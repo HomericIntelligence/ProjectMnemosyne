@@ -1,0 +1,48 @@
+name: Update Marketplace
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'plugins/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate marketplace.json
+        run: python3 scripts/generate_marketplace.py plugins/ marketplace.json
+
+      - name: Check for changes
+        id: check
+        run: |
+          if git diff --quiet marketplace.json 2>/dev/null; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add marketplace.json
+          git commit -m "chore: update marketplace.json [skip ci]"
+          git push

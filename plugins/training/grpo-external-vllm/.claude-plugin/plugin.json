@@ -1,0 +1,13 @@
+{
+  "name": "grpo-external-vllm",
+  "version": "1.0.0",
+  "description": "GRPO training with external vLLM server. Use when: (1) Running vLLM on separate GPUs, (2) Encountering vllm_skip_weight_sync errors, (3) OpenAI API parsing issues. Verified on gemma-3-12b-it.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-28",
+  "category": "training",
+  "tags": ["grpo", "vllm", "reinforcement-learning", "llm-training", "distributed"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

@@ -1,0 +1,82 @@
+{
+  "version": "1.0.0",
+  "updated": "2025-12-28T15:34:00.691883+00:00",
+  "plugin_count": 5,
+  "plugins": [
+    {
+      "name": "skill-marketplace-design",
+      "category": "architecture",
+      "description": "Design patterns for Claude Code skill marketplaces. Use when: (1) Setting up team knowledge capture, (2) Implementing /advise and /retrospective, (3) Designing plugin validation. Meta: this skill documents its own design.",
+      "tags": [
+        "marketplace",
+        "skills",
+        "claude-code",
+        "knowledge-management",
+        "hooks"
+      ],
+      "path": "plugins/architecture/skill-marketplace-design",
+      "date": "2025-12-28",
+      "version": "1.0.0"
+    },
+    {
+      "name": "github-actions-mojo",
+      "category": "ci-cd",
+      "description": "GitHub Actions CI setup for Mojo projects. Use when: (1) Setting up Mojo CI/CD, (2) Configuring pixi with GitHub Actions, (3) Running mojo test in CI. Verified with Mojo v0.25.7.",
+      "tags": [
+        "github-actions",
+        "mojo",
+        "ci-cd",
+        "pixi",
+        "testing"
+      ],
+      "path": "plugins/ci-cd/github-actions-mojo",
+      "date": "2025-12-28",
+      "version": "1.0.0"
+    },
+    {
+      "name": "mojo-simd-errors",
+      "category": "debugging",
+      "description": "Debug SIMD vectorization errors in Mojo. Use when: (1) SIMD comparison operators fail, (2) Conditional selection with masks, (3) Vectorized tensor operations. Verified on Mojo v0.25.7+.",
+      "tags": [
+        "mojo",
+        "simd",
+        "vectorization",
+        "tensor",
+        "performance"
+      ],
+      "path": "plugins/debugging/mojo-simd-errors",
+      "date": "2025-12-28",
+      "version": "1.0.0"
+    },
+    {
+      "name": "layerwise-gradient-check",
+      "category": "testing",
+      "description": "Layerwise gradient checking for neural network testing. Use when: (1) Validating backward pass implementations, (2) Debugging gradient computation, (3) TDD for neural network layers. Verified with Mojo tensor operations.",
+      "tags": [
+        "testing",
+        "gradients",
+        "neural-network",
+        "tdd",
+        "numerical-verification"
+      ],
+      "path": "plugins/testing/layerwise-gradient-check",
+      "date": "2025-12-28",
+      "version": "1.0.0"
+    },
+    {
+      "name": "grpo-external-vllm",
+      "category": "training",
+      "description": "GRPO training with external vLLM server. Use when: (1) Running vLLM on separate GPUs, (2) Encountering vllm_skip_weight_sync errors, (3) OpenAI API parsing issues. Verified on gemma-3-12b-it.",
+      "tags": [
+        "grpo",
+        "vllm",
+        "reinforcement-learning",
+        "llm-training",
+        "distributed"
+      ],
+      "path": "plugins/training/grpo-external-vllm",
+      "date": "2025-12-28",
+      "version": "1.0.0"
+    }
+  ]
+}
