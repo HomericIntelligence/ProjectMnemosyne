@@ -5,9 +5,5 @@
   "author": {
     "name": "ML Odyssey Team"
   },
-  "date": "2025-12-28",
-  "category": "training",
-  "tags": ["grpo", "vllm", "reinforcement-learning", "llm-training", "distributed"],
-  "skills": "./skills",
-  "source_project": "ProjectOdyssey"
+  "skills": "./skills"
 }
