@@ -1,33 +1,132 @@
 # ProjectMnemosyne
 
-ProjectMnemosyne is a repository dedicated to storing, organizing, and sharing agentic skills, code artifacts, and knowledge resources. Named after Mnemosyne, the Greek goddess of memory, this project serves as the collective memory of the agentic ecosystem. It ensures that agents can recall, reuse, and refine capabilities across workflows, enabling continuous improvement and long-term growth.
+ProjectMnemosyne is a skills marketplace for the HomericIntelligence agentic ecosystem.
+Named after Mnemosyne, the Greek goddess of memory, this repository serves as the
+collective memory where team learnings are preserved and made searchable.
 
-## Purpose
+## Quick Start
 
-While ProjectOdyssey focuses on training and capability development, ProjectKeystone establishes communication and coordination, and ProjectScylla provides testing and optimization, ProjectMnemosyne is the library of wisdom. It is the place where agentic knowledge is preserved, codified, and made accessible for future use.
+### Search for Knowledge
 
-## This repository is designed to:
-- 📚 Store Skills: Maintain a structured archive of Claude code skills, reusable modules, and agentic patterns.
-- 🧠 Preserve Knowledge: Capture agentic strategies, workflows, and decision-making heuristics for reuse.
-- 🔄 Enable Reuse: Provide a central hub where agents can draw upon existing skills rather than reinventing them.
-- 🚀 Support Growth: Facilitate continuous improvement by building on past knowledge and refining capabilities.
+```text
+/advise <your goal or question>
+```
 
-## Core Concepts
+Claude will search the marketplace for relevant prior learnings and return:
 
-- Skill Codex: A curated collection of agentic skills and code snippets.
-- Knowledge Base: Documentation of agentic strategies, workflows, and lessons learned.
-- Versioned Artifacts: Skills and modules tracked for evolution and improvement over time.
-- Interoperability: Designed to integrate seamlessly with other projects in the ecosystem.
+- What worked in similar situations
+- What failed and why (critical!)
+- Recommended parameters and configurations
 
-## Why Mnemosyne?
+### Save Your Learnings
 
-Mnemosyne embodies memory, continuity, and the preservation of wisdom. By naming this repository after her, we highlight its role as the memory layer of the agentic ecosystem. Just as memory allows humans to learn, adapt, and grow, ProjectMnemosyne ensures agents can build upon prior knowledge to achieve excellence.
+```text
+/retrospective
+```
+
+After an experiment or debugging session, capture your learnings as a new skill.
+Claude will:
+
+1. Analyze your conversation
+2. Extract successes, failures, and parameters
+3. Create a PR with a new skill
+
+**Auto-trigger**: On `/exit` or `/clear`, you'll be prompted to save learnings.
+
+## Marketplace Structure
+
+```text
+plugins/
+├── training/           # ML training experiments
+├── evaluation/         # Model evaluation
+├── optimization/       # Performance tuning
+├── debugging/          # Bug investigation
+├── architecture/       # Design decisions
+├── tooling/            # Automation tools
+├── ci-cd/              # Pipeline configurations
+└── testing/            # Test strategies
+```
+
+Each skill follows the plugin structure:
+
+```text
+plugins/<category>/<name>/
+├── .claude-plugin/
+│   └── plugin.json         # Metadata and trigger conditions
+├── skills/<name>/
+│   └── SKILL.md            # Main knowledge document
+└── references/
+    └── notes.md            # Additional context
+```
+
+## Available Skills
+
+| Skill | Category | Description |
+|-------|----------|-------------|
+| grpo-external-vllm | training | GRPO training with external vLLM server |
+| mojo-simd-errors | debugging | Debug SIMD vectorization errors in Mojo |
+| github-actions-mojo | ci-cd | GitHub Actions CI setup for Mojo |
+| layerwise-gradient-check | testing | Gradient checking for neural networks |
+| skill-marketplace-design | architecture | Design patterns for skill marketplaces |
+
+See `marketplace.json` for the complete searchable index.
+
+## Contributing a Skill
+
+### Option 1: Automatic (Recommended)
+
+1. Complete an experiment or debugging session
+2. Run `/retrospective`
+3. Follow the prompts to categorize and name the skill
+4. PR is created automatically
+
+### Option 2: Manual
+
+1. Copy `templates/experiment-skill/` to `plugins/<category>/<name>/`
+2. Fill in `plugin.json` with specific trigger conditions
+3. Write `SKILL.md` with all required sections
+4. **Include "Failed Attempts" table** (required!)
+5. Create PR
+
+### Required Sections in SKILL.md
+
+- **Overview table**: Date, objective, outcome
+- **When to Use**: Specific trigger conditions
+- **Verified Workflow**: Step-by-step that worked
+- **Failed Attempts**: What didn't work and why (REQUIRED)
+- **Results & Parameters**: Copy-paste ready configs
+- **References**: Links to issues, docs
+
+## Validation
+
+All PRs are validated by CI:
+
+- `plugin.json` has required fields
+- `SKILL.md` has required sections
+- Failed Attempts section is present
+- Description is specific (20+ chars)
+- Category is valid
+
+Run validation locally:
+
+```bash
+python3 scripts/validate_plugins.py plugins/
+```
 
 ## Ecosystem
 
-- ProjectOdyssey → Training and capability development.
-- ProjectKeystone → Communication and distributed agent coordination.
-- ProjectScylla → Testing, measurement, and optimization under trial.
-- ProjectMnemosyne → Knowledge, skills, and memory preservation.
+| Project | Purpose |
+|---------|---------|
+| [ProjectOdyssey](https://github.com/HomericIntelligence/ProjectOdyssey) | Training and capability development |
+| [ProjectKeystone](https://github.com/HomericIntelligence/ProjectKeystone) | Communication and coordination |
+| [ProjectScylla](https://github.com/HomericIntelligence/ProjectScylla) | Testing and optimization |
+| **ProjectMnemosyne** | Knowledge, skills, and memory |
 
-Together, these projects form a cohesive framework for building, connecting, testing, and refining agentic workflows.
+## Why Mnemosyne?
+
+Mnemosyne embodies memory, continuity, and the preservation of wisdom. This repository
+ensures that learnings compound over time - every experiment, debugging session, and
+architectural decision becomes searchable knowledge for the team.
+
+The most valuable section in any skill is **Failed Attempts** - knowing what didn't
+work saves more time than knowing what did.

@@ -1,0 +1,13 @@
+{
+  "name": "SKILL_NAME",
+  "version": "1.0.0",
+  "description": "TRIGGER CONDITIONS: (1) condition 1, (2) condition 2. Verified on X.",
+  "author": {
+    "name": "AUTHOR_NAME"
+  },
+  "date": "YYYY-MM-DD",
+  "category": "CATEGORY",
+  "tags": ["tag1", "tag2"],
+  "skills": "./skills",
+  "source_project": "SOURCE_PROJECT"
+}

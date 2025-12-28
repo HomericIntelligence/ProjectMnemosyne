@@ -1,0 +1,44 @@
+name: Validate Plugins
+
+on:
+  pull_request:
+    paths:
+      - 'plugins/**'
+      - 'templates/**'
+      - 'scripts/validate_plugins.py'
+  push:
+    branches:
+      - main
+    paths:
+      - 'plugins/**'
+      - 'templates/**'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate plugins
+        run: python3 scripts/validate_plugins.py plugins/
+
+      - name: Check template validity
+        run: |
+          echo "Checking template structure..."
+          if [ ! -f "templates/experiment-skill/.claude-plugin/plugin.json" ]; then
+            echo "ERROR: Template plugin.json missing"
+            exit 1
+          fi
+          if [ ! -f "templates/experiment-skill/skills/SKILL_NAME/SKILL.md" ]; then
+            echo "ERROR: Template SKILL.md missing"
+            exit 1
+          fi
+          echo "Template structure valid"
