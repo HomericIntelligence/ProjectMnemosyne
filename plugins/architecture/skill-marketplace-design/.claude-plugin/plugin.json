@@ -5,9 +5,5 @@
   "author": {
     "name": "ML Odyssey Team"
   },
-  "date": "2025-12-28",
-  "category": "architecture",
-  "tags": ["marketplace", "skills", "claude-code", "knowledge-management", "hooks"],
-  "skills": "./skills",
-  "source_project": "ProjectMnemosyne"
+  "skills": "./skills"
 }

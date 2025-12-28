@@ -4,6 +4,36 @@ ProjectMnemosyne is a skills marketplace for the HomericIntelligence agentic eco
 Named after Mnemosyne, the Greek goddess of memory, this repository serves as the
 collective memory where team learnings are preserved and made searchable.
 
+## Installation
+
+Register the marketplace and install plugins using Claude Code CLI:
+
+```bash
+# Add the marketplace
+claude plugin marketplace add HomericIntelligence/ProjectMnemosyne
+
+# Install all plugins
+claude plugin install grpo-external-vllm@ProjectMnemosyne
+claude plugin install mojo-simd-errors@ProjectMnemosyne
+claude plugin install github-actions-mojo@ProjectMnemosyne
+claude plugin install layerwise-gradient-check@ProjectMnemosyne
+claude plugin install skill-marketplace-design@ProjectMnemosyne
+```
+
+Or install from a local clone:
+
+```bash
+git clone https://github.com/HomericIntelligence/ProjectMnemosyne
+claude plugin marketplace add /path/to/ProjectMnemosyne
+claude plugin install <plugin-name>@ProjectMnemosyne
+```
+
+Verify installation:
+
+```bash
+claude plugin marketplace list
+```
+
 ## Quick Start
 
 ### Search for Knowledge

@@ -1,0 +1,51 @@
+{
+  "name": "ProjectMnemosyne",
+  "owner": {
+    "name": "HomericIntelligence",
+    "url": "https://github.com/HomericIntelligence"
+  },
+  "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
+  "version": "1.0.0",
+  "plugins": [
+    {
+      "name": "grpo-external-vllm",
+      "description": "GRPO training with external vLLM server. Use when: (1) Running vLLM on separate GPUs, (2) Encountering vllm_skip_weight_sync errors, (3) OpenAI API parsing issues.",
+      "version": "1.0.0",
+      "source": "./plugins/training/grpo-external-vllm",
+      "category": "training",
+      "tags": ["grpo", "vllm", "reinforcement-learning", "llm-training"]
+    },
+    {
+      "name": "mojo-simd-errors",
+      "description": "Debug SIMD vectorization errors in Mojo. Use when: (1) SIMD comparison operators fail, (2) Conditional selection with masks, (3) Vectorized tensor operations.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/mojo-simd-errors",
+      "category": "debugging",
+      "tags": ["mojo", "simd", "vectorization", "tensor"]
+    },
+    {
+      "name": "github-actions-mojo",
+      "description": "GitHub Actions CI setup for Mojo projects. Use when: (1) Setting up Mojo CI/CD, (2) Configuring pixi with GitHub Actions, (3) Running mojo test in CI.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/github-actions-mojo",
+      "category": "ci-cd",
+      "tags": ["github-actions", "mojo", "ci-cd", "pixi"]
+    },
+    {
+      "name": "layerwise-gradient-check",
+      "description": "Layerwise gradient checking for neural network testing. Use when: (1) Validating backward pass implementations, (2) Debugging gradient computation, (3) TDD for neural network layers.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/layerwise-gradient-check",
+      "category": "testing",
+      "tags": ["testing", "gradients", "neural-network", "tdd"]
+    },
+    {
+      "name": "skill-marketplace-design",
+      "description": "Design patterns for Claude Code skill marketplaces. Use when: (1) Setting up team knowledge capture, (2) Implementing /advise and /retrospective, (3) Designing plugin validation.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/skill-marketplace-design",
+      "category": "architecture",
+      "tags": ["marketplace", "skills", "claude-code", "knowledge-management"]
+    }
+  ]
+}

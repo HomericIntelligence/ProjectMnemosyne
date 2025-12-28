@@ -5,9 +5,5 @@
   "author": {
     "name": "ML Odyssey Team"
   },
-  "date": "2025-12-28",
-  "category": "ci-cd",
-  "tags": ["github-actions", "mojo", "ci-cd", "pixi", "testing"],
-  "skills": "./skills",
-  "source_project": "ProjectOdyssey"
+  "skills": "./skills"
 }
