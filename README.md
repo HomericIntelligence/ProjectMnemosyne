@@ -6,13 +6,54 @@ collective memory where team learnings are preserved and made searchable.
 
 ## Installation
 
-Register the marketplace and install plugins using Claude Code CLI:
+### Prerequisites
+
+- Claude Code CLI installed
+- Access to HomericIntelligence/ProjectMnemosyne (private repository)
+
+### Option A: From GitHub (Recommended)
+
+Register the private repository directly.
+
+**From terminal:**
 
 ```bash
-# Add the marketplace
-claude plugin marketplace add HomericIntelligence/ProjectMnemosyne
+claude plugin marketplace add https://github.com/HomericIntelligence/ProjectMnemosyne
+```
 
-# Install all plugins
+**Or inside a Claude Code session:**
+
+```text
+/plugin marketplace add https://github.com/HomericIntelligence/ProjectMnemosyne
+```
+
+### Option B: From Local Directory
+
+If you have the repository cloned locally:
+
+```bash
+git clone git@github.com:HomericIntelligence/ProjectMnemosyne.git
+```
+
+**From terminal:**
+
+```bash
+claude plugin marketplace add /path/to/ProjectMnemosyne
+```
+
+**Or inside a Claude Code session:**
+
+```text
+/plugin marketplace add /path/to/ProjectMnemosyne
+```
+
+### Install Skills
+
+After registering the marketplace, install available skills.
+
+**From terminal:**
+
+```bash
 claude plugin install grpo-external-vllm@ProjectMnemosyne
 claude plugin install mojo-simd-errors@ProjectMnemosyne
 claude plugin install github-actions-mojo@ProjectMnemosyne
@@ -20,21 +61,33 @@ claude plugin install layerwise-gradient-check@ProjectMnemosyne
 claude plugin install skill-marketplace-design@ProjectMnemosyne
 ```
 
-Or install from a local clone:
+**Or inside a Claude Code session:**
 
-```bash
-git clone https://github.com/HomericIntelligence/ProjectMnemosyne
-claude plugin marketplace add /path/to/ProjectMnemosyne
-claude plugin install <plugin-name>@ProjectMnemosyne
+```text
+/plugin install grpo-external-vllm@ProjectMnemosyne
+/plugin install mojo-simd-errors@ProjectMnemosyne
+/plugin install github-actions-mojo@ProjectMnemosyne
+/plugin install layerwise-gradient-check@ProjectMnemosyne
+/plugin install skill-marketplace-design@ProjectMnemosyne
 ```
 
-Verify installation:
+### Verify Installation
+
+**From terminal:**
 
 ```bash
 claude plugin marketplace list
 ```
 
+**Or inside a Claude Code session:**
+
+```text
+/plugin marketplace list
+```
+
 ## Quick Start
+
+These commands work inside any Claude Code session after installation.
 
 ### Search for Knowledge
 
@@ -55,11 +108,11 @@ Claude will search the marketplace for relevant prior learnings and return:
 ```
 
 After an experiment or debugging session, capture your learnings as a new skill.
-Claude will:
+Claude automatically:
 
-1. Analyze your conversation
-2. Extract successes, failures, and parameters
-3. Create a PR with a new skill
+1. Analyzes your entire session conversation
+2. Extracts successes, failures, and parameters
+3. Creates a branch and opens a PR with a new skill
 
 **Auto-trigger**: On `/exit` or `/clear`, you'll be prompted to save learnings.
 
