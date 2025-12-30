@@ -1,0 +1,9 @@
+{
+  "name": "claude-plugin-format",
+  "version": "1.0.0",
+  "description": "Official Claude Code plugin format requirements. Use when: (1) Creating a new plugin, (2) Debugging plugin validation errors, (3) Skills or commands not appearing after install.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "skills": "./skills"
+}
