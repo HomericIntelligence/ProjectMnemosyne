@@ -1,0 +1,9 @@
+{
+  "name": "sionic-blog-conversion",
+  "version": "1.0.0",
+  "description": "Convert knowledge sources into Claude Code plugins. Use when: (1) Extracting skills from blog posts or documentation, (2) Creating importable plugins from external knowledge, (3) Building a skills marketplace from scattered resources.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "skills": "./skills"
+}
