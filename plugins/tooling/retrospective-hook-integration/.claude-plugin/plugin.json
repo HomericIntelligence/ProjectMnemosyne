@@ -1,0 +1,13 @@
+{
+  "name": "retrospective-hook-integration",
+  "version": "1.0.0",
+  "description": "Setup SessionEnd hooks for automatic retrospective prompts in Claude Code. TRIGGER: (1) When integrating ProjectMnemosyne marketplace with another repository, (2) When setting up /advise and /retrospective skills, (3) When configuring automatic session-end knowledge capture. Verified on Claude Code with ProjectOdyssey integration.",
+  "author": {
+    "name": "HomericIntelligence"
+  },
+  "date": "2025-12-29",
+  "category": "tooling",
+  "tags": ["claude-code", "hooks", "marketplace", "retrospective", "session-end", "knowledge-capture"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}
