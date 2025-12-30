@@ -1,0 +1,17 @@
+{
+  "name": "shell-recovery-patterns",
+  "description": "TRIGGER: Shell commands returning exit code 1 with no output, bash session unresponsive after git worktree removal or directory deletion",
+  "category": "tooling",
+  "source": "ProjectOdyssey",
+  "date": "2025-12-29",
+  "tags": [
+    "shell",
+    "bash",
+    "worktree",
+    "git",
+    "recovery",
+    "debugging",
+    "cwd",
+    "directory"
+  ]
+}
