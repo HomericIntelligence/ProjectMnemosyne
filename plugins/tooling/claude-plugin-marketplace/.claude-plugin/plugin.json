@@ -1,0 +1,9 @@
+{
+  "name": "claude-plugin-marketplace",
+  "version": "1.0.0",
+  "description": "Set up Claude Code plugin marketplaces. Use when: (1) Registering a skills marketplace, (2) Fixing plugin.json schema errors, (3) Understanding marketplace.json format, (4) Installing plugins from private repos.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "skills": "./skills"
+}
