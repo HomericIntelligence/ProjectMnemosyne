@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "updated": "2025-12-29T00:00:00.000000+00:00",
+  "updated": "2025-12-30T00:15:59.854340+00:00",
   "plugin_count": 4,
   "plugins": [
     {
@@ -16,9 +16,9 @@
       "name": "skills-registry-commands",
       "category": "tooling",
       "description": "Complete skills registry system: /advise, /retrospective, documentation patterns, and CI validation. Use when: (1) Setting up team knowledge capture, (2) Adding skill search/creation to any project, (3) Implementing the Sionic AI skills pattern.",
-      "tags": ["advise", "retrospective", "skills", "registry", "commands", "ci-cd", "validation"],
+      "tags": [],
       "path": "plugins/tooling/skills-registry-commands",
-      "date": "2025-12-29",
+      "date": "",
       "version": "1.0.0"
     },
     {
@@ -34,9 +34,9 @@
       "name": "spec-driven-experimentation",
       "category": "training",
       "description": "TECHSPEC.md pattern for structured ML experiments. Use when: (1) Planning parameter sweeps, (2) Defining success criteria before training, (3) Budget-constrained experiment design, (4) Hypothesis-driven ablation studies. Source: Sionic AI blog.",
-      "tags": ["training", "experiments", "techspec", "ml", "ablation"],
+      "tags": [],
       "path": "plugins/training/spec-driven-experimentation",
-      "date": "2025-12-29",
+      "date": "",
       "version": "1.0.0"
     }
   ]
