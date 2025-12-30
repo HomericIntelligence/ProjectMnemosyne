@@ -1,0 +1,9 @@
+{
+  "name": "batch-pr-ci-fix",
+  "version": "1.0.0",
+  "description": "Batch fix CI failures across multiple PRs and enable auto-merge. Use when: (1) Multiple PRs have CI failures, (2) Need to fix common failure patterns, (3) Want to auto-merge PRs after CI passes. Handles broken links, formatting issues, mypy errors.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "skills": "./skills"
+}
