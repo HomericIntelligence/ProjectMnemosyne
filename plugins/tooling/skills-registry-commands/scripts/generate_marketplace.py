@@ -6,6 +6,9 @@ Scans for plugin.json files and creates a searchable index.
 
 Usage:
     python scripts/generate_marketplace.py
+
+Output:
+    .claude-plugin/marketplace.json
 """
 
 import json
@@ -42,10 +45,10 @@ def generate_marketplace():
         "plugins": plugins
     }
 
-    with open("marketplace.json", "w") as f:
+    with open(".claude-plugin/marketplace.json", "w") as f:
         json.dump(marketplace, f, indent=2)
 
-    print(f"Generated marketplace.json with {len(plugins)} plugins")
+    print(f"Generated .claude-plugin/marketplace.json with {len(plugins)} plugins")
 
 
 if __name__ == "__main__":
