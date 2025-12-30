@@ -1,0 +1,13 @@
+{
+  "name": "plan-review-interview",
+  "version": "1.0.0",
+  "description": "Structured interview workflow for reviewing implementation plans. Use when: (1) You have a draft plan that needs stakeholder validation, (2) GitHub issues exist but lack key decision details, (3) You need to systematically identify gaps before implementation, (4) You want to document decisions alongside affected issues.",
+  "author": {
+    "name": "ProjectScylla Team"
+  },
+  "date": "2025-12-30",
+  "category": "evaluation",
+  "tags": ["planning", "requirements", "interview", "decision-tracking", "github-issues"],
+  "skills": "./skills",
+  "source_project": "ProjectScylla"
+}
