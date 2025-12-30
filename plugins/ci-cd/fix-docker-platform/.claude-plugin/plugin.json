@@ -1,0 +1,12 @@
+{
+  "name": "fix-docker-platform",
+  "version": "1.0.0",
+  "description": "Fix Docker build failures caused by platform mismatches. Use when: (1) Docker builds fail with 'unsupported platform' errors, (2) pixi install fails in Docker with linux-aarch64 errors, (3) Multi-arch builds fail when pixi.toml only supports one platform.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "category": "ci-cd",
+  "date": "2025-12-28",
+  "tags": ["docker", "ghcr", "arm64", "pixi", "platform", "ci"],
+  "skills": "./skills"
+}
