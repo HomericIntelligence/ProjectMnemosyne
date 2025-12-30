@@ -95,6 +95,16 @@ Your project needs:
 3. **Description keywords** - Broader matches
 4. **Copy-paste configs** - When available, include them
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson Learned |
+|---------|-----------|----------------|
+| Searching only by exact tag match | Missed relevant skills with different tags | Include description keyword matching |
+| Not prioritizing Failed Attempts | Users repeated mistakes | Show failures first in output |
+| Vague search queries | Too many irrelevant results | Encourage users to be specific about context |
+| Reading all SKILL.md files | Performance issues with large registry | Filter by category/tags first, then read |
+| Not showing parameter snippets | Users had to open files manually | Include copy-paste configs in summary |
+
 ## References
 
 - Source: https://huggingface.co/blog/sionic-ai/claude-code-skills-training
