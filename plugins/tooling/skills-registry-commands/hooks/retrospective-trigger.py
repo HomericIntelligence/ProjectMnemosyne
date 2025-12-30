@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Hook script triggered on SessionEnd to prompt for retrospective.
+Hook triggered on UserPromptSubmit when user types session-ending keywords.
+Adds context reminding about /retrospective - does not block.
 
 Receives JSON input with:
+- prompt: The user's prompt text
 - session_id: Session identifier
-- transcript_path: Path to session transcript (.jsonl)
-- reason: "exit" | "clear" | "logout" | "prompt_input_exit" | "other"
 - cwd: Current working directory
 
 Outputs JSON to stdout for Claude to process.
@@ -17,50 +17,41 @@ Installation:
 
 import json
 import sys
-from pathlib import Path
+import re
 
 
 def main():
     """Main entry point for the hook."""
     try:
-        # Read hook input from stdin
         input_data = json.load(sys.stdin)
     except json.JSONDecodeError:
-        # Invalid input, exit silently
         sys.exit(0)
 
-    reason = input_data.get("reason", "other")
-    transcript_path = input_data.get("transcript_path", "")
+    prompt = input_data.get("prompt", "").lower()
 
-    # Only trigger on explicit session end (not other reasons)
-    if reason not in ("exit", "clear"):
-        sys.exit(0)
+    # Check for session-ending keywords
+    ending_patterns = [
+        r"\b(exit|quit|bye|goodbye)\b",
+        r"^/clear\b",
+        r"\b(done|finished|wrapping up)\b",
+        r"\b(end.*session|session.*end)\b",
+    ]
 
-    # Check if transcript has meaningful content (> 10 messages)
-    try:
-        transcript = Path(transcript_path)
-        if transcript.exists():
-            line_count = sum(1 for _ in transcript.open())
-            if line_count < 10:
-                # Session too short for retrospective
-                sys.exit(0)
-        else:
-            # No transcript file
+    for pattern in ending_patterns:
+        if re.search(pattern, prompt):
+            output = {
+                "hookSpecificOutput": {
+                    "hookEventName": "UserPromptSubmit",
+                    "additionalContext": (
+                        "[Retrospective Reminder] Before ending this session, "
+                        "consider running /retrospective to capture any learnings."
+                    ),
+                }
+            }
+            print(json.dumps(output))
             sys.exit(0)
-    except Exception:
-        # Error reading transcript, exit silently
-        sys.exit(0)
 
-    # Output message prompting retrospective
-    output = {
-        "systemMessage": (
-            "Session ending. Consider running /retrospective to capture learnings "
-            "from this session. Would you like to save your learnings to the "
-            "skills marketplace before ending?"
-        )
-    }
-
-    print(json.dumps(output))
+    # No match, exit silently
     sys.exit(0)
 
 

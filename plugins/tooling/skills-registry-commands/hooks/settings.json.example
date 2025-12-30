@@ -1,12 +1,13 @@
 {
   "hooks": {
-    "SessionEnd": [
+    "UserPromptSubmit": [
       {
+        "matcher": "(?i)(exit|quit|clear|done|finished|bye|goodbye|session)",
         "hooks": [
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/retrospective-trigger.py\"",
-            "timeout": 120
+            "timeout": 5
           }
         ]
       }

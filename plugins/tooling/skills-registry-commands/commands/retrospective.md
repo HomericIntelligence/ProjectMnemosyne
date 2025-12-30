@@ -10,7 +10,9 @@ Capture session learnings and create a new skill plugin in the ProjectMnemosyne 
 
 **Repository**: `HomericIntelligence/ProjectMnemosyne`
 **Base branch**: `main`
-**Clone location**: `<ProjectRoot>/build/ProjectMnemosyne/`
+**Clone location**: `<ProjectRoot>/build/<UUID>/ProjectMnemosyne/`
+
+Each retrospective generates a unique UUID to prevent conflicts with parallel Claude agents.
 
 ## Instructions
 
@@ -27,17 +29,17 @@ When the user invokes this command:
    - Category (training, evaluation, optimization, debugging, architecture, tooling, ci-cd, testing)
    - Skill name (kebab-case)
 
-3. **Setup repository** (IMPORTANT: Don't remove/reclone if exists):
+3. **Setup repository**:
    ```bash
-   # Create build directory if it doesn't exist
-   mkdir -p build
+   # Generate unique build directory to prevent conflicts with parallel agents
+   SESSION_UUID=$(uuidgen)
+   BUILD_DIR="build/${SESSION_UUID}"
 
-   # Clone only if directory doesn't exist
-   if [ ! -d "build/ProjectMnemosyne" ]; then
-     gh repo clone HomericIntelligence/ProjectMnemosyne build/ProjectMnemosyne
-   fi
+   # Create build directory and clone repository
+   mkdir -p "$BUILD_DIR"
+   gh repo clone HomericIntelligence/ProjectMnemosyne "$BUILD_DIR/ProjectMnemosyne"
 
-   cd build/ProjectMnemosyne
+   cd "$BUILD_DIR/ProjectMnemosyne"
 
    # Fetch latest changes and create branch from origin/main
    git fetch origin
@@ -70,8 +72,8 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 
 6. **Create PR** (only if push succeeded):
    ```bash
-   # Write PR body to build directory (not /tmp)
-   cat > ../pr-body-<name>.md << 'EOF'
+   # Write PR body to build directory (use $BUILD_DIR from step 3)
+   cat > "$BUILD_DIR/pr-body-<name>.md" << 'EOF'
    ## Summary
 
    Documents <brief description of what was learned>.
@@ -101,7 +103,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 
    gh pr create --repo HomericIntelligence/ProjectMnemosyne --base main \
      --title "feat: add <name> skill" \
-     --body-file ../pr-body-<name>.md
+     --body-file "$BUILD_DIR/pr-body-<name>.md"
    ```
 
 ## Common Issues & Solutions
@@ -115,25 +117,27 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 git checkout -b skill/<category>/<name> origin/main
 ```
 
-### Issue: Repository already exists
+### Issue: uuidgen not found
 
-**Cause**: Tried to remove and reclone unnecessarily.
+**Cause**: `uuidgen` not installed on system.
 
-**Solution**: Never `rm -rf` the build directory. Just fetch and create new branch:
+**Solution**: Install uuid-runtime or use alternative:
 ```bash
-cd build/ProjectMnemosyne
-git fetch origin
-git checkout -b skill/<category>/<name> origin/main
+# On Debian/Ubuntu
+sudo apt install uuid-runtime
+
+# Alternative using Python
+SESSION_UUID=$(python3 -c "import uuid; print(uuid.uuid4())")
 ```
 
-### Issue: Uncommitted changes warning
+### Issue: Build directory cleanup
 
-**Cause**: Previous retrospective left uncommitted files.
+**Cause**: Multiple retrospective sessions accumulate build directories.
 
-**Solution**: Clean or stash before creating new branch:
+**Solution**: Periodically clean old build directories:
 ```bash
-git stash
-git checkout -b skill/<category>/<name> origin/main
+# Remove build directories older than 7 days
+find build -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \;
 ```
 
 ## Required SKILL.md Sections
