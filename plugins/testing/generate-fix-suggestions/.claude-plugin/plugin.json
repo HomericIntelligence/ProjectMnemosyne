@@ -1,0 +1,13 @@
+{
+  "name": "generate-fix-suggestions",
+  "version": "1.0.0",
+  "description": "Generate fix suggestions based on error patterns and best practices. Use when: (1) Test failures need concrete solutions, (2) Build errors require remediation steps, (3) Creating PR comments with suggestions.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "testing",
+  "tags": ["testing", "error-analysis", "fix-suggestions", "remediation"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

@@ -1,0 +1,13 @@
+{
+  "name": "extract-test-failures",
+  "version": "1.0.0",
+  "description": "Extract and summarize test failures from logs. Use when: (1) CI test run failed, need to understand failures, (2) Large test suite with many failures needs summary, (3) Categorizing failures by type (assertion, runtime, timeout).",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "testing",
+  "tags": ["testing", "test-failures", "log-analysis", "debugging"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

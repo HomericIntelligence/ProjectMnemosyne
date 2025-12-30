@@ -1,0 +1,13 @@
+{
+  "name": "gh-get-review-comments",
+  "version": "1.0.0",
+  "description": "Retrieve all review comments from a pull request using GitHub API. Use when: (1) Checking for unresolved review feedback, (2) Getting comment IDs for replies, (3) Analyzing reviewer feedback before fixing.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "tooling",
+  "tags": ["github", "pr", "review-comments", "api", "gh-cli"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

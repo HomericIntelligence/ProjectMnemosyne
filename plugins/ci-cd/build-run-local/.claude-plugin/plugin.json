@@ -1,0 +1,13 @@
+{
+  "name": "build-run-local",
+  "version": "1.0.0",
+  "description": "Run local builds with proper environment setup matching CI pipeline. Use when: (1) Building code locally before pushing, (2) Verifying changes work before creating PR, (3) Debugging build issues in isolation.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "ci-cd",
+  "tags": ["build", "local", "testing", "environment", "verification"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

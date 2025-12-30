@@ -1,0 +1,13 @@
+{
+  "name": "gh-post-issue-update",
+  "version": "1.0.0",
+  "description": "Post structured updates to GitHub issues for progress tracking. Use when: (1) Reporting implementation progress, (2) Documenting design decisions, (3) Posting completion summaries or findings.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "tooling",
+  "tags": ["github", "issues", "documentation", "progress", "gh-cli"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

@@ -1,0 +1,13 @@
+{
+  "name": "worktree-cleanup",
+  "version": "1.0.0",
+  "description": "Remove merged or stale git worktrees safely. Use when: (1) PR has been merged, (2) Worktree no longer needed, (3) Freeing disk space and maintaining organization.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "debugging",
+  "tags": ["git", "worktree", "cleanup", "disk-space"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

@@ -1,0 +1,13 @@
+{
+  "name": "fix-ci-failures",
+  "version": "1.0.0",
+  "description": "Diagnose and fix CI/CD failures systematically. Use when: (1) CI checks fail on PR, (2) Tests pass locally but fail in CI, (3) Need to debug CI issues.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "ci-cd",
+  "tags": ["ci-cd", "debugging", "github-actions", "troubleshooting"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

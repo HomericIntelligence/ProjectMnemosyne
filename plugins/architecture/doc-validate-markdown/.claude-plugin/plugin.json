@@ -1,0 +1,13 @@
+{
+  "name": "doc-validate-markdown",
+  "version": "1.0.0",
+  "description": "Validate markdown files for formatting, links, and style compliance using markdownlint. Use when: (1) Before committing documentation, (2) Markdown linting errors in CI, (3) Creating new documentation.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "architecture",
+  "tags": ["markdown", "linting", "documentation", "formatting", "validation"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

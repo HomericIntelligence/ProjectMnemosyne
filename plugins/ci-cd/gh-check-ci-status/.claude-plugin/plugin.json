@@ -1,0 +1,13 @@
+{
+  "name": "gh-check-ci-status",
+  "version": "1.0.0",
+  "description": "Check CI/CD status of a pull request including workflow runs and test results. Use when: (1) Verifying PR checks are passing before merge, (2) Investigating CI failures, (3) Monitoring long-running CI jobs.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "ci-cd",
+  "tags": ["github", "ci-cd", "checks", "testing", "gh-cli"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

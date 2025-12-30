@@ -1,0 +1,13 @@
+{
+  "name": "doc-generate-adr",
+  "version": "1.0.0",
+  "description": "Generate Architecture Decision Records (ADRs) to document significant architectural decisions. Use when: (1) Making significant architectural decisions, (2) Choosing between technical alternatives, (3) Documenting design trade-offs.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "architecture",
+  "tags": ["adr", "architecture", "documentation", "decisions", "design"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

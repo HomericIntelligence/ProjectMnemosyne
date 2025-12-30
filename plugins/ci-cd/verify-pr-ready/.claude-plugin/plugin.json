@@ -1,0 +1,13 @@
+{
+  "name": "verify-pr-ready",
+  "version": "1.0.0",
+  "description": "Verify PR is ready for merge with all requirements met. Use when: (1) Before merging a PR manually, (2) Validating PR readiness in batch operations, (3) Checking branch protection rule compliance.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "ci-cd",
+  "tags": ["github", "pr", "merge", "validation", "branch-protection"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

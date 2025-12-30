@@ -8,16 +8,429 @@
   "version": "1.0.0",
   "plugins": [
     {
+      "name": "doc-generate-adr",
+      "description": "Generate Architecture Decision Records (ADRs) to document significant architectural decisions. Use when: (1) Making significant architectural decisions, (2) Choosing between technical alternatives, (3) Documenting design trade-offs.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/doc-generate-adr",
+      "category": "architecture",
+      "tags": [
+        "adr",
+        "architecture",
+        "documentation",
+        "decisions",
+        "design"
+      ]
+    },
+    {
+      "name": "doc-validate-markdown",
+      "description": "Validate markdown files for formatting, links, and style compliance using markdownlint. Use when: (1) Before committing documentation, (2) Markdown linting errors in CI, (3) Creating new documentation.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/doc-validate-markdown",
+      "category": "architecture",
+      "tags": [
+        "markdown",
+        "linting",
+        "documentation",
+        "formatting",
+        "validation"
+      ]
+    },
+    {
+      "name": "quality-complexity-check",
+      "description": "Analyze code complexity metrics including cyclomatic complexity and nesting depth. Use when: (1) Code review process, (2) Identifying refactoring candidates, (3) Maintaining code quality standards.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/quality-complexity-check",
+      "category": "architecture",
+      "tags": [
+        "complexity",
+        "cyclomatic",
+        "refactoring",
+        "code-quality",
+        "metrics"
+      ]
+    },
+    {
+      "name": "quality-security-scan",
+      "description": "Scan code for security vulnerabilities and unsafe patterns. Use when: (1) Before committing code with secrets, (2) Security review process, (3) Pre-release security audit.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/quality-security-scan",
+      "category": "architecture",
+      "tags": [
+        "security",
+        "vulnerabilities",
+        "secrets",
+        "audit",
+        "owasp"
+      ]
+    },
+    {
+      "name": "analyze-ci-failure-logs",
+      "description": "Parse and analyze CI failure logs to identify root causes and error patterns. Use when: (1) CI builds fail and you need to understand why, (2) Analyzing test failures from GitHub Actions, (3) Identifying patterns in recurring failures.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/analyze-ci-failure-logs",
+      "category": "ci-cd",
+      "tags": [
+        "ci-cd",
+        "logs",
+        "debugging",
+        "error-analysis",
+        "root-cause"
+      ]
+    },
+    {
+      "name": "batch-pr-ci-fix",
+      "description": "Batch fix CI failures across multiple PRs and enable auto-merge. Use when: (1) Multiple PRs have CI failures, (2) Need to fix common failure patterns, (3) Want to auto-merge PRs after CI passes. Handles broken links, formatting issues, mypy errors.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/batch-pr-ci-fix",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "build-run-local",
+      "description": "Run local builds with proper environment setup matching CI pipeline. Use when: (1) Building code locally before pushing, (2) Verifying changes work before creating PR, (3) Debugging build issues in isolation.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/build-run-local",
+      "category": "ci-cd",
+      "tags": [
+        "build",
+        "local",
+        "testing",
+        "environment",
+        "verification"
+      ]
+    },
+    {
+      "name": "fix-ci-failures",
+      "description": "Diagnose and fix CI/CD failures systematically. Use when: (1) CI checks fail on PR, (2) Tests pass locally but fail in CI, (3) Need to debug CI issues.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/fix-ci-failures",
+      "category": "ci-cd",
+      "tags": [
+        "ci-cd",
+        "debugging",
+        "github-actions",
+        "troubleshooting"
+      ]
+    },
+    {
+      "name": "fix-docker-platform",
+      "description": "Fix Docker build failures caused by platform mismatches. Use when: (1) Docker builds fail with 'unsupported platform' errors, (2) pixi install fails in Docker with linux-aarch64 errors, (3) Multi-arch builds fail when pixi.toml only supports one platform.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/fix-docker-platform",
+      "category": "ci-cd",
+      "tags": [
+        "docker",
+        "ghcr",
+        "arm64",
+        "pixi",
+        "platform",
+        "ci"
+      ]
+    },
+    {
+      "name": "gh-check-ci-status",
+      "description": "Check CI/CD status of a pull request including workflow runs and test results. Use when: (1) Verifying PR checks are passing before merge, (2) Investigating CI failures, (3) Monitoring long-running CI jobs.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/gh-check-ci-status",
+      "category": "ci-cd",
+      "tags": [
+        "github",
+        "ci-cd",
+        "checks",
+        "testing",
+        "gh-cli"
+      ]
+    },
+    {
       "name": "github-actions-mojo",
       "description": "GitHub Actions CI setup for Mojo projects. Use when: (1) Setting up Mojo CI/CD, (2) Configuring pixi with GitHub Actions, (3) Running mojo test in CI. Verified with Mojo v0.25.7.",
       "version": "1.0.0",
       "source": "./plugins/ci-cd/github-actions-mojo",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "run-precommit",
+      "description": "Run pre-commit hooks locally to validate code quality before committing. Use when: (1) Before committing code, (2) Testing if CI will pass, (3) After making code changes.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/run-precommit",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "hooks",
+        "linting",
+        "formatting",
+        "code-quality"
+      ]
+    },
+    {
+      "name": "validate-workflow",
+      "description": "Validate GitHub Actions workflow files for syntax and correctness. Use when: (1) Creating or modifying workflows, (2) Workflow syntax errors occur, (3) Before committing workflow changes.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/validate-workflow",
+      "category": "ci-cd",
       "tags": [
         "github-actions",
-        "mojo",
-        "ci-cd",
-        "pixi"
+        "workflow",
+        "yaml",
+        "validation",
+        "actionlint"
+      ]
+    },
+    {
+      "name": "verify-pr-ready",
+      "description": "Verify PR is ready for merge with all requirements met. Use when: (1) Before merging a PR manually, (2) Validating PR readiness in batch operations, (3) Checking branch protection rule compliance.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/verify-pr-ready",
+      "category": "ci-cd",
+      "tags": [
+        "github",
+        "pr",
+        "merge",
+        "validation",
+        "branch-protection"
+      ]
+    },
+    {
+      "name": "fix-docker-shell-tty",
+      "description": "Fix Docker interactive shell failures caused by missing TTY flags. Use when: (1) docker compose exec or docker exec fails for interactive shells, (2) justfile shell recipe doesn't work, (3) Terminal input/output not working in containerized shells. Root cause: -T flag disables TTY when -it flags are needed.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/fix-docker-shell-tty",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "worktree-cleanup",
+      "description": "Remove merged or stale git worktrees safely. Use when: (1) PR has been merged, (2) Worktree no longer needed, (3) Freeing disk space and maintaining organization.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/worktree-cleanup",
+      "category": "debugging",
+      "tags": [
+        "git",
+        "worktree",
+        "cleanup",
+        "disk-space"
+      ]
+    },
+    {
+      "name": "worktree-create",
+      "description": "Create isolated git worktrees for parallel development. Use when: (1) Starting work on a new issue, (2) Need to work on multiple issues in parallel, (3) Want to avoid stashing/context switching overhead.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/worktree-create",
+      "category": "debugging",
+      "tags": [
+        "git",
+        "worktree",
+        "parallel-development",
+        "branching"
+      ]
+    },
+    {
+      "name": "worktree-switch",
+      "description": "Switch between git worktrees for parallel development. Use when: (1) Working on multiple issues simultaneously, (2) Need to context switch without stashing, (3) Testing different branches side-by-side.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/worktree-switch",
+      "category": "debugging",
+      "tags": [
+        "git",
+        "worktree",
+        "context-switch",
+        "parallel-development"
+      ]
+    },
+    {
+      "name": "worktree-sync",
+      "description": "Sync git worktrees with remote and main branch changes. Use when: (1) Long-running feature branches need updates, (2) Main branch has new commits, (3) Before creating/updating PR to avoid conflicts.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/worktree-sync",
+      "category": "debugging",
+      "tags": [
+        "git",
+        "worktree",
+        "sync",
+        "rebase",
+        "merge"
+      ]
+    },
+    {
+      "name": "create-review-checklist",
+      "description": "Generate customized review checklists based on type of change. Use when: (1) Starting PR review for unfamiliar change type, (2) Need specific checklist for code vs tests vs docs, (3) Large multi-type changes needing organized review.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/create-review-checklist",
+      "category": "testing",
+      "tags": [
+        "code-review",
+        "checklist",
+        "pr-review",
+        "quality"
+      ]
+    },
+    {
+      "name": "extract-test-failures",
+      "description": "Extract and summarize test failures from logs. Use when: (1) CI test run failed, need to understand failures, (2) Large test suite with many failures needs summary, (3) Categorizing failures by type (assertion, runtime, timeout).",
+      "version": "1.0.0",
+      "source": "./plugins/testing/extract-test-failures",
+      "category": "testing",
+      "tags": [
+        "testing",
+        "test-failures",
+        "log-analysis",
+        "debugging"
+      ]
+    },
+    {
+      "name": "generate-fix-suggestions",
+      "description": "Generate fix suggestions based on error patterns and best practices. Use when: (1) Test failures need concrete solutions, (2) Build errors require remediation steps, (3) Creating PR comments with suggestions.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/generate-fix-suggestions",
+      "category": "testing",
+      "tags": [
+        "testing",
+        "error-analysis",
+        "fix-suggestions",
+        "remediation"
+      ]
+    },
+    {
+      "name": "test-diff-analyzer",
+      "description": "Analyze test differences between runs to identify flaky tests. Use when: (1) Test passes locally but fails in CI, (2) Test sometimes passes, sometimes fails, (3) Need to understand test consistency issues.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/test-diff-analyzer",
+      "category": "testing",
+      "tags": [
+        "testing",
+        "flaky-tests",
+        "test-stability",
+        "debugging"
+      ]
+    },
+    {
+      "name": "claude-plugin-format",
+      "description": "Official Claude Code plugin format requirements. Use when: (1) Creating a new plugin, (2) Debugging plugin validation errors, (3) Skills or commands not appearing after install.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/claude-plugin-format",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "claude-plugin-marketplace",
+      "description": "Set up Claude Code plugin marketplaces. Use when: (1) Registering a skills marketplace, (2) Fixing plugin.json schema errors, (3) Understanding marketplace.json format, (4) Installing plugins from private repos.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/claude-plugin-marketplace",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "gh-batch-merge-by-labels",
+      "description": "Batch merge multiple PRs by label matching. Use when: (1) Multiple PRs ready for merge with same status label, (2) End-of-sprint or release batch merges, (3) Automating merge of dependent chain of PRs.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/gh-batch-merge-by-labels",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "pr",
+        "batch-merge",
+        "labels",
+        "automation"
+      ]
+    },
+    {
+      "name": "gh-create-pr-linked",
+      "description": "Create PRs properly linked to GitHub issues. Use when: (1) Creating a PR that implements a specific issue, (2) Need automatic issue linking in PR, (3) Ready to submit changes for review after completing work.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/gh-create-pr-linked",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "pr",
+        "issue-linking",
+        "gh-cli",
+        "pull-request"
+      ]
+    },
+    {
+      "name": "gh-fix-pr-feedback",
+      "description": "Address PR review feedback by making changes and replying to comments. Use when: (1) PR has open review comments needing responses, (2) Ready to implement reviewer's requested changes, (3) Need to notify reviewers of fixes.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/gh-fix-pr-feedback",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "pr",
+        "code-review",
+        "feedback",
+        "gh-cli"
+      ]
+    },
+    {
+      "name": "gh-get-review-comments",
+      "description": "Retrieve all review comments from a pull request using GitHub API. Use when: (1) Checking for unresolved review feedback, (2) Getting comment IDs for replies, (3) Analyzing reviewer feedback before fixing.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/gh-get-review-comments",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "pr",
+        "review-comments",
+        "api",
+        "gh-cli"
+      ]
+    },
+    {
+      "name": "gh-post-issue-update",
+      "description": "Post structured updates to GitHub issues for progress tracking. Use when: (1) Reporting implementation progress, (2) Documenting design decisions, (3) Posting completion summaries or findings.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/gh-post-issue-update",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "issues",
+        "documentation",
+        "progress",
+        "gh-cli"
+      ]
+    },
+    {
+      "name": "gh-read-issue-context",
+      "description": "Read context from GitHub issue including body and comments. Use when: (1) Before starting implementation work, (2) When prior context is needed, (3) Resuming work after a break and need to understand decisions made earlier.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/gh-read-issue-context",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "issues",
+        "context",
+        "implementation",
+        "gh-cli"
+      ]
+    },
+    {
+      "name": "gh-reply-review-comment",
+      "description": "Reply to PR review comments using correct GitHub API endpoint. Use when: (1) Responding to inline code review feedback, (2) Confirming fixes have been implemented, (3) Need to reply to specific review comments (not general PR comments).",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/gh-reply-review-comment",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "pr",
+        "review-comments",
+        "reply",
+        "api"
+      ]
+    },
+    {
+      "name": "retrospective-hook-integration",
+      "description": "Setup SessionEnd hooks for automatic retrospective prompts in Claude Code. TRIGGER: (1) When integrating ProjectMnemosyne marketplace with another repository, (2) When setting up /advise and /retrospective skills, (3) When configuring automatic session-end knowledge capture. Verified on Claude Code with ProjectOdyssey integration.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/retrospective-hook-integration",
+      "category": "tooling",
+      "tags": [
+        "claude-code",
+        "hooks",
+        "marketplace",
+        "retrospective",
+        "session-end",
+        "knowledge-capture"
       ]
     },
     {
@@ -26,15 +439,7 @@
       "version": "1.0.0",
       "source": "./plugins/tooling/skills-registry-commands",
       "category": "tooling",
-      "tags": [
-        "advise",
-        "retrospective",
-        "skills",
-        "registry",
-        "commands",
-        "ci-cd",
-        "validation"
-      ]
+      "tags": []
     },
     {
       "name": "grpo-external-vllm",
@@ -42,12 +447,7 @@
       "version": "1.0.0",
       "source": "./plugins/training/grpo-external-vllm",
       "category": "training",
-      "tags": [
-        "grpo",
-        "vllm",
-        "reinforcement-learning",
-        "llm-training"
-      ]
+      "tags": []
     },
     {
       "name": "spec-driven-experimentation",
@@ -55,13 +455,7 @@
       "version": "1.0.0",
       "source": "./plugins/training/spec-driven-experimentation",
       "category": "training",
-      "tags": [
-        "training",
-        "experiments",
-        "techspec",
-        "ml",
-        "ablation"
-      ]
+      "tags": []
     }
   ]
 }
