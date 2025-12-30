@@ -1,0 +1,9 @@
+{
+  "name": "spec-driven-experimentation",
+  "version": "1.0.0",
+  "description": "TECHSPEC.md pattern for structured ML experiments. Use when: (1) Planning parameter sweeps, (2) Defining success criteria before training, (3) Budget-constrained experiment design, (4) Hypothesis-driven ablation studies. Source: Sionic AI blog.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "skills": "./skills"
+}

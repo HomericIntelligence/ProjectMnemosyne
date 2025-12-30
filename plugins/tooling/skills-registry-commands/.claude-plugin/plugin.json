@@ -1,0 +1,9 @@
+{
+  "name": "skills-registry-commands",
+  "version": "1.0.0",
+  "description": "Complete skills registry system: /advise, /retrospective, documentation patterns, and CI validation. Use when: (1) Setting up team knowledge capture, (2) Adding skill search/creation to any project, (3) Implementing the Sionic AI skills pattern.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "skills": "./skills"
+}

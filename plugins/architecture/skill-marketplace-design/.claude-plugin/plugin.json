@@ -1,9 +1,0 @@
-{
-  "name": "skill-marketplace-design",
-  "version": "1.0.0",
-  "description": "Design patterns for Claude Code skill marketplaces. Use when: (1) Setting up team knowledge capture, (2) Implementing /advise and /retrospective, (3) Designing plugin validation. Meta: this skill documents its own design.",
-  "author": {
-    "name": "ML Odyssey Team"
-  },
-  "skills": "./skills"
-}
