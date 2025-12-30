@@ -8,16 +8,42 @@
   "version": "1.0.0",
   "plugins": [
     {
+      "name": "batch-pr-ci-fix",
+      "description": "Batch fix CI failures across multiple PRs and enable auto-merge. Use when: (1) Multiple PRs have CI failures, (2) Need to fix common failure patterns, (3) Want to auto-merge PRs after CI passes. Handles broken links, formatting issues, mypy errors.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/batch-pr-ci-fix",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "github-actions-mojo",
       "description": "GitHub Actions CI setup for Mojo projects. Use when: (1) Setting up Mojo CI/CD, (2) Configuring pixi with GitHub Actions, (3) Running mojo test in CI. Verified with Mojo v0.25.7.",
       "version": "1.0.0",
       "source": "./plugins/ci-cd/github-actions-mojo",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "claude-plugin-format",
+      "description": "Official Claude Code plugin format requirements. Use when: (1) Creating a new plugin, (2) Debugging plugin validation errors, (3) Skills or commands not appearing after install.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/claude-plugin-format",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "retrospective-hook-integration",
+      "description": "Setup SessionEnd hooks for automatic retrospective prompts in Claude Code. TRIGGER: (1) When integrating ProjectMnemosyne marketplace with another repository, (2) When setting up /advise and /retrospective skills, (3) When configuring automatic session-end knowledge capture. Verified on Claude Code with ProjectOdyssey integration.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/retrospective-hook-integration",
+      "category": "tooling",
       "tags": [
-        "github-actions",
-        "mojo",
-        "ci-cd",
-        "pixi"
+        "claude-code",
+        "hooks",
+        "marketplace",
+        "retrospective",
+        "session-end",
+        "knowledge-capture"
       ]
     },
     {
@@ -26,15 +52,7 @@
       "version": "1.0.0",
       "source": "./plugins/tooling/skills-registry-commands",
       "category": "tooling",
-      "tags": [
-        "advise",
-        "retrospective",
-        "skills",
-        "registry",
-        "commands",
-        "ci-cd",
-        "validation"
-      ]
+      "tags": []
     },
     {
       "name": "grpo-external-vllm",
@@ -42,12 +60,7 @@
       "version": "1.0.0",
       "source": "./plugins/training/grpo-external-vllm",
       "category": "training",
-      "tags": [
-        "grpo",
-        "vllm",
-        "reinforcement-learning",
-        "llm-training"
-      ]
+      "tags": []
     },
     {
       "name": "spec-driven-experimentation",
@@ -55,13 +68,7 @@
       "version": "1.0.0",
       "source": "./plugins/training/spec-driven-experimentation",
       "category": "training",
-      "tags": [
-        "training",
-        "experiments",
-        "techspec",
-        "ml",
-        "ablation"
-      ]
+      "tags": []
     }
   ]
 }
