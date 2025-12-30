@@ -1,0 +1,13 @@
+{
+  "name": "worktree-create",
+  "version": "1.0.0",
+  "description": "Create isolated git worktrees for parallel development. Use when: (1) Starting work on a new issue, (2) Need to work on multiple issues in parallel, (3) Want to avoid stashing/context switching overhead.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "debugging",
+  "tags": ["git", "worktree", "parallel-development", "branching"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

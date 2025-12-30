@@ -1,0 +1,13 @@
+{
+  "name": "run-precommit",
+  "version": "1.0.0",
+  "description": "Run pre-commit hooks locally to validate code quality before committing. Use when: (1) Before committing code, (2) Testing if CI will pass, (3) After making code changes.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "ci-cd",
+  "tags": ["pre-commit", "hooks", "linting", "formatting", "code-quality"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

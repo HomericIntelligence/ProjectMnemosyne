@@ -1,0 +1,13 @@
+{
+  "name": "test-diff-analyzer",
+  "version": "1.0.0",
+  "description": "Analyze test differences between runs to identify flaky tests. Use when: (1) Test passes locally but fails in CI, (2) Test sometimes passes, sometimes fails, (3) Need to understand test consistency issues.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "testing",
+  "tags": ["testing", "flaky-tests", "test-stability", "debugging"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

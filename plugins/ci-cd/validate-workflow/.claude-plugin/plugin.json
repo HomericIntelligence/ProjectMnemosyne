@@ -1,0 +1,13 @@
+{
+  "name": "validate-workflow",
+  "version": "1.0.0",
+  "description": "Validate GitHub Actions workflow files for syntax and correctness. Use when: (1) Creating or modifying workflows, (2) Workflow syntax errors occur, (3) Before committing workflow changes.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "ci-cd",
+  "tags": ["github-actions", "workflow", "yaml", "validation", "actionlint"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

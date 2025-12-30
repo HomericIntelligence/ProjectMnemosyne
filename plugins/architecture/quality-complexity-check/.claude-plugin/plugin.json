@@ -1,0 +1,13 @@
+{
+  "name": "quality-complexity-check",
+  "version": "1.0.0",
+  "description": "Analyze code complexity metrics including cyclomatic complexity and nesting depth. Use when: (1) Code review process, (2) Identifying refactoring candidates, (3) Maintaining code quality standards.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "architecture",
+  "tags": ["complexity", "cyclomatic", "refactoring", "code-quality", "metrics"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

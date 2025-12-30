@@ -1,0 +1,13 @@
+{
+  "name": "quality-security-scan",
+  "version": "1.0.0",
+  "description": "Scan code for security vulnerabilities and unsafe patterns. Use when: (1) Before committing code with secrets, (2) Security review process, (3) Pre-release security audit.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "architecture",
+  "tags": ["security", "vulnerabilities", "secrets", "audit", "owasp"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

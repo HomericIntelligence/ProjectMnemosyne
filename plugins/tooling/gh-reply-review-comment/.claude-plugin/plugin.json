@@ -1,0 +1,13 @@
+{
+  "name": "gh-reply-review-comment",
+  "version": "1.0.0",
+  "description": "Reply to PR review comments using correct GitHub API endpoint. Use when: (1) Responding to inline code review feedback, (2) Confirming fixes have been implemented, (3) Need to reply to specific review comments (not general PR comments).",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "tooling",
+  "tags": ["github", "pr", "review-comments", "reply", "api"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

@@ -1,0 +1,13 @@
+{
+  "name": "gh-create-pr-linked",
+  "version": "1.0.0",
+  "description": "Create PRs properly linked to GitHub issues. Use when: (1) Creating a PR that implements a specific issue, (2) Need automatic issue linking in PR, (3) Ready to submit changes for review after completing work.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "tooling",
+  "tags": ["github", "pr", "issue-linking", "gh-cli", "pull-request"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

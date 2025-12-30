@@ -1,0 +1,13 @@
+{
+  "name": "create-review-checklist",
+  "version": "1.0.0",
+  "description": "Generate customized review checklists based on type of change. Use when: (1) Starting PR review for unfamiliar change type, (2) Need specific checklist for code vs tests vs docs, (3) Large multi-type changes needing organized review.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "testing",
+  "tags": ["code-review", "checklist", "pr-review", "quality"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

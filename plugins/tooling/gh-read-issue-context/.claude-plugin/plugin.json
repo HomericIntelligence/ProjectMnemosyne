@@ -1,0 +1,13 @@
+{
+  "name": "gh-read-issue-context",
+  "version": "1.0.0",
+  "description": "Read context from GitHub issue including body and comments. Use when: (1) Before starting implementation work, (2) When prior context is needed, (3) Resuming work after a break and need to understand decisions made earlier.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "tooling",
+  "tags": ["github", "issues", "context", "implementation", "gh-cli"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}
