@@ -8,44 +8,60 @@
   "version": "1.0.0",
   "plugins": [
     {
-      "name": "grpo-external-vllm",
-      "description": "GRPO training with external vLLM server. Use when: (1) Running vLLM on separate GPUs, (2) Encountering vllm_skip_weight_sync errors, (3) OpenAI API parsing issues.",
-      "version": "1.0.0",
-      "source": "./plugins/training/grpo-external-vllm",
-      "category": "training",
-      "tags": ["grpo", "vllm", "reinforcement-learning", "llm-training"]
-    },
-    {
-      "name": "mojo-simd-errors",
-      "description": "Debug SIMD vectorization errors in Mojo. Use when: (1) SIMD comparison operators fail, (2) Conditional selection with masks, (3) Vectorized tensor operations.",
-      "version": "1.0.0",
-      "source": "./plugins/debugging/mojo-simd-errors",
-      "category": "debugging",
-      "tags": ["mojo", "simd", "vectorization", "tensor"]
-    },
-    {
       "name": "github-actions-mojo",
-      "description": "GitHub Actions CI setup for Mojo projects. Use when: (1) Setting up Mojo CI/CD, (2) Configuring pixi with GitHub Actions, (3) Running mojo test in CI.",
+      "description": "GitHub Actions CI setup for Mojo projects. Use when: (1) Setting up Mojo CI/CD, (2) Configuring pixi with GitHub Actions, (3) Running mojo test in CI. Verified with Mojo v0.25.7.",
       "version": "1.0.0",
       "source": "./plugins/ci-cd/github-actions-mojo",
       "category": "ci-cd",
-      "tags": ["github-actions", "mojo", "ci-cd", "pixi"]
+      "tags": [
+        "github-actions",
+        "mojo",
+        "ci-cd",
+        "pixi"
+      ]
     },
     {
-      "name": "layerwise-gradient-check",
-      "description": "Layerwise gradient checking for neural network testing. Use when: (1) Validating backward pass implementations, (2) Debugging gradient computation, (3) TDD for neural network layers.",
+      "name": "skills-registry-commands",
+      "description": "Complete skills registry system: /advise, /retrospective, documentation patterns, and CI validation. Use when: (1) Setting up team knowledge capture, (2) Adding skill search/creation to any project, (3) Implementing the Sionic AI skills pattern.",
       "version": "1.0.0",
-      "source": "./plugins/testing/layerwise-gradient-check",
-      "category": "testing",
-      "tags": ["testing", "gradients", "neural-network", "tdd"]
+      "source": "./plugins/tooling/skills-registry-commands",
+      "category": "tooling",
+      "tags": [
+        "advise",
+        "retrospective",
+        "skills",
+        "registry",
+        "commands",
+        "ci-cd",
+        "validation"
+      ]
     },
     {
-      "name": "skill-marketplace-design",
-      "description": "Design patterns for Claude Code skill marketplaces. Use when: (1) Setting up team knowledge capture, (2) Implementing /advise and /retrospective, (3) Designing plugin validation.",
+      "name": "grpo-external-vllm",
+      "description": "GRPO training with external vLLM server. Use when: (1) Running vLLM on separate GPUs, (2) Encountering vllm_skip_weight_sync errors, (3) OpenAI API parsing issues. Verified on gemma-3-12b-it.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/skill-marketplace-design",
-      "category": "architecture",
-      "tags": ["marketplace", "skills", "claude-code", "knowledge-management"]
+      "source": "./plugins/training/grpo-external-vllm",
+      "category": "training",
+      "tags": [
+        "grpo",
+        "vllm",
+        "reinforcement-learning",
+        "llm-training"
+      ]
+    },
+    {
+      "name": "spec-driven-experimentation",
+      "description": "TECHSPEC.md pattern for structured ML experiments. Use when: (1) Planning parameter sweeps, (2) Defining success criteria before training, (3) Budget-constrained experiment design, (4) Hypothesis-driven ablation studies. Source: Sionic AI blog.",
+      "version": "1.0.0",
+      "source": "./plugins/training/spec-driven-experimentation",
+      "category": "training",
+      "tags": [
+        "training",
+        "experiments",
+        "techspec",
+        "ml",
+        "ablation"
+      ]
     }
   ]
 }

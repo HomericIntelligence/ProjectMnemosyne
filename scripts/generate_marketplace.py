@@ -3,14 +3,14 @@
 Generate marketplace.json index from all plugins.
 
 This script scans the plugins/ directory and generates a searchable
-index file at marketplace.json.
+index file at .claude-plugin/marketplace.json.
 
 Usage:
     python3 scripts/generate_marketplace.py [plugins_dir] [output_file]
 
     Defaults:
         plugins_dir: plugins/
-        output_file: marketplace.json
+        output_file: .claude-plugin/marketplace.json
 """
 
 import json
@@ -74,25 +74,29 @@ def generate_marketplace(plugins_dir: Path) -> Dict[str, Any]:
     for plugin_path in plugins:
         metadata = load_plugin_metadata(plugin_path)
         if metadata:
-            # Create clean entry for index
+            # Create clean entry for index (official format uses 'source')
             entry = {
                 "name": metadata.get("name", plugin_path.name),
-                "category": metadata.get("category", "unknown"),
                 "description": metadata.get("description", ""),
-                "tags": metadata.get("tags", []),
-                "path": str(plugin_path.relative_to(plugins_dir.parent)),
-                "date": metadata.get("date", ""),
                 "version": metadata.get("version", "1.0.0"),
+                "source": "./" + str(plugin_path.relative_to(plugins_dir.parent)),
+                "category": metadata.get("category", "unknown"),
+                "tags": metadata.get("tags", []),
             }
             plugin_entries.append(entry)
 
     # Sort by category then name
     plugin_entries.sort(key=lambda x: (x["category"], x["name"]))
 
+    # Official marketplace format
     marketplace = {
+        "name": "ProjectMnemosyne",
+        "owner": {
+            "name": "HomericIntelligence",
+            "url": "https://github.com/HomericIntelligence"
+        },
+        "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
         "version": "1.0.0",
-        "updated": datetime.now(timezone.utc).isoformat(),
-        "plugin_count": len(plugin_entries),
         "plugins": plugin_entries,
     }
 
@@ -102,7 +106,7 @@ def generate_marketplace(plugins_dir: Path) -> Dict[str, Any]:
 def main() -> int:
     """Main entry point."""
     plugins_dir_arg = sys.argv[1] if len(sys.argv) > 1 else "plugins"
-    output_file_arg = sys.argv[2] if len(sys.argv) > 2 else "marketplace.json"
+    output_file_arg = sys.argv[2] if len(sys.argv) > 2 else ".claude-plugin/marketplace.json"
 
     plugins_dir = Path(plugins_dir_arg)
     output_file = Path(output_file_arg)
@@ -118,8 +122,7 @@ def main() -> int:
         json.dump(marketplace, f, indent=2)
 
     print(f"Generated {output_file}")
-    print(f"  Plugins indexed: {marketplace['plugin_count']}")
-    print(f"  Updated: {marketplace['updated']}")
+    print(f"  Plugins indexed: {len(marketplace['plugins'])}")
 
     return 0
 
