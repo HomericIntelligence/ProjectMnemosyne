@@ -1,0 +1,13 @@
+{
+  "name": "ai-blog-generator",
+  "version": "1.0.0",
+  "description": "Generate AI-authored blog posts from git commit history. Use when: (1) Filling gaps in project blog history, (2) Need to document past work retroactively, (3) Creating development blog posts based on actual commits, (4) Backfilling documentation for dates without posts.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "tooling",
+  "tags": ["blog", "documentation", "git-history", "ai-generated", "backfill", "markdown"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}
