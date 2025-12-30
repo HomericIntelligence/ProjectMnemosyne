@@ -3,11 +3,13 @@
 Validate plugin structure and content in the ProjectMnemosyne marketplace.
 
 This script validates:
-- plugin.json exists and has required fields
+- plugin.json exists and has required fields (name, version, description)
 - SKILL.md exists and has required sections
 - Failed Attempts section is present (required)
 - Description is specific (20+ chars)
-- Category is valid (one of 8 approved)
+- Category is valid if present (one of 8 approved)
+
+Note: category and date are optional - category is derived from directory structure.
 
 Usage:
     python3 scripts/validate_plugins.py [plugins_dir]
@@ -38,8 +40,9 @@ VALID_CATEGORIES = {
     "testing",
 }
 
-# Required plugin.json fields
-REQUIRED_PLUGIN_FIELDS = {"name", "version", "description", "category", "date", "tags"}
+# Required plugin.json fields (per official Claude Code plugin docs)
+# Note: category is derived from directory structure, date is optional metadata
+REQUIRED_PLUGIN_FIELDS = {"name", "version", "description"}
 
 
 @dataclass
