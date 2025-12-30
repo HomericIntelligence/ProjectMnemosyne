@@ -65,6 +65,27 @@ Use a small learning rate
 RoPE theta=100 works well for short sequences. d_proj=64+ prevents information loss. ksim=4 optimal with 16-bucket token distribution.
 ```
 
+### 3.5. Include Environment Details in Overview
+
+Add environment context for reproducibility:
+
+```markdown
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | YYYY-MM-DD |
+| Objective | [What was the goal] |
+| Outcome | [What happened] |
+| Hardware | NVIDIA A100-SXM4-80GB |
+| Software | PyTorch 2.0.1, CUDA 11.8 |
+| Dataset | 100K train / 10K eval |
+| Runtime | 24 GPU hours |
+| Source | [Blog/paper/issue link] |
+```
+
+**Why**: Reproducibility requires environment context. "Works on A100-80GB" might fail on V100-16GB due to memory constraints.
+
 ### 4. Make Configs Copy-Paste Ready
 
 ```yaml
@@ -80,12 +101,46 @@ dtype: bfloat16
 
 ### 5. Include Error-to-Solution Mappings
 
+Use this structured format for documenting errors:
+
 ```markdown
-## Issue: 404 `/update_flattened_params/` Error
-- **Symptom:** 404 error in vLLM server logs
-- **Cause:** Weight sync API called even when flag is true
-- **Solution:** Add logic check for flag in rollout_mixin.py
-- **Prevention:** Always include cleanup logic in distributed scripts
+## Error: [Error Title/Message]
+
+**Symptom**: [What the user sees/experiences]
+**Cause**: [Root cause explanation]
+**Solution**: [Step-by-step fix]
+**Prevention**: [How to avoid in future]
+**Related Errors**: [Links to similar issues]
+```
+
+**Example:**
+
+```markdown
+## Error: RuntimeError - RoPE freqs dimension mismatch
+
+**Symptom**:
+```
+RuntimeError: The size of tensor a (32) must match the size of tensor b (16)
+at non-singleton dimension 3
+```
+
+**Cause**: Standard RoPE implementations output freqs with shape `[seq_len, head_dim/2]`, but attention layer expects `[seq_len, head_dim]` for broadcasting.
+
+**Solution**:
+```python
+# In apply_rotary_pos_emb function
+freqs = torch.cat((freqs, freqs), dim=-1)  # Duplicate to match head dimension
+freqs = freqs.unsqueeze(0).unsqueeze(0)    # Add batch and head dims [1, 1, seq, dim]
+```
+
+**Prevention**:
+- Always verify RoPE freqs shape before attention computation
+- Add assertion: `assert freqs.shape[-1] == head_dim`
+
+**Related Errors**:
+- Attention mask broadcasting errors
+- Position embedding shape mismatches
+```
 ```
 
 ## Failed Attempts

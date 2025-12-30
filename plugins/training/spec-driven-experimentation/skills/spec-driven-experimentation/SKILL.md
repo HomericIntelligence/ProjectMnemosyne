@@ -115,7 +115,10 @@ After experiments, `/retrospective` saves findings with TECHSPEC reference:
 
 | Attempt | Why Failed | Lesson |
 |---------|-----------|--------|
-| No upfront success criteria | Couldn't tell if 75% was good or bad | Define best/realistic/fail thresholds |
+| Tiny model (32d-2L, 77K params) | Flatlined at ~0% accuracy | Minimum viable for addition is ~253K params |
+| Standard RoPE implementation | RuntimeError: dimension mismatch [32] vs [16] | Need `torch.cat((freqs, freqs), dim=-1)` to duplicate freqs |
+| d_proj=32 in attention | Performance drop of 8% | Use d_proj=64+ to avoid information bottleneck |
+| No upfront success criteria | Couldn't tell if 75% was good or bad | Define best/realistic/fail thresholds in TECHSPEC |
 | Unscoped parameter ranges | 200+ experiments, ran out of budget | Prioritize parameters, set max experiments |
 | Missing context for Claude | Claude didn't know why experiments mattered | Add "Context for Claude" section |
 | Running all params at once | Wasted compute on low-priority sweeps | Priority column + staged execution |
@@ -153,17 +156,134 @@ avoid:
 
 ## Real Example: Addition Task
 
-From the blog:
+Complete reference from Sionic AI blog with verified results and configurations.
 
-**Phase 1 Baselines:**
-- Upper bound (3.18M): 91.5% exact match
-- Minimum viable question: How small can we go?
-- Scaling law discovered: 40x params = 98x improvement
+### Task Specification
 
-**Phase 2 Width/Depth Ablation:**
-- Hypothesis: "Addition is local, doesn't need depth"
-- Generated: 6 width/depth pairs at identical param counts
-- Result: Wide-shallow confirmed better for positional ops
+| Property | Value |
+|----------|-------|
+| Task | Integer addition (0-999 + 0-999) |
+| Tokenization | Base-100 (each digit 0-99 is one token) |
+| Sequence length | 32 tokens max |
+| Dataset | 100K train / 10K eval |
+| Hardware | NVIDIA A100-SXM4-80GB |
+| Runtime | 24 GPU hours total (Phase 1 + 2) |
+
+### Phase 1: Baseline Size Scaling
+
+**Objective**: Determine minimum viable model size for integer addition.
+
+**TECHSPEC.md Excerpt:**
+```markdown
+## Hypotheses
+1. Smaller models can learn addition (local operation)
+2. Performance degrades gracefully with param count
+3. Minimum viable: ~250K params
+
+## Parameter Grid
+| Name | d_model | depth | params | Priority |
+|------|---------|-------|--------|----------|
+| Upper | 256 | 6 | 3.18M | Baseline |
+| Middle | 192 | 4 | 1.4M | High |
+| Lower | 64 | 3 | 253K | High |
+| Tiny | 32 | 2 | 77K | Test floor |
+
+## Success Criteria
+- Best case: >95% exact match
+- Minimum viable: >70% exact match
+- Failure: <50% exact match
+```
+
+**Phase 1 Results:**
+
+| Model | d_model | depth | Params | Exact Match | Outcome |
+|-------|---------|-------|--------|-------------|---------|
+| Upper | 256 | 6 | 3.18M | **91.5%** | Best case achieved |
+| Middle | 192 | 4 | 1.4M | **79.31%** | Above minimum viable |
+| Lower | 64 | 3 | 253K | **37.6%** | Below threshold |
+| Tiny | 32 | 2 | 77K | **~0%** | Complete failure |
+
+**Key Finding**: 40x parameter reduction (3.18M → 77K) = 98x performance drop (91.5% → ~0%). Minimum viable size is ~250K params.
+
+### Phase 2: Width vs Depth Ablation
+
+**Objective**: Test hypothesis that addition (positional operation) benefits more from width than depth.
+
+**TECHSPEC.md Excerpt:**
+```markdown
+## Hypothesis
+Addition is a local, positional operation. Wide-shallow models should
+outperform narrow-deep at identical parameter counts.
+
+## Parameter-Matched Pairs
+Target: ~1M params each
+| Config | d_model | depth | Params | Rationale |
+|--------|---------|-------|--------|-----------|
+| Wide-shallow | 512 | 2 | ~1.05M | Test max width |
+| Narrow-deep | 128 | 8 | ~1.02M | Test max depth |
+| Balanced | 256 | 4 | ~1.31M | Control |
+
+## Prediction
+Wide-shallow > Balanced > Narrow-deep for positional ops
+```
+
+**Phase 2 Results:**
+
+| Config | d_model | depth | Params | Exact Match | Hypothesis |
+|--------|---------|-------|--------|-------------|------------|
+| Wide-shallow | 512 | 2 | 1.05M | **87.2%** | ✓ Confirmed |
+| Balanced | 256 | 4 | 1.31M | **79.31%** | ✓ Middle |
+| Narrow-deep | 128 | 8 | 1.02M | **71.8%** | ✓ Weakest |
+
+**Key Finding**: Width matters more than depth for positional operations. 512d-2L outperformed 128d-8L by 15.4 percentage points at identical parameter budget.
+
+### Critical Implementation Details
+
+**RoPE Configuration** (from blog debugging section):
+```yaml
+# For sequences <32 tokens
+rope_theta: 100  # Lower than default 10000
+rope_scaling: null
+
+# Bug fix required:
+# Standard RoPE outputs [seq_len, head_dim/2]
+# Attention expects [seq_len, head_dim]
+# Solution in apply_rotary_pos_emb:
+freqs = torch.cat((freqs, freqs), dim=-1)  # Duplicate to match head_dim
+freqs = freqs.unsqueeze(0).unsqueeze(0)    # [1, 1, seq, dim]
+```
+
+**Training Configuration**:
+```yaml
+batch_size: 512  # Higher for small models, 256 for 3M+
+learning_rate: 1e-4
+max_steps: 10000
+eval_every: 500
+early_stopping: true  # Stop if eval loss plateaus for 3 evals
+```
+
+**Tokenization** (Base-100):
+```python
+# Each digit 0-99 becomes one token
+# Example: 123 + 456 = 579
+# Tokens: [1, 23, PAD, +, 4, 56, PAD, =, 5, 79, PAD]
+# Max seq: 32 tokens (handles 999 + 999 = 1998)
+```
+
+### Scaling Laws Observed
+
+```
+Parameter Count → Exact Match Accuracy
+3.18M → 91.5%
+1.4M  → 79.31%
+1.05M → 87.2% (wide-shallow advantage)
+253K  → 37.6%
+77K   → ~0%
+
+Inflection point: ~250K params (where performance crosses 50%)
+Minimum viable: ~1M params (for >70% accuracy)
+Production target: ~3M params (for >90% accuracy)
+```
 
 ## References
 

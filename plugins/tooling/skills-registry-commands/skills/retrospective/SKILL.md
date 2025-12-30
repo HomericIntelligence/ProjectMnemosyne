@@ -142,6 +142,17 @@ Before creating the skill, verify:
 - [ ] Parameters are copy-paste ready
 - [ ] Environment/versions are documented
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson Learned |
+|---------|-----------|----------------|
+| Auto-trigger on every session | User fatigue from constant prompts | Use >10 messages threshold |
+| Generic skill names | Hard to find later via /advise | Enforce kebab-case with category prefix |
+| Optional Failed Attempts section | Most valuable content missing | Make failures REQUIRED in template |
+| Single references/notes.md | Information overload in one file | Split into experiment-log + troubleshooting |
+| No environment capture | "Works on my machine" problems | Add environment table to Overview section |
+| Committing without validation | Bad plugins entered registry | Run validate_plugins.py before commit |
+
 ## References
 
 - Source: https://huggingface.co/blog/sionic-ai/claude-code-skills-training

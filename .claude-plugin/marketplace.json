@@ -200,6 +200,21 @@
       "tags": []
     },
     {
+      "name": "fix-randn-seed-bug",
+      "description": "Fix unused seed parameter in random number generation functions. Use when: (1) Tests using seeded random inputs produce non-reproducible results, (2) randn/random functions declare seed parameter but generate different values each call, (3) assert_almost_equal fails with wildly different values for same-seeded inputs.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/fix-randn-seed-bug",
+      "category": "debugging",
+      "tags": [
+        "random",
+        "seed",
+        "reproducibility",
+        "testing",
+        "mojo",
+        "prng"
+      ]
+    },
+    {
       "name": "worktree-cleanup",
       "description": "Remove merged or stale git worktrees safely. Use when: (1) PR has been merged, (2) Worktree no longer needed, (3) Freeing disk space and maintaining organization.",
       "version": "1.0.0",
