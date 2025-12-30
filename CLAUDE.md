@@ -57,7 +57,7 @@ Save learnings after a session (auto-creates PR).
 6. Commit and push
 7. Create PR with summary
 
-**Auto-trigger**: SessionEnd hook prompts retrospective on `/exit` and `/clear`.
+**Auto-trigger**: UserPromptSubmit hook reminds about retrospective when you type session-ending keywords.
 
 ## Plugin Standards
 
@@ -116,9 +116,14 @@ plugins/<category>/<name>/
 
 The project uses Claude Code hooks for automatic retrospective prompts.
 
-**SessionEnd Hook**: Triggers on `/exit` and `/clear` to prompt knowledge capture.
+**Important**: SessionEnd hooks CANNOT display messages to users (Claude Code limitation).
+This project uses UserPromptSubmit hooks instead.
 
-See `.claude/settings.json` for configuration.
+**UserPromptSubmit Hook**: Triggers when user types session-ending keywords (exit, quit,
+clear, done, finished, etc.) to remind about `/retrospective`.
+
+See `.claude/settings.json` for configuration and
+`plugins/tooling/skills-registry-commands/hooks/settings.json.example` for reference.
 
 ## Contributing a Skill
 
