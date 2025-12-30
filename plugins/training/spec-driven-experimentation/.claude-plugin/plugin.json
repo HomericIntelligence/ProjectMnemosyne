@@ -5,6 +5,5 @@
   "author": {
     "name": "ML Odyssey Team"
   },
-  "skills": "./skills",
-  "tags": ["training", "experiments", "techspec", "ml", "ablation"]
+  "skills": "./skills"
 }

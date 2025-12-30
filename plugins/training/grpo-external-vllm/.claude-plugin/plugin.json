@@ -5,6 +5,5 @@
   "author": {
     "name": "ML Odyssey Team"
   },
-  "skills": "./skills",
-  "tags": ["grpo", "vllm", "reinforcement-learning", "llm-training"]
+  "skills": "./skills"
 }
