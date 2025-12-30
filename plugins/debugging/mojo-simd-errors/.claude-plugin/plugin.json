@@ -1,9 +1,0 @@
-{
-  "name": "mojo-simd-errors",
-  "version": "1.0.0",
-  "description": "Debug SIMD vectorization errors in Mojo. Use when: (1) SIMD comparison operators fail, (2) Conditional selection with masks, (3) Vectorized tensor operations. Verified on Mojo v0.25.7+.",
-  "author": {
-    "name": "ML Odyssey Team"
-  },
-  "skills": "./skills"
-}

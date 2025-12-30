@@ -1,9 +1,0 @@
-{
-  "name": "layerwise-gradient-check",
-  "version": "1.0.0",
-  "description": "Layerwise gradient checking for neural network testing. Use when: (1) Validating backward pass implementations, (2) Debugging gradient computation, (3) TDD for neural network layers. Verified with Mojo tensor operations.",
-  "author": {
-    "name": "ML Odyssey Team"
-  },
-  "skills": "./skills"
-}
