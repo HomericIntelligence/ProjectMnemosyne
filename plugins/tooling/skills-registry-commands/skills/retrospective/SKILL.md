@@ -1,8 +1,6 @@
 ---
 name: retrospective
-description: "Auto-save session learnings as a new skill"
-category: tooling
-invokedBy: user
+description: Save session learnings as a new skill plugin. Use after experiments, debugging sessions, or when you want to preserve team knowledge.
 ---
 
 # /retrospective

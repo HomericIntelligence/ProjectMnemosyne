@@ -1,8 +1,6 @@
 ---
 name: advise
-description: "Search team knowledge before starting work"
-category: tooling
-invokedBy: user
+description: Search team knowledge before starting work. Use when starting experiments, debugging unfamiliar errors, or before implementing features with unknowns.
 ---
 
 # /advise

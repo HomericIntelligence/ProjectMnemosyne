@@ -1,9 +1,6 @@
 ---
 name: validation-workflow
-description: "GitHub Actions CI for validating skill plugins"
-category: tooling
-source: https://huggingface.co/blog/sionic-ai/claude-code-skills-training
-date: 2025-12-29
+description: GitHub Actions CI for validating skill plugins. Use when setting up CI/CD for a skills marketplace or enforcing plugin quality.
 ---
 
 # Plugin Validation Workflow

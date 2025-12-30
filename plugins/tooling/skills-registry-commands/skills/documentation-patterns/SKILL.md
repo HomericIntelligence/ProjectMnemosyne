@@ -1,9 +1,6 @@
 ---
 name: documentation-patterns
-description: "Best practices for writing effective skill documentation"
-category: tooling
-source: https://huggingface.co/blog/sionic-ai/claude-code-skills-training
-date: 2025-12-29
+description: Best practices for writing effective skill documentation. Use when creating new skills, improving skill discoverability, or documenting failed attempts.
 ---
 
 # Skill Documentation Patterns
