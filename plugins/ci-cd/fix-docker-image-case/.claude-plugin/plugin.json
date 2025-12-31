@@ -1,5 +1,10 @@
 {
   "name": "fix-docker-image-case",
   "version": "1.0.0",
-  "description": "Fix Docker SBOM and workflow failures caused by mixed-case image names in GitHub Actions. Use when: SBOM generation fails with 'could not parse reference' errors, Docker workflows fail with case-related parsing issues."
+  "description": "Fix Docker SBOM and workflow failures caused by mixed-case image names in GitHub Actions. Use when: SBOM generation fails with 'could not parse reference' errors, Docker workflows fail with case-related parsing issues.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "skills": "./skills",
+  "tags": ["docker", "sbom", "case-sensitivity", "github-actions", "ci-cd"]
 }

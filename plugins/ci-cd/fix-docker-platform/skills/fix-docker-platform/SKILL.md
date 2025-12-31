@@ -124,6 +124,11 @@ gh run rerun <run-id> --failed
 gh pr checks <pr-number>
 ```
 
+## Related Docker Skills
+
+- **fix-docker-image-case** - Fix SBOM failures from mixed-case image names
+- **fix-docker-shell-tty** - Fix interactive shell failures with TTY flags
+
 ## Related
 
 - PR #2978 in ProjectOdyssey - Implementation of this fix

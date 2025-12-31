@@ -1,9 +1,11 @@
 {
   "name": "skills-registry-commands",
   "version": "1.0.0",
-  "description": "Complete skills registry system: /advise, /retrospective, documentation patterns, and CI validation. Use when: (1) Setting up team knowledge capture, (2) Adding skill search/creation to any project, (3) Implementing the Sionic AI skills pattern.",
+  "description": "Complete skills registry system with 4 components: (1) /advise command - search skills before starting work, (2) /retrospective command - capture session learnings as new skills, (3) documentation-patterns skill - how to write effective skill docs, (4) validation-workflow skill - CI/CD for plugin validation. Use when setting up team knowledge capture or implementing the Sionic AI skills pattern.",
   "author": {
     "name": "ML Odyssey Team"
   },
-  "skills": "./skills"
+  "commands": "./commands",
+  "skills": "./skills",
+  "tags": ["skills", "advise", "retrospective", "knowledge-capture", "team-learning", "documentation", "ci-cd"]
 }

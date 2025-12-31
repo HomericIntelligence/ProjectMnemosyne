@@ -1,5 +1,10 @@
 {
   "name": "verify-issue-before-work",
   "version": "1.0.0",
-  "description": "Verify GitHub issue state and existing implementation before starting work to avoid duplicate effort. Use when: starting work on issues, resuming after breaks, taking over from other sessions."
+  "description": "Verify GitHub issue state and existing implementation before starting work to avoid duplicate effort. Use when: starting work on issues, resuming after breaks, taking over from other sessions.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "skills": "./skills",
+  "tags": ["github", "issues", "workflow", "verification", "duplicate-prevention"]
 }

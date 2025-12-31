@@ -1,0 +1,10 @@
+{
+  "name": "fix-docker-shell-tty",
+  "version": "1.0.0",
+  "description": "Fix Docker interactive shell failures caused by missing TTY flags. Use when: (1) docker compose exec or docker exec fails for interactive shells, (2) justfile shell recipe doesn't work, (3) Terminal input/output not working in containerized shells. Root cause: -T flag disables TTY when -it flags are needed.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "skills": "./skills",
+  "tags": ["docker", "shell", "tty", "interactive", "container", "troubleshooting"]
+}
