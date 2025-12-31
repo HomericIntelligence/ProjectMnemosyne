@@ -1,3 +1,11 @@
+---
+name: fix-placeholder-code-ci
+description: "Fix CI failures caused by partially commented placeholder code and dtype migration assertion mismatches"
+category: testing
+source: ProjectOdyssey
+date: 2025-12-31
+---
+
 # Fix Placeholder Code CI Failures
 
 ## Overview
