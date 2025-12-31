@@ -1,0 +1,13 @@
+{
+  "name": "judge-system-extension",
+  "version": "1.0.0",
+  "description": "Patterns for extending AI evaluation/judge systems with consensus retry, cleanup evaluation, cross-tier analysis, and container orchestration. Use when: (1) Adding new evaluation capabilities to a judge system, (2) Implementing consensus-based scoring with disagreement handling, (3) Creating container-based isolation for evaluators, (4) Adding cross-tier statistical analysis.",
+  "author": {
+    "name": "ProjectScylla Team"
+  },
+  "date": "2025-12-31",
+  "category": "evaluation",
+  "tags": ["judge", "evaluation", "consensus", "docker", "metrics", "scoring", "container-orchestration"],
+  "skills": "./skills",
+  "source_project": "ProjectScylla"
+}
