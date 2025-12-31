@@ -1,0 +1,13 @@
+{
+  "name": "git-worktree-workflow",
+  "version": "1.0.0",
+  "description": "Complete git worktree workflow for parallel development. Contains 4 sub-skills: (1) create - create isolated worktrees for new issues, (2) switch - navigate between worktrees, (3) sync - keep worktrees up-to-date with main, (4) cleanup - remove worktrees after PR merge. Use when working on multiple issues in parallel without stashing.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "tooling",
+  "tags": ["git", "worktree", "parallel-development", "branching", "workflow"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

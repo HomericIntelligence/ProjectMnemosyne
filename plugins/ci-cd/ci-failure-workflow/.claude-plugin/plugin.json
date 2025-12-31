@@ -1,0 +1,13 @@
+{
+  "name": "ci-failure-workflow",
+  "version": "1.0.0",
+  "description": "Complete CI failure debugging workflow. Contains 2 sub-skills: (1) analyze - parse CI logs to identify root causes and error patterns, (2) fix - systematic workflow to reproduce, fix, and verify CI issues. Use when CI checks fail on PR.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "ci-cd",
+  "tags": ["ci-cd", "debugging", "github-actions", "troubleshooting", "logs"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}

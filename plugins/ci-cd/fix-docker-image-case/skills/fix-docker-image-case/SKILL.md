@@ -145,3 +145,8 @@ env:
 1. **Audit all Docker workflows** for `github.repository` usage
 2. **Search for image references**: `grep -r "IMAGE_NAME" .github/workflows/`
 3. **Add validation**: Test lowercase conversion in workflow
+
+## Related Docker Skills
+
+- **fix-docker-platform** - Fix Docker build failures from platform mismatches
+- **fix-docker-shell-tty** - Fix interactive shell failures with TTY flags

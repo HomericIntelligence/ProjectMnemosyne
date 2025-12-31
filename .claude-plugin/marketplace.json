@@ -64,26 +64,19 @@
       ]
     },
     {
-      "name": "analyze-ci-failure-logs",
-      "description": "Parse and analyze CI failure logs to identify root causes and error patterns. Use when: (1) CI builds fail and you need to understand why, (2) Analyzing test failures from GitHub Actions, (3) Identifying patterns in recurring failures.",
-      "version": "1.0.0",
-      "source": "./plugins/ci-cd/analyze-ci-failure-logs",
-      "category": "ci-cd",
-      "tags": [
-        "ci-cd",
-        "logs",
-        "debugging",
-        "error-analysis",
-        "root-cause"
-      ]
-    },
-    {
       "name": "batch-pr-ci-fix",
       "description": "Batch fix CI failures across multiple PRs and enable auto-merge. Use when: (1) Multiple PRs have CI failures, (2) Need to fix common failure patterns, (3) Want to auto-merge PRs after CI passes. Handles broken links, formatting issues, mypy errors.",
       "version": "1.0.0",
       "source": "./plugins/ci-cd/batch-pr-ci-fix",
       "category": "ci-cd",
-      "tags": []
+      "tags": [
+        "ci-cd",
+        "batch",
+        "automation",
+        "github",
+        "pr",
+        "auto-merge"
+      ]
     },
     {
       "name": "build-run-local",
@@ -100,16 +93,17 @@
       ]
     },
     {
-      "name": "fix-ci-failures",
-      "description": "Diagnose and fix CI/CD failures systematically. Use when: (1) CI checks fail on PR, (2) Tests pass locally but fail in CI, (3) Need to debug CI issues.",
+      "name": "ci-failure-workflow",
+      "description": "Complete CI failure debugging workflow. Contains 2 sub-skills: (1) analyze - parse CI logs to identify root causes and error patterns, (2) fix - systematic workflow to reproduce, fix, and verify CI issues. Use when CI checks fail on PR.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/fix-ci-failures",
+      "source": "./plugins/ci-cd/ci-failure-workflow",
       "category": "ci-cd",
       "tags": [
         "ci-cd",
         "debugging",
         "github-actions",
-        "troubleshooting"
+        "troubleshooting",
+        "logs"
       ]
     },
     {
@@ -118,7 +112,13 @@
       "version": "1.0.0",
       "source": "./plugins/ci-cd/fix-docker-image-case",
       "category": "ci-cd",
-      "tags": []
+      "tags": [
+        "docker",
+        "sbom",
+        "case-sensitivity",
+        "github-actions",
+        "ci-cd"
+      ]
     },
     {
       "name": "fix-docker-platform",
@@ -133,6 +133,21 @@
         "pixi",
         "platform",
         "ci"
+      ]
+    },
+    {
+      "name": "fix-docker-shell-tty",
+      "description": "Fix Docker interactive shell failures caused by missing TTY flags. Use when: (1) docker compose exec or docker exec fails for interactive shells, (2) justfile shell recipe doesn't work, (3) Terminal input/output not working in containerized shells. Root cause: -T flag disables TTY when -it flags are needed.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/fix-docker-shell-tty",
+      "category": "ci-cd",
+      "tags": [
+        "docker",
+        "shell",
+        "tty",
+        "interactive",
+        "container",
+        "troubleshooting"
       ]
     },
     {
@@ -155,7 +170,13 @@
       "version": "1.0.0",
       "source": "./plugins/ci-cd/github-actions-mojo",
       "category": "ci-cd",
-      "tags": []
+      "tags": [
+        "mojo",
+        "github-actions",
+        "ci-cd",
+        "pixi",
+        "testing"
+      ]
     },
     {
       "name": "run-precommit",
@@ -200,20 +221,18 @@
       ]
     },
     {
-      "name": "fix-docker-shell-tty",
-      "description": "Fix Docker interactive shell failures caused by missing TTY flags. Use when: (1) docker compose exec or docker exec fails for interactive shells, (2) justfile shell recipe doesn't work, (3) Terminal input/output not working in containerized shells. Root cause: -T flag disables TTY when -it flags are needed.",
-      "version": "1.0.0",
-      "source": "./plugins/debugging/fix-docker-shell-tty",
-      "category": "debugging",
-      "tags": []
-    },
-    {
       "name": "fix-implicitlycopyable-removal",
       "description": "Systematic approach to removing ImplicitlyCopyable trait from Mojo structs and fixing resulting compilation errors. Use when: removing ImplicitlyCopyable from structs with List/Dict/String fields, fixing 'cannot implicitly copy' errors, debugging memory corruption from bitwise copies.",
       "version": "1.0.0",
       "source": "./plugins/debugging/fix-implicitlycopyable-removal",
       "category": "debugging",
-      "tags": []
+      "tags": [
+        "mojo",
+        "memory",
+        "compilation",
+        "trait",
+        "debugging"
+      ]
     },
     {
       "name": "fix-randn-seed-bug",
@@ -228,59 +247,6 @@
         "testing",
         "mojo",
         "prng"
-      ]
-    },
-    {
-      "name": "worktree-cleanup",
-      "description": "Remove merged or stale git worktrees safely. Use when: (1) PR has been merged, (2) Worktree no longer needed, (3) Freeing disk space and maintaining organization.",
-      "version": "1.0.0",
-      "source": "./plugins/debugging/worktree-cleanup",
-      "category": "debugging",
-      "tags": [
-        "git",
-        "worktree",
-        "cleanup",
-        "disk-space"
-      ]
-    },
-    {
-      "name": "worktree-create",
-      "description": "Create isolated git worktrees for parallel development. Use when: (1) Starting work on a new issue, (2) Need to work on multiple issues in parallel, (3) Want to avoid stashing/context switching overhead.",
-      "version": "1.0.0",
-      "source": "./plugins/debugging/worktree-create",
-      "category": "debugging",
-      "tags": [
-        "git",
-        "worktree",
-        "parallel-development",
-        "branching"
-      ]
-    },
-    {
-      "name": "worktree-switch",
-      "description": "Switch between git worktrees for parallel development. Use when: (1) Working on multiple issues simultaneously, (2) Need to context switch without stashing, (3) Testing different branches side-by-side.",
-      "version": "1.0.0",
-      "source": "./plugins/debugging/worktree-switch",
-      "category": "debugging",
-      "tags": [
-        "git",
-        "worktree",
-        "context-switch",
-        "parallel-development"
-      ]
-    },
-    {
-      "name": "worktree-sync",
-      "description": "Sync git worktrees with remote and main branch changes. Use when: (1) Long-running feature branches need updates, (2) Main branch has new commits, (3) Before creating/updating PR to avoid conflicts.",
-      "version": "1.0.0",
-      "source": "./plugins/debugging/worktree-sync",
-      "category": "debugging",
-      "tags": [
-        "git",
-        "worktree",
-        "sync",
-        "rebase",
-        "merge"
       ]
     },
     {
@@ -370,7 +336,13 @@
       "version": "1.0.0",
       "source": "./plugins/tooling/claude-plugin-format",
       "category": "tooling",
-      "tags": []
+      "tags": [
+        "plugin",
+        "validation",
+        "schema",
+        "claude-code",
+        "format"
+      ]
     },
     {
       "name": "claude-plugin-marketplace",
@@ -378,7 +350,13 @@
       "version": "1.0.0",
       "source": "./plugins/tooling/claude-plugin-marketplace",
       "category": "tooling",
-      "tags": []
+      "tags": [
+        "marketplace",
+        "registry",
+        "plugin",
+        "claude-code",
+        "installation"
+      ]
     },
     {
       "name": "gh-batch-merge-by-labels",
@@ -409,34 +387,6 @@
       ]
     },
     {
-      "name": "gh-fix-pr-feedback",
-      "description": "Address PR review feedback by making changes and replying to comments. Use when: (1) PR has open review comments needing responses, (2) Ready to implement reviewer's requested changes, (3) Need to notify reviewers of fixes.",
-      "version": "1.0.0",
-      "source": "./plugins/tooling/gh-fix-pr-feedback",
-      "category": "tooling",
-      "tags": [
-        "github",
-        "pr",
-        "code-review",
-        "feedback",
-        "gh-cli"
-      ]
-    },
-    {
-      "name": "gh-get-review-comments",
-      "description": "Retrieve all review comments from a pull request using GitHub API. Use when: (1) Checking for unresolved review feedback, (2) Getting comment IDs for replies, (3) Analyzing reviewer feedback before fixing.",
-      "version": "1.0.0",
-      "source": "./plugins/tooling/gh-get-review-comments",
-      "category": "tooling",
-      "tags": [
-        "github",
-        "pr",
-        "review-comments",
-        "api",
-        "gh-cli"
-      ]
-    },
-    {
       "name": "gh-post-issue-update",
       "description": "Post structured updates to GitHub issues for progress tracking. Use when: (1) Reporting implementation progress, (2) Documenting design decisions, (3) Posting completion summaries or findings.",
       "version": "1.0.0",
@@ -448,6 +398,21 @@
         "documentation",
         "progress",
         "gh-cli"
+      ]
+    },
+    {
+      "name": "gh-pr-review-workflow",
+      "description": "Complete PR review feedback workflow. Contains 3 sub-skills: (1) get-comments - fetch all review comments from PR, (2) reply-comment - reply to individual review comments, (3) fix-feedback - full workflow to address and reply to all feedback. Use when addressing PR review comments.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/gh-pr-review-workflow",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "pr",
+        "review",
+        "comments",
+        "feedback",
+        "workflow"
       ]
     },
     {
@@ -465,17 +430,17 @@
       ]
     },
     {
-      "name": "gh-reply-review-comment",
-      "description": "Reply to PR review comments using correct GitHub API endpoint. Use when: (1) Responding to inline code review feedback, (2) Confirming fixes have been implemented, (3) Need to reply to specific review comments (not general PR comments).",
+      "name": "git-worktree-workflow",
+      "description": "Complete git worktree workflow for parallel development. Contains 4 sub-skills: (1) create - create isolated worktrees for new issues, (2) switch - navigate between worktrees, (3) sync - keep worktrees up-to-date with main, (4) cleanup - remove worktrees after PR merge. Use when working on multiple issues in parallel without stashing.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/gh-reply-review-comment",
+      "source": "./plugins/tooling/git-worktree-workflow",
       "category": "tooling",
       "tags": [
-        "github",
-        "pr",
-        "review-comments",
-        "reply",
-        "api"
+        "git",
+        "worktree",
+        "parallel-development",
+        "branching",
+        "workflow"
       ]
     },
     {
@@ -495,11 +460,34 @@
     },
     {
       "name": "skills-registry-commands",
-      "description": "Complete skills registry system: /advise, /retrospective, documentation patterns, and CI validation. Use when: (1) Setting up team knowledge capture, (2) Adding skill search/creation to any project, (3) Implementing the Sionic AI skills pattern.",
+      "description": "Complete skills registry system with 4 components: (1) /advise command - search skills before starting work, (2) /retrospective command - capture session learnings as new skills, (3) documentation-patterns skill - how to write effective skill docs, (4) validation-workflow skill - CI/CD for plugin validation. Use when setting up team knowledge capture or implementing the Sionic AI skills pattern.",
       "version": "1.0.0",
       "source": "./plugins/tooling/skills-registry-commands",
       "category": "tooling",
-      "tags": []
+      "tags": [
+        "skills",
+        "advise",
+        "retrospective",
+        "knowledge-capture",
+        "team-learning",
+        "documentation",
+        "ci-cd"
+      ]
+    },
+    {
+      "name": "technical-debt-tracker",
+      "description": "Track and resolve FIXME/TODO comments by creating GitHub issues and updating stale references. Use when: (1) Auditing codebase for technical debt, (2) Creating structured issues for each debt category, (3) Updating stale issue references in comments.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/technical-debt-tracker",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "technical-debt",
+        "fixme",
+        "todo",
+        "code-quality",
+        "issue-tracking"
+      ]
     },
     {
       "name": "verify-issue-before-work",
@@ -507,7 +495,13 @@
       "version": "1.0.0",
       "source": "./plugins/tooling/verify-issue-before-work",
       "category": "tooling",
-      "tags": []
+      "tags": [
+        "github",
+        "issues",
+        "workflow",
+        "verification",
+        "duplicate-prevention"
+      ]
     },
     {
       "name": "grpo-external-vllm",
@@ -515,7 +509,14 @@
       "version": "1.0.0",
       "source": "./plugins/training/grpo-external-vllm",
       "category": "training",
-      "tags": []
+      "tags": [
+        "ml",
+        "training",
+        "llm",
+        "vllm",
+        "grpo",
+        "reinforcement-learning"
+      ]
     },
     {
       "name": "spec-driven-experimentation",
@@ -523,7 +524,14 @@
       "version": "1.0.0",
       "source": "./plugins/training/spec-driven-experimentation",
       "category": "training",
-      "tags": []
+      "tags": [
+        "ml",
+        "training",
+        "methodology",
+        "experiments",
+        "ablation",
+        "hyperparameters"
+      ]
     }
   ]
 }

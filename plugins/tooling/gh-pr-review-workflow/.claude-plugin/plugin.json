@@ -1,0 +1,13 @@
+{
+  "name": "gh-pr-review-workflow",
+  "version": "1.0.0",
+  "description": "Complete PR review feedback workflow. Contains 3 sub-skills: (1) get-comments - fetch all review comments from PR, (2) reply-comment - reply to individual review comments, (3) fix-feedback - full workflow to address and reply to all feedback. Use when addressing PR review comments.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "tooling",
+  "tags": ["github", "pr", "review", "comments", "feedback", "workflow"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}
