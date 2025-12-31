@@ -6,18 +6,36 @@ description: Search team knowledge before starting work
 
 Search the skills registry for relevant prior learnings before starting work.
 
+## Target Repository
+
+**Repository**: `HomericIntelligence/ProjectMnemosyne`
+**Clone location**: `<ProjectRoot>/build/advise/`
+
 ## Instructions
 
 When the user invokes this command:
 
-1. **Parse the user's goal** from $ARGUMENTS
-2. **Read the marketplace.json** file to find available plugins
-3. **Search matching plugins** by:
+1. **Setup repository** (if not already cloned):
+   ```bash
+   BUILD_DIR="build/advise"
+
+   # Clone repository if not present
+   if [ ! -d "$BUILD_DIR" ]; then
+     gh repo clone HomericIntelligence/ProjectMnemosyne "$BUILD_DIR"
+   else
+     # Update existing clone
+     git -C "$BUILD_DIR" pull --ff-only origin main
+   fi
+   ```
+
+2. **Parse the user's goal** from $ARGUMENTS
+3. **Read the marketplace.json** file to find available plugins
+4. **Search matching plugins** by:
    - Description keywords
    - Tags (if present)
    - Category (if specified)
-4. **Read relevant SKILL.md files** for matches
-5. **Return structured findings** with:
+5. **Read relevant SKILL.md files** for matches
+6. **Return structured findings** with:
    - What worked (verified approaches)
    - What failed (critical - prevents wasted effort)
    - Recommended parameters (copy-paste ready)
