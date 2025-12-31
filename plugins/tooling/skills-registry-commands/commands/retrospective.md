@@ -10,7 +10,7 @@ Capture session learnings and create a new skill plugin in the ProjectMnemosyne 
 
 **Repository**: `HomericIntelligence/ProjectMnemosyne`
 **Base branch**: `main`
-**Clone location**: `<ProjectRoot>/build/<UUID>/ProjectMnemosyne/`
+**Clone location**: `<ProjectRoot>/build/<UUID>/`
 
 Each retrospective generates a unique UUID to prevent conflicts with parallel Claude agents.
 
@@ -35,11 +35,10 @@ When the user invokes this command:
    SESSION_UUID=$(uuidgen)
    BUILD_DIR="build/${SESSION_UUID}"
 
-   # Create build directory and clone repository
-   mkdir -p "$BUILD_DIR"
-   gh repo clone HomericIntelligence/ProjectMnemosyne "$BUILD_DIR/ProjectMnemosyne"
+   # Clone repository directly into build directory
+   gh repo clone HomericIntelligence/ProjectMnemosyne "$BUILD_DIR"
 
-   cd "$BUILD_DIR/ProjectMnemosyne"
+   cd "$BUILD_DIR"
 
    # Fetch latest changes and create branch from origin/main
    git fetch origin
