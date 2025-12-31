@@ -31,20 +31,20 @@ Audit FIXME/TODO comments in a codebase, create categorized GitHub issues, and u
 1. **Find all FIXME comments**:
 
    ```bash
-   grep -rn "FIXME" --include="*.mojo" --include="*.py" .
+   grep -rn "FIXME" --include="*.mojo" --include="*.py" --exclude-dir='.*' .
    ```
 
 2. **Find all TODO comments**:
 
    ```bash
-   grep -rn "TODO" --include="*.mojo" --include="*.py" .
+   grep -rn "TODO" --include="*.mojo" --include="*.py" --exclude-dir='.*' .
    ```
 
 3. **Extract referenced issue numbers**:
 
    ```bash
-   grep -oP "FIXME\(#\K\d+" --include="*.mojo" -r . | sort -u
-   grep -oP "TODO\(#\K\d+" --include="*.mojo" -r . | sort -u
+   grep -oP "FIXME\(#\K\d+" --include="*.mojo" --exclude-dir='.*' -r . | sort -u
+   grep -oP "TODO\(#\K\d+" --include="*.mojo" --exclude-dir='.*' -r . | sort -u
    ```
 
 4. **Check if referenced issues are closed**:
@@ -135,6 +135,7 @@ Issues created in ProjectOdyssey session:
 | Tried to edit file without reading | Edit tool requires read first | Read files before attempting `replace_all` updates |
 | Assumed referenced issues were open | All were actually closed | Verify issue state with `gh issue view --json state` |
 | Included documentation examples in updates | They use fictional issue numbers | Skip files like `examples.md` and `.DEPRECATED` files |
+| Searched hidden directories (.pixi, .git) | grep without --exclude-dir scanned dependencies | **Always add `--exclude-dir='.*'`** to exclude hidden directories |
 
 ## Error Handling
 
@@ -157,8 +158,8 @@ Issues created in ProjectOdyssey session:
 After completing updates:
 
 ```bash
-# Verify no old references remain
-grep -rn "#OLD_NUMBER" --include="*.mojo" .
+# Verify no old references remain (exclude hidden directories)
+grep -rn "#OLD_NUMBER" --include="*.mojo" --exclude-dir='.*' .
 
 # Should return empty or only documentation examples
 ```

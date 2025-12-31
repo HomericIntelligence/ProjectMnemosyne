@@ -1,0 +1,15 @@
+{
+  "name": "fix-placeholder-code-ci",
+  "version": "1.0.0",
+  "description": "Fix CI failures caused by partially commented placeholder code and dtype migration assertion mismatches",
+  "category": "testing",
+  "skills": ["fix-placeholder-code-ci"],
+  "triggers": [
+    "CI fails with 'use of unknown declaration'",
+    "Test assertions fail after dtype/type migration",
+    "Merge conflicts leave orphaned code references"
+  ],
+  "dependencies": [],
+  "author": "Claude",
+  "created": "2025-12-31"
+}
