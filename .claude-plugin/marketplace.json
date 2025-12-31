@@ -113,6 +113,14 @@
       ]
     },
     {
+      "name": "fix-docker-image-case",
+      "description": "Fix Docker SBOM and workflow failures caused by mixed-case image names in GitHub Actions. Use when: SBOM generation fails with 'could not parse reference' errors, Docker workflows fail with case-related parsing issues.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/fix-docker-image-case",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "fix-docker-platform",
       "description": "Fix Docker build failures caused by platform mismatches. Use when: (1) Docker builds fail with 'unsupported platform' errors, (2) pixi install fails in Docker with linux-aarch64 errors, (3) Multi-arch builds fail when pixi.toml only supports one platform.",
       "version": "1.0.0",
@@ -200,6 +208,14 @@
       "tags": []
     },
     {
+      "name": "fix-implicitlycopyable-removal",
+      "description": "Systematic approach to removing ImplicitlyCopyable trait from Mojo structs and fixing resulting compilation errors. Use when: removing ImplicitlyCopyable from structs with List/Dict/String fields, fixing 'cannot implicitly copy' errors, debugging memory corruption from bitwise copies.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/fix-implicitlycopyable-removal",
+      "category": "debugging",
+      "tags": []
+    },
+    {
       "name": "fix-randn-seed-bug",
       "description": "Fix unused seed parameter in random number generation functions. Use when: (1) Tests using seeded random inputs produce non-reproducible results, (2) randn/random functions declare seed parameter but generate different values each call, (3) assert_almost_equal fails with wildly different values for same-seeded inputs.",
       "version": "1.0.0",
@@ -268,6 +284,20 @@
       ]
     },
     {
+      "name": "plan-review-interview",
+      "description": "Structured interview workflow for reviewing implementation plans. Use when: (1) You have a draft plan that needs stakeholder validation, (2) GitHub issues exist but lack key decision details, (3) You need to systematically identify gaps before implementation, (4) You want to document decisions alongside affected issues.",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/plan-review-interview",
+      "category": "evaluation",
+      "tags": [
+        "planning",
+        "requirements",
+        "interview",
+        "decision-tracking",
+        "github-issues"
+      ]
+    },
+    {
       "name": "create-review-checklist",
       "description": "Generate customized review checklists based on type of change. Use when: (1) Starting PR review for unfamiliar change type, (2) Need specific checklist for code vs tests vs docs, (3) Large multi-type changes needing organized review.",
       "version": "1.0.0",
@@ -317,6 +347,21 @@
         "flaky-tests",
         "test-stability",
         "debugging"
+      ]
+    },
+    {
+      "name": "ai-blog-generator",
+      "description": "Generate AI-authored blog posts from git commit history. Use when: (1) Filling gaps in project blog history, (2) Need to document past work retroactively, (3) Creating development blog posts based on actual commits, (4) Backfilling documentation for dates without posts.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/ai-blog-generator",
+      "category": "tooling",
+      "tags": [
+        "blog",
+        "documentation",
+        "git-history",
+        "ai-generated",
+        "backfill",
+        "markdown"
       ]
     },
     {
@@ -453,6 +498,14 @@
       "description": "Complete skills registry system: /advise, /retrospective, documentation patterns, and CI validation. Use when: (1) Setting up team knowledge capture, (2) Adding skill search/creation to any project, (3) Implementing the Sionic AI skills pattern.",
       "version": "1.0.0",
       "source": "./plugins/tooling/skills-registry-commands",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "verify-issue-before-work",
+      "description": "Verify GitHub issue state and existing implementation before starting work to avoid duplicate effort. Use when: starting work on issues, resuming after breaks, taking over from other sessions.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/verify-issue-before-work",
       "category": "tooling",
       "tags": []
     },

@@ -1,0 +1,5 @@
+{
+  "name": "fix-implicitlycopyable-removal",
+  "version": "1.0.0",
+  "description": "Systematic approach to removing ImplicitlyCopyable trait from Mojo structs and fixing resulting compilation errors. Use when: removing ImplicitlyCopyable from structs with List/Dict/String fields, fixing 'cannot implicitly copy' errors, debugging memory corruption from bitwise copies."
+}
