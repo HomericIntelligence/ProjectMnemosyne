@@ -1,0 +1,21 @@
+{
+  "name": "batch-pr-ci-fixer",
+  "version": "1.0.0",
+  "description": "Batch create PRs from orphaned branches and systematically fix CI failures",
+  "category": "ci-cd",
+  "created": "2025-12-31",
+  "repository": "mvillmow/ProjectOdyssey",
+  "tags": ["pr-management", "ci-fix", "github", "mojo", "pre-commit"],
+  "triggers": [
+    "multiple branches need PRs",
+    "batch CI failures",
+    "orphaned branches with completed work"
+  ],
+  "tools_used": [
+    "gh pr create",
+    "gh pr checks",
+    "gh run view --log-failed",
+    "pixi run mojo format",
+    "pixi run ruff check --fix"
+  ]
+}
