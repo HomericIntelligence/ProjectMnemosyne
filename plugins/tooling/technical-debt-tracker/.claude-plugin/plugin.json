@@ -1,0 +1,13 @@
+{
+  "name": "technical-debt-tracker",
+  "version": "1.0.0",
+  "description": "Track and resolve FIXME/TODO comments by creating GitHub issues and updating stale references. Use when: (1) Auditing codebase for technical debt, (2) Creating structured issues for each debt category, (3) Updating stale issue references in comments.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2025-12-30",
+  "category": "tooling",
+  "tags": ["github", "technical-debt", "fixme", "todo", "code-quality", "issue-tracking"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}
