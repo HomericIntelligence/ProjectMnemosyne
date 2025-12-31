@@ -316,6 +316,21 @@
       ]
     },
     {
+      "name": "test-implementation-gap-analysis",
+      "description": "Detect and fix gaps between test expectations and implementation. Use when: (1) Tests fail with import errors for missing classes/functions, (2) Tests exist but implementation is a stub, (3) Auditing epic/milestone implementation completeness, (4) Pytest collection warnings for production classes named Test*.",
+      "version": "1.0.0",
+      "source": "./skills/test-implementation-gap-analysis",
+      "category": "testing",
+      "tags": [
+        "testing",
+        "implementation-gaps",
+        "pytest",
+        "import-errors",
+        "stub-completion",
+        "epic-audit"
+      ]
+    },
+    {
       "name": "ai-blog-generator",
       "description": "Generate AI-authored blog posts from git commit history. Use when: (1) Filling gaps in project blog history, (2) Need to document past work retroactively, (3) Creating development blog posts based on actual commits, (4) Backfilling documentation for dates without posts.",
       "version": "1.0.0",
