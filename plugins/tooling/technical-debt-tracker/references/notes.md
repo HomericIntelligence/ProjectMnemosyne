@@ -91,14 +91,14 @@ tests/shared/testing/test_layer_testers_analytical.mojo - #2710 -> #3011
 ### Discovery
 
 ```bash
-# Find FIXMEs with issue references
-grep -rn "FIXME(#" --include="*.mojo" .
+# Find FIXMEs with issue references (exclude hidden directories)
+grep -rn "FIXME(#" --include="*.mojo" --exclude-dir='.*' .
 
-# Find TODOs with issue references
-grep -rn "TODO(#" --include="*.mojo" .
+# Find TODOs with issue references (exclude hidden directories)
+grep -rn "TODO(#" --include="*.mojo" --exclude-dir='.*' .
 
-# Extract unique issue numbers
-grep -oP "FIXME\(#\K\d+" --include="*.mojo" -r . | sort -u
+# Extract unique issue numbers (exclude hidden directories)
+grep -oP "FIXME\(#\K\d+" --include="*.mojo" --exclude-dir='.*' -r . | sort -u
 
 # Check issue states
 for issue in 2378 2379 2400 2401 2701 2703 2710 2715 2717 2718 2719 2720 2721 2731; do
@@ -139,3 +139,4 @@ replace_all: true
 4. **Exclude documentation examples** - They use fictional issue numbers
 5. **Use replace_all for bulk updates** - Much faster than individual edits
 6. **Read before edit** - Edit tool requires reading file first
+7. **Always exclude hidden directories** - Add `--exclude-dir='.*'` to avoid scanning .pixi/, .git/, .cache/

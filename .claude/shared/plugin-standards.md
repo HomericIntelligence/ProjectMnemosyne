@@ -102,3 +102,37 @@ issues. Verified on gemma-3-12b-it."
 | Attempt | Why Failed | Lesson |
 |---------|-----------|--------|
 | It didn't work | Unknown | Try again |
+
+## Search Command Standards
+
+All grep/find commands in skills **MUST exclude hidden directories** to avoid searching `.pixi/`, `.git/`, `.cache/`, etc.
+
+### Required Pattern
+
+```bash
+# Correct - excludes all directories starting with .
+grep -rn "pattern" --include="*.ext" --exclude-dir='.*' .
+
+# Multiple file types
+grep -rn "FIXME" --include="*.mojo" --include="*.py" --exclude-dir='.*' .
+
+# With Perl regex
+grep -oP "FIXME\(#\K\d+" --include="*.mojo" --exclude-dir='.*' -r . | sort -u
+```
+
+### Common Mistake
+
+```bash
+# WRONG - searches .pixi/, .git/, .cache/, etc.
+grep -rn "FIXME" --include="*.mojo" .
+
+# CORRECT - excludes hidden directories
+grep -rn "FIXME" --include="*.mojo" --exclude-dir='.*' .
+```
+
+### Why This Matters
+
+- `.pixi/` contains thousands of dependency files with their own TODOs/FIXMEs
+- `.git/` contains repository metadata
+- Hidden directories pollute search results with false positives
+- Slows down searches significantly
