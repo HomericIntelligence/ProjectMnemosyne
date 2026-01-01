@@ -1,0 +1,19 @@
+{
+  "name": "implementation-alignment-validation",
+  "description": "Use when validating that implementation code matches research documentation, design specs, or theoretical frameworks. Triggers: 'validate implementation', 'check alignment', 'docs vs code', 'implementation matches theory', 'verify against research'.",
+  "category": "architecture",
+  "date": "2025-06-27",
+  "tags": [
+    "validation",
+    "alignment",
+    "documentation",
+    "implementation",
+    "research",
+    "theory",
+    "metrics",
+    "audit"
+  ],
+  "related": [
+    "implementation-theory-alignment"
+  ]
+}
