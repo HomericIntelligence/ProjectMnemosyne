@@ -1,0 +1,16 @@
+{
+  "name": "e2e-judge-rubric-design",
+  "description": "Design LLM-as-Judge evaluation rubrics for E2E agent testing. Use when: (1) Building agent evaluation systems with LLM judges, (2) Designing weighted scoring criteria for code quality, (3) Handling invalid evaluations (rate limits, errors) distinctly from failures, (4) Standardizing judge prompts across test runs.",
+  "version": "1.0.0",
+  "category": "evaluation",
+  "date": "2026-01-01",
+  "tags": [
+    "llm-judge",
+    "evaluation",
+    "rubric",
+    "e2e-testing",
+    "agent-testing",
+    "scoring",
+    "rate-limits"
+  ]
+}
