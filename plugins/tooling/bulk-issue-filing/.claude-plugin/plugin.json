@@ -1,0 +1,13 @@
+{
+  "name": "bulk-issue-filing",
+  "version": "1.0.0",
+  "description": "Bulk create GitHub issues from code markers (TODO/FIXME/DEPRECATED/NOTE). Use when: (1) Cleaning up technical debt markers across codebase, (2) Need to systematically track all TODO/FIXME items, (3) Creating master tracking issues with child issues for large cleanup efforts.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2026-01-01",
+  "category": "tooling",
+  "tags": ["github", "issues", "cleanup", "todo", "fixme", "technical-debt", "bulk-operations"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}
