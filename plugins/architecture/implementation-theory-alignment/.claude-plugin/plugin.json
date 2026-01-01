@@ -1,5 +1,6 @@
 {
   "name": "implementation-theory-alignment",
+  "version": "1.0.0",
   "description": "Use when validating implementation code against research documentation, design specs, or theory papers. Triggers: 'validate implementation', 'align with docs', 'check against research', 'implementation matches theory'. Provides systematic workflow for identifying discrepancies and implementing fixes.",
   "category": "architecture",
   "date": "2025-12-31",
