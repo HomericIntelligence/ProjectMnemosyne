@@ -1,0 +1,16 @@
+{
+  "name": "orphan-branch-recovery",
+  "version": "1.0.0",
+  "description": "Use when a branch has no common ancestor with main, cannot be merged, or was pushed from the wrong repository. Triggers: 'no merge base', 'branch diverged completely', 'cannot merge unrelated histories', 'pushed from wrong repo'. Provides workflow for diagnosing orphan branches and recovering valuable content.",
+  "category": "debugging",
+  "date": "2026-01-01",
+  "tags": [
+    "git",
+    "branch",
+    "orphan",
+    "diverged",
+    "merge-base",
+    "recovery",
+    "wrong-repo"
+  ]
+}
