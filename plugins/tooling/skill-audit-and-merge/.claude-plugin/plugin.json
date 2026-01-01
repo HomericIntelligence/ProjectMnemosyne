@@ -1,0 +1,13 @@
+{
+  "name": "skill-audit-and-merge",
+  "version": "1.0.0",
+  "description": "Systematic audit and consolidation of skills marketplace plugins. Use when: (1) Marketplace has grown with overlapping plugins, (2) Need to identify merge candidates, (3) Improving plugin discoverability via tags, (4) Reorganizing categories for better structure.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2026-01-01",
+  "category": "tooling",
+  "tags": ["marketplace", "plugin", "consolidation", "audit", "organization"],
+  "skills": "./skills",
+  "source_project": "ProjectMnemosyne"
+}

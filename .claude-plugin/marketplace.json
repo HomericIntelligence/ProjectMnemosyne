@@ -36,6 +36,40 @@
       ]
     },
     {
+      "name": "implementation-alignment-validation",
+      "description": "Use when validating that implementation code matches research documentation, design specs, or theoretical frameworks. Triggers: 'validate implementation', 'check alignment', 'docs vs code', 'implementation matches theory', 'verify against research'.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/implementation-alignment-validation",
+      "category": "architecture",
+      "tags": [
+        "validation",
+        "alignment",
+        "documentation",
+        "implementation",
+        "research",
+        "theory",
+        "metrics",
+        "audit"
+      ]
+    },
+    {
+      "name": "implementation-theory-alignment",
+      "description": "Use when validating implementation code against research documentation, design specs, or theory papers. Triggers: 'validate implementation', 'align with docs', 'check against research', 'implementation matches theory'. Provides systematic workflow for identifying discrepancies and implementing fixes.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/implementation-theory-alignment",
+      "category": "architecture",
+      "tags": [
+        "validation",
+        "alignment",
+        "research",
+        "documentation",
+        "metrics",
+        "implementation",
+        "theory",
+        "discrepancy"
+      ]
+    },
+    {
       "name": "quality-complexity-check",
       "description": "Analyze code complexity metrics including cyclomatic complexity and nesting depth. Use when: (1) Code review process, (2) Identifying refactoring candidates, (3) Maintaining code quality standards.",
       "version": "1.0.0",
@@ -250,6 +284,37 @@
       ]
     },
     {
+      "name": "fixme-todo-cleanup",
+      "description": "Systematic FIXME/TODO cleanup workflow with proper branching, PRs, and CI handling",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/fixme-todo-cleanup",
+      "category": "debugging",
+      "tags": [
+        "technical-debt",
+        "cleanup",
+        "workflow",
+        "github",
+        "ci-cd",
+        "mojo"
+      ]
+    },
+    {
+      "name": "judge-system-extension",
+      "description": "Patterns for extending AI evaluation/judge systems with consensus retry, cleanup evaluation, cross-tier analysis, and container orchestration. Use when: (1) Adding new evaluation capabilities to a judge system, (2) Implementing consensus-based scoring with disagreement handling, (3) Creating container-based isolation for evaluators, (4) Adding cross-tier statistical analysis.",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/judge-system-extension",
+      "category": "evaluation",
+      "tags": [
+        "judge",
+        "evaluation",
+        "consensus",
+        "docker",
+        "metrics",
+        "scoring",
+        "container-orchestration"
+      ]
+    },
+    {
       "name": "plan-review-interview",
       "description": "Structured interview workflow for reviewing implementation plans. Use when: (1) You have a draft plan that needs stakeholder validation, (2) GitHub issues exist but lack key decision details, (3) You need to systematically identify gaps before implementation, (4) You want to document decisions alongside affected issues.",
       "version": "1.0.0",
@@ -290,6 +355,14 @@
       ]
     },
     {
+      "name": "fix-placeholder-code-ci",
+      "description": "Fix CI failures caused by partially commented placeholder code and dtype migration assertion mismatches",
+      "version": "1.0.0",
+      "source": "./plugins/testing/fix-placeholder-code-ci",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "generate-fix-suggestions",
       "description": "Generate fix suggestions based on error patterns and best practices. Use when: (1) Test failures need concrete solutions, (2) Build errors require remediation steps, (3) Creating PR comments with suggestions.",
       "version": "1.0.0",
@@ -313,21 +386,6 @@
         "flaky-tests",
         "test-stability",
         "debugging"
-      ]
-    },
-    {
-      "name": "test-implementation-gap-analysis",
-      "description": "Detect and fix gaps between test expectations and implementation. Use when: (1) Tests fail with import errors for missing classes/functions, (2) Tests exist but implementation is a stub, (3) Auditing epic/milestone implementation completeness, (4) Pytest collection warnings for production classes named Test*.",
-      "version": "1.0.0",
-      "source": "./skills/test-implementation-gap-analysis",
-      "category": "testing",
-      "tags": [
-        "testing",
-        "implementation-gaps",
-        "pytest",
-        "import-errors",
-        "stub-completion",
-        "epic-audit"
       ]
     },
     {
@@ -471,6 +529,20 @@
         "retrospective",
         "session-end",
         "knowledge-capture"
+      ]
+    },
+    {
+      "name": "skill-audit-and-merge",
+      "description": "Systematic audit and consolidation of skills marketplace plugins. Use when: (1) Marketplace has grown with overlapping plugins, (2) Need to identify merge candidates, (3) Improving plugin discoverability via tags, (4) Reorganizing categories for better structure.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/skill-audit-and-merge",
+      "category": "tooling",
+      "tags": [
+        "marketplace",
+        "plugin",
+        "consolidation",
+        "audit",
+        "organization"
       ]
     },
     {
