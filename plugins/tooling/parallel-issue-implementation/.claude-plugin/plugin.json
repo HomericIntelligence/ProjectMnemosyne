@@ -1,9 +1,13 @@
 {
   "name": "parallel-issue-implementation",
+  "version": "1.0.0",
   "description": "Implement multiple GitHub issues in parallel using git worktrees. Use when you have 2+ issues with detailed plans ready for implementation.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
   "category": "tooling",
-  "source": "ProjectScylla",
+  "source_project": "ProjectScylla",
   "date": "2025-01-01",
   "tags": ["github", "worktree", "parallel", "batch", "issues", "implementation"],
-  "skills": ["parallel-issue-implementation"]
+  "skills": "./skills"
 }
