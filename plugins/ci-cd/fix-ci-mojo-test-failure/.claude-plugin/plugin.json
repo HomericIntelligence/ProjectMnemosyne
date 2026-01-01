@@ -1,0 +1,13 @@
+{
+  "name": "fix-ci-mojo-test-failure",
+  "version": "1.0.0",
+  "description": "TRIGGER CONDITIONS: (1) CI failing with Mojo test assertion error, (2) test expects specific return value but implementation returns different value, (3) edge case handling missing in implementation. Verified on ProjectOdyssey PR #3050.",
+  "author": {
+    "name": "Claude Opus 4.5"
+  },
+  "date": "2026-01-01",
+  "category": "ci-cd",
+  "tags": ["ci", "mojo", "testing", "assertion", "edge-case", "debugging"],
+  "skills": "./skills",
+  "source_project": "ProjectOdyssey"
+}
