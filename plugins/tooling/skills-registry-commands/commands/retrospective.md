@@ -10,9 +10,9 @@ Capture session learnings and create a new skill plugin in the ProjectMnemosyne 
 
 **Repository**: `HomericIntelligence/ProjectMnemosyne`
 **Base branch**: `main`
-**Clone location**: `<ProjectRoot>/build/<UUID>/`
+**Clone location**: `<ProjectRoot>/build/<PID>/`
 
-Each retrospective generates a unique UUID to prevent conflicts with parallel Claude agents.
+Commands in the same session share the clone via process ID.
 
 ## Instructions
 
@@ -31,17 +31,18 @@ When the user invokes this command:
 
 3. **Setup repository**:
    ```bash
-   # Generate unique build directory to prevent conflicts with parallel agents
-   SESSION_UUID=$(uuidgen)
-   BUILD_DIR="build/${SESSION_UUID}"
+   BUILD_DIR="build/$$"
 
-   # Clone repository directly into build directory
-   gh repo clone HomericIntelligence/ProjectMnemosyne "$BUILD_DIR"
+   # Clone repository if not present, otherwise update
+   if [ ! -d "$BUILD_DIR" ]; then
+     gh repo clone HomericIntelligence/ProjectMnemosyne "$BUILD_DIR"
+   else
+     git -C "$BUILD_DIR" fetch origin
+   fi
 
    cd "$BUILD_DIR"
 
-   # Fetch latest changes and create branch from origin/main
-   git fetch origin
+   # Create branch from origin/main
    git checkout -b skill/<category>/<name> origin/main
    ```
 
@@ -114,19 +115,6 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 **Solution**: Don't rebase. Create branch directly from `origin/main`:
 ```bash
 git checkout -b skill/<category>/<name> origin/main
-```
-
-### Issue: uuidgen not found
-
-**Cause**: `uuidgen` not installed on system.
-
-**Solution**: Install uuid-runtime or use alternative:
-```bash
-# On Debian/Ubuntu
-sudo apt install uuid-runtime
-
-# Alternative using Python
-SESSION_UUID=$(python3 -c "import uuid; print(uuid.uuid4())")
 ```
 
 ### Issue: Build directory cleanup

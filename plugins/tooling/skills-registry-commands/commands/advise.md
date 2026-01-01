@@ -9,7 +9,9 @@ Search the skills registry for relevant prior learnings before starting work.
 ## Target Repository
 
 **Repository**: `HomericIntelligence/ProjectMnemosyne`
-**Clone location**: `<ProjectRoot>/build/advise/`
+**Clone location**: `<ProjectRoot>/build/<PID>/`
+
+Commands in the same session share the clone via process ID.
 
 ## Instructions
 
@@ -17,7 +19,7 @@ When the user invokes this command:
 
 1. **Setup repository** (if not already cloned):
    ```bash
-   BUILD_DIR="build/advise"
+   BUILD_DIR="build/$$"
 
    # Clone repository if not present
    if [ ! -d "$BUILD_DIR" ]; then
