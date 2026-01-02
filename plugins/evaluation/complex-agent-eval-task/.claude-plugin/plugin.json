@@ -1,0 +1,16 @@
+{
+  "name": "complex-agent-eval-task",
+  "description": "Create sophisticated E2E test cases for AI agents using real PRs as reference solutions. Use when: (1) designing T2+ tier evaluation tasks, (2) need patchfile-based evaluation against reference, (3) testing agents on complex refactoring/migration tasks, (4) constraining agents from accessing solution sources.",
+  "version": "1.0.0",
+  "category": "evaluation",
+  "date": "2026-01-01",
+  "tags": [
+    "e2e-testing",
+    "agent-evaluation",
+    "patchfile",
+    "reference-solution",
+    "t2-plus",
+    "refactoring",
+    "llm-judge"
+  ]
+}
