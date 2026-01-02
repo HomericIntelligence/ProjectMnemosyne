@@ -1,0 +1,10 @@
+{
+  "name": "tier-ablation-testing",
+  "version": "1.0.0",
+  "description": "Methodology for running comprehensive tier ablation studies across AI agent architectures (T0-T6)",
+  "category": "evaluation",
+  "tags": ["ablation", "tiers", "e2e-testing", "benchmarking", "agent-evaluation"],
+  "created": "2026-01-02",
+  "author": "ProjectScylla Team",
+  "source_session": "test-001-all-tiers-validation"
+}
