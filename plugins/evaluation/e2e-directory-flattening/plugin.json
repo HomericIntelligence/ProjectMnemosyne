@@ -1,0 +1,23 @@
+{
+  "name": "e2e-directory-flattening",
+  "version": "1.0.0",
+  "description": "Patterns for reorganizing E2E results directory structure to flatten hierarchy, share workspaces, and generate hierarchical reports",
+  "category": "evaluation",
+  "tags": [
+    "e2e",
+    "directory-structure",
+    "results",
+    "reports",
+    "git-worktree",
+    "hierarchical-reports"
+  ],
+  "triggers": [
+    "flatten E2E directory",
+    "reorganize results structure",
+    "share workspace across runs",
+    "hierarchical reports",
+    "reduce directory nesting"
+  ],
+  "created": "2026-01-02",
+  "project": "ProjectScylla"
+}
