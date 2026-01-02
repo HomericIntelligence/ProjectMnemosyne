@@ -1,20 +1,28 @@
+---
+name: tier-ablation-testing
+description: "Run comprehensive tier ablation studies across AI agent architectures (T0-T6) with ~114 sub-tests"
+category: evaluation
+source: ProjectScylla
+date: 2026-01-02
+---
+
 # Tier Ablation Testing
 
-| Attribute | Value |
-|-----------|-------|
-| Date | 2026-01-02 |
-| Objective | Run comprehensive tier ablation study across 7 evaluation tiers (T0-T6) with ~114 sub-tests |
-| Outcome | Successfully validated tier infrastructure, discovered CLI argument limit bug in T6 |
-| Project | ProjectScylla |
+Run comprehensive tier ablation studies across 7 evaluation tiers (T0-T6) with ~114 sub-tests for AI agent architecture evaluation.
+
+## Overview
+
+| Date | Objective | Outcome |
+|------|-----------|---------|
+| 2026-01-02 | Run comprehensive tier ablation study across T0-T6 with ~114 sub-tests | Successfully validated tier infrastructure, discovered and fixed CLI argument limit bug in T6 |
 
 ## When to Use
 
-Use this skill when you need to:
-
-- Set up multi-tier ablation experiments for AI agent evaluation
-- Run E2E validation across all capability tiers (T0-T6)
-- Debug issues with large configuration combinations (T5/T6)
-- Understand the tier structure and sub-test organization
+- (1) Setting up multi-tier ablation experiments for AI agent evaluation
+- (2) Running E2E validation across all capability tiers (T0-T6)
+- (3) Debugging issues with large configuration combinations (T5/T6)
+- (4) Understanding the tier structure and sub-test organization
+- (5) Need to compare agent performance across different capability levels
 
 ## Verified Workflow
 
@@ -68,8 +76,6 @@ results/YYYY-MM-DDTHH-MM-SS-<experiment-id>/
 
 ### 4. Key Files for Sub-Test Configuration
 
-Each sub-test directory follows this pattern:
-
 ```
 tests/fixtures/tests/test-001/t{N}/NN-name/
 ├── config.yaml                  # Sub-test metadata
@@ -82,40 +88,11 @@ tests/fixtures/tests/test-001/t{N}/NN-name/
 
 ## Failed Attempts
 
-### LLM Judge "Argument list too long" (T6)
-
-**Problem**: When running T6 (Super tier), the LLM judge failed with:
-```
-[Errno 7] Argument list too long: 'claude'
-```
-
-**Root Cause**: The evaluation context was passed directly as a CLI argument to `claude`. T6 combines all configs (full CLAUDE.md + all skills + all agents), making the prompt exceed the OS command line limit (~128KB).
-
-**Location**: `src/scylla/e2e/llm_judge.py:_call_claude_judge()`
-
-**Original Code**:
-```python
-cmd = [
-    "claude",
-    "--model", model,
-    "--system-prompt-file", str(JUDGE_SYSTEM_PROMPT_FILE),
-    evaluation_context,  # TOO LONG!
-]
-```
-
-**Fix**: Write evaluation context to a temp file and use `-p` flag:
-```python
-with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as f:
-    f.write(evaluation_context)
-    prompt_file_path = f.name
-
-cmd = [
-    "claude",
-    "--model", model,
-    "--system-prompt-file", str(JUDGE_SYSTEM_PROMPT_FILE),
-    "-p", prompt_file_path,  # Use file instead
-]
-```
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| Pass evaluation context as CLI arg | `[Errno 7] Argument list too long` for T6 | Write to temp file, use `-p` flag instead |
+| Direct `evaluation_context` in cmd | OS command line limit (~128KB) exceeded | Large prompts must use file-based passing |
+| T6 with all configs combined | Context size explodes with full CLAUDE.md + skills + agents | Always test highest tier combinations early |
 
 ## Results & Parameters
 
@@ -126,7 +103,6 @@ cmd = [
   "score": 0.92,
   "passed": true,
   "grade": "A",
-  "reasoning": "The agent successfully created a correct hello.py script...",
   "criteria_scores": {
     "correctness": {"score": 1.0},
     "completeness": {"score": 1.0},
@@ -154,4 +130,3 @@ T6: PASS (score: 0.700, cost: $0.4037)
 ## Related Skills
 
 - `complex-agent-eval-task` - Setting up complex evaluation tasks
-- `e2e-framework-validation` - E2E framework testing patterns
