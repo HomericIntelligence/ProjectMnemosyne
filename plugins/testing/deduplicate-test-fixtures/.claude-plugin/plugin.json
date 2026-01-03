@@ -1,0 +1,21 @@
+{
+  "name": "deduplicate-test-fixtures",
+  "version": "1.0.0",
+  "description": "Eliminate duplicated test fixture files by using runtime block-based composition. Use when: test fixtures contain many copies of the same file across directories, repository size is growing due to duplication, you want single source of truth for shared content.",
+  "category": "testing",
+  "date": "2026-01-02",
+  "tags": [
+    "deduplication",
+    "test-fixtures",
+    "block-composition",
+    "runtime-generation",
+    "tier-testing",
+    "refactoring"
+  ],
+  "source_project": "ProjectScylla",
+  "metrics": {
+    "files_removed": 1034,
+    "lines_deleted": 239888,
+    "size_reduction": "16%"
+  }
+}
