@@ -1,4 +1,13 @@
-# Skill: shared-fixture-migration
+---
+name: shared-fixture-migration
+description: "Migrate duplicated test fixture configs to a centralized shared location. Use when: test fixtures have duplicated configs, find | md5sum shows 40+ duplicates, configs are test-independent."
+category: architecture
+date: 2026-01-03
+---
+
+# Shared Fixture Migration
+
+Migrate duplicated test fixture configs to a centralized shared location with runtime loading.
 
 ## Overview
 
