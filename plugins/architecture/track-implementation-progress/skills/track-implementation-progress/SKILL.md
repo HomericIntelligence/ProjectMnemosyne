@@ -209,6 +209,12 @@ Report progress with:
 - Create sub-issues for complex tasks
 - Use GitHub projects for visual board view
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See CLAUDE.md for issue and project organization

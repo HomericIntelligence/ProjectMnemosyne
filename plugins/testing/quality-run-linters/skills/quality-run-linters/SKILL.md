@@ -167,6 +167,12 @@ gh pr create --issue 42
 4. **Keep updated** - Update linter versions regularly
 5. **CI enforcement** - Ensure CI runs all linters
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - Configuration: `.pre-commit-config.yaml`, `.markdownlint.yaml`

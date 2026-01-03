@@ -57,6 +57,12 @@ fn validate[size: Int]():
 | `Unsupported operation` | Trait not constrained | Add trait constraint |
 | `Constraint failed` | Compile-time check failed | Verify constraint conditions |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `.claude/shared/mojo-guidelines.md` - Current syntax and patterns

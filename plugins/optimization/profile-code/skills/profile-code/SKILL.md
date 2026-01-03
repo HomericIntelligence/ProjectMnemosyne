@@ -51,6 +51,12 @@ Profiling report:
 - Percentage of total time/memory per function
 - Recommendations for optimization
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `suggest-optimizations` skill for improvement recommendations

@@ -58,6 +58,12 @@ Dataset preparation report:
 - Final dataset shape and statistics
 - Augmentation transformations applied
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `extract-hyperparameters` skill for data preprocessing config

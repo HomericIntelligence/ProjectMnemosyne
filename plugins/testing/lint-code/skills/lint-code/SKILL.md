@@ -50,6 +50,12 @@ Lint report:
 - Suggested fix or reference
 - Severity level
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See CLAUDE.md > Pre-commit Hooks for automated checking

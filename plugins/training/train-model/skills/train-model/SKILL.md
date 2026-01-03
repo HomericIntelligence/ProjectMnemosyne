@@ -57,6 +57,12 @@ Training report:
 - Final model performance
 - Checkpoint locations
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `prepare-dataset` skill for data pipeline setup

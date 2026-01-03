@@ -43,6 +43,12 @@ Mathematical analysis document:
 - Data type requirements (float32, float64, int32)
 - Mojo implementation mapping
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See CLAUDE.md > Language Preference for Mojo ML implementations

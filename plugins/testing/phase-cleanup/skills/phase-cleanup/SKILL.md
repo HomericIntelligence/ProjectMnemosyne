@@ -158,6 +158,12 @@ just pre-commit-all
 git status  # No uncommitted changes
 ```
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `CLAUDE.md` - "Key Development Principles" (KISS, DRY, SOLID, YAGNI)

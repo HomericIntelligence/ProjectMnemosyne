@@ -123,6 +123,12 @@ class TestComponent:
 | Flaky tests | Add setup/teardown, check for randomness |
 | Low coverage | Add tests for uncovered branches |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `CLAUDE.md` - "Key Development Principles" (TDD section)

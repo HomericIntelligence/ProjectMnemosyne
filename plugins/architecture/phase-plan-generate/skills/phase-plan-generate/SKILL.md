@@ -126,6 +126,12 @@ Additional context, assumptions, or considerations.
 | No success criteria | Add verifiable checkboxes |
 | Broken hierarchy | Verify parent/child links exist |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `CLAUDE.md` - "GitHub Issue Structure" section

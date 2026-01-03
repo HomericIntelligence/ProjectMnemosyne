@@ -131,6 +131,12 @@ Before marking package complete:
 | Installation fails | Check permissions, test script paths |
 | Missing files | Verify all deliverables before packaging |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `CLAUDE.md` - "Package Phase" in 5-phase workflow

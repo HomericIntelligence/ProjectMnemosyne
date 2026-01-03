@@ -64,6 +64,12 @@ python3 tests/agents/test_delegation.py .claude/agents/
 
 - **Fix**: Add delegation or remove if unused
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `/agents/delegation-rules.md` - Complete delegation guidelines

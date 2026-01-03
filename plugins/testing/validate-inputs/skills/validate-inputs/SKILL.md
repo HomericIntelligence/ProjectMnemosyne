@@ -53,6 +53,12 @@ Input validation specification:
 - Error messages returned
 - Test cases for invalid inputs
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `generate-tests` skill for validation test cases

@@ -55,6 +55,12 @@ mojo test -v tests/
 | `Timeout` | Test too slow | Optimize or increase timeout |
 | `Memory error` | Ownership issue | Check ownership and borrowing |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `.claude/shared/mojo-anti-patterns.md` - Common test mistakes

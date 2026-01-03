@@ -56,6 +56,12 @@ Refactoring report:
 - Test coverage status
 - Performance impact
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `detect-code-smells` skill for identifying issues

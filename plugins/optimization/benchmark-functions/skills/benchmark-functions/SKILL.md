@@ -45,6 +45,12 @@ Benchmark report:
 - Comparison to baseline (improvement percentage)
 - Iterations and sample size used
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `profile-code` skill for detailed performance profiling

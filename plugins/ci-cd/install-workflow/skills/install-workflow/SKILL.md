@@ -122,6 +122,12 @@ on:
 | Build script not found | Verify script path and permissions |
 | Artifact not uploaded | Check build produces expected files |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - Related skill: `validate-workflow` for syntax validation

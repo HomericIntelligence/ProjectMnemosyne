@@ -64,6 +64,12 @@ Docstring structure:
 - Raises section (exceptions)
 - Examples section (usage examples)
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `generate-api-docs` skill for API documentation generation

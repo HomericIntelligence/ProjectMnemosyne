@@ -52,6 +52,12 @@ mojo package src/tensor -o packages/tensor.mojopkg
 | `Export not found` | Missing from `__all__` | Add name to `__all__` list |
 | `Build failed` | Syntax errors in module | Fix syntax before building |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `.claude/shared/mojo-guidelines.md` - Function definition patterns

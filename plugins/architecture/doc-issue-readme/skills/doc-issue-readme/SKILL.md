@@ -170,6 +170,12 @@ Must be measurable checkboxes:
 | Content too long | Split into multiple comments |
 | Missing context | Run `gh issue view <number> --comments` first |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `.claude/shared/github-issue-workflow.md` for workflow patterns

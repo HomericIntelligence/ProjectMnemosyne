@@ -45,6 +45,12 @@ Code quality report:
 - Explanation of the issue
 - Suggested fix or refactoring approach
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See CLAUDE.md > SOLID principles for design guidance

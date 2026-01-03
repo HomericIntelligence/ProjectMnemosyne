@@ -121,6 +121,12 @@ Before code review approval:
 | Missing dependencies | Update Plan, communicate status |
 | Compiler warnings | Fix immediately (zero-warnings policy) |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `CLAUDE.md` - "Mojo Syntax Standards" (current v0.26.1+ patterns)

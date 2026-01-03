@@ -67,6 +67,12 @@ Implementation Engineer (L4)
 Orchestrators are the coordination hub between high-level planning and implementation teams.
 They decompose work from section level to component level, enabling parallel development.
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `/agents/hierarchy.md` - Complete orchestrator structure
