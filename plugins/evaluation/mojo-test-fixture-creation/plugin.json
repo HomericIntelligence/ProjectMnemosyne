@@ -1,0 +1,15 @@
+{
+  "name": "mojo-test-fixture-creation",
+  "description": "Create E2E test fixtures for evaluating AI agents on Mojo development tasks. Use when: (1) Adding new test cases targeting Mojo repositories, (2) Designing rubrics for Mojo code quality evaluation, (3) Integrating ProjectOdyssey Mojo skills/agents into tests.",
+  "version": "1.0.0",
+  "category": "evaluation",
+  "date": "2026-01-02",
+  "tags": [
+    "mojo",
+    "e2e-testing",
+    "test-fixture",
+    "rubric-design",
+    "ablation-testing",
+    "evaluation"
+  ]
+}
