@@ -1,4 +1,13 @@
-# Skill: deduplicate-test-fixtures
+---
+name: deduplicate-test-fixtures
+description: "Eliminate duplicated test fixture files using runtime block-based composition. Use when: test fixtures have duplicate YAML blocks, find | md5sum shows duplication, want single source of truth for shared configs."
+category: testing
+date: 2026-01-02
+---
+
+# Deduplicate Test Fixtures
+
+Eliminate duplicated test fixture files by using runtime block-based composition.
 
 ## Overview
 
