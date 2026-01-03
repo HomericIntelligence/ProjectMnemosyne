@@ -1,3 +1,10 @@
+---
+name: codebase-consolidation
+description: Systematic approach to finding and consolidating duplicate code
+category: architecture
+date: 2026-01-02
+---
+
 # Codebase Consolidation
 
 Systematic approach to finding duplicate code, unifying implementations, and documenting intentional variations.
