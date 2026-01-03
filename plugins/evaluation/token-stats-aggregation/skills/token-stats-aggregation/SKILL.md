@@ -1,3 +1,10 @@
+---
+name: token-stats-aggregation
+description: Pattern for tracking detailed token statistics with cache tokens across hierarchical E2E report levels
+category: evaluation
+date: 2026-01-03
+---
+
 # Token Stats Aggregation
 
 ## Overview
@@ -152,38 +159,11 @@ assert result.tokens_input == 100
 
 ## Failed Attempts
 
-### 1. Direct Field Replacement Without Compatibility
-
-**What was tried**: Initially replaced `tokens_input` and `tokens_output` fields directly with `token_stats` object.
-
-**Why it failed**: Broke existing code and tests that accessed the old field names directly.
-
-**Solution**: Add `@property` decorators that compute legacy values from the new structure.
-
-### 2. Assuming All Tests Follow Same Pattern
-
-**What was tried**: Fixed one test file (test_claude_code.py) and expected others to pass.
-
-**Why it failed**: Other adapter tests (cline, opencode, openai_codex) had identical issues with:
-- Old parameter names in AdapterResult construction
-- Logs directory assertions expecting `logs/` subdirectory
-
-**Solution**: Check all similar test files and apply consistent fixes across the entire test suite.
-
-### 3. Log Directory Expectations
-
-**What was tried**: Tests expected logs at `output_dir/logs/stdout.log`.
-
-**Why it failed**: Implementation writes directly to `output_dir/stdout.log` (no subdirectory).
-
-**Solution**: Update test assertions to match actual implementation:
-```python
-# Wrong
-assert (tmppath / "logs" / "stdout.log").exists()
-
-# Correct
-assert (tmppath / "stdout.log").exists()
-```
+| Attempt | What Was Tried | Why It Failed | Solution |
+|---------|----------------|---------------|----------|
+| Direct field replacement | Replaced `tokens_input` and `tokens_output` fields directly with `token_stats` object | Broke existing code and tests that accessed the old field names directly | Add `@property` decorators that compute legacy values from the new structure |
+| Single test file fix | Fixed one test file (test_claude_code.py) and expected others to pass | Other adapter tests (cline, opencode, openai_codex) had identical issues with old parameter names and logs directory assertions | Check all similar test files and apply consistent fixes across the entire test suite |
+| Wrong log directory | Tests expected logs at `output_dir/logs/stdout.log` | Implementation writes directly to `output_dir/stdout.log` (no subdirectory) | Update test assertions to match actual implementation path |
 
 ## Results & Parameters
 
