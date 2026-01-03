@@ -2,7 +2,6 @@
 name: plan-review-interview
 description: "Structured interview workflow for reviewing implementation plans and capturing decisions"
 category: evaluation
-source: ProjectScylla
 date: 2025-12-30
 ---
 

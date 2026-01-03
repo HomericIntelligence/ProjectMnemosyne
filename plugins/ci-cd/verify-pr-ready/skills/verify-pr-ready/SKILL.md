@@ -2,7 +2,6 @@
 name: verify-pr-ready
 description: "Verify PR is ready for merge with all requirements met"
 category: ci-cd
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 
@@ -99,6 +98,12 @@ PR cannot merge if:
 | Approvals missing | Request review from required reviewers |
 | Auth error | Check `gh auth status` permissions |
 | PR not found | Verify PR number exists |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | PR merge validation workflow | Generic patterns applicable to any GitHub project |
 
 ## References
 

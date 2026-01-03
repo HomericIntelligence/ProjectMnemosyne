@@ -2,7 +2,6 @@
 name: github-actions-mojo
 description: "GitHub Actions CI setup for Mojo projects with pixi"
 category: ci-cd
-source: ProjectOdyssey
 date: 2025-12-28
 ---
 
@@ -49,7 +48,7 @@ Configure GitHub Actions CI/CD for Mojo projects using pixi.
              pixi-version: v0.39.5
 
          - name: Run tests
-           run: pixi run mojo test tests/
+           run: pixi run mojo test <test-path>/
    ```
 
 2. **Use matrix for parallel test groups**:
@@ -58,8 +57,8 @@ Configure GitHub Actions CI/CD for Mojo projects using pixi.
    strategy:
      matrix:
        test-group:
-         - { path: "tests/core", pattern: "test_*.mojo" }
-         - { path: "tests/models", pattern: "test_*.mojo" }
+         - { path: "<test-path>/core", pattern: "test_*.mojo" }
+         - { path: "<test-path>/models", pattern: "test_*.mojo" }
 
    steps:
      - run: pixi run mojo test ${{ matrix.test-group.path }}
@@ -101,8 +100,8 @@ jobs:
       fail-fast: false
       matrix:
         test-group:
-          - { name: "core", path: "tests/shared/core" }
-          - { name: "models", path: "tests/models" }
+          - { name: "core", path: "<test-path>/core" }
+          - { name: "models", path: "<test-path>/models" }
 
     steps:
       - uses: actions/checkout@v4
@@ -116,6 +115,12 @@ jobs:
         run: |
           pixi run mojo test ${{ matrix.test-group.path }}
 ```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Mojo v0.25.7 CI setup | [notes.md](../../references/notes.md) |
 
 ## References
 

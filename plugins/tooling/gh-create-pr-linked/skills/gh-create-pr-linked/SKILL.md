@@ -2,7 +2,6 @@
 name: gh-create-pr-linked
 description: "Create PRs properly linked to GitHub issues"
 category: tooling
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 

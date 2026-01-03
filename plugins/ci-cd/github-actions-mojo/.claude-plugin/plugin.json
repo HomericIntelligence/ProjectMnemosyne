@@ -1,10 +1,20 @@
 {
   "name": "github-actions-mojo",
   "version": "1.0.0",
-  "description": "GitHub Actions CI setup for Mojo projects. Use when: (1) Setting up Mojo CI/CD, (2) Configuring pixi with GitHub Actions, (3) Running mojo test in CI. Verified with Mojo v0.25.7.",
+  "description": "GitHub Actions CI setup for Mojo projects. Use when: (1) Setting up Mojo CI/CD, (2) Configuring pixi with GitHub Actions, (3) Running mojo test in CI.",
   "author": {
     "name": "ML Odyssey Team"
   },
   "skills": "./skills",
-  "tags": ["mojo", "github-actions", "ci-cd", "pixi", "testing"]
+  "tags": ["mojo", "github-actions", "ci-cd", "pixi", "testing"],
+  "requires": {
+    "tools": [
+      {"name": "mojo", "version": ">=0.25.0"},
+      {"name": "pixi", "version": ">=0.39.0"}
+    ],
+    "languages": ["mojo"]
+  },
+  "verified_on": [
+    {"project": "ProjectOdyssey", "context": "Mojo v0.25.7 CI setup"}
+  ]
 }

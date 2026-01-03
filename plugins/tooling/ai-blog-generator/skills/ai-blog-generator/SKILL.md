@@ -2,7 +2,6 @@
 name: ai-blog-generator
 description: "Generate AI-authored blog posts from git commit history to fill documentation gaps"
 category: tooling
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 

@@ -2,7 +2,6 @@
 name: build-run-local
 description: "Run local builds with proper environment setup matching CI pipeline"
 category: ci-cd
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 
@@ -100,6 +99,12 @@ pre-commit run --all-files
 - [ ] All tests pass
 - [ ] Pre-commit hooks pass
 - [ ] No new lint errors
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Local build verification with pixi/Mojo | Patterns adaptable to any build system |
 
 ## References
 

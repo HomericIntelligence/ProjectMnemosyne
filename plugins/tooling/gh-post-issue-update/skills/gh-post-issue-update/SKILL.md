@@ -2,7 +2,6 @@
 name: gh-post-issue-update
 description: "Post structured updates to GitHub issues for progress tracking"
 category: tooling
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 

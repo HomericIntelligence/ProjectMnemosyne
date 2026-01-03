@@ -2,7 +2,6 @@
 name: extract-test-failures
 description: "Extract and summarize test failures from logs"
 category: testing
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 

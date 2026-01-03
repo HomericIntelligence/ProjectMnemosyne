@@ -2,7 +2,6 @@
 name: quality-security-scan
 description: "Scan code for security vulnerabilities and unsafe patterns"
 category: architecture
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 

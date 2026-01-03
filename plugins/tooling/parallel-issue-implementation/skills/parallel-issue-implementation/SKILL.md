@@ -2,7 +2,6 @@
 name: parallel-issue-implementation
 description: "Implement multiple GitHub issues in parallel using git worktrees. Use when you have 2+ issues with detailed plans ready for implementation."
 category: tooling
-source: ProjectScylla
 date: 2025-01-01
 ---
 

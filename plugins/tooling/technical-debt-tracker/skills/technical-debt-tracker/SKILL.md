@@ -2,7 +2,6 @@
 name: technical-debt-tracker
 description: "Track and resolve FIXME/TODO comments via GitHub issues"
 category: tooling
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 

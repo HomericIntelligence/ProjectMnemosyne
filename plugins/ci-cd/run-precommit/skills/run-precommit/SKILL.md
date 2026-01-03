@@ -2,7 +2,6 @@
 name: run-precommit
 description: "Run pre-commit hooks locally to validate code quality before committing"
 category: ci-cd
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 
@@ -93,6 +92,12 @@ If hooks fail:
 2. Fix your code - Update to pass the check
 3. Re-run hooks - Verify with `pre-commit run`
 4. Commit again - Let hooks validate
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Pre-commit validation workflow | Generic patterns applicable to any project |
 
 ## References
 

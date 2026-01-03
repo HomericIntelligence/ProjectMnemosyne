@@ -2,7 +2,6 @@
 name: bulk-issue-filing
 description: "Bulk create GitHub issues from code markers (TODO/FIXME/DEPRECATED/NOTE)"
 category: tooling
-source: ProjectOdyssey FIXME/TODO cleanup session
 date: 2026-01-01
 ---
 

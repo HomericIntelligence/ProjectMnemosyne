@@ -2,7 +2,6 @@
 name: doc-validate-markdown
 description: "Validate markdown files for formatting, links, and style compliance using markdownlint"
 category: architecture
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 

@@ -2,7 +2,6 @@
 name: retrospective-hook-integration
 description: "Setup SessionEnd hooks for automatic retrospective prompts in Claude Code. Use when integrating ProjectMnemosyne marketplace."
 category: tooling
-source: ProjectOdyssey
 date: 2025-12-29
 ---
 

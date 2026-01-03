@@ -2,7 +2,6 @@
 name: fix-ci-mojo-test-failure
 description: "TRIGGER CONDITIONS: CI failing with Mojo test assertion error, edge case handling missing"
 category: ci-cd
-source: ProjectOdyssey
 date: 2026-01-01
 ---
 
@@ -15,8 +14,8 @@ Systematic workflow for diagnosing and fixing CI failures caused by Mojo test as
 | Item | Details |
 |------|---------|
 | Date | 2026-01-01 |
-| Objective | Fix CI failures for PR #3050 where test expected empty list but got non-empty |
-| Outcome | Success - All 54 CI checks passed after fix |
+| Objective | Fix CI failures where test expects specific value but implementation returns different |
+| Outcome | Success |
 
 ## When to Use
 
@@ -36,8 +35,8 @@ Step-by-step process that worked:
 5. **Read the test file**: Understand what the test expects
 6. **Read the implementation**: Identify why it returns unexpected value
 7. **Apply minimal fix**: Add early return for edge cases or fix initialization
-8. **Run test locally**: `pixi run mojo run <test-file>` (note: `mojo test` doesn't exist)
-9. **Run pre-commit**: `just pre-commit-all` to ensure formatting passes
+8. **Run test locally**: `<package-manager> run mojo run <test-file>` (note: `mojo test` may not exist in all versions)
+9. **Run pre-commit**: Validate formatting passes
 10. **Commit with conventional format**: `fix(scope): description`
 11. **Push and verify CI**: Wait for all checks to pass
 
@@ -46,44 +45,47 @@ Step-by-step process that worked:
 | Attempt | Why Failed | Lesson |
 |---------|-----------|--------|
 | Read main branch test file | Test didn't exist on main - was added in PR | Always checkout PR branch before investigating |
-| Use `mojo test` command | Command doesn't exist in current Mojo version | Use `mojo run` for test files with `main()` function |
-| Initial `max_class = 0` | Created 1x1 matrix for empty inputs instead of empty matrix | Initialize to -1 when empty input should produce empty output |
+| Use `mojo test` command | Command doesn't exist in some Mojo versions | Use `mojo run` for test files with `main()` function |
+| Initialize loop variable to 0 | Created 1x1 matrix for empty inputs instead of empty matrix | Initialize to -1 when empty input should produce empty output |
 
 ## Results & Parameters
 
-The fix applied to `compute_confusion_matrix` function:
+Common pattern for fixing edge cases:
 
 ```mojo
-fn compute_confusion_matrix(
-    y_true: List[Int], y_pred: List[Int], num_classes: Int = 0
-) -> List[List[Int]]:
-    # Handle empty inputs - return empty matrix unless num_classes is specified
-    if len(y_true) == 0 and len(y_pred) == 0 and num_classes == 0:
-        return List[List[Int]]()
+fn some_function(input: List[T]) -> List[U]:
+    # Handle empty inputs - return empty result
+    if len(input) == 0:
+        return List[U]()
 
-    # Initialize max_class to -1 (not 0) so empty lists give n_classes = 0
-    var max_class = -1
+    # Initialize max/min to -1 (not 0) so empty lists give correct result
+    var max_val = -1
     # ... rest of implementation
 ```
 
-Key commands used:
+Key commands:
 
 ```bash
 # Check CI status
-gh pr checks 3050
+gh pr checks <pr-number>
 
 # Get failed logs
-gh run view 20635532846 --log-failed 2>&1 | grep -A 50 -E "(FAILED|Error)"
+gh run view <run-id> --log-failed 2>&1 | grep -A 50 -E "(FAILED|Error)"
 
 # Run Mojo test locally
-pixi run mojo run tests/shared/utils/test_visualization.mojo
+<package-manager> run mojo run <test-path>
 
 # Pre-commit all files
-just pre-commit-all
+<pre-commit-command>
 ```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | PR #3050 - confusion matrix edge case | [notes.md](../../references/notes.md) |
 
 ## References
 
-- Source PR: ProjectOdyssey#3050
-- Fix commit: 93f92a3b
 - Related: Edge case handling patterns for list functions
+- Mojo test documentation: https://docs.modular.com/mojo/cli/test

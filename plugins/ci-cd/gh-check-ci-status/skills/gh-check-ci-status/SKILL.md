@@ -2,7 +2,6 @@
 name: gh-check-ci-status
 description: "Check CI/CD status of a pull request including workflow runs and test results"
 category: ci-cd
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 
@@ -108,6 +107,12 @@ gh pr checks <pr>          # All passing?
 gh pr view <pr>            # Up-to-date?
 gh pr diff <pr>            # Changes correct?
 ```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | CI status monitoring workflow | Generic patterns applicable to any GitHub project |
 
 ## References
 

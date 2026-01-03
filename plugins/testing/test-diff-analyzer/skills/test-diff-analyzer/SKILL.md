@@ -2,7 +2,6 @@
 name: test-diff-analyzer
 description: "Analyze test differences between runs to identify flaky tests"
 category: testing
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 

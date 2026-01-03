@@ -2,7 +2,6 @@
 name: grpo-external-vllm
 description: "GRPO training with external vLLM server for distributed GPU setups"
 category: training
-source: ProjectOdyssey
 date: 2025-12-28
 ---
 

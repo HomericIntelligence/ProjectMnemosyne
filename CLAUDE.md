@@ -112,6 +112,28 @@ plugins/<category>/<name>/
 3. **Copy-paste ready**: Parameters and configs should work immediately
 4. **No duplication**: Link to external docs instead of copying
 
+### Cross-Repository Compatibility
+
+Skills should be generic enough to work across multiple repositories:
+
+1. **No `source:` in frontmatter**: Remove repository-specific source fields
+2. **Use placeholders**: Replace hardcoded paths with `<project-root>`, `<test-path>`, `<package-manager>`
+3. **Add "Verified On" section**: Document where the skill was validated with a table:
+   ```markdown
+   ## Verified On
+
+   | Project | Context | Details |
+   |---------|---------|---------|
+   | ProjectName | PR #XXX context | [notes.md](../references/notes.md) |
+   ```
+4. **Move specifics to references**: Put project-specific commands, paths, and code in `references/notes.md`
+5. **Generic workflows**: Write workflows that can be adapted to any repository structure
+
+**Optional plugin.json fields for cross-repo support**:
+- `requires.tools`: Array of tool requirements (e.g., `[{"name": "mojo", "version": ">=0.25.0"}]`)
+- `requires.languages`: Programming languages this skill applies to
+- `verified_on`: Array of projects where the skill was validated
+
 ## Hooks Configuration
 
 The project uses Claude Code hooks for automatic retrospective prompts.

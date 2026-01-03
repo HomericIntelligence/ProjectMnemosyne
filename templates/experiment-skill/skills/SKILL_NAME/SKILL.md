@@ -2,7 +2,6 @@
 name: SKILL_NAME
 description: "TRIGGER CONDITIONS: When to use this skill"
 category: CATEGORY
-source: SOURCE_PROJECT
 date: YYYY-MM-DD
 ---
 
@@ -32,6 +31,11 @@ Step-by-step process that worked:
 2. **Step two**: Description of what to do
 3. **Step three**: Description of what to do
 
+```bash
+# Use placeholders for project-specific paths
+<package-manager> run <test-command> <test-path>
+```
+
 ## Failed Attempts
 
 | Attempt | Why Failed | Lesson |
@@ -49,8 +53,15 @@ param1: value1
 param2: value2
 ```
 
+## Verified On
+
+Specific projects where this skill was validated (see `references/notes.md` for details):
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectName | PR #XXX or brief context | [notes.md](../references/notes.md) |
+
 ## References
 
-- Source issue: #NUMBER
 - Related skills: skill-name
 - External docs: URL

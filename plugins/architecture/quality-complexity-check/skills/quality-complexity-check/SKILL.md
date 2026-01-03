@@ -2,7 +2,6 @@
 name: quality-complexity-check
 description: "Analyze code complexity metrics including cyclomatic complexity and nesting depth"
 category: architecture
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 

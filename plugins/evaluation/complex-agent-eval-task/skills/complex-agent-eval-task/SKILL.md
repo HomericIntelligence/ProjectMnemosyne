@@ -2,7 +2,6 @@
 name: complex-agent-eval-task
 description: "Create sophisticated E2E test cases for AI agents using real PRs as reference solutions"
 category: evaluation
-source: ProjectScylla
 date: 2026-01-01
 ---
 

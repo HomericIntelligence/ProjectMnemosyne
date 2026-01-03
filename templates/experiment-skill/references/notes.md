@@ -1,18 +1,45 @@
-# Notes
+# Session Notes: SKILL_NAME
 
-Additional context, raw logs, and detailed findings from the session.
+Additional context, raw logs, and detailed findings from verified implementations.
 
-## Session Summary
+## Verified Examples
 
-- **Date**: YYYY-MM-DD
-- **Duration**: X hours
-- **Participants**: Names or Claude session
+### Example 1: ProjectName
+
+**Date**: YYYY-MM-DD
+**Context**: Brief description of the scenario (e.g., PR #XXX, Issue #YYY)
+
+**Specific Commands Used**:
+
+```bash
+# Actual commands run during this implementation
+command1
+command2
+```
+
+**Specific Fix/Solution Applied**:
+
+```
+# Code or configuration changes made
+```
+
+**Links**:
+
+- PR: https://github.com/org/repo/pull/XXX
+- Issue: https://github.com/org/repo/issues/YYY
+- Commit: abc123
+
+---
+
+### Example 2: AnotherProject
+
+(Add additional verified examples as the skill is used in more projects)
 
 ## Raw Findings
 
-Add detailed notes, error messages, and observations here.
+Additional observations, error messages, and notes from sessions.
 
-## Links
+## External References
 
-- Related issues: #NUMBER
-- External resources: URLs
+- Documentation: URLs
+- Related skills: skill-names

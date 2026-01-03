@@ -2,7 +2,6 @@
 name: gh-batch-merge-by-labels
 description: "Batch merge multiple PRs by label matching"
 category: tooling
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 

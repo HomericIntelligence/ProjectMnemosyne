@@ -2,7 +2,6 @@
 name: spec-driven-experimentation
 description: "TECHSPEC.md pattern for structured ML experiments"
 category: training
-source: https://huggingface.co/blog/sionic-ai/claude-code-skills-training
 date: 2025-12-29
 ---
 

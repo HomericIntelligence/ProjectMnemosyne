@@ -2,7 +2,6 @@
 name: validate-workflow
 description: "Validate GitHub Actions workflow files for syntax and correctness"
 category: ci-cd
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 
@@ -109,6 +108,12 @@ git commit -m "ci: update workflow"
 | "Unknown action" | Check action name and version |
 | "Missing field" | Add required fields (run, uses, etc.) |
 | "Invalid context" | Use correct context expression syntax |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | GitHub Actions workflow validation | Generic patterns applicable to any project |
 
 ## References
 

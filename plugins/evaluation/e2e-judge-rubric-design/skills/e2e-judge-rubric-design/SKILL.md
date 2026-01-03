@@ -2,7 +2,6 @@
 name: e2e-judge-rubric-design
 description: "Design LLM-as-Judge evaluation rubrics for E2E agent testing"
 category: evaluation
-source: ProjectScylla
 date: 2026-01-01
 ---
 

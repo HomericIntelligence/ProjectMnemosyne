@@ -2,7 +2,6 @@
 name: doc-generate-adr
 description: "Generate Architecture Decision Records (ADRs) to document significant architectural decisions"
 category: architecture
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 

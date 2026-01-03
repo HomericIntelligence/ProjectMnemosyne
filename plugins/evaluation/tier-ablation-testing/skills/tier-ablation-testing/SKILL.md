@@ -2,7 +2,6 @@
 name: tier-ablation-testing
 description: "Run comprehensive tier ablation studies across AI agent architectures (T0-T6) with ~114 sub-tests"
 category: evaluation
-source: ProjectScylla
 date: 2026-01-02
 ---
 

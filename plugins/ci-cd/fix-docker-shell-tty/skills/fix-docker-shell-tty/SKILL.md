@@ -1,8 +1,7 @@
 ---
 name: fix-docker-shell-tty
 description: "Fix Docker interactive shell failures caused by missing or incorrect TTY flags"
-category: debugging
-source: ProjectOdyssey
+category: ci-cd
 date: 2025-12-30
 ---
 
@@ -162,8 +161,13 @@ docker run --rm image ./script.sh
 - **fix-docker-platform** - Fix Docker build failures from platform mismatches
 - **fix-docker-image-case** - Fix SBOM failures from mixed-case image names
 
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | PR #2961 - justfile shell recipe fix | Docker TTY flag pattern |
+
 ## References
 
-- Docker exec reference: <https://docs.docker.com/engine/reference/commandline/exec/>
-- Docker compose exec: <https://docs.docker.com/compose/reference/exec/>
-- PR #2961: <https://github.com/mvillmow/ProjectOdyssey/pull/2961>
+- Docker exec reference: https://docs.docker.com/engine/reference/commandline/exec/
+- Docker compose exec: https://docs.docker.com/compose/reference/exec/

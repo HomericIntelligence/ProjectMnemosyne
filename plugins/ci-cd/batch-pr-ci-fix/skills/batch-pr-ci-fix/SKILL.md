@@ -2,7 +2,6 @@
 name: batch-pr-ci-fix
 description: "Batch fix CI failures across multiple open PRs and enable auto-merge"
 category: ci-cd
-source: ProjectOdyssey
 date: 2025-12-29
 ---
 
@@ -16,8 +15,7 @@ Fix CI failures across multiple open pull requests and enable auto-merge for aut
 |------|---------|
 | Date | 2025-12-29 |
 | Objective | Fix all CI failures across open PRs and merge them using auto-merge |
-| Outcome | Success - 3 PRs merged (2990, 2991, 2992) |
-| Duration | ~45 minutes |
+| Outcome | Success |
 
 ## When to Use
 
@@ -48,11 +46,11 @@ Common patterns observed:
 
 | Pattern | Example | Fix Strategy |
 |---------|---------|--------------|
-| Broken markdown links | Link to non-existent `math.md` | Remove or fix link |
+| Broken markdown links | Link to non-existent file | Remove or fix link |
 | Cross-directory links | Link to `../../.github/workflows/` | Convert to plain text reference |
-| Pre-commit formatting | ruff-format-python changes | Rebase onto main |
-| Mypy module conflicts | `generators.templates` vs `scripts.generators.templates` | Add `--exclude` flag |
-| Mojo package restrictions | `main()` in package file | Remove main function |
+| Pre-commit formatting | ruff-format changes | Rebase onto main |
+| Mypy module conflicts | Module path conflict | Add `--exclude` flag |
+| Package restrictions | `main()` in package file | Remove main function |
 
 ### 3. Fix Each PR Sequentially
 
@@ -65,9 +63,7 @@ git checkout <branch-name>
 # Find broken links
 gh run view <run-id> --log 2>&1 | grep -B5 "Aborted with.*warnings"
 
-# Example: Remove broken link
 # Edit file to remove/fix link
-
 # Commit fix
 git add <file>
 git commit -m "fix(docs): remove broken link to non-existent file"
@@ -93,12 +89,11 @@ git push --force-with-lease origin <branch-name>
 gh run view <run-id> --log-failed | grep "error:"
 
 # Add exclude or fix config
-# Example: .github/workflows/type-check.yml
-pixi run mypy --exclude 'generators/' scripts/
+<linter> --exclude '<pattern>' <path>
 
 # Commit config fix
-git add .github/workflows/type-check.yml
-git commit -m "fix(ci): exclude generators/ from mypy"
+git add <workflow-file>
+git commit -m "fix(ci): exclude problematic paths from type checking"
 git push
 ```
 
@@ -131,27 +126,9 @@ gh pr list --state open
 |---------|-----------|--------|
 | Mypy `explicit_package_bases` config | Still failed with module path conflict | Use CLI `--exclude` flag instead of config |
 | Direct fix for pre-commit failures | Files from main needed | Rebase onto main to get formatting fixes |
-| Removing API docs entirely | Over-correction | Just remove broken links, keep structure |
+| Removing content entirely | Over-correction | Just remove broken links, keep structure |
 
 ## Results & Parameters
-
-### Successful Fixes
-
-**PR 2990** (docs/api reference):
-- **Issue**: Broken link to `math.md`
-- **Fix**: Removed non-existent link from `docs/api/operations/arithmetic.md`
-- **Fix**: Rebased onto main for pre-commit formatting
-- **Result**: Merged at 2025-12-30T00:29:57Z
-
-**PR 2991** (PyTorch migration guide):
-- **Issue**: Links to `../api/tensor.md`, `../api/training/optimizers.md`
-- **Fix**: Removed broken links (API docs don't exist on main)
-- **Result**: Merged at 2025-12-30T00:25:11Z
-
-**PR 2992** (release automation):
-- **Issue**: Links to `../../.github/workflows/release.yml`, `../../scripts/*.py`
-- **Fix**: Converted cross-directory links to plain text references
-- **Result**: Merged at 2025-12-30T00:24:15Z
 
 ### Key Commands
 
@@ -179,29 +156,15 @@ MkDocs strict mode aborts on broken/unrecognized links:
 
 | Error Type | Example | Fix |
 |-----------|---------|-----|
-| Link to non-existent file | `[Math](math.md)` when `math.md` doesn't exist | Remove link or create file |
-| Cross-directory link | `[Workflow](../../.github/workflows/release.yml)` | Convert to backtick code reference |
+| Link to non-existent file | `[Math](math.md)` when file doesn't exist | Remove link or create file |
+| Cross-directory link | `[Workflow](../../.github/workflows/file.yml)` | Convert to backtick code reference |
 | Unrecognized relative link | `[Examples](../../examples/)` | Use valid docs-relative path or remove |
 
 **Detection pattern:**
 ```
-WARNING - Doc file 'path/to/file.md' contains a link 'target.md', but the target 'path/target.md' is not found
+WARNING - Doc file 'path/to/file.md' contains a link 'target.md', but the target is not found
 Aborted with N warnings in strict mode!
 ```
-
-## Pre-commit Failure Patterns
-
-When pre-commit hooks modify files in CI:
-
-```
-Ruff Format Python.......................................................Failed
-- hook id: ruff-format-python
-- files were modified by this hook
-
-1 file reformatted, 140 files left unchanged
-```
-
-**Fix**: Rebase PR onto main to incorporate formatting fixes that were merged.
 
 ## Verification Checklist
 
@@ -214,9 +177,15 @@ Ruff Format Python.......................................................Failed
 
 ## Time Savings
 
-- **Manual approach**: ~2-3 hours (fix each PR individually, wait for CI, manually merge)
-- **Batch approach**: ~45 minutes (parallel analysis, pattern-based fixes, auto-merge)
+- **Manual approach**: ~2-3 hours (fix each PR individually)
+- **Batch approach**: ~45 minutes (parallel analysis, pattern-based fixes)
 - **Savings**: ~60-70% time reduction
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Batch merge of 3 documentation PRs | [notes.md](../../references/notes.md) |
 
 ## Related Skills
 
@@ -227,5 +196,5 @@ Ruff Format Python.......................................................Failed
 ## References
 
 - GitHub CLI: `gh pr`, `gh run` commands
-- MkDocs strict mode: <https://www.mkdocs.org/user-guide/configuration/#strict>
-- GitHub auto-merge: <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/automatically-merging-a-pull-request>
+- MkDocs strict mode: https://www.mkdocs.org/user-guide/configuration/#strict
+- GitHub auto-merge: https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/incorporating-changes-from-a-pull-request/automatically-merging-a-pull-request

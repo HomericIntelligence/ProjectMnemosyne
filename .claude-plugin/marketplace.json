@@ -327,7 +327,7 @@
     },
     {
       "name": "github-actions-mojo",
-      "description": "GitHub Actions CI setup for Mojo projects. Use when: (1) Setting up Mojo CI/CD, (2) Configuring pixi with GitHub Actions, (3) Running mojo test in CI. Verified with Mojo v0.25.7.",
+      "description": "GitHub Actions CI setup for Mojo projects. Use when: (1) Setting up Mojo CI/CD, (2) Configuring pixi with GitHub Actions, (3) Running mojo test in CI.",
       "version": "1.0.0",
       "source": "./plugins/ci-cd/github-actions-mojo",
       "category": "ci-cd",

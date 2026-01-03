@@ -2,7 +2,6 @@
 name: gh-read-issue-context
 description: "Read context from GitHub issue including body and comments"
 category: tooling
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 

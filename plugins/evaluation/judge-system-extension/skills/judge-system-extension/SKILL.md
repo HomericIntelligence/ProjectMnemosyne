@@ -2,7 +2,6 @@
 name: judge-system-extension
 description: "Patterns for extending AI evaluation/judge systems with new capabilities"
 category: evaluation
-source: ProjectScylla
 date: 2025-12-31
 ---
 

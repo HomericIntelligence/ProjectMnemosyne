@@ -2,7 +2,6 @@
 name: create-review-checklist
 description: "Generate customized review checklists based on type of change"
 category: testing
-source: ProjectOdyssey
 date: 2025-12-30
 ---
 
