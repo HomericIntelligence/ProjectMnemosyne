@@ -1,0 +1,24 @@
+{
+  "name": "token-stats-aggregation",
+  "version": "1.0.0",
+  "description": "Pattern for tracking detailed token statistics with cache tokens across hierarchical E2E report levels",
+  "category": "evaluation",
+  "tags": ["tokens", "cache", "aggregation", "reports", "e2e", "dataclass", "pydantic"],
+  "skills": [
+    {
+      "name": "token-stats-aggregation",
+      "path": "skills/token-stats-aggregation/SKILL.md",
+      "triggers": [
+        "tracking token usage",
+        "cache token statistics",
+        "hierarchical report aggregation",
+        "bridging dataclass and pydantic",
+        "backwards compatible API changes"
+      ]
+    }
+  ],
+  "references": ["references/notes.md"],
+  "source_project": "ProjectScylla",
+  "created": "2026-01-03",
+  "author": "Claude Opus 4.5"
+}
