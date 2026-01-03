@@ -1,0 +1,16 @@
+{
+  "name": "industry-grading-scale",
+  "description": "Replace academic grading scales (A=95%, B=85%) with industry-aligned scales focused on production readiness. Use when: (1) Designing rubric scoring systems, (2) Evaluating AI/code quality with meaningful thresholds, (3) Centralizing grading definitions across multiple rubrics.",
+  "version": "1.0.0",
+  "category": "evaluation",
+  "date": "2026-01-02",
+  "tags": [
+    "grading",
+    "rubric",
+    "evaluation",
+    "scoring",
+    "thresholds",
+    "production-readiness",
+    "centralization"
+  ]
+}
