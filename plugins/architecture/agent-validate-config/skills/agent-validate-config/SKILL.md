@@ -60,6 +60,12 @@ Validation includes:
 | Duplicate keys | Remove duplicate entries in frontmatter |
 | Wrong level type | Must be integer 0-5, not string |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `/agents/templates/` - Agent configuration templates

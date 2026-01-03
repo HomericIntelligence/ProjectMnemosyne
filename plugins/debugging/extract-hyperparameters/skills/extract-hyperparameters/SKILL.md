@@ -46,6 +46,12 @@ Hyperparameter documentation:
 - Data preprocessing (normalization, augmentation)
 - Hardware and precision (float32, float64)
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `prepare-dataset` skill for data configuration

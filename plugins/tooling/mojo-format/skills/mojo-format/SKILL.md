@@ -52,6 +52,12 @@ pixi run mojo format --check path/to/file.mojo
 | `Permission denied` | File permissions | Check `chmod` settings |
 | `Mojo not installed` | Missing Mojo | Install via `pixi` or Magic |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `.claude/shared/mojo-guidelines.md` - Mojo syntax standards

@@ -50,6 +50,12 @@ Changelog entry:
 - Contributors
 - Version links (GitHub compare)
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `doc-update-blog` skill for blog post updates

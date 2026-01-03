@@ -87,6 +87,12 @@ Sections:
 
 **Missing section**: Section without orchestrator
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `agent-validate-config` - Validate individual agent configs

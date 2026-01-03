@@ -100,6 +100,12 @@ Provide review with sections:
 | Auth failure | Check `gh auth status` |
 | CI pending | Note review based on current state |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See CLAUDE.md for project standards

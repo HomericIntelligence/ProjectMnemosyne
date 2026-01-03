@@ -108,6 +108,12 @@ Before committing Mojo code:
 - [ ] All type annotations present in fn declarations
 - [ ] Zero compiler warnings
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See CLAUDE.md for v0.26.1+ syntax standards

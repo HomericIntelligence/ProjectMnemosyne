@@ -58,6 +58,12 @@ Generated boilerplate:
 - Import statements included
 - Ready to compile/run (no syntax errors)
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See templates/ directories in skill folders for examples

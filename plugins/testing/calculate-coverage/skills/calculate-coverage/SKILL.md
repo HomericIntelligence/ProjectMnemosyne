@@ -49,6 +49,12 @@ Coverage analysis:
 - Branch coverage (if applicable)
 - Recommendations for improvement
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `run-tests` skill for test execution

@@ -47,6 +47,12 @@ Algorithm documentation:
 - Special cases and error handling
 - Implementation notes and tips
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `analyze-equations` skill for mathematical formula extraction

@@ -183,6 +183,12 @@ Comment when:
 - Questions about approach
 - Suggestions for improvement
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See CLAUDE.md for project standards

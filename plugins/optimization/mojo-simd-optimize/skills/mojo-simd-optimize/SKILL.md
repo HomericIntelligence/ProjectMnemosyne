@@ -52,6 +52,12 @@ for i in range(0, size, width):
 | `Compilation fails` | Type mismatch | Check load/store types match |
 | `Segfault` | Misaligned access | Ensure stride is correct |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `.claude/shared/mojo-guidelines.md` - SIMD patterns section

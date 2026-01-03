@@ -120,6 +120,12 @@ pytest --cov=src --cov-report=html tests/
 | "Cannot find tests/" | Verify test directory exists |
 | No coverage report | Ensure tests ran successfully |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - Related skill: `phase-test-tdd` for test generation

@@ -50,6 +50,12 @@ Architecture documentation:
 - Data flow diagram (text or ASCII)
 - Special components (skip connections, attention)
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `extract-hyperparameters` skill for model configuration

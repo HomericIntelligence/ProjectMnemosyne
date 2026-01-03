@@ -101,6 +101,12 @@ EOF
 | Missing learnings | Add what was discovered/surprised you |
 | No next steps | Plan immediate next work |
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - Related skill: `doc-generate-adr` for architectural decisions

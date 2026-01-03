@@ -49,6 +49,12 @@ Dependency analysis:
 - Recommended import order
 - Unnecessary or redundant dependencies
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `check-dependencies` skill for validation

@@ -52,6 +52,12 @@ Test results:
 - Execution time per test
 - Test coverage metrics (if applicable)
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `generate-tests` skill for creating tests

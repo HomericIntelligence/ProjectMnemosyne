@@ -52,6 +52,12 @@ Test suite:
 - Clear assertions with error messages
 - Coverage report showing lines tested
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `run-tests` skill for executing tests

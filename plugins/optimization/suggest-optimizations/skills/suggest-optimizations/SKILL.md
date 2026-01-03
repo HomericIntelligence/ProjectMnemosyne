@@ -50,6 +50,12 @@ Optimization recommendation:
 - Expected improvement (percentage or time estimate)
 - Implementation difficulty (low/medium/high)
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See `benchmark-functions` skill for measuring improvements

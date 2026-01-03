@@ -197,6 +197,12 @@ Fix locally and push if CI fails.
 5. **NEVER bypass hooks** - Using `--no-verify` is strictly prohibited. If formatting fails, fix the code instead of
    bypassing the check.
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - [Git Commit Policy](../../shared/git-commit-policy.md) - Hook bypass prohibition

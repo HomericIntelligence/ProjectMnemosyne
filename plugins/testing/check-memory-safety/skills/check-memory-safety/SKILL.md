@@ -147,6 +147,12 @@ Before committing Mojo code:
 - [ ] Scope lifetimes match usage
 - [ ] Compiler produces no errors or warnings
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See CLAUDE.md for ownership patterns

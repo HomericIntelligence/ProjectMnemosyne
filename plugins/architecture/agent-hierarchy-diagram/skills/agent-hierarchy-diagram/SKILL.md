@@ -71,6 +71,12 @@ graph TD
 
 **GraphML**: Import into diagram tools (yEd, Graphviz)
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - `/agents/hierarchy.md` - Existing hierarchy documentation

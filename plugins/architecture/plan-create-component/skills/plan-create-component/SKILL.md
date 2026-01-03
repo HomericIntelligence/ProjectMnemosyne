@@ -161,6 +161,12 @@ Additional context and considerations.
 ./scripts/validate_plan_hierarchy.sh
 ```
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - Template 1 format: CLAUDE.md

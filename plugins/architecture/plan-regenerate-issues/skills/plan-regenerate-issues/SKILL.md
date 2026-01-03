@@ -149,6 +149,12 @@ python3 scripts/regenerate_github_issues.py --section 02-shared-library
 - `scripts/validate_issue_format.sh` - Validate format
 - `scripts/check_issue_format.sh` - Check all issues
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - Plan format: CLAUDE.md

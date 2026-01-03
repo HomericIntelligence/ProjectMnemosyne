@@ -141,6 +141,12 @@ fn sum_simd[simd_width: Int](tensor: Tensor) -> Float32:
 - Critical path (hot loop)? → YES → Worth optimizing
 - Implement → Measure → Iterate
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See mojo-simd-optimize for implementation guidance

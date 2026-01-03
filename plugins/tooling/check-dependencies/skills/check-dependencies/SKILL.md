@@ -49,6 +49,12 @@ Dependency validation report:
 - Compatibility status (compatible/incompatible)
 - Issues found (if any)
 
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
 ## References
 
 - See CLAUDE.md > Environment Setup for Pixi configuration
