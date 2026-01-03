@@ -1,0 +1,22 @@
+{
+  "name": "shared-fixture-migration",
+  "version": "1.0.0",
+  "description": "Migrate duplicated test fixture configs to a centralized shared location with runtime loading. Use when: test fixtures contain config files duplicated across many test directories, the same config content is repeated for each test but is actually test-independent, you want a single source of truth for shared configurations.",
+  "category": "architecture",
+  "date": "2026-01-03",
+  "tags": [
+    "deduplication",
+    "test-fixtures",
+    "config-migration",
+    "centralization",
+    "runtime-loading",
+    "tier-testing",
+    "shared-resources"
+  ],
+  "source_project": "ProjectScylla",
+  "metrics": {
+    "size_reduction": "97%",
+    "files_eliminated": 5355,
+    "lines_deleted": 120735
+  }
+}
