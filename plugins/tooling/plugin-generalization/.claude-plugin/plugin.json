@@ -1,0 +1,17 @@
+{
+  "name": "plugin-generalization",
+  "version": "1.0.0",
+  "description": "Generalize skills/plugins for cross-repository compatibility. Use when: (1) plugins reference specific repos in frontmatter, (2) hardcoded paths need abstraction, (3) migrating a skills marketplace to support multiple projects.",
+  "author": {
+    "name": "HomericIntelligence"
+  },
+  "skills": "./skills",
+  "tags": ["plugin", "generalization", "cross-repo", "marketplace", "migration", "abstraction"],
+  "requires": {
+    "tools": [],
+    "languages": []
+  },
+  "verified_on": [
+    {"project": "ProjectMnemosyne", "context": "Generalized 33 plugins across 8 categories"}
+  ]
+}
