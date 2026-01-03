@@ -32,6 +32,22 @@
       "tags": []
     },
     {
+      "name": "codebase-consolidation",
+      "description": "Systematic approach to finding and consolidating duplicate code, aligning implementations to consistent patterns, and documenting intentional type variations. Use when: analyzing codebase for duplicates, unifying implementations across modules, creating backward-compatible refactors.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/codebase-consolidation",
+      "category": "architecture",
+      "tags": [
+        "refactor",
+        "deduplication",
+        "consolidation",
+        "backward-compatibility",
+        "type-alias",
+        "cross-reference",
+        "tech-debt"
+      ]
+    },
+    {
       "name": "doc-generate-adr",
       "description": "Generate Architecture Decision Records (ADRs) to document significant architectural decisions. Use when: (1) Making significant architectural decisions, (2) Choosing between technical alternatives, (3) Documenting design trade-offs.",
       "version": "1.0.0",
@@ -1095,6 +1111,21 @@
       "source": "./plugins/tooling/phase-package",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "plugin-generalization",
+      "description": "Generalize skills/plugins for cross-repository compatibility. Use when: (1) plugins reference specific repos in frontmatter, (2) hardcoded paths need abstraction, (3) migrating a skills marketplace to support multiple projects.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/plugin-generalization",
+      "category": "tooling",
+      "tags": [
+        "plugin",
+        "generalization",
+        "cross-repo",
+        "marketplace",
+        "migration",
+        "abstraction"
+      ]
     },
     {
       "name": "retrospective-hook-integration",
