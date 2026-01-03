@@ -1,0 +1,6 @@
+{
+  "name": "track-implementation-progress",
+  "version": "1.0.0",
+  "description": "Track implementation progress against plan. Use to monitor component delivery and identify blockers.",
+  "skills": "./skills"
+}

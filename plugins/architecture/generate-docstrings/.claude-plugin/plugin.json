@@ -1,0 +1,6 @@
+{
+  "name": "generate-docstrings",
+  "version": "1.0.0",
+  "description": "Create docstrings for functions and classes. Use when documenting code APIs.",
+  "skills": "./skills"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "identify-architecture",
+  "version": "1.0.0",
+  "description": "Analyze ML model architecture from papers and code. Use when understanding model structure for implementation.",
+  "skills": "./skills"
+}

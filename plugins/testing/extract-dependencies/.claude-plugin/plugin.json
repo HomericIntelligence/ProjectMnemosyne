@@ -1,0 +1,6 @@
+{
+  "name": "extract-dependencies",
+  "version": "1.0.0",
+  "description": "Analyze imports and identify all module dependencies. Use when mapping project structure.",
+  "skills": "./skills"
+}

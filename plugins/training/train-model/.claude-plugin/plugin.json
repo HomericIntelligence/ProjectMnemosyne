@@ -1,0 +1,6 @@
+{
+  "name": "train-model",
+  "version": "1.0.0",
+  "description": "Execute model training with optimization algorithms. Use when running training loops on datasets.",
+  "skills": "./skills"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "agent-run-orchestrator",
+  "version": "1.0.0",
+  "description": "Run section orchestrators to coordinate multi-component workflows. Use when starting work on a section.",
+  "skills": "./skills"
+}

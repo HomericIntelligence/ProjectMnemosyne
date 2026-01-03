@@ -1,0 +1,6 @@
+{
+  "name": "generate-api-docs",
+  "version": "1.0.0",
+  "description": "Create API reference documentation from docstrings. Use when documenting public module interfaces.",
+  "skills": "./skills"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "profile-code",
+  "version": "1.0.0",
+  "description": "Measure execution time and memory usage of code. Use when analyzing performance characteristics.",
+  "skills": "./skills"
+}

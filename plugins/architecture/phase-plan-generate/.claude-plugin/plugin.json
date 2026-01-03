@@ -1,0 +1,6 @@
+{
+  "name": "phase-plan-generate",
+  "version": "1.0.0",
+  "description": "Generate comprehensive plan documentation following Template 1 format. Use when creating plan.md files for new components or subsections.",
+  "skills": "./skills"
+}

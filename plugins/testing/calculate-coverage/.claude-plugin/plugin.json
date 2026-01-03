@@ -1,0 +1,6 @@
+{
+  "name": "calculate-coverage",
+  "version": "1.0.0",
+  "description": "Measure test coverage and identify untested code. Use when assessing test completeness.",
+  "skills": "./skills"
+}

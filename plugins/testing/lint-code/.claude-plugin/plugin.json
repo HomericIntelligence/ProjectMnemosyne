@@ -1,0 +1,6 @@
+{
+  "name": "lint-code",
+  "version": "1.0.0",
+  "description": "Check code for style and quality issues. Use when validating code before commits.",
+  "skills": "./skills"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "evaluate-model",
+  "version": "1.0.0",
+  "description": "Measure model performance on test datasets. Use when assessing accuracy, precision, recall, and other metrics.",
+  "skills": "./skills"
+}

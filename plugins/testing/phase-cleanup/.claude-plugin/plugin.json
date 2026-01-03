@@ -1,0 +1,6 @@
+{
+  "name": "phase-cleanup",
+  "version": "1.0.0",
+  "description": "Refactor and finalize code after parallel phases complete, addressing technical debt. Use in cleanup phase to polish code before merge.",
+  "skills": "./skills"
+}

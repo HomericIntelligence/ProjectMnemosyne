@@ -1,0 +1,6 @@
+{
+  "name": "analyze-code-structure",
+  "version": "1.0.0",
+  "description": "Examine code organization and identify structural patterns. Use when reviewing module design.",
+  "skills": "./skills"
+}

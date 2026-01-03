@@ -8,6 +8,30 @@
   "version": "1.0.0",
   "plugins": [
     {
+      "name": "agent-coverage-check",
+      "description": "Check agent configuration coverage across hierarchy levels and phases. Use to ensure complete agent system coverage.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/agent-coverage-check",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "agent-hierarchy-diagram",
+      "description": "Generate visual hierarchy diagrams of agent system showing levels and delegation. Use for documentation or onboarding.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/agent-hierarchy-diagram",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "agent-validate-config",
+      "description": "Validate agent YAML frontmatter and configuration. Use before committing agent changes or in CI.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/agent-validate-config",
+      "category": "architecture",
+      "tags": []
+    },
+    {
       "name": "doc-generate-adr",
       "description": "Generate Architecture Decision Records (ADRs) to document significant architectural decisions. Use when: (1) Making significant architectural decisions, (2) Choosing between technical alternatives, (3) Documenting design trade-offs.",
       "version": "1.0.0",
@@ -22,6 +46,22 @@
       ]
     },
     {
+      "name": "doc-issue-readme",
+      "description": "Post structured documentation to GitHub issue as a comment. Use when starting work on an issue to document approach and track progress.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/doc-issue-readme",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "doc-update-blog",
+      "description": "Update development blog with implementation milestones, learnings, and progress. Use after completing major milestones or phases.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/doc-update-blog",
+      "category": "architecture",
+      "tags": []
+    },
+    {
       "name": "doc-validate-markdown",
       "description": "Validate markdown files for formatting, links, and style compliance using markdownlint. Use when: (1) Before committing documentation, (2) Markdown linting errors in CI, (3) Creating new documentation.",
       "version": "1.0.0",
@@ -34,6 +74,38 @@
         "formatting",
         "validation"
       ]
+    },
+    {
+      "name": "generate-api-docs",
+      "description": "Create API reference documentation from docstrings. Use when documenting public module interfaces.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/generate-api-docs",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "generate-changelog",
+      "description": "Create changelog from git commits. Use when preparing release notes.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/generate-changelog",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "generate-docstrings",
+      "description": "Create docstrings for functions and classes. Use when documenting code APIs.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/generate-docstrings",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "identify-architecture",
+      "description": "Analyze ML model architecture from papers and code. Use when understanding model structure for implementation.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/identify-architecture",
+      "category": "architecture",
+      "tags": []
     },
     {
       "name": "implementation-alignment-validation",
@@ -70,6 +142,38 @@
       ]
     },
     {
+      "name": "phase-plan-generate",
+      "description": "Generate comprehensive plan documentation following Template 1 format. Use when creating plan.md files for new components or subsections.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/phase-plan-generate",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "plan-create-component",
+      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/plan-create-component",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "plan-regenerate-issues",
+      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/plan-regenerate-issues",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "plan-validate-structure",
+      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/plan-validate-structure",
+      "category": "architecture",
+      "tags": []
+    },
+    {
       "name": "quality-complexity-check",
       "description": "Analyze code complexity metrics including cyclomatic complexity and nesting depth. Use when: (1) Code review process, (2) Identifying refactoring candidates, (3) Maintaining code quality standards.",
       "version": "1.0.0",
@@ -96,6 +200,14 @@
         "audit",
         "owasp"
       ]
+    },
+    {
+      "name": "track-implementation-progress",
+      "description": "Track implementation progress against plan. Use to monitor component delivery and identify blockers.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/track-implementation-progress",
+      "category": "architecture",
+      "tags": []
     },
     {
       "name": "batch-pr-ci-fix",
@@ -138,6 +250,21 @@
         "github-actions",
         "troubleshooting",
         "logs"
+      ]
+    },
+    {
+      "name": "fix-ci-mojo-test-failure",
+      "description": "TRIGGER CONDITIONS: (1) CI failing with Mojo test assertion error, (2) test expects specific return value but implementation returns different value, (3) edge case handling missing in implementation. Verified on ProjectOdyssey PR #3050.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/fix-ci-mojo-test-failure",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "mojo",
+        "testing",
+        "assertion",
+        "edge-case",
+        "debugging"
       ]
     },
     {
@@ -213,6 +340,22 @@
       ]
     },
     {
+      "name": "install-workflow",
+      "description": "Create GitHub Actions workflows for automated package building and distribution. Use in package phase to automate .mojopkg building and release creation.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/install-workflow",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "quality-fix-formatting",
+      "description": "Automatically fix code formatting issues using mojo format, markdownlint, and pre-commit hooks. Use when formatting checks fail or before committing code.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/quality-fix-formatting",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "run-precommit",
       "description": "Run pre-commit hooks locally to validate code quality before committing. Use when: (1) Before committing code, (2) Testing if CI will pass, (3) After making code changes.",
       "version": "1.0.0",
@@ -225,6 +368,14 @@
         "formatting",
         "code-quality"
       ]
+    },
+    {
+      "name": "scan-vulnerabilities",
+      "description": "Detect security vulnerabilities in code and dependencies. Use when auditing security.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/scan-vulnerabilities",
+      "category": "ci-cd",
+      "tags": []
     },
     {
       "name": "validate-workflow",
@@ -253,6 +404,46 @@
         "validation",
         "branch-protection"
       ]
+    },
+    {
+      "name": "analyze-code-structure",
+      "description": "Examine code organization and identify structural patterns. Use when reviewing module design.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/analyze-code-structure",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "analyze-equations",
+      "description": "Parse and interpret mathematical equations from research papers. Use when extracting formulas for implementation.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/analyze-equations",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "detect-code-smells",
+      "description": "Identify code quality issues and anti-patterns. Use when reviewing code for maintainability problems.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/detect-code-smells",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "extract-algorithm",
+      "description": "Parse and document algorithm pseudocode from research papers. Use when preparing for implementation.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/extract-algorithm",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "extract-hyperparameters",
+      "description": "Identify and document model hyperparameters from papers. Use when setting up training configurations.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/extract-hyperparameters",
+      "category": "debugging",
+      "tags": []
     },
     {
       "name": "fix-implicitlycopyable-removal",
@@ -299,6 +490,78 @@
       ]
     },
     {
+      "name": "orphan-branch-recovery",
+      "description": "Use when a branch has no common ancestor with main, cannot be merged, or was pushed from the wrong repository. Triggers: 'no merge base', 'branch diverged completely', 'cannot merge unrelated histories', 'pushed from wrong repo'. Provides workflow for diagnosing orphan branches and recovering valuable content.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/orphan-branch-recovery",
+      "category": "debugging",
+      "tags": [
+        "git",
+        "branch",
+        "orphan",
+        "diverged",
+        "merge-base",
+        "recovery",
+        "wrong-repo"
+      ]
+    },
+    {
+      "name": "complex-agent-eval-task",
+      "description": "Create sophisticated E2E test cases for AI agents using real PRs as reference solutions. Use when: (1) designing T2+ tier evaluation tasks, (2) need patchfile-based evaluation against reference, (3) testing agents on complex refactoring/migration tasks, (4) constraining agents from accessing solution sources.",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/complex-agent-eval-task",
+      "category": "evaluation",
+      "tags": [
+        "e2e-testing",
+        "agent-evaluation",
+        "patchfile",
+        "reference-solution",
+        "t2-plus",
+        "refactoring",
+        "llm-judge"
+      ]
+    },
+    {
+      "name": "create-swe-bench-tests",
+      "description": "Create SWE-bench style benchmark test cases from repository PR history. Use when: (1) Setting up AI agent evaluation infrastructure, (2) Creating benchmark suites from real PRs, (3) Building ablation test frameworks with tier configurations.",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/create-swe-bench-tests",
+      "category": "evaluation",
+      "tags": [
+        "swe-bench",
+        "benchmarks",
+        "evaluation",
+        "testing",
+        "ai-agents",
+        "ablation",
+        "pr-analysis"
+      ]
+    },
+    {
+      "name": "e2e-judge-rubric-design",
+      "description": "Design LLM-as-Judge evaluation rubrics for E2E agent testing. Use when: (1) Building agent evaluation systems with LLM judges, (2) Designing weighted scoring criteria for code quality, (3) Handling invalid evaluations (rate limits, errors) distinctly from failures, (4) Standardizing judge prompts across test runs.",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/e2e-judge-rubric-design",
+      "category": "evaluation",
+      "tags": [
+        "llm-judge",
+        "evaluation",
+        "rubric",
+        "e2e-testing",
+        "agent-testing",
+        "scoring",
+        "rate-limits"
+      ]
+    },
+    {
+      "name": "evaluate-model",
+      "description": "Measure model performance on test datasets. Use when assessing accuracy, precision, recall, and other metrics.",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/evaluate-model",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "judge-system-extension",
       "description": "Patterns for extending AI evaluation/judge systems with consensus retry, cleanup evaluation, cross-tier analysis, and container orchestration. Use when: (1) Adding new evaluation capabilities to a judge system, (2) Implementing consensus-based scoring with disagreement handling, (3) Creating container-based isolation for evaluators, (4) Adding cross-tier statistical analysis.",
       "version": "1.0.0",
@@ -329,6 +592,92 @@
       ]
     },
     {
+      "name": "prepare-dataset",
+      "description": "Process and validate datasets for training. Use when setting up data pipelines.",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/prepare-dataset",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "tier-ablation-testing",
+      "description": "Methodology for running comprehensive tier ablation studies across AI agent architectures (T0-T6)",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/tier-ablation-testing",
+      "category": "evaluation",
+      "tags": [
+        "ablation",
+        "tiers",
+        "e2e-testing",
+        "benchmarking",
+        "agent-evaluation"
+      ]
+    },
+    {
+      "name": "analyze-simd-usage",
+      "description": "Analyze SIMD usage opportunities in Mojo code. Use to find performance optimization opportunities.",
+      "version": "1.0.0",
+      "source": "./plugins/optimization/analyze-simd-usage",
+      "category": "optimization",
+      "tags": []
+    },
+    {
+      "name": "benchmark-functions",
+      "description": "Measure function performance and compare implementations. Use when optimizing critical code paths.",
+      "version": "1.0.0",
+      "source": "./plugins/optimization/benchmark-functions",
+      "category": "optimization",
+      "tags": []
+    },
+    {
+      "name": "mojo-simd-optimize",
+      "description": "Apply SIMD optimizations to Mojo code for parallel computation. Use when optimizing performance-critical tensor and array operations.",
+      "version": "1.0.0",
+      "source": "./plugins/optimization/mojo-simd-optimize",
+      "category": "optimization",
+      "tags": []
+    },
+    {
+      "name": "profile-code",
+      "description": "Measure execution time and memory usage of code. Use when analyzing performance characteristics.",
+      "version": "1.0.0",
+      "source": "./plugins/optimization/profile-code",
+      "category": "optimization",
+      "tags": []
+    },
+    {
+      "name": "suggest-optimizations",
+      "description": "Identify performance optimization opportunities. Use when improving code efficiency.",
+      "version": "1.0.0",
+      "source": "./plugins/optimization/suggest-optimizations",
+      "category": "optimization",
+      "tags": []
+    },
+    {
+      "name": "agent-test-delegation",
+      "description": "Test agent delegation patterns to verify hierarchy and escalation paths. Use after modifying agent structure.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/agent-test-delegation",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "calculate-coverage",
+      "description": "Measure test coverage and identify untested code. Use when assessing test completeness.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/calculate-coverage",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "check-memory-safety",
+      "description": "Check Mojo code for memory safety issues (ownership violations, use-after-free, etc.). Use to catch memory bugs.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/check-memory-safety",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "create-review-checklist",
       "description": "Generate customized review checklists based on type of change. Use when: (1) Starting PR review for unfamiliar change type, (2) Need specific checklist for code vs tests vs docs, (3) Large multi-type changes needing organized review.",
       "version": "1.0.0",
@@ -340,6 +689,14 @@
         "pr-review",
         "quality"
       ]
+    },
+    {
+      "name": "extract-dependencies",
+      "description": "Analyze imports and identify all module dependencies. Use when mapping project structure.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/extract-dependencies",
+      "category": "testing",
+      "tags": []
     },
     {
       "name": "extract-test-failures",
@@ -376,6 +733,110 @@
       ]
     },
     {
+      "name": "generate-tests",
+      "description": "Create test cases for functions and modules. Use when implementing TDD or improving coverage.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/generate-tests",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "lint-code",
+      "description": "Check code for style and quality issues. Use when validating code before commits.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/lint-code",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "mojo-lint-syntax",
+      "description": "Validate Mojo syntax against current v0.26.1+ standards. Use to catch syntax errors before compilation.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/mojo-lint-syntax",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "mojo-memory-check",
+      "description": "Verify memory safety in Mojo code including ownership, borrowing, and lifetime management. Use when reviewing code or debugging memory issues.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/mojo-memory-check",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "mojo-test-runner",
+      "description": "Run Mojo tests using mojo test command. Use when executing tests or verifying test coverage.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/mojo-test-runner",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "mojo-type-safety",
+      "description": "Validate type safety in Mojo code including parametric types and trait constraints. Use during code review or when type errors occur.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/mojo-type-safety",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "phase-cleanup",
+      "description": "Refactor and finalize code after parallel phases complete, addressing technical debt. Use in cleanup phase to polish code before merge.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/phase-cleanup",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "phase-test-tdd",
+      "description": "Generate test files and coordinate test-driven development (TDD). Use when creating tests before implementation or during test phase.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/phase-test-tdd",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "quality-coverage-report",
+      "description": "Generate test coverage reports showing which code paths are tested. Use to identify untested code and improve test coverage.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/quality-coverage-report",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "quality-run-linters",
+      "description": "Run all configured linters including mojo format, markdownlint, and pre-commit hooks. Use before committing code to ensure quality standards are met.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/quality-run-linters",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "refactor-code",
+      "description": "Restructure code for improved clarity and maintainability. Use when addressing code smells or technical debt.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/refactor-code",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "review-pr-changes",
+      "description": "Review PR changes with structured checklist for quality and standards compliance. Use for comprehensive PR code review.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/review-pr-changes",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "run-tests",
+      "description": "Execute test suites and report results. Use when validating code functionality.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/run-tests",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "test-diff-analyzer",
       "description": "Analyze test differences between runs to identify flaky tests. Use when: (1) Test passes locally but fails in CI, (2) Test sometimes passes, sometimes fails, (3) Need to understand test consistency issues.",
       "version": "1.0.0",
@@ -387,6 +848,30 @@
         "test-stability",
         "debugging"
       ]
+    },
+    {
+      "name": "validate-inputs",
+      "description": "Check function inputs for correctness and safety. Use when implementing defensive programming.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/validate-inputs",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "validate-mojo-patterns",
+      "description": "Validate Mojo code patterns (out self, mut, List, etc.) against best practices. Use to ensure code follows project standards.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/validate-mojo-patterns",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "agent-run-orchestrator",
+      "description": "Run section orchestrators to coordinate multi-component workflows. Use when starting work on a section.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/agent-run-orchestrator",
+      "category": "tooling",
+      "tags": []
     },
     {
       "name": "ai-blog-generator",
@@ -402,6 +887,30 @@
         "backfill",
         "markdown"
       ]
+    },
+    {
+      "name": "bulk-issue-filing",
+      "description": "Bulk create GitHub issues from code markers (TODO/FIXME/DEPRECATED/NOTE). Use when: (1) Cleaning up technical debt markers across codebase, (2) Need to systematically track all TODO/FIXME items, (3) Creating master tracking issues with child issues for large cleanup efforts.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/bulk-issue-filing",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "issues",
+        "cleanup",
+        "todo",
+        "fixme",
+        "technical-debt",
+        "bulk-operations"
+      ]
+    },
+    {
+      "name": "check-dependencies",
+      "description": "Validate and verify dependencies are available and compatible. Use when setting up environments.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/check-dependencies",
+      "category": "tooling",
+      "tags": []
     },
     {
       "name": "claude-plugin-format",
@@ -432,6 +941,14 @@
       ]
     },
     {
+      "name": "generate-boilerplate",
+      "description": "Create starter code from templates. Use when setting up new modules or test files.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/generate-boilerplate",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "gh-batch-merge-by-labels",
       "description": "Batch merge multiple PRs by label matching. Use when: (1) Multiple PRs ready for merge with same status label, (2) End-of-sprint or release batch merges, (3) Automating merge of dependent chain of PRs.",
       "version": "1.0.0",
@@ -458,6 +975,14 @@
         "gh-cli",
         "pull-request"
       ]
+    },
+    {
+      "name": "gh-implement-issue",
+      "description": "End-to-end implementation workflow for a GitHub issue from planning through PR creation. Use when starting work on an issue from scratch.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/gh-implement-issue",
+      "category": "tooling",
+      "tags": []
     },
     {
       "name": "gh-post-issue-update",
@@ -503,6 +1028,14 @@
       ]
     },
     {
+      "name": "gh-review-pr",
+      "description": "Comprehensively review a pull request including code changes, CI status, and adherence to project standards. Use when asked to review a PR.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/gh-review-pr",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "git-worktree-workflow",
       "description": "Complete git worktree workflow for parallel development. Contains 4 sub-skills: (1) create - create isolated worktrees for new issues, (2) switch - navigate between worktrees, (3) sync - keep worktrees up-to-date with main, (4) cleanup - remove worktrees after PR merge. Use when working on multiple issues in parallel without stashing.",
       "version": "1.0.0",
@@ -515,6 +1048,53 @@
         "branching",
         "workflow"
       ]
+    },
+    {
+      "name": "mojo-build-package",
+      "description": "Build Mojo packages (.mojopkg files) for distribution. Use when creating distributable libraries or during packaging phase.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/mojo-build-package",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "mojo-format",
+      "description": "Format Mojo code using mojo format command. Use when preparing code for commit or when formatting checks fail.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/mojo-format",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "parallel-issue-implementation",
+      "description": "Implement multiple GitHub issues in parallel using git worktrees. Use when you have 2+ issues with detailed plans ready for implementation.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/parallel-issue-implementation",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "worktree",
+        "parallel",
+        "batch",
+        "issues",
+        "implementation"
+      ]
+    },
+    {
+      "name": "phase-implement",
+      "description": "Coordinate implementation phase by delegating tasks and ensuring code quality. Use during implementation phase to manage engineer tasks.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/phase-implement",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "phase-package",
+      "description": "Create distributable packages including .mojopkg files and archives. Use during package phase to prepare components for distribution.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/phase-package",
+      "category": "tooling",
+      "tags": []
     },
     {
       "name": "retrospective-hook-integration",
@@ -621,20 +1201,12 @@
       ]
     },
     {
-      "name": "create-swe-bench-tests",
-      "description": "Create SWE-bench style benchmark test cases from repository PR history. Use when: (1) Setting up AI agent evaluation infrastructure, (2) Creating benchmark suites from real PRs, (3) Building ablation test frameworks with tier configurations.",
+      "name": "train-model",
+      "description": "Execute model training with optimization algorithms. Use when running training loops on datasets.",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/create-swe-bench-tests",
-      "category": "evaluation",
-      "tags": [
-        "swe-bench",
-        "benchmarks",
-        "evaluation",
-        "testing",
-        "ai-agents",
-        "ablation",
-        "pr-analysis"
-      ]
+      "source": "./plugins/training/train-model",
+      "category": "training",
+      "tags": []
     }
   ]
 }

@@ -1,0 +1,6 @@
+{
+  "name": "extract-algorithm",
+  "version": "1.0.0",
+  "description": "Parse and document algorithm pseudocode from research papers. Use when preparing for implementation.",
+  "skills": "./skills"
+}

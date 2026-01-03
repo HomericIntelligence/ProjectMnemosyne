@@ -1,0 +1,6 @@
+{
+  "name": "scan-vulnerabilities",
+  "version": "1.0.0",
+  "description": "Detect security vulnerabilities in code and dependencies. Use when auditing security.",
+  "skills": "./skills"
+}

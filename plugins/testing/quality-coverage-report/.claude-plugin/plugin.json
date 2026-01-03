@@ -1,0 +1,6 @@
+{
+  "name": "quality-coverage-report",
+  "version": "1.0.0",
+  "description": "Generate test coverage reports showing which code paths are tested. Use to identify untested code and improve test coverage.",
+  "skills": "./skills"
+}

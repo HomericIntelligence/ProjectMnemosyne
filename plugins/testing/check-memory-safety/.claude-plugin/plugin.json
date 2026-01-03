@@ -1,0 +1,6 @@
+{
+  "name": "check-memory-safety",
+  "version": "1.0.0",
+  "description": "Check Mojo code for memory safety issues (ownership violations, use-after-free, etc.). Use to catch memory bugs.",
+  "skills": "./skills"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "mojo-test-runner",
+  "version": "1.0.0",
+  "description": "Run Mojo tests using mojo test command. Use when executing tests or verifying test coverage.",
+  "skills": "./skills"
+}

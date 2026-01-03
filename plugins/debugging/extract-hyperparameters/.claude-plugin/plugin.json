@@ -1,0 +1,6 @@
+{
+  "name": "extract-hyperparameters",
+  "version": "1.0.0",
+  "description": "Identify and document model hyperparameters from papers. Use when setting up training configurations.",
+  "skills": "./skills"
+}
