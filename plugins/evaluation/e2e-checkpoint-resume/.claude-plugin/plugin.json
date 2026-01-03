@@ -1,0 +1,26 @@
+{
+  "name": "e2e-checkpoint-resume",
+  "version": "1.0.0",
+  "description": "Implementing checkpoint/resume with rate limit handling for E2E evaluation frameworks",
+  "category": "evaluation",
+  "tags": [
+    "e2e-testing",
+    "checkpoint",
+    "resume",
+    "rate-limit",
+    "multiprocessing",
+    "parallel-execution"
+  ],
+  "author": "ProjectScylla",
+  "created": "2026-01-03",
+  "project": "ProjectScylla",
+  "outcome": "success",
+  "impact": "high",
+  "skills": [
+    {
+      "name": "e2e-checkpoint-resume",
+      "path": "skills/e2e-checkpoint-resume/SKILL.md",
+      "trigger": "when implementing checkpoint/resume for long-running evaluation experiments with rate limit handling"
+    }
+  ]
+}
