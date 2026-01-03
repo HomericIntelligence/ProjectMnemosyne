@@ -1,0 +1,15 @@
+{
+  "name": "codebase-consolidation",
+  "description": "Systematic approach to finding and consolidating duplicate code, aligning implementations to consistent patterns, and documenting intentional type variations. Use when: analyzing codebase for duplicates, unifying implementations across modules, creating backward-compatible refactors.",
+  "category": "refactor",
+  "date": "2026-01-02",
+  "tags": [
+    "refactor",
+    "deduplication",
+    "consolidation",
+    "backward-compatibility",
+    "type-alias",
+    "cross-reference",
+    "tech-debt"
+  ]
+}
