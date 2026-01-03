@@ -1,0 +1,16 @@
+{
+  "name": "create-swe-bench-tests",
+  "description": "Create SWE-bench style benchmark test cases from repository PR history. Use when: (1) Setting up AI agent evaluation infrastructure, (2) Creating benchmark suites from real PRs, (3) Building ablation test frameworks with tier configurations.",
+  "version": "1.0.0",
+  "category": "evaluation",
+  "date": "2026-01-02",
+  "tags": [
+    "swe-bench",
+    "benchmarks",
+    "evaluation",
+    "testing",
+    "ai-agents",
+    "ablation",
+    "pr-analysis"
+  ]
+}
