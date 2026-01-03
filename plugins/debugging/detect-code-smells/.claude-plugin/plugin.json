@@ -1,0 +1,6 @@
+{
+  "name": "detect-code-smells",
+  "version": "1.0.0",
+  "description": "Identify code quality issues and anti-patterns. Use when reviewing code for maintainability problems.",
+  "skills": "./skills"
+}

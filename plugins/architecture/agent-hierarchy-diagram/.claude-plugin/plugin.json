@@ -1,0 +1,6 @@
+{
+  "name": "agent-hierarchy-diagram",
+  "version": "1.0.0",
+  "description": "Generate visual hierarchy diagrams of agent system showing levels and delegation. Use for documentation or onboarding.",
+  "skills": "./skills"
+}

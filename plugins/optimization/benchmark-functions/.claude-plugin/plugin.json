@@ -1,0 +1,6 @@
+{
+  "name": "benchmark-functions",
+  "version": "1.0.0",
+  "description": "Measure function performance and compare implementations. Use when optimizing critical code paths.",
+  "skills": "./skills"
+}

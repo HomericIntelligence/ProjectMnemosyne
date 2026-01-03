@@ -1,0 +1,6 @@
+{
+  "name": "agent-coverage-check",
+  "version": "1.0.0",
+  "description": "Check agent configuration coverage across hierarchy levels and phases. Use to ensure complete agent system coverage.",
+  "skills": "./skills"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "phase-implement",
+  "version": "1.0.0",
+  "description": "Coordinate implementation phase by delegating tasks and ensuring code quality. Use during implementation phase to manage engineer tasks.",
+  "skills": "./skills"
+}

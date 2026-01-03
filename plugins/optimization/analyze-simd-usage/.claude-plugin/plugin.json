@@ -1,0 +1,6 @@
+{
+  "name": "analyze-simd-usage",
+  "version": "1.0.0",
+  "description": "Analyze SIMD usage opportunities in Mojo code. Use to find performance optimization opportunities.",
+  "skills": "./skills"
+}

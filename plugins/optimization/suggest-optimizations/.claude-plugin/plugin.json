@@ -1,0 +1,6 @@
+{
+  "name": "suggest-optimizations",
+  "version": "1.0.0",
+  "description": "Identify performance optimization opportunities. Use when improving code efficiency.",
+  "skills": "./skills"
+}

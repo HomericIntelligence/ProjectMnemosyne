@@ -1,0 +1,6 @@
+{
+  "name": "validate-mojo-patterns",
+  "version": "1.0.0",
+  "description": "Validate Mojo code patterns (out self, mut, List, etc.) against best practices. Use to ensure code follows project standards.",
+  "skills": "./skills"
+}

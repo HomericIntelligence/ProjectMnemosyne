@@ -1,0 +1,6 @@
+{
+  "name": "refactor-code",
+  "version": "1.0.0",
+  "description": "Restructure code for improved clarity and maintainability. Use when addressing code smells or technical debt.",
+  "skills": "./skills"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "mojo-memory-check",
+  "version": "1.0.0",
+  "description": "Verify memory safety in Mojo code including ownership, borrowing, and lifetime management. Use when reviewing code or debugging memory issues.",
+  "skills": "./skills"
+}

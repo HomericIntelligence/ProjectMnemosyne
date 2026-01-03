@@ -1,0 +1,6 @@
+{
+  "name": "agent-validate-config",
+  "version": "1.0.0",
+  "description": "Validate agent YAML frontmatter and configuration. Use before committing agent changes or in CI.",
+  "skills": "./skills"
+}

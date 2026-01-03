@@ -1,0 +1,6 @@
+{
+  "name": "mojo-type-safety",
+  "version": "1.0.0",
+  "description": "Validate type safety in Mojo code including parametric types and trait constraints. Use during code review or when type errors occur.",
+  "skills": "./skills"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "check-dependencies",
+  "version": "1.0.0",
+  "description": "Validate and verify dependencies are available and compatible. Use when setting up environments.",
+  "skills": "./skills"
+}

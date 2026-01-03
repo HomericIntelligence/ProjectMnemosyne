@@ -1,0 +1,6 @@
+{
+  "name": "generate-changelog",
+  "version": "1.0.0",
+  "description": "Create changelog from git commits. Use when preparing release notes.",
+  "skills": "./skills"
+}

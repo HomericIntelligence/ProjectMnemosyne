@@ -1,0 +1,6 @@
+{
+  "name": "analyze-equations",
+  "version": "1.0.0",
+  "description": "Parse and interpret mathematical equations from research papers. Use when extracting formulas for implementation.",
+  "skills": "./skills"
+}

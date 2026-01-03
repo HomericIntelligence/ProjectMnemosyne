@@ -1,0 +1,6 @@
+{
+  "name": "mojo-format",
+  "version": "1.0.0",
+  "description": "Format Mojo code using mojo format command. Use when preparing code for commit or when formatting checks fail.",
+  "skills": "./skills"
+}

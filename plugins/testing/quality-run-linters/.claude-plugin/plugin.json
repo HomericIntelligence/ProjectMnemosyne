@@ -1,0 +1,6 @@
+{
+  "name": "quality-run-linters",
+  "version": "1.0.0",
+  "description": "Run all configured linters including mojo format, markdownlint, and pre-commit hooks. Use before committing code to ensure quality standards are met.",
+  "skills": "./skills"
+}

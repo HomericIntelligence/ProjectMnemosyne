@@ -1,0 +1,6 @@
+{
+  "name": "agent-test-delegation",
+  "version": "1.0.0",
+  "description": "Test agent delegation patterns to verify hierarchy and escalation paths. Use after modifying agent structure.",
+  "skills": "./skills"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "mojo-lint-syntax",
+  "version": "1.0.0",
+  "description": "Validate Mojo syntax against current v0.26.1+ standards. Use to catch syntax errors before compilation.",
+  "skills": "./skills"
+}

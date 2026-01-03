@@ -1,0 +1,6 @@
+{
+  "name": "quality-fix-formatting",
+  "version": "1.0.0",
+  "description": "Automatically fix code formatting issues using mojo format, markdownlint, and pre-commit hooks. Use when formatting checks fail or before committing code.",
+  "skills": "./skills"
+}

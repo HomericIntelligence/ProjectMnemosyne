@@ -1,0 +1,6 @@
+{
+  "name": "run-tests",
+  "version": "1.0.0",
+  "description": "Execute test suites and report results. Use when validating code functionality.",
+  "skills": "./skills"
+}

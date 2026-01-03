@@ -1,0 +1,6 @@
+{
+  "name": "prepare-dataset",
+  "version": "1.0.0",
+  "description": "Process and validate datasets for training. Use when setting up data pipelines.",
+  "skills": "./skills"
+}
