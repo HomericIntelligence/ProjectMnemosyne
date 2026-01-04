@@ -1,7 +1,7 @@
 ---
 name: pydantic-model-dump
 description: Fix Pydantic v2 model serialization using .model_dump() instead of .to_dict()
-category: refactor
+category: debugging
 date: 2026-01-04
 tags: [pydantic, serialization, migration, python, bug-fix]
 ---
