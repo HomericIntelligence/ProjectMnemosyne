@@ -1,7 +1,7 @@
 {
   "id": "fix-resource-prompt-consistency",
   "version": "1.0.0",
-  "name": "Fix Resource Prompt Consistency",
+  "name": "fix-resource-prompt-consistency",
   "description": "Workflow for fixing inconsistent root-level field mapping in tier configurations and enhancing resource prompt suffixes",
   "author": "ProjectScylla Team",
   "category": "architecture",
