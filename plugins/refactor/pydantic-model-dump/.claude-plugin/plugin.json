@@ -1,0 +1,8 @@
+{
+  "name": "pydantic-model-dump",
+  "description": "Fix Pydantic v2 model serialization using .model_dump() instead of .to_dict(). Use when encountering AttributeError on Pydantic BaseModel objects during JSON serialization.",
+  "category": "refactor",
+  "date": "2026-01-04",
+  "tags": ["pydantic", "serialization", "migration", "python", "bug-fix"],
+  "version": "1.0.0"
+}
