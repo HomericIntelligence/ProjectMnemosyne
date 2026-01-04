@@ -1,0 +1,36 @@
+{
+  "name": "e2e-resume-refactor",
+  "version": "1.0.0",
+  "description": "Refactoring E2E test framework resume behavior with directory restructure and checkpoint schema upgrade",
+  "author": "ProjectScylla Team",
+  "created": "2026-01-04",
+  "category": "architecture",
+  "tags": [
+    "e2e-testing",
+    "resume-behavior",
+    "checkpoint",
+    "directory-structure",
+    "result-reuse"
+  ],
+  "skills": [
+    {
+      "name": "e2e-resume-refactor",
+      "description": "Comprehensive refactor of E2E test resume system with pass/fail tracking and result reuse",
+      "path": "skills/e2e-resume-refactor/SKILL.md"
+    }
+  ],
+  "references": [
+    {
+      "name": "Session Notes",
+      "path": "references/notes.md",
+      "description": "Detailed conversation log and implementation notes"
+    }
+  ],
+  "metadata": {
+    "project": "ProjectScylla",
+    "session_date": "2026-01-04",
+    "outcome": "success",
+    "tests_passing": true,
+    "files_modified": 5
+  }
+}
