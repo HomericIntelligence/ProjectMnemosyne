@@ -1,0 +1,36 @@
+{
+  "name": "fix-ruff-linting-errors",
+  "version": "1.0.0",
+  "description": "Comprehensive workflow for fixing all ruff linting errors in CI/CD pipelines",
+  "author": "ProjectScylla Team",
+  "category": "ci-cd",
+  "tags": ["linting", "ruff", "pre-commit", "ci-cd", "automation", "docstrings"],
+  "created": "2026-01-04",
+  "last_updated": "2026-01-04",
+  "skills": [
+    {
+      "name": "fix-ruff-linting-errors",
+      "description": "Fix all types of ruff linting errors systematically",
+      "trigger": "pre-commit hooks failing with ruff errors",
+      "path": "skills/fix-ruff-linting-errors/SKILL.md"
+    }
+  ],
+  "references": [
+    {
+      "type": "session-notes",
+      "path": "references/notes.md",
+      "description": "Raw session details from fixing 431+ ruff errors in ProjectScylla"
+    }
+  ],
+  "keywords": [
+    "ruff",
+    "linting",
+    "docstrings",
+    "D102",
+    "F841",
+    "D401",
+    "pre-commit",
+    "automation",
+    "test-locally-first"
+  ]
+}
