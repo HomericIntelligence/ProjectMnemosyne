@@ -1,0 +1,7 @@
+{
+  "name": "e2e-agent-judge-timing",
+  "description": "Add separate agent and judge timing fields to E2E test results for tiebreaker ranking. Use when implementing timing metrics in evaluation frameworks with multi-stage pipelines (agent execution + judging).",
+  "category": "evaluation",
+  "date": "2026-01-04",
+  "tags": ["e2e", "timing", "metrics", "tiebreaker", "agent", "judge", "evaluation"]
+}
