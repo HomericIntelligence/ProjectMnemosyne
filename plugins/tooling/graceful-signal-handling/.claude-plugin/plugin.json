@@ -1,0 +1,8 @@
+{
+  "name": "graceful-signal-handling",
+  "description": "Implement graceful shutdown for SIGINT/SIGTERM with checkpoint save and partial results. Use when long-running processes need to handle Ctrl+C without losing work.",
+  "category": "tooling",
+  "date": "2026-01-04",
+  "tags": ["signals", "shutdown", "checkpoint", "ctrl-c", "graceful-exit"],
+  "version": "1.0.0"
+}
