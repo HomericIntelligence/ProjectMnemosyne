@@ -1,3 +1,11 @@
+---
+name: fix-resource-prompt-consistency
+description: Workflow for fixing inconsistent root-level field mapping in tier configurations and enhancing resource prompt suffixes
+category: architecture
+date: 2026-01-04
+tags: [tier-config, prompt-engineering, resource-mapping, testing]
+---
+
 # Fix Resource Prompt Consistency
 
 ## Overview
@@ -173,21 +181,12 @@ def test_root_level_tools_mapped(self, tmp_path: Path) -> None:
 
 ## Failed Attempts
 
-### ❌ Attempt 1: Assumed feature was not implemented
+| Attempt | What We Tried | Why It Failed | Lesson Learned |
+|---------|---------------|---------------|----------------|
+| **Assumed feature was not implemented** | Started planning to implement the entire feature from scratch | The feature WAS already partially implemented - `mcp_servers` root-level mapping existed, and `build_resource_suffix()` was functional | Always search for existing implementation before assuming nothing exists. Use parallel Explore agents to check both implementation and configuration patterns |
+| **Test assumed filesystem structure** | Initial test used `skills: {"categories": ["github"], "names": []}` expecting category lookup to work in `/tmp/tiers` | Test directory doesn't have the shared skills directory structure, so no skills were found and assertion failed | Use explicit skill names in tests: `{"categories": [], "names": ["skill-name"]}` instead of relying on filesystem lookups |
 
-**What we tried**: Started planning to implement the entire feature from scratch
-
-**Why it failed**: The feature WAS already partially implemented - `mcp_servers` root-level mapping existed, and `build_resource_suffix()` was functional
-
-**Lesson**: Always search for existing implementation before assuming nothing exists. Use parallel Explore agents to check both implementation and configuration patterns.
-
-### ❌ Attempt 2: Test assumed skills would be found in filesystem
-
-**What we tried**: Initial test used `skills: {"categories": ["github"], "names": []}` expecting category lookup to work
-
-**Why it failed**: Test was using `/tmp/tiers` which doesn't have the shared skills directory structure, so no skills were found and the assertion failed
-
-**Fix**: Changed test to use explicit skill names: `{"categories": [], "names": ["gh-create-pr-linked"]}` which doesn't require filesystem lookup
+### Failed Test Code
 
 **Code that failed**:
 ```python
