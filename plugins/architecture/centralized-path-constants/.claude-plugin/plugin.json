@@ -1,0 +1,8 @@
+{
+  "name": "centralized-path-constants",
+  "description": "Create central path constants module to prevent hardcoded path inconsistencies. Use when multiple files construct the same paths differently, causing bugs during refactoring or resume scenarios.",
+  "category": "architecture",
+  "date": "2026-01-04",
+  "tags": ["paths", "refactoring", "consistency", "constants", "dry-principle"],
+  "version": "1.0.0"
+}
