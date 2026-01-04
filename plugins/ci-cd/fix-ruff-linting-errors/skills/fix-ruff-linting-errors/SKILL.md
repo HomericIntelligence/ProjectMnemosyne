@@ -1,3 +1,10 @@
+---
+name: fix-ruff-linting-errors
+description: Fix all CI/CD failures by systematically resolving ruff linting errors (F841, D401, D102, E741, D103, D413) with automation for repetitive fixes
+category: ci-cd
+date: 2026-01-04
+---
+
 # Fix Ruff Linting Errors
 
 ## Overview
