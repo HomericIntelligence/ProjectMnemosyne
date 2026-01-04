@@ -1,3 +1,10 @@
+---
+name: e2e-checkpoint-resume
+description: Implementing checkpoint/resume with rate limit handling for E2E evaluation frameworks
+category: evaluation
+date: 2026-01-03
+---
+
 # E2E Checkpoint/Resume with Rate Limit Handling
 
 | Field | Value |
