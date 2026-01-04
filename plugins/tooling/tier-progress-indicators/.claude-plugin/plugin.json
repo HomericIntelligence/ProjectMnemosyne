@@ -1,0 +1,8 @@
+{
+  "name": "tier-progress-indicators",
+  "description": "Add real-time progress tracking for parallel tier execution to prevent 'appears hung' issues. Use when parallel workers make it unclear how many tasks are complete vs still running.",
+  "category": "tooling",
+  "date": "2026-01-04",
+  "tags": ["progress", "observability", "parallel-execution", "logging", "user-experience"],
+  "version": "1.0.0"
+}
