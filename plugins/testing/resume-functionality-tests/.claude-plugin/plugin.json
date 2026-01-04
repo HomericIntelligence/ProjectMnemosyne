@@ -1,0 +1,8 @@
+{
+  "name": "resume-functionality-tests",
+  "description": "Comprehensive test patterns for checkpoint/resume systems covering crash, interrupt, and partial completion scenarios. Use when testing long-running processes with resume capability.",
+  "category": "testing",
+  "date": "2026-01-04",
+  "tags": ["testing", "checkpoint", "resume", "crash-recovery", "fixtures"],
+  "version": "1.0.0"
+}
