@@ -1,0 +1,8 @@
+{
+  "name": "checkpoint-result-validation",
+  "description": "Validate checkpoint results before resuming expensive operations to prevent wasted API calls. Use when implementing resume/checkpoint systems that need to skip already-completed work.",
+  "category": "optimization",
+  "date": "2026-01-04",
+  "tags": ["checkpoint", "resume", "validation", "cost-optimization", "idempotency"],
+  "version": "1.0.0"
+}
