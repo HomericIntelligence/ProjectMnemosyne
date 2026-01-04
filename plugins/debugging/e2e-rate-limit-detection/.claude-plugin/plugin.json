@@ -1,0 +1,25 @@
+{
+  "name": "e2e-rate-limit-detection",
+  "version": "1.0.0",
+  "description": "Debugging rate limit detection when error messages appear in JSON response fields instead of stderr. Use when rate limits from API responses aren't being caught, especially for Claude CLI JSON output with is_error:true.",
+  "category": "debugging",
+  "date": "2026-01-04",
+  "tags": [
+    "debugging",
+    "rate-limit",
+    "json-parsing",
+    "error-detection",
+    "e2e-testing",
+    "api-errors",
+    "stderr-vs-stdout",
+    "tdd"
+  ],
+  "author": "ProjectScylla",
+  "verified_on": [
+    {
+      "project": "ProjectScylla",
+      "context": "E2E testing framework rate limit handling",
+      "pr": "https://github.com/HomericIntelligence/ProjectScylla/pull/126"
+    }
+  ]
+}
