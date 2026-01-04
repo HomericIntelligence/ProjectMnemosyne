@@ -1,4 +1,15 @@
+---
+name: e2e-resume-refactor
+description: "Refactoring E2E test framework resume behavior with directory restructure and checkpoint schema upgrade. Use when implementing checkpoint systems with detailed status tracking or separating outputs by execution phase."
+mcp_fallback: none
+category: architecture
+tier: 2
+date: 2026-01-04
+---
+
 # E2E Resume Refactor: Directory Structure & Checkpoint v2.0
+
+## Overview
 
 | Aspect | Details |
 |--------|---------|
@@ -235,21 +246,10 @@ agent_dir.mkdir(parents=True)
 
 ## Failed Attempts
 
-### Attempt 1: Backward Compatibility
-
-**What was tried**: Initially considered checking both old and new paths during transition period.
-
-**Why it failed**: User explicitly stated "don't provide backward compatibility, just move everything to the new directory structure". Simplified implementation by removing all compatibility checks.
-
-**Lesson**: When user gives explicit architectural direction, follow it exactly rather than second-guessing.
-
-### Attempt 2: Validating Checkpointed Runs Without Filesystem Check
-
-**What was tried**: Resume logic initially only checked `checkpoint.is_run_completed()` to skip runs.
-
-**Why it failed**: Checkpoint could be corrupted or incomplete (T0/00 completed but not in checkpoint). Need to validate filesystem artifacts exist and are valid.
-
-**Solution**: Keep the validation logic that checks `run_result.json` exists and validates it, but now also check for partial completion (agent done but judge missing).
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| **Backward Compatibility** | Initially considered checking both old and new paths during transition period | User explicitly stated "don't provide backward compatibility, just move everything to the new directory structure" | When user gives explicit architectural direction, follow it exactly rather than second-guessing |
+| **Checkpoint-Only Validation** | Resume logic initially only checked `checkpoint.is_run_completed()` to skip runs | Checkpoint could be corrupted or incomplete (T0/00 completed but not in checkpoint) | Must validate filesystem artifacts exist and are valid, not just trust checkpoint state |
 
 ## Key Decisions
 
