@@ -36,9 +36,13 @@ Or configure auto-trigger on session end (see Hooks section).
    - Category (from approved categories)
    - Skill name (kebab-case)
    - Tags (for searchability)
-4. **Generate plugin**:
+4. **Generate plugin** (⚠️ **MUST follow CI requirements**):
    - `.claude-plugin/plugin.json` with metadata
-   - `skills/<name>/SKILL.md` with required sections
+   - `skills/<name>/SKILL.md` with:
+     - ✅ **YAML frontmatter** (starts with `---`)
+     - ✅ **Overview section** with table
+     - ✅ **Failed Attempts table** (not prose)
+     - ✅ All other required sections
    - `references/notes.md` with raw details
 5. **Create PR**:
    - Branch: `skill/<category>/<name>`
@@ -67,6 +71,81 @@ plugins/<category>/<skill-name>/
 | **Failed Attempts** | What didn't work (REQUIRED!) |
 | Results & Parameters | Copy-paste ready configs |
 | References | Links to issues, docs |
+
+## CRITICAL: CI Validation Requirements
+
+**These requirements are enforced by CI and will cause PR failures if not met:**
+
+### 1. YAML Frontmatter (REQUIRED)
+
+**Every SKILL.md MUST start with YAML frontmatter:**
+
+```yaml
+---
+name: skill-name
+description: "Brief description. Use when: specific trigger conditions."
+mcp_fallback: none
+category: architecture  # or training, evaluation, etc.
+tier: 2
+date: YYYY-MM-DD
+---
+```
+
+**Common failure**: Forgetting the frontmatter entirely or missing the opening `---`
+
+### 2. Overview Table (REQUIRED)
+
+**Must have an "## Overview" section header with a table:**
+
+```markdown
+## Overview
+
+| Aspect | Details |
+|--------|---------|
+| **Date** | 2026-01-04 |
+| **Objective** | What you were trying to accomplish |
+| **Outcome** | ✅ Success or ❌ Failure |
+| **Root Cause** | Why the problem occurred |
+| **Solution** | How it was fixed |
+```
+
+**Common failure**: Having the table without the "## Overview" header
+
+### 3. Failed Attempts Table (REQUIRED)
+
+**Failed Attempts MUST be in table format, not prose:**
+
+```markdown
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| **Approach 1** | Description of what was tried | Why it didn't work | What you learned |
+| **Approach 2** | Another attempt | Reason for failure | Key insight |
+```
+
+**Common failures**:
+- Writing prose paragraphs instead of a table
+- Omitting the section entirely
+- Using subsections (###) instead of a single table
+
+### 4. Results & Parameters Section (RECOMMENDED)
+
+While not strictly required for CI, this section is highly valuable:
+
+```markdown
+## Results & Parameters
+
+**Command used**:
+```bash
+pixi run pytest tests/unit/ -x
+```
+
+**Configuration**:
+- Python 3.14
+- pytest 9.0.2
+- All 70 tests passing
+```
 
 ## Generated plugin.json Format
 
@@ -136,11 +215,19 @@ Auto-prompt retrospective on session end:
 
 ## Quality Checklist
 
-Before creating the skill, verify:
+**Before creating the skill, verify CI requirements are met:**
+
+### CI-Enforced (Will Fail Build)
+- [ ] **YAML frontmatter** at the top with `---` delimiters
+- [ ] **Overview section** with `## Overview` header and table
+- [ ] **Failed Attempts table** (not prose paragraphs)
+- [ ] **Proper markdown formatting** (no malformed tables)
+
+### Quality Requirements (Best Practices)
 - [ ] Description has specific trigger conditions (`Use when:`)
-- [ ] Failed Attempts section is populated
 - [ ] Parameters are copy-paste ready
 - [ ] Environment/versions are documented
+- [ ] References to issues/PRs included
 
 ## Failed Attempts
 
