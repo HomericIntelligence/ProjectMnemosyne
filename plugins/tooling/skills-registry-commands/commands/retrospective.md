@@ -47,8 +47,31 @@ When the user invokes this command:
    ```
 
 4. **Generate plugin files** in `plugins/<category>/<name>/`:
+
+   **CRITICAL**: SKILL.md MUST meet CI validation requirements or PR will fail:
+
    - `.claude-plugin/plugin.json` with metadata
-   - `skills/<name>/SKILL.md` with findings
+   - `skills/<name>/SKILL.md` with **required format**:
+     - ✅ **YAML frontmatter** (starts with `---`)
+       ```yaml
+       ---
+       name: skill-name
+       description: "Use when: specific triggers"
+       category: architecture
+       tier: 2
+       date: YYYY-MM-DD
+       ---
+       ```
+     - ✅ **Overview section** with `## Overview` header and table
+     - ✅ **Failed Attempts table** (MUST be table format, not prose):
+       ```markdown
+       ## Failed Attempts
+
+       | Attempt | What Was Tried | Why It Failed | Lesson Learned |
+       |---------|----------------|---------------|----------------|
+       | ... | ... | ... | ... |
+       ```
+     - ✅ All other sections (When to Use, Verified Workflow, Results & Parameters)
    - `references/notes.md` with raw details
 
 5. **Commit and push**:
@@ -129,13 +152,21 @@ find build -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \;
 
 ## Required SKILL.md Sections
 
-| Section | Purpose |
-|---------|---------|
-| Overview table | Date, objective, outcome |
-| When to Use | Trigger conditions |
-| Verified Workflow | Steps that worked |
-| **Failed Attempts** | What didn't work (REQUIRED) |
-| Results & Parameters | Copy-paste configs |
+**All sections are CI-validated. Missing or incorrectly formatted sections will fail the build.**
+
+| Section | Format | CI-Required |
+|---------|--------|-------------|
+| **YAML frontmatter** | Starts with `---`, includes name/description/category/date | ✅ YES |
+| **Overview section** | `## Overview` header with table | ✅ YES |
+| When to Use | Specific trigger conditions | ⚠️ Recommended |
+| Verified Workflow | Steps that worked | ⚠️ Recommended |
+| **Failed Attempts** | **TABLE format** (not prose) | ✅ YES |
+| Results & Parameters | Copy-paste configs | ⚠️ Recommended |
+
+**Common CI failures**:
+- Missing YAML frontmatter entirely
+- Failed Attempts as prose paragraphs instead of table
+- Overview table without "## Overview" header
 
 ## Example
 
