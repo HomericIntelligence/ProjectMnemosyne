@@ -1,0 +1,18 @@
+{
+  "id": "fix-resource-prompt-consistency",
+  "version": "1.0.0",
+  "name": "Fix Resource Prompt Consistency",
+  "description": "Workflow for fixing inconsistent root-level field mapping in tier configurations and enhancing resource prompt suffixes",
+  "author": "ProjectScylla Team",
+  "category": "architecture",
+  "tags": ["tier-config", "prompt-engineering", "resource-mapping", "testing"],
+  "skills": [
+    {
+      "name": "fix-resource-prompt-consistency",
+      "description": "Fix root-level field mapping inconsistencies and enhance prompt suffix wording",
+      "path": "skills/fix-resource-prompt-consistency/SKILL.md"
+    }
+  ],
+  "created": "2026-01-04",
+  "documentation": "skills/fix-resource-prompt-consistency/SKILL.md"
+}
