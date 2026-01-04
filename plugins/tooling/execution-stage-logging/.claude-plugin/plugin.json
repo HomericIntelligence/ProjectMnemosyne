@@ -1,0 +1,8 @@
+{
+  "name": "execution-stage-logging",
+  "description": "Add structured stage logging with timing to track worker thread progress through multi-stage pipelines. Use when parallel workers make it unclear what stage each is in or which workers are stuck.",
+  "category": "tooling",
+  "date": "2026-01-04",
+  "tags": ["logging", "observability", "debugging", "worker-threads", "pipeline"],
+  "version": "1.0.0"
+}
