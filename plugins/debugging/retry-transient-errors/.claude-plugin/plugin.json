@@ -1,0 +1,25 @@
+{
+  "name": "retry-transient-errors",
+  "version": "1.0.0",
+  "description": "Pattern for adding exponential backoff retry logic to handle transient network and I/O errors",
+  "author": "ProjectScylla",
+  "category": "debugging",
+  "tags": [
+    "retry-logic",
+    "exponential-backoff",
+    "transient-errors",
+    "network-failures",
+    "error-handling",
+    "resilience"
+  ],
+  "skills": [
+    {
+      "name": "retry-transient-errors",
+      "description": "Add retry logic with exponential backoff for transient failures (network errors, timeouts, connection issues). Use when operations fail intermittently due to external factors.",
+      "skill_file": "skills/retry-transient-errors/SKILL.md"
+    }
+  ],
+  "created": "2026-01-04",
+  "project": "ProjectScylla",
+  "context": "E2E experiment infrastructure - git clone operations failing on transient network errors"
+}
