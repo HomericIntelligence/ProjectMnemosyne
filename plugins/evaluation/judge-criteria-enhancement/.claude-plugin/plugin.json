@@ -1,0 +1,16 @@
+{
+  "name": "judge-criteria-enhancement",
+  "version": "1.0.0",
+  "category": "evaluation",
+  "description": "Adding proportionality criteria to LLM judge systems to penalize over-engineering and reward task-appropriate solutions",
+  "author": "ProjectScylla",
+  "created": "2026-01-04",
+  "tags": ["judge", "evaluation", "criteria", "proportionality", "workspace-cleanliness", "test-quality", "scope-discipline"],
+  "skills": [
+    {
+      "name": "judge-criteria-enhancement",
+      "description": "Add proportionality criteria to judge systems to evaluate task-appropriate solutions",
+      "file": "skills/judge-criteria-enhancement/SKILL.md"
+    }
+  ]
+}
