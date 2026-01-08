@@ -1,6 +1,7 @@
 ---
 name: fix-feedback
 description: "Address PR review feedback by making changes and replying to comments"
+user-invocable: false
 ---
 
 # Fix PR Review Feedback

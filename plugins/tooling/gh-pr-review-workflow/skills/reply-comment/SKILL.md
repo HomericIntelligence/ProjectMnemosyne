@@ -1,6 +1,7 @@
 ---
 name: reply-comment
 description: "Reply to PR review comments using correct GitHub API endpoint"
+user-invocable: false
 ---
 
 # Reply to Review Comments

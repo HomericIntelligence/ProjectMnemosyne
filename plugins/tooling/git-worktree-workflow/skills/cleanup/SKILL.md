@@ -1,6 +1,7 @@
 ---
 name: cleanup
 description: "Remove merged or stale git worktrees safely"
+user-invocable: false
 ---
 
 # Worktree Cleanup

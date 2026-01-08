@@ -1,6 +1,7 @@
 ---
 name: analyze
 description: "Parse and analyze CI failure logs to identify root causes and error patterns"
+user-invocable: false
 ---
 
 # Analyze CI Failure Logs

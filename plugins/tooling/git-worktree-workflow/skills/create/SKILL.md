@@ -1,6 +1,7 @@
 ---
 name: create
 description: "Create isolated git worktrees for parallel development"
+user-invocable: false
 ---
 
 # Worktree Create

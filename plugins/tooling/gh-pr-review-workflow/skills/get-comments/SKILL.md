@@ -1,6 +1,7 @@
 ---
 name: get-comments
 description: "Retrieve all review comments from a pull request using GitHub API"
+user-invocable: false
 ---
 
 # Get PR Review Comments
