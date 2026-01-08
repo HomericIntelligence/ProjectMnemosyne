@@ -1178,6 +1178,14 @@
       "tags": []
     },
     {
+      "name": "claude-code-v2.1-adoption",
+      "description": "Systematic approach to adopting Claude Code v2.1.0 features in skills marketplace. Use when: (1) upgrading to new Claude Code version, (2) analyzing CHANGELOG for feature adoption, (3) updating plugin schemas and templates, (4) creating documentation skills for new features.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/claude-code-v2.1-adoption",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "claude-plugin-format",
       "description": "Official Claude Code plugin format requirements. Use when: (1) Creating a new plugin, (2) Debugging plugin validation errors, (3) Skills or commands not appearing after install.",
       "version": "1.0.0",
