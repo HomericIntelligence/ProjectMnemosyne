@@ -1,3 +1,9 @@
+---
+name: global-semaphore-parallelism
+description: "Implement global parallelism control using shared semaphores. Use when limiting concurrent workers across multiple process pools or fixing per-tier parallelism issues."
+user-invocable: false
+---
+
 # Global Semaphore Parallelism Control
 
 ## Overview
