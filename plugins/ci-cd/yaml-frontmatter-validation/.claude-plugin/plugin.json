@@ -1,0 +1,12 @@
+{
+  "name": "yaml-frontmatter-validation",
+  "version": "1.0.0",
+  "description": "Fix CI failures caused by missing YAML frontmatter in SKILL.md files. Use when: (1) plugin validation fails with 'missing YAML frontmatter' errors, (2) multiple PRs failing with same root cause, (3) SKILL.md doesn't start with '---', (4) systematic fixes needed across main and feature branches.",
+  "author": {
+    "name": "HomericIntelligence"
+  },
+  "category": "ci-cd",
+  "date": "2026-01-08",
+  "tags": ["ci-cd", "validation", "yaml", "frontmatter", "github-actions", "pr-fixes"],
+  "skills": "./skills"
+}

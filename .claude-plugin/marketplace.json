@@ -511,6 +511,21 @@
       ]
     },
     {
+      "name": "yaml-frontmatter-validation",
+      "description": "Fix CI failures caused by missing YAML frontmatter in SKILL.md files. Use when: (1) plugin validation fails with 'missing YAML frontmatter' errors, (2) multiple PRs failing with same root cause, (3) SKILL.md doesn't start with '---', (4) systematic fixes needed across main and feature branches.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/yaml-frontmatter-validation",
+      "category": "ci-cd",
+      "tags": [
+        "ci-cd",
+        "validation",
+        "yaml",
+        "frontmatter",
+        "github-actions",
+        "pr-fixes"
+      ]
+    },
+    {
       "name": "analyze-code-structure",
       "description": "Examine code organization and identify structural patterns. Use when reviewing module design.",
       "version": "1.0.0",
@@ -612,6 +627,24 @@
       ]
     },
     {
+      "name": "global-semaphore-parallelism",
+      "description": "Debugging and implementing global parallelism control using multiprocessing.Manager().Semaphore() to limit concurrent agents across all tiers",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/global-semaphore-parallelism",
+      "category": "debugging",
+      "tags": [
+        "semaphore",
+        "parallelism",
+        "multiprocessing",
+        "concurrency-control",
+        "process-pool",
+        "global-limits",
+        "cross-process-sharing",
+        "e2e-testing",
+        "debugging"
+      ]
+    },
+    {
       "name": "orphan-branch-recovery",
       "description": "Use when a branch has no common ancestor with main, cannot be merged, or was pushed from the wrong repository. Triggers: 'no merge base', 'branch diverged completely', 'cannot merge unrelated histories', 'pushed from wrong repo'. Provides workflow for diagnosing orphan branches and recovering valuable content.",
       "version": "1.0.0",
@@ -639,6 +672,20 @@
         "migration",
         "python",
         "bug-fix"
+      ]
+    },
+    {
+      "name": "resume-crash-debugging",
+      "description": "Pattern for debugging resume crashes in long-running experiments with checkpoint systems. Use when: (1) experiments crash on resume with FileNotFoundError or similar, (2) file path mismatches between validation and loading, (3) need to diagnose progressive degradation (works 1st time, fails on Nth resume), (4) checkpoint state is out of sync with filesystem.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/resume-crash-debugging",
+      "category": "debugging",
+      "tags": [
+        "debugging",
+        "resume",
+        "checkpoint",
+        "e2e",
+        "file-path-mismatch"
       ]
     },
     {
