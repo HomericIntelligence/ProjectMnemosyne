@@ -1,3 +1,9 @@
+---
+name: judge-criteria-enhancement
+description: "Add new evaluation criteria to LLM judge systems. Use when penalizing over-engineering, fixing result validation, or adding proportionality scoring."
+user-invocable: false
+---
+
 # Judge Criteria Enhancement: Proportionality & Scope Discipline
 
 ## Overview

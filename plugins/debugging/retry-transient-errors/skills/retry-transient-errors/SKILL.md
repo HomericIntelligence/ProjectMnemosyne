@@ -1,3 +1,9 @@
+---
+name: retry-transient-errors
+description: "Fix git clone failures caused by transient network errors. Use when experiencing connection reset, curl 56, or timeout errors in subprocess calls."
+user-invocable: false
+---
+
 # Skill: Adding Retry Logic for Transient Errors
 
 | Attribute | Value |
