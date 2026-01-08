@@ -1,5 +1,5 @@
 ---
-name: claude-code-v2.1-adoption
+name: claude-code-v21-adoption
 description: "Systematic approach to adopting Claude Code v2.1.0 features. Use when upgrading to new Claude Code version or analyzing CHANGELOG for feature adoption."
 user-invocable: false
 ---
