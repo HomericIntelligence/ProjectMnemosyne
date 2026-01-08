@@ -146,6 +146,17 @@ This project uses UserPromptSubmit hooks instead.
 **UserPromptSubmit Hook**: Triggers when user types session-ending keywords (exit, quit,
 clear, done, finished, etc.) to remind about `/retrospective`.
 
+**NEW in v2.1.0**: Hooks support `once: true` field to execute only once per session:
+```json
+{
+  "hooks": [{
+    "type": "command",
+    "command": "script.sh",
+    "once": true
+  }]
+}
+```
+
 See `.claude/settings.json` for configuration and
 `plugins/tooling/skills-registry-commands/hooks/settings.json.example` for reference.
 

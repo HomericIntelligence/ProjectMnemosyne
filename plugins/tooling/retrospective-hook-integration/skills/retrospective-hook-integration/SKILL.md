@@ -87,7 +87,8 @@ Update `.claude/settings.json`:
           {
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/retrospective-trigger.py\"",
-            "timeout": 120
+            "timeout": 120,
+            "once": true
           }
         ]
       }
@@ -136,7 +137,7 @@ After marketplace registration:
 
 ## Results & Parameters
 
-### Hook Configuration
+### Hook Configuration (v2.1.0+)
 
 ```json
 {
@@ -146,7 +147,8 @@ After marketplace registration:
         {
           "type": "command",
           "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/retrospective-trigger.py\"",
-          "timeout": 120
+          "timeout": 120,
+          "once": true
         }
       ]
     }
@@ -154,11 +156,14 @@ After marketplace registration:
 }
 ```
 
+**NEW in v2.1.0**: `once: true` ensures hook runs only once per session, preventing duplicate retrospective prompts.
+
 ### Hook Script Parameters
 
 - **Minimum transcript length**: 10 messages
 - **Trigger reasons**: `"exit"` or `"clear"` only
 - **Timeout**: 120 seconds
+- **once**: `true` (v2.1.0+) - Run only once per session
 - **Output**: JSON with `systemMessage` field
 
 ### Marketplace Registration
