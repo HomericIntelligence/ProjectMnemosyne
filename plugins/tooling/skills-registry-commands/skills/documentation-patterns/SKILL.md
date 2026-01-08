@@ -1,6 +1,7 @@
 ---
 name: documentation-patterns
 description: Best practices for writing effective skill documentation. Use when creating new skills, improving skill discoverability, or documenting failed attempts.
+user-invocable: false
 ---
 
 # Skill Documentation Patterns

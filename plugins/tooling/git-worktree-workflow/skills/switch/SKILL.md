@@ -1,6 +1,7 @@
 ---
 name: switch
 description: "Switch between git worktrees for parallel development"
+user-invocable: false
 ---
 
 # Worktree Switch

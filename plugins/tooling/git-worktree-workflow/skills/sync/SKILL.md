@@ -1,6 +1,7 @@
 ---
 name: sync
 description: "Sync git worktrees with remote and main branch changes"
+user-invocable: false
 ---
 
 # Worktree Sync

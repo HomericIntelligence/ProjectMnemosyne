@@ -1,6 +1,7 @@
 ---
 name: fix
 description: "Diagnose and fix CI/CD failures systematically"
+user-invocable: false
 ---
 
 # Fix CI Failures

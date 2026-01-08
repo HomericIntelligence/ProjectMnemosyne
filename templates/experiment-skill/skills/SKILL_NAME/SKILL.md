@@ -1,6 +1,7 @@
 ---
 name: SKILL_NAME
 description: "TRIGGER CONDITIONS: When to use this skill"
+user-invocable: false  # Set to true only for user-facing commands, false for internal/sub-skills
 category: CATEGORY
 date: YYYY-MM-DD
 ---

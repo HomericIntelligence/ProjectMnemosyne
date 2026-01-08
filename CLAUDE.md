@@ -86,6 +86,8 @@ plugins/<category>/<name>/
 **SKILL.md**:
 
 - YAML frontmatter (name, description, category, date)
+  - `user-invocable`: Set to `false` for internal/sub-skills (declutters slash command menu)
+  - Set to `true` only for skills users should directly invoke
 - Overview table (date, objective, outcome)
 - When to Use (trigger conditions)
 - Verified Workflow (what worked)

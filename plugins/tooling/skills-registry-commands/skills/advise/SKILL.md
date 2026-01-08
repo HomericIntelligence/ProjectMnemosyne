@@ -1,6 +1,7 @@
 ---
 name: advise
 description: Search team knowledge before starting work. Use when starting experiments, debugging unfamiliar errors, or before implementing features with unknowns.
+user-invocable: false
 ---
 
 # /advise

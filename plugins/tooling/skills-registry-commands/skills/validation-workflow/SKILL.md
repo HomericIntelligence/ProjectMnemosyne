@@ -1,6 +1,7 @@
 ---
 name: validation-workflow
 description: GitHub Actions CI for validating skill plugins. Use when setting up CI/CD for a skills marketplace or enforcing plugin quality.
+user-invocable: false
 ---
 
 # Plugin Validation Workflow
