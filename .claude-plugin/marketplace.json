@@ -32,6 +32,20 @@
       "tags": []
     },
     {
+      "name": "centralized-path-constants",
+      "description": "Create central path constants module to prevent hardcoded path inconsistencies. Use when multiple files construct the same paths differently, causing bugs during refactoring or resume scenarios.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/centralized-path-constants",
+      "category": "architecture",
+      "tags": [
+        "paths",
+        "refactoring",
+        "consistency",
+        "constants",
+        "dry-principle"
+      ]
+    },
+    {
       "name": "codebase-consolidation",
       "description": "Systematic approach to finding and consolidating duplicate code, aligning implementations to consistent patterns, and documenting intentional type variations. Use when: analyzing codebase for duplicates, unifying implementations across modules, creating backward-compatible refactors.",
       "version": "1.0.0",
@@ -89,6 +103,33 @@
         "documentation",
         "formatting",
         "validation"
+      ]
+    },
+    {
+      "name": "e2e-resume-refactor",
+      "description": "Refactoring E2E test framework resume behavior with directory restructure and checkpoint schema upgrade",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/e2e-resume-refactor",
+      "category": "architecture",
+      "tags": [
+        "e2e-testing",
+        "resume-behavior",
+        "checkpoint",
+        "directory-structure",
+        "result-reuse"
+      ]
+    },
+    {
+      "name": "fix-resource-prompt-consistency",
+      "description": "Workflow for fixing inconsistent root-level field mapping in tier configurations and enhancing resource prompt suffixes",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/fix-resource-prompt-consistency",
+      "category": "architecture",
+      "tags": [
+        "tier-config",
+        "prompt-engineering",
+        "resource-mapping",
+        "testing"
       ]
     },
     {
@@ -218,6 +259,22 @@
       ]
     },
     {
+      "name": "shared-fixture-migration",
+      "description": "Migrate duplicated test fixture configs to a centralized shared location with runtime loading. Use when: test fixtures contain config files duplicated across many test directories, the same config content is repeated for each test but is actually test-independent, you want a single source of truth for shared configurations.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/shared-fixture-migration",
+      "category": "architecture",
+      "tags": [
+        "deduplication",
+        "test-fixtures",
+        "config-migration",
+        "centralization",
+        "runtime-loading",
+        "tier-testing",
+        "shared-resources"
+      ]
+    },
+    {
       "name": "track-implementation-progress",
       "description": "Track implementation progress against plan. Use to monitor component delivery and identify blockers.",
       "version": "1.0.0",
@@ -328,6 +385,21 @@
       ]
     },
     {
+      "name": "fix-ruff-linting-errors",
+      "description": "Comprehensive workflow for fixing all ruff linting errors in CI/CD pipelines",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/fix-ruff-linting-errors",
+      "category": "ci-cd",
+      "tags": [
+        "linting",
+        "ruff",
+        "pre-commit",
+        "ci-cd",
+        "automation",
+        "docstrings"
+      ]
+    },
+    {
       "name": "gh-check-ci-status",
       "description": "Check CI/CD status of a pull request including workflow runs and test results. Use when: (1) Verifying PR checks are passing before merge, (2) Investigating CI failures, (3) Monitoring long-running CI jobs.",
       "version": "1.0.0",
@@ -353,6 +425,23 @@
         "ci-cd",
         "pixi",
         "testing"
+      ]
+    },
+    {
+      "name": "github-actions-pytest-pixi",
+      "description": "GitHub Actions CI setup for pytest projects using pixi. Use when: (1) Setting up CI/CD for Python projects with pixi, (2) Need parallel test execution with matrix strategy, (3) Adding automated testing to existing repos, (4) Configuring coverage reporting in CI.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/github-actions-pytest-pixi",
+      "category": "ci-cd",
+      "tags": [
+        "github-actions",
+        "pytest",
+        "pixi",
+        "ci-cd",
+        "testing",
+        "matrix",
+        "coverage",
+        "automation"
       ]
     },
     {
@@ -446,6 +535,23 @@
       "tags": []
     },
     {
+      "name": "e2e-rate-limit-detection",
+      "description": "Debugging rate limit detection when error messages appear in JSON response fields instead of stderr. Use when rate limits from API responses aren't being caught, especially for Claude CLI JSON output with is_error:true.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/e2e-rate-limit-detection",
+      "category": "debugging",
+      "tags": [
+        "debugging",
+        "rate-limit",
+        "json-parsing",
+        "error-detection",
+        "e2e-testing",
+        "api-errors",
+        "stderr-vs-stdout",
+        "tdd"
+      ]
+    },
+    {
       "name": "extract-algorithm",
       "description": "Parse and document algorithm pseudocode from research papers. Use when preparing for implementation.",
       "version": "1.0.0",
@@ -522,6 +628,35 @@
       ]
     },
     {
+      "name": "pydantic-model-dump",
+      "description": "Fix Pydantic v2 model serialization using .model_dump() instead of .to_dict(). Use when encountering AttributeError on Pydantic BaseModel objects during JSON serialization.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/pydantic-model-dump",
+      "category": "debugging",
+      "tags": [
+        "pydantic",
+        "serialization",
+        "migration",
+        "python",
+        "bug-fix"
+      ]
+    },
+    {
+      "name": "retry-transient-errors",
+      "description": "Pattern for adding exponential backoff retry logic to handle transient network and I/O errors",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/retry-transient-errors",
+      "category": "debugging",
+      "tags": [
+        "retry-logic",
+        "exponential-backoff",
+        "transient-errors",
+        "network-failures",
+        "error-handling",
+        "resilience"
+      ]
+    },
+    {
       "name": "complex-agent-eval-task",
       "description": "Create sophisticated E2E test cases for AI agents using real PRs as reference solutions. Use when: (1) designing T2+ tier evaluation tasks, (2) need patchfile-based evaluation against reference, (3) testing agents on complex refactoring/migration tasks, (4) constraining agents from accessing solution sources.",
       "version": "1.0.0",
@@ -554,6 +689,37 @@
       ]
     },
     {
+      "name": "e2e-agent-judge-timing",
+      "description": "Add separate agent and judge timing fields to E2E test results for tiebreaker ranking. Use when implementing timing metrics in evaluation frameworks with multi-stage pipelines (agent execution + judging).",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/e2e-agent-judge-timing",
+      "category": "evaluation",
+      "tags": [
+        "e2e",
+        "timing",
+        "metrics",
+        "tiebreaker",
+        "agent",
+        "judge",
+        "evaluation"
+      ]
+    },
+    {
+      "name": "e2e-checkpoint-resume",
+      "description": "Implementing checkpoint/resume with rate limit handling for E2E evaluation frameworks",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/e2e-checkpoint-resume",
+      "category": "evaluation",
+      "tags": [
+        "e2e-testing",
+        "checkpoint",
+        "resume",
+        "rate-limit",
+        "multiprocessing",
+        "parallel-execution"
+      ]
+    },
+    {
       "name": "e2e-judge-rubric-design",
       "description": "Design LLM-as-Judge evaluation rubrics for E2E agent testing. Use when: (1) Building agent evaluation systems with LLM judges, (2) Designing weighted scoring criteria for code quality, (3) Handling invalid evaluations (rate limits, errors) distinctly from failures, (4) Standardizing judge prompts across test runs.",
       "version": "1.0.0",
@@ -576,6 +742,22 @@
       "source": "./plugins/evaluation/evaluate-model",
       "category": "evaluation",
       "tags": []
+    },
+    {
+      "name": "judge-criteria-enhancement",
+      "description": "Adding proportionality criteria to LLM judge systems to penalize over-engineering and reward task-appropriate solutions",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/judge-criteria-enhancement",
+      "category": "evaluation",
+      "tags": [
+        "judge",
+        "evaluation",
+        "criteria",
+        "proportionality",
+        "workspace-cleanliness",
+        "test-quality",
+        "scope-discipline"
+      ]
     },
     {
       "name": "judge-system-extension",
@@ -630,6 +812,22 @@
       ]
     },
     {
+      "name": "token-stats-aggregation",
+      "description": "Pattern for tracking detailed token statistics with cache tokens across hierarchical E2E report levels",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/token-stats-aggregation",
+      "category": "evaluation",
+      "tags": [
+        "tokens",
+        "cache",
+        "aggregation",
+        "reports",
+        "e2e",
+        "dataclass",
+        "pydantic"
+      ]
+    },
+    {
       "name": "analyze-simd-usage",
       "description": "Analyze SIMD usage opportunities in Mojo code. Use to find performance optimization opportunities.",
       "version": "1.0.0",
@@ -644,6 +842,20 @@
       "source": "./plugins/optimization/benchmark-functions",
       "category": "optimization",
       "tags": []
+    },
+    {
+      "name": "checkpoint-result-validation",
+      "description": "Validate checkpoint results before resuming expensive operations to prevent wasted API calls. Use when implementing resume/checkpoint systems that need to skip already-completed work.",
+      "version": "1.0.0",
+      "source": "./plugins/optimization/checkpoint-result-validation",
+      "category": "optimization",
+      "tags": [
+        "checkpoint",
+        "resume",
+        "validation",
+        "cost-optimization",
+        "idempotency"
+      ]
     },
     {
       "name": "mojo-simd-optimize",
@@ -704,6 +916,21 @@
         "checklist",
         "pr-review",
         "quality"
+      ]
+    },
+    {
+      "name": "deduplicate-test-fixtures",
+      "description": "Eliminate duplicated test fixture files by using runtime block-based composition. Use when: test fixtures contain many copies of the same file across directories, repository size is growing due to duplication, you want single source of truth for shared content.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/deduplicate-test-fixtures",
+      "category": "testing",
+      "tags": [
+        "deduplication",
+        "test-fixtures",
+        "block-composition",
+        "runtime-generation",
+        "tier-testing",
+        "refactoring"
       ]
     },
     {
@@ -837,6 +1064,20 @@
       "tags": []
     },
     {
+      "name": "resume-functionality-tests",
+      "description": "Comprehensive test patterns for checkpoint/resume systems covering crash, interrupt, and partial completion scenarios. Use when testing long-running processes with resume capability.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/resume-functionality-tests",
+      "category": "testing",
+      "tags": [
+        "testing",
+        "checkpoint",
+        "resume",
+        "crash-recovery",
+        "fixtures"
+      ]
+    },
+    {
       "name": "review-pr-changes",
       "description": "Review PR changes with structured checklist for quality and standards compliance. Use for comprehensive PR code review.",
       "version": "1.0.0",
@@ -879,6 +1120,14 @@
       "version": "1.0.0",
       "source": "./plugins/testing/validate-mojo-patterns",
       "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "agent-hooks-pattern",
+      "description": "Pattern for agent-scoped lifecycle hooks in Claude Code v2.1.0. Use when: (1) implementing custom agents with safety controls, (2) restricting agent tool access, (3) adding PreToolUse/PostToolUse/Stop hooks to agents.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/agent-hooks-pattern",
+      "category": "tooling",
       "tags": []
     },
     {
@@ -954,6 +1203,20 @@
         "plugin",
         "claude-code",
         "installation"
+      ]
+    },
+    {
+      "name": "execution-stage-logging",
+      "description": "Add structured stage logging with timing to track worker thread progress through multi-stage pipelines. Use when parallel workers make it unclear what stage each is in or which workers are stuck.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/execution-stage-logging",
+      "category": "tooling",
+      "tags": [
+        "logging",
+        "observability",
+        "debugging",
+        "worker-threads",
+        "pipeline"
       ]
     },
     {
@@ -1063,6 +1326,20 @@
         "parallel-development",
         "branching",
         "workflow"
+      ]
+    },
+    {
+      "name": "graceful-signal-handling",
+      "description": "Implement graceful shutdown for SIGINT/SIGTERM with checkpoint save and partial results. Use when long-running processes need to handle Ctrl+C without losing work.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/graceful-signal-handling",
+      "category": "tooling",
+      "tags": [
+        "signals",
+        "shutdown",
+        "checkpoint",
+        "ctrl-c",
+        "graceful-exit"
       ]
     },
     {
@@ -1185,6 +1462,20 @@
         "todo",
         "code-quality",
         "issue-tracking"
+      ]
+    },
+    {
+      "name": "tier-progress-indicators",
+      "description": "Add real-time progress tracking for parallel tier execution to prevent 'appears hung' issues. Use when parallel workers make it unclear how many tasks are complete vs still running.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/tier-progress-indicators",
+      "category": "tooling",
+      "tags": [
+        "progress",
+        "observability",
+        "parallel-execution",
+        "logging",
+        "user-experience"
       ]
     },
     {

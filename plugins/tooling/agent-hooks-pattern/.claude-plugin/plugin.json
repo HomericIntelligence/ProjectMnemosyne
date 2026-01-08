@@ -1,0 +1,9 @@
+{
+  "name": "agent-hooks-pattern",
+  "version": "1.0.0",
+  "description": "Pattern for agent-scoped lifecycle hooks in Claude Code v2.1.0. Use when: (1) implementing custom agents with safety controls, (2) restricting agent tool access, (3) adding PreToolUse/PostToolUse/Stop hooks to agents.",
+  "author": {
+    "name": "HomericIntelligence"
+  },
+  "skills": "./skills"
+}
