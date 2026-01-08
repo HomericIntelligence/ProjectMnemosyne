@@ -1,5 +1,5 @@
 {
-  "name": "claude-code-v2.1-adoption",
+  "name": "claude-code-v21-adoption",
   "version": "1.0.0",
   "description": "Systematic approach to adopting Claude Code v2.1.0 features in skills marketplace. Use when: (1) upgrading to new Claude Code version, (2) analyzing CHANGELOG for feature adoption, (3) updating plugin schemas and templates, (4) creating documentation skills for new features.",
   "author": {
