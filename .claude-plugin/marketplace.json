@@ -453,6 +453,14 @@
       "tags": []
     },
     {
+      "name": "pr-merge-conflict-resolution",
+      "description": "Systematic workflow for rebasing PRs and resolving merge conflicts. Use when: (1) PR branch is behind main with conflicts, (2) bulk-fixing frontmatter conflicts across many files, (3) resolving conflicts between new and existing fields.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/pr-merge-conflict-resolution",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "quality-fix-formatting",
       "description": "Automatically fix code formatting issues using mojo format, markdownlint, and pre-commit hooks. Use when formatting checks fail or before committing code.",
       "version": "1.0.0",

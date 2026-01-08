@@ -1,0 +1,9 @@
+{
+  "name": "pr-merge-conflict-resolution",
+  "version": "1.0.0",
+  "description": "Systematic workflow for rebasing PRs and resolving merge conflicts. Use when: (1) PR branch is behind main with conflicts, (2) bulk-fixing frontmatter conflicts across many files, (3) resolving conflicts between new and existing fields.",
+  "author": {
+    "name": "HomericIntelligence"
+  },
+  "skills": "./skills"
+}
