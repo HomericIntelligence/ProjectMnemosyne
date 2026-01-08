@@ -1442,6 +1442,14 @@
       ]
     },
     {
+      "name": "skills-agent-field",
+      "description": "Pattern for specifying which agent type should execute a skill. Use when: (1) creating specialized skills for specific agents, (2) routing Mojo skills to syntax validators, (3) directing GitHub skills to implementation engineers.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/skills-agent-field",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "skills-registry-commands",
       "description": "Complete skills registry system with 4 components: (1) /advise command - search skills before starting work, (2) /retrospective command - capture session learnings as new skills, (3) documentation-patterns skill - how to write effective skill docs, (4) validation-workflow skill - CI/CD for plugin validation. Use when setting up team knowledge capture or implementing the Sionic AI skills pattern.",
       "version": "1.0.0",

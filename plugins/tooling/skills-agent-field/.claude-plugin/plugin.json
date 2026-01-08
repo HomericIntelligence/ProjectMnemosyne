@@ -1,0 +1,9 @@
+{
+  "name": "skills-agent-field",
+  "version": "1.0.0",
+  "description": "Pattern for specifying which agent type should execute a skill. Use when: (1) creating specialized skills for specific agents, (2) routing Mojo skills to syntax validators, (3) directing GitHub skills to implementation engineers.",
+  "author": {
+    "name": "HomericIntelligence"
+  },
+  "skills": "./skills"
+}
