@@ -1,0 +1,14 @@
+{
+  "name": "resume-crash-debugging",
+  "version": "1.0.0",
+  "description": "Pattern for debugging resume crashes in long-running experiments with checkpoint systems. Use when: (1) experiments crash on resume with FileNotFoundError or similar, (2) file path mismatches between validation and loading, (3) need to diagnose progressive degradation (works 1st time, fails on Nth resume), (4) checkpoint state is out of sync with filesystem.",
+  "category": "debugging",
+  "date": "2026-01-08",
+  "tags": ["debugging", "resume", "checkpoint", "e2e", "file-path-mismatch"],
+  "skills": [
+    {
+      "name": "resume-crash-debugging",
+      "path": "skills/resume-crash-debugging/SKILL.md"
+    }
+  ]
+}
