@@ -2,6 +2,7 @@
 name: SKILL_NAME
 description: "TRIGGER CONDITIONS: When to use this skill"
 user-invocable: false  # Set to true only for user-facing commands, false for internal/sub-skills
+agent: specialist-agent  # Optional: specify which agent type should execute this skill (e.g., mojo-validator, code-reviewer)
 category: CATEGORY
 date: YYYY-MM-DD
 ---
