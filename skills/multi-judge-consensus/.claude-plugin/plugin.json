@@ -1,0 +1,52 @@
+{
+  "name": "multi-judge-consensus",
+  "version": "1.0.0",
+  "category": "evaluation",
+  "description": "Implement multiple LLM judges with consensus voting in evaluation systems",
+  "tags": [
+    "evaluation",
+    "consensus",
+    "multi-judge",
+    "llm-as-judge",
+    "voting",
+    "multiprocessing"
+  ],
+  "created": "2026-01-08",
+  "last_updated": "2026-01-08",
+  "author": "ProjectScylla Team",
+  "repository": "ProjectScylla",
+  "pr_url": "https://github.com/HomericIntelligence/ProjectScylla/pull/160",
+  "related_issues": [
+    "#153"
+  ],
+  "dependencies": [],
+  "verified": true,
+  "use_cases": [
+    "Adding multi-judge support to evaluation systems",
+    "Implementing consensus voting across LLM evaluators",
+    "Designing per-judge reporting with aggregate results",
+    "Fixing multiprocessing Ctrl+C clean shutdown",
+    "Creating flexible CLI arguments with shortcuts"
+  ],
+  "key_patterns": [
+    "Simple average + majority vote for consensus",
+    "Sequential judge execution to avoid rate limits",
+    "Separate subdirectories per judge (judge_01/, judge_02/)",
+    "Backward compatibility through conditional logic",
+    "argparse nargs='?' for optional argument values",
+    "Backward compatibility in load() method for field renames"
+  ],
+  "anti_patterns": [
+    "Importing BrokenProcessPool from concurrent.futures (wrong module)",
+    "Placing optional dataclass fields before required fields",
+    "Over-engineering consensus algorithms before measuring need",
+    "Parallel judge execution without rate limit handling",
+    "Forgetting backward compatibility when renaming persisted fields"
+  ],
+  "metrics": {
+    "implementation_time": "3 hours",
+    "files_modified": 7,
+    "lines_added": 350,
+    "backward_compatible": true
+  }
+}
