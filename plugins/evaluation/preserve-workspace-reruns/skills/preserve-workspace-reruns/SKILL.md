@@ -1,4 +1,13 @@
+---
+name: preserve-workspace-reruns
+description: Preserving git worktrees and test results when re-running E2E experiments with checkpoint resume
+category: evaluation
+date: 2026-01-08
+---
+
 # Skill: Preserve Workspaces on E2E Experiment Re-runs
+
+## Overview
 
 | Field | Value |
 |-------|-------|
@@ -20,7 +29,7 @@ This caused:
 - Unnecessary git worktree recreation overhead
 - Inability to inspect workspaces from passing runs
 
-## When to Use This Pattern
+## When to Use
 
 Apply this pattern when:
 - ✅ You have a checkpoint/resume system that tracks completed work
@@ -108,51 +117,12 @@ else:
 
 ## Failed Attempts
 
-### ❌ Attempt 1: Modify workspace recovery logic only
+| Attempt | Approach | Why It Failed | Lesson Learned |
+|---------|----------|---------------|----------------|
+| **1. Modify recovery logic** | Add preservation check inside `_setup_workspace()` recovery path (line 1125-1128) to check if workspace should be preserved before deleting | Recovery path only executes when git branch exists; requires passing checkpoint deep into method; checks happen too late after worktree command created | Check conditions BEFORE starting expensive operations, not during recovery |
+| **2. Cleanup after completion** | After each run completes, clean up workspaces for failing runs (after line 723) | Solves wrong problem - issue is re-creation on re-run, not cleanup; doesn't address workspace destruction during resume; adds overhead; failed workspaces useful for debugging | Identify actual problem point - workspace destroyed during **setup**, not **cleanup** |
 
-**Approach**: Add preservation check inside `_setup_workspace()` recovery path (line 1125-1128)
-
-```python
-# In _setup_workspace, around line 1125-1128
-if workspace_abs.exists():
-    should_preserve = self._should_preserve_workspace(workspace_abs, tier_id, subtest_id, run_number)
-    if should_preserve:
-        logger.info(f"Preserving existing workspace with passing results: {workspace_abs}")
-        return  # Skip workspace setup
-    else:
-        shutil.rmtree(workspace_abs)
-```
-
-**Why it failed**:
-- Recovery path only executes when git branch already exists
-- Requires passing checkpoint context deep into `_setup_workspace()`
-- Still creates git worktree command before checking
-- More complex - checks happen too late in the flow
-
-**Lesson**: Check conditions BEFORE starting expensive operations, not during recovery.
-
-### ❌ Attempt 2: Add workspace cleanup after run completes
-
-**Approach**: After each run, clean up workspaces for failing runs (after line 723)
-
-```python
-if run_result.judge_passed:
-    # Preserve workspace for passing run
-    pass
-else:
-    # Clean up workspace for failing run
-    self.workspace_manager.cleanup_worktree(workspace, branch_name)
-```
-
-**Why it failed**:
-- Solves the wrong problem - issue is **re-creation on re-run**, not cleanup
-- Doesn't address the core issue: workspace destruction during resume
-- Adds cleanup overhead after every run
-- Workspaces for failed runs might still be useful for debugging
-
-**Lesson**: Identify the actual problem point - workspace is destroyed during **setup**, not during **cleanup**.
-
-## Results & Parameters
+## Results
 
 ### Test Command
 ```bash
