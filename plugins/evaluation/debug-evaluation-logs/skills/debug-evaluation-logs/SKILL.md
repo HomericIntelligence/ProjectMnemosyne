@@ -1,4 +1,13 @@
+---
+name: debug-evaluation-logs
+description: Improving diagnostic clarity of LLM judge warning messages by adding specific failure details
+category: evaluation
+date: 2026-01-08
+---
+
 # Skill: Debug Evaluation Logs
+
+## Overview
 
 | Property | Value |
 |----------|-------|
@@ -9,11 +18,9 @@
 | **Files Modified** | `src/scylla/e2e/llm_judge.py` |
 | **Context** | ProjectScylla evaluation infrastructure |
 
-## Overview
-
 When analyzing evaluation experiment logs, generic warning messages made it difficult to diagnose failures. Log output like "Build pipeline: SOME FAILED" and "Claude CLI failed (exit 1): No error message" provided no actionable information about what actually went wrong.
 
-## When to Use This Skill
+## When to Use
 
 Apply this pattern when:
 
