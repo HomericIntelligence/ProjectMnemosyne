@@ -1,0 +1,28 @@
+{
+  "name": "debug-evaluation-logs",
+  "version": "1.0.0",
+  "category": "evaluation",
+  "description": "Improve diagnostic clarity of LLM judge warning messages by adding specific failure details and better error extraction",
+  "tags": [
+    "evaluation",
+    "logging",
+    "diagnostics",
+    "error-handling",
+    "llm-judge"
+  ],
+  "skills": {
+    "debug-evaluation-logs": {
+      "type": "skill",
+      "path": "skills/debug-evaluation-logs/SKILL.md"
+    }
+  },
+  "metadata": {
+    "created": "2026-01-08",
+    "context": "ProjectScylla",
+    "related_skills": [
+      "error-message-improvement",
+      "structured-logging",
+      "subprocess-error-handling"
+    ]
+  }
+}
