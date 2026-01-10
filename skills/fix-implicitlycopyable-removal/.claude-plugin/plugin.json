@@ -1,0 +1,48 @@
+{
+  "name": "fix-implicitlycopyable-removal",
+  "version": "1.0.0",
+  "category": "debugging",
+  "description": "Systematic approach to removing ImplicitlyCopyable trait from Mojo structs and fixing resulting compilation errors",
+  "tags": [
+    "mojo",
+    "ownership",
+    "memory-safety",
+    "refactoring",
+    "ci-fix",
+    "compilation-errors"
+  ],
+  "created": "2025-12-29",
+  "last_updated": "2026-01-09",
+  "author": "ProjectOdyssey Team",
+  "repository": "ProjectOdyssey",
+  "pr_url": "https://github.com/mvillmow/ProjectOdyssey/pull/3001",
+  "related_issues": [],
+  "dependencies": [],
+  "verified": true,
+  "use_cases": [
+    "Removing ImplicitlyCopyable trait from Mojo structs",
+    "Fixing compilation errors after trait removal",
+    "Migrating to explicit copy/move semantics",
+    "Understanding Mojo ownership and borrowing",
+    "Resolving 'cannot transfer ownership' errors"
+  ],
+  "key_patterns": [
+    "Use transfer operator (^) for non-copyable types",
+    "Add __copyinit__ for types that need copying",
+    "Use borrowed self for read-only methods",
+    "Prefer transferring ownership over copying",
+    "Leverage Mojo's ownership system for memory safety"
+  ],
+  "anti_patterns": [
+    "Adding ImplicitlyCopyable to avoid fixing ownership issues",
+    "Using unnecessary copies instead of borrows",
+    "Ignoring compilation errors and adding workarounds",
+    "Not understanding when ownership transfer is needed"
+  ],
+  "metrics": {
+    "files_fixed": 27,
+    "errors_resolved": 132,
+    "test_pass_rate": "100%",
+    "mojo_version": "0.26.1"
+  }
+}
