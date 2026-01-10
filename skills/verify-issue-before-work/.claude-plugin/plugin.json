@@ -1,0 +1,53 @@
+{
+  "name": "verify-issue-before-work",
+  "version": "1.0.0",
+  "category": "tooling",
+  "description": "Verify GitHub issue state and existing implementation before starting work to avoid duplicate effort",
+  "tags": [
+    "workflow",
+    "github",
+    "productivity",
+    "verification",
+    "issue-management"
+  ],
+  "created": "2025-12-29",
+  "last_updated": "2026-01-09",
+  "author": "ProjectOdyssey Team",
+  "repository": "ProjectOdyssey",
+  "related_issues": [],
+  "dependencies": [
+    "gh (GitHub CLI)"
+  ],
+  "verified": true,
+  "use_cases": [
+    "Verify issue state before starting work",
+    "Check for existing implementations in codebase",
+    "Avoid duplicate work on already-implemented features",
+    "Validate issue is still open and unassigned",
+    "Search for related PRs and branches"
+  ],
+  "key_patterns": [
+    "Use gh issue view to check issue state",
+    "Search codebase for existing implementations",
+    "Check for related PRs using gh pr list",
+    "Verify branch existence with git branch -a",
+    "Document findings before proceeding"
+  ],
+  "anti_patterns": [
+    "Starting work without checking issue state",
+    "Ignoring existing partial implementations",
+    "Not searching for related work",
+    "Assuming issue description is still accurate"
+  ],
+  "workflow": [
+    "Read issue with gh issue view",
+    "Search codebase for existing implementation",
+    "Check for related PRs and branches",
+    "Verify issue is still open",
+    "Document current state before proceeding"
+  ],
+  "metrics": {
+    "time_saved_per_use": "15-30 minutes",
+    "duplicate_work_prevented": "high"
+  }
+}
