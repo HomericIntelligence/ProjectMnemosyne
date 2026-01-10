@@ -1,0 +1,59 @@
+{
+  "name": "investigate-mojo-heap-corruption",
+  "version": "1.0.0",
+  "category": "debugging",
+  "description": "Systematic workflow for investigating and fixing Mojo 0.26.1 heap corruption crashes that occur in CI but not locally",
+  "tags": [
+    "mojo",
+    "debugging",
+    "heap-corruption",
+    "ci-failures",
+    "runtime-crashes",
+    "float-conversions",
+    "integration-tests"
+  ],
+  "created": "2026-01-08",
+  "last_updated": "2026-01-09",
+  "author": "ProjectOdyssey Team",
+  "repository": "ProjectOdyssey",
+  "pr_url": "https://github.com/mvillmow/ProjectOdyssey/pull/3103",
+  "documentation_pr_url": "https://github.com/mvillmow/ProjectOdyssey/pull/3104",
+  "ci_run": "https://github.com/mvillmow/ProjectOdyssey/actions/runs/20826482385",
+  "related_issues": [],
+  "related_adrs": ["ADR-009"],
+  "dependencies": [],
+  "verified": true,
+  "use_cases": [
+    "CI-only crashes in libKGENCompilerRTShared.so",
+    "Heap corruption after ~15 cumulative tests (ADR-009 threshold)",
+    "Runtime crashes with unsymbolicated stack traces",
+    "Intermittent integration test failures",
+    "Debugging type conversion issues in Mojo"
+  ],
+  "key_patterns": [
+    "Use exact commit SHA from CI metadata (headSha), not approximate reports",
+    "Trust CI logs even when crashes don't reproduce locally",
+    "Identify unnecessary type conversions (e.g., Float32→Float64)",
+    "Use native type accessors (_get_float32 vs _get_float64)",
+    "Analyze cumulative test count across integration test suite",
+    "CI environment differences cause specific failure modes"
+  ],
+  "anti_patterns": [
+    "Testing at wrong commit based on approximate reports",
+    "Dismissing CI failures that don't reproduce locally",
+    "Using unnecessary type conversions in accessor methods",
+    "Running full test suite (just test) instead of targeted groups",
+    "Assuming local reproduction is required for valid debugging"
+  ],
+  "metrics": {
+    "crash_identified": "Test 9 - test_fp16_vs_fp32_accuracy",
+    "root_cause": "Unnecessary Float32→Float64 conversion",
+    "fix_applied": "Native Float32 comparison",
+    "crash_resolved": true,
+    "investigation_time": "4 hours",
+    "files_modified": 1,
+    "lines_changed": 4,
+    "ci_environment": "GitHub Actions Ubuntu 22.04",
+    "mojo_version": "0.26.1"
+  }
+}
