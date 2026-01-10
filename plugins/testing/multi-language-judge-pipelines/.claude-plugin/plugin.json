@@ -1,0 +1,21 @@
+{
+  "name": "multi-language-judge-pipelines",
+  "version": "1.0.0",
+  "description": "Add language-specific build pipelines (Python/Mojo) to E2E test judge systems. Use when test infrastructure needs to support multiple programming languages with different tooling (python/ruff/pytest vs mojo build/format/test). Handles pipeline routing, configuration loading, and test fixture updates.",
+  "category": "testing",
+  "date": "2026-01-09",
+  "tags": [
+    "testing",
+    "e2e",
+    "pipelines",
+    "python",
+    "mojo",
+    "judge-system",
+    "multi-language",
+    "build-automation"
+  ],
+  "requires": {
+    "tools": [],
+    "languages": ["python", "mojo"]
+  }
+}
