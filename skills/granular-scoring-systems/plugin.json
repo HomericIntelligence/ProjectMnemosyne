@@ -1,0 +1,47 @@
+{
+  "name": "granular-scoring-systems",
+  "version": "1.0.0",
+  "description": "Hybrid LLM judge evaluation system combining objective checklists (80%) with subjective engineering judgment (20%) to achieve low-variance (<10%) granular scoring",
+  "category": "evaluation",
+  "author": "Claude Code",
+  "created": "2026-01-10",
+  "tags": [
+    "llm-judge",
+    "evaluation",
+    "hybrid-scoring",
+    "variance-reduction",
+    "granular-scoring",
+    "continuous-scoring",
+    "multi-run-reporting",
+    "grade-aggregation"
+  ],
+  "skills": [
+    "skills/granular-scoring-systems/SKILL.md"
+  ],
+  "references": [
+    "references/notes.md"
+  ],
+  "source_project": "ProjectScylla",
+  "target_registry": "ProjectMnemosyne",
+  "metrics": {
+    "variance_before": "14%",
+    "variance_after": "6%",
+    "variance_reduction": "57%",
+    "target_achieved": true,
+    "files_modified": 6,
+    "lines_added": 916,
+    "commits": 2,
+    "test_runs": 3,
+    "subtests_validated": 24
+  },
+  "related_resources": [
+    "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents"
+  ],
+  "key_innovations": [
+    "80/20 checklist/subjective split for optimal variance reduction",
+    "Anchored examples at 7 levels for continuous scoring",
+    "2.0-point subjective scale for granularity",
+    "N/A handling excluding environmental factors from scoring",
+    "Multi-run grade aggregation with distribution, modal, and range statistics"
+  ]
+}
