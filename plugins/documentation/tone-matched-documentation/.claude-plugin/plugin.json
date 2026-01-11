@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Fill placeholder sections in documents while matching the author's existing writing style and tone",
   "author": "ProjectScylla",
-  "category": "documentation",
+  "category": "tooling",
   "tags": ["academic-writing", "documentation", "tone-matching", "style-consistency"],
   "skills": [
     {
