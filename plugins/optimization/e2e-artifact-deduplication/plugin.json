@@ -1,0 +1,29 @@
+{
+  "name": "e2e-artifact-deduplication",
+  "version": "1.0.0",
+  "category": "optimization",
+  "description": "Consolidate duplicate artifacts in E2E evaluation output by sharing prompts, commands, and configuration files across judges and runs",
+  "author": "ProjectScylla Team",
+  "created": "2026-01-11",
+  "tags": [
+    "e2e-evaluation",
+    "deduplication",
+    "optimization",
+    "file-structure",
+    "judge-prompts",
+    "artifact-consolidation"
+  ],
+  "triggers": [
+    "duplicate files in evaluation output",
+    "same prompt written multiple times",
+    "run_all.sh duplicated per judge",
+    "large evaluation result directories",
+    "repeated content across judge runs"
+  ],
+  "related_files": [
+    "src/scylla/e2e/llm_judge.py",
+    "src/scylla/e2e/command_logger.py",
+    "src/scylla/e2e/runner.py",
+    "src/scylla/e2e/subtest_executor.py"
+  ]
+}
