@@ -56,7 +56,7 @@ Academic grading (A=95%, B=85%, C=75%, D=65%) has issues for software evaluation
 Create a single source of truth file:
 
 ```markdown
-# .claude/shared/grading-scale.md
+# docs/design/grading-scale.md
 
 | Grade | Threshold | Label | Description |
 |-------|-----------|-------|-------------|
@@ -90,7 +90,7 @@ Reference the central definition in each rubric:
 ```yaml
 grading:
   pass_threshold: 0.60
-  # Industry-aligned grade scale - see .claude/shared/grading-scale.md
+  # Industry-aligned grade scale - see docs/design/grading-scale.md
   grade_scale:
     S: 1.00    # Amazing - above and beyond
     A: 0.80    # Excellent - production ready
@@ -155,7 +155,7 @@ grading:
 
 When implementing this pattern:
 
-1. `.claude/shared/grading-scale.md` - Central definition (create)
+1. `docs/design/grading-scale.md` - Central definition (create)
 2. `schemas/rubric.schema.json` - Add S grade to schema
 3. `docs/design/rubric-schema.md` - Update documentation
 4. `src/*/rubric.py` - Update parser with S grade and validation
