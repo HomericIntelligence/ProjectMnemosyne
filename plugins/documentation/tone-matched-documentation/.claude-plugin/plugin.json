@@ -1,0 +1,15 @@
+{
+  "name": "tone-matched-documentation",
+  "version": "1.0.0",
+  "description": "Fill placeholder sections in documents while matching the author's existing writing style and tone",
+  "author": "ProjectScylla",
+  "category": "documentation",
+  "tags": ["academic-writing", "documentation", "tone-matching", "style-consistency"],
+  "skills": [
+    {
+      "name": "tone-matched-documentation",
+      "description": "Analyze existing document style and fill placeholders matching that tone",
+      "trigger": "When filling in <placeholder> sections in documents with established writing style"
+    }
+  ]
+}
