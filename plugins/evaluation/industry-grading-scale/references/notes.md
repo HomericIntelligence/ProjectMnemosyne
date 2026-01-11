@@ -39,7 +39,7 @@ well to production readiness semantics.
 
 ### Files Changed
 
-1. `.claude/shared/grading-scale.md` (new)
+1. `docs/design/grading-scale.md` (new)
    - Central definition file
    - Grade thresholds and descriptions
    - Assignment logic

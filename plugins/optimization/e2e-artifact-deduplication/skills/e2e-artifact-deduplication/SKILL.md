@@ -1,3 +1,10 @@
+---
+title: E2E Artifact Deduplication
+category: optimization
+date: 2026-01-11
+outcome: success
+---
+
 # Skill: E2E Artifact Deduplication
 
 | Attribute | Value |
