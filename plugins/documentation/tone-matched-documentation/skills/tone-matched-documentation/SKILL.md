@@ -1,3 +1,11 @@
+---
+name: tone-matched-documentation
+description: Fill placeholder sections in documents while matching the author's existing writing style and tone
+category: tooling
+date: 2026-01-11
+user-invocable: false
+---
+
 # Tone-Matched Documentation Skill
 
 | Field | Value |
@@ -6,7 +14,7 @@
 | **Session ID** | ProjectScylla paper authoring |
 | **Objective** | Fill placeholder sections (`<...>`) in academic paper while matching author's conversational, direct writing style |
 | **Outcome** | SUCCESS - Filled 16 sections (~4000 words) maintaining consistent tone throughout |
-| **Category** | documentation |
+| **Category** | tooling |
 | **Applicable Domains** | Academic papers, technical documentation, blog posts, any document requiring style consistency |
 
 ---
@@ -101,36 +109,11 @@ Use this skill when:
 
 ## Failed Attempts & Lessons
 
-### ❌ Attempt 1: Fill all sections with standard academic tone
-
-**Why it failed**: Produced overly formal, stiff language that clashed with author's conversational intro/summary sections.
-
-**Symptoms**:
-- Used "We present", "Our methodology employs", "facilitates", "leverages"
-- Passive voice: "is performed", "are evaluated", "is determined"
-- Formal transitions: "However", "Subsequently", "Furthermore"
-- Third person exclusively
-
-**Lesson**: **ALWAYS read existing sections first** to identify author's voice before writing anything.
-
-### ❌ Attempt 2: Mixed first/third person inconsistently
-
-**Why it failed**: Some sections used "I" while others used "the framework" or "we", creating jarring inconsistency.
-
-**Example**:
-- "The framework evaluates..." (third person)
-- "I use 0.60 as threshold..." (first person)
-- "We present results..." (first person plural)
-
-**Lesson**: **Pick one perspective** and stick to it throughout. If author uses first person in existing sections, use it everywhere.
-
-### ❌ Attempt 3: Over-simplified technical content
-
-**Why it failed**: Tried to make EVERYTHING conversational, which oversimplified complex technical concepts and lost precision.
-
-**Example**: Changed "Hierarchical Bayesian Generalised Linear Models (HiBayES)" to "fancy statistical models"
-
-**Lesson**: **Keep technical terms technical**. Conversational tone doesn't mean dumbing down. It means explaining clearly and avoiding unnecessary formality.
+| Attempt | Why It Failed | Key Lesson |
+|---------|---------------|------------|
+| **Fill all sections with standard academic tone** | Produced overly formal, stiff language ("We present", "Our methodology employs", passive voice, formal transitions) that clashed with author's conversational intro/summary sections | **ALWAYS read existing sections first** to identify author's voice before writing anything |
+| **Mixed first/third person inconsistently** | Some sections used "I" while others used "the framework" or "we", creating jarring inconsistency across the document | **Pick one perspective** and stick to it throughout - if author uses first person in existing sections, use it everywhere |
+| **Over-simplified technical content** | Tried to make EVERYTHING conversational, which oversimplified complex technical concepts (e.g., changed "Hierarchical Bayesian models" to "fancy statistical models") and lost precision | **Keep technical terms technical** - conversational tone doesn't mean dumbing down, it means explaining clearly while avoiding unnecessary formality |
 
 ---
 
