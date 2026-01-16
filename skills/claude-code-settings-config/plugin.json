@@ -1,0 +1,17 @@
+{
+  "name": "claude-code-settings-config",
+  "version": "1.0.0",
+  "category": "debugging",
+  "description": "Configure Claude Code settings.json for E2E test workspaces to control thinking mode and other workspace-level settings",
+  "created": "2026-01-16",
+  "tags": [
+    "claude-code",
+    "settings",
+    "thinking-mode",
+    "e2e-testing",
+    "workspace-config"
+  ],
+  "related_skills": [
+    "e2e-framework-bug-fixes"
+  ]
+}
