@@ -1,0 +1,49 @@
+{
+  "name": "unify-config-structure",
+  "version": "1.0.0",
+  "category": "architecture",
+  "description": "Consolidate configuration hierarchies to establish single source of truth and fix documentation inconsistencies",
+  "tags": [
+    "config-management",
+    "documentation",
+    "test-fixtures",
+    "single-source-of-truth",
+    "architecture-patterns"
+  ],
+  "created_at": "2026-01-17",
+  "source_project": "ProjectScylla",
+  "target_registry": "ProjectMnemosyne",
+  "author": "Claude Sonnet 4.5",
+  "outcome": "success",
+  "metrics": {
+    "tests_passing": 45,
+    "files_modified": 11,
+    "discrepancies_fixed": 4,
+    "tiers_documented": 7,
+    "total_subtests": 113
+  },
+  "triggers": [
+    "Config files are duplicated in multiple places",
+    "Documentation doesn't match actual tier structure",
+    "Tests break when I update production config",
+    "Which config file should I edit?"
+  ],
+  "key_learnings": [
+    "Always audit actual resource counts before fixing configs",
+    "Fix documentation first to establish target state",
+    "Test fixtures serve different purpose than production configs",
+    "Use _ prefix convention to mark test-only production configs",
+    "Symlinks reduce duplication while maintaining single source of truth"
+  ],
+  "related_skills": [
+    "testing/test-fixture-management",
+    "documentation/docs-sync",
+    "architecture/config-hierarchy"
+  ],
+  "use_cases": [
+    "Consolidating duplicate configuration files",
+    "Fixing documentation drift in evaluation frameworks",
+    "Organizing test fixtures separately from production configs",
+    "Establishing single source of truth for tier definitions"
+  ]
+}
