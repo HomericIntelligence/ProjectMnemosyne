@@ -10,9 +10,10 @@ Capture session learnings and create a new skill plugin in the ProjectMnemosyne 
 
 **Repository**: `HomericIntelligence/ProjectMnemosyne`
 **Base branch**: `main`
-**Clone location**: `<ProjectRoot>/build/<PID>/`
+**Clone location**: `<ProjectRoot>/build/<PID>/ProjectMnemosyne/`
 
-Commands in the same session share the clone via process ID.
+Each Claude Code session gets its own isolated clone (via process ID) to avoid interference.
+Automatically skipped if already running in the ProjectMnemosyne repository.
 
 ## Instructions
 
@@ -31,18 +32,40 @@ When the user invokes this command:
 
 3. **Setup repository**:
    ```bash
-   BUILD_DIR="build/$$"
-
-   # Clone repository if not present, otherwise update
-   if [ ! -d "$BUILD_DIR" ]; then
-     gh repo clone HomericIntelligence/ProjectMnemosyne "$BUILD_DIR"
+   # Detect if already in ProjectMnemosyne
+   CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+   if [[ "$CURRENT_REMOTE" == *"ProjectMnemosyne"* ]] && [[ "$CURRENT_REMOTE" != *"ProjectMnemosyne-"* ]]; then
+     # Already in ProjectMnemosyne - work in current directory
+     MNEMOSYNE_DIR="."
    else
-     git -C "$BUILD_DIR" fetch origin
+     # Use PID-scoped build directory - NEVER modify local repo
+     MNEMOSYNE_DIR="build/$$/ProjectMnemosyne"
+
+     if [ ! -d "$MNEMOSYNE_DIR" ]; then
+       # Clone fresh
+       mkdir -p "build/$$"
+       gh repo clone HomericIntelligence/ProjectMnemosyne "$MNEMOSYNE_DIR"
+     else
+       # Update existing clone
+       # Ensure we're on main branch
+       if ! git -C "$MNEMOSYNE_DIR" symbolic-ref HEAD | grep -q "refs/heads/main"; then
+         echo "Error: $MNEMOSYNE_DIR is not on main branch."
+         echo "Fix: rm -rf build/$$"
+         exit 1
+       fi
+
+       # Ensure no local commits or conflicts
+       if ! git -C "$MNEMOSYNE_DIR" pull --ff-only origin main; then
+         echo "Error: Cannot fast-forward $MNEMOSYNE_DIR/main. May have local commits or conflicts."
+         echo "Fix: rm -rf build/$$"
+         exit 1
+       fi
+     fi
+
+     cd "$MNEMOSYNE_DIR"
    fi
 
-   cd "$BUILD_DIR"
-
-   # Create branch from origin/main
+   # Create branch from origin/main (clean state)
    git checkout -b skill/<category>/<name> origin/main
    ```
 
@@ -95,8 +118,8 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 
 6. **Create PR** (only if push succeeded):
    ```bash
-   # Write PR body to build directory (use $BUILD_DIR from step 3)
-   cat > "$BUILD_DIR/pr-body-<name>.md" << 'EOF'
+   # Write PR body to build directory (use $MNEMOSYNE_DIR from step 3)
+   cat > "$MNEMOSYNE_DIR/pr-body-<name>.md" << 'EOF'
    ## Summary
 
    Documents <brief description of what was learned>.
@@ -126,7 +149,12 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 
    gh pr create --repo HomericIntelligence/ProjectMnemosyne --base main \
      --title "feat: add <name> skill" \
-     --body-file "$BUILD_DIR/pr-body-<name>.md"
+     --body-file "$MNEMOSYNE_DIR/pr-body-<name>.md"
+
+   # After successful PR creation, clean up the feature branch
+   BRANCH_NAME="skill/<category>/<name>"
+   git checkout main
+   git branch -D "$BRANCH_NAME"
    ```
 
 ## Common Issues & Solutions
@@ -142,13 +170,17 @@ git checkout -b skill/<category>/<name> origin/main
 
 ### Issue: Build directory cleanup
 
-**Cause**: Multiple retrospective sessions accumulate build directories.
+**Cause**: Multiple Claude Code sessions accumulate build directories.
 
 **Solution**: Periodically clean old build directories:
 ```bash
-# Remove build directories older than 7 days
-find build -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \;
+# Remove all PID-scoped build directories
+rm -rf build/*/ProjectMnemosyne
+
+# Or remove the entire build directory
+rm -rf build/
 ```
+The next `/advise` or `/retrospective` will re-clone automatically.
 
 ## Required SKILL.md Sections
 
