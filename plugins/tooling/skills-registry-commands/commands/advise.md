@@ -9,9 +9,10 @@ Search the skills registry for relevant prior learnings before starting work.
 ## Target Repository
 
 **Repository**: `HomericIntelligence/ProjectMnemosyne`
-**Clone location**: `<ProjectRoot>/build/<PID>/`
+**Clone location**: `<ProjectRoot>/build/<PID>/ProjectMnemosyne/`
 
-Commands in the same session share the clone via process ID.
+Each Claude Code session gets its own isolated clone (via process ID) to avoid interference.
+Automatically skipped if already running in the ProjectMnemosyne repository.
 
 ## Instructions
 
@@ -21,14 +22,35 @@ When the user invokes this command:
 
 1. **Setup repository** (if not already cloned):
    ```bash
-   BUILD_DIR="build/$$"
-
-   # Clone repository if not present
-   if [ ! -d "$BUILD_DIR" ]; then
-     gh repo clone HomericIntelligence/ProjectMnemosyne "$BUILD_DIR"
+   # Detect if already in ProjectMnemosyne
+   CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
+   if [[ "$CURRENT_REMOTE" == *"ProjectMnemosyne"* ]] && [[ "$CURRENT_REMOTE" != *"ProjectMnemosyne-"* ]]; then
+     # Already in ProjectMnemosyne - use current directory
+     MNEMOSYNE_DIR="."
    else
-     # Update existing clone
-     git -C "$BUILD_DIR" pull --ff-only origin main
+     # Use PID-scoped build directory to avoid interference between Claude instances
+     MNEMOSYNE_DIR="build/$$/ProjectMnemosyne"
+
+     if [ ! -d "$MNEMOSYNE_DIR" ]; then
+       # Clone fresh
+       mkdir -p "build/$$"
+       gh repo clone HomericIntelligence/ProjectMnemosyne "$MNEMOSYNE_DIR"
+     else
+       # Update existing clone before analysis
+       # Ensure we're on main branch
+       if ! git -C "$MNEMOSYNE_DIR" symbolic-ref HEAD | grep -q "refs/heads/main"; then
+         echo "Error: $MNEMOSYNE_DIR is not on main branch."
+         echo "Fix: rm -rf build/$$"
+         exit 1
+       fi
+
+       # Ensure no local commits or conflicts
+       if ! git -C "$MNEMOSYNE_DIR" pull --ff-only origin main; then
+         echo "Error: Cannot fast-forward $MNEMOSYNE_DIR/main. May have local commits or conflicts."
+         echo "Fix: rm -rf build/$$"
+         exit 1
+       fi
+     fi
    fi
    ```
 
