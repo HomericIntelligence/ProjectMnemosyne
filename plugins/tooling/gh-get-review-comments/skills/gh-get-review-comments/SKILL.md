@@ -55,6 +55,15 @@ Comments include:
 - `user` - Reviewer username
 - `in_reply_to_id` - Parent comment ID (null if top-level)
 
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Use `gh pr view` | Tried to get comments with standard view | Doesn't show review comment IDs | Use API endpoint for comment IDs |
+| Parse from web UI | Copied comments from GitHub website | Lost comment IDs needed for replies | Always use API for programmatic access |
+| Filter by resolved status | Tried to filter resolved comments | API doesn't expose resolved field directly | Check `in_reply_to_id` for top-level only |
+| Get all PR comments | Used `gh pr comment` endpoint | Returns PR-level comments, not review comments | Review comments require different API endpoint |
+
 ## Error Handling
 
 | Problem | Solution |
