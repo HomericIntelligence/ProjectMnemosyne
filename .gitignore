@@ -4,3 +4,6 @@ __pycache__/
 
 # Git worktrees
 worktrees/
+
+# build artifacts
+build/
