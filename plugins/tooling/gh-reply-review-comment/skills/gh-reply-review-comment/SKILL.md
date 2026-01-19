@@ -64,6 +64,15 @@ Keep responses SHORT and CONCISE (1 line preferred):
 - Defensive responses
 - Multiple paragraphs
 
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Use `gh pr comment` | Tried standard PR comment command | Creates new PR-level comment, not a reply | Must use API endpoint for review replies |
+| Reply without comment ID | Tried to reply by line number | GitHub doesn't support line-based replies | Always get comment ID from API first |
+| Wrong API endpoint | Used `/issues/comments` endpoint | That's for issue comments, not review comments | Use `/pulls/PR/comments/ID/replies` |
+| Reply before fetching IDs | Tried to reply without listing comments | Don't know which IDs to reply to | Always fetch comment list first |
+
 ## Error Handling
 
 | Problem | Solution |

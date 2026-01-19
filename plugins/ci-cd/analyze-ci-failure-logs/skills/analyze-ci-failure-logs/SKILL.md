@@ -79,6 +79,15 @@ Provide analysis with:
 4. **Related Changes** - Which PR changes might have caused it
 5. **Remediation** - Recommended fix or investigation steps
 
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Read only last few lines | Used `tail` to check end of log | Missed earlier context and root cause | Read full log or use grep for patterns |
+| Search for single keyword | Grepped only "error" | Missed "FAILED", "panic", "exception" variants | Use multiple error patterns together |
+| Analyze without PR context | Looked at logs in isolation | Couldn't connect to code changes | Always compare with PR diff |
+| Skip stack traces | Focused only on error message | Missed actual source location | Full stack trace shows root cause |
+
 ## Error Handling
 
 | Problem | Solution |

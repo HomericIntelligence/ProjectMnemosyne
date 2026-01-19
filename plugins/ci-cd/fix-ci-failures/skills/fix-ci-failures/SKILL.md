@@ -87,6 +87,15 @@ gh pr checks 123 --watch
 | "Test failed" | Logic error | Debug test, fix implementation |
 | "Hook failed" | Formatting/whitespace | Run formatters, re-commit |
 
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Fix without reading logs | Guessed at fix based on error message | Missed root cause, fixed wrong thing | Always read full CI logs first |
+| Push untested fix | Committed fix without local verification | Introduced new CI failure | Always test locally before pushing |
+| Fix multiple issues at once | Changed multiple things in one commit | Hard to debug which fix worked | Fix one issue at a time |
+| Ignore warnings | Focused only on errors | Warnings became errors later | Fix all warnings, follow zero-warnings policy |
+
 ## Scripts Available
 
 - `scripts/get_ci_logs.sh` - Download CI logs

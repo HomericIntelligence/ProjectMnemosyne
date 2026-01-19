@@ -72,6 +72,15 @@ gh api repos/OWNER/REPO/pulls/PR/comments/COMMENT_ID/replies \
 
 NEVER confuse these - use the correct API for review comments.
 
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Use `gh pr comment` for review replies | Tried to reply using general comment command | Posted to PR timeline, not as review reply | Must use API `/comments/ID/replies` endpoint |
+| Reply to all at once | Made all fixes then one bulk reply | Reviewers couldn't see which fix addressed which comment | Reply individually to each comment |
+| Long explanatory replies | Wrote detailed justifications | Cluttered PR conversation | Keep replies short: "✅ Fixed - brief description" |
+| Fix and forget to reply | Made changes but didn't reply | Reviewers didn't know feedback was addressed | Always reply to EVERY comment |
+
 ## Error Handling
 
 | Problem | Solution |
