@@ -1,0 +1,9 @@
+{
+  "name": "fix-evaluation-framework-bugs",
+  "version": "1.0.0",
+  "description": "Fix critical E2E evaluation framework bugs causing false negative agent scores. Use when agents are penalized for framework issues.",
+  "category": "debugging",
+  "date": "2026-01-18",
+  "tags": ["e2e", "evaluation", "debugging", "judge", "framework"],
+  "skills": "./skills"
+}

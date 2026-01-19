@@ -1,0 +1,9 @@
+{
+  "name": "fix-judge-file-access",
+  "version": "1.0.0",
+  "description": "Fix E2E test evaluation failures where judge cannot verify agent work on file creation tasks. Use when judge scores are low despite correct agent output.",
+  "category": "debugging",
+  "date": "2026-01-18",
+  "tags": ["e2e", "judge", "evaluation", "file-access", "debugging"],
+  "skills": "./skills"
+}

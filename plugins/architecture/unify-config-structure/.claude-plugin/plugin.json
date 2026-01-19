@@ -1,0 +1,9 @@
+{
+  "name": "unify-config-structure",
+  "version": "1.0.0",
+  "description": "Consolidate config structure to establish single source of truth. Use when dealing with duplicate configs, documentation drift, or inconsistent naming.",
+  "category": "architecture",
+  "date": "2026-01-17",
+  "tags": ["config-management", "documentation", "test-fixtures", "single-source-of-truth"],
+  "skills": "./skills"
+}

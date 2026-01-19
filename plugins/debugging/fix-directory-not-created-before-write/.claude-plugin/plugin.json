@@ -1,0 +1,9 @@
+{
+  "name": "fix-directory-not-created-before-write",
+  "version": "1.0.0",
+  "description": "Fix FileNotFoundError when writing to directory that was assigned but not created. Use for intermittent failures in parallel execution.",
+  "category": "debugging",
+  "date": "2026-01-18",
+  "tags": ["debugging", "parallel-execution", "file-operations", "race-conditions"],
+  "skills": "./skills"
+}

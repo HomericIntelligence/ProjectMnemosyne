@@ -1,0 +1,9 @@
+{
+  "name": "evaluation-report-fixes",
+  "version": "1.0.0",
+  "description": "Fix critical issues in E2E evaluation reports. Use when encountering UnboundLocalError crashes, missing workspace files, or broken report links.",
+  "category": "evaluation",
+  "date": "2026-01-10",
+  "tags": ["e2e", "evaluation", "reports", "debugging", "judge"],
+  "skills": "./skills"
+}

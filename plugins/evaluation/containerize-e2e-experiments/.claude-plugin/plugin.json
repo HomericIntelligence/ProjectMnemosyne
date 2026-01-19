@@ -1,0 +1,9 @@
+{
+  "name": "containerize-e2e-experiments",
+  "version": "1.0.0",
+  "description": "Containerize E2E experiment execution for isolation and consistency. Use when experiments need isolated environments or different Python versions.",
+  "category": "evaluation",
+  "date": "2026-01-15",
+  "tags": ["docker", "containerization", "e2e", "isolation", "experiments"],
+  "skills": "./skills"
+}

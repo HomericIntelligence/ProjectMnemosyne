@@ -1,0 +1,9 @@
+{
+  "name": "e2e-path-resolution-fix",
+  "version": "1.0.0",
+  "description": "Fix E2E agent execution failures caused by relative path handling. Use when seeing 0% pass rates with 'cd: No such file or directory' errors.",
+  "category": "debugging",
+  "date": "2026-01-17",
+  "tags": ["e2e", "path-resolution", "subprocess", "debugging"],
+  "skills": "./skills"
+}

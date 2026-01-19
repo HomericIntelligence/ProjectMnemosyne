@@ -1,0 +1,9 @@
+{
+  "name": "claude-code-settings-config",
+  "version": "1.0.0",
+  "description": "Configure Claude Code settings.json per test workspace to control thinking mode via API rather than prompt injection. Use when implementing workspace-level configuration for E2E tests.",
+  "category": "architecture",
+  "date": "2026-01-16",
+  "tags": ["claude-code", "settings", "configuration", "e2e", "testing"],
+  "skills": "./skills"
+}

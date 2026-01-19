@@ -1,0 +1,9 @@
+{
+  "name": "fix-ci-failures",
+  "version": "1.0.0",
+  "description": "Diagnose and fix CI/CD failures by analyzing logs, reproducing locally, and applying fixes. Use when CI checks fail on pull requests.",
+  "category": "ci-cd",
+  "date": "2026-01-18",
+  "tags": ["ci", "debugging", "github-actions", "testing"],
+  "skills": "./skills"
+}
