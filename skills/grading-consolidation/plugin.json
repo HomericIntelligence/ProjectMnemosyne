@@ -1,0 +1,28 @@
+{
+  "name": "grading-consolidation",
+  "version": "1.0.0",
+  "category": "evaluation",
+  "description": "Eliminate duplicate grading definitions and consolidate to single source of truth",
+  "tags": ["evaluation", "grading", "deduplication", "refactoring", "consistency", "testing", "single-source-of-truth"],
+  "source_project": "ProjectScylla",
+  "created_date": "2026-01-19",
+  "author": "Claude Sonnet 4.5",
+  "trigger_phrases": [
+    "Find all locations where grades are assigned",
+    "There should only be one function and one definition",
+    "Check for any more grading duplications",
+    "Ensure grading is consistent across the codebase",
+    "Consolidate grading infrastructure"
+  ],
+  "related_skills": [
+    "holistic-code-audit",
+    "single-source-of-truth",
+    "test-driven-consistency"
+  ],
+  "outcomes": {
+    "lines_removed": 241,
+    "files_modified": 9,
+    "tests_added": 6,
+    "success": true
+  }
+}
