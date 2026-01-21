@@ -1,0 +1,17 @@
+{
+  "name": "dry-consolidation-workflow",
+  "version": "1.0.0",
+  "description": "Complete workflow for analyzing codebase duplications and implementing DRY consolidation with centralized modules. Use when: starting codebase cleanup, eliminating duplicate functions/constants, creating single sources of truth, standardizing path/config usage.",
+  "author": "ProjectScylla",
+  "category": "architecture",
+  "tags": [
+    "dry-principle",
+    "refactoring",
+    "deduplication",
+    "code-quality",
+    "centralization",
+    "single-source-of-truth",
+    "maintainability"
+  ],
+  "date": "2026-01-20"
+}
