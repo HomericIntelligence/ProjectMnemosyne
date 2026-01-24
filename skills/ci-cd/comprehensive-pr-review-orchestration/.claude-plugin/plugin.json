@@ -1,0 +1,22 @@
+{
+  "name": "comprehensive-pr-review-orchestration",
+  "version": "1.0.0",
+  "description": "Conduct comprehensive PR reviews using code-review-orchestrator to coordinate multiple specialized reviewers and post structured feedback",
+  "category": "ci-cd",
+  "created": "2026-01-23",
+  "repository": "mvillmow/ProjectOdyssey",
+  "tags": ["pr-review", "code-review", "orchestrator", "github", "quality-assurance"],
+  "triggers": [
+    "comprehensive PR review needed",
+    "need multi-dimensional code review",
+    "verify PR aligns with issue requirements",
+    "file review comments for others to fix"
+  ],
+  "tools_used": [
+    "Task (code-review-orchestrator)",
+    "gh api repos/.../pulls/.../reviews",
+    "gh pr comment",
+    "gh issue comment",
+    "gh pr view"
+  ]
+}
