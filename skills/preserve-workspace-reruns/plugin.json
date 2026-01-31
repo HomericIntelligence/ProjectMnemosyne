@@ -1,0 +1,29 @@
+{
+  "name": "preserve-workspace-reruns",
+  "version": "1.0.0",
+  "description": "Preserving git worktrees and test results when re-running E2E experiments with checkpoint resume",
+  "category": "evaluation",
+  "author": "Claude Code",
+  "created": "2026-01-08",
+  "tags": [
+    "e2e-evaluation",
+    "checkpoint-resume",
+    "workspace-preservation",
+    "git-worktree",
+    "experiment-rerun",
+    "resource-management"
+  ],
+  "skills": [
+    "skills/preserve-workspace-reruns/SKILL.md"
+  ],
+  "references": [
+    "references/notes.md"
+  ],
+  "source_project": "ProjectScylla",
+  "target_project": "ProjectScylla",
+  "metrics": {
+    "files_modified": 1,
+    "lines_added": 12,
+    "issue_resolved": "workspace-destruction-on-rerun"
+  }
+}
