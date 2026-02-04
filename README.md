@@ -32,7 +32,7 @@ claude plugin marketplace add https://github.com/HomericIntelligence/ProjectMnem
 If you have the repository cloned locally:
 
 ```bash
-git clone git@github.com:HomericIntelligence/ProjectMnemosyne.git
+git clone https://github.com/HomericIntelligence/ProjectMnemosyne.git
 ```
 
 **From terminal:**
@@ -45,30 +45,6 @@ claude plugin marketplace add /path/to/ProjectMnemosyne
 
 ```text
 /plugin marketplace add /path/to/ProjectMnemosyne
-```
-
-### Install Skills
-
-After registering the marketplace, install available skills.
-
-**From terminal:**
-
-```bash
-claude plugin install grpo-external-vllm@ProjectMnemosyne
-claude plugin install mojo-simd-errors@ProjectMnemosyne
-claude plugin install github-actions-mojo@ProjectMnemosyne
-claude plugin install layerwise-gradient-check@ProjectMnemosyne
-claude plugin install skill-marketplace-design@ProjectMnemosyne
-```
-
-**Or inside a Claude Code session:**
-
-```text
-/plugin install grpo-external-vllm@ProjectMnemosyne
-/plugin install mojo-simd-errors@ProjectMnemosyne
-/plugin install github-actions-mojo@ProjectMnemosyne
-/plugin install layerwise-gradient-check@ProjectMnemosyne
-/plugin install skill-marketplace-design@ProjectMnemosyne
 ```
 
 ### Verify Installation
@@ -87,7 +63,7 @@ claude plugin marketplace list
 
 ## Quick Start
 
-These commands work inside any Claude Code session after installation.
+These commands work inside any Claude Code session after installation. All skill discovery and installation is handled automatically through the `/advise` and `/retrospective` commands.
 
 ### Search for Knowledge
 
@@ -144,15 +120,7 @@ plugins/<category>/<name>/
 
 ## Available Skills
 
-| Skill | Category | Description |
-|-------|----------|-------------|
-| grpo-external-vllm | training | GRPO training with external vLLM server |
-| mojo-simd-errors | debugging | Debug SIMD vectorization errors in Mojo |
-| github-actions-mojo | ci-cd | GitHub Actions CI setup for Mojo |
-| layerwise-gradient-check | testing | Gradient checking for neural networks |
-| skill-marketplace-design | architecture | Design patterns for skill marketplaces |
-
-See `marketplace.json` for the complete searchable index.
+See `marketplace.json` for the complete searchable index of available skills. The `/advise` command will automatically search and retrieve relevant skills for your queries.
 
 ## Contributing a Skill
 
@@ -213,3 +181,19 @@ architectural decision becomes searchable knowledge for the team.
 
 The most valuable section in any skill is **Failed Attempts** - knowing what didn't
 work saves more time than knowing what did.
+
+## Citation
+
+If you use ProjectMnemosyne in your research or work, please cite:
+
+```bibtex
+@misc{projectmnemosyne2026,
+  title={ProjectMnemosyne: A Skills Marketplace for HomericIntelligence},
+  author={{HomericIntelligence Team}},
+  year={2026},
+  note={Skills marketplace and collective memory system},
+  url={https://github.com/HomericIntelligence/ProjectMnemosyne}
+}
+```
+
+
