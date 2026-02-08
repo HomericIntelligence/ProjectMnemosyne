@@ -1,9 +1,6 @@
 {
   "name": "fix-ci-test-failures",
   "version": "1.0.0",
-  "description": "Fix tests passing locally but failing in CI due to environment differences. Use when tests fail in CI but pass locally.",
-  "category": "testing",
-  "date": "2026-01-17",
-  "tags": ["ci", "testing", "debugging", "symlinks", "mocks"],
+  "description": "Skill for fixing unit tests that pass locally but fail in CI due to symlinks and mocking issues",
   "skills": "./skills"
 }

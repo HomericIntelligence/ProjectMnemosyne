@@ -1,0 +1,6 @@
+{
+  "name": "paper-revision-workflow",
+  "version": "1.0.0",
+  "description": "Systematic workflow for revising research papers: data validation, structural improvements, and tone unification",
+  "skills": "./skills"
+}

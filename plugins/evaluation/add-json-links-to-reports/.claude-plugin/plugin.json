@@ -1,0 +1,6 @@
+{
+  "name": "add-json-links-to-reports",
+  "version": "1.0.0",
+  "description": "Add JSON result links to markdown reports for structured data access",
+  "skills": "./skills"
+}

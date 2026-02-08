@@ -1,9 +1,0 @@
-{
-  "name": "fix-rerun-script-errors",
-  "version": "1.0.0",
-  "category": "debugging",
-  "description": "Fix common errors in E2E rerun script: SubTestExecutor constructor parameters, checkpoint status validation, and T5 inheritance failures",
-  "tags": ["debugging", "e2e", "rerun", "checkpoint", "inheritance"],
-  "created": "2026-01-29",
-  "project": "ProjectScylla"
-}

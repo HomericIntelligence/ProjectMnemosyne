@@ -1,11 +1,10 @@
 ---
-name: containerize-e2e-experiments
-description: "Containerize E2E experiment execution for isolation and consistency. Use when experiments need isolated environments or different Python versions."
+name: "Skill: Containerize E2E Experiments"
+description: "Skill: Containerize E2E Experiments"
 category: evaluation
 date: 2026-01-15
 user-invocable: false
 ---
-
 # Skill: Containerize E2E Experiments
 
 ## Overview
@@ -76,11 +75,11 @@ datetime.now(timezone.utc)
 ```
 
 **Files updated:** 22 files across:
-- `src/scylla/e2e/*.py` (8 files)
-- `src/scylla/adapters/*.py` (4 files)
-- `src/scylla/executor/*.py` (2 files)
-- `src/scylla/reporting/*.py` (4 files)
-- `src/scylla/cli/main.py` + `orchestrator.py` + test files
+- `scylla/e2e/*.py` (8 files)
+- `scylla/adapters/*.py` (4 files)
+- `scylla/executor/*.py` (2 files)
+- `scylla/reporting/*.py` (4 files)
+- `scylla/cli/main.py` + `orchestrator.py` + test files
 
 ### Phase 3: Credential Mounting (Critical!)
 
@@ -324,8 +323,8 @@ exit
 
 **Modified:**
 - 22 Python files: `datetime.UTC` → `datetime.timezone.utc`
-- `src/scylla/e2e/models.py`: `use_containers = True` → `False` (deprecated)
-- `src/scylla/e2e/subtest_executor.py`: Disabled nested container execution
+- `scylla/e2e/models.py`: `use_containers = True` → `False` (deprecated)
+- `scylla/e2e/subtest_executor.py`: Disabled nested container execution
 
 ## Key Takeaways
 

@@ -1,0 +1,6 @@
+{
+  "name": "fix-yaml-config-propagation",
+  "version": "1.0.0",
+  "description": "Debug pattern for fixing YAML config fields that aren't propagating to execution, plus eliminating DRY violations in config dataclasses",
+  "skills": "./skills"
+}

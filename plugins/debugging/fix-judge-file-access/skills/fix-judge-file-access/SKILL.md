@@ -1,11 +1,10 @@
 ---
-name: fix-judge-file-access
-description: "Fix E2E test evaluation failures where judge cannot verify agent work on file creation tasks. Use when judge scores are low despite correct agent output."
+name: "Skill: Fix Judge File Access for E2E Evaluation"
+description: "Skill: Fix Judge File Access for E2E Evaluation"
 category: debugging
 date: 2026-01-18
 user-invocable: false
 ---
-
 # Skill: Fix Judge File Access for E2E Evaluation
 
 | Attribute | Value |
@@ -48,7 +47,7 @@ Use this skill when you encounter:
 
 ### 1. Expand Directory Listings in Workspace State
 
-**File**: `src/scylla/e2e/llm_judge.py`
+**File**: `scylla/e2e/llm_judge.py`
 **Function**: `_get_workspace_state()`
 
 **Problem**: Git status shows `?? directory/` for untracked directories, hiding all files inside.
@@ -73,7 +72,7 @@ if status == "??" and full_path.is_dir():
 
 ### 2. Enable Judge Tool Access
 
-**File**: `src/scylla/e2e/llm_judge.py`
+**File**: `scylla/e2e/llm_judge.py`
 **Function**: `_call_claude_judge()`
 
 **Problem**: Judge runs via Anthropic API with only text prompt - can't read workspace files.
@@ -108,7 +107,7 @@ def _call_claude_judge(
 
 ### 3. Fix Mojo Pipeline Commands
 
-**File**: `src/scylla/e2e/llm_judge.py`
+**File**: `scylla/e2e/llm_judge.py`
 **Function**: `_run_mojo_pipeline()`
 
 **Problem**: Direct `mojo` command not in PATH - needs to run via pixi environment.
@@ -155,7 +154,7 @@ tool to verify implementation details.
 
 ### 5. Enhance Patchfile Section (Optional)
 
-**File**: `src/scylla/judge/prompts.py`
+**File**: `scylla/judge/prompts.py`
 **Function**: `build_task_prompt()`
 
 **Enhancement**: Add note that patchfile doesn't show new files:
@@ -235,8 +234,8 @@ pixi run python scripts/run_e2e_experiment.py \
 
 ## Related Files
 
-- `src/scylla/e2e/llm_judge.py` - Core judge implementation
-- `src/scylla/judge/prompts.py` - Prompt building logic
+- `scylla/e2e/llm_judge.py` - Core judge implementation
+- `scylla/judge/prompts.py` - Prompt building logic
 - `config/judge/system_prompt.md` - Judge evaluation instructions
 - `tests/fixtures/tests/test-002/` - Test case that exposed the issue
 

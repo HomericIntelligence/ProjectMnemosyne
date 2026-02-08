@@ -1,0 +1,6 @@
+{
+  "name": "rescue-broken-prs",
+  "version": "1.0.0",
+  "description": "Recover and repair broken pull requests with failed CI checks",
+  "skills": "./skills"
+}

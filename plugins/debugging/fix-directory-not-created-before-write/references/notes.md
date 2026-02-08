@@ -1,37 +1,138 @@
-# References: fix-directory-not-created-before-write
+# Raw Session Notes: Fix Directory Not Created Before Write
 
-## Verified On
+## Session Context
 
-| Project | Context | Details |
-|---------|---------|---------|
-| ProjectScylla | Parallel execution bug | Imported from ProjectScylla .claude-plugin/skills/fix-directory-not-created-before-write |
+- **Date**: 2026-01-18
+- **Branch**: skill/evaluation/fix-judge-file-access
+- **Issue**: FileNotFoundError: 'results/.../T3/best_subtest.json'
 
-## Source
+## Problem Description
 
-Originally created for ProjectScylla to fix intermittent FileNotFoundError in parallel execution.
+During parallel tier execution in the e2e evaluation framework, the T3 tier would intermittently fail with:
 
-## Additional Context
+```
+FileNotFoundError: 'results/2026-01-18T21-15-01-test-002/T3/best_subtest.json'
+```
 
-This skill documents a subtle race condition bug:
+## Root Cause Analysis
 
-**Problem Pattern:**
-- Directory path assigned but `mkdir()` never called
-- Works when child operations create parent directory implicitly
-- Fails when child operations are skipped (checkpoint, early exit)
+### Code Inspection: scylla/e2e/runner.py
 
-**Root Cause:**
-- Directory assignment != directory creation in Python pathlib
-- Implicit creation by subdirectories masked the bug
-- Parallel execution + checkpoints exposed the race condition
+**Line 624** - Directory assigned but not created:
+```python
+tier_dir = self.experiment_dir / tier_id.value
+# No mkdir() call here!
+```
 
-**Solution:**
-- Single line fix: Add `tier_dir.mkdir(parents=True, exist_ok=True)`
-- Ensure directory exists before any write operations
+**Line 661** - File write attempts before directory exists:
+```python
+save_selection(selection, str(tier_dir / "best_subtest.json"))
+```
 
-**Key Insight:**
-Directory assignment is not directory creation - always explicitly create directories before writing.
+**Lines 702-703** - Directory created too late (in cleanup):
+```python
+# _save_tier_result() creates directory AFTER _run_tier() returns
+tier_dir.mkdir(parents=True, exist_ok=True)
+```
 
-## Related Skills
+### Why It Was Intermittent
 
-- e2e-path-resolution-fix: Path handling issues
-- parallel-execution-patterns: Concurrent execution best practices
+1. **Works when subtests execute**: Subtest creates `T3/01/run_01/` which implicitly creates parent `T3/`
+2. **Fails when subtests skipped**: Checkpoint resume or early exit means no subdirectory creation
+3. **Race condition**: In parallel execution, some tiers get implicit creation, others don't
+
+## Solution
+
+Add one line at runner.py:625:
+
+```python
+tier_dir = self.experiment_dir / tier_id.value
+tier_dir.mkdir(parents=True, exist_ok=True)  # ← Added this
+```
+
+## Verification Process
+
+### Step 1: Code Verification
+```bash
+# Confirmed mkdir is now called immediately after assignment
+grep -A 1 "tier_dir = self.experiment_dir / tier_id.value" scylla/e2e/runner.py
+```
+
+### Step 2: Live Test
+```bash
+pixi run python scripts/run_e2e_experiment.py \
+  --tiers-dir tests/fixtures/tests/test-002 \
+  --tiers T0 T1 T2 T3 T4 T5 T6 \
+  --runs 1 --max-subtests 2 -v --fresh
+```
+
+**Results**:
+- T3 directory created at 13:15:07 (start of tier execution)
+- T3 subtests (01, 02) both completed successfully
+- No FileNotFoundError occurred
+- Directory structure verified:
+  ```
+  results/2026-01-18T21-15-01-test-002/T3/
+  ├── 01/
+  │   └── run_01/
+  └── 02/
+      └── run_01/
+  ```
+
+### Step 3: Error Log Check
+```bash
+grep -i "filenotfounderror\|no such file" output.log
+# Result: No matches - fix confirmed working
+```
+
+## Commit Details
+
+**Commit**: beb8ed7
+**Message**:
+```
+fix(e2e): create tier directory before writing best_subtest.json
+
+Fix FileNotFoundError when save_selection() tries to write to
+tier_dir/best_subtest.json before the directory exists.
+
+The bug occurred in parallel tier execution when all subtests were
+skipped or loaded from checkpoint. The tier directory was assigned
+at line 624 but never created, causing save_selection() at line 661
+to fail.
+
+Solution: Add tier_dir.mkdir(parents=True, exist_ok=True) immediately
+after tier_dir assignment to ensure the directory exists before any
+write operations.
+
+Fixes: results/.../T3/best_subtest.json FileNotFoundError
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+```
+
+**Pre-commit Hooks**: All passed
+- ruff: Passed
+- ruff-format: Passed
+
+**Status**: Pushed to remote
+
+## Key Learnings
+
+1. **Python pathlib quirk**: `Path()` assignment does NOT create directories
+2. **Always call mkdir() immediately** after path assignment if files will be written
+3. **Parallel + checkpoint = race condition exposer** - great for finding these bugs
+4. **Child operations can mask parent bugs** - subdirectory creation implicitly creates parents
+
+## Pattern Recognition
+
+This bug pattern appears when:
+- Directory path assigned: `dir = parent / "name"`
+- No mkdir() call: Missing `dir.mkdir(...)`
+- File write later: `(dir / "file").write_text(...)`
+- Conditional execution: Sometimes subdirs create parent, sometimes not
+
+## Prevention
+
+Add to code review checklist:
+- [ ] Every directory path assignment followed by mkdir()?
+- [ ] All file write operations verify parent directory exists?
+- [ ] Parallel execution paths tested without child directory creation?

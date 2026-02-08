@@ -1,0 +1,6 @@
+{
+  "name": "processpool-rate-limit-recovery",
+  "version": "1.0.0",
+  "description": "Robust ProcessPoolExecutor rate limit recovery for E2E evaluation frameworks",
+  "skills": "./skills"
+}

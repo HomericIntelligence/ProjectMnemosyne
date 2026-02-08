@@ -1,0 +1,6 @@
+{
+  "name": "academic-paper-review",
+  "version": "1.0.0",
+  "description": "Comprehensive academic paper review workflow: data validation, tone formalization, error correction, and reproducibility fixes",
+  "skills": "./skills"
+}

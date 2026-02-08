@@ -1,0 +1,6 @@
+{
+  "name": "add-analysis-metric",
+  "version": "1.0.0",
+  "description": "Workflow for adding new metrics to ProjectScylla analysis pipeline",
+  "skills": "./skills"
+}

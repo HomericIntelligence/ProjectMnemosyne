@@ -1,11 +1,10 @@
 ---
-name: fix-ci-test-failures
-description: "Fix tests passing locally but failing in CI due to environment differences. Use when tests fail in CI but pass locally."
+name: "Skill: Fix CI Test Failures"
+description: "Skill for fixing unit tests that pass locally but fail in CI due to symlinks and mocking issues"
 category: testing
 date: 2026-01-17
 user-invocable: false
 ---
-
 # Skill: Fix CI Test Failures
 
 | Property | Value |

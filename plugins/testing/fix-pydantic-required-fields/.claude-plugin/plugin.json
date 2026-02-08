@@ -1,0 +1,6 @@
+{
+  "name": "fix-pydantic-required-fields",
+  "version": "1.0.0",
+  "description": "Fix test failures caused by missing required fields in Pydantic model fixtures after data model evolution",
+  "skills": "./skills"
+}

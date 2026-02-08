@@ -1,0 +1,6 @@
+{
+  "name": "parallel-io-executor",
+  "version": "1.0.0",
+  "description": "Pattern for implementing ThreadPoolExecutor-based parallelization of I/O-bound tasks in Python CLI tools",
+  "skills": "./skills"
+}

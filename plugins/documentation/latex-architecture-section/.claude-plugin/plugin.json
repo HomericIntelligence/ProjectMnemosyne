@@ -1,0 +1,6 @@
+{
+  "name": "latex-architecture-section",
+  "version": "1.0.0",
+  "description": "Add architecture sections to academic LaTeX papers with TikZ diagrams, including fixing common TikZ syntax errors and managing arxiv builds",
+  "skills": "./skills"
+}

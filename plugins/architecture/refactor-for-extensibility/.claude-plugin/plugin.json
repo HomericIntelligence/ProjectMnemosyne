@@ -1,0 +1,6 @@
+{
+  "name": "refactor-for-extensibility",
+  "version": "1.0.0",
+  "description": "Systematic workflow for preparing codebases for extensibility through extraction, parameterization, and protocol-based abstraction",
+  "skills": "./skills"
+}

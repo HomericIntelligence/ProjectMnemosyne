@@ -1,0 +1,6 @@
+{
+  "name": "defensive-analysis-patterns",
+  "version": "1.0.0",
+  "description": "Defensive programming patterns for statistical analysis pipelines to handle data quality issues gracefully",
+  "skills": "./skills"
+}

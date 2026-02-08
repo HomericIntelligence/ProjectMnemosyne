@@ -1,0 +1,6 @@
+{
+  "name": "vega-lite-analysis-pipeline",
+  "version": "1.0.0",
+  "description": "Build comprehensive analysis pipelines with text-based Vega-Lite figures and statistical tables for research papers",
+  "skills": "./skills"
+}

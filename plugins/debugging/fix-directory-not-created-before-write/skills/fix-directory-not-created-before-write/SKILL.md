@@ -1,11 +1,10 @@
 ---
-name: fix-directory-not-created-before-write
-description: "Fix FileNotFoundError when writing to directory that was assigned but not created. Use for intermittent failures in parallel execution."
+name: "Skill: Fix Directory Not Created Before Write"
+description: "Skill: Fix Directory Not Created Before Write"
 category: debugging
 date: 2026-01-18
 user-invocable: false
 ---
-
 # Skill: Fix Directory Not Created Before Write
 
 ## Overview
@@ -60,7 +59,7 @@ write_file(parent_dir / "result.json", data)
 Search for where the problematic directory path is assigned:
 
 ```bash
-grep -n "problematic_dir = " src/path/to/file.py
+grep -n "problematic_dir = " scylla/path/to/file.py
 ```
 
 ### Step 2: Verify No mkdir() Call
@@ -139,7 +138,7 @@ directory_path.mkdir(parents=True, exist_ok=True)  # Create immediately
 
 ### Fix Location
 
-**File**: `src/scylla/e2e/runner.py:625`
+**File**: `scylla/e2e/runner.py:625`
 
 **Change**:
 ```diff
