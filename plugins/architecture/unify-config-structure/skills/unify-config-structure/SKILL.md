@@ -1,11 +1,10 @@
 ---
-name: unify-config-structure
-description: "Consolidate config structure to establish single source of truth. Use when dealing with duplicate configs, documentation drift, or inconsistent naming."
+name: "Skill: Unify Config Structure"
+description: "Skill: Unify Config Structure"
 category: architecture
 date: 2026-01-17
 user-invocable: false
 ---
-
 # Skill: Unify Config Structure
 
 ## Overview

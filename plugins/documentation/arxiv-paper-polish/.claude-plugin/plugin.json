@@ -1,0 +1,6 @@
+{
+  "name": "arxiv-paper-polish",
+  "version": "1.0.0",
+  "description": "Skill: arXiv Paper Publication Polish",
+  "skills": "./skills"
+}

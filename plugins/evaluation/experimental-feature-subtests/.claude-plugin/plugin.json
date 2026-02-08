@@ -1,0 +1,6 @@
+{
+  "name": "experimental-feature-subtests",
+  "version": "1.0.0",
+  "description": "Add A/B testing for experimental features in evaluation tiers using parallel sub-tests with environment variable feature flags",
+  "skills": "./skills"
+}

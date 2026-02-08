@@ -1,0 +1,6 @@
+{
+  "name": "paper-final-review",
+  "version": "1.0.0",
+  "description": "Paper Final Review - Publication Readiness Workflow",
+  "skills": "./skills"
+}

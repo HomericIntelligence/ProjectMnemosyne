@@ -1,0 +1,6 @@
+{
+  "name": "academic-paper-validation",
+  "version": "1.0.0",
+  "description": "Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical rigor improvements, and noise reduction",
+  "skills": "./skills"
+}

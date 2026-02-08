@@ -1,0 +1,6 @@
+{
+  "name": "dryrun-validation",
+  "version": "1.0.0",
+  "description": "Complete workflow for re-running dryrun experiments, generating analysis outputs, and validating results against baseline",
+  "skills": "./skills"
+}

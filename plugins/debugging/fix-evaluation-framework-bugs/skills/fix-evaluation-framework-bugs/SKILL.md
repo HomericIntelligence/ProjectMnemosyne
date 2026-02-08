@@ -1,11 +1,10 @@
 ---
-name: fix-evaluation-framework-bugs
-description: "Fix critical E2E evaluation framework bugs causing false negative agent scores. Use when agents are penalized for framework issues."
+name: "Skill: Fix Evaluation Framework Bugs"
+description: "Skill: Fix Evaluation Framework Bugs"
 category: debugging
 date: 2026-01-18
 user-invocable: false
 ---
-
 # Skill: Fix Evaluation Framework Bugs
 
 ## Overview
@@ -97,7 +96,7 @@ grep -A 10 "patchfile" judge_output.log | grep -i claude
 
 ### Step 2: Fix Directory Creation Race Condition
 
-**File**: `src/scylla/e2e/runner.py`
+**File**: `scylla/e2e/runner.py`
 
 **Location**: Immediately after directory path assignment
 
@@ -116,7 +115,7 @@ tier_dir.mkdir(parents=True, exist_ok=True)
 
 ### Step 3: Filter Framework Files from Patchfile
 
-**File**: `src/scylla/e2e/llm_judge.py`
+**File**: `scylla/e2e/llm_judge.py`
 
 **Location**: `_get_patchfile()` function
 
@@ -137,7 +136,7 @@ tier_dir.mkdir(parents=True, exist_ok=True)
 
 ### Step 4: Generate Valid Markdown
 
-**File**: `src/scylla/e2e/tier_manager.py`
+**File**: `scylla/e2e/tier_manager.py`
 
 **Location**: `build_resource_suffix()` method
 

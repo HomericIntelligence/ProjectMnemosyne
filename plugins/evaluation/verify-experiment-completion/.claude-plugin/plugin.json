@@ -1,0 +1,6 @@
+{
+  "name": "verify-experiment-completion",
+  "version": "1.0.0",
+  "description": "Verify E2E Experiment Completion",
+  "skills": "./skills"
+}

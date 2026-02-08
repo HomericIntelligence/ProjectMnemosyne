@@ -1,0 +1,6 @@
+{
+  "name": "checkpoint-config-mismatch",
+  "version": "1.0.0",
+  "description": "Skill: Fixing Checkpoint Config Mismatch and Data Loss",
+  "skills": "./skills"
+}

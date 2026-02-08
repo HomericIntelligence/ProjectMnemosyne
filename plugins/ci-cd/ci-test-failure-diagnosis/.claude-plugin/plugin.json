@@ -1,0 +1,6 @@
+{
+  "name": "ci-test-failure-diagnosis",
+  "version": "1.0.0",
+  "description": "Systematic approach to diagnosing and fixing CI test failures in PRs",
+  "skills": "./skills"
+}

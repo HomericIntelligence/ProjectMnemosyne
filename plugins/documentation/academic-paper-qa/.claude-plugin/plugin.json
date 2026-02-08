@@ -1,0 +1,6 @@
+{
+  "name": "academic-paper-qa",
+  "version": "1.0.0",
+  "description": "Validate and fix data accuracy issues, structural problems, and LaTeX compilation errors in academic papers",
+  "skills": "./skills"
+}

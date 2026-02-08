@@ -112,7 +112,7 @@ Judge inferred "no hello.py" from git diff instead of trusting workspace state.
 
 ### BUG 4: No --agent Flag
 
-**Evidence**: From `src/scylla/adapters/claude_code.py:160-213`
+**Evidence**: From `scylla/adapters/claude_code.py:160-213`
 ```python
 cmd = [
     self.CLI_EXECUTABLE,

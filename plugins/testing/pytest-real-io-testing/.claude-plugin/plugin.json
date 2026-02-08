@@ -1,0 +1,6 @@
+{
+  "name": "pytest-real-io-testing",
+  "version": "1.0.0",
+  "description": "Pattern for replacing pytest mocks with real file I/O to fix test isolation issues",
+  "skills": "./skills"
+}

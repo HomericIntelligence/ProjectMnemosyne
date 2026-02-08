@@ -1,0 +1,6 @@
+{
+  "name": "fix-rerun-script-errors",
+  "version": "1.0.0",
+  "description": "Fix common errors in E2E rerun script: SubTestExecutor constructor parameters, checkpoint status validation, and T5 inheritance failures",
+  "skills": "./skills"
+}

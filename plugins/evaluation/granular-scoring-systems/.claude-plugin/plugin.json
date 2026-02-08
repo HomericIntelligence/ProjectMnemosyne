@@ -1,0 +1,6 @@
+{
+  "name": "granular-scoring-systems",
+  "version": "1.0.0",
+  "description": "Hybrid LLM judge evaluation system combining objective checklists (80%) with subjective engineering judgment (20%) to achieve low-variance (<10%) granular scoring",
+  "skills": "./skills"
+}

@@ -46,6 +46,20 @@
       ]
     },
     {
+      "name": "claude-code-settings-config",
+      "description": "Configure Claude Code settings.json per test workspace to control thinking mode via API rather than prompt injection. Use when implementing workspace-level configuration for E2E tests.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/claude-code-settings-config",
+      "category": "architecture",
+      "tags": [
+        "claude-code",
+        "settings",
+        "configuration",
+        "e2e",
+        "testing"
+      ]
+    },
+    {
       "name": "codebase-consolidation",
       "description": "Systematic approach to finding and consolidating duplicate code, aligning implementations to consistent patterns, and documenting intentional type variations. Use when: analyzing codebase for duplicates, unifying implementations across modules, creating backward-compatible refactors.",
       "version": "1.0.0",
@@ -103,6 +117,22 @@
         "documentation",
         "formatting",
         "validation"
+      ]
+    },
+    {
+      "name": "dry-consolidation-workflow",
+      "description": "Complete workflow for analyzing codebase duplications and implementing DRY consolidation with centralized modules. Use when: starting codebase cleanup, eliminating duplicate functions/constants, creating single sources of truth, standardizing path/config usage.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/dry-consolidation-workflow",
+      "category": "architecture",
+      "tags": [
+        "dry-principle",
+        "refactoring",
+        "deduplication",
+        "code-quality",
+        "centralization",
+        "single-source-of-truth",
+        "maintainability"
       ]
     },
     {
@@ -259,6 +289,14 @@
       ]
     },
     {
+      "name": "refactor-for-extensibility",
+      "description": "Systematic workflow for preparing codebases for extensibility through extraction, parameterization, and protocol-based abstraction",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/refactor-for-extensibility",
+      "category": "architecture",
+      "tags": []
+    },
+    {
       "name": "shared-fixture-migration",
       "description": "Migrate duplicated test fixture configs to a centralized shared location with runtime loading. Use when: test fixtures contain config files duplicated across many test directories, the same config content is repeated for each test but is actually test-independent, you want a single source of truth for shared configurations.",
       "version": "1.0.0",
@@ -281,6 +319,27 @@
       "source": "./plugins/architecture/track-implementation-progress",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "unify-config-structure",
+      "description": "Skill: Unify Config Structure",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/unify-config-structure",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "analyze-ci-failure-logs",
+      "description": "Parse and analyze CI failure logs to identify root causes and error patterns. Use when CI builds fail to understand what broke.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/analyze-ci-failure-logs",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "logs",
+        "debugging",
+        "github-actions"
+      ]
     },
     {
       "name": "batch-pr-ci-fix",
@@ -323,6 +382,27 @@
         "github-actions",
         "troubleshooting",
         "logs"
+      ]
+    },
+    {
+      "name": "ci-test-failure-diagnosis",
+      "description": "Systematic approach to diagnosing and fixing CI test failures in PRs",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/ci-test-failure-diagnosis",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "fix-ci-failures",
+      "description": "Diagnose and fix CI/CD failures by analyzing logs, reproducing locally, and applying fixes. Use when CI checks fail on pull requests.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/fix-ci-failures",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "debugging",
+        "github-actions",
+        "testing"
       ]
     },
     {
@@ -469,6 +549,14 @@
       "tags": []
     },
     {
+      "name": "rescue-broken-prs",
+      "description": "Recover and repair broken pull requests with failed CI checks",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/rescue-broken-prs",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "run-precommit",
       "description": "Run pre-commit hooks locally to validate code quality before committing. Use when: (1) Before committing code, (2) Testing if CI will pass, (3) After making code changes.",
       "version": "1.0.0",
@@ -550,10 +638,42 @@
       "tags": []
     },
     {
+      "name": "checkpoint-config-mismatch",
+      "description": "Skill: Fixing Checkpoint Config Mismatch and Data Loss",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/checkpoint-config-mismatch",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "claude-code-settings-config",
+      "description": "Configure Claude Code settings.json for E2E test workspaces to control thinking mode and other workspace-level settings",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/claude-code-settings-config",
+      "category": "debugging",
+      "tags": []
+    },
+    {
       "name": "detect-code-smells",
       "description": "Identify code quality issues and anti-patterns. Use when reviewing code for maintainability problems.",
       "version": "1.0.0",
       "source": "./plugins/debugging/detect-code-smells",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "e2e-framework-bug-fixes",
+      "description": "E2E Evaluation Framework Bug Fixes",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/e2e-framework-bug-fixes",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "e2e-path-resolution-fix",
+      "description": "E2E Path Resolution Fix",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/e2e-path-resolution-fix",
       "category": "debugging",
       "tags": []
     },
@@ -591,6 +711,39 @@
       "tags": []
     },
     {
+      "name": "fix-ci-memory-safety-failures",
+      "description": "Diagnose and fix CI failures caused by memory safety issues in Mojo, particularly UnsafePointer access through copied structs and Python FFI interference",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/fix-ci-memory-safety-failures",
+      "category": "debugging",
+      "tags": [
+        "memory-safety",
+        "mojo",
+        "ci-failures",
+        "segfault",
+        "unsafe-pointer",
+        "defensive-coding",
+        "python-ffi",
+        "api-compatibility"
+      ]
+    },
+    {
+      "name": "fix-directory-not-created-before-write",
+      "description": "Skill: Fix Directory Not Created Before Write",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/fix-directory-not-created-before-write",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "fix-evaluation-framework-bugs",
+      "description": "Skill: Fix Evaluation Framework Bugs",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/fix-evaluation-framework-bugs",
+      "category": "debugging",
+      "tags": []
+    },
+    {
       "name": "fix-implicitlycopyable-removal",
       "description": "Systematic approach to removing ImplicitlyCopyable trait from Mojo structs and fixing resulting compilation errors. Use when: removing ImplicitlyCopyable from structs with List/Dict/String fields, fixing 'cannot implicitly copy' errors, debugging memory corruption from bitwise copies.",
       "version": "1.0.0",
@@ -603,6 +756,14 @@
         "trait",
         "debugging"
       ]
+    },
+    {
+      "name": "fix-judge-file-access",
+      "description": "Skill: Fix Judge File Access for E2E Evaluation",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/fix-judge-file-access",
+      "category": "debugging",
+      "tags": []
     },
     {
       "name": "fix-randn-seed-bug",
@@ -618,6 +779,30 @@
         "mojo",
         "prng"
       ]
+    },
+    {
+      "name": "fix-rerun-completion",
+      "description": "Skill: Fix Rerun Completion Failures",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/fix-rerun-completion",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "fix-rerun-script-errors",
+      "description": "Fix common errors in E2E rerun script: SubTestExecutor constructor parameters, checkpoint status validation, and T5 inheritance failures",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/fix-rerun-script-errors",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "fix-yaml-config-propagation",
+      "description": "Debug pattern for fixing YAML config fields that aren't propagating to execution, plus eliminating DRY violations in config dataclasses",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/fix-yaml-config-propagation",
+      "category": "debugging",
+      "tags": []
     },
     {
       "name": "fixme-todo-cleanup",
@@ -712,6 +897,118 @@
       ]
     },
     {
+      "name": "academic-paper-qa",
+      "description": "Validate and fix data accuracy issues, structural problems, and LaTeX compilation errors in academic papers",
+      "version": "1.0.0",
+      "source": "./plugins/documentation/academic-paper-qa",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "academic-paper-review",
+      "description": "Comprehensive academic paper review workflow: data validation, tone formalization, error correction, and reproducibility fixes",
+      "version": "1.0.0",
+      "source": "./plugins/documentation/academic-paper-review",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "academic-paper-validation",
+      "description": "Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical rigor improvements, and noise reduction",
+      "version": "1.0.0",
+      "source": "./plugins/documentation/academic-paper-validation",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "arxiv-paper-polish",
+      "description": "Skill: arXiv Paper Publication Polish",
+      "version": "1.0.0",
+      "source": "./plugins/documentation/arxiv-paper-polish",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "latex-architecture-section",
+      "description": "Add architecture sections to academic LaTeX papers with TikZ diagrams, including fixing common TikZ syntax errors and managing arxiv builds",
+      "version": "1.0.0",
+      "source": "./plugins/documentation/latex-architecture-section",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "paper-consolidation",
+      "description": "Consolidate scattered LaTeX paper files into unified directory structure with publication readiness fixes",
+      "version": "1.0.0",
+      "source": "./plugins/documentation/paper-consolidation",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "paper-final-review",
+      "description": "Paper Final Review - Publication Readiness Workflow",
+      "version": "1.0.0",
+      "source": "./plugins/documentation/paper-final-review",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "paper-revision-workflow",
+      "description": "Systematic workflow for revising research papers: data validation, structural improvements, and tone unification",
+      "version": "1.0.0",
+      "source": "./plugins/documentation/paper-revision-workflow",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "paper-validation-workflow",
+      "description": "Paper Validation Workflow",
+      "version": "1.0.0",
+      "source": "./plugins/documentation/paper-validation-workflow",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "publication-readiness-check",
+      "description": "publication-readiness-check",
+      "version": "1.0.0",
+      "source": "./plugins/documentation/publication-readiness-check",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "publication-readiness-review",
+      "description": "Comprehensive 10-category GO/NO-GO assessment framework for academic paper publication readiness",
+      "version": "1.0.0",
+      "source": "./plugins/documentation/publication-readiness-review",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "add-analysis-metric",
+      "description": "Workflow for adding new metrics to ProjectScylla analysis pipeline",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/add-analysis-metric",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "add-json-links-to-reports",
+      "description": "Add JSON result links to markdown reports for structured data access",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/add-json-links-to-reports",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "analysis-pipeline-code-review",
+      "description": "Skill: Analysis Pipeline Code Review",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/analysis-pipeline-code-review",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "complex-agent-eval-task",
       "description": "Create sophisticated E2E test cases for AI agents using real PRs as reference solutions. Use when: (1) designing T2+ tier evaluation tasks, (2) need patchfile-based evaluation against reference, (3) testing agents on complex refactoring/migration tasks, (4) constraining agents from accessing solution sources.",
       "version": "1.0.0",
@@ -728,6 +1025,14 @@
       ]
     },
     {
+      "name": "containerize-e2e-experiments",
+      "description": "Skill: Containerize E2E Experiments",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/containerize-e2e-experiments",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "create-swe-bench-tests",
       "description": "Create SWE-bench style benchmark test cases from repository PR history. Use when: (1) Setting up AI agent evaluation infrastructure, (2) Creating benchmark suites from real PRs, (3) Building ablation test frameworks with tier configurations.",
       "version": "1.0.0",
@@ -742,6 +1047,28 @@
         "ablation",
         "pr-analysis"
       ]
+    },
+    {
+      "name": "debug-evaluation-logs",
+      "description": "Improve diagnostic clarity of LLM judge warning messages by adding specific failure details and better error extraction",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/debug-evaluation-logs",
+      "category": "evaluation",
+      "tags": [
+        "evaluation",
+        "logging",
+        "diagnostics",
+        "error-handling",
+        "llm-judge"
+      ]
+    },
+    {
+      "name": "dryrun-validation",
+      "description": "Complete workflow for re-running dryrun experiments, generating analysis outputs, and validating results against baseline",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/dryrun-validation",
+      "category": "evaluation",
+      "tags": []
     },
     {
       "name": "e2e-agent-judge-timing",
@@ -799,6 +1126,30 @@
       "tags": []
     },
     {
+      "name": "evaluation-report-fixes",
+      "description": "Fix critical E2E evaluation report issues including timing persistence, workspace detection, judge validation, and broken links",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/evaluation-report-fixes",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "experimental-feature-subtests",
+      "description": "Add A/B testing for experimental features in evaluation tiers using parallel sub-tests with environment variable feature flags",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/experimental-feature-subtests",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "granular-scoring-systems",
+      "description": "Hybrid LLM judge evaluation system combining objective checklists (80%) with subjective engineering judgment (20%) to achieve low-variance (<10%) granular scoring",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/granular-scoring-systems",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "judge-criteria-enhancement",
       "description": "Adding proportionality criteria to LLM judge systems to penalize over-engineering and reward task-appropriate solutions",
       "version": "1.0.0",
@@ -831,6 +1182,14 @@
       ]
     },
     {
+      "name": "parallel-metrics-integration",
+      "description": "Skill for integrating multiple metrics into statistical analysis pipelines in parallel",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/parallel-metrics-integration",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "plan-review-interview",
       "description": "Structured interview workflow for reviewing implementation plans. Use when: (1) You have a draft plan that needs stakeholder validation, (2) GitHub issues exist but lack key decision details, (3) You need to systematically identify gaps before implementation, (4) You want to document decisions alongside affected issues.",
       "version": "1.0.0",
@@ -849,6 +1208,30 @@
       "description": "Process and validate datasets for training. Use when setting up data pipelines.",
       "version": "1.0.0",
       "source": "./plugins/evaluation/prepare-dataset",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "preserve-workspace-reruns",
+      "description": "Preserving git worktrees and test results when re-running E2E experiments with checkpoint resume",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/preserve-workspace-reruns",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "processpool-rate-limit-recovery",
+      "description": "Robust ProcessPoolExecutor rate limit recovery for E2E evaluation frameworks",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/processpool-rate-limit-recovery",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "publication-pipeline-enhancement",
+      "description": "Publication Pipeline Enhancement",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/publication-pipeline-enhancement",
       "category": "evaluation",
       "tags": []
     },
@@ -883,6 +1266,22 @@
       ]
     },
     {
+      "name": "vega-lite-analysis-pipeline",
+      "description": "Build comprehensive analysis pipelines with text-based Vega-Lite figures and statistical tables for research papers",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/vega-lite-analysis-pipeline",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "verify-experiment-completion",
+      "description": "Verify E2E Experiment Completion",
+      "version": "1.0.0",
+      "source": "./plugins/evaluation/verify-experiment-completion",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "analyze-simd-usage",
       "description": "Analyze SIMD usage opportunities in Mojo code. Use to find performance optimization opportunities.",
       "version": "1.0.0",
@@ -913,10 +1312,33 @@
       ]
     },
     {
+      "name": "e2e-artifact-deduplication",
+      "description": "Consolidate duplicate artifacts in E2E evaluation output by sharing prompts, commands, and configuration files across judges and runs",
+      "version": "1.0.0",
+      "source": "./plugins/optimization/e2e-artifact-deduplication",
+      "category": "optimization",
+      "tags": [
+        "e2e-evaluation",
+        "deduplication",
+        "optimization",
+        "file-structure",
+        "judge-prompts",
+        "artifact-consolidation"
+      ]
+    },
+    {
       "name": "mojo-simd-optimize",
       "description": "Apply SIMD optimizations to Mojo code for parallel computation. Use when optimizing performance-critical tensor and array operations.",
       "version": "1.0.0",
       "source": "./plugins/optimization/mojo-simd-optimize",
+      "category": "optimization",
+      "tags": []
+    },
+    {
+      "name": "parallel-io-executor",
+      "description": "Pattern for implementing ThreadPoolExecutor-based parallelization of I/O-bound tasks in Python CLI tools",
+      "version": "1.0.0",
+      "source": "./plugins/optimization/parallel-io-executor",
       "category": "optimization",
       "tags": []
     },
@@ -989,6 +1411,14 @@
       ]
     },
     {
+      "name": "defensive-analysis-patterns",
+      "description": "Defensive programming patterns for statistical analysis pipelines to handle data quality issues gracefully",
+      "version": "1.0.0",
+      "source": "./plugins/testing/defensive-analysis-patterns",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "extract-dependencies",
       "description": "Analyze imports and identify all module dependencies. Use when mapping project structure.",
       "version": "1.0.0",
@@ -1010,10 +1440,34 @@
       ]
     },
     {
+      "name": "fix-ci-test-failures",
+      "description": "Skill for fixing unit tests that pass locally but fail in CI due to symlinks and mocking issues",
+      "version": "1.0.0",
+      "source": "./plugins/testing/fix-ci-test-failures",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "fix-placeholder-code-ci",
       "description": "Fix CI failures caused by partially commented placeholder code and dtype migration assertion mismatches",
       "version": "1.0.0",
       "source": "./plugins/testing/fix-placeholder-code-ci",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "fix-pydantic-required-fields",
+      "description": "Fix test failures caused by missing required fields in Pydantic model fixtures after data model evolution",
+      "version": "1.0.0",
+      "source": "./plugins/testing/fix-pydantic-required-fields",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "fix-tests-after-config-refactor",
+      "description": "Fix Tests After Config Refactor",
+      "version": "1.0.0",
+      "source": "./plugins/testing/fix-tests-after-config-refactor",
       "category": "testing",
       "tags": []
     },
@@ -1079,6 +1533,23 @@
       "tags": []
     },
     {
+      "name": "multi-language-judge-pipelines",
+      "description": "Add language-specific build pipelines (Python/Mojo) to E2E test judge systems. Use when test infrastructure needs to support multiple programming languages with different tooling (python/ruff/pytest vs mojo build/format/test). Handles pipeline routing, configuration loading, and test fixture updates.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/multi-language-judge-pipelines",
+      "category": "testing",
+      "tags": [
+        "testing",
+        "e2e",
+        "pipelines",
+        "python",
+        "mojo",
+        "judge-system",
+        "multi-language",
+        "build-automation"
+      ]
+    },
+    {
       "name": "phase-cleanup",
       "description": "Refactor and finalize code after parallel phases complete, addressing technical debt. Use in cleanup phase to polish code before merge.",
       "version": "1.0.0",
@@ -1091,6 +1562,14 @@
       "description": "Generate test files and coordinate test-driven development (TDD). Use when creating tests before implementation or during test phase.",
       "version": "1.0.0",
       "source": "./plugins/testing/phase-test-tdd",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "pytest-real-io-testing",
+      "description": "Pattern for replacing pytest mocks with real file I/O to fix test isolation issues",
+      "version": "1.0.0",
+      "source": "./plugins/testing/pytest-real-io-testing",
       "category": "testing",
       "tags": []
     },
@@ -1283,6 +1762,14 @@
       ]
     },
     {
+      "name": "experiment-recovery-tools",
+      "description": "Skill: Experiment Recovery Tools",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/experiment-recovery-tools",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "generate-boilerplate",
       "description": "Create starter code from templates. Use when setting up new modules or test files.",
       "version": "1.0.0",
@@ -1316,6 +1803,32 @@
         "issue-linking",
         "gh-cli",
         "pull-request"
+      ]
+    },
+    {
+      "name": "gh-fix-pr-feedback",
+      "description": "Address PR review feedback by making changes and replying to comments. Use when a PR has open review comments needing responses.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/gh-fix-pr-feedback",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "pr",
+        "review",
+        "feedback"
+      ]
+    },
+    {
+      "name": "gh-get-review-comments",
+      "description": "Retrieve all review comments from a pull request using the GitHub API. Use when you need to see what feedback has been provided on a PR.",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/gh-get-review-comments",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "pr",
+        "review",
+        "api"
       ]
     },
     {
@@ -1367,6 +1880,19 @@
         "context",
         "implementation",
         "gh-cli"
+      ]
+    },
+    {
+      "name": "gh-reply-review-comment",
+      "description": "Reply to PR review comments using the correct GitHub API endpoint. Use when responding to inline code review feedback (not gh pr comment).",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/gh-reply-review-comment",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "pr",
+        "review",
+        "api"
       ]
     },
     {
@@ -1483,6 +2009,14 @@
       ]
     },
     {
+      "name": "review-task-orchestration",
+      "description": "Review Task Orchestration",
+      "version": "1.0.0",
+      "source": "./plugins/tooling/review-task-orchestration",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "skill-audit-and-merge",
       "description": "Systematic audit and consolidation of skills marketplace plugins. Use when: (1) Marketplace has grown with overlapping plugins, (2) Need to identify merge candidates, (3) Improving plugin discoverability via tags, (4) Reorganizing categories for better structure.",
       "version": "1.0.0",
@@ -1547,6 +2081,19 @@
         "parallel-execution",
         "logging",
         "user-experience"
+      ]
+    },
+    {
+      "name": "tone-matched-documentation",
+      "description": "Fill placeholder sections in documents while matching the author's existing writing style and tone",
+      "version": "1.0.0",
+      "source": "./plugins/documentation/tone-matched-documentation",
+      "category": "tooling",
+      "tags": [
+        "academic-writing",
+        "documentation",
+        "tone-matching",
+        "style-consistency"
       ]
     },
     {

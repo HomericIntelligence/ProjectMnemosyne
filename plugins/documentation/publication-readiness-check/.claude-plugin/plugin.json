@@ -1,0 +1,6 @@
+{
+  "name": "publication-readiness-check",
+  "version": "1.0.0",
+  "description": "publication-readiness-check",
+  "skills": "./skills"
+}

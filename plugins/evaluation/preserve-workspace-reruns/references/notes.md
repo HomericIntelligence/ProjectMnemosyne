@@ -140,11 +140,11 @@ This ensures:
 
 ## Implementation
 
-Modified `src/scylla/e2e/subtest_executor.py:683-697` to add checkpoint-based workspace preservation.
+Modified `scylla/e2e/subtest_executor.py:683-697` to add checkpoint-based workspace preservation.
 
 Also committed:
 - `.gitignore`: Added `worktrees/` directory
-- `src/scylla/e2e/llm_judge.py`: Better error handling (unrelated improvement from earlier work)
+- `scylla/e2e/llm_judge.py`: Better error handling (unrelated improvement from earlier work)
 
 ## Commit
 

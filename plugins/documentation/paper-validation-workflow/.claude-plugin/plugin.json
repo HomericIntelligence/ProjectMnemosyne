@@ -1,0 +1,6 @@
+{
+  "name": "paper-validation-workflow",
+  "version": "1.0.0",
+  "description": "Paper Validation Workflow",
+  "skills": "./skills"
+}

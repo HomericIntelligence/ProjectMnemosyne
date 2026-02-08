@@ -1,0 +1,6 @@
+{
+  "name": "parallel-metrics-integration",
+  "version": "1.0.0",
+  "description": "Skill for integrating multiple metrics into statistical analysis pipelines in parallel",
+  "skills": "./skills"
+}

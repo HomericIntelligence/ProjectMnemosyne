@@ -1,13 +1,11 @@
 ---
-name: preserve-workspace-reruns
-description: Preserving git worktrees and test results when re-running E2E experiments with checkpoint resume
+name: "Skill: Preserve Workspaces on E2E Experiment Re-runs"
+description: "Preserving git worktrees and test results when re-running E2E experiments with checkpoint resume"
 category: evaluation
 date: 2026-01-08
+user-invocable: false
 ---
-
 # Skill: Preserve Workspaces on E2E Experiment Re-runs
-
-## Overview
 
 | Field | Value |
 |-------|-------|
@@ -29,7 +27,7 @@ This caused:
 - Unnecessary git worktree recreation overhead
 - Inability to inspect workspaces from passing runs
 
-## When to Use
+## When to Use This Pattern
 
 Apply this pattern when:
 - ✅ You have a checkpoint/resume system that tracks completed work
@@ -46,7 +44,7 @@ Do NOT use this pattern when:
 ## Root Cause Analysis
 
 ### Code Location
-`/home/mvillmow/ProjectScylla/src/scylla/e2e/subtest_executor.py:678-697`
+`/home/mvillmow/ProjectScylla/scylla/e2e/subtest_executor.py:678-697`
 
 ### The Problem Flow
 
@@ -79,7 +77,7 @@ The workspace setup was designed to be **idempotent** - always creating fresh st
 
 ### Implementation Pattern
 
-**Location**: `src/scylla/e2e/subtest_executor.py:683-697`
+**Location**: `scylla/e2e/subtest_executor.py:683-697`
 
 ```python
 # Check if run already passed and workspace exists - preserve it
@@ -117,12 +115,51 @@ else:
 
 ## Failed Attempts
 
-| Attempt | Approach | Why It Failed | Lesson Learned |
-|---------|----------|---------------|----------------|
-| **1. Modify recovery logic** | Add preservation check inside `_setup_workspace()` recovery path (line 1125-1128) to check if workspace should be preserved before deleting | Recovery path only executes when git branch exists; requires passing checkpoint deep into method; checks happen too late after worktree command created | Check conditions BEFORE starting expensive operations, not during recovery |
-| **2. Cleanup after completion** | After each run completes, clean up workspaces for failing runs (after line 723) | Solves wrong problem - issue is re-creation on re-run, not cleanup; doesn't address workspace destruction during resume; adds overhead; failed workspaces useful for debugging | Identify actual problem point - workspace destroyed during **setup**, not **cleanup** |
+### ❌ Attempt 1: Modify workspace recovery logic only
 
-## Results
+**Approach**: Add preservation check inside `_setup_workspace()` recovery path (line 1125-1128)
+
+```python
+# In _setup_workspace, around line 1125-1128
+if workspace_abs.exists():
+    should_preserve = self._should_preserve_workspace(workspace_abs, tier_id, subtest_id, run_number)
+    if should_preserve:
+        logger.info(f"Preserving existing workspace with passing results: {workspace_abs}")
+        return  # Skip workspace setup
+    else:
+        shutil.rmtree(workspace_abs)
+```
+
+**Why it failed**:
+- Recovery path only executes when git branch already exists
+- Requires passing checkpoint context deep into `_setup_workspace()`
+- Still creates git worktree command before checking
+- More complex - checks happen too late in the flow
+
+**Lesson**: Check conditions BEFORE starting expensive operations, not during recovery.
+
+### ❌ Attempt 2: Add workspace cleanup after run completes
+
+**Approach**: After each run, clean up workspaces for failing runs (after line 723)
+
+```python
+if run_result.judge_passed:
+    # Preserve workspace for passing run
+    pass
+else:
+    # Clean up workspace for failing run
+    self.workspace_manager.cleanup_worktree(workspace, branch_name)
+```
+
+**Why it failed**:
+- Solves the wrong problem - issue is **re-creation on re-run**, not cleanup
+- Doesn't address the core issue: workspace destruction during resume
+- Adds cleanup overhead after every run
+- Workspaces for failed runs might still be useful for debugging
+
+**Lesson**: Identify the actual problem point - workspace is destroyed during **setup**, not during **cleanup**.
+
+## Results & Parameters
 
 ### Test Command
 ```bash
@@ -172,9 +209,9 @@ Re-run: Preserves workspace (checkpoint passed), skips setup ✅
 
 | File | Lines Changed | Purpose |
 |------|---------------|---------|
-| `src/scylla/e2e/subtest_executor.py` | +12, -4 | Add checkpoint check before workspace setup |
+| `scylla/e2e/subtest_executor.py` | +12, -4 | Add checkpoint check before workspace setup |
 | `.gitignore` | +2 | Ignore worktrees/ directory |
-| `src/scylla/e2e/llm_judge.py` | +39, -2 | Better error handling (related improvement) |
+| `scylla/e2e/llm_judge.py` | +39, -2 | Better error handling (related improvement) |
 
 ## Key Learnings
 
@@ -186,7 +223,7 @@ Re-run: Preserves workspace (checkpoint passed), skips setup ✅
 
 ## References
 
-- Checkpoint system: `/home/mvillmow/ProjectScylla/src/scylla/e2e/checkpoint.py`
-- Workspace manager: `/home/mvillmow/ProjectScylla/src/scylla/e2e/workspace_manager.py`
+- Checkpoint system: `/home/mvillmow/ProjectScylla/scylla/e2e/checkpoint.py`
+- Workspace manager: `/home/mvillmow/ProjectScylla/scylla/e2e/workspace_manager.py`
 - Git worktree docs: https://git-scm.com/docs/git-worktree
 - PR: https://github.com/HomericIntelligence/ProjectScylla/pull/161

@@ -1,0 +1,6 @@
+{
+  "name": "experiment-recovery-tools",
+  "version": "1.0.0",
+  "description": "Skill: Experiment Recovery Tools",
+  "skills": "./skills"
+}

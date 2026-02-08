@@ -1,0 +1,6 @@
+{
+  "name": "publication-readiness-review",
+  "version": "1.0.0",
+  "description": "Comprehensive 10-category GO/NO-GO assessment framework for academic paper publication readiness",
+  "skills": "./skills"
+}

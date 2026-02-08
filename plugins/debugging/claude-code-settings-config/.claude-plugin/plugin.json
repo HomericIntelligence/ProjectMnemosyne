@@ -1,0 +1,6 @@
+{
+  "name": "claude-code-settings-config",
+  "version": "1.0.0",
+  "description": "Configure Claude Code settings.json for E2E test workspaces to control thinking mode and other workspace-level settings",
+  "skills": "./skills"
+}

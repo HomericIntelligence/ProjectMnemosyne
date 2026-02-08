@@ -1,0 +1,6 @@
+{
+  "name": "paper-consolidation",
+  "version": "1.0.0",
+  "description": "Consolidate scattered LaTeX paper files into unified directory structure with publication readiness fixes",
+  "skills": "./skills"
+}
