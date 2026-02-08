@@ -38,6 +38,7 @@ VALID_CATEGORIES = {
     "tooling",
     "ci-cd",
     "testing",
+    "documentation",
 }
 
 # Required plugin.json fields (per official Claude Code plugin docs)
