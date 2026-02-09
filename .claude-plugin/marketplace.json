@@ -820,6 +820,21 @@
       ]
     },
     {
+      "name": "ci-test-matrix-management",
+      "description": "Safely modify CI test matrix without breaking coverage validation. Use when: (1) Disabling flaky tests from CI workflow, (2) Removing or commenting out test groups from comprehensive-tests.yml, (3) Pre-commit validate-test-coverage hook fails after CI matrix changes.",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/ci-test-matrix-management",
+      "category": "debugging",
+      "tags": [
+        "ci-cd",
+        "test-matrix",
+        "coverage",
+        "pre-commit",
+        "flaky-tests",
+        "github-actions"
+      ]
+    },
+    {
       "name": "global-semaphore-parallelism",
       "description": "Debugging and implementing global parallelism control using multiprocessing.Manager().Semaphore() to limit concurrent agents across all tiers",
       "version": "1.0.0",

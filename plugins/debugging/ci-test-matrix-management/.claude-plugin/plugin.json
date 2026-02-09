@@ -1,0 +1,12 @@
+{
+  "name": "ci-test-matrix-management",
+  "version": "1.0.0",
+  "description": "Safely modify CI test matrix without breaking coverage validation. Use when: (1) Disabling flaky tests from CI workflow, (2) Removing or commenting out test groups from comprehensive-tests.yml, (3) Pre-commit validate-test-coverage hook fails after CI matrix changes.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "category": "debugging",
+  "date": "2026-02-08",
+  "tags": ["ci-cd", "test-matrix", "coverage", "pre-commit", "flaky-tests", "github-actions"],
+  "skills": "./skills"
+}
