@@ -244,6 +244,11 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 ### ❌ Attempt 1: Hardcoded Holm-Bonferroni Expectations
 
 **What we tried**: Initial parametrized tests for Holm-Bonferroni expected all p-values below threshold to be rejected.

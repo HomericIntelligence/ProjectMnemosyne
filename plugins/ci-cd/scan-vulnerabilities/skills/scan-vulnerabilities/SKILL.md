@@ -8,6 +8,15 @@ tier: 2
 
 # Scan Vulnerabilities
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Systematically scan code for security vulnerabilities including unsafe patterns, known CVEs, and potential exploits. |
+| Outcome | Operational |
+
+
 Systematically scan code for security vulnerabilities including unsafe patterns, known CVEs, and potential exploits.
 
 ## When to Use
@@ -34,7 +43,7 @@ python3 -m pip install semgrep
 semgrep --config=p/security-audit --json .
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Scan code for issues**: Identify unsafe patterns (SQL injection, exec, hardcoded secrets)
 2. **Check dependencies**: Scan for known vulnerabilities (CVEs)
@@ -59,6 +68,11 @@ Security scan report:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

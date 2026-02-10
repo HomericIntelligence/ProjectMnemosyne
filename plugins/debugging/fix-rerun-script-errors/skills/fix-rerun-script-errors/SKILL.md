@@ -7,6 +7,15 @@ user-invocable: false
 ---
 # Fix E2E Rerun Script Errors
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | 2026-01-29 |
+| Objective | | Field | Value | |-------|-------| | **Date** | 2026-01-29 | | **Category** | Debugging | | **Objective** | Fix SubTestExecutor constructor errors... |
+| Outcome | Operational |
+
+
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-01-29 |
@@ -217,6 +226,11 @@ from scylla.e2e.subtest_executor import SubTestExecutor, _commit_test_config
 ```
 
 ## Failed Attempts
+
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
 
 ### Attempt 1: Using `raise` Instead of `return None` for T5 Inheritance
 

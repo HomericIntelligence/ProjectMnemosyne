@@ -7,6 +7,15 @@ category: mojo
 
 # Memory Safety Check Skill
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Validate Mojo ownership and borrowing rules. - Reviewing code for memory safety - Debugging memory or segfault issues |
+| Outcome | Operational |
+
+
 Validate Mojo ownership and borrowing rules.
 
 ## When to Use
@@ -32,7 +41,7 @@ fn modify(mut data: Tensor):
     data[0] = 42  # Mutate in caller's variable
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Trace ownership** - Which function owns each value
 2. **Check borrows** - Are references short-lived
@@ -61,6 +70,11 @@ fn modify(mut data: Tensor):
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

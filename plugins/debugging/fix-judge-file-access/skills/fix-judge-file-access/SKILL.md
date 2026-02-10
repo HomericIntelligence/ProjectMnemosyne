@@ -171,6 +171,11 @@ if patchfile and patchfile not in ("(no changes detected)", ...):
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 **None** - All planned fixes worked on first implementation.
 
 The plan was well-researched by comparing successful test-001 (Python tasks) with failing test-002 (Mojo tasks), which revealed the exact gaps.

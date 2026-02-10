@@ -8,6 +8,15 @@ tier: 2
 
 # Benchmark Functions
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Systematically measure function execution time, memory usage, and performance characteristics to identify optimization opportunities. |
+| Outcome | Operational |
+
+
 Systematically measure function execution time, memory usage, and performance characteristics to identify optimization opportunities.
 
 ## When to Use
@@ -27,7 +36,7 @@ python3 -m timeit -s 'import module' 'module.function(args)' -n 1000 -r 5
 mojo run benchmark_script.mojo
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Set up benchmarks**: Create timing harness with warm-up iterations
 2. **Run measurements**: Execute function multiple times, record timing
@@ -50,6 +59,11 @@ Benchmark report:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

@@ -8,6 +8,15 @@ phase: Test
 
 # Test-Driven Development Skill
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Coordinate test-driven development by writing tests first, then implementing to make them pass. - Creating tests before implementation (TDD workflow) |
+| Outcome | Operational |
+
+
 Coordinate test-driven development by writing tests first, then implementing to make them pass.
 
 ## When to Use
@@ -40,7 +49,7 @@ mojo test tests/test_component.mojo
 mojo test tests/test_component.mojo
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Write test first** - Define expected behavior before implementation
 2. **Run test** (Red phase) - Test fails because code doesn't exist yet
@@ -128,6 +137,11 @@ class TestComponent:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

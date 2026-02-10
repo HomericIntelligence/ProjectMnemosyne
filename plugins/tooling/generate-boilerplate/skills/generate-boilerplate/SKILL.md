@@ -8,6 +8,15 @@ tier: 1
 
 # Generate Boilerplate
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Create standard starter code templates for new modules, test files, and configuration files to accelerate development. |
+| Outcome | Operational |
+
+
 Create standard starter code templates for new modules, test files, and configuration files to accelerate development.
 
 ## When to Use
@@ -40,7 +49,7 @@ def generate_module_boilerplate(name):
 PYSCRIPT
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Select template type**: Module, test, config, etc.
 2. **Customize parameters**: Name, class structure, default content
@@ -63,6 +72,11 @@ Generated boilerplate:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

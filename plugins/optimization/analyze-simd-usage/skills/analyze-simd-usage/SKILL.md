@@ -7,6 +7,15 @@ mcp_fallback: none
 
 # Analyze SIMD Usage Opportunities
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Identify where SIMD (Single Instruction Multiple Data) can improve performance. - Performance-critical tensor operations |
+| Outcome | Operational |
+
+
 Identify where SIMD (Single Instruction Multiple Data) can improve performance.
 
 ## When to Use
@@ -17,7 +26,9 @@ Identify where SIMD (Single Instruction Multiple Data) can improve performance.
 - Optimizing matrix/vector operations
 - Finding performance bottlenecks in ML code
 
-## Quick Reference
+## Verified Workflow
+
+### Quick Reference
 
 ```bash
 # Find loops processing arrays/tensors
@@ -146,6 +157,11 @@ fn sum_simd[simd_width: Int](tensor: Tensor) -> Float32:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

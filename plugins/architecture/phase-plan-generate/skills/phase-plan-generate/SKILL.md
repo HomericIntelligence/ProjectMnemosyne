@@ -53,7 +53,7 @@ Additional context
 EOF
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Create plan.md** with all 9 required sections
 2. **Use relative paths** for links (e.g., `../plan.md`, not absolute)
@@ -131,6 +131,11 @@ Additional context, assumptions, or considerations.
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

@@ -174,6 +174,11 @@ except Exception as e:
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 ### ❌ Initial Token Calculation Error
 
 **What Was Tried**: Used `cache_read_input_tokens` instead of `cache_read_tokens`

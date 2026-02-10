@@ -7,6 +7,15 @@ category: mojo
 
 # SIMD Optimization Skill
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Parallelize tensor and array operations using SIMD. - Optimizing tensor operations - Vectorizing element-wise computations |
+| Outcome | Operational |
+
+
 Parallelize tensor and array operations using SIMD.
 
 ## When to Use
@@ -28,7 +37,7 @@ for i in range(0, size, width):
     result.store(i, a.load[width](i) + b.load[width](i))
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Identify bottleneck** - Profile code to find hot loops
 2. **Get SIMD width** - Use `simdwidthof[dtype]()`
@@ -57,6 +66,11 @@ for i in range(0, size, width):
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

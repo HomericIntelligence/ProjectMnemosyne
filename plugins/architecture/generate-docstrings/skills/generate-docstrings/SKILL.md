@@ -8,6 +8,15 @@ tier: 2
 
 # Generate Docstrings
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Write comprehensive docstrings for functions and classes following standard formats (Google, NumPy, reStructuredText). |
+| Outcome | Operational |
+
+
 Write comprehensive docstrings for functions and classes following standard formats (Google, NumPy, reStructuredText).
 
 ## When to Use
@@ -44,7 +53,7 @@ def matrix_multiply(a: ExTensor, b: ExTensor) -> ExTensor:
     ...
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Analyze function**: Understand purpose, parameters, return value
 2. **Choose format**: Select docstring style (Google is recommended)
@@ -69,6 +78,11 @@ Docstring structure:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

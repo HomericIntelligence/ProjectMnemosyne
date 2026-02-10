@@ -7,6 +7,15 @@ category: agent
 
 # Agent Hierarchy Diagram
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Generate visual diagrams showing agent system structure and relationships. - Documenting agent system for team |
+| Outcome | Operational |
+
+
 Generate visual diagrams showing agent system structure and relationships.
 
 ## When to Use
@@ -16,7 +25,9 @@ Generate visual diagrams showing agent system structure and relationships.
 - Onboarding new contributors
 - Visualizing agent relationships for presentations
 
-## Quick Reference
+## Verified Workflow
+
+### Quick Reference
 
 ```bash
 # Generate ASCII tree diagram
@@ -76,6 +87,11 @@ graph TD
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

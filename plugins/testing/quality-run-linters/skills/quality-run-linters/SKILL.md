@@ -7,6 +7,15 @@ category: quality
 
 # Run Linters Skill
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Run all configured linters to ensure code quality. - Before committing code - CI/CD quality checks - Pre-PR validation |
+| Outcome | Operational |
+
+
 Run all configured linters to ensure code quality.
 
 ## When to Use
@@ -48,7 +57,7 @@ Run all configured linters to ensure code quality.
 - `check-added-large-files` - Prevent large files (No)
 - `mixed-line-ending` - Fix line endings (Yes)
 
-## Workflow
+## Verified Workflow
 
 ```bash
 # 1. Run all linters
@@ -172,6 +181,11 @@ gh pr create --issue 42
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

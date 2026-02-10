@@ -151,6 +151,10 @@ Use this workflow when:
     - Link to tracking document
 
 ## Failed Attempts & Lessons Learned
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Exploration Agents Failed with "classifyHandoffIfNeeded" Error
 

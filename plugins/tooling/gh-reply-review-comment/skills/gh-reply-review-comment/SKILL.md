@@ -8,6 +8,15 @@ user-invocable: false
 
 # Reply to Review Comments
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Reply to PR review comments using the correct GitHub API. - Responding to inline code review feedback |
+| Outcome | Operational |
+
+
 Reply to PR review comments using the correct GitHub API.
 
 ## When to Use
@@ -40,7 +49,7 @@ gh api repos/OWNER/REPO/pulls/PR/comments \
   --jq '.[] | select(.in_reply_to_id)'
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Get comment IDs**: List all review comments
 2. **Apply fixes**: Make the requested changes
@@ -94,6 +103,11 @@ gh api repos/OWNER/REPO/pulls/PR/comments \
 # Verify CI status
 gh pr checks PR
 ```
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

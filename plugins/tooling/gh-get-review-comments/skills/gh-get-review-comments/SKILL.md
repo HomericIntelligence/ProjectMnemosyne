@@ -8,6 +8,15 @@ user-invocable: false
 
 # Get PR Review Comments
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Retrieve and analyze all review comments from a pull request. - Checking for unresolved review feedback |
+| Outcome | Operational |
+
+
 Retrieve and analyze all review comments from a pull request.
 
 ## When to Use
@@ -36,7 +45,7 @@ gh api repos/OWNER/REPO/pulls/PR/comments \
   --jq '.[] | select(.in_reply_to_id == null)'
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Fetch comments**: Use API to list all comments
 2. **Parse output**: Extract IDs and feedback
@@ -95,6 +104,11 @@ gh api repos/OWNER/REPO/pulls/PR/comments \
 gh api repos/OWNER/REPO/pulls/PR/comments \
   --jq '.[] | select(.in_reply_to_id == null)'
 ```
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

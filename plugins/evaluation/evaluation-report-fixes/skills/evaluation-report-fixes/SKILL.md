@@ -7,6 +7,15 @@ user-invocable: false
 ---
 # Skill: E2E Evaluation Report Fixes
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | 2026-01-10 |
+| Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-01-10 | | **Objective** | Fix critical issues in E2E evaluation reports and add judge... |
+| Outcome | Operational |
+
+
 | Attribute | Value |
 |-----------|-------|
 | **Date** | 2026-01-10 |
@@ -222,6 +231,11 @@ Example: "Code works but uses 8 lines where 3 would suffice" → -0.15
 ```
 
 ## Failed Attempts
+
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
 
 ### ❌ Attempt 1: Using only `git diff HEAD~1`
 

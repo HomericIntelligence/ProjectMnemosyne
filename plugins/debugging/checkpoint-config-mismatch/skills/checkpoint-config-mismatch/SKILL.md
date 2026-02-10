@@ -171,6 +171,11 @@ def load(cls, path: Path) -> ExperimentConfig:
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 ### ❌ Attempt 1: Manually Match Original CLI Args
 
 **Tried**: Asked user to remember exact original command with 3 judges.

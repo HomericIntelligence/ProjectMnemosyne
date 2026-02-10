@@ -7,6 +7,15 @@ mcp_fallback: none
 
 # Check Memory Safety
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Validate Mojo code for memory safety violations and ownership issues. - Code review focused on memory safety |
+| Outcome | Operational |
+
+
 Validate Mojo code for memory safety violations and ownership issues.
 
 ## When to Use
@@ -17,7 +26,9 @@ Validate Mojo code for memory safety violations and ownership issues.
 - Catching double-free or segmentation fault sources
 - Validating SIMD memory access patterns
 
-## Quick Reference
+## Verified Workflow
+
+### Quick Reference
 
 ```bash
 # Find potential use-after-free patterns
@@ -152,6 +163,11 @@ Before committing Mojo code:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

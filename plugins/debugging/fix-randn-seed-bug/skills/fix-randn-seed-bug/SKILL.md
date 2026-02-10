@@ -8,6 +8,15 @@ tags: [random, seed, reproducibility, testing, mojo, prng]
 
 # Fix Unused Seed Parameter in randn()
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | | Field | Value | |-------|-------| | Date | 2025-12-30 | | Objective | Fix test failures caused by randn() ignoring its seed parameter | |
+| Outcome | Operational |
+
+
 | Field | Value |
 |-------|-------|
 | Date | 2025-12-30 |

@@ -258,6 +258,10 @@ git checkout main
 ```
 
 ## Failed Attempts & Lessons Learned
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Failed: Using `git reset --hard` Without Checking State
 

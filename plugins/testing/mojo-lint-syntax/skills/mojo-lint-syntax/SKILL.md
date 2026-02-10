@@ -7,6 +7,15 @@ mcp_fallback: none
 
 # Lint Mojo Syntax
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Validate Mojo code against v0.26.1+ syntax standards. - Writing new Mojo code before testing - Reviewing Mojo code for syntax issues |
+| Outcome | Operational |
+
+
 Validate Mojo code against v0.26.1+ syntax standards.
 
 ## When to Use
@@ -17,7 +26,9 @@ Validate Mojo code against v0.26.1+ syntax standards.
 - Checking for deprecated patterns
 - Pre-commit validation of Mojo files
 
-## Quick Reference
+## Verified Workflow
+
+### Quick Reference
 
 ```bash
 # Validate single executable file (with main())
@@ -113,6 +124,11 @@ Before committing Mojo code:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

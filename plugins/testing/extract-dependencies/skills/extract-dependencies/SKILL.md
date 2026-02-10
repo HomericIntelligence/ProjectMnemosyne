@@ -8,6 +8,15 @@ tier: 2
 
 # Extract Dependencies
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Analyze import statements and identify all external and internal module dependencies in codebase. - Understanding module coupling |
+| Outcome | Operational |
+
+
 Analyze import statements and identify all external and internal module dependencies in codebase.
 
 ## When to Use
@@ -30,7 +39,7 @@ pipdeptree
 python3 -c "import ast; [print(f.name) for f in ast.walk(ast.parse(open('file.py').read())) if isinstance(f, ast.Import)]"
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Scan imports**: Extract all import statements from codebase
 2. **Categorize dependencies**: Separate external, internal, standard library
@@ -54,6 +63,11 @@ Dependency analysis:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

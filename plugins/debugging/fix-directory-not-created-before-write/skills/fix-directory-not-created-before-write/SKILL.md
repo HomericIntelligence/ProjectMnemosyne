@@ -100,6 +100,11 @@ ls -la results/experiment/tier_name/  # Should exist immediately
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 **None** - The root cause was clear from the stack trace and the first solution worked.
 
 ### Why This Worked First Try

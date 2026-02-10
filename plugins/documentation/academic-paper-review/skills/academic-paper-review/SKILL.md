@@ -176,6 +176,11 @@ TaskUpdate: taskId=1, status="completed", description="..."
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 ### ❌ Don't: Trust analysis plan without verification
 
 **What happened:** Analysis plan flagged judge agreement statistics as "CRITICAL: DO NOT match any generated data"

@@ -1,7 +1,7 @@
 {
   "id": "split-figures-per-tier",
   "version": "1.0.0",
-  "name": "Split Figures Per Tier Due to Altair Row Limit",
+  "name": "split-figures-per-tier",
   "description": "Pattern for splitting large faceted figures into per-tier subfigures to avoid Altair's 5,000-row dataset limit. Handles multi-facet cases and test pattern updates.",
   "category": "tooling",
   "created": "2026-02-08",

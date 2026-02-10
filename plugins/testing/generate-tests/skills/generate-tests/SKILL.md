@@ -8,6 +8,15 @@ tier: 2
 
 # Generate Tests
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Create comprehensive test cases for functions and modules to ensure correctness and improve code coverage. |
+| Outcome | Operational |
+
+
 Create comprehensive test cases for functions and modules to ensure correctness and improve code coverage.
 
 ## When to Use
@@ -34,7 +43,7 @@ test_cases = [
 ]
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Analyze function**: Understand inputs, outputs, side effects
 2. **Identify test cases**: Normal cases, edge cases, error cases
@@ -57,6 +66,11 @@ Test suite:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

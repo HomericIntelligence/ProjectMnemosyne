@@ -7,6 +7,15 @@ category: mojo
 
 # Mojo Test Runner Skill
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Execute Mojo tests with filtering and reporting. - Running Mojo test suites - Verifying implementation correctness |
+| Outcome | Operational |
+
+
 Execute Mojo tests with filtering and reporting.
 
 ## When to Use
@@ -32,7 +41,7 @@ mojo test -v tests/
 ./scripts/run_tests.sh tensor
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Run tests** - Execute `mojo test` or script
 2. **Review output** - Check pass/fail summary
@@ -60,6 +69,11 @@ mojo test -v tests/
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

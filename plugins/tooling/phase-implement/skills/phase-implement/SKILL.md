@@ -8,6 +8,15 @@ phase: Impl
 
 # Implementation Coordination Skill
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Coordinate implementation phase by breaking down work, delegating to engineers, and maintaining quality standards. |
+| Outcome | Operational |
+
+
 Coordinate implementation phase by breaking down work, delegating to engineers, and maintaining quality standards.
 
 ## When to Use
@@ -32,7 +41,7 @@ just pre-commit-all
 # Any output = fix before committing
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Review plan specifications** - Understand deliverables and success criteria
 2. **Break into tasks** - Create granular implementation work items
@@ -126,6 +135,11 @@ Before code review approval:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

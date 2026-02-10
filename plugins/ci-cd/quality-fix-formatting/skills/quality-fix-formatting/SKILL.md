@@ -7,6 +7,15 @@ category: quality
 
 # Fix Formatting Skill
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Automatically fix code formatting issues across file types. - Pre-commit checks fail due to formatting |
+| Outcome | Operational |
+
+
 Automatically fix code formatting issues across file types.
 
 ## When to Use
@@ -78,7 +87,7 @@ just pre-commit-all
 
 Auto-fixes: trailing whitespace, missing newlines, line endings, YAML
 
-## Workflow
+## Verified Workflow
 
 ```bash
 # 1. Fix all formatting
@@ -202,6 +211,11 @@ Fix locally and push if CI fails.
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

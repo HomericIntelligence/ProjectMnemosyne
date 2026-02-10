@@ -8,6 +8,15 @@ tier: 2
 
 # Extract Hyperparameters
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Locate and document all hyperparameters mentioned in research papers including learning rates, batch sizes, and model configurations. |
+| Outcome | Operational |
+
+
 Locate and document all hyperparameters mentioned in research papers including learning rates, batch sizes, and model configurations.
 
 ## When to Use
@@ -27,7 +36,7 @@ pdftotext paper.pdf - | grep -i "learning rate\|batch\|epochs\|weight decay\|dro
 grep -E "\\b(lr|batch_size|epochs|momentum|dropout|layers)\\s*[=:]" config.py
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Find hyperparameter table**: Look for "Table 1" or "Hyperparameters" section
 2. **Document architecture parameters**: Layer sizes, activation functions, normalization
@@ -51,6 +60,11 @@ Hyperparameter documentation:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

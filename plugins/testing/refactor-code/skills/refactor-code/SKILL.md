@@ -8,6 +8,15 @@ tier: 2
 
 # Refactor Code
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Apply systematic refactoring techniques to improve code clarity, maintainability, and performance without changing functionality. |
+| Outcome | Operational |
+
+
 Apply systematic refactoring techniques to improve code clarity, maintainability, and performance without changing functionality.
 
 ## When to Use
@@ -38,7 +47,7 @@ def _validate_and_format(data):
     return format_data(validate(data))
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Identify refactoring targets**: From code review or analysis tools
 2. **Plan changes**: Document what will change and why
@@ -61,6 +70,11 @@ Refactoring report:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

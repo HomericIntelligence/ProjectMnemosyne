@@ -8,6 +8,15 @@ tier: 1
 
 # Lint Code
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Run linting tools to identify style issues, potential bugs, and code quality problems in source files. |
+| Outcome | Operational |
+
+
 Run linting tools to identify style issues, potential bugs, and code quality problems in source files.
 
 ## When to Use
@@ -32,7 +41,7 @@ pixi run mojo format file.mojo
 pixi run quality-run-linters
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Select linters**: Choose appropriate tools (pylint, flake8, black, etc.)
 2. **Run checks**: Execute linters on code
@@ -55,6 +64,11 @@ Lint report:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

@@ -8,6 +8,15 @@ tier: 1
 
 # Run Tests
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Execute test suites to verify code functionality and identify regressions or failures. - Pre-commit validation |
+| Outcome | Operational |
+
+
 Execute test suites to verify code functionality and identify regressions or failures.
 
 ## When to Use
@@ -34,7 +43,7 @@ pytest tests/
 pytest tests/ -v --tb=short
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Set up test environment**: Ensure all dependencies installed
 2. **Select tests**: Choose which test suite or specific tests to run
@@ -57,6 +66,11 @@ Test results:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

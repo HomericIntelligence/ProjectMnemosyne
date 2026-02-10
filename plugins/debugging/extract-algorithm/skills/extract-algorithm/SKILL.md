@@ -8,6 +8,15 @@ tier: 2
 
 # Extract Algorithm
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Identify, document, and translate algorithms from research papers into structured pseudocode for implementation planning. |
+| Outcome | Operational |
+
+
 Identify, document, and translate algorithms from research papers into structured pseudocode for implementation planning.
 
 ## When to Use
@@ -27,7 +36,7 @@ pdftotext paper.pdf - | grep -A 20 -i "algorithm\|pseudocode" | head -50
 # Use cleaner formatting with numbered steps
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Locate algorithm**: Find algorithm description, pseudocode, or flowchart in paper
 2. **Document steps**: Extract numbered steps or pseudocode from paper
@@ -52,6 +61,11 @@ Algorithm documentation:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

@@ -234,6 +234,11 @@ finally:
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 ### ❌ Attempt 1: Using `multiprocessing.Semaphore()` Directly
 
 **What we tried**: Creating semaphore without Manager

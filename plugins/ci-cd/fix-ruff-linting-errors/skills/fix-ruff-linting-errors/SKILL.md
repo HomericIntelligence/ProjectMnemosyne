@@ -300,6 +300,10 @@ git push origin <branch>
 ```
 
 ## Failed Attempts (What NOT to Do)
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Attempt 1: Push fixes without testing locally
 

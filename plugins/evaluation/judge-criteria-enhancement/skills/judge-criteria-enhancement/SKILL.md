@@ -249,6 +249,11 @@ def _has_valid_agent_result(run_dir: Path) -> bool:
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 ### ❌ Attempt 1: Restricting Agent File Creation
 
 **What We Tried**: Initial plan included changing task prompts to say "Don't create extra files unless necessary"

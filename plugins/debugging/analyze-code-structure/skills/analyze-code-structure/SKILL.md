@@ -8,6 +8,15 @@ tier: 1
 
 # Analyze Code Structure
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Examine code organization, module hierarchy, and structural patterns to understand how components are organized. |
+| Outcome | Operational |
+
+
 Examine code organization, module hierarchy, and structural patterns to understand how components are organized.
 
 ## When to Use
@@ -26,7 +35,7 @@ tree -L 2 --dirsfirst
 grep -r "^class\|^def\|^fn\|^struct" --include="*.py" --include="*.mojo" | head -30
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Survey the codebase**: Identify top-level modules and packages
 2. **Map module hierarchy**: Create visual tree of module organization
@@ -49,6 +58,11 @@ Structure analysis:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

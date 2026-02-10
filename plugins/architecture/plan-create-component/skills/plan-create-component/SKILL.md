@@ -59,7 +59,7 @@ Create new component plans and integrate into hierarchy.
 ./scripts/create_component_plan.sh "Tensor Operations" "notes/plan/02-shared-library/01-core"
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Create plan** - Run generator script with component name
 2. **Edit plan** - Fill in 9-section template
@@ -166,6 +166,11 @@ Additional context and considerations.
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

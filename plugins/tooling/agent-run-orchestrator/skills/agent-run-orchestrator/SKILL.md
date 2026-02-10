@@ -7,6 +7,15 @@ category: agent
 
 # Run Orchestrator
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Invoke section orchestrators to coordinate complex development workflows. - Starting work on new section |
+| Outcome | Operational |
+
+
 Invoke section orchestrators to coordinate complex development workflows.
 
 ## When to Use
@@ -16,7 +25,9 @@ Invoke section orchestrators to coordinate complex development workflows.
 - Managing complex workflows
 - Need hierarchical task coordination
 
-## Quick Reference
+## Verified Workflow
+
+### Quick Reference
 
 ```bash
 # Run orchestrator for section
@@ -72,6 +83,11 @@ They decompose work from section level to component level, enabling parallel dev
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

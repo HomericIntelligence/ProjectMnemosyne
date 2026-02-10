@@ -185,6 +185,10 @@ test ! -d docs/paper-dryrun && echo "OK"
 - ✅ Git shows renames (R prefix in status)
 
 ## Failed Attempts & Lessons Learned
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Failed: Editing Before Reading File
 

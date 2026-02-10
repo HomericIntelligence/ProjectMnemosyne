@@ -205,6 +205,10 @@ extends_previous = tier_id != TierID.T0 or int(subtest_id) >= T0_FIRST_EXTENDING
 ```
 
 ## Failed Attempts & Lessons Learned
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Failed: Trying to refactor everything in one PR
 

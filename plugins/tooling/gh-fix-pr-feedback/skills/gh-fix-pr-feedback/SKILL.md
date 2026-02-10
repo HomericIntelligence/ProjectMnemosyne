@@ -7,6 +7,15 @@ agent: implementation-engineer
 
 # Fix PR Review Feedback
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Address PR review comments by implementing fixes and responding to each comment. - PR has open review comments requiring responses |
+| Outcome | Operational |
+
+
 Address PR review comments by implementing fixes and responding to each comment.
 
 ## When to Use
@@ -37,7 +46,7 @@ git push
 gh pr checks PR
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Fetch review comments**: List all comments requiring response
 2. **Analyze feedback**: Understand all requested changes
@@ -98,6 +107,11 @@ After addressing feedback:
 - [ ] Changes committed and pushed
 - [ ] CI checks passing
 - [ ] No new issues introduced
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

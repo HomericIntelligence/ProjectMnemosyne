@@ -6,6 +6,15 @@ category: doc
 
 # Issue Documentation Skill
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Post structured documentation to GitHub issues following ML Odyssey standards. - Starting work on a GitHub issue |
+| Outcome | Operational |
+
+
 Post structured documentation to GitHub issues following ML Odyssey standards.
 
 ## When to Use
@@ -63,7 +72,12 @@ gh issue comment <number> --body "$(cat <<'EOF'
 - [ ] Criterion 1
 - [ ] Criterion 2
 
-### References
+#
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
 - Related: #[other-issue]
 - Design: [link to relevant docs]
 EOF
@@ -118,7 +132,7 @@ EOF
 )"
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Read issue context**: `gh issue view <number> --comments`
 2. **Post documentation**: Use templates above to document approach
@@ -175,6 +189,11 @@ Must be measurable checkboxes:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 
