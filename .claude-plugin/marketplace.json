@@ -670,6 +670,21 @@
       "tags": []
     },
     {
+      "name": "e2e-judge-prompt-reuse",
+      "description": "Fix E2E judge regeneration by reusing saved judge_prompt.md files instead of rebuilding from potentially corrupted workspaces",
+      "version": "1.0.0",
+      "source": "./plugins/debugging/e2e-judge-prompt-reuse",
+      "category": "debugging",
+      "tags": [
+        "judge",
+        "regeneration",
+        "reproducibility",
+        "e2e",
+        "workspace",
+        "prompt-preservation"
+      ]
+    },
+    {
       "name": "e2e-path-resolution-fix",
       "description": "E2E Path Resolution Fix",
       "version": "1.0.0",

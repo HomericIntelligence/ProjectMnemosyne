@@ -1,0 +1,53 @@
+{
+  "name": "e2e-judge-prompt-reuse",
+  "version": "1.0.0",
+  "description": "Fix E2E judge regeneration by reusing saved judge_prompt.md files instead of rebuilding from potentially corrupted workspaces",
+  "category": "debugging",
+  "created": "2026-02-09",
+  "author": "Claude Sonnet 4.5",
+  "tags": [
+    "judge",
+    "regeneration",
+    "reproducibility",
+    "e2e",
+    "workspace",
+    "prompt-preservation"
+  ],
+  "relatedIssues": [],
+  "learnings": {
+    "successes": [
+      "Fixed regenerate.py to reuse saved judge_prompt.md (mirroring rerun_judges.py pattern)",
+      "Identified 5 bugs total: 2 historical/fixed, 1 model behavior, 1 open (fixed), 1 expected",
+      "Verified no remaining fallback paths in the codebase",
+      "Dryrun validation confirmed all fixes working (13/13 pass)",
+      "Removed obsolete -e analysis pixi env references from 4 local files + 17 ProjectMnemosyne skills"
+    ],
+    "failures": [
+      "Initially used pixi run -e analysis (old env name) - environment was already removed",
+      "First commit had ruff line-length violations (comment > 100 chars, f-string > 100 chars)",
+      "Tried to update build/ProjectMnemosyne which didn't exist - actual path was ~/ProjectMnemosyne"
+    ],
+    "keyInsights": [
+      "Saved prompts are critical for reproducible judging - when workspaces are recreated (e.g., from git worktrees), rebuilding judge prompts from workspace state produces inaccurate evaluations",
+      "Check all code paths that invoke judges - rerun_judges.py had the fix but regenerate.py didn't",
+      "Bimodal failure distributions (all-or-nothing per subtest) indicate configuration-specific issues, not random failures",
+      "Historical data artifacts can't be fixed by code changes - broken prompt.md files in old fullruns will always show that bug even though the code is fixed"
+    ]
+  },
+  "metrics": {
+    "filesModified": 1,
+    "linesAdded": 31,
+    "linesRemoved": 6,
+    "testsAdded": 0,
+    "testsUpdated": 0,
+    "testsPassing": "13/13 dryrun",
+    "failureRateReduction": "26-28% → 0% (for regeneration from saved prompts)"
+  },
+  "use_cases": [
+    "Investigating judge failure spikes in fullrun datasets where workspaces were recreated",
+    "Debugging inconsistent judge evaluations between initial runs and regenerations",
+    "Ensuring reproducible judging when workspaces are created from git worktrees",
+    "Fixing bimodal failure distributions (all-or-nothing per subtest)",
+    "Preserving original evaluation context for accurate rejudging"
+  ]
+}
