@@ -389,7 +389,7 @@ git push -u origin 326-327-integrate-available-metrics --force
 **Solution**:
 1. After first PR merges, rebase other branches: `git rebase main`
 2. Update test fixtures to include new columns from merged PRs
-3. Run tests locally before pushing: `pixi run -e analysis pytest tests/unit/analysis/`
+3. Run tests locally before pushing: `pixi run pytest tests/unit/analysis/`
 
 **Lesson**: Test fixture evolution is a dependency across parallel branches. Plan for rebase + fixture updates after each merge.
 
@@ -499,12 +499,12 @@ min_sample_kruskal_wallis = 2  # Minimum N per group for Kruskal-Wallis
 
 ```bash
 # Run integration tests
-pixi run -e analysis pytest tests/unit/analysis/test_export_data.py \
+pixi run pytest tests/unit/analysis/test_export_data.py \
   tests/unit/analysis/test_cop_integration.py \
   tests/unit/analysis/test_duration_integration.py -v
 
 # Run specific integration test
-pixi run -e analysis pytest tests/unit/analysis/test_YOUR_METRIC_integration.py -xvs
+pixi run pytest tests/unit/analysis/test_YOUR_METRIC_integration.py -xvs
 ```
 
 ## Decision Tree: Integrate Now vs Document for Later

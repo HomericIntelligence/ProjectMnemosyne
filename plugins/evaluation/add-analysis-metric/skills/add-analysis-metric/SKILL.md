@@ -273,13 +273,13 @@ def sample_judges_df(sample_runs_df):
 
 ```bash
 # Test the new metric function
-pixi run -e analysis pytest tests/unit/analysis/test_stats.py::test_compute_impl_rate -xvs
+pixi run pytest tests/unit/analysis/test_stats.py::test_compute_impl_rate -xvs
 
 # Test dataframes integration
-pixi run -e analysis pytest tests/unit/analysis/test_dataframes.py -xvs
+pixi run pytest tests/unit/analysis/test_dataframes.py -xvs
 
 # Run all analysis tests
-pixi run -e analysis pytest tests/unit/analysis/ -q
+pixi run pytest tests/unit/analysis/ -q
 ```
 
 **Expected outcome:**

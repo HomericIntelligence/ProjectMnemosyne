@@ -495,16 +495,16 @@ Tables:
 ### Run Full Pipeline
 ```bash
 # Generate all outputs
-pixi run -e analysis python scripts/generate_all_results.py \
+pixi run python scripts/generate_all_results.py \
   --data-dir ~/fullruns \
   --output-dir docs \
   --exclude test001-dryrun
 
 # Run all analysis tests
-pixi run -e analysis pytest tests/unit/analysis/ -v
+pixi run pytest tests/unit/analysis/ -v
 
 # Verify test coverage
-pixi run -e analysis pytest tests/unit/analysis/ --cov=scylla/analysis --cov-report=html
+pixi run pytest tests/unit/analysis/ --cov=scylla/analysis --cov-report=html
 ```
 
 ### Check Outputs

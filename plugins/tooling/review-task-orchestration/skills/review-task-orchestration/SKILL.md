@@ -283,10 +283,10 @@ gh pr merge --auto --rebase
 ### Test Verification
 
 ```bash
-pixi run -e analysis pytest tests/unit/analysis/ -v
+pixi run pytest tests/unit/analysis/ -v
 # 119 passed, 1 warning in 3.92s
 
-pixi run -e analysis pytest tests/unit/analysis/test_dataframes.py tests/unit/analysis/test_loader.py tests/unit/analysis/test_figures.py -v
+pixi run pytest tests/unit/analysis/test_dataframes.py tests/unit/analysis/test_loader.py tests/unit/analysis/test_figures.py -v
 # Verify new tests: 4 + 8 + 8 = 20 new tests
 ```
 

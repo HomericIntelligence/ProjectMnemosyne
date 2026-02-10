@@ -46,7 +46,7 @@ Use this skill when you need to:
 claude --version
 
 # 2. Verify analysis environment dependencies
-pixi run -e analysis python -c "import pandas, altair, scipy, krippendorff; print('OK')"
+pixi run python -c "import pandas, altair, scipy, krippendorff; print('OK')"
 
 # 3. Verify clean slate (new experiment directory should not exist)
 ls ~/fullruns/test001-dryrun2 2>/dev/null && echo "WARNING: Directory exists" || echo "OK: Clean slate"
@@ -119,7 +119,7 @@ ls ~/fullruns/test001-dryrun2/*/T{0,1,2,3,4,5,6}/
 ```bash
 cd /home/mvillmow/ProjectScylla
 
-pixi run -e analysis python scripts/generate_all_results.py \
+pixi run python scripts/generate_all_results.py \
   --data-dir ~/fullruns \
   --output-dir docs/paper-dryrun2 \
   --exclude test001-dryrun test001-nothinking test001-nothinking-haiku
@@ -207,7 +207,7 @@ cd /home/mvillmow/ProjectScylla/docs
 tar -xzf dryrun-analysis.tar.gz  # Creates docs/paper-dryrun/
 
 # 2. Regenerate analysis from original experiment
-pixi run -e analysis python scripts/generate_all_results.py \
+pixi run python scripts/generate_all_results.py \
   --data-dir ~/fullruns \
   --output-dir docs/paper-dryrun-regenerated \
   --exclude test001-dryrun2 test001-nothinking test001-nothinking-haiku
@@ -256,7 +256,7 @@ Always use full model IDs:
 **What we tried:**
 Running analysis without filtering out other experiments:
 ```bash
-pixi run -e analysis python scripts/generate_all_results.py \
+pixi run python scripts/generate_all_results.py \
   --data-dir ~/fullruns \
   --output-dir docs/paper-dryrun2
 ```

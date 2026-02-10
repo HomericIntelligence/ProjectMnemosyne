@@ -74,7 +74,7 @@ pixi run python scripts/run_e2e_experiment.py \
 
 **Command:**
 ```bash
-pixi run -e analysis python scripts/generate_all_results.py \
+pixi run python scripts/generate_all_results.py \
   --data-dir ~/fullruns \
   --output-dir docs/paper-dryrun2 \
   --exclude test001-dryrun test001-nothinking test001-nothinking-haiku

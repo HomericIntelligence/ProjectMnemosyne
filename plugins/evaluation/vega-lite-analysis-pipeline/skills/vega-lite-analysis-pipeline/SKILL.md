@@ -556,18 +556,18 @@ analysis = { features = ["dev", "analysis"], solve-group = "default" }
 
 ```bash
 # Install environment
-pixi install -e analysis
+pixi install
 
 # Generate everything
-pixi run -e analysis python scripts/generate_all_results.py
+pixi run python scripts/generate_all_results.py
 
 # Generate with PNG/PDF rendering
-pixi run -e analysis python scripts/generate_all_results.py --no-render=false
+pixi run python scripts/generate_all_results.py --no-render=false
 
 # Generate specific components
-pixi run -e analysis python scripts/export_data.py       # Data only
-pixi run -e analysis python scripts/generate_figures.py  # Figures only
-pixi run -e analysis python scripts/generate_tables.py   # Tables only
+pixi run python scripts/export_data.py       # Data only
+pixi run python scripts/generate_figures.py  # Figures only
+pixi run python scripts/generate_tables.py   # Tables only
 
 # View outputs
 # - Data: docs/data/*.csv (Excel, Python, R)

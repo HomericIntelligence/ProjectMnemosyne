@@ -51,7 +51,7 @@ gh issue create --title "P1: Render PNG/PDF figures" --label "P1,reporting"
 git checkout -b 324-integrate-impl-rate-statistical-tests
 # Edit scripts/export_data.py
 # Edit tests/unit/analysis/test_export_data.py
-pixi run -e analysis pytest tests/unit/analysis/test_export_data.py -v
+pixi run pytest tests/unit/analysis/test_export_data.py -v
 git commit -m "feat(metrics): Integrate Impl-Rate into statistical tests"
 git push -u origin 324-integrate-impl-rate-statistical-tests
 gh pr create --title "feat(metrics): Integrate Impl-Rate" --label "P1,metrics"
@@ -62,7 +62,7 @@ git checkout main && git pull
 git checkout -b 325-integrate-cop-frontier-cop
 # Edit scripts/export_data.py (add CoP imports, tier_descriptives)
 # Create tests/unit/analysis/test_cop_integration.py
-pixi run -e analysis pytest tests/unit/analysis/test_cop_integration.py -xvs
+pixi run pytest tests/unit/analysis/test_cop_integration.py -xvs
 git commit -m "feat(metrics): Integrate CoP and Frontier CoP"
 git push -u origin 325-integrate-cop-frontier-cop
 gh pr create --title "feat(metrics): Integrate CoP/Frontier CoP" --label "P1,metrics,pricing"
@@ -75,7 +75,7 @@ git checkout -b 326-327-process-latency-metrics-documentation
 git commit -m "docs(metrics): Document process and latency metrics"
 # Edit scripts/export_data.py (add duration_seconds)
 # Create tests/unit/analysis/test_duration_integration.py
-pixi run -e analysis pytest tests/unit/analysis/test_duration_integration.py -xvs
+pixi run pytest tests/unit/analysis/test_duration_integration.py -xvs
 git commit -m "feat(metrics): Integrate duration_seconds"
 git push -u origin 326-327-process-latency-metrics-documentation
 gh pr edit 333 --title "feat(metrics): Duration + Documentation"
@@ -103,7 +103,7 @@ gh pr edit 333 --title "feat(metrics): Duration + Documentation"
 
 ```bash
 # Final test run
-pixi run -e analysis pytest tests/unit/analysis/test_export_data.py \
+pixi run pytest tests/unit/analysis/test_export_data.py \
   tests/unit/analysis/test_cop_integration.py \
   tests/unit/analysis/test_duration_integration.py -v
 

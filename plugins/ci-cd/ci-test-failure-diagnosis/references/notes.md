@@ -120,7 +120,7 @@ python -m pytest tests/unit/analysis/test_integration.py
 # ModuleNotFoundError: No module named 'pandas'
 
 # Passed locally (correct environment):
-pixi run -e analysis pytest tests/unit/analysis/test_integration.py
+pixi run pytest tests/unit/analysis/test_integration.py
 # All tests PASSED
 ```
 
@@ -128,7 +128,7 @@ Checked GitHub workflow:
 ```yaml
 # .github/workflows/test.yml
 if [[ "$TEST_PATH" == "tests/unit" ]]; then
-  pixi run -e analysis pytest "$TEST_PATH" -v
+  pixi run pytest "$TEST_PATH" -v
 ```
 
 CI is using correct environment!
@@ -214,7 +214,7 @@ ModuleNotFoundError: No module named 'pandas'
 
 **Fix**: Check `pixi.toml` and use correct environment:
 ```bash
-pixi run -e analysis pytest tests/unit/analysis/
+pixi run pytest tests/unit/analysis/
 ```
 
 ## Files Modified
@@ -247,7 +247,7 @@ Read scylla/config/pricing.py
 # Local testing
 ruff check tests/unit/e2e/test_tier_manager.py
 python -m pytest tests/unit/config/test_pricing.py::TestCalculateCost::test_with_cached_tokens -v
-pixi run -e analysis pytest tests/unit/analysis/test_integration.py -v
+pixi run pytest tests/unit/analysis/test_integration.py -v
 
 # Git operations
 git branch --show-current

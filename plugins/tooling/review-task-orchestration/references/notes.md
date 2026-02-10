@@ -144,7 +144,7 @@ docs/dev/
 
 ```bash
 # Final test run
-pixi run -e analysis pytest tests/unit/analysis/test_dataframes.py tests/unit/analysis/test_loader.py tests/unit/analysis/test_figures.py -v
+pixi run pytest tests/unit/analysis/test_dataframes.py tests/unit/analysis/test_loader.py tests/unit/analysis/test_figures.py -v
 
 # Output:
 # ======================== 119 passed, 1 warning in 3.92s ========================
