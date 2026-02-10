@@ -482,7 +482,7 @@ git checkout main
 ### Testing
 ```bash
 # Run analysis tests
-pixi run -e analysis pytest tests/unit/analysis/ -v
+pixi run pytest tests/unit/analysis/ -v
 
 # Run all tests
 pixi run test
@@ -494,7 +494,7 @@ pre-commit run --all-files
 ### Verification
 ```bash
 # Regenerate all outputs
-pixi run -e analysis python scripts/generate_all_results.py
+pixi run python scripts/generate_all_results.py
 
 # Check git status
 git status

@@ -444,10 +444,10 @@ gh pr create --issue <number> --body "Closes #<number>"
 gh pr merge --auto --rebase
 
 # Testing
-pixi run -e analysis pytest tests/unit/analysis/ -v
+pixi run pytest tests/unit/analysis/ -v
 
 # Verification
-pixi run -e analysis python scripts/generate_all_results.py
+pixi run python scripts/generate_all_results.py
 pre-commit run --all-files
 ```
 

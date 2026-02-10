@@ -121,7 +121,7 @@ Use this skill when:
    ```bash
    pixi run pytest <test_path> -v
    # OR with specific environment:
-   pixi run -e analysis pytest <test_path> -v
+   pixi run pytest <test_path> -v
    ```
 
 ### Phase 3: Identify Pre-Existing Issues
@@ -193,7 +193,7 @@ git branch --show-current  # Check before commit
 pytest tests/unit/analysis/
 
 # Correct:
-pixi run -e analysis pytest tests/unit/analysis/
+pixi run pytest tests/unit/analysis/
 ```
 
 **Lesson**: Check `pixi.toml` for feature-specific environments:
@@ -212,7 +212,7 @@ analysis = { features = ["dev", "analysis"] }
 **What happened**: Analysis tests failing in CI but passing locally.
 
 **Investigation findings**:
-- Tests pass: `pixi run -e analysis pytest tests/unit/analysis/test_integration.py -v`
+- Tests pass: `pixi run pytest tests/unit/analysis/test_integration.py -v`
 - CI uses correct environment (verified in `.github/workflows/test.yml`)
 - Main branch has been failing for 24+ hours
 - Functions don't write output files in CI but work locally
@@ -322,7 +322,7 @@ gh run list --branch main --workflow test.yml --status success --limit 1
 ruff check <file>
 pre-commit run --all-files
 pixi run pytest <test_path> -v
-pixi run -e analysis pytest tests/unit/analysis/ -v
+pixi run pytest tests/unit/analysis/ -v
 
 # Fix workflow (when on wrong branch)
 git branch --show-current

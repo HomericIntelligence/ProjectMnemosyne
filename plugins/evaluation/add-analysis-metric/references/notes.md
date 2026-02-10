@@ -251,16 +251,16 @@ grep -r "impl.?rate" --include="*.py" --include="*.md"
 find ~/fullruns -name "judgment.json" | head -1 | xargs cat | jq '.'
 
 # Test new function
-pixi run -e analysis pytest tests/unit/analysis/test_stats.py::test_compute_impl_rate -xvs
+pixi run pytest tests/unit/analysis/test_stats.py::test_compute_impl_rate -xvs
 
 # Test dataframes integration
-pixi run -e analysis pytest tests/unit/analysis/test_dataframes.py -xvs
+pixi run pytest tests/unit/analysis/test_dataframes.py -xvs
 
 # Test tables integration
-pixi run -e analysis pytest tests/unit/analysis/test_tables.py -xvs
+pixi run pytest tests/unit/analysis/test_tables.py -xvs
 
 # Run all analysis tests
-pixi run -e analysis pytest tests/unit/analysis/ -q
+pixi run pytest tests/unit/analysis/ -q
 
 # Git workflow
 git checkout -b implement-impl-rate

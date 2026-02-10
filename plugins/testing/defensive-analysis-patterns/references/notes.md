@@ -130,20 +130,20 @@ def safe_float(value, default=0.0):
 
 ```bash
 # Test parametrized tests
-pixi run -e analysis pytest tests/unit/analysis/test_stats_parametrized.py -v
+pixi run pytest tests/unit/analysis/test_stats_parametrized.py -v
 
 # Test export tests
-pixi run -e analysis pytest tests/unit/analysis/test_export_data.py -v
+pixi run pytest tests/unit/analysis/test_export_data.py -v
 
 # Full analysis suite
-pixi run -e analysis pytest tests/unit/analysis/ -v
+pixi run pytest tests/unit/analysis/ -v
 
 # Create PRs
 gh pr create --title "..." --body-file /tmp/pr_body.txt --label enhancement
 gh pr merge --auto --rebase
 
 # Debug Holm-Bonferroni
-pixi run -e analysis python3 -c "
+pixi run python3 -c "
 from scylla.analysis.stats import holm_bonferroni_correction
 p_values = [0.001, 0.01, 0.03, 0.04]
 corrected = holm_bonferroni_correction(p_values)

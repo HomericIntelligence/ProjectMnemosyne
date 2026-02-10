@@ -21,7 +21,7 @@
 ## Dependencies Installed
 
 ```bash
-pixi install -e analysis
+pixi install
 ```
 
 Adds: pandas, numpy, scipy, matplotlib, seaborn, altair, vl-convert-python

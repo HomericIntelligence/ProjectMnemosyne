@@ -39,7 +39,7 @@ Use defensive analysis patterns when:
 Run analysis on real data to discover issues:
 
 ```bash
-pixi run -e analysis python scripts/generate_all_results.py \
+pixi run python scripts/generate_all_results.py \
   --data-dir ~/fullruns \
   --output-dir results/analysis
 ```
@@ -261,7 +261,7 @@ gh pr merge --auto --rebase
 **Fix**: Test the actual behavior by running the function first:
 
 ```bash
-pixi run -e analysis python3 -c "
+pixi run python3 -c "
 from scylla.analysis.stats import holm_bonferroni_correction
 p_values = [0.001, 0.01, 0.03, 0.04]
 corrected = holm_bonferroni_correction(p_values)
@@ -303,7 +303,7 @@ Then update test expectations to match reality.
 **What we tried**: Run full test suite with `pytest tests/unit/analysis/`:
 
 ```bash
-pixi run -e analysis pytest tests/unit/analysis/ -v
+pixi run pytest tests/unit/analysis/ -v
 # FAILED: 3 integration tests fail
 ```
 
@@ -313,10 +313,10 @@ pixi run -e analysis pytest tests/unit/analysis/ -v
 
 ```bash
 # Run individually - PASSES
-pixi run -e analysis pytest tests/unit/analysis/test_integration.py -v
+pixi run pytest tests/unit/analysis/test_integration.py -v
 
 # Run with full suite - FAILS
-pixi run -e analysis pytest tests/unit/analysis/ -v
+pixi run pytest tests/unit/analysis/ -v
 ```
 
 **Root cause**: Likely shared state or configuration modified by earlier tests.
@@ -371,15 +371,15 @@ colors:
 
 ```bash
 # Run all new parametrized tests
-pixi run -e analysis pytest tests/unit/analysis/test_stats_parametrized.py -v
+pixi run pytest tests/unit/analysis/test_stats_parametrized.py -v
 # ============================== 63 passed in 0.61s ===============================
 
 # Run expanded export tests
-pixi run -e analysis pytest tests/unit/analysis/test_export_data.py -v
+pixi run pytest tests/unit/analysis/test_export_data.py -v
 # ============================== 8 passed in 0.92s ===============================
 
 # Run full analysis test suite
-pixi run -e analysis pytest tests/unit/analysis/ -v
+pixi run pytest tests/unit/analysis/ -v
 # =================== 309 passed, 6 warnings in 3.93s ============================
 ```
 
