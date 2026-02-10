@@ -41,8 +41,9 @@ Or configure auto-trigger on session end (see Hooks section).
    - `.claude-plugin/plugin.json` with metadata
    - `skills/<name>/SKILL.md` with:
      - ✅ **YAML frontmatter** (starts with `---`)
-     - ✅ **Overview section** with table
-     - ✅ **Failed Attempts table** (not prose)
+     - ✅ **Overview section** with table (must have `## Overview` header)
+     - ✅ **Failed Attempts table** with pipe (`|`) characters (subsections with `###` or prose alone will FAIL CI)
+     - ✅ **Verified Workflow section** (not just "## Workflow")
      - ✅ All other required sections
    - `references/notes.md` with raw details
 5. **Create PR**:
@@ -114,7 +115,9 @@ date: YYYY-MM-DD
 
 ### 3. Failed Attempts Table (REQUIRED)
 
-**Failed Attempts MUST be in table format, not prose:**
+**Failed Attempts MUST be in table format with pipe (`|`) characters. This is enforced by CI validation.**
+
+**✅ CORRECT FORMAT (use this):**
 
 ```markdown
 ## Failed Attempts
@@ -123,12 +126,42 @@ date: YYYY-MM-DD
 |---------|----------------|---------------|----------------|
 | **Approach 1** | Description of what was tried | Why it didn't work | What you learned |
 | **Approach 2** | Another attempt | Reason for failure | Key insight |
+| **Approach 3** | Third attempt if applicable | Failure reason | Insight gained |
 ```
 
-**Common failures**:
-- Writing prose paragraphs instead of a table
-- Omitting the section entirely
-- Using subsections (###) instead of a single table
+**❌ INCORRECT FORMATS (will fail CI):**
+
+```markdown
+## Failed Attempts
+
+### ❌ Attempt 1: First approach
+We tried X but it failed because Y...
+
+### ❌ Attempt 2: Second approach
+Another approach that didn't work...
+```
+
+```markdown
+## Failed Attempts
+
+We tried several approaches but they all failed for various reasons...
+```
+
+**Key requirement**: The section MUST contain at least one pipe character (`|`) to form a table. Subsections with `###` or plain prose paragraphs will **fail CI validation**.
+
+**Best practice**: If you have detailed subsections, add a summary table at the top, then include detailed subsections below:
+
+```markdown
+## Failed Attempts
+
+| Attempt | Issue | Details |
+|---------|-------|---------|
+| Approach 1 | Error X occurred | See subsection below |
+| Approach 2 | Performance issue | See subsection below |
+
+### ❌ Attempt 1: Detailed Analysis
+[Detailed explanation here...]
+```
 
 ### 4. Results & Parameters Section (RECOMMENDED)
 
@@ -221,7 +254,7 @@ Auto-prompt retrospective on session end:
 ### CI-Enforced (Will Fail Build)
 - [ ] **YAML frontmatter** at the top with `---` delimiters
 - [ ] **Overview section** with `## Overview` header and table
-- [ ] **Failed Attempts table** (not prose paragraphs)
+- [ ] **Failed Attempts table** with pipe (`|`) characters (prose paragraphs or `###` subsections alone will FAIL)
 - [ ] **Proper markdown formatting** (no malformed tables)
 
 ### Quality Requirements (Best Practices)
