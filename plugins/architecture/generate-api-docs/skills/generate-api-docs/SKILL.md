@@ -8,6 +8,15 @@ tier: 2
 
 # Generate API Docs
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Extract docstrings from functions and classes to automatically generate API reference documentation. - Documenting public module interfaces |
+| Outcome | Operational |
+
+
 Extract docstrings from functions and classes to automatically generate API reference documentation.
 
 ## When to Use
@@ -31,7 +40,7 @@ make -C docs html
 python3 -c "import module; help(module.function)"
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Ensure docstrings**: Verify all public functions/classes have docstrings
 2. **Validate format**: Check docstring format (Google, NumPy, or reStructuredText)
@@ -56,6 +65,11 @@ API documentation:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

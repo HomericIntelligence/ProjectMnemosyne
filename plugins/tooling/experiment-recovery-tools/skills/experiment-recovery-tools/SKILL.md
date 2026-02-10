@@ -7,6 +7,15 @@ user-invocable: false
 ---
 # Skill: Experiment Recovery Tools
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | 2026-01-29 |
+| Objective | | Property | Value | |----------|-------| | **Date** | 2026-01-29 | | **Objective** | Build scripts to selectively re-run failed/incomplete agents ... |
+| Outcome | Operational |
+
+
 | Property | Value |
 |----------|-------|
 | **Date** | 2026-01-29 |
@@ -153,6 +162,10 @@ regen_stats = regenerate_experiment(
 ```
 
 ## Failed Attempts & Lessons Learned
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Failed: Initial Classification Didn't Check agent/result.json
 

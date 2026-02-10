@@ -6,6 +6,15 @@ user-invocable: false
 
 # Skill: Split Figures Per Tier
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | | Field | Value | |-------|-------| | **Date** | 2026-02-08 | | **Objective** | Fix figure generation failures caused by Altair's 5,000-row dataset... |
+| Outcome | Operational |
+
+
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-02-08 |
@@ -177,6 +186,11 @@ corr_df.to_csv(corr_csv_path, index=False)  # NameError!
 ```
 
 ## Failed Attempts
+
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
 
 ### ❌ Attempt 1: Keep Faceting on Full Dataset
 

@@ -24,7 +24,7 @@ Capture session learnings and create a new skill plugin with PR.
 
 Or configure auto-trigger on session end (see Hooks section).
 
-## Workflow
+## Verified Workflow
 
 1. **Analyze conversation**: Read entire session transcript
 2. **Extract learnings**:

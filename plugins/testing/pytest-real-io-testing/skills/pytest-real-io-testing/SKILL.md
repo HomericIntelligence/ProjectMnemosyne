@@ -7,6 +7,15 @@ user-invocable: false
 ---
 # Skill: Replace Pytest Mocks with Real File I/O
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | 2026-02-05 |
+| Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-02-05 | | **Objective** | Fix test isolation issues by removing mocks and using real ... |
+| Outcome | Operational |
+
+
 | Attribute | Value |
 |-----------|-------|
 | **Date** | 2026-02-05 |
@@ -276,6 +285,11 @@ pixi run pytest tests/unit/analysis/ -v --tb=short | grep "passed"
 - ✅ All tests use `tmp_path` instead of mocks
 
 ## Failed Attempts
+
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
 
 ### ❌ Attempt 1: Keep `clear_patches` Fixture
 

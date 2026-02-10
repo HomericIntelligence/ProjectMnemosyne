@@ -8,6 +8,15 @@ deprecated: true
 
 # Regenerate GitHub Issues Skill (DEPRECATED)
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | **DEPRECATED**: This skill is no longer used. The `notes/plan/` directory has been removed. Planning is now done directly through GitHub issues. |
+| Outcome | Operational |
+
+
 **DEPRECATED**: This skill is no longer used. The `notes/plan/` directory has been removed.
 Planning is now done directly through GitHub issues.
 
@@ -59,7 +68,7 @@ python3 scripts/regenerate_github_issues.py --section 01-foundation
 ./scripts/regenerate_single_issue.sh notes/plan/01-foundation/plan.md
 ```
 
-## Workflow
+## Verified Workflow
 
 ```bash
 # 1. Edit plan.md
@@ -154,6 +163,11 @@ python3 scripts/regenerate_github_issues.py --section 02-shared-library
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

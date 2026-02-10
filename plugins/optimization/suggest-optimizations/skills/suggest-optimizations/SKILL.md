@@ -8,6 +8,15 @@ tier: 2
 
 # Suggest Optimizations
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Analyze code and profile data to recommend optimization strategies for improving performance and resource usage. |
+| Outcome | Operational |
+
+
 Analyze code and profile data to recommend optimization strategies for improving performance and resource usage.
 
 ## When to Use
@@ -31,7 +40,7 @@ Analyze code and profile data to recommend optimization strategies for improving
 python3 -m cProfile -s cumulative script.py | head -20
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Profile critical paths**: Identify functions consuming most time/memory
 2. **Analyze algorithms**: Check time/space complexity, look for inefficiencies
@@ -55,6 +64,11 @@ Optimization recommendation:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

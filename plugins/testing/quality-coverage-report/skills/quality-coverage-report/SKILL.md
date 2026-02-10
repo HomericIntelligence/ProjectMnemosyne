@@ -7,6 +7,15 @@ category: quality
 
 # Test Coverage Report Skill
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Generate and analyze test coverage reports. - After running tests - Before creating PR - Identifying untested code |
+| Outcome | Operational |
+
+
 Generate and analyze test coverage reports.
 
 ## When to Use
@@ -16,7 +25,9 @@ Generate and analyze test coverage reports.
 - Identifying untested code
 - Improving test coverage
 
-## Quick Reference
+## Verified Workflow
+
+### Quick Reference
 
 ```bash
 # Python coverage
@@ -125,6 +136,11 @@ pytest --cov=src --cov-report=html tests/
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

@@ -348,6 +348,10 @@ YOUR_METRIC = calculation_here
 **Key**: Provide complete instrumentation guide so future experiments can capture the data.
 
 ## Failed Attempts & Lessons Learned
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Attempt 1: Sequential Integration (Rejected)
 

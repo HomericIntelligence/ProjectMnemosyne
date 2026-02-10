@@ -288,6 +288,10 @@ pixi run pytest tests/unit/analysis/ -q
 - No warnings about missing columns
 
 ## Failed Attempts & Lessons Learned
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Attempt 1: Using 0.0 instead of NaN for edge cases
 

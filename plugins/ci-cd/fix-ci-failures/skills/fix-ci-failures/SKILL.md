@@ -7,6 +7,15 @@ category: ci
 
 # Fix CI Failures Skill
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Diagnose and fix CI failures systematically. - CI checks fail on PR - Workflow runs fail - Tests pass locally but fail in CI |
+| Outcome | Operational |
+
+
 Diagnose and fix CI failures systematically.
 
 ## When to Use
@@ -29,7 +38,7 @@ gh run view <run-id> --log-failed
 ./scripts/reproduce_ci.sh <run-id>
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Check status** - View failed PR checks
 2. **Get logs** - Download or view failure details
@@ -109,6 +118,11 @@ gh pr checks 123 --watch
 - Run tests locally
 - Check formatting before commit
 - Review CI logs regularly
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

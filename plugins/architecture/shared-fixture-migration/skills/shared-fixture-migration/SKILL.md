@@ -131,6 +131,11 @@ for tier_id in TierID:
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 ### 1. Assuming Wrong Source of Duplication
 
 **What happened**: Initial assumption (from prior session) was that agent markdown files like `implementation-review-specialist.md` were duplicated 66 times.

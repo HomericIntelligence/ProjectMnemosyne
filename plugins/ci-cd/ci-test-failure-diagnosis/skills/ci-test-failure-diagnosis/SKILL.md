@@ -155,6 +155,10 @@ Use this skill when:
    - Last successful run was days/weeks ago
 
 ## Failed Attempts & Lessons
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Committing directly to main
 

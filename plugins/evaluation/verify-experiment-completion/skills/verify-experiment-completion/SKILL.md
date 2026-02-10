@@ -7,6 +7,15 @@ user-invocable: false
 ---
 # Verify E2E Experiment Completion
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | 2026-02-05 |
+| Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-02-05 | | **Objective** | Verify two full experiment runs were complete and ready for... |
+| Outcome | Operational |
+
+
 ## Session Overview
 
 | Attribute | Value |
@@ -189,6 +198,11 @@ cd ~/ProjectScylla && pixi run python scripts/run_e2e_experiment.py \
 ```
 
 ## Failed Attempts
+
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
 
 ### ❌ Attempt 1: Using rerun_judges.py --regenerate-only
 

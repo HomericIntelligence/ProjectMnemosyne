@@ -8,6 +8,15 @@ tier: 2
 
 # Check Dependencies
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Verify that required dependencies are installed and compatible with the project requirements. - Setting up development environment |
+| Outcome | Operational |
+
+
 Verify that required dependencies are installed and compatible with the project requirements.
 
 ## When to Use
@@ -31,7 +40,7 @@ pixi info
 pixi task list
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **List requirements**: Identify all declared dependencies (pixi.toml, requirements.txt)
 2. **Verify installation**: Check that all packages are installed and importable
@@ -54,6 +63,11 @@ Dependency validation report:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

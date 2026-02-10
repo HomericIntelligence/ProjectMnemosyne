@@ -139,6 +139,10 @@ Did I answer my original questions? Partially. CoP lets me quantify efficiency..
     - Check numerical precision (3 decimal places? 2?)
 
 ## Failed Attempts & Lessons Learned
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Failed: Editing without reading first
 

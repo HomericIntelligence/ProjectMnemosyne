@@ -6,6 +6,15 @@ category: review
 
 # Review PR Changes with Checklist
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Perform structured review of PR changes against project quality standards. - Code review before approving PR |
+| Outcome | Operational |
+
+
 Perform structured review of PR changes against project quality standards.
 
 ## When to Use
@@ -16,7 +25,9 @@ Perform structured review of PR changes against project quality standards.
 - Verifying test coverage
 - Assessing architectural impact
 
-## Quick Reference
+## Verified Workflow
+
+### Quick Reference
 
 ```bash
 # Get PR files changed
@@ -188,6 +199,11 @@ Comment when:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

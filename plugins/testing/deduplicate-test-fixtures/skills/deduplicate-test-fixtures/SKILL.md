@@ -112,6 +112,11 @@ du -sh tests/fixtures/
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 ### 1. Misidentified Source of Duplication
 
 **What happened**: Initial assumption was that agent markdown files (e.g., `implementation-review-specialist.md`) were duplicated 66 times.

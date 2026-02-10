@@ -6,6 +6,15 @@ category: github
 
 # Review Pull Request
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Evaluate PR quality and provide structured feedback. - Reviewing a PR before merge - Evaluating code quality and standards |
+| Outcome | Operational |
+
+
 Evaluate PR quality and provide structured feedback.
 
 ## When to Use
@@ -42,7 +51,7 @@ gh api repos/OWNER/REPO/pulls/PR/comments
 - [ ] Documentation updated if needed
 - [ ] No unintended files included
 
-## Workflow
+## Verified Workflow
 
 1. **Get PR info**: `gh pr view <pr>`
 2. **Review diff**: `gh pr diff <pr>`
@@ -105,6 +114,11 @@ Provide review with sections:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

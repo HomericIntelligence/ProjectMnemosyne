@@ -8,6 +8,15 @@ tier: 2
 
 # Calculate Coverage
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Measure code coverage percentage and identify which code paths are untested to ensure comprehensive testing. |
+| Outcome | Operational |
+
+
 Measure code coverage percentage and identify which code paths are untested to ensure comprehensive testing.
 
 ## When to Use
@@ -31,7 +40,7 @@ open htmlcov/index.html
 coverage report --fail-under=80
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Install coverage tool**: Set up measurement infrastructure
 2. **Run tests with coverage**: Execute test suite capturing coverage data
@@ -54,6 +63,11 @@ Coverage analysis:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

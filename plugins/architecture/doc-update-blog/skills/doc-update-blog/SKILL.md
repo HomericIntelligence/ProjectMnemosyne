@@ -7,6 +7,15 @@ category: doc
 
 # Update Progress Blog Skill
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Document progress and technical learnings in blog format. - Completed major milestone - Finished implementation phase |
+| Outcome | Operational |
+
+
 Document progress and technical learnings in blog format.
 
 ## When to Use
@@ -16,7 +25,9 @@ Document progress and technical learnings in blog format.
 - Learned something significant
 - Major refactoring or optimization completed
 
-## Quick Reference
+## Verified Workflow
+
+### Quick Reference
 
 ```bash
 cat > notes/blog/MM-DD-YYYY.md << 'EOF'
@@ -106,6 +117,11 @@ EOF
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

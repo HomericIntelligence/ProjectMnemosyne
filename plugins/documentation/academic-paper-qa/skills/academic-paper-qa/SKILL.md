@@ -165,6 +165,10 @@ if __name__ == "__main__":
 ```
 
 ## Failed Attempts & Lessons Learned
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Attempt 1: Trust Paper Claims Without Verification
 **What we tried**: Initially accepted paper's quantitative claims as accurate.

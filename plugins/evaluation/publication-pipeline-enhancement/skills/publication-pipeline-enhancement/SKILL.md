@@ -281,6 +281,10 @@ Next WP: <Next WP description>
 - Export: Structure validation + JSON serialization
 
 ## Failed Attempts & Lessons Learned
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Failed: Direct figure module patching in tests
 

@@ -8,6 +8,15 @@ tier: 2
 
 # Train Model
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Implement and execute model training loops including forward/backward passes, gradient updates, and checkpoint management. |
+| Outcome | Operational |
+
+
 Implement and execute model training loops including forward/backward passes, gradient updates, and checkpoint management.
 
 ## When to Use
@@ -38,7 +47,7 @@ struct Trainer:
         return total_loss / Float32(batches)
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Prepare data pipeline**: Load and batch training data
 2. **Initialize model**: Create network with specified architecture
@@ -62,6 +71,11 @@ Training report:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

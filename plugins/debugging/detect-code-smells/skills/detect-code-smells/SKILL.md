@@ -8,6 +8,15 @@ tier: 2
 
 # Detect Code Smells
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Identify code quality issues, anti-patterns, and maintainability problems that suggest need for refactoring. |
+| Outcome | Operational |
+
+
 Identify code quality issues, anti-patterns, and maintainability problems that suggest need for refactoring.
 
 ## When to Use
@@ -27,7 +36,7 @@ radon cc -a module.py  # Cyclomatic complexity
 radon mi -s module.py  # Maintainability index
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Scan for patterns**: Identify common code smell patterns (long functions, duplication, magic numbers)
 2. **Check complexity**: Measure cyclomatic and cognitive complexity
@@ -50,6 +59,11 @@ Code quality report:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

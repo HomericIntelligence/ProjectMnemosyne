@@ -8,6 +8,15 @@ tier: 2
 
 # Identify Architecture
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Analyze and document machine learning model architectures including layers, connections, and information flow. |
+| Outcome | Operational |
+
+
 Analyze and document machine learning model architectures including layers, connections, and information flow.
 
 ## When to Use
@@ -30,7 +39,7 @@ Analyze and document machine learning model architectures including layers, conn
 # print(model)  # Should show layer information
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Locate architecture diagram**: Find visual architecture representation in paper
 2. **List layers**: Enumerate all layers with type and parameters
@@ -55,6 +64,11 @@ Architecture documentation:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

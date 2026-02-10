@@ -7,6 +7,15 @@ user-invocable: false
 ---
 # Skill: Fix CI Test Failures
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | 2026-01-17 |
+| Objective | | Property | Value | |----------|-------| | **Date** | 2026-01-17 | | **Objective** | Fix 6 unit tests passing locally but failing in CI due to env... |
+| Outcome | Operational |
+
+
 | Property | Value |
 |----------|-------|
 | **Date** | 2026-01-17 |
@@ -123,6 +132,11 @@ gh pr create --title "fix(tests): fix 6 CI test failures" --body "..."
 ```
 
 ## Failed Attempts
+
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
 
 ### ❌ Attempt 1: Ignore the failures (assumed pre-existing)
 **What we tried**: Check if main branch has same failures, assume they're pre-existing issues

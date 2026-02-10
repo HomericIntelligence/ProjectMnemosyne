@@ -7,6 +7,15 @@ user-invocable: false
 ---
 # Adding JSON Links to Markdown Reports
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | 2026-01-08 |
+| Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-01-08 | | **Objective** | Add links to JSON result files in markdown reports for easy... |
+| Outcome | Operational |
+
+
 | Attribute | Value |
 |-----------|-------|
 | **Date** | 2026-01-08 |
@@ -136,6 +145,11 @@ pixi run pytest tests/unit/reporting/test_markdown.py -v
 **Expected**: All tests should pass (28/28) since we're only adding, not changing existing content.
 
 ## Failed Attempts
+
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
 
 ### ❌ Attempt 1: Using Task Tool for Exploration
 

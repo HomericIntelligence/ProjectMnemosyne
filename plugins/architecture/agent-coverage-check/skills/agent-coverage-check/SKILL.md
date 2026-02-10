@@ -7,6 +7,15 @@ category: agent
 
 # Agent Coverage Check
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Verify complete agent system coverage across all dimensions. - After adding new agents to system - Validating agent system completeness |
+| Outcome | Operational |
+
+
 Verify complete agent system coverage across all dimensions.
 
 ## When to Use
@@ -16,7 +25,9 @@ Verify complete agent system coverage across all dimensions.
 - Finding gaps in coverage
 - Ensuring all development phases covered
 
-## Quick Reference
+## Verified Workflow
+
+### Quick Reference
 
 ```bash
 # Check all coverage dimensions
@@ -92,6 +103,11 @@ Sections:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

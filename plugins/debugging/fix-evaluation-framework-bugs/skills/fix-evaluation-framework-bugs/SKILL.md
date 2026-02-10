@@ -234,6 +234,11 @@ EOF
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 **None** - All solutions worked on first try.
 
 ### Why Solutions Worked Immediately

@@ -7,6 +7,15 @@ user-invocable: false
 ---
 # Skill: Preserve Workspaces on E2E Experiment Re-runs
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | 2026-01-08 |
+| Objective | | Field | Value | |-------|-------| | **Date** | 2026-01-08 | | **Objective** | Prevent workspace destruction when re-running E2E experiments | |
+| Outcome | Operational |
+
+
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-01-08 |
@@ -114,6 +123,11 @@ else:
 - **Preserves git worktrees**: No branch conflicts or worktree churn
 
 ## Failed Attempts
+
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
 
 ### ❌ Attempt 1: Modify workspace recovery logic only
 

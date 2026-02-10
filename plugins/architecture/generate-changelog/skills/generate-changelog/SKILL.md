@@ -8,6 +8,15 @@ tier: 2
 
 # Generate Changelog
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Automatically extract commit messages and generate formatted changelog entries for release notes and version history. |
+| Outcome | Operational |
+
+
 Automatically extract commit messages and generate formatted changelog entries for release notes and version history.
 
 ## When to Use
@@ -30,7 +39,7 @@ git log --pretty=format:"%h %s" | grep -E "^[a-f0-9]+ (feat|fix|docs|refactor|te
 git log --reverse --pretty=format:"- %s (%h)" > CHANGELOG.md
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Extract commits**: Get commit messages since last release
 2. **Parse convention**: Identify conventional commit types (feat, fix, docs, etc.)
@@ -55,6 +64,11 @@ Changelog entry:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

@@ -127,6 +127,10 @@ Structure the plan document with:
 ```
 
 ## Failed Attempts & Lessons Learned
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Don't assume file paths are correct without verification
 

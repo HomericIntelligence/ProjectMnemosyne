@@ -8,6 +8,15 @@ tier: 2
 
 # Evaluate Model
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Measure machine learning model performance using appropriate metrics for the task (classification, regression, etc.). |
+| Outcome | Operational |
+
+
 Measure machine learning model performance using appropriate metrics for the task (classification, regression, etc.).
 
 ## When to Use
@@ -39,7 +48,7 @@ struct ModelEvaluator:
         ...
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Load test data**: Prepare test/validation dataset
 2. **Generate predictions**: Run model inference on test set
@@ -63,6 +72,11 @@ Evaluation report:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

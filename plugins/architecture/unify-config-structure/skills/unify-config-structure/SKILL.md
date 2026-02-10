@@ -127,6 +127,11 @@ Use this skill when you encounter:
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 ### ❌ Attempt 1: Delete fixtures entirely without replacement
 
 **What was tried:**

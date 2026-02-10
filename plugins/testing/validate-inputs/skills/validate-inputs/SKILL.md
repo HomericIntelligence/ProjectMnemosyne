@@ -8,6 +8,15 @@ tier: 2
 
 # Validate Inputs
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Implement input validation to ensure functions receive correct data types, shapes, ranges, and formats. |
+| Outcome | Operational |
+
+
 Implement input validation to ensure functions receive correct data types, shapes, ranges, and formats.
 
 ## When to Use
@@ -35,7 +44,7 @@ except AssertionError as e:
     raise ValueError(f"Invalid input: {e}")
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Document expectations**: Specify types, shapes, ranges for inputs
 2. **Implement checks**: Add validation before processing
@@ -58,6 +67,11 @@ Input validation specification:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

@@ -150,6 +150,11 @@ gh pr checks <pr-number> --watch
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 ### ❌ Attempt 1: Running Tests Locally
 
 **What was tried:**

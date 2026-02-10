@@ -8,6 +8,15 @@ tags: [docker, ghcr, arm64, pixi, platform, ci]
 
 # Fix Docker Platform Mismatch
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | | Field | Value | |-------|-------| | Date | 2025-12-28 | | Objective | Fix Docker build failures caused by ARM64 platform not supported by pixi.to... |
+| Outcome | Operational |
+
+
 | Field | Value |
 |-------|-------|
 | Date | 2025-12-28 |

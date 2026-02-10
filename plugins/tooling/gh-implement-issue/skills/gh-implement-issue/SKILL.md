@@ -6,6 +6,15 @@ category: github
 
 # Implement GitHub Issue
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Complete workflow for implementing a GitHub issue from start to finish. - Starting work on a new issue |
+| Outcome | Operational |
+
+
 Complete workflow for implementing a GitHub issue from start to finish.
 
 ## When to Use
@@ -38,7 +47,7 @@ git push -u origin <branch>
 gh pr create --issue <issue>
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Read issue context**: `gh issue view <issue> --comments` - understand requirements, prior context
 2. **Create branch**: `git checkout -b <issue>-<description>`
@@ -137,6 +146,11 @@ EOF
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

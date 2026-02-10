@@ -8,6 +8,15 @@ tier: 2
 
 # Analyze Equations
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Extract and parse mathematical equations from research papers to understand computational requirements |
+| Outcome | Operational |
+
+
 Extract and parse mathematical equations from research papers to understand computational requirements
 and implementation details.
 
@@ -25,7 +34,7 @@ and implementation details.
 pdftotext -layout paper.pdf - | grep -E '\$\$|\\begin\{equation\}' | head -20
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Extract equations**: Identify and extract LaTeX/mathematical notation from source documents
 2. **Parse components**: Break down complex equations into primitive operations
@@ -48,6 +57,11 @@ Mathematical analysis document:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

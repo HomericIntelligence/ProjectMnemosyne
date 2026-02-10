@@ -7,6 +7,15 @@ mcp_fallback: none
 
 # Validate Mojo Patterns
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Check Mojo code for correct usage of language patterns and conventions. - Code review to catch pattern violations |
+| Outcome | Operational |
+
+
 Check Mojo code for correct usage of language patterns and conventions.
 
 ## When to Use
@@ -17,7 +26,9 @@ Check Mojo code for correct usage of language patterns and conventions.
 - Checking memory safety patterns
 - Validating trait conformances
 
-## Quick Reference
+## Verified Workflow
+
+### Quick Reference
 
 ```bash
 # Find incorrect constructor patterns
@@ -146,6 +157,11 @@ Report validation results with:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

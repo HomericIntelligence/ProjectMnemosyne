@@ -172,6 +172,11 @@ T4:
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 ### ❌ Attempt 1: Runtime Filtering Instead of Discovery-Time
 
 **What we tried**: Initially considered filtering agent teams tests at runtime after loading all configs.

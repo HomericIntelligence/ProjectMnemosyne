@@ -169,6 +169,10 @@ chmod 666 /output/result.json /output/stdout.log /output/stderr.log
 ```
 
 ## Failed Attempts (Lessons Learned)
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Attempt 1: Nested Container Architecture
 

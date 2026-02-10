@@ -8,6 +8,15 @@ tier: 2
 
 # Profile Code
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Use profiling tools to measure CPU time, memory allocation, and identify performance bottlenecks in code. |
+| Outcome | Operational |
+
+
 Use profiling tools to measure CPU time, memory allocation, and identify performance bottlenecks in code.
 
 ## When to Use
@@ -32,7 +41,7 @@ pip install graphviz
 python3 -m pstats /tmp/profile.prof
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Select profiler**: Choose appropriate tool (cProfile for CPU, memory_profiler for memory)
 2. **Run with instrumentation**: Execute code with profiling enabled
@@ -56,6 +65,11 @@ Profiling report:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

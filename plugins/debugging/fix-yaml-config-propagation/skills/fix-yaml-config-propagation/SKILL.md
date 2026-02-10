@@ -7,6 +7,15 @@ user-invocable: false
 ---
 # Fix YAML Config Propagation
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | 2026-02-05 |
+| Objective | | Field | Value | |-------|-------| | Date | 2026-02-05 | | Objective | Fix T0 subtest 00 missing `--system-prompt ""` flag due to YAML config not ... |
+| Outcome | Operational |
+
+
 ## Session Overview
 
 | Field | Value |
@@ -175,6 +184,11 @@ grep -- "--system-prompt" results/*/T0/01/*/agent/replay.sh     # Should NOT mat
 ```
 
 ## Failed Attempts
+
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
 
 ### ❌ Initial Assumption: Tier-Level Config
 

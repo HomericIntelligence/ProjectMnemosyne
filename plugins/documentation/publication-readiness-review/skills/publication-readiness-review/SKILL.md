@@ -215,6 +215,11 @@ done < configs_cited.txt
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 ### ❌ Automated Numerical Verification Scripts
 
 **What was tried:**

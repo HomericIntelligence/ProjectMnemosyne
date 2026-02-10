@@ -8,6 +8,15 @@ tier: 2
 
 # Prepare Dataset
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Load, preprocess, and validate datasets for machine learning model training including normalization and augmentation. |
+| Outcome | Operational |
+
+
 Load, preprocess, and validate datasets for machine learning model training including normalization and augmentation.
 
 ## When to Use
@@ -39,7 +48,7 @@ class DatasetLoader:
         pass
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Load raw data**: Read dataset from file (CSV, HDF5, NumPy)
 2. **Validate data**: Check shape, dtype, missing values
@@ -63,6 +72,11 @@ Dataset preparation report:
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

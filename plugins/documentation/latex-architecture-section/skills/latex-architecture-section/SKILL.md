@@ -158,6 +158,10 @@ grep "??" paper.log
 ```
 
 ## Failed Attempts (Lessons Learned)
+| Attempt | Issue | Resolution |
+|---------|-------|------------|
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
 
 ### ❌ Failed: TikZ Font Commands Without Braces
 

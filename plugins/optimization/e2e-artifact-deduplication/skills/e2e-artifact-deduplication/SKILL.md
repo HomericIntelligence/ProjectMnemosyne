@@ -7,6 +7,15 @@ outcome: success
 
 # Skill: E2E Artifact Deduplication
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | 2026-01-11 |
+| Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-01-11 | | **Objective** | Consolidate duplicate artifacts in E2E evaluation output | |
+| Outcome | Operational |
+
+
 | Attribute | Value |
 |-----------|-------|
 | **Date** | 2026-01-11 |
@@ -211,6 +220,11 @@ else:
 **Result**: Experiment-level copy ensures reproducibility, run-level symlinks when possible
 
 ## Failed Attempts
+
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
 
 ### ❌ Attempt 1: Writing judge_prompt.md to judge/ subdirectory
 

@@ -7,6 +7,15 @@ user-invocable: false
 
 # Analyze CI Failure Logs
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Parse CI failure logs to identify root causes and categorize errors. - CI pipeline fails and you need to understand why |
+| Outcome | Operational |
+
+
 Parse CI failure logs to identify root causes and categorize errors.
 
 ## When to Use
@@ -33,7 +42,7 @@ grep -i "error\|failed\|panic\|exception" /tmp/ci-output.log
 tail -100 /tmp/ci-output.log | grep -A 5 "FAILED\|ERROR"
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Collect logs**: Download CI artifacts or view workflow run output
 2. **Extract errors**: Filter for error patterns (FAILED, ERROR, PANIC, exception)
@@ -96,6 +105,11 @@ Provide analysis with:
 | Truncated logs | Download full artifact instead of view |
 | Large log files | Use grep to extract relevant sections |
 | Encoded artifacts | Unzip and decompress before analysis |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

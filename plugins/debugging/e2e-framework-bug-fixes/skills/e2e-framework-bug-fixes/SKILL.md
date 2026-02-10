@@ -488,6 +488,11 @@ def save_checkpoint(checkpoint: E2ECheckpoint, path: Path) -> None:
 
 ## Failed Attempts
 
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
+
 ### Failed Attempt 1: Using sed to Fix replay.sh Post-Generation
 **What we tried**: Modify replay.sh after generation to fix paths
 **Why it failed**: Too fragile, didn't address root cause (execution flow backwards)

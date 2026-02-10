@@ -7,6 +7,15 @@ category: mojo
 
 # Mojo Format Skill
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Format Mojo code files to ensure consistent style. - Preparing code for commit - Pre-commit hook reports formatting issues |
+| Outcome | Operational |
+
+
 Format Mojo code files to ensure consistent style.
 
 ## When to Use
@@ -29,7 +38,7 @@ pixi run mojo format `find src/ -name "*.mojo"`
 pixi run mojo format --check path/to/file.mojo
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Identify files** - Single file or directory
 2. **Run formatter** - `pixi run mojo format <path>`
@@ -57,6 +66,11 @@ pixi run mojo format --check path/to/file.mojo
 | Attempt | Why Failed | Lesson |
 |---------|------------|--------|
 | N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

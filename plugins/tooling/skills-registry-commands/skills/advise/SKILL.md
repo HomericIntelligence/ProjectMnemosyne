@@ -6,6 +6,15 @@ user-invocable: false
 
 # /advise
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Search the skills registry for relevant prior learnings before starting work. - Starting a new experiment or task |
+| Outcome | Operational |
+
+
 Search the skills registry for relevant prior learnings before starting work.
 
 ## When to Use
@@ -28,7 +37,7 @@ Examples:
 /advise setting up GitHub Actions for ML
 ```
 
-## Workflow
+## Verified Workflow
 
 1. **Parse user's goal** from the prompt
 2. **Read `marketplace.json`** for available plugins
@@ -105,6 +114,11 @@ Your project needs:
 | Vague search queries | Too many irrelevant results | Encourage users to be specific about context |
 | Reading all SKILL.md files | Performance issues with large registry | Filter by category/tags first, then read |
 | Not showing parameter snippets | Users had to open files manually | Include copy-paste configs in summary |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
 
 ## References
 

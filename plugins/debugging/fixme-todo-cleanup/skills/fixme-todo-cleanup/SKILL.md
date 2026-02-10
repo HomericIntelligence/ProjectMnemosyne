@@ -10,6 +10,15 @@ triggers:
 
 # FIXME/TODO Cleanup Skill
 
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | | Field | Value | |-------|-------| | Date | 2026-01-01 | | Objective | Systematically resolve all FIXME/TODO items in a directory | |
+| Outcome | Operational |
+
+
 | Field | Value |
 |-------|-------|
 | Date | 2026-01-01 |
@@ -76,6 +85,11 @@ gh run rerun <run-id> --failed
 ```
 
 ## Failed Attempts
+
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| Initial approach | See details below | Refer to notes in this section |
 
 ### 1. `@value` to `@fieldwise_init` Migration
 
