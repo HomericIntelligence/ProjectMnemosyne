@@ -1,0 +1,52 @@
+{
+  "name": "fix-altair-facet-layering",
+  "version": "1.0.0",
+  "category": "debugging",
+  "description": "Systematic workflow for fixing Altair/Vega-Lite faceted chart bugs: invisible overlays, data clipping, and domain issues",
+  "author": "Micah Villmow + Claude Sonnet 4.5",
+  "created": "2026-02-08",
+  "tags": [
+    "altair",
+    "vega-lite",
+    "visualization",
+    "faceting",
+    "layering",
+    "debugging",
+    "domain-computation",
+    "data-visualization"
+  ],
+  "trigger_symptoms": [
+    "Facet charts require data to be specified at the top level",
+    "Overlay layers invisible in faceted charts",
+    "Data rendered outside chart bounds",
+    "Error bars clipped by axis limits",
+    "Reference lines not showing in faceted plots"
+  ],
+  "applies_to": {
+    "languages": ["python"],
+    "libraries": ["altair", "vega-lite", "pandas"],
+    "problem_types": ["data-visualization", "chart-rendering", "faceting-bugs"]
+  },
+  "success_metrics": {
+    "before": {
+      "figures_with_bugs": 10,
+      "invisible_overlays": 4,
+      "clipped_data": 6,
+      "test_failures": 26
+    },
+    "after": {
+      "figures_with_bugs": 0,
+      "invisible_overlays": 0,
+      "clipped_data": 0,
+      "test_failures": 0
+    }
+  },
+  "key_patterns": {
+    "anti_pattern": "(chart1 + chart2).facet(...)",
+    "correct_pattern": "alt.layer(chart1, chart2).facet(..., data=df)",
+    "principle": "Always use alt.layer() with explicit data when combining different data sources"
+  },
+  "related_issues": ["#322"],
+  "files_modified": 13,
+  "test_coverage": "45 passing tests (100%)"
+}

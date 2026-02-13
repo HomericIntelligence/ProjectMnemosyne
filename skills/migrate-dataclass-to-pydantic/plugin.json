@@ -1,0 +1,9 @@
+{
+  "name": "migrate-dataclass-to-pydantic",
+  "version": "1.0.0",
+  "category": "refactoring",
+  "description": "Migrate Python dataclasses to Pydantic BaseModel with validation",
+  "created": "2026-02-13",
+  "tags": ["pydantic", "dataclass", "migration", "validation", "refactoring"],
+  "author": "ProjectScylla Team"
+}

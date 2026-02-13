@@ -1,0 +1,10 @@
+{
+  "name": "mass-figure-documentation",
+  "version": "1.0.0",
+  "category": "documentation",
+  "description": "Generate comprehensive documentation for multiple analysis figures using parallel background agents",
+  "created": "2026-02-12",
+  "tags": ["documentation", "parallel-agents", "analysis-figures", "automation", "background-tasks"],
+  "dependencies": [],
+  "verified": true
+}

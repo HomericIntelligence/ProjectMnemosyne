@@ -1,0 +1,17 @@
+{
+  "name": "checkpoint-recovery",
+  "version": "1.0.0",
+  "category": "tooling",
+  "description": "Implementing checkpoint/resume functionality for long-running batch processes with rate limit handling",
+  "created": "2026-02-12",
+  "tags": ["checkpoint", "resume", "batch-processing", "rate-limits", "interruption-recovery"],
+  "outcome": "success",
+  "related_prs": [526],
+  "key_learnings": [
+    "Incremental checkpoint saves prevent progress loss on interruption",
+    "Atomic writes (tmp + rename) ensure checkpoint integrity",
+    "Pre-flight checks catch transient failures before wasting resources",
+    "Append-mode logs preserve debugging context across restarts",
+    "Distinct exit codes enable automation to distinguish failure types"
+  ]
+}
