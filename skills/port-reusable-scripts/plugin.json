@@ -1,0 +1,51 @@
+{
+  "id": "port-reusable-scripts",
+  "version": "1.0.0",
+  "name": "Port Reusable Scripts Between Repositories",
+  "description": "Port and generalize reusable scripts between repositories with proper adaptations, dependency elimination, and Python path setup. Achieved zero external dependencies by rewriting PyGithub to gh CLI.",
+  "category": "tooling",
+  "created": "2026-02-12",
+  "author": "ProjectScylla",
+  "tags": [
+    "scripts",
+    "porting",
+    "generalization",
+    "cross-repo",
+    "utilities",
+    "automation",
+    "python",
+    "refactoring",
+    "gh-cli",
+    "dependency-elimination"
+  ],
+  "use_cases": [
+    "Port utility scripts from one repository to another",
+    "Build shared tooling foundation across multiple repos",
+    "Eliminate heavy dependencies by rewriting to CLI tools",
+    "Modernize legacy scripts to Python 3.10+ standards",
+    "Organize large script migrations into sequential PRs"
+  ],
+  "success_metrics": {
+    "scripts_ported": 17,
+    "prs_created": 5,
+    "external_dependencies_added": 0,
+    "pythonpath_fixes": 6,
+    "pygithub_rewrites": 2,
+    "total_lines_ported": "~4,500",
+    "precommit_iterations": 12
+  },
+  "requirements": {
+    "python": "3.10+",
+    "gh_cli": "GitHub CLI for API operations",
+    "pre_commit": "Code quality enforcement"
+  },
+  "related_skills": [
+    "dependency-elimination",
+    "python-modernization",
+    "sequential-pr-workflow",
+    "gh-cli-automation"
+  ],
+  "session_id": "d975f6d1-ca65-4075-ba98-5e0b1876ccd3",
+  "context": "Port 17 scripts from ProjectOdyssey to ProjectScylla, removing Mojo/ML content and adding Scylla evaluation framework specifics",
+  "outcome": "SUCCESS - All 17 scripts ported across 5 PRs, zero dependencies added, all work without PYTHONPATH"
+}

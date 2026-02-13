@@ -1,0 +1,14 @@
+{
+  "name": "fix-incomplete-pydantic-migration",
+  "version": "1.0.0",
+  "description": "Fix CI test failures from incomplete Pydantic v2 migrations with bandaid approach",
+  "category": "tooling",
+  "tags": ["pydantic", "testing", "ci-cd", "migration", "debugging"],
+  "author": "ProjectScylla Team",
+  "created": "2026-02-13",
+  "session_context": {
+    "objective": "Fix PR #588 CI failures from incomplete Pydantic migration",
+    "outcome": "All tests passing, PR merged successfully",
+    "key_issue": "Partial migration left dataclasses with .to_dict() but tests called .model_dump()"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "name": "unify-judge-validity-logic",
+  "version": "1.0.0",
+  "description": "Fix E2E judge data quality bugs by unifying validity checks and ensuring is_valid is the single source of truth",
+  "category": "debugging",
+  "created": "2026-02-09",
+  "author": "Claude Sonnet 4.5",
+  "tags": [
+    "judge",
+    "validation",
+    "data-quality",
+    "e2e",
+    "consensus",
+    "backward-compatibility"
+  ],
+  "relatedIssues": [
+    "#476",
+    "#475"
+  ],
+  "learnings": {
+    "successes": [
+      "Unified validity checking across 4 different code paths",
+      "Added fail-fast validation for required fields",
+      "Aligned live consensus with regeneration logic",
+      "Comprehensive test coverage (5 new tests)",
+      "Backward compatibility mapping for deprecated fields"
+    ],
+    "failures": [
+      "Initial test implementation passed file paths instead of directories",
+      "Docstring line length violation in first attempt"
+    ],
+    "keyInsights": [
+      "is_valid as single source of truth prevents inconsistent validation",
+      "Function signatures matter - always check parameters",
+      "Helper functions may expect specific directory structures",
+      "Mapping deprecated fields in one place simplifies migration"
+    ]
+  },
+  "metrics": {
+    "filesModified": 7,
+    "linesAdded": 309,
+    "linesRemoved": 42,
+    "testsAdded": 5,
+    "testsUpdated": 1,
+    "testsPassing": 218
+  },
+  "use_cases": [
+    "Investigating judge data quality issues where invalid judgments contaminate consensus",
+    "Debugging silent failures where invalid data appears valid",
+    "Unifying validation logic across multiple code paths",
+    "Adding backward compatibility for deprecated fields",
+    "Ensuring filtering consistency between live and regeneration"
+  ]
+}

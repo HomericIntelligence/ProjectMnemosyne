@@ -1,0 +1,60 @@
+{
+  "name": "quality-audit-tracking",
+  "version": "1.0.0",
+  "description": "Convert comprehensive code quality audit findings into tracked GitHub issues with epic/tracking organization",
+  "category": "workflow",
+  "author": "ProjectScylla Team",
+  "created": "2026-02-09",
+  "skill": {
+    "name": "quality-audit-tracking",
+    "path": "SKILL.md",
+    "description": "Complete workflow for converting 15+ audit findings into GitHub issues with tracking",
+    "triggers": [
+      "create github issues from audit",
+      "file all the audit issues",
+      "convert audit plan to tracked issues",
+      "implement the audit plan"
+    ],
+    "tags": [
+      "github",
+      "issues",
+      "audit",
+      "tracking",
+      "batch-operations",
+      "quality",
+      "workflow"
+    ]
+  },
+  "dependencies": {
+    "tools": [
+      "gh (GitHub CLI)"
+    ],
+    "skills": [
+      "pr-workflow",
+      "github-issue-workflow"
+    ]
+  },
+  "session_metadata": {
+    "session_date": "2026-02-09",
+    "issues_created": 24,
+    "time_spent_minutes": 53,
+    "success_rate": "100%",
+    "key_learnings": [
+      "Always validate labels with 'gh label list' before batch creation",
+      "Use sequential scripts instead of parallel for external API calls",
+      "Create tracking issue after first batch, before final batch",
+      "Temp files in /tmp/ for intermediate content"
+    ]
+  },
+  "outcomes": {
+    "p0_issues": 3,
+    "p1_issues": 12,
+    "p2_issues": 9,
+    "tracking_issue": 1,
+    "total_issues": 24,
+    "issue_range": "400-421",
+    "tracking_issue_number": 403,
+    "bonus_commits": 1,
+    "commit_hash": "a548f7a"
+  }
+}

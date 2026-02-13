@@ -1,0 +1,43 @@
+{
+  "id": "parallel-worktree-workflow",
+  "version": "1.0.0",
+  "name": "Parallel Worktree Workflow",
+  "description": "Execute multiple independent tasks in parallel using git worktrees and background sub-agents. Achieves 3x speedup for independent work.",
+  "category": "workflow",
+  "created": "2025-02-09",
+  "author": "ProjectScylla",
+  "tags": [
+    "parallel",
+    "worktrees",
+    "sub-agents",
+    "efficiency",
+    "git",
+    "workflow",
+    "background-tasks"
+  ],
+  "use_cases": [
+    "Complete multiple independent GitHub issues simultaneously",
+    "Write tests for multiple modules in parallel",
+    "Run refactoring tasks without file conflicts",
+    "Create multiple PRs from parallel development streams"
+  ],
+  "success_metrics": {
+    "parallel_tasks_completed": 3,
+    "time_vs_sequential": "3x speedup (5min vs 15min)",
+    "prs_created": 3,
+    "tests_written": 193,
+    "conflict_rate": "0%"
+  },
+  "requirements": {
+    "git": "2.5+ (worktree support)",
+    "claude_code": "sub-agent support with background execution"
+  },
+  "related_skills": [
+    "pr-workflow",
+    "github-issue-workflow",
+    "test-driven-development"
+  ],
+  "session_id": "b42d3d77-0bb7-41f5-a5fc-e4687d1a5d50",
+  "context": "ProjectScylla code quality improvements - issues #480, #483, #490",
+  "outcome": "SUCCESS - 3 issues completed in parallel, 4 PRs created (including test fix), all auto-merge enabled"
+}

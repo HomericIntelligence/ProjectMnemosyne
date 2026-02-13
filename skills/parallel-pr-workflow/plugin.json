@@ -1,0 +1,75 @@
+{
+  "skill_name": "parallel-pr-workflow",
+  "version": "1.0.0",
+  "category": "tooling",
+  "description": "Systematic workflow for implementing multiple fixes in parallel using git worktrees and auto-merge PRs",
+  "created_date": "2026-02-12",
+  "author": "Claude Sonnet 4.5",
+  "tags": [
+    "git",
+    "worktrees",
+    "parallel-development",
+    "pull-requests",
+    "automation",
+    "github-cli",
+    "code-quality",
+    "technical-debt"
+  ],
+  "use_cases": [
+    "Large-scale code quality improvements",
+    "Epic or tracking issue with many sub-issues",
+    "Multiple independent bug fixes",
+    "Systematic technical debt elimination",
+    "Parallel refactoring across codebase"
+  ],
+  "prerequisites": [
+    "Git worktrees support (Git 2.5+)",
+    "GitHub CLI (gh) installed",
+    "Good test coverage (for catching regressions)",
+    "CI/CD pipeline configured",
+    "Auto-merge enabled on repository"
+  ],
+  "success_metrics": {
+    "prs_created": 9,
+    "issues_resolved": 19,
+    "lines_removed": 1500,
+    "time_saved_percent": 70,
+    "ci_pass_rate": "100% (after fixes)",
+    "regressions": 0
+  },
+  "workflow_summary": {
+    "phase_1": "Plan and group issues by dependencies",
+    "phase_2": "Create worktrees for independent fixes",
+    "phase_3": "Implement, test, and create PRs with auto-merge",
+    "phase_4": "Monitor CI and fix failures in worktrees",
+    "phase_5": "Wait for dependencies, create next group",
+    "phase_6": "Cleanup worktrees and close issues"
+  },
+  "key_commands": {
+    "create_worktree": "git worktree add ../path -b branch-name main",
+    "create_pr": "gh pr create --title '...' --body '...' --label 'type'",
+    "enable_automerge": "gh pr merge --auto --rebase",
+    "monitor_prs": "gh pr list --author '@me' --state open",
+    "cleanup": "git worktree remove ../path && git worktree prune"
+  },
+  "lessons_learned": [
+    "Create worktrees in dependency groups, not all upfront",
+    "Always read files before editing to see exact format",
+    "Update tests when changing production code behavior",
+    "Use Python scripts for batch operations across many files",
+    "Pre-commit hooks will auto-fix - just commit again",
+    "Auto-merge removes manual bottleneck - critical for parallel workflow"
+  ],
+  "applicable_to": [
+    "Any project with GitHub and CI/CD",
+    "Codebases with good test coverage",
+    "Teams using conventional commits",
+    "Projects with protected main branch"
+  ],
+  "not_applicable_to": [
+    "Projects without CI/CD",
+    "Unstable codebases (fix stability first)",
+    "Highly interdependent changes",
+    "Limited CI resources (parallel PRs can overwhelm)"
+  ]
+}
