@@ -1,0 +1,12 @@
+{
+  "name": "retrospective-integration",
+  "version": "1.0.0",
+  "category": "automation",
+  "description": "Integrate /retrospective skill into automation pipelines to automatically capture session learnings",
+  "author": "ProjectScylla Team",
+  "date": "2026-02-13",
+  "tags": ["automation", "claude-cli", "session-management", "pipeline-integration", "graceful-degradation"],
+  "related_skills": ["advise-before-planning", "automation-testing"],
+  "verified": true,
+  "outcome": "success"
+}
