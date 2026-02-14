@@ -237,30 +237,6 @@
       "tags": []
     },
     {
-      "name": "plan-create-component",
-      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
-      "version": "1.0.0",
-      "source": "./plugins/architecture/plan-create-component",
-      "category": "architecture",
-      "tags": []
-    },
-    {
-      "name": "plan-regenerate-issues",
-      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
-      "version": "1.0.0",
-      "source": "./plugins/architecture/plan-regenerate-issues",
-      "category": "architecture",
-      "tags": []
-    },
-    {
-      "name": "plan-validate-structure",
-      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
-      "version": "1.0.0",
-      "source": "./plugins/architecture/plan-validate-structure",
-      "category": "architecture",
-      "tags": []
-    },
-    {
       "name": "quality-complexity-check",
       "description": "Analyze code complexity metrics including cyclomatic complexity and nesting depth. Use when: (1) Code review process, (2) Identifying refactoring candidates, (3) Maintaining code quality standards.",
       "version": "1.0.0",
@@ -2177,6 +2153,20 @@
       "source": "./plugins/training/train-model",
       "category": "training",
       "tags": []
+    },
+    {
+      "name": "retrospective-integration",
+      "description": "Integrate /retrospective skill into automation pipelines to automatically capture session learnings",
+      "version": "1.0.0",
+      "source": "./skills/retrospective-integration",
+      "category": "automation",
+      "tags": [
+        "automation",
+        "claude-cli",
+        "session-management",
+        "pipeline-integration",
+        "graceful-degradation"
+      ]
     }
   ]
 }
