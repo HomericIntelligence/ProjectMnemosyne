@@ -903,6 +903,22 @@
       ]
     },
     {
+      "name": "improve-automation-error-visibility",
+      "description": "Improve error visibility in curses UI automation scripts and add granular status updates",
+      "version": "1.0.0",
+      "source": "./skills/improve-automation-error-visibility",
+      "category": "debugging",
+      "tags": [
+        "error-handling",
+        "ui-visibility",
+        "curses",
+        "status-tracking",
+        "observability",
+        "automation",
+        "exception-classification"
+      ]
+    },
+    {
       "name": "academic-paper-qa",
       "description": "Validate and fix data accuracy issues, structural problems, and LaTeX compilation errors in academic papers",
       "version": "1.0.0",
