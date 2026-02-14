@@ -1,0 +1,20 @@
+{
+  "name": "improve-automation-error-visibility",
+  "version": "1.0.0",
+  "category": "debugging",
+  "description": "Improve error visibility in curses UI automation scripts and add granular status updates",
+  "tags": [
+    "error-handling",
+    "ui-visibility",
+    "curses",
+    "status-tracking",
+    "observability",
+    "automation",
+    "exception-classification"
+  ],
+  "author": "ProjectScylla Team",
+  "created": "2026-02-14",
+  "project": "ProjectScylla",
+  "issue": 632,
+  "pr": 633
+}
