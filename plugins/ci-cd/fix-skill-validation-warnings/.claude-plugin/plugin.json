@@ -1,0 +1,41 @@
+{
+  "id": "fix-skill-validation-warnings",
+  "version": "1.0.0",
+  "name": "fix-skill-validation-warnings",
+  "description": "Automated approach to fix CI validation errors and warnings across skill plugins. Use when: (1) CI reports validation failures in SKILL.md files, (2) Bulk fixing missing Overview/Verified Workflow/Results sections, (3) Converting Failed Attempts prose to required table format. Verified on ProjectMnemosyne with 198 plugins.",
+  "category": "ci-cd",
+  "created": "2026-02-13",
+  "author": "ProjectMnemosyne",
+  "tags": [
+    "ci",
+    "validation",
+    "quality",
+    "automation",
+    "bulk-fixes",
+    "skill-plugins",
+    "python",
+    "markdown"
+  ],
+  "use_cases": [
+    "Fix CI validation failures after bulk skill imports",
+    "Add missing required sections (Overview, Verified Workflow, Results)",
+    "Convert Failed Attempts prose/subsections to table format",
+    "Batch update plugin.json name fields to kebab-case",
+    "Achieve 100% CI validation pass rate"
+  ],
+  "success_metrics": {
+    "validation_pass_rate": "100% (198/198 plugins)",
+    "errors_fixed": "1 hard error",
+    "warnings_fixed": "151 warnings across 133 plugins",
+    "automation_scripts": "3 Python scripts created"
+  },
+  "requirements": {
+    "python": "3.x",
+    "tools": ["validate_plugins.py CI script"]
+  },
+  "related_skills": [
+    "skills-registry-commands",
+    "validation-workflow",
+    "documentation-patterns"
+  ]
+}
