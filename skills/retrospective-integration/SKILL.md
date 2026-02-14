@@ -32,16 +32,39 @@ except (json.JSONDecodeError, AttributeError):
 
 **Key**: Use `.get()` for graceful None return, log warnings but never fail pipeline
 
-### 2. Resume Session to Preserve Context
+### 2. Resume Session to Run Retrospective with Proper Permissions
+
+**Critical**: When resuming a session to run `/retrospective`, you MUST provide tool permissions for git and gh commands:
 
 ```python
 run([
-    "claude", "--resume", session_id, "--message",
-    "Use the /skills-registry-commands:retrospective skill..."
+    "claude",
+    "--resume", session_id,
+    "/skills-registry-commands:retrospective commit the results and create a PR",
+    "--print",
+    "--tools", "Bash",
+    "--allowedTools", "Bash(git:*)",
+    "--allowedTools", "Bash(gh:*)"
 ], cwd=worktree_path, timeout=600)
 ```
 
-**Key**: `--resume` preserves full session history, never re-raise exceptions
+**Key Points**:
+- Use `/skills-registry-commands:retrospective` as the command (not `--message`)
+- Add explicit instructions: "commit the results and create a PR"
+- `--print` mode for non-interactive execution
+- `--tools "Bash"` enables Bash tool
+- `--allowedTools "Bash(git:*)"` permits all git commands
+- `--allowedTools "Bash(gh:*)"` permits all gh CLI commands
+- Without these permissions, retrospective cannot commit to ProjectMnemosyne
+
+**Wrong approach** (will fail to commit):
+```python
+# ❌ Missing tool permissions
+run([
+    "claude", "--resume", session_id, "--message",
+    "Use the /skills-registry-commands:retrospective skill..."
+], ...)
+```
 
 ### 3. Add New Phase to Pydantic State Model
 
@@ -78,6 +101,16 @@ if self.options.enable_retrospective and state.session_id:
 
 **Solution**: Mock subprocess calls in unit tests, validate JSON parsing logic separately
 
+### ❌ Resuming Session Without Tool Permissions
+
+**Tried**: Using `--message` flag to invoke retrospective without explicit tool permissions
+
+**Failed**: Retrospective runs but cannot commit to ProjectMnemosyne or create PR
+
+**Why**: Resumed sessions need explicit `--allowedTools` for git/gh operations
+
+**Solution**: Use command-style invocation with `--tools` and `--allowedTools` flags
+
 ## Results & Parameters
 
 | Component | Value | Rationale |
@@ -87,6 +120,7 @@ if self.options.enable_retrospective and state.session_id:
 | Phase ordering | After CREATING_PR, before COMPLETED | Work saved but state not finalized |
 | Default flag state | False | Opt-in to avoid disrupting workflows |
 | Error handling | Log warning, never raise | Non-blocking enhancement |
+| Tool permissions | Bash(git:*), Bash(gh:*) | Required for committing and creating PRs |
 
 ### Test Coverage
 
@@ -104,7 +138,7 @@ python scripts/implement_issues.py --epic 123 --retrospective
 
 ## Reusable Patterns
 
-**Extract JSON CLI Output**:
+### Extract JSON CLI Output
 ```python
 try:
     data = json.loads(result.stdout)
@@ -113,7 +147,20 @@ except (json.JSONDecodeError, AttributeError):
     return None
 ```
 
-**Non-Blocking Optional Phase**:
+### Resume Session with Tool Permissions
+```python
+run([
+    "claude",
+    "--resume", session_id,
+    "/skill-name command arguments",
+    "--print",
+    "--tools", "Bash",
+    "--allowedTools", "Bash(git:*)",
+    "--allowedTools", "Bash(gh:*)"
+], cwd=worktree_path, timeout=600)
+```
+
+### Non-Blocking Optional Phase
 ```python
 try:
     execute_optional_feature()
@@ -124,4 +171,4 @@ except Exception as e:
 
 ## Tags
 
-`automation` `claude-cli` `session-management` `pipeline-integration` `graceful-degradation`
+`automation` `claude-cli` `session-management` `pipeline-integration` `graceful-degradation` `tool-permissions`
