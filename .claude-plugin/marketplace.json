@@ -919,6 +919,24 @@
       ]
     },
     {
+      "name": "persist-automation-logs",
+      "description": "Persist execution logs (Claude Code, retrospective, follow-up) to disk for post-mortem analysis after worktrees are cleaned up. Use when: automation fails silently, curses UI hides subprocess output, non-blocking phases fail without trace, or you need to debug after cleanup.",
+      "version": "1.0.0",
+      "source": "./skills/persist-automation-logs",
+      "category": "debugging",
+      "tags": [
+        "automation",
+        "logging",
+        "debugging",
+        "post-mortem",
+        "curses-ui",
+        "subprocess",
+        "file-persistence",
+        "error-handling",
+        "testing"
+      ]
+    },
+    {
       "name": "academic-paper-qa",
       "description": "Validate and fix data accuracy issues, structural problems, and LaTeX compilation errors in academic papers",
       "version": "1.0.0",

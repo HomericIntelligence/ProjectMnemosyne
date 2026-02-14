@@ -1,0 +1,35 @@
+{
+  "name": "persist-automation-logs",
+  "description": "Persist execution logs (Claude Code, retrospective, follow-up) to disk for post-mortem analysis after worktrees are cleaned up. Use when: automation fails silently, curses UI hides subprocess output, non-blocking phases fail without trace, or you need to debug after cleanup.",
+  "category": "debugging",
+  "date": "2026-02-14",
+  "tags": [
+    "automation",
+    "logging",
+    "debugging",
+    "post-mortem",
+    "curses-ui",
+    "subprocess",
+    "file-persistence",
+    "error-handling",
+    "testing"
+  ],
+  "user-invocable": false,
+  "requires": {
+    "tools": [
+      {
+        "name": "python",
+        "version": ">=3.10"
+      }
+    ],
+    "languages": ["python"]
+  },
+  "verified_on": [
+    {
+      "project": "ProjectScylla",
+      "issue": 602,
+      "pr": null,
+      "date": "2026-02-14"
+    }
+  ]
+}
