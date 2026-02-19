@@ -1,0 +1,11 @@
+{
+  "version": "1.0.0",
+  "name": "type-alias-removal",
+  "category": "architecture",
+  "description": "Systematic workflow for removing redundant type aliases and using explicit variant names",
+  "tags": ["refactoring", "type-safety", "code-clarity", "maintenance"],
+  "created": "2026-02-15",
+  "updated": "2026-02-15",
+  "author": "ProjectScylla Team",
+  "verified": true
+}

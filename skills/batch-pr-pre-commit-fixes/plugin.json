@@ -1,0 +1,59 @@
+{
+  "name": "batch-pr-pre-commit-fixes",
+  "version": "1.0.0",
+  "category": "ci-cd",
+  "description": "Systematically fix multiple failing PRs with pre-commit hook auto-fix issues",
+  "triggers": [
+    "Fix these failing PRs",
+    "Multiple PRs failing pre-commit",
+    "Batch fix markdown linting",
+    "pre-commit hook(s) made changes",
+    "files were modified by this hook"
+  ],
+  "tags": [
+    "pre-commit",
+    "markdown",
+    "linting",
+    "ci-cd",
+    "batch-processing",
+    "github-actions",
+    "automation"
+  ],
+  "created": "2026-02-15",
+  "source": {
+    "prs": ["#685", "#688", "#689", "#691", "#693", "#697"],
+    "session": "2026-02-15"
+  },
+  "outcomes": {
+    "success": true,
+    "metrics": {
+      "prs_fixed": 6,
+      "time_per_pr": "2-3 minutes",
+      "common_issue": "markdown linting (MD032)",
+      "time_saved": "50-60%"
+    }
+  },
+  "key_learnings": [
+    "Check git status after pre-commit to see what changed",
+    "Use specific commit messages mentioning actual fixes",
+    "Complete each PR sequentially before moving to next",
+    "Verify CI is running (pending) before moving on",
+    "Most common issue: MD032 (blank lines after list headings)"
+  ],
+  "failed_attempts": [
+    "Running pre-commit without checking what changed",
+    "Using generic commit messages",
+    "Trying to run all PRs in parallel",
+    "Not waiting for CI verification"
+  ],
+  "workflow_patterns": {
+    "markdown_only": "pre-commit run markdownlint-cli2",
+    "multi_hook": "pre-commit run --all-files",
+    "coverage_and_lock": "Edit files + pixi install + commit all"
+  },
+  "related_skills": [
+    "markdownlint-troubleshooting",
+    "pre-commit-maintenance",
+    "coverage-threshold-tuning"
+  ]
+}

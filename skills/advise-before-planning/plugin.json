@@ -1,0 +1,17 @@
+{
+  "name": "advise-before-planning",
+  "version": "1.0.0",
+  "category": "tooling",
+  "description": "Integrate team knowledge search before automated planning workflows",
+  "tags": [
+    "automation",
+    "planning",
+    "knowledge-base",
+    "two-step-workflow",
+    "claude-cli",
+    "team-learning"
+  ],
+  "author": "ProjectScylla",
+  "created": "2026-02-13",
+  "last_updated": "2026-02-13"
+}
