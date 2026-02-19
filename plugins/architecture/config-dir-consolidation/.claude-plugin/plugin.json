@@ -1,0 +1,23 @@
+{
+  "name": "config-dir-consolidation",
+  "version": "1.0.0",
+  "description": "Move configuration files from a dedicated config/ directory into tests/ (or another appropriate location) when config is only consumed by the test infrastructure. Use when: a config directory contains files superseded by a test-side system, config files are referenced by path-hardcoded loaders, or you want to eliminate a legacy config directory entirely.",
+  "category": "architecture",
+  "date": "2026-02-19",
+  "tags": [
+    "config-migration",
+    "consolidation",
+    "refactoring",
+    "tier-config",
+    "path-cleanup",
+    "prompt-removal",
+    "test-infrastructure"
+  ],
+  "source_project": "ProjectScylla",
+  "metrics": {
+    "files_deleted": 18,
+    "files_modified": 15,
+    "tests_passing": 2202,
+    "zero_regressions": true
+  }
+}

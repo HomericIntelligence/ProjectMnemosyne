@@ -2201,6 +2201,22 @@
         "pipeline-integration",
         "graceful-degradation"
       ]
+    },
+    {
+      "name": "config-dir-consolidation",
+      "description": "Move config files from a dedicated config/ directory into tests/ when config is only consumed by test infrastructure. Use when: config dir contains files superseded by a test-side system, loaders have hardcoded config/ paths, or a legacy config directory needs full elimination.",
+      "version": "1.0.0",
+      "source": "./plugins/architecture/config-dir-consolidation",
+      "category": "architecture",
+      "tags": [
+        "config-migration",
+        "consolidation",
+        "refactoring",
+        "tier-config",
+        "path-cleanup",
+        "prompt-removal",
+        "test-infrastructure"
+      ]
     }
   ]
 }
