@@ -1,0 +1,14 @@
+{
+  "name": "planning-implementation-from-issue",
+  "version": "1.0.0",
+  "category": "architecture",
+  "description": "Create comprehensive implementation plans from GitHub issues by analyzing code, understanding test failures, and structuring step-by-step execution plans",
+  "created": "2026-02-14",
+  "tags": ["planning", "github-issues", "implementation", "test-fixes", "architecture"],
+  "author": "ProjectScylla Team",
+  "related_skills": [
+    "fix-ci-test-failures",
+    "fix-pydantic-required-fields",
+    "pr-merge-conflict-resolution"
+  ]
+}
