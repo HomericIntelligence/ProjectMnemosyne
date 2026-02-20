@@ -46,6 +46,7 @@ from scylla.config.validation import validate_filename_model_id_consistency
 ```
 
 The script then:
+
 1. Finds `*.yaml` files in `config/models/`, skipping `_`-prefixed fixtures
 2. Loads `model_id` with `yaml.safe_load`
 3. Calls `validate_filename_model_id_consistency(config_file, model_id)`
@@ -67,6 +68,7 @@ Because the script imports from `scylla/`, it must run inside the pixi environme
 ```
 
 **Key details:**
+
 - `pixi run python ...` rather than plain `python ...` ensures the venv with `pyyaml` and project packages is active
 - `pass_filenames: false` — the script scans the directory itself, not individual changed files
 - `files: ^config/models/.*\.yaml$` — only trigger when model configs change
