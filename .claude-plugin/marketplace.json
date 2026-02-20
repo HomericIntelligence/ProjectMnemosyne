@@ -2234,6 +2234,22 @@
         "prompt-removal",
         "test-infrastructure"
       ]
+    },
+    {
+      "name": "deprecation-warning-migration",
+      "description": "Add runtime DeprecationWarning to a legacy dataclass superseded by a Pydantic model, track surviving usages in CI with a non-blocking grep step, and document the removal timeline in CHANGELOG. Use when deprecating Python dataclasses in favour of Pydantic BaseModel.",
+      "version": "1.0.0",
+      "source": "./plugins/testing/deprecation-warning-migration",
+      "category": "testing",
+      "tags": [
+        "deprecation",
+        "migration",
+        "pydantic",
+        "dataclass",
+        "warnings",
+        "ci-tracking",
+        "changelog"
+      ]
     }
   ]
 }
