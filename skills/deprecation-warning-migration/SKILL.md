@@ -46,6 +46,7 @@ class RunMetricsBase(BaseModel):
 ```
 
 **Key design decisions:**
+
 - `frozen=True` — matches `ExecutionInfoBase`; all base types in `results.py` are immutable
 - `Field(...)` for required fields — preserve the existing contract (no defaults on originally-required fields)
 - `Field(default=..., description=...)` for fields that had defaults in the dataclass
@@ -83,6 +84,7 @@ class BaseRunMetrics:
 ```
 
 **Critical details:**
+
 - `stacklevel=2` — surfaces the caller's line in the warning, not `__post_init__` itself
 - Docstring on `__post_init__` is **required** — ruff `D105` will fail without it
 - `import warnings` must be present at the top of the file (verify it's already imported)
