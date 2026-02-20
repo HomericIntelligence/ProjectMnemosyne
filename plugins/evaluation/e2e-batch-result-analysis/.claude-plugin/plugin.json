@@ -1,0 +1,32 @@
+{
+  "name": "e2e-batch-result-analysis",
+  "version": "1.0.0",
+  "description": "Analyze E2E batch dry run results: triage failures, write local analysis files, generate GitHub issue filing script. Use when batch_summary.json exists and you need structured output files (README, per-failure analysis, per-test issue bodies, shell script).",
+  "category": "evaluation",
+  "date": "2026-02-19",
+  "tags": [
+    "e2e",
+    "batch",
+    "dry-run",
+    "failure-triage",
+    "github-issues",
+    "batch_summary.json",
+    "ValidationError",
+    "criteria_scores",
+    "analysis"
+  ],
+  "triggers": [
+    "analyze dry run results",
+    "batch_summary.json exists and needs analysis",
+    "triage framework failures vs model failures",
+    "write analysis files locally before filing issues",
+    "generate issue filing script from batch results"
+  ],
+  "tools_used": [
+    "python3 (data processing from batch_summary.json)",
+    "bash (write files, syntax-check scripts)",
+    "grep (extract error patterns from thread logs)",
+    "gh issue create (from generated file_issues.sh)"
+  ],
+  "user-invocable": false
+}
