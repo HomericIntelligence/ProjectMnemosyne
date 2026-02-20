@@ -1,0 +1,8 @@
+{
+  "name": "pydantic-none-coercion-pattern",
+  "description": "Fix Pydantic ValidationError caused by None flowing into non-Optional dict fields. Use when you see 'Input should be a valid dictionary [type=dict_type, input_value=None]' or when dict.get() with a default fails to guard against explicit null values in JSON data.",
+  "category": "debugging",
+  "date": "2026-02-19",
+  "tags": ["pydantic", "validation", "none", "dict", "json", "null", "coercion", "field_validator", "e2e", "checkpoint"],
+  "version": "1.0.0"
+}
