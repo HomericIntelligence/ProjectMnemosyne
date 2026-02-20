@@ -52,11 +52,13 @@ grep -n "class MetricsInfo\|class JudgmentInfo" scylla/reporting/result.py
 ### 2. Design Base Fields
 
 For **MetricsInfoBase** — core token/cost concepts:
+
 - `tokens_input: int = Field(...)` — always required
 - `tokens_output: int = Field(...)` — always required
 - `cost_usd: float = Field(default=0.0)` — optional (may not be known yet)
 
 For **JudgmentInfoBase** — core judgment concepts:
+
 - `passed: bool = Field(...)` — always required
 - `impl_rate: float = Field(default=0.0)` — optional (may not be computed)
 
