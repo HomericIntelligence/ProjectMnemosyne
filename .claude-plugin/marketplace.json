@@ -1752,6 +1752,23 @@
       "tags": []
     },
     {
+      "name": "cli-adapter-implementation",
+      "description": "Add a new CLI-based AI agent as an evaluation target in ProjectScylla. Use when: (1) integrating a new CLI tool (Goose, Aider, Continue, Cursor, etc.) for T0-T6 tier benchmarking, (2) an issue requests '[Feature] Add support for <tool>', (3) extending scylla/adapters/ with a new provider. Covers exact file list (3 create, 1 modify), regex pitfalls in fallback patterns, and 23-test structure.",
+      "version": "1.0.0",
+      "source": "./skills/cli-adapter-implementation",
+      "category": "tooling",
+      "tags": [
+        "adapters",
+        "cli",
+        "integration",
+        "benchmarking",
+        "goose",
+        "base-cli-adapter",
+        "pytest",
+        "pattern"
+      ]
+    },
+    {
       "name": "claude-code-v21-adoption",
       "description": "Systematic approach to adopting Claude Code v2.1.0 features in skills marketplace. Use when: (1) upgrading to new Claude Code version, (2) analyzing CHANGELOG for feature adoption, (3) updating plugin schemas and templates, (4) creating documentation skills for new features.",
       "version": "1.0.0",
