@@ -1,0 +1,9 @@
+{
+  "name": "gh-implement-issue-preflight-integration",
+  "version": "1.0.0",
+  "category": "tooling",
+  "tags": ["github", "workflow", "pre-flight", "automation", "safety-check", "gh-implement-issue", "bash", "issue-management"],
+  "description": "How to integrate automated pre-flight checks as Step 1 of the gh-implement-issue workflow to prevent duplicate work and worktree conflicts",
+  "created": "2026-02-19",
+  "last_updated": "2026-02-19"
+}
