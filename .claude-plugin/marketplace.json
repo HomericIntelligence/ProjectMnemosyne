@@ -2250,6 +2250,22 @@
         "ci-tracking",
         "changelog"
       ]
+    },
+    {
+      "name": "ci-deprecation-enforcement",
+      "description": "Promote a non-blocking grep ::warning:: CI step to a hard exit-1 enforcement gate. Use when count of deprecated symbol usages reaches zero and you want to prevent any new callers from being introduced. Covers grep exclusion patterns for re-export files and inline (deprecated) docstring annotations.",
+      "version": "1.0.0",
+      "source": "./plugins/ci-cd/ci-deprecation-enforcement",
+      "category": "ci-cd",
+      "tags": [
+        "deprecation",
+        "enforcement",
+        "grep",
+        "ci-gate",
+        "exit-1",
+        "github-actions",
+        "warning-to-error"
+      ]
     }
   ]
 }
