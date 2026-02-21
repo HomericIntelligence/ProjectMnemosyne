@@ -73,7 +73,6 @@ When the user invokes this command:
 
    **CRITICAL**: SKILL.md MUST meet CI validation requirements or PR will fail:
 
-   - `.claude-plugin/plugin.json` with metadata
    - `skills/<name>/SKILL.md` with **required format**:
      - ✅ **YAML frontmatter** (starts with `---`)
        ```yaml

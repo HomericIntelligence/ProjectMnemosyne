@@ -6,7 +6,6 @@ A complete skills registry system for Claude agents, including commands, hooks, 
 
 ```
 skills-registry-commands/
-├── .claude-plugin/plugin.json
 ├── skills/
 │   ├── advise/SKILL.md              # /advise command
 │   ├── retrospective/SKILL.md       # /retrospective command
