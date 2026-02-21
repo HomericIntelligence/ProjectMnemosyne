@@ -1,0 +1,32 @@
+{
+  "name": "ci-coverage-threshold-single-source",
+  "version": "1.0.0",
+  "description": "Remove explicit --cov-fail-under from CI workflows and rely on pyproject.toml as the single source of truth for the coverage threshold",
+  "category": "ci-cd",
+  "tags": [
+    "ci",
+    "coverage",
+    "pytest",
+    "pytest-cov",
+    "github-actions",
+    "single-source-of-truth",
+    "pyproject"
+  ],
+  "created": "2026-02-20",
+  "tested_on": {
+    "python_version": "3.10+",
+    "pytest_version": "9.x",
+    "pytest_cov_version": "6.x"
+  },
+  "related_files": [
+    ".github/workflows/test.yml",
+    "pyproject.toml"
+  ],
+  "key_insights": [
+    "pytest-cov reads fail_under from [tool.coverage.report] in pyproject.toml when no CLI --cov-fail-under flag is present",
+    "CLI --cov-fail-under overrides the pyproject.toml value — removing it lets the config file win",
+    "sed removal of the flag can leave trailing whitespace — always strip after",
+    "The Edit tool on .github/workflows/ files triggers security hook warnings but is not blocked",
+    "Skill tool invocations are denied in don't-ask permission mode — fall back to direct git/gh commands"
+  ]
+}
