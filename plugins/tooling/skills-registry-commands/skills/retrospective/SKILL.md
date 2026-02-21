@@ -38,7 +38,6 @@ Or configure auto-trigger on session end (see Hooks section).
    - Skill name (kebab-case)
    - Tags (for searchability)
 4. **Generate plugin** (⚠️ **MUST follow CI requirements**):
-   - `.claude-plugin/plugin.json` with metadata
    - `skills/<name>/SKILL.md` with:
      - ✅ **YAML frontmatter** (starts with `---`)
      - ✅ **Overview section** with table (must have `## Overview` header)
@@ -55,8 +54,6 @@ Or configure auto-trigger on session end (see Hooks section).
 
 ```
 plugins/<category>/<skill-name>/
-├── .claude-plugin/
-│   └── plugin.json
 ├── skills/<skill-name>/
 │   └── SKILL.md
 └── references/
@@ -181,18 +178,6 @@ pixi run pytest tests/unit/ -x
 - All 70 tests passing
 ```
 
-## Generated plugin.json Format
-
-```json
-{
-  "name": "skill-name",
-  "version": "1.0.0",
-  "description": "What this does. Use when: (1) trigger 1, (2) trigger 2. Verified on X.",
-  "author": { "name": "Author Name" },
-  "skills": "./skills"
-}
-```
-
 ## Categories
 
 | Category | Use For |
@@ -221,7 +206,6 @@ Save learnings after a session (auto-creates PR).
 2. Extract: objective, steps taken, successes, failures, parameters
 3. Prompt user for category and skill name
 4. Generate plugin:
-   - plugin.json with metadata
    - SKILL.md with required sections
    - references/notes.md with raw details
 5. Create branch: `skill/<category>/<name>`

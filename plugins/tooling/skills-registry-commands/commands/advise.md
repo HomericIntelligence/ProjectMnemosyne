@@ -66,7 +66,7 @@ When the user invokes this command:
    - What failed (critical - prevents wasted effort)
    - Recommended parameters (copy-paste ready)
 
-### Phase 2: Structured Interview (Optional but Recommended)
+### Phase 2: Structured Interview
 
 After presenting initial findings, conduct a structured interview to refine recommendations:
 
@@ -111,7 +111,7 @@ After presenting initial findings, conduct a structured interview to refine reco
 
 ## Output Format
 
-### Phase 1 Output (Initial Findings)
+### Phase 1 Output (Before Interview)
 
 ```markdown
 ### Related Skills Found

@@ -20,7 +20,6 @@ CI/CD pipeline for validating skills and auto-generating marketplace.
 ## When to Use
 
 - Setting up CI/CD for a skills marketplace
-- Validating plugin.json structure on PRs
 - Enforcing required sections in SKILL.md
 - Auto-generating marketplace.json on merge
 - Preventing low-quality skills from entering registry
@@ -49,20 +48,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Validate plugin.json files
-        run: python scripts/validate_plugins.py
-
-      - name: Check SKILL.md exists
-        run: |
-          for plugin_json in $(find plugins -name "plugin.json"); do
-            plugin_dir=$(dirname $(dirname "$plugin_json"))
-            skill_md=$(find "$plugin_dir/skills" -name "SKILL.md" 2>/dev/null)
-            if [ -z "$skill_md" ]; then
-              echo "ERROR: Missing SKILL.md for $plugin_json"
-              exit 1
-            fi
-          done
 
       - name: Validate SKILL.md sections
         run: |
@@ -123,7 +108,6 @@ Copy from this plugin's `scripts/` directory:
 | No validation on PRs | Bad plugins entered registry | Validate before merge |
 | Manual marketplace.json edits | Out of sync with actual plugins | Auto-generate on merge |
 | Optional failures section | Most valuable info missing | Make it required in validation |
-| Validate only plugin.json | SKILL.md quality ignored | Check both files |
 | Single validation script | Hard to debug which check failed | Separate steps in workflow |
 
 ## Results & Parameters
@@ -155,7 +139,7 @@ commits:
 recommendations:
   - Separate validation and generation workflows
   - Use [skip ci] for auto-commits
-  - Validate both plugin.json AND SKILL.md
+  - Validate SKILL.md
   - Show specific error messages
   - Fail fast on first error per file
 ```
