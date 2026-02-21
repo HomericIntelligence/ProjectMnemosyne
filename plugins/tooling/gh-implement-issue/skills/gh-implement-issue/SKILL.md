@@ -26,8 +26,16 @@ Complete workflow for implementing a GitHub issue from start to finish.
 
 ## Quick Reference
 
+> **Note:** `<skill-dir>` is the absolute path to this skill's directory.
+> Resolve it with: `SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"`
+> or use the skill's installed path directly.
+
 ```bash
-# 1. Fetch issue and create branch
+# 0. Pre-flight check (REQUIRED - runs all 6 checks automatically)
+# Replace <skill-dir> with the absolute path to this skill directory
+bash <skill-dir>/scripts/preflight_check.sh <issue>
+
+# 1. Fetch issue and create branch (only after pre-flight passes)
 gh issue view <issue>
 git checkout -b <issue>-<description>
 
@@ -47,18 +55,31 @@ git push -u origin <branch>
 gh pr create --issue <issue>
 ```
 
+## Pre-Flight Check Results
+
+| Result | Check | Behavior |
+|--------|-------|----------|
+| STOP (exit 1) | Issue is CLOSED | Halt immediately — work may be done |
+| STOP (exit 1) | PR is MERGED | Halt immediately — duplicate work risk |
+| STOP (exit 1) | Worktree conflict | Halt — branch already checked out |
+| WARN (exit 0) | Existing commits | Proceed with caution — may be partial work |
+| WARN (exit 0) | Open PR exists | Proceed with caution — coordinate with author |
+| WARN (exit 0) | Existing branch | Proceed with caution — review before creating new branch |
+| PASS (exit 0) | All clear | Safe to proceed |
+
 ## Verified Workflow
 
-1. **Read issue context**: `gh issue view <issue> --comments` - understand requirements, prior context
-2. **Create branch**: `git checkout -b <issue>-<description>`
-3. **Post start comment**: Document approach on the issue
-4. **Write tests first**: TDD approach - tests drive implementation
-5. **Implement code**: Build functionality to pass tests
-6. **Quality check**: Format code and run pre-commit
-7. **Commit**: Create focused commit with issue reference
-8. **Push and PR**: Create PR linked to issue
-9. **Post completion**: Document summary on the issue
-10. **Monitor CI**: Verify all checks pass
+1. **Run pre-flight check**: `bash <skill-dir>/scripts/preflight_check.sh <issue>` — automatically runs all 6 checks; stops on critical failures
+2. **Read issue context**: `gh issue view <issue> --comments` - understand requirements, prior context
+3. **Create branch**: `git checkout -b <issue>-<description>`
+4. **Post start comment**: Document approach on the issue
+5. **Write tests first**: TDD approach - tests drive implementation
+6. **Implement code**: Build functionality to pass tests
+7. **Quality check**: Format code and run pre-commit
+8. **Commit**: Create focused commit with issue reference
+9. **Push and PR**: Create PR linked to issue
+10. **Post completion**: Document summary on the issue
+11. **Monitor CI**: Verify all checks pass
 
 ## Branch Naming Convention
 
@@ -100,6 +121,10 @@ Before creating PR:
 
 | Problem | Solution |
 |---------|----------|
+| Pre-flight: issue CLOSED | Stop work; issue already resolved |
+| Pre-flight: merged PR found | Stop work; check PR for implementation |
+| Pre-flight: worktree conflict | Navigate to existing worktree or remove it |
+| Pre-flight: warns existing branch | Review branch before creating new one |
 | Issue not found | Verify issue number |
 | Branch exists | Use different name or delete old branch |
 | Tests fail | Fix code before creating PR |
@@ -157,3 +182,4 @@ N/A — this skill describes a workflow pattern.
 - See CLAUDE.md for complete development workflow
 - See CLAUDE.md for Mojo syntax standards
 - See CLAUDE.md for zero-warnings policy
+- See `issue-preflight-check` skill for full pre-flight check documentation
