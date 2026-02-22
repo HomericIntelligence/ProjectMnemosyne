@@ -1,0 +1,48 @@
+{
+  "name": "unit-tests-untested-modules",
+  "version": "1.0.0",
+  "description": "Workflow for adding unit tests to previously untested source modules — read source first, extend existing test files, use tmp_path for real I/O, mock at call boundaries",
+  "category": "testing",
+  "author": "Claude Sonnet 4.6",
+  "created": "2026-02-22",
+  "tags": [
+    "testing",
+    "unit-tests",
+    "pytest",
+    "coverage",
+    "mocking",
+    "multiprocessing",
+    "curses"
+  ],
+  "trigger_conditions": [
+    "Source module has no corresponding test file",
+    "Test coverage audit identifies untested modules",
+    "Coverage threshold at risk due to missing test files",
+    "Issue requests adding tests for N specific source modules"
+  ],
+  "outcomes": {
+    "success_rate": "100%",
+    "tests_added": 133,
+    "coverage_before": "~73%",
+    "coverage_after": "74.93%",
+    "modules_covered": [
+      "scylla/e2e/agent_runner.py",
+      "scylla/e2e/judge_runner.py",
+      "scylla/e2e/parallel_executor.py",
+      "scylla/config/validation.py",
+      "scylla/automation/curses_ui.py"
+    ]
+  },
+  "related_skills": [
+    "fix-ci-test-failures",
+    "pytest-coverage-threshold-config",
+    "coverage-threshold-tuning"
+  ],
+  "applies_to": [
+    "Python",
+    "pytest",
+    "multiprocessing.Manager",
+    "curses",
+    "subprocess mocking"
+  ]
+}
