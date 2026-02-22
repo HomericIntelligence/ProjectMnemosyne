@@ -1,0 +1,14 @@
+{
+  "name": "orphan-module-subpackage-relocation",
+  "version": "1.0.0",
+  "category": "architecture",
+  "description": "Relocate an orphaned root-level module into the correct sub-package: copy, update all consumers, re-export from __init__.py, delete old file, verify with smoke tests and full test suite",
+  "created": "2026-02-22",
+  "tags": ["refactoring", "structure", "imports", "sub-package", "KISS", "YAGNI"],
+  "author": "ProjectScylla Team",
+  "related_skills": [
+    "dry-refactoring-workflow",
+    "quality-audit-implementation",
+    "planning-implementation-from-issue"
+  ]
+}
