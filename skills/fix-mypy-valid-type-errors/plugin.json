@@ -1,0 +1,19 @@
+{
+  "name": "fix-mypy-valid-type-errors",
+  "version": "1.0.0",
+  "description": "TRIGGER CONDITIONS: (1) fixing mypy valid-type violations (callable/any used as type annotations), (2) re-enabling disabled mypy error codes after fixing violations, (3) updating MYPY_KNOWN_ISSUES.md baseline counts.",
+  "author": {
+    "name": "ProjectScylla"
+  },
+  "date": "2026-02-21",
+  "category": "tooling",
+  "tags": ["mypy", "type-checking", "valid-type", "python", "code-quality", "incremental-adoption"],
+  "skills": "./skills",
+  "requires": {
+    "tools": ["mypy", "pixi", "pre-commit"],
+    "languages": ["python"]
+  },
+  "verified_on": [
+    "ProjectScylla"
+  ]
+}
