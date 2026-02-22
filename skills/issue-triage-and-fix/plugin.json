@@ -1,0 +1,79 @@
+{
+  "skill_name": "issue-triage-and-fix",
+  "version": "1.0.0",
+  "category": "evaluation",
+  "description": "Bulk triage and fix GitHub issues in parallel using isolated worktrees",
+  "created_date": "2026-02-22",
+  "author": "claude-sonnet-4-6",
+  "tags": [
+    "github",
+    "worktree",
+    "parallel",
+    "bulk-fix",
+    "pr-workflow",
+    "triage",
+    "wave-based",
+    "pre-commit"
+  ],
+  "use_cases": [
+    "10+ open GitHub issues that are simple one-file fixes",
+    "Auto-generated follow-up issues with many duplicates",
+    "Independent fixes requiring no cross-issue coordination",
+    "Bulk technical debt cleanup sprints",
+    "Post-epic cleanup of leftover issues"
+  ],
+  "prerequisites": [
+    "Git worktrees support (Git 2.5+)",
+    "GitHub CLI (gh) installed and authenticated",
+    "CI/CD pipeline configured with auto-merge support",
+    "Pre-commit hooks installed",
+    "Pixi or equivalent environment manager"
+  ],
+  "success_metrics": {
+    "issues_closed_as_duplicates": 5,
+    "prs_created": 16,
+    "waves_executed": 4,
+    "agents_per_wave": 5,
+    "auto_merge_enabled": "100%",
+    "pr_merge_time": "minutes",
+    "contaminated_prs": 0
+  },
+  "workflow_summary": {
+    "step_0": "Triage all issues — close duplicates and already-fixed items first",
+    "step_1": "Analyze file overlap across remaining issues to detect conflicts",
+    "step_2": "Group issues into waves by complexity and risk level",
+    "step_3": "Launch up to 5 parallel agents per wave using isolation: worktree",
+    "step_4": "Each agent runs targeted pre-commit, tests, then creates PR with auto-merge"
+  },
+  "key_commands": {
+    "list_issues": "gh issue list --repo <org>/<repo> --state open --limit 100 --json number,title,body",
+    "close_duplicate": "gh issue comment <n> --body 'Duplicate of #X' && gh issue close <n>",
+    "targeted_precommit_ruff": "pre-commit run ruff --all-files",
+    "targeted_precommit_mypy": "pre-commit run mypy-check-python --all-files",
+    "run_unit_tests": "pixi run python -m pytest tests/unit/ -q --no-cov 2>&1 | tail -20",
+    "create_pr": "gh pr create --title 'type(scope): description' --body 'Closes #<n>'",
+    "enable_automerge": "gh pr merge --auto --rebase"
+  },
+  "lessons_learned": [
+    "Never run pre-commit --all-files in agents — use targeted hooks only to avoid contamination",
+    "Pre-analyze file overlap before execution to prevent merge conflicts",
+    "Close duplicates and already-fixed issues before writing any code",
+    "Audit issues (grep/search first) often need zero code changes",
+    "Stage only specific files with git add <file>, never git add -A",
+    "Investigate-first issues belong in the last wave, not the first",
+    "Always enable auto-merge immediately after gh pr create",
+    "Background agents lose task IDs — use foreground agents by default"
+  ],
+  "applicable_to": [
+    "Any project with GitHub and CI/CD",
+    "Projects using conventional commits",
+    "Codebases with good unit test coverage",
+    "Protected main branches requiring PRs"
+  ],
+  "not_applicable_to": [
+    "Issues with deep cross-file dependencies",
+    "Changes requiring coordinated schema migrations",
+    "Projects without CI/CD pipelines",
+    "Issues requiring major architectural decisions"
+  ]
+}
