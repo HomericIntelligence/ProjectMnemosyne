@@ -1,0 +1,15 @@
+{
+  "name": "validate-tier-id-filename-consistency",
+  "version": "1.0.0",
+  "category": "testing",
+  "tags": ["config", "validation", "tier", "consistency", "error-handling"],
+  "created": "2026-02-22",
+  "updated": "2026-02-22",
+  "description": "Validate that config field values match their source filename at the aggregation layer to prevent silent key/value disagreement",
+  "trigger_patterns": [
+    "load_all.*filename.*mismatch",
+    "config.*tier.*disagree",
+    "dict key.*config field.*inconsistent",
+    "aggregation.*filename.*consistency"
+  ]
+}
