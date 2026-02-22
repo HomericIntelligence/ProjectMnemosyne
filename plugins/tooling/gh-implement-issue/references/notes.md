@@ -10,8 +10,8 @@ Migrated from plugins/uncategorized/skills/gh-implement-issue/ on 2026-01-02.
 tests/claude-code/shared/skills/github/gh-implement-issue/scripts/preflight_check.sh
 ```
 
-Absolute path in ProjectScylla:
-`/home/mvillmow/ProjectScylla/tests/claude-code/shared/skills/github/gh-implement-issue/scripts/preflight_check.sh`
+Absolute path in ProjectScylla (replace `<repo-root>` with your local clone path):
+`<repo-root>/tests/claude-code/shared/skills/github/gh-implement-issue/scripts/preflight_check.sh`
 
 ## Skill Directory Resolution
 
