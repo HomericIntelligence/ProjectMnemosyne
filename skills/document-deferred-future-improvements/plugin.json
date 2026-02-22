@@ -1,0 +1,11 @@
+{
+  "name": "document-deferred-future-improvements",
+  "version": "1.0.0",
+  "description": "Pattern for documenting deferred Future Improvements in design docs: add Status, Why Deferred, and Acceptance Criteria to each item so future contributors avoid re-investigating implementation status",
+  "category": "documentation",
+  "tags": ["documentation", "design-docs", "deferred", "future-improvements", "container", "architecture"],
+  "author": "ProjectScylla Team",
+  "created": "2026-02-22",
+  "updated": "2026-02-22",
+  "source": "issue-881"
+}
