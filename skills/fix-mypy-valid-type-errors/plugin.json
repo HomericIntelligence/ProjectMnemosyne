@@ -1,0 +1,38 @@
+{
+  "name": "fix-mypy-valid-type-errors",
+  "version": "1.0.0",
+  "description": "Workflow for fixing mypy valid-type violations (lowercase callable/any) to re-enable suppressed error codes",
+  "author": "ProjectScylla Team",
+  "category": "ci-cd",
+  "tags": ["mypy", "type-checking", "valid-type", "callable", "typing", "pre-commit", "python"],
+  "created": "2026-02-22",
+  "last_updated": "2026-02-22",
+  "skills": [
+    {
+      "name": "fix-mypy-valid-type-errors",
+      "description": "Fix invalid lowercase type annotations (callable, any) to re-enable mypy valid-type error code",
+      "trigger": "mypy valid-type violations preventing removal from disable_error_code",
+      "path": "skills/fix-mypy-valid-type-errors/SKILL.md"
+    }
+  ],
+  "references": [
+    {
+      "type": "session-notes",
+      "path": "skills/fix-mypy-valid-type-errors/references/notes.md",
+      "description": "Raw session details from fixing valid-type errors in ProjectScylla #888"
+    }
+  ],
+  "keywords": [
+    "mypy",
+    "valid-type",
+    "callable",
+    "Callable",
+    "any",
+    "Any",
+    "disable_error_code",
+    "type-annotation",
+    "collections.abc",
+    "MYPY_KNOWN_ISSUES",
+    "incremental-typing"
+  ]
+}
