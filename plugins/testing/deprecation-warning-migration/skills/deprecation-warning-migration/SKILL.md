@@ -1,3 +1,10 @@
+---
+name: "deprecation-warning-migration"
+description: "Add runtime DeprecationWarning to a legacy dataclass superseded by a Pydantic model, track usages in CI, and document migration timeline"
+category: testing
+date: 2026-02-19
+user-invocable: false
+---
 # Skill: deprecation-warning-migration
 
 ## Overview
@@ -128,6 +135,11 @@ Uses `::warning::` (not `::error::`) so CI passes even if deprecated usages rema
 ---
 
 ## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| `__post_init__` without docstring | ruff D105 requires docstrings on all dunder methods | Add one-line docstring to `__post_init__` |
+| `AskUserQuestion` in non-interactive mode | Tool was denied in don't-ask mode | Pick sensible defaults and proceed without prompting |
 
 ### `ruff D105` — missing docstring in magic method
 

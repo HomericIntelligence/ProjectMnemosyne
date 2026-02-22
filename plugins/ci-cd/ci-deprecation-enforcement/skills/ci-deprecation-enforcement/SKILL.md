@@ -1,3 +1,10 @@
+---
+name: "ci-deprecation-enforcement"
+description: "Promote a CI grep warning into a hard exit-1 enforcement gate for deprecated symbols"
+category: ci-cd
+date: 2026-02-20
+user-invocable: false
+---
 # Skill: ci-deprecation-enforcement
 
 ## Overview
@@ -111,6 +118,10 @@ This CI change touches only `.github/workflows/test.yml` — no Python source
 changes are needed and no new tests are required.
 
 ## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|-----------|--------|
+| `grep -v "# deprecated"` to catch docstring mentions | Only strips standalone comment lines, not inline `(deprecated)` annotations in docstrings | Add a separate `grep -v "(deprecated)"` filter |
 
 ### Relying on `grep -v "# deprecated"` to catch docstring mentions
 
