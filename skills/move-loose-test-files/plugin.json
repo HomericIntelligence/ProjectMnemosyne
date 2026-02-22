@@ -1,0 +1,9 @@
+{
+  "name": "move-loose-test-files",
+  "version": "1.0.0",
+  "category": "testing",
+  "tags": ["testing", "refactoring", "git", "fixtures", "test-organization", "pytest"],
+  "description": "Safe pattern for moving test files from a root test directory into mirrored sub-packages, including fixture path correction",
+  "created": "2026-02-22",
+  "last_updated": "2026-02-22"
+}
