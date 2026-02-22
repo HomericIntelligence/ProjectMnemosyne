@@ -1,0 +1,9 @@
+{
+  "name": "phantom-dir-reference-fix",
+  "version": "1.0.0",
+  "description": "Remove phantom directory references from documentation when a referenced path does not exist in the repository.",
+  "category": "docs",
+  "tags": ["documentation", "cleanup", "testing", "readme", "contributing"],
+  "trigger": "grep -r 'nonexistent-dir' docs/ README.md CONTRIBUTING.md returns hits",
+  "outcome": "All phantom directory references removed; documentation accurately reflects actual repository structure"
+}
