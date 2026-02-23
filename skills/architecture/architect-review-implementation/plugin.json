@@ -1,0 +1,27 @@
+{
+  "name": "architect-review-implementation",
+  "version": "1.0.0",
+  "category": "architecture",
+  "description": "Implement post-merge recommendations from a chief architect or code review: documentation gaps, test coverage gaps, comment accuracy, and rebase with conflict resolution.",
+  "tags": [
+    "state-machine",
+    "code-review",
+    "post-merge",
+    "rebase",
+    "conflict-resolution",
+    "test-coverage",
+    "until_state"
+  ],
+  "trigger_conditions": [
+    "chief architect review with recommended actions",
+    "post-merge cleanup tasks",
+    "rebasing feature branch against updated main",
+    "merge conflicts in refactored test files"
+  ],
+  "files": [
+    "SKILL.md",
+    "references/notes.md"
+  ],
+  "created": "2026-02-23",
+  "author": "ProjectScylla session"
+}
