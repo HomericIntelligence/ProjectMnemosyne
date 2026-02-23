@@ -1,11 +1,20 @@
+---
+name: gitattributes-setup
+description: Add .gitattributes for cross-platform line-ending normalization and diff drivers. Use when repository lacks .gitattributes, has spurious diffs, CRLF/LF merge conflicts, or CI failures due to line-ending mismatch.
+category: tooling
+date: 2026-02-22
+user-invocable: true
+---
+
 # Skill: gitattributes-setup
+
+## Overview
 
 | Field | Value |
 |-------|-------|
 | Date | 2026-02-22 |
 | Objective | Add `.gitattributes` for cross-platform line-ending normalization |
-| Outcome | Success — PR #968 merged, no renormalization needed |
-| Project | ProjectScylla (HomericIntelligence/ProjectScylla) |
+| Outcome | Success — PR merged, no renormalization needed |
 
 ## When to Use
 
@@ -78,7 +87,9 @@
 
 ## Failed Attempts
 
-- **Skill tool invocation** was denied in `don't-ask` permission mode. Used direct `git`/`gh` CLI commands instead — this is the correct fallback when Skills are unavailable.
+| Attempt | What Happened | Why It Failed |
+|---------|--------------|---------------|
+| Skill tool invocation | Denied in `don't-ask` permission mode | Safety net blocks skill tool when mode restricts it — use direct CLI commands instead |
 
 ## Results & Parameters
 
@@ -94,10 +105,10 @@ The template above is suitable for projects with:
 ### Verification commands
 ```bash
 # Confirm text attribute is set for a Python file
-git check-attr text -- scylla/cli/main.py
+git check-attr text -- <project-root>/<any>.py
 
 # Check all attributes at once
-git check-attr -a -- scylla/cli/main.py
+git check-attr -a -- <project-root>/<any>.py
 
 # Detect files that would be renormalized
 git add --renormalize . && git diff --cached --name-only
@@ -118,3 +129,9 @@ git add --renormalize . && git diff --cached --name-only
 - [ ] `git check-attr text -- <file>.py` returns `text: set`
 - [ ] Pre-commit hooks pass
 ```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectScylla | PR #968 merged, no renormalization needed | [notes.md](../../references/notes.md) |
