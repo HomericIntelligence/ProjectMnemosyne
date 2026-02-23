@@ -1,11 +1,20 @@
+---
+name: pixi-lock-rebase-regenerate
+description: Correctly resolve pixi.lock conflicts during git rebase without producing a stale lock file. Use when git rebase causes pixi.lock conflicts, or CI fails with 'lock-file not up-to-date with the workspace'.
+category: ci-cd
+date: 2026-02-22
+user-invocable: true
+---
+
 # Pixi Lock Rebase Regenerate
+
+## Overview
 
 | Attribute | Value |
 |-----------|-------|
 | **Date** | 2026-02-22 |
 | **Objective** | Correctly resolve `pixi.lock` conflicts during `git rebase` without producing a stale lock file |
-| **Outcome** | ✅ Eliminates `lock-file not up-to-date` CI failures caused by accepting one side of a pixi.lock conflict |
-| **Context** | ProjectScylla parallel PR rebase workflow — multiple branches rebased against main |
+| **Outcome** | Eliminates `lock-file not up-to-date` CI failures caused by accepting one side of a pixi.lock conflict |
 
 ## When to Use This Skill
 
@@ -21,7 +30,7 @@ relative to the rebased branch's actual `pixi.toml`.
 ## Root Cause
 
 `pixi.lock` encodes the exact resolved dependency graph plus a SHA256 hash of the local
-editable package (`scylla`). When you rebase:
+editable package. When you rebase:
 
 1. The branch's `pyproject.toml` or `pixi.toml` may differ from main's
 2. Even if `pixi.toml` is identical, the local package hash changes whenever source files change
@@ -74,11 +83,10 @@ pixi lock                                  # regenerate if it was
 
 ```bash
 git fetch origin
-git checkout -b <branch> origin/<branch>
+git switch -c <branch> origin/<branch>
 git rebase origin/main
 # ... resolve conflicts, using delete+add for pixi.lock ...
 pixi lock                                   # always regenerate after rebase
-python scripts/check_mypy_counts.py --update
 pre-commit run --all-files
 # Fix any pre-commit failures
 git add pixi.lock
@@ -87,38 +95,15 @@ git commit -m "fix(deps): regenerate pixi.lock after rebase on main"
 git push --force-with-lease origin <branch>
 ```
 
-## Failed Approaches
+## Failed Attempts
 
-### ❌ `git checkout --theirs pixi.lock`
-
-**What happened**: Accepted main's lock file. The branch modified `pyproject.toml` (adding ruff
-rules), which changed the editable `scylla` package hash. CI failed immediately:
-```
-Error: × lock-file not up-to-date with the workspace
-```
-
-**Why it fails**: The SHA256 hash of the local `scylla` package in `pixi.lock` is computed from
-the package source. Accepting `--theirs` (main's hash) doesn't match the branch's modified source.
-
-### ❌ `git checkout --ours pixi.lock`
-
-**Why it fails**: `--ours` is the pre-rebase branch's lock file, which is behind main's dependency
-changes. Still produces a mismatch.
-
-### ❌ Skipping `pixi lock` after rebase when no pixi.toml conflict
-
-**What happened**: No conflict was detected in `pixi.toml`, so `pixi lock` was skipped. But the
-local package hash had changed due to Python source file modifications on the branch. CI still
-failed with `lock-file not up-to-date`.
-
-**Rule**: Always run `pixi lock` after any rebase — even when `pixi.toml` appears unchanged.
+| Attempt | What Happened | Why It Failed |
+|---------|--------------|---------------|
+| `git checkout --theirs pixi.lock` | Accepted main's lock file; CI failed with `lock-file not up-to-date` | SHA256 hash in lock file is computed from local package source — main's hash doesn't match branch's modified source |
+| `git checkout --ours pixi.lock` | Lock file still mismatched | `--ours` is the pre-rebase branch's lock file, which is behind main's dependency changes |
+| Skipping `pixi lock` when no pixi.toml conflict | CI still failed with `lock-file not up-to-date` | Local package hash changes even when `pixi.toml` appears unchanged, due to source file modifications |
 
 ## Results & Parameters
-
-Confirmed working in ProjectScylla on 2026-02-22 across:
-- PR #965 (`756-auto-impl`): `pyproject.toml` modified (ruff rules added) — pixi.lock hash changed
-- PR #1010 (`fix-credential-dir-leak`): source files modified — local package hash changed
-- PR #1009 (`1008-state-machine-refactor`): large rebase (24 commits) with pixi.lock conflicts
 
 Key pixi commands:
 ```bash
@@ -130,3 +115,9 @@ pixi install --locked  # verify lock file is consistent (what CI runs)
 
 - `parallel-worktree-workflow` — running parallel rebases in isolated worktrees
 - `pixi-pip-audit-severity-filter` — configuring pip-audit in the pixi lint environment
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectScylla | Multiple PRs on 2026-02-22 with pixi.lock conflicts and CI failures | [notes.md](../../references/notes.md) |
