@@ -27,12 +27,12 @@ jobs:
           python-version: '3.11'
 
       - name: Generate marketplace.json
-        run: python3 scripts/generate_marketplace.py plugins/ marketplace.json
+        run: python3 scripts/generate_marketplace.py plugins/ .claude-plugin/marketplace.json
 
       - name: Check for changes
         id: check
         run: |
-          if git diff --quiet marketplace.json 2>/dev/null; then
+          if git diff --quiet .claude-plugin/marketplace.json 2>/dev/null; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
@@ -43,6 +43,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add marketplace.json
+          git add .claude-plugin/marketplace.json
           git commit -m "chore: update marketplace.json [skip ci]"
           git push

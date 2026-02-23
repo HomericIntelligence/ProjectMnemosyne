@@ -1,17 +1,8 @@
 {
   "name": "SKILL_NAME",
   "version": "1.0.0",
-  "description": "TRIGGER CONDITIONS: (1) condition 1, (2) condition 2.",
-  "author": {
-    "name": "AUTHOR_NAME"
-  },
-  "date": "YYYY-MM-DD",
+  "description": "TRIGGER CONDITIONS. Use when: (1) condition 1, (2) condition 2.",
   "category": "CATEGORY",
-  "tags": ["tag1", "tag2"],
-  "skills": "./skills",
-  "requires": {
-    "tools": [],
-    "languages": []
-  },
-  "verified_on": []
+  "date": "YYYY-MM-DD",
+  "tags": ["tag1", "tag2", "tag3"]
 }

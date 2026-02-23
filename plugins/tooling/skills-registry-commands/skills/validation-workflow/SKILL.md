@@ -15,7 +15,6 @@ CI/CD pipeline for validating skills and auto-generating marketplace.
 | Date | 2025-12-29 |
 | Objective | Automate skill validation and marketplace generation |
 | Outcome | Consistent quality, auto-updated discoverability |
-| Source | Sionic AI HuggingFace blog |
 
 ## When to Use
 
@@ -26,80 +25,38 @@ CI/CD pipeline for validating skills and auto-generating marketplace.
 
 ## Verified Workflow
 
-### 1. PR Validation Workflow
+### 1. PR Validation
 
-Copy `.github/workflows/validate-plugins.yml`:
+CI runs `python3 scripts/validate_plugins.py plugins/` on every PR touching `plugins/**`, `templates/**`, or `scripts/validate_plugins.py`.
 
-```yaml
-name: Validate Plugins
+**What it checks** (`scripts/validate_plugins.py`):
+- `.claude-plugin/plugin.json` exists with name, version, description
+- Name matches `^[a-z0-9-]+$`
+- Description ≥ 20 chars
+- Category valid if present (9 approved values)
+- SKILL.md has YAML frontmatter (`---`)
+- Required sections: Overview, When to Use, Verified Workflow, Failed Attempts, Results
+- Failed Attempts has table format (pipe characters)
 
-on:
-  pull_request:
-    paths:
-      - 'plugins/**'
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Validate SKILL.md sections
-        run: |
-          for skill_md in $(find plugins -name "SKILL.md"); do
-            if ! grep -q "## Failed Attempts" "$skill_md"; then
-              echo "ERROR: Missing 'Failed Attempts' section in $skill_md"
-              exit 1
-            fi
-          done
+Run locally before committing:
+```bash
+python3 scripts/validate_plugins.py plugins/
 ```
 
 ### 2. Auto-Generate Marketplace on Merge
 
-Copy `.github/workflows/update-marketplace.yml`:
-
-```yaml
-name: Update Marketplace
-
-on:
-  push:
-    branches: [main]
-    paths:
-      - 'plugins/**'
-
-jobs:
-  update:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Generate marketplace.json
-        run: python scripts/generate_marketplace.py
-
-      - name: Commit and push
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add marketplace.json
-          git diff --staged --quiet || git commit -m "chore: update marketplace.json [skip ci]"
-          git push
+On push to `main` (paths: `plugins/**`), CI runs:
+```bash
+python3 scripts/generate_marketplace.py plugins/ .claude-plugin/marketplace.json
 ```
+
+Result is committed with `[skip ci]` to prevent infinite loops.
 
 ### 3. Install Scripts
 
 Copy from this plugin's `scripts/` directory:
-- `validate_plugins.py` - PR validation
-- `generate_marketplace.py` - Marketplace generation
+- `validate_plugins.py` — PR validation
+- `generate_marketplace.py` — Marketplace generation
 
 ## Failed Attempts
 
@@ -109,11 +66,12 @@ Copy from this plugin's `scripts/` directory:
 | Manual marketplace.json edits | Out of sync with actual plugins | Auto-generate on merge |
 | Optional failures section | Most valuable info missing | Make it required in validation |
 | Single validation script | Hard to debug which check failed | Separate steps in workflow |
+| Inline grep validation | Missed edge cases, hard to maintain | Use dedicated validate_plugins.py |
 
 ## Results & Parameters
 
 ```yaml
-# Validation rules
+# Validation rules (from validate_plugins.py)
 validation:
   required_plugin_fields:
     - name
@@ -127,25 +85,16 @@ validation:
 
 # Workflow triggers
 triggers:
-  validate_on: pull_request (paths: plugins/**)
+  validate_on: pull_request (paths: plugins/**, templates/**, scripts/validate_plugins.py)
   generate_on: push to main (paths: plugins/**)
 
 # Commit message patterns
 commits:
   marketplace_update: "chore: update marketplace.json [skip ci]"
   skip_ci_pattern: "[skip ci]"  # Prevent infinite loops
-
-# Best practices
-recommendations:
-  - Separate validation and generation workflows
-  - Use [skip ci] for auto-commits
-  - Validate SKILL.md
-  - Show specific error messages
-  - Fail fast on first error per file
 ```
 
 ## References
 
-- Source blog: https://huggingface.co/blog/sionic-ai/claude-code-skills-training
 - GitHub Actions: https://docs.github.com/en/actions
 - Key insight: "Auto-update marketplace makes skills discoverable to /plugin system"

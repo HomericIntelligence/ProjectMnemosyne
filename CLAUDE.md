@@ -79,7 +79,7 @@ plugins/<category>/<name>/
 
 - `name`: Lowercase, kebab-case identifier
 - `description`: Trigger conditions with specific use cases
-- `category`: One of 8 approved categories
+- `category`: One of 9 approved categories
 - `date`: Creation date (YYYY-MM-DD)
 - `tags`: Searchable keywords
 
@@ -106,6 +106,7 @@ plugins/<category>/<name>/
 | `tooling` | Automation and developer tools |
 | `ci-cd` | Pipeline configurations and CI fixes |
 | `testing` | Test strategies and patterns |
+| `documentation` | Paper writing, academic reviews, knowledge docs |
 
 ### Quality Rules
 
