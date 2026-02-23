@@ -1,0 +1,15 @@
+{
+  "name": "wave-based-bulk-issue-triage",
+  "version": "1.0.0",
+  "description": "Fix 5+ independent GitHub issues in parallel waves using Task isolation:worktree — no manual worktree setup needed. Use when you have a backlog of simple issues to clear.",
+  "category": "architecture",
+  "date": "2026-02-22",
+  "tags": ["parallel", "worktrees", "bulk-triage", "issues", "wave", "sub-agents", "automation"],
+  "triggers": [
+    "multiple open GitHub issues to fix in bulk",
+    "backlog of simple fixes needing parallel PRs",
+    "mix of simple fixes and test additions to batch",
+    "want to clear 5+ issues in one session"
+  ],
+  "user-invocable": false
+}
