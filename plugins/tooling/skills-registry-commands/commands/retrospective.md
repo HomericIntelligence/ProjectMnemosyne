@@ -27,7 +27,7 @@ When the user invokes this command:
    - Parameters: What configs/settings were used?
 
 2. **Prompt for metadata**:
-   - Category (training, evaluation, optimization, debugging, architecture, tooling, ci-cd, testing)
+   - Category (training, evaluation, optimization, debugging, architecture, tooling, ci-cd, testing, documentation)
    - Skill name (kebab-case)
 
 3. **Setup repository**:
@@ -71,32 +71,58 @@ When the user invokes this command:
 
 4. **Generate plugin files** in `plugins/<category>/<name>/`:
 
-   **CRITICAL**: SKILL.md MUST meet CI validation requirements or PR will fail:
+   **File 1: `.claude-plugin/plugin.json`**
+   ```json
+   {
+     "name": "<skill-name>",
+     "version": "1.0.0",
+     "description": "<description>. Use when: (1) trigger1, (2) trigger2.",
+     "category": "<category>",
+     "date": "YYYY-MM-DD",
+     "tags": ["tag1", "tag2", "tag3"]
+   }
+   ```
+   Rules:
+   - `name`: Must match directory name, lowercase kebab-case (`^[a-z0-9-]+$`)
+   - `description`: 20+ characters, include "Use when:" trigger conditions
+   - No extra fields — only name, version, description, category, date, tags
 
-   - `skills/<name>/SKILL.md` with **required format**:
-     - ✅ **YAML frontmatter** (starts with `---`)
-       ```yaml
-       ---
-       name: skill-name
-       description: "Use when: specific triggers"
-       category: architecture
-       tier: 2
-       date: YYYY-MM-DD
-       ---
-       ```
-     - ✅ **Overview section** with `## Overview` header and table
-     - ✅ **Failed Attempts table** (MUST be table format, not prose):
-       ```markdown
-       ## Failed Attempts
+   **File 2: `skills/<name>/SKILL.md`** with **required format**:
 
-       | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-       |---------|----------------|---------------|----------------|
-       | ... | ... | ... | ... |
-       ```
-     - ✅ All other sections (When to Use, Verified Workflow, Results & Parameters)
-   - `references/notes.md` with raw details
+   ```yaml
+   ---
+   name: skill-name
+   description: "Brief description. Use when: specific triggers."
+   category: <category>
+   date: YYYY-MM-DD
+   user-invocable: false
+   ---
+   ```
 
-5. **Commit and push**:
+   Required sections:
+   - ✅ **YAML frontmatter** (starts with `---`)
+   - ✅ **Overview section** with `## Overview` header and table
+   - ✅ **When to Use** with specific trigger conditions
+   - ✅ **Verified Workflow** (exact header — NOT "## Workflow")
+   - ✅ **Failed Attempts table** (MUST be table format, not prose):
+     ```markdown
+     ## Failed Attempts
+
+     | Attempt | What Was Tried | Why It Failed | Lesson Learned |
+     |---------|----------------|---------------|----------------|
+     | ... | ... | ... | ... |
+     ```
+   - ✅ **Results & Parameters** with copy-paste configs
+
+   **File 3: `references/notes.md`** with raw session details
+
+5. **Validate plugin** (MUST pass before committing):
+   ```bash
+   python3 scripts/validate_plugins.py plugins/
+   ```
+   If validation fails, fix errors and re-run. Do NOT commit until it passes.
+
+6. **Commit and push**:
    ```bash
    git add plugins/<category>/<name>/
    git commit -m "feat: add <name> skill
@@ -110,12 +136,12 @@ Key learnings:
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
+Co-Authored-By: Claude <noreply@anthropic.com>"
 
    git push -u origin skill/<category>/<name>
    ```
 
-6. **Create PR** (only if push succeeded):
+7. **Create PR** (only if push succeeded):
    ```bash
    # Write PR body to build directory (use $MNEMOSYNE_DIR from step 3)
    cat > "$MNEMOSYNE_DIR/pr-body-<name>.md" << 'EOF'
@@ -139,7 +165,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 
    ## Test Plan
 
-   - [ ] Validate plugin with `python scripts/validate_plugins.py plugins/`
+   - [ ] Validate plugin with `python3 scripts/validate_plugins.py plugins/`
    - [ ] Install plugin and verify skill appears
    - [ ] Check skill activation with relevant triggers
 
@@ -183,21 +209,14 @@ The next `/advise` or `/retrospective` will re-clone automatically.
 
 ## Required SKILL.md Sections
 
-**All sections are CI-validated. Missing or incorrectly formatted sections will fail the build.**
-
-| Section | Format | CI-Required |
-|---------|--------|-------------|
-| **YAML frontmatter** | Starts with `---`, includes name/description/category/date | ✅ YES |
-| **Overview section** | `## Overview` header with table | ✅ YES |
-| When to Use | Specific trigger conditions | ⚠️ Recommended |
-| Verified Workflow | Steps that worked | ⚠️ Recommended |
-| **Failed Attempts** | **TABLE format** (not prose) | ✅ YES |
-| Results & Parameters | Copy-paste configs | ⚠️ Recommended |
-
-**Common CI failures**:
-- Missing YAML frontmatter entirely
-- Failed Attempts as prose paragraphs instead of table
-- Overview table without "## Overview" header
+| Section | Format |
+|---------|--------|
+| **YAML frontmatter** | Starts with `---`, includes name/description/category/date/user-invocable |
+| **Overview section** | `## Overview` header with table |
+| When to Use | Specific trigger conditions |
+| Verified Workflow | Steps that worked (exact header) |
+| **Failed Attempts** | **TABLE format** (not prose) |
+| Results & Parameters | Copy-paste configs |
 
 ## Example
 
