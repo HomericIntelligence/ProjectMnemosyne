@@ -1,3 +1,11 @@
+---
+name: issue-triage-and-fix
+description: Bulk triage and fix GitHub issues in parallel using isolated worktrees. Use when you have 10+ simple open GitHub issues, many may be duplicates, and each fix is independent.
+category: evaluation
+date: 2026-02-22
+user-invocable: true
+---
+
 # Skill: Issue Triage and Bulk Fix
 
 ## Overview
@@ -5,10 +13,8 @@
 | Field | Value |
 |-------|-------|
 | Date | 2026-02-22 |
-| Category | evaluation / tooling |
 | Objective | Bulk-close duplicates and create parallel PRs for simple open GitHub issues |
 | Outcome | SUCCESS — 5 issues closed, 16 PRs created, all with auto-merge |
-| Project | ProjectScylla |
 
 ## When to Use
 
@@ -54,7 +60,7 @@ Wave 4: Audit/investigate-first issues (3 agents)
 
 Each agent prompt must include:
 
-1. Create branch: `git checkout -b <issue>-<slug>`
+1. Create branch: `git switch -c <issue>-<slug>`
 2. Read target file(s) before editing
 3. Make minimal change
 4. Run **targeted** pre-commit (NOT `--all-files`):
@@ -62,7 +68,7 @@ Each agent prompt must include:
    pre-commit run ruff --all-files
    pre-commit run mypy-check-python --all-files
    ```
-5. Run unit tests: `pixi run python -m pytest tests/unit/ -q --no-cov 2>&1 | tail -20`
+5. Run unit tests: `<package-manager> run python -m pytest tests/unit/ -q --no-cov 2>&1 | tail -20`
 6. Stage **only** changed files: `git add <specific files>`
 7. Commit with conventional format
 8. Push + create PR: `gh pr create --title "..." --body "Closes #<n>"`
@@ -70,20 +76,20 @@ Each agent prompt must include:
 
 ### Step 4: Handle Audit Issues
 
-For "audit and fix" issues (#892, #893 pattern):
+For "audit and fix" issues:
 - Run the grep/search first
 - If nothing found → close issue with comment, no PR needed
 - If found → fix and create PR
 
-## Failed Attempts / Pitfalls
+## Failed Attempts
 
 | Attempt | What Happened | Fix |
 |---------|---------------|-----|
-| `pre-commit run --all-files` in agent | Other hooks (e.g. S101 mover) auto-modified `pyproject.toml` and `pixi.lock`, contaminating the PR with unrelated changes | Use targeted hooks: `pre-commit run ruff --all-files` only |
+| `pre-commit run --all-files` in agent | Other hooks auto-modified `pyproject.toml` and `pixi.lock`, contaminating the PR with unrelated changes | Use targeted hooks: `pre-commit run ruff --all-files` only |
 | Two issues modifying same file in parallel | Would cause merge conflicts | Pre-analyze file overlap; merge into single PR or make sequential |
 | Background agents | Task IDs couldn't be retrieved with `TaskOutput` after agent exit | Use foreground agents (default); if background needed, capture ID immediately |
 | Worktree branch cleanup | PR branch was deleted when worktree was cleaned, closing the PR | Re-create branch from main and push again; or push before worktree cleanup |
-| "Investigate first" issues in early wave | Risk of making wrong fix (e.g. #977 needed YAML audit to find root cause) | Put investigate-first issues in Wave 4 with explicit investigation steps |
+| "Investigate first" issues in early wave | Risk of making wrong fix (needed YAML audit to find root cause) | Put investigate-first issues in Wave 4 with explicit investigation steps |
 
 ## Results & Parameters
 
@@ -94,7 +100,7 @@ Agent type:     Bash with isolation: "worktree"
 Wave size:      5 parallel agents max
 Auto-merge:     gh pr merge --auto --rebase (always)
 Pre-commit:     Targeted only (ruff + mypy-check-python)
-Test command:   pixi run python -m pytest tests/unit/ -q --no-cov
+Test command:   <package-manager> run python -m pytest tests/unit/ -q --no-cov
 Branch naming:  <issue-number>-<short-slug>
 ```
 
@@ -123,7 +129,12 @@ gh pr merge --auto --rebase
 
 ## Related Skills
 
-- [parallel-worktree-workflow](../parallel-worktree-workflow/SKILL.md) — foundational worktree setup pattern
-- [parallel-pr-workflow](../parallel-pr-workflow/SKILL.md) — systematic multi-PR creation workflow
-- [deduplicate-issues](../deduplicate-issues/SKILL.md) — focused duplicate-detection approach
-- [verify-issue-before-work](../verify-issue-before-work/SKILL.md) — pre-work verification checklist
+- `parallel-worktree-workflow` — foundational worktree setup pattern
+- `parallel-pr-workflow` — systematic multi-PR creation workflow
+- `deduplicate-issues` — focused duplicate-detection approach
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectScylla | 5 issues closed, 16 PRs created across 4 waves with auto-merge | [session-notes.md](../../references/session-notes.md) |
