@@ -131,7 +131,7 @@ grep -n "α" docs/paper.tex
 cd docs/ && pdflatex -interaction=nonstopmode paper.tex
 
 # ArXiv build
-bash scripts/build_arxiv_submission.sh
+bash <project-root>/scripts/build_arxiv_submission.sh
 
 # Commit
 git add <files>

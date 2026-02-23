@@ -250,7 +250,7 @@ pdflatex -interaction=nonstopmode paper.tex  # Pass 2 (cross-refs)
 ### ArXiv Build
 ```bash
 # Automated build with verification:
-bash scripts/build_arxiv_submission.sh
+bash <project-root>/scripts/build_arxiv_submission.sh
 
 # Output:
 # ✓ main.tex generated (34 pages, 663 KB PDF)
