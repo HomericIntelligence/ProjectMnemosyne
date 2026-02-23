@@ -1,0 +1,8 @@
+{
+  "name": "unit-tests-untested-modules",
+  "version": "1.0.0",
+  "description": "Workflow for adding unit tests to previously untested source modules. Use when a quality audit identifies modules with no test file, coverage threshold is at risk, or an issue requests tests for specific untested modules.",
+  "category": "testing",
+  "date": "2026-02-22",
+  "tags": ["testing", "unit-tests", "pytest", "coverage", "mocking", "multiprocessing", "curses"]
+}

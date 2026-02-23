@@ -1,11 +1,21 @@
+---
+name: unit-tests-untested-modules
+description: Workflow for adding unit tests to previously untested source modules. Use when a quality audit identifies modules with no test file, coverage threshold is at risk, or an issue requests tests for specific untested modules.
+category: testing
+date: 2026-02-22
+user-invocable: true
+---
+
 # Skill: Unit Tests for Untested Source Modules
+
+## Overview
 
 | Property | Value |
 |----------|-------|
 | **Date** | 2026-02-22 |
-| **Objective** | Add unit tests for 6 source modules with no test file (agent_runner, parallel_executor, judge_runner, workspace_setup, config/validation, curses_ui) |
-| **Outcome** | ✅ 133 new tests added, all pass; coverage 74.93% (threshold 73%) |
-| **Context** | Issue #850 — quality audit identified modules with zero test coverage; 2 were HIGH priority core execution paths |
+| **Objective** | Add unit tests for source modules with no test file |
+| **Outcome** | 133 new tests added, all pass; coverage 74.93% (threshold 73%) |
+| **Context** | Quality audit identified modules with zero test coverage; 2 were HIGH priority core execution paths |
 
 ## When to Use This Skill
 
@@ -48,7 +58,7 @@ Read each source module fully before writing tests. Key things to capture:
 
 ```bash
 # Also check the path constants
-cat scylla/e2e/paths.py
+cat <project-root>/e2e/paths.py
 ```
 
 ### 3. Decide Mock Strategy Per Module
@@ -152,20 +162,20 @@ When a module does `from scylla.utils.terminal import restore_terminal`, patch t
 
 ```python
 # WRONG
-patch("scylla.automation.curses_ui.restore_terminal")
+patch("<package>.automation.curses_ui.restore_terminal")
 
 # RIGHT — patch where the function is defined
-patch("scylla.utils.terminal.restore_terminal")
+patch("<package>.utils.terminal.restore_terminal")
 ```
 
 ### 9. Run Tests and Fix Pre-commit Issues
 
 ```bash
 # Run only new tests first
-pixi run python -m pytest tests/unit/e2e/test_agent_runner.py -v --no-cov
+<package-manager> run python -m pytest <test-path>/test_agent_runner.py -v --no-cov
 
 # Run full suite with coverage check
-pixi run python -m pytest tests/unit/ -q
+<package-manager> run python -m pytest tests/unit/ -q
 
 # Fix formatting/linting
 pre-commit run --files <new_test_files>
@@ -176,12 +186,7 @@ pre-commit run --files <new_test_files>
 ### 10. Commit and PR
 
 ```bash
-git add tests/unit/e2e/test_agent_runner.py \
-        tests/unit/e2e/test_judge_runner.py \
-        tests/unit/e2e/test_parallel_executor.py \
-        tests/unit/config/test_validation.py \
-        tests/unit/automation/test_curses_ui.py
-
+git add <test-files>
 git commit -m "test(unit): Add unit tests for N untested source modules"
 git push -u origin <branch>
 gh pr create --title "..." --body "Closes #<issue>"
@@ -190,26 +195,11 @@ gh pr merge --auto --rebase <pr-number>
 
 ## Failed Attempts
 
-### ❌ Attempt 1: Patch `restore_terminal` at import site
-**What we tried**: `patch("scylla.automation.curses_ui.restore_terminal")`
-
-**Why it failed**: `curses_ui.py` imports `restore_terminal` inline inside a method (`from scylla.utils.terminal import restore_terminal`), so the module-level attribute doesn't exist.
-
-**Fix**: Patch the source: `patch("scylla.utils.terminal.restore_terminal")`
-
-### ❌ Attempt 2: Thread-based idempotency test with timing
-**What we tried**: Start UI, capture thread, call start() again, assert same thread.
-
-**Why it failed**: With `curses.wrapper` mocked to a no-op, the background thread completes instantly and sets `running=False`. The second `start()` call sees `running=False` and creates a new thread rather than returning early.
-
-**Fix**: Manually set `ui.running = True` and `ui.thread = threading.Thread(...)` to simulate the running state without depending on thread timing.
-
-### ❌ Attempt 3: Calling `check_if_paused()` after `signal_rate_limit()` without pre-setting resume
-**What we tried**: Signal rate limit, then call check_if_paused() to verify pause detection.
-
-**Why it failed**: `check_if_paused()` calls `self._resume_event.wait()` which blocks indefinitely when the resume event is not set.
-
-**Fix**: Set `coordinator._resume_event.set()` before calling `check_if_paused()` so the wait returns immediately.
+| Attempt | What Happened | Why It Failed |
+|---------|--------------|---------------|
+| Patch `restore_terminal` at import site | `patch("package.curses_ui.restore_terminal")` had no effect | Module imports function inline inside method body, not at module level |
+| Thread-based idempotency test | Second `start()` created new thread instead of no-op | Mocked `curses.wrapper` completes instantly — thread finishes before second `start()` call |
+| `check_if_paused()` after `signal_rate_limit()` | Test blocked indefinitely | `check_if_paused()` calls `_resume_event.wait()` which blocks when resume not pre-set |
 
 ## Results & Parameters
 
@@ -232,7 +222,7 @@ After:  74.93% (threshold: 73%)
 Tests:  2535 passed, 0 failed, 8 warnings
 ```
 
-### Mock Pattern for Agent/Judge Result Files
+### Mock Pattern for File I/O Modules
 
 ```python
 def _write_result_json(agent_dir: Path, data: dict) -> None:
@@ -270,10 +260,16 @@ def test_signal_rate_limit_sets_pause(self) -> None:
 ## Key Takeaways
 
 1. **Always check if test file already exists** before creating a new one — extend, don't replace
-2. **Read source before writing tests** — especially to find path constants (`RESULT_FILE`, `AGENT_DIR`)
+2. **Read source before writing tests** — especially to find path constants
 3. **Use `tmp_path` for file I/O tests** — real files are more reliable than `mock_open`
 4. **multiprocessing.Manager: use a real one** — don't mock it, use `with Manager() as mgr:`
 5. **Pre-set blocking events before triggering them** — avoid deadlocks in coordinator tests
 6. **Thread timing tests are fragile** — simulate state directly rather than relying on thread scheduling
 7. **Patch at the definition site** — `from X import Y` means patch `X.Y`, not the importer
 8. **Docstrings must be ≤100 chars** — ruff E501 will fail on long docstrings
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectScylla | Issue #850, PR #975 — 133 tests added, coverage 74.93% | [notes.md](../../references/notes.md) |
