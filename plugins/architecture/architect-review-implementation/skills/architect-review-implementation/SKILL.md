@@ -1,3 +1,11 @@
+---
+name: architect-review-implementation
+description: Implement post-merge recommendations from a chief architect or code review covering documentation gaps, test coverage gaps, comment accuracy, and rebase with conflict resolution
+category: architecture
+date: 2026-02-23
+user-invocable: false
+---
+
 # Skill: Architect Review Implementation
 
 ## Overview
