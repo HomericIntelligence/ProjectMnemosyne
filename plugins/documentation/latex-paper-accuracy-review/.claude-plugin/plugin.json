@@ -1,0 +1,16 @@
+{
+  "name": "latex-paper-accuracy-review",
+  "version": "1.0.0",
+  "description": "Review a LaTeX research paper for factual accuracy against raw experiment data, statistical outputs, and codebase constants. Use before submitting a research paper for publication or arXiv upload.",
+  "category": "documentation",
+  "date": "2026-02-22",
+  "tags": [
+    "latex",
+    "accuracy-review",
+    "fact-check",
+    "research-paper",
+    "statistics",
+    "publication",
+    "arxiv"
+  ]
+}

@@ -1,3 +1,11 @@
+---
+name: latex-paper-accuracy-review
+description: Review a LaTeX research paper for factual accuracy against raw experiment data, statistical outputs, and codebase constants before publication
+category: documentation
+date: 2026-02-22
+user-invocable: false
+---
+
 # Skill: latex-paper-accuracy-review
 
 ## Overview
