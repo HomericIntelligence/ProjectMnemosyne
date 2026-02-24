@@ -1,3 +1,11 @@
+---
+name: mypy-full-compliance-workflow
+description: 9-phase workflow to achieve full mypy compliance by fixing all suppressed error codes incrementally, decoupling tests/ overrides, and removing disable_error_code entirely
+category: tooling
+date: 2026-02-23
+user-invocable: false
+---
+
 # Mypy Full Compliance Workflow
 
 ## Overview
@@ -307,3 +315,9 @@ python scripts/check_mypy_counts.py → OK — counts match mypy output
 **What happened**: Removing `assignment` from global `disable_error_code` caused mypy to now report `method-assign` errors in `tests/unit/judge/test_evaluator.py` (monkey-patching: `evaluator._single_evaluation = mock_eval`). These weren't visible before because `assignment` suppressed them.
 
 **Fix**: Add `method-assign` to the `tests.*` override AND to `TESTS_ONLY_ERROR_CODES`.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectScylla | Issue #687, PRs #1068–#1077 | [notes.md](../../references/notes.md) |
