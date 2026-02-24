@@ -32,6 +32,22 @@
       "tags": []
     },
     {
+      "name": "architect-review-implementation",
+      "description": "Implement post-merge recommendations from a chief architect or code review: documentation gaps, test coverage gaps, comment accuracy, and rebase with conflict resolution.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/architect-review-implementation",
+      "category": "architecture",
+      "tags": [
+        "state-machine",
+        "code-review",
+        "post-merge",
+        "rebase",
+        "conflict-resolution",
+        "test-coverage",
+        "until_state"
+      ]
+    },
+    {
       "name": "backward-compat-removal",
       "description": "Systematically remove deprecated backward compatibility code and tests",
       "version": "1.0.0",
@@ -444,6 +460,22 @@
       ]
     },
     {
+      "name": "state-machine-wiring",
+      "description": "Wire hierarchical state machines (Experiment \u2192 Tier \u2192 Run) into a production runner using closure-based action maps. Use when refactoring a monolithic execution loop into resumable, checkpoint-backed discrete states.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/state-machine-wiring",
+      "category": "architecture",
+      "tags": [
+        "state-machine",
+        "closure",
+        "checkpoint",
+        "resume",
+        "hierarchy",
+        "refactoring",
+        "production"
+      ]
+    },
+    {
       "name": "track-implementation-progress",
       "description": "Track implementation progress against plan. Use to monitor component delivery and identify blockers.",
       "version": "1.0.0",
@@ -483,6 +515,22 @@
       "source": "./skills/architecture/unify-config-structure",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "wave-based-bulk-issue-triage",
+      "description": "Fix 5+ independent GitHub issues in parallel waves using Task isolation:worktree \u2014 no manual worktree setup needed. Use when you have a backlog of simple issues to clear.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/wave-based-bulk-issue-triage",
+      "category": "architecture",
+      "tags": [
+        "parallel",
+        "worktrees",
+        "bulk-triage",
+        "issues",
+        "wave",
+        "sub-agents",
+        "automation"
+      ]
     },
     {
       "name": "yaml-long-line-refactor",
@@ -845,6 +893,25 @@
       ]
     },
     {
+      "name": "github-bulk-housekeeping",
+      "description": "Bulk GitHub housekeeping: classify open issues by complexity, batch-close already-resolved issues, clean stale worktrees/branches, create batched PRs for simple issues, and rebase conflicting PRs onto main. Use when you have 20+ open issues, stale worktrees, or PRs with merge conflicts.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/github-bulk-housekeeping",
+      "category": "ci-cd",
+      "tags": [
+        "github",
+        "issues",
+        "triage",
+        "bulk",
+        "worktree",
+        "branch-cleanup",
+        "rebase",
+        "pre-commit",
+        "pixi",
+        "ci"
+      ]
+    },
+    {
       "name": "install-workflow",
       "description": "Create GitHub Actions workflows for automated package building and distribution. Use in package phase to automate .mojopkg building and release creation.",
       "version": "1.0.0",
@@ -915,6 +982,25 @@
       "source": "./skills/ci-cd/pr-merge-conflict-resolution",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "pr-rebase-pipeline",
+      "description": "Fix a systemic CI failure blocking all PRs, then ship 13+ fixes in parallel waves using git worktrees. Use when multiple PRs share the same CI failure, or when you want to clear a backlog of simple issues in parallel.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pr-rebase-pipeline",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "rebase",
+        "pipeline",
+        "worktrees",
+        "bulk-triage",
+        "pip-audit",
+        "pixi",
+        "parallel",
+        "wave-based",
+        "pr-management"
+      ]
     },
     {
       "name": "pre-commit-maintenance",
@@ -1384,6 +1470,25 @@
       ]
     },
     {
+      "name": "mock-expensive-simulations",
+      "description": "Diagnose and fix pytest tests hanging due to expensive Monte Carlo or bootstrap simulation calls. Covers: identifying the hanging function, verifying the correct patch target (caller vs origin namespace), and adding an autouse conftest fixture.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/mock-expensive-simulations",
+      "category": "debugging",
+      "tags": [
+        "pytest",
+        "mock",
+        "monte-carlo",
+        "bootstrap",
+        "simulation",
+        "conftest",
+        "autouse",
+        "hanging-tests",
+        "performance",
+        "from-import-patch"
+      ]
+    },
+    {
       "name": "mypy-quick-win-fixes",
       "description": "Skill: mypy-quick-win-fixes. Use when working with mypy quick win fixes.",
       "version": "1.0.0",
@@ -1645,6 +1750,41 @@
       "tags": []
     },
     {
+      "name": "latex-paper-accuracy-review",
+      "description": "Review a LaTeX research paper for factual accuracy against raw experiment data, statistical outputs, and codebase constants. Use before submitting a research paper for publication or arXiv upload.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/latex-paper-accuracy-review",
+      "category": "documentation",
+      "tags": [
+        "latex",
+        "accuracy-review",
+        "fact-check",
+        "research-paper",
+        "statistics",
+        "publication",
+        "arxiv"
+      ]
+    },
+    {
+      "name": "latex-paper-peer-review",
+      "description": "Apply expert peer review corrections to LaTeX research papers: fix statistical claims, reconcile pipeline vs paper discrepancies, integrate computed results, include figures, and verify clean LaTeX compilation.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/latex-paper-peer-review",
+      "category": "documentation",
+      "tags": [
+        "latex",
+        "research",
+        "peer-review",
+        "statistics",
+        "arXiv",
+        "paper-revision",
+        "holm-bonferroni",
+        "power-analysis",
+        "cliff-delta",
+        "reproducibility"
+      ]
+    },
+    {
       "name": "mass-figure-documentation",
       "description": "Generate comprehensive documentation for multiple analysis figures using parallel background agents",
       "version": "1.0.0",
@@ -1673,6 +1813,24 @@
       "source": "./skills/documentation/paper-final-review",
       "category": "documentation",
       "tags": []
+    },
+    {
+      "name": "paper-iterative-accuracy-review",
+      "description": "Apply a second-pass accuracy review to an academic paper after initial fixes, catching: (1) internal inconsistencies introduced by prior edits, (2) missed effect-size classification errors (Romano thresholds), (3) ambiguous table column headers, (4) unexplained counter-intuitive results, (5) missing pricing/cost context for readers. Use when a first round of fixes has been applied and you want to verify no new issues were introduced.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/paper-iterative-accuracy-review",
+      "category": "documentation",
+      "tags": [
+        "latex",
+        "academic-paper",
+        "accuracy-review",
+        "effect-size",
+        "iterative",
+        "consistency-check",
+        "statistical-thresholds",
+        "romano",
+        "post-fix-validation"
+      ]
     },
     {
       "name": "paper-readiness-epic",
@@ -1731,6 +1889,24 @@
       "source": "./skills/documentation/publication-readiness-review",
       "category": "documentation",
       "tags": []
+    },
+    {
+      "name": "statistical-claim-verification",
+      "description": "Verify statistical methodology claims in research papers against raw data and authoritative references before editing. Use when reviewing or correcting empirical papers, ablation studies, or benchmark reports that contain effect sizes, statistical tests, or power analyses.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/statistical-claim-verification",
+      "category": "documentation",
+      "tags": [
+        "statistics",
+        "peer-review",
+        "latex",
+        "cliff-delta",
+        "kruskal-wallis",
+        "scheirer-ray-hare",
+        "bootstrap-ci",
+        "power-analysis",
+        "empirical-evaluation"
+      ]
     },
     {
       "name": "sync-stale-future-improvements",
@@ -3272,6 +3448,22 @@
       "source": "./skills/tooling/mojo-format",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "mypy-full-compliance-workflow",
+      "description": "9-phase workflow to achieve full mypy compliance: fix all suppressed error codes incrementally, decouple tests/ overrides, remove disable_error_code entirely, and simplify the regression guard to a single invocation. Use when a project has incrementally-adopted mypy with multiple disabled error codes and you want to achieve full compliance.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/mypy-full-compliance-workflow",
+      "category": "tooling",
+      "tags": [
+        "mypy",
+        "type-checking",
+        "compliance",
+        "incremental",
+        "pre-commit",
+        "regression-guard",
+        "python"
+      ]
     },
     {
       "name": "parallel-issue-implementation",
