@@ -3122,6 +3122,21 @@
       ]
     },
     {
+      "name": "consolidate-skills-directory",
+      "description": "Consolidate a dual plugins/+skills/ structure into a single skills/<category>/<name>/ directory. Use when: (1) ProjectMnemosyne has both plugins/ and skills/ directories causing confusion, (2) migrating flat legacy skills to plugin format, (3) updating all tooling and CI to reference the new canonical location.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/consolidate-skills-directory",
+      "category": "tooling",
+      "tags": [
+        "migration",
+        "consolidation",
+        "directory-structure",
+        "marketplace",
+        "refactoring",
+        "skills-registry"
+      ]
+    },
+    {
       "name": "coverage-threshold-tuning",
       "description": "Tune pytest coverage thresholds to match actual coverage baselines and avoid CI failures",
       "version": "1.0.0",
