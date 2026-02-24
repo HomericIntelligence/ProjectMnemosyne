@@ -1,3 +1,11 @@
+---
+name: pr-rebase-pipeline
+description: Fix a systemic CI failure blocking all PRs, then ship fixes in parallel waves using git worktrees
+category: ci-cd
+date: 2026-02-23
+user-invocable: false
+---
+
 # Skill: PR Rebase Pipeline (Bulk Issue Triage)
 
 | Property | Value |
