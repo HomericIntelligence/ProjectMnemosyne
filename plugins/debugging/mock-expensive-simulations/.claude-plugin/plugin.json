@@ -1,8 +1,9 @@
 {
   "name": "mock-expensive-simulations",
   "version": "1.0.0",
-  "category": "debugging",
   "description": "Diagnose and fix pytest tests hanging due to expensive Monte Carlo or bootstrap simulation calls. Covers: identifying the hanging function, verifying the correct patch target (caller vs origin namespace), and adding an autouse conftest fixture.",
+  "category": "debugging",
+  "date": "2026-02-23",
   "tags": [
     "pytest",
     "mock",
@@ -14,17 +15,5 @@
     "hanging-tests",
     "performance",
     "from-import-patch"
-  ],
-  "trigger_conditions": [
-    "pytest hangs at a fixed percentage of the test suite",
-    "push hook blocks indefinitely due to test timeout",
-    "tests call compute_statistical_results or similar analysis functions",
-    "Monte Carlo / bootstrap functions with large n_simulations defaults"
-  ],
-  "files": [
-    "SKILL.md",
-    "references/notes.md"
-  ],
-  "created": "2026-02-23",
-  "author": "ProjectScylla session"
+  ]
 }

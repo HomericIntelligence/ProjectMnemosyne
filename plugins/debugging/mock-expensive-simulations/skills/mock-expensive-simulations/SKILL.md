@@ -1,3 +1,11 @@
+---
+name: mock-expensive-simulations
+description: Diagnose and fix pytest tests hanging due to expensive Monte Carlo or bootstrap simulation calls, with correct patch target (caller vs origin namespace) identification
+category: debugging
+date: 2026-02-23
+user-invocable: false
+---
+
 # Skill: Mock Expensive Simulations
 
 ## Overview
