@@ -1,0 +1,8 @@
+{
+  "name": "cli-deep-audit-and-fix",
+  "version": "1.0.0",
+  "description": "Deep-audit CLI scripts for bugs, dead code, and validation gaps, then fix in dependency order with complementary tests. Use when: (1) a CLI script has grown organically and may have accumulated inconsistencies, (2) multiple code paths (single-mode vs batch-mode) could diverge, (3) you need to validate argparse resolution works correctly.",
+  "category": "testing",
+  "date": "2026-02-24",
+  "tags": ["argparse", "cli", "audit", "batch-mode", "validation", "ThreadPoolExecutor", "dead-code", "testing"]
+}
