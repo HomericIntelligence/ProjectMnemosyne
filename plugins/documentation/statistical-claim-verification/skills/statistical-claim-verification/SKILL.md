@@ -1,7 +1,7 @@
 ---
 name: statistical-claim-verification
 description: Verify statistical methodology claims in research papers against raw data and authoritative references before making corrections
-category: research
+category: documentation
 date: 2026-02-23
 user-invocable: false
 ---
