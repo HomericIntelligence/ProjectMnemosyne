@@ -1,21 +1,9 @@
 {
-  "name": "batch-pr-ci-fixer",
+  "name": "manage-experiment-audit",
   "version": "1.0.0",
-  "description": "Batch create PRs from orphaned branches and systematically fix CI failures",
-  "category": "ci-cd",
-  "created": "2025-12-31",
-  "repository": "mvillmow/ProjectOdyssey",
-  "tags": ["pr-management", "ci-fix", "github", "mojo", "pre-commit"],
-  "triggers": [
-    "multiple branches need PRs",
-    "batch CI failures",
-    "orphaned branches with completed work"
-  ],
-  "tools_used": [
-    "gh pr create",
-    "gh pr checks",
-    "gh run view --log-failed",
-    "pixi run mojo format",
-    "pixi run ruff check --fix"
-  ]
+  "description": "Audit and fix patterns for manage_experiment.py CLI: --from batch-mode wiring, checkpoint reset logic, mock patching for local imports, test fixture gotchas",
+  "category": "debugging",
+  "tags": ["cli", "batch-mode", "checkpoint", "mock-patching", "test-fixtures", "manage_experiment"],
+  "author": "ProjectScylla",
+  "created": "2026-02-24"
 }
