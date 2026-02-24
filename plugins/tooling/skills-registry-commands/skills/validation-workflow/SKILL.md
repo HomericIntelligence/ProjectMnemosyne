@@ -27,7 +27,7 @@ CI/CD pipeline for validating skills and auto-generating marketplace.
 
 ### 1. PR Validation
 
-CI runs `python3 scripts/validate_plugins.py plugins/` on every PR touching `plugins/**`, `templates/**`, or `scripts/validate_plugins.py`.
+CI runs `python3 scripts/validate_plugins.py skills/ plugins/` on every PR touching `skills/**`, `plugins/**`, `templates/**`, or `scripts/validate_plugins.py`.
 
 **What it checks** (`scripts/validate_plugins.py`):
 - `.claude-plugin/plugin.json` exists with name, version, description
@@ -40,14 +40,14 @@ CI runs `python3 scripts/validate_plugins.py plugins/` on every PR touching `plu
 
 Run locally before committing:
 ```bash
-python3 scripts/validate_plugins.py plugins/
+python3 scripts/validate_plugins.py skills/
 ```
 
 ### 2. Auto-Generate Marketplace on Merge
 
-On push to `main` (paths: `plugins/**`), CI runs:
+On push to `main` (paths: `skills/**`, `plugins/**`), CI runs:
 ```bash
-python3 scripts/generate_marketplace.py plugins/ .claude-plugin/marketplace.json
+python3 scripts/generate_marketplace.py .claude-plugin/marketplace.json skills/ plugins/
 ```
 
 Result is committed with `[skip ci]` to prevent infinite loops.
@@ -85,8 +85,8 @@ validation:
 
 # Workflow triggers
 triggers:
-  validate_on: pull_request (paths: plugins/**, templates/**, scripts/validate_plugins.py)
-  generate_on: push to main (paths: plugins/**)
+  validate_on: pull_request (paths: skills/**, plugins/**, templates/**, scripts/validate_plugins.py)
+  generate_on: push to main (paths: skills/**, plugins/**)
 
 # Commit message patterns
 commits:

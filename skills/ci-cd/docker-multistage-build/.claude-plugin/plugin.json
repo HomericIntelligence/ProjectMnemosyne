@@ -1,0 +1,14 @@
+{
+  "name": "docker-multistage-build",
+  "version": "1.0.0",
+  "description": "Implement multi-stage Docker builds to reduce production image size by separating build-time and runtime dependencies",
+  "category": "ci-cd",
+  "date": "2026-02-14",
+  "tags": [
+    "docker",
+    "optimization",
+    "containerization",
+    "build",
+    "deployment"
+  ]
+}

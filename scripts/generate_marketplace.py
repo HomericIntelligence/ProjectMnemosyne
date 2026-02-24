@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
 """
-Generate marketplace.json index from all plugins.
+Generate marketplace.json index from all plugins/skills.
 
-This script scans the plugins/ directory and generates a searchable
+This script scans one or more directories and generates a searchable
 index file at .claude-plugin/marketplace.json.
 
 Usage:
-    python3 scripts/generate_marketplace.py [plugins_dir] [output_file]
+    python3 scripts/generate_marketplace.py [output_file] [scan_dir ...]
 
     Defaults:
-        plugins_dir: plugins/
         output_file: .claude-plugin/marketplace.json
+        scan_dirs: skills/ plugins/
 """
 
 import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -66,24 +65,33 @@ def find_plugins(plugins_dir: Path) -> List[Path]:
     return plugins
 
 
-def generate_marketplace(plugins_dir: Path) -> Dict[str, Any]:
-    """Generate marketplace index."""
-    plugins = find_plugins(plugins_dir)
-
+def generate_marketplace(scan_dirs: List[Path], repo_root: Path) -> Dict[str, Any]:
+    """Generate marketplace index from multiple scan directories."""
     plugin_entries = []
-    for plugin_path in plugins:
-        metadata = load_plugin_metadata(plugin_path)
-        if metadata:
-            # Create clean entry for index (official format uses 'source')
-            entry = {
-                "name": metadata.get("name", plugin_path.name),
-                "description": metadata.get("description", ""),
-                "version": metadata.get("version", "1.0.0"),
-                "source": "./" + str(plugin_path.relative_to(plugins_dir.parent)),
-                "category": metadata.get("category", "unknown"),
-                "tags": metadata.get("tags", []),
-            }
-            plugin_entries.append(entry)
+    seen_names: set = set()
+
+    for scan_dir in scan_dirs:
+        if not scan_dir.exists():
+            continue
+        plugins = find_plugins(scan_dir)
+        for plugin_path in plugins:
+            metadata = load_plugin_metadata(plugin_path)
+            if metadata:
+                name = metadata.get("name", plugin_path.name)
+                # Avoid duplicates (skills/ wins over plugins/ if same name)
+                if name in seen_names:
+                    continue
+                seen_names.add(name)
+                # Create clean entry for index (official format uses 'source')
+                entry = {
+                    "name": name,
+                    "description": metadata.get("description", ""),
+                    "version": metadata.get("version", "1.0.0"),
+                    "source": "./" + str(plugin_path.relative_to(repo_root)),
+                    "category": metadata.get("category", "unknown"),
+                    "tags": metadata.get("tags", []),
+                }
+                plugin_entries.append(entry)
 
     # Sort by category then name
     plugin_entries.sort(key=lambda x: (x["category"], x["name"]))
@@ -104,18 +112,31 @@ def generate_marketplace(plugins_dir: Path) -> Dict[str, Any]:
 
 
 def main() -> int:
-    """Main entry point."""
-    plugins_dir_arg = sys.argv[1] if len(sys.argv) > 1 else "plugins"
-    output_file_arg = sys.argv[2] if len(sys.argv) > 2 else ".claude-plugin/marketplace.json"
+    """Main entry point.
 
-    plugins_dir = Path(plugins_dir_arg)
+    Usage: generate_marketplace.py [output_file] [scan_dir ...]
+    Defaults: output=.claude-plugin/marketplace.json, scan_dirs=skills/ plugins/
+    """
+    args = sys.argv[1:]
+
+    # First arg is output file if it ends with .json, else it's a scan dir
+    if args and (args[0].endswith(".json") or args[0].startswith(".claude-plugin")):
+        output_file_arg = args[0]
+        scan_dir_args = args[1:] if len(args) > 1 else ["skills", "plugins"]
+    else:
+        output_file_arg = ".claude-plugin/marketplace.json"
+        scan_dir_args = args if args else ["skills", "plugins"]
+
     output_file = Path(output_file_arg)
+    repo_root = Path(".")
+    scan_dirs = [Path(d) for d in scan_dir_args]
 
-    if not plugins_dir.exists():
-        print(f"Plugins directory not found: {plugins_dir}")
+    existing = [d for d in scan_dirs if d.exists()]
+    if not existing:
+        print(f"No scan directories found: {scan_dir_args}")
         return 1
 
-    marketplace = generate_marketplace(plugins_dir)
+    marketplace = generate_marketplace(scan_dirs, repo_root)
 
     # Write output
     with open(output_file, "w") as f:
@@ -123,6 +144,7 @@ def main() -> int:
 
     print(f"Generated {output_file}")
     print(f"  Plugins indexed: {len(marketplace['plugins'])}")
+    print(f"  Scanned dirs: {[str(d) for d in existing]}")
 
     return 0
 

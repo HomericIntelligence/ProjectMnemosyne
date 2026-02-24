@@ -3,6 +3,7 @@ name: Validate Plugins
 on:
   pull_request:
     paths:
+      - 'skills/**'
       - 'plugins/**'
       - 'templates/**'
       - 'scripts/validate_plugins.py'
@@ -10,6 +11,7 @@ on:
     branches:
       - main
     paths:
+      - 'skills/**'
       - 'plugins/**'
       - 'templates/**'
   workflow_dispatch:
@@ -28,7 +30,7 @@ jobs:
           python-version: '3.11'
 
       - name: Validate plugins
-        run: python3 scripts/validate_plugins.py plugins/
+        run: python3 scripts/validate_plugins.py skills/ plugins/
 
       - name: Check template validity
         run: |

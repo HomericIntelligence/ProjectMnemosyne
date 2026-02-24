@@ -7,22 +7,22 @@ from pathlib import Path
 # Sub-skills that should be marked as user-invocable: false
 SUB_SKILLS = [
     # gh-pr-review-workflow
-    "plugins/tooling/gh-pr-review-workflow/skills/fix-feedback/SKILL.md",
-    "plugins/tooling/gh-pr-review-workflow/skills/get-comments/SKILL.md",
-    "plugins/tooling/gh-pr-review-workflow/skills/reply-comment/SKILL.md",
+    "skills/tooling/gh-pr-review-workflow/skills/fix-feedback/SKILL.md",
+    "skills/tooling/gh-pr-review-workflow/skills/get-comments/SKILL.md",
+    "skills/tooling/gh-pr-review-workflow/skills/reply-comment/SKILL.md",
     # git-worktree-workflow
-    "plugins/tooling/git-worktree-workflow/skills/cleanup/SKILL.md",
-    "plugins/tooling/git-worktree-workflow/skills/create/SKILL.md",
-    "plugins/tooling/git-worktree-workflow/skills/switch/SKILL.md",
-    "plugins/tooling/git-worktree-workflow/skills/sync/SKILL.md",
-    # skills-registry-commands
+    "skills/tooling/git-worktree-workflow/skills/cleanup/SKILL.md",
+    "skills/tooling/git-worktree-workflow/skills/create/SKILL.md",
+    "skills/tooling/git-worktree-workflow/skills/switch/SKILL.md",
+    "skills/tooling/git-worktree-workflow/skills/sync/SKILL.md",
+    # skills-registry-commands (stays in plugins/)
     "plugins/tooling/skills-registry-commands/skills/advise/SKILL.md",
     "plugins/tooling/skills-registry-commands/skills/documentation-patterns/SKILL.md",
     "plugins/tooling/skills-registry-commands/skills/retrospective/SKILL.md",
     "plugins/tooling/skills-registry-commands/skills/validation-workflow/SKILL.md",
     # ci-failure-workflow
-    "plugins/ci-cd/ci-failure-workflow/skills/analyze/SKILL.md",
-    "plugins/ci-cd/ci-failure-workflow/skills/fix/SKILL.md",
+    "skills/ci-cd/ci-failure-workflow/skills/analyze/SKILL.md",
+    "skills/ci-cd/ci-failure-workflow/skills/fix/SKILL.md",
 ]
 
 def add_user_invocable(file_path: Path) -> bool:

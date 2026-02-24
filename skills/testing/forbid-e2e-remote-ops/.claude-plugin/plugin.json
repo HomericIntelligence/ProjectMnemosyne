@@ -1,0 +1,15 @@
+{
+  "name": "forbid-e2e-remote-ops",
+  "version": "1.0.0",
+  "description": "Prevent remote Git operations in e2e tests and optimize worktree creation",
+  "category": "testing",
+  "date": "2026-02-14",
+  "tags": [
+    "e2e-testing",
+    "git",
+    "worktree",
+    "test-isolation",
+    "safety",
+    "optimization"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "multi-judge-consensus",
+  "version": "1.0.0",
+  "description": "Implement multiple LLM judges with consensus voting in evaluation systems",
+  "category": "evaluation",
+  "date": "2026-01-08",
+  "tags": [
+    "evaluation",
+    "consensus",
+    "multi-judge",
+    "llm-as-judge",
+    "voting",
+    "multiprocessing"
+  ]
+}

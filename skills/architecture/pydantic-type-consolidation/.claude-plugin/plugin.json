@@ -1,0 +1,12 @@
+{
+  "name": "pydantic-type-consolidation",
+  "version": "1.0.0",
+  "description": "Pattern for consolidating duplicate types into Pydantic-based inheritance hierarchies with full backward compatibility",
+  "category": "architecture",
+  "date": "2026-02-15",
+  "tags": [
+    "pydantic",
+    "type",
+    "consolidation"
+  ]
+}

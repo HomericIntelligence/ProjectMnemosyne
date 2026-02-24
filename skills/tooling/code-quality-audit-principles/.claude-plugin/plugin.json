@@ -1,0 +1,20 @@
+{
+  "name": "code-quality-audit-principles",
+  "version": "1.0.0",
+  "description": "Comprehensive codebase audit against 7 core development principles (KISS, YAGNI, TDD, DRY, SOLID, Modularity, POLA). Generates ratings, files issues, and creates audit report.",
+  "category": "tooling",
+  "date": "2025-02-09",
+  "tags": [
+    "audit",
+    "quality",
+    "principles",
+    "technical-debt",
+    "kiss",
+    "yagni",
+    "tdd",
+    "dry",
+    "solid",
+    "modularity",
+    "pola"
+  ]
+}

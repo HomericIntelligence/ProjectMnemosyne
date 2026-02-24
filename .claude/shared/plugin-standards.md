@@ -5,7 +5,7 @@ Standards for creating and validating skills in the ProjectMnemosyne marketplace
 ## Required Structure
 
 ```text
-plugins/<category>/<name>/
+skills/<category>/<name>/
 ├── .claude-plugin/
 │   └── plugin.json           # Metadata (REQUIRED)
 ├── skills/<name>/

@@ -1,0 +1,12 @@
+{
+  "name": "bats-shell-testing",
+  "version": "1.0.0",
+  "description": "Skill: bats-shell-testing. Use when working with bats shell testing.",
+  "category": "testing",
+  "date": "2026-01-01",
+  "tags": [
+    "bats",
+    "shell",
+    "testing"
+  ]
+}

@@ -123,9 +123,9 @@ def fix_skill_file(skill_path: Path) -> Tuple[bool, str]:
 
 def main():
     """Main execution."""
-    plugins_dir = Path('/home/mvillmow/ProjectMnemosyne/plugins')
+    skills_dir = Path('/home/mvillmow/ProjectMnemosyne/skills')
 
-    # Plugins that still need Failed Attempts tables
+    # Skills that still need Failed Attempts tables
     plugins_with_table_warning = [
         'evaluation/add-analysis-metric',
         'evaluation/dryrun-validation',
@@ -156,7 +156,7 @@ def main():
     modified_files = 0
 
     for plugin_path in plugins_with_table_warning:
-        skill_file = plugins_dir / plugin_path / 'skills' / Path(plugin_path).name / 'SKILL.md'
+        skill_file = skills_dir / plugin_path / 'skills' / Path(plugin_path).name / 'SKILL.md'
 
         if not skill_file.exists():
             print(f"⚠ Skipping {plugin_path} - SKILL.md not found")

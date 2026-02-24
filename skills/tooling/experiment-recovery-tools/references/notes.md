@@ -51,10 +51,10 @@ User requested changing default judge from Sonnet to Opus.
    - `--add-judge const="opus"`
    - Help text examples
 
-2. `src/scylla/e2e/regenerate.py`:
+2. `scylla/e2e/regenerate.py`:
    - Fallback: `"claude-opus-4-5-20251101"`
 
-3. `src/scylla/e2e/models.py`:
+3. `scylla/e2e/models.py`:
    - Already correct: `["claude-opus-4-5-20251101"]`
 
 ### Iteration 5: AttributeError Fixes
@@ -86,7 +86,7 @@ User reported: "this is not supposed to be running judges" when using `--status 
 User requested: "update the rerun judge script to have the same behavior as the re-run agents, but instead of validating agents, it does it for judges"
 
 **Created**:
-1. `src/scylla/e2e/rerun_judges.py` - Judge-specific rerun logic
+1. `scylla/e2e/rerun_judges.py` - Judge-specific rerun logic
 2. `scripts/rerun_judges.py` - Judge rerun CLI
 3. `docs/dev/rerun-judges-guide.md` - Comprehensive guide
 
@@ -194,8 +194,8 @@ Total expected runs: 1130
 ## Files Modified
 
 ### New Files
-- `src/scylla/e2e/rerun.py`
-- `src/scylla/e2e/rerun_judges.py`
+- `scylla/e2e/rerun.py`
+- `scylla/e2e/rerun_judges.py`
 - `scripts/rerun_agents.py`
 - `scripts/rerun_judges.py`
 - `scripts/regenerate_agent_results.py`
@@ -203,7 +203,7 @@ Total expected runs: 1130
 - `docs/dev/rerun-judges-guide.md`
 
 ### Modified Files
-- `src/scylla/e2e/regenerate.py` (fixed judge_model references)
+- `scylla/e2e/regenerate.py` (fixed judge_model references)
 - `scripts/run_e2e_experiment.py` (changed default judge to opus)
 
 ## Performance Characteristics

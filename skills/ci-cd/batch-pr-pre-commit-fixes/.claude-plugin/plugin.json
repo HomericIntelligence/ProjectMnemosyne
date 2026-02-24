@@ -1,0 +1,16 @@
+{
+  "name": "batch-pr-pre-commit-fixes",
+  "version": "1.0.0",
+  "description": "Systematically fix multiple failing PRs with pre-commit hook auto-fix issues",
+  "category": "ci-cd",
+  "date": "2026-02-15",
+  "tags": [
+    "pre-commit",
+    "markdown",
+    "linting",
+    "ci-cd",
+    "batch-processing",
+    "github-actions",
+    "automation"
+  ]
+}

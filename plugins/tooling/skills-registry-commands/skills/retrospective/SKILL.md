@@ -35,7 +35,7 @@ Capture session learnings and create a new skill plugin with PR.
 | Wrong category | "Invalid category" | Use one of 9 approved categories |
 | `## Workflow` instead of `## Verified Workflow` | "Missing Verified Workflow section" | Use exact header name |
 | SessionEnd hook | Hook doesn't display messages to user | Use UserPromptSubmit hook instead |
-| Committed without validating | PR fails CI | Run `python3 scripts/validate_plugins.py plugins/` before commit |
+| Committed without validating | PR fails CI | Run `python3 scripts/validate_plugins.py skills/` before commit |
 
 ## Failed Attempts
 

@@ -1,0 +1,13 @@
+{
+  "name": "validation-test-fixture-symmetry",
+  "version": "1.0.0",
+  "description": "Skill: validation-test-fixture-symmetry. Use when working with validation test fixture symmetry.",
+  "category": "debugging",
+  "date": "2026-01-01",
+  "tags": [
+    "validation",
+    "test",
+    "fixture",
+    "symmetry"
+  ]
+}
