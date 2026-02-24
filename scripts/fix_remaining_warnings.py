@@ -139,9 +139,9 @@ def fix_skill_file(skill_path: Path) -> Tuple[bool, List[str]]:
 
 def main():
     """Main execution."""
-    plugins_dir = Path('/home/mvillmow/ProjectMnemosyne/plugins')
+    skills_dir = Path('/home/mvillmow/ProjectMnemosyne/skills')
 
-    # List of plugins with remaining warnings (from validation output)
+    # List of skills with remaining warnings (from validation output)
     plugins_with_workflow_warning = [
         'optimization/analyze-simd-usage',
         'tooling/agent-run-orchestrator',
@@ -193,7 +193,7 @@ def main():
     all_fixes = []
 
     for plugin_path in all_plugins:
-        skill_file = plugins_dir / plugin_path / 'skills' / Path(plugin_path).name / 'SKILL.md'
+        skill_file = skills_dir / plugin_path / 'skills' / Path(plugin_path).name / 'SKILL.md'
 
         if not skill_file.exists():
             print(f"⚠ Skipping {plugin_path} - SKILL.md not found")

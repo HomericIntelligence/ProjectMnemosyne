@@ -11,7 +11,7 @@
       "name": "agent-coverage-check",
       "description": "Check agent configuration coverage across hierarchy levels and phases. Use to ensure complete agent system coverage.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/agent-coverage-check",
+      "source": "./skills/architecture/agent-coverage-check",
       "category": "architecture",
       "tags": []
     },
@@ -19,7 +19,7 @@
       "name": "agent-hierarchy-diagram",
       "description": "Generate visual hierarchy diagrams of agent system showing levels and delegation. Use for documentation or onboarding.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/agent-hierarchy-diagram",
+      "source": "./skills/architecture/agent-hierarchy-diagram",
       "category": "architecture",
       "tags": []
     },
@@ -27,15 +27,29 @@
       "name": "agent-validate-config",
       "description": "Validate agent YAML frontmatter and configuration. Use before committing agent changes or in CI.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/agent-validate-config",
+      "source": "./skills/architecture/agent-validate-config",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "backward-compat-removal",
+      "description": "Systematically remove deprecated backward compatibility code and tests",
+      "version": "1.0.0",
+      "source": "./skills/architecture/backward-compat-removal",
+      "category": "architecture",
+      "tags": [
+        "refactoring",
+        "technical-debt",
+        "cleanup",
+        "testing",
+        "deprecation"
+      ]
     },
     {
       "name": "centralized-path-constants",
       "description": "Create central path constants module to prevent hardcoded path inconsistencies. Use when multiple files construct the same paths differently, causing bugs during refactoring or resume scenarios.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/centralized-path-constants",
+      "source": "./skills/architecture/centralized-path-constants",
       "category": "architecture",
       "tags": [
         "paths",
@@ -46,24 +60,10 @@
       ]
     },
     {
-      "name": "claude-code-settings-config",
-      "description": "Configure Claude Code settings.json per test workspace to control thinking mode via API rather than prompt injection. Use when implementing workspace-level configuration for E2E tests.",
-      "version": "1.0.0",
-      "source": "./plugins/architecture/claude-code-settings-config",
-      "category": "architecture",
-      "tags": [
-        "claude-code",
-        "settings",
-        "configuration",
-        "e2e",
-        "testing"
-      ]
-    },
-    {
       "name": "codebase-consolidation",
       "description": "Systematic approach to finding and consolidating duplicate code, aligning implementations to consistent patterns, and documenting intentional type variations. Use when: analyzing codebase for duplicates, unifying implementations across modules, creating backward-compatible refactors.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/codebase-consolidation",
+      "source": "./skills/architecture/codebase-consolidation",
       "category": "architecture",
       "tags": [
         "refactor",
@@ -76,10 +76,42 @@
       ]
     },
     {
+      "name": "config-dir-consolidation",
+      "description": "Move configuration files from a dedicated config/ directory into tests/ (or another appropriate location) when config is only consumed by the test infrastructure. Use when: a config directory contains files superseded by a test-side system, config files are referenced by path-hardcoded loaders, or you want to eliminate a legacy config directory entirely.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/config-dir-consolidation",
+      "category": "architecture",
+      "tags": [
+        "config-migration",
+        "consolidation",
+        "refactoring",
+        "tier-config",
+        "path-cleanup",
+        "prompt-removal",
+        "test-infrastructure"
+      ]
+    },
+    {
+      "name": "credential-mount-context-manager",
+      "description": "TRIGGER CONDITIONS: (1) temp directories leaking in home dir after Docker runs, (2) credential files not being cleaned up after container exit, (3) silent rmtree failures in finally blocks on WSL2, (4) need to mount host credentials into Docker containers safely.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/credential-mount-context-manager",
+      "category": "architecture",
+      "tags": [
+        "docker",
+        "credentials",
+        "context-manager",
+        "cleanup",
+        "wsl2",
+        "temp-dirs",
+        "resource-leak"
+      ]
+    },
+    {
       "name": "doc-generate-adr",
       "description": "Generate Architecture Decision Records (ADRs) to document significant architectural decisions. Use when: (1) Making significant architectural decisions, (2) Choosing between technical alternatives, (3) Documenting design trade-offs.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/doc-generate-adr",
+      "source": "./skills/architecture/doc-generate-adr",
       "category": "architecture",
       "tags": [
         "adr",
@@ -93,7 +125,7 @@
       "name": "doc-issue-readme",
       "description": "Post structured documentation to GitHub issue as a comment. Use when starting work on an issue to document approach and track progress.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/doc-issue-readme",
+      "source": "./skills/architecture/doc-issue-readme",
       "category": "architecture",
       "tags": []
     },
@@ -101,7 +133,7 @@
       "name": "doc-update-blog",
       "description": "Update development blog with implementation milestones, learnings, and progress. Use after completing major milestones or phases.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/doc-update-blog",
+      "source": "./skills/architecture/doc-update-blog",
       "category": "architecture",
       "tags": []
     },
@@ -109,7 +141,7 @@
       "name": "doc-validate-markdown",
       "description": "Validate markdown files for formatting, links, and style compliance using markdownlint. Use when: (1) Before committing documentation, (2) Markdown linting errors in CI, (3) Creating new documentation.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/doc-validate-markdown",
+      "source": "./skills/architecture/doc-validate-markdown",
       "category": "architecture",
       "tags": [
         "markdown",
@@ -123,7 +155,7 @@
       "name": "dry-consolidation-workflow",
       "description": "Complete workflow for analyzing codebase duplications and implementing DRY consolidation with centralized modules. Use when: starting codebase cleanup, eliminating duplicate functions/constants, creating single sources of truth, standardizing path/config usage.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/dry-consolidation-workflow",
+      "source": "./skills/architecture/dry-consolidation-workflow",
       "category": "architecture",
       "tags": [
         "dry-principle",
@@ -136,10 +168,26 @@
       ]
     },
     {
+      "name": "dry-refactoring-workflow",
+      "description": "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods",
+      "version": "1.0.0",
+      "source": "./skills/architecture/dry-refactoring-workflow",
+      "category": "architecture",
+      "tags": [
+        "refactoring",
+        "dry-principle",
+        "helper-methods",
+        "tdd",
+        "code-quality",
+        "python",
+        "pytest"
+      ]
+    },
+    {
       "name": "e2e-resume-refactor",
       "description": "Refactoring E2E test framework resume behavior with directory restructure and checkpoint schema upgrade",
       "version": "1.0.0",
-      "source": "./plugins/architecture/e2e-resume-refactor",
+      "source": "./skills/architecture/e2e-resume-refactor",
       "category": "architecture",
       "tags": [
         "e2e-testing",
@@ -150,10 +198,38 @@
       ]
     },
     {
+      "name": "extract-detection-utils",
+      "description": "Pattern for extracting private detection/validation functions into centralized, reusable modules with optional caching",
+      "version": "1.0.0",
+      "source": "./skills/architecture/extract-detection-utils",
+      "category": "architecture",
+      "tags": [
+        "refactoring",
+        "module-extraction",
+        "DRY",
+        "single-responsibility",
+        "lru-cache",
+        "testing-patterns",
+        "code-organization"
+      ]
+    },
+    {
+      "name": "extract-method-refactoring",
+      "description": "Skill: extract-method-refactoring. Use when working with extract method refactoring.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/extract-method-refactoring",
+      "category": "architecture",
+      "tags": [
+        "extract",
+        "method",
+        "refactoring"
+      ]
+    },
+    {
       "name": "fix-resource-prompt-consistency",
       "description": "Workflow for fixing inconsistent root-level field mapping in tier configurations and enhancing resource prompt suffixes",
       "version": "1.0.0",
-      "source": "./plugins/architecture/fix-resource-prompt-consistency",
+      "source": "./skills/architecture/fix-resource-prompt-consistency",
       "category": "architecture",
       "tags": [
         "tier-config",
@@ -166,7 +242,7 @@
       "name": "generate-api-docs",
       "description": "Create API reference documentation from docstrings. Use when documenting public module interfaces.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/generate-api-docs",
+      "source": "./skills/architecture/generate-api-docs",
       "category": "architecture",
       "tags": []
     },
@@ -174,7 +250,7 @@
       "name": "generate-changelog",
       "description": "Create changelog from git commits. Use when preparing release notes.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/generate-changelog",
+      "source": "./skills/architecture/generate-changelog",
       "category": "architecture",
       "tags": []
     },
@@ -182,7 +258,7 @@
       "name": "generate-docstrings",
       "description": "Create docstrings for functions and classes. Use when documenting code APIs.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/generate-docstrings",
+      "source": "./skills/architecture/generate-docstrings",
       "category": "architecture",
       "tags": []
     },
@@ -190,7 +266,7 @@
       "name": "identify-architecture",
       "description": "Analyze ML model architecture from papers and code. Use when understanding model structure for implementation.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/identify-architecture",
+      "source": "./skills/architecture/identify-architecture",
       "category": "architecture",
       "tags": []
     },
@@ -198,7 +274,7 @@
       "name": "implementation-alignment-validation",
       "description": "Use when validating that implementation code matches research documentation, design specs, or theoretical frameworks. Triggers: 'validate implementation', 'check alignment', 'docs vs code', 'implementation matches theory', 'verify against research'.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/implementation-alignment-validation",
+      "source": "./skills/architecture/implementation-alignment-validation",
       "category": "architecture",
       "tags": [
         "validation",
@@ -215,7 +291,7 @@
       "name": "implementation-theory-alignment",
       "description": "Use when validating implementation code against research documentation, design specs, or theory papers. Triggers: 'validate implementation', 'align with docs', 'check against research', 'implementation matches theory'. Provides systematic workflow for identifying discrepancies and implementing fixes.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/implementation-theory-alignment",
+      "source": "./skills/architecture/implementation-theory-alignment",
       "category": "architecture",
       "tags": [
         "validation",
@@ -229,18 +305,97 @@
       ]
     },
     {
+      "name": "judge-rerun-workspace-corruption",
+      "description": "Fix judge reruns producing incorrect results due to workspace corruption",
+      "version": "1.0.0",
+      "source": "./skills/architecture/judge-rerun-workspace-corruption",
+      "category": "architecture",
+      "tags": [
+        "evaluation",
+        "judging",
+        "workspace-management",
+        "error-handling",
+        "rerun-scripts"
+      ]
+    },
+    {
+      "name": "migrate-dataclass-to-pydantic",
+      "description": "Migrate Python dataclasses to Pydantic BaseModel with validation",
+      "version": "1.0.0",
+      "source": "./skills/architecture/migrate-dataclass-to-pydantic",
+      "category": "architecture",
+      "tags": [
+        "pydantic",
+        "dataclass",
+        "migration",
+        "validation",
+        "refactoring"
+      ]
+    },
+    {
+      "name": "orphan-module-subpackage-relocation",
+      "description": "Relocate an orphaned root-level module into the correct sub-package. Use when a module sits at the package root but logically belongs in an existing sub-package, or a quality audit identifies structural inconsistencies where one module is an exception.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/orphan-module-subpackage-relocation",
+      "category": "architecture",
+      "tags": [
+        "refactoring",
+        "structure",
+        "imports",
+        "sub-package",
+        "KISS",
+        "YAGNI"
+      ]
+    },
+    {
       "name": "phase-plan-generate",
       "description": "Generate comprehensive plan documentation following Template 1 format. Use when creating plan.md files for new components or subsections.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/phase-plan-generate",
+      "source": "./skills/architecture/phase-plan-generate",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "plan-create-component",
+      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/plan-create-component",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "plan-regenerate-issues",
+      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/plan-regenerate-issues",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "plan-validate-structure",
+      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/plan-validate-structure",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "pydantic-type-consolidation",
+      "description": "Pattern for consolidating duplicate types into Pydantic-based inheritance hierarchies with full backward compatibility",
+      "version": "1.0.0",
+      "source": "./skills/architecture/pydantic-type-consolidation",
+      "category": "architecture",
+      "tags": [
+        "pydantic",
+        "type",
+        "consolidation"
+      ]
     },
     {
       "name": "quality-complexity-check",
       "description": "Analyze code complexity metrics including cyclomatic complexity and nesting depth. Use when: (1) Code review process, (2) Identifying refactoring candidates, (3) Maintaining code quality standards.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/quality-complexity-check",
+      "source": "./skills/architecture/quality-complexity-check",
       "category": "architecture",
       "tags": [
         "complexity",
@@ -254,7 +409,7 @@
       "name": "quality-security-scan",
       "description": "Scan code for security vulnerabilities and unsafe patterns. Use when: (1) Before committing code with secrets, (2) Security review process, (3) Pre-release security audit.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/quality-security-scan",
+      "source": "./skills/architecture/quality-security-scan",
       "category": "architecture",
       "tags": [
         "security",
@@ -268,7 +423,7 @@
       "name": "refactor-for-extensibility",
       "description": "Systematic workflow for preparing codebases for extensibility through extraction, parameterization, and protocol-based abstraction",
       "version": "1.0.0",
-      "source": "./plugins/architecture/refactor-for-extensibility",
+      "source": "./skills/architecture/refactor-for-extensibility",
       "category": "architecture",
       "tags": []
     },
@@ -276,7 +431,7 @@
       "name": "shared-fixture-migration",
       "description": "Migrate duplicated test fixture configs to a centralized shared location with runtime loading. Use when: test fixtures contain config files duplicated across many test directories, the same config content is repeated for each test but is actually test-independent, you want a single source of truth for shared configurations.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/shared-fixture-migration",
+      "source": "./skills/architecture/shared-fixture-migration",
       "category": "architecture",
       "tags": [
         "deduplication",
@@ -292,23 +447,61 @@
       "name": "track-implementation-progress",
       "description": "Track implementation progress against plan. Use to monitor component delivery and identify blockers.",
       "version": "1.0.0",
-      "source": "./plugins/architecture/track-implementation-progress",
+      "source": "./skills/architecture/track-implementation-progress",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "type-alias-consolidation",
+      "description": "Skill: type-alias-consolidation. Use when working with type alias consolidation.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/type-alias-consolidation",
+      "category": "architecture",
+      "tags": [
+        "type",
+        "alias",
+        "consolidation"
+      ]
+    },
+    {
+      "name": "type-alias-removal",
+      "description": "Systematic workflow for removing redundant type aliases and using explicit variant names",
+      "version": "1.0.0",
+      "source": "./skills/architecture/type-alias-removal",
+      "category": "architecture",
+      "tags": [
+        "refactoring",
+        "type-safety",
+        "code-clarity",
+        "maintenance"
+      ]
     },
     {
       "name": "unify-config-structure",
       "description": "Skill: Unify Config Structure",
       "version": "1.0.0",
-      "source": "./plugins/architecture/unify-config-structure",
+      "source": "./skills/architecture/unify-config-structure",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "yaml-long-line-refactor",
+      "description": "Skill: yaml-long-line-refactor. Use when working with yaml long line refactor.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/yaml-long-line-refactor",
+      "category": "architecture",
+      "tags": [
+        "yaml",
+        "long",
+        "line",
+        "refactor"
+      ]
     },
     {
       "name": "analyze-ci-failure-logs",
       "description": "Parse and analyze CI failure logs to identify root causes and error patterns. Use when CI builds fail to understand what broke.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/analyze-ci-failure-logs",
+      "source": "./skills/ci-cd/analyze-ci-failure-logs",
       "category": "ci-cd",
       "tags": [
         "ci",
@@ -321,7 +514,7 @@
       "name": "batch-pr-ci-fix",
       "description": "Batch fix CI failures across multiple PRs and enable auto-merge. Use when: (1) Multiple PRs have CI failures, (2) Need to fix common failure patterns, (3) Want to auto-merge PRs after CI passes. Handles broken links, formatting issues, mypy errors.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/batch-pr-ci-fix",
+      "source": "./skills/ci-cd/batch-pr-ci-fix",
       "category": "ci-cd",
       "tags": [
         "ci-cd",
@@ -333,10 +526,26 @@
       ]
     },
     {
+      "name": "batch-pr-pre-commit-fixes",
+      "description": "Systematically fix multiple failing PRs with pre-commit hook auto-fix issues",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/batch-pr-pre-commit-fixes",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "markdown",
+        "linting",
+        "ci-cd",
+        "batch-processing",
+        "github-actions",
+        "automation"
+      ]
+    },
+    {
       "name": "build-run-local",
       "description": "Run local builds with proper environment setup matching CI pipeline. Use when: (1) Building code locally before pushing, (2) Verifying changes work before creating PR, (3) Debugging build issues in isolation.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/build-run-local",
+      "source": "./skills/ci-cd/build-run-local",
       "category": "ci-cd",
       "tags": [
         "build",
@@ -347,10 +556,41 @@
       ]
     },
     {
+      "name": "ci-coverage-threshold-single-source",
+      "description": "Remove explicit --cov-fail-under from CI workflows and rely on pyproject.toml as the single source of truth. Use when CI passes with a lower coverage threshold than local enforces, or --cov-fail-under appears in GitHub Actions AND fail_under exists in pyproject.toml with different values.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/ci-coverage-threshold-single-source",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "coverage",
+        "pytest",
+        "pytest-cov",
+        "github-actions",
+        "single-source-of-truth",
+        "pyproject"
+      ]
+    },
+    {
+      "name": "ci-deprecation-enforcement",
+      "description": "Promote a CI grep warning into a hard exit-1 enforcement gate for deprecated symbols. Use when: (1) converting ::warning:: grep steps to ::error:: + exit 1, (2) adding grep -v exclusions for re-exports or docstring mentions, (3) verifying deprecated symbol count is zero before enabling enforcement.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/ci-deprecation-enforcement",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "deprecation",
+        "grep",
+        "enforcement",
+        "exit-1",
+        "github-actions"
+      ]
+    },
+    {
       "name": "ci-failure-workflow",
       "description": "Complete CI failure debugging workflow. Contains 2 sub-skills: (1) analyze - parse CI logs to identify root causes and error patterns, (2) fix - systematic workflow to reproduce, fix, and verify CI issues. Use when CI checks fail on PR.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/ci-failure-workflow",
+      "source": "./skills/ci-cd/ci-failure-workflow",
       "category": "ci-cd",
       "tags": [
         "ci-cd",
@@ -364,15 +604,86 @@
       "name": "ci-test-failure-diagnosis",
       "description": "Systematic approach to diagnosing and fixing CI test failures in PRs",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/ci-test-failure-diagnosis",
+      "source": "./skills/ci-cd/ci-test-failure-diagnosis",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "comprehensive-pr-review-orchestration",
+      "description": "Orchestrate comprehensive PR reviews using specialized sub-reviewers. Use when reviewing complex PRs with multiple aspects to evaluate.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/comprehensive-pr-review-orchestration",
+      "category": "ci-cd",
+      "tags": [
+        "pr-review",
+        "code-review",
+        "orchestration",
+        "github"
+      ]
+    },
+    {
+      "name": "deduplicate-issues",
+      "description": "Systematically identify and close duplicate or resolved GitHub issues",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/deduplicate-issues",
+      "category": "ci-cd",
+      "tags": [
+        "github",
+        "issues",
+        "automation",
+        "cleanup",
+        "deduplication"
+      ]
+    },
+    {
+      "name": "deduplicate-llm-json-extraction",
+      "description": "Skill: deduplicate-llm-json-extraction. Use when working with deduplicate llm json extraction.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/deduplicate-llm-json-extraction",
+      "category": "ci-cd",
+      "tags": [
+        "deduplicate",
+        "llm",
+        "json",
+        "extraction"
+      ]
+    },
+    {
+      "name": "docker-multistage-build",
+      "description": "Implement multi-stage Docker builds to reduce production image size by separating build-time and runtime dependencies",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/docker-multistage-build",
+      "category": "ci-cd",
+      "tags": [
+        "docker",
+        "optimization",
+        "containerization",
+        "build",
+        "deployment"
+      ]
+    },
+    {
+      "name": "enable-yaml-markdown-linting",
+      "description": "Enable yamllint and markdownlint-cli2 pre-commit hooks with proper configuration for GitHub Actions and documentation quality",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/enable-yaml-markdown-linting",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "yamllint",
+        "markdownlint",
+        "linting",
+        "quality",
+        "github-actions",
+        "ci-cd",
+        "documentation"
+      ]
     },
     {
       "name": "fix-ci-failures",
       "description": "Diagnose and fix CI/CD failures by analyzing logs, reproducing locally, and applying fixes. Use when CI checks fail on pull requests.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/fix-ci-failures",
+      "source": "./skills/ci-cd/fix-ci-failures",
       "category": "ci-cd",
       "tags": [
         "ci",
@@ -385,7 +696,7 @@
       "name": "fix-ci-mojo-test-failure",
       "description": "TRIGGER CONDITIONS: (1) CI failing with Mojo test assertion error, (2) test expects specific return value but implementation returns different value, (3) edge case handling missing in implementation. Verified on ProjectOdyssey PR #3050.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/fix-ci-mojo-test-failure",
+      "source": "./skills/ci-cd/fix-ci-mojo-test-failure",
       "category": "ci-cd",
       "tags": [
         "ci",
@@ -400,7 +711,7 @@
       "name": "fix-docker-image-case",
       "description": "Fix Docker SBOM and workflow failures caused by mixed-case image names in GitHub Actions. Use when: SBOM generation fails with 'could not parse reference' errors, Docker workflows fail with case-related parsing issues.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/fix-docker-image-case",
+      "source": "./skills/ci-cd/fix-docker-image-case",
       "category": "ci-cd",
       "tags": [
         "docker",
@@ -414,7 +725,7 @@
       "name": "fix-docker-platform",
       "description": "Fix Docker build failures caused by platform mismatches. Use when: (1) Docker builds fail with 'unsupported platform' errors, (2) pixi install fails in Docker with linux-aarch64 errors, (3) Multi-arch builds fail when pixi.toml only supports one platform.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/fix-docker-platform",
+      "source": "./skills/ci-cd/fix-docker-platform",
       "category": "ci-cd",
       "tags": [
         "docker",
@@ -429,7 +740,7 @@
       "name": "fix-docker-shell-tty",
       "description": "Fix Docker interactive shell failures caused by missing TTY flags. Use when: (1) docker compose exec or docker exec fails for interactive shells, (2) justfile shell recipe doesn't work, (3) Terminal input/output not working in containerized shells. Root cause: -T flag disables TTY when -it flags are needed.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/fix-docker-shell-tty",
+      "source": "./skills/ci-cd/fix-docker-shell-tty",
       "category": "ci-cd",
       "tags": [
         "docker",
@@ -441,10 +752,26 @@
       ]
     },
     {
+      "name": "fix-mypy-valid-type-errors",
+      "description": "Workflow for fixing mypy valid-type violations (lowercase callable/any) to re-enable suppressed error codes",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/fix-mypy-valid-type-errors",
+      "category": "ci-cd",
+      "tags": [
+        "mypy",
+        "type-checking",
+        "valid-type",
+        "callable",
+        "typing",
+        "pre-commit",
+        "python"
+      ]
+    },
+    {
       "name": "fix-ruff-linting-errors",
       "description": "Comprehensive workflow for fixing all ruff linting errors in CI/CD pipelines",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/fix-ruff-linting-errors",
+      "source": "./skills/ci-cd/fix-ruff-linting-errors",
       "category": "ci-cd",
       "tags": [
         "linting",
@@ -456,10 +783,27 @@
       ]
     },
     {
+      "name": "fix-skill-validation-warnings",
+      "description": "Automated approach to fix CI validation errors and warnings across skill plugins. Use when: (1) CI reports validation failures in SKILL.md files, (2) Bulk fixing missing Overview/Verified Workflow/Results sections, (3) Converting Failed Attempts prose to required table format. Verified on ProjectMnemosyne with 198 plugins.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/fix-skill-validation-warnings",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "validation",
+        "quality",
+        "automation",
+        "bulk-fixes",
+        "skill-plugins",
+        "python",
+        "markdown"
+      ]
+    },
+    {
       "name": "gh-check-ci-status",
       "description": "Check CI/CD status of a pull request including workflow runs and test results. Use when: (1) Verifying PR checks are passing before merge, (2) Investigating CI failures, (3) Monitoring long-running CI jobs.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/gh-check-ci-status",
+      "source": "./skills/ci-cd/gh-check-ci-status",
       "category": "ci-cd",
       "tags": [
         "github",
@@ -473,7 +817,7 @@
       "name": "github-actions-mojo",
       "description": "GitHub Actions CI setup for Mojo projects. Use when: (1) Setting up Mojo CI/CD, (2) Configuring pixi with GitHub Actions, (3) Running mojo test in CI.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/github-actions-mojo",
+      "source": "./skills/ci-cd/github-actions-mojo",
       "category": "ci-cd",
       "tags": [
         "mojo",
@@ -487,7 +831,7 @@
       "name": "github-actions-pytest-pixi",
       "description": "GitHub Actions CI setup for pytest projects using pixi. Use when: (1) Setting up CI/CD for Python projects with pixi, (2) Need parallel test execution with matrix strategy, (3) Adding automated testing to existing repos, (4) Configuring coverage reporting in CI.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/github-actions-pytest-pixi",
+      "source": "./skills/ci-cd/github-actions-pytest-pixi",
       "category": "ci-cd",
       "tags": [
         "github-actions",
@@ -504,31 +848,128 @@
       "name": "install-workflow",
       "description": "Create GitHub Actions workflows for automated package building and distribution. Use in package phase to automate .mojopkg building and release creation.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/install-workflow",
+      "source": "./skills/ci-cd/install-workflow",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "markdownlint-troubleshooting",
+      "description": "Diagnose and fix markdownlint CI failures that block multiple PRs due to issues in main branch",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/markdownlint-troubleshooting",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "pre-commit",
+        "markdownlint",
+        "debugging",
+        "unblock-prs",
+        "linting"
+      ]
+    },
+    {
+      "name": "pin-npm-dockerfile",
+      "description": "Skill: pin-npm-dockerfile. Use when working with pin npm dockerfile.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pin-npm-dockerfile",
+      "category": "ci-cd",
+      "tags": [
+        "pin",
+        "npm",
+        "dockerfile"
+      ]
+    },
+    {
+      "name": "pixi-lock-rebase-regenerate",
+      "description": "Correctly resolve pixi.lock conflicts during git rebase without producing a stale lock file. Use when git rebase causes pixi.lock conflicts, or CI fails with 'lock-file not up-to-date with the workspace'.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pixi-lock-rebase-regenerate",
+      "category": "ci-cd",
+      "tags": [
+        "pixi",
+        "lock-file",
+        "rebase",
+        "ci-failure",
+        "dependency-management"
+      ]
+    },
+    {
+      "name": "pixi-pip-audit-severity-filter",
+      "description": "Configure pip-audit in pixi CI to fail only on HIGH/CRITICAL severity vulnerabilities using pixi task definitions",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pixi-pip-audit-severity-filter",
+      "category": "ci-cd",
+      "tags": [
+        "pip-audit",
+        "pixi",
+        "security",
+        "ci",
+        "vulnerability-scanning",
+        "severity-filter"
+      ]
     },
     {
       "name": "pr-merge-conflict-resolution",
       "description": "Systematic workflow for rebasing PRs and resolving merge conflicts. Use when: (1) PR branch is behind main with conflicts, (2) bulk-fixing frontmatter conflicts across many files, (3) resolving conflicts between new and existing fields.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/pr-merge-conflict-resolution",
+      "source": "./skills/ci-cd/pr-merge-conflict-resolution",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "pre-commit-maintenance",
+      "description": "Skill: pre-commit-maintenance. Use when working with pre commit maintenance.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pre-commit-maintenance",
+      "category": "ci-cd",
+      "tags": [
+        "pre",
+        "commit",
+        "maintenance"
+      ]
+    },
+    {
+      "name": "pytest-coverage-threshold-config",
+      "description": "Configure pytest coverage thresholds to enforce minimum code coverage in CI/CD pipelines with multiple report formats",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pytest-coverage-threshold-config",
+      "category": "ci-cd",
+      "tags": [
+        "pytest",
+        "coverage",
+        "ci-cd",
+        "pyproject.toml",
+        "github-actions",
+        "quality",
+        "thresholds",
+        "html-reports"
+      ]
     },
     {
       "name": "quality-fix-formatting",
       "description": "Automatically fix code formatting issues using mojo format, markdownlint, and pre-commit hooks. Use when formatting checks fail or before committing code.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/quality-fix-formatting",
+      "source": "./skills/ci-cd/quality-fix-formatting",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "reenable-precommit-hook",
+      "description": "Skill: reenable-precommit-hook. Use when working with reenable precommit hook.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/reenable-precommit-hook",
+      "category": "ci-cd",
+      "tags": [
+        "reenable",
+        "precommit",
+        "hook"
+      ]
     },
     {
       "name": "rescue-broken-prs",
       "description": "Recover and repair broken pull requests with failed CI checks",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/rescue-broken-prs",
+      "source": "./skills/ci-cd/rescue-broken-prs",
       "category": "ci-cd",
       "tags": []
     },
@@ -536,7 +977,7 @@
       "name": "run-precommit",
       "description": "Run pre-commit hooks locally to validate code quality before committing. Use when: (1) Before committing code, (2) Testing if CI will pass, (3) After making code changes.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/run-precommit",
+      "source": "./skills/ci-cd/run-precommit",
       "category": "ci-cd",
       "tags": [
         "pre-commit",
@@ -550,15 +991,31 @@
       "name": "scan-vulnerabilities",
       "description": "Detect security vulnerabilities in code and dependencies. Use when auditing security.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/scan-vulnerabilities",
+      "source": "./skills/ci-cd/scan-vulnerabilities",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "skills-to-plugins-migration",
+      "description": "Migrate PRs that add skills to the flat skills/ directory into the correct plugins/<category>/<name>/ structure so CI triggers and the validate check passes. Use when a PR branch puts files under skills/ instead of plugins/, or when the validate CI check never appears on a PR.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/skills-to-plugins-migration",
+      "category": "ci-cd",
+      "tags": [
+        "skills",
+        "plugins",
+        "migration",
+        "ci-fix",
+        "pr-rescue",
+        "structure",
+        "validate"
+      ]
     },
     {
       "name": "validate-workflow",
       "description": "Validate GitHub Actions workflow files for syntax and correctness. Use when: (1) Creating or modifying workflows, (2) Workflow syntax errors occur, (3) Before committing workflow changes.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/validate-workflow",
+      "source": "./skills/ci-cd/validate-workflow",
       "category": "ci-cd",
       "tags": [
         "github-actions",
@@ -572,7 +1029,7 @@
       "name": "verify-pr-ready",
       "description": "Verify PR is ready for merge with all requirements met. Use when: (1) Before merging a PR manually, (2) Validating PR readiness in batch operations, (3) Checking branch protection rule compliance.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/verify-pr-ready",
+      "source": "./skills/ci-cd/verify-pr-ready",
       "category": "ci-cd",
       "tags": [
         "github",
@@ -586,7 +1043,7 @@
       "name": "yaml-frontmatter-validation",
       "description": "Fix CI failures caused by missing YAML frontmatter in SKILL.md files. Use when: (1) plugin validation fails with 'missing YAML frontmatter' errors, (2) multiple PRs failing with same root cause, (3) SKILL.md doesn't start with '---', (4) systematic fixes needed across main and feature branches.",
       "version": "1.0.0",
-      "source": "./plugins/ci-cd/yaml-frontmatter-validation",
+      "source": "./skills/ci-cd/yaml-frontmatter-validation",
       "category": "ci-cd",
       "tags": [
         "ci-cd",
@@ -601,7 +1058,7 @@
       "name": "analyze-code-structure",
       "description": "Examine code organization and identify structural patterns. Use when reviewing module design.",
       "version": "1.0.0",
-      "source": "./plugins/debugging/analyze-code-structure",
+      "source": "./skills/debugging/analyze-code-structure",
       "category": "debugging",
       "tags": []
     },
@@ -609,7 +1066,7 @@
       "name": "analyze-equations",
       "description": "Parse and interpret mathematical equations from research papers. Use when extracting formulas for implementation.",
       "version": "1.0.0",
-      "source": "./plugins/debugging/analyze-equations",
+      "source": "./skills/debugging/analyze-equations",
       "category": "debugging",
       "tags": []
     },
@@ -617,15 +1074,30 @@
       "name": "checkpoint-config-mismatch",
       "description": "Skill: Fixing Checkpoint Config Mismatch and Data Loss",
       "version": "1.0.0",
-      "source": "./plugins/debugging/checkpoint-config-mismatch",
+      "source": "./skills/debugging/checkpoint-config-mismatch",
       "category": "debugging",
       "tags": []
+    },
+    {
+      "name": "ci-test-matrix-management",
+      "description": "Safely modify CI test matrix without breaking coverage validation. Use when: (1) Disabling flaky tests from CI workflow, (2) Removing or commenting out test groups from comprehensive-tests.yml, (3) Pre-commit validate-test-coverage hook fails after CI matrix changes.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/ci-test-matrix-management",
+      "category": "debugging",
+      "tags": [
+        "ci-cd",
+        "test-matrix",
+        "coverage",
+        "pre-commit",
+        "flaky-tests",
+        "github-actions"
+      ]
     },
     {
       "name": "claude-code-settings-config",
       "description": "Configure Claude Code settings.json for E2E test workspaces to control thinking mode and other workspace-level settings",
       "version": "1.0.0",
-      "source": "./plugins/debugging/claude-code-settings-config",
+      "source": "./skills/debugging/claude-code-settings-config",
       "category": "debugging",
       "tags": []
     },
@@ -633,7 +1105,7 @@
       "name": "detect-code-smells",
       "description": "Identify code quality issues and anti-patterns. Use when reviewing code for maintainability problems.",
       "version": "1.0.0",
-      "source": "./plugins/debugging/detect-code-smells",
+      "source": "./skills/debugging/detect-code-smells",
       "category": "debugging",
       "tags": []
     },
@@ -641,30 +1113,15 @@
       "name": "e2e-framework-bug-fixes",
       "description": "E2E Evaluation Framework Bug Fixes",
       "version": "1.0.0",
-      "source": "./plugins/debugging/e2e-framework-bug-fixes",
+      "source": "./skills/debugging/e2e-framework-bug-fixes",
       "category": "debugging",
       "tags": []
-    },
-    {
-      "name": "e2e-judge-prompt-reuse",
-      "description": "Fix E2E judge regeneration by reusing saved judge_prompt.md files instead of rebuilding from potentially corrupted workspaces",
-      "version": "1.0.0",
-      "source": "./plugins/debugging/e2e-judge-prompt-reuse",
-      "category": "debugging",
-      "tags": [
-        "judge",
-        "regeneration",
-        "reproducibility",
-        "e2e",
-        "workspace",
-        "prompt-preservation"
-      ]
     },
     {
       "name": "e2e-path-resolution-fix",
       "description": "E2E Path Resolution Fix",
       "version": "1.0.0",
-      "source": "./plugins/debugging/e2e-path-resolution-fix",
+      "source": "./skills/debugging/e2e-path-resolution-fix",
       "category": "debugging",
       "tags": []
     },
@@ -672,7 +1129,7 @@
       "name": "e2e-rate-limit-detection",
       "description": "Debugging rate limit detection when error messages appear in JSON response fields instead of stderr. Use when rate limits from API responses aren't being caught, especially for Claude CLI JSON output with is_error:true.",
       "version": "1.0.0",
-      "source": "./plugins/debugging/e2e-rate-limit-detection",
+      "source": "./skills/debugging/e2e-rate-limit-detection",
       "category": "debugging",
       "tags": [
         "debugging",
@@ -689,7 +1146,7 @@
       "name": "extract-algorithm",
       "description": "Parse and document algorithm pseudocode from research papers. Use when preparing for implementation.",
       "version": "1.0.0",
-      "source": "./plugins/debugging/extract-algorithm",
+      "source": "./skills/debugging/extract-algorithm",
       "category": "debugging",
       "tags": []
     },
@@ -697,15 +1154,49 @@
       "name": "extract-hyperparameters",
       "description": "Identify and document model hyperparameters from papers. Use when setting up training configurations.",
       "version": "1.0.0",
-      "source": "./plugins/debugging/extract-hyperparameters",
+      "source": "./skills/debugging/extract-hyperparameters",
       "category": "debugging",
       "tags": []
+    },
+    {
+      "name": "fix-altair-facet-layering",
+      "description": "Systematic workflow for fixing Altair/Vega-Lite faceted chart bugs: invisible overlays, data clipping, and domain issues",
+      "version": "1.0.0",
+      "source": "./skills/debugging/fix-altair-facet-layering",
+      "category": "debugging",
+      "tags": [
+        "altair",
+        "vega-lite",
+        "visualization",
+        "faceting",
+        "layering",
+        "debugging",
+        "domain-computation",
+        "data-visualization"
+      ]
+    },
+    {
+      "name": "fix-ci-broken-main-plugins",
+      "description": "Fix broken CI on main caused by plugins missing plugin.json or SKILL.md YAML frontmatter, then rebase all blocked PRs and re-enable auto-merge. Use when: (1) all PR CI runs fail with validate errors, (2) plugins exist in the directory but lack .claude-plugin/plugin.json, (3) SKILL.md files are missing the --- YAML frontmatter block, (4) PRs are stuck pending CI that can never pass due to main being broken.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/fix-ci-broken-main-plugins",
+      "category": "debugging",
+      "tags": [
+        "ci",
+        "plugins",
+        "plugin.json",
+        "frontmatter",
+        "validation",
+        "rebase",
+        "auto-merge",
+        "pr-rescue"
+      ]
     },
     {
       "name": "fix-ci-memory-safety-failures",
       "description": "Diagnose and fix CI failures caused by memory safety issues in Mojo, particularly UnsafePointer access through copied structs and Python FFI interference",
       "version": "1.0.0",
-      "source": "./plugins/debugging/fix-ci-memory-safety-failures",
+      "source": "./skills/debugging/fix-ci-memory-safety-failures",
       "category": "debugging",
       "tags": [
         "memory-safety",
@@ -722,7 +1213,7 @@
       "name": "fix-directory-not-created-before-write",
       "description": "Skill: Fix Directory Not Created Before Write",
       "version": "1.0.0",
-      "source": "./plugins/debugging/fix-directory-not-created-before-write",
+      "source": "./skills/debugging/fix-directory-not-created-before-write",
       "category": "debugging",
       "tags": []
     },
@@ -730,29 +1221,45 @@
       "name": "fix-evaluation-framework-bugs",
       "description": "Skill: Fix Evaluation Framework Bugs",
       "version": "1.0.0",
-      "source": "./plugins/debugging/fix-evaluation-framework-bugs",
+      "source": "./skills/debugging/fix-evaluation-framework-bugs",
       "category": "debugging",
       "tags": []
     },
     {
-      "name": "fix-implicitlycopyable-removal",
-      "description": "Systematic approach to removing ImplicitlyCopyable trait from Mojo structs and fixing resulting compilation errors. Use when: removing ImplicitlyCopyable from structs with List/Dict/String fields, fixing 'cannot implicitly copy' errors, debugging memory corruption from bitwise copies.",
+      "name": "fix-implement-issues-script",
+      "description": "Debug and fix automation pipeline failures in implement_issues.py",
       "version": "1.0.0",
-      "source": "./plugins/debugging/fix-implicitlycopyable-removal",
+      "source": "./skills/debugging/fix-implement-issues-script",
+      "category": "debugging",
+      "tags": [
+        "automation",
+        "github",
+        "worktree",
+        "git",
+        "claude-code",
+        "ci-cd"
+      ]
+    },
+    {
+      "name": "fix-implicitlycopyable-removal",
+      "description": "Systematic approach to removing ImplicitlyCopyable trait from Mojo structs and fixing resulting compilation errors",
+      "version": "1.0.0",
+      "source": "./skills/debugging/fix-implicitlycopyable-removal",
       "category": "debugging",
       "tags": [
         "mojo",
-        "memory",
-        "compilation",
-        "trait",
-        "debugging"
+        "ownership",
+        "memory-safety",
+        "refactoring",
+        "ci-fix",
+        "compilation-errors"
       ]
     },
     {
       "name": "fix-judge-file-access",
       "description": "Skill: Fix Judge File Access for E2E Evaluation",
       "version": "1.0.0",
-      "source": "./plugins/debugging/fix-judge-file-access",
+      "source": "./skills/debugging/fix-judge-file-access",
       "category": "debugging",
       "tags": []
     },
@@ -760,7 +1267,7 @@
       "name": "fix-randn-seed-bug",
       "description": "Fix unused seed parameter in random number generation functions. Use when: (1) Tests using seeded random inputs produce non-reproducible results, (2) randn/random functions declare seed parameter but generate different values each call, (3) assert_almost_equal fails with wildly different values for same-seeded inputs.",
       "version": "1.0.0",
-      "source": "./plugins/debugging/fix-randn-seed-bug",
+      "source": "./skills/debugging/fix-randn-seed-bug",
       "category": "debugging",
       "tags": [
         "random",
@@ -775,7 +1282,7 @@
       "name": "fix-rerun-completion",
       "description": "Skill: Fix Rerun Completion Failures",
       "version": "1.0.0",
-      "source": "./plugins/debugging/fix-rerun-completion",
+      "source": "./skills/debugging/fix-rerun-completion",
       "category": "debugging",
       "tags": []
     },
@@ -783,7 +1290,7 @@
       "name": "fix-rerun-script-errors",
       "description": "Fix common errors in E2E rerun script: SubTestExecutor constructor parameters, checkpoint status validation, and T5 inheritance failures",
       "version": "1.0.0",
-      "source": "./plugins/debugging/fix-rerun-script-errors",
+      "source": "./skills/debugging/fix-rerun-script-errors",
       "category": "debugging",
       "tags": []
     },
@@ -791,7 +1298,7 @@
       "name": "fix-yaml-config-propagation",
       "description": "Debug pattern for fixing YAML config fields that aren't propagating to execution, plus eliminating DRY violations in config dataclasses",
       "version": "1.0.0",
-      "source": "./plugins/debugging/fix-yaml-config-propagation",
+      "source": "./skills/debugging/fix-yaml-config-propagation",
       "category": "debugging",
       "tags": []
     },
@@ -799,7 +1306,7 @@
       "name": "fixme-todo-cleanup",
       "description": "Systematic FIXME/TODO cleanup workflow with proper branching, PRs, and CI handling",
       "version": "1.0.0",
-      "source": "./plugins/debugging/fixme-todo-cleanup",
+      "source": "./skills/debugging/fixme-todo-cleanup",
       "category": "debugging",
       "tags": [
         "technical-debt",
@@ -811,25 +1318,26 @@
       ]
     },
     {
-      "name": "ci-test-matrix-management",
-      "description": "Safely modify CI test matrix without breaking coverage validation. Use when: (1) Disabling flaky tests from CI workflow, (2) Removing or commenting out test groups from comprehensive-tests.yml, (3) Pre-commit validate-test-coverage hook fails after CI matrix changes.",
+      "name": "git-rebase-over-deletion",
+      "description": "Fix CI failure caused by git rebase/merge replaying a deletion commit that over-removes active code. Use when: CI Test workflow breaks after a deprecation-removal commit; ImportError for symbols that should exist; git log shows a fix commit followed by a removal commit in wrong order; multiple test modules fail to collect simultaneously.",
       "version": "1.0.0",
-      "source": "./plugins/debugging/ci-test-matrix-management",
+      "source": "./skills/debugging/git-rebase-over-deletion",
       "category": "debugging",
       "tags": [
-        "ci-cd",
-        "test-matrix",
-        "coverage",
-        "pre-commit",
-        "flaky-tests",
-        "github-actions"
+        "git",
+        "rebase",
+        "deletion",
+        "import-error",
+        "ci",
+        "deprecation",
+        "merge-conflict"
       ]
     },
     {
       "name": "global-semaphore-parallelism",
       "description": "Debugging and implementing global parallelism control using multiprocessing.Manager().Semaphore() to limit concurrent agents across all tiers",
       "version": "1.0.0",
-      "source": "./plugins/debugging/global-semaphore-parallelism",
+      "source": "./skills/debugging/global-semaphore-parallelism",
       "category": "debugging",
       "tags": [
         "semaphore",
@@ -844,69 +1352,10 @@
       ]
     },
     {
-      "name": "orphan-branch-recovery",
-      "description": "Use when a branch has no common ancestor with main, cannot be merged, or was pushed from the wrong repository. Triggers: 'no merge base', 'branch diverged completely', 'cannot merge unrelated histories', 'pushed from wrong repo'. Provides workflow for diagnosing orphan branches and recovering valuable content.",
-      "version": "1.0.0",
-      "source": "./plugins/debugging/orphan-branch-recovery",
-      "category": "debugging",
-      "tags": [
-        "git",
-        "branch",
-        "orphan",
-        "diverged",
-        "merge-base",
-        "recovery",
-        "wrong-repo"
-      ]
-    },
-    {
-      "name": "pydantic-model-dump",
-      "description": "Fix Pydantic v2 model serialization using .model_dump() instead of .to_dict(). Use when encountering AttributeError on Pydantic BaseModel objects during JSON serialization.",
-      "version": "1.0.0",
-      "source": "./plugins/debugging/pydantic-model-dump",
-      "category": "debugging",
-      "tags": [
-        "pydantic",
-        "serialization",
-        "migration",
-        "python",
-        "bug-fix"
-      ]
-    },
-    {
-      "name": "resume-crash-debugging",
-      "description": "Pattern for debugging resume crashes in long-running experiments with checkpoint systems. Use when: (1) experiments crash on resume with FileNotFoundError or similar, (2) file path mismatches between validation and loading, (3) need to diagnose progressive degradation (works 1st time, fails on Nth resume), (4) checkpoint state is out of sync with filesystem.",
-      "version": "1.0.0",
-      "source": "./plugins/debugging/resume-crash-debugging",
-      "category": "debugging",
-      "tags": [
-        "debugging",
-        "resume",
-        "checkpoint",
-        "e2e",
-        "file-path-mismatch"
-      ]
-    },
-    {
-      "name": "retry-transient-errors",
-      "description": "Pattern for adding exponential backoff retry logic to handle transient network and I/O errors",
-      "version": "1.0.0",
-      "source": "./plugins/debugging/retry-transient-errors",
-      "category": "debugging",
-      "tags": [
-        "retry-logic",
-        "exponential-backoff",
-        "transient-errors",
-        "network-failures",
-        "error-handling",
-        "resilience"
-      ]
-    },
-    {
       "name": "improve-automation-error-visibility",
       "description": "Improve error visibility in curses UI automation scripts and add granular status updates",
       "version": "1.0.0",
-      "source": "./skills/improve-automation-error-visibility",
+      "source": "./skills/debugging/improve-automation-error-visibility",
       "category": "debugging",
       "tags": [
         "error-handling",
@@ -919,10 +1368,55 @@
       ]
     },
     {
+      "name": "investigate-mojo-heap-corruption",
+      "description": "Systematic workflow for investigating and fixing Mojo 0.26.1 heap corruption crashes that occur in CI but not locally",
+      "version": "1.0.0",
+      "source": "./skills/debugging/investigate-mojo-heap-corruption",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "debugging",
+        "heap-corruption",
+        "ci-failures",
+        "runtime-crashes",
+        "float-conversions",
+        "integration-tests"
+      ]
+    },
+    {
+      "name": "mypy-quick-win-fixes",
+      "description": "Skill: mypy-quick-win-fixes. Use when working with mypy quick win fixes.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/mypy-quick-win-fixes",
+      "category": "debugging",
+      "tags": [
+        "mypy",
+        "quick",
+        "win",
+        "fixes"
+      ]
+    },
+    {
+      "name": "orphan-branch-recovery",
+      "description": "Use when a branch has no common ancestor with main, cannot be merged, or was pushed from the wrong repository. Triggers: 'no merge base', 'branch diverged completely', 'cannot merge unrelated histories', 'pushed from wrong repo'. Provides workflow for diagnosing orphan branches and recovering valuable content.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/orphan-branch-recovery",
+      "category": "debugging",
+      "tags": [
+        "git",
+        "branch",
+        "orphan",
+        "diverged",
+        "merge-base",
+        "recovery",
+        "wrong-repo"
+      ]
+    },
+    {
       "name": "persist-automation-logs",
       "description": "Persist execution logs (Claude Code, retrospective, follow-up) to disk for post-mortem analysis after worktrees are cleaned up. Use when: automation fails silently, curses UI hides subprocess output, non-blocking phases fail without trace, or you need to debug after cleanup.",
       "version": "1.0.0",
-      "source": "./skills/persist-automation-logs",
+      "source": "./skills/debugging/persist-automation-logs",
       "category": "debugging",
       "tags": [
         "automation",
@@ -937,10 +1431,155 @@
       ]
     },
     {
+      "name": "preflight-closing-issues-fix",
+      "description": "Skill: preflight-closing-issues-fix. Use when working with preflight closing issues fix.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/preflight-closing-issues-fix",
+      "category": "debugging",
+      "tags": [
+        "preflight",
+        "closing",
+        "issues",
+        "fix"
+      ]
+    },
+    {
+      "name": "production-code-quality-fixes",
+      "description": "Skill: production-code-quality-fixes. Use when working with production code quality fixes.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/production-code-quality-fixes",
+      "category": "debugging",
+      "tags": [
+        "production",
+        "code",
+        "quality",
+        "fixes"
+      ]
+    },
+    {
+      "name": "pydantic-model-dump",
+      "description": "Fix Pydantic v2 model serialization using .model_dump() instead of .to_dict(). Use when encountering AttributeError on Pydantic BaseModel objects during JSON serialization.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/pydantic-model-dump",
+      "category": "debugging",
+      "tags": [
+        "pydantic",
+        "serialization",
+        "migration",
+        "python",
+        "bug-fix"
+      ]
+    },
+    {
+      "name": "pydantic-none-coercion-pattern",
+      "description": "Fix Pydantic ValidationError caused by None flowing into non-Optional dict fields. Use when you see 'Input should be a valid dictionary [type=dict_type, input_value=None]' or when dict.get() with a default fails to guard against explicit null values in JSON data.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/pydantic-none-coercion-pattern",
+      "category": "debugging",
+      "tags": [
+        "pydantic",
+        "validation",
+        "none",
+        "dict",
+        "json",
+        "null",
+        "coercion",
+        "field_validator",
+        "e2e",
+        "checkpoint"
+      ]
+    },
+    {
+      "name": "python-subprocess-terminal-corruption",
+      "description": "Fix terminal corruption from Python subprocess management and None-safe error handling patterns",
+      "version": "1.0.0",
+      "source": "./skills/debugging/python-subprocess-terminal-corruption",
+      "category": "debugging",
+      "tags": [
+        "python",
+        "subprocess",
+        "terminal",
+        "corruption",
+        "none-safety",
+        "error-handling",
+        "debugging",
+        "batch-runner"
+      ]
+    },
+    {
+      "name": "resume-crash-debugging",
+      "description": "Pattern for debugging resume crashes in long-running experiments with checkpoint systems. Use when: (1) experiments crash on resume with FileNotFoundError or similar, (2) file path mismatches between validation and loading, (3) need to diagnose progressive degradation (works 1st time, fails on Nth resume), (4) checkpoint state is out of sync with filesystem.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/resume-crash-debugging",
+      "category": "debugging",
+      "tags": [
+        "debugging",
+        "resume",
+        "checkpoint",
+        "e2e",
+        "file-path-mismatch"
+      ]
+    },
+    {
+      "name": "retry-transient-errors",
+      "description": "Pattern for adding exponential backoff retry logic to handle transient network and I/O errors",
+      "version": "1.0.0",
+      "source": "./skills/debugging/retry-transient-errors",
+      "category": "debugging",
+      "tags": [
+        "retry-logic",
+        "exponential-backoff",
+        "transient-errors",
+        "network-failures",
+        "error-handling",
+        "resilience"
+      ]
+    },
+    {
+      "name": "skill-path-resolution-fix",
+      "description": "Skill: skill-path-resolution-fix. Use when working with skill path resolution fix.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/skill-path-resolution-fix",
+      "category": "debugging",
+      "tags": [
+        "skill",
+        "path",
+        "resolution",
+        "fix"
+      ]
+    },
+    {
+      "name": "validate-model-configs-fix-mode",
+      "description": "Skill: validate-model-configs-fix-mode. Use when working with validate model configs fix mode.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/validate-model-configs-fix-mode",
+      "category": "debugging",
+      "tags": [
+        "validate",
+        "model",
+        "configs",
+        "fix",
+        "mode"
+      ]
+    },
+    {
+      "name": "validation-test-fixture-symmetry",
+      "description": "Skill: validation-test-fixture-symmetry. Use when working with validation test fixture symmetry.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/validation-test-fixture-symmetry",
+      "category": "debugging",
+      "tags": [
+        "validation",
+        "test",
+        "fixture",
+        "symmetry"
+      ]
+    },
+    {
       "name": "academic-paper-qa",
       "description": "Validate and fix data accuracy issues, structural problems, and LaTeX compilation errors in academic papers",
       "version": "1.0.0",
-      "source": "./plugins/documentation/academic-paper-qa",
+      "source": "./skills/documentation/academic-paper-qa",
       "category": "documentation",
       "tags": []
     },
@@ -948,7 +1587,7 @@
       "name": "academic-paper-review",
       "description": "Comprehensive academic paper review workflow: data validation, tone formalization, error correction, and reproducibility fixes",
       "version": "1.0.0",
-      "source": "./plugins/documentation/academic-paper-review",
+      "source": "./skills/documentation/academic-paper-review",
       "category": "documentation",
       "tags": []
     },
@@ -956,7 +1595,7 @@
       "name": "academic-paper-validation",
       "description": "Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical rigor improvements, and noise reduction",
       "version": "1.0.0",
-      "source": "./plugins/documentation/academic-paper-validation",
+      "source": "./skills/documentation/academic-paper-validation",
       "category": "documentation",
       "tags": []
     },
@@ -964,23 +1603,66 @@
       "name": "arxiv-paper-polish",
       "description": "Skill: arXiv Paper Publication Polish",
       "version": "1.0.0",
-      "source": "./plugins/documentation/arxiv-paper-polish",
+      "source": "./skills/documentation/arxiv-paper-polish",
       "category": "documentation",
       "tags": []
+    },
+    {
+      "name": "doc-stale-future-improvements-audit",
+      "description": "Systematically audit design docs for Future Improvements sections that describe features already implemented in source code. Use when an issue asks to audit docs for staleness, when CI flags stale docs, or after a period of active development.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/doc-stale-future-improvements-audit",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "audit",
+        "stale-docs",
+        "future-improvements",
+        "design-docs"
+      ]
+    },
+    {
+      "name": "document-deferred-future-improvements",
+      "description": "Pattern for documenting deferred Future Improvements in design docs: add Status, Why Deferred, and Acceptance Criteria to each item so future contributors avoid re-investigating implementation status",
+      "version": "1.0.0",
+      "source": "./skills/documentation/document-deferred-future-improvements",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "design-docs",
+        "deferred",
+        "future-improvements",
+        "container",
+        "architecture"
+      ]
     },
     {
       "name": "latex-architecture-section",
       "description": "Add architecture sections to academic LaTeX papers with TikZ diagrams, including fixing common TikZ syntax errors and managing arxiv builds",
       "version": "1.0.0",
-      "source": "./plugins/documentation/latex-architecture-section",
+      "source": "./skills/documentation/latex-architecture-section",
       "category": "documentation",
       "tags": []
+    },
+    {
+      "name": "mass-figure-documentation",
+      "description": "Generate comprehensive documentation for multiple analysis figures using parallel background agents",
+      "version": "1.0.0",
+      "source": "./skills/documentation/mass-figure-documentation",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "parallel-agents",
+        "analysis-figures",
+        "automation",
+        "background-tasks"
+      ]
     },
     {
       "name": "paper-consolidation",
       "description": "Consolidate scattered LaTeX paper files into unified directory structure with publication readiness fixes",
       "version": "1.0.0",
-      "source": "./plugins/documentation/paper-consolidation",
+      "source": "./skills/documentation/paper-consolidation",
       "category": "documentation",
       "tags": []
     },
@@ -988,15 +1670,27 @@
       "name": "paper-final-review",
       "description": "Paper Final Review - Publication Readiness Workflow",
       "version": "1.0.0",
-      "source": "./plugins/documentation/paper-final-review",
+      "source": "./skills/documentation/paper-final-review",
       "category": "documentation",
       "tags": []
+    },
+    {
+      "name": "paper-readiness-epic",
+      "description": "Skill: paper-readiness-epic. Use when working with paper readiness epic.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/paper-readiness-epic",
+      "category": "documentation",
+      "tags": [
+        "paper",
+        "readiness",
+        "epic"
+      ]
     },
     {
       "name": "paper-revision-workflow",
       "description": "Systematic workflow for revising research papers: data validation, structural improvements, and tone unification",
       "version": "1.0.0",
-      "source": "./plugins/documentation/paper-revision-workflow",
+      "source": "./skills/documentation/paper-revision-workflow",
       "category": "documentation",
       "tags": []
     },
@@ -1004,15 +1698,29 @@
       "name": "paper-validation-workflow",
       "description": "Paper Validation Workflow",
       "version": "1.0.0",
-      "source": "./plugins/documentation/paper-validation-workflow",
+      "source": "./skills/documentation/paper-validation-workflow",
       "category": "documentation",
       "tags": []
+    },
+    {
+      "name": "phantom-dir-reference-fix",
+      "description": "Remove phantom directory references from documentation when a referenced path does not exist in the repository.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/phantom-dir-reference-fix",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "cleanup",
+        "testing",
+        "readme",
+        "contributing"
+      ]
     },
     {
       "name": "publication-readiness-check",
       "description": "publication-readiness-check",
       "version": "1.0.0",
-      "source": "./plugins/documentation/publication-readiness-check",
+      "source": "./skills/documentation/publication-readiness-check",
       "category": "documentation",
       "tags": []
     },
@@ -1020,15 +1728,29 @@
       "name": "publication-readiness-review",
       "description": "Comprehensive 10-category GO/NO-GO assessment framework for academic paper publication readiness",
       "version": "1.0.0",
-      "source": "./plugins/documentation/publication-readiness-review",
+      "source": "./skills/documentation/publication-readiness-review",
       "category": "documentation",
       "tags": []
+    },
+    {
+      "name": "sync-stale-future-improvements",
+      "description": "Sync stale Future Improvements sections with actual implementation. Use when a TODO/Future Improvements doc section lists a feature that has already been shipped, or code review finds a doc calling something 'planned' but grep shows it exists in source.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/sync-stale-future-improvements",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "future-improvements",
+        "stale-docs",
+        "sync",
+        "markdown"
+      ]
     },
     {
       "name": "add-analysis-metric",
       "description": "Workflow for adding new metrics to ProjectScylla analysis pipeline",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/add-analysis-metric",
+      "source": "./skills/evaluation/add-analysis-metric",
       "category": "evaluation",
       "tags": []
     },
@@ -1036,7 +1758,7 @@
       "name": "add-json-links-to-reports",
       "description": "Add JSON result links to markdown reports for structured data access",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/add-json-links-to-reports",
+      "source": "./skills/evaluation/add-json-links-to-reports",
       "category": "evaluation",
       "tags": []
     },
@@ -1044,7 +1766,7 @@
       "name": "analysis-pipeline-code-review",
       "description": "Skill: Analysis Pipeline Code Review",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/analysis-pipeline-code-review",
+      "source": "./skills/evaluation/analysis-pipeline-code-review",
       "category": "evaluation",
       "tags": []
     },
@@ -1052,7 +1774,7 @@
       "name": "complex-agent-eval-task",
       "description": "Create sophisticated E2E test cases for AI agents using real PRs as reference solutions. Use when: (1) designing T2+ tier evaluation tasks, (2) need patchfile-based evaluation against reference, (3) testing agents on complex refactoring/migration tasks, (4) constraining agents from accessing solution sources.",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/complex-agent-eval-task",
+      "source": "./skills/evaluation/complex-agent-eval-task",
       "category": "evaluation",
       "tags": [
         "e2e-testing",
@@ -1068,7 +1790,7 @@
       "name": "containerize-e2e-experiments",
       "description": "Skill: Containerize E2E Experiments",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/containerize-e2e-experiments",
+      "source": "./skills/evaluation/containerize-e2e-experiments",
       "category": "evaluation",
       "tags": []
     },
@@ -1076,7 +1798,7 @@
       "name": "create-swe-bench-tests",
       "description": "Create SWE-bench style benchmark test cases from repository PR history. Use when: (1) Setting up AI agent evaluation infrastructure, (2) Creating benchmark suites from real PRs, (3) Building ablation test frameworks with tier configurations.",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/create-swe-bench-tests",
+      "source": "./skills/evaluation/create-swe-bench-tests",
       "category": "evaluation",
       "tags": [
         "swe-bench",
@@ -1092,7 +1814,7 @@
       "name": "debug-evaluation-logs",
       "description": "Improve diagnostic clarity of LLM judge warning messages by adding specific failure details and better error extraction",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/debug-evaluation-logs",
+      "source": "./skills/evaluation/debug-evaluation-logs",
       "category": "evaluation",
       "tags": [
         "evaluation",
@@ -1106,7 +1828,7 @@
       "name": "dryrun-validation",
       "description": "Complete workflow for re-running dryrun experiments, generating analysis outputs, and validating results against baseline",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/dryrun-validation",
+      "source": "./skills/evaluation/dryrun-validation",
       "category": "evaluation",
       "tags": []
     },
@@ -1114,7 +1836,7 @@
       "name": "e2e-agent-judge-timing",
       "description": "Add separate agent and judge timing fields to E2E test results for tiebreaker ranking. Use when implementing timing metrics in evaluation frameworks with multi-stage pipelines (agent execution + judging).",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/e2e-agent-judge-timing",
+      "source": "./skills/evaluation/e2e-agent-judge-timing",
       "category": "evaluation",
       "tags": [
         "e2e",
@@ -1127,10 +1849,28 @@
       ]
     },
     {
+      "name": "e2e-batch-result-analysis",
+      "description": "Analyze E2E batch dry run results: triage failures, write local analysis files, generate GitHub issue filing script. Use when batch_summary.json exists and you need structured output files (README, per-failure analysis, per-test issue bodies, shell script).",
+      "version": "1.0.0",
+      "source": "./skills/evaluation/e2e-batch-result-analysis",
+      "category": "evaluation",
+      "tags": [
+        "e2e",
+        "batch",
+        "dry-run",
+        "failure-triage",
+        "github-issues",
+        "batch_summary.json",
+        "ValidationError",
+        "criteria_scores",
+        "analysis"
+      ]
+    },
+    {
       "name": "e2e-checkpoint-resume",
       "description": "Implementing checkpoint/resume with rate limit handling for E2E evaluation frameworks",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/e2e-checkpoint-resume",
+      "source": "./skills/evaluation/e2e-checkpoint-resume",
       "category": "evaluation",
       "tags": [
         "e2e-testing",
@@ -1145,7 +1885,7 @@
       "name": "e2e-judge-rubric-design",
       "description": "Design LLM-as-Judge evaluation rubrics for E2E agent testing. Use when: (1) Building agent evaluation systems with LLM judges, (2) Designing weighted scoring criteria for code quality, (3) Handling invalid evaluations (rate limits, errors) distinctly from failures, (4) Standardizing judge prompts across test runs.",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/e2e-judge-rubric-design",
+      "source": "./skills/evaluation/e2e-judge-rubric-design",
       "category": "evaluation",
       "tags": [
         "llm-judge",
@@ -1161,7 +1901,7 @@
       "name": "evaluate-model",
       "description": "Measure model performance on test datasets. Use when assessing accuracy, precision, recall, and other metrics.",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/evaluate-model",
+      "source": "./skills/evaluation/evaluate-model",
       "category": "evaluation",
       "tags": []
     },
@@ -1169,7 +1909,7 @@
       "name": "evaluation-report-fixes",
       "description": "Fix critical E2E evaluation report issues including timing persistence, workspace detection, judge validation, and broken links",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/evaluation-report-fixes",
+      "source": "./skills/evaluation/evaluation-report-fixes",
       "category": "evaluation",
       "tags": []
     },
@@ -1177,23 +1917,97 @@
       "name": "experimental-feature-subtests",
       "description": "Add A/B testing for experimental features in evaluation tiers using parallel sub-tests with environment variable feature flags",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/experimental-feature-subtests",
+      "source": "./skills/evaluation/experimental-feature-subtests",
       "category": "evaluation",
       "tags": []
+    },
+    {
+      "name": "fair-evaluation-baseline",
+      "description": "Implement baseline pipeline capture and regression detection to distinguish agent-introduced failures from pre-existing issues in E2E evaluations",
+      "version": "1.0.0",
+      "source": "./skills/evaluation/fair-evaluation-baseline",
+      "category": "evaluation",
+      "tags": [
+        "evaluation",
+        "baseline",
+        "regression-detection",
+        "fair-evaluation",
+        "pipeline",
+        "e2e"
+      ]
+    },
+    {
+      "name": "grading-consolidation",
+      "description": "Eliminate duplicate grading definitions and consolidate to single source of truth",
+      "version": "1.0.0",
+      "source": "./skills/evaluation/grading-consolidation",
+      "category": "evaluation",
+      "tags": [
+        "evaluation",
+        "grading",
+        "deduplication",
+        "refactoring",
+        "consistency",
+        "testing",
+        "single-source-of-truth"
+      ]
     },
     {
       "name": "granular-scoring-systems",
       "description": "Hybrid LLM judge evaluation system combining objective checklists (80%) with subjective engineering judgment (20%) to achieve low-variance (<10%) granular scoring",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/granular-scoring-systems",
+      "source": "./skills/evaluation/granular-scoring-systems",
       "category": "evaluation",
       "tags": []
+    },
+    {
+      "name": "investigate-test-failures",
+      "description": "Systematic workflow for investigating test failures to differentiate framework bugs from model hallucinations",
+      "version": "1.0.0",
+      "source": "./skills/evaluation/investigate-test-failures",
+      "category": "evaluation",
+      "tags": [
+        "debugging",
+        "testing",
+        "hallucination",
+        "evaluation",
+        "framework-verification"
+      ]
+    },
+    {
+      "name": "issue-triage-and-fix",
+      "description": "Bulk triage and fix GitHub issues in parallel using isolated worktrees. Use when you have 10+ simple open GitHub issues, many may be duplicates, and each fix is independent.",
+      "version": "1.0.0",
+      "source": "./skills/evaluation/issue-triage-and-fix",
+      "category": "evaluation",
+      "tags": [
+        "github",
+        "worktree",
+        "parallel",
+        "bulk-fix",
+        "pr-workflow",
+        "triage",
+        "wave-based",
+        "pre-commit"
+      ]
+    },
+    {
+      "name": "issue-validation-workflow",
+      "description": "Validate GitHub issue state against codebase reality before implementation. Use when starting work on multiple issues to prevent wasted effort on already-resolved issues.",
+      "version": "1.0.0",
+      "source": "./skills/evaluation/issue-validation-workflow",
+      "category": "evaluation",
+      "tags": [
+        "issue",
+        "validation",
+        "workflow"
+      ]
     },
     {
       "name": "judge-criteria-enhancement",
       "description": "Adding proportionality criteria to LLM judge systems to penalize over-engineering and reward task-appropriate solutions",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/judge-criteria-enhancement",
+      "source": "./skills/evaluation/judge-criteria-enhancement",
       "category": "evaluation",
       "tags": [
         "judge",
@@ -1209,7 +2023,7 @@
       "name": "judge-system-extension",
       "description": "Patterns for extending AI evaluation/judge systems with consensus retry, cleanup evaluation, cross-tier analysis, and container orchestration. Use when: (1) Adding new evaluation capabilities to a judge system, (2) Implementing consensus-based scoring with disagreement handling, (3) Creating container-based isolation for evaluators, (4) Adding cross-tier statistical analysis.",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/judge-system-extension",
+      "source": "./skills/evaluation/judge-system-extension",
       "category": "evaluation",
       "tags": [
         "judge",
@@ -1222,10 +2036,25 @@
       ]
     },
     {
+      "name": "multi-judge-consensus",
+      "description": "Implement multiple LLM judges with consensus voting in evaluation systems",
+      "version": "1.0.0",
+      "source": "./skills/evaluation/multi-judge-consensus",
+      "category": "evaluation",
+      "tags": [
+        "evaluation",
+        "consensus",
+        "multi-judge",
+        "llm-as-judge",
+        "voting",
+        "multiprocessing"
+      ]
+    },
+    {
       "name": "parallel-metrics-integration",
       "description": "Skill for integrating multiple metrics into statistical analysis pipelines in parallel",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/parallel-metrics-integration",
+      "source": "./skills/evaluation/parallel-metrics-integration",
       "category": "evaluation",
       "tags": []
     },
@@ -1233,7 +2062,7 @@
       "name": "plan-review-interview",
       "description": "Structured interview workflow for reviewing implementation plans. Use when: (1) You have a draft plan that needs stakeholder validation, (2) GitHub issues exist but lack key decision details, (3) You need to systematically identify gaps before implementation, (4) You want to document decisions alongside affected issues.",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/plan-review-interview",
+      "source": "./skills/evaluation/plan-review-interview",
       "category": "evaluation",
       "tags": [
         "planning",
@@ -1247,7 +2076,7 @@
       "name": "prepare-dataset",
       "description": "Process and validate datasets for training. Use when setting up data pipelines.",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/prepare-dataset",
+      "source": "./skills/evaluation/prepare-dataset",
       "category": "evaluation",
       "tags": []
     },
@@ -1255,7 +2084,7 @@
       "name": "preserve-workspace-reruns",
       "description": "Preserving git worktrees and test results when re-running E2E experiments with checkpoint resume",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/preserve-workspace-reruns",
+      "source": "./skills/evaluation/preserve-workspace-reruns",
       "category": "evaluation",
       "tags": []
     },
@@ -1263,7 +2092,7 @@
       "name": "processpool-rate-limit-recovery",
       "description": "Robust ProcessPoolExecutor rate limit recovery for E2E evaluation frameworks",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/processpool-rate-limit-recovery",
+      "source": "./skills/evaluation/processpool-rate-limit-recovery",
       "category": "evaluation",
       "tags": []
     },
@@ -1271,15 +2100,29 @@
       "name": "publication-pipeline-enhancement",
       "description": "Publication Pipeline Enhancement",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/publication-pipeline-enhancement",
+      "source": "./skills/evaluation/publication-pipeline-enhancement",
       "category": "evaluation",
       "tags": []
+    },
+    {
+      "name": "pydantic-type-consolidation-metrics-judgment",
+      "description": "Skill: pydantic-type-consolidation-metrics-judgment. Use when working with pydantic type consolidation metrics judgment.",
+      "version": "1.0.0",
+      "source": "./skills/evaluation/pydantic-type-consolidation-metrics-judgment",
+      "category": "evaluation",
+      "tags": [
+        "pydantic",
+        "type",
+        "consolidation",
+        "metrics",
+        "judgment"
+      ]
     },
     {
       "name": "tier-ablation-testing",
       "description": "Methodology for running comprehensive tier ablation studies across AI agent architectures (T0-T6)",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/tier-ablation-testing",
+      "source": "./skills/evaluation/tier-ablation-testing",
       "category": "evaluation",
       "tags": [
         "ablation",
@@ -1293,7 +2136,7 @@
       "name": "token-stats-aggregation",
       "description": "Pattern for tracking detailed token statistics with cache tokens across hierarchical E2E report levels",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/token-stats-aggregation",
+      "source": "./skills/evaluation/token-stats-aggregation",
       "category": "evaluation",
       "tags": [
         "tokens",
@@ -1306,10 +2149,23 @@
       ]
     },
     {
+      "name": "unify-judge-validity-logic",
+      "description": "Skill: unify-judge-validity-logic. Use when working with unify judge validity logic.",
+      "version": "1.0.0",
+      "source": "./skills/evaluation/unify-judge-validity-logic",
+      "category": "evaluation",
+      "tags": [
+        "unify",
+        "judge",
+        "validity",
+        "logic"
+      ]
+    },
+    {
       "name": "vega-lite-analysis-pipeline",
       "description": "Build comprehensive analysis pipelines with text-based Vega-Lite figures and statistical tables for research papers",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/vega-lite-analysis-pipeline",
+      "source": "./skills/evaluation/vega-lite-analysis-pipeline",
       "category": "evaluation",
       "tags": []
     },
@@ -1317,7 +2173,7 @@
       "name": "verify-experiment-completion",
       "description": "Verify E2E Experiment Completion",
       "version": "1.0.0",
-      "source": "./plugins/evaluation/verify-experiment-completion",
+      "source": "./skills/evaluation/verify-experiment-completion",
       "category": "evaluation",
       "tags": []
     },
@@ -1325,7 +2181,7 @@
       "name": "analyze-simd-usage",
       "description": "Analyze SIMD usage opportunities in Mojo code. Use to find performance optimization opportunities.",
       "version": "1.0.0",
-      "source": "./plugins/optimization/analyze-simd-usage",
+      "source": "./skills/optimization/analyze-simd-usage",
       "category": "optimization",
       "tags": []
     },
@@ -1333,7 +2189,7 @@
       "name": "benchmark-functions",
       "description": "Measure function performance and compare implementations. Use when optimizing critical code paths.",
       "version": "1.0.0",
-      "source": "./plugins/optimization/benchmark-functions",
+      "source": "./skills/optimization/benchmark-functions",
       "category": "optimization",
       "tags": []
     },
@@ -1341,7 +2197,7 @@
       "name": "checkpoint-result-validation",
       "description": "Validate checkpoint results before resuming expensive operations to prevent wasted API calls. Use when implementing resume/checkpoint systems that need to skip already-completed work.",
       "version": "1.0.0",
-      "source": "./plugins/optimization/checkpoint-result-validation",
+      "source": "./skills/optimization/checkpoint-result-validation",
       "category": "optimization",
       "tags": [
         "checkpoint",
@@ -1355,7 +2211,7 @@
       "name": "e2e-artifact-deduplication",
       "description": "Consolidate duplicate artifacts in E2E evaluation output by sharing prompts, commands, and configuration files across judges and runs",
       "version": "1.0.0",
-      "source": "./plugins/optimization/e2e-artifact-deduplication",
+      "source": "./skills/optimization/e2e-artifact-deduplication",
       "category": "optimization",
       "tags": [
         "e2e-evaluation",
@@ -1367,10 +2223,22 @@
       ]
     },
     {
+      "name": "github-actions-ci-speedup",
+      "description": "Skill: github-actions-ci-speedup. Use when working with github actions ci speedup.",
+      "version": "1.0.0",
+      "source": "./skills/optimization/github-actions-ci-speedup",
+      "category": "optimization",
+      "tags": [
+        "github",
+        "actions",
+        "speedup"
+      ]
+    },
+    {
       "name": "mojo-simd-optimize",
       "description": "Apply SIMD optimizations to Mojo code for parallel computation. Use when optimizing performance-critical tensor and array operations.",
       "version": "1.0.0",
-      "source": "./plugins/optimization/mojo-simd-optimize",
+      "source": "./skills/optimization/mojo-simd-optimize",
       "category": "optimization",
       "tags": []
     },
@@ -1378,7 +2246,7 @@
       "name": "parallel-io-executor",
       "description": "Pattern for implementing ThreadPoolExecutor-based parallelization of I/O-bound tasks in Python CLI tools",
       "version": "1.0.0",
-      "source": "./plugins/optimization/parallel-io-executor",
+      "source": "./skills/optimization/parallel-io-executor",
       "category": "optimization",
       "tags": []
     },
@@ -1386,7 +2254,7 @@
       "name": "profile-code",
       "description": "Measure execution time and memory usage of code. Use when analyzing performance characteristics.",
       "version": "1.0.0",
-      "source": "./plugins/optimization/profile-code",
+      "source": "./skills/optimization/profile-code",
       "category": "optimization",
       "tags": []
     },
@@ -1394,7 +2262,7 @@
       "name": "suggest-optimizations",
       "description": "Identify performance optimization opportunities. Use when improving code efficiency.",
       "version": "1.0.0",
-      "source": "./plugins/optimization/suggest-optimizations",
+      "source": "./skills/optimization/suggest-optimizations",
       "category": "optimization",
       "tags": []
     },
@@ -1402,15 +2270,27 @@
       "name": "agent-test-delegation",
       "description": "Test agent delegation patterns to verify hierarchy and escalation paths. Use after modifying agent structure.",
       "version": "1.0.0",
-      "source": "./plugins/testing/agent-test-delegation",
+      "source": "./skills/testing/agent-test-delegation",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "bats-shell-testing",
+      "description": "Skill: bats-shell-testing. Use when working with bats shell testing.",
+      "version": "1.0.0",
+      "source": "./skills/testing/bats-shell-testing",
+      "category": "testing",
+      "tags": [
+        "bats",
+        "shell",
+        "testing"
+      ]
     },
     {
       "name": "calculate-coverage",
       "description": "Measure test coverage and identify untested code. Use when assessing test completeness.",
       "version": "1.0.0",
-      "source": "./plugins/testing/calculate-coverage",
+      "source": "./skills/testing/calculate-coverage",
       "category": "testing",
       "tags": []
     },
@@ -1418,15 +2298,30 @@
       "name": "check-memory-safety",
       "description": "Check Mojo code for memory safety issues (ownership violations, use-after-free, etc.). Use to catch memory bugs.",
       "version": "1.0.0",
-      "source": "./plugins/testing/check-memory-safety",
+      "source": "./skills/testing/check-memory-safety",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "config-filename-model-id-audit",
+      "description": "Audit and fix YAML config files where filename stems mismatch model_id fields. Use when: (1) a filename/model_id validation was added and existing files need auditing, (2) CI emits warnings like 'Config filename X does not match model_id Y', (3) model configs use short names but model_id is versioned.",
+      "version": "1.0.0",
+      "source": "./skills/testing/config-filename-model-id-audit",
+      "category": "testing",
+      "tags": [
+        "config",
+        "model-id",
+        "yaml",
+        "audit",
+        "validation",
+        "rename"
+      ]
     },
     {
       "name": "create-review-checklist",
       "description": "Generate customized review checklists based on type of change. Use when: (1) Starting PR review for unfamiliar change type, (2) Need specific checklist for code vs tests vs docs, (3) Large multi-type changes needing organized review.",
       "version": "1.0.0",
-      "source": "./plugins/testing/create-review-checklist",
+      "source": "./skills/testing/create-review-checklist",
       "category": "testing",
       "tags": [
         "code-review",
@@ -1439,7 +2334,7 @@
       "name": "deduplicate-test-fixtures",
       "description": "Eliminate duplicated test fixture files by using runtime block-based composition. Use when: test fixtures contain many copies of the same file across directories, repository size is growing due to duplication, you want single source of truth for shared content.",
       "version": "1.0.0",
-      "source": "./plugins/testing/deduplicate-test-fixtures",
+      "source": "./skills/testing/deduplicate-test-fixtures",
       "category": "testing",
       "tags": [
         "deduplication",
@@ -1454,15 +2349,44 @@
       "name": "defensive-analysis-patterns",
       "description": "Defensive programming patterns for statistical analysis pipelines to handle data quality issues gracefully",
       "version": "1.0.0",
-      "source": "./plugins/testing/defensive-analysis-patterns",
+      "source": "./skills/testing/defensive-analysis-patterns",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "deprecation-warning-migration",
+      "description": "Add runtime DeprecationWarning to a legacy dataclass being superseded by a Pydantic model, track usages in CI, and document migration timeline. Use when: (1) deprecating a Python dataclass in favour of a BaseModel, (2) adding non-blocking CI grep step to track surviving usages, (3) writing pytest.warns tests for deprecated classes.",
+      "version": "1.0.0",
+      "source": "./skills/testing/deprecation-warning-migration",
+      "category": "testing",
+      "tags": [
+        "deprecation",
+        "migration",
+        "pydantic",
+        "dataclass",
+        "warnings",
+        "ci",
+        "testing"
+      ]
+    },
+    {
+      "name": "expand-ruff-rule-set",
+      "description": "Skill: expand-ruff-rule-set. Use when working with expand ruff rule set.",
+      "version": "1.0.0",
+      "source": "./skills/testing/expand-ruff-rule-set",
+      "category": "testing",
+      "tags": [
+        "expand",
+        "ruff",
+        "rule",
+        "set"
+      ]
     },
     {
       "name": "extract-dependencies",
       "description": "Analyze imports and identify all module dependencies. Use when mapping project structure.",
       "version": "1.0.0",
-      "source": "./plugins/testing/extract-dependencies",
+      "source": "./skills/testing/extract-dependencies",
       "category": "testing",
       "tags": []
     },
@@ -1470,7 +2394,7 @@
       "name": "extract-test-failures",
       "description": "Extract and summarize test failures from logs. Use when: (1) CI test run failed, need to understand failures, (2) Large test suite with many failures needs summary, (3) Categorizing failures by type (assertion, runtime, timeout).",
       "version": "1.0.0",
-      "source": "./plugins/testing/extract-test-failures",
+      "source": "./skills/testing/extract-test-failures",
       "category": "testing",
       "tags": [
         "testing",
@@ -1483,15 +2407,28 @@
       "name": "fix-ci-test-failures",
       "description": "Skill for fixing unit tests that pass locally but fail in CI due to symlinks and mocking issues",
       "version": "1.0.0",
-      "source": "./plugins/testing/fix-ci-test-failures",
+      "source": "./skills/testing/fix-ci-test-failures",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "fix-default-value-test-mismatch",
+      "description": "Fix test failures when default values change in source code but tests aren't updated",
+      "version": "1.0.0",
+      "source": "./skills/testing/fix-default-value-test-mismatch",
+      "category": "testing",
+      "tags": [
+        "testing",
+        "ci",
+        "defaults",
+        "unit-tests"
+      ]
     },
     {
       "name": "fix-placeholder-code-ci",
       "description": "Fix CI failures caused by partially commented placeholder code and dtype migration assertion mismatches",
       "version": "1.0.0",
-      "source": "./plugins/testing/fix-placeholder-code-ci",
+      "source": "./skills/testing/fix-placeholder-code-ci",
       "category": "testing",
       "tags": []
     },
@@ -1499,7 +2436,7 @@
       "name": "fix-pydantic-required-fields",
       "description": "Fix test failures caused by missing required fields in Pydantic model fixtures after data model evolution",
       "version": "1.0.0",
-      "source": "./plugins/testing/fix-pydantic-required-fields",
+      "source": "./skills/testing/fix-pydantic-required-fields",
       "category": "testing",
       "tags": []
     },
@@ -1507,15 +2444,30 @@
       "name": "fix-tests-after-config-refactor",
       "description": "Fix Tests After Config Refactor",
       "version": "1.0.0",
-      "source": "./plugins/testing/fix-tests-after-config-refactor",
+      "source": "./skills/testing/fix-tests-after-config-refactor",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "forbid-e2e-remote-ops",
+      "description": "Prevent remote Git operations in e2e tests and optimize worktree creation",
+      "version": "1.0.0",
+      "source": "./skills/testing/forbid-e2e-remote-ops",
+      "category": "testing",
+      "tags": [
+        "e2e-testing",
+        "git",
+        "worktree",
+        "test-isolation",
+        "safety",
+        "optimization"
+      ]
     },
     {
       "name": "generate-fix-suggestions",
       "description": "Generate fix suggestions based on error patterns and best practices. Use when: (1) Test failures need concrete solutions, (2) Build errors require remediation steps, (3) Creating PR comments with suggestions.",
       "version": "1.0.0",
-      "source": "./plugins/testing/generate-fix-suggestions",
+      "source": "./skills/testing/generate-fix-suggestions",
       "category": "testing",
       "tags": [
         "testing",
@@ -1528,7 +2480,7 @@
       "name": "generate-tests",
       "description": "Create test cases for functions and modules. Use when implementing TDD or improving coverage.",
       "version": "1.0.0",
-      "source": "./plugins/testing/generate-tests",
+      "source": "./skills/testing/generate-tests",
       "category": "testing",
       "tags": []
     },
@@ -1536,15 +2488,28 @@
       "name": "lint-code",
       "description": "Check code for style and quality issues. Use when validating code before commits.",
       "version": "1.0.0",
-      "source": "./plugins/testing/lint-code",
+      "source": "./skills/testing/lint-code",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "manager-proxy-type-hints",
+      "description": "Skill: manager-proxy-type-hints. Use when working with manager proxy type hints.",
+      "version": "1.0.0",
+      "source": "./skills/testing/manager-proxy-type-hints",
+      "category": "testing",
+      "tags": [
+        "manager",
+        "proxy",
+        "type",
+        "hints"
+      ]
     },
     {
       "name": "mojo-lint-syntax",
       "description": "Validate Mojo syntax against current v0.26.1+ standards. Use to catch syntax errors before compilation.",
       "version": "1.0.0",
-      "source": "./plugins/testing/mojo-lint-syntax",
+      "source": "./skills/testing/mojo-lint-syntax",
       "category": "testing",
       "tags": []
     },
@@ -1552,7 +2517,7 @@
       "name": "mojo-memory-check",
       "description": "Verify memory safety in Mojo code including ownership, borrowing, and lifetime management. Use when reviewing code or debugging memory issues.",
       "version": "1.0.0",
-      "source": "./plugins/testing/mojo-memory-check",
+      "source": "./skills/testing/mojo-memory-check",
       "category": "testing",
       "tags": []
     },
@@ -1560,7 +2525,7 @@
       "name": "mojo-test-runner",
       "description": "Run Mojo tests using mojo test command. Use when executing tests or verifying test coverage.",
       "version": "1.0.0",
-      "source": "./plugins/testing/mojo-test-runner",
+      "source": "./skills/testing/mojo-test-runner",
       "category": "testing",
       "tags": []
     },
@@ -1568,15 +2533,30 @@
       "name": "mojo-type-safety",
       "description": "Validate type safety in Mojo code including parametric types and trait constraints. Use during code review or when type errors occur.",
       "version": "1.0.0",
-      "source": "./plugins/testing/mojo-type-safety",
+      "source": "./skills/testing/mojo-type-safety",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "move-loose-test-files",
+      "description": "Safe pattern for moving test files from a root test directory into mirrored sub-packages, including fixture path correction",
+      "version": "1.0.0",
+      "source": "./skills/testing/move-loose-test-files",
+      "category": "testing",
+      "tags": [
+        "testing",
+        "refactoring",
+        "git",
+        "fixtures",
+        "test-organization",
+        "pytest"
+      ]
     },
     {
       "name": "multi-language-judge-pipelines",
       "description": "Add language-specific build pipelines (Python/Mojo) to E2E test judge systems. Use when test infrastructure needs to support multiple programming languages with different tooling (python/ruff/pytest vs mojo build/format/test). Handles pipeline routing, configuration loading, and test fixture updates.",
       "version": "1.0.0",
-      "source": "./plugins/testing/multi-language-judge-pipelines",
+      "source": "./skills/testing/multi-language-judge-pipelines",
       "category": "testing",
       "tags": [
         "testing",
@@ -1590,10 +2570,48 @@
       ]
     },
     {
+      "name": "mypy-living-baseline",
+      "description": "Skill: mypy-living-baseline. Use when working with mypy living baseline.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mypy-living-baseline",
+      "category": "testing",
+      "tags": [
+        "mypy",
+        "living",
+        "baseline"
+      ]
+    },
+    {
+      "name": "mypy-per-directory-baseline",
+      "description": "Skill: mypy-per-directory-baseline. Use when working with mypy per directory baseline.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mypy-per-directory-baseline",
+      "category": "testing",
+      "tags": [
+        "mypy",
+        "per",
+        "directory",
+        "baseline"
+      ]
+    },
+    {
+      "name": "mypy-scripts-coverage-extension",
+      "description": "Skill: mypy-scripts-coverage-extension. Use when working with mypy scripts coverage extension.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mypy-scripts-coverage-extension",
+      "category": "testing",
+      "tags": [
+        "mypy",
+        "scripts",
+        "coverage",
+        "extension"
+      ]
+    },
+    {
       "name": "phase-cleanup",
       "description": "Refactor and finalize code after parallel phases complete, addressing technical debt. Use in cleanup phase to polish code before merge.",
       "version": "1.0.0",
-      "source": "./plugins/testing/phase-cleanup",
+      "source": "./skills/testing/phase-cleanup",
       "category": "testing",
       "tags": []
     },
@@ -1601,7 +2619,7 @@
       "name": "phase-test-tdd",
       "description": "Generate test files and coordinate test-driven development (TDD). Use when creating tests before implementation or during test phase.",
       "version": "1.0.0",
-      "source": "./plugins/testing/phase-test-tdd",
+      "source": "./skills/testing/phase-test-tdd",
       "category": "testing",
       "tags": []
     },
@@ -1609,7 +2627,7 @@
       "name": "pytest-real-io-testing",
       "description": "Pattern for replacing pytest mocks with real file I/O to fix test isolation issues",
       "version": "1.0.0",
-      "source": "./plugins/testing/pytest-real-io-testing",
+      "source": "./skills/testing/pytest-real-io-testing",
       "category": "testing",
       "tags": []
     },
@@ -1617,7 +2635,7 @@
       "name": "quality-coverage-report",
       "description": "Generate test coverage reports showing which code paths are tested. Use to identify untested code and improve test coverage.",
       "version": "1.0.0",
-      "source": "./plugins/testing/quality-coverage-report",
+      "source": "./skills/testing/quality-coverage-report",
       "category": "testing",
       "tags": []
     },
@@ -1625,7 +2643,7 @@
       "name": "quality-run-linters",
       "description": "Run all configured linters including mojo format, markdownlint, and pre-commit hooks. Use before committing code to ensure quality standards are met.",
       "version": "1.0.0",
-      "source": "./plugins/testing/quality-run-linters",
+      "source": "./skills/testing/quality-run-linters",
       "category": "testing",
       "tags": []
     },
@@ -1633,15 +2651,27 @@
       "name": "refactor-code",
       "description": "Restructure code for improved clarity and maintainability. Use when addressing code smells or technical debt.",
       "version": "1.0.0",
-      "source": "./plugins/testing/refactor-code",
+      "source": "./skills/testing/refactor-code",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "resolve-skipped-tests",
+      "description": "Skill: resolve-skipped-tests. Use when working with resolve skipped tests.",
+      "version": "1.0.0",
+      "source": "./skills/testing/resolve-skipped-tests",
+      "category": "testing",
+      "tags": [
+        "resolve",
+        "skipped",
+        "tests"
+      ]
     },
     {
       "name": "resume-functionality-tests",
       "description": "Comprehensive test patterns for checkpoint/resume systems covering crash, interrupt, and partial completion scenarios. Use when testing long-running processes with resume capability.",
       "version": "1.0.0",
-      "source": "./plugins/testing/resume-functionality-tests",
+      "source": "./skills/testing/resume-functionality-tests",
       "category": "testing",
       "tags": [
         "testing",
@@ -1655,7 +2685,7 @@
       "name": "review-pr-changes",
       "description": "Review PR changes with structured checklist for quality and standards compliance. Use for comprehensive PR code review.",
       "version": "1.0.0",
-      "source": "./plugins/testing/review-pr-changes",
+      "source": "./skills/testing/review-pr-changes",
       "category": "testing",
       "tags": []
     },
@@ -1663,7 +2693,7 @@
       "name": "run-tests",
       "description": "Execute test suites and report results. Use when validating code functionality.",
       "version": "1.0.0",
-      "source": "./plugins/testing/run-tests",
+      "source": "./skills/testing/run-tests",
       "category": "testing",
       "tags": []
     },
@@ -1671,7 +2701,7 @@
       "name": "test-diff-analyzer",
       "description": "Analyze test differences between runs to identify flaky tests. Use when: (1) Test passes locally but fails in CI, (2) Test sometimes passes, sometimes fails, (3) Need to understand test consistency issues.",
       "version": "1.0.0",
-      "source": "./plugins/testing/test-diff-analyzer",
+      "source": "./skills/testing/test-diff-analyzer",
       "category": "testing",
       "tags": [
         "testing",
@@ -1681,10 +2711,26 @@
       ]
     },
     {
+      "name": "unit-tests-untested-modules",
+      "description": "Workflow for adding unit tests to previously untested source modules. Use when a quality audit identifies modules with no test file, coverage threshold is at risk, or an issue requests tests for specific untested modules.",
+      "version": "1.0.0",
+      "source": "./skills/testing/unit-tests-untested-modules",
+      "category": "testing",
+      "tags": [
+        "testing",
+        "unit-tests",
+        "pytest",
+        "coverage",
+        "mocking",
+        "multiprocessing",
+        "curses"
+      ]
+    },
+    {
       "name": "validate-inputs",
       "description": "Check function inputs for correctness and safety. Use when implementing defensive programming.",
       "version": "1.0.0",
-      "source": "./plugins/testing/validate-inputs",
+      "source": "./skills/testing/validate-inputs",
       "category": "testing",
       "tags": []
     },
@@ -1692,15 +2738,44 @@
       "name": "validate-mojo-patterns",
       "description": "Validate Mojo code patterns (out self, mut, List, etc.) against best practices. Use to ensure code follows project standards.",
       "version": "1.0.0",
-      "source": "./plugins/testing/validate-mojo-patterns",
+      "source": "./skills/testing/validate-mojo-patterns",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "validate-tier-id-filename-consistency",
+      "description": "Validate that config field values match their source filename at the aggregation layer to prevent silent key/value disagreement",
+      "version": "1.0.0",
+      "source": "./skills/testing/validate-tier-id-filename-consistency",
+      "category": "testing",
+      "tags": [
+        "config",
+        "validation",
+        "tier",
+        "consistency",
+        "error-handling"
+      ]
+    },
+    {
+      "name": "advise-before-planning",
+      "description": "Integrate team knowledge search before automated planning workflows",
+      "version": "1.0.0",
+      "source": "./skills/tooling/advise-before-planning",
+      "category": "tooling",
+      "tags": [
+        "automation",
+        "planning",
+        "knowledge-base",
+        "two-step-workflow",
+        "claude-cli",
+        "team-learning"
+      ]
     },
     {
       "name": "agent-hooks-pattern",
       "description": "Pattern for agent-scoped lifecycle hooks in Claude Code v2.1.0. Use when: (1) implementing custom agents with safety controls, (2) restricting agent tool access, (3) adding PreToolUse/PostToolUse/Stop hooks to agents.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/agent-hooks-pattern",
+      "source": "./skills/tooling/agent-hooks-pattern",
       "category": "tooling",
       "tags": []
     },
@@ -1708,7 +2783,7 @@
       "name": "agent-run-orchestrator",
       "description": "Run section orchestrators to coordinate multi-component workflows. Use when starting work on a section.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/agent-run-orchestrator",
+      "source": "./skills/tooling/agent-run-orchestrator",
       "category": "tooling",
       "tags": []
     },
@@ -1716,7 +2791,7 @@
       "name": "ai-blog-generator",
       "description": "Generate AI-authored blog posts from git commit history. Use when: (1) Filling gaps in project blog history, (2) Need to document past work retroactively, (3) Creating development blog posts based on actual commits, (4) Backfilling documentation for dates without posts.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/ai-blog-generator",
+      "source": "./skills/tooling/ai-blog-generator",
       "category": "tooling",
       "tags": [
         "blog",
@@ -1731,7 +2806,7 @@
       "name": "bulk-issue-filing",
       "description": "Bulk create GitHub issues from code markers (TODO/FIXME/DEPRECATED/NOTE). Use when: (1) Cleaning up technical debt markers across codebase, (2) Need to systematically track all TODO/FIXME items, (3) Creating master tracking issues with child issues for large cleanup efforts.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/bulk-issue-filing",
+      "source": "./skills/tooling/bulk-issue-filing",
       "category": "tooling",
       "tags": [
         "github",
@@ -1744,35 +2819,56 @@
       ]
     },
     {
+      "name": "centralize-model-id-constants",
+      "description": "Skill: centralize-model-id-constants. Use when working with centralize model id constants.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/centralize-model-id-constants",
+      "category": "tooling",
+      "tags": [
+        "centralize",
+        "model",
+        "constants"
+      ]
+    },
+    {
+      "name": "centralize-repo-clones",
+      "description": "Skill: centralize-repo-clones. Use when working with centralize repo clones.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/centralize-repo-clones",
+      "category": "tooling",
+      "tags": [
+        "centralize",
+        "repo",
+        "clones"
+      ]
+    },
+    {
       "name": "check-dependencies",
       "description": "Validate and verify dependencies are available and compatible. Use when setting up environments.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/check-dependencies",
+      "source": "./skills/tooling/check-dependencies",
       "category": "tooling",
       "tags": []
     },
     {
-      "name": "cli-adapter-implementation",
-      "description": "Add a new CLI-based AI agent as an evaluation target in ProjectScylla. Use when: (1) integrating a new CLI tool (Goose, Aider, Continue, Cursor, etc.) for T0-T6 tier benchmarking, (2) an issue requests '[Feature] Add support for <tool>', (3) extending scylla/adapters/ with a new provider. Covers exact file list (3 create, 1 modify), regex pitfalls in fallback patterns, and 23-test structure.",
+      "name": "checkpoint-recovery",
+      "description": "Implementing checkpoint/resume functionality for long-running batch processes with rate limit handling",
       "version": "1.0.0",
-      "source": "./skills/cli-adapter-implementation",
+      "source": "./skills/tooling/checkpoint-recovery",
       "category": "tooling",
       "tags": [
-        "adapters",
-        "cli",
-        "integration",
-        "benchmarking",
-        "goose",
-        "base-cli-adapter",
-        "pytest",
-        "pattern"
+        "checkpoint",
+        "resume",
+        "batch-processing",
+        "rate-limits",
+        "interruption-recovery"
       ]
     },
     {
       "name": "claude-code-v21-adoption",
       "description": "Systematic approach to adopting Claude Code v2.1.0 features in skills marketplace. Use when: (1) upgrading to new Claude Code version, (2) analyzing CHANGELOG for feature adoption, (3) updating plugin schemas and templates, (4) creating documentation skills for new features.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/claude-code-v21-adoption",
+      "source": "./skills/tooling/claude-code-v21-adoption",
       "category": "tooling",
       "tags": []
     },
@@ -1780,7 +2876,7 @@
       "name": "claude-plugin-format",
       "description": "Official Claude Code plugin format requirements. Use when: (1) Creating a new plugin, (2) Debugging plugin validation errors, (3) Skills or commands not appearing after install.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/claude-plugin-format",
+      "source": "./skills/tooling/claude-plugin-format",
       "category": "tooling",
       "tags": [
         "plugin",
@@ -1794,7 +2890,7 @@
       "name": "claude-plugin-marketplace",
       "description": "Set up Claude Code plugin marketplaces. Use when: (1) Registering a skills marketplace, (2) Fixing plugin.json schema errors, (3) Understanding marketplace.json format, (4) Installing plugins from private repos.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/claude-plugin-marketplace",
+      "source": "./skills/tooling/claude-plugin-marketplace",
       "category": "tooling",
       "tags": [
         "marketplace",
@@ -1805,10 +2901,97 @@
       ]
     },
     {
+      "name": "cli-adapter-implementation",
+      "description": "Skill: cli-adapter-implementation. Use when working with cli adapter implementation.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/cli-adapter-implementation",
+      "category": "tooling",
+      "tags": [
+        "cli",
+        "adapter",
+        "implementation"
+      ]
+    },
+    {
+      "name": "code-quality-audit-principles",
+      "description": "Comprehensive codebase audit against 7 core development principles (KISS, YAGNI, TDD, DRY, SOLID, Modularity, POLA). Generates ratings, files issues, and creates audit report.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/code-quality-audit-principles",
+      "category": "tooling",
+      "tags": [
+        "audit",
+        "quality",
+        "principles",
+        "technical-debt",
+        "kiss",
+        "yagni",
+        "tdd",
+        "dry",
+        "solid",
+        "modularity",
+        "pola"
+      ]
+    },
+    {
+      "name": "config-default-model-drift",
+      "description": "Skill: config-default-model-drift. Use when working with config default model drift.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/config-default-model-drift",
+      "category": "tooling",
+      "tags": [
+        "config",
+        "default",
+        "model",
+        "drift"
+      ]
+    },
+    {
+      "name": "coverage-threshold-tuning",
+      "description": "Tune pytest coverage thresholds to match actual coverage baselines and avoid CI failures",
+      "version": "1.0.0",
+      "source": "./skills/tooling/coverage-threshold-tuning",
+      "category": "tooling",
+      "tags": [
+        "pytest",
+        "coverage",
+        "ci-cd",
+        "threshold",
+        "pixi",
+        "github-actions"
+      ]
+    },
+    {
+      "name": "defaults-config-filename-validation",
+      "description": "Skill: defaults-config-filename-validation. Use when working with defaults config filename validation.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/defaults-config-filename-validation",
+      "category": "tooling",
+      "tags": [
+        "defaults",
+        "config",
+        "filename",
+        "validation"
+      ]
+    },
+    {
+      "name": "enforce-model-config-consistency-hook",
+      "description": "Skill: enforce-model-config-consistency-hook. Use when working with enforce model config consistency hook.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/enforce-model-config-consistency-hook",
+      "category": "tooling",
+      "tags": [
+        "enforce",
+        "model",
+        "config",
+        "consistency",
+        "hook"
+      ]
+    },
+    {
       "name": "execution-stage-logging",
       "description": "Add structured stage logging with timing to track worker thread progress through multi-stage pipelines. Use when parallel workers make it unclear what stage each is in or which workers are stuck.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/execution-stage-logging",
+      "source": "./skills/tooling/execution-stage-logging",
       "category": "tooling",
       "tags": [
         "logging",
@@ -1822,15 +3005,41 @@
       "name": "experiment-recovery-tools",
       "description": "Skill: Experiment Recovery Tools",
       "version": "1.0.0",
-      "source": "./plugins/tooling/experiment-recovery-tools",
+      "source": "./skills/tooling/experiment-recovery-tools",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "extract-logging-helper",
+      "description": "Skill: extract-logging-helper. Use when working with extract logging helper.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/extract-logging-helper",
+      "category": "tooling",
+      "tags": [
+        "extract",
+        "logging",
+        "helper"
+      ]
+    },
+    {
+      "name": "fix-incomplete-pydantic-migration",
+      "description": "Fix CI test failures from incomplete Pydantic v2 migrations with bandaid approach",
+      "version": "1.0.0",
+      "source": "./skills/tooling/fix-incomplete-pydantic-migration",
+      "category": "tooling",
+      "tags": [
+        "pydantic",
+        "testing",
+        "ci-cd",
+        "migration",
+        "debugging"
+      ]
     },
     {
       "name": "generate-boilerplate",
       "description": "Create starter code from templates. Use when setting up new modules or test files.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/generate-boilerplate",
+      "source": "./skills/tooling/generate-boilerplate",
       "category": "tooling",
       "tags": []
     },
@@ -1838,7 +3047,7 @@
       "name": "gh-batch-merge-by-labels",
       "description": "Batch merge multiple PRs by label matching. Use when: (1) Multiple PRs ready for merge with same status label, (2) End-of-sprint or release batch merges, (3) Automating merge of dependent chain of PRs.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/gh-batch-merge-by-labels",
+      "source": "./skills/tooling/gh-batch-merge-by-labels",
       "category": "tooling",
       "tags": [
         "github",
@@ -1852,7 +3061,7 @@
       "name": "gh-create-pr-linked",
       "description": "Create PRs properly linked to GitHub issues. Use when: (1) Creating a PR that implements a specific issue, (2) Need automatic issue linking in PR, (3) Ready to submit changes for review after completing work.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/gh-create-pr-linked",
+      "source": "./skills/tooling/gh-create-pr-linked",
       "category": "tooling",
       "tags": [
         "github",
@@ -1866,7 +3075,7 @@
       "name": "gh-fix-pr-feedback",
       "description": "Address PR review feedback by making changes and replying to comments. Use when a PR has open review comments needing responses.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/gh-fix-pr-feedback",
+      "source": "./skills/tooling/gh-fix-pr-feedback",
       "category": "tooling",
       "tags": [
         "github",
@@ -1879,7 +3088,7 @@
       "name": "gh-get-review-comments",
       "description": "Retrieve all review comments from a pull request using the GitHub API. Use when you need to see what feedback has been provided on a PR.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/gh-get-review-comments",
+      "source": "./skills/tooling/gh-get-review-comments",
       "category": "tooling",
       "tags": [
         "github",
@@ -1892,15 +3101,32 @@
       "name": "gh-implement-issue",
       "description": "End-to-end implementation workflow for a GitHub issue from planning through PR creation. Use when starting work on an issue from scratch.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/gh-implement-issue",
+      "source": "./skills/tooling/gh-implement-issue",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "gh-implement-issue-preflight-integration",
+      "description": "How to integrate automated pre-flight checks as Step 1 of the gh-implement-issue workflow to prevent duplicate work and worktree conflicts",
+      "version": "1.0.0",
+      "source": "./skills/tooling/gh-implement-issue-preflight-integration",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "workflow",
+        "pre-flight",
+        "automation",
+        "safety-check",
+        "gh-implement-issue",
+        "bash",
+        "issue-management"
+      ]
     },
     {
       "name": "gh-post-issue-update",
       "description": "Post structured updates to GitHub issues for progress tracking. Use when: (1) Reporting implementation progress, (2) Documenting design decisions, (3) Posting completion summaries or findings.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/gh-post-issue-update",
+      "source": "./skills/tooling/gh-post-issue-update",
       "category": "tooling",
       "tags": [
         "github",
@@ -1914,7 +3140,7 @@
       "name": "gh-pr-review-workflow",
       "description": "Complete PR review feedback workflow. Contains 3 sub-skills: (1) get-comments - fetch all review comments from PR, (2) reply-comment - reply to individual review comments, (3) fix-feedback - full workflow to address and reply to all feedback. Use when addressing PR review comments.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/gh-pr-review-workflow",
+      "source": "./skills/tooling/gh-pr-review-workflow",
       "category": "tooling",
       "tags": [
         "github",
@@ -1929,7 +3155,7 @@
       "name": "gh-read-issue-context",
       "description": "Read context from GitHub issue including body and comments. Use when: (1) Before starting implementation work, (2) When prior context is needed, (3) Resuming work after a break and need to understand decisions made earlier.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/gh-read-issue-context",
+      "source": "./skills/tooling/gh-read-issue-context",
       "category": "tooling",
       "tags": [
         "github",
@@ -1943,7 +3169,7 @@
       "name": "gh-reply-review-comment",
       "description": "Reply to PR review comments using the correct GitHub API endpoint. Use when responding to inline code review feedback (not gh pr comment).",
       "version": "1.0.0",
-      "source": "./plugins/tooling/gh-reply-review-comment",
+      "source": "./skills/tooling/gh-reply-review-comment",
       "category": "tooling",
       "tags": [
         "github",
@@ -1956,7 +3182,7 @@
       "name": "gh-review-pr",
       "description": "Comprehensively review a pull request including code changes, CI status, and adherence to project standards. Use when asked to review a PR.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/gh-review-pr",
+      "source": "./skills/tooling/gh-review-pr",
       "category": "tooling",
       "tags": []
     },
@@ -1964,7 +3190,7 @@
       "name": "git-worktree-workflow",
       "description": "Complete git worktree workflow for parallel development. Contains 4 sub-skills: (1) create - create isolated worktrees for new issues, (2) switch - navigate between worktrees, (3) sync - keep worktrees up-to-date with main, (4) cleanup - remove worktrees after PR merge. Use when working on multiple issues in parallel without stashing.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/git-worktree-workflow",
+      "source": "./skills/tooling/git-worktree-workflow",
       "category": "tooling",
       "tags": [
         "git",
@@ -1975,10 +3201,24 @@
       ]
     },
     {
+      "name": "gitattributes-setup",
+      "description": "Add .gitattributes for cross-platform line-ending normalization and diff drivers. Use when repository lacks .gitattributes, has spurious diffs, CRLF/LF merge conflicts, or CI failures due to line-ending mismatch.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/gitattributes-setup",
+      "category": "tooling",
+      "tags": [
+        "git",
+        "line-endings",
+        "cross-platform",
+        "gitattributes",
+        "normalization"
+      ]
+    },
+    {
       "name": "graceful-signal-handling",
       "description": "Implement graceful shutdown for SIGINT/SIGTERM with checkpoint save and partial results. Use when long-running processes need to handle Ctrl+C without losing work.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/graceful-signal-handling",
+      "source": "./skills/tooling/graceful-signal-handling",
       "category": "tooling",
       "tags": [
         "signals",
@@ -1989,10 +3229,39 @@
       ]
     },
     {
+      "name": "issue-completion-verification",
+      "description": "Verify and properly close GitHub issues when PR automation fails to auto-close",
+      "version": "1.0.0",
+      "source": "./skills/tooling/issue-completion-verification",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "workflow",
+        "automation",
+        "issue-tracking",
+        "pr-management"
+      ]
+    },
+    {
+      "name": "issue-preflight-check",
+      "description": "Pre-flight checklist before starting GitHub issue work: verify completion, check conflicts, gather context",
+      "version": "1.0.0",
+      "source": "./skills/tooling/issue-preflight-check",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "workflow",
+        "pre-flight",
+        "verification",
+        "worktree",
+        "branch-management"
+      ]
+    },
+    {
       "name": "mojo-build-package",
       "description": "Build Mojo packages (.mojopkg files) for distribution. Use when creating distributable libraries or during packaging phase.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/mojo-build-package",
+      "source": "./skills/tooling/mojo-build-package",
       "category": "tooling",
       "tags": []
     },
@@ -2000,7 +3269,7 @@
       "name": "mojo-format",
       "description": "Format Mojo code using mojo format command. Use when preparing code for commit or when formatting checks fail.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/mojo-format",
+      "source": "./skills/tooling/mojo-format",
       "category": "tooling",
       "tags": []
     },
@@ -2008,7 +3277,7 @@
       "name": "parallel-issue-implementation",
       "description": "Implement multiple GitHub issues in parallel using git worktrees. Use when you have 2+ issues with detailed plans ready for implementation.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/parallel-issue-implementation",
+      "source": "./skills/tooling/parallel-issue-implementation",
       "category": "tooling",
       "tags": [
         "github",
@@ -2020,10 +3289,57 @@
       ]
     },
     {
+      "name": "parallel-issue-resolution-with-worktrees",
+      "description": "Skill: parallel-issue-resolution-with-worktrees. Use when working with parallel issue resolution with worktrees.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/parallel-issue-resolution-with-worktrees",
+      "category": "tooling",
+      "tags": [
+        "parallel",
+        "issue",
+        "resolution",
+        "with",
+        "worktrees"
+      ]
+    },
+    {
+      "name": "parallel-pr-workflow",
+      "description": "Systematic workflow for implementing multiple fixes in parallel using git worktrees and auto-merge PRs",
+      "version": "1.0.0",
+      "source": "./skills/tooling/parallel-pr-workflow",
+      "category": "tooling",
+      "tags": [
+        "git",
+        "worktrees",
+        "parallel-development",
+        "pull-requests",
+        "automation",
+        "github-cli",
+        "code-quality",
+        "technical-debt"
+      ]
+    },
+    {
+      "name": "parallel-worktree-workflow",
+      "description": "Execute multiple independent tasks in parallel using git worktrees and background sub-agents. Achieves 3x speedup for independent work.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/parallel-worktree-workflow",
+      "category": "tooling",
+      "tags": [
+        "parallel",
+        "worktrees",
+        "sub-agents",
+        "efficiency",
+        "git",
+        "workflow",
+        "background-tasks"
+      ]
+    },
+    {
       "name": "phase-implement",
       "description": "Coordinate implementation phase by delegating tasks and ensuring code quality. Use during implementation phase to manage engineer tasks.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/phase-implement",
+      "source": "./skills/tooling/phase-implement",
       "category": "tooling",
       "tags": []
     },
@@ -2031,15 +3347,28 @@
       "name": "phase-package",
       "description": "Create distributable packages including .mojopkg files and archives. Use during package phase to prepare components for distribution.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/phase-package",
+      "source": "./skills/tooling/phase-package",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "planning-implementation-from-issue",
+      "description": "Skill: planning-implementation-from-issue. Use when working with planning implementation from issue.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/planning-implementation-from-issue",
+      "category": "tooling",
+      "tags": [
+        "planning",
+        "implementation",
+        "from",
+        "issue"
+      ]
     },
     {
       "name": "plugin-generalization",
       "description": "Generalize skills/plugins for cross-repository compatibility. Use when: (1) plugins reference specific repos in frontmatter, (2) hardcoded paths need abstraction, (3) migrating a skills marketplace to support multiple projects.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/plugin-generalization",
+      "source": "./skills/tooling/plugin-generalization",
       "category": "tooling",
       "tags": [
         "plugin",
@@ -2051,10 +3380,65 @@
       ]
     },
     {
+      "name": "port-reusable-scripts",
+      "description": "Port and generalize reusable scripts between repositories with proper adaptations, dependency elimination, and Python path setup. Achieved zero external dependencies by rewriting PyGithub to gh CLI.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/port-reusable-scripts",
+      "category": "tooling",
+      "tags": [
+        "scripts",
+        "porting",
+        "generalization",
+        "cross-repo",
+        "utilities",
+        "automation",
+        "python",
+        "refactoring",
+        "gh-cli",
+        "dependency-elimination"
+      ]
+    },
+    {
+      "name": "pydantic-frozen-consistency",
+      "description": "Skill: pydantic-frozen-consistency. Use when working with pydantic frozen consistency.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/pydantic-frozen-consistency",
+      "category": "tooling",
+      "tags": [
+        "pydantic",
+        "frozen",
+        "consistency"
+      ]
+    },
+    {
+      "name": "quality-audit-implementation",
+      "description": "Skill: quality-audit-implementation. Use when working with quality audit implementation.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/quality-audit-implementation",
+      "category": "tooling",
+      "tags": [
+        "quality",
+        "audit",
+        "implementation"
+      ]
+    },
+    {
+      "name": "quality-audit-tracking",
+      "description": "Skill: quality-audit-tracking. Use when working with quality audit tracking.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/quality-audit-tracking",
+      "category": "tooling",
+      "tags": [
+        "quality",
+        "audit",
+        "tracking"
+      ]
+    },
+    {
       "name": "retrospective-hook-integration",
       "description": "Setup SessionEnd hooks for automatic retrospective prompts in Claude Code. TRIGGER: (1) When integrating ProjectMnemosyne marketplace with another repository, (2) When setting up /advise and /retrospective skills, (3) When configuring automatic session-end knowledge capture. Verified on Claude Code with ProjectOdyssey integration.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/retrospective-hook-integration",
+      "source": "./skills/tooling/retrospective-hook-integration",
       "category": "tooling",
       "tags": [
         "claude-code",
@@ -2066,10 +3450,24 @@
       ]
     },
     {
+      "name": "retrospective-integration",
+      "description": "Integrate /retrospective skill into automation pipelines to automatically capture session learnings",
+      "version": "1.0.0",
+      "source": "./skills/tooling/retrospective-integration",
+      "category": "tooling",
+      "tags": [
+        "automation",
+        "claude-cli",
+        "session-management",
+        "pipeline-integration",
+        "graceful-degradation"
+      ]
+    },
+    {
       "name": "review-task-orchestration",
       "description": "Review Task Orchestration",
       "version": "1.0.0",
-      "source": "./plugins/tooling/review-task-orchestration",
+      "source": "./skills/tooling/review-task-orchestration",
       "category": "tooling",
       "tags": []
     },
@@ -2077,7 +3475,7 @@
       "name": "skill-audit-and-merge",
       "description": "Systematic audit and consolidation of skills marketplace plugins. Use when: (1) Marketplace has grown with overlapping plugins, (2) Need to identify merge candidates, (3) Improving plugin discoverability via tags, (4) Reorganizing categories for better structure.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/skill-audit-and-merge",
+      "source": "./skills/tooling/skill-audit-and-merge",
       "category": "tooling",
       "tags": [
         "marketplace",
@@ -2091,7 +3489,7 @@
       "name": "skills-agent-field",
       "description": "Pattern for specifying which agent type should execute a skill. Use when: (1) creating specialized skills for specific agents, (2) routing Mojo skills to syntax validators, (3) directing GitHub skills to implementation engineers.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/skills-agent-field",
+      "source": "./skills/tooling/skills-agent-field",
       "category": "tooling",
       "tags": []
     },
@@ -2112,10 +3510,26 @@
       ]
     },
     {
+      "name": "split-figures-per-tier",
+      "description": "Pattern for splitting large faceted figures into per-tier subfigures to avoid Altair's 5,000-row dataset limit. Handles multi-facet cases and test pattern updates.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/split-figures-per-tier",
+      "category": "tooling",
+      "tags": [
+        "altair",
+        "vega-lite",
+        "visualization",
+        "row-limit",
+        "figure-generation",
+        "per-tier-patterns",
+        "data-filtering"
+      ]
+    },
+    {
       "name": "technical-debt-tracker",
       "description": "Track and resolve FIXME/TODO comments by creating GitHub issues and updating stale references. Use when: (1) Auditing codebase for technical debt, (2) Creating structured issues for each debt category, (3) Updating stale issue references in comments.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/technical-debt-tracker",
+      "source": "./skills/tooling/technical-debt-tracker",
       "category": "tooling",
       "tags": [
         "github",
@@ -2127,10 +3541,21 @@
       ]
     },
     {
+      "name": "template-migration",
+      "description": "Skill: template-migration. Use when working with template migration.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/template-migration",
+      "category": "tooling",
+      "tags": [
+        "template",
+        "migration"
+      ]
+    },
+    {
       "name": "tier-progress-indicators",
       "description": "Add real-time progress tracking for parallel tier execution to prevent 'appears hung' issues. Use when parallel workers make it unclear how many tasks are complete vs still running.",
       "version": "1.0.0",
-      "source": "./plugins/tooling/tier-progress-indicators",
+      "source": "./skills/tooling/tier-progress-indicators",
       "category": "tooling",
       "tags": [
         "progress",
@@ -2144,7 +3569,7 @@
       "name": "tone-matched-documentation",
       "description": "Fill placeholder sections in documents while matching the author's existing writing style and tone",
       "version": "1.0.0",
-      "source": "./plugins/documentation/tone-matched-documentation",
+      "source": "./skills/documentation/tone-matched-documentation",
       "category": "tooling",
       "tags": [
         "academic-writing",
@@ -2155,23 +3580,23 @@
     },
     {
       "name": "verify-issue-before-work",
-      "description": "Verify GitHub issue state and existing implementation before starting work to avoid duplicate effort. Use when: starting work on issues, resuming after breaks, taking over from other sessions.",
+      "description": "Verify GitHub issue state and existing implementation before starting work to avoid duplicate effort",
       "version": "1.0.0",
-      "source": "./plugins/tooling/verify-issue-before-work",
+      "source": "./skills/tooling/verify-issue-before-work",
       "category": "tooling",
       "tags": [
-        "github",
-        "issues",
         "workflow",
+        "github",
+        "productivity",
         "verification",
-        "duplicate-prevention"
+        "issue-management"
       ]
     },
     {
       "name": "grpo-external-vllm",
       "description": "GRPO training with external vLLM server. Use when: (1) Running vLLM on separate GPUs, (2) Encountering vllm_skip_weight_sync errors, (3) OpenAI API parsing issues. Verified on gemma-3-12b-it.",
       "version": "1.0.0",
-      "source": "./plugins/training/grpo-external-vllm",
+      "source": "./skills/training/grpo-external-vllm",
       "category": "training",
       "tags": [
         "ml",
@@ -2186,7 +3611,7 @@
       "name": "spec-driven-experimentation",
       "description": "TECHSPEC.md pattern for structured ML experiments. Use when: (1) Planning parameter sweeps, (2) Defining success criteria before training, (3) Budget-constrained experiment design, (4) Hypothesis-driven ablation studies. Source: Sionic AI blog.",
       "version": "1.0.0",
-      "source": "./plugins/training/spec-driven-experimentation",
+      "source": "./skills/training/spec-driven-experimentation",
       "category": "training",
       "tags": [
         "ml",
@@ -2201,71 +3626,9 @@
       "name": "train-model",
       "description": "Execute model training with optimization algorithms. Use when running training loops on datasets.",
       "version": "1.0.0",
-      "source": "./plugins/training/train-model",
+      "source": "./skills/training/train-model",
       "category": "training",
       "tags": []
-    },
-    {
-      "name": "retrospective-integration",
-      "description": "Integrate /retrospective skill into automation pipelines to automatically capture session learnings",
-      "version": "1.0.0",
-      "source": "./skills/retrospective-integration",
-      "category": "automation",
-      "tags": [
-        "automation",
-        "claude-cli",
-        "session-management",
-        "pipeline-integration",
-        "graceful-degradation"
-      ]
-    },
-    {
-      "name": "config-dir-consolidation",
-      "description": "Move config files from a dedicated config/ directory into tests/ when config is only consumed by test infrastructure. Use when: config dir contains files superseded by a test-side system, loaders have hardcoded config/ paths, or a legacy config directory needs full elimination.",
-      "version": "1.0.0",
-      "source": "./plugins/architecture/config-dir-consolidation",
-      "category": "architecture",
-      "tags": [
-        "config-migration",
-        "consolidation",
-        "refactoring",
-        "tier-config",
-        "path-cleanup",
-        "prompt-removal",
-        "test-infrastructure"
-      ]
-    },
-    {
-      "name": "deprecation-warning-migration",
-      "description": "Add runtime DeprecationWarning to a legacy dataclass superseded by a Pydantic model, track surviving usages in CI with a non-blocking grep step, and document the removal timeline in CHANGELOG. Use when deprecating Python dataclasses in favour of Pydantic BaseModel.",
-      "version": "1.0.0",
-      "source": "./plugins/testing/deprecation-warning-migration",
-      "category": "testing",
-      "tags": [
-        "deprecation",
-        "migration",
-        "pydantic",
-        "dataclass",
-        "warnings",
-        "ci-tracking",
-        "changelog"
-      ]
-    },
-    {
-      "name": "ci-deprecation-enforcement",
-      "description": "Promote a non-blocking grep ::warning:: CI step to a hard exit-1 enforcement gate. Use when count of deprecated symbol usages reaches zero and you want to prevent any new callers from being introduced. Covers grep exclusion patterns for re-export files and inline (deprecated) docstring annotations.",
-      "version": "1.0.0",
-      "source": "./plugins/ci-cd/ci-deprecation-enforcement",
-      "category": "ci-cd",
-      "tags": [
-        "deprecation",
-        "enforcement",
-        "grep",
-        "ci-gate",
-        "exit-1",
-        "github-actions",
-        "warning-to-error"
-      ]
     }
   ]
 }

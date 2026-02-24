@@ -1,0 +1,16 @@
+{
+  "name": "grading-consolidation",
+  "version": "1.0.0",
+  "description": "Eliminate duplicate grading definitions and consolidate to single source of truth",
+  "category": "evaluation",
+  "date": "2026-01-01",
+  "tags": [
+    "evaluation",
+    "grading",
+    "deduplication",
+    "refactoring",
+    "consistency",
+    "testing",
+    "single-source-of-truth"
+  ]
+}

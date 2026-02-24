@@ -1,0 +1,14 @@
+{
+  "name": "judge-rerun-workspace-corruption",
+  "version": "1.0.0",
+  "description": "Fix judge reruns producing incorrect results due to workspace corruption",
+  "category": "architecture",
+  "date": "2026-02-09",
+  "tags": [
+    "evaluation",
+    "judging",
+    "workspace-management",
+    "error-handling",
+    "rerun-scripts"
+  ]
+}

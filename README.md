@@ -95,7 +95,7 @@ Claude automatically:
 ## Marketplace Structure
 
 ```text
-plugins/
+skills/
 ├── training/           # ML training experiments
 ├── evaluation/         # Model evaluation
 ├── optimization/       # Performance tuning
@@ -103,13 +103,18 @@ plugins/
 ├── architecture/       # Design decisions
 ├── tooling/            # Automation tools
 ├── ci-cd/              # Pipeline configurations
-└── testing/            # Test strategies
+├── testing/            # Test strategies
+└── documentation/      # Paper writing and docs
+
+plugins/
+└── tooling/
+    └── skills-registry-commands/   # /advise and /retrospective commands
 ```
 
 Each skill follows the plugin structure:
 
 ```text
-plugins/<category>/<name>/
+skills/<category>/<name>/
 ├── .claude-plugin/
 │   └── plugin.json         # Metadata and trigger conditions
 ├── skills/<name>/
@@ -133,7 +138,7 @@ See `marketplace.json` for the complete searchable index of available skills. Th
 
 ### Option 2: Manual
 
-1. Copy `templates/experiment-skill/` to `plugins/<category>/<name>/`
+1. Copy `templates/experiment-skill/` to `skills/<category>/<name>/`
 2. Fill in `plugin.json` with specific trigger conditions
 3. Write `SKILL.md` with all required sections
 4. **Include "Failed Attempts" table** (required!)
@@ -161,7 +166,7 @@ All PRs are validated by CI:
 Run validation locally:
 
 ```bash
-python3 scripts/validate_plugins.py plugins/
+python3 scripts/validate_plugins.py skills/
 ```
 
 ## Ecosystem

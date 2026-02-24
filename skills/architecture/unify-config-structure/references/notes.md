@@ -358,6 +358,6 @@ uses_tools: false
 ## References
 
 - Plan file: `plan-elegant-squishing-puffin.md`
-- Config loader: `src/scylla/config/loader.py`
-- Config models: `src/scylla/config/models.py`
+- Config loader: `scylla/config/loader.py`
+- Config models: `scylla/config/models.py`
 - Tier definitions: `config/tiers/tiers.yaml`

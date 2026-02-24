@@ -1,0 +1,13 @@
+{
+  "name": "manager-proxy-type-hints",
+  "version": "1.0.0",
+  "description": "Skill: manager-proxy-type-hints. Use when working with manager proxy type hints.",
+  "category": "testing",
+  "date": "2026-01-01",
+  "tags": [
+    "manager",
+    "proxy",
+    "type",
+    "hints"
+  ]
+}

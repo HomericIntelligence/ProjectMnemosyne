@@ -231,20 +231,32 @@ def find_plugins(plugins_dir: Path) -> List[Path]:
 
 
 def main() -> int:
-    """Main entry point."""
-    plugins_dir_arg = sys.argv[1] if len(sys.argv) > 1 else "plugins"
-    plugins_dir = Path(plugins_dir_arg)
+    """Main entry point.
 
-    if not plugins_dir.exists():
-        print(f"Plugins directory not found: {plugins_dir}")
-        return 1
+    Usage: validate_plugins.py [scan_dir ...]
+    Defaults: skills/ plugins/
+    """
+    scan_dir_args = sys.argv[1:] if len(sys.argv) > 1 else ["skills", "plugins"]
 
-    plugins = find_plugins(plugins_dir)
+    all_plugins: List[Path] = []
+    for dir_arg in scan_dir_args:
+        d = Path(dir_arg)
+        if not d.exists():
+            continue
+        all_plugins.extend(find_plugins(d))
 
-    if not plugins:
-        print(f"No plugins found in {plugins_dir}")
+    if not all_plugins:
+        print(f"No plugins found in: {scan_dir_args}")
         print("This is OK if the marketplace is empty.")
         return 0
+
+    # Deduplicate by name (keep first occurrence)
+    seen: set = set()
+    plugins: List[Path] = []
+    for p in all_plugins:
+        if p.name not in seen:
+            seen.add(p.name)
+            plugins.append(p)
 
     results = [validate_plugin(p) for p in plugins]
 

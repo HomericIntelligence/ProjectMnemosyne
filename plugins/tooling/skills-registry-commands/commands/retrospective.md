@@ -69,7 +69,7 @@ When the user invokes this command:
    git checkout -b skill/<category>/<name> origin/main
    ```
 
-4. **Generate plugin files** in `plugins/<category>/<name>/`:
+4. **Generate plugin files** in `skills/<category>/<name>/`:
 
    **File 1: `.claude-plugin/plugin.json`**
    ```json
@@ -118,13 +118,13 @@ When the user invokes this command:
 
 5. **Validate plugin** (MUST pass before committing):
    ```bash
-   python3 scripts/validate_plugins.py plugins/
+   python3 scripts/validate_plugins.py skills/
    ```
    If validation fails, fix errors and re-run. Do NOT commit until it passes.
 
 6. **Commit and push**:
    ```bash
-   git add plugins/<category>/<name>/
+   git add skills/<category>/<name>/
    git commit -m "feat: add <name> skill
 
 Documents <brief description>.
@@ -165,7 +165,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 
    ## Test Plan
 
-   - [ ] Validate plugin with `python3 scripts/validate_plugins.py plugins/`
+   - [ ] Validate plugin with `python3 scripts/validate_plugins.py skills/`
    - [ ] Install plugin and verify skill appears
    - [ ] Check skill activation with relevant triggers
 

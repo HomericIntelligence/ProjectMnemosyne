@@ -1,0 +1,13 @@
+{
+  "name": "deduplicate-llm-json-extraction",
+  "version": "1.0.0",
+  "description": "Skill: deduplicate-llm-json-extraction. Use when working with deduplicate llm json extraction.",
+  "category": "ci-cd",
+  "date": "2026-01-01",
+  "tags": [
+    "deduplicate",
+    "llm",
+    "json",
+    "extraction"
+  ]
+}

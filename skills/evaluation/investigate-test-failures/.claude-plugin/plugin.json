@@ -1,0 +1,14 @@
+{
+  "name": "investigate-test-failures",
+  "version": "1.0.0",
+  "description": "Systematic workflow for investigating test failures to differentiate framework bugs from model hallucinations",
+  "category": "evaluation",
+  "date": "2026-02-12",
+  "tags": [
+    "debugging",
+    "testing",
+    "hallucination",
+    "evaluation",
+    "framework-verification"
+  ]
+}

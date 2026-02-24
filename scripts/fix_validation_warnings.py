@@ -215,20 +215,20 @@ def fix_skill_file(skill_path: Path) -> Tuple[bool, List[str]]:
 
 def main():
     """Main execution."""
-    plugins_dir = Path('/home/mvillmow/ProjectMnemosyne/plugins')
+    skills_dir = Path('/home/mvillmow/ProjectMnemosyne/skills')
 
     total_files = 0
     modified_files = 0
     all_fixes = []
 
     # Find all SKILL.md files
-    for skill_file in plugins_dir.rglob('*/skills/*/SKILL.md'):
+    for skill_file in skills_dir.rglob('*/skills/*/SKILL.md'):
         total_files += 1
         modified, fixes = fix_skill_file(skill_file)
 
         if modified:
             modified_files += 1
-            rel_path = skill_file.relative_to(plugins_dir)
+            rel_path = skill_file.relative_to(skills_dir)
             print(f"✓ {rel_path}")
             for fix in fixes:
                 print(f"  - {fix}")

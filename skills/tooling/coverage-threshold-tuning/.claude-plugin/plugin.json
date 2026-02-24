@@ -1,0 +1,15 @@
+{
+  "name": "coverage-threshold-tuning",
+  "version": "1.0.0",
+  "description": "Tune pytest coverage thresholds to match actual coverage baselines and avoid CI failures",
+  "category": "tooling",
+  "date": "2026-02-15",
+  "tags": [
+    "pytest",
+    "coverage",
+    "ci-cd",
+    "threshold",
+    "pixi",
+    "github-actions"
+  ]
+}

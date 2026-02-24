@@ -1,0 +1,13 @@
+{
+  "name": "config-default-model-drift",
+  "version": "1.0.0",
+  "description": "Skill: config-default-model-drift. Use when working with config default model drift.",
+  "category": "tooling",
+  "date": "2026-01-01",
+  "tags": [
+    "config",
+    "default",
+    "model",
+    "drift"
+  ]
+}

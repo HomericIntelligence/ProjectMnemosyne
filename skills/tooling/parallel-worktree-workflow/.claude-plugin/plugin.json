@@ -1,0 +1,16 @@
+{
+  "name": "parallel-worktree-workflow",
+  "version": "1.0.0",
+  "description": "Execute multiple independent tasks in parallel using git worktrees and background sub-agents. Achieves 3x speedup for independent work.",
+  "category": "tooling",
+  "date": "2025-02-09",
+  "tags": [
+    "parallel",
+    "worktrees",
+    "sub-agents",
+    "efficiency",
+    "git",
+    "workflow",
+    "background-tasks"
+  ]
+}

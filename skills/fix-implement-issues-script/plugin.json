@@ -1,9 +1,0 @@
-{
-  "name": "fix-implement-issues-script",
-  "version": "1.0.0",
-  "category": "debugging",
-  "tags": ["automation", "github", "worktree", "git", "claude-code", "ci-cd"],
-  "description": "Debug and fix automation pipeline failures in implement_issues.py",
-  "created": "2026-02-14",
-  "last_updated": "2026-02-14"
-}

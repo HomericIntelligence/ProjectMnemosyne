@@ -1,0 +1,15 @@
+{
+  "name": "fix-implicitlycopyable-removal",
+  "version": "1.0.0",
+  "description": "Systematic approach to removing ImplicitlyCopyable trait from Mojo structs and fixing resulting compilation errors",
+  "category": "debugging",
+  "date": "2025-12-29",
+  "tags": [
+    "mojo",
+    "ownership",
+    "memory-safety",
+    "refactoring",
+    "ci-fix",
+    "compilation-errors"
+  ]
+}

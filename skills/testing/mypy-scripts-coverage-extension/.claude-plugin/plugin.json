@@ -1,0 +1,13 @@
+{
+  "name": "mypy-scripts-coverage-extension",
+  "version": "1.0.0",
+  "description": "Skill: mypy-scripts-coverage-extension. Use when working with mypy scripts coverage extension.",
+  "category": "testing",
+  "date": "2026-01-01",
+  "tags": [
+    "mypy",
+    "scripts",
+    "coverage",
+    "extension"
+  ]
+}

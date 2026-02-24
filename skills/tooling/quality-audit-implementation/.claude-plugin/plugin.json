@@ -1,0 +1,12 @@
+{
+  "name": "quality-audit-implementation",
+  "version": "1.0.0",
+  "description": "Skill: quality-audit-implementation. Use when working with quality audit implementation.",
+  "category": "tooling",
+  "date": "2026-01-01",
+  "tags": [
+    "quality",
+    "audit",
+    "implementation"
+  ]
+}

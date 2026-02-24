@@ -64,7 +64,7 @@ Save learnings after a session (auto-creates PR).
 ### Required Structure
 
 ```text
-plugins/<category>/<name>/
+skills/<category>/<name>/
 ├── .claude-plugin/
 │   └── plugin.json           # Metadata with trigger conditions
 ├── skills/<name>/
@@ -72,6 +72,8 @@ plugins/<category>/<name>/
 └── references/
     └── notes.md              # Additional context
 ```
+
+**Exception**: `plugins/tooling/skills-registry-commands/` stays in `plugins/` — it's the command infrastructure (advise, retrospective), not a skill to migrate.
 
 ### Required Fields
 
@@ -182,6 +184,10 @@ clear, done, finished, etc.) to remind about `/retrospective`.
 
 See `.claude/settings.json` for configuration and
 `plugins/tooling/skills-registry-commands/hooks/settings.json.example` for reference.
+
+**Skills location**: All skills live in `skills/<category>/<name>/`. The only exception is
+`plugins/tooling/skills-registry-commands/` which contains the /advise and /retrospective
+command infrastructure.
 
 ## Contributing a Skill
 

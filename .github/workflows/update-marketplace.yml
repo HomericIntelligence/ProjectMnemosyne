@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - 'skills/**'
       - 'plugins/**'
   workflow_dispatch:
 
@@ -27,7 +28,7 @@ jobs:
           python-version: '3.11'
 
       - name: Generate marketplace.json
-        run: python3 scripts/generate_marketplace.py plugins/ .claude-plugin/marketplace.json
+        run: python3 scripts/generate_marketplace.py .claude-plugin/marketplace.json skills/ plugins/
 
       - name: Check for changes
         id: check
