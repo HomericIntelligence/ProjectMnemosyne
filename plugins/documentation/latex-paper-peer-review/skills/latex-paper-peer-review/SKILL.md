@@ -1,7 +1,7 @@
 ---
 name: latex-paper-peer-review
 description: Apply expert peer review corrections to LaTeX research papers with statistical analysis pipelines
-category: research
+category: documentation
 date: 2026-02-22
 user-invocable: false
 ---

@@ -1,8 +1,9 @@
 {
   "name": "latex-paper-peer-review",
   "version": "1.0.0",
-  "category": "research",
   "description": "Apply expert peer review corrections to LaTeX research papers: fix statistical claims, reconcile pipeline vs paper discrepancies, integrate computed results, include figures, and verify clean LaTeX compilation.",
+  "category": "documentation",
+  "date": "2026-02-22",
   "tags": [
     "latex",
     "research",
@@ -14,8 +15,5 @@
     "power-analysis",
     "cliff-delta",
     "reproducibility"
-  ],
-  "author": "ProjectScylla",
-  "created": "2026-02-22",
-  "last_updated": "2026-02-22"
+  ]
 }
