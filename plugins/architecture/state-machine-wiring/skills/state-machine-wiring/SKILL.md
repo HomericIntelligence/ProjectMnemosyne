@@ -1,10 +1,9 @@
 ---
 name: state-machine-wiring
 description: "Wire hierarchical state machines (Experiment → Tier → Run) into a production runner using closure-based action maps. Use when refactoring a monolithic execution loop into resumable, checkpoint-backed discrete states."
-mcp_fallback: none
 category: architecture
-tier: 2
 date: 2026-02-22
+user-invocable: false
 ---
 
 # State Machine Wiring: Hierarchical Closure-Based Action Maps
