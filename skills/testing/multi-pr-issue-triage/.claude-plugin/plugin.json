@@ -1,0 +1,11 @@
+{
+  "name": "multi-pr-issue-triage",
+  "version": "1.0.0",
+  "description": "Triage a backlog of open GitHub issues, close resolved ones, and implement remaining issues as ordered PRs with parallel execution and dependency management",
+  "category": "testing",
+  "date": "2026-02-25",
+  "tags": ["github", "pr-workflow", "issue-triage", "bats", "graphql", "shell-testing"],
+  "author": "ProjectScylla session 2026-02-25",
+  "skills": ["multi-pr-issue-triage"],
+  "references": ["multi-pr-issue-triage-notes"]
+}
