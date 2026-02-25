@@ -1,0 +1,20 @@
+{
+  "name": "resume-from-failed-experiment",
+  "description": "Fixing E2E experiment resume when experiment_state=failed/interrupted causes immediate exit. Use when: resuming a checkpoint with FAILED or INTERRUPTED terminal state skips all work, --retry-errors flag is silently ignored in single mode, CLI-specified tiers are ignored when resuming from a failed partial run.",
+  "category": "evaluation",
+  "date": "2026-02-25",
+  "tags": [
+    "e2e",
+    "checkpoint",
+    "resume",
+    "failed",
+    "interrupted",
+    "state-machine",
+    "terminal-state",
+    "retry-errors",
+    "tiers_to_run",
+    "ExperimentStateMachine",
+    "experiment_state"
+  ],
+  "user-invocable": false
+}
