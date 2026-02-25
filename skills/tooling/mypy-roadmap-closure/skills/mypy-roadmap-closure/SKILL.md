@@ -1,3 +1,10 @@
+---
+name: mypy-roadmap-closure
+description: Close a phased mypy strictness roadmap by removing dead tracking infrastructure, shipping free-win strict settings, triaging remaining work into individual issues, and closing the roadmap issue.
+category: tooling
+date: 2026-02-24
+---
+
 # Skill: mypy-roadmap-closure
 
 ## Overview
@@ -158,6 +165,12 @@ gh issue close 687
 ---
 
 ## Failed Attempts
+
+| Attempt | What Failed | Fix |
+|---------|------------|-----|
+| `--enable-error-code` to audit override coverage | Flag re-enables globally-disabled codes but does NOT override `[[tool.mypy.overrides]]` module blocks | Temporarily remove the overrides block from pyproject.toml to see true error counts |
+| `warn_unused_ignores = true` without updating overrides | Existing `# type: ignore[method-assign]` in `tests/` became `unused-ignore` warnings | Add `"unused-ignore"` to the `[[tool.mypy.overrides]]` disable_error_code list |
+| Bare `import tomllib` after removing tomli fallback | Ruff E402 fires because import appears after `sys.path.insert()` calls | Add `# noqa: E402` to the import line |
 
 ### `--enable-error-code` does NOT override an active [[tool.mypy.overrides]] block
 
