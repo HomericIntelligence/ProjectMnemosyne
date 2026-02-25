@@ -1,0 +1,8 @@
+{
+  "name": "cli-visualize-subcommand",
+  "description": "Pattern for adding a visualize/inspect subcommand to a CLI tool that reads state files (checkpoint.json, etc.) and renders experiment/run status hierarchies. Use when: (1) adding state inspection to manage_experiment.py or similar CLIs, (2) implementing tree/table/JSON state renderers, (3) supporting batch directory mode for multi-experiment visualization, (4) adding --states-only or similar filter modes.",
+  "version": "1.0.0",
+  "category": "tooling",
+  "date": "2026-02-24",
+  "tags": ["cli", "visualization", "checkpoint", "state-machine", "batch", "manage-experiment"]
+}
