@@ -1,0 +1,6 @@
+{
+  "name": "e2e-state-machine-bugs",
+  "version": "1.0.0",
+  "description": "Skill: E2E State Machine Bugs — --until off-by-one and disconnected signal handlers",
+  "skills": "./skills"
+}
