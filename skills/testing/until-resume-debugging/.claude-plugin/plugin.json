@@ -1,0 +1,10 @@
+{
+  "name": "until-resume-debugging",
+  "version": "1.0.0",
+  "category": "testing",
+  "description": "Debugging and fixing --until checkpoint resume bugs in the E2E state machine pipeline",
+  "tags": ["e2e", "checkpoint", "resume", "state-machine", "until", "debugging"],
+  "author": "Claude Sonnet 4.6",
+  "created": "2026-02-25",
+  "project": "ProjectScylla"
+}
