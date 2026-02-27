@@ -322,13 +322,61 @@ set -euo pipefail
 # 4. Post summary to tracking issue
 ```
 
+## Verified On
+
+| Project | Context | Grade | Issues Filed | PR |
+|---------|---------|-------|-------------|-----|
+| ProjectScylla | February 2026 (first run) | 78/100 (B) | #670-679 | #680 |
+| ProjectScylla | February 2026 (second run, 1-year delta) | 81/100 (B-) | #1115-1120 | #1121 |
+
 ## References
 
-- Original tracking issue: #594
-- Created issues: #670-679
-- Pull request: #680
-- Audit date: February 2026
-- Overall audit grade: 78/100 (B)
+- Audit date: February 2026 (first): Overall grade 78/100 (B), issues #670-679, PR #680
+- Audit date: February 2026 (second, annual delta audit): Overall grade 81/100 (B-), issues #1115-1120, PR #1121
+
+## New Findings (February 2026 second run)
+
+### Triage decision: direct fix vs issue
+
+When an audit finding is **purely mechanical** (change one number, remove two lines, add one CI matrix entry),
+implement it directly in the same PR as the issue-filing. Avoids a second PR cycle for trivial changes.
+
+Decision rule:
+
+- Change is < 5 lines AND has no design ambiguity → fix directly
+- Change requires thought/review/architecture → file issue only
+
+### Existing-skill check before creating new retrospective
+
+Always check `skills/<category>/` for a matching skill name before creating a new one. In this run,
+`quality-audit-implementation` already existed — updated it instead of creating a duplicate.
+
+### CODEOWNERS stale entries are silent
+
+Stale CODEOWNERS entries (pointing to non-existent files) don't cause errors — they silently provide
+no coverage. Always verify CODEOWNERS paths with `ls <path>` after any file reorganization.
+
+### Verification commands for common audit findings
+
+```bash
+# Confirm sub-test counts
+ls tests/claude-code/shared/subtests/t4/ | wc -l
+
+# Confirm coverage threshold
+grep "fail_under" pyproject.toml
+
+# Confirm integration tests exist
+ls tests/integration/
+
+# Confirm integration tests are in CI matrix
+grep "integration" .github/workflows/test.yml
+
+# Confirm CODEOWNERS paths exist
+while IFS= read -r line; do
+  path=$(echo "$line" | grep -oP '^/[^ ]+')
+  [ -n "$path" ] && [ ! -e ".$path" ] && echo "STALE: $path"
+done < .github/CODEOWNERS
+```
 
 ## Team Knowledge Integration
 
@@ -343,11 +391,11 @@ This skill builds on:
 
 ✅ **Complete** when:
 
-- All audit findings have tracking issues
-- HIGH priority mechanical fixes are implemented
-- Pre-commit hooks pass
+- All audit findings have tracking issues (or are fixed directly if trivial)
+- P1/P2 mechanical fixes are implemented in same PR
+- Pre-commit hooks pass on all changed files
 - PR created with auto-merge enabled
-- Tracking issue updated with summary
+- Existing skill updated (not duplicated) if one already exists
 
 ❌ **Incomplete** if:
 
@@ -355,3 +403,4 @@ This skill builds on:
 - Pre-commit hooks fail
 - Verification commands don't pass
 - Missing tracking issues for any findings
+- Duplicate skill created instead of updating existing one
