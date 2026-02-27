@@ -1,0 +1,8 @@
+{
+  "name": "enforce-unit-test-structure-hook",
+  "description": "Pattern for adding a pre-commit hook that enforces tests/unit/ mirroring convention. Fails commits if test_*.py files appear directly under the unit test root. Includes three critical lessons on mock patch correctness (call-site vs definition-site), git worktree test isolation, and wall-clock timing vs sleep mocking.",
+  "version": "1.0.0",
+  "category": "ci-cd",
+  "date": "2026-02-27",
+  "tags": ["pre-commit", "testing", "structural-enforcement", "mock-patching", "worktree", "git", "timing-tests", "flaky-tests"]
+}
