@@ -1,0 +1,17 @@
+{
+  "name": "cytoscape-filter-compose",
+  "version": "1.0.0",
+  "category": "debugging",
+  "tags": ["cytoscape", "javascript", "dag", "filters", "visibility", "state-management"],
+  "created": "2026-02-27",
+  "updated": "2026-02-27",
+  "description": "Composing multiple Cytoscape.js visibility filters (day, status, team trajectory) without mutual state reset. Covers the single-owner pattern, boundary edge insertion in DAGs, and avoiding relayout thrash.",
+  "trigger_patterns": [
+    "cytoscape.*filter.*reset",
+    "trajectory.*clear.*day.*filter",
+    "visibility.*filter.*compose",
+    "cytoscape.*team.*trajectory",
+    "dag.*boundary.*orphan",
+    "relayout.*every.*interaction"
+  ]
+}
