@@ -1,0 +1,12 @@
+{
+  "name": "runtime-error-guard-tests",
+  "version": "1.0.0",
+  "description": "Patterns for testing if-None RuntimeError precondition guards in Python — covers unit test structure, parametrized fixtures, and the guard-firing verification technique used in ProjectScylla.",
+  "category": "testing",
+  "tags": ["unit-tests", "runtime-error", "guards", "preconditions", "pytest", "parametrize", "projectscylla"],
+  "created": "2026-02-27",
+  "project": "ProjectScylla",
+  "issue": "HomericIntelligence/ProjectScylla#1144",
+  "pr": "HomericIntelligence/ProjectScylla#1210",
+  "outcome": "success"
+}
