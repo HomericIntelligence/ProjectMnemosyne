@@ -1,0 +1,6 @@
+{
+  "name": "export-process-metrics",
+  "version": "1.0.0",
+  "description": "Workflow for wiring pre-existing dataframe columns into summary.json export sections",
+  "skills": "./skills"
+}
