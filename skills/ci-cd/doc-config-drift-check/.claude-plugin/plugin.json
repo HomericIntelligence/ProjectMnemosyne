@@ -1,0 +1,8 @@
+{
+  "name": "doc-config-drift-check",
+  "version": "1.0.0",
+  "description": "Add a CI pre-commit script that detects drift between documented metric values (CLAUDE.md, README.md) and authoritative config sources (pyproject.toml). Use when: (1) coverage threshold in docs may diverge from fail_under in pyproject.toml, (2) --cov=<path> in README may point to the wrong package, (3) you want a lightweight gate that catches future documentation staleness automatically.",
+  "category": "ci-cd",
+  "date": "2026-02-28",
+  "tags": ["pre-commit", "documentation", "drift-detection", "coverage", "pyproject", "consistency"]
+}
