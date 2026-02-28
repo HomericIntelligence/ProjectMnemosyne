@@ -34,3 +34,25 @@ Option B (remove + ADR) is almost always the right choice over Option A
 
 The pre-commit hook that runs all tests before `git push` caught any regressions:
 3185 tests, 78.36% coverage, push succeeded.
+
+## 2026-02-27: add-analysis-metric (ProjectScylla #1134)
+
+### Context
+
+Extended `build_subtests_df()` and `tier_summary()` with mean/median/std aggregations for 4 nullable process metrics (`r_prog`, `cfp`, `pr_revert_rate`, `strategic_drift`). Metrics were already in `build_runs_df()` but not propagated to aggregation layers.
+
+### Key Files
+
+- `scylla/analysis/dataframes.py` — `compute_subtest_stats()` ~L240, `compute_tier_stats()` ~L318
+- `tests/unit/analysis/conftest.py` — `sample_runs_df` ~L33, `sample_subtests_df` ~L208
+- `tests/unit/analysis/test_process_metrics_aggregation.py` — new file, 14 tests
+
+### Bugs Encountered
+
+1. **`pd.isfinite` does not exist**: Used in assertion. Must use `np.isfinite()`.
+2. **mypy: `list[float]` ≠ `list[float | None]`**: List is invariant. Fix: use `Sequence[float | None]` from `collections.abc`.
+
+### Results
+
+- 3271 tests passing (14 new), all pre-commit hooks pass
+- PR #1183, auto-merge enabled
