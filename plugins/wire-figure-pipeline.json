@@ -1,0 +1,8 @@
+{
+  "name": "wire-figure-pipeline",
+  "version": "1.0.0",
+  "description": "TRIGGER CONDITIONS: Registering a new figure function into the generate_figures.py report pipeline. Use when: (1) a figure function exists in scylla/analysis/figures/ but is missing from the FIGURES registry, (2) running --list-figures omits a figure that should auto-generate, (3) following up on 'figure implemented but not called' issues.",
+  "category": "analysis",
+  "date": "2026-02-27",
+  "tags": ["analysis", "figures", "pipeline", "generate_figures", "process_metrics", "registry", "dispatch"]
+}
