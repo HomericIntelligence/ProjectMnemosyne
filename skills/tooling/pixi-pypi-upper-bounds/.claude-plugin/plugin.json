@@ -1,0 +1,6 @@
+{
+  "name": "pixi-pypi-upper-bounds",
+  "version": "1.0.0",
+  "description": "Add explicit upper version bounds to pixi.toml [pypi-dependencies]. Use when auditing or hardening dependency version constraints to prevent silent breakage on major releases.",
+  "skills": "./skills"
+}
