@@ -1,0 +1,16 @@
+{
+  "name": "python-version-alignment",
+  "version": "1.0.0",
+  "description": "Align Python version across pyproject.toml classifiers, pixi.toml, and Dockerfile when drift is detected",
+  "category": "tooling",
+  "date": "2026-02-27",
+  "tags": [
+    "python",
+    "dockerfile",
+    "version-drift",
+    "pyproject",
+    "pixi",
+    "configuration",
+    "quality-audit"
+  ]
+}
