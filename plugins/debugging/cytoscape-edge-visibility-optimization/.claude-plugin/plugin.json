@@ -1,0 +1,10 @@
+{
+  "name": "cytoscape-edge-visibility-optimization",
+  "version": "1.0.0",
+  "description": "Cytoscape.js DAG visualization patterns: (1) hide all edges at baseline for performance — show only selected team edges on demand, (2) read-only graph via autoungrabify+autounselectify, (3) day filter phase visibility rules for start/end ranking columns, (4) node-click trajectory includes all team roles (home/away/work). Use when: a Cytoscape graph renders slowly with many edges, or has unwanted node dragging, or day filter boundary columns misbehave.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "skills": "./skills",
+  "tags": ["cytoscape", "visualization", "dag", "performance", "edges", "read-only", "day-filter", "trajectory", "debugging"]
+}
