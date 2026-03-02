@@ -15,6 +15,8 @@
 
 Use this skill when:
 - Adding `if x is None: raise RuntimeError(...)` precondition guards to production code
+- Adding `if result.returncode != 0: raise RuntimeError(...)` subprocess failure guards
+- Adding `if not self._is_setup: raise RuntimeError(...)` state precondition guards
 - Writing regression tests to prevent guards from being silently removed or weakened
 - Verifying precondition contracts documented via RuntimeError (as opposed to assert)
 - Testing multi-guard functions with parametrize to keep tests DRY
@@ -338,6 +340,88 @@ This applies to any `from x import Y` inside a function body. Always patch `x.Y`
 | `tier_action_builder.py: action_subtests_complete` | `selection` | `TestActionSubtestsComplete` |
 | `tier_action_builder.py: action_best_selected` | `tier_result` | `TestActionBestSelected` |
 
+---
+
+## Follow-Up: Subprocess Failure Guards (ProjectScylla #1215)
+
+`workspace_manager.py` has a different guard pattern: **subprocess failure guards** (checking
+`result.returncode != 0`) rather than `is None` guards. These require patching `subprocess.run`
+to return a mock with `returncode=1`.
+
+### 10. Subprocess-Failure Guard Test
+
+```python
+class TestWorkspaceManagerGuards:
+    """Guard tests for WorkspaceManager RuntimeError precondition paths."""
+
+    def test_checkout_commit_raises_if_checkout_fails(self, tmp_path: Path) -> None:
+        """_checkout_commit raises RuntimeError when git checkout returns non-zero."""
+        manager = WorkspaceManager(
+            experiment_dir=tmp_path,
+            repo_url="https://github.com/test/repo.git",
+            commit="abc123",
+        )
+        fetch_ok = MagicMock()
+        fetch_ok.returncode = 0
+        fetch_ok.stderr = ""
+
+        checkout_fail = MagicMock()
+        checkout_fail.returncode = 1
+        checkout_fail.stderr = "error: pathspec 'abc123' did not match any file"
+
+        with patch("subprocess.run", side_effect=[fetch_ok, checkout_fail]):
+            with pytest.raises(RuntimeError, match="Failed to checkout commit abc123"):
+                manager._checkout_commit()
+```
+
+**Key**: Use `side_effect=[ok_result, fail_result]` when the method calls `subprocess.run` multiple
+times (e.g., fetch then checkout). The guard fires on the second call.
+
+### 11. `_is_setup` Precondition Guard Test
+
+```python
+    def test_create_worktree_raises_if_not_setup(self, tmp_path: Path) -> None:
+        """create_worktree raises RuntimeError when _is_setup is False."""
+        manager = WorkspaceManager(
+            experiment_dir=tmp_path,
+            repo_url="https://github.com/test/repo.git",
+        )
+        with pytest.raises(RuntimeError, match="Base repo not set up"):
+            manager.create_worktree(tmp_path / "workspace")
+```
+
+**Key**: `_is_setup` starts as `False` — no patching needed. Just call the method directly.
+
+### 12. Worktree Creation Failure Guard
+
+```python
+    def test_create_worktree_raises_if_worktree_cmd_fails(self, tmp_path: Path) -> None:
+        """create_worktree raises RuntimeError when git worktree add returns non-zero."""
+        manager = WorkspaceManager(
+            experiment_dir=tmp_path,
+            repo_url="https://github.com/test/repo.git",
+        )
+        manager._is_setup = True  # bypass the _is_setup guard
+
+        worktree_fail = MagicMock()
+        worktree_fail.returncode = 1
+        worktree_fail.stderr = "fatal: 'workspace' already exists"
+
+        workspace = tmp_path / "workspace"
+        with patch("subprocess.run", return_value=worktree_fail):
+            with pytest.raises(RuntimeError, match="Failed to create worktree at"):
+                manager.create_worktree(workspace)
+```
+
+**Key**: Set `manager._is_setup = True` to bypass the earlier precondition guard and reach the
+subprocess-failure guard under test.
+
+| Guard Location | Trigger Condition | Test Class |
+|---|---|---|
+| `workspace_manager.py: _checkout_commit` line 237 | `git checkout` returncode != 0 | `TestWorkspaceManagerGuards` |
+| `workspace_manager.py: create_worktree` line 283 | `_is_setup is False` | `TestWorkspaceManagerGuards` |
+| `workspace_manager.py: create_worktree` line 319 | `git worktree add` returncode != 0 | `TestWorkspaceManagerGuards` |
+
 ## Failed Attempts
 
 ### 1. Trying to Test All Guards in One Parametrize Call
@@ -362,7 +446,7 @@ This applies to any `from x import Y` inside a function body. Always patch `x.Y`
 
 ## Results & Parameters
 
-### Test counts added
+### Test counts added — Session 1 (#1144, 2026-02-27)
 - 1 test in `TestLogCheckpointResumeGuard`
 - 1 test in `TestInitializeOrResumeExperimentGuard`
 - 1 test in `TestStageExecuteAgentGuard`
@@ -370,10 +454,18 @@ This applies to any `from x import Y` inside a function body. Always patch `x.Y`
 - 3 parametrized tests in `TestStageWriteReportGuards`
 - **Total: 8 new tests**
 
-### Full suite result
 ```
 3265 passed, 9 warnings in 50.37s
 Coverage: 78.42% (threshold: 75%)
+```
+
+### Test counts added — Session 2 (#1215, 2026-03-02)
+- 3 tests in `TestWorkspaceManagerGuards`
+- **Total: 3 new tests**
+
+```
+3513 passed, 1 skipped in 59.57s
+Coverage: 79.62% (threshold: 75%)
 ```
 
 ### Match pattern convention
