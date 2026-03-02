@@ -1,0 +1,6 @@
+{
+  "name": "python-version-drift-detection",
+  "version": "1.0.0",
+  "description": "Detect Python version drift between pyproject.toml classifiers and Dockerfile FROM line. Use when adding CI checks to prevent silent version mismatches.",
+  "skills": "./skills"
+}
