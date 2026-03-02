@@ -1,0 +1,6 @@
+{
+  "name": "dockerfile-cache-arg-ordering",
+  "version": "1.0.0",
+  "description": "Assert Dockerfile ARG declarations appear before RUN commands that consume them, ensuring Docker build-cache is correctly invalidated when build-args change.",
+  "skills": "./skills"
+}
