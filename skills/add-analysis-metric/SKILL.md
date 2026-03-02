@@ -1,30 +1,31 @@
 ---
 name: add-analysis-metric
-description: "TRIGGER CONDITIONS: Adding new aggregated metrics to build_subtests_df() or tier_summary() in scylla/analysis/dataframes.py. Use when extending the analysis layer with new per-run measurements that need mean/median/std at the subtest and tier level."
+description: "TRIGGER CONDITIONS: Adding new aggregated metrics to build_subtests_df(), tier_summary(), or model_comparison() in scylla/analysis/dataframes.py. Use when extending the analysis layer with new per-run measurements that need mean/median/std at the subtest, tier, or model-comparison level."
 user-invocable: false
 category: analysis
-date: 2026-02-27
+date: 2026-03-02
 ---
 
 # add-analysis-metric
 
-How to add new aggregated metric columns to `build_subtests_df()` and `tier_summary()` in ProjectScylla's analysis layer, with correct NaN handling and fixture symmetry.
+How to add new aggregated metric columns to `build_subtests_df()`, `tier_summary()`, and `model_comparison()` in ProjectScylla's analysis layer, with correct NaN handling and fixture symmetry.
 
 ## Overview
 
 | Item | Details |
 |------|---------|
-| Date | 2026-02-27 |
-| Objective | Extend `build_subtests_df()` and `tier_summary()` with process metric aggregations (r_prog, cfp, pr_revert_rate, strategic_drift) |
-| Outcome | Success — 14 new tests, 3271 total passing, all pre-commit hooks pass |
-| Issue | HomericIntelligence/ProjectScylla#1134 |
-| PR | HomericIntelligence/ProjectScylla#1183 |
+| Date | 2026-02-27 (updated 2026-03-02) |
+| Objective | Extend analysis aggregation functions with process metrics (r_prog, cfp, pr_revert_rate, strategic_drift) |
+| Outcome | Success — all pre-commit hooks pass |
+| Issues | HomericIntelligence/ProjectScylla#1134, #1189 |
+| PRs | HomericIntelligence/ProjectScylla#1183, #1299 |
 
 ## When to Use
 
 - Adding mean/median/std aggregations for a new nullable per-run metric to `build_subtests_df()`
 - Adding the same aggregations to `tier_summary()` for tier-level analysis
-- Any new column in `build_runs_df()` that needs to be rolled up to subtest or tier granularity
+- Adding the same aggregations to `model_comparison()` for cross-model comparison
+- Any new column in `build_runs_df()` that needs to be rolled up to subtest, tier, or model granularity
 - Updating `conftest.py` fixtures after adding columns to production aggregation functions
 
 ## Architecture: 4-Layer Analysis Stack
@@ -93,6 +94,30 @@ std_<metric>     = group["<metric>"].std()
 
 Add to the returned dict after `"cop"`.
 
+### Step 3b: Extend `model_comparison()` `.agg()` dict (pandas MultiIndex style)
+
+`model_comparison()` uses a raw `.agg()` dict, not a custom function. Output columns are MultiIndex tuples
+like `("r_prog", "mean")`. Add after `"total_tokens"`:
+
+```python
+return grouped.agg(
+    {
+        "passed": "mean",
+        "score": ["mean", "median", "std"],
+        "cost_usd": ["mean", "sum"],
+        "duration_seconds": "mean",
+        "total_tokens": ["mean", "sum"],
+        "r_prog": ["mean", "median", "std"],         # ← add
+        "cfp": ["mean", "median", "std"],            # ← add
+        "pr_revert_rate": ["mean", "median", "std"], # ← add
+        "strategic_drift": ["mean", "median", "std"],# ← add
+    }
+).reset_index()
+```
+
+**Key difference from `tier_summary()`**: columns are MultiIndex tuples `("r_prog", "mean")`, not flat
+strings `"mean_r_prog"`. Tests must check `(metric, agg) in list(result.columns)`.
+
 ### Step 4: Update `sample_runs_df` fixture in `tests/unit/analysis/conftest.py`
 
 Add the 4 nullable columns inside the `data.append({...})` block (after `"exit_code": 0`):
@@ -117,16 +142,28 @@ Use defensive column guards (production doesn't need them, but the fixture is re
 mean_r_prog = group["r_prog"].mean() if "r_prog" in group.columns else np.nan
 ```
 
-### Step 6: Write tests in a focused new file
+### Step 6: Write tests in focused new file(s)
 
-Create `tests/unit/analysis/test_<metric>_aggregation.py` covering:
+For `build_subtests_df()` / `tier_summary()` (flat column names), create
+`tests/unit/analysis/test_<metric>_aggregation.py` covering:
 
-1. Column presence in `build_subtests_df()` output
+1. Column presence in `build_subtests_df()` output (`"mean_<metric>" in result.columns`)
 2. Correct mean/median/std values (compare to `np.mean(values)`, `np.median(values)`, `pd.Series(values).std()`)
 3. All-NaN group → NaN aggregation (`pd.isna(result["mean_<metric>"].iloc[0])`)
 4. Mixed NaN → skipna behaviour (`np.isfinite(result["mean_<metric>"].iloc[0])`)
 5. Same column presence in `tier_summary()` output
 6. Fixture symmetry: `set(sample_subtests_df.columns) == set(build_subtests_df(sample_runs_df).columns)`
+
+For `model_comparison()` (MultiIndex column names), create
+`tests/unit/analysis/test_model_comparison_process_metrics.py` covering:
+
+1. Column presence: `(metric, agg) in list(result.columns)` for all 12 combinations
+2. Mean correctness per metric (parametrize with `PROCESS_METRICS`): compare against
+   `groupby(...)[metric].mean().reset_index()`
+3. All-NaN group → NaN for all three aggregations
+4. Mixed-NaN group → correct skipna mean
+5. Row count unchanged: `len(result) == groupby(...).ngroups`
+6. Grouping keys preserved: `"agent_model" in result.columns and "tier" in result.columns`
 
 ### Step 7: Verify
 
@@ -138,7 +175,9 @@ pixi run python -m pytest tests/unit/analysis/ -q --no-cov
 pixi run python -m pytest tests/ -q --no-cov
 
 # Pre-commit hooks
-pre-commit run --files scylla/analysis/dataframes.py tests/unit/analysis/conftest.py tests/unit/analysis/test_<metric>_aggregation.py
+pre-commit run --files scylla/analysis/dataframes.py tests/unit/analysis/conftest.py \
+  tests/unit/analysis/test_<metric>_aggregation.py \
+  tests/unit/analysis/test_model_comparison_process_metrics.py
 ```
 
 ## Failed Attempts
@@ -148,11 +187,13 @@ pre-commit run --files scylla/analysis/dataframes.py tests/unit/analysis/conftes
 | Used `pd.isfinite()` in test assertion | `pandas` has no `isfinite` attribute — only `numpy` does | Always use `np.isfinite()`, never `pd.isfinite()` |
 | Type hint `list[float \| None]` for helper param | mypy: `list` is invariant, `list[float]` ≠ `list[float \| None]` | Use `Sequence[float \| None]` from `collections.abc` — covariant, accepts both |
 | Adding NaN guards to production `compute_subtest_stats()` | Unnecessary — pandas `.mean()/.median()/.std()` already skip NaN by default | Trust `skipna=True` default; only add guards in fixtures that lack the column entirely |
+| Checking `"r_prog" in result.columns` for `model_comparison()` output | `model_comparison()` uses raw `.agg()` which creates MultiIndex columns — `"r_prog"` is not a flat column | Use `("r_prog", "mean") in list(result.columns)` for MultiIndex agg output |
 
 ## Results & Parameters
 
 ### New columns added (12 per aggregation function)
 
+`build_subtests_df()` / `tier_summary()` — flat column names:
 ```python
 PROCESS_METRIC_COLS = [
     "mean_r_prog",    "median_r_prog",    "std_r_prog",
@@ -160,6 +201,13 @@ PROCESS_METRIC_COLS = [
     "mean_pr_revert_rate", "median_pr_revert_rate", "std_pr_revert_rate",
     "mean_strategic_drift", "median_strategic_drift", "std_strategic_drift",
 ]
+```
+
+`model_comparison()` — MultiIndex column tuples:
+```python
+PROCESS_METRICS = ["r_prog", "cfp", "pr_revert_rate", "strategic_drift"]
+AGGREGATIONS = ["mean", "median", "std"]
+# columns: (metric, agg) for metric in PROCESS_METRICS for agg in AGGREGATIONS
 ```
 
 ### NaN convention
@@ -192,11 +240,12 @@ def _make_runs_df(
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectScylla | Issue #1134, PR #1183 | [notes.md](../references/notes.md) |
+| ProjectScylla | Issue #1134, PR #1183 | `build_subtests_df()` + `tier_summary()` |
+| ProjectScylla | Issue #1189, PR #1299 | `model_comparison()` — MultiIndex agg pattern |
 
 ## References
 
 - Related skills: `parallel-metrics-integration`, `defensive-analysis-patterns`, `validation-test-fixture-symmetry`
 - Production file: `scylla/analysis/dataframes.py`
-- Test file: `tests/unit/analysis/test_process_metrics_aggregation.py`
+- Test files: `tests/unit/analysis/test_process_metrics_aggregation.py`, `tests/unit/analysis/test_model_comparison_process_metrics.py`
 - Fixture file: `tests/unit/analysis/conftest.py`
