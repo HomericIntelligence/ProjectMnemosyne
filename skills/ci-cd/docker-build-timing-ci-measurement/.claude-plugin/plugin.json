@@ -1,0 +1,12 @@
+{
+  "name": "docker-build-timing-ci-measurement",
+  "description": "Add a CI job that performs two consecutive Docker builds (cold + source-only change) and reports layer-cache hit/miss times, confirming a ≥30% build-time reduction claim with actual measured data",
+  "category": "ci-cd",
+  "version": "1.0.0",
+  "date": "2026-03-02",
+  "tags": ["docker", "ci", "build-timing", "cache-efficiency", "github-actions", "performance-measurement"],
+  "user-invocable": false,
+  "project": "ProjectScylla",
+  "issue": "#1173",
+  "pr": "#1291"
+}
