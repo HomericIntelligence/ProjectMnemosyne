@@ -181,9 +181,19 @@ from scylla.analysis.figures.process_metrics import (
 |---------|---------|---------|
 | ProjectScylla | Issue #1136, PR #1194 | Follow-up from #997 |
 
+## Note: figures wired here were later renamed
+
+The three process-metrics figures documented in this skill used ad-hoc names at wire time. They were subsequently renamed to the `fig{NN}` convention in issue #1199 / PR #1302:
+
+- `fig_r_prog_by_tier` → `fig28_r_prog_by_tier`
+- `fig_cfp_by_tier` → `fig29_cfp_by_tier`
+- `fig_pr_revert_by_tier` → `fig30_pr_revert_by_tier`
+
+See the `rename-figure-convention` skill for the complete rename workflow.
+
 ## References
 
-- Related skills: `add-analysis-metric` (adding metrics), `add-analysis-figure` (adding new figure modules)
+- Related skills: `add-analysis-metric` (adding metrics), `add-analysis-figure` (adding new figure modules), `rename-figure-convention` (standardizing fig{NN} names post-wire)
 - Production file: `scripts/generate_figures.py`
 - Figure module: `scylla/analysis/figures/process_metrics.py`
 - Test file: `tests/unit/analysis/test_figures.py`
