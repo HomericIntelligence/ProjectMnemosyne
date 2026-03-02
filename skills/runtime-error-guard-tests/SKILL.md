@@ -180,6 +180,164 @@ class TestLogCheckpointResumeGuard:
 | `stages.py: stage_write_report` | `ctx.agent_result` | `TestStageWriteReportGuards` |
 | `stages.py: stage_write_report` | `ctx.judgment` | `TestStageWriteReportGuards` |
 
+---
+
+## Follow-Up: Closure and Inline Guards (ProjectScylla #1214)
+
+Issue #1214 added guard tests for `_run_tier()` and `_run_experiment()` inner closures that were not
+covered by #1144. These guards live inside closures returned from action-builder methods, or inline in
+`run()`, requiring different test approaches.
+
+### 7. Closure Guard Test (Action Builder Pattern)
+
+When guards live inside closures returned from a builder method (`_build_experiment_actions`, `TierActionBuilder.build()`), call the builder to get the closure dict, null the required attribute, and invoke the closure directly:
+
+```python
+class TestBuildExperimentActionsGuards:
+    """Tests for None-guard in action_tiers_complete closure inside _build_experiment_actions."""
+
+    def test_action_tiers_complete_raises_when_experiment_dir_none(
+        self,
+        mock_config: ExperimentConfig,
+        mock_tier_manager: MagicMock,
+    ) -> None:
+        """action_tiers_complete raises RuntimeError when experiment_dir is None."""
+        from datetime import datetime, timezone
+        from scylla.e2e.models import ExperimentState
+
+        runner = E2ERunner(mock_config, mock_tier_manager, Path("/tmp"))
+        runner.experiment_dir = None
+
+        tier_results: dict[TierID, TierResult] = {}
+        actions = runner._build_experiment_actions(
+            tier_groups=[[TierID.T0]],
+            scheduler=None,
+            tier_results=tier_results,
+            start_time=datetime.now(timezone.utc),
+        )
+
+        with pytest.raises(
+            RuntimeError, match="experiment_dir must be set before aggregating tier results"
+        ):
+            actions[ExperimentState.TIERS_COMPLETE]()
+```
+
+**Key**: No state machine needed — call the builder, get back the closure dict, invoke the specific key.
+
+### 8. Inline Guard in run() — Guard 1 (Before Heartbeat)
+
+For guards that fire early in `run()` because `self.checkpoint` is None after `_initialize_or_resume_experiment()`:
+
+```python
+class TestRunCheckpointGuards:
+    def test_heartbeat_guard_raises_when_checkpoint_none(
+        self,
+        mock_config: ExperimentConfig,
+        mock_tier_manager: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """run() raises RuntimeError when checkpoint is None at heartbeat creation."""
+        runner = E2ERunner(mock_config, mock_tier_manager, tmp_path)
+
+        def fake_init() -> Path:
+            # runner.checkpoint remains None — do NOT set it
+            return tmp_path / "checkpoint.json"
+
+        with (
+            patch.object(runner, "_initialize_or_resume_experiment", side_effect=fake_init),
+            pytest.raises(
+                RuntimeError,
+                match="checkpoint must be set before starting heartbeat thread",
+            ),
+        ):
+            runner.run()
+```
+
+**Key**: Patch `_initialize_or_resume_experiment` to be a no-op that returns a path but never sets `runner.checkpoint`. The guard fires immediately.
+
+### 9. Inline Guard in run() — Guard 2 (Before ESM, After Heartbeat)
+
+When a second guard fires *after* a first guard (so the first must not fire), use a side-effect on the intermediate object (HeartbeatThread) to clear the checkpoint just before the second guard:
+
+```python
+    def test_esm_guard_raises_when_checkpoint_none_at_esm_creation(
+        self,
+        mock_config: ExperimentConfig,
+        mock_tier_manager: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        """run() raises RuntimeError when checkpoint is None at ESM creation."""
+        from scylla.e2e.checkpoint import E2ECheckpoint
+
+        runner = E2ERunner(mock_config, mock_tier_manager, tmp_path)
+        checkpoint = E2ECheckpoint(
+            experiment_id="test-exp",
+            experiment_dir=str(tmp_path),
+            config_hash="abc123",
+            started_at="2024-01-01T00:00:00+00:00",
+            last_updated_at="2024-01-01T00:00:00+00:00",
+            status="running",
+        )
+
+        def fake_init() -> Path:
+            runner.checkpoint = checkpoint   # Guard 1 passes
+            return tmp_path / "checkpoint.json"
+
+        mock_heartbeat = MagicMock()
+
+        def clear_checkpoint_on_start() -> None:
+            runner.checkpoint = None         # Guard 2 will now fire
+
+        mock_heartbeat.start.side_effect = clear_checkpoint_on_start
+
+        with (
+            patch.object(runner, "_initialize_or_resume_experiment", side_effect=fake_init),
+            patch("scylla.e2e.health.HeartbeatThread", return_value=mock_heartbeat),
+            pytest.raises(
+                RuntimeError,
+                match="checkpoint must be set before creating experiment state machine",
+            ),
+        ):
+            runner.run()
+```
+
+**Critical**: Patch `scylla.e2e.health.HeartbeatThread` (the module where it is defined), NOT `scylla.e2e.runner.HeartbeatThread`. The runner uses a *local import* (`from scylla.e2e.health import HeartbeatThread`), so patching the runner module attribute fails with `AttributeError`.
+
+### Local-Import Patch Target Rule
+
+When a production method uses a **local import** like `from module.sub import Class`, patching the caller's namespace won't work:
+
+```python
+# runner.py
+def run(self):
+    from scylla.e2e.health import HeartbeatThread  # local import
+    heartbeat = HeartbeatThread(...)
+```
+
+```python
+# WRONG — runner module has no HeartbeatThread attribute at import time
+patch("scylla.e2e.runner.HeartbeatThread", ...)
+# → AttributeError: module 'scylla.e2e.runner' does not have the attribute 'HeartbeatThread'
+
+# CORRECT — patch where the class is defined
+patch("scylla.e2e.health.HeartbeatThread", ...)
+```
+
+This applies to any `from x import Y` inside a function body. Always patch `x.Y`, not `caller.Y`.
+
+## Guards Covered in Follow-Up Session (ProjectScylla #1214)
+
+| Guard Location | Field Tested | Test Class |
+|---|---|---|
+| `runner.py: _build_experiment_actions / action_tiers_complete` | `self.experiment_dir` | `TestBuildExperimentActionsGuards` |
+| `runner.py: run() ~line 688` | `self.checkpoint` (heartbeat) | `TestRunCheckpointGuards` |
+| `runner.py: run() ~line 730` | `self.checkpoint` (ESM) | `TestRunCheckpointGuards` |
+| `tier_action_builder.py: action_pending` | `experiment_dir` | `TestActionPending` (in test_tier_action_builder.py) |
+| `tier_action_builder.py: action_config_loaded` ×3 | `tier_config`, `tier_dir`, `experiment_dir` | `TestActionConfigLoaded` |
+| `tier_action_builder.py: action_subtests_running` | `tier_dir` | `TestActionSubtestsRunning` |
+| `tier_action_builder.py: action_subtests_complete` | `selection` | `TestActionSubtestsComplete` |
+| `tier_action_builder.py: action_best_selected` | `tier_result` | `TestActionBestSelected` |
+
 ## Failed Attempts
 
 ### 1. Trying to Test All Guards in One Parametrize Call
