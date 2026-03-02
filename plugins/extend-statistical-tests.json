@@ -1,0 +1,12 @@
+{
+  "name": "extend-statistical-tests",
+  "version": "1.0.0",
+  "description": "How to add new nullable per-run metrics to all four statistical test categories (normality, omnibus, pairwise, effect sizes) in compute_statistical_results() with correct NaN/missing-column guards.",
+  "category": "analysis",
+  "tags": ["statistical-tests", "export-data", "process-metrics", "normality", "omnibus", "pairwise", "effect-sizes", "backward-compat"],
+  "skill": "skills/extend-statistical-tests/SKILL.md",
+  "date": "2026-03-02",
+  "project": "ProjectScylla",
+  "issue": "HomericIntelligence/ProjectScylla#1186",
+  "pr": "HomericIntelligence/ProjectScylla#1300"
+}
