@@ -1,0 +1,8 @@
+{
+  "name": "replace-hardcoded-counts-with-live-commands",
+  "version": "1.0.0",
+  "description": "Replace hardcoded test/file counts in README badges and prose with a live command users can run. Use when a CI check enforces doc accuracy but counts change frequently, making the docs flaky.",
+  "category": "documentation",
+  "date": "2026-03-03",
+  "tags": ["documentation", "readme", "test-counts", "badges", "flaky", "ci", "live-command"]
+}
