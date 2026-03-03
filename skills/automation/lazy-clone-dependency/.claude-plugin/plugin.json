@@ -1,0 +1,8 @@
+{
+  "name": "lazy-clone-dependency",
+  "description": "Pattern for lazy-cloning a missing external git repository dependency instead of skipping a workflow step. Use when an automation step silently skips because a required repo (e.g. ProjectMnemosyne) is not present locally.",
+  "category": "automation",
+  "date": "2026-03-03",
+  "tags": ["automation", "clone", "dependency", "planner", "mnemosyne", "race-condition", "fcntl", "threading", "gh"],
+  "version": "1.0.0"
+}

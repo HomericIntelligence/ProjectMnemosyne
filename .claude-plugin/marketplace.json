@@ -335,6 +335,24 @@
       ]
     },
     {
+      "name": "lazy-clone-dependency",
+      "description": "Pattern for lazy-cloning a missing external git repository dependency instead of skipping a workflow step. Use when an automation step silently skips because a required repo (e.g. ProjectMnemosyne) is not present locally.",
+      "version": "1.0.0",
+      "source": "./skills/automation/lazy-clone-dependency",
+      "category": "automation",
+      "tags": [
+        "automation",
+        "clone",
+        "dependency",
+        "planner",
+        "mnemosyne",
+        "race-condition",
+        "fcntl",
+        "threading",
+        "gh"
+      ]
+    },
+    {
       "name": "migrate-dataclass-to-pydantic",
       "description": "Migrate Python dataclasses to Pydantic BaseModel with validation",
       "version": "1.0.0",
