@@ -1,0 +1,8 @@
+{
+  "name": "pr-review-automation",
+  "version": "1.0.0",
+  "description": "TRIGGER CONDITIONS: Adding PR review/fix automation to implement_issues.py. Use when: (1) building a two-phase Claude workflow (read-only analysis then full-tools fix) for PR remediation, (2) creating a new SRP automation class alongside IssueImplementer, (3) adding Enum/State/Options model trios to scylla/automation/models.py, (4) gathering GitHub PR context (diff, CI logs, review comments) via gh CLI.",
+  "category": "tooling",
+  "date": "2026-03-02",
+  "tags": ["automation", "pr-review", "claude-code", "worktree", "two-phase", "implement-issues", "github-cli", "parallel"]
+}
