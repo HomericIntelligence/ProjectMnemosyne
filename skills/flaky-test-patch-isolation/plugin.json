@@ -1,0 +1,10 @@
+{
+  "name": "flaky-test-patch-isolation",
+  "category": "testing",
+  "description": "Fix flaky tests caused by class-level mock state leakage via patch.object(__class__, ...). Adds autouse teardown fixture with patch.stopall() to isolate test classes.",
+  "tags": ["pytest", "unittest.mock", "flaky", "isolation", "patch.stopall"],
+  "trigger": "flaky test only in full suite, patch.object class-level patching, test ordering sensitivity",
+  "created": "2026-03-03",
+  "project": "ProjectScylla",
+  "issue": "HomericIntelligence/ProjectScylla#1131"
+}
