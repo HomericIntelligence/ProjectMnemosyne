@@ -75,6 +75,8 @@ After presenting findings, ask:
 
 If the user wants more detail, read the full SKILL.md for the most relevant matches.
 
+> **Note**: If the user's goal involves **creating or fixing skills**, remind them to run `/retrospective` which includes the Pre-Commit Validation Checklist, or point them to the [Top CI Failures](retrospective.md#top-ci-failures-most-common) section in the retrospective command for the most common plugin validation errors.
+
 ## Output Format
 
 ```markdown
