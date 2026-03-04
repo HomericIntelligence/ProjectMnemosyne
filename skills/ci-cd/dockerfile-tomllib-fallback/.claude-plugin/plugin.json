@@ -1,0 +1,9 @@
+{
+  "name": "dockerfile-tomllib-fallback",
+  "version": "1.0.0",
+  "description": "Add a tomllib/tomli try/except fallback to a Dockerfile dependency-extraction RUN layer to support Python 3.10 as well as 3.11+. Use when a Dockerfile builder stage must work on Python 3.10 and needs to parse pyproject.toml for dependencies.",
+  "category": "ci-cd",
+  "tags": ["dockerfile", "tomllib", "tomli", "python3.10", "python3.11", "pyproject", "dependencies"],
+  "date": "2026-03-02",
+  "user-invocable": false
+}
