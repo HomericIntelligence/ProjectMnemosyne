@@ -1,3 +1,11 @@
+---
+name: rubric-conflict-detection
+description: Pattern for detecting and handling conflicting rubric weights across experiments in a multi-experiment data loader
+category: testing
+date: 2026-02-27
+user-invocable: true
+---
+
 # Skill: Rubric Conflict Detection in Multi-Experiment Loaders
 
 ## Overview
