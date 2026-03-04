@@ -1,0 +1,16 @@
+{
+  "name": "assert-to-runtime-error-migration",
+  "version": "1.0.0",
+  "description": "Skill: assert-to-runtime-error-migration. Use when replacing assert guards in production code with explicit RuntimeError raises to eliminate Ruff S101 suppressions.",
+  "category": "testing",
+  "date": "2026-02-27",
+  "tags": [
+    "assert",
+    "runtime-error",
+    "ruff",
+    "S101",
+    "migration",
+    "testing",
+    "linting"
+  ]
+}
