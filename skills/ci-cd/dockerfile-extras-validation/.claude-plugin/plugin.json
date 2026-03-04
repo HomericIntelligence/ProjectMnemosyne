@@ -1,0 +1,9 @@
+{
+  "name": "dockerfile-extras-validation",
+  "version": "1.0.0",
+  "description": "Validate Docker build-arg EXTRAS group names against pyproject.toml [project.optional-dependencies] at build time. Use when a Dockerfile uses a python3 -c snippet to resolve optional-dependency groups from EXTRAS and typos should fail fast rather than silently omitting deps.",
+  "category": "ci-cd",
+  "tags": ["dockerfile", "extras", "validation", "pyproject", "optional-dependencies", "build-arg"],
+  "date": "2026-03-02",
+  "user-invocable": false
+}
