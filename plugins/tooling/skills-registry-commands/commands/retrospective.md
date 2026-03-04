@@ -86,8 +86,10 @@ When the user invokes this command:
    - `name`: Must match directory name, lowercase kebab-case (`^[a-z0-9-]+$`)
    - `description`: 20+ characters, include "Use when:" trigger conditions
    - No extra fields — only name, version, description, category, date, tags
+   - ⚠️ The `version` field is REQUIRED — omitting it will fail CI.
 
    **File 2: `skills/<name>/SKILL.md`** with **required format**:
+   > ⚠️ SKILL.md must be at `skills/<name>/SKILL.md` (nested directory), NOT at the plugin root.
 
    ```yaml
    ---
@@ -117,6 +119,20 @@ When the user invokes this command:
    **File 3: `references/notes.md`** with raw session details
 
 5. **Validate plugin** (MUST pass before committing):
+
+   ### Pre-Commit Validation Checklist
+
+   Before running `validate_plugins.py`, verify these common failure points:
+
+   | # | Check | Common Error |
+   |---|-------|-------------|
+   | 1 | `.claude-plugin/plugin.json` exists | "Missing .claude-plugin/plugin.json" |
+   | 2 | `plugin.json` has `name`, `version`, `description` fields | "Missing required fields: version" |
+   | 3 | `skills/<name>/SKILL.md` exists (nested under `skills/`) | "Missing skills/ directory" |
+   | 4 | SKILL.md starts with `---` YAML frontmatter | "missing YAML frontmatter" |
+   | 5 | `## Failed Attempts` section exists with pipe-delimited table | "Missing Failed Attempts section" |
+   | 6 | `category` is one of: training, evaluation, optimization, debugging, architecture, tooling, ci-cd, testing, documentation | "Invalid category" |
+
    ```bash
    python3 scripts/validate_plugins.py skills/
    ```
@@ -183,6 +199,16 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
    ```
 
 ## Common Issues & Solutions
+
+### Top CI Failures (Most Common)
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| "Missing .claude-plugin/plugin.json" | Forgot to create plugin.json | Create `.claude-plugin/plugin.json` from SKILL.md frontmatter |
+| "Missing required fields: version" | plugin.json missing `version` | Add `"version": "1.0.0"` to plugin.json |
+| "Missing skills/ directory" | SKILL.md at wrong path | Move SKILL.md to `skills/<name>/SKILL.md` (nested) |
+| "missing YAML frontmatter" | SKILL.md doesn't start with `---` | Add `---` YAML block at top of SKILL.md |
+| "Missing Failed Attempts section" | Section absent or wrong format | Add `## Failed Attempts` with pipe-delimited table |
 
 ### Issue: "No commits between main and skill/..."
 
