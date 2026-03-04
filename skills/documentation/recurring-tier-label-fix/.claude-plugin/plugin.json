@@ -1,0 +1,8 @@
+{
+  "name": "recurring-tier-label-fix",
+  "version": "1.0.0",
+  "description": "Fix recurring tier label mismatches in metrics-definitions.md and related docs. Applies when a quality audit flags T3/T4/T5 labels that should be T2/T3/T4 per the authoritative CLAUDE.md tier table. Covers both section headers and inline references throughout the file.",
+  "category": "documentation",
+  "date": "2026-03-03",
+  "tags": ["documentation", "tier-labels", "metrics-definitions", "quality-audit", "recurring-fix"]
+}
