@@ -1,0 +1,8 @@
+{
+  "name": "fix-mock-patch-call-site",
+  "version": "1.0.0",
+  "description": "Fix unittest.mock.patch targets that point to the wrong namespace (definition-site instead of call-site), causing mocks to have no effect in isolated environments",
+  "category": "testing",
+  "date": "2026-03-03",
+  "tags": ["mock", "patch", "unittest", "subprocess", "call-site", "namespace", "worktree", "isolation", "testing"]
+}
