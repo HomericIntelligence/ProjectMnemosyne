@@ -1,5 +1,6 @@
 {
   "name": "fix-isolation-mode-export-data-path",
+  "version": "1.0.0",
   "description": "Fix ModuleNotFoundError when patching a scripts/ module that isn't on sys.path during single-file pytest runs; add sys.path guard to conftest.py",
   "category": "debugging",
   "tags": ["pytest", "sys.path", "isolation", "conftest", "mock", "patch", "scripts", "pythonpath", "ModuleNotFoundError"],
