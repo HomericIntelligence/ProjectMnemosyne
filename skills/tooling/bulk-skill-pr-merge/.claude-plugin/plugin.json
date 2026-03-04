@@ -1,0 +1,9 @@
+{
+  "name": "bulk-skill-pr-merge",
+  "version": "1.0.0",
+  "description": "Bulk-merge many open skill PRs into main, including fixing failing CI (missing plugin.json, invalid category, missing version field) and rebasing conflicted branches. Use when 10+ open skill PRs accumulate and need to be merged in one session.",
+  "category": "tooling",
+  "tags": ["bulk-merge", "pr", "rebase", "conflict-resolution", "plugin.json", "ci", "git-switch"],
+  "date": "2026-03-03",
+  "user-invocable": false
+}
