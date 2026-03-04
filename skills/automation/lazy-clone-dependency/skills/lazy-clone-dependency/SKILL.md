@@ -1,7 +1,7 @@
 ---
 name: lazy-clone-dependency
 description: Pattern for lazy-cloning a missing external git repository dependency instead of skipping a workflow step
-category: automation
+category: tooling
 date: 2026-03-03
 tags: [automation, clone, dependency, planner, mnemosyne, race-condition, fcntl, threading, gh]
 user-invocable: false
