@@ -1,0 +1,8 @@
+{
+  "name": "verify-already-implemented-issues",
+  "version": "1.0.0",
+  "description": "Verify issue implementation status before starting work by checking git log, branch state, and open PRs. Use when: (1) assigned to implement a GitHub issue in a pre-created worktree branch, (2) unsure if work is already done, (3) starting issue implementation and want to avoid duplicate work.",
+  "category": "tooling",
+  "date": "2026-03-05",
+  "tags": ["github", "issues", "worktree", "git", "pr", "duplicate-work"]
+}
