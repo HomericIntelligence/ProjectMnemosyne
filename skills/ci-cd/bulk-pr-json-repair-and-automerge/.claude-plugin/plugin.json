@@ -1,0 +1,7 @@
+{
+  "name": "bulk-pr-json-repair-and-automerge",
+  "version": "1.0.0",
+  "description": "Repair bulk-corrupted JSON files and enable auto-merge on many PRs. Use when a batch edit left invalid JSON (orphaned array contents, trailing commas) in many files, or when you need to enable auto-merge across 20+ open PRs.",
+  "category": "ci-cd",
+  "date": "2026-03-05"
+}
