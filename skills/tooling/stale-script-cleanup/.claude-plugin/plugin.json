@@ -1,0 +1,8 @@
+{
+  "name": "stale-script-cleanup",
+  "version": "1.0.0",
+  "description": "Remove stale one-time fix/migration scripts from a scripts/ directory safely. Use when: (1) scripts/ directory has accumulated one-time fix or migration scripts no longer needed, (2) cleaning up development artifacts before a release, (3) reducing cognitive load for new contributors by removing irrelevant scripts.",
+  "category": "tooling",
+  "date": "2026-03-05",
+  "tags": ["cleanup", "scripts", "maintenance", "git", "refactoring"]
+}
