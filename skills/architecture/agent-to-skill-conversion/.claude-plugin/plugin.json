@@ -1,0 +1,8 @@
+{
+  "name": "agent-to-skill-conversion",
+  "version": "1.0.0",
+  "description": "Convert agent configurations to skills when tasks are fixed/predictable rather than adaptive. Use when: (1) agent performs repeatable automation steps, (2) agent does not require exploration or adaptive decision-making, (3) reducing agent count to simplify hierarchy.",
+  "category": "architecture",
+  "date": "2026-03-05",
+  "tags": ["agents", "skills", "refactoring", "abstraction", "hierarchy"]
+}
