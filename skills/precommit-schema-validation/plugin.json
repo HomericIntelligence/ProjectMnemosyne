@@ -1,0 +1,12 @@
+{
+  "name": "precommit-schema-validation",
+  "version": "1.0.0",
+  "description": "Add a pre-commit hook that validates YAML config files against JSON schemas at commit time. Use when schemas/ JSON schemas already exist and you want to catch violations before CI. Covers multi-directory dispatch, Draft7Validator.iter_errors() for full reporting, and pass_filenames: true pattern.",
+  "category": "ci-cd",
+  "created": "2026-03-05",
+  "tags": ["pre-commit", "jsonschema", "yaml", "validation", "config", "hooks"],
+  "project": "ProjectScylla",
+  "issue": "HomericIntelligence/ProjectScylla#1382",
+  "pr": "HomericIntelligence/ProjectScylla#1439",
+  "outcome": "success"
+}
