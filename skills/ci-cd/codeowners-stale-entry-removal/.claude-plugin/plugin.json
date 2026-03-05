@@ -1,0 +1,8 @@
+{
+  "name": "codeowners-stale-entry-removal",
+  "version": "1.0.0",
+  "description": "Remove stale path entries from .github/CODEOWNERS that point to non-existent directories. Use when a CODEOWNERS audit flags entries for directories that were moved or renamed.",
+  "author": { "name": "ML Odyssey Team" },
+  "skills": "./skills",
+  "tags": ["ci-cd", "codeowners", "github", "cleanup"]
+}
