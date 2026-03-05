@@ -1,0 +1,8 @@
+{
+  "name": "mojo-deprecated-alias-removal",
+  "version": "1.0.0",
+  "description": "Workflow for removing deprecated Mojo comptime type aliases and replacing with canonical types. Use when: (1) removing DEPRECATED-marked comptime aliases from Mojo modules, (2) replacing backward-compat aliases with canonical gradient/result types, (3) cleaning up module exports and backward-compat test files after alias consolidation.",
+  "category": "architecture",
+  "date": "2026-03-05",
+  "tags": ["mojo", "type-alias", "comptime", "cleanup", "backward-compat", "gradient-types"]
+}
