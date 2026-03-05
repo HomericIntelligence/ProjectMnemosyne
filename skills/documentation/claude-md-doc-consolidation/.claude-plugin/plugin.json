@@ -1,0 +1,8 @@
+{
+  "name": "claude-md-doc-consolidation",
+  "version": "1.0.0",
+  "description": "Trim duplicate documentation sections in CLAUDE.md by replacing verbose content with a summary + link to canonical docs. Use when: (1) CLAUDE.md has sections that duplicate content in docs/, (2) CLAUDE.md is growing too large and consuming excess tokens, (3) consolidating 4+ doc locations to 2.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["claude-md", "documentation", "consolidation", "token-reduction", "dry"]
+}
