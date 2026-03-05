@@ -1,0 +1,8 @@
+{
+  "name": "bandit-replace-pygrep-security-hook",
+  "version": "1.0.0",
+  "description": "Replace a naive pygrep shell=True pre-commit hook with bandit for AST-based Python security scanning. Use when: (1) pygrep check-shell-injection produces false positives in comments/strings, (2) need to catch os.system/subprocess misuse not just shell=True, (3) upgrading pre-commit security checks to reduce false positive rate.",
+  "category": "ci-cd",
+  "date": "2026-03-05",
+  "tags": ["bandit", "pre-commit", "security", "pygrep", "shell-injection", "python", "pixi"]
+}
