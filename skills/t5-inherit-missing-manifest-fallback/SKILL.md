@@ -80,7 +80,10 @@ Add to `tests/unit/e2e/test_tier_manager.py` in `TestBuildMergedBaseline`:
 
 ## Failed Attempts
 
-None in this session — the plan was clear from diagnosis. The only gotcha was that `tier_manager.py` lacked `import logging` / `logger`, requiring both to be added before the fix compiled.
+| Attempt | What happened | Why it failed | Fix |
+|---------|--------------|---------------|-----|
+| Multi-line method signatures in tests | CI pre-commit (black) rejected the commit | `black` requires method signatures with only `self` + one arg to fit on a single line — the formatter collapsed the signature to one line automatically | Rewrite as `def test_foo(self, tmp_path: Path) -> None:` (single line) |
+| Importing `json` inside each test method | No failure — this is an existing pattern in the file and works | — | — |
 
 ## Parameters
 
