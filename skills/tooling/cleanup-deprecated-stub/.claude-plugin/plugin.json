@@ -1,0 +1,8 @@
+{
+  "name": "cleanup-deprecated-stub",
+  "version": "1.0.0",
+  "description": "Delete deprecated stub files safely after verifying no remaining references. Use when: (1) a file is marked DEPRECATED or contains only a redirect comment, (2) a module was reorganized into a subdirectory leaving a stub behind, (3) a cleanup issue requests file deletion with import verification.",
+  "category": "tooling",
+  "date": "2026-03-05",
+  "tags": ["cleanup", "deprecated", "stub", "mojo", "imports", "refactoring"]
+}
