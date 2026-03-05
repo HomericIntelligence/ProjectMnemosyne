@@ -3,12 +3,5 @@
   "version": "1.0.0",
   "description": "Debug and fix automation pipeline failures in implement_issues.py",
   "category": "debugging",
-  "date": "2026-02-14",
-    "automation",
-    "github",
-    "worktree",
-    "git",
-    "claude-code",
-    "ci-cd"
-  ]
+  "date": "2026-02-14"
 }

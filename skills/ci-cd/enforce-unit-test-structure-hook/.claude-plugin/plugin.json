@@ -3,5 +3,5 @@
   "version": "1.0.0",
   "description": "Pattern for adding a pre-commit hook that enforces tests/unit/ mirroring convention — fails on test_*.py files at the root level of the unit test directory",
   "category": "ci-cd",
-  "date": "2026-02-27",
+  "date": "2026-02-27"
 }

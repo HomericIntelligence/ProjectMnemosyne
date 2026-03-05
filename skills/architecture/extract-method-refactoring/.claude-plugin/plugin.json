@@ -3,9 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: extract-method-refactoring. Use when working with extract method refactoring.",
   "category": "architecture",
-  "date": "2026-01-01",
-    "extract",
-    "method",
-    "refactoring"
-  ]
+  "date": "2026-01-01"
 }

@@ -4,16 +4,6 @@
   "description": "Analyze E2E batch dry run results: triage failures, write local analysis files, generate GitHub issue filing script. Use when batch_summary.json exists and you need structured output files (README, per-failure analysis, per-test issue bodies, shell script).",
   "category": "evaluation",
   "date": "2026-02-19",
-    "e2e",
-    "batch",
-    "dry-run",
-    "failure-triage",
-    "github-issues",
-    "batch_summary.json",
-    "ValidationError",
-    "criteria_scores",
-    "analysis"
-  ],
   "triggers": [
     "analyze dry run results",
     "batch_summary.json exists and needs analysis",

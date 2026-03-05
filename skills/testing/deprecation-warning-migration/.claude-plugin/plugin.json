@@ -2,5 +2,5 @@
   "name": "deprecation-warning-migration",
   "version": "1.0.0",
   "description": "Add runtime DeprecationWarning to a legacy dataclass being superseded by a Pydantic model, track usages in CI, and document migration timeline. Use when: (1) deprecating a Python dataclass in favour of a BaseModel, (2) adding non-blocking CI grep step to track surviving usages, (3) writing pytest.warns tests for deprecated classes.",
-  "skills": "./skills",
+  "skills": "./skills"
 }

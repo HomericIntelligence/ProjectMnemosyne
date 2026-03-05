@@ -3,11 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: validate-model-configs-fix-mode. Use when working with validate model configs fix mode.",
   "category": "debugging",
-  "date": "2026-01-01",
-    "validate",
-    "model",
-    "configs",
-    "fix",
-    "mode"
-  ]
+  "date": "2026-01-01"
 }

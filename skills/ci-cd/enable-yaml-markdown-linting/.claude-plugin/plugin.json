@@ -3,14 +3,5 @@
   "version": "1.0.0",
   "description": "Enable yamllint and markdownlint-cli2 pre-commit hooks with proper configuration for GitHub Actions and documentation quality",
   "category": "ci-cd",
-  "date": "2026-02-14",
-    "pre-commit",
-    "yamllint",
-    "markdownlint",
-    "linting",
-    "quality",
-    "github-actions",
-    "ci-cd",
-    "documentation"
-  ]
+  "date": "2026-02-14"
 }

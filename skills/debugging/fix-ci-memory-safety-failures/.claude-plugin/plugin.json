@@ -6,15 +6,6 @@
   "created": "2026-01-24",
   "pr": 3109,
   "status": "verified",
-    "memory-safety",
-    "mojo",
-    "ci-failures",
-    "segfault",
-    "unsafe-pointer",
-    "defensive-coding",
-    "python-ffi",
-    "api-compatibility"
-  ],
   "use_cases": [
     "CI segfault in libKGENCompilerRTShared.so",
     "UnsafePointer access crashes",

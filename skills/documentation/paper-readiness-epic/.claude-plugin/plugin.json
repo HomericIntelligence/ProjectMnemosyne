@@ -3,9 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: paper-readiness-epic. Use when working with paper readiness epic.",
   "category": "documentation",
-  "date": "2026-01-01",
-    "paper",
-    "readiness",
-    "epic"
-  ]
+  "date": "2026-01-01"
 }

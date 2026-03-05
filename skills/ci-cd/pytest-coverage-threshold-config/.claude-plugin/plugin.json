@@ -3,14 +3,5 @@
   "version": "1.0.0",
   "description": "Configure pytest coverage thresholds to enforce minimum code coverage in CI/CD pipelines with multiple report formats",
   "category": "ci-cd",
-  "date": "2026-02-15",
-    "pytest",
-    "coverage",
-    "ci-cd",
-    "pyproject.toml",
-    "github-actions",
-    "quality",
-    "thresholds",
-    "html-reports"
-  ]
+  "date": "2026-02-15"
 }

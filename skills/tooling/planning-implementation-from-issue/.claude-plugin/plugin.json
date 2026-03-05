@@ -3,10 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: planning-implementation-from-issue. Use when working with planning implementation from issue.",
   "category": "tooling",
-  "date": "2026-01-01",
-    "planning",
-    "implementation",
-    "from",
-    "issue"
-  ]
+  "date": "2026-01-01"
 }

@@ -3,9 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: cli-adapter-implementation. Use when working with cli adapter implementation.",
   "category": "tooling",
-  "date": "2026-01-01",
-    "cli",
-    "adapter",
-    "implementation"
-  ]
+  "date": "2026-01-01"
 }

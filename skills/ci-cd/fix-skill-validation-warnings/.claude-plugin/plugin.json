@@ -6,15 +6,6 @@
   "category": "ci-cd",
   "created": "2026-02-13",
   "author": "ProjectMnemosyne",
-    "ci",
-    "validation",
-    "quality",
-    "automation",
-    "bulk-fixes",
-    "skill-plugins",
-    "python",
-    "markdown"
-  ],
   "use_cases": [
     "Fix CI validation failures after bulk skill imports",
     "Add missing required sections (Overview, Verified Workflow, Results)",

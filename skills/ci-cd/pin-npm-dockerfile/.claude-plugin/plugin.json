@@ -3,9 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: pin-npm-dockerfile. Use when working with pin npm dockerfile.",
   "category": "ci-cd",
-  "date": "2026-01-01",
-    "pin",
-    "npm",
-    "dockerfile"
-  ]
+  "date": "2026-01-01"
 }

@@ -3,12 +3,5 @@
   "version": "1.0.0",
   "description": "Integrate team knowledge search before automated planning workflows",
   "category": "tooling",
-  "date": "2026-02-13",
-    "automation",
-    "planning",
-    "knowledge-base",
-    "two-step-workflow",
-    "claude-cli",
-    "team-learning"
-  ]
+  "date": "2026-02-13"
 }

@@ -3,10 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: production-code-quality-fixes. Use when working with production code quality fixes.",
   "category": "debugging",
-  "date": "2026-01-01",
-    "production",
-    "code",
-    "quality",
-    "fixes"
-  ]
+  "date": "2026-01-01"
 }

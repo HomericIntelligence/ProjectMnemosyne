@@ -3,5 +3,5 @@
   "version": "1.0.0",
   "description": "Add .gitattributes for cross-platform line-ending normalization and diff drivers. Use when repository lacks .gitattributes, has spurious diffs, CRLF/LF merge conflicts, or CI failures due to line-ending mismatch.",
   "category": "tooling",
-  "date": "2026-02-22",
+  "date": "2026-02-22"
 }

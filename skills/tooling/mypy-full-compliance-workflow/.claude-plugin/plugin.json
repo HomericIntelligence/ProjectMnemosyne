@@ -3,13 +3,5 @@
   "version": "1.0.0",
   "description": "9-phase workflow to achieve full mypy compliance: fix all suppressed error codes incrementally, decouple tests/ overrides, remove disable_error_code entirely, and simplify the regression guard to a single invocation. Use when a project has incrementally-adopted mypy with multiple disabled error codes and you want to achieve full compliance.",
   "category": "tooling",
-  "date": "2026-02-23",
-    "mypy",
-    "type-checking",
-    "compliance",
-    "incremental",
-    "pre-commit",
-    "regression-guard",
-    "python"
-  ]
+  "date": "2026-02-23"
 }

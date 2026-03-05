@@ -3,9 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: extract-logging-helper. Use when working with extract logging helper.",
   "category": "tooling",
-  "date": "2026-01-01",
-    "extract",
-    "logging",
-    "helper"
-  ]
+  "date": "2026-01-01"
 }

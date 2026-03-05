@@ -3,13 +3,5 @@
   "version": "1.0.0",
   "description": "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods",
   "category": "architecture",
-  "date": "2026-02-15",
-    "refactoring",
-    "dry-principle",
-    "helper-methods",
-    "tdd",
-    "code-quality",
-    "python",
-    "pytest"
-  ]
+  "date": "2026-02-15"
 }

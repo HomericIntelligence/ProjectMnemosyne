@@ -3,9 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: github-actions-ci-speedup. Use when working with github actions ci speedup.",
   "category": "optimization",
-  "date": "2026-01-01",
-    "github",
-    "actions",
-    "speedup"
-  ]
+  "date": "2026-01-01"
 }

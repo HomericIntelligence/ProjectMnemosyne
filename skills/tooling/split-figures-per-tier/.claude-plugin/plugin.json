@@ -6,14 +6,6 @@
   "category": "tooling",
   "created": "2026-02-08",
   "author": "ProjectScylla",
-    "altair",
-    "vega-lite",
-    "visualization",
-    "row-limit",
-    "figure-generation",
-    "per-tier-patterns",
-    "data-filtering"
-  ],
   "use_cases": [
     "Fix figure generation failures due to Altair's 5K row limit",
     "Split faceted visualizations into per-category subfigures",

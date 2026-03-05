@@ -3,10 +3,5 @@
   "version": "1.0.0",
   "description": "Fix test failures when default values change in source code but tests aren't updated",
   "category": "testing",
-  "date": "2026-02-13",
-    "testing",
-    "ci",
-    "defaults",
-    "unit-tests"
-  ]
+  "date": "2026-02-13"
 }

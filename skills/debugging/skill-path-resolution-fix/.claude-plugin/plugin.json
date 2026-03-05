@@ -3,10 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: skill-path-resolution-fix. Use when working with skill path resolution fix.",
   "category": "debugging",
-  "date": "2026-01-01",
-    "skill",
-    "path",
-    "resolution",
-    "fix"
-  ]
+  "date": "2026-01-01"
 }

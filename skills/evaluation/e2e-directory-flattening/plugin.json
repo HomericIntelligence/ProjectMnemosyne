@@ -3,13 +3,6 @@
   "version": "1.0.0",
   "description": "Patterns for reorganizing E2E results directory structure to flatten hierarchy, share workspaces, and generate hierarchical reports",
   "category": "evaluation",
-    "e2e",
-    "directory-structure",
-    "results",
-    "reports",
-    "git-worktree",
-    "hierarchical-reports"
-  ],
   "triggers": [
     "flatten E2E directory",
     "reorganize results structure",

@@ -3,10 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: config-default-model-drift. Use when working with config default model drift.",
   "category": "tooling",
-  "date": "2026-01-01",
-    "config",
-    "default",
-    "model",
-    "drift"
-  ]
+  "date": "2026-01-01"
 }

@@ -3,5 +3,5 @@
   "version": "1.0.0",
   "description": "Orchestrate comprehensive PR reviews using specialized sub-reviewers. Use when reviewing complex PRs with multiple aspects to evaluate.",
   "category": "ci-cd",
-  "date": "2026-01-23",
+  "date": "2026-01-23"
 }
