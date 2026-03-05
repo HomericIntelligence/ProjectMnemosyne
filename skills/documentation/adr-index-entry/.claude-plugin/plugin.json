@@ -1,0 +1,8 @@
+{
+  "name": "adr-index-entry",
+  "version": "1.0.0",
+  "description": "Add a missing ADR entry to the ADR index table in docs/adr/README.md. Use when: (1) an ADR file exists under docs/adr/ but is not listed in the README index table, (2) a quality audit or issue flags a missing ADR row, (3) a new ADR was added without updating the index.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["adr", "index", "documentation", "readme", "table"]
+}
