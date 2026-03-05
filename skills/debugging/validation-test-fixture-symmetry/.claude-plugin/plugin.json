@@ -3,10 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: validation-test-fixture-symmetry. Use when working with validation test fixture symmetry.",
   "category": "debugging",
-  "date": "2026-01-01",
-    "validation",
-    "test",
-    "fixture",
-    "symmetry"
-  ]
+  "date": "2026-01-01"
 }

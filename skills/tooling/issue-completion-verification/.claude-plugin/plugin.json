@@ -3,11 +3,5 @@
   "version": "1.0.0",
   "description": "Verify and properly close GitHub issues when PR automation fails to auto-close",
   "category": "tooling",
-  "date": "2026-02-15",
-    "github",
-    "workflow",
-    "automation",
-    "issue-tracking",
-    "pr-management"
-  ]
+  "date": "2026-02-15"
 }

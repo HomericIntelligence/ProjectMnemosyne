@@ -5,17 +5,6 @@
   "category": "architecture",
   "date": "2026-02-27",
   "user-invocable": false,
-    "state-machine",
-    "interrupt-handling",
-    "ctrl-c",
-    "sigint",
-    "subprocess",
-    "sentinel-exception",
-    "resume",
-    "checkpoint",
-    "processpool",
-    "graceful-shutdown"
-  ],
   "verified_on": [
     {
       "project": "ProjectScylla",

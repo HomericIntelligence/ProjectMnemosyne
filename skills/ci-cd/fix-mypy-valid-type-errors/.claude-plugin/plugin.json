@@ -3,13 +3,5 @@
   "version": "1.0.0",
   "description": "Workflow for fixing mypy valid-type violations (lowercase callable/any) to re-enable suppressed error codes",
   "category": "ci-cd",
-  "date": "2026-02-22",
-    "mypy",
-    "type-checking",
-    "valid-type",
-    "callable",
-    "typing",
-    "pre-commit",
-    "python"
-  ]
+  "date": "2026-02-22"
 }

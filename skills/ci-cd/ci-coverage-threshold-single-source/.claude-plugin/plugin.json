@@ -4,13 +4,5 @@
   "description": "Remove explicit --cov-fail-under from CI workflows and rely on pyproject.toml as the single source of truth. Use when CI passes with a lower coverage threshold than local enforces, or --cov-fail-under appears in GitHub Actions AND fail_under exists in pyproject.toml with different values.",
   "category": "ci-cd",
   "date": "2026-02-20",
-    "ci",
-    "coverage",
-    "pytest",
-    "pytest-cov",
-    "github-actions",
-    "single-source-of-truth",
-    "pyproject"
-  ],
   "skills": "./skills"
 }

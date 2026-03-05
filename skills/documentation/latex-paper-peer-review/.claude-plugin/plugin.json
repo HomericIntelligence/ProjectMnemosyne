@@ -3,16 +3,5 @@
   "version": "1.0.0",
   "description": "Apply expert peer review corrections to LaTeX research papers: fix statistical claims, reconcile pipeline vs paper discrepancies, integrate computed results, include figures, and verify clean LaTeX compilation.",
   "category": "documentation",
-  "date": "2026-02-22",
-    "latex",
-    "research",
-    "peer-review",
-    "statistics",
-    "arXiv",
-    "paper-revision",
-    "holm-bonferroni",
-    "power-analysis",
-    "cliff-delta",
-    "reproducibility"
-  ]
+  "date": "2026-02-22"
 }

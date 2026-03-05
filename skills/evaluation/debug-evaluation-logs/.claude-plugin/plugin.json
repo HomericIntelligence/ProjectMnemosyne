@@ -3,12 +3,6 @@
   "version": "1.0.0",
   "category": "evaluation",
   "description": "Improve diagnostic clarity of LLM judge warning messages by adding specific failure details and better error extraction",
-    "evaluation",
-    "logging",
-    "diagnostics",
-    "error-handling",
-    "llm-judge"
-  ],
   "skills": {
     "debug-evaluation-logs": {
       "type": "skill",

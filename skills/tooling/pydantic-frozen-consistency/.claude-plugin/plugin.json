@@ -3,9 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: pydantic-frozen-consistency. Use when working with pydantic frozen consistency.",
   "category": "tooling",
-  "date": "2026-01-01",
-    "pydantic",
-    "frozen",
-    "consistency"
-  ]
+  "date": "2026-01-01"
 }

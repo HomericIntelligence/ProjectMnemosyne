@@ -3,13 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: fix-s101-assert-to-runtimeerror. Use when fixing Ruff S101 violations in production code by replacing bare assert guards with RuntimeError raises.",
   "category": "debugging",
-  "date": "2026-02-27",
-    "ruff",
-    "s101",
-    "assert",
-    "runtimeerror",
-    "production-code",
-    "code-quality",
-    "linting"
-  ]
+  "date": "2026-02-27"
 }

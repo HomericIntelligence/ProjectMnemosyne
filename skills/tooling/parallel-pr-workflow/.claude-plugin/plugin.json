@@ -3,14 +3,5 @@
   "version": "1.0.0",
   "description": "Systematic workflow for implementing multiple fixes in parallel using git worktrees and auto-merge PRs",
   "category": "tooling",
-  "date": "2026-01-01",
-    "git",
-    "worktrees",
-    "parallel-development",
-    "pull-requests",
-    "automation",
-    "github-cli",
-    "code-quality",
-    "technical-debt"
-  ]
+  "date": "2026-01-01"
 }

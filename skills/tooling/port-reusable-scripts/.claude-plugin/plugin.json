@@ -3,16 +3,5 @@
   "version": "1.0.0",
   "description": "Port and generalize reusable scripts between repositories with proper adaptations, dependency elimination, and Python path setup. Achieved zero external dependencies by rewriting PyGithub to gh CLI.",
   "category": "tooling",
-  "date": "2026-02-12",
-    "scripts",
-    "porting",
-    "generalization",
-    "cross-repo",
-    "utilities",
-    "automation",
-    "python",
-    "refactoring",
-    "gh-cli",
-    "dependency-elimination"
-  ]
+  "date": "2026-02-12"
 }

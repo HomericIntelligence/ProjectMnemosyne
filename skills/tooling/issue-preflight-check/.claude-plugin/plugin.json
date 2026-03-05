@@ -3,12 +3,5 @@
   "version": "1.0.0",
   "description": "Pre-flight checklist before starting GitHub issue work: verify completion, check conflicts, gather context",
   "category": "tooling",
-  "date": "2026-02-15",
-    "github",
-    "workflow",
-    "pre-flight",
-    "verification",
-    "worktree",
-    "branch-management"
-  ]
+  "date": "2026-02-15"
 }

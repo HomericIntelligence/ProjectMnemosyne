@@ -4,11 +4,5 @@
   "version": "1.0.0",
   "category": "documentation",
   "date": "2026-02-20",
-    "documentation",
-    "future-improvements",
-    "stale-docs",
-    "sync",
-    "markdown"
-  ],
   "skills": "./skills"
 }

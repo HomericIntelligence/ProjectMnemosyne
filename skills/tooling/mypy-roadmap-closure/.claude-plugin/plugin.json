@@ -3,13 +3,6 @@
   "version": "1.0.0",
   "category": "tooling",
   "description": "Close a phased mypy strictness roadmap: identify dead tracking infrastructure, ship free-win strict settings, triage remaining work into individual issues, and close the roadmap issue.",
-    "mypy",
-    "type-checking",
-    "roadmap",
-    "tech-debt",
-    "pre-commit",
-    "pyproject"
-  ],
   "author": "Claude Sonnet 4.6",
   "date": "2026-02-24",
   "related_issues": [

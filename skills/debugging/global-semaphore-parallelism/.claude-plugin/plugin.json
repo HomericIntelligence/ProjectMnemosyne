@@ -4,16 +4,6 @@
   "description": "Debugging and implementing global parallelism control using multiprocessing.Manager().Semaphore() to limit concurrent agents across all tiers",
   "category": "debugging",
   "subcategories": ["concurrency", "parallelism", "multiprocessing"],
-    "semaphore",
-    "parallelism",
-    "multiprocessing",
-    "concurrency-control",
-    "process-pool",
-    "global-limits",
-    "cross-process-sharing",
-    "e2e-testing",
-    "debugging"
-  ],
   "type": "skill",
   "project_context": "ProjectScylla",
   "use_cases": [

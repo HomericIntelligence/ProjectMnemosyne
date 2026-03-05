@@ -3,13 +3,5 @@
   "version": "1.0.0",
   "description": "Implement post-merge recommendations from a chief architect or code review: documentation gaps, test coverage gaps, comment accuracy, and rebase with conflict resolution.",
   "category": "architecture",
-  "date": "2026-02-23",
-    "state-machine",
-    "code-review",
-    "post-merge",
-    "rebase",
-    "conflict-resolution",
-    "test-coverage",
-    "until_state"
-  ]
+  "date": "2026-02-23"
 }

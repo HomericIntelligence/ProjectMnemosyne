@@ -3,10 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: defaults-config-filename-validation. Use when working with defaults config filename validation.",
   "category": "tooling",
-  "date": "2026-01-01",
-    "defaults",
-    "config",
-    "filename",
-    "validation"
-  ]
+  "date": "2026-01-01"
 }

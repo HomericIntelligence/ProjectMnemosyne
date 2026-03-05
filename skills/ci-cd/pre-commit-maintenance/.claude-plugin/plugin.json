@@ -3,9 +3,5 @@
   "version": "1.0.0",
   "description": "Skill: pre-commit-maintenance. Use when working with pre commit maintenance.",
   "category": "ci-cd",
-  "date": "2026-01-01",
-    "pre",
-    "commit",
-    "maintenance"
-  ]
+  "date": "2026-01-01"
 }

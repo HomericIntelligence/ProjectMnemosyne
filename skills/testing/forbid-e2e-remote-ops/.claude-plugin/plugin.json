@@ -3,12 +3,5 @@
   "version": "1.0.0",
   "description": "Prevent remote Git operations in e2e tests and optimize worktree creation",
   "category": "testing",
-  "date": "2026-02-14",
-    "e2e-testing",
-    "git",
-    "worktree",
-    "test-isolation",
-    "safety",
-    "optimization"
-  ]
+  "date": "2026-02-14"
 }

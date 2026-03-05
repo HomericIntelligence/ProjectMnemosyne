@@ -4,13 +4,6 @@
   "description": "Pattern for adding exponential backoff retry logic to handle transient network and I/O errors",
   "author": "ProjectScylla",
   "category": "debugging",
-    "retry-logic",
-    "exponential-backoff",
-    "transient-errors",
-    "network-failures",
-    "error-handling",
-    "resilience"
-  ],
   "skills": [
     {
       "name": "retry-transient-errors",

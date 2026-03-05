@@ -3,13 +3,5 @@
   "version": "1.0.0",
   "description": "Fix 5+ independent GitHub issues in parallel waves using Task isolation:worktree — no manual worktree setup needed. Use when you have a backlog of simple issues to clear.",
   "category": "architecture",
-  "date": "2026-02-22",
-    "parallel",
-    "worktrees",
-    "bulk-triage",
-    "issues",
-    "wave",
-    "sub-agents",
-    "automation"
-  ]
+  "date": "2026-02-22"
 }

@@ -5,12 +5,6 @@
   "author": "ProjectScylla Team",
   "created": "2026-01-04",
   "category": "architecture",
-    "e2e-testing",
-    "resume-behavior",
-    "checkpoint",
-    "directory-structure",
-    "result-reuse"
-  ],
   "skills": [
     {
       "name": "e2e-resume-refactor",
