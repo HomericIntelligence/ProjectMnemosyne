@@ -1,0 +1,8 @@
+{
+  "name": "placeholder-test-docstring-update",
+  "version": "1.0.0",
+  "description": "Update placeholder test language in __init__.mojo docstrings to reflect implemented tests. Use when: (1) __init__.mojo docstrings say 'Placeholder tests...require implementation' but real test files exist, (2) closing tracking issues for test implementation, (3) keeping module documentation accurate after tests are written.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["mojo", "docstrings", "testing", "placeholder", "init-files"]
+}
