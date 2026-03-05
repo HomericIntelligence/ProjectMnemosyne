@@ -1,0 +1,8 @@
+{
+  "name": "link-workaround-notes-to-issues",
+  "version": "1.0.0",
+  "description": "Link temporary workaround NOTE comments in source code to tracking GitHub issues by updating NOTE format to NOTE(#NNNN). Use when: (1) cleaning up untracked workaround NOTEs in a codebase, (2) performing NOTE/TODO/FIXME cleanup sprints, (3) ensuring every temporary hack has a tracking issue.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["notes", "tracking", "github-issues", "technical-debt", "cleanup", "mojo"]
+}
