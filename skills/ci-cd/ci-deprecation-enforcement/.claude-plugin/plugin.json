@@ -3,5 +3,4 @@
   "version": "1.0.0",
   "description": "Promote a CI grep warning into a hard exit-1 enforcement gate for deprecated symbols. Use when: (1) converting ::warning:: grep steps to ::error:: + exit 1, (2) adding grep -v exclusions for re-exports or docstring mentions, (3) verifying deprecated symbol count is zero before enabling enforcement.",
   "skills": "./skills",
-  "tags": ["ci", "deprecation", "grep", "enforcement", "exit-1", "github-actions"]
 }

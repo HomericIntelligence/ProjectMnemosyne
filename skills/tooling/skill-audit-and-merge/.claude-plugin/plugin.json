@@ -7,7 +7,6 @@
   },
   "date": "2026-01-01",
   "category": "tooling",
-  "tags": ["marketplace", "plugin", "consolidation", "audit", "organization"],
   "skills": "./skills",
   "source_project": "ProjectMnemosyne"
 }

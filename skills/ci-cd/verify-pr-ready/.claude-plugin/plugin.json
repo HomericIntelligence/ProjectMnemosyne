@@ -7,7 +7,6 @@
   },
   "date": "2025-12-30",
   "category": "ci-cd",
-  "tags": ["github", "pr", "merge", "validation", "branch-protection"],
   "skills": "./skills",
   "source_project": "ProjectOdyssey"
 }

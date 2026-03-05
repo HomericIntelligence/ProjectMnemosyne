@@ -6,7 +6,6 @@
     "name": "HomericIntelligence"
   },
   "skills": "./skills",
-  "tags": ["plugin", "generalization", "cross-repo", "marketplace", "migration", "abstraction"],
   "requires": {
     "tools": [],
     "languages": []

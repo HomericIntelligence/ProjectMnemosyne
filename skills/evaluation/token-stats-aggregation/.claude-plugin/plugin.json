@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Pattern for tracking detailed token statistics with cache tokens across hierarchical E2E report levels",
   "category": "evaluation",
-  "tags": ["tokens", "cache", "aggregation", "reports", "e2e", "dataclass", "pydantic"],
   "skills": [
     {
       "name": "token-stats-aggregation",

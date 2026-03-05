@@ -4,5 +4,4 @@
   "description": "Migrate PRs that add skills to the flat skills/ directory into the correct plugins/<category>/<name>/ structure so CI triggers and the validate check passes. Use when a PR branch puts files under skills/ instead of plugins/, or when the validate CI check never appears on a PR.",
   "category": "ci-cd",
   "date": "2026-02-22",
-  "tags": ["skills", "plugins", "migration", "ci-fix", "pr-rescue", "structure", "validate"]
 }

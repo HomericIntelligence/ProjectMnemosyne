@@ -4,7 +4,6 @@
   "description": "Diagnose and fix pytest tests hanging due to expensive Monte Carlo or bootstrap simulation calls. Covers: identifying the hanging function, verifying the correct patch target (caller vs origin namespace), and adding an autouse conftest fixture.",
   "category": "debugging",
   "date": "2026-02-23",
-  "tags": [
     "pytest",
     "mock",
     "monte-carlo",

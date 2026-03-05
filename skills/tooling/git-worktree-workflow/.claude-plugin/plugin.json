@@ -7,7 +7,6 @@
   },
   "date": "2025-12-30",
   "category": "tooling",
-  "tags": ["git", "worktree", "parallel-development", "branching", "workflow"],
   "skills": "./skills",
   "source_project": "ProjectOdyssey"
 }

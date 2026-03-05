@@ -4,7 +4,6 @@
   "description": "Comprehensive workflow for fixing all ruff linting errors in CI/CD pipelines",
   "author": "ProjectScylla Team",
   "category": "ci-cd",
-  "tags": ["linting", "ruff", "pre-commit", "ci-cd", "automation", "docstrings"],
   "created": "2026-01-04",
   "last_updated": "2026-01-04",
   "skills": [

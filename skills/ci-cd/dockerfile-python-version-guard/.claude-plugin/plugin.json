@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "category": "ci-cd",
   "description": "Guard Dockerfile Python version constraints via static tests and inline documentation when a stdlib module has a minimum Python version requirement (e.g., tomllib >= 3.11). Use when: (1) a Dockerfile uses a Python stdlib module introduced after 3.6, (2) you need a regression test to prevent base image downgrades, (3) adding version constraint documentation inline in the Dockerfile.",
-  "tags": ["docker", "python", "tomllib", "version-constraint", "static-analysis", "regression-guard"],
   "author": "ProjectScylla",
   "created": "2026-02-27"
 }

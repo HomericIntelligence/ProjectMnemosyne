@@ -4,7 +4,6 @@
   "description": "Wire hierarchical state machines (Experiment → Tier → Run) into a production runner using closure-based action maps. Use when refactoring a monolithic execution loop into resumable, checkpoint-backed discrete states.",
   "category": "architecture",
   "date": "2026-02-22",
-  "tags": [
     "state-machine",
     "closure",
     "checkpoint",

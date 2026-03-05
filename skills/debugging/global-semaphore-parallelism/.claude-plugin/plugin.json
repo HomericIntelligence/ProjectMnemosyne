@@ -4,7 +4,6 @@
   "description": "Debugging and implementing global parallelism control using multiprocessing.Manager().Semaphore() to limit concurrent agents across all tiers",
   "category": "debugging",
   "subcategories": ["concurrency", "parallelism", "multiprocessing"],
-  "tags": [
     "semaphore",
     "parallelism",
     "multiprocessing",

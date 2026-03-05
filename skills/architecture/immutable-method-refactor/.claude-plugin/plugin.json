@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Refactoring a class method to follow an immutable (purely functional) pattern by removing in-place self.attribute mutation and returning a new value instead. Use when a class has mixed patterns and consistency is needed.",
   "category": "architecture",
-  "tags": ["immutable", "refactor", "architecture", "functional", "class", "mutation", "method"],
   "date": "2026-03-02",
   "user-invocable": false
 }

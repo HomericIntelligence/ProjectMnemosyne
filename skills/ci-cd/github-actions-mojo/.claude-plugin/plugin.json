@@ -6,7 +6,6 @@
     "name": "ML Odyssey Team"
   },
   "skills": "./skills",
-  "tags": ["mojo", "github-actions", "ci-cd", "pixi", "testing"],
   "requires": {
     "tools": [
       {"name": "mojo", "version": ">=0.25.0"},

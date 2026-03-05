@@ -4,7 +4,6 @@
   "description": "Skill: resolve-skipped-tests. Use when working with resolve skipped tests.",
   "category": "testing",
   "date": "2026-01-01",
-  "tags": [
     "resolve",
     "skipped",
     "tests"

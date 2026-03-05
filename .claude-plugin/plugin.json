@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Audit and fix patterns for manage_experiment.py CLI: --from batch-mode wiring, checkpoint reset logic, mock patching for local imports, test fixture gotchas",
   "category": "debugging",
-  "tags": ["cli", "batch-mode", "checkpoint", "mock-patching", "test-fixtures", "manage_experiment"],
   "author": "ProjectScylla",
   "created": "2026-02-24"
 }

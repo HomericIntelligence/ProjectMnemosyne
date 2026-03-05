@@ -4,7 +4,6 @@
   "description": "Configure pip-audit in pixi CI to fail only on HIGH/CRITICAL severity vulnerabilities using pixi task definitions",
   "category": "ci-cd",
   "date": "2026-02-22",
-  "tags": [
     "pip-audit",
     "pixi",
     "security",

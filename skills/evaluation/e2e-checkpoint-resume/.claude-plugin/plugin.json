@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Implementing checkpoint/resume with rate limit handling for E2E evaluation frameworks",
   "category": "evaluation",
-  "tags": [
     "e2e-testing",
     "checkpoint",
     "resume",

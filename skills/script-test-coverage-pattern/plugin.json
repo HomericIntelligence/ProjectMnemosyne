@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Patterns for adding mock-only unit tests to Python utility scripts — covering subprocess-heavy, filesystem-heavy, and pure-function scripts in ProjectScylla. Raises scripts/ test coverage from 29% to 65% (10/34 → 22/34 scripts tested).",
   "category": "testing",
-  "tags": ["unit-tests", "scripts", "mock", "subprocess", "pytest", "coverage", "projectscylla"],
   "created": "2026-03-03",
   "project": "ProjectScylla",
   "issue": "HomericIntelligence/ProjectScylla#1162",

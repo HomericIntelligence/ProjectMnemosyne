@@ -4,7 +4,6 @@
   "description": "Skill: pin-npm-dockerfile. Use when working with pin npm dockerfile.",
   "category": "ci-cd",
   "date": "2026-01-01",
-  "tags": [
     "pin",
     "npm",
     "dockerfile"

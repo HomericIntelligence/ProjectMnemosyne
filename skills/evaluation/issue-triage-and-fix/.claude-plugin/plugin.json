@@ -4,5 +4,4 @@
   "description": "Bulk triage and fix GitHub issues in parallel using isolated worktrees. Use when you have 10+ simple open GitHub issues, many may be duplicates, and each fix is independent.",
   "category": "evaluation",
   "date": "2026-02-22",
-  "tags": ["github", "worktree", "parallel", "bulk-fix", "pr-workflow", "triage", "wave-based", "pre-commit"]
 }

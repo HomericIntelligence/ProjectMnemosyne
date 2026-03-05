@@ -5,7 +5,6 @@
   "description": "Workflow for fixing inconsistent root-level field mapping in tier configurations and enhancing resource prompt suffixes",
   "author": "ProjectScylla Team",
   "category": "architecture",
-  "tags": ["tier-config", "prompt-engineering", "resource-mapping", "testing"],
   "skills": [
     {
       "name": "fix-resource-prompt-consistency",

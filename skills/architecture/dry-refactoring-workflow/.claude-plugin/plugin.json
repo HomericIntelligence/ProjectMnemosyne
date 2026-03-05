@@ -4,7 +4,6 @@
   "description": "Complete TDD-driven workflow for identifying and eliminating code duplication by extracting reusable helper methods",
   "category": "architecture",
   "date": "2026-02-15",
-  "tags": [
     "refactoring",
     "dry-principle",
     "helper-methods",

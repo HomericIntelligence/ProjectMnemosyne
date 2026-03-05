@@ -4,7 +4,6 @@
   "description": "Validate GitHub issue state against codebase reality before implementation. Use when starting work on multiple issues to prevent wasted effort on already-resolved issues.",
   "category": "evaluation",
   "date": "2026-02-12",
-  "tags": [
     "issue",
     "validation",
     "workflow"

@@ -7,7 +7,6 @@
   },
   "date": "2026-01-01",
   "category": "tooling",
-  "tags": ["github", "issues", "cleanup", "todo", "fixme", "technical-debt", "bulk-operations"],
   "skills": "./skills",
   "source_project": "ProjectOdyssey"
 }

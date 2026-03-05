@@ -7,6 +7,5 @@
   },
   "category": "debugging",
   "date": "2026-02-08",
-  "tags": ["ci-cd", "test-matrix", "coverage", "pre-commit", "flaky-tests", "github-actions"],
   "skills": "./skills"
 }

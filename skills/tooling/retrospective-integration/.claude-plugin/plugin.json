@@ -4,7 +4,6 @@
   "description": "Integrate /retrospective skill into automation pipelines to automatically capture session learnings",
   "category": "tooling",
   "date": "2026-02-13",
-  "tags": [
     "automation",
     "claude-cli",
     "session-management",

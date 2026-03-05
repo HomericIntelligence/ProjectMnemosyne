@@ -4,7 +4,6 @@
   "description": "Skill: mypy-per-directory-baseline. Use when working with mypy per directory baseline.",
   "category": "testing",
   "date": "2026-01-01",
-  "tags": [
     "mypy",
     "per",
     "directory",

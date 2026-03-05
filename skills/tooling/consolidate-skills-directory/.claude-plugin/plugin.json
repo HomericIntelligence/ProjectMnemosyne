@@ -4,5 +4,4 @@
   "description": "Consolidate a dual plugins/+skills/ structure into a single skills/<category>/<name>/ directory. Use when: (1) ProjectMnemosyne has both plugins/ and skills/ directories causing confusion, (2) migrating flat legacy skills to plugin format, (3) updating all tooling and CI to reference the new canonical location.",
   "category": "tooling",
   "date": "2026-02-23",
-  "tags": ["migration", "consolidation", "directory-structure", "marketplace", "refactoring", "skills-registry"]
 }

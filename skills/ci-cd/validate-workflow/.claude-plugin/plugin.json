@@ -7,7 +7,6 @@
   },
   "date": "2025-12-30",
   "category": "ci-cd",
-  "tags": ["github-actions", "workflow", "yaml", "validation", "actionlint"],
   "skills": "./skills",
   "source_project": "ProjectOdyssey"
 }

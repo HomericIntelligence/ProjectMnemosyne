@@ -3,5 +3,4 @@
   "version": "1.0.0",
   "description": "Fix broken CI on main caused by plugins missing plugin.json or SKILL.md YAML frontmatter, then rebase all blocked PRs and re-enable auto-merge. Use when: (1) all PR CI runs fail with validate errors, (2) plugins exist in the directory but lack .claude-plugin/plugin.json, (3) SKILL.md files are missing the --- YAML frontmatter block, (4) PRs are stuck pending CI that can never pass due to main being broken.",
   "skills": "./skills",
-  "tags": ["ci", "plugins", "plugin.json", "frontmatter", "validation", "rebase", "auto-merge", "pr-rescue"]
 }

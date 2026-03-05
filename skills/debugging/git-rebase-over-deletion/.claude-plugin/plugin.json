@@ -4,7 +4,6 @@
   "description": "Fix CI failure caused by git rebase/merge replaying a deletion commit that over-removes active code. Use when: CI Test workflow breaks after a deprecation-removal commit; ImportError for symbols that should exist; git log shows a fix commit followed by a removal commit in wrong order; multiple test modules fail to collect simultaneously.",
   "category": "debugging",
   "date": "2026-02-21",
-  "tags": [
     "git",
     "rebase",
     "deletion",

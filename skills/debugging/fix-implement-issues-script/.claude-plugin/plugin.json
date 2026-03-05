@@ -4,7 +4,6 @@
   "description": "Debug and fix automation pipeline failures in implement_issues.py",
   "category": "debugging",
   "date": "2026-02-14",
-  "tags": [
     "automation",
     "github",
     "worktree",

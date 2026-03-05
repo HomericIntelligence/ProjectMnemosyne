@@ -4,7 +4,6 @@
   "description": "Debugging rate limit detection when error messages appear in JSON response fields instead of stderr. Use when rate limits from API responses aren't being caught, especially for Claude CLI JSON output with is_error:true.",
   "category": "debugging",
   "date": "2026-01-04",
-  "tags": [
     "debugging",
     "rate-limit",
     "json-parsing",

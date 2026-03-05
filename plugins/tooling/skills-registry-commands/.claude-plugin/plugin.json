@@ -7,5 +7,4 @@
   },
   "commands": "./commands",
   "skills": "./skills",
-  "tags": ["skills", "advise", "retrospective", "knowledge-capture", "team-learning", "documentation", "ci-cd"]
 }

@@ -4,7 +4,6 @@
   "description": "Implement baseline pipeline capture and regression detection to distinguish agent-introduced failures from pre-existing issues in E2E evaluations",
   "category": "evaluation",
   "date": "2025-02-15",
-  "tags": [
     "evaluation",
     "baseline",
     "regression-detection",

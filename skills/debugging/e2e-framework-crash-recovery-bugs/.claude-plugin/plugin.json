@@ -4,7 +4,6 @@
   "description": "Debugging methodology for E2E framework crash recovery bugs: checkpoint race conditions, resume state machine failures, and LLM judge JSON failures",
   "category": "debugging",
   "date": "2026-02-23",
-  "tags": ["checkpoint", "threading", "resume", "judge", "haiku", "race-condition", "e2e"],
   "author": "ProjectScylla",
   "skill_file": "skills/e2e-framework-crash-recovery-bugs/SKILL.md"
 }

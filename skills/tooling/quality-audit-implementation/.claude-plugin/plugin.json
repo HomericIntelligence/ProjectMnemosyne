@@ -4,7 +4,6 @@
   "description": "Use when implementing findings from a structured code quality audit. Covers: filing tracking issues for untracked findings, applying mechanical P1/P2 fixes directly (CODEOWNERS stale paths, doc count discrepancies, CI matrix gaps, hardcoded paths), and bundling into a single PR with auto-merge.",
   "category": "tooling",
   "date": "2026-02-27",
-  "tags": [
     "quality",
     "audit",
     "implementation",

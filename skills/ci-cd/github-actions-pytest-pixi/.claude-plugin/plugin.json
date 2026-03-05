@@ -4,7 +4,6 @@
   "description": "GitHub Actions CI setup for pytest projects using pixi. Use when: (1) Setting up CI/CD for Python projects with pixi, (2) Need parallel test execution with matrix strategy, (3) Adding automated testing to existing repos, (4) Configuring coverage reporting in CI.",
   "category": "ci-cd",
   "date": "2026-01-04",
-  "tags": [
     "github-actions",
     "pytest",
     "pixi",

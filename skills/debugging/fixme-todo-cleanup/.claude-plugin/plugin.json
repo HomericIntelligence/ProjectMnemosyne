@@ -5,7 +5,6 @@
   "category": "debugging",
   "created": "2026-01-01",
   "repository": "mvillmow/ProjectOdyssey",
-  "tags": ["technical-debt", "cleanup", "workflow", "github", "ci-cd", "mojo"],
   "triggers": [
     "cleanup FIXME items",
     "cleanup TODO items",

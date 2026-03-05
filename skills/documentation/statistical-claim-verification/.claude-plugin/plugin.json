@@ -4,7 +4,6 @@
   "description": "Verify statistical methodology claims in research papers against raw data and authoritative references before editing. Use when reviewing or correcting empirical papers, ablation studies, or benchmark reports that contain effect sizes, statistical tests, or power analyses.",
   "category": "documentation",
   "date": "2026-02-23",
-  "tags": [
     "statistics",
     "peer-review",
     "latex",

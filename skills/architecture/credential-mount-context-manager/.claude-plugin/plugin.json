@@ -7,7 +7,6 @@
   },
   "date": "2026-02-22",
   "category": "architecture",
-  "tags": ["docker", "credentials", "context-manager", "cleanup", "wsl2", "temp-dirs", "resource-leak"],
   "skills": "./skills",
   "requires": {
     "tools": [],

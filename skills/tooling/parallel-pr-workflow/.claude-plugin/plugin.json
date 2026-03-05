@@ -4,7 +4,6 @@
   "description": "Systematic workflow for implementing multiple fixes in parallel using git worktrees and auto-merge PRs",
   "category": "tooling",
   "date": "2026-01-01",
-  "tags": [
     "git",
     "worktrees",
     "parallel-development",
