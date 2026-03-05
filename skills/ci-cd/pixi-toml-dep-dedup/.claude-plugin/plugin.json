@@ -1,0 +1,8 @@
+{
+  "name": "pixi-toml-dep-dedup",
+  "version": "1.0.0",
+  "description": "Reconcile duplicate package version specs between [dependencies] and [feature.dev.dependencies] in pixi.toml. Use when a package appears in both sections with conflicting constraints.",
+  "author": { "name": "ML Odyssey Team" },
+  "skills": "./skills",
+  "tags": ["ci-cd", "pixi", "dependencies", "deduplication"]
+}
