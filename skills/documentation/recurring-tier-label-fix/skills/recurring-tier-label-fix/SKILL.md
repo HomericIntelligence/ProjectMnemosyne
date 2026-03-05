@@ -1,3 +1,11 @@
+---
+name: recurring-tier-label-fix
+description: "Fix recurring tier label mismatches in metrics-definitions.md. Use when a quality audit flags tier label inconsistencies."
+category: documentation
+date: 2026-03-03
+user-invocable: false
+---
+
 # Recurring Tier Label Fix in metrics-definitions.md
 
 ## Overview
