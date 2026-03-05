@@ -1,8 +1,0 @@
-{
-  "name": "dockerfile-layer-caching",
-  "version": "1.0.0",
-  "description": "Split Python pip install into two cached layers in a Dockerfile: (1) copy pyproject.toml and install dependencies, (2) copy source and pip install --no-deps. Eliminates dependency reinstall on source-only changes. Uses tomllib (stdlib, Python 3.11+) to extract deps inline. Apply when source changes more often than dependencies and pip install is slow.",
-  "category": "ci-cd",
-  "date": "2026-02-27",
-  "tags": ["docker", "dockerfile", "layer-caching", "pip", "python", "pyproject-toml", "build-optimization", "hatchling", "tomllib"]
-}

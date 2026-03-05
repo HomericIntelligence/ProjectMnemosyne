@@ -1,8 +1,0 @@
-{
-  "name": "pr-review-automation-integration",
-  "version": "1.0.0",
-  "description": "TRIGGER CONDITIONS: Running implement_issues.py --review in a live environment. Use when: (1) launching PR review automation from a terminal or CI, (2) debugging CLAUDECODE nested session errors (unset env var or strip it in subprocess env), (3) choosing a good test PR (unit-tests-only failures are cleanest), (4) understanding expected phase timings (~12.5 min total for single PR).",
-  "category": "tooling",
-  "date": "2026-03-02",
-  "tags": ["automation", "pr-review", "integration-test", "CLAUDECODE", "nested-session", "timing", "implement-issues", "live-run"]
-}

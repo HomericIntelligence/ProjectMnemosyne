@@ -1,8 +1,0 @@
-{
-  "name": "extract-method-to-private-methods",
-  "version": "1.0.0",
-  "description": "TRIGGER CONDITIONS: A method defines multiple closures over 3+ captured variables, closures use `nonlocal`, or closure RuntimeError guards are untestable in isolation. Use when: (1) extracting inline action closures into private `_action_*` instance methods, (2) replacing `nonlocal x` with a mutable-box `x_ref: list[T] = [x]` pattern, (3) slimming a builder method down to a return dict + lambdas. Key gotcha: assert patch.object mocks INSIDE the `with` block, not after it exits.",
-  "category": "testing",
-  "date": "2026-03-02",
-  "tags": ["refactoring", "extract-method", "closures", "nonlocal", "mutable-box", "private-methods", "unit-testing", "runner", "state-machine"]
-}

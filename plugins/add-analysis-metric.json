@@ -1,8 +1,0 @@
-{
-  "name": "add-analysis-metric",
-  "version": "1.0.0",
-  "description": "TRIGGER CONDITIONS: Adding new aggregated metrics to build_subtests_df() or tier_summary(). Use when: (1) a new nullable per-run column exists in build_runs_df() that needs mean/median/std rollup at subtest/tier level, (2) extending the analysis layer for Table_CFP or similar comparison tables, (3) updating conftest.py fixtures after adding production aggregation columns.",
-  "category": "analysis",
-  "date": "2026-02-27",
-  "tags": ["analysis", "dataframes", "aggregation", "metrics", "fixtures", "pandas", "nullable", "nan"]
-}
