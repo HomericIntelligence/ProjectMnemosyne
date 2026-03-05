@@ -1,0 +1,8 @@
+{
+  "name": "mojo-hash-bitcast-floats",
+  "version": "1.0.0",
+  "description": "Fix Mojo __hash__ for float-containing structs to use UnsafePointer bitcast for exact IEEE 754 bit representation instead of lossy integer approximation. Use when: (1) float hash collisions occur for large or very small values, (2) __hash__ uses multiplication/truncation approximation, (3) dict/set keys with float structs have unexpected collisions.",
+  "category": "debugging",
+  "date": "2026-03-05",
+  "tags": ["mojo", "hash", "float", "bitcast", "ieee754", "collision", "extensor"]
+}
