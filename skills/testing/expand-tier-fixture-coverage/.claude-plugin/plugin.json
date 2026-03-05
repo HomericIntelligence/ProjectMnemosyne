@@ -1,0 +1,6 @@
+{
+  "name": "expand-tier-fixture-coverage",
+  "version": "1.0.0",
+  "description": "Expand YAML fixture files and test parametrize lists when adding new tiers to the testing tier registry. Use when tier count assertions or schema parametrize lists are out of sync with fixture files.",
+  "skills": "./skills"
+}
