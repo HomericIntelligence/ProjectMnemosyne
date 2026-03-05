@@ -1,0 +1,14 @@
+{
+  "name": "delete-deprecated-skills",
+  "version": "1.0.0",
+  "description": "Delete deprecated skill directories and update all cross-references in documentation, agents, and scripts. Use when: (1) skill directories reference removed systems, (2) cleanup issues require removing DEPRECATED-marked skills, (3) planning-system migration leaves orphaned skill files.",
+  "category": "tooling",
+  "date": "2026-03-05",
+  "tags": [
+    "cleanup",
+    "deprecated",
+    "skills",
+    "references",
+    "documentation"
+  ]
+}
