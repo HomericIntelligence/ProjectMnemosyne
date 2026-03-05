@@ -1,0 +1,8 @@
+{
+  "name": "small-doc-edit-workflow",
+  "version": "1.0.0",
+  "description": "Workflow for implementing small, well-specified documentation edits: read file, apply targeted Edit, verify with pre-commit, commit and create PR. Use when: (1) issue specifies exact line/location for a doc change, (2) adding a note or clarification to an existing markdown file, (3) change is a single insert with no structural refactoring.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["documentation", "markdown", "pull-request", "pre-commit", "worktree"]
+}
