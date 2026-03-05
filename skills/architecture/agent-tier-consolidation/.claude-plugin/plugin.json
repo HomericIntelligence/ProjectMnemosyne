@@ -1,0 +1,8 @@
+{
+  "name": "agent-tier-consolidation",
+  "version": "1.0.0",
+  "description": "Consolidate over-segmented agent tiers in a hierarchical agent system by merging similar-level agents into a single comprehensive agent. Use when: (1) multiple agents share the same scope and only differ by seniority/complexity level, (2) agent count is growing unwieldy and tiers overlap in practice, (3) simplifying the agent hierarchy without losing capability coverage.",
+  "category": "architecture",
+  "date": "2026-03-05",
+  "tags": ["agents", "hierarchy", "consolidation", "refactoring", "claude-code"]
+}
