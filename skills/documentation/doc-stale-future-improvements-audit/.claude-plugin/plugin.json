@@ -4,5 +4,4 @@
   "description": "Systematically audit design docs for Future Improvements sections that describe features already implemented in source code. Use when an issue asks to audit docs for staleness, when CI flags stale docs, or after a period of active development.",
   "category": "documentation",
   "date": "2026-02-22",
-  "tags": ["documentation", "audit", "stale-docs", "future-improvements", "design-docs"]
 }

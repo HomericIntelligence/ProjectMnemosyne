@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "category": "ci-cd",
   "description": "How to resolve CI workflows referencing non-existent test directories",
-  "tags": ["docker", "ci", "github-actions", "dead-code", "cleanup"],
   "author": "ProjectScylla",
   "created": "2026-02-27"
 }

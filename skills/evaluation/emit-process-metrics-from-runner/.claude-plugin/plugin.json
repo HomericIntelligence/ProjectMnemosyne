@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Emitting process_metrics, progress_tracking, and changes blocks to run_result.json from the E2E runner stage pipeline",
   "category": "evaluation",
-  "tags": [
     "process-metrics",
     "e2e-runner",
     "stages",

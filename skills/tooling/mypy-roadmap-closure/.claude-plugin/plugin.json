@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "category": "tooling",
   "description": "Close a phased mypy strictness roadmap: identify dead tracking infrastructure, ship free-win strict settings, triage remaining work into individual issues, and close the roadmap issue.",
-  "tags": [
     "mypy",
     "type-checking",
     "roadmap",

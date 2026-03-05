@@ -6,7 +6,6 @@
   "created": "2026-01-24",
   "pr": 3109,
   "status": "verified",
-  "tags": [
     "memory-safety",
     "mojo",
     "ci-failures",

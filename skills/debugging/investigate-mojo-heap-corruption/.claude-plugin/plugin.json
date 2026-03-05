@@ -4,7 +4,6 @@
   "description": "Systematic workflow for investigating and fixing Mojo 0.26.1 heap corruption crashes that occur in CI but not locally",
   "category": "debugging",
   "date": "2026-01-08",
-  "tags": [
     "mojo",
     "debugging",
     "heap-corruption",

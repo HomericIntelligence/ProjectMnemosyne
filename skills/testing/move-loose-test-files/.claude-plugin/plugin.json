@@ -4,7 +4,6 @@
   "description": "Safe pattern for moving test files from a root test directory into mirrored sub-packages, including fixture path correction",
   "category": "testing",
   "date": "2026-02-22",
-  "tags": [
     "testing",
     "refactoring",
     "git",

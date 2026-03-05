@@ -5,7 +5,6 @@
   "description": "Consolidate duplicate artifacts in E2E evaluation output by sharing prompts, commands, and configuration files across judges and runs",
   "author": "ProjectScylla Team",
   "created": "2026-01-11",
-  "tags": [
     "e2e-evaluation",
     "deduplication",
     "optimization",

@@ -4,7 +4,6 @@
   "description": "Skill: verify-and-commit. Use when taking a dirty working tree (implementation already complete) through the full verify → fix → commit → PR workflow. Covers running tests, fixing pre-commit hook failures (ruff format, ruff E501, mypy count drift), and creating a PR with auto-merge.",
   "category": "ci-cd",
   "date": "2026-02-24",
-  "tags": [
     "pre-commit",
     "ruff",
     "mypy",

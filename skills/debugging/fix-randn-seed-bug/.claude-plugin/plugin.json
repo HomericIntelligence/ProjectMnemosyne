@@ -7,6 +7,5 @@
   },
   "category": "debugging",
   "date": "2025-12-30",
-  "tags": ["random", "seed", "reproducibility", "testing", "mojo", "prng"],
   "skills": "./skills"
 }

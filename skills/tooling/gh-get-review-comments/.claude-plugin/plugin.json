@@ -4,6 +4,5 @@
   "description": "Retrieve all review comments from a pull request using the GitHub API. Use when you need to see what feedback has been provided on a PR.",
   "category": "tooling",
   "date": "2026-01-18",
-  "tags": ["github", "pr", "review", "api"],
   "skills": "./skills"
 }

@@ -8,6 +8,5 @@
   "category": "tooling",
   "source_project": "ProjectScylla",
   "date": "2025-01-01",
-  "tags": ["github", "worktree", "parallel", "batch", "issues", "implementation"],
   "skills": "./skills"
 }

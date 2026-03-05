@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Fix ModuleNotFoundError when patching a scripts/ module that isn't on sys.path during single-file pytest runs; add sys.path guard to conftest.py",
   "category": "debugging",
-  "tags": ["pytest", "sys.path", "isolation", "conftest", "mock", "patch", "scripts", "pythonpath", "ModuleNotFoundError"],
   "date": "2026-03-02",
   "user-invocable": false
 }

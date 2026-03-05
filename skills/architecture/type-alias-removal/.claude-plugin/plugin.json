@@ -4,7 +4,6 @@
   "description": "Systematic workflow for removing redundant type aliases and using explicit variant names",
   "category": "architecture",
   "date": "2026-02-15",
-  "tags": [
     "refactoring",
     "type-safety",
     "code-clarity",

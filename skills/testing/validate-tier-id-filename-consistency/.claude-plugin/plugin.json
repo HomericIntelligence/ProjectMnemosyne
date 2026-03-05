@@ -4,7 +4,6 @@
   "description": "Validate that config field values match their source filename at the aggregation layer to prevent silent key/value disagreement",
   "category": "testing",
   "date": "2026-02-22",
-  "tags": [
     "config",
     "validation",
     "tier",

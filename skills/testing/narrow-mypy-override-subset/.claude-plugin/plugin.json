@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Narrow a broad mypy module glob override to an explicit list when a subset of subdirs is fully annotated. Use when annotating tests/unit/<subdir>/ and removing it from a blanket suppressor.",
   "category": "testing",
-  "tags": ["mypy", "type-checking", "testing", "annotations", "overrides", "pyproject"],
   "date": "2026-03-02",
   "user-invocable": false
 }

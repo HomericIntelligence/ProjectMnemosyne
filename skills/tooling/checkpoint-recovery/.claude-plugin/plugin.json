@@ -4,7 +4,6 @@
   "description": "Implementing checkpoint/resume functionality for long-running batch processes with rate limit handling",
   "category": "tooling",
   "date": "2026-02-12",
-  "tags": [
     "checkpoint",
     "resume",
     "batch-processing",

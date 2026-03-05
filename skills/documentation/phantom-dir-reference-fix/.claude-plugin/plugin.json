@@ -4,7 +4,6 @@
   "description": "Remove phantom directory references from documentation when a referenced path does not exist in the repository.",
   "category": "documentation",
   "date": "2026-01-01",
-  "tags": [
     "documentation",
     "cleanup",
     "testing",

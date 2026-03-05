@@ -3,7 +3,6 @@
   "version": "1.1.0",
   "description": "Patterns for testing if-None RuntimeError precondition guards in Python — covers unit test structure, parametrized fixtures, closure guards via action builders, inline run() guards with side-effect patching, and the local-import patch target rule.",
   "category": "testing",
-  "tags": ["unit-tests", "runtime-error", "guards", "preconditions", "pytest", "parametrize", "closures", "local-import-patch", "projectscylla"],
   "created": "2026-02-27",
   "updated": "2026-03-02",
   "project": "ProjectScylla",

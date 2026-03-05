@@ -4,7 +4,6 @@
   "description": "Skill: reenable-precommit-hook. Use when working with reenable precommit hook.",
   "category": "ci-cd",
   "date": "2026-01-01",
-  "tags": [
     "reenable",
     "precommit",
     "hook"

@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Integration test patterns for stateful additive resume behavior in ProjectScylla — validates that sequential invocations with expanding --tiers/--max-subtests never reset existing checkpoint state.",
   "category": "testing",
-  "tags": ["integration-tests", "state-machine", "resume", "checkpoint", "pytest", "projectscylla"],
   "created": "2026-02-27",
   "project": "ProjectScylla",
   "issue": "HomericIntelligence/ProjectScylla#1111",

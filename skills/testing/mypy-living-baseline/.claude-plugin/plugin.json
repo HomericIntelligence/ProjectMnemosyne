@@ -4,7 +4,6 @@
   "description": "Skill: mypy-living-baseline. Use when working with mypy living baseline.",
   "category": "testing",
   "date": "2026-01-01",
-  "tags": [
     "mypy",
     "living",
     "baseline"

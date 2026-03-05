@@ -4,7 +4,6 @@
   "description": "Move configuration files from a dedicated config/ directory into tests/ (or another appropriate location) when config is only consumed by the test infrastructure. Use when: a config directory contains files superseded by a test-side system, config files are referenced by path-hardcoded loaders, or you want to eliminate a legacy config directory entirely.",
   "category": "architecture",
   "date": "2026-02-19",
-  "tags": [
     "config-migration",
     "consolidation",
     "refactoring",

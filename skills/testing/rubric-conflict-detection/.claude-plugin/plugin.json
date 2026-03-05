@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "category": "testing",
   "description": "Pattern for detecting and handling conflicting rubric weights across experiments in a multi-experiment data loader",
-  "tags": ["rubric", "conflict-detection", "loader", "data-integrity", "cross-experiment", "research-pipeline"],
   "author": "Claude Sonnet 4.6",
   "date": "2026-02-27",
   "project": "ProjectScylla",

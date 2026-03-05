@@ -4,7 +4,6 @@
   "description": "Add ARG EXTRAS to Docker Layer 2 so optional-dependency groups land in the build cache and are not reinstalled on every source change",
   "category": "tooling",
   "date": "2026-02-27",
-  "tags": [
     "docker",
     "dockerfile",
     "caching",

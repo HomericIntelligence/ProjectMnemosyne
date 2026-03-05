@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Patterns for reorganizing E2E results directory structure to flatten hierarchy, share workspaces, and generate hierarchical reports",
   "category": "evaluation",
-  "tags": [
     "e2e",
     "directory-structure",
     "results",

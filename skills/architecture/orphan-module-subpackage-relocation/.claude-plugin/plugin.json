@@ -4,6 +4,5 @@
   "description": "Relocate an orphaned root-level module into the correct sub-package. Use when a module sits at the package root but logically belongs in an existing sub-package, or a quality audit identifies structural inconsistencies where one module is an exception.",
   "category": "architecture",
   "date": "2026-02-22",
-  "tags": ["refactoring", "structure", "imports", "sub-package", "KISS", "YAGNI"],
   "skills": "./skills"
 }

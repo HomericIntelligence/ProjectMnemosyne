@@ -4,5 +4,4 @@
   "description": "Pin unpinned pip dependencies in a Dockerfile builder stage for reproducible builds. Use when a pip install lacks a version specifier and you need to lock it to match pyproject.toml or pixi.toml, then add a static regression test.",
   "category": "ci-cd",
   "date": "2026-02-27",
-  "tags": ["docker", "dockerfile", "pip", "pinning", "reproducible-builds", "layer-cache", "hatchling", "regression-test", "static-analysis"]
 }

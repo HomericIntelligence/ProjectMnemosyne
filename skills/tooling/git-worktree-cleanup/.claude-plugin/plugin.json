@@ -4,7 +4,6 @@
   "description": "Clean up stale git worktrees after parallel wave execution. Use when multiple worktrees remain from merged PRs, especially nested worktrees from agent-in-agent workflows.",
   "category": "tooling",
   "date": "2026-03-05",
-  "tags": [
     "git",
     "worktree",
     "cleanup",

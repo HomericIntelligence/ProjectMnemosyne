@@ -4,7 +4,6 @@
   "description": "Systematically remove deprecated backward compatibility code and tests",
   "category": "architecture",
   "date": "2026-02-13",
-  "tags": [
     "refactoring",
     "technical-debt",
     "cleanup",

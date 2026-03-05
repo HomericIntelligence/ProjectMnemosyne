@@ -4,6 +4,5 @@
   "description": "Address PR review feedback by making changes and replying to comments. Use when a PR has open review comments needing responses.",
   "category": "tooling",
   "date": "2026-01-18",
-  "tags": ["github", "pr", "review", "feedback"],
   "skills": "./skills"
 }

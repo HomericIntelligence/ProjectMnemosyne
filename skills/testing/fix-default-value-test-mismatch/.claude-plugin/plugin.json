@@ -4,7 +4,6 @@
   "description": "Fix test failures when default values change in source code but tests aren't updated",
   "category": "testing",
   "date": "2026-02-13",
-  "tags": [
     "testing",
     "ci",
     "defaults",

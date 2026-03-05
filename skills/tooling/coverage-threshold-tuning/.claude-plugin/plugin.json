@@ -4,7 +4,6 @@
   "description": "Tune pytest coverage thresholds to match actual coverage baselines and avoid CI failures",
   "category": "tooling",
   "date": "2026-02-15",
-  "tags": [
     "pytest",
     "coverage",
     "ci-cd",

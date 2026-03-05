@@ -4,7 +4,6 @@
   "category": "ci-cd",
   "version": "1.0.0",
   "date": "2026-03-02",
-  "tags": ["docker", "ci", "build-timing", "cache-efficiency", "github-actions", "performance-measurement"],
   "user-invocable": false,
   "project": "ProjectScylla",
   "issue": "#1173",

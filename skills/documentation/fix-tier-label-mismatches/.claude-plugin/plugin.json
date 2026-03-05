@@ -4,5 +4,4 @@
   "description": "Fix incorrect tier labels in ProjectScylla documentation (T3→T2, T4→T3, T5→T4 pattern). Use when quality audits flag tier name/number mismatches in .claude/shared/metrics-definitions.md or CLAUDE.md tier table references.",
   "category": "documentation",
   "date": "2026-03-03",
-  "tags": ["documentation", "tier-labels", "metrics-definitions", "mismatch", "quality-audit", "fix"]
 }

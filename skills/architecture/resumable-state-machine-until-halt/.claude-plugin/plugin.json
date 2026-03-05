@@ -4,7 +4,6 @@
   "description": "Fix --until semantics in resumable state machines: sentinel exception that transitions state before stopping, additive CLI tier merging across checkpoint states, ephemeral CLI arg preservation after config reload. Use when a state machine's advance() drops into a stuck state because an exception fires before the state update.",
   "category": "architecture",
   "date": "2026-02-25",
-  "tags": [
     "state-machine",
     "until-halt",
     "sentinel-exception",

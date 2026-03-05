@@ -4,6 +4,5 @@
   "description": "Reply to PR review comments using the correct GitHub API endpoint. Use when responding to inline code review feedback (not gh pr comment).",
   "category": "tooling",
   "date": "2026-01-18",
-  "tags": ["github", "pr", "review", "api"],
   "skills": "./skills"
 }

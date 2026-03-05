@@ -7,6 +7,5 @@
   },
   "category": "ci-cd",
   "date": "2026-01-08",
-  "tags": ["ci-cd", "validation", "yaml", "frontmatter", "github-actions", "pr-fixes"],
   "skills": "./skills"
 }

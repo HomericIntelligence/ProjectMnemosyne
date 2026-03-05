@@ -4,7 +4,6 @@
   "description": "Diagnose and fix markdownlint CI failures that block multiple PRs due to issues in main branch",
   "category": "ci-cd",
   "date": "2026-02-14",
-  "tags": [
     "ci",
     "pre-commit",
     "markdownlint",

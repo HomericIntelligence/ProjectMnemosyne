@@ -4,5 +4,4 @@
   "description": "Patterns for separating Cytoscape.js node-click highlight (visual-only dimming) from filter-based hiding, and for working around cytoscape-node-html-label overlay persistence bugs. Use when: (1) node clicks should highlight without hiding other nodes, (2) HTML overlay cards remain visible after display:none is applied to their nodes, (3) end-ranking/terminal phase nodes should only appear for the last date, (4) team trajectory filter should compact layout.",
   "category": "architecture",
   "date": "2026-02-28",
-  "tags": ["cytoscape", "highlight", "filter", "html-overlay", "node-click", "trajectory", "dimming", "tournament-viz"]
 }

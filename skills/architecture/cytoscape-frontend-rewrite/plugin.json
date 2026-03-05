@@ -2,7 +2,6 @@
   "name": "cytoscape-frontend-rewrite",
   "version": "1.0.0",
   "category": "architecture",
-  "tags": ["cytoscape", "javascript", "layout", "court-slot-packing", "dag", "filters", "spa", "tournament", "rewrite"],
   "created": "2026-02-27",
   "updated": "2026-02-27",
   "description": "Full rewrite of a Cytoscape.js tournament visualization frontend: court-slot packing layout (no vertical gaps), composable day+team filters, multi-team trajectory highlighting, and single bottom toolbar. Covers the shared layout helper pattern, filter composition invariants, and multi-team click-to-highlight.",

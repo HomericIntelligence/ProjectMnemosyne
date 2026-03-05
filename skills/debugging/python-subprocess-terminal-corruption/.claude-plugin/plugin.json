@@ -4,7 +4,6 @@
   "description": "Fix terminal corruption from Python subprocess management and None-safe error handling patterns",
   "category": "debugging",
   "date": "2026-02-13",
-  "tags": [
     "python",
     "subprocess",
     "terminal",

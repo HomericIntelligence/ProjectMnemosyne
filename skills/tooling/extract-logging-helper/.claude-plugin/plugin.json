@@ -4,7 +4,6 @@
   "description": "Skill: extract-logging-helper. Use when working with extract logging helper.",
   "category": "tooling",
   "date": "2026-01-01",
-  "tags": [
     "extract",
     "logging",
     "helper"

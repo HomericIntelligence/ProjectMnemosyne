@@ -4,7 +4,6 @@
   "description": "Extend doc/config consistency scripts to validate README.md test count claims against actual pytest --collect-only output, with graceful skip and 10% tolerance",
   "category": "ci-cd",
   "date": "2026-03-02",
-  "tags": [
     "pytest",
     "documentation",
     "drift-detection",
