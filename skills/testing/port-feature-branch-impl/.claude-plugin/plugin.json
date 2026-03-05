@@ -1,0 +1,8 @@
+{
+  "name": "port-feature-branch-impl",
+  "version": "1.0.0",
+  "description": "Port an implementation from a feature branch worktree when the PR was never merged to main. Use when: (1) a test references a TODO blocked on a feature that exists only on a stale branch, (2) a follow-up issue assumes a prior PR landed but it did not, (3) cherry-picking from a worktree is faster than waiting for the blocked PR.",
+  "category": "testing",
+  "date": "2026-03-05",
+  "tags": ["worktree", "cherry-pick", "blocked-todo", "mojo", "port"]
+}
