@@ -1,0 +1,8 @@
+{
+  "name": "delete-deprecated-file",
+  "version": "1.0.0",
+  "description": "Delete a deprecated file from the codebase after verifying no remaining imports or references. Use when: (1) a file is marked DEPRECATED and needs removal, (2) consolidation leaves behind stub/re-export files, (3) cleanup issues require file deletion with safety checks.",
+  "category": "tooling",
+  "date": "2026-03-05",
+  "tags": ["cleanup", "deprecated", "deletion", "consolidation", "refactoring"]
+}
