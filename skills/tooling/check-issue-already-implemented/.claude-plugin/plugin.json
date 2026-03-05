@@ -1,0 +1,8 @@
+{
+  "name": "check-issue-already-implemented",
+  "version": "1.0.0",
+  "description": "Check if a GitHub issue was already implemented in a previous session before starting work. Use when: (1) implementing an issue whose branch already exists, (2) the branch has recent commits, (3) a PR already exists for the issue.",
+  "category": "tooling",
+  "date": "2026-03-05",
+  "tags": ["github", "issue", "worktree", "pr", "deduplication", "idempotency"]
+}
