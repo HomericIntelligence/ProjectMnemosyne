@@ -1,0 +1,8 @@
+{
+  "name": "mojo-dtype-partial-support-guard",
+  "version": "1.0.0",
+  "description": "Diagnose and guard against partially-supported Mojo DTypes where the type exists in the type system but runtime operations silently fail. Use when: (1) a newly-enabled DType test passes dtype existence checks but fails value round-trip assertions, (2) CI shows 'Element 0 = 0.0, expected N.N' after enabling a previously-skipped dtype test, (3) DType.bfloat16 or other recently-added dtypes produce zero-filled tensors despite explicit value assignment.",
+  "category": "debugging",
+  "date": "2026-03-05",
+  "tags": ["mojo", "dtype", "bfloat16", "ci", "test-skip", "partial-support"]
+}
