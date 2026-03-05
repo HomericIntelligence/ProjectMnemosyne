@@ -1,7 +1,7 @@
 ---
 name: tighten-except-exception-clauses
 description: Audit and tighten broad except Exception clauses in Python — replacing with specific types where feasible and annotating legitimate broad catches with justification comments
-category: refactoring
+category: architecture
 date: 2026-03-03
 tags: [python, exceptions, refactoring, code-quality, ruff, pre-commit, subprocess, OSError, json]
 user-invocable: false
