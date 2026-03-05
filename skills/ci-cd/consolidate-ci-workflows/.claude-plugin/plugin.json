@@ -1,0 +1,8 @@
+{
+  "name": "consolidate-ci-workflows",
+  "version": "1.0.0",
+  "description": "Consolidate GitHub Actions workflows by extracting composite actions and merging redundant workflows. Use when: (1) repo has 15+ workflows with repeated Pixi setup or PR comment JS blocks, (2) build validation workflow duplicates work already done in a test workflow, (3) security workflows overlap in trigger conditions, (4) placeholder-only jobs exist with no real implementation.",
+  "category": "ci-cd",
+  "date": "2026-03-05",
+  "tags": ["github-actions", "composite-actions", "workflow-consolidation", "deduplication", "pixi", "pr-comments"]
+}
