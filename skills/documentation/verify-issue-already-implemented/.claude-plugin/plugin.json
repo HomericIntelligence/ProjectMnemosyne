@@ -1,0 +1,8 @@
+{
+  "name": "verify-issue-already-implemented",
+  "version": "1.0.0",
+  "description": "Check whether a GitHub issue is already implemented before starting work. Use when: (1) handed an issue via .claude-prompt-NNNN.md with branch already checked out, (2) git log shows a recent commit matching the issue title, (3) an open PR already exists for the branch.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["github", "issue", "verification", "idempotency", "auto-impl", "pr", "worktree"]
+}
