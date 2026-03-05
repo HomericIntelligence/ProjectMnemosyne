@@ -1,0 +1,13 @@
+{
+  "name": "worktree-switch",
+  "version": "1.0.0",
+  "description": "Switch between git worktrees for parallel development. Use when working on multiple issues simultaneously.",
+  "category": "tooling",
+  "date": "2025-01-01",
+  "tags": [
+    "tooling",
+    "worktree",
+    "git-worktree",
+    "parallel-development"
+  ]
+}
