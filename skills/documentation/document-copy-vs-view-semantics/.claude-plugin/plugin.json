@@ -1,0 +1,8 @@
+{
+  "name": "document-copy-vs-view-semantics",
+  "version": "1.0.0",
+  "description": "Document and clarify copy vs view semantics in tensor/array slicing operations by updating docstrings and test names. Use when: (1) a codebase has NOTE markers flagging undocumented behavior, (2) test function names contradict what the test actually asserts, (3) docstrings say 'view' but implementation returns a copy (or vice versa), (4) a cleanup issue asks to document or decide on slice semantics.",
+  "category": "documentation",
+  "date": "2026-03-04",
+  "tags": ["mojo", "slicing", "semantics", "docstrings", "copy", "view", "tensor"]
+}
