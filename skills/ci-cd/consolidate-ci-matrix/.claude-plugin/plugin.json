@@ -1,0 +1,8 @@
+{
+  "name": "consolidate-ci-matrix",
+  "version": "1.0.0",
+  "description": "Consolidate GitHub Actions matrix test groups to reduce job overhead. Use when: (1) CI matrix has too many groups (>20) causing excessive startup overhead, (2) reducing CI wall time without losing test coverage, (3) grouping related test directories that rarely fail independently.",
+  "category": "ci-cd",
+  "date": "2026-03-05",
+  "tags": ["github-actions", "matrix", "test-groups", "ci-optimization", "mojo"]
+}
