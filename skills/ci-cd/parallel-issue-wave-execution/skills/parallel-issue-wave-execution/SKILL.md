@@ -59,15 +59,19 @@ Send a **single message** with 4-5 `Agent(isolation="worktree")` calls to run tr
 
 ```
 1. gh issue view {N} --comments
-2. git checkout -b {N}-description origin/main
+2. git fetch origin && git rebase origin/main  # ALWAYS rebase first (critical for late waves)
 3. Read the relevant files, implement the minimal change
-4. pre-commit run --all-files (fix any failures)
-5. pixi install  # if pyproject.toml or pixi.toml changed
+4. pre-commit run --files <changed-files>  # targeted, not --all-files
+5. pixi install && git add pixi.lock  # REQUIRED if pyproject.toml or pixi.toml changed
 6. git add <files> && git commit -m "type(scope): description"
 7. git push -u origin {N}-description
 8. gh pr create --title "..." --body "Closes #{N}"
 9. gh pr merge --auto --rebase <pr-number>
 ```
+
+**Note on step 5**: Even non-dependency changes to `pyproject.toml` (e.g. removing a ruff
+ignore rule) change the scylla package SHA in `pixi.lock`. Always run `pixi install` and
+commit the updated `pixi.lock` if `pyproject.toml` was modified.
 
 ### Phase 3: Wait and Verify Each Wave
 
@@ -156,14 +160,29 @@ fail_under = 9
       --cov-fail-under=75
 ```
 
-### pixi.lock Must Be Regenerated
+### pixi.lock Must Be Regenerated After pyproject.toml Changes
 
-Any change to `pyproject.toml` or `pixi.toml` requires `pixi install` to regenerate `pixi.lock`. Forgetting this causes CI to fail with lock-file-out-of-date errors.
+`pixi.lock` contains a SHA256 hash of the local editable package (`./`). Any change to
+`pyproject.toml` — even non-dependency changes like removing a ruff rule from the ignore
+list — changes the package hash. When CI runs `pixi install --locked` with a stale hash,
+it fails with `lock-file not up-to-date with the workspace`.
+
+**This only happens when:**
+- A PR modifies `pyproject.toml` (even metadata-only changes)
+- The pixi environment cache misses in CI (cache is keyed on the lock file hash)
+
+**Symptom**: CI passes when cache hits (old lock file hash still works) but fails on cache
+miss (tries fresh install with `--locked` against the stale SHA).
 
 ```bash
 # After any pyproject.toml or pixi.toml change:
-pixi install
-git add pixi.lock && git commit -m "fix(lock): regenerate pixi.lock after <description>"
+pixi install          # regenerates pixi.lock with correct SHA
+git add pixi.lock && git commit -m "fix(lock): update pixi.lock SHA after pyproject.toml change"
+```
+
+**Quick diagnosis**:
+```bash
+git diff HEAD -- pixi.lock  # if SHA changed, you must commit the updated lock file
 ```
 
 ### altair Upper Bound and Python 3.14t
@@ -227,6 +246,9 @@ git switch main
 | `git restore <file>` to undo unstaged changes | Blocked by Safety Net | Use `git show HEAD:<file> > /tmp/backup && cp /tmp/backup <file>` |
 | Creating branch `skill/...` in wrong repo | Accidentally created in Scylla instead of Mnemosyne | `git branch -d` (need user approval for Safety Net) |
 | `--cov=scripts` in addopts without `--override-ini` in unit CI step | Unit test coverage drops below 75% (scripts/ barely covered in unit tests) | Add `--override-ini="addopts="` with explicit `--cov=scylla` to unit CI step |
+| PR changing `pyproject.toml` (non-dependency change, e.g. removing a ruff rule) — CI fails with `lock-file not up-to-date` | Local editable package SHA in `pixi.lock` changes whenever any source file (including `pyproject.toml`) changes. CI `pixi install --locked` fails when cache misses. | After any `pyproject.toml` change, run `pixi install` and commit the updated `pixi.lock` SHA alongside the code change. See `pixi-lock-rebase-regenerate` skill. |
+| Deeply nested worktree agent (Wave N agent inside Wave N-1 worktree) carrying extra commits | Wave 4 agent created a PR with 2 commits: its own + a duplicate tier-labels fix from the parent worktree. PR was rejected due to duplicate commit. | Close the PR, cherry-pick only the relevant commit onto a fresh branch from `origin/main`. Or, for Wave 4+, always instruct agents to rebase on `origin/main` before making changes (`git fetch origin && git rebase origin/main`). |
+| Updating CI `pixi-version` from `v0.62.2` to `v0.63.2` to fix lock-file error | Pre-commit still failed with `lock-file not up-to-date` even with correct pixi version | The real cause was the local editable package SHA mismatch (pyproject.toml changed), not the pixi version. Fix: `pixi install` + commit `pixi.lock`. The pixi version update was a separate valid improvement. |
 
 ## Results & Parameters
 
@@ -300,3 +322,4 @@ gh pr close <old-pr> --comment "Superseded by #<new-pr>"
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectScylla | 35 LOW issues, 8 parallel waves, March 2026 | [notes.md](../../references/notes.md) |
+| ProjectScylla | 14 LOW issues, 4 parallel waves, March 2026 (second run) | pyproject.toml change required pixi.lock SHA update; nested worktree carried stale commits |
