@@ -1,0 +1,8 @@
+{
+  "name": "mojo-comptime-alias-removal",
+  "version": "1.0.0",
+  "description": "Remove deprecated Mojo comptime type aliases and replace with direct type references. Use when: (1) cleaning up deprecated `comptime Alias = Type` definitions in Mojo, (2) removing backward-compat aliases after type consolidation, (3) updating function signatures and exports after alias removal.",
+  "category": "architecture",
+  "date": "2026-03-05",
+  "tags": ["mojo", "type-alias", "comptime", "cleanup", "refactoring", "backward-compat"]
+}
