@@ -28,7 +28,7 @@ Capture session learnings and create a new skill plugin with PR.
 
 | Mistake | Symptom | Fix |
 |---------|---------|-----|
-| Forgot `.claude-plugin/plugin.json` | "Missing .claude-plugin/plugin.json" | Create with name, version, description, category, date, tags |
+| Forgot `.claude-plugin/plugin.json` | "Missing .claude-plugin/plugin.json" | Create with name, version, description, category, date |
 | Description < 20 chars | "Description too short" | Add "Use when:" trigger conditions |
 | Failed Attempts as prose | "should contain a table" | Use pipe-delimited table format |
 | Missing frontmatter | "missing YAML frontmatter" | Add `---` delimiters at top of SKILL.md |
