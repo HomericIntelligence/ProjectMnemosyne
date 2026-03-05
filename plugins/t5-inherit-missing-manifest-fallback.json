@@ -1,0 +1,8 @@
+{
+  "name": "t5-inherit-missing-manifest-fallback",
+  "version": "1.0.0",
+  "description": "TRIGGER CONDITIONS: T5 inheritance crash with 'ValueError: config_manifest.json not found' when running with --retry-errors. Use when: (1) all subtests in a parent tier scored 0.0 and tiebreaker selected a subtest whose run failed before _save_resource_manifest() executed, (2) build_merged_baseline() raises on a missing config_manifest.json. Fix: replace hard raise with sorted-sibling fallback; skip tier entirely (with warning) if no subtest has a manifest.",
+  "category": "debugging",
+  "date": "2026-03-05",
+  "tags": ["debugging", "t5", "inheritance", "config-manifest", "tier-manager", "build-merged-baseline", "fallback", "graceful-degradation", "retry-errors", "python", "scylla"]
+}
