@@ -1,3 +1,11 @@
+---
+name: quality-audit-issue-already-fixed
+description: "Verify and close quality audit issues that reference problems already resolved in the codebase"
+category: documentation
+date: 2026-03-03
+user-invocable: false
+---
+
 # Quality Audit Issue Already Fixed
 
 ## Overview
