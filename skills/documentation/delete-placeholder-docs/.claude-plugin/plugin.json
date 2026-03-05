@@ -1,0 +1,8 @@
+{
+  "name": "delete-placeholder-docs",
+  "version": "1.0.0",
+  "description": "Delete empty placeholder documentation stubs and remove all broken links to them. Use when: (1) docs contain only placeholder text like 'Content here.', (2) a cleanup issue targets stub files, (3) YAGNI principle requires removing premature documentation.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["documentation", "cleanup", "yagni", "placeholder", "broken-links"]
+}
