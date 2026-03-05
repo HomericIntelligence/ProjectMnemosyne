@@ -1,0 +1,8 @@
+{
+  "name": "verify-issue-already-implemented",
+  "version": "1.0.0",
+  "description": "Verify whether a GitHub issue has already been implemented before starting work. Use when: (1) assigned to implement a GitHub issue, (2) issue prompt file exists in worktree, (3) before writing any code to avoid duplicate work.",
+  "category": "architecture",
+  "date": "2026-03-05",
+  "tags": ["github", "issues", "verification", "idempotency", "git-log", "worktree"]
+}
