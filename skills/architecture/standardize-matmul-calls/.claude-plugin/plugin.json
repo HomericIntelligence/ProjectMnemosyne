@@ -1,0 +1,8 @@
+{
+  "name": "standardize-matmul-calls",
+  "version": "1.0.0",
+  "description": "Convert A.__matmul__(B) dunder method calls to matmul(A, B) function syntax for consistency. Use when: (1) codebase has mixed matmul call patterns, (2) standardizing operator vs function syntax in Mojo/ML code, (3) refactoring dunder method calls to idiomatic function syntax.",
+  "category": "architecture",
+  "date": "2026-03-04",
+  "tags": ["mojo", "refactoring", "matmul", "standardization", "ml-odyssey"]
+}
