@@ -76,6 +76,20 @@
       ]
     },
     {
+      "name": "claude-code-settings-config",
+      "description": "Configure Claude Code settings.json per test workspace to control thinking mode via API rather than prompt injection. Use when implementing workspace-level configuration for E2E tests.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/claude-code-settings-config",
+      "category": "architecture",
+      "tags": [
+        "claude-code",
+        "settings",
+        "configuration",
+        "e2e",
+        "testing"
+      ]
+    },
+    {
       "name": "codebase-consolidation",
       "description": "Systematic approach to finding and consolidating duplicate code, aligning implementations to consistent patterns, and documenting intentional type variations. Use when: analyzing codebase for duplicates, unifying implementations across modules, creating backward-compatible refactors.",
       "version": "1.0.0",
@@ -89,6 +103,23 @@
         "type-alias",
         "cross-reference",
         "tech-debt"
+      ]
+    },
+    {
+      "name": "codebase-quality-plan-execution",
+      "description": "Execute a pre-analyzed codebase quality improvement plan with full test verification. Use when: (1) you have a static analysis / code-review document with categorized bugs and dead code, (2) changes span multiple files with interdependencies (type annotations, constructor signatures, serialization fields), (3) you need to keep all existing tests green throughout. Verified on Python scraper + JS frontend with 175 pytest tests.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/codebase-quality-plan-execution",
+      "category": "architecture",
+      "tags": [
+        "architecture",
+        "bug-fix",
+        "dead-code-removal",
+        "type-safety",
+        "refactoring",
+        "test-driven",
+        "python",
+        "javascript"
       ]
     },
     {
@@ -121,6 +152,23 @@
         "wsl2",
         "temp-dirs",
         "resource-leak"
+      ]
+    },
+    {
+      "name": "cytoscape-interaction-patterns",
+      "description": "Patterns for separating Cytoscape.js node-click highlight (visual-only dimming) from filter-based hiding, and for working around cytoscape-node-html-label overlay persistence bugs. Use when: (1) node clicks should highlight without hiding other nodes, (2) HTML overlay cards remain visible after display:none is applied to their nodes, (3) end-ranking/terminal phase nodes should only appear for the last date, (4) team trajectory filter should compact layout.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/cytoscape-interaction-patterns",
+      "category": "architecture",
+      "tags": [
+        "cytoscape",
+        "highlight",
+        "filter",
+        "html-overlay",
+        "node-click",
+        "trajectory",
+        "dimming",
+        "tournament-viz"
       ]
     },
     {
@@ -287,6 +335,22 @@
       "tags": []
     },
     {
+      "name": "immutable-method-refactor",
+      "description": "Refactoring a class method to follow an immutable (purely functional) pattern by removing in-place self.attribute mutation and returning a new value instead. Use when a class has mixed patterns and consistency is needed.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/immutable-method-refactor",
+      "category": "architecture",
+      "tags": [
+        "immutable",
+        "refactor",
+        "architecture",
+        "functional",
+        "class",
+        "mutation",
+        "method"
+      ]
+    },
+    {
       "name": "implementation-alignment-validation",
       "description": "Use when validating that implementation code matches research documentation, design specs, or theoretical frameworks. Triggers: 'validate implementation', 'check alignment', 'docs vs code', 'implementation matches theory', 'verify against research'.",
       "version": "1.0.0",
@@ -332,24 +396,6 @@
         "workspace-management",
         "error-handling",
         "rerun-scripts"
-      ]
-    },
-    {
-      "name": "lazy-clone-dependency",
-      "description": "Pattern for lazy-cloning a missing external git repository dependency instead of skipping a workflow step. Use when an automation step silently skips because a required repo (e.g. ProjectMnemosyne) is not present locally.",
-      "version": "1.0.0",
-      "source": "./skills/automation/lazy-clone-dependency",
-      "category": "automation",
-      "tags": [
-        "automation",
-        "clone",
-        "dependency",
-        "planner",
-        "mnemosyne",
-        "race-condition",
-        "fcntl",
-        "threading",
-        "gh"
       ]
     },
     {
@@ -462,6 +508,23 @@
       "tags": []
     },
     {
+      "name": "resumable-state-machine-until-halt",
+      "description": "Fix --until semantics in resumable state machines: sentinel exception that transitions state before stopping, additive CLI tier merging across checkpoint states, ephemeral CLI arg preservation after config reload. Use when a state machine's advance() drops into a stuck state because an exception fires before the state update.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/resumable-state-machine-until-halt",
+      "category": "architecture",
+      "tags": [
+        "state-machine",
+        "until-halt",
+        "sentinel-exception",
+        "checkpoint",
+        "resume",
+        "additive-tiers",
+        "ephemeral-config",
+        "cli-args"
+      ]
+    },
+    {
       "name": "shared-fixture-migration",
       "description": "Migrate duplicated test fixture configs to a centralized shared location with runtime loading. Use when: test fixtures contain config files duplicated across many test directories, the same config content is repeated for each test but is actually test-independent, you want a single source of truth for shared configurations.",
       "version": "1.0.0",
@@ -478,6 +541,41 @@
       ]
     },
     {
+      "name": "single-responsibility-extraction",
+      "description": "Extracting a complex multi-concern method into a dedicated collaborator class using TDD",
+      "version": "1.0.0",
+      "source": "./skills/architecture/single-responsibility-extraction",
+      "category": "architecture",
+      "tags": [
+        "refactoring",
+        "solid",
+        "single-responsibility",
+        "extract-method",
+        "tdd",
+        "collaborator-pattern",
+        "complexity-reduction"
+      ]
+    },
+    {
+      "name": "state-machine-interrupt-handling",
+      "description": "Pattern for handling process interrupts (Ctrl+C/SIGINT) in multi-level state machine hierarchies without marking states as FAILED. Use when: a subprocess is killed by SIGINT and subprocess.run() returns normally (no exception) but you want the run to stay resumable; or when you have a 4-level state machine hierarchy (run \u2192 subtest \u2192 tier \u2192 experiment) and need a sentinel exception to propagate without triggering FAILED at any level.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/state-machine-interrupt-handling",
+      "category": "architecture",
+      "tags": [
+        "state-machine",
+        "interrupt-handling",
+        "ctrl-c",
+        "sigint",
+        "subprocess",
+        "sentinel-exception",
+        "resume",
+        "checkpoint",
+        "processpool",
+        "graceful-shutdown"
+      ]
+    },
+    {
       "name": "state-machine-wiring",
       "description": "Wire hierarchical state machines (Experiment \u2192 Tier \u2192 Run) into a production runner using closure-based action maps. Use when refactoring a monolithic execution loop into resumable, checkpoint-backed discrete states.",
       "version": "1.0.0",
@@ -491,6 +589,20 @@
         "hierarchy",
         "refactoring",
         "production"
+      ]
+    },
+    {
+      "name": "tighten-except-exception-clauses",
+      "description": "Audit and tighten broad except Exception clauses in Python. Use when replacing generic exception handlers with specific types.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/tighten-except-exception-clauses",
+      "category": "architecture",
+      "tags": [
+        "architecture",
+        "python",
+        "exceptions",
+        "code-quality",
+        "refactoring"
       ]
     },
     {
@@ -675,6 +787,19 @@
       "tags": []
     },
     {
+      "name": "codeowners-stale-entry-removal",
+      "description": "Remove stale path entries from .github/CODEOWNERS that point to non-existent directories. Use when a CODEOWNERS audit flags entries for directories that were moved or renamed.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/codeowners-stale-entry-removal",
+      "category": "ci-cd",
+      "tags": [
+        "ci-cd",
+        "codeowners",
+        "github",
+        "cleanup"
+      ]
+    },
+    {
       "name": "comprehensive-pr-review-orchestration",
       "description": "Orchestrate comprehensive PR reviews using specialized sub-reviewers. Use when reviewing complex PRs with multiple aspects to evaluate.",
       "version": "1.0.0",
@@ -715,6 +840,68 @@
       ]
     },
     {
+      "name": "doc-config-drift-check",
+      "description": "Add a CI pre-commit script that detects drift between documented metric values (CLAUDE.md, README.md) and authoritative config sources (pyproject.toml). Use when: (1) coverage threshold in docs may diverge from fail_under in pyproject.toml, (2) --cov=<path> in README may point to the wrong package, (3) you want a lightweight gate that catches future documentation staleness automatically.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/doc-config-drift-check",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "documentation",
+        "drift-detection",
+        "coverage",
+        "pyproject",
+        "consistency"
+      ]
+    },
+    {
+      "name": "doc-config-drift-test-count-check",
+      "description": "Extend doc/config consistency scripts to validate README.md test count claims against actual pytest --collect-only output, with graceful skip and 10% tolerance",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/doc-config-drift-test-count-check",
+      "category": "ci-cd",
+      "tags": [
+        "pytest",
+        "documentation",
+        "drift-detection",
+        "ci-cd",
+        "readme",
+        "test-count",
+        "consistency-check",
+        "subprocess",
+        "pre-commit"
+      ]
+    },
+    {
+      "name": "docker-build-timing-ci-measurement",
+      "description": "Add a CI job that performs two consecutive Docker builds (cold + source-only change) and reports layer-cache hit/miss times, confirming a \u226530% build-time reduction claim with actual measured data",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/docker-build-timing-ci-measurement",
+      "category": "ci-cd",
+      "tags": [
+        "docker",
+        "ci",
+        "build-timing",
+        "cache-efficiency",
+        "github-actions",
+        "performance-measurement"
+      ]
+    },
+    {
+      "name": "docker-ci-dead-step-cleanup",
+      "description": "How to resolve CI workflows referencing non-existent test directories",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/docker-ci-dead-step-cleanup",
+      "category": "ci-cd",
+      "tags": [
+        "docker",
+        "ci",
+        "github-actions",
+        "dead-code",
+        "cleanup"
+      ]
+    },
+    {
       "name": "docker-multistage-build",
       "description": "Implement multi-stage Docker builds to reduce production image size by separating build-time and runtime dependencies",
       "version": "1.0.0",
@@ -726,6 +913,104 @@
         "containerization",
         "build",
         "deployment"
+      ]
+    },
+    {
+      "name": "dockerfile-dep-pin",
+      "description": "Pin unpinned pip dependencies in a Dockerfile builder stage for reproducible builds. Use when a pip install lacks a version specifier and you need to lock it to match pyproject.toml or pixi.toml, then add a static regression test.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/dockerfile-dep-pin",
+      "category": "ci-cd",
+      "tags": [
+        "docker",
+        "dockerfile",
+        "pip",
+        "pinning",
+        "reproducible-builds",
+        "layer-cache",
+        "hatchling",
+        "regression-test",
+        "static-analysis"
+      ]
+    },
+    {
+      "name": "dockerfile-extras-validation",
+      "description": "Validate Docker build-arg EXTRAS group names against pyproject.toml [project.optional-dependencies] at build time. Use when a Dockerfile uses a python3 -c snippet to resolve optional-dependency groups from EXTRAS and typos should fail fast rather than silently omitting deps.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/dockerfile-extras-validation",
+      "category": "ci-cd",
+      "tags": [
+        "dockerfile",
+        "extras",
+        "validation",
+        "pyproject",
+        "optional-dependencies",
+        "build-arg"
+      ]
+    },
+    {
+      "name": "dockerfile-layer-caching",
+      "description": "Optimize Docker layer caching for Python packages when source changes more often than dependencies to prevent pip from reinstalling all dependencies on every source-only change.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/dockerfile-layer-caching",
+      "category": "ci-cd",
+      "tags": [
+        "docker",
+        "dockerfile",
+        "layer-caching",
+        "pip",
+        "python",
+        "pyproject.toml",
+        "build-optimization",
+        "ci-cd"
+      ]
+    },
+    {
+      "name": "dockerfile-python-version-guard",
+      "description": "Guard Dockerfile Python version constraints via static tests and inline documentation when a stdlib module has a minimum Python version requirement (e.g., tomllib >= 3.11). Use when: (1) a Dockerfile uses a Python stdlib module introduced after 3.6, (2) you need a regression test to prevent base image downgrades, (3) adding version constraint documentation inline in the Dockerfile.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/dockerfile-python-version-guard",
+      "category": "ci-cd",
+      "tags": [
+        "docker",
+        "python",
+        "tomllib",
+        "version-constraint",
+        "static-analysis",
+        "regression-guard"
+      ]
+    },
+    {
+      "name": "dockerfile-tomllib-fallback",
+      "description": "Add a tomllib/tomli try/except fallback to a Dockerfile dependency-extraction RUN layer to support Python 3.10 as well as 3.11+. Use when a Dockerfile builder stage must work on Python 3.10 and needs to parse pyproject.toml for dependencies.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/dockerfile-tomllib-fallback",
+      "category": "ci-cd",
+      "tags": [
+        "dockerfile",
+        "tomllib",
+        "tomli",
+        "python3.10",
+        "python3.11",
+        "pyproject",
+        "dependencies"
+      ]
+    },
+    {
+      "name": "docstring-fragment-validator",
+      "description": "Pattern for adding a pre-commit hook that validates Python docstrings as complete semantic units (not line-by-line), preventing false-positive fragment detection during audits of correctly-wrapped multi-line docstrings",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/docstring-fragment-validator",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "docstrings",
+        "ast",
+        "audit",
+        "false-positives",
+        "python",
+        "hooks",
+        "semantic-validation"
       ]
     },
     {
@@ -743,6 +1028,21 @@
         "github-actions",
         "ci-cd",
         "documentation"
+      ]
+    },
+    {
+      "name": "enforce-unit-test-structure-hook",
+      "description": "Pattern for adding a pre-commit hook that enforces tests/unit/ mirroring convention \u2014 fails on test_*.py files at the root level of the unit test directory",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/enforce-unit-test-structure-hook",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "unit-tests",
+        "test-structure",
+        "hooks",
+        "enforcement",
+        "mirroring"
       ]
     },
     {
@@ -953,6 +1253,24 @@
       ]
     },
     {
+      "name": "parallel-issue-wave-execution",
+      "description": "Pattern for implementing 30+ GitHub issues in parallel waves using isolated git worktrees. Use when: (1) bulk-closing a backlog of LOW/MEDIUM/MEDIUM issues classified by difficulty, (2) running 4-5 sub-agents simultaneously with isolation='worktree', (3) fixing cascading CI failures where a shared config change (e.g. --cov-fail-under) breaks all PRs created before the fix, (4) rebasing stale PRs onto current main after a breaking config change lands.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/parallel-issue-wave-execution",
+      "category": "ci-cd",
+      "tags": [
+        "parallel",
+        "worktree",
+        "bulk-pr",
+        "issue-backlog",
+        "coverage",
+        "pixi",
+        "altair",
+        "ci-fix",
+        "rebase"
+      ]
+    },
+    {
       "name": "pin-npm-dockerfile",
       "description": "Skill: pin-npm-dockerfile. Use when working with pin npm dockerfile.",
       "version": "1.0.0",
@@ -991,6 +1309,19 @@
         "ci",
         "vulnerability-scanning",
         "severity-filter"
+      ]
+    },
+    {
+      "name": "pixi-toml-dep-dedup",
+      "description": "Reconcile duplicate package version specs between [dependencies] and [feature.dev.dependencies] in pixi.toml. Use when a package appears in both sections with conflicting constraints.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pixi-toml-dep-dedup",
+      "category": "ci-cd",
+      "tags": [
+        "ci-cd",
+        "pixi",
+        "dependencies",
+        "deduplication"
       ]
     },
     {
@@ -1033,6 +1364,22 @@
       ]
     },
     {
+      "name": "pygrep-artifact-detection-hook",
+      "description": "Zero-dependency pattern for adding a pygrep pre-commit hook that blocks commits if banned phrases appear in source files. Covers regex design, ruff D301 fix, and test strategy for hooks without a backing script.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pygrep-artifact-detection-hook",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "pygrep",
+        "artifact-detection",
+        "regression-prevention",
+        "hooks",
+        "ruff-d301",
+        "testing"
+      ]
+    },
+    {
       "name": "pytest-coverage-threshold-config",
       "description": "Configure pytest coverage thresholds to enforce minimum code coverage in CI/CD pipelines with multiple report formats",
       "version": "1.0.0",
@@ -1048,6 +1395,14 @@
         "thresholds",
         "html-reports"
       ]
+    },
+    {
+      "name": "python-version-drift-detection",
+      "description": "Detect Python version drift between pyproject.toml classifiers and Dockerfile FROM line. Use when adding CI checks to prevent silent version mismatches.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/python-version-drift-detection",
+      "category": "ci-cd",
+      "tags": []
     },
     {
       "name": "quality-fix-formatting",
@@ -1076,6 +1431,20 @@
       "source": "./skills/ci-cd/rescue-broken-prs",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "ruff-rule-set-expansion",
+      "description": "Workflow for safely expanding ruff lint rule sets (B, SIM, C4, RUF) in an existing Python project: triage new violations, apply auto-fixes, handle legitimate exceptions with ignore comments",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/ruff-rule-set-expansion",
+      "category": "ci-cd",
+      "tags": [
+        "ruff",
+        "linting",
+        "python",
+        "pre-commit",
+        "code-quality"
+      ]
     },
     {
       "name": "run-precommit",
@@ -1116,6 +1485,23 @@
       ]
     },
     {
+      "name": "tier-label-consistency-check",
+      "description": "Pattern for adding a testable Python script + CI grep gate + pre-commit hook that prevents tier-number/tier-name mismatches from recurring in documentation. Use when a doc field has regressed 3+ times and manual audits have failed to prevent it.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/tier-label-consistency-check",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "ci-lint",
+        "regression-prevention",
+        "grep-gate",
+        "documentation-consistency",
+        "python-script",
+        "pytest",
+        "tier-labels"
+      ]
+    },
+    {
       "name": "validate-workflow",
       "description": "Validate GitHub Actions workflow files for syntax and correctness. Use when: (1) Creating or modifying workflows, (2) Workflow syntax errors occur, (3) Before committing workflow changes.",
       "version": "1.0.0",
@@ -1127,6 +1513,23 @@
         "yaml",
         "validation",
         "actionlint"
+      ]
+    },
+    {
+      "name": "verify-and-commit",
+      "description": "Skill: verify-and-commit. Use when taking a dirty working tree (implementation already complete) through the full verify \u2192 fix \u2192 commit \u2192 PR workflow. Covers running tests, fixing pre-commit hook failures (ruff format, ruff E501, mypy count drift), and creating a PR with auto-merge.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/verify-and-commit",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "ruff",
+        "mypy",
+        "pytest",
+        "commit",
+        "pr",
+        "verify",
+        "working-tree"
       ]
     },
     {
@@ -1198,12 +1601,22 @@
       ]
     },
     {
-      "name": "claude-code-settings-config",
-      "description": "Configure Claude Code settings.json for E2E test workspaces to control thinking mode and other workspace-level settings",
+      "name": "cytoscape-edge-visibility-optimization",
+      "description": "Cytoscape.js DAG visualization patterns: (1) hide all edges at baseline for performance \u2014 show only selected team edges on demand, (2) read-only graph via autoungrabify+autounselectify, (3) day filter phase visibility rules for start/end ranking columns, (4) node-click trajectory includes all team roles (home/away/work). Use when: a Cytoscape graph renders slowly with many edges, or has unwanted node dragging, or day filter boundary columns misbehave.",
       "version": "1.0.0",
-      "source": "./skills/debugging/claude-code-settings-config",
+      "source": "./skills/debugging/cytoscape-edge-visibility-optimization",
       "category": "debugging",
-      "tags": []
+      "tags": [
+        "cytoscape",
+        "visualization",
+        "dag",
+        "performance",
+        "edges",
+        "read-only",
+        "day-filter",
+        "trajectory",
+        "debugging"
+      ]
     },
     {
       "name": "detect-code-smells",
@@ -1220,6 +1633,22 @@
       "source": "./skills/debugging/e2e-framework-bug-fixes",
       "category": "debugging",
       "tags": []
+    },
+    {
+      "name": "e2e-framework-crash-recovery-bugs",
+      "description": "Debugging methodology for E2E framework crash recovery bugs: checkpoint race conditions, resume state machine failures, and LLM judge JSON failures",
+      "version": "1.0.0",
+      "source": "./skills/debugging/e2e-framework-crash-recovery-bugs",
+      "category": "debugging",
+      "tags": [
+        "checkpoint",
+        "threading",
+        "resume",
+        "judge",
+        "haiku",
+        "race-condition",
+        "e2e"
+      ]
     },
     {
       "name": "e2e-path-resolution-fix",
@@ -1245,6 +1674,14 @@
         "stderr-vs-stdout",
         "tdd"
       ]
+    },
+    {
+      "name": "e2e-state-machine-bugs",
+      "description": "Skill: E2E State Machine Bugs \u2014 --until off-by-one and disconnected signal handlers",
+      "version": "1.0.0",
+      "source": "./skills/debugging/e2e-state-machine-bugs",
+      "category": "debugging",
+      "tags": []
     },
     {
       "name": "extract-algorithm",
@@ -1360,6 +1797,24 @@
       ]
     },
     {
+      "name": "fix-isolation-mode-export-data-path",
+      "description": "Fix ModuleNotFoundError when patching a scripts/ module that isn't on sys.path during single-file pytest runs; add sys.path guard to conftest.py",
+      "version": "1.0.0",
+      "source": "./skills/debugging/fix-isolation-mode-export-data-path",
+      "category": "debugging",
+      "tags": [
+        "pytest",
+        "sys.path",
+        "isolation",
+        "conftest",
+        "mock",
+        "patch",
+        "scripts",
+        "pythonpath",
+        "ModuleNotFoundError"
+      ]
+    },
+    {
       "name": "fix-judge-file-access",
       "description": "Skill: Fix Judge File Access for E2E Evaluation",
       "version": "1.0.0",
@@ -1397,6 +1852,22 @@
       "source": "./skills/debugging/fix-rerun-script-errors",
       "category": "debugging",
       "tags": []
+    },
+    {
+      "name": "fix-s101-assert-to-runtimeerror",
+      "description": "Skill: fix-s101-assert-to-runtimeerror. Use when fixing Ruff S101 violations in production code by replacing bare assert guards with RuntimeError raises.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/fix-s101-assert-to-runtimeerror",
+      "category": "debugging",
+      "tags": [
+        "ruff",
+        "s101",
+        "assert",
+        "runtimeerror",
+        "production-code",
+        "code-quality",
+        "linting"
+      ]
     },
     {
       "name": "fix-yaml-config-propagation",
@@ -1630,6 +2101,14 @@
       ]
     },
     {
+      "name": "resume-checkpoint-bugs",
+      "description": "Patterns for diagnosing and fixing experiment runner resume/checkpoint bugs: uppercase INTERRUPTED state casing, max_subtests ephemeral handling, missing-subtest detection, tier state reset target",
+      "version": "1.0.0",
+      "source": "./skills/debugging/resume-checkpoint-bugs",
+      "category": "debugging",
+      "tags": []
+    },
+    {
       "name": "resume-crash-debugging",
       "description": "Pattern for debugging resume crashes in long-running experiments with checkpoint systems. Use when: (1) experiments crash on resume with FileNotFoundError or similar, (2) file path mismatches between validation and loading, (3) need to diagnose progressive degradation (works 1st time, fails on Nth resume), (4) checkpoint state is out of sync with filesystem.",
       "version": "1.0.0",
@@ -1757,6 +2236,50 @@
         "future-improvements",
         "container",
         "architecture"
+      ]
+    },
+    {
+      "name": "fix-doc-metric-discrepancies",
+      "description": "Fix stale or incorrect metric values in documentation (test counts, coverage thresholds, command paths) that drift from actual codebase state. Use when a code audit reveals contradictions between docs and pyproject.toml, README, or CI config.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/fix-doc-metric-discrepancies",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "metrics",
+        "discrepancy",
+        "readme",
+        "coverage",
+        "test-counts",
+        "typo"
+      ]
+    },
+    {
+      "name": "fix-mojo-migration-artifact",
+      "description": "Remove Mojo migration fragment artifacts from Python module docstrings that were left behind from an old migration notes pass.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/fix-mojo-migration-artifact",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "mojo",
+        "migration",
+        "docstring"
+      ]
+    },
+    {
+      "name": "fix-tier-label-mismatches",
+      "description": "Fix incorrect tier labels in ProjectScylla documentation (T3\u2192T2, T4\u2192T3, T5\u2192T4 pattern). Use when quality audits flag tier name/number mismatches in .claude/shared/metrics-definitions.md or CLAUDE.md tier table references.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/fix-tier-label-mismatches",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "tier-labels",
+        "metrics-definitions",
+        "mismatch",
+        "quality-audit",
+        "fix"
       ]
     },
     {
@@ -1907,6 +2430,50 @@
       "source": "./skills/documentation/publication-readiness-review",
       "category": "documentation",
       "tags": []
+    },
+    {
+      "name": "quality-audit-issue-already-fixed",
+      "description": "Handle quality audit issues that are already resolved in the codebase. Teaches the verify-before-edit pattern: read the file first, confirm the fix exists, check git log and issue state, then close without making changes.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/quality-audit-issue-already-fixed",
+      "category": "documentation",
+      "tags": [
+        "quality-audit",
+        "false-positive",
+        "docstring",
+        "verification",
+        "issue-triage"
+      ]
+    },
+    {
+      "name": "recurring-tier-label-fix",
+      "description": "Fix recurring tier label mismatches in metrics-definitions.md and related docs. Applies when a quality audit flags T3/T4/T5 labels that should be T2/T3/T4 per the authoritative CLAUDE.md tier table. Covers both section headers and inline references throughout the file.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/recurring-tier-label-fix",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "tier-labels",
+        "metrics-definitions",
+        "quality-audit",
+        "recurring-fix"
+      ]
+    },
+    {
+      "name": "replace-hardcoded-counts-with-live-commands",
+      "description": "Replace hardcoded test/file counts in README badges and prose with a live command users can run. Use when a CI check enforces doc accuracy but counts change frequently, making the docs flaky.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/replace-hardcoded-counts-with-live-commands",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "readme",
+        "test-counts",
+        "badges",
+        "flaky",
+        "ci",
+        "live-command"
+      ]
     },
     {
       "name": "statistical-claim-verification",
@@ -2092,6 +2659,23 @@
       ]
     },
     {
+      "name": "emit-process-metrics-from-runner",
+      "description": "Emitting process_metrics, progress_tracking, and changes blocks to run_result.json from the E2E runner stage pipeline",
+      "version": "1.0.0",
+      "source": "./skills/evaluation/emit-process-metrics-from-runner",
+      "category": "evaluation",
+      "tags": [
+        "process-metrics",
+        "e2e-runner",
+        "stages",
+        "run-result",
+        "git-diff",
+        "progress-tracking",
+        "change-tracking",
+        "tdd"
+      ]
+    },
+    {
       "name": "evaluate-model",
       "description": "Measure model performance on test datasets. Use when assessing accuracy, precision, recall, and other metrics.",
       "version": "1.0.0",
@@ -2112,6 +2696,14 @@
       "description": "Add A/B testing for experimental features in evaluation tiers using parallel sub-tests with environment variable feature flags",
       "version": "1.0.0",
       "source": "./skills/evaluation/experimental-feature-subtests",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "export-process-metrics",
+      "description": "Workflow for wiring pre-existing dataframe columns into summary.json export sections",
+      "version": "1.0.0",
+      "source": "./skills/evaluation/export-process-metrics",
       "category": "evaluation",
       "tags": []
     },
@@ -2151,6 +2743,14 @@
       "description": "Hybrid LLM judge evaluation system combining objective checklists (80%) with subjective engineering judgment (20%) to achieve low-variance (<10%) granular scoring",
       "version": "1.0.0",
       "source": "./skills/evaluation/granular-scoring-systems",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "integrate-process-metrics",
+      "description": "Workflow for integrating pre-implemented process metrics (R_Prog, CFP, PR Revert Rate) into the ProjectScylla analysis pipeline",
+      "version": "1.0.0",
+      "source": "./skills/evaluation/integrate-process-metrics",
       "category": "evaluation",
       "tags": []
     },
@@ -2313,6 +2913,26 @@
       ]
     },
     {
+      "name": "resume-from-failed-experiment",
+      "description": "Fixing E2E experiment resume when experiment_state=failed/interrupted causes immediate exit. Use when: resuming a checkpoint with FAILED or INTERRUPTED terminal state skips all work, --retry-errors flag is silently ignored in single mode, CLI-specified tiers are ignored when resuming from a failed partial run.",
+      "version": "1.0.0",
+      "source": "./skills/evaluation/resume-from-failed-experiment",
+      "category": "evaluation",
+      "tags": [
+        "e2e",
+        "checkpoint",
+        "resume",
+        "failed",
+        "interrupted",
+        "state-machine",
+        "terminal-state",
+        "retry-errors",
+        "tiers_to_run",
+        "ExperimentStateMachine",
+        "experiment_state"
+      ]
+    },
+    {
       "name": "tier-ablation-testing",
       "description": "Methodology for running comprehensive tier ablation studies across AI agent architectures (T0-T6)",
       "version": "1.0.0",
@@ -2469,6 +3089,22 @@
       "tags": []
     },
     {
+      "name": "assert-to-runtime-error-migration",
+      "description": "Skill: assert-to-runtime-error-migration. Use when replacing assert guards in production code with explicit RuntimeError raises to eliminate Ruff S101 suppressions.",
+      "version": "1.0.0",
+      "source": "./skills/testing/assert-to-runtime-error-migration",
+      "category": "testing",
+      "tags": [
+        "assert",
+        "runtime-error",
+        "ruff",
+        "S101",
+        "migration",
+        "testing",
+        "linting"
+      ]
+    },
+    {
       "name": "bats-shell-testing",
       "description": "Skill: bats-shell-testing. Use when working with bats shell testing.",
       "version": "1.0.0",
@@ -2495,6 +3131,23 @@
       "source": "./skills/testing/check-memory-safety",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "cli-deep-audit-and-fix",
+      "description": "Deep-audit CLI scripts for bugs, dead code, and validation gaps, then fix in dependency order with complementary tests. Use when: (1) a CLI script has grown organically and may have accumulated inconsistencies, (2) multiple code paths (single-mode vs batch-mode) could diverge, (3) you need to validate argparse resolution works correctly.",
+      "version": "1.0.0",
+      "source": "./skills/testing/cli-deep-audit-and-fix",
+      "category": "testing",
+      "tags": [
+        "argparse",
+        "cli",
+        "audit",
+        "batch-mode",
+        "validation",
+        "ThreadPoolExecutor",
+        "dead-code",
+        "testing"
+      ]
     },
     {
       "name": "config-filename-model-id-audit",
@@ -2564,6 +3217,22 @@
       ]
     },
     {
+      "name": "docker-entrypoint-bats",
+      "description": "Patterns for adding BATS shell tests to Docker entrypoint scripts: credential chain mocking, HOME override, system path skip guards, and set-e arithmetic exit code traps",
+      "version": "1.0.0",
+      "source": "./skills/testing/docker-entrypoint-bats",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "dockerfile-cache-arg-ordering",
+      "description": "Assert Dockerfile ARG declarations appear before RUN commands that consume them, ensuring Docker build-cache is correctly invalidated when build-args change.",
+      "version": "1.0.0",
+      "source": "./skills/testing/dockerfile-cache-arg-ordering",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "expand-ruff-rule-set",
       "description": "Skill: expand-ruff-rule-set. Use when working with expand ruff rule set.",
       "version": "1.0.0",
@@ -2616,6 +3285,40 @@
         "ci",
         "defaults",
         "unit-tests"
+      ]
+    },
+    {
+      "name": "fix-flaky-sleep-mock",
+      "description": "Fix timing-sensitive tests by replacing wall-clock assertions with deterministic time.sleep mocks",
+      "version": "1.0.0",
+      "source": "./skills/testing/fix-flaky-sleep-mock",
+      "category": "testing",
+      "tags": [
+        "testing",
+        "flaky-tests",
+        "mocking",
+        "time-sleep",
+        "pytest",
+        "retry",
+        "backoff"
+      ]
+    },
+    {
+      "name": "fix-mock-patch-call-site",
+      "description": "Fix unittest.mock.patch targets that point to the wrong namespace (definition-site instead of call-site), causing mocks to have no effect in isolated environments",
+      "version": "1.0.0",
+      "source": "./skills/testing/fix-mock-patch-call-site",
+      "category": "testing",
+      "tags": [
+        "mock",
+        "patch",
+        "unittest",
+        "subprocess",
+        "call-site",
+        "namespace",
+        "worktree",
+        "isolation",
+        "testing"
       ]
     },
     {
@@ -2747,6 +3450,22 @@
       ]
     },
     {
+      "name": "multi-division-fixture-management",
+      "description": "Organize API fixtures per-division with auto-slug subdirectories and parameterized integration tests. Use when: (1) adding a second fixture set to a flat tests/fixtures/ directory, (2) capture-fixtures CLI needs to write to named subdirs, (3) integration tests need to run against all fixture sets without manual wiring. Verified on TitanSchedule (AES volleyball tournament scraper).",
+      "version": "1.0.0",
+      "source": "./skills/testing/multi-division-fixture-management",
+      "category": "testing",
+      "tags": [
+        "testing",
+        "fixtures",
+        "integration-tests",
+        "pytest",
+        "parameterize",
+        "cli",
+        "multi-division"
+      ]
+    },
+    {
       "name": "multi-language-judge-pipelines",
       "description": "Add language-specific build pipelines (Python/Mojo) to E2E test judge systems. Use when test infrastructure needs to support multiple programming languages with different tooling (python/ruff/pytest vs mojo build/format/test). Handles pipeline routing, configuration loading, and test fixture updates.",
       "version": "1.0.0",
@@ -2761,6 +3480,21 @@
         "judge-system",
         "multi-language",
         "build-automation"
+      ]
+    },
+    {
+      "name": "multi-pr-issue-triage",
+      "description": "Triage a backlog of open GitHub issues, close resolved ones, and implement remaining issues as ordered PRs with parallel execution and dependency management",
+      "version": "1.0.0",
+      "source": "./skills/testing/multi-pr-issue-triage",
+      "category": "testing",
+      "tags": [
+        "github",
+        "pr-workflow",
+        "issue-triage",
+        "bats",
+        "graphql",
+        "shell-testing"
       ]
     },
     {
@@ -2799,6 +3533,21 @@
         "scripts",
         "coverage",
         "extension"
+      ]
+    },
+    {
+      "name": "narrow-mypy-override-subset",
+      "description": "Narrow a broad mypy module glob override to an explicit list when a subset of subdirs is fully annotated. Use when annotating tests/unit/<subdir>/ and removing it from a blanket suppressor.",
+      "version": "1.0.0",
+      "source": "./skills/testing/narrow-mypy-override-subset",
+      "category": "testing",
+      "tags": [
+        "mypy",
+        "type-checking",
+        "testing",
+        "annotations",
+        "overrides",
+        "pyproject"
       ]
     },
     {
@@ -2884,12 +3633,58 @@
       "tags": []
     },
     {
+      "name": "rubric-conflict-detection",
+      "description": "Pattern for detecting and handling conflicting rubric weights across experiments in a multi-experiment data loader",
+      "version": "1.0.0",
+      "source": "./skills/testing/rubric-conflict-detection",
+      "category": "testing",
+      "tags": [
+        "rubric",
+        "conflict-detection",
+        "loader",
+        "data-integrity",
+        "cross-experiment",
+        "research-pipeline"
+      ]
+    },
+    {
       "name": "run-tests",
       "description": "Execute test suites and report results. Use when validating code functionality.",
       "version": "1.0.0",
       "source": "./skills/testing/run-tests",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "script-unit-test-coverage",
+      "description": "Add unit test coverage for scripts/ that lack test files, following mocked I/O with pytest class-based tests.",
+      "version": "1.0.0",
+      "source": "./skills/testing/script-unit-test-coverage",
+      "category": "testing",
+      "tags": [
+        "testing",
+        "pytest",
+        "scripts",
+        "coverage",
+        "mocking"
+      ]
+    },
+    {
+      "name": "split-large-test-file",
+      "description": "Split a monolithic test file exceeding the Edit tool's ~25K token limit into focused sub-modules, preserving test count and git history",
+      "version": "1.0.0",
+      "source": "./skills/testing/split-large-test-file",
+      "category": "testing",
+      "tags": [
+        "testing",
+        "refactoring",
+        "git",
+        "pytest",
+        "test-organization",
+        "token-limit",
+        "edit-tool",
+        "large-files"
+      ]
     },
     {
       "name": "test-diff-analyzer",
@@ -2918,6 +3713,21 @@
         "mocking",
         "multiprocessing",
         "curses"
+      ]
+    },
+    {
+      "name": "until-resume-debugging",
+      "description": "Debugging and fixing --until checkpoint resume bugs in the E2E state machine pipeline",
+      "version": "1.0.0",
+      "source": "./skills/testing/until-resume-debugging",
+      "category": "testing",
+      "tags": [
+        "e2e",
+        "checkpoint",
+        "resume",
+        "state-machine",
+        "until",
+        "debugging"
       ]
     },
     {
@@ -3010,6 +3820,22 @@
         "fixme",
         "technical-debt",
         "bulk-operations"
+      ]
+    },
+    {
+      "name": "bulk-skill-pr-merge",
+      "description": "Bulk-merge many open skill PRs into main, including fixing failing CI (missing plugin.json, invalid category, missing version field) and rebasing conflicted branches. Use when 10+ open skill PRs accumulate and need to be merged in one session.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/bulk-skill-pr-merge",
+      "category": "tooling",
+      "tags": [
+        "bulk-merge",
+        "pr",
+        "rebase",
+        "conflict-resolution",
+        "plugin.json",
+        "ci",
+        "git-switch"
       ]
     },
     {
@@ -3107,6 +3933,21 @@
       ]
     },
     {
+      "name": "cli-visualize-subcommand",
+      "description": "Pattern for adding a visualize/inspect subcommand to a CLI tool that reads state files (checkpoint.json, etc.) and renders experiment/run status hierarchies. Use when: (1) adding state inspection to manage_experiment.py or similar CLIs, (2) implementing tree/table/JSON state renderers, (3) supporting batch directory mode for multi-experiment visualization, (4) adding --states-only or similar filter modes.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/cli-visualize-subcommand",
+      "category": "tooling",
+      "tags": [
+        "cli",
+        "visualization",
+        "checkpoint",
+        "state-machine",
+        "batch",
+        "manage-experiment"
+      ]
+    },
+    {
       "name": "code-quality-audit-principles",
       "description": "Comprehensive codebase audit against 7 core development principles (KISS, YAGNI, TDD, DRY, SOLID, Modularity, POLA). Generates ratings, files issues, and creates audit report.",
       "version": "1.0.0",
@@ -3180,6 +4021,24 @@
         "config",
         "filename",
         "validation"
+      ]
+    },
+    {
+      "name": "docker-optional-dep-layer-caching",
+      "description": "Add ARG EXTRAS to Docker Layer 2 so optional-dependency groups land in the build cache and are not reinstalled on every source change",
+      "version": "1.0.0",
+      "source": "./skills/tooling/docker-optional-dep-layer-caching",
+      "category": "tooling",
+      "tags": [
+        "docker",
+        "dockerfile",
+        "caching",
+        "optional-dependencies",
+        "pyproject",
+        "tomllib",
+        "layer-caching",
+        "build-arg",
+        "docker-compose"
       ]
     },
     {
@@ -3396,6 +4255,22 @@
       "tags": []
     },
     {
+      "name": "git-worktree-cleanup",
+      "description": "Clean up stale git worktrees after parallel wave execution. Use when multiple worktrees remain from merged PRs, especially nested worktrees from agent-in-agent workflows.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/git-worktree-cleanup",
+      "category": "tooling",
+      "tags": [
+        "git",
+        "worktree",
+        "cleanup",
+        "parallel-waves",
+        "nested-worktrees",
+        "safety-net",
+        "branch-deletion"
+      ]
+    },
+    {
       "name": "git-worktree-workflow",
       "description": "Complete git worktree workflow for parallel development. Contains 4 sub-skills: (1) create - create isolated worktrees for new issues, (2) switch - navigate between worktrees, (3) sync - keep worktrees up-to-date with main, (4) cleanup - remove worktrees after PR merge. Use when working on multiple issues in parallel without stashing.",
       "version": "1.0.0",
@@ -3467,6 +4342,24 @@
       ]
     },
     {
+      "name": "lazy-clone-dependency",
+      "description": "Pattern for lazy-cloning a missing external git repository dependency instead of skipping a workflow step. Use when an automation step silently skips because a required repo (e.g. ProjectMnemosyne) is not present locally.",
+      "version": "1.0.0",
+      "source": "./skills/automation/lazy-clone-dependency",
+      "category": "tooling",
+      "tags": [
+        "automation",
+        "clone",
+        "dependency",
+        "planner",
+        "mnemosyne",
+        "race-condition",
+        "fcntl",
+        "threading",
+        "gh"
+      ]
+    },
+    {
       "name": "mojo-build-package",
       "description": "Build Mojo packages (.mojopkg files) for distribution. Use when creating distributable libraries or during packaging phase.",
       "version": "1.0.0",
@@ -3496,6 +4389,21 @@
         "pre-commit",
         "regression-guard",
         "python"
+      ]
+    },
+    {
+      "name": "mypy-roadmap-closure",
+      "description": "Close a phased mypy strictness roadmap: identify dead tracking infrastructure, ship free-win strict settings, triage remaining work into individual issues, and close the roadmap issue.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/mypy-roadmap-closure",
+      "category": "tooling",
+      "tags": [
+        "mypy",
+        "type-checking",
+        "roadmap",
+        "tech-debt",
+        "pre-commit",
+        "pyproject"
       ]
     },
     {
@@ -3577,6 +4485,14 @@
       "tags": []
     },
     {
+      "name": "pixi-pypi-upper-bounds",
+      "description": "Add explicit upper version bounds to pixi.toml [pypi-dependencies]. Use when auditing or hardening dependency version constraints to prevent silent breakage on major releases.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/pixi-pypi-upper-bounds",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "planning-implementation-from-issue",
       "description": "Skill: planning-implementation-from-issue. Use when working with planning implementation from issue.",
       "version": "1.0.0",
@@ -3636,15 +4552,36 @@
       ]
     },
     {
-      "name": "quality-audit-implementation",
-      "description": "Skill: quality-audit-implementation. Use when working with quality audit implementation.",
+      "name": "python-version-alignment",
+      "description": "Align Python version across pyproject.toml classifiers, pixi.toml, and Dockerfile when drift is detected",
       "version": "1.0.0",
+      "source": "./skills/tooling/python-version-alignment",
+      "category": "tooling",
+      "tags": [
+        "python",
+        "dockerfile",
+        "version-drift",
+        "pyproject",
+        "pixi",
+        "configuration",
+        "quality-audit"
+      ]
+    },
+    {
+      "name": "quality-audit-implementation",
+      "description": "Use when implementing findings from a structured code quality audit. Covers: filing tracking issues for untracked findings, applying mechanical P1/P2 fixes directly (CODEOWNERS stale paths, doc count discrepancies, CI matrix gaps, hardcoded paths), and bundling into a single PR with auto-merge.",
+      "version": "1.1.0",
       "source": "./skills/tooling/quality-audit-implementation",
       "category": "tooling",
       "tags": [
         "quality",
         "audit",
-        "implementation"
+        "implementation",
+        "github-issues",
+        "codeowners",
+        "ci-matrix",
+        "documentation",
+        "triage"
       ]
     },
     {
@@ -3815,6 +4752,58 @@
         "productivity",
         "verification",
         "issue-management"
+      ]
+    },
+    {
+      "name": "worktree-cleanup",
+      "description": "Remove merged or stale git worktrees. Use after PRs are merged, work is done, or when worktrees are no longer needed.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/worktree-cleanup",
+      "category": "tooling",
+      "tags": [
+        "tooling",
+        "worktree",
+        "git-worktree",
+        "parallel-development"
+      ]
+    },
+    {
+      "name": "worktree-create",
+      "description": "Create isolated git worktrees for parallel development. Use when working on multiple issues simultaneously.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/worktree-create",
+      "category": "tooling",
+      "tags": [
+        "tooling",
+        "worktree",
+        "git-worktree",
+        "parallel-development"
+      ]
+    },
+    {
+      "name": "worktree-switch",
+      "description": "Switch between git worktrees for parallel development. Use when working on multiple issues simultaneously.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/worktree-switch",
+      "category": "tooling",
+      "tags": [
+        "tooling",
+        "worktree",
+        "git-worktree",
+        "parallel-development"
+      ]
+    },
+    {
+      "name": "worktree-sync",
+      "description": "Sync git worktrees with remote and main branch changes. Use to keep long-running feature branches up-to-date.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/worktree-sync",
+      "category": "tooling",
+      "tags": [
+        "tooling",
+        "worktree",
+        "git-worktree",
+        "parallel-development"
       ]
     },
     {
