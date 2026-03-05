@@ -1,0 +1,8 @@
+{
+  "name": "fix-mojo-migration-artifact",
+  "version": "1.0.0",
+  "description": "Remove Mojo migration fragment artifacts from Python module docstrings that were left behind from an old migration notes pass.",
+  "author": { "name": "ML Odyssey Team" },
+  "skills": "./skills",
+  "tags": ["documentation", "mojo", "migration", "docstring"]
+}
