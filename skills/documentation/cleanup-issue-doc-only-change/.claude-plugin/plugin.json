@@ -1,0 +1,17 @@
+{
+  "name": "cleanup-issue-doc-only-change",
+  "version": "1.0.0",
+  "description": "Pattern for implementing documentation-only cleanup issues: expand bare NOTE/TODO markers with structured deferred-item format and add user-facing workaround sections to READMEs. Use when: (1) a cleanup issue tracks an unresolved limitation with no code change needed, (2) a bare comment marker needs Status/Why Deferred/Workaround/Acceptance Criteria structure, (3) a README needs a Limitations section with a Python interop workaround snippet.",
+  "category": "documentation",
+  "date": "2026-03-04",
+  "tags": [
+    "documentation",
+    "cleanup",
+    "deferred",
+    "note-marker",
+    "workaround",
+    "readme",
+    "mojo",
+    "python-interop"
+  ]
+}
