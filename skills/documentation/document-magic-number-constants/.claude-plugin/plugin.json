@@ -1,0 +1,8 @@
+{
+  "name": "document-magic-number-constants",
+  "version": "1.0.0",
+  "description": "Extract inline magic-number NOTE comments into named module-level constants with full rationale. Use when: (1) a value is used with a NOTE comment referencing an issue, (2) the same magic number appears in multiple locations, (3) a cleanup issue asks to convert inline NOTEs to docstrings.",
+  "category": "documentation",
+  "date": "2026-03-04",
+  "tags": ["documentation", "cleanup", "constants", "magic-numbers", "mojo", "gradient-checking", "precision"]
+}
