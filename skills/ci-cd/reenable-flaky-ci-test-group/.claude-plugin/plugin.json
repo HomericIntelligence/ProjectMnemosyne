@@ -1,0 +1,14 @@
+{
+  "name": "reenable-flaky-ci-test-group",
+  "version": "1.0.0",
+  "description": "Re-enable a CI test group that was disabled as flaky by verifying it passed historically before re-enabling. Use when: (1) a CI test group is commented out with a 'flaky' or 'disabled' note, (2) crashes appear intermittent rather than consistent, (3) no code changes occurred after the last passing run.",
+  "category": "ci-cd",
+  "date": "2026-03-04",
+  "tags": [
+    "flaky-tests",
+    "ci-reenable",
+    "mojo",
+    "test-crash",
+    "github-actions"
+  ]
+}
