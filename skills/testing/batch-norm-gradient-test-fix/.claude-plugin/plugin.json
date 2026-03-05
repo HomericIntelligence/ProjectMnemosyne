@@ -1,0 +1,8 @@
+{
+  "name": "batch-norm-gradient-test-fix",
+  "version": "1.0.0",
+  "description": "Fix batch normalization backward pass gradient tests that fail with uniform (ones) upstream gradients due to sum(x_norm)=0 cancellation. Use when: (1) batch_norm_backward gradient check fails with analytical~=0 but numerical!=0, (2) normalization layer backward tests fail with pathological cancellation, (3) gradient checking with ones upstream gradient gives false negatives.",
+  "category": "testing",
+  "date": "2026-03-05",
+  "tags": ["batch-norm", "gradient-checking", "backward-pass", "mojo", "normalization", "false-failure"]
+}
