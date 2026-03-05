@@ -1,8 +1,0 @@
-{
-  "name": "dockerfile-dep-pin",
-  "version": "1.0.0",
-  "description": "TRIGGER CONDITIONS: Pinning unpinned pip dependencies in a Dockerfile builder stage. Use when: (1) a pip install line in a Dockerfile lacks a version specifier, (2) you want to match the version from pyproject.toml [build-system].requires or a lockfile, (3) you need a regression test to prevent future un-pinning, (4) stabilizing Docker layer cache by removing implicit version resolution.",
-  "category": "ci-cd",
-  "date": "2026-02-27",
-  "tags": ["docker", "dockerfile", "pip", "pinning", "reproducible-builds", "layer-cache", "hatchling", "regression-test", "static-analysis"]
-}

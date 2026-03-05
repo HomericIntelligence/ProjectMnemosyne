@@ -1,8 +1,0 @@
-{
-  "name": "collaborator-extraction-tdd",
-  "version": "1.0.0",
-  "description": "TRIGGER CONDITIONS: Extracting method groups from an oversized class into dedicated collaborator classes using TDD. Use when: (1) a class exceeds its target line count (e.g. >800 lines) and has identifiable method groups with shared state, (2) doing pure structural refactoring with zero behavior change, (3) methods need explicit dependency injection to avoid circular coupling, (4) extracted class needs lazy local imports to break circular import cycles.",
-  "category": "refactoring",
-  "date": "2026-02-28",
-  "tags": ["refactoring", "tdd", "collaborator-extraction", "dependency-injection", "circular-import", "pydantic", "mypy", "python", "runner"]
-}

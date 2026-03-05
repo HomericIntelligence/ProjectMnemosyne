@@ -1,8 +1,0 @@
-{
-  "name": "expose-run-report-process-metrics",
-  "version": "1.0.0",
-  "description": "TRIGGER CONDITIONS: Adding new metric fields to per-run report.json or report.md in scylla/e2e/run_report.py. Use when: (1) a new metrics block already exists in run_result.json and needs to appear in the human-readable report.md, (2) save_run_report_json() needs a new key with NaN-guarded float values, (3) stage_write_report() needs to read additional data from disk and thread it into the report functions.",
-  "category": "evaluation",
-  "date": "2026-03-02",
-  "tags": ["evaluation", "run-report", "process-metrics", "nan-guard", "report-json", "report-md", "stage-write-report", "run_report.py"]
-}

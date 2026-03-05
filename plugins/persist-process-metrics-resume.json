@@ -1,8 +1,0 @@
-{
-  "name": "persist-process-metrics-resume",
-  "version": "1.0.0",
-  "description": "TRIGGER CONDITIONS: Reloading intermediate stage data from a JSON artifact when a ctx field is None on resume in ProjectScylla's 16-stage E2E pipeline. Use when: (1) a stage uses `ctx.field or []` fallback that silently degrades on crash-resume, (2) the missing data was already written to disk in a prior partial run, (3) the reload guard must distinguish None (not set) from [] (set but empty).",
-  "category": "evaluation",
-  "date": "2026-03-02",
-  "tags": ["resume", "crash-recovery", "process-metrics", "stages", "run_result.json", "e2e-pipeline", "stage_finalize_run", "progress_steps", "change_results", "is-none-guard"]
-}

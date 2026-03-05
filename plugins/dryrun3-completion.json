@@ -1,8 +1,0 @@
-{
-  "name": "dryrun3-completion",
-  "version": "1.0.0",
-  "description": "TRIGGER CONDITIONS: Completing interrupted dryrun experiments where some experiments have 0/7 run_results, some are partial, and the batch skip logic fails to re-queue tests after --max-subtests expansion. Use when: (1) batch run left broken experiments with stale git worktrees/branches in ~/dryrun3/repos/, (2) --retry-errors reports 'All tests already completed' after --max-subtests expansion, (3) need to build a loader-compatible fullruns/ symlink tree after re-runs, (4) need to run generate_all_results.py to produce figures, tables, and stats from a complete dryrun dataset.",
-  "category": "evaluation",
-  "date": "2026-03-04",
-  "tags": ["dryrun", "evaluation", "batch", "worktrees", "analysis", "repair", "resume", "manage_experiment"]
-}
