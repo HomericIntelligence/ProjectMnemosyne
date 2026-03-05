@@ -1,0 +1,8 @@
+{
+  "name": "enable-todo-tests",
+  "version": "1.0.0",
+  "description": "Enable placeholder tests by removing TODO comments and uncommenting test code for already-implemented functionality. Also adds missing package exports needed for test imports. Use when: (1) tests exist as commented-out stubs with TODO markers pointing to an issue, (2) the underlying implementation is already complete but not exported, (3) closing an issue that tracked test enablement rather than implementation.",
+  "category": "testing",
+  "date": "2026-03-05",
+  "tags": ["mojo", "test-enablement", "exports", "todo-cleanup", "package-api"]
+}
