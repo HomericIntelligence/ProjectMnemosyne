@@ -1,0 +1,8 @@
+{
+  "name": "cleanup-task-already-done-on-branch",
+  "version": "1.0.0",
+  "description": "Detect when a cleanup/deletion task was already completed in a prior commit on the current branch, avoiding duplicate work. Use when: (1) working on a cleanup issue in an auto-impl worktree, (2) the target file or artifact is already missing, (3) a PR exists but git history shows the deletion already happened.",
+  "category": "tooling",
+  "date": "2026-03-05",
+  "tags": ["cleanup", "git-history", "worktree", "auto-impl", "duplicate-prevention", "deletion"]
+}
