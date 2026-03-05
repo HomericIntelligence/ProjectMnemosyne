@@ -1,0 +1,8 @@
+{
+  "name": "note-comment-cleanup",
+  "version": "1.0.0",
+  "description": "Systematically review and clean up NOTE/Note comment inconsistencies in a codebase: remove stale markers, convert docstring NOTEs to prose, and normalize casing. Use when: (1) auditing code comments for a cleanup issue, (2) standardizing NOTE vs Note casing across modules, (3) removing outdated reference markers after features are removed or issues are closed.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["comments", "cleanup", "notes", "formatting", "consistency", "mojo", "codebase-hygiene"]
+}
