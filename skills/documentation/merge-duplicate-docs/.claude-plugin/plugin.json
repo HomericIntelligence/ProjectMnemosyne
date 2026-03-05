@@ -1,0 +1,8 @@
+{
+  "name": "merge-duplicate-docs",
+  "version": "1.0.0",
+  "description": "Merge two overlapping documentation files into one canonical source, preserving unique content and fixing all cross-references. Use when: (1) two markdown files document the same topic creating a DRY violation, (2) one file is a visual/summary reference and the other has detailed specs, (3) you need to consolidate docs and update all links.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["dry", "markdown", "consolidation", "references", "hierarchy"]
+}
