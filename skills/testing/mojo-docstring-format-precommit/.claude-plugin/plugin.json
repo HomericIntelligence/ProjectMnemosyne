@@ -1,0 +1,8 @@
+{
+  "name": "mojo-docstring-format-precommit",
+  "version": "1.0.0",
+  "description": "Fix Mojo docstring formatting to pass mojo format pre-commit hook. Use when: (1) pre-commit CI fails with mojo format diff showing single-line docstrings being split, (2) long single-line docstrings exceed mojo format line length threshold, (3) adding docstrings to Mojo functions that will be reformatted by mojo format.",
+  "category": "testing",
+  "date": "2026-03-05",
+  "tags": ["mojo", "docstring", "pre-commit", "formatting", "ci"]
+}
