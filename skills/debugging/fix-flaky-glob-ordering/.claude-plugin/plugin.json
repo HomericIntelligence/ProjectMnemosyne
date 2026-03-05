@@ -1,0 +1,8 @@
+{
+  "name": "fix-flaky-glob-ordering",
+  "version": "1.0.0",
+  "description": "Fix flaky tests caused by non-deterministic filesystem glob ordering. Use when: (1) a test passes on some CI runs but fails on others with identical code, (2) test loads files from a directory and asserts ordering, (3) pathlib.glob() or os.listdir() results are iterated without sorting.",
+  "category": "debugging",
+  "date": "2026-03-05",
+  "tags": ["flaky-tests", "glob", "pathlib", "non-deterministic", "mojo", "python-interop"]
+}
