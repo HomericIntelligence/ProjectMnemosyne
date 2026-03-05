@@ -1,0 +1,8 @@
+{
+  "name": "issue-cleanup-already-done",
+  "version": "1.0.0",
+  "description": "Detects when a GitHub issue cleanup task was already completed in a prior session before implementing. Use when: (1) assigned a cleanup/docs issue and the target file looks already updated, (2) the branch's recent commits mention the same issue, (3) the issue marker (NOTE/TODO) referenced is absent from the file.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["github-issues", "cleanup", "idempotency", "docs", "stale-notes"]
+}
