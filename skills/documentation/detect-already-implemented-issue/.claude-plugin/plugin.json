@@ -1,0 +1,8 @@
+{
+  "name": "detect-already-implemented-issue",
+  "version": "1.0.0",
+  "description": "Detect when a GitHub issue was already implemented in a previous session and has an open PR. Use when: (1) implementing a GitHub issue, (2) session starts on a branch that already has commits for the issue, (3) a PR already exists for the issue.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["github", "pr", "idempotency", "issue-tracking", "session-resume"]
+}
