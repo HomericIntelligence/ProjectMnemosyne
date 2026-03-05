@@ -1,0 +1,8 @@
+{
+  "name": "mojo-note-to-docstring",
+  "version": "1.0.0",
+  "description": "Convert inline NOTE comments describing implementation constraints to proper docstring Note sections in Mojo code. Use when: (1) cleaning up legacy inline NOTE comments, (2) doing a documentation cleanup pass, (3) preparing code for public API documentation.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["mojo", "documentation", "docstrings", "cleanup", "refactoring", "comments"]
+}
