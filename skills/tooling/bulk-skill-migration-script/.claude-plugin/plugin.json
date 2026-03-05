@@ -1,0 +1,8 @@
+{
+  "name": "bulk-skill-migration-script",
+  "version": "1.0.0",
+  "description": "Write an idempotent Python script to bulk-migrate skills from one Claude project to a ProjectMnemosyne marketplace. Use when: (1) porting skills from a source repo to Mnemosyne and most skills are already migrated, (2) needing to check which skills are missing and only migrate those, (3) automating the SKILL.md transformation pipeline.",
+  "category": "tooling",
+  "date": "2026-03-04",
+  "tags": ["migration", "skills", "automation", "idempotent", "bulk", "marketplace"]
+}
