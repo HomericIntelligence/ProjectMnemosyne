@@ -81,8 +81,7 @@ When the user invokes this command:
      "version": "1.0.0",
      "description": "<description>. Use when: (1) trigger1, (2) trigger2.",
      "category": "<category>",
-     "date": "YYYY-MM-DD",
-     "tags": ["tag1", "tag2", "tag3"]
+     "date": "YYYY-MM-DD"
    }
    ```
    Rules:
@@ -90,9 +89,9 @@ When the user invokes this command:
    - `description`: 20+ characters, include "Use when:" trigger conditions
    - `category`: REQUIRED — must be one of the 9 valid categories (see checklist row 6)
    - `date`: REQUIRED — format `YYYY-MM-DD`
-   - No extra fields — only name, version, description, category, date, tags
+   - No extra fields — only name, version, description, category, date
    - ⚠️ The `version` field is REQUIRED — omitting it will fail CI.
-   - ⚠️ Do NOT add `author`, `skills`, or other non-standard fields — they are ignored and signal incorrect structure.
+   - ⚠️ Do NOT add `author`, `skills`, `tags`, or other non-standard fields — they cause validation errors.
 
    **File 2: `skills/<name>/SKILL.md`** with **required format**:
    > ⚠️ SKILL.md must be at `skills/<name>/SKILL.md` (nested directory), NOT at the plugin root.

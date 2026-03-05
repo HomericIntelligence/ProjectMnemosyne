@@ -60,7 +60,7 @@ cp plugins/tooling/skills-registry-commands/scripts/*.py \
 Search skills registry for relevant experiments before starting work.
 
 1. Read user's goal/question
-2. Read `marketplace.json` to find matching plugins by description/tags
+2. Read `marketplace.json` to find matching plugins by description
 3. For each match, read the plugin's SKILL.md
 4. Summarize: what worked, what failed, recommended parameters
 5. Always prioritize Failed Attempts - these prevent wasted effort

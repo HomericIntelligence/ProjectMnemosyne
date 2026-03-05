@@ -32,7 +32,6 @@ def generate_marketplace():
             "name": plugin["name"],
             "category": category,
             "description": plugin["description"],
-            "tags": plugin.get("tags", []),
             "path": str(plugin_json.parent.parent),
             "date": plugin.get("date", ""),
             "version": plugin.get("version", "1.0.0")
