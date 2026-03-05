@@ -1,0 +1,8 @@
+{
+  "name": "mojo-extensor-utility-methods",
+  "version": "1.0.0",
+  "description": "Implement standard utility methods on a Mojo tensor class (ExTensor). Use when: (1) adding Python/NumPy-compatible utility methods to a Mojo struct, (2) implementing __setitem__, __str__, __repr__, __hash__, __int__, __float__ on a type-erased tensor, (3) auditing what methods are already implemented before coding.",
+  "category": "architecture",
+  "date": "2026-03-04",
+  "tags": ["mojo", "tensor", "extensor", "utility-methods", "struct-methods", "type-erased-storage"]
+}
