@@ -1,4 +1,4 @@
-# Session Notes: Mojo Deprecated Alias Removal
+# Session Notes: Mojo Deprecated Alias Removal — Linear (#3065)
 
 ## Session Context
 
