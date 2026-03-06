@@ -1,0 +1,8 @@
+{
+  "name": "pre-commit-ruff-pass-filenames-fix",
+  "version": "1.0.0",
+  "description": "Fix pre-commit ruff hooks to use pass_filenames: true and remove hardcoded directory args, enabling per-file linting instead of whole-directory scans. Use when: (1) ruff pre-commit hooks run on all files instead of only staged files, (2) ruff hooks have hardcoded directory args in entry field, (3) pre-commit ruff hooks ignore file scope.",
+  "category": "ci-cd",
+  "date": "2026-03-05",
+  "tags": ["pre-commit", "ruff", "linting", "pass_filenames", "hooks"]
+}
