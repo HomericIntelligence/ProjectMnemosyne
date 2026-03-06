@@ -1,0 +1,8 @@
+{
+  "name": "no-op-review-fix-detection",
+  "version": "1.0.0",
+  "description": "Recognize when a review-fix plan requires zero implementation changes. Use when: (1) a .claude-review-fix-*.md plan says 'No fixes required', (2) verifying a worktree already contains the correct committed state, (3) avoiding unnecessary commits on already-clean branches.",
+  "category": "tooling",
+  "date": "2026-03-05",
+  "tags": ["review", "pr", "no-op", "worktree", "ci"]
+}
