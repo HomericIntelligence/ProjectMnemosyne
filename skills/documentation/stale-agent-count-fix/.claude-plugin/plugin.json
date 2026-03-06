@@ -1,0 +1,8 @@
+{
+  "name": "stale-agent-count-fix",
+  "version": "1.0.0",
+  "description": "Fix stale agent count references in documentation after agents are deleted or converted to skills. Use when: (1) agent files are removed or converted and doc counts are out of sync, (2) CLAUDE.md or hierarchy docs still reference old agent totals, (3) tracking docs list files that no longer exist.",
+  "category": "documentation",
+  "date": "2026-03-06",
+  "tags": ["agents", "documentation", "count", "stale-refs", "cleanup"]
+}
