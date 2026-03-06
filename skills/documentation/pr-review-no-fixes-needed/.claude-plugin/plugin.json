@@ -1,0 +1,8 @@
+{
+  "name": "pr-review-no-fixes-needed",
+  "version": "1.0.0",
+  "description": "Handle PR review fix plans that conclude no changes are required. Use when: (1) a review fix plan file says 'no fixes needed', (2) verifying auto-merge is already enabled, (3) confirming a documentation-only PR is ready to merge.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["pr-review", "auto-merge", "documentation", "no-op", "verification"]
+}
