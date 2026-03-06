@@ -1,0 +1,8 @@
+{
+  "name": "diverged-branch-cherry-pick-fix",
+  "version": "1.0.0",
+  "description": "Fix a diverged feature branch by resetting to remote and cherry-picking specific fix commits. Use when: (1) local and remote branches have diverged and cannot be fast-forward pushed, (2) a fix commit exists locally but the remote has additional commits not present locally, (3) git push fails due to non-fast-forward rejection on a feature branch.",
+  "category": "ci-cd",
+  "date": "2026-03-05",
+  "tags": ["git", "cherry-pick", "diverged-branch", "feature-branch", "pr-fix"]
+}
