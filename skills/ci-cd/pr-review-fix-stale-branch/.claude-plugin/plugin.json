@@ -1,0 +1,8 @@
+{
+  "name": "pr-review-fix-stale-branch",
+  "version": "1.0.0",
+  "description": "Fix CI failures on a PR when the remote branch was rebased/force-pushed and the fix commit was lost. Use when: (1) pre-commit CI check fails on a PR that previously had a fix applied, (2) local branch diverges from remote with lost commits after rebase, (3) mojo format line-length violations appear in CI but not locally.",
+  "category": "ci-cd",
+  "date": "2026-03-06",
+  "tags": ["pr", "rebase", "mojo-format", "ci-failure", "stale-branch", "force-push"]
+}
