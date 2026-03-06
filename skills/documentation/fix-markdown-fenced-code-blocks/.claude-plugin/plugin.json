@@ -1,0 +1,8 @@
+{
+  "name": "fix-markdown-fenced-code-blocks",
+  "version": "1.0.0",
+  "description": "Fix malformed fenced code block closings and markdownlint violations (MD013, MD032, MD040) in markdown files. Use when: (1) markdownlint reports closing fences with language tags (e.g. ```text used as closing fence), (2) line-length violations on documentation lines, (3) lists missing surrounding blank lines in PR review feedback.",
+  "category": "documentation",
+  "date": "2026-03-06",
+  "tags": ["markdown", "markdownlint", "code-fences", "line-length", "md013", "md032", "md040", "pr-review"]
+}
