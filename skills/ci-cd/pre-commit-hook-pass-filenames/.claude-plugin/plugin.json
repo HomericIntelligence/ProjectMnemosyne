@@ -1,0 +1,8 @@
+{
+  "name": "pre-commit-hook-pass-filenames",
+  "version": "1.0.0",
+  "description": "Fix pre-commit hooks running on hardcoded directories instead of staged files by setting pass_filenames: true. Use when: (1) ruff/linter pre-commit hooks ignore staged files and run on entire directories, (2) hook entry point has hardcoded paths that override filename passing, (3) PR review requests pass_filenames fix for formatter/linter hooks.",
+  "category": "ci-cd",
+  "date": "2026-03-06",
+  "tags": ["pre-commit", "ruff", "pass_filenames", "hooks", "linting", "formatting"]
+}
