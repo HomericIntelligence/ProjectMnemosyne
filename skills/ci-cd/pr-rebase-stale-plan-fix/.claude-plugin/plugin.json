@@ -1,0 +1,8 @@
+{
+  "name": "pr-rebase-stale-plan-fix",
+  "version": "1.0.0",
+  "description": "Rebase a diverged PR onto main when the automated fix plan has stale state information, resolving comment-only merge conflicts. Use when: (1) automated fix plan claims branch commit is already in main but PR is still open, (2) comment-only Mojo changes cause merge conflicts on rebase, (3) PR needs force-push + auto-merge after resolving stale plan assessment.",
+  "category": "ci-cd",
+  "date": "2026-03-06",
+  "tags": ["rebase", "merge-conflict", "stale-plan", "auto-merge", "mojo", "comments"]
+}
