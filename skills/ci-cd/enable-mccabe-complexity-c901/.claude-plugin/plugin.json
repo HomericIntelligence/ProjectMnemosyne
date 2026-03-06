@@ -1,5 +1,6 @@
 {
   "name": "enable-mccabe-complexity-c901",
+  "version": "1.0.0",
   "description": "Enable C901 McCabe complexity rule in ruff for an existing Python project. Covers threshold selection (10 vs 12), pyproject.toml mccabe section config, annotated noqa suppression pattern for orchestration/pipeline/CLI functions, and the critical pitfall that --max-complexity is not a valid ruff CLI flag.",
   "category": "ci-cd",
   "date": "2026-03-05",
