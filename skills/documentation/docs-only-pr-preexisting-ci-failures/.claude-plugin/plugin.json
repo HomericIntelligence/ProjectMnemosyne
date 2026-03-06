@@ -1,0 +1,8 @@
+{
+  "name": "docs-only-pr-preexisting-ci-failures",
+  "version": "1.0.0",
+  "description": "Verify and close a review-fix task when a docs-only PR has no actual code changes needed and CI failures are pre-existing. Use when: (1) a review-fix plan concludes no changes are required, (2) CI failures exist but are unrelated to the PR diff, (3) a docs-only PR needs final pre-commit verification before merge.",
+  "category": "documentation",
+  "date": "2026-03-06",
+  "tags": ["pr-review", "ci-failures", "docs-only", "no-op", "pre-commit", "adr"]
+}
