@@ -1,0 +1,8 @@
+{
+  "name": "fix-composite-action-migration",
+  "version": "1.0.0",
+  "description": "Fix incomplete GitHub Actions composite action migration and redundant double-caching. Use when: (1) some jobs still call a third-party action directly instead of a newly-created composite action wrapper, (2) a composite action duplicates caching that the wrapped action already handles internally.",
+  "category": "ci-cd",
+  "date": "2026-03-05",
+  "tags": ["github-actions", "composite-action", "caching", "pixi", "migration", "refactoring"]
+}
