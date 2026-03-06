@@ -1,0 +1,8 @@
+{
+  "name": "pr-review-no-op-verification",
+  "version": "1.0.0",
+  "description": "Verify that a review-fix plan requiring no changes is correct before closing the loop. Use when: (1) a generated fix plan concludes 'no fixes needed', (2) CI failures exist but may be pre-existing on main, (3) a documentation-only PR has CI failures unrelated to its changes.",
+  "category": "documentation",
+  "date": "2026-03-05",
+  "tags": ["pr-review", "ci-failures", "no-op", "documentation", "verification"]
+}
