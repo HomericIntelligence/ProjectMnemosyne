@@ -1,5 +1,6 @@
 {
   "name": "cluster-extraction-to-modules",
+  "version": "1.0.0",
   "description": "Decompose a large Python class file (>1000 lines) by extracting cohesive method clusters into dedicated sub-modules with thin delegation wrappers. Use when a class file exceeds 1000 lines and contains 3+ independent method clusters with clear boundary responsibilities.",
   "category": "architecture",
   "date": "2026-03-05",
