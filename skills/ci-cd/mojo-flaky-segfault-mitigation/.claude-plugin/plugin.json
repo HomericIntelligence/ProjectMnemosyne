@@ -1,0 +1,8 @@
+{
+  "name": "mojo-flaky-segfault-mitigation",
+  "version": "1.0.0",
+  "description": "Mitigate flaky Mojo runtime segfaults (libKGENCompilerRTShared.so crashes) in GitHub Actions CI matrix jobs. Use when: (1) CI matrix test groups fail with 'execution crashed' from libKGENCompilerRTShared.so, (2) failures are intermittent and pass on main branch, (3) crashes are unrelated to code changes under review.",
+  "category": "ci-cd",
+  "date": "2026-03-06",
+  "tags": ["mojo", "segfault", "flaky-tests", "continue-on-error", "github-actions", "matrix", "ci"]
+}
