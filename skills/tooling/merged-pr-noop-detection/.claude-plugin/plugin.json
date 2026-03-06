@@ -1,0 +1,8 @@
+{
+  "name": "merged-pr-noop-detection",
+  "version": "1.0.0",
+  "description": "Detect when a fix-PR workflow targets an already-merged PR and safely short-circuit. Use when: (1) review-fix automation runs against a PR that has already merged, (2) a fix plan file says 'no fixes needed' or 'PR is merged', (3) automated scripts generate fix tasks for closed/merged PRs.",
+  "category": "tooling",
+  "date": "2026-03-06",
+  "tags": ["pr-workflow", "automation", "noop", "merged-pr", "fix-plan"]
+}
