@@ -1,0 +1,8 @@
+{
+  "name": "pr-review-fix-no-op-detection",
+  "version": "1.0.0",
+  "description": "Detect when a PR review-fix plan requires no code changes and verify the fix commit exists on the remote before declaring the task complete. Use when: (1) a .claude-review-fix-*.md plan file says 'no fixes needed', (2) CI shows stale failures after a fix commit, (3) verifying whether a pre-commit or format fix was actually pushed.",
+  "category": "ci-cd",
+  "date": "2026-03-05",
+  "tags": ["pr-review", "ci", "pre-commit", "no-op", "fix-detection", "stale-ci"]
+}
