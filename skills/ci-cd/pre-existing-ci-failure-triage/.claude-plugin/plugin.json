@@ -1,0 +1,8 @@
+{
+  "name": "pre-existing-ci-failure-triage",
+  "version": "1.0.0",
+  "description": "Triage CI failures on a PR to determine if they are pre-existing on main or introduced by the PR. Use when: (1) CI fails on a PR but changes look unrelated, (2) deciding whether fixes are needed before merging, (3) distinguishing flaky/infrastructure failures from code regressions.",
+  "category": "ci-cd",
+  "date": "2026-03-05",
+  "tags": ["ci", "triage", "pre-existing", "flaky", "pr-review"]
+}
