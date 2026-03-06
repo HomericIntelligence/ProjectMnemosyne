@@ -1,0 +1,8 @@
+{
+  "name": "bandit-precommit-security-scanner",
+  "version": "1.0.0",
+  "description": "Pattern for replacing a pygrep shell=True pre-commit hook with bandit AST-based Python security scanning. Use when: (1) a pygrep hook uses shell=True or regex patterns that have false positives, (2) you need deeper security analysis than string matching, (3) upgrading pre-commit security hooks to AST-based scanning.",
+  "category": "ci-cd",
+  "date": "2026-03-05",
+  "tags": ["bandit", "pre-commit", "security", "pygrep", "shell-injection", "pixi", "ast-scanning"]
+}
