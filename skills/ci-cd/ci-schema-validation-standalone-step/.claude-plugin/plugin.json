@@ -1,0 +1,12 @@
+{
+  "name": "ci-schema-validation-standalone-step",
+  "version": "1.0.0",
+  "description": "Add a standalone CI step to validate all config files against JSON schemas on every PR. Use when: (1) a pre-commit hook validates only changed files but you need full-corpus CI validation, (2) contributors may skip pre-commit, (3) adding schema drift detection to CI for YAML/JSON config files.",
+  "author": {
+    "name": "ML Odyssey Team"
+  },
+  "date": "2026-03-07",
+  "category": "ci-cd",
+  "skills": "./skills",
+  "source_project": "ProjectScylla"
+}
