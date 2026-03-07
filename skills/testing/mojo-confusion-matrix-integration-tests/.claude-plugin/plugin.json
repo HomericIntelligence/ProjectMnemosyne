@@ -1,0 +1,8 @@
+{
+  "name": "mojo-confusion-matrix-integration-tests",
+  "version": "1.0.0",
+  "description": "Pattern for adding ConfusionMatrix integration tests to a Mojo ValidationLoop test file. Use when: (1) a ValidationLoop accepts compute_confusion=True but has no test covering that path, (2) need to verify ConfusionMatrix cell counts with known binary fixtures in Mojo, (3) adding coverage for compute_confusion flag without running full Mojo runtime locally.",
+  "category": "testing",
+  "date": "2026-03-07",
+  "tags": ["mojo", "confusion-matrix", "validation-loop", "integration-test", "binary-classification"]
+}
