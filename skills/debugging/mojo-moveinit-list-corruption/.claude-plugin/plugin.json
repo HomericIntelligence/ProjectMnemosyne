@@ -1,0 +1,8 @@
+{
+  "name": "mojo-moveinit-list-corruption",
+  "version": "1.0.0",
+  "description": "Diagnose and avoid Mojo 0.26.1 bug where ^ transfer of a List field in __moveinit__ corrupts in-place-mutated element values. Use when: (1) test assertions on List-derived values fail after moving a struct, (2) shape/stride values are wrong after ExTensor slice operations, (3) considering replacing .copy() with ^ in __moveinit__ for performance.",
+  "category": "debugging",
+  "date": "2026-03-06",
+  "tags": ["mojo", "moveinit", "list", "memory", "ownership", "extensor", "slice"]
+}
