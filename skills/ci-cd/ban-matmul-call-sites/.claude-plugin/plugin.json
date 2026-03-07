@@ -1,0 +1,8 @@
+{
+  "name": "ban-matmul-call-sites",
+  "version": "1.0.0",
+  "description": "Add a system-language pre-commit hook and belt-and-suspenders CI step to ban dunder method call sites (e.g. .__matmul__()) in Mojo files while excluding function definition lines. Use when: (1) codebase has been standardized on a free-function form (matmul(A, B)) and you need to prevent dunder-call-site regression, (2) pygrep cannot express the exclusion you need, (3) you need both pre-commit and CI enforcement.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["pre-commit", "mojo", "matmul", "dunder", "hook", "grep", "lint", "regression-prevention"]
+}
