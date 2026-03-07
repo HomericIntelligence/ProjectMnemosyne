@@ -1,0 +1,8 @@
+{
+  "name": "yaml-frontmatter-colon-fix",
+  "version": "1.0.0",
+  "description": "Fix silent data-loss when parsing YAML frontmatter containing colons in values by replacing line.partition(':') with yaml.safe_load(). Use when: (1) a markdown frontmatter parser splits on the first colon and truncates values, (2) skill descriptions or metadata fields contain colons and are silently corrupted on migration.",
+  "category": "tooling",
+  "date": "2026-03-07",
+  "tags": ["yaml", "frontmatter", "parsing", "migration", "data-loss"]
+}
