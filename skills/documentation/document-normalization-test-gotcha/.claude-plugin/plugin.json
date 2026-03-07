@@ -1,0 +1,8 @@
+{
+  "name": "document-normalization-test-gotcha",
+  "version": "1.0.0",
+  "description": "Document normalization backward pass test gotchas in project docs. Use when: (1) a normalization layer backward gradient test produced a false mismatch that turned out to be a mathematical identity, (2) adding a Known Gotchas section to testing-strategy.md or backward-pass-catalog.md, (3) cross-referencing test pathologies across documentation files.",
+  "category": "documentation",
+  "date": "2026-03-07",
+  "tags": ["batch-norm", "normalization", "gradient-checking", "testing-strategy", "gotcha", "documentation"]
+}
