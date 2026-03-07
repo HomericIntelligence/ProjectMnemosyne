@@ -1,0 +1,8 @@
+{
+  "name": "mojo-numerical-gradient-test",
+  "version": "1.0.0",
+  "description": "Add numerical gradient validation tests for Mojo ML backward passes using central finite differences. Use when: (1) adding backward pass tests to normalization or other ML layers in Mojo, (2) grad_output=ones cancellation risk needs to be avoided, (3) verifying analytical gradients match finite differences.",
+  "category": "testing",
+  "date": "2026-03-07",
+  "tags": ["mojo", "gradient-checking", "finite-differences", "normalization", "backward-pass", "layer-norm", "batch-norm"]
+}
