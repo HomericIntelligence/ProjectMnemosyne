@@ -1,0 +1,8 @@
+{
+  "name": "conv2d-gradient-checking",
+  "version": "1.0.0",
+  "description": "Add numerical gradient checking tests for conv2d backward pass using finite differences. Use when: (1) conv2d_backward shape/value tests pass but numerical correctness is unverified, (2) adding gradient checking coverage for strided, padded, or multi-channel convolutions, (3) extending existing gradient checking test files in a Mojo project with ADR-009 heap corruption constraints.",
+  "category": "testing",
+  "date": "2026-03-07",
+  "tags": ["conv2d", "gradient-checking", "backward-pass", "mojo", "finite-differences", "numerical-gradients", "adr-009"]
+}
