@@ -1,0 +1,8 @@
+{
+  "name": "bf16-apple-silicon-guard",
+  "version": "1.0.0",
+  "description": "Add runtime guards to dtype/precision factory methods that raise descriptive errors on unsupported hardware. Use when: (1) adding platform-specific dtype restrictions in Mojo, (2) converting silent dtype misuse into loud runtime errors, (3) making precision factory methods testable without requiring target hardware.",
+  "category": "architecture",
+  "date": "2026-03-07",
+  "tags": ["mojo", "precision", "apple-silicon", "dtype", "runtime-guard", "bfloat16"]
+}
