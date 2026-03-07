@@ -1,0 +1,8 @@
+{
+  "name": "bulk-test-type-annotation",
+  "version": "1.0.0",
+  "description": "TRIGGER CONDITIONS: Annotating hundreds of unannotated test functions in a test directory to satisfy mypy disallow_untyped_defs. Use when: (1) removing a [[tool.mypy.overrides]] suppress block for a test directory, (2) adding -> None to test methods in bulk, (3) adding typing.Any to pytest fixture parameters, (4) fixing cascade errors from inner helper functions that return values.",
+  "category": "testing",
+  "date": "2026-03-06",
+  "tags": ["mypy", "type-annotations", "pytest", "testing", "bulk", "no-untyped-def", "typing.Any"]
+}
