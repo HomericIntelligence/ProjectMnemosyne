@@ -1,0 +1,8 @@
+{
+  "name": "mojo-extensor-bool-method",
+  "version": "1.0.0",
+  "description": "Implement __bool__ on a Mojo tensor/struct for single-element truthiness. Use when: (1) adding Python/NumPy/PyTorch-compatible boolean context to a Mojo struct, (2) un-commenting placeholder tests for __bool__, (3) following up on existing item() / __int__ / __float__ implementations.",
+  "category": "architecture",
+  "date": "2026-03-07",
+  "tags": ["mojo", "extensor", "bool", "dunder", "truthiness", "tensor"]
+}
