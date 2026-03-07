@@ -1,12 +1,20 @@
 # Raw Session Notes — tier-label-consistency-check
 
-## Session Details
+## Session Details (v1.0 — 2026-03-04)
 
 - **Date**: 2026-03-04
 - **Project**: ProjectScylla
 - **Issue**: #1370
 - **PR**: #1421
 - **Branch**: `1370-auto-impl`
+
+## Session Details (v1.1 — 2026-03-06)
+
+- **Date**: 2026-03-06
+- **Project**: ProjectScylla
+- **Issue**: #1428 (follow-up from #1370)
+- **PR**: #1454
+- **Branch**: `1428-auto-impl`
 
 ## Issue Context
 
@@ -23,14 +31,30 @@ PRs #1345 and #1362. The correct tier-to-label mapping is:
 | T5 | Hybrid |
 | T6 | Super |
 
-Bad patterns detected:
+### v1.0 — Original 4 patterns
+
 - `T3.*Tool` — T3 is Delegation, not Tooling (T2)
 - `T4.*Deleg` — T4 is Hierarchy, not Delegation (T3)
 - `T5.*Hier` — T5 is Hybrid, not Hierarchy (T4)
 - `T2.*Skill` — T2 is Tooling, not Skills (T1)
 
+### v1.1 — Expanded to 20 patterns (symmetric/reverse coverage)
+
+Issue #1428 noted the original 4 patterns only cover off-by-one in one direction. The symmetric
+cases (e.g., T2 labelled as Delegation, T3 labelled as Hierarchy) were not covered.
+
+New 16 reverse patterns added with `.{0,10}` bound:
+- `T2.{0,10}Deleg`, `T3.{0,10}Hier`, `T4.{0,10}Hybrid`, `T1.{0,10}Tool`
+- `T0.{0,10}Skill`, `T1.{0,10}Prompt`, `T2.{0,10}Prompt`, `T3.{0,10}Skill`
+- `T4.{0,10}Tool`, `T5.{0,10}Deleg`, `T6.{0,10}Hier`, `T6.{0,10}Hybrid`
+- `T0.{0,10}Tool`, `T0.{0,10}Deleg`, `T5.{0,10}Skill`, `T6.{0,10}Deleg`
+
+**Why bounded?** The line "between T1 (Skills) and T2 (Tooling)" caused `T1.*Tool` to false-positive.
+The gap from T1 to Tool was 18+ chars; `.{0,10}` stops matching at 11+ chars.
+
 ## Files Changed
 
+### v1.0
 ```
 scripts/check_tier_label_consistency.py          (new, 81 lines)
 tests/unit/scripts/test_check_tier_label_consistency.py  (new, 107 lines)
@@ -38,12 +62,27 @@ tests/unit/scripts/test_check_tier_label_consistency.py  (new, 107 lines)
 .pre-commit-config.yaml                          (modified, +8 lines)
 ```
 
+### v1.1
+```
+scripts/check_tier_label_consistency.py          (modified, +20 patterns, +25 lines)
+tests/unit/scripts/test_check_tier_label_consistency.py  (modified, +32 test cases)
+.github/workflows/test.yml                       (modified, BAD_PATS variable + 16 new patterns)
+```
+
 ## Test Results
 
+### v1.0
 ```
 24 passed in 7.81s
 Full suite: 4350 passed, 1 skipped, 48 warnings in 116.58s
 Coverage: 75.20% (threshold 75%)
+```
+
+### v1.1
+```
+56 passed in 3.03s (tier label tests only)
+Full suite: 4595 passed, 1 skipped, 48 warnings in 208.60s
+Coverage: 75.85% (threshold 75%)
 ```
 
 ## Blockers Encountered
