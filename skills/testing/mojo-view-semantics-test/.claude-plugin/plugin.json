@@ -1,0 +1,8 @@
+{
+  "name": "mojo-view-semantics-test",
+  "version": "1.0.0",
+  "description": "Add Mojo tests asserting view/shared-memory semantics for tensor slicing. Use when: (1) a slice() method claims view semantics but lacks a mutation test, (2) adding regression coverage for copy-vs-view bugs in tensor ops, (3) writing TDD tests for slice() before implementing view semantics.",
+  "category": "testing",
+  "date": "2026-03-07",
+  "tags": ["mojo", "tensor", "slice", "view-semantics", "shared-memory", "regression", "tdd"]
+}
