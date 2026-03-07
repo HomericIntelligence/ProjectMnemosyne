@@ -1,0 +1,12 @@
+{
+  "name": "test-driven-bug-discovery",
+  "version": "1.0.0",
+  "description": "Pattern for writing unit tests that expose latent parsing bugs — especially string manipulation functions whose correctness depends on input shape (single-line vs. multi-line, leading/trailing whitespace). Use when adding tests for utility functions that process text output from external tools (git, subprocess, etc.).",
+  "category": "testing",
+  "created": "2026-03-07",
+  "project": "ProjectScylla",
+  "issue": "HomericIntelligence/ProjectScylla#1447",
+  "pr": "HomericIntelligence/ProjectScylla#1467",
+  "outcome": "success",
+  "tags": ["pytest", "unit-testing", "bug-discovery", "string-parsing", "git", "porcelain", "subprocess"]
+}
