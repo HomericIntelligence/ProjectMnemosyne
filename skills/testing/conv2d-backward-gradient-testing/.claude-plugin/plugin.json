@@ -1,0 +1,8 @@
+{
+  "name": "conv2d-backward-gradient-testing",
+  "version": "1.0.0",
+  "description": "Add numerical gradient checks for conv2d_backward in Mojo using check_gradient with finite differences. Use when: (1) conv2d backward tests only check shapes/bias but not grad_input or grad_weights values, (2) adding gradient correctness tests to test_backward_conv_pool.mojo, (3) verifying grad_weights by treating the kernel as the perturbed variable.",
+  "category": "testing",
+  "date": "2026-03-07",
+  "tags": ["mojo", "conv2d", "backward", "gradient-checking", "numerical-gradients", "finite-differences", "check_gradient"]
+}
