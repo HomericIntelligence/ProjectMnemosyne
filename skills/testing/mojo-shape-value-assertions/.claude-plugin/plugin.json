@@ -1,0 +1,8 @@
+{
+  "name": "mojo-shape-value-assertions",
+  "version": "1.0.0",
+  "description": "Add value-correctness assertions (assert_value_at, assert_all_values) to Mojo tensor shape tests. Use when: (1) shape tests only check element counts and dimensions but not actual values, (2) code review flags that tests pass even if the operation produces wrong values, (3) following up on newly-enabled tests that are missing content assertions.",
+  "category": "testing",
+  "date": "2026-03-07",
+  "tags": ["mojo", "tensor", "shape", "assert-value-at", "assert-all-values", "value-correctness", "ExTensor"]
+}
