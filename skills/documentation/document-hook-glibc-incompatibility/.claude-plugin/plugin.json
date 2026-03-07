@@ -1,0 +1,8 @@
+{
+  "name": "document-hook-glibc-incompatibility",
+  "version": "1.0.0",
+  "description": "Document pre-commit hook OS/runtime incompatibilities in CONTRIBUTING.md. Use when: (1) a pre-commit hook fails due to host OS constraints rather than code errors, (2) a wrapper script already handles the incompatibility but CONTRIBUTING.md lacks a discoverable explanation, (3) contributors report confusing hook failures tied to glibc, musl, or other system library versions.",
+  "category": "documentation",
+  "date": "2026-03-07",
+  "tags": ["pre-commit", "glibc", "contributing", "hooks", "documentation", "mojo-format", "debian"]
+}
