@@ -212,6 +212,9 @@ pixi run python -m pytest tests/unit/<package>/ -q  # all tests pass
 | **Bare `dict` in test helper** | Wrote `def _make_output(items: list[dict]) -> str` | mypy `type-arg` error: generic type needs params | Use `list[dict[str, Any]]` consistently |
 | **Forgetting to update existing test patch paths** | Left `patch("scylla.automation.implementer.run")` for methods that moved to `follow_up.py` | Test passes Python import but mock is never triggered — `AssertionError: Called 0 times` | Always grep for module-level patches in existing tests when extracting code to a new module |
 | **Extracting all clusters before checking line count** | Planned to extract all 3 clusters unconditionally | Premature — checking after each extraction shows whether target is met; avoids over-engineering | Apply YAGNI: check `wc -l` after each cluster extraction; stop when < 1000 |
+| **Using `object` type for collaborator param** | Typed workspace_manager as `object` to avoid circular imports | mypy: `"object" has no attribute "create_worktree"` — `object` is too permissive | Use `TYPE_CHECKING` guard: `if TYPE_CHECKING: from .workspace_manager import WorkspaceManager`; then use `WorkspaceManager` as the type annotation |
+| **Inlining delegation shells that tests mock** | Removed `_write_pid_file` and `_cleanup_pid_file` methods to reduce line count | Existing tests used `patch.object(runner, "_write_pid_file")` — removing the method broke 9 tests with `AttributeError: does not have the attribute '_write_pid_file'` | Retain thin delegation wrappers when existing tests mock them by name; the 6-line cost is worth the compatibility |
+| **Patching wrong logger after extraction** | Left `patch("scylla.e2e.runner.logger")` in test for warnings now logged by the extracted class | Test failed: mock showed 0 warning calls because warning was emitted from `scylla.e2e.checkpoint_finalizer.logger` | After each extraction, grep existing tests for `patch("…old_module.logger")` and update to the new module's logger |
 
 ## Key Decisions
 
@@ -254,8 +257,63 @@ pixi run python -m pytest tests/unit/<package>/ -q  # all tests pass
 
 **Pre-commit**: All hooks pass after 2 runs (ruff auto-fixes on first)
 
+## Variant: Class-Based Extraction with Factory Methods
+
+When the extracted cluster needs access to multiple `self` attributes that form a natural object
+(e.g., `self.config` + `self.results_base_dir`), extract into a **collaborator class** instead
+of module-level functions.
+
+```python
+# New collaborator class
+class ExperimentSetupManager:
+    def __init__(self, config: ExperimentConfig, results_base_dir: Path) -> None:
+        self.config = config
+        self.results_base_dir = results_base_dir
+
+    def create_experiment_dir(self) -> Path: ...
+    def copy_grading_materials(self, experiment_dir: Path) -> None: ...
+    def save_config(self, experiment_dir: Path) -> None: ...
+    def capture_baseline(self, experiment_dir: Path, workspace_manager: WorkspaceManager) -> None: ...
+    def write_pid_file(self, experiment_dir: Path) -> None: ...
+    def cleanup_pid_file(self, experiment_dir: Path) -> None: ...
+
+# Factory method in parent class
+def _setup_manager(self) -> ExperimentSetupManager:
+    """Create an ExperimentSetupManager bound to current state."""
+    return ExperimentSetupManager(self.config, self.results_base_dir)
+
+# Delegation in parent (retains method for backward compat with test mocks)
+def _write_pid_file(self) -> None:
+    """Write PID file for status monitoring."""
+    if self.experiment_dir:
+        self._setup_manager().write_pid_file(self.experiment_dir)
+```
+
+**When to choose class-based over function-based**:
+- The cluster needs 2+ `self` attributes that always travel together
+- The extracted methods form a coherent lifecycle (init → use → cleanup)
+- Existing tests mock the parent's delegation methods by name (keep them for compat)
+
+**Critical: `TYPE_CHECKING` for collaborator type hints** — if the collaborator accepts a type
+from a module that would create a circular import, use `TYPE_CHECKING`:
+
+```python
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from scylla.e2e.workspace_manager import WorkspaceManager
+
+def capture_baseline(self, experiment_dir: Path, workspace_manager: WorkspaceManager) -> None:
+    ...
+```
+
+Using `object` as the type causes `"object" has no attribute 'create_worktree'` mypy errors.
+
+**Delegation method retention** — if existing tests patch `patch.object(runner, "_write_pid_file")`,
+keep the delegation shell. Removing it to inline the call breaks those tests.
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectScylla | PR #1444 — decompose `scylla/automation/implementer.py` 1221→837 lines | [notes.md](../references/notes.md) |
+| ProjectScylla | PR #1468 — decompose `scylla/e2e/runner.py` 1230→999 lines (class-based variant) | [runner-notes.md](../references/runner-notes.md) |
