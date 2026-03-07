@@ -181,6 +181,13 @@ def validate_skill_md(plugin_dir: Path, plugin_data: dict) -> Tuple[List[str], L
         if "|" not in failed_section:
             warnings.append("Failed Attempts section should contain a table")
 
+    # Warn if ## Quick Reference appears as a top-level section alongside ## Verified Workflow
+    if "## Verified Workflow" in content and re.search(r'^## Quick Reference', content, re.MULTILINE):
+        warnings.append(
+            "## Quick Reference should be a subsection (### Quick Reference) of "
+            "## Verified Workflow, not a top-level section"
+        )
+
     return errors, warnings
 
 
