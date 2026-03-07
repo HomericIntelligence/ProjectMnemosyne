@@ -1,0 +1,8 @@
+{
+  "name": "verify-infrastructure-tracking",
+  "version": "1.0.0",
+  "description": "Verify a known environment incompatibility is tracked as an open infrastructure issue before re-implementing a workaround. Use when: (1) a pre-commit hook silently skips or fails due to host environment constraints, (2) you suspect an infrastructure issue may already be tracked but need to confirm, (3) implementing issue #N whose objective is 'verify X is tracked'.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["pre-commit", "glibc", "infrastructure", "deduplication", "tracking", "mojo-format"]
+}
