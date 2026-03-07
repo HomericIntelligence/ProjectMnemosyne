@@ -1,0 +1,8 @@
+{
+  "name": "normalization-backward-grad-output-warning",
+  "version": "1.0.0",
+  "description": "Document the grad_output=ones cancellation hazard in normalization backward tests as a shared testing guide warning. Use when: (1) a normalization layer backward test produced a false failure due to sum(x_norm)=0 cancellation, (2) you want to prevent teammates from repeating the same mistake by adding a warning to testing-patterns.md or equivalent shared guide.",
+  "category": "testing",
+  "date": "2026-03-07",
+  "tags": ["batch-norm", "normalization", "gradient-checking", "backward-pass", "documentation", "testing-patterns", "cancellation", "grad-output"]
+}
