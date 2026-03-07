@@ -102,3 +102,99 @@ Closes #<issue>
 | Assuming hierarchy.md table already correct | Skipped table check because it showed 31 | L5 narrative ("3 types") was still wrong even though table count was right | Always check both the table AND the narrative prose separately |
 | Updating catalog Quick Reference table row | Tried to remove the Junior Documentation Engineer row without context | `old_string` not unique without surrounding rows | Include both flanking rows in `old_string` for uniqueness |
 
+## Results & Parameters
+
+### Consolidation from ProjectOdyssey issue #3146
+
+**Before**: 4 implementation tiers
+
+```text
+implementation-specialist (L3)
+  → senior-implementation-engineer (L4)
+  → implementation-engineer (L4)
+  → junior-implementation-engineer (L5)
+  → implementation-specialist (L3, also receives)
+```
+
+**After**: 2 tiers
+
+```text
+implementation-specialist (L3)
+  → implementation-engineer (L4, full spectrum)
+```
+
+**Agent count delta**: 44 → 42
+
+**Key merge decisions**:
+
+- Added `mojo-simd-optimize`, `mojo-memory-check` skills from senior tier
+- Added `quality-fix-formatting`, `gh-check-ci-status` skills from junior tier
+- Added performance-profiling workflow steps from senior tier
+- Added anti-pattern reference and escalation rules from junior tier
+- Kept two concrete examples: one standard, one performance-critical
+- Removed `hooks.PreToolUse` Bash block (junior-only restriction, not needed for consolidated agent)
+
+### Validation output
+
+```text
+Total files: 42
+Passed: 42
+Failed: 0
+Total errors: 0
+```
+
+### Hierarchy counts to update
+
+| Section | Before | After |
+|---------|--------|-------|
+| Level 4 count line | "6 agents" | "5 agents" |
+| Level 5 count line | "3 types" | "2 types" |
+| Agent Count table L4 | 6 | 5 |
+| Agent Count table L5 | 3 | 2 |
+| Total | 44 | 42 |
+| Diagram box L4 | Lists senior + regular | Lists only regular |
+| Diagram box L5 | Lists 3 juniors | Lists 2 juniors |
+
+### Consolidation from ProjectOdyssey issue #3332 (junior-only variant)
+
+**Before**: 3 test tiers
+
+```text
+test-specialist (L3)
+  → test-engineer (L4)
+  → junior-test-engineer (L5)
+```
+
+**After**: 2 tiers
+
+```text
+test-specialist (L3)
+  → test-engineer (L4, handles all complexity)
+```
+
+**Agent count delta**: 31 → 30
+
+**Key differences from implementation consolidation**:
+
+- No senior tier to merge — only junior-to-middle merge needed
+- `test-engineer.md` already had `Bash` tool access (unlike junior which blocked it via hook)
+- Removed `hooks.PreToolUse` Bash block from junior; test-engineer retained Bash access
+- Cross-references in `agents/hierarchy.md`, `agents/README.md`, `agents/docs/agent-catalog.md`,
+  `scripts/agents/setup_agents.sh`, and `docs/dev/agent-claude4-update-status.md` all needed updating
+- `test-specialist.md` `delegates_to` changed from `[test-engineer, junior-test-engineer]` to `[test-engineer]`
+
+**Validation output**:
+
+```text
+Total files: 30
+Passed: 30
+Failed: 0
+Total errors: 0
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Issue #3146 — implementation engineer tier consolidation | See Results above |
+| ProjectOdyssey | Issue #3332 — test engineer tier consolidation (junior-only variant) | See Results above |
