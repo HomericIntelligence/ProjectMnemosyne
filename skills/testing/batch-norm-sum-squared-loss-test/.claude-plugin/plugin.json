@@ -1,0 +1,8 @@
+{
+  "name": "batch-norm-sum-squared-loss-test",
+  "version": "1.0.0",
+  "description": "Replace trivial batch norm gradient test with sum(output^2) loss for real backward pass validation. Use when: (1) batch_norm2d_backward gradient test uses a non-loss-derived grad_output, (2) upgrading from non-uniform ad-hoc grad_output to a principled loss function, (3) gradient check uses arbitrary weights instead of a closed-form derivative.",
+  "category": "testing",
+  "date": "2026-03-07",
+  "tags": ["batch-norm", "gradient-checking", "sum-squared-loss", "mojo", "backward-pass"]
+}
