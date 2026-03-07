@@ -1,0 +1,8 @@
+{
+  "name": "deferred-doc-placeholder",
+  "version": "1.0.0",
+  "description": "Pattern for adding an HTML comment placeholder to a docs navigation index when an entire section is removed due to stub deletion. Preserves awareness of missing topics without broken links. Use when: (1) a docs/index.md section is removed after stub deletion, (2) a follow-up issue tracks restoring the navigation hub, (3) you need to mark topics as deferred with acceptance criteria for future contributors.",
+  "category": "documentation",
+  "date": "2026-03-07",
+  "tags": ["docs", "index", "placeholder", "deferred", "navigation", "stub-deletion", "html-comment"]
+}
