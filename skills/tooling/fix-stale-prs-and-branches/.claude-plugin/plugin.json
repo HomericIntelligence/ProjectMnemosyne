@@ -1,0 +1,8 @@
+{
+  "name": "fix-stale-prs-and-branches",
+  "version": "1.0.0",
+  "description": "Rebase open PRs that have no CI or failing CI, delete stale remote branches with no open PR, and commit orphaned local work as a new PR. Use when accumulating open PRs that diverged from main.",
+  "category": "tooling",
+  "date": "2026-03-06",
+  "user-invocable": false
+}
