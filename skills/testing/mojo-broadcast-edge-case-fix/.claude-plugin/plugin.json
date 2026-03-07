@@ -1,0 +1,8 @@
+{
+  "name": "mojo-broadcast-edge-case-fix",
+  "version": "1.0.0",
+  "description": "Fix and test broadcast_to edge cases in Mojo tensor libraries: vacuous-loop dimension guard, 0-d scalars, identity, multi-axis, and ndim-reduction errors. Use when: (1) broadcast_to succeeds incorrectly for incompatible target shapes due to empty loop in are_shapes_broadcastable, (2) adding edge-case coverage for broadcasting 0-d tensors, identity broadcasts, or multi-axis expansion, (3) need to validate ndim reduction is properly rejected.",
+  "category": "testing",
+  "date": "2026-03-07",
+  "tags": ["mojo", "broadcast", "edge-cases", "shape-ops", "tensor", "are_shapes_broadcastable"]
+}
