@@ -166,3 +166,47 @@ Total errors: 0
 | Total | 44 | 42 |
 | Diagram box L4 | Lists senior + regular | Lists only regular |
 | Diagram box L5 | Lists 3 juniors | Lists 2 juniors |
+
+### Consolidation from ProjectOdyssey issue #3332 (junior-only variant)
+
+**Before**: 3 test tiers
+
+```text
+test-specialist (L3)
+  → test-engineer (L4)
+  → junior-test-engineer (L5)
+```
+
+**After**: 2 tiers
+
+```text
+test-specialist (L3)
+  → test-engineer (L4, handles all complexity)
+```
+
+**Agent count delta**: 31 → 30
+
+**Key differences from implementation consolidation**:
+
+- No senior tier to merge — only junior-to-middle merge needed
+- `test-engineer.md` already had `Bash` tool access (unlike junior which blocked it via hook)
+- Removed `hooks.PreToolUse` Bash block from junior; test-engineer retained Bash access
+- Cross-references in `agents/hierarchy.md`, `agents/README.md`, `agents/docs/agent-catalog.md`,
+  `scripts/agents/setup_agents.sh`, and `docs/dev/agent-claude4-update-status.md` all needed updating
+- `test-specialist.md` `delegates_to` changed from `[test-engineer, junior-test-engineer]` to `[test-engineer]`
+
+**Validation output**:
+
+```text
+Total files: 30
+Passed: 30
+Failed: 0
+Total errors: 0
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Issue #3146 — implementation engineer tier consolidation | See Results above |
+| ProjectOdyssey | Issue #3332 — test engineer tier consolidation (junior-only variant) | See Results above |
