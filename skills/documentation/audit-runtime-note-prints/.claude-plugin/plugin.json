@@ -1,0 +1,8 @@
+{
+  "name": "audit-runtime-note-prints",
+  "version": "1.0.0",
+  "description": "Audit example scripts for ambiguous runtime NOTE/TODO/FIXME print statements and replace with plain status messages. Use when: (1) follow-up cleanup after fixing NOTE prints in a subset of files, (2) auditing all examples/ scripts for misleading runtime output, (3) converting Note: prefixes to factual plain text.",
+  "category": "documentation",
+  "date": "2026-03-07",
+  "tags": ["examples", "print-statements", "cleanup", "runtime-output", "note-prefix"]
+}
