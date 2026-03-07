@@ -1,0 +1,8 @@
+{
+  "name": "ci-matrix-timeout-guidance",
+  "version": "1.0.0",
+  "description": "Add timeout monitoring guidance comments to GitHub Actions matrix entries. Use when: (1) a CI matrix has a shared timeout and some groups may approach the limit, (2) groups have grown after consolidation and risk hitting the timeout, (3) you want to document split thresholds and file counts inline without changing runtime behavior.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["github-actions", "matrix", "timeout", "documentation", "mojo", "ci-comments"]
+}
