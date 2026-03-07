@@ -1,0 +1,8 @@
+{
+  "name": "badge-count-drift-prevention",
+  "version": "1.0.0",
+  "description": "Automate README badge count validation via pre-commit hook and Python script to prevent drift between badge values and actual file counts. Use when: (1) a README badge reflects a count that must track changing files (e.g. test count), (2) badge values drift as files are added without automation, (3) adding a pre-commit hook scoped to README changes to validate badge accuracy.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["badge", "pre-commit", "readme", "drift", "test-count", "automation", "shields.io"]
+}
