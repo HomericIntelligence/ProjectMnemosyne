@@ -1,0 +1,8 @@
+{
+  "name": "migrate-skill-aux-dirs",
+  "version": "1.0.0",
+  "description": "Migrate skills that contain auxiliary subdirectories (scripts/, templates/, hooks/) alongside SKILL.md. Use when: (1) a skill dir has subdirs beyond SKILL.md that would be silently dropped, (2) fixing migrate_odyssey_skills.py to copy auxiliary content.",
+  "category": "tooling",
+  "date": "2026-03-07",
+  "tags": ["migration", "skills", "tooling", "subdirectories", "shutil"]
+}
