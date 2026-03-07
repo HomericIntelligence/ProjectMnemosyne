@@ -1,0 +1,8 @@
+{
+  "name": "uint-overflow-wrap-tests",
+  "version": "1.0.0",
+  "description": "Skill: uint-overflow-wrap-tests. Use when: (1) adding wrap-around/overflow tests for Mojo built-in unsigned integer types, (2) verifying modular arithmetic semantics at boundary values for UInt8/UInt16/UInt32/UInt64, (3) extending an existing unsigned integer test file with overflow correctness checks.",
+  "category": "testing",
+  "date": "2026-03-07",
+  "tags": ["mojo", "uint", "overflow", "wrap-around", "unsigned-integer", "boundary-testing", "modular-arithmetic"]
+}
