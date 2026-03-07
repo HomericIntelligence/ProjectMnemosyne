@@ -1,0 +1,8 @@
+{
+  "name": "mojo-promote-constants-to-public-api",
+  "version": "1.0.0",
+  "description": "Promote module-scoped Mojo constants to the package public API via __init__.mojo re-exports. Use when: (1) constants are defined with alias/comptime in a single module but needed by multiple test files, (2) an issue asks to 'export constants from public API', (3) callers must import the whole module just to get one constant value.",
+  "category": "documentation",
+  "date": "2026-03-07",
+  "tags": ["mojo", "constants", "public-api", "init-mojo", "re-export", "tolerance", "gradient-check"]
+}
