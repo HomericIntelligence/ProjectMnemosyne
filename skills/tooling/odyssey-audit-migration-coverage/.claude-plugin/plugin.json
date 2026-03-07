@@ -1,0 +1,8 @@
+{
+  "name": "odyssey-audit-migration-coverage",
+  "version": "1.0.0",
+  "description": "Add --audit flag to a migration script that cross-references source skills against a target repo and reports coverage gaps. Use when: (1) a migration script lacks observability into what was ported vs skipped, (2) CI needs to detect new skills added to source but not yet ported to target, (3) you need a summary table with coverage percentage and non-zero exit on missing items.",
+  "category": "tooling",
+  "date": "2026-03-07",
+  "tags": ["migration", "audit", "coverage", "ci-ready", "skill-registry"]
+}
