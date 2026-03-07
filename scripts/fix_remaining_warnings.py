@@ -62,6 +62,56 @@ def add_verified_workflow_wrapper(content: str) -> str:
     return content
 
 
+def has_orphan_quick_reference(content: str) -> bool:
+    """Check if ## Quick Reference exists as a top-level section (not under ## Verified Workflow).
+
+    Returns True when the content contains a top-level '## Quick Reference' heading,
+    indicating it needs to be demoted to a subsection of '## Verified Workflow'.
+    """
+    return bool(re.search(r'^## Quick Reference', content, re.MULTILINE))
+
+
+def merge_quick_reference_into_verified_workflow(content: str) -> str:
+    """Demote top-level ## Quick Reference to ### Quick Reference under ## Verified Workflow.
+
+    Extracts the entire ## Quick Reference section, removes it from its current
+    position, and inserts it as the first subsection (###) of ## Verified Workflow.
+    If ## Quick Reference is already a subsection (### level), the content is
+    returned unchanged.
+    """
+    # Nothing to do if already a subsection only
+    if not re.search(r'^## Quick Reference', content, re.MULTILINE):
+        return content
+
+    # Extract the full ## Quick Reference section (everything up to the next ## heading or EOF)
+    qr_match = re.search(
+        r'^(## Quick Reference\s*\n.*?)(?=^##|\Z)',
+        content,
+        re.MULTILINE | re.DOTALL,
+    )
+    if not qr_match:
+        return content
+
+    qr_block = qr_match.group(1)
+
+    # Demote the heading from ## to ###
+    qr_as_subsection = re.sub(r'^## Quick Reference', '### Quick Reference', qr_block, count=1)
+
+    # Remove the original top-level block from content
+    content_without_qr = content[:qr_match.start()] + content[qr_match.end():]
+
+    # Insert the demoted block immediately after the ## Verified Workflow heading line
+    vw_match = re.search(r'^## Verified Workflow[^\n]*\n', content_without_qr, re.MULTILINE)
+    if not vw_match:
+        # No Verified Workflow section — put it back unchanged
+        return content
+
+    insert_pos = vw_match.end()
+    # Ensure there's a blank line before the subsection
+    subsection_text = '\n' + qr_as_subsection.lstrip('\n')
+    return content_without_qr[:insert_pos] + subsection_text + content_without_qr[insert_pos:]
+
+
 def improve_failed_attempts_table(content: str) -> str:
     """Improve Failed Attempts tables that were flagged."""
 
@@ -120,6 +170,13 @@ def fix_skill_file(skill_path: Path) -> Tuple[bool, List[str]]:
         if new_content != content:
             content = new_content
             fixes.append("Added ## Verified Workflow wrapper")
+
+    # Fix 3: Merge orphaned ## Quick Reference into ## Verified Workflow
+    if has_verified_workflow_section(content) and has_orphan_quick_reference(content):
+        new_content = merge_quick_reference_into_verified_workflow(content)
+        if new_content != content:
+            content = new_content
+            fixes.append("Merged ## Quick Reference into ## Verified Workflow as subsection")
 
     # Fix 2: Improve Failed Attempts table
     if not has_failed_attempts_table(content):

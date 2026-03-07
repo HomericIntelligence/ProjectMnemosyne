@@ -111,6 +111,9 @@ When the user invokes this command:
    - ✅ **Overview section** with `## Overview` header and table
    - ✅ **When to Use** with specific trigger conditions
    - ✅ **Verified Workflow** (exact header — NOT "## Workflow")
+     > 📝 If the source skill has a `## Quick Reference` section, demote it to
+     > `### Quick Reference` as the **first subsection** of `## Verified Workflow`.
+     > Do NOT preserve it as a top-level `## Quick Reference` section.
    - ✅ **Failed Attempts table** (MUST be table format, not prose):
      ```markdown
      ## Failed Attempts
@@ -250,7 +253,7 @@ The next `/advise` or `/retrospective` will re-clone automatically.
 | **YAML frontmatter** | Starts with `---`, includes name/description/category/date/user-invocable |
 | **Overview section** | `## Overview` header with table |
 | When to Use | Specific trigger conditions |
-| Verified Workflow | Steps that worked (exact header) |
+| Verified Workflow | Steps that worked (exact header) + `### Quick Reference` subsection if source had one |
 | **Failed Attempts** | **TABLE format** (not prose) |
 | Results & Parameters | Copy-paste configs |
 
