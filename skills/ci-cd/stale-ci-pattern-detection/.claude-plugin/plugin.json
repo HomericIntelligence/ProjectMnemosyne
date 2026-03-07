@@ -1,0 +1,8 @@
+{
+  "name": "stale-ci-pattern-detection",
+  "version": "1.0.0",
+  "description": "Add inverse CI coverage check that flags matrix patterns matching zero existing files as warnings. Use when: (1) a CI matrix references test paths that may have been renamed or deleted, (2) you want to catch stale entries in a test matrix without breaking CI on exit code, (3) implementing coverage validation scripts that need both forward and inverse checks.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["ci", "coverage", "matrix", "stale-patterns", "validation", "testing"]
+}
