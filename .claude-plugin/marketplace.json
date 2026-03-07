@@ -24,6 +24,34 @@
       "tags": []
     },
     {
+      "name": "agent-tier-consolidation",
+      "description": "Consolidate over-segmented agent tiers in a hierarchical agent system by merging similar-level agents into a single comprehensive agent. Use when: (1) multiple agents share the same scope and only differ by seniority/complexity level, (2) agent count is growing unwieldy and tiers overlap in practice, (3) simplifying the agent hierarchy without losing capability coverage.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/agent-tier-consolidation",
+      "category": "architecture",
+      "tags": [
+        "agents",
+        "hierarchy",
+        "consolidation",
+        "refactoring",
+        "claude-code"
+      ]
+    },
+    {
+      "name": "agent-to-skill-conversion",
+      "description": "Convert agent configurations to skills when tasks are fixed/predictable rather than adaptive. Use when: (1) agent performs repeatable automation steps, (2) agent does not require exploration or adaptive decision-making, (3) reducing agent count to simplify hierarchy.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/agent-to-skill-conversion",
+      "category": "architecture",
+      "tags": [
+        "agents",
+        "skills",
+        "refactoring",
+        "abstraction",
+        "hierarchy"
+      ]
+    },
+    {
       "name": "agent-validate-config",
       "description": "Validate agent YAML frontmatter and configuration. Use before committing agent changes or in CI.",
       "version": "1.0.0",
@@ -37,15 +65,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/architect-review-implementation",
       "category": "architecture",
-      "tags": [
-        "state-machine",
-        "code-review",
-        "post-merge",
-        "rebase",
-        "conflict-resolution",
-        "test-coverage",
-        "until_state"
-      ]
+      "tags": []
     },
     {
       "name": "backward-compat-removal",
@@ -53,13 +73,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/backward-compat-removal",
       "category": "architecture",
-      "tags": [
-        "refactoring",
-        "technical-debt",
-        "cleanup",
-        "testing",
-        "deprecation"
-      ]
+      "tags": []
     },
     {
       "name": "centralized-path-constants",
@@ -67,26 +81,23 @@
       "version": "1.0.0",
       "source": "./skills/architecture/centralized-path-constants",
       "category": "architecture",
-      "tags": [
-        "paths",
-        "refactoring",
-        "consistency",
-        "constants",
-        "dry-principle"
-      ]
+      "tags": []
     },
     {
-      "name": "claude-code-settings-config",
-      "description": "Configure Claude Code settings.json per test workspace to control thinking mode via API rather than prompt injection. Use when implementing workspace-level configuration for E2E tests.",
+      "name": "cluster-extraction-to-modules",
+      "description": "Decompose a large Python class file (>1000 lines) by extracting cohesive method clusters into dedicated sub-modules with thin delegation wrappers. Use when a class file exceeds 1000 lines and contains 3+ independent method clusters with clear boundary responsibilities.",
       "version": "1.0.0",
-      "source": "./skills/architecture/claude-code-settings-config",
+      "source": "./skills/architecture/cluster-extraction-to-modules",
       "category": "architecture",
       "tags": [
-        "claude-code",
-        "settings",
-        "configuration",
-        "e2e",
-        "testing"
+        "decomposition",
+        "refactoring",
+        "large-files",
+        "single-responsibility",
+        "sub-modules",
+        "delegation",
+        "1000-lines",
+        "method-extraction"
       ]
     },
     {
@@ -95,15 +106,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/codebase-consolidation",
       "category": "architecture",
-      "tags": [
-        "refactor",
-        "deduplication",
-        "consolidation",
-        "backward-compatibility",
-        "type-alias",
-        "cross-reference",
-        "tech-debt"
-      ]
+      "tags": []
     },
     {
       "name": "codebase-quality-plan-execution",
@@ -111,16 +114,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/codebase-quality-plan-execution",
       "category": "architecture",
-      "tags": [
-        "architecture",
-        "bug-fix",
-        "dead-code-removal",
-        "type-safety",
-        "refactoring",
-        "test-driven",
-        "python",
-        "javascript"
-      ]
+      "tags": []
     },
     {
       "name": "config-dir-consolidation",
@@ -128,14 +122,20 @@
       "version": "1.0.0",
       "source": "./skills/architecture/config-dir-consolidation",
       "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "consolidate-review-agents",
+      "description": "Merge overlapping review specialist agents into a single general-review-specialist to reduce complexity. Use when: (1) you have many fine-grained review agents with overlapping scopes, (2) a project is in early stages and doesn't need 13+ specialists, (3) you want to reduce agent count while preserving full review coverage.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/consolidate-review-agents",
+      "category": "architecture",
       "tags": [
-        "config-migration",
+        "agents",
+        "review",
         "consolidation",
-        "refactoring",
-        "tier-config",
-        "path-cleanup",
-        "prompt-removal",
-        "test-infrastructure"
+        "architecture",
+        "complexity-reduction"
       ]
     },
     {
@@ -144,15 +144,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/credential-mount-context-manager",
       "category": "architecture",
-      "tags": [
-        "docker",
-        "credentials",
-        "context-manager",
-        "cleanup",
-        "wsl2",
-        "temp-dirs",
-        "resource-leak"
-      ]
+      "tags": []
     },
     {
       "name": "cytoscape-interaction-patterns",
@@ -160,16 +152,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/cytoscape-interaction-patterns",
       "category": "architecture",
-      "tags": [
-        "cytoscape",
-        "highlight",
-        "filter",
-        "html-overlay",
-        "node-click",
-        "trajectory",
-        "dimming",
-        "tournament-viz"
-      ]
+      "tags": []
     },
     {
       "name": "doc-generate-adr",
@@ -177,13 +160,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/doc-generate-adr",
       "category": "architecture",
-      "tags": [
-        "adr",
-        "architecture",
-        "documentation",
-        "decisions",
-        "design"
-      ]
+      "tags": []
     },
     {
       "name": "doc-issue-readme",
@@ -207,13 +184,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/doc-validate-markdown",
       "category": "architecture",
-      "tags": [
-        "markdown",
-        "linting",
-        "documentation",
-        "formatting",
-        "validation"
-      ]
+      "tags": []
     },
     {
       "name": "dry-consolidation-workflow",
@@ -221,15 +192,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/dry-consolidation-workflow",
       "category": "architecture",
-      "tags": [
-        "dry-principle",
-        "refactoring",
-        "deduplication",
-        "code-quality",
-        "centralization",
-        "single-source-of-truth",
-        "maintainability"
-      ]
+      "tags": []
     },
     {
       "name": "dry-refactoring-workflow",
@@ -237,15 +200,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/dry-refactoring-workflow",
       "category": "architecture",
-      "tags": [
-        "refactoring",
-        "dry-principle",
-        "helper-methods",
-        "tdd",
-        "code-quality",
-        "python",
-        "pytest"
-      ]
+      "tags": []
     },
     {
       "name": "e2e-resume-refactor",
@@ -253,13 +208,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/e2e-resume-refactor",
       "category": "architecture",
-      "tags": [
-        "e2e-testing",
-        "resume-behavior",
-        "checkpoint",
-        "directory-structure",
-        "result-reuse"
-      ]
+      "tags": []
     },
     {
       "name": "extract-detection-utils",
@@ -267,15 +216,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/extract-detection-utils",
       "category": "architecture",
-      "tags": [
-        "refactoring",
-        "module-extraction",
-        "DRY",
-        "single-responsibility",
-        "lru-cache",
-        "testing-patterns",
-        "code-organization"
-      ]
+      "tags": []
     },
     {
       "name": "extract-method-refactoring",
@@ -283,11 +224,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/extract-method-refactoring",
       "category": "architecture",
-      "tags": [
-        "extract",
-        "method",
-        "refactoring"
-      ]
+      "tags": []
     },
     {
       "name": "fix-resource-prompt-consistency",
@@ -295,12 +232,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/fix-resource-prompt-consistency",
       "category": "architecture",
-      "tags": [
-        "tier-config",
-        "prompt-engineering",
-        "resource-mapping",
-        "testing"
-      ]
+      "tags": []
     },
     {
       "name": "generate-api-docs",
@@ -340,15 +272,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/immutable-method-refactor",
       "category": "architecture",
-      "tags": [
-        "immutable",
-        "refactor",
-        "architecture",
-        "functional",
-        "class",
-        "mutation",
-        "method"
-      ]
+      "tags": []
     },
     {
       "name": "implementation-alignment-validation",
@@ -356,16 +280,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/implementation-alignment-validation",
       "category": "architecture",
-      "tags": [
-        "validation",
-        "alignment",
-        "documentation",
-        "implementation",
-        "research",
-        "theory",
-        "metrics",
-        "audit"
-      ]
+      "tags": []
     },
     {
       "name": "implementation-theory-alignment",
@@ -373,16 +288,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/implementation-theory-alignment",
       "category": "architecture",
-      "tags": [
-        "validation",
-        "alignment",
-        "research",
-        "documentation",
-        "metrics",
-        "implementation",
-        "theory",
-        "discrepancy"
-      ]
+      "tags": []
     },
     {
       "name": "judge-rerun-workspace-corruption",
@@ -390,13 +296,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/judge-rerun-workspace-corruption",
       "category": "architecture",
-      "tags": [
-        "evaluation",
-        "judging",
-        "workspace-management",
-        "error-handling",
-        "rerun-scripts"
-      ]
+      "tags": []
     },
     {
       "name": "migrate-dataclass-to-pydantic",
@@ -404,12 +304,51 @@
       "version": "1.0.0",
       "source": "./skills/architecture/migrate-dataclass-to-pydantic",
       "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "mojo-comptime-alias-removal",
+      "description": "Remove deprecated Mojo comptime type aliases and replace with direct type references. Use when: (1) cleaning up deprecated `comptime Alias = Type` definitions in Mojo, (2) removing backward-compat aliases after type consolidation, (3) updating function signatures and exports after alias removal.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/mojo-comptime-alias-removal",
+      "category": "architecture",
       "tags": [
-        "pydantic",
-        "dataclass",
-        "migration",
-        "validation",
-        "refactoring"
+        "mojo",
+        "type-alias",
+        "comptime",
+        "cleanup",
+        "refactoring",
+        "backward-compat"
+      ]
+    },
+    {
+      "name": "mojo-deprecated-alias-removal",
+      "description": "Workflow for removing deprecated Mojo comptime type aliases and replacing with canonical types. Use when: (1) removing DEPRECATED-marked comptime aliases from Mojo modules, (2) replacing backward-compat aliases with canonical gradient/result types, (3) cleaning up module exports and backward-compat test files after alias consolidation.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/mojo-deprecated-alias-removal",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "type-alias",
+        "comptime",
+        "cleanup",
+        "backward-compat",
+        "gradient-types"
+      ]
+    },
+    {
+      "name": "mojo-extensor-utility-methods",
+      "description": "Implement standard utility methods on a Mojo tensor class (ExTensor). Use when: (1) adding Python/NumPy-compatible utility methods to a Mojo struct, (2) implementing __setitem__, __str__, __repr__, __hash__, __int__, __float__ on a type-erased tensor, (3) auditing what methods are already implemented before coding.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/mojo-extensor-utility-methods",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "tensor",
+        "extensor",
+        "utility-methods",
+        "struct-methods",
+        "type-erased-storage"
       ]
     },
     {
@@ -418,14 +357,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/orphan-module-subpackage-relocation",
       "category": "architecture",
-      "tags": [
-        "refactoring",
-        "structure",
-        "imports",
-        "sub-package",
-        "KISS",
-        "YAGNI"
-      ]
+      "tags": []
     },
     {
       "name": "phase-plan-generate",
@@ -465,11 +397,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/pydantic-type-consolidation",
       "category": "architecture",
-      "tags": [
-        "pydantic",
-        "type",
-        "consolidation"
-      ]
+      "tags": []
     },
     {
       "name": "quality-complexity-check",
@@ -477,13 +405,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/quality-complexity-check",
       "category": "architecture",
-      "tags": [
-        "complexity",
-        "cyclomatic",
-        "refactoring",
-        "code-quality",
-        "metrics"
-      ]
+      "tags": []
     },
     {
       "name": "quality-security-scan",
@@ -491,13 +413,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/quality-security-scan",
       "category": "architecture",
-      "tags": [
-        "security",
-        "vulnerabilities",
-        "secrets",
-        "audit",
-        "owasp"
-      ]
+      "tags": []
     },
     {
       "name": "refactor-for-extensibility",
@@ -513,16 +429,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/resumable-state-machine-until-halt",
       "category": "architecture",
-      "tags": [
-        "state-machine",
-        "until-halt",
-        "sentinel-exception",
-        "checkpoint",
-        "resume",
-        "additive-tiers",
-        "ephemeral-config",
-        "cli-args"
-      ]
+      "tags": []
     },
     {
       "name": "shared-fixture-migration",
@@ -530,15 +437,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/shared-fixture-migration",
       "category": "architecture",
-      "tags": [
-        "deduplication",
-        "test-fixtures",
-        "config-migration",
-        "centralization",
-        "runtime-loading",
-        "tier-testing",
-        "shared-resources"
-      ]
+      "tags": []
     },
     {
       "name": "single-responsibility-extraction",
@@ -546,14 +445,20 @@
       "version": "1.0.0",
       "source": "./skills/architecture/single-responsibility-extraction",
       "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "standardize-matmul-calls",
+      "description": "Convert A.__matmul__(B) dunder method calls to matmul(A, B) function syntax for consistency. Use when: (1) codebase has mixed matmul call patterns, (2) standardizing operator vs function syntax in Mojo/ML code, (3) refactoring dunder method calls to idiomatic function syntax.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/standardize-matmul-calls",
+      "category": "architecture",
       "tags": [
+        "mojo",
         "refactoring",
-        "solid",
-        "single-responsibility",
-        "extract-method",
-        "tdd",
-        "collaborator-pattern",
-        "complexity-reduction"
+        "matmul",
+        "standardization",
+        "ml-odyssey"
       ]
     },
     {
@@ -562,18 +467,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/state-machine-interrupt-handling",
       "category": "architecture",
-      "tags": [
-        "state-machine",
-        "interrupt-handling",
-        "ctrl-c",
-        "sigint",
-        "subprocess",
-        "sentinel-exception",
-        "resume",
-        "checkpoint",
-        "processpool",
-        "graceful-shutdown"
-      ]
+      "tags": []
     },
     {
       "name": "state-machine-wiring",
@@ -581,15 +475,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/state-machine-wiring",
       "category": "architecture",
-      "tags": [
-        "state-machine",
-        "closure",
-        "checkpoint",
-        "resume",
-        "hierarchy",
-        "refactoring",
-        "production"
-      ]
+      "tags": []
     },
     {
       "name": "tighten-except-exception-clauses",
@@ -597,13 +483,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/tighten-except-exception-clauses",
       "category": "architecture",
-      "tags": [
-        "architecture",
-        "python",
-        "exceptions",
-        "code-quality",
-        "refactoring"
-      ]
+      "tags": []
     },
     {
       "name": "track-implementation-progress",
@@ -619,11 +499,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/type-alias-consolidation",
       "category": "architecture",
-      "tags": [
-        "type",
-        "alias",
-        "consolidation"
-      ]
+      "tags": []
     },
     {
       "name": "type-alias-removal",
@@ -631,12 +507,7 @@
       "version": "1.0.0",
       "source": "./skills/architecture/type-alias-removal",
       "category": "architecture",
-      "tags": [
-        "refactoring",
-        "type-safety",
-        "code-clarity",
-        "maintenance"
-      ]
+      "tags": []
     },
     {
       "name": "unify-config-structure",
@@ -647,20 +518,27 @@
       "tags": []
     },
     {
+      "name": "verify-issue-already-implemented",
+      "description": "Verify whether a GitHub issue has already been implemented before starting work. Use when: (1) assigned to implement a GitHub issue, (2) issue prompt file exists in worktree, (3) before writing any code to avoid duplicate work.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/verify-issue-already-implemented",
+      "category": "architecture",
+      "tags": [
+        "github",
+        "issues",
+        "verification",
+        "idempotency",
+        "git-log",
+        "worktree"
+      ]
+    },
+    {
       "name": "wave-based-bulk-issue-triage",
       "description": "Fix 5+ independent GitHub issues in parallel waves using Task isolation:worktree \u2014 no manual worktree setup needed. Use when you have a backlog of simple issues to clear.",
       "version": "1.0.0",
       "source": "./skills/architecture/wave-based-bulk-issue-triage",
       "category": "architecture",
-      "tags": [
-        "parallel",
-        "worktrees",
-        "bulk-triage",
-        "issues",
-        "wave",
-        "sub-agents",
-        "automation"
-      ]
+      "tags": []
     },
     {
       "name": "yaml-long-line-refactor",
@@ -668,11 +546,21 @@
       "version": "1.0.0",
       "source": "./skills/architecture/yaml-long-line-refactor",
       "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "adr009-audit-issue-creation",
+      "description": "Audit test files for ADR-009 violations (too many fn test_ per file) and create GitHub issues per violating file. Use when: (1) CI is flaky due to Mojo heap corruption and files exceed per-file test limits, (2) a new ADR sets a per-file test count limit and you need to enumerate all violations as actionable issues, (3) you need to triage 50-150 files and create structured GitHub issues in batches without duplicates.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-audit-issue-creation",
+      "category": "ci-cd",
       "tags": [
-        "yaml",
-        "long",
-        "line",
-        "refactor"
+        "adr",
+        "mojo",
+        "heap-corruption",
+        "github-issues",
+        "test-splitting",
+        "batch-operations"
       ]
     },
     {
@@ -681,11 +569,38 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/analyze-ci-failure-logs",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "bandit-precommit-security-scanner",
+      "description": "Pattern for replacing a pygrep shell=True pre-commit hook with bandit AST-based Python security scanning. Use when: (1) a pygrep hook uses shell=True or regex patterns that have false positives, (2) you need deeper security analysis than string matching, (3) upgrading pre-commit security hooks to AST-based scanning.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/bandit-precommit-security-scanner",
+      "category": "ci-cd",
       "tags": [
-        "ci",
-        "logs",
-        "debugging",
-        "github-actions"
+        "bandit",
+        "pre-commit",
+        "security",
+        "pygrep",
+        "shell-injection",
+        "pixi",
+        "ast-scanning"
+      ]
+    },
+    {
+      "name": "bandit-replace-pygrep-security-hook",
+      "description": "Replace a naive pygrep shell=True pre-commit hook with bandit for AST-based Python security scanning. Use when: (1) pygrep check-shell-injection produces false positives in comments/strings, (2) need to catch os.system/subprocess misuse not just shell=True, (3) upgrading pre-commit security checks to reduce false positive rate.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/bandit-replace-pygrep-security-hook",
+      "category": "ci-cd",
+      "tags": [
+        "bandit",
+        "pre-commit",
+        "security",
+        "pygrep",
+        "shell-injection",
+        "python",
+        "pixi"
       ]
     },
     {
@@ -694,14 +609,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/batch-pr-ci-fix",
       "category": "ci-cd",
-      "tags": [
-        "ci-cd",
-        "batch",
-        "automation",
-        "github",
-        "pr",
-        "auto-merge"
-      ]
+      "tags": []
     },
     {
       "name": "batch-pr-pre-commit-fixes",
@@ -709,14 +617,21 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/batch-pr-pre-commit-fixes",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "batch-review-plan-implementation",
+      "description": "Implements multiple review plans generated by automated issue implementers, handling both OPEN PRs (rebase+push) and MERGED PRs (skip if pre-existing flake). Use when: (1) automated implementer created 20+ PRs and review plans need bulk processing, (2) review JSON files show phase=failed with git push errors, (3) stale branches need rebasing across many PRs simultaneously.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/batch-review-plan-implementation",
+      "category": "ci-cd",
       "tags": [
-        "pre-commit",
-        "markdown",
-        "linting",
-        "ci-cd",
-        "batch-processing",
-        "github-actions",
-        "automation"
+        "batch",
+        "review",
+        "rebase",
+        "git-worktree",
+        "pr-management",
+        "auto-merge"
       ]
     },
     {
@@ -725,12 +640,28 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/build-run-local",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "bulk-pr-json-repair-and-automerge",
+      "description": "Repair bulk-corrupted JSON files and enable auto-merge on many PRs. Use when a batch edit left invalid JSON (orphaned array contents, trailing commas) in many files, or when you need to enable auto-merge across 20+ open PRs.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/bulk-pr-json-repair-and-automerge",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "cherry-pick-fix-diverged-pr",
+      "description": "Apply a local fix commit to a remote PR branch when histories have diverged (same-content commits with different SHAs). Use when: (1) a fix exists locally but can't be fast-forward pushed to the PR branch, (2) git rebase created duplicate commits with different SHAs on local vs remote, (3) review fix plan says 'no changes needed' but CI still fails because the fix was never pushed.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/cherry-pick-fix-diverged-pr",
+      "category": "ci-cd",
       "tags": [
-        "build",
-        "local",
-        "testing",
-        "environment",
-        "verification"
+        "cherry-pick",
+        "diverged-branch",
+        "pr-fix",
+        "mojo-format",
+        "rebase"
       ]
     },
     {
@@ -739,15 +670,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/ci-coverage-threshold-single-source",
       "category": "ci-cd",
-      "tags": [
-        "ci",
-        "coverage",
-        "pytest",
-        "pytest-cov",
-        "github-actions",
-        "single-source-of-truth",
-        "pyproject"
-      ]
+      "tags": []
     },
     {
       "name": "ci-deprecation-enforcement",
@@ -755,14 +678,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/ci-deprecation-enforcement",
       "category": "ci-cd",
-      "tags": [
-        "ci",
-        "deprecation",
-        "grep",
-        "enforcement",
-        "exit-1",
-        "github-actions"
-      ]
+      "tags": []
     },
     {
       "name": "ci-failure-workflow",
@@ -770,13 +686,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/ci-failure-workflow",
       "category": "ci-cd",
-      "tags": [
-        "ci-cd",
-        "debugging",
-        "github-actions",
-        "troubleshooting",
-        "logs"
-      ]
+      "tags": []
     },
     {
       "name": "ci-test-failure-diagnosis",
@@ -792,12 +702,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/codeowners-stale-entry-removal",
       "category": "ci-cd",
-      "tags": [
-        "ci-cd",
-        "codeowners",
-        "github",
-        "cleanup"
-      ]
+      "tags": []
     },
     {
       "name": "comprehensive-pr-review-orchestration",
@@ -805,11 +710,35 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/comprehensive-pr-review-orchestration",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "consolidate-ci-matrix",
+      "description": "Consolidate GitHub Actions matrix test groups to reduce job overhead. Use when: (1) CI matrix has too many groups (>20) causing excessive startup overhead, (2) reducing CI wall time without losing test coverage, (3) grouping related test directories that rarely fail independently.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/consolidate-ci-matrix",
+      "category": "ci-cd",
       "tags": [
-        "pr-review",
-        "code-review",
-        "orchestration",
-        "github"
+        "github-actions",
+        "matrix",
+        "test-groups",
+        "ci-optimization",
+        "mojo"
+      ]
+    },
+    {
+      "name": "consolidate-ci-workflows",
+      "description": "Consolidate GitHub Actions workflows by extracting composite actions and merging redundant workflows. Use when: (1) repo has 15+ workflows with repeated Pixi setup or PR comment JS blocks, (2) build validation workflow duplicates work already done in a test workflow, (3) security workflows overlap in trigger conditions, (4) placeholder-only jobs exist with no real implementation.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/consolidate-ci-workflows",
+      "category": "ci-cd",
+      "tags": [
+        "github-actions",
+        "composite-actions",
+        "workflow-consolidation",
+        "deduplication",
+        "pixi",
+        "pr-comments"
       ]
     },
     {
@@ -818,13 +747,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/deduplicate-issues",
       "category": "ci-cd",
-      "tags": [
-        "github",
-        "issues",
-        "automation",
-        "cleanup",
-        "deduplication"
-      ]
+      "tags": []
     },
     {
       "name": "deduplicate-llm-json-extraction",
@@ -832,11 +755,35 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/deduplicate-llm-json-extraction",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "diagnose-pr-ci-failures",
+      "description": "Diagnose CI failures on a pull request by classifying them as PR-caused vs pre-existing vs flaky, then take the appropriate action. Use when: (1) CI checks fail after pushing a PR, (2) you need to determine if a failure is your fault or pre-existing, (3) intermittent Mojo runtime crashes appear in CI.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/diagnose-pr-ci-failures",
+      "category": "ci-cd",
       "tags": [
-        "deduplicate",
-        "llm",
-        "json",
-        "extraction"
+        "ci",
+        "debugging",
+        "flaky-tests",
+        "mojo",
+        "github-actions",
+        "pr-workflow"
+      ]
+    },
+    {
+      "name": "diverged-branch-cherry-pick-fix",
+      "description": "Fix a diverged feature branch by resetting to remote and cherry-picking specific fix commits. Use when: (1) local and remote branches have diverged and cannot be fast-forward pushed, (2) a fix commit exists locally but the remote has additional commits not present locally, (3) git push fails due to non-fast-forward rejection on a feature branch.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/diverged-branch-cherry-pick-fix",
+      "category": "ci-cd",
+      "tags": [
+        "git",
+        "cherry-pick",
+        "diverged-branch",
+        "feature-branch",
+        "pr-fix"
       ]
     },
     {
@@ -845,14 +792,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/doc-config-drift-check",
       "category": "ci-cd",
-      "tags": [
-        "pre-commit",
-        "documentation",
-        "drift-detection",
-        "coverage",
-        "pyproject",
-        "consistency"
-      ]
+      "tags": []
     },
     {
       "name": "doc-config-drift-test-count-check",
@@ -860,17 +800,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/doc-config-drift-test-count-check",
       "category": "ci-cd",
-      "tags": [
-        "pytest",
-        "documentation",
-        "drift-detection",
-        "ci-cd",
-        "readme",
-        "test-count",
-        "consistency-check",
-        "subprocess",
-        "pre-commit"
-      ]
+      "tags": []
     },
     {
       "name": "docker-build-timing-ci-measurement",
@@ -878,14 +808,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/docker-build-timing-ci-measurement",
       "category": "ci-cd",
-      "tags": [
-        "docker",
-        "ci",
-        "build-timing",
-        "cache-efficiency",
-        "github-actions",
-        "performance-measurement"
-      ]
+      "tags": []
     },
     {
       "name": "docker-ci-dead-step-cleanup",
@@ -893,13 +816,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/docker-ci-dead-step-cleanup",
       "category": "ci-cd",
-      "tags": [
-        "docker",
-        "ci",
-        "github-actions",
-        "dead-code",
-        "cleanup"
-      ]
+      "tags": []
     },
     {
       "name": "docker-multistage-build",
@@ -907,12 +824,23 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/docker-multistage-build",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "dockerfile-cargo-to-prebuilt-binary",
+      "description": "Replace slow cargo install in Dockerfiles with pre-built binary installers to eliminate Rust compilation. Use when: (1) Dockerfile uses cargo install for a tool that provides an official install.sh, (2) Docker builds are slow due to Rust compilation, (3) cargo is only a transitive dep for a single tool install.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/dockerfile-cargo-to-prebuilt-binary",
+      "category": "ci-cd",
       "tags": [
-        "docker",
+        "dockerfile",
+        "cargo",
+        "just",
+        "pre-built",
+        "build-time",
         "optimization",
-        "containerization",
-        "build",
-        "deployment"
+        "pixi",
+        "version-pinning"
       ]
     },
     {
@@ -921,17 +849,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/dockerfile-dep-pin",
       "category": "ci-cd",
-      "tags": [
-        "docker",
-        "dockerfile",
-        "pip",
-        "pinning",
-        "reproducible-builds",
-        "layer-cache",
-        "hatchling",
-        "regression-test",
-        "static-analysis"
-      ]
+      "tags": []
     },
     {
       "name": "dockerfile-extras-validation",
@@ -939,14 +857,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/dockerfile-extras-validation",
       "category": "ci-cd",
-      "tags": [
-        "dockerfile",
-        "extras",
-        "validation",
-        "pyproject",
-        "optional-dependencies",
-        "build-arg"
-      ]
+      "tags": []
     },
     {
       "name": "dockerfile-layer-caching",
@@ -954,16 +865,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/dockerfile-layer-caching",
       "category": "ci-cd",
-      "tags": [
-        "docker",
-        "dockerfile",
-        "layer-caching",
-        "pip",
-        "python",
-        "pyproject.toml",
-        "build-optimization",
-        "ci-cd"
-      ]
+      "tags": []
     },
     {
       "name": "dockerfile-python-version-guard",
@@ -971,14 +873,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/dockerfile-python-version-guard",
       "category": "ci-cd",
-      "tags": [
-        "docker",
-        "python",
-        "tomllib",
-        "version-constraint",
-        "static-analysis",
-        "regression-guard"
-      ]
+      "tags": []
     },
     {
       "name": "dockerfile-tomllib-fallback",
@@ -986,15 +881,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/dockerfile-tomllib-fallback",
       "category": "ci-cd",
-      "tags": [
-        "dockerfile",
-        "tomllib",
-        "tomli",
-        "python3.10",
-        "python3.11",
-        "pyproject",
-        "dependencies"
-      ]
+      "tags": []
     },
     {
       "name": "docstring-fragment-validator",
@@ -1002,15 +889,24 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/docstring-fragment-validator",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "enable-mccabe-complexity-c901",
+      "description": "Enable C901 McCabe complexity rule in ruff for an existing Python project. Covers threshold selection (10 vs 12), pyproject.toml mccabe section config, annotated noqa suppression pattern for orchestration/pipeline/CLI functions, and the critical pitfall that --max-complexity is not a valid ruff CLI flag.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/enable-mccabe-complexity-c901",
+      "category": "ci-cd",
       "tags": [
-        "pre-commit",
-        "docstrings",
-        "ast",
-        "audit",
-        "false-positives",
-        "python",
-        "hooks",
-        "semantic-validation"
+        "ruff",
+        "C901",
+        "McCabe",
+        "complexity",
+        "linting",
+        "noqa",
+        "pyproject",
+        "code-quality",
+        "Python"
       ]
     },
     {
@@ -1019,16 +915,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/enable-yaml-markdown-linting",
       "category": "ci-cd",
-      "tags": [
-        "pre-commit",
-        "yamllint",
-        "markdownlint",
-        "linting",
-        "quality",
-        "github-actions",
-        "ci-cd",
-        "documentation"
-      ]
+      "tags": []
     },
     {
       "name": "enforce-unit-test-structure-hook",
@@ -1036,14 +923,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/enforce-unit-test-structure-hook",
       "category": "ci-cd",
-      "tags": [
-        "pre-commit",
-        "unit-tests",
-        "test-structure",
-        "hooks",
-        "enforcement",
-        "mirroring"
-      ]
+      "tags": []
     },
     {
       "name": "fix-ci-failures",
@@ -1051,12 +931,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/fix-ci-failures",
       "category": "ci-cd",
-      "tags": [
-        "ci",
-        "debugging",
-        "github-actions",
-        "testing"
-      ]
+      "tags": []
     },
     {
       "name": "fix-ci-mojo-test-failure",
@@ -1064,13 +939,21 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/fix-ci-mojo-test-failure",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "fix-composite-action-migration",
+      "description": "Fix incomplete GitHub Actions composite action migration and redundant double-caching. Use when: (1) some jobs still call a third-party action directly instead of a newly-created composite action wrapper, (2) a composite action duplicates caching that the wrapped action already handles internally.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/fix-composite-action-migration",
+      "category": "ci-cd",
       "tags": [
-        "ci",
-        "mojo",
-        "testing",
-        "assertion",
-        "edge-case",
-        "debugging"
+        "github-actions",
+        "composite-action",
+        "caching",
+        "pixi",
+        "migration",
+        "refactoring"
       ]
     },
     {
@@ -1079,13 +962,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/fix-docker-image-case",
       "category": "ci-cd",
-      "tags": [
-        "docker",
-        "sbom",
-        "case-sensitivity",
-        "github-actions",
-        "ci-cd"
-      ]
+      "tags": []
     },
     {
       "name": "fix-docker-platform",
@@ -1093,14 +970,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/fix-docker-platform",
       "category": "ci-cd",
-      "tags": [
-        "docker",
-        "ghcr",
-        "arm64",
-        "pixi",
-        "platform",
-        "ci"
-      ]
+      "tags": []
     },
     {
       "name": "fix-docker-shell-tty",
@@ -1108,13 +978,36 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/fix-docker-shell-tty",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "fix-mojo-format-line-length",
+      "description": "Fix mojo format CI failures caused by print() strings exceeding 88-char line limit when mojo cannot run locally. Use when: (1) pre-commit mojo-format hook fails in CI reformatting print() calls, (2) mojo binary is unavailable locally due to GLIBC incompatibility, (3) need to manually apply mojo format line-wrapping rules to print statements.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/fix-mojo-format-line-length",
+      "category": "ci-cd",
       "tags": [
-        "docker",
-        "shell",
-        "tty",
-        "interactive",
-        "container",
-        "troubleshooting"
+        "mojo",
+        "mojo-format",
+        "pre-commit",
+        "line-length",
+        "print",
+        "glibc"
+      ]
+    },
+    {
+      "name": "fix-mypy-ruff-script-ci",
+      "description": "Fix mypy and ruff CI failures in Python scripts caused by unused variables, missing type annotations, and bare f-strings. Use when: (1) mypy reports 'Incompatible return value type' for list with None elements, (2) ruff reports F841 unused variables or F541 f-string without placeholders, (3) pre-commit ruff-format or ruff-check hooks fail on scripts.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/fix-mypy-ruff-script-ci",
+      "category": "ci-cd",
+      "tags": [
+        "mypy",
+        "ruff",
+        "type-annotations",
+        "python",
+        "ci-cd",
+        "pre-commit"
       ]
     },
     {
@@ -1123,14 +1016,20 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/fix-mypy-valid-type-errors",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "fix-precommit-pass-filenames",
+      "description": "Fix pre-commit hooks that use pass_filenames: false when they should use pass_filenames: true, removing hardcoded directory args from entry so pre-commit passes only changed files. Use when: (1) pre-commit hooks always scan entire directories instead of only changed files, (2) hooks are slower than expected on partial changes, (3) ruff/linter hooks have hardcoded directory paths in entry instead of using file filtering.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/fix-precommit-pass-filenames",
+      "category": "ci-cd",
       "tags": [
-        "mypy",
-        "type-checking",
-        "valid-type",
-        "callable",
-        "typing",
         "pre-commit",
-        "python"
+        "ruff",
+        "pass-filenames",
+        "incremental",
+        "performance"
       ]
     },
     {
@@ -1139,13 +1038,20 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/fix-ruff-linting-errors",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "fix-security-scan-gaps",
+      "description": "Fix common GitHub Actions security scanning gaps: missing PR triggers, silenced Semgrep failures, and Gitleaks working-directory-only scans. Use when: (1) security scans only run on push to main, not PRs, (2) Semgrep has continue-on-error masking failures, (3) Gitleaks uses --no-git missing history secrets.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/fix-security-scan-gaps",
+      "category": "ci-cd",
       "tags": [
-        "linting",
-        "ruff",
-        "pre-commit",
-        "ci-cd",
-        "automation",
-        "docstrings"
+        "security",
+        "gitleaks",
+        "semgrep",
+        "github-actions",
+        "pull-request"
       ]
     },
     {
@@ -1154,16 +1060,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/fix-skill-validation-warnings",
       "category": "ci-cd",
-      "tags": [
-        "ci",
-        "validation",
-        "quality",
-        "automation",
-        "bulk-fixes",
-        "skill-plugins",
-        "python",
-        "markdown"
-      ]
+      "tags": []
     },
     {
       "name": "gh-check-ci-status",
@@ -1171,13 +1068,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/gh-check-ci-status",
       "category": "ci-cd",
-      "tags": [
-        "github",
-        "ci-cd",
-        "checks",
-        "testing",
-        "gh-cli"
-      ]
+      "tags": []
     },
     {
       "name": "github-actions-mojo",
@@ -1185,13 +1076,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/github-actions-mojo",
       "category": "ci-cd",
-      "tags": [
-        "mojo",
-        "github-actions",
-        "ci-cd",
-        "pixi",
-        "testing"
-      ]
+      "tags": []
     },
     {
       "name": "github-actions-pytest-pixi",
@@ -1199,16 +1084,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/github-actions-pytest-pixi",
       "category": "ci-cd",
-      "tags": [
-        "github-actions",
-        "pytest",
-        "pixi",
-        "ci-cd",
-        "testing",
-        "matrix",
-        "coverage",
-        "automation"
-      ]
+      "tags": []
     },
     {
       "name": "github-bulk-housekeeping",
@@ -1216,18 +1092,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/github-bulk-housekeeping",
       "category": "ci-cd",
-      "tags": [
-        "github",
-        "issues",
-        "triage",
-        "bulk",
-        "worktree",
-        "branch-cleanup",
-        "rebase",
-        "pre-commit",
-        "pixi",
-        "ci"
-      ]
+      "tags": []
     },
     {
       "name": "install-workflow",
@@ -1243,13 +1108,186 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/markdownlint-troubleshooting",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "mass-pr-ci-fix",
+      "description": "Fix CI failures across many open PRs systematically: identify root blockers, mass-rebase, fix mojo format violations, Mojo trait API mismatches, and ADR-009 heap crash retries. Use when: (1) many PRs share a common CI failure root cause, (2) pre-commit mojo format failures appear after a codebase change, (3) Mojo trait API changes break compilation across multiple branches.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mass-pr-ci-fix",
+      "category": "ci-cd",
       "tags": [
+        "mojo",
         "ci",
         "pre-commit",
-        "markdownlint",
-        "debugging",
-        "unblock-prs",
-        "linting"
+        "rebase",
+        "mass-fix",
+        "github-actions"
+      ]
+    },
+    {
+      "name": "mass-pr-rebase-conflict-resolution",
+      "description": "Rebase multiple DIRTY/CONFLICTING PRs against main, resolve merge conflicts, and fix pre-commit CI failures. Use when: (1) many PRs show DIRTY/CONFLICTING merge state after main advances, (2) pre-commit format failures need manual fixes because mojo format can't run locally, (3) the same files (e.g. extensor.mojo) conflict across many PRs with diverging implementations.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mass-pr-rebase-conflict-resolution",
+      "category": "ci-cd",
+      "tags": [
+        "rebase",
+        "conflict-resolution",
+        "pull-requests",
+        "mojo",
+        "pre-commit",
+        "ci-failures"
+      ]
+    },
+    {
+      "name": "mkdocs-nav-cleanup",
+      "description": "Fix MkDocs build failures caused by nav entries referencing deleted documentation files. Use when: (1) CI 'Deploy Documentation' job fails after deleting doc stubs, (2) mkdocs build --strict reports missing files, (3) PR deletes placeholder docs but mkdocs.yml nav still references them.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mkdocs-nav-cleanup",
+      "category": "ci-cd",
+      "tags": [
+        "mkdocs",
+        "documentation",
+        "nav",
+        "broken-links",
+        "ci-fix"
+      ]
+    },
+    {
+      "name": "mojo-flaky-segfault-mitigation",
+      "description": "Mitigate flaky Mojo runtime segfaults (libKGENCompilerRTShared.so crashes) in GitHub Actions CI matrix jobs. Use when: (1) CI matrix test groups fail with 'execution crashed' from libKGENCompilerRTShared.so, (2) failures are intermittent and pass on main branch, (3) crashes are unrelated to code changes under review.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-flaky-segfault-mitigation",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "segfault",
+        "flaky-tests",
+        "continue-on-error",
+        "github-actions",
+        "matrix",
+        "ci"
+      ]
+    },
+    {
+      "name": "mojo-format-line-length-fix",
+      "description": "Fix mojo-format pre-commit CI failures caused by lines exceeding the line length limit. Use when: (1) pre-commit CI fails with mojo-format modifying a file, (2) a print() or other statement in .mojo files exceeds the line length limit, (3) you need to wrap long string literals across multiple lines in Mojo code.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-format-line-length-fix",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "mojo-format",
+        "line-length",
+        "pre-commit",
+        "ci",
+        "formatting"
+      ]
+    },
+    {
+      "name": "mojo-jit-crash-flaky-diagnosis",
+      "description": "Diagnose and distinguish genuine Mojo JIT crash failures from infrastructure flakiness in CI. Use when: (1) CI shows 'execution crashed' errors affecting unchanged test files, (2) Core test groups fail while identical code passes on main, (3) multiple unrelated test files crash in the same CI run.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-jit-crash-flaky-diagnosis",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "jit",
+        "flaky",
+        "ci",
+        "crash",
+        "diagnosis"
+      ]
+    },
+    {
+      "name": "mojo-jit-crash-retry",
+      "description": "Diagnose and fix intermittent Mojo JIT compiler crashes in CI (libKGENCompilerRTShared.so abort). Add retry logic to test-group justfile recipe. Use when: (1) Mojo tests report 'execution crashed' before printing any output, (2) same test passes/fails non-deterministically across CI runs, (3) crash stack shows libKGENCompilerRTShared.so calling libc abort.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-jit-crash-retry",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "ci",
+        "flaky-tests",
+        "justfile",
+        "retry",
+        "jit-crash"
+      ]
+    },
+    {
+      "name": "mojo-setitem-glibc-hook-skip",
+      "description": "Fix ExTensor missing __setitem__ and handle mojo format pre-commit failures caused by GLIBC version mismatch. Use when: (1) CI Core Utilities fails with 'expression must be mutable in assignment' on tensor subscript assignment, (2) mojo format pre-commit hook fails locally with GLIBC_2.32/2.33/2.34 not found errors, (3) adding __setitem__ overloads to ExTensor following _set_float64/_set_int64 internal setter pattern. Verified on ProjectOdyssey PR #3385.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-setitem-glibc-hook-skip",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "extensor",
+        "setitem",
+        "glibc",
+        "pre-commit",
+        "hook-skip"
+      ]
+    },
+    {
+      "name": "mojo-transient-crash-rerun",
+      "description": "Identify and clear transient Mojo runner crashes in CI by re-triggering failed jobs instead of making code changes. Use when: (1) CI fails with 'mojo: error: execution crashed' and no stack frames from repo code, (2) same test group passes on main branch at same time, (3) PR only contains non-logic changes (comments, docs, formatting).",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-transient-crash-rerun",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "flaky-ci",
+        "transient-crash",
+        "execution-crashed",
+        "rerun",
+        "ci-rerun"
+      ]
+    },
+    {
+      "name": "mojo-type-alias-cleanup",
+      "description": "Fix Mojo compilation errors caused by non-existent type aliases introduced when removing deprecated type aliases. Use when: (1) CI fails with unknown type errors after removing deprecated aliases, (2) backward type names were replaced with new names that don't exist, (3) need to map removed aliases back to their canonical underlying types.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-type-alias-cleanup",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "type-alias",
+        "deprecated",
+        "ci-failure",
+        "compilation"
+      ]
+    },
+    {
+      "name": "mojo-unsafepointer-bitcast-fix",
+      "description": "Fix Mojo compile error: UnsafePointer.address_of() is not a valid API; use UnsafePointer[T](to=val).bitcast[U]()[] instead. Use when: (1) CI fails with 'value has no attribute address_of', (2) converting float values to bit representation for hashing, (3) mojo format line-length failures on raise Error() calls.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-unsafepointer-bitcast-fix",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "unsafepointer",
+        "bitcast",
+        "compile-error",
+        "hash",
+        "mojo-format"
+      ]
+    },
+    {
+      "name": "mypy-precommit-hook-pixi",
+      "description": "Add mypy type checking as a pre-commit hook in pixi-managed projects. Use when: (1) adding mypy enforcement to pre-commit, (2) scripts use X|Y union syntax that mypy rejects without --python-version 3.10, (3) mirrors-mypy isolated env is missing types-PyYAML stubs.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mypy-precommit-hook-pixi",
+      "category": "ci-cd",
+      "tags": [
+        "mypy",
+        "pre-commit",
+        "type-checking",
+        "pixi",
+        "python",
+        "mirrors-mypy",
+        "types-PyYAML"
       ]
     },
     {
@@ -1258,17 +1296,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/parallel-issue-wave-execution",
       "category": "ci-cd",
-      "tags": [
-        "parallel",
-        "worktree",
-        "bulk-pr",
-        "issue-backlog",
-        "coverage",
-        "pixi",
-        "altair",
-        "ci-fix",
-        "rebase"
-      ]
+      "tags": []
     },
     {
       "name": "pin-npm-dockerfile",
@@ -1276,11 +1304,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/pin-npm-dockerfile",
       "category": "ci-cd",
-      "tags": [
-        "pin",
-        "npm",
-        "dockerfile"
-      ]
+      "tags": []
     },
     {
       "name": "pixi-lock-rebase-regenerate",
@@ -1288,13 +1312,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/pixi-lock-rebase-regenerate",
       "category": "ci-cd",
-      "tags": [
-        "pixi",
-        "lock-file",
-        "rebase",
-        "ci-failure",
-        "dependency-management"
-      ]
+      "tags": []
     },
     {
       "name": "pixi-pip-audit-severity-filter",
@@ -1302,14 +1320,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/pixi-pip-audit-severity-filter",
       "category": "ci-cd",
-      "tags": [
-        "pip-audit",
-        "pixi",
-        "security",
-        "ci",
-        "vulnerability-scanning",
-        "severity-filter"
-      ]
+      "tags": []
     },
     {
       "name": "pixi-toml-dep-dedup",
@@ -1317,11 +1328,34 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/pixi-toml-dep-dedup",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "pr-ci-fix-via-rebase",
+      "description": "Fix PR CI failures caused by a stale branch that is many commits behind main. Use when: (1) CI fails with crashes or segfaults unrelated to the PR's own changes, (2) the branch is 10+ commits behind main, (3) fuzz/integration tests pass on main but fail on the PR branch.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pr-ci-fix-via-rebase",
+      "category": "ci-cd",
       "tags": [
-        "ci-cd",
-        "pixi",
-        "dependencies",
-        "deduplication"
+        "rebase",
+        "ci-fix",
+        "stale-branch",
+        "fuzz-tests",
+        "worktree"
+      ]
+    },
+    {
+      "name": "pr-ci-rebase-fix",
+      "description": "Diagnose pre-existing CI failures on a PR and fix by rebasing onto current main. Use when: (1) PR CI jobs fail with crashes or errors not caused by the PR's own changes, (2) upstream fixes have landed on main since the PR branch was created, (3) need to distinguish pre-existing failures from PR-introduced regressions.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pr-ci-rebase-fix",
+      "category": "ci-cd",
+      "tags": [
+        "rebase",
+        "ci-failures",
+        "pre-existing",
+        "pr-fix",
+        "git"
       ]
     },
     {
@@ -1333,22 +1367,114 @@
       "tags": []
     },
     {
+      "name": "pr-preexisting-failure-triage",
+      "description": "Distinguish pre-existing CI failures from regressions introduced by a PR, then verify the PR is ready to merge. Use when: (1) a PR has CI failures and you need to determine if they are blockers, (2) a review plan states 'no fixes needed' but tasks still require verification, (3) confirming PR correctness before enabling auto-merge.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pr-preexisting-failure-triage",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "pr-review",
+        "triage",
+        "preexisting-failures",
+        "merge-readiness"
+      ]
+    },
+    {
       "name": "pr-rebase-pipeline",
       "description": "Fix a systemic CI failure blocking all PRs, then ship 13+ fixes in parallel waves using git worktrees. Use when multiple PRs share the same CI failure, or when you want to clear a backlog of simple issues in parallel.",
       "version": "1.0.0",
       "source": "./skills/ci-cd/pr-rebase-pipeline",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "pr-rebase-stale-plan-fix",
+      "description": "Rebase a diverged PR onto main when the automated fix plan has stale state information, resolving comment-only merge conflicts. Use when: (1) automated fix plan claims branch commit is already in main but PR is still open, (2) comment-only Mojo changes cause merge conflicts on rebase, (3) PR needs force-push + auto-merge after resolving stale plan assessment.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pr-rebase-stale-plan-fix",
+      "category": "ci-cd",
+      "tags": [
+        "rebase",
+        "merge-conflict",
+        "stale-plan",
+        "auto-merge",
+        "mojo",
+        "comments"
+      ]
+    },
+    {
+      "name": "pr-review-ci-flake-analysis",
+      "description": "Analyze CI failures on a PR to distinguish pre-existing flakes from regression. Use when: (1) a review-fix plan says 'no code changes needed', (2) CI shows execution crashes unrelated to PR changes, (3) validating that a cleanup/deletion PR is safe to merge despite CI failures.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pr-review-ci-flake-analysis",
+      "category": "ci-cd",
       "tags": [
         "ci",
+        "flaky-tests",
+        "pr-review",
+        "mojo",
+        "heap-corruption",
+        "adr-009"
+      ]
+    },
+    {
+      "name": "pr-review-fix-no-op-detection",
+      "description": "Detect when a PR review-fix plan requires no code changes and verify the fix commit exists on the remote before declaring the task complete. Use when: (1) a .claude-review-fix-*.md plan file says 'no fixes needed', (2) CI shows stale failures after a fix commit, (3) verifying whether a pre-commit or format fix was actually pushed.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pr-review-fix-no-op-detection",
+      "category": "ci-cd",
+      "tags": [
+        "pr-review",
+        "ci",
+        "pre-commit",
+        "no-op",
+        "fix-detection",
+        "stale-ci"
+      ]
+    },
+    {
+      "name": "pr-review-fix-stale-branch",
+      "description": "Fix CI failures on a PR when the remote branch was rebased/force-pushed and the fix commit was lost. Use when: (1) pre-commit CI check fails on a PR that previously had a fix applied, (2) local branch diverges from remote with lost commits after rebase, (3) mojo format line-length violations appear in CI but not locally.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pr-review-fix-stale-branch",
+      "category": "ci-cd",
+      "tags": [
+        "pr",
         "rebase",
-        "pipeline",
-        "worktrees",
-        "bulk-triage",
-        "pip-audit",
-        "pixi",
-        "parallel",
-        "wave-based",
-        "pr-management"
+        "mojo-format",
+        "ci-failure",
+        "stale-branch",
+        "force-push"
+      ]
+    },
+    {
+      "name": "pr-review-no-action-determination",
+      "description": "Determine when a PR requires no fixes by distinguishing pre-existing CI failures from PR-introduced regressions. Use when: (1) CI jobs fail on a PR but the PR changes are unrelated to failing tests, (2) link-check or runtime-crash CI failures appear on a PR touching only documentation or config, (3) you need to confirm a PR is merge-ready despite red CI checks.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pr-review-no-action-determination",
+      "category": "ci-cd",
+      "tags": [
+        "pr-review",
+        "ci-failures",
+        "pre-existing",
+        "no-action",
+        "merge-ready"
+      ]
+    },
+    {
+      "name": "pre-commit-hook-pass-filenames",
+      "description": "Fix pre-commit hooks running on hardcoded directories instead of staged files by setting pass_filenames: true. Use when: (1) ruff/linter pre-commit hooks ignore staged files and run on entire directories, (2) hook entry point has hardcoded paths that override filename passing, (3) PR review requests pass_filenames fix for formatter/linter hooks.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pre-commit-hook-pass-filenames",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "ruff",
+        "pass_filenames",
+        "hooks",
+        "linting",
+        "formatting"
       ]
     },
     {
@@ -1357,10 +1483,64 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/pre-commit-maintenance",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "pre-commit-ruff-pass-filenames-fix",
+      "description": "Fix pre-commit ruff hooks to use pass_filenames: true and remove hardcoded directory args, enabling per-file linting instead of whole-directory scans. Use when: (1) ruff pre-commit hooks run on all files instead of only staged files, (2) ruff hooks have hardcoded directory args in entry field, (3) pre-commit ruff hooks ignore file scope.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pre-commit-ruff-pass-filenames-fix",
+      "category": "ci-cd",
       "tags": [
-        "pre",
-        "commit",
-        "maintenance"
+        "pre-commit",
+        "ruff",
+        "linting",
+        "pass_filenames",
+        "hooks"
+      ]
+    },
+    {
+      "name": "pre-existing-ci-failure-triage",
+      "description": "Triage CI failures on a PR to determine if they are pre-existing on main or introduced by the PR. Use when: (1) CI fails on a PR but changes look unrelated, (2) deciding whether fixes are needed before merging, (3) distinguishing flaky/infrastructure failures from code regressions.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pre-existing-ci-failure-triage",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "triage",
+        "pre-existing",
+        "flaky",
+        "pr-review"
+      ]
+    },
+    {
+      "name": "preexisting-ci-failure-triage",
+      "description": "Triage CI failures to determine if they are pre-existing on main branch vs caused by PR changes. Use when: (1) CI fails on a PR that only changes non-code files, (2) determining whether to block merge on CI failures, (3) reviewing PRs with runtime crashes unrelated to changed files.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/preexisting-ci-failure-triage",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "triage",
+        "pre-existing",
+        "pr-review",
+        "mojo",
+        "test-failures"
+      ]
+    },
+    {
+      "name": "preexisting-flaky-crash-rerun",
+      "description": "Diagnose whether CI failures are pre-existing flaky crashes unrelated to PR changes, and re-trigger CI as the sole fix. Use when: (1) CI fails with execution crashes in Mojo tests, (2) the PR diff does not touch failing test files, (3) the same tests passed on a recent main CI run.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/preexisting-flaky-crash-rerun",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "flaky-tests",
+        "mojo",
+        "crash",
+        "rerun",
+        "pre-existing"
       ]
     },
     {
@@ -1369,15 +1549,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/pygrep-artifact-detection-hook",
       "category": "ci-cd",
-      "tags": [
-        "pre-commit",
-        "pygrep",
-        "artifact-detection",
-        "regression-prevention",
-        "hooks",
-        "ruff-d301",
-        "testing"
-      ]
+      "tags": []
     },
     {
       "name": "pytest-coverage-threshold-config",
@@ -1385,16 +1557,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/pytest-coverage-threshold-config",
       "category": "ci-cd",
-      "tags": [
-        "pytest",
-        "coverage",
-        "ci-cd",
-        "pyproject.toml",
-        "github-actions",
-        "quality",
-        "thresholds",
-        "html-reports"
-      ]
+      "tags": []
     },
     {
       "name": "python-version-drift-detection",
@@ -1413,16 +1576,26 @@
       "tags": []
     },
     {
+      "name": "reenable-flaky-ci-test-group",
+      "description": "Re-enable a CI test group that was disabled as flaky by verifying it passed historically before re-enabling. Use when: (1) a CI test group is commented out with a 'flaky' or 'disabled' note, (2) crashes appear intermittent rather than consistent, (3) no code changes occurred after the last passing run.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/reenable-flaky-ci-test-group",
+      "category": "ci-cd",
+      "tags": [
+        "flaky-tests",
+        "ci-reenable",
+        "mojo",
+        "test-crash",
+        "github-actions"
+      ]
+    },
+    {
       "name": "reenable-precommit-hook",
       "description": "Skill: reenable-precommit-hook. Use when working with reenable precommit hook.",
       "version": "1.0.0",
       "source": "./skills/ci-cd/reenable-precommit-hook",
       "category": "ci-cd",
-      "tags": [
-        "reenable",
-        "precommit",
-        "hook"
-      ]
+      "tags": []
     },
     {
       "name": "rescue-broken-prs",
@@ -1433,18 +1606,26 @@
       "tags": []
     },
     {
+      "name": "retrigger-flaky-ci",
+      "description": "Diagnose and re-trigger pre-existing flaky CI failures on pull requests without code changes. Use when: (1) CI fails on a PR that only has cosmetic/doc changes, (2) failure is in tests not touched by the PR, (3) Mojo runtime crashes (SIGABRT, execution crashed) appear in CI logs.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/retrigger-flaky-ci",
+      "category": "ci-cd",
+      "tags": [
+        "flaky-tests",
+        "ci",
+        "mojo",
+        "github-actions",
+        "retrigger"
+      ]
+    },
+    {
       "name": "ruff-rule-set-expansion",
       "description": "Workflow for safely expanding ruff lint rule sets (B, SIM, C4, RUF) in an existing Python project: triage new violations, apply auto-fixes, handle legitimate exceptions with ignore comments",
       "version": "1.0.0",
       "source": "./skills/ci-cd/ruff-rule-set-expansion",
       "category": "ci-cd",
-      "tags": [
-        "ruff",
-        "linting",
-        "python",
-        "pre-commit",
-        "code-quality"
-      ]
+      "tags": []
     },
     {
       "name": "run-precommit",
@@ -1452,13 +1633,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/run-precommit",
       "category": "ci-cd",
-      "tags": [
-        "pre-commit",
-        "hooks",
-        "linting",
-        "formatting",
-        "code-quality"
-      ]
+      "tags": []
     },
     {
       "name": "scan-vulnerabilities",
@@ -1469,37 +1644,34 @@
       "tags": []
     },
     {
+      "name": "self-cancelling-review-plan",
+      "description": "Recognize and handle review fix files whose plan body declares no changes are needed. Use when: (1) a .claude-review-fix-*.md file instructs 'implement fixes' but the Fix Plan section states the PR is already correct, (2) a review automation script generates a fix task file where the embedded plan concludes no action is required.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/self-cancelling-review-plan",
+      "category": "ci-cd",
+      "tags": [
+        "pr-review",
+        "no-op",
+        "review-automation",
+        "docker",
+        "ci"
+      ]
+    },
+    {
       "name": "skills-to-plugins-migration",
       "description": "Migrate PRs that add skills to the flat skills/ directory into the correct plugins/<category>/<name>/ structure so CI triggers and the validate check passes. Use when a PR branch puts files under skills/ instead of plugins/, or when the validate CI check never appears on a PR.",
       "version": "1.0.0",
       "source": "./skills/ci-cd/skills-to-plugins-migration",
       "category": "ci-cd",
-      "tags": [
-        "skills",
-        "plugins",
-        "migration",
-        "ci-fix",
-        "pr-rescue",
-        "structure",
-        "validate"
-      ]
+      "tags": []
     },
     {
       "name": "tier-label-consistency-check",
       "description": "Pattern for adding a testable Python script + CI grep gate + pre-commit hook that prevents tier-number/tier-name mismatches from recurring in documentation. Use when a doc field has regressed 3+ times and manual audits have failed to prevent it.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/ci-cd/tier-label-consistency-check",
       "category": "ci-cd",
-      "tags": [
-        "pre-commit",
-        "ci-lint",
-        "regression-prevention",
-        "grep-gate",
-        "documentation-consistency",
-        "python-script",
-        "pytest",
-        "tier-labels"
-      ]
+      "tags": []
     },
     {
       "name": "validate-workflow",
@@ -1507,13 +1679,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/validate-workflow",
       "category": "ci-cd",
-      "tags": [
-        "github-actions",
-        "workflow",
-        "yaml",
-        "validation",
-        "actionlint"
-      ]
+      "tags": []
     },
     {
       "name": "verify-and-commit",
@@ -1521,15 +1687,20 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/verify-and-commit",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "verify-pr-ci-preexisting-failures",
+      "description": "Verify whether CI failures on a PR are pre-existing on main or introduced by the PR changes. Use when: (1) a PR has CI failures and you need to determine if they are caused by the PR or were already present on main, (2) reviewing a cleanup/deletion PR where no code logic was changed, (3) confirming a PR is correct and complete despite red CI checks.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/verify-pr-ci-preexisting-failures",
+      "category": "ci-cd",
       "tags": [
-        "pre-commit",
-        "ruff",
-        "mypy",
-        "pytest",
-        "commit",
-        "pr",
-        "verify",
-        "working-tree"
+        "ci",
+        "pr-review",
+        "pre-existing-failures",
+        "cleanup",
+        "verification"
       ]
     },
     {
@@ -1538,13 +1709,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/verify-pr-ready",
       "category": "ci-cd",
-      "tags": [
-        "github",
-        "pr",
-        "merge",
-        "validation",
-        "branch-protection"
-      ]
+      "tags": []
     },
     {
       "name": "yaml-frontmatter-validation",
@@ -1552,14 +1717,7 @@
       "version": "1.0.0",
       "source": "./skills/ci-cd/yaml-frontmatter-validation",
       "category": "ci-cd",
-      "tags": [
-        "ci-cd",
-        "validation",
-        "yaml",
-        "frontmatter",
-        "github-actions",
-        "pr-fixes"
-      ]
+      "tags": []
     },
     {
       "name": "analyze-code-structure",
@@ -1591,14 +1749,15 @@
       "version": "1.0.0",
       "source": "./skills/debugging/ci-test-matrix-management",
       "category": "debugging",
-      "tags": [
-        "ci-cd",
-        "test-matrix",
-        "coverage",
-        "pre-commit",
-        "flaky-tests",
-        "github-actions"
-      ]
+      "tags": []
+    },
+    {
+      "name": "claude-code-settings-config",
+      "description": "Configure Claude Code settings.json for E2E test workspaces to control thinking mode and other workspace-level settings",
+      "version": "1.0.0",
+      "source": "./skills/debugging/claude-code-settings-config",
+      "category": "debugging",
+      "tags": []
     },
     {
       "name": "cytoscape-edge-visibility-optimization",
@@ -1606,17 +1765,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/cytoscape-edge-visibility-optimization",
       "category": "debugging",
-      "tags": [
-        "cytoscape",
-        "visualization",
-        "dag",
-        "performance",
-        "edges",
-        "read-only",
-        "day-filter",
-        "trajectory",
-        "debugging"
-      ]
+      "tags": []
     },
     {
       "name": "detect-code-smells",
@@ -1640,15 +1789,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/e2e-framework-crash-recovery-bugs",
       "category": "debugging",
-      "tags": [
-        "checkpoint",
-        "threading",
-        "resume",
-        "judge",
-        "haiku",
-        "race-condition",
-        "e2e"
-      ]
+      "tags": []
     },
     {
       "name": "e2e-path-resolution-fix",
@@ -1664,16 +1805,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/e2e-rate-limit-detection",
       "category": "debugging",
-      "tags": [
-        "debugging",
-        "rate-limit",
-        "json-parsing",
-        "error-detection",
-        "e2e-testing",
-        "api-errors",
-        "stderr-vs-stdout",
-        "tdd"
-      ]
+      "tags": []
     },
     {
       "name": "e2e-state-machine-bugs",
@@ -1705,16 +1837,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/fix-altair-facet-layering",
       "category": "debugging",
-      "tags": [
-        "altair",
-        "vega-lite",
-        "visualization",
-        "faceting",
-        "layering",
-        "debugging",
-        "domain-computation",
-        "data-visualization"
-      ]
+      "tags": []
     },
     {
       "name": "fix-ci-broken-main-plugins",
@@ -1722,16 +1845,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/fix-ci-broken-main-plugins",
       "category": "debugging",
-      "tags": [
-        "ci",
-        "plugins",
-        "plugin.json",
-        "frontmatter",
-        "validation",
-        "rebase",
-        "auto-merge",
-        "pr-rescue"
-      ]
+      "tags": []
     },
     {
       "name": "fix-ci-memory-safety-failures",
@@ -1739,16 +1853,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/fix-ci-memory-safety-failures",
       "category": "debugging",
-      "tags": [
-        "memory-safety",
-        "mojo",
-        "ci-failures",
-        "segfault",
-        "unsafe-pointer",
-        "defensive-coding",
-        "python-ffi",
-        "api-compatibility"
-      ]
+      "tags": []
     },
     {
       "name": "fix-directory-not-created-before-write",
@@ -1767,19 +1872,27 @@
       "tags": []
     },
     {
+      "name": "fix-flaky-glob-ordering",
+      "description": "Fix flaky tests caused by non-deterministic filesystem glob ordering. Use when: (1) a test passes on some CI runs but fails on others with identical code, (2) test loads files from a directory and asserts ordering, (3) pathlib.glob() or os.listdir() results are iterated without sorting.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/fix-flaky-glob-ordering",
+      "category": "debugging",
+      "tags": [
+        "flaky-tests",
+        "glob",
+        "pathlib",
+        "non-deterministic",
+        "mojo",
+        "python-interop"
+      ]
+    },
+    {
       "name": "fix-implement-issues-script",
       "description": "Debug and fix automation pipeline failures in implement_issues.py",
       "version": "1.0.0",
       "source": "./skills/debugging/fix-implement-issues-script",
       "category": "debugging",
-      "tags": [
-        "automation",
-        "github",
-        "worktree",
-        "git",
-        "claude-code",
-        "ci-cd"
-      ]
+      "tags": []
     },
     {
       "name": "fix-implicitlycopyable-removal",
@@ -1787,14 +1900,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/fix-implicitlycopyable-removal",
       "category": "debugging",
-      "tags": [
-        "mojo",
-        "ownership",
-        "memory-safety",
-        "refactoring",
-        "ci-fix",
-        "compilation-errors"
-      ]
+      "tags": []
     },
     {
       "name": "fix-isolation-mode-export-data-path",
@@ -1802,17 +1908,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/fix-isolation-mode-export-data-path",
       "category": "debugging",
-      "tags": [
-        "pytest",
-        "sys.path",
-        "isolation",
-        "conftest",
-        "mock",
-        "patch",
-        "scripts",
-        "pythonpath",
-        "ModuleNotFoundError"
-      ]
+      "tags": []
     },
     {
       "name": "fix-judge-file-access",
@@ -1828,14 +1924,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/fix-randn-seed-bug",
       "category": "debugging",
-      "tags": [
-        "random",
-        "seed",
-        "reproducibility",
-        "testing",
-        "mojo",
-        "prng"
-      ]
+      "tags": []
     },
     {
       "name": "fix-rerun-completion",
@@ -1859,15 +1948,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/fix-s101-assert-to-runtimeerror",
       "category": "debugging",
-      "tags": [
-        "ruff",
-        "s101",
-        "assert",
-        "runtimeerror",
-        "production-code",
-        "code-quality",
-        "linting"
-      ]
+      "tags": []
     },
     {
       "name": "fix-yaml-config-propagation",
@@ -1883,13 +1964,20 @@
       "version": "1.0.0",
       "source": "./skills/debugging/fixme-todo-cleanup",
       "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "flaky-ci-crash-diagnosis",
+      "description": "Diagnose whether CI test crashes are caused by code changes or pre-existing flakiness. Use when: (1) CI jobs show 'execution crashed' failures on a PR but the same tests previously passed on main, (2) widespread test crashes affect files unrelated to the PR changes, (3) need to distinguish introduced regressions from infrastructure flakiness.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/flaky-ci-crash-diagnosis",
+      "category": "debugging",
       "tags": [
-        "technical-debt",
-        "cleanup",
-        "workflow",
-        "github",
-        "ci-cd",
-        "mojo"
+        "ci",
+        "flaky-tests",
+        "crash-diagnosis",
+        "mojo",
+        "regression-detection"
       ]
     },
     {
@@ -1898,15 +1986,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/git-rebase-over-deletion",
       "category": "debugging",
-      "tags": [
-        "git",
-        "rebase",
-        "deletion",
-        "import-error",
-        "ci",
-        "deprecation",
-        "merge-conflict"
-      ]
+      "tags": []
     },
     {
       "name": "global-semaphore-parallelism",
@@ -1914,17 +1994,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/global-semaphore-parallelism",
       "category": "debugging",
-      "tags": [
-        "semaphore",
-        "parallelism",
-        "multiprocessing",
-        "concurrency-control",
-        "process-pool",
-        "global-limits",
-        "cross-process-sharing",
-        "e2e-testing",
-        "debugging"
-      ]
+      "tags": []
     },
     {
       "name": "improve-automation-error-visibility",
@@ -1932,15 +2002,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/improve-automation-error-visibility",
       "category": "debugging",
-      "tags": [
-        "error-handling",
-        "ui-visibility",
-        "curses",
-        "status-tracking",
-        "observability",
-        "automation",
-        "exception-classification"
-      ]
+      "tags": []
     },
     {
       "name": "investigate-mojo-heap-corruption",
@@ -1948,15 +2010,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/investigate-mojo-heap-corruption",
       "category": "debugging",
-      "tags": [
-        "mojo",
-        "debugging",
-        "heap-corruption",
-        "ci-failures",
-        "runtime-crashes",
-        "float-conversions",
-        "integration-tests"
-      ]
+      "tags": []
     },
     {
       "name": "mock-expensive-simulations",
@@ -1964,17 +2018,84 @@
       "version": "1.0.0",
       "source": "./skills/debugging/mock-expensive-simulations",
       "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "mojo-dtype-partial-support-guard",
+      "description": "Diagnose and guard against partially-supported Mojo DTypes where the type exists in the type system but runtime operations silently fail. Use when: (1) a newly-enabled DType test passes dtype existence checks but fails value round-trip assertions, (2) CI shows 'Element 0 = 0.0, expected N.N' after enabling a previously-skipped dtype test, (3) DType.bfloat16 or other recently-added dtypes produce zero-filled tensors despite explicit value assignment.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/mojo-dtype-partial-support-guard",
+      "category": "debugging",
       "tags": [
-        "pytest",
-        "mock",
-        "monte-carlo",
-        "bootstrap",
-        "simulation",
-        "conftest",
-        "autouse",
-        "hanging-tests",
-        "performance",
-        "from-import-patch"
+        "mojo",
+        "dtype",
+        "bfloat16",
+        "ci",
+        "test-skip",
+        "partial-support"
+      ]
+    },
+    {
+      "name": "mojo-float-literal-overload-fix",
+      "description": "Fix Mojo type errors where float literals fail to match Float64 overloads by adding a Float32 overload that delegates to Float64. Use when: (1) CI fails with 'no matching method in call to __setitem__' for float literals, (2) Mojo API accepts Float64 but user code with bare float literals fails to compile, (3) ergonomic API design for Mojo numeric overloads.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/mojo-float-literal-overload-fix",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "float32",
+        "float64",
+        "type-inference",
+        "overload",
+        "setitem",
+        "api-ergonomics"
+      ]
+    },
+    {
+      "name": "mojo-hash-bitcast-floats",
+      "description": "Fix Mojo __hash__ for float-containing structs to use UnsafePointer bitcast for exact IEEE 754 bit representation instead of lossy integer approximation. Use when: (1) float hash collisions occur for large or very small values, (2) __hash__ uses multiplication/truncation approximation, (3) dict/set keys with float structs have unexpected collisions.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/mojo-hash-bitcast-floats",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "hash",
+        "float",
+        "bitcast",
+        "ieee754",
+        "collision",
+        "extensor"
+      ]
+    },
+    {
+      "name": "mojo-moveinit-list-corruption",
+      "description": "Diagnose and avoid Mojo 0.26.1 bug where ^ transfer of a List field in __moveinit__ corrupts in-place-mutated element values. Use when: (1) test assertions on List-derived values fail after moving a struct, (2) shape/stride values are wrong after ExTensor slice operations, (3) considering replacing .copy() with ^ in __moveinit__ for performance.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/mojo-moveinit-list-corruption",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "moveinit",
+        "list",
+        "memory",
+        "ownership",
+        "extensor",
+        "slice"
+      ]
+    },
+    {
+      "name": "mojo-trait-conformance-fix",
+      "description": "Fix Mojo struct missing trait declaration causing compile-time 'does not conform to trait' errors. Use when: (1) a struct implements trait methods (e.g. __hash__, __eq__) but is not listed in the struct trait list, (2) CI fails with 'argument type X does not conform to trait Y', (3) hash() or other trait-dispatched functions fail on a struct that has the implementation.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/mojo-trait-conformance-fix",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "traits",
+        "hashable",
+        "compile-error",
+        "struct",
+        "extensor"
       ]
     },
     {
@@ -1983,12 +2104,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/mypy-quick-win-fixes",
       "category": "debugging",
-      "tags": [
-        "mypy",
-        "quick",
-        "win",
-        "fixes"
-      ]
+      "tags": []
     },
     {
       "name": "orphan-branch-recovery",
@@ -1996,15 +2112,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/orphan-branch-recovery",
       "category": "debugging",
-      "tags": [
-        "git",
-        "branch",
-        "orphan",
-        "diverged",
-        "merge-base",
-        "recovery",
-        "wrong-repo"
-      ]
+      "tags": []
     },
     {
       "name": "persist-automation-logs",
@@ -2012,17 +2120,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/persist-automation-logs",
       "category": "debugging",
-      "tags": [
-        "automation",
-        "logging",
-        "debugging",
-        "post-mortem",
-        "curses-ui",
-        "subprocess",
-        "file-persistence",
-        "error-handling",
-        "testing"
-      ]
+      "tags": []
     },
     {
       "name": "preflight-closing-issues-fix",
@@ -2030,12 +2128,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/preflight-closing-issues-fix",
       "category": "debugging",
-      "tags": [
-        "preflight",
-        "closing",
-        "issues",
-        "fix"
-      ]
+      "tags": []
     },
     {
       "name": "production-code-quality-fixes",
@@ -2043,12 +2136,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/production-code-quality-fixes",
       "category": "debugging",
-      "tags": [
-        "production",
-        "code",
-        "quality",
-        "fixes"
-      ]
+      "tags": []
     },
     {
       "name": "pydantic-model-dump",
@@ -2056,13 +2144,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/pydantic-model-dump",
       "category": "debugging",
-      "tags": [
-        "pydantic",
-        "serialization",
-        "migration",
-        "python",
-        "bug-fix"
-      ]
+      "tags": []
     },
     {
       "name": "pydantic-none-coercion-pattern",
@@ -2070,18 +2152,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/pydantic-none-coercion-pattern",
       "category": "debugging",
-      "tags": [
-        "pydantic",
-        "validation",
-        "none",
-        "dict",
-        "json",
-        "null",
-        "coercion",
-        "field_validator",
-        "e2e",
-        "checkpoint"
-      ]
+      "tags": []
     },
     {
       "name": "python-subprocess-terminal-corruption",
@@ -2089,16 +2160,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/python-subprocess-terminal-corruption",
       "category": "debugging",
-      "tags": [
-        "python",
-        "subprocess",
-        "terminal",
-        "corruption",
-        "none-safety",
-        "error-handling",
-        "debugging",
-        "batch-runner"
-      ]
+      "tags": []
     },
     {
       "name": "resume-checkpoint-bugs",
@@ -2114,13 +2176,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/resume-crash-debugging",
       "category": "debugging",
-      "tags": [
-        "debugging",
-        "resume",
-        "checkpoint",
-        "e2e",
-        "file-path-mismatch"
-      ]
+      "tags": []
     },
     {
       "name": "retry-transient-errors",
@@ -2128,14 +2184,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/retry-transient-errors",
       "category": "debugging",
-      "tags": [
-        "retry-logic",
-        "exponential-backoff",
-        "transient-errors",
-        "network-failures",
-        "error-handling",
-        "resilience"
-      ]
+      "tags": []
     },
     {
       "name": "skill-path-resolution-fix",
@@ -2143,12 +2192,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/skill-path-resolution-fix",
       "category": "debugging",
-      "tags": [
-        "skill",
-        "path",
-        "resolution",
-        "fix"
-      ]
+      "tags": []
     },
     {
       "name": "validate-model-configs-fix-mode",
@@ -2156,13 +2200,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/validate-model-configs-fix-mode",
       "category": "debugging",
-      "tags": [
-        "validate",
-        "model",
-        "configs",
-        "fix",
-        "mode"
-      ]
+      "tags": []
     },
     {
       "name": "validation-test-fixture-symmetry",
@@ -2170,12 +2208,7 @@
       "version": "1.0.0",
       "source": "./skills/debugging/validation-test-fixture-symmetry",
       "category": "debugging",
-      "tags": [
-        "validation",
-        "test",
-        "fixture",
-        "symmetry"
-      ]
+      "tags": []
     },
     {
       "name": "academic-paper-qa",
@@ -2202,6 +2235,35 @@
       "tags": []
     },
     {
+      "name": "adr-index-entry",
+      "description": "Add a missing ADR entry to the ADR index table in docs/adr/README.md. Use when: (1) an ADR file exists under docs/adr/ but is not listed in the README index table, (2) a quality audit or issue flags a missing ADR row, (3) a new ADR was added without updating the index.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/adr-index-entry",
+      "category": "documentation",
+      "tags": [
+        "adr",
+        "index",
+        "documentation",
+        "readme",
+        "table"
+      ]
+    },
+    {
+      "name": "adr-status-deferred-update",
+      "description": "Update ADR status to Accepted (Deferred) when implementation is bypassed pending language/platform support. Use when: (1) an ADR has Status: Accepted but its implementation is fully or partially bypassed, (2) the bypass is temporary pending a known platform limitation (e.g., global state, stdlib gap), (3) documentation needs to accurately reflect deferred rather than active implementation.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/adr-status-deferred-update",
+      "category": "documentation",
+      "tags": [
+        "adr",
+        "status",
+        "deferred",
+        "documentation",
+        "mojo",
+        "global-state"
+      ]
+    },
+    {
       "name": "arxiv-paper-polish",
       "description": "Skill: arXiv Paper Publication Polish",
       "version": "1.0.0",
@@ -2210,17 +2272,158 @@
       "tags": []
     },
     {
+      "name": "auto-impl-partial-completion-check",
+      "description": "Verify auto-impl issue completion when commit and PR already exist. Use when: (1) worktree branch is named <number>-auto-impl and git log shows a prior commit closing the issue, (2) an open PR already exists for the branch, (3) need to check whether implementation plan was fully executed vs partially done.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/auto-impl-partial-completion-check",
+      "category": "documentation",
+      "tags": [
+        "auto-impl",
+        "issue-verification",
+        "pr-workflow",
+        "completion-check"
+      ]
+    },
+    {
+      "name": "claude-md-doc-consolidation",
+      "description": "Trim duplicate documentation sections in CLAUDE.md by replacing verbose content with a summary + link to canonical docs. Use when: (1) CLAUDE.md has sections that duplicate content in docs/, (2) CLAUDE.md is growing too large and consuming excess tokens, (3) consolidating 4+ doc locations to 2.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/claude-md-doc-consolidation",
+      "category": "documentation",
+      "tags": [
+        "claude-md",
+        "documentation",
+        "consolidation",
+        "token-reduction",
+        "dry"
+      ]
+    },
+    {
+      "name": "claude-md-token-trimming",
+      "description": "Trim CLAUDE.md token consumption by moving verbose sections to .claude/shared/ files with summary links. Use when: (1) CLAUDE.md exceeds 1200+ lines and is consuming too many context tokens, (2) sections have detailed examples that duplicate content in dedicated docs, (3) reducing context overhead while preserving all critical information.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/claude-md-token-trimming",
+      "category": "documentation",
+      "tags": [
+        "claude-md",
+        "token-optimization",
+        "context-reduction",
+        "documentation",
+        "refactoring"
+      ]
+    },
+    {
+      "name": "cleanup-blocker-notes",
+      "description": "Update blocked NOTE comments with issue tracking references instead of implementing. Use when: (1) a NOTE/TODO documents a feature blocked by an unresolved initiative, (2) a cleanup issue asks to update blocker comments with issue refs, (3) pre-commit has a mojo-format hook failing due to GLIBC incompatibility.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/cleanup-blocker-notes",
+      "category": "documentation",
+      "tags": [
+        "cleanup",
+        "notes",
+        "blockers",
+        "mojo",
+        "comments",
+        "pre-commit"
+      ]
+    },
+    {
+      "name": "cleanup-issue-doc-only-change",
+      "description": "Pattern for implementing documentation-only cleanup issues: expand bare NOTE/TODO markers with structured deferred-item format and add user-facing workaround sections to READMEs. Use when: (1) a cleanup issue tracks an unresolved limitation with no code change needed, (2) a bare comment marker needs Status/Why Deferred/Workaround/Acceptance Criteria structure, (3) a README needs a Limitations section with a Python interop workaround snippet.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/cleanup-issue-doc-only-change",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "cleanup",
+        "deferred",
+        "note-marker",
+        "workaround",
+        "readme",
+        "mojo",
+        "python-interop"
+      ]
+    },
+    {
+      "name": "delete-deprecated-stubs",
+      "description": "Safely delete deprecated re-export stub files after verifying no code imports reference them. Use when: (1) a file is marked DEPRECATED or contains only re-export shims, (2) cleanup issues require removing consolidation leftovers, (3) need to update doc references after deletion.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/delete-deprecated-stubs",
+      "category": "documentation",
+      "tags": [
+        "cleanup",
+        "deprecated",
+        "stub",
+        "re-export",
+        "consolidation",
+        "mojo"
+      ]
+    },
+    {
+      "name": "delete-placeholder-docs",
+      "description": "Delete empty placeholder documentation stubs and remove all broken links to them. Use when: (1) docs contain only placeholder text like 'Content here.', (2) a cleanup issue targets stub files, (3) YAGNI principle requires removing premature documentation.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/delete-placeholder-docs",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "cleanup",
+        "yagni",
+        "placeholder",
+        "broken-links"
+      ]
+    },
+    {
+      "name": "detect-already-implemented-issue",
+      "description": "Detect when a GitHub issue was already implemented in a previous session and has an open PR. Use when: (1) implementing a GitHub issue, (2) session starts on a branch that already has commits for the issue, (3) a PR already exists for the issue.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/detect-already-implemented-issue",
+      "category": "documentation",
+      "tags": [
+        "github",
+        "pr",
+        "idempotency",
+        "issue-tracking",
+        "session-resume"
+      ]
+    },
+    {
       "name": "doc-stale-future-improvements-audit",
       "description": "Systematically audit design docs for Future Improvements sections that describe features already implemented in source code. Use when an issue asks to audit docs for staleness, when CI flags stale docs, or after a period of active development.",
       "version": "1.0.0",
       "source": "./skills/documentation/doc-stale-future-improvements-audit",
       "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "docs-only-pr-preexisting-ci-failures",
+      "description": "Verify and close a review-fix task when a docs-only PR has no actual code changes needed and CI failures are pre-existing. Use when: (1) a review-fix plan concludes no changes are required, (2) CI failures exist but are unrelated to the PR diff, (3) a docs-only PR needs final pre-commit verification before merge.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/docs-only-pr-preexisting-ci-failures",
+      "category": "documentation",
       "tags": [
-        "documentation",
-        "audit",
-        "stale-docs",
-        "future-improvements",
-        "design-docs"
+        "pr-review",
+        "ci-failures",
+        "docs-only",
+        "no-op",
+        "pre-commit",
+        "adr"
+      ]
+    },
+    {
+      "name": "document-copy-vs-view-semantics",
+      "description": "Document and clarify copy vs view semantics in tensor/array slicing operations by updating docstrings and test names. Use when: (1) a codebase has NOTE markers flagging undocumented behavior, (2) test function names contradict what the test actually asserts, (3) docstrings say 'view' but implementation returns a copy (or vice versa), (4) a cleanup issue asks to document or decide on slice semantics.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/document-copy-vs-view-semantics",
+      "category": "documentation",
+      "tags": [
+        "mojo",
+        "slicing",
+        "semantics",
+        "docstrings",
+        "copy",
+        "view",
+        "tensor"
       ]
     },
     {
@@ -2229,13 +2432,22 @@
       "version": "1.0.0",
       "source": "./skills/documentation/document-deferred-future-improvements",
       "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "document-magic-number-constants",
+      "description": "Extract inline magic-number NOTE comments into named module-level constants with full rationale. Use when: (1) a value is used with a NOTE comment referencing an issue, (2) the same magic number appears in multiple locations, (3) a cleanup issue asks to convert inline NOTEs to docstrings.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/document-magic-number-constants",
+      "category": "documentation",
       "tags": [
         "documentation",
-        "design-docs",
-        "deferred",
-        "future-improvements",
-        "container",
-        "architecture"
+        "cleanup",
+        "constants",
+        "magic-numbers",
+        "mojo",
+        "gradient-checking",
+        "precision"
       ]
     },
     {
@@ -2244,14 +2456,37 @@
       "version": "1.0.0",
       "source": "./skills/documentation/fix-doc-metric-discrepancies",
       "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "fix-markdown-agent-docs",
+      "description": "Fix common markdown issues in agent hierarchy docs: malformed closing code fences, stale agent counts, and lines exceeding 120 chars. Use when: (1) agent hierarchy docs fail markdownlint, (2) agent counts in docs don't match actual agent files, (3) code fence closing tags have language specifiers.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/fix-markdown-agent-docs",
+      "category": "documentation",
       "tags": [
-        "documentation",
-        "metrics",
-        "discrepancy",
-        "readme",
-        "coverage",
-        "test-counts",
-        "typo"
+        "markdown",
+        "agent-docs",
+        "hierarchy",
+        "markdownlint",
+        "code-fences"
+      ]
+    },
+    {
+      "name": "fix-markdown-fenced-code-blocks",
+      "description": "Fix malformed fenced code block closings and markdownlint violations (MD013, MD032, MD040) in markdown files. Use when: (1) markdownlint reports closing fences with language tags (e.g. ```text used as closing fence), (2) line-length violations on documentation lines, (3) lists missing surrounding blank lines in PR review feedback.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/fix-markdown-fenced-code-blocks",
+      "category": "documentation",
+      "tags": [
+        "markdown",
+        "markdownlint",
+        "code-fences",
+        "line-length",
+        "md013",
+        "md032",
+        "md040",
+        "pr-review"
       ]
     },
     {
@@ -2260,11 +2495,20 @@
       "version": "1.0.0",
       "source": "./skills/documentation/fix-mojo-migration-artifact",
       "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "fix-stale-agent-crossrefs",
+      "description": "Fix stale cross-references in agent config files after specialist consolidation. Use when: (1) agent specialists are deleted/consolidated and remaining configs still link to the deleted files, (2) PR review identifies broken internal links in .claude/agents/*.md files.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/fix-stale-agent-crossrefs",
+      "category": "documentation",
       "tags": [
-        "documentation",
-        "mojo",
-        "migration",
-        "docstring"
+        "agents",
+        "cross-references",
+        "consolidation",
+        "markdown",
+        "review-feedback"
       ]
     },
     {
@@ -2273,13 +2517,78 @@
       "version": "1.0.0",
       "source": "./skills/documentation/fix-tier-label-mismatches",
       "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "fp16-precision-test-documentation",
+      "description": "Document Float16 precision limitations in ML test file headers with technical detail. Use when: (1) test files have inline FP16 precision NOTEs needing consolidation into file headers, (2) cleanup issues require documenting known Float16 arithmetic limitations, (3) reviewers ask why Float16 tests are skipped or use FP32 compute.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/fp16-precision-test-documentation",
+      "category": "documentation",
       "tags": [
+        "float16",
+        "precision",
+        "mojo",
+        "testing",
         "documentation",
-        "tier-labels",
-        "metrics-definitions",
-        "mismatch",
-        "quality-audit",
-        "fix"
+        "cleanup"
+      ]
+    },
+    {
+      "name": "generator-template-placeholder-cleanup",
+      "description": "Review TODO comments in code generator scripts and reclassify them as TEMPLATE: placeholders or actual work items. Use when: (1) a generator script contains TODO markers in its template strings, (2) you need to distinguish intentional scaffolding from implementation gaps, (3) cleaning up generator scripts as part of a cleanup issue.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/generator-template-placeholder-cleanup",
+      "category": "documentation",
+      "tags": [
+        "generators",
+        "templates",
+        "cleanup",
+        "todos",
+        "placeholders",
+        "code-generation"
+      ]
+    },
+    {
+      "name": "git-worktree-edit-placement",
+      "description": "Correct workflow for editing files in the right git worktree when multiple worktrees share the same monorepo. Use when: (1) editing files that may land in the wrong worktree/branch, (2) changes appear in main instead of a feature branch worktree, (3) debugging why a push is rejected due to diverged remote.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/git-worktree-edit-placement",
+      "category": "documentation",
+      "tags": [
+        "git",
+        "worktree",
+        "monorepo",
+        "branch-management",
+        "file-editing"
+      ]
+    },
+    {
+      "name": "impl-already-committed-and-pr-open",
+      "description": "Detect and handle auto-impl worktrees where all work is already committed and a PR is already open. Use when: (1) branch is named <number>-auto-impl, (2) git status is clean with no staged changes, (3) recent git log shows a commit matching the issue title.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/impl-already-committed-and-pr-open",
+      "category": "documentation",
+      "tags": [
+        "auto-impl",
+        "pre-committed",
+        "idempotent",
+        "worktree",
+        "pr"
+      ]
+    },
+    {
+      "name": "issue-cleanup-already-done",
+      "description": "Detects when a GitHub issue cleanup task was already completed in a prior session before implementing. Use when: (1) assigned a cleanup/docs issue and the target file looks already updated, (2) the branch's recent commits mention the same issue, (3) the issue marker (NOTE/TODO) referenced is absent from the file.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/issue-cleanup-already-done",
+      "category": "documentation",
+      "tags": [
+        "github-issues",
+        "cleanup",
+        "idempotency",
+        "docs",
+        "stale-notes"
       ]
     },
     {
@@ -2296,15 +2605,7 @@
       "version": "1.0.0",
       "source": "./skills/documentation/latex-paper-accuracy-review",
       "category": "documentation",
-      "tags": [
-        "latex",
-        "accuracy-review",
-        "fact-check",
-        "research-paper",
-        "statistics",
-        "publication",
-        "arxiv"
-      ]
+      "tags": []
     },
     {
       "name": "latex-paper-peer-review",
@@ -2312,17 +2613,21 @@
       "version": "1.0.0",
       "source": "./skills/documentation/latex-paper-peer-review",
       "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "link-workaround-notes-to-issues",
+      "description": "Link temporary workaround NOTE comments in source code to tracking GitHub issues by updating NOTE format to NOTE(#NNNN). Use when: (1) cleaning up untracked workaround NOTEs in a codebase, (2) performing NOTE/TODO/FIXME cleanup sprints, (3) ensuring every temporary hack has a tracking issue.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/link-workaround-notes-to-issues",
+      "category": "documentation",
       "tags": [
-        "latex",
-        "research",
-        "peer-review",
-        "statistics",
-        "arXiv",
-        "paper-revision",
-        "holm-bonferroni",
-        "power-analysis",
-        "cliff-delta",
-        "reproducibility"
+        "notes",
+        "tracking",
+        "github-issues",
+        "technical-debt",
+        "cleanup",
+        "mojo"
       ]
     },
     {
@@ -2331,12 +2636,95 @@
       "version": "1.0.0",
       "source": "./skills/documentation/mass-figure-documentation",
       "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "merge-duplicate-docs",
+      "description": "Merge two overlapping documentation files into one canonical source, preserving unique content and fixing all cross-references. Use when: (1) two markdown files document the same topic creating a DRY violation, (2) one file is a visual/summary reference and the other has detailed specs, (3) you need to consolidate docs and update all links.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/merge-duplicate-docs",
+      "category": "documentation",
       "tags": [
+        "dry",
+        "markdown",
+        "consolidation",
+        "references",
+        "hierarchy"
+      ]
+    },
+    {
+      "name": "mojo-limitation-note-standardization",
+      "description": "Standardize Mojo language/compiler limitation NOTEs to use consistent format `# NOTE (Mojo vX.Y.Z):`. Use when: (1) cleaning up documentation NOTEs that lack version info, (2) auditing Mojo codebases for inconsistent limitation comment formats, (3) implementing cleanup issues that require NOTE standardization across multiple files.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/mojo-limitation-note-standardization",
+      "category": "documentation",
+      "tags": [
+        "mojo",
         "documentation",
-        "parallel-agents",
-        "analysis-figures",
-        "automation",
-        "background-tasks"
+        "cleanup",
+        "notes",
+        "comments",
+        "version-tagging"
+      ]
+    },
+    {
+      "name": "mojo-module-docstring-limitation",
+      "description": "Document Mojo re-export limitations in module docstrings when submodule symbols cannot be imported via the parent package. Use when: (1) a NOTE comment exists warning users about an import limitation, (2) a GitHub issue asks to document a Mojo import workaround, (3) a module docstring is missing guidance for users who cannot import types from the parent package.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/mojo-module-docstring-limitation",
+      "category": "documentation",
+      "tags": [
+        "mojo",
+        "documentation",
+        "docstring",
+        "import",
+        "limitation",
+        "workaround"
+      ]
+    },
+    {
+      "name": "mojo-note-to-docstring",
+      "description": "Convert inline NOTE comments describing implementation constraints to proper docstring Note sections in Mojo code. Use when: (1) cleaning up legacy inline NOTE comments, (2) doing a documentation cleanup pass, (3) preparing code for public API documentation.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/mojo-note-to-docstring",
+      "category": "documentation",
+      "tags": [
+        "mojo",
+        "documentation",
+        "docstrings",
+        "cleanup",
+        "refactoring",
+        "comments"
+      ]
+    },
+    {
+      "name": "no-op-review-fix",
+      "description": "Handle review fix plans that require no changes. Use when: (1) a .claude-review-fix-*.md plan states no fixes are required, (2) a PR is already correct and CI failures are pre-existing, (3) verifying clean git state before reporting back.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/no-op-review-fix",
+      "category": "documentation",
+      "tags": [
+        "review",
+        "pr",
+        "no-op",
+        "verification",
+        "git"
+      ]
+    },
+    {
+      "name": "note-comment-cleanup",
+      "description": "Systematically review and clean up NOTE/Note comment inconsistencies in a codebase: remove stale markers, convert docstring NOTEs to prose, and normalize casing. Use when: (1) auditing code comments for a cleanup issue, (2) standardizing NOTE vs Note casing across modules, (3) removing outdated reference markers after features are removed or issues are closed.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/note-comment-cleanup",
+      "category": "documentation",
+      "tags": [
+        "comments",
+        "cleanup",
+        "notes",
+        "formatting",
+        "consistency",
+        "mojo",
+        "codebase-hygiene"
       ]
     },
     {
@@ -2361,17 +2749,7 @@
       "version": "1.0.0",
       "source": "./skills/documentation/paper-iterative-accuracy-review",
       "category": "documentation",
-      "tags": [
-        "latex",
-        "academic-paper",
-        "accuracy-review",
-        "effect-size",
-        "iterative",
-        "consistency-check",
-        "statistical-thresholds",
-        "romano",
-        "post-fix-validation"
-      ]
+      "tags": []
     },
     {
       "name": "paper-readiness-epic",
@@ -2379,11 +2757,7 @@
       "version": "1.0.0",
       "source": "./skills/documentation/paper-readiness-epic",
       "category": "documentation",
-      "tags": [
-        "paper",
-        "readiness",
-        "epic"
-      ]
+      "tags": []
     },
     {
       "name": "paper-revision-workflow",
@@ -2407,12 +2781,76 @@
       "version": "1.0.0",
       "source": "./skills/documentation/phantom-dir-reference-fix",
       "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "placeholder-note-to-status-tracking",
+      "description": "Clarify ambiguous NOTE: runtime print statements as intentional placeholders by converting them to STATUS: messages that reference GitHub tracking issues. Use when: (1) example or demo scripts print NOTE messages that confuse users into thinking something is broken, (2) cleanup issues require disambiguating placeholder code from unimplemented code.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/placeholder-note-to-status-tracking",
+      "category": "documentation",
       "tags": [
-        "documentation",
         "cleanup",
+        "documentation",
+        "placeholder",
+        "github-issues",
+        "examples"
+      ]
+    },
+    {
+      "name": "placeholder-test-docstring-update",
+      "description": "Update placeholder test language in __init__.mojo docstrings to reflect implemented tests. Use when: (1) __init__.mojo docstrings say 'Placeholder tests...require implementation' but real test files exist, (2) closing tracking issues for test implementation, (3) keeping module documentation accurate after tests are written.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/placeholder-test-docstring-update",
+      "category": "documentation",
+      "tags": [
+        "mojo",
+        "docstrings",
         "testing",
-        "readme",
-        "contributing"
+        "placeholder",
+        "init-files"
+      ]
+    },
+    {
+      "name": "pr-review-clean-state-handling",
+      "description": "Handle PR review plans that report no issues and no fixes required. Use when: (1) a review plan file says 'No problems found' or 'No fixes required', (2) automated review feedback reports a clean PR state, (3) CI is pending but no code changes are needed.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/pr-review-clean-state-handling",
+      "category": "documentation",
+      "tags": [
+        "pr-review",
+        "clean-state",
+        "no-op",
+        "review-feedback",
+        "automation"
+      ]
+    },
+    {
+      "name": "pr-review-no-fixes-needed",
+      "description": "Handle PR review fix plans that conclude no changes are required. Use when: (1) a review fix plan file says 'no fixes needed', (2) verifying auto-merge is already enabled, (3) confirming a documentation-only PR is ready to merge.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/pr-review-no-fixes-needed",
+      "category": "documentation",
+      "tags": [
+        "pr-review",
+        "auto-merge",
+        "documentation",
+        "no-op",
+        "verification"
+      ]
+    },
+    {
+      "name": "pr-review-no-op-verification",
+      "description": "Verify that a review-fix plan requiring no changes is correct before closing the loop. Use when: (1) a generated fix plan concludes 'no fixes needed', (2) CI failures exist but may be pre-existing on main, (3) a documentation-only PR has CI failures unrelated to its changes.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/pr-review-no-op-verification",
+      "category": "documentation",
+      "tags": [
+        "pr-review",
+        "ci-failures",
+        "no-op",
+        "documentation",
+        "verification"
       ]
     },
     {
@@ -2437,12 +2875,20 @@
       "version": "1.0.0",
       "source": "./skills/documentation/quality-audit-issue-already-fixed",
       "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "readme-from-codebase-exploration",
+      "description": "Replace placeholder README.md with accurate project description by exploring the live codebase. Use when: (1) README has placeholder text like 'Description here' or 'Features list', (2) a project has grown beyond its documentation, (3) a new contributor needs to understand a codebase quickly.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/readme-from-codebase-exploration",
+      "category": "documentation",
       "tags": [
-        "quality-audit",
-        "false-positive",
-        "docstring",
-        "verification",
-        "issue-triage"
+        "readme",
+        "documentation",
+        "codebase-exploration",
+        "onboarding",
+        "placeholder-removal"
       ]
     },
     {
@@ -2451,12 +2897,36 @@
       "version": "1.0.0",
       "source": "./skills/documentation/recurring-tier-label-fix",
       "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "remove-shipped-feature-placeholders",
+      "description": "Remove stale 'feature not yet supported' comments, TODO placeholders, and disabled test stubs from source code once the underlying feature ships natively. Use when: (1) an issue says to document/update a dtype or language feature that was previously aliased or stubbed out, (2) code has comments like 'X aliases to Y until Z is supported', (3) tests are disabled with pass-placeholder and TODO referencing a missing feature, (4) a cleanup issue asks to verify current support status of a previously-missing feature.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/remove-shipped-feature-placeholders",
+      "category": "documentation",
       "tags": [
-        "documentation",
-        "tier-labels",
-        "metrics-definitions",
-        "quality-audit",
-        "recurring-fix"
+        "stale-comments",
+        "placeholders",
+        "todo-cleanup",
+        "mojo",
+        "dtype",
+        "migration",
+        "cleanup"
+      ]
+    },
+    {
+      "name": "remove-unimplemented-mojo-placeholder",
+      "description": "Remove no-op placeholder tests and NOTE comments for unimplemented Mojo features. Use when: (1) a test function contains only a NOTE comment and pass with no assertions, (2) a feature requires stdlib APIs not available in current Mojo version, (3) a cleanup issue requests decision on whether to implement or remove a placeholder.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/remove-unimplemented-mojo-placeholder",
+      "category": "documentation",
+      "tags": [
+        "mojo",
+        "cleanup",
+        "placeholder",
+        "test-removal",
+        "dead-code"
       ]
     },
     {
@@ -2465,14 +2935,48 @@
       "version": "1.0.0",
       "source": "./skills/documentation/replace-hardcoded-counts-with-live-commands",
       "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "review-commented-imports",
+      "description": "Review and resolve commented-out imports in module init files by auditing which are implemented, misnamed, or pending. Use when: (1) a module __init__ file has imports commented out with placeholder NOTEs, (2) cleaning up post-implementation init files in Mojo/Python projects, (3) documenting API surface gaps and name mismatches.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/review-commented-imports",
+      "category": "documentation",
+      "tags": [
+        "mojo",
+        "imports",
+        "module-init",
+        "api-audit",
+        "cleanup"
+      ]
+    },
+    {
+      "name": "small-doc-edit-workflow",
+      "description": "Workflow for implementing small, well-specified documentation edits: read file, apply targeted Edit, verify with pre-commit, commit and create PR. Use when: (1) issue specifies exact line/location for a doc change, (2) adding a note or clarification to an existing markdown file, (3) change is a single insert with no structural refactoring.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/small-doc-edit-workflow",
+      "category": "documentation",
       "tags": [
         "documentation",
-        "readme",
-        "test-counts",
-        "badges",
-        "flaky",
-        "ci",
-        "live-command"
+        "markdown",
+        "pull-request",
+        "pre-commit",
+        "worktree"
+      ]
+    },
+    {
+      "name": "stale-agent-count-fix",
+      "description": "Fix stale agent count references in documentation after agents are deleted or converted to skills. Use when: (1) agent files are removed or converted and doc counts are out of sync, (2) CLAUDE.md or hierarchy docs still reference old agent totals, (3) tracking docs list files that no longer exist.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/stale-agent-count-fix",
+      "category": "documentation",
+      "tags": [
+        "agents",
+        "documentation",
+        "count",
+        "stale-refs",
+        "cleanup"
       ]
     },
     {
@@ -2481,17 +2985,7 @@
       "version": "1.0.0",
       "source": "./skills/documentation/statistical-claim-verification",
       "category": "documentation",
-      "tags": [
-        "statistics",
-        "peer-review",
-        "latex",
-        "cliff-delta",
-        "kruskal-wallis",
-        "scheirer-ray-hare",
-        "bootstrap-ci",
-        "power-analysis",
-        "empirical-evaluation"
-      ]
+      "tags": []
     },
     {
       "name": "sync-stale-future-improvements",
@@ -2499,12 +2993,77 @@
       "version": "1.0.0",
       "source": "./skills/documentation/sync-stale-future-improvements",
       "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "update-blocker-note",
+      "description": "Update blocked feature NOTE comments with issue tracking references and resolution path. Use when: (1) a NOTE comment lacks a tracking issue number, (2) a blocker NOTE needs a resolution path documented, (3) cleanup issues require linking NOTEs to parent tracking issues.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/update-blocker-note",
+      "category": "documentation",
       "tags": [
+        "notes",
+        "tracking",
+        "blockers",
+        "comments",
+        "cleanup"
+      ]
+    },
+    {
+      "name": "verify-before-fix",
+      "description": "Verify PR state before implementing review fixes to avoid unnecessary changes. Use when: (1) a review fix script is generated but the PR may already be correct, (2) pre-existing CI failures are present that may not be caused by the PR, (3) a documentation-only PR has unrelated test failures blocking merge.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/verify-before-fix",
+      "category": "documentation",
+      "tags": [
+        "pr-review",
+        "verification",
+        "ci-failures",
         "documentation",
-        "future-improvements",
-        "stale-docs",
-        "sync",
-        "markdown"
+        "no-op"
+      ]
+    },
+    {
+      "name": "verify-ci-preexisting-failures",
+      "description": "Verify that CI failures on a PR are pre-existing on main before attempting fixes. Use when: (1) PR has CI failures but only touches docs/markdown, (2) CI failures appear unrelated to PR changes, (3) review plan claims failures are pre-existing and need confirmation.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/verify-ci-preexisting-failures",
+      "category": "documentation",
+      "tags": [
+        "ci",
+        "pr-review",
+        "verification",
+        "pre-existing",
+        "markdown",
+        "documentation"
+      ]
+    },
+    {
+      "name": "verify-implementation-completeness",
+      "description": "Verify that a GitHub issue's implementation is already complete before re-doing work. Use when: (1) assigned to implement an issue on an existing branch, (2) a prompt file says 'implement issue #N', (3) suspecting prior session already completed the work.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/verify-implementation-completeness",
+      "category": "documentation",
+      "tags": [
+        "github",
+        "verification",
+        "idempotency",
+        "cleanup",
+        "pr"
+      ]
+    },
+    {
+      "name": "worktree-path-awareness",
+      "description": "Identifies and edits files in the correct git worktree path. Use when: (1) editing files inside a git worktree and the main repo has the same file path, (2) a commit shows no staged changes after editing a file, (3) working in .worktrees/ subdirectories where file paths shadow the main repo.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/worktree-path-awareness",
+      "category": "documentation",
+      "tags": [
+        "worktree",
+        "git",
+        "file-editing",
+        "path",
+        "disambiguation"
       ]
     },
     {
@@ -2537,15 +3096,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/complex-agent-eval-task",
       "category": "evaluation",
-      "tags": [
-        "e2e-testing",
-        "agent-evaluation",
-        "patchfile",
-        "reference-solution",
-        "t2-plus",
-        "refactoring",
-        "llm-judge"
-      ]
+      "tags": []
     },
     {
       "name": "containerize-e2e-experiments",
@@ -2561,15 +3112,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/create-swe-bench-tests",
       "category": "evaluation",
-      "tags": [
-        "swe-bench",
-        "benchmarks",
-        "evaluation",
-        "testing",
-        "ai-agents",
-        "ablation",
-        "pr-analysis"
-      ]
+      "tags": []
     },
     {
       "name": "debug-evaluation-logs",
@@ -2577,13 +3120,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/debug-evaluation-logs",
       "category": "evaluation",
-      "tags": [
-        "evaluation",
-        "logging",
-        "diagnostics",
-        "error-handling",
-        "llm-judge"
-      ]
+      "tags": []
     },
     {
       "name": "dryrun-validation",
@@ -2599,15 +3136,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/e2e-agent-judge-timing",
       "category": "evaluation",
-      "tags": [
-        "e2e",
-        "timing",
-        "metrics",
-        "tiebreaker",
-        "agent",
-        "judge",
-        "evaluation"
-      ]
+      "tags": []
     },
     {
       "name": "e2e-batch-result-analysis",
@@ -2615,17 +3144,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/e2e-batch-result-analysis",
       "category": "evaluation",
-      "tags": [
-        "e2e",
-        "batch",
-        "dry-run",
-        "failure-triage",
-        "github-issues",
-        "batch_summary.json",
-        "ValidationError",
-        "criteria_scores",
-        "analysis"
-      ]
+      "tags": []
     },
     {
       "name": "e2e-checkpoint-resume",
@@ -2633,14 +3152,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/e2e-checkpoint-resume",
       "category": "evaluation",
-      "tags": [
-        "e2e-testing",
-        "checkpoint",
-        "resume",
-        "rate-limit",
-        "multiprocessing",
-        "parallel-execution"
-      ]
+      "tags": []
     },
     {
       "name": "e2e-judge-rubric-design",
@@ -2648,15 +3160,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/e2e-judge-rubric-design",
       "category": "evaluation",
-      "tags": [
-        "llm-judge",
-        "evaluation",
-        "rubric",
-        "e2e-testing",
-        "agent-testing",
-        "scoring",
-        "rate-limits"
-      ]
+      "tags": []
     },
     {
       "name": "emit-process-metrics-from-runner",
@@ -2664,16 +3168,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/emit-process-metrics-from-runner",
       "category": "evaluation",
-      "tags": [
-        "process-metrics",
-        "e2e-runner",
-        "stages",
-        "run-result",
-        "git-diff",
-        "progress-tracking",
-        "change-tracking",
-        "tdd"
-      ]
+      "tags": []
     },
     {
       "name": "evaluate-model",
@@ -2713,14 +3208,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/fair-evaluation-baseline",
       "category": "evaluation",
-      "tags": [
-        "evaluation",
-        "baseline",
-        "regression-detection",
-        "fair-evaluation",
-        "pipeline",
-        "e2e"
-      ]
+      "tags": []
     },
     {
       "name": "grading-consolidation",
@@ -2728,15 +3216,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/grading-consolidation",
       "category": "evaluation",
-      "tags": [
-        "evaluation",
-        "grading",
-        "deduplication",
-        "refactoring",
-        "consistency",
-        "testing",
-        "single-source-of-truth"
-      ]
+      "tags": []
     },
     {
       "name": "granular-scoring-systems",
@@ -2760,13 +3240,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/investigate-test-failures",
       "category": "evaluation",
-      "tags": [
-        "debugging",
-        "testing",
-        "hallucination",
-        "evaluation",
-        "framework-verification"
-      ]
+      "tags": []
     },
     {
       "name": "issue-triage-and-fix",
@@ -2774,16 +3248,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/issue-triage-and-fix",
       "category": "evaluation",
-      "tags": [
-        "github",
-        "worktree",
-        "parallel",
-        "bulk-fix",
-        "pr-workflow",
-        "triage",
-        "wave-based",
-        "pre-commit"
-      ]
+      "tags": []
     },
     {
       "name": "issue-validation-workflow",
@@ -2791,11 +3256,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/issue-validation-workflow",
       "category": "evaluation",
-      "tags": [
-        "issue",
-        "validation",
-        "workflow"
-      ]
+      "tags": []
     },
     {
       "name": "judge-criteria-enhancement",
@@ -2803,15 +3264,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/judge-criteria-enhancement",
       "category": "evaluation",
-      "tags": [
-        "judge",
-        "evaluation",
-        "criteria",
-        "proportionality",
-        "workspace-cleanliness",
-        "test-quality",
-        "scope-discipline"
-      ]
+      "tags": []
     },
     {
       "name": "judge-system-extension",
@@ -2819,15 +3272,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/judge-system-extension",
       "category": "evaluation",
-      "tags": [
-        "judge",
-        "evaluation",
-        "consensus",
-        "docker",
-        "metrics",
-        "scoring",
-        "container-orchestration"
-      ]
+      "tags": []
     },
     {
       "name": "multi-judge-consensus",
@@ -2835,14 +3280,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/multi-judge-consensus",
       "category": "evaluation",
-      "tags": [
-        "evaluation",
-        "consensus",
-        "multi-judge",
-        "llm-as-judge",
-        "voting",
-        "multiprocessing"
-      ]
+      "tags": []
     },
     {
       "name": "parallel-metrics-integration",
@@ -2858,13 +3296,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/plan-review-interview",
       "category": "evaluation",
-      "tags": [
-        "planning",
-        "requirements",
-        "interview",
-        "decision-tracking",
-        "github-issues"
-      ]
+      "tags": []
     },
     {
       "name": "prepare-dataset",
@@ -2904,13 +3336,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/pydantic-type-consolidation-metrics-judgment",
       "category": "evaluation",
-      "tags": [
-        "pydantic",
-        "type",
-        "consolidation",
-        "metrics",
-        "judgment"
-      ]
+      "tags": []
     },
     {
       "name": "resume-from-failed-experiment",
@@ -2918,19 +3344,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/resume-from-failed-experiment",
       "category": "evaluation",
-      "tags": [
-        "e2e",
-        "checkpoint",
-        "resume",
-        "failed",
-        "interrupted",
-        "state-machine",
-        "terminal-state",
-        "retry-errors",
-        "tiers_to_run",
-        "ExperimentStateMachine",
-        "experiment_state"
-      ]
+      "tags": []
     },
     {
       "name": "tier-ablation-testing",
@@ -2938,13 +3352,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/tier-ablation-testing",
       "category": "evaluation",
-      "tags": [
-        "ablation",
-        "tiers",
-        "e2e-testing",
-        "benchmarking",
-        "agent-evaluation"
-      ]
+      "tags": []
     },
     {
       "name": "token-stats-aggregation",
@@ -2952,15 +3360,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/token-stats-aggregation",
       "category": "evaluation",
-      "tags": [
-        "tokens",
-        "cache",
-        "aggregation",
-        "reports",
-        "e2e",
-        "dataclass",
-        "pydantic"
-      ]
+      "tags": []
     },
     {
       "name": "unify-judge-validity-logic",
@@ -2968,12 +3368,7 @@
       "version": "1.0.0",
       "source": "./skills/evaluation/unify-judge-validity-logic",
       "category": "evaluation",
-      "tags": [
-        "unify",
-        "judge",
-        "validity",
-        "logic"
-      ]
+      "tags": []
     },
     {
       "name": "vega-lite-analysis-pipeline",
@@ -3013,13 +3408,7 @@
       "version": "1.0.0",
       "source": "./skills/optimization/checkpoint-result-validation",
       "category": "optimization",
-      "tags": [
-        "checkpoint",
-        "resume",
-        "validation",
-        "cost-optimization",
-        "idempotency"
-      ]
+      "tags": []
     },
     {
       "name": "e2e-artifact-deduplication",
@@ -3027,14 +3416,7 @@
       "version": "1.0.0",
       "source": "./skills/optimization/e2e-artifact-deduplication",
       "category": "optimization",
-      "tags": [
-        "e2e-evaluation",
-        "deduplication",
-        "optimization",
-        "file-structure",
-        "judge-prompts",
-        "artifact-consolidation"
-      ]
+      "tags": []
     },
     {
       "name": "github-actions-ci-speedup",
@@ -3042,11 +3424,7 @@
       "version": "1.0.0",
       "source": "./skills/optimization/github-actions-ci-speedup",
       "category": "optimization",
-      "tags": [
-        "github",
-        "actions",
-        "speedup"
-      ]
+      "tags": []
     },
     {
       "name": "mojo-simd-optimize",
@@ -3081,6 +3459,22 @@
       "tags": []
     },
     {
+      "name": "activate-mojo-str-repr-tests",
+      "description": "Implement Stringable/Representable traits on a Mojo struct and activate commented-out __str__/__repr__ placeholder tests. Use when: (1) a test file has TODO-guarded __str__/__repr__ test stubs, (2) you need to add String() and repr() support to a Mojo struct, (3) tests are commented out pending implementation of string methods.",
+      "version": "1.0.0",
+      "source": "./skills/testing/activate-mojo-str-repr-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "stringable",
+        "representable",
+        "__str__",
+        "__repr__",
+        "placeholder-tests",
+        "extensor"
+      ]
+    },
+    {
       "name": "agent-test-delegation",
       "description": "Test agent delegation patterns to verify hierarchy and escalation paths. Use after modifying agent structure.",
       "version": "1.0.0",
@@ -3094,14 +3488,35 @@
       "version": "1.0.0",
       "source": "./skills/testing/assert-to-runtime-error-migration",
       "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "batch-norm-backward-gradient-analysis",
+      "description": "Diagnose batch normalization backward pass gradient mismatches using mathematical analysis of PyTorch formula correctness. Use when: (1) batch_norm backward test shows analytical ~0 vs numerical ~non-zero mismatch, (2) gradient tests are disabled pending investigation of suspected backward pass bugs, (3) validating batch norm backward implementation correctness.",
+      "version": "1.0.0",
+      "source": "./skills/testing/batch-norm-backward-gradient-analysis",
+      "category": "testing",
       "tags": [
-        "assert",
-        "runtime-error",
-        "ruff",
-        "S101",
-        "migration",
-        "testing",
-        "linting"
+        "batch-norm",
+        "gradient-checking",
+        "backward-pass",
+        "mojo",
+        "numerical-gradients"
+      ]
+    },
+    {
+      "name": "batch-norm-gradient-test-fix",
+      "description": "Fix batch normalization backward pass gradient tests that fail with uniform (ones) upstream gradients due to sum(x_norm)=0 cancellation. Use when: (1) batch_norm_backward gradient check fails with analytical~=0 but numerical!=0, (2) normalization layer backward tests fail with pathological cancellation, (3) gradient checking with ones upstream gradient gives false negatives.",
+      "version": "1.0.0",
+      "source": "./skills/testing/batch-norm-gradient-test-fix",
+      "category": "testing",
+      "tags": [
+        "batch-norm",
+        "gradient-checking",
+        "backward-pass",
+        "mojo",
+        "normalization",
+        "false-failure"
       ]
     },
     {
@@ -3110,11 +3525,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/bats-shell-testing",
       "category": "testing",
-      "tags": [
-        "bats",
-        "shell",
-        "testing"
-      ]
+      "tags": []
     },
     {
       "name": "calculate-coverage",
@@ -3138,16 +3549,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/cli-deep-audit-and-fix",
       "category": "testing",
-      "tags": [
-        "argparse",
-        "cli",
-        "audit",
-        "batch-mode",
-        "validation",
-        "ThreadPoolExecutor",
-        "dead-code",
-        "testing"
-      ]
+      "tags": []
     },
     {
       "name": "config-filename-model-id-audit",
@@ -3155,14 +3557,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/config-filename-model-id-audit",
       "category": "testing",
-      "tags": [
-        "config",
-        "model-id",
-        "yaml",
-        "audit",
-        "validation",
-        "rename"
-      ]
+      "tags": []
     },
     {
       "name": "create-review-checklist",
@@ -3170,12 +3565,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/create-review-checklist",
       "category": "testing",
-      "tags": [
-        "code-review",
-        "checklist",
-        "pr-review",
-        "quality"
-      ]
+      "tags": []
     },
     {
       "name": "deduplicate-test-fixtures",
@@ -3183,14 +3573,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/deduplicate-test-fixtures",
       "category": "testing",
-      "tags": [
-        "deduplication",
-        "test-fixtures",
-        "block-composition",
-        "runtime-generation",
-        "tier-testing",
-        "refactoring"
-      ]
+      "tags": []
     },
     {
       "name": "defensive-analysis-patterns",
@@ -3206,15 +3589,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/deprecation-warning-migration",
       "category": "testing",
-      "tags": [
-        "deprecation",
-        "migration",
-        "pydantic",
-        "dataclass",
-        "warnings",
-        "ci",
-        "testing"
-      ]
+      "tags": []
     },
     {
       "name": "docker-entrypoint-bats",
@@ -3233,17 +3608,49 @@
       "tags": []
     },
     {
+      "name": "enable-disabled-mojo-tests",
+      "description": "Re-enable disabled Mojo test files by identifying resolved blockers and writing real test implementations. Use when: (1) a test file has a NOTE stub saying tests are pending implementation, (2) the blocking components have since been implemented, (3) a cleanup issue requires converting skip stubs to real test functions.",
+      "version": "1.0.0",
+      "source": "./skills/testing/enable-disabled-mojo-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "testing",
+        "cleanup",
+        "test-enablement",
+        "tdd",
+        "validation-loop"
+      ]
+    },
+    {
+      "name": "enable-todo-tests",
+      "description": "Enable placeholder tests by removing TODO comments and uncommenting test code for already-implemented functionality. Also adds missing package exports needed for test imports. Use when: (1) tests exist as commented-out stubs with TODO markers pointing to an issue, (2) the underlying implementation is already complete but not exported, (3) closing an issue that tracked test enablement rather than implementation.",
+      "version": "1.0.0",
+      "source": "./skills/testing/enable-todo-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "test-enablement",
+        "exports",
+        "todo-cleanup",
+        "package-api"
+      ]
+    },
+    {
       "name": "expand-ruff-rule-set",
       "description": "Skill: expand-ruff-rule-set. Use when working with expand ruff rule set.",
       "version": "1.0.0",
       "source": "./skills/testing/expand-ruff-rule-set",
       "category": "testing",
-      "tags": [
-        "expand",
-        "ruff",
-        "rule",
-        "set"
-      ]
+      "tags": []
+    },
+    {
+      "name": "expand-tier-fixture-coverage",
+      "description": "Expand YAML fixture files and test parametrize lists when adding new tiers to the testing tier registry. Use when tier count assertions or schema parametrize lists are out of sync with fixture files.",
+      "version": "1.0.0",
+      "source": "./skills/testing/expand-tier-fixture-coverage",
+      "category": "testing",
+      "tags": []
     },
     {
       "name": "extract-dependencies",
@@ -3259,12 +3666,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/extract-test-failures",
       "category": "testing",
-      "tags": [
-        "testing",
-        "test-failures",
-        "log-analysis",
-        "debugging"
-      ]
+      "tags": []
     },
     {
       "name": "fix-ci-test-failures",
@@ -3280,12 +3682,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/fix-default-value-test-mismatch",
       "category": "testing",
-      "tags": [
-        "testing",
-        "ci",
-        "defaults",
-        "unit-tests"
-      ]
+      "tags": []
     },
     {
       "name": "fix-flaky-sleep-mock",
@@ -3293,15 +3690,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/fix-flaky-sleep-mock",
       "category": "testing",
-      "tags": [
-        "testing",
-        "flaky-tests",
-        "mocking",
-        "time-sleep",
-        "pytest",
-        "retry",
-        "backoff"
-      ]
+      "tags": []
     },
     {
       "name": "fix-mock-patch-call-site",
@@ -3309,17 +3698,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/fix-mock-patch-call-site",
       "category": "testing",
-      "tags": [
-        "mock",
-        "patch",
-        "unittest",
-        "subprocess",
-        "call-site",
-        "namespace",
-        "worktree",
-        "isolation",
-        "testing"
-      ]
+      "tags": []
     },
     {
       "name": "fix-placeholder-code-ci",
@@ -3351,14 +3730,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/forbid-e2e-remote-ops",
       "category": "testing",
-      "tags": [
-        "e2e-testing",
-        "git",
-        "worktree",
-        "test-isolation",
-        "safety",
-        "optimization"
-      ]
+      "tags": []
     },
     {
       "name": "generate-fix-suggestions",
@@ -3366,12 +3738,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/generate-fix-suggestions",
       "category": "testing",
-      "tags": [
-        "testing",
-        "error-analysis",
-        "fix-suggestions",
-        "remediation"
-      ]
+      "tags": []
     },
     {
       "name": "generate-tests",
@@ -3395,11 +3762,20 @@
       "version": "1.0.0",
       "source": "./skills/testing/manager-proxy-type-hints",
       "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "mojo-docstring-format-precommit",
+      "description": "Fix Mojo docstring formatting to pass mojo format pre-commit hook. Use when: (1) pre-commit CI fails with mojo format diff showing single-line docstrings being split, (2) long single-line docstrings exceed mojo format line length threshold, (3) adding docstrings to Mojo functions that will be reformatted by mojo format.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-docstring-format-precommit",
+      "category": "testing",
       "tags": [
-        "manager",
-        "proxy",
-        "type",
-        "hints"
+        "mojo",
+        "docstring",
+        "pre-commit",
+        "formatting",
+        "ci"
       ]
     },
     {
@@ -3417,6 +3793,37 @@
       "source": "./skills/testing/mojo-memory-check",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "mojo-setitem-test-pattern",
+      "description": "Skill: mojo-setitem-test-pattern. Use when: (1) adding tests for a new __setitem__ method on a Mojo tensor/array type, (2) testing both Float64 and Int64 setter overloads, (3) testing out-of-bounds error handling using try/except in Mojo test files.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-setitem-test-pattern",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "setitem",
+        "extensor",
+        "tensor",
+        "indexing",
+        "try-except",
+        "out-of-bounds"
+      ]
+    },
+    {
+      "name": "mojo-stride-manipulation-for-noncontiguous-tests",
+      "description": "Technique for testing non-contiguous tensor behavior in Mojo without transpose(). Use when: (1) testing is_contiguous() or as_contiguous() but transpose() is not yet implemented, (2) need to simulate column-major or stride-permuted tensors in unit tests, (3) completing placeholder tests blocked by missing higher-level ops.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-stride-manipulation-for-noncontiguous-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "tensors",
+        "strides",
+        "non-contiguous",
+        "testing",
+        "extensor"
+      ]
     },
     {
       "name": "mojo-test-runner",
@@ -3440,14 +3847,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/move-loose-test-files",
       "category": "testing",
-      "tags": [
-        "testing",
-        "refactoring",
-        "git",
-        "fixtures",
-        "test-organization",
-        "pytest"
-      ]
+      "tags": []
     },
     {
       "name": "multi-division-fixture-management",
@@ -3455,15 +3855,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/multi-division-fixture-management",
       "category": "testing",
-      "tags": [
-        "testing",
-        "fixtures",
-        "integration-tests",
-        "pytest",
-        "parameterize",
-        "cli",
-        "multi-division"
-      ]
+      "tags": []
     },
     {
       "name": "multi-language-judge-pipelines",
@@ -3471,16 +3863,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/multi-language-judge-pipelines",
       "category": "testing",
-      "tags": [
-        "testing",
-        "e2e",
-        "pipelines",
-        "python",
-        "mojo",
-        "judge-system",
-        "multi-language",
-        "build-automation"
-      ]
+      "tags": []
     },
     {
       "name": "multi-pr-issue-triage",
@@ -3488,14 +3871,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/multi-pr-issue-triage",
       "category": "testing",
-      "tags": [
-        "github",
-        "pr-workflow",
-        "issue-triage",
-        "bats",
-        "graphql",
-        "shell-testing"
-      ]
+      "tags": []
     },
     {
       "name": "mypy-living-baseline",
@@ -3503,11 +3879,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/mypy-living-baseline",
       "category": "testing",
-      "tags": [
-        "mypy",
-        "living",
-        "baseline"
-      ]
+      "tags": []
     },
     {
       "name": "mypy-per-directory-baseline",
@@ -3515,12 +3887,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/mypy-per-directory-baseline",
       "category": "testing",
-      "tags": [
-        "mypy",
-        "per",
-        "directory",
-        "baseline"
-      ]
+      "tags": []
     },
     {
       "name": "mypy-scripts-coverage-extension",
@@ -3528,12 +3895,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/mypy-scripts-coverage-extension",
       "category": "testing",
-      "tags": [
-        "mypy",
-        "scripts",
-        "coverage",
-        "extension"
-      ]
+      "tags": []
     },
     {
       "name": "narrow-mypy-override-subset",
@@ -3541,14 +3903,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/narrow-mypy-override-subset",
       "category": "testing",
-      "tags": [
-        "mypy",
-        "type-checking",
-        "testing",
-        "annotations",
-        "overrides",
-        "pyproject"
-      ]
+      "tags": []
     },
     {
       "name": "phase-cleanup",
@@ -3565,6 +3920,20 @@
       "source": "./skills/testing/phase-test-tdd",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "port-feature-branch-impl",
+      "description": "Port an implementation from a feature branch worktree when the PR was never merged to main. Use when: (1) a test references a TODO blocked on a feature that exists only on a stale branch, (2) a follow-up issue assumes a prior PR landed but it did not, (3) cherry-picking from a worktree is faster than waiting for the blocked PR.",
+      "version": "1.0.0",
+      "source": "./skills/testing/port-feature-branch-impl",
+      "category": "testing",
+      "tags": [
+        "worktree",
+        "cherry-pick",
+        "blocked-todo",
+        "mojo",
+        "port"
+      ]
     },
     {
       "name": "pytest-real-io-testing",
@@ -3591,6 +3960,29 @@
       "tags": []
     },
     {
+      "name": "re-enable-disabled-mojo-tests",
+      "description": "Re-enable disabled/skipped Mojo test files by investigating root cause, verifying builtin types work, and replacing stubs with real tests. Use when: (1) a .mojo test file has a NOTE saying tests are disabled due to type system issues, (2) a test file is a stub that only prints SKIPPED, (3) cleanup issues ask to re-enable previously disabled tests.",
+      "version": "1.0.0",
+      "source": "./skills/testing/re-enable-disabled-mojo-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "testing",
+        "re-enable",
+        "disabled-tests",
+        "unsigned-types",
+        "cleanup"
+      ]
+    },
+    {
+      "name": "reenable-disabled-mojo-backward-tests",
+      "description": "Re-enable disabled Mojo backward pass tests by verifying the root cause is resolved, reading gradient type field names, and writing analytically-verifiable test cases. Use when: (1) backward tests are commented out with stale ownership/borrowing notes, (2) a comptime alias change resolved the underlying type issue, (3) gradient type field names need to be confirmed before writing tests.",
+      "version": "1.0.0",
+      "source": "./skills/testing/reenable-disabled-mojo-backward-tests",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "refactor-code",
       "description": "Restructure code for improved clarity and maintainability. Use when addressing code smells or technical debt.",
       "version": "1.0.0",
@@ -3599,16 +3991,41 @@
       "tags": []
     },
     {
+      "name": "resolve-blocked-todos",
+      "description": "Resolve TODO markers blocked by a now-closed issue: verify the blocking issue is closed, cherry-pick or implement missing functionality, enable disabled tests, and remove TODO markers. Use when: (1) a tracking issue references TODO(#N) markers and issue #N has been closed, (2) disabled tests have TODO comments referencing a merged PR, (3) cleanup issues require resolving accumulated technical debt once a dependency closes.",
+      "version": "1.0.0",
+      "source": "./skills/testing/resolve-blocked-todos",
+      "category": "testing",
+      "tags": [
+        "todo",
+        "cleanup",
+        "technical-debt",
+        "cherry-pick",
+        "disabled-tests",
+        "mojo"
+      ]
+    },
+    {
+      "name": "resolve-skipped-mojo-tests",
+      "description": "Re-enable disabled Mojo test files by identifying root causes (missing modules, type system issues) and replacing stubs with actual tests. Use when: (1) a Mojo test file prints SKIPPED instead of running tests, (2) a test file has a NOTE saying tests are disabled due to type system issues, (3) a test stub references a non-existent module.",
+      "version": "1.0.0",
+      "source": "./skills/testing/resolve-skipped-mojo-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "testing",
+        "skipped-tests",
+        "cleanup",
+        "type-system"
+      ]
+    },
+    {
       "name": "resolve-skipped-tests",
       "description": "Skill: resolve-skipped-tests. Use when working with resolve skipped tests.",
       "version": "1.0.0",
       "source": "./skills/testing/resolve-skipped-tests",
       "category": "testing",
-      "tags": [
-        "resolve",
-        "skipped",
-        "tests"
-      ]
+      "tags": []
     },
     {
       "name": "resume-functionality-tests",
@@ -3616,13 +4033,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/resume-functionality-tests",
       "category": "testing",
-      "tags": [
-        "testing",
-        "checkpoint",
-        "resume",
-        "crash-recovery",
-        "fixtures"
-      ]
+      "tags": []
     },
     {
       "name": "review-pr-changes",
@@ -3638,14 +4049,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/rubric-conflict-detection",
       "category": "testing",
-      "tags": [
-        "rubric",
-        "conflict-detection",
-        "loader",
-        "data-integrity",
-        "cross-experiment",
-        "research-pipeline"
-      ]
+      "tags": []
     },
     {
       "name": "run-tests",
@@ -3661,13 +4065,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/script-unit-test-coverage",
       "category": "testing",
-      "tags": [
-        "testing",
-        "pytest",
-        "scripts",
-        "coverage",
-        "mocking"
-      ]
+      "tags": []
     },
     {
       "name": "split-large-test-file",
@@ -3675,16 +4073,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/split-large-test-file",
       "category": "testing",
-      "tags": [
-        "testing",
-        "refactoring",
-        "git",
-        "pytest",
-        "test-organization",
-        "token-limit",
-        "edit-tool",
-        "large-files"
-      ]
+      "tags": []
     },
     {
       "name": "test-diff-analyzer",
@@ -3692,12 +4081,15 @@
       "version": "1.0.0",
       "source": "./skills/testing/test-diff-analyzer",
       "category": "testing",
-      "tags": [
-        "testing",
-        "flaky-tests",
-        "test-stability",
-        "debugging"
-      ]
+      "tags": []
+    },
+    {
+      "name": "tier-fixture-schema-coverage",
+      "description": "Add YAML fixture files for each testing tier (t2-t6) to extend schema validation coverage. Use when: (1) a test parametrizes over tier fixture files but only t0/t1 exist, (2) new tier-specific fields (uses_tools, uses_delegation, uses_hierarchy) need schema validation, (3) expanding parametrized pytest tests to cover the full tier range. Verified on ProjectScylla issue #1381.",
+      "version": "1.0.0",
+      "source": "./skills/testing/tier-fixture-schema-coverage",
+      "category": "testing",
+      "tags": []
     },
     {
       "name": "unit-tests-untested-modules",
@@ -3705,15 +4097,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/unit-tests-untested-modules",
       "category": "testing",
-      "tags": [
-        "testing",
-        "unit-tests",
-        "pytest",
-        "coverage",
-        "mocking",
-        "multiprocessing",
-        "curses"
-      ]
+      "tags": []
     },
     {
       "name": "until-resume-debugging",
@@ -3721,14 +4105,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/until-resume-debugging",
       "category": "testing",
-      "tags": [
-        "e2e",
-        "checkpoint",
-        "resume",
-        "state-machine",
-        "until",
-        "debugging"
-      ]
+      "tags": []
     },
     {
       "name": "validate-inputs",
@@ -3752,13 +4129,7 @@
       "version": "1.0.0",
       "source": "./skills/testing/validate-tier-id-filename-consistency",
       "category": "testing",
-      "tags": [
-        "config",
-        "validation",
-        "tier",
-        "consistency",
-        "error-handling"
-      ]
+      "tags": []
     },
     {
       "name": "advise-before-planning",
@@ -3766,14 +4137,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/advise-before-planning",
       "category": "tooling",
-      "tags": [
-        "automation",
-        "planning",
-        "knowledge-base",
-        "two-step-workflow",
-        "claude-cli",
-        "team-learning"
-      ]
+      "tags": []
     },
     {
       "name": "agent-hooks-pattern",
@@ -3797,13 +4161,65 @@
       "version": "1.0.0",
       "source": "./skills/tooling/ai-blog-generator",
       "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "already-implemented-feature-detection",
+      "description": "Verify whether GitHub issue requirements are already fully implemented before starting work. Use when: (1) implementing a GitHub issue that may have prior partial/full implementation, (2) a branch already has commits suggesting work was done, (3) PR already exists for the issue.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/already-implemented-feature-detection",
+      "category": "tooling",
       "tags": [
-        "blog",
+        "github",
+        "implementation",
+        "verification",
+        "extensor",
+        "mojo"
+      ]
+    },
+    {
+      "name": "auto-impl-already-done-detection",
+      "description": "Detect when an auto-impl worktree arrives with work already completed on main and a PR already open. Use when: (1) invoked in a worktree with branch pattern '<issue>-auto-impl', (2) worktree branch is clean with no staged changes, (3) issue is still open but recent git log shows a 'Closes #<issue>' commit on main.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/auto-impl-already-done-detection",
+      "category": "tooling",
+      "tags": [
+        "workflow",
+        "github",
+        "worktree",
+        "auto-impl",
+        "pre-flight",
+        "idempotency"
+      ]
+    },
+    {
+      "name": "auto-impl-preflight",
+      "description": "Pre-flight check when given a .claude-prompt-<N>.md auto-impl file: verify the issue isn't already implemented on the current branch before doing any work. Use when: (1) given a prompt file named .claude-prompt-<N>.md, (2) working in a worktree branch like <N>-auto-impl, (3) before implementing any GitHub issue from an automated prompt.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/auto-impl-preflight",
+      "category": "tooling",
+      "tags": [
+        "workflow",
+        "github",
+        "preflight",
+        "auto-impl",
+        "worktree",
+        "duplicate-prevention"
+      ]
+    },
+    {
+      "name": "batch-low-difficulty-issue-impl",
+      "description": "Classify, deduplicate, and batch-implement 15-30 low-difficulty GitHub issues (doc edits, text fixes, trivial cleanup) in a single session. Use when: (1) a backlog of 30+ open issues exists and needs triage, (2) many issues are pure doc/text edits with no logic changes, (3) duplicate issues need closing before implementation begins.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/batch-low-difficulty-issue-impl",
+      "category": "tooling",
+      "tags": [
+        "batch",
+        "github-issues",
+        "triage",
         "documentation",
-        "git-history",
-        "ai-generated",
-        "backfill",
-        "markdown"
+        "bulk-pr",
+        "deduplication"
       ]
     },
     {
@@ -3812,14 +4228,21 @@
       "version": "1.0.0",
       "source": "./skills/tooling/bulk-issue-filing",
       "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "bulk-skill-migration-script",
+      "description": "Write an idempotent Python script to bulk-migrate skills from one Claude project to a ProjectMnemosyne marketplace. Use when: (1) porting skills from a source repo to Mnemosyne and most skills are already migrated, (2) needing to check which skills are missing and only migrate those, (3) automating the SKILL.md transformation pipeline.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/bulk-skill-migration-script",
+      "category": "tooling",
       "tags": [
-        "github",
-        "issues",
-        "cleanup",
-        "todo",
-        "fixme",
-        "technical-debt",
-        "bulk-operations"
+        "migration",
+        "skills",
+        "automation",
+        "idempotent",
+        "bulk",
+        "marketplace"
       ]
     },
     {
@@ -3828,15 +4251,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/bulk-skill-pr-merge",
       "category": "tooling",
-      "tags": [
-        "bulk-merge",
-        "pr",
-        "rebase",
-        "conflict-resolution",
-        "plugin.json",
-        "ci",
-        "git-switch"
-      ]
+      "tags": []
     },
     {
       "name": "centralize-model-id-constants",
@@ -3844,11 +4259,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/centralize-model-id-constants",
       "category": "tooling",
-      "tags": [
-        "centralize",
-        "model",
-        "constants"
-      ]
+      "tags": []
     },
     {
       "name": "centralize-repo-clones",
@@ -3856,11 +4267,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/centralize-repo-clones",
       "category": "tooling",
-      "tags": [
-        "centralize",
-        "repo",
-        "clones"
-      ]
+      "tags": []
     },
     {
       "name": "check-dependencies",
@@ -3871,18 +4278,42 @@
       "tags": []
     },
     {
+      "name": "check-impl-before-starting",
+      "description": "Check if an issue's implementation already exists before starting work. Use when: (1) implementing a GitHub issue on a pre-existing branch, (2) resuming work that may have been partially done, (3) verifying PR status before creating a new one.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/check-impl-before-starting",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "issue",
+        "pr",
+        "git",
+        "workflow",
+        "idempotency"
+      ]
+    },
+    {
+      "name": "check-issue-already-implemented",
+      "description": "Check if a GitHub issue was already implemented in a previous session before starting work. Use when: (1) implementing an issue whose branch already exists, (2) the branch has recent commits, (3) a PR already exists for the issue.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/check-issue-already-implemented",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "issue",
+        "worktree",
+        "pr",
+        "deduplication",
+        "idempotency"
+      ]
+    },
+    {
       "name": "checkpoint-recovery",
       "description": "Implementing checkpoint/resume functionality for long-running batch processes with rate limit handling",
       "version": "1.0.0",
       "source": "./skills/tooling/checkpoint-recovery",
       "category": "tooling",
-      "tags": [
-        "checkpoint",
-        "resume",
-        "batch-processing",
-        "rate-limits",
-        "interruption-recovery"
-      ]
+      "tags": []
     },
     {
       "name": "claude-code-v21-adoption",
@@ -3898,13 +4329,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/claude-plugin-format",
       "category": "tooling",
-      "tags": [
-        "plugin",
-        "validation",
-        "schema",
-        "claude-code",
-        "format"
-      ]
+      "tags": []
     },
     {
       "name": "claude-plugin-marketplace",
@@ -3912,12 +4337,50 @@
       "version": "1.0.0",
       "source": "./skills/tooling/claude-plugin-marketplace",
       "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "cleanup-deprecated-stub",
+      "description": "Delete deprecated stub files safely after verifying no remaining references. Use when: (1) a file is marked DEPRECATED or contains only a redirect comment, (2) a module was reorganized into a subdirectory leaving a stub behind, (3) a cleanup issue requests file deletion with import verification.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/cleanup-deprecated-stub",
+      "category": "tooling",
       "tags": [
-        "marketplace",
-        "registry",
-        "plugin",
-        "claude-code",
-        "installation"
+        "cleanup",
+        "deprecated",
+        "stub",
+        "mojo",
+        "imports",
+        "refactoring"
+      ]
+    },
+    {
+      "name": "cleanup-issue-detection",
+      "description": "Detect when a cleanup issue has already been implemented before starting work. Use when: (1) assigned a cleanup/removal issue, (2) implementing an issue whose branch already exists on remote, (3) verifying prior auto-implementation state.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/cleanup-issue-detection",
+      "category": "tooling",
+      "tags": [
+        "cleanup",
+        "deduplication",
+        "git",
+        "worktree",
+        "issue-workflow"
+      ]
+    },
+    {
+      "name": "cleanup-task-already-done-on-branch",
+      "description": "Detect when a cleanup/deletion task was already completed in a prior commit on the current branch, avoiding duplicate work. Use when: (1) working on a cleanup issue in an auto-impl worktree, (2) the target file or artifact is already missing, (3) a PR exists but git history shows the deletion already happened.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/cleanup-task-already-done-on-branch",
+      "category": "tooling",
+      "tags": [
+        "cleanup",
+        "git-history",
+        "worktree",
+        "auto-impl",
+        "duplicate-prevention",
+        "deletion"
       ]
     },
     {
@@ -3926,11 +4389,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/cli-adapter-implementation",
       "category": "tooling",
-      "tags": [
-        "cli",
-        "adapter",
-        "implementation"
-      ]
+      "tags": []
     },
     {
       "name": "cli-visualize-subcommand",
@@ -3938,14 +4397,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/cli-visualize-subcommand",
       "category": "tooling",
-      "tags": [
-        "cli",
-        "visualization",
-        "checkpoint",
-        "state-machine",
-        "batch",
-        "manage-experiment"
-      ]
+      "tags": []
     },
     {
       "name": "code-quality-audit-principles",
@@ -3953,19 +4405,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/code-quality-audit-principles",
       "category": "tooling",
-      "tags": [
-        "audit",
-        "quality",
-        "principles",
-        "technical-debt",
-        "kiss",
-        "yagni",
-        "tdd",
-        "dry",
-        "solid",
-        "modularity",
-        "pola"
-      ]
+      "tags": []
     },
     {
       "name": "config-default-model-drift",
@@ -3973,12 +4413,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/config-default-model-drift",
       "category": "tooling",
-      "tags": [
-        "config",
-        "default",
-        "model",
-        "drift"
-      ]
+      "tags": []
     },
     {
       "name": "consolidate-skills-directory",
@@ -3986,14 +4421,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/consolidate-skills-directory",
       "category": "tooling",
-      "tags": [
-        "migration",
-        "consolidation",
-        "directory-structure",
-        "marketplace",
-        "refactoring",
-        "skills-registry"
-      ]
+      "tags": []
     },
     {
       "name": "coverage-threshold-tuning",
@@ -4001,14 +4429,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/coverage-threshold-tuning",
       "category": "tooling",
-      "tags": [
-        "pytest",
-        "coverage",
-        "ci-cd",
-        "threshold",
-        "pixi",
-        "github-actions"
-      ]
+      "tags": []
     },
     {
       "name": "defaults-config-filename-validation",
@@ -4016,11 +4437,63 @@
       "version": "1.0.0",
       "source": "./skills/tooling/defaults-config-filename-validation",
       "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "delete-deprecated-file",
+      "description": "Delete a deprecated file from the codebase after verifying no remaining imports or references. Use when: (1) a file is marked DEPRECATED and needs removal, (2) consolidation leaves behind stub/re-export files, (3) cleanup issues require file deletion with safety checks.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/delete-deprecated-file",
+      "category": "tooling",
       "tags": [
-        "defaults",
-        "config",
-        "filename",
-        "validation"
+        "cleanup",
+        "deprecated",
+        "deletion",
+        "consolidation",
+        "refactoring"
+      ]
+    },
+    {
+      "name": "delete-deprecated-skills",
+      "description": "Delete deprecated skill directories and update all cross-references in documentation, agents, and scripts. Use when: (1) skill directories reference removed systems, (2) cleanup issues require removing DEPRECATED-marked skills, (3) planning-system migration leaves orphaned skill files.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/delete-deprecated-skills",
+      "category": "tooling",
+      "tags": [
+        "cleanup",
+        "deprecated",
+        "skills",
+        "references",
+        "documentation"
+      ]
+    },
+    {
+      "name": "deprecated-file-cleanup",
+      "description": "Safely delete deprecated stub files after verifying no active imports reference them. Use when: (1) a file is marked DEPRECATED with a consolidation notice, (2) a cleanup issue asks you to delete a helper/utility file, (3) you need to verify zero consumers before deletion.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/deprecated-file-cleanup",
+      "category": "tooling",
+      "tags": [
+        "cleanup",
+        "deprecated",
+        "deletion",
+        "imports",
+        "refactoring"
+      ]
+    },
+    {
+      "name": "deprecated-file-cleanup-workflow",
+      "description": "Workflow for safely deleting deprecated files from a Mojo/Python codebase. Use when: (1) a file is marked DEPRECATED and consolidated elsewhere, (2) cleaning up legacy modules after migration, (3) removing files as part of a cleanup GitHub issue.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/deprecated-file-cleanup-workflow",
+      "category": "tooling",
+      "tags": [
+        "cleanup",
+        "deprecated",
+        "delete",
+        "mojo",
+        "github-issue",
+        "worktree"
       ]
     },
     {
@@ -4029,17 +4502,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/docker-optional-dep-layer-caching",
       "category": "tooling",
-      "tags": [
-        "docker",
-        "dockerfile",
-        "caching",
-        "optional-dependencies",
-        "pyproject",
-        "tomllib",
-        "layer-caching",
-        "build-arg",
-        "docker-compose"
-      ]
+      "tags": []
     },
     {
       "name": "enforce-model-config-consistency-hook",
@@ -4047,13 +4510,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/enforce-model-config-consistency-hook",
       "category": "tooling",
-      "tags": [
-        "enforce",
-        "model",
-        "config",
-        "consistency",
-        "hook"
-      ]
+      "tags": []
     },
     {
       "name": "execution-stage-logging",
@@ -4061,13 +4518,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/execution-stage-logging",
       "category": "tooling",
-      "tags": [
-        "logging",
-        "observability",
-        "debugging",
-        "worker-threads",
-        "pipeline"
-      ]
+      "tags": []
     },
     {
       "name": "experiment-recovery-tools",
@@ -4083,11 +4534,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/extract-logging-helper",
       "category": "tooling",
-      "tags": [
-        "extract",
-        "logging",
-        "helper"
-      ]
+      "tags": []
     },
     {
       "name": "fix-incomplete-pydantic-migration",
@@ -4095,13 +4542,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/fix-incomplete-pydantic-migration",
       "category": "tooling",
-      "tags": [
-        "pydantic",
-        "testing",
-        "ci-cd",
-        "migration",
-        "debugging"
-      ]
+      "tags": []
     },
     {
       "name": "generate-boilerplate",
@@ -4117,13 +4558,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/gh-batch-merge-by-labels",
       "category": "tooling",
-      "tags": [
-        "github",
-        "pr",
-        "batch-merge",
-        "labels",
-        "automation"
-      ]
+      "tags": []
     },
     {
       "name": "gh-create-pr-linked",
@@ -4131,13 +4566,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/gh-create-pr-linked",
       "category": "tooling",
-      "tags": [
-        "github",
-        "pr",
-        "issue-linking",
-        "gh-cli",
-        "pull-request"
-      ]
+      "tags": []
     },
     {
       "name": "gh-fix-pr-feedback",
@@ -4145,12 +4574,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/gh-fix-pr-feedback",
       "category": "tooling",
-      "tags": [
-        "github",
-        "pr",
-        "review",
-        "feedback"
-      ]
+      "tags": []
     },
     {
       "name": "gh-get-review-comments",
@@ -4158,12 +4582,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/gh-get-review-comments",
       "category": "tooling",
-      "tags": [
-        "github",
-        "pr",
-        "review",
-        "api"
-      ]
+      "tags": []
     },
     {
       "name": "gh-implement-issue",
@@ -4179,16 +4598,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/gh-implement-issue-preflight-integration",
       "category": "tooling",
-      "tags": [
-        "github",
-        "workflow",
-        "pre-flight",
-        "automation",
-        "safety-check",
-        "gh-implement-issue",
-        "bash",
-        "issue-management"
-      ]
+      "tags": []
     },
     {
       "name": "gh-post-issue-update",
@@ -4196,13 +4606,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/gh-post-issue-update",
       "category": "tooling",
-      "tags": [
-        "github",
-        "issues",
-        "documentation",
-        "progress",
-        "gh-cli"
-      ]
+      "tags": []
     },
     {
       "name": "gh-pr-review-workflow",
@@ -4210,14 +4614,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/gh-pr-review-workflow",
       "category": "tooling",
-      "tags": [
-        "github",
-        "pr",
-        "review",
-        "comments",
-        "feedback",
-        "workflow"
-      ]
+      "tags": []
     },
     {
       "name": "gh-read-issue-context",
@@ -4225,13 +4622,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/gh-read-issue-context",
       "category": "tooling",
-      "tags": [
-        "github",
-        "issues",
-        "context",
-        "implementation",
-        "gh-cli"
-      ]
+      "tags": []
     },
     {
       "name": "gh-reply-review-comment",
@@ -4239,12 +4630,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/gh-reply-review-comment",
       "category": "tooling",
-      "tags": [
-        "github",
-        "pr",
-        "review",
-        "api"
-      ]
+      "tags": []
     },
     {
       "name": "gh-review-pr",
@@ -4260,14 +4646,20 @@
       "version": "1.0.0",
       "source": "./skills/tooling/git-worktree-cleanup",
       "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "git-worktree-mass-cleanup",
+      "description": "Remove all git worktrees in bulk, distinguishing merged vs active PRs, cleaning untracked dirs, and switching the main checkout to main. Use when: (1) many worktrees have accumulated and need purging after a parallel development session, (2) resetting a repo to a clean single-checkout state, (3) removing stale worktrees whose remote branches are gone.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/git-worktree-mass-cleanup",
+      "category": "tooling",
       "tags": [
         "git",
         "worktree",
         "cleanup",
-        "parallel-waves",
-        "nested-worktrees",
-        "safety-net",
-        "branch-deletion"
+        "branches",
+        "parallel-development"
       ]
     },
     {
@@ -4276,13 +4668,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/git-worktree-workflow",
       "category": "tooling",
-      "tags": [
-        "git",
-        "worktree",
-        "parallel-development",
-        "branching",
-        "workflow"
-      ]
+      "tags": []
     },
     {
       "name": "gitattributes-setup",
@@ -4290,13 +4676,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/gitattributes-setup",
       "category": "tooling",
-      "tags": [
-        "git",
-        "line-endings",
-        "cross-platform",
-        "gitattributes",
-        "normalization"
-      ]
+      "tags": []
     },
     {
       "name": "graceful-signal-handling",
@@ -4304,13 +4684,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/graceful-signal-handling",
       "category": "tooling",
-      "tags": [
-        "signals",
-        "shutdown",
-        "checkpoint",
-        "ctrl-c",
-        "graceful-exit"
-      ]
+      "tags": []
     },
     {
       "name": "issue-completion-verification",
@@ -4318,13 +4692,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/issue-completion-verification",
       "category": "tooling",
-      "tags": [
-        "github",
-        "workflow",
-        "automation",
-        "issue-tracking",
-        "pr-management"
-      ]
+      "tags": []
     },
     {
       "name": "issue-preflight-check",
@@ -4332,14 +4700,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/issue-preflight-check",
       "category": "tooling",
-      "tags": [
-        "github",
-        "workflow",
-        "pre-flight",
-        "verification",
-        "worktree",
-        "branch-management"
-      ]
+      "tags": []
     },
     {
       "name": "lazy-clone-dependency",
@@ -4347,16 +4708,20 @@
       "version": "1.0.0",
       "source": "./skills/automation/lazy-clone-dependency",
       "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "merged-pr-noop-detection",
+      "description": "Detect when a fix-PR workflow targets an already-merged PR and safely short-circuit. Use when: (1) review-fix automation runs against a PR that has already merged, (2) a fix plan file says 'no fixes needed' or 'PR is merged', (3) automated scripts generate fix tasks for closed/merged PRs.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/merged-pr-noop-detection",
+      "category": "tooling",
       "tags": [
+        "pr-workflow",
         "automation",
-        "clone",
-        "dependency",
-        "planner",
-        "mnemosyne",
-        "race-condition",
-        "fcntl",
-        "threading",
-        "gh"
+        "noop",
+        "merged-pr",
+        "fix-plan"
       ]
     },
     {
@@ -4376,20 +4741,43 @@
       "tags": []
     },
     {
+      "name": "mojo-glibc-env-awareness",
+      "description": "Handle Mojo projects that require newer GLIBC than the host OS provides. Use when: (1) mojo fails with GLIBC_2.32/2.33/2.34 version not found, (2) pre-commit mojo-format hook fails due to GLIBC mismatch, (3) running Mojo toolchain on older Linux distributions like Debian 10.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/mojo-glibc-env-awareness",
+      "category": "tooling",
+      "tags": [
+        "mojo",
+        "glibc",
+        "linux",
+        "docker",
+        "pre-commit",
+        "environment"
+      ]
+    },
+    {
+      "name": "mojo-note-cleanup-without-compiler",
+      "description": "Update Mojo compiler limitation NOTEs with tracking references when local Mojo compilation is unavailable due to GLIBC mismatch. Use when: (1) cleaning up blocker NOTEs in Mojo code on systems where Mojo cannot run locally, (2) verifying version-pinned compiler limitations without running the compiler, (3) updating comments with issue tracking references.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/mojo-note-cleanup-without-compiler",
+      "category": "tooling",
+      "tags": [
+        "mojo",
+        "comments",
+        "compiler-limitations",
+        "fp16",
+        "simd",
+        "glibc",
+        "cleanup"
+      ]
+    },
+    {
       "name": "mypy-full-compliance-workflow",
       "description": "9-phase workflow to achieve full mypy compliance: fix all suppressed error codes incrementally, decouple tests/ overrides, remove disable_error_code entirely, and simplify the regression guard to a single invocation. Use when a project has incrementally-adopted mypy with multiple disabled error codes and you want to achieve full compliance.",
       "version": "1.0.0",
       "source": "./skills/tooling/mypy-full-compliance-workflow",
       "category": "tooling",
-      "tags": [
-        "mypy",
-        "type-checking",
-        "compliance",
-        "incremental",
-        "pre-commit",
-        "regression-guard",
-        "python"
-      ]
+      "tags": []
     },
     {
       "name": "mypy-roadmap-closure",
@@ -4397,13 +4785,20 @@
       "version": "1.0.0",
       "source": "./skills/tooling/mypy-roadmap-closure",
       "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "no-op-review-fix-detection",
+      "description": "Recognize when a review-fix plan requires zero implementation changes. Use when: (1) a .claude-review-fix-*.md plan says 'No fixes required', (2) verifying a worktree already contains the correct committed state, (3) avoiding unnecessary commits on already-clean branches.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/no-op-review-fix-detection",
+      "category": "tooling",
       "tags": [
-        "mypy",
-        "type-checking",
-        "roadmap",
-        "tech-debt",
-        "pre-commit",
-        "pyproject"
+        "review",
+        "pr",
+        "no-op",
+        "worktree",
+        "ci"
       ]
     },
     {
@@ -4412,14 +4807,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/parallel-issue-implementation",
       "category": "tooling",
-      "tags": [
-        "github",
-        "worktree",
-        "parallel",
-        "batch",
-        "issues",
-        "implementation"
-      ]
+      "tags": []
     },
     {
       "name": "parallel-issue-resolution-with-worktrees",
@@ -4427,13 +4815,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/parallel-issue-resolution-with-worktrees",
       "category": "tooling",
-      "tags": [
-        "parallel",
-        "issue",
-        "resolution",
-        "with",
-        "worktrees"
-      ]
+      "tags": []
     },
     {
       "name": "parallel-pr-workflow",
@@ -4441,16 +4823,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/parallel-pr-workflow",
       "category": "tooling",
-      "tags": [
-        "git",
-        "worktrees",
-        "parallel-development",
-        "pull-requests",
-        "automation",
-        "github-cli",
-        "code-quality",
-        "technical-debt"
-      ]
+      "tags": []
     },
     {
       "name": "parallel-worktree-workflow",
@@ -4458,15 +4831,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/parallel-worktree-workflow",
       "category": "tooling",
-      "tags": [
-        "parallel",
-        "worktrees",
-        "sub-agents",
-        "efficiency",
-        "git",
-        "workflow",
-        "background-tasks"
-      ]
+      "tags": []
     },
     {
       "name": "phase-implement",
@@ -4498,12 +4863,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/planning-implementation-from-issue",
       "category": "tooling",
-      "tags": [
-        "planning",
-        "implementation",
-        "from",
-        "issue"
-      ]
+      "tags": []
     },
     {
       "name": "plugin-generalization",
@@ -4511,14 +4871,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/plugin-generalization",
       "category": "tooling",
-      "tags": [
-        "plugin",
-        "generalization",
-        "cross-repo",
-        "marketplace",
-        "migration",
-        "abstraction"
-      ]
+      "tags": []
     },
     {
       "name": "port-reusable-scripts",
@@ -4526,18 +4879,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/port-reusable-scripts",
       "category": "tooling",
-      "tags": [
-        "scripts",
-        "porting",
-        "generalization",
-        "cross-repo",
-        "utilities",
-        "automation",
-        "python",
-        "refactoring",
-        "gh-cli",
-        "dependency-elimination"
-      ]
+      "tags": []
     },
     {
       "name": "pydantic-frozen-consistency",
@@ -4545,11 +4887,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/pydantic-frozen-consistency",
       "category": "tooling",
-      "tags": [
-        "pydantic",
-        "frozen",
-        "consistency"
-      ]
+      "tags": []
     },
     {
       "name": "python-version-alignment",
@@ -4557,15 +4895,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/python-version-alignment",
       "category": "tooling",
-      "tags": [
-        "python",
-        "dockerfile",
-        "version-drift",
-        "pyproject",
-        "pixi",
-        "configuration",
-        "quality-audit"
-      ]
+      "tags": []
     },
     {
       "name": "quality-audit-implementation",
@@ -4573,16 +4903,7 @@
       "version": "1.1.0",
       "source": "./skills/tooling/quality-audit-implementation",
       "category": "tooling",
-      "tags": [
-        "quality",
-        "audit",
-        "implementation",
-        "github-issues",
-        "codeowners",
-        "ci-matrix",
-        "documentation",
-        "triage"
-      ]
+      "tags": []
     },
     {
       "name": "quality-audit-tracking",
@@ -4590,11 +4911,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/quality-audit-tracking",
       "category": "tooling",
-      "tags": [
-        "quality",
-        "audit",
-        "tracking"
-      ]
+      "tags": []
     },
     {
       "name": "retrospective-hook-integration",
@@ -4602,14 +4919,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/retrospective-hook-integration",
       "category": "tooling",
-      "tags": [
-        "claude-code",
-        "hooks",
-        "marketplace",
-        "retrospective",
-        "session-end",
-        "knowledge-capture"
-      ]
+      "tags": []
     },
     {
       "name": "retrospective-integration",
@@ -4617,13 +4927,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/retrospective-integration",
       "category": "tooling",
-      "tags": [
-        "automation",
-        "claude-cli",
-        "session-management",
-        "pipeline-integration",
-        "graceful-degradation"
-      ]
+      "tags": []
     },
     {
       "name": "review-task-orchestration",
@@ -4639,13 +4943,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/skill-audit-and-merge",
       "category": "tooling",
-      "tags": [
-        "marketplace",
-        "plugin",
-        "consolidation",
-        "audit",
-        "organization"
-      ]
+      "tags": []
     },
     {
       "name": "skills-agent-field",
@@ -4661,15 +4959,7 @@
       "version": "1.0.0",
       "source": "./plugins/tooling/skills-registry-commands",
       "category": "tooling",
-      "tags": [
-        "skills",
-        "advise",
-        "retrospective",
-        "knowledge-capture",
-        "team-learning",
-        "documentation",
-        "ci-cd"
-      ]
+      "tags": []
     },
     {
       "name": "split-figures-per-tier",
@@ -4677,14 +4967,20 @@
       "version": "1.0.0",
       "source": "./skills/tooling/split-figures-per-tier",
       "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "stale-script-cleanup",
+      "description": "Remove stale one-time fix/migration scripts from a scripts/ directory safely. Use when: (1) scripts/ directory has accumulated one-time fix or migration scripts no longer needed, (2) cleaning up development artifacts before a release, (3) reducing cognitive load for new contributors by removing irrelevant scripts.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/stale-script-cleanup",
+      "category": "tooling",
       "tags": [
-        "altair",
-        "vega-lite",
-        "visualization",
-        "row-limit",
-        "figure-generation",
-        "per-tier-patterns",
-        "data-filtering"
+        "cleanup",
+        "scripts",
+        "maintenance",
+        "git",
+        "refactoring"
       ]
     },
     {
@@ -4693,14 +4989,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/technical-debt-tracker",
       "category": "tooling",
-      "tags": [
-        "github",
-        "technical-debt",
-        "fixme",
-        "todo",
-        "code-quality",
-        "issue-tracking"
-      ]
+      "tags": []
     },
     {
       "name": "template-migration",
@@ -4708,10 +4997,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/template-migration",
       "category": "tooling",
-      "tags": [
-        "template",
-        "migration"
-      ]
+      "tags": []
     },
     {
       "name": "tier-progress-indicators",
@@ -4719,13 +5005,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/tier-progress-indicators",
       "category": "tooling",
-      "tags": [
-        "progress",
-        "observability",
-        "parallel-execution",
-        "logging",
-        "user-experience"
-      ]
+      "tags": []
     },
     {
       "name": "tone-matched-documentation",
@@ -4733,11 +5013,21 @@
       "version": "1.0.0",
       "source": "./skills/documentation/tone-matched-documentation",
       "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "verify-already-implemented-issues",
+      "description": "Verify issue implementation status before starting work by checking git log, branch state, and open PRs. Use when: (1) assigned to implement a GitHub issue in a pre-created worktree branch, (2) unsure if work is already done, (3) starting issue implementation and want to avoid duplicate work.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/verify-already-implemented-issues",
+      "category": "tooling",
       "tags": [
-        "academic-writing",
-        "documentation",
-        "tone-matching",
-        "style-consistency"
+        "github",
+        "issues",
+        "worktree",
+        "git",
+        "pr",
+        "duplicate-work"
       ]
     },
     {
@@ -4746,13 +5036,7 @@
       "version": "1.0.0",
       "source": "./skills/tooling/verify-issue-before-work",
       "category": "tooling",
-      "tags": [
-        "workflow",
-        "github",
-        "productivity",
-        "verification",
-        "issue-management"
-      ]
+      "tags": []
     },
     {
       "name": "worktree-cleanup",
@@ -4778,6 +5062,21 @@
         "worktree",
         "git-worktree",
         "parallel-development"
+      ]
+    },
+    {
+      "name": "worktree-prompt-already-done",
+      "description": "Detect and confirm when a worktree issue prompt's implementation is already complete in git history. Use when: (1) invoked with a .claude-prompt-<N>.md file in a worktree branch, (2) git log shows the task commit as HEAD, (3) a PR already exists for the branch.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/worktree-prompt-already-done",
+      "category": "tooling",
+      "tags": [
+        "worktree",
+        "github",
+        "issue-tracking",
+        "pr-management",
+        "git-history",
+        "automation"
       ]
     },
     {
@@ -4812,14 +5111,7 @@
       "version": "1.0.0",
       "source": "./skills/training/grpo-external-vllm",
       "category": "training",
-      "tags": [
-        "ml",
-        "training",
-        "llm",
-        "vllm",
-        "grpo",
-        "reinforcement-learning"
-      ]
+      "tags": []
     },
     {
       "name": "spec-driven-experimentation",
@@ -4827,14 +5119,7 @@
       "version": "1.0.0",
       "source": "./skills/training/spec-driven-experimentation",
       "category": "training",
-      "tags": [
-        "ml",
-        "training",
-        "methodology",
-        "experiments",
-        "ablation",
-        "hyperparameters"
-      ]
+      "tags": []
     },
     {
       "name": "train-model",
