@@ -1,0 +1,8 @@
+{
+  "name": "png-jpeg-to-idx-conversion",
+  "version": "1.0.0",
+  "description": "Create a Python interop script converting PNG/JPEG images to IDX binary format for Mojo inference pipelines. Use when: (1) inference pipeline only accepts IDX format but users have PNG/JPEG inputs, (2) adding image-to-IDX preprocessing to ML inference examples, (3) bridging PIL/Pillow image loading into Mojo-native data formats.",
+  "category": "tooling",
+  "date": "2026-03-07",
+  "tags": ["python", "mojo", "interop", "idx", "image-preprocessing", "inference", "pillow"]
+}
