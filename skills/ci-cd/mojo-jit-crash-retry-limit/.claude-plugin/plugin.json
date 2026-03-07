@@ -1,0 +1,8 @@
+{
+  "name": "mojo-jit-crash-retry-limit",
+  "version": "1.0.0",
+  "description": "Add retry limit and distinct failure messages to just test-group crash retry logic. Use when: (1) the blind retry loop retries all failures (not just crashes), (2) CI logs cannot distinguish 'crashed and retried' from 'normal failure', (3) follow-up to mojo-jit-crash-retry to add MAX_RETRIES limit and distinct exit messages.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["mojo", "justfile", "retry", "jit-crash", "ci", "failure-messages", "test-group"]
+}
