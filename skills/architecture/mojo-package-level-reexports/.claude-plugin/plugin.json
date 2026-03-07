@@ -1,0 +1,8 @@
+{
+  "name": "mojo-package-level-reexports",
+  "version": "1.0.0",
+  "description": "Add convenience top-level re-exports to a Mojo package __init__.mojo and implement new optimizer structs. Use when: (1) enabling `from shared import SGD, Adam, AdamW` style imports in Mojo, (2) adding a new optimizer struct (AdamW) that mirrors an existing one (Adam) with a behavioral twist (decoupled weight decay), (3) activating commented-out import lines in __init__.mojo after implementation is ready.",
+  "category": "architecture",
+  "date": "2026-03-07",
+  "tags": ["mojo", "package", "reexports", "init", "optimizer", "adamw", "adam", "sgd", "convenience-imports"]
+}
