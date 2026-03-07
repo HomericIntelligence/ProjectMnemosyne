@@ -1,66 +1,42 @@
-# Session Notes: Agent Tier Consolidation
+# Session Notes: Agent Tier Consolidation (Issue #3333)
 
-## Context
+## Session Context
 
-- **Repository**: HomericIntelligence/ProjectOdyssey
-- **Issue**: #3146 — [P1-3] Consolidate implementation engineer tiers (4 → 2)
-- **Branch**: 3146-auto-impl
-- **PR**: #3327
-- **Date**: 2026-03-05
+- **Repo**: HomericIntelligence/ProjectOdyssey
+- **Issue**: #3333 - Apply same tier consolidation to documentation engineers (3 -> 2)
+- **Follow-up from**: #3146 (junior implementation/test consolidation)
+- **Branch**: 3333-auto-impl
+- **PR**: #3959
 
-## Problem
+## Objective
 
-The project had 4 implementation tiers:
-
-1. `senior-implementation-engineer.md` — complex algorithms, SIMD, profiling
-2. `implementation-engineer.md` — standard functions, established patterns
-3. `junior-implementation-engineer.md` — boilerplate, formatting, simple fixes
-4. `implementation-specialist.md` — coordination/planning (distinct role, kept)
-
-Three generalist tiers with same scope but different complexity level is over-segmented
-for a project in planning phase where actual implementation hasn't begun.
-
-## Approach
-
-- Read all 4 agent files to inventory capabilities
-- Identified `implementation-engineer.md` as the natural consolidation target (middle tier)
-- Merged unique capabilities from senior (SIMD skills, profiling workflow, performance example)
-  and junior (formatting skills, boilerplate scope, anti-pattern references, escalation hook removal)
-- Updated `implementation-specialist.md` `delegates_to` from 3 agents to 1
-- Deleted `senior-implementation-engineer.md` and `junior-implementation-engineer.md`
-- Updated `agents/hierarchy.md` diagram, level summaries, and agent count table
-
-## Key Observations
-
-1. **The "middle" agent already had the best structure** — it had Thinking Guidance,
-   Output Preferences, Delegation Patterns, and Sub-Agent Usage sections. The senior/junior
-   agents lacked these. Merging into the middle preserved this richness.
-
-2. **Junior hooks can be dropped** — The junior agent had a `PreToolUse` Bash block hook
-   that blocked Bash access. This restriction makes no sense for a consolidated agent that
-   handles all complexity levels.
-
-3. **Examples anchor the difference** — Rather than trying to specify complexity via prose,
-   two concrete examples (standard layer implementation vs SIMD matrix multiplication)
-   make the capability range tangible.
-
-4. **Hierarchy counts cascade** — Removing 2 agents requires updating: diagram boxes,
-   level summary counts, agent count table, and the total. Easy to miss one.
-
-5. **pre-commit mojo-format fails on this host** — GLIBC incompatibility, pre-existing.
-   All non-Mojo hooks pass cleanly.
+Merge `junior-documentation-engineer` (L5) into `documentation-engineer` (L4),
+reducing the documentation tier from 3 levels to 2 and total agents from 44 to 43.
 
 ## Files Changed
 
-- `.claude/agents/implementation-engineer.md` — merged from 3 agents (rewrote)
-- `.claude/agents/implementation-specialist.md` — updated delegates_to + example
-- `.claude/agents/senior-implementation-engineer.md` — deleted
-- `.claude/agents/junior-implementation-engineer.md` — deleted
-- `agents/hierarchy.md` — updated counts and diagram
+### Agent configs (.claude/agents/)
+- `documentation-engineer.md` — expanded description/scope/workflow/skills/constraints; `delegates_to: []`
+- `documentation-specialist.md` — removed `junior-documentation-engineer` from delegates_to
+- `junior-documentation-engineer.md` — DELETED
 
-## Validation
+### Documentation (agents/)
+- `hierarchy.md` — removed Junior Documentation Engineer from L5 diagram; updated L5 "3 types" → "2 types"
+- `README.md` — removed entry; updated Level 5 count "(2 agents)" → "(1 agent)"
+- `docs/agent-catalog.md` — removed full section; updated 44→43, 3 L5→2 L5; updated delegation text
+- `docs/onboarding.md` — removed junior list entry; updated "3 junior types" → "2 junior types"; "44 agents" → "43 agents"
 
-```text
-python3 tests/agents/validate_configs.py .claude/agents/
-Total files: 42, Passed: 42, Failed: 0, Errors: 0
-```
+## Key Discovery
+
+The `agents/hierarchy.md` table already showed 31 total agents (correct), but the
+L5 narrative text still said "3 types (Implementation, Test, Documentation)" — these
+must be checked independently. The table count and the prose description can drift.
+
+## Test Results
+
+All 30 agent configs passed validation (0 failures, 48 warnings — warnings are pre-existing
+non-blocking style suggestions unrelated to this change).
+
+## Time
+
+~20 minutes total: read files, make edits, verify, commit, push, create PR.
