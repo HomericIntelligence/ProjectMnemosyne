@@ -46,7 +46,47 @@ Full suite: 4350 passed, 1 skipped, 48 warnings in 116.58s
 Coverage: 75.20% (threshold 75%)
 ```
 
-## Blockers Encountered
+---
+
+## Session v2 — 2026-03-06 (issue #1427, PR #1452)
+
+- **Issue**: #1427 — extend check from single file to all project markdown files
+- **Branch**: `1427-auto-impl`
+- **PR**: #1452
+
+### What Changed
+
+```
+scripts/check_tier_label_consistency.py     (extended: +TierLabelFinding, scan_repository, format_report, format_json, --glob/--json/--verbose flags)
+tests/unit/scripts/test_check_tier_label_consistency.py  (extended: +31 tests → 55 total)
+.pre-commit-config.yaml                     (files: trigger broadened to \.md$)
+```
+
+### New APIs Added
+
+- `TierLabelFinding` dataclass (file, line, tier, found_name, expected_name, raw_text)
+- `_collect_mismatches(path)` — per-file scan returning `list[TierLabelFinding]`
+- `scan_repository(repo_root, glob, excludes)` — whole-repo scan with default excludes
+- `format_report(findings)` / `format_json(findings)` — structured output
+
+Legacy API preserved: `find_violations`, `check_tier_label_consistency`, `BAD_PATTERNS`.
+
+### Ruff Blocker
+
+`try/except/pass` for `relative_to()` in `scan_repository` was flagged by ruff SIM105 and
+auto-fixed to a broken state. Fix: use `with contextlib.suppress(ValueError):` from the start.
+
+### Test Results
+
+```
+55 passed in 0.37s (new tests only)
+Full suite: 4594 passed, 1 skipped in 131.96s
+Coverage: 75.79% (threshold 75%)
+```
+
+---
+
+## Blockers Encountered (v1)
 
 ### Edit tool blocked on workflow files
 
