@@ -193,6 +193,8 @@ The `test_backward_compat_aliases.mojo` file typically tests multiple aliases. O
 |---------|----------------|---------------|----------------|
 | Local `pixi run mojo build` | Ran mojo build locally to verify | GLIBC version incompatibility (`GLIBC_2.32/2.33/2.34` not found) — mojo requires newer glibc than available on the host | Mojo compilation must run in Docker container or CI; local verification is not possible on older Linux hosts |
 | Deleting only alias definitions | Only removed the `comptime X = Y` lines, didn't search for usages | Function return types still referenced the removed alias, would cause compile errors | Always grep for all occurrences before removing — aliases appear in return types, docstrings, and test files |
+| Grepping only code, not comments | On follow-up issue #3267, only searched for aliases in code/imports | Missed one stale comment in `test_conv.mojo` that still referenced `Conv2dBackwardResult` — the plan said 18+ changes but prior sessions had done all the real work already | Grep with no `--include` type filter to catch alias names in comments too; the final verification grep must return 0 results across ALL file content |
+| Assuming a detailed plan means lots of work remains | Issue #3267 plan described removing 8 aliases from 6 files; assumed this was all unimplemented | All source/import changes had already been done by prior sessions; only 1 comment update remained | Always grep for remaining occurrences FIRST before reading the plan — the actual work may be a tiny fraction of what the plan describes |
 
 ## Results & Parameters
 
@@ -237,7 +239,8 @@ Closes #<issue-number>
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectOdyssey | Issue #3065, PR #3262 | [notes.md](../references/notes.md) |
+| ProjectOdyssey | Issue #3065, PR #3262 — initial linear alias removal | [notes.md](../references/notes.md) |
+| ProjectOdyssey | Issue #3267, PR #3833 — follow-up: remaining conv2d aliases (all already removed; only 1 stale comment remained) | [notes-3267.md](../references/notes-3267.md) |
 
 ## Related Skills
 
