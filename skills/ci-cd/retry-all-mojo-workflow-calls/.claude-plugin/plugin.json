@@ -1,0 +1,8 @@
+{
+  "name": "retry-all-mojo-workflow-calls",
+  "version": "1.0.0",
+  "description": "Audit GitHub Actions workflows for unprotected bare pixi run mojo calls and apply retry logic. Use when: (1) a retry fix was applied to one workflow but other workflows still have bare pixi run mojo calls, (2) auditing CI for JIT crash resilience after discovering intermittent Mojo crashes, (3) workflows use pixi run mojo directly instead of routing through a just recipe that has retry.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["mojo", "retry", "jit-crash", "github-actions", "pixi", "just", "resilience", "ci-audit"]
+}
