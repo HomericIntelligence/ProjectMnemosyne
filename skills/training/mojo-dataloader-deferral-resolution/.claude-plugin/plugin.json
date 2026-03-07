@@ -1,0 +1,8 @@
+{
+  "name": "mojo-dataloader-deferral-resolution",
+  "version": "1.0.0",
+  "description": "Resolve PythonObject interop deferral placeholders in Mojo training loops by replacing them with real DataLoader iteration. Use when: (1) a Mojo function accepts PythonObject as a data loader but a native DataLoader struct already exists, (2) run_epoch() or similar training loop methods always return 0.0 due to a deferred interop placeholder, (3) Track 4 / Python-Mojo interop deferral comments exist in training code.",
+  "category": "training",
+  "date": "2026-03-07",
+  "tags": ["mojo", "dataloader", "training-loop", "python-interop", "deferral", "placeholder", "run-epoch"]
+}
