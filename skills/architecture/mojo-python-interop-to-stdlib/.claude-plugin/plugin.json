@@ -1,0 +1,8 @@
+{
+  "name": "mojo-python-interop-to-stdlib",
+  "version": "1.0.0",
+  "description": "Replace Python interop (Python.import_module) with Mojo native stdlib equivalents. Use when: (1) a Mojo function uses Python.import_module for os/pathlib/builtins operations that Mojo stdlib now supports, (2) refactoring away from Python interop overhead for file system operations, (3) eliminating 'from python import Python' imports from ML/AI Mojo modules.",
+  "category": "architecture",
+  "date": "2026-03-07",
+  "tags": ["mojo", "python-interop", "stdlib", "refactoring", "os", "pathlib", "file-system"]
+}
