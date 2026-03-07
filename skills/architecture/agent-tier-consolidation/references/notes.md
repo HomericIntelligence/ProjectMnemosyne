@@ -64,3 +64,41 @@ for a project in planning phase where actual implementation hasn't begun.
 python3 tests/agents/validate_configs.py .claude/agents/
 Total files: 42, Passed: 42, Failed: 0, Errors: 0
 ```
+
+---
+
+## Session Notes: Issue #3332 (junior-only variant, 2026-03-07)
+
+- **Issue**: #3332 — Apply same tier consolidation to test engineers (3 → 2)
+- **Branch**: 3332-auto-impl
+- **PR**: #3957
+
+### Problem
+
+Test engineer hierarchy had 3 tiers: `test-specialist (L3) → test-engineer (L4) → junior-test-engineer (L5)`.
+Same over-segmentation argument as #3146 — junior tier adds overhead without benefit at current stage.
+
+### Approach
+
+- This was a junior-only variant: no senior tier to handle
+- `test-engineer.md` already had Bash tool access; junior had a `PreToolUse` Bash block hook
+- Simply removed the junior, cleared `delegates_to` on test-engineer, updated test-specialist
+- Cross-references spread across 5 files beyond the agent configs themselves
+
+### Files Changed
+
+- `.claude/agents/junior-test-engineer.md` — deleted
+- `.claude/agents/test-engineer.md` — `delegates_to: [junior-test-engineer]` → `delegates_to: []`
+- `.claude/agents/test-specialist.md` — removed `junior-test-engineer` from `delegates_to`
+- `agents/hierarchy.md` — removed Junior Test Engineer section
+- `agents/README.md` — Level 5 count 2 → 1
+- `agents/docs/agent-catalog.md` — removed Junior Test Engineer catalog entry
+- `scripts/agents/setup_agents.sh` — removed from EXPECTED_AGENT_FILES array
+- `docs/dev/agent-claude4-update-status.md` — removed from Level 5 list
+
+### Validation
+
+```text
+python3 tests/agents/validate_configs.py .claude/agents/
+Total files: 30, Passed: 30, Failed: 0, Errors: 0
+```
