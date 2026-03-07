@@ -1,0 +1,8 @@
+{
+  "name": "constant-centralization",
+  "version": "1.0.0",
+  "description": "Centralize shared constants to their canonical module and update importers. Use when: (1) duplicate constant definitions exist across modules, (2) a utility module defines constants that belong in a lower-level dependency, (3) refactoring to clarify ownership of shared configuration values.",
+  "category": "architecture",
+  "date": "2026-03-07",
+  "tags": ["refactoring", "constants", "imports", "dry", "mojo", "deduplication"]
+}
