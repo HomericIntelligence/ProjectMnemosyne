@@ -1,0 +1,8 @@
+{
+  "name": "mojo-gradient-type-naming",
+  "version": "1.0.0",
+  "description": "Fix naming inconsistency between generic gradient container types and domain-specific backward pass results in Mojo ML code. Use when: (1) a backward function returns a generic GradientPair/GradientQuad with opaque field names (grad_a, grad_b) but the caller knows the semantic meaning, (2) different backward functions for the same operation (with-bias vs without-bias) return different types with inconsistent field names, (3) call sites accessing .grad_a/.grad_b need to be updated to semantically named fields.",
+  "category": "architecture",
+  "date": "2026-03-07",
+  "tags": ["mojo", "gradient", "naming", "type-safety", "ml", "backward-pass", "conv2d"]
+}
