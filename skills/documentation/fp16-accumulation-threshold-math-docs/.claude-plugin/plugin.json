@@ -1,0 +1,8 @@
+{
+  "name": "fp16-accumulation-threshold-math-docs",
+  "version": "1.0.0",
+  "description": "Document Float16 convolution skips in developer testing-strategy guides with accumulation threshold math and per-layer error tables. Use when: (1) a follow-up issue asks to add a Float16 limitations section to a testing-strategy.md or similar dev guide, (2) a plan references accumulation error = n × ε_machine math that was omitted from Success Criteria, (3) a gradient-checking parameters section needs a Float16 subsection explaining why convolution tests skip Float16.",
+  "category": "documentation",
+  "date": "2026-03-07",
+  "tags": ["float16", "fp16", "convolution", "gradient-checking", "testing-strategy", "accumulation-error", "documentation", "follow-up-issue"]
+}
