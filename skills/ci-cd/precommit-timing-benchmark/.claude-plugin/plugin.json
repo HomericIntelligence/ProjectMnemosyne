@@ -1,0 +1,8 @@
+{
+  "name": "precommit-timing-benchmark",
+  "version": "1.0.0",
+  "description": "Add pre-commit hook runtime measurement to CI to catch performance regressions. Use when: (1) regressions in hook speed are suspected, (2) a hook config change may affect performance, (3) you want to document before/after timing improvements.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["pre-commit", "benchmark", "timing", "performance", "ci", "github-actions"]
+}
