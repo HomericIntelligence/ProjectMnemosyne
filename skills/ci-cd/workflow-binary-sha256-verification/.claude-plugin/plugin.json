@@ -1,0 +1,8 @@
+{
+  "name": "workflow-binary-sha256-verification",
+  "version": "1.0.0",
+  "description": "Add SHA256 checksum verification for binary downloads in GitHub Actions workflows to prevent supply chain attacks. Use when: (1) a workflow downloads a binary via wget/curl without integrity verification, (2) a tool is pinned to a version but the downloaded artifact is not checksummed, (3) reviewing CI security and noticing unverified binary execution.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["security", "sha256", "supply-chain", "github-actions", "binary-verification", "gitleaks", "workflow-hardening"]
+}
