@@ -21,9 +21,10 @@ to prevent Mojo v0.26.1 heap corruption (`libKGENCompilerRTShared.so` JIT fault)
 ## When to Use
 
 - A Mojo test file has more than 10 `fn test_` functions
-- CI Testing Fixtures group fails intermittently (13/20 runs is a strong signal)
+- CI Testing Fixtures or Models group fails intermittently (13/20 runs is a strong signal)
 - A new large test file is being added that would exceed the limit
 - ADR-009 compliance check fails in PR review
+- A debugging-only file (previously excluded from CI) is being split and brought into regular CI
 
 ## Verified Workflow
 
@@ -82,10 +83,49 @@ git rm tests/shared/testing/test_assertions.mojo.DEPRECATED
 
 ```bash
 # Verify no file exceeds 10 (count actual functions, not comments)
-grep -c "^fn test_[a-z]" tests/shared/testing/test_assertions_*.mojo
+grep -c "^fn test_[a-z]" tests/models/test_heap_corruption_combined_part*.mojo
+```
 
-# CI glob auto-picks up new files if named test_*.mojo in the right directory
-# No workflow changes needed for testing/test_*.mojo glob pattern
+**CI coverage — three cases:**
+
+**Case A: CI uses glob patterns that match new filenames** (e.g., `pattern: "test_*.mojo"`)
+
+New files are picked up automatically — no workflow changes needed.
+
+**Case B: CI uses explicit filename lists or a glob that doesn't match new names**
+
+Must update the pattern string in `.github/workflows/comprehensive-tests.yml` to include the new filenames:
+
+```yaml
+# Before (Models group uses pattern that won't match _part*.mojo):
+pattern: "test_*_layers.mojo"
+
+# After (explicitly list the new split files):
+pattern: "test_*_layers.mojo test_heap_corruption_combined_part1.mojo test_heap_corruption_combined_part2.mojo test_heap_corruption_combined_part3.mojo"
+```
+
+**Case C: Original file was excluded from CI** (e.g., in `validate_test_coverage.py`)
+
+Update the exclusion list to reference the new part filenames instead of the original:
+
+```python
+# Before:
+"tests/models/test_heap_corruption_combined.mojo",
+
+# After:
+"tests/models/test_heap_corruption_combined_part1.mojo",
+"tests/models/test_heap_corruption_combined_part2.mojo",
+"tests/models/test_heap_corruption_combined_part3.mojo",
+```
+
+Check which case applies by inspecting the workflow and coverage validator:
+
+```bash
+# Check CI pattern for the relevant group
+grep -A3 '"Models"' .github/workflows/comprehensive-tests.yml
+
+# Check if original file was excluded from coverage validation
+grep "heap_corruption" scripts/validate_test_coverage.py
 ```
 
 ### 8. Commit and push
@@ -98,6 +138,8 @@ All pre-commit hooks must pass (mojo format, test coverage validation).
 |---------|----------------|---------------|----------------|
 | Using `grep "^fn test_"` to count tests | Counted comment lines matching the pattern | ADR-009 header comment contained `fn test_` text at line start | Use `^fn test_[a-z]` pattern instead |
 | Expecting 61 tests in split files | Issue description said 61 tests | The actual split files in main had 59 tests (issue count was approximate) | Always verify against actual code, not issue description |
+| Assuming new split files auto-match CI group pattern | Expected `test_heap_corruption_combined_part*.mojo` to match `test_*_layers.mojo` | Filenames don't end in `_layers.mojo` so they fall outside the glob | Always verify new filenames match the CI group's glob before finishing; add explicit entries if not |
+| Assuming excluded file needs no CI update | Original file excluded from CI; assumed split files auto-excluded | Split files brought into CI — also needed `validate_test_coverage.py` exclusion list updated | When splitting a file that was in an exclusion list, update the list to reference the new part filenames |
 
 ## Results & Parameters
 
@@ -123,5 +165,6 @@ grep -c "^fn test_[a-z]" <file>.mojo
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3397, PR #4094 | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3430, PR #4213 | `test_heap_corruption_combined.mojo` (24 tests → 3×8); Models CI group; file was debugging-only (excluded from CI), split files added to CI explicitly |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942
