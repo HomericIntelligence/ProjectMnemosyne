@@ -1,6 +1,6 @@
 ---
 name: adr009-test-file-splitting
-description: "Workflow for splitting Mojo test files that exceed ADR-009 ≤10 fn test_ limit. Use when: CI has heap corruption failures, a test file has >10 fn test_ functions, or any CI group fails intermittently due to heap corruption."
+description: "Split Mojo test files exceeding ADR-009 limit (≤10 fn test_ functions) to prevent heap corruption in Mojo v0.26.1. Use when: CI shows non-deterministic libKGENCompilerRTShared.so crashes, a test file exceeds the fn test_ limit, or Models CI group fails intermittently."
 category: ci-cd
 date: 2026-03-07
 user-invocable: false
@@ -8,126 +8,135 @@ user-invocable: false
 
 ## Overview
 
-| Field | Value |
-|-------|-------|
-| Category | ci-cd |
-| Complexity | Low |
-| Risk | Low |
-| Time | ~30 minutes |
-
-Splits Mojo test files that exceed ADR-009's ≤10 `fn test_` hard limit and ≤8 target per file,
-to prevent Mojo v0.26.1 heap corruption (`libKGENCompilerRTShared.so` JIT fault) in CI.
+| Property | Value |
+|----------|-------|
+| **Problem** | Mojo v0.26.1 heap corruption (`libKGENCompilerRTShared.so` JIT fault) under high test load |
+| **Root Cause** | Too many `fn test_` functions in a single `.mojo` file triggers memory corruption |
+| **ADR-009 Limit** | ≤10 `fn test_` functions per file (target: ≤8 for safety margin) |
+| **Fix** | Split oversized test files into numbered part files |
+| **CI Impact** | Eliminates non-deterministic Models CI group failures |
 
 ## When to Use
 
-- A Mojo test file has more than 10 `fn test_` functions
-- Any CI group fails intermittently due to heap corruption (13/20 runs is a strong signal)
-- A new large test file is being added that would exceed the limit
-- ADR-009 compliance check fails in PR review
+- A `.mojo` test file has more than 10 `fn test_` functions
+- CI shows intermittent `libKGENCompilerRTShared.so` segfaults on Mojo test runs
+- The `Models` CI group (or other Mojo test groups) fail non-deterministically
+- `grep -c "^fn test_" tests/models/test_<model>_layers.mojo` returns > 10
+- Adding new tests would push a file over the 10-function limit
 
 ## Verified Workflow
 
-### 1. Audit existing split state
-
-Check if splitting has already started before creating new files:
+### Step 1: Identify Oversized Files
 
 ```bash
-# Count actual test functions (use [a-z] to avoid matching comments)
-grep -c "^fn test_[a-z]" tests/shared/testing/test_assertions_*.mojo
-
-# Check for stale deprecated artifacts
-ls tests/shared/testing/*.DEPRECATED 2>/dev/null
+# Find all test files exceeding the limit
+for f in tests/**/*.mojo; do
+  count=$(grep -c "^fn test_" "$f" 2>/dev/null || echo 0)
+  if [ "$count" -gt 10 ]; then
+    echo "$count $f"
+  fi
+done
 ```
 
-### 2. Identify over-limit files
+### Step 2: Plan the Split
 
-Files with >10 tests violate ADR-009 hard limit. Files with >8 tests exceed the target.
-Target: ≤8 per file (buffer below the 10-test limit that triggers heap corruption).
+- Target ≤8 tests per file (leaves buffer below the 10-function limit)
+- Group tests logically: initialization → forward → backward, or by feature area
+- All shared structs and helper functions must be duplicated in each part file
 
-### 3. Group tests logically for split files
+### Step 3: Create Part Files
 
-Move tests that form a coherent group (e.g., `assert_equal_int` tests from a float file,
-`assert_type` tests from a tensor_values file). Prefer semantic groupings over arbitrary splits.
+Each part file MUST include:
 
-For a simple 2-way split of a single file, group by test theme:
-
-- Part 1: creation, basic behavior, edge cases
-- Part 2: advanced scenarios, error handling, determinism
-
-### 4. Create new split file with ADR-009 header
-
-Each new file must include the ADR-009 comment in its module docstring:
+1. **ADR-009 header comment** at the very top:
 
 ```mojo
-"""Tests for <description> - Part N: <theme>.
-
 # ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
 # Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
 # high test load. Split from <original_file>.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
-
-Tests <ComponentName> which <description>.
-"""
 ```
 
-### 5. Delete the original file (simple 2-way split)
+2. **All imports** from the original file
+3. **All shared structs and helper functions** (must be duplicated — no cross-file imports between test files)
+4. **A subset of tests** (≤8 `fn test_` functions)
+5. **A `main()` function** that runs only the tests in this part
 
-When replacing a single file with two new files:
+### Step 4: Delete the Original File
 
 ```bash
-git rm <original_file>.mojo
+rm tests/models/test_<model>_layers.mojo
 ```
 
-The new `_part1.mojo` and `_part2.mojo` files replace it entirely.
+### Step 5: Update CI Workflow
 
-### 6. Verify counts and CI coverage
+The `comprehensive-tests.yml` `Models` group uses `test_*_layers.mojo` pattern. Part files like
+`test_googlenet_layers_part1.mojo` do NOT match this glob. Update the pattern explicitly:
+
+```yaml
+- name: "Models"
+  path: "tests/models"
+  pattern: "test_*_layers.mojo test_<model>_layers_part1.mojo test_<model>_layers_part2.mojo test_<model>_layers_part3.mojo"
+```
+
+### Step 6: Verify and Commit
 
 ```bash
-# Verify no file exceeds 10 (count actual functions, not comments)
-grep -c "^fn test_[a-z]" <directory>/test_<name>_part*.mojo
+# Verify test counts
+grep -c "^fn test_" tests/models/test_<model>_layers_part*.mojo
 
-# CI glob auto-picks up new files if named test_*.mojo in the right directory
-# Check the CI workflow pattern for the affected group - usually no changes needed
+# Verify total test count matches original
+grep "^fn test_" tests/models/test_<model>_layers_part*.mojo | wc -l
+
+# Run pre-commit (validate_test_coverage.py runs automatically)
+just pre-commit
+
+# Commit with ADR reference
+git commit -m "fix(ci): split test_<model>_layers.mojo into N parts (ADR-009)"
 ```
 
-### 8. Commit and push
+## Key Architectural Detail: Helper Function Duplication
 
-All pre-commit hooks must pass (mojo format, test coverage validation).
+Because Mojo test files cannot import from each other, any shared structs or helper functions
+(e.g., `InceptionModule`, `concatenate_depthwise`) must be **duplicated** into every part file
+that uses them. This is intentional and expected — do not try to factor them out.
+
+## CI Pattern Mismatch Gotcha
+
+The `Models` group pattern `test_*_layers.mojo` matches `test_googlenet_layers.mojo` but NOT
+`test_googlenet_layers_part1.mojo`. After splitting, the CI pattern must be updated to explicitly
+list the part files, or the `validate_test_coverage.py` script will flag them as uncovered.
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Using `grep "^fn test_"` to count tests | Counted comment lines matching the pattern | ADR-009 header comment contained `fn test_` text at line start | Use `^fn test_[a-z]` pattern instead |
-| Expecting 61 tests in split files | Issue description said 61 tests | The actual split files in main had 59 tests (issue count was approximate) | Always verify against actual code, not issue description |
+| Relying on glob pattern | Assumed `test_*_layers.mojo` would match `test_googlenet_layers_part1.mojo` | Pattern requires `_layers.mojo` suffix; `_part1.mojo` doesn't match | Must explicitly list part files in CI pattern |
+| Cross-file imports | Considered importing `InceptionModule` from part1 in part2 | Mojo test files cannot import from each other (no test module system) | Duplicate shared structs/helpers in each part file |
+| Keeping original file | Considered keeping original alongside parts | Would double-count tests and re-introduce heap corruption | Delete original; replace completely with parts |
 
 ## Results & Parameters
 
-**ADR-009 limits:**
+### Splitting Strategy for 18-Test File
 
-- Hard limit: ≤10 `fn test_` per file (heap corruption threshold)
-- Target: ≤8 per file (safety buffer)
-
-**CI glob pattern** (no changes needed for new files with `test_` prefix):
-
-```yaml
-# Testing Fixtures group
-pattern: "testing/test_*.mojo"
-
-# Data Samplers group (part of broader Data group)
-pattern: "test_*.mojo datasets/test_*.mojo samplers/test_*.mojo transforms/test_*.mojo loaders/test_*.mojo formats/test_*.mojo"
+```
+Part 1 (8 tests): inception module init/forward, branch forward passes, concat shape
+Part 2 (6 tests): concatenation values, initial conv block, global avgpool, FC layer
+Part 3 (4 tests): backward passes for all conv branches + concatenation gradient
 ```
 
-**Grep pattern for accurate count:**
+### Validate Test Coverage Script
+
+The project's `scripts/validate_test_coverage.py` automatically validates that all `.mojo` test
+files are referenced in `comprehensive-tests.yml`. Run it to verify the split is correct:
 
 ```bash
-grep -c "^fn test_[a-z]" <file>.mojo
+python scripts/validate_test_coverage.py
 ```
 
-## Verified On
+### ADR-009 Header Template
 
-| Project | Context | Details |
-|---------|---------|---------|
-| ProjectOdyssey | Issue #3397, PR #4094 (Testing Fixtures group) | [notes.md](../../references/notes.md) |
-| ProjectOdyssey | Issue #3474, PR #4312 (Data Samplers group) | [notes.md](../../references/notes.md) |
-
-**Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942
+```mojo
+# ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
+# Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
+# high test load. Split from test_<original>.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
+```
