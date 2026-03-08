@@ -1,0 +1,23 @@
+{
+  "name": "enable-mypy-check-untyped-defs",
+  "version": "1.0.0",
+  "description": "Enable mypy --check-untyped-defs flag and fix surfaced errors for full Python type-checking coverage. Use when: (1) mypy reports 'bodies of untyped functions are not checked', (2) adding stricter mypy coverage to a project, (3) enabling check_untyped_defs in pyproject.toml or pre-commit hook.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["mypy", "type-checking", "python", "pre-commit", "ci"],
+  "requires": {
+    "tools": [
+      {"name": "mypy", "version": ">=1.0.0"},
+      {"name": "pixi"}
+    ],
+    "languages": ["python"]
+  },
+  "verified_on": [
+    {
+      "project": "ProjectOdyssey",
+      "pr": 4036,
+      "issue": 3370,
+      "date": "2026-03-07"
+    }
+  ]
+}
