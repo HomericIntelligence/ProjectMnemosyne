@@ -49,6 +49,7 @@ Each new file MUST begin with:
 ```
 
 Then include:
+
 - Only the imports needed for that file's tests (prune unused imports)
 - The relevant `fn test_` functions verbatim
 - A `fn main()` runner calling only those tests
@@ -64,6 +65,10 @@ pattern: "... test_reduction.mojo ..."
 # After:
 pattern: "... test_reduction_part1.mojo test_reduction_part2.mojo test_reduction_part3.mojo ..."
 ```
+
+**Exception**: If the CI group uses a glob pattern like `autograd/test_*.mojo`, the new
+`_part1/2/3` files are picked up automatically — no workflow changes needed. Always verify
+the existing glob before editing the workflow YAML.
 
 ### Step 5: Delete the original file
 
@@ -101,12 +106,29 @@ gh pr merge --auto --rebase
 
 ### Split sizing formula
 
-```
+```text
 parts = ceil(total_tests / 8)
 tests_per_part = ceil(total_tests / parts)
 ```
 
 For 22 tests: `ceil(22/8) = 3` parts, with 8/8/6 distribution.
+For 18 tests: `ceil(18/8) = 3` parts, with 6/6/6 distribution (equal thirds).
+
+**Grep pattern for accurate count** (avoid matching ADR-009 header comment lines):
+
+```bash
+grep -c "^fn test_[a-z]" <file>.mojo
+```
+
+**Key invariant**: Total test count must be identical before and after the split. Verify with:
+
+```bash
+# Before: count in original
+grep -c "^fn test_[a-z]" <original>.mojo   # e.g. 18
+
+# After: sum across parts
+grep -c "^fn test_[a-z]" <original>_part*.mojo   # should also total 18
+```
 
 ## Failed Attempts
 
@@ -118,6 +140,8 @@ For 22 tests: `ceil(22/8) = 3` parts, with 8/8/6 distribution.
 | Assumed split was complete | Saw N split files and `.DEPRECATED`, assumed done | Tests were missing from split files — some categories of tests omitted | Always verify by comparing `fn test_` lists between original and split files, not just file existence |
 | Used `grep -c "fn test_"` to count tests | Counted lines matching pattern to verify ≤10 limit | ADR-009 header comment contains "fn test_" text, inflating count by 1 | Use `grep -n "fn test_"` or `grep -c "^fn test_[a-z]"` to see actual lines and verify count |
 | Wrong ADR-009 header format | Used docstring note: "Note: Split from... See ADR-009." | ADR-009 requires `# ADR-009:` comment block format, not a note inside the docstring | Header must be `#` comment lines at file top, before the module docstring |
+| Modifying CI workflow glob pattern | Thought new files would not be matched by existing glob | Glob `test_*.mojo` already covers `test_*_part1.mojo` | Verify existing glob before making changes; it usually already works |
+| Checking `validate_test_coverage.py` for filename refs | Searched for original filename in the script | Script uses glob patterns, not hardcoded filenames | No changes needed to coverage validation script when splitting |
 
 ## Additional Notes
 
@@ -141,5 +165,6 @@ grep -n "^fn test_" tests/path/to/test_<name>_*.mojo
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3438, PR #4223 | test_reduction.mojo: 22 tests → 3 files |
 | ProjectOdyssey | Issue #3444, PR #4238 | test_backward.mojo: 21 tests → 3 files; found 7 missing tests + wrong header format |
+| ProjectOdyssey | Issue #3457, PR #4278 | test_optimizer_base.mojo: 18 tests → 3 files of 6/6/6; CI glob auto-covered new files |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`
