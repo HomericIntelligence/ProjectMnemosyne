@@ -123,5 +123,6 @@ grep -c "^fn test_[a-z]" <file>.mojo
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3397, PR #4094 | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3436, PR #4221 — configs/test_validation.mojo (23 tests → 3 files) | [notes.md](../../references/notes.md) |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942
