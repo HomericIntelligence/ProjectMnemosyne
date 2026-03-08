@@ -2,7 +2,7 @@
 name: mojo-test-file-split
 description: "Split large Mojo test files exceeding ADR-009 fn test_ function limits to prevent heap corruption in CI. Use when: a test file has >10 fn test_ functions causing intermittent libKGENCompilerRTShared.so JIT faults."
 category: ci-cd
-date: 2026-03-07
+date: 2026-03-08
 user-invocable: false
 ---
 
@@ -175,5 +175,6 @@ Total: 37 tests preserved
 | ProjectOdyssey | Issue #3424, PR #4189 — split `test_utility.mojo` (31 tests → 4 files) | [notes.md](../../references/notes.md) |
 | ProjectOdyssey | Issue #3496, PR #4372 — split `test_checkpointing.mojo` (13 tests → 2 files, 8/5); CI glob auto-covered; `validate_test_coverage.py` had explicit filename ref requiring 1-for-2 update | [notes.md](../../references/notes.md) |
 | ProjectOdyssey | Issue #3509, PR #4387 — split `test_file_dataset.mojo` (13 tests → 2 files, 7/6); CI `datasets/test_*.mojo` glob auto-covered; `validate_test_coverage.py` had no explicit ref — no changes needed | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3549, PR #4400 — split `test_progress_bar.mojo` (22 tests → 3 files, 8/8/6); CI `utils/test_*.mojo` glob auto-covered; `validate_test_coverage.py` had no explicit ref — no changes needed | [notes.md](../../references/notes.md) |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issues #2942, #3397
