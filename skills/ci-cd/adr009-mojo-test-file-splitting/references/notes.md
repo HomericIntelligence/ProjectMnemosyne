@@ -123,3 +123,71 @@ fn test_reduction_preserves_dtype
 - **Created**: `tests/shared/core/test_reduction_edge_cases_part1.mojo` (8 tests)
 - **Created**: `tests/shared/core/test_reduction_edge_cases_part2.mojo` (7 tests)
 - **Updated**: `.github/workflows/comprehensive-tests.yml`
+
+---
+
+# Session Notes: ADR-009 Test Split — test_warmup_scheduler.mojo (Issue #3481)
+
+**Date**: 2026-03-07
+**Issue**: #3481
+**PR**: #4329
+**Branch**: `3481-auto-impl`
+
+## Objective
+
+Fix intermittent Mojo CI heap corruption by splitting `test_warmup_scheduler.mojo`
+(14 `fn test_` functions) into two files of ≤8 tests each, complying with ADR-009.
+
+## Context
+
+- `tests/shared/training/test_warmup_scheduler.mojo` had 14 `fn test_` functions
+- ADR-009 mandates ≤10 per file due to Mojo v0.26.1 JIT heap corruption bug
+- CI `Shared Infra` group was failing 13/20 recent runs non-deterministically
+- Related issue: #2942, ADR-009 at `docs/adr/ADR-009-heap-corruption-workaround.md`
+
+## Original Test Inventory
+
+```text
+fn test_warmup_scheduler_initialization
+fn test_warmup_scheduler_linear_increase
+fn test_warmup_scheduler_reaches_target
+fn test_warmup_scheduler_different_warmup_periods
+fn test_warmup_scheduler_single_epoch_warmup
+fn test_warmup_scheduler_matches_formula
+fn test_warmup_scheduler_quarter_points
+fn test_warmup_scheduler_zero_warmup_epochs
+fn test_warmup_scheduler_negative_warmup_epochs
+fn test_warmup_scheduler_very_large_warmup
+fn test_warmup_scheduler_property_monotonic_increase
+fn test_warmup_scheduler_property_linear
+fn test_warmup_scheduler_property_bounded
+fn test_warmup_scheduler_property_starts_from_zero
+```
+
+## Steps Taken
+
+1. Read the original 347-line test file (14 test functions)
+2. Checked CI workflow — `Shared Infra` group uses `training/test_*.mojo` glob (not explicit filenames)
+3. Checked `validate_test_coverage.py` — uses exact filenames in exclusion list; must update
+4. Split 14 tests into two logical groups of 7:
+   - Part 1 (7 tests): core behavior + warmup period tests + numerical accuracy
+   - Part 2 (7 tests): edge cases + property-based tests
+5. Added ADR-009 header comment to each new file
+6. Deleted original file
+7. Updated `scripts/validate_test_coverage.py` exclusion list
+8. Committed — all pre-commit hooks passed on first attempt
+9. Pushed and created PR #4329 with auto-merge enabled
+
+## Key Observations
+
+- The CI workflow uses `training/test_*.mojo` glob — no workflow file changes needed
+- `validate_test_coverage.py` uses exact filenames in exclusion list — must update
+- The `Validate Test Coverage` pre-commit hook catches stale filenames immediately
+- Pre-commit hooks all passed on first attempt
+
+## Files Changed
+
+- **Deleted**: `tests/shared/training/test_warmup_scheduler.mojo`
+- **Created**: `tests/shared/training/test_warmup_scheduler_part1.mojo` (7 tests)
+- **Created**: `tests/shared/training/test_warmup_scheduler_part2.mojo` (7 tests)
+- **Updated**: `scripts/validate_test_coverage.py`
