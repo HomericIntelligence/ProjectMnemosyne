@@ -1,0 +1,20 @@
+{
+  "name": "dryrun3-runner-failure-fixes",
+  "description": "Fix three E2E runner failure modes: (1) empty judge prompt on resumed runs (JUDGE_COMPLETE threshold wrong), (2) T5 inheritance hard-crash when dependent tiers failed, (3) judge responding with prose instead of JSON (regex stops at first '}'). Use when dryrun experiments show high judge failure counts, T5 ValueError on inheritance, or zero-score consensus from prose responses.",
+  "category": "debugging",
+  "date": "2026-03-07",
+  "tags": [
+    "e2e",
+    "judge",
+    "resume",
+    "t5",
+    "inheritance",
+    "json-parse",
+    "regex",
+    "dryrun",
+    "stage-finalization",
+    "tier-manager",
+    "subtest-executor"
+  ],
+  "user-invocable": false
+}
