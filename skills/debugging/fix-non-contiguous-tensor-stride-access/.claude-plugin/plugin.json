@@ -1,0 +1,8 @@
+{
+  "name": "fix-non-contiguous-tensor-stride-access",
+  "version": "1.0.0",
+  "description": "Fix tensor operations that use flat index offset instead of stride-based multi-dimensional indexing for non-contiguous views. Use when: (1) a tensor copy/conversion silently produces wrong values for transposed or sliced views, (2) element access uses i*dtype_size offset rather than strides, (3) as_contiguous or similar functions assume stride-1 layout.",
+  "category": "debugging",
+  "date": "2026-03-07",
+  "tags": ["mojo", "tensor", "stride", "non-contiguous", "extensor", "shape", "transpose"]
+}
