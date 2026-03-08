@@ -1,0 +1,8 @@
+{
+  "name": "adr009-test-file-splitting",
+  "version": "1.0.0",
+  "description": "Workflow for splitting Mojo test files that exceed ADR-009 ≤10 fn test_ limit to prevent heap corruption in CI. Use when: (1) a test file exceeds the ADR-009 limit, (2) CI has intermittent heap corruption failures in Testing Fixtures group, (3) over-limit files need splitting while preserving all test cases.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["mojo", "adr-009", "heap-corruption", "test-splitting", "ci-stability"]
+}
