@@ -64,3 +64,62 @@ All hooks passed on first attempt:
 
 - PR #4223: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4223
 - Auto-merge enabled with rebase strategy
+
+---
+
+# Session Notes: ADR-009 Test Split for test_backward.mojo (Issue #3444)
+
+## Context
+
+- **Date**: 2026-03-07
+- **Issue**: #3444 — `tests/shared/core/test_backward.mojo` contained 21 `fn test_` functions
+- **ADR-009 limit**: ≤10 per file
+- **CI failure**: Intermittent heap corruption in `Core Gradient` group
+- **Root cause**: Same Mojo v0.26.1 heap corruption bug
+
+## Initial State (found on the branch)
+
+The file had been partially split into 3 files (split was prepared in advance but incomplete):
+
+- test_backward_linear.mojo: present but had wrong ADR-009 header format (docstring note, not `#` comment)
+- test_backward_conv_pool.mojo: present but had wrong ADR-009 header format
+- test_backward_losses.mojo: present but had wrong ADR-009 header format
+- test_backward.mojo.DEPRECATED: stale artifact (the original 21-test file)
+- CI workflow: already updated (correct filenames listed) — no changes needed
+
+Total tests in split files: 14 (7 missing — the gradient-checking tests)
+
+## Actions Taken
+
+1. Read the deprecated file (21 tests) and listed all `fn test_` functions
+2. Compared against split files (14 tests total) — found 7 missing gradient-checking tests
+3. Fixed ADR-009 header format in all 3 files (changed from docstring note to `#` comment block)
+4. Added 7 missing tests to appropriate files:
+   - test_backward_conv_pool.mojo: added `test_avgpool2d_backward_shapes`,
+     `test_conv2d_backward_gradient`, `test_maxpool2d_backward_gradient`,
+     `test_avgpool2d_backward_gradient`
+   - test_backward_losses.mojo: added `test_cross_entropy_backward_gradient`,
+     `test_binary_cross_entropy_backward_gradient`, `test_mean_squared_error_backward_gradient`
+5. Deleted test_backward.mojo.DEPRECATED
+
+## Final State
+
+- 3 files, all ≤9 tests each:
+  - test_backward_linear.mojo: 4 tests
+  - test_backward_conv_pool.mojo: 9 tests
+  - test_backward_losses.mojo: 8 tests
+- 21 total test functions preserved
+- CI workflow was already updated — no changes needed
+- Pre-commit hooks all passed on first attempt
+
+## PR
+
+- PR #4238: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4238
+- Auto-merge enabled with rebase strategy
+
+## Key Gotchas (new learnings vs issue #3438)
+
+1. Split file existence does NOT guarantee completeness — must verify test lists match
+2. CI workflow being updated does NOT mean the split files are complete
+3. `grep -c "fn test_"` over-counts when header contains the pattern — use `grep -n "fn test_"`
+4. ADR-009 header format is `#` comment lines, NOT a note inside the module docstring
