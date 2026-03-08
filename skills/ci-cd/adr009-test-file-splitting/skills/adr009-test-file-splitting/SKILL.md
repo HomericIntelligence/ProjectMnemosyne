@@ -88,7 +88,21 @@ grep -c "^fn test_[a-z]" tests/shared/testing/test_assertions_*.mojo
 # No workflow changes needed for testing/test_*.mojo glob pattern
 ```
 
-### 8. Commit and push
+### 8. Update validate_test_coverage.py if needed
+
+If the original file is fully deleted (not just updated), the exclusion list in
+`scripts/validate_test_coverage.py` must be updated:
+
+```python
+# Replace the old filename with the new split filenames in the exclusion list
+"tests/shared/training/test_callbacks_part1.mojo",
+"tests/shared/training/test_callbacks_part2.mojo",
+"tests/shared/training/test_callbacks_part3.mojo",
+```
+
+The pre-commit `validate-test-coverage` hook will catch this automatically if missed.
+
+### 9. Commit and push
 
 All pre-commit hooks must pass (mojo format, test coverage validation).
 
@@ -122,6 +136,7 @@ grep -c "^fn test_[a-z]" <file>.mojo
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectOdyssey | Issue #3397, PR #4094 | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3397, PR #4094 — split test_assertions.mojo (61 tests) in tests/shared/testing/ | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3445, PR #4244 — split test_callbacks.mojo (20 tests) in tests/shared/training/ | [notes.md](../../references/notes.md) |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942
