@@ -1,0 +1,8 @@
+{
+  "name": "mojo-multidim-setitem-tests",
+  "version": "1.0.0",
+  "description": "Implement variadic-Int __setitem__ on ExTensor and corresponding multi-dim tests. Use when: (1) adding stride-aware multi-dim assignment to a Mojo tensor (t[i,j]=v), (2) writing 2D/3D __setitem__ tests verifying flat index = sum(idx*stride), (3) implementing a variadic-Int setitem that delegates to 1D overload.",
+  "category": "testing",
+  "date": "2026-03-07",
+  "tags": ["mojo", "extensor", "setitem", "multi-dim", "strides", "tensor", "indexing"]
+}
