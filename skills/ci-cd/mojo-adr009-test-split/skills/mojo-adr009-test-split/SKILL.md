@@ -166,5 +166,6 @@ grep -n "^fn test_" tests/path/to/test_<name>_*.mojo
 | ProjectOdyssey | Issue #3438, PR #4223 | test_reduction.mojo: 22 tests → 3 files |
 | ProjectOdyssey | Issue #3444, PR #4238 | test_backward.mojo: 21 tests → 3 files; found 7 missing tests + wrong header format |
 | ProjectOdyssey | Issue #3457, PR #4278 | test_optimizer_base.mojo: 18 tests → 3 files of 6/6/6; CI glob auto-covered new files |
+| ProjectOdyssey | Issue #3471, PR #4306 | test_result.mojo: 16 tests → 2 files of 8/8; Benchmarking CI group; glob auto-covered new files |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`
