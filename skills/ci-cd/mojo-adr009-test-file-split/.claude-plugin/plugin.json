@@ -1,0 +1,8 @@
+{
+  "name": "mojo-adr009-test-file-split",
+  "version": "1.0.0",
+  "description": "Split oversized Mojo test files to comply with ADR-009 heap corruption workaround. Use when: (1) a Mojo test file exceeds the fn test_ limit causing intermittent JIT crashes, (2) CI group shows non-deterministic heap corruption failures, (3) applying ADR-009 to new test files.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["mojo", "adr-009", "heap-corruption", "test-splitting", "ci-stability"]
+}
