@@ -258,3 +258,16 @@ Nothing. Approach was straightforward on first attempt. Pre-commit hooks passed 
 - **Workflow update**: Required — replaced `test_advanced_activations.mojo` with 3 new filenames
 - **Pre-commit hooks**: All passed on first attempt (mojo format, validate_test_coverage, YAML)
 - **Key note**: Targeting ≤8 tests per file (not just ≤10) provides a safety margin
+
+---
+
+# Session #3463: test_optimizer_utils.mojo
+
+- **Issue**: #3463
+- **PR**: #4290
+- **Original**: 16 tests (15 `fn test_` + `fn test_main`) → 2 parts (8+7)
+- **Split**: Part1=state-init+scaling+norms+clip (8), Part2=clip-no-op+global-clip+weight-decay+normalize+bias-correction+validation (7)
+- **CI group**: `Shared Infra & Testing` uses `training/test_*.mojo` glob — `_part1/2` auto-discovered, no CI changes needed
+- **validate_test_coverage.py**: Had explicit filename at line 91 — updated to reference both new filenames
+- **Pre-commit hooks**: All passed on first attempt (mojo format, validate_test_coverage, Validate Test Coverage hook)
+- **Key note**: `fn test_main()` in the original doesn't count toward the ADR-009 limit (it's a runner, not a test). Only count `fn test_` functions that test specific behavior.

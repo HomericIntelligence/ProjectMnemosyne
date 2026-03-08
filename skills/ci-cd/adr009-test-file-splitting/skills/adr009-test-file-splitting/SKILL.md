@@ -154,6 +154,15 @@ git commit -m "fix(ci): split test_original.mojo into N files (ADR-009)"
 - **All pre-commit hooks**: Passed on first attempt
 - **PR**: #4279
 
+### Session Results (Issue #3463)
+
+- **Original file**: `tests/shared/training/test_optimizer_utils.mojo` — 16 tests (15 `fn test_` + `fn test_main`)
+- **Split into**: 2 files of 8/7 tests (state init+scaling+norms+clip / clip-no-op+global-clip+weight-decay+normalize+bias-correction+validation)
+- **CI pattern**: `training/test_*.mojo` glob in `Shared Infra & Testing` group — `_part1/2` files auto-discovered, no CI changes needed
+- **validate_test_coverage.py**: Had explicit filename list at line 91 — updated to reference both new filenames
+- **All pre-commit hooks**: Passed on first attempt (including `Validate Test Coverage`)
+- **PR**: #4290
+
 ### Key Parameters
 
 | Parameter | Value |
@@ -194,3 +203,4 @@ Group tests by **logical category** (operation type), not alphabetically:
 | ProjectOdyssey | Issue #3435, PR #4220 | Split test_arithmetic_backward.mojo (23 → 3 files), explicit CI pattern update |
 | ProjectOdyssey | Issue #3455, PR #4276 | Split test_mobilenetv1_layers.mojo (19 → 3 files), glob CI pattern auto-covered |
 | ProjectOdyssey | Issue #3458, PR #4279 | Split test_googlenet_layers.mojo (18 → 3 files, 8+6+4), explicit CI pattern update required |
+| ProjectOdyssey | Issue #3463, PR #4290 | Split test_optimizer_utils.mojo (16 → 2 files, 8+7), glob CI pattern auto-covered, validate_test_coverage.py explicit list updated |
