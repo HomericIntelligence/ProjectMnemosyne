@@ -176,3 +176,58 @@ Single file `tests/shared/autograd/test_optimizer_base.mojo` containing 18 tests
 1. When the CI group uses a glob (`autograd/test_*.mojo`), new `_part1/2/3` files are picked up automatically — no workflow edit needed
 2. Equal splits (6/6/6) are simpler to reason about than asymmetric splits for 18-test files
 3. `validate_test_coverage.py` uses glob patterns, so no script changes are needed when splitting
+
+---
+
+# Session Notes: ADR-009 Normalization Test Split (Issue #3461)
+
+## Context
+
+- **Date**: 2026-03-07
+- **Issue**: #3461 — `tests/shared/core/test_normalization.mojo` contained 21 `fn test_` functions
+- **ADR-009 limit**: ≤10 per file (target ≤8)
+- **CI group**: `Core Utilities` (explicit filename list, not glob)
+- **CI failure rate**: 13/20 recent runs on `main`
+
+## Initial State
+
+Single file `tests/shared/core/test_normalization.mojo` containing 21 tests (not previously split):
+
+- 5 batch norm forward tests
+- 6 batch norm backward/gradient tests
+- 4 layer norm forward tests
+- 6 layer norm backward tests
+
+## Actions Taken
+
+1. Counted 21 `fn test_` functions with `grep -c "^fn test_"`.
+2. Split into 3 logical groups:
+   - **part1** (8): batch norm forward (5) + first 3 backward gradient tests
+   - **part2** (8): remaining batch norm backward (3) + layer norm forward (5)
+   - **part3** (5): layer norm backward tests
+3. Each file gets ADR-009 `#` comment header at line 1.
+4. Updated `.github/workflows/comprehensive-tests.yml` — `Core Utilities` group uses explicit
+   space-separated filenames (not a glob), so replaced `test_normalization.mojo` with
+   `test_normalization_part1.mojo test_normalization_part2.mojo test_normalization_part3.mojo`.
+5. Deleted original `test_normalization.mojo`.
+6. All pre-commit hooks passed on first attempt.
+7. Created PR #4289 with auto-merge enabled.
+
+## Final State
+
+- 3 files: 8/8/5 tests (all ≤8)
+- 21 total test functions preserved
+- CI pattern explicitly updated (explicit list, not glob)
+
+## PR
+
+- PR #4289: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4289
+- Auto-merge enabled with rebase strategy
+
+## Key Observation
+
+The `Core Utilities` CI group uses an explicit space-separated filename list, not a glob.
+This means new split files must always be added to the pattern manually. Contrast with
+`autograd/test_*.mojo` (glob) which auto-picks up new files.
+
+Always check the CI pattern type before deciding whether a workflow edit is needed.
