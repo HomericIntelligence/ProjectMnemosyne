@@ -2,7 +2,7 @@
 name: adr-009-test-file-split
 description: "Split Mojo test files exceeding the ADR-009 limit of 10 fn test_ functions per file. Use when: (1) CI shows intermittent heap corruption crashes in a Mojo test group, (2) a test file has >10 fn test_ functions, (3) implementing ADR-009 compliance."
 category: ci-cd
-date: 2026-03-07
+date: 2026-03-08
 user-invocable: false
 ---
 
@@ -84,6 +84,7 @@ git commit -m "fix(ci): split test_<original>.mojo into 2 files per ADR-009"
 - **Buffer matters**: Use ≤8 tests per file, not exactly 10 — gives room for future test additions without immediately violating ADR-009
 - **`fn main()` must be updated**: Each split file needs its own `fn main()` that only calls its own test functions
 - **Pre-commit passes automatically**: Mojo format hook, deprecated syntax check, and test coverage validation all pass for split files without extra work
+- **Helper functions must be duplicated**: Mojo test files cannot import from sibling test files — any shared helpers (e.g., `create_basic_block`) must be copied verbatim into each split file
 
 ### Pre-commit hooks: run one at a time
 
@@ -120,9 +121,26 @@ worktree shell environments.
 
 **Pre-commit results**: All hooks passed on first commit attempt.
 
+### Commit Message Template
+
+```text
+fix(ci): split test_<model>_layers.mojo into 2 files (ADR-009)
+
+Split N-test file into part1 (X tests) and part2 (Y tests) to stay
+within the ADR-009 limit of ≤10 fn test_ functions per file, fixing
+intermittent heap corruption crashes in the Models CI group.
+
+All N original test cases are preserved. Each new file includes the
+ADR-009 header comment. The CI workflow pattern test_*_layers.mojo
+automatically picks up both new files without changes.
+
+Closes #<issue-number>
+```
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3483, PR #4330 — split `test_layer_testers.mojo` (14 tests → 2 files, 8/6); CI glob auto-covered | [notes.md](../../references/notes.md) |
 | ProjectOdyssey | Issue #3503, PR #4381 — split `test_pipeline.mojo` (13 tests → 2 files, 8/5); CI glob auto-covered; no `validate_test_coverage.py` update needed | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3628, PR #4422 — split `test_resnet18_layers.mojo` (12 tests → 2 files, 8/4); CI glob `test_*_layers.mojo` auto-covered; `validate_test_coverage.py` had no explicit ref | [notes.md](../../references/notes.md) |
