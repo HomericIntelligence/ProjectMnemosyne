@@ -123,5 +123,6 @@ grep -c "^fn test_[a-z]" <file>.mojo
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3397, PR #4094 | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3431, PR #4214 | `test_mxfp4_block.mojo` (24 tests) → 3 files ×8; `Core Types & Fuzz` wildcard auto-discovers new files |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942
