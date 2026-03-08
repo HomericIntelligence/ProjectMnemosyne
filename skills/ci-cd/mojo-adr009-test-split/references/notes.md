@@ -176,3 +176,75 @@ Single file `tests/shared/autograd/test_optimizer_base.mojo` containing 18 tests
 1. When the CI group uses a glob (`autograd/test_*.mojo`), new `_part1/2/3` files are picked up automatically — no workflow edit needed
 2. Equal splits (6/6/6) are simpler to reason about than asymmetric splits for 18-test files
 3. `validate_test_coverage.py` uses glob patterns, so no script changes are needed when splitting
+
+---
+
+# Session Notes: ADR-009 Conv Test Split (Issue #3477)
+
+## Context
+
+- **Date**: 2026-03-07
+- **Issue**: #3477 — `tests/shared/core/test_conv.mojo` title said 15 `fn test_` functions but actual count was 20
+- **ADR-009 limit**: ≤10 per file
+- **CI group**: Core Utilities (explicit filename pattern in workflow, not glob)
+- **Root cause**: Same Mojo v0.26.1 heap corruption bug
+
+## Key Discovery: Issue Description Undercount
+
+The issue title stated "15 tests" but `grep -c "^fn test_" tests/shared/core/test_conv.mojo`
+returned 20. A 2-way split of 20 would yield 10/10, which hits the hard limit exactly (not the
+≤8 target). This forced a 3-way split.
+
+**Lesson**: Always grep for the actual count before planning — issue descriptions can undercount.
+
+## Original file test inventory (20 tests)
+
+```text
+fn test_conv2d_initialization
+fn test_conv2d_shape_inference
+fn test_conv2d_forward_shape
+fn test_conv2d_stride_shape
+fn test_conv2d_dilation_shape
+fn test_conv2d_groups_shape
+fn test_conv2d_padding_shape
+fn test_conv2d_forward_values
+fn test_conv2d_no_bias
+fn test_conv2d_batched
+fn test_conv2d_5x5
+fn test_conv2d_backward_input_shape
+fn test_conv2d_backward_weight_shape
+fn test_conv2d_backward_bias_shape
+fn test_conv2d_backward_input_gradient
+fn test_conv2d_backward_weight_gradient
+fn test_conv2d_backward_bias_gradient
+fn test_conv2d_backward_no_bias
+fn test_conv2d_full_backward_pass
+fn test_conv2d_integration
+```
+
+## Split decision
+
+- **part1** (7): initialization and shape tests — test_conv2d_initialization through test_conv2d_padding_shape
+- **part2** (7): numerical correctness and batch tests — test_conv2d_forward_values through test_conv2d_5x5
+- **part3** (6): backward pass and integration — test_conv2d_backward_input_shape through test_conv2d_integration
+
+## CI workflow update
+
+The `comprehensive-tests.yml` Core Utilities group used an explicit filename pattern (not a glob),
+so a workflow update was required. Replaced `test_conv.mojo` with three filenames:
+`test_conv_part1.mojo test_conv_part2.mojo test_conv_part3.mojo`.
+
+## Pre-commit results
+
+All hooks passed on first attempt.
+
+## PR
+
+- PR #4322: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4322
+- Auto-merge enabled with rebase strategy
+
+## Key Gotchas (new learnings vs #3457)
+
+1. Issue descriptions can undercount tests — grep for `^fn test_[a-z]` to get accurate count before planning
+2. A 2-way split of 20 tests yields 10/10 which hits the ADR-009 hard limit; use 3-way split to meet ≤8 target
+3. Explicit filename patterns in CI workflow require manual update (unlike glob patterns that auto-match)
