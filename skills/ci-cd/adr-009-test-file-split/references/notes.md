@@ -82,3 +82,48 @@ No workflow edit was needed.
 - `just` not available in worktree environments — use `pixi run` directly
 - `pixi run pre-commit run` only accepts ONE hook name at a time
 - Background tasks via run_in_background may not flush output during session
+
+---
+
+# Session Notes: ADR-009 Test File Split (Issue #3628)
+
+## Context
+
+- Date: 2026-03-08
+- Issue: HomericIntelligence/ProjectOdyssey#3628
+- PR: HomericIntelligence/ProjectOdyssey#4422
+
+## Problem
+
+`tests/models/test_resnet18_layers.mojo` had 12 `fn test_` functions,
+exceeding the ADR-009 limit of 10. This caused intermittent heap corruption
+crashes in the Mojo v0.26.1 JIT compiler (libKGENCompilerRTShared.so).
+
+## Solution
+
+Split into:
+
+- `test_resnet18_layers_part1.mojo`: 8 tests (residual blocks, skip connections, BatchNorm)
+- `test_resnet18_layers_part2.mojo`: 4 tests (BatchNorm effects, ReLU, integration)
+
+## Key Discovery
+
+The CI workflow used `pattern: "test_*_layers.mojo"` — this glob
+automatically matches the split files. No workflow update was needed.
+
+## Files Changed
+
+- Deleted: `tests/models/test_resnet18_layers.mojo`
+- Created: `tests/models/test_resnet18_layers_part1.mojo` (8 tests)
+- Created: `tests/models/test_resnet18_layers_part2.mojo` (4 tests)
+
+## Pre-commit Results
+
+All hooks passed:
+
+- Mojo Format: Passed
+- Check for deprecated List syntax: Passed
+- Validate Test Coverage: Passed
+- Trim Trailing Whitespace: Passed
+- Fix End of Files: Passed
+- Check for Large Files: Passed
