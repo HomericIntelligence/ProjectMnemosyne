@@ -98,6 +98,8 @@ All pre-commit hooks must pass (mojo format, test coverage validation).
 |---------|----------------|---------------|----------------|
 | Using `grep "^fn test_"` to count tests | Counted comment lines matching the pattern | ADR-009 header comment contained `fn test_` text at line start | Use `^fn test_[a-z]` pattern instead |
 | Expecting 61 tests in split files | Issue description said 61 tests | The actual split files in main had 59 tests (issue count was approximate) | Always verify against actual code, not issue description |
+| Trying to fit 40 tests into 5 files with ≤8 each (max capacity 40) | Issue said "5 files of ≤8 tests each" — 5×8=40 exactly | dtype (7) + edge_cases (3) = 10 for the last file regardless of arrangement | When max capacity = total tests, some files will hit the hard limit (10); ≤8 target is aspirational not mandatory |
+| Updating CI glob pattern for split | Assumed glob `test_creation*.mojo` would cover new files | CI pattern listed each filename explicitly, not a glob | When CI uses explicit filenames, update the `pattern:` field to list all 5 new filenames |
 
 ## Results & Parameters
 
@@ -106,7 +108,25 @@ All pre-commit hooks must pass (mojo format, test coverage validation).
 - Hard limit: ≤10 `fn test_` per file (heap corruption threshold)
 - Target: ≤8 per file (safety buffer)
 
-**CI glob pattern** (no changes needed for new files with `test_` prefix):
+**CI pattern types — critical distinction**:
+
+- **Glob pattern** (no CI changes needed for new files): `pattern: "test_*.mojo"` — auto-discovers new files
+- **Explicit filename pattern** (must update CI): `pattern: "test_a.mojo test_b.mojo"` — must add all new filenames
+
+When the CI `pattern:` field uses explicit filenames (not globs), always update
+`.github/workflows/comprehensive-tests.yml` to list all new split files explicitly.
+
+**Example CI update for explicit-filename pattern:**
+
+```yaml
+# Before:
+pattern: "... test_creation.mojo ..."
+
+# After:
+pattern: "... test_creation_part1.mojo test_creation_part2.mojo test_creation_part3.mojo test_creation_part4.mojo test_creation_part5.mojo ..."
+```
+
+**Original glob pattern** (no changes needed when this form is used):
 
 ```yaml
 pattern: "testing/test_*.mojo"
@@ -123,5 +143,6 @@ grep -c "^fn test_[a-z]" <file>.mojo
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3397, PR #4094 | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3404, PR #4126 | test_creation.mojo (40 tests) → 5 part files; explicit CI filename pattern updated |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942
