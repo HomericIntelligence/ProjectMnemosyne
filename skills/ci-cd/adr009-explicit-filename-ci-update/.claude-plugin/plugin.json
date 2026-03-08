@@ -1,0 +1,8 @@
+{
+  "name": "adr009-explicit-filename-ci-update",
+  "version": "1.0.0",
+  "description": "Splitting a Mojo test file per ADR-009 when the CI workflow uses explicit filenames (not a glob). Use when: (1) the CI test group lists files by name rather than test_*.mojo wildcard, (2) splitting a test file would make the new part files invisible to CI without a workflow update.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["adr009", "mojo", "heap-corruption", "test-splitting", "ci-matrix", "explicit-filenames"]
+}
