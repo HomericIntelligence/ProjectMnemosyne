@@ -1,0 +1,8 @@
+{
+  "name": "extensor-dtype-str-repr",
+  "version": "1.0.0",
+  "description": "Pattern for implementing dtype-aware __str__/__repr__ in Mojo ExTensor and writing tests for integer/bool formatting. Use when: (1) adding string formatting to a Mojo tensor struct, (2) testing that integer types render without decimal points, (3) testing that bool types render as True/False.",
+  "category": "testing",
+  "date": "2026-03-07",
+  "tags": ["mojo", "extensor", "dtype", "str", "repr", "testing", "int32", "bool"]
+}
