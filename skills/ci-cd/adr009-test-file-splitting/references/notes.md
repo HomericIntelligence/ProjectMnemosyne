@@ -310,3 +310,36 @@ Both the old filename removal and new filename insertion were required in the YA
 ## Pre-commit hooks
 
 All passed on first attempt: mojo format, YAML check, validate_test_coverage.py.
+
+---
+
+# Session Notes: ADR-009 Test File Splitting (Issue #3517)
+
+## Context
+
+- **Date**: 2026-03-08
+- **Repository**: HomericIntelligence/ProjectOdyssey
+- **Branch**: 3517-auto-impl
+- **Issue**: #3517 — fix(ci): split test_no_grad_context.mojo (13 tests) — Mojo heap corruption (ADR-009)
+- **PR**: #4396
+
+## Problem
+
+`tests/shared/autograd/test_no_grad_context.mojo` had 13 `fn test_` functions.
+ADR-009 mandates ≤10 per file to avoid Mojo v0.26.1 heap corruption from
+`libKGENCompilerRTShared.so` JIT faults under high test load.
+
+## Approach Taken
+
+Split into 2 files of ≤8 tests each, grouping by logical section:
+- `test_no_grad_context_part1.mojo` (8 tests): enter/exit + disable/restore
+- `test_no_grad_context_part2.mojo` (5 tests): roundtrip + recording
+
+## Key Findings
+
+- CI workflow used glob `autograd/test_*.mojo` — new files matched automatically, no YAML change needed
+- `validate_test_coverage.py` had no specific filename references — no update needed
+- All pre-commit hooks (Mojo format, validate test coverage) passed cleanly
+- ADR-009 header uses `#` comments (Mojo line comments), not docstrings
+- Each split file needs its own `fn main() raises:` calling only its tests
+- Imports must be fully duplicated in each split file
