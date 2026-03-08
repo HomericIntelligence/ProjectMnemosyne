@@ -99,3 +99,77 @@ making CI non-deterministically fail.
 - `tests/shared/core/test_utility_part3.mojo` — CREATED (9 tests)
 - `tests/shared/core/test_utility_part4.mojo` — CREATED (8 tests)
 - `.github/workflows/comprehensive-tests.yml` — UPDATED (Core Utilities pattern)
+
+---
+
+# Session Notes: ADR-009 Test Split for test_checkpointing.mojo (Issue #3496)
+
+## Session Context
+
+- **Date**: 2026-03-08
+- **Issue**: #3496 — `tests/shared/training/test_checkpointing.mojo` contained 13 `fn test_` functions
+- **ADR-009 limit**: ≤10 per file
+- **Branch**: `3496-auto-impl`
+- **PR**: #4372
+
+## Problem
+
+`tests/shared/training/test_checkpointing.mojo` had 13 `fn test_` functions, exceeding ADR-009's
+limit of ≤10 per file. This caused intermittent heap corruption crashes in Mojo v0.26.1
+(`libKGENCompilerRTShared.so` JIT fault), making the Shared Infra CI group non-deterministically
+fail.
+
+## Original file test inventory (13 tests)
+
+```text
+fn test_checkpoint_save_and_load
+fn test_checkpoint_metadata
+fn test_checkpoint_save_frequency
+fn test_checkpoint_no_save_on_non_multiple
+fn test_checkpoint_save_best_only_improves
+fn test_checkpoint_save_best_only_no_improve
+fn test_checkpoint_best_value_tracking_min_mode
+fn test_checkpoint_best_value_tracking_max_mode
+fn test_checkpoint_min_mode
+fn test_checkpoint_max_mode
+fn test_checkpoint_auto_mode_loss
+fn test_checkpoint_auto_mode_accuracy
+fn test_checkpoint_empty_metrics
+```
+
+## What Was Done
+
+1. Read the issue prompt to understand requirements
+2. Read the original `test_checkpointing.mojo` (13 tests)
+3. Checked `.github/workflows/comprehensive-tests.yml` — the Shared Infra group uses pattern
+   `training/test_*.mojo` (glob), which auto-picks up split files — no workflow changes needed
+4. Checked `validate_test_coverage.py` — found explicit filename reference to `test_checkpointing.mojo`
+   in an exclusion list; replaced 1 entry with 2 entries for `test_checkpointing_part1.mojo` and
+   `test_checkpointing_part2.mojo`
+5. Created `test_checkpointing_part1.mojo` (8 tests): core save/load, metadata, save_frequency,
+   save_best_only, best value tracking
+6. Created `test_checkpointing_part2.mojo` (5 tests): mode tests (min/max/auto), edge cases
+7. Added ADR-009 header comment to both files
+8. Deleted the original file with `git rm`
+9. All pre-commit hooks passed on first attempt
+10. Pushed and created PR #4372 with `gh pr merge --auto --rebase`
+
+## Key Observations
+
+- CI glob pattern `training/test_*.mojo` auto-matched new split files — no workflow YAML change needed.
+  This is the same pattern as issue #3409 (Core Activations); contrast with #3424 (Core Utilities)
+  which used an explicit filename list and required workflow updates.
+- `validate_test_coverage.py` had a separate explicit exclusion list with `test_checkpointing.mojo`
+  hardcoded. This is NOT covered by the CI glob. Lesson: glob in CI workflow does NOT mean glob
+  everywhere — always check `validate_test_coverage.py` independently.
+- Split at natural section boundaries: part1 covers core save/load behavior and frequency/best-only
+  logic; part2 covers mode-specific behavior and edge cases.
+- All pre-commit hooks passed first attempt: mojo format, validate_test_coverage, mypy, ruff,
+  check-yaml.
+
+## Files Changed
+
+- `tests/shared/training/test_checkpointing.mojo` — DELETED
+- `tests/shared/training/test_checkpointing_part1.mojo` — CREATED (8 tests)
+- `tests/shared/training/test_checkpointing_part2.mojo` — CREATED (5 tests)
+- `scripts/validate_test_coverage.py` — UPDATED (replaced 1 filename entry with 2)

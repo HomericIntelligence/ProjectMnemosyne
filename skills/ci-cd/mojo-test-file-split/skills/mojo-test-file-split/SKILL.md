@@ -74,16 +74,37 @@ rm tests/shared/core/test_elementwise.mojo
 
 The `validate_test_coverage.py` script will fail if the original file still exists but is not referenced in the CI workflow, so deletion is required.
 
-### 5. Update CI workflow pattern
+### 5. Check CI workflow pattern and validate_test_coverage.py
 
-In `.github/workflows/comprehensive-tests.yml`, find the test group pattern that referenced the original file and replace it:
+First, check if the CI group uses a **glob** or an **explicit filename list**:
+
+```bash
+grep -n "<original_filename>" .github/workflows/comprehensive-tests.yml
+```
+
+- **Glob pattern** (e.g., `training/test_*.mojo`): new `_part1/2` files are picked up automatically
+  — no workflow changes needed.
+- **Explicit filename list**: replace the original filename with all part filenames.
+
+Then check `scripts/validate_test_coverage.py` for direct filename references:
+
+```bash
+grep "<original_filename>" scripts/validate_test_coverage.py
+```
+
+- If found: replace the single entry with entries for each part file (1-for-N replacement)
+- If not found (uses glob patterns): no changes needed
+
+**Important**: A glob in the CI workflow does NOT mean `validate_test_coverage.py` also uses globs.
+Always check both files independently.
 
 ```yaml
+# If explicit list in comprehensive-tests.yml:
 # Before
 pattern: "... test_elementwise.mojo ..."
 
 # After
-pattern: "... test_elementwise_part1.mojo test_elementwise_part2.mojo test_elementwise_part3.mojo test_elementwise_part4.mojo test_elementwise_part5.mojo ..."
+pattern: "... test_elementwise_part1.mojo test_elementwise_part2.mojo ..."
 ```
 
 ### 6. Verify counts
@@ -119,6 +140,7 @@ gh pr merge --auto --rebase
 | Label the PR | `gh pr create --label fix` | Label `fix` does not exist in the target repo | Check available labels with `gh label list` before using `--label` |
 | Trust issue description for test count | Used count from issue body directly (said 25) | Actual count was 31 — off by 6 | Always grep `^fn test_[a-z]` to get the real count; issue descriptions are often approximate |
 | Target ≤8 only for the last split file | Initially gave last part 10 tests | Exceeded ≤8 target from issue requirements | Plan all splits upfront so each file lands ≤8 not just ≤10 |
+| Skipped validate_test_coverage.py check | CI workflow used glob `training/test_*.mojo` so assumed no other files needed updating | `validate_test_coverage.py` had a separate exclusion list with the original filename hardcoded | Always grep the original filename in `validate_test_coverage.py` even when the CI workflow uses globs — glob in workflow ≠ glob everywhere |
 
 ## Results & Parameters
 
@@ -151,5 +173,6 @@ Total: 37 tests preserved
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3409, PR #4142 — split `test_elementwise.mojo` (37 tests → 5 files) | [notes.md](../../references/notes.md) |
 | ProjectOdyssey | Issue #3424, PR #4189 — split `test_utility.mojo` (31 tests → 4 files) | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3496, PR #4372 — split `test_checkpointing.mojo` (13 tests → 2 files, 8/5); CI glob auto-covered; `validate_test_coverage.py` had explicit filename ref requiring 1-for-2 update | [notes.md](../../references/notes.md) |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issues #2942, #3397
