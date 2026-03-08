@@ -133,6 +133,13 @@ grep -A2 "Shared Infra" .github/workflows/comprehensive-tests.yml
 
 If the pattern ends in `test_*.mojo`, all part files are covered automatically.
 
+## Verified On
+
+| Project | Issue | File Split | Files Created | CI Group Fixed |
+|---------|-------|------------|---------------|----------------|
+| ProjectOdyssey (PR #4130) | #3406 | `test_io.mojo` (39 tests → 5 files) | `test_io_part1-5.mojo` | "Shared Infra & Testing" |
+| ProjectOdyssey (PR #4193) | #3425 | `test_shape_edge_cases.mojo` (25 tests → 4 files) | `test_shape_edge_cases_part1-4.mojo` | "Core Tensors" |
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -140,3 +147,4 @@ If the pattern ends in `test_*.mojo`, all part files are covered automatically.
 | Using `continue-on-error: true` | Marking the CI group non-blocking instead of fixing root cause | Masked the real failure; other unrelated failures also got hidden | Always fix the root cause (file size); `continue-on-error` is a last resort |
 | Keeping `test_io.mojo` and adding parts | Leaving original alongside split files | Would double-run tests in CI, doubling the load and defeating the purpose | Delete the original; the parts are the full replacement |
 | Updating CI workflow explicitly | Hardcoding `test_io_part1.mojo test_io_part2.mojo ...` in pattern | Unnecessary work since wildcard `utils/test_*.mojo` already covers them | Check existing patterns first — wildcards often already cover new files |
+| Wildcard pattern in CI for explicitly-named files | Using `test_shape_edge_cases*.mojo` in workflow for a file listed by name | Files listed explicitly in the pattern must be updated explicitly; glob only helps for wildcard groups | When the CI pattern lists files explicitly, update each filename directly |
