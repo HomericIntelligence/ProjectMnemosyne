@@ -1,6 +1,6 @@
 ---
 name: adr009-test-file-splitting
-description: "Split Mojo test files exceeding ADR-009 limit (≤10 fn test_ functions) to prevent heap corruption in Mojo v0.26.1. Use when: CI shows non-deterministic libKGENCompilerRTShared.so crashes, a test file exceeds the fn test_ limit, or Models CI group fails intermittently."
+description: "Split large Mojo test files into ≤10 fn test_ per file to fix heap corruption CI crashes. Use when: Mojo test file exceeds 10 fn test_ functions, CI shows intermittent libKGENCompilerRTShared.so crashes."
 category: ci-cd
 date: 2026-03-07
 user-invocable: false
@@ -8,135 +8,189 @@ user-invocable: false
 
 ## Overview
 
-| Property | Value |
-|----------|-------|
-| **Problem** | Mojo v0.26.1 heap corruption (`libKGENCompilerRTShared.so` JIT fault) under high test load |
-| **Root Cause** | Too many `fn test_` functions in a single `.mojo` file triggers memory corruption |
-| **ADR-009 Limit** | ≤10 `fn test_` functions per file (target: ≤8 for safety margin) |
-| **Fix** | Split oversized test files into numbered part files |
-| **CI Impact** | Eliminates non-deterministic Models CI group failures |
+| Attribute | Value |
+|-----------|-------|
+| **Problem** | Mojo v0.26.1 heap corruption when a single test file has too many `fn test_` functions |
+| **Symptom** | Intermittent CI failures: `libKGENCompilerRTShared.so` JIT fault |
+| **Fix** | Split file into multiple files with ≤10 (target ≤8) `fn test_` each |
+| **ADR** | ADR-009: Heap Corruption Workaround |
+| **CI failure rate** | 13/20 runs non-deterministically across groups |
 
 ## When to Use
 
-- A `.mojo` test file has more than 10 `fn test_` functions
-- CI shows intermittent `libKGENCompilerRTShared.so` segfaults on Mojo test runs
-- The `Models` CI group (or other Mojo test groups) fail non-deterministically
-- `grep -c "^fn test_" tests/models/test_<model>_layers.mojo` returns > 10
-- Adding new tests would push a file over the 10-function limit
+Trigger this skill when:
+
+1. A Mojo test file has more than 10 `fn test_` functions
+2. CI shows intermittent crashes with `libKGENCompilerRTShared.so` in the stack
+3. A CI group fails non-deterministically — not always the same test, just the same group
+4. A new large test file is being added with 10+ tests
+
+**CI Pattern note**: Some CI groups use a glob (`test_*.mojo`) that auto-discovers `_partN` files.
+Others use explicit space-separated filenames that must be updated manually. Always check which
+pattern applies before assuming no CI changes are needed.
 
 ## Verified Workflow
 
-### Step 1: Identify Oversized Files
+### Step 1 — Count tests in the file
 
 ```bash
-# Find all test files exceeding the limit
-for f in tests/**/*.mojo; do
-  count=$(grep -c "^fn test_" "$f" 2>/dev/null || echo 0)
-  if [ "$count" -gt 10 ]; then
-    echo "$count $f"
-  fi
-done
+grep -c "^fn test_" tests/path/to/test_file.mojo
 ```
 
-### Step 2: Plan the Split
+If count > 10, proceed. Target ≤8 per split file for headroom.
 
-- Target ≤8 tests per file (leaves buffer below the 10-function limit)
-- Group tests logically: initialization → forward → backward, or by feature area
-- All shared structs and helper functions must be duplicated in each part file
+### Step 2 — Plan the split
 
-### Step 3: Create Part Files
+Divide tests into logical groups (by operation category, not alphabetically).
+For N tests, use `ceil(N / 8)` files. Example: 47 tests → 6 files (8+8+8+8+8+7).
 
-Each part file MUST include:
+### Step 3 — Create split files with ADR-009 header
 
-1. **ADR-009 header comment** at the very top:
+Each split file **must** include this header comment:
 
 ```mojo
 # ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
 # Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
-# high test load. Split from <original_file>.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
+# high test load. Split from <original_filename>.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
 ```
 
-2. **All imports** from the original file
-3. **All shared structs and helper functions** (must be duplicated — no cross-file imports between test files)
-4. **A subset of tests** (≤8 `fn test_` functions)
-5. **A `main()` function** that runs only the tests in this part
+Naming convention: `test_<original>_part1.mojo`, `test_<original>_part2.mojo`, etc.
 
-### Step 4: Delete the Original File
+### Step 4 — Copy imports and shared structs to each split file
+
+Each split file needs its own full import block. Custom structs/ops used across parts
+must be duplicated in each file that uses them (Mojo has no shared module within a test).
+
+### Step 5 — Each split file needs its own `main()` runner
+
+```mojo
+fn main() raises:
+    """Run <original> tests - Part N."""
+    test_function_1()
+    test_function_2()
+    # ... only the tests in THIS file
+```
+
+### Step 6 — Delete the original file
 
 ```bash
-rm tests/models/test_<model>_layers.mojo
+rm tests/path/to/test_original.mojo
 ```
 
-### Step 5: Update CI Workflow
+### Step 7 — Update CI workflow pattern
 
-The `comprehensive-tests.yml` `Models` group uses `test_*_layers.mojo` pattern. Part files like
-`test_googlenet_layers_part1.mojo` do NOT match this glob. Update the pattern explicitly:
+First check whether the CI group uses a glob or explicit filenames:
+
+```bash
+grep -A5 "<test-group-name>" .github/workflows/comprehensive-tests.yml
+```
+
+**If glob** (e.g., `test_*.mojo`): new `_partN` files are discovered automatically. No changes needed.
+
+**If explicit filenames**: replace the old filename with all new filenames:
 
 ```yaml
-- name: "Models"
-  path: "tests/models"
-  pattern: "test_*_layers.mojo test_<model>_layers_part1.mojo test_<model>_layers_part2.mojo test_<model>_layers_part3.mojo"
+# Before:
+pattern: "... test_original.mojo ..."
+
+# After:
+pattern: "... test_original_part1.mojo test_original_part2.mojo test_original_part3.mojo ..."
 ```
 
-### Step 6: Verify and Commit
+### Step 8 — Verify and commit
 
 ```bash
-# Verify test counts
-grep -c "^fn test_" tests/models/test_<model>_layers_part*.mojo
+# Check no file exceeds 10 tests
+for f in tests/path/to/test_original_part*.mojo; do
+  count=$(grep -c "^fn test_" "$f")
+  echo "$f: $count tests"
+done
 
-# Verify total test count matches original
-grep "^fn test_" tests/models/test_<model>_layers_part*.mojo | wc -l
-
-# Run pre-commit (validate_test_coverage.py runs automatically)
-just pre-commit
-
-# Commit with ADR reference
-git commit -m "fix(ci): split test_<model>_layers.mojo into N parts (ADR-009)"
+git add tests/path/to/test_original_part*.mojo tests/path/to/test_original.mojo
+git add .github/workflows/comprehensive-tests.yml
+git commit -m "fix(ci): split test_original.mojo into N files (ADR-009)"
 ```
 
-## Key Architectural Detail: Helper Function Duplication
+## Results & Parameters
 
-Because Mojo test files cannot import from each other, any shared structs or helper functions
-(e.g., `InceptionModule`, `concatenate_depthwise`) must be **duplicated** into every part file
-that uses them. This is intentional and expected — do not try to factor them out.
+### Session Results (Issue #3399)
 
-## CI Pattern Mismatch Gotcha
+- **Original file**: `tests/shared/core/test_elementwise_dispatch.mojo` — 47 tests
+- **Split into**: 6 files of 8/8/8/8/8/7 tests
+- **All pre-commit hooks**: Passed (mojo format, deprecated syntax check, validate test coverage, YAML)
+- **PR**: #4106
 
-The `Models` group pattern `test_*_layers.mojo` matches `test_googlenet_layers.mojo` but NOT
-`test_googlenet_layers_part1.mojo`. After splitting, the CI pattern must be updated to explicitly
-list the part files, or the `validate_test_coverage.py` script will flag them as uncovered.
+### Session Results (Issue #3429)
+
+- **Original file**: `tests/shared/core/test_activation_funcs.mojo` — 24 tests
+- **Split into**: 3 files of 9/8/7 tests (ReLU+Sigmoid / Tanh+Softmax basic / Softmax axis+Integration)
+- **All pre-commit hooks**: Passed
+- **PR**: #4209
+
+### Session Results (Issue #3432)
+
+- **Original file**: `tests/shared/utils/test_logging.mojo` — 22 tests
+- **Split into**: 3 files of 8/7/7 tests (log levels+formatters+console / file+multi+training / config+error+integration)
+- **CI pattern**: `utils/test_*.mojo` glob — new files auto-discovered, no CI changes needed
+- **Coverage script**: `validate_test_coverage.py` uses `Path.rglob("test_*.mojo")` — also auto-covered
+- **All pre-commit hooks**: Passed on first attempt
+- **PR**: #4215
+
+### Session Results (Issue #3455)
+
+- **Original file**: `tests/models/test_mobilenetv1_layers.mojo` — 19 tests
+- **Split into**: 3 files of 7/7/5 tests (depthwise+pointwise conv / separable+BatchNorm+ReLU / avgpool+channel configs)
+- **CI pattern**: `test_*_layers.mojo` glob in `Models` group — `_part1/2/3` files auto-discovered, no CI changes needed
+- **validate_test_coverage.py**: No changes needed (auto-discovers split files via glob)
+- **All pre-commit hooks**: Passed on first attempt
+- **PR**: #4276
+
+### Session Results (Issue #3458)
+
+- **Original file**: `tests/models/test_googlenet_layers.mojo` — 18 tests
+- **Split into**: 3 files of 8/6/4 tests (inception module+branches / concat+avgpool+FC / backward passes)
+- **CI pattern**: `test_*_layers.mojo` glob in `Models` group does NOT match `test_googlenet_layers_part1.mojo` — explicit CI update required
+- **validate_test_coverage.py**: Flagged part files as uncovered until CI pattern was updated
+- **All pre-commit hooks**: Passed on first attempt
+- **PR**: #4279
+
+### Key Parameters
+
+| Parameter | Value |
+|-----------|-------|
+| Max tests per file (ADR-009 limit) | 10 |
+| Target tests per file (headroom) | ≤8 |
+| Naming convention | `test_<original>_partN.mojo` |
+| Header comment | ADR-009 tracking comment (required) |
+| CI workflow key | `pattern:` field in test group (glob or explicit) |
+
+### Grouping Strategy
+
+Group tests by **logical category** (operation type), not alphabetically:
+
+- Part 1: First set of unary ops (ExpOp, LogOp, SqrtOp, SinOp, CosOp)
+- Part 2: Next set of unary ops (TanhOp, AbsOp, NegateOp, SquareOp, SignOp)
+- Part 3: Custom unary + first binary ops (AddOp, SubtractOp, MultiplyOp, DivideOp, PowerOp)
+- Part 4: More binary ops (MaxOp, MinOp, comparison ops)
+- Part 5: Logical ops, custom binary, dtype preservation
+- Part 6: Error cases, 2D tensors, edge cases
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Relying on glob pattern | Assumed `test_*_layers.mojo` would match `test_googlenet_layers_part1.mojo` | Pattern requires `_layers.mojo` suffix; `_part1.mojo` doesn't match | Must explicitly list part files in CI pattern |
-| Cross-file imports | Considered importing `InceptionModule` from part1 in part2 | Mojo test files cannot import from each other (no test module system) | Duplicate shared structs/helpers in each part file |
-| Keeping original file | Considered keeping original alongside parts | Would double-count tests and re-introduce heap corruption | Delete original; replace completely with parts |
+| Share struct definitions via import | Tried to import `DoubleOp` from part1 in part3 | Mojo test files don't export symbols to other test files | Duplicate custom structs in each split file that needs them |
+| Single combined CI pattern glob | Tried `test_elementwise_dispatch_part*.mojo` wildcard | `comprehensive-tests.yml` `pattern:` field uses space-separated literal names for explicit-list groups | List all filenames explicitly when the group uses explicit filenames |
+| Keep original file + add split files | Considered keeping original for backwards compat | Would re-introduce the heap corruption bug | Delete original; replace completely |
+| Assuming glob pattern for all CI groups | Did not check CI pattern type first | Some groups use explicit filenames, some use glob | Always check CI pattern type before deciding if workflow update is needed |
 
-## Results & Parameters
+## Verified On
 
-### Splitting Strategy for 18-Test File
-
-```
-Part 1 (8 tests): inception module init/forward, branch forward passes, concat shape
-Part 2 (6 tests): concatenation values, initial conv block, global avgpool, FC layer
-Part 3 (4 tests): backward passes for all conv branches + concatenation gradient
-```
-
-### Validate Test Coverage Script
-
-The project's `scripts/validate_test_coverage.py` automatically validates that all `.mojo` test
-files are referenced in `comprehensive-tests.yml`. Run it to verify the split is correct:
-
-```bash
-python scripts/validate_test_coverage.py
-```
-
-### ADR-009 Header Template
-
-```mojo
-# ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
-# Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
-# high test load. Split from test_<original>.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
-```
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Issue #3399, PR #4106 | Split test_elementwise_dispatch.mojo (47 → 6 files) |
+| ProjectOdyssey | Issue #3429, PR #4209 | Split test_activation_funcs.mojo (24 → 3 files), explicit CI update needed |
+| ProjectOdyssey | Issue #3432, PR #4215 | Split test_logging.mojo (22 → 3 files), glob CI pattern auto-covered |
+| ProjectOdyssey | Issue #3435, PR #4220 | Split test_arithmetic_backward.mojo (23 → 3 files), explicit CI pattern update |
+| ProjectOdyssey | Issue #3455, PR #4276 | Split test_mobilenetv1_layers.mojo (19 → 3 files), glob CI pattern auto-covered |
+| ProjectOdyssey | Issue #3458, PR #4279 | Split test_googlenet_layers.mojo (18 → 3 files, 8+6+4), explicit CI pattern update required |
