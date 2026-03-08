@@ -248,3 +248,32 @@ All hooks passed on first attempt.
 1. Issue descriptions can undercount tests — grep for `^fn test_[a-z]` to get accurate count before planning
 2. A 2-way split of 20 tests yields 10/10 which hits the ADR-009 hard limit; use 3-way split to meet ≤8 target
 3. Explicit filename patterns in CI workflow require manual update (unlike glob patterns that auto-match)
+
+---
+
+## Session Notes: ADR-009 Test Split (Issue #3498, PR #4373)
+
+### Context
+
+- **Date**: 2026-03-08
+- **Issue**: #3498 — `tests/shared/testing/test_gradient_checker_meta.mojo` had 14 `fn test_` functions
+- **ADR-009 limit**: ≤10 per file (target ≤8)
+- **CI failure rate**: 13/20 recent runs on `main` (Testing Fixtures group)
+- **Split result**: 2 files — part1 (8 tests), part2 (6 tests)
+
+### Key Learnings vs Prior Sessions
+
+1. **ADR-009 header placement**: The `# ADR-009:` comment block must appear at the absolute top of
+   the file (line 1), before the triple-quoted module docstring. Placing it inside the docstring
+   makes it a string literal, not a source comment.
+
+2. **CI glob auto-coverage**: The `testing/test_*.mojo` glob in `comprehensive-tests.yml` already
+   covers `test_gradient_checker_meta_part1.mojo` and `test_gradient_checker_meta_part2.mojo`.
+   No workflow edits were needed. Always verify existing glob before editing CI YAML.
+
+3. **validate_test_coverage.py is glob-based**: Confirmed once more that the pre-commit hook uses
+   glob patterns (not hardcoded filenames), so no script changes needed after a split.
+
+4. **Helper functions duplicated across parts**: Both part files needed the shared helper functions
+   (`square_forward`, `square_backward_correct`, etc.) because Mojo has no intra-test imports.
+   This is expected and acceptable.
