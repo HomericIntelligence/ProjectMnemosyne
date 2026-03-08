@@ -139,6 +139,7 @@ If the pattern ends in `test_*.mojo`, all part files are covered automatically.
 |---------|-------|------------|---------------|----------------|
 | ProjectOdyssey (PR #4130) | #3406 | `test_io.mojo` (39 tests → 5 files) | `test_io_part1-5.mojo` | "Shared Infra & Testing" |
 | ProjectOdyssey (PR #4193) | #3425 | `test_shape_edge_cases.mojo` (25 tests → 4 files) | `test_shape_edge_cases_part1-4.mojo` | "Core Tensors" |
+| ProjectOdyssey (PR #4306) | #3471 | `test_result.mojo` (16 tests → 2 files) | `test_result_part1-2.mojo` | "Autograd & Benchmarking" |
 
 ## Failed Attempts
 
