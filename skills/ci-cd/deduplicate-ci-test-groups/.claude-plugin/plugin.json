@@ -1,0 +1,8 @@
+{
+  "name": "deduplicate-ci-test-groups",
+  "version": "1.0.0",
+  "description": "Fix overlapping test group patterns in GitHub Actions matrix workflows. Use when: (1) CI test files run in multiple jobs due to wildcard overlap, (2) a parent group uses subdirectory wildcards that subsume dedicated child groups, (3) validate_test_coverage.py exclusion list is out of sync with CI patterns.",
+  "category": "ci-cd",
+  "date": "2026-03-08",
+  "tags": ["ci", "github-actions", "test-matrix", "deduplication", "yaml", "wildcards"]
+}
