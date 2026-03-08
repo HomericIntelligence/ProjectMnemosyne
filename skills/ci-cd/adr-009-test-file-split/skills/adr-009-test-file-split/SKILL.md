@@ -107,6 +107,7 @@ worktree shell environments.
 | Multi-hook pre-commit | `pixi run pre-commit run hook1 hook2 --files ...` | pre-commit CLI doesn't accept multiple hook names in one call | Run hooks one at a time or use `pre-commit run --all-files` |
 | Background pre-commit via run_in_background | Ran full pre-commit in background, checked output file | Output file remained 0 bytes during session (task still running) | Use foreground for pre-commit hooks; background only for genuinely independent long tasks |
 | `just pre-commit` | Ran `just pre-commit` to use project's justfile recipe | `just` not installed in worktree shell environment | Use `pixi run pre-commit run` directly in worktrees |
+| Trusting issue CI group name | Issue #3631 described "Top-Level Tests" as the CI group | Actual group was "Misc Tests" with a broad `test_*.mojo` glob | Issue descriptions may use stale/incorrect CI group names — always verify from the workflow file directly |
 
 ## Results & Parameters
 
@@ -144,3 +145,4 @@ Closes #<issue-number>
 | ProjectOdyssey | Issue #3483, PR #4330 — split `test_layer_testers.mojo` (14 tests → 2 files, 8/6); CI glob auto-covered | [notes.md](../../references/notes.md) |
 | ProjectOdyssey | Issue #3503, PR #4381 — split `test_pipeline.mojo` (13 tests → 2 files, 8/5); CI glob auto-covered; no `validate_test_coverage.py` update needed | [notes.md](../../references/notes.md) |
 | ProjectOdyssey | Issue #3628, PR #4422 — split `test_resnet18_layers.mojo` (12 tests → 2 files, 8/4); CI glob `test_*_layers.mojo` auto-covered; `validate_test_coverage.py` had no explicit ref | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3631, PR #4431 — split `test_data_integrity.mojo` (11 tests → 2 files, 8/3); CI "Misc Tests" group uses broad `test_*.mojo` glob — auto-covered; issue described wrong CI group name ("Top-Level Tests" vs actual "Misc Tests") — always verify from workflow file | [notes.md](../../references/notes.md) |

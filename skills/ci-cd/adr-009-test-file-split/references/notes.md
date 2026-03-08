@@ -127,3 +127,61 @@ All hooks passed:
 - Trim Trailing Whitespace: Passed
 - Fix End of Files: Passed
 - Check for Large Files: Passed
+
+---
+
+# Session Notes: ADR-009 Test File Split (Issue #3631)
+
+## Context
+
+- Date: 2026-03-08
+- Issue: HomericIntelligence/ProjectOdyssey#3631
+- PR: HomericIntelligence/ProjectOdyssey#4431
+
+## Problem
+
+`tests/test_data_integrity.mojo` had 11 `fn test_` functions, exceeding the ADR-009 limit of 10.
+This caused intermittent heap corruption crashes in the Mojo v0.26.1 JIT compiler
+(libKGENCompilerRTShared.so).
+
+## Original Test Functions
+
+1. test_mxfp4_aligned_roundtrip
+2. test_mxfp4_unaligned_roundtrip
+3. test_mxfp4_various_unaligned_sizes
+4. test_nvfp4_unaligned_roundtrip
+5. test_fp8_bounds_checking
+6. test_dtype_validation_fp8
+7. test_dtype_validation_mxfp4
+8. test_fp16_conversion_behavior
+9. test_int_conversion_bounds
+10. test_metadata_preservation
+11. test_backwards_compatibility
+
+## Solution
+
+Split into:
+
+- `test_data_integrity_part1.mojo`: 8 tests (roundtrip, dtype validation, FP16 behavior)
+- `test_data_integrity_part2.mojo`: 3 tests (int bounds, metadata, backwards compat)
+
+## Key Discovery
+
+The CI workflow "Misc Tests" group uses `pattern: "test_*.mojo ..."` — the wildcard picks up
+both split files automatically. No workflow edit was needed.
+
+Issue prompt described the CI group as "Top-Level Tests" but the actual group in the workflow
+was "Misc Tests". Always read the workflow file directly to verify CI group names.
+
+## Documentation Updates
+
+`docs/dev/phases.md` referenced `test_data_integrity.mojo` by name and was updated to reference
+both new filenames.
+
+## Pre-commit Results
+
+All hooks passed:
+
+- Mojo Format: Passed
+- Validate Test Coverage: Passed
+- Markdown Lint: Passed
