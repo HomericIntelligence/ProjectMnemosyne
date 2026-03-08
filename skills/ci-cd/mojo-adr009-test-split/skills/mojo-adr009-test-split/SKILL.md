@@ -142,7 +142,8 @@ grep -c "^fn test_[a-z]" <original>_part*.mojo   # should also total 18
 | Used `grep -c "fn test_"` to count tests | Counted lines matching pattern to verify ≤10 limit | ADR-009 header comment contains "fn test_" text, inflating count by 1 | Use `grep -n "fn test_"` or `grep -c "^fn test_[a-z]"` to see actual lines and verify count |
 | Wrong ADR-009 header format | Used docstring note: "Note: Split from... See ADR-009." | ADR-009 requires `# ADR-009:` comment block format, not a note inside the docstring | Header must be `#` comment lines at file top, before the module docstring |
 | Modifying CI workflow glob pattern | Thought new files would not be matched by existing glob | Glob `test_*.mojo` already covers `test_*_part1.mojo` | Verify existing glob before making changes; it usually already works |
-| Checking `validate_test_coverage.py` for filename refs | Searched for original filename in the script | Script uses glob patterns, not hardcoded filenames | No changes needed to coverage validation script when splitting |
+| Checking `validate_test_coverage.py` for filename refs (glob-covered tests) | Searched for original filename in the script | Script uses glob patterns, not hardcoded filenames | No changes needed when the CI group covers the directory with a wildcard |
+| Skipping `validate_test_coverage.py` update for excluded files | Assumed exclude list did not need updating | Some test files (e.g. training tests) are in an explicit exclude list by filename; new split filenames must replace the old one | When a file is in `exclude_training_patterns` or similar explicit lists in `validate_test_coverage.py`, ALL new part filenames must be added and the original removed |
 
 ## Additional Notes
 
@@ -168,5 +169,35 @@ grep -n "^fn test_" tests/path/to/test_<name>_*.mojo
 | ProjectOdyssey | Issue #3444, PR #4238 | test_backward.mojo: 21 tests → 3 files; found 7 missing tests + wrong header format |
 | ProjectOdyssey | Issue #3457, PR #4278 | test_optimizer_base.mojo: 18 tests → 3 files of 6/6/6; CI glob auto-covered new files |
 | ProjectOdyssey | Issue #3477, PR #4322 | test_conv.mojo: issue said 15 tests but actual count was 20 → 3 files of 7/7/6; CI workflow explicit pattern updated |
+| ProjectOdyssey | Issue #3482, PR #4331 | test_training_loop.mojo: issue said 14 tests but actual count was 18 → 3 files of 7/7/4; CI glob auto-covered; `validate_test_coverage.py` explicit exclude list updated |
+
+### When `validate_test_coverage.py` needs updating
+
+Two scenarios exist — always check which applies:
+
+**Scenario A (no update needed)**: Test files are covered by a CI wildcard glob and do NOT
+appear in `exclude_files` or similar lists in `validate_test_coverage.py`. The new part files
+are discovered automatically.
+
+**Scenario B (update required)**: Test files are in an explicit `exclude_training_patterns` or
+`exclude_files` list (e.g. training tests that run weekly, not per-PR). The original filename
+must be replaced with all new part filenames:
+
+```python
+# Before:
+"tests/shared/training/test_training_loop.mojo",
+
+# After:
+"tests/shared/training/test_training_loop_part1.mojo",
+"tests/shared/training/test_training_loop_part2.mojo",
+"tests/shared/training/test_training_loop_part3.mojo",
+```
+
+**How to check**: Search for the original filename in `scripts/validate_test_coverage.py`. If
+it appears in an exclude list, update it. If it's not there, Scenario A applies.
+
+```bash
+grep "test_<original_name>" scripts/validate_test_coverage.py
+```
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`
