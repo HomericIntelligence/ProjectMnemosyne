@@ -83,9 +83,27 @@ git rm tests/shared/testing/test_assertions.mojo.DEPRECATED
 ```bash
 # Verify no file exceeds 10 (count actual functions, not comments)
 grep -c "^fn test_[a-z]" tests/shared/testing/test_assertions_*.mojo
+```
 
-# CI glob auto-picks up new files if named test_*.mojo in the right directory
-# No workflow changes needed for testing/test_*.mojo glob pattern
+**If CI uses a glob pattern** (`test_*.mojo`): New files are picked up automatically — no
+workflow changes needed.
+
+**If CI uses an explicit file list** (e.g., `comprehensive-tests.yml` `pattern:` field):
+You MUST update the workflow to reference the new filenames. Replace the original filename
+with all split filenames:
+
+```yaml
+# Before
+pattern: "... test_arithmetic_contiguous.mojo ..."
+
+# After (replace with all 4 parts)
+pattern: "... test_arithmetic_contiguous_part1.mojo test_arithmetic_contiguous_part2.mojo test_arithmetic_contiguous_part3.mojo test_arithmetic_contiguous_part4.mojo ..."
+```
+
+To check whether CI uses a glob or explicit list:
+
+```bash
+grep -A2 "Core Tensors" .github/workflows/comprehensive-tests.yml
 ```
 
 ### 8. Commit and push
@@ -98,6 +116,7 @@ All pre-commit hooks must pass (mojo format, test coverage validation).
 |---------|----------------|---------------|----------------|
 | Using `grep "^fn test_"` to count tests | Counted comment lines matching the pattern | ADR-009 header comment contained `fn test_` text at line start | Use `^fn test_[a-z]` pattern instead |
 | Expecting 61 tests in split files | Issue description said 61 tests | The actual split files in main had 59 tests (issue count was approximate) | Always verify against actual code, not issue description |
+| Assuming CI glob auto-picks new files | Did not update `comprehensive-tests.yml` after split | CI used an explicit space-separated file list in `pattern:` field, not a glob | Check whether CI uses glob or explicit list; update explicit lists manually |
 
 ## Results & Parameters
 
@@ -123,5 +142,6 @@ grep -c "^fn test_[a-z]" <file>.mojo
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3397, PR #4094 | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3423, PR #4188 | Explicit-list CI workflow update (26-test arithmetic_contiguous split into 4 files) |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942
