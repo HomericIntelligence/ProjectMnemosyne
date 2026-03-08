@@ -227,3 +227,68 @@ PR #4360: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4360
 `fix(ci): split test_arg_parser.mojo to comply with ADR-009 (≤10 tests/file)`
 
 3 files changed: 1 deleted (test_arg_parser.mojo), 2 created (test_arg_parser_part1-2.mojo)
+
+---
+
+# Session Notes — Issue #3624 (Seventh Application)
+
+## Date
+
+2026-03-08
+
+## Issue
+
+GitHub Issue #3624: `fix(ci): split test_sequential.mojo (12 tests) — Mojo heap corruption (ADR-009)`
+
+## Problem
+
+`tests/shared/data/samplers/test_sequential.mojo` contained 12 `fn test_` functions, exceeding ADR-009's ≤10
+limit. This caused intermittent `libKGENCompilerRTShared.so` JIT faults in Mojo v0.26.1, making the
+"Data" CI group fail non-deterministically (13/20 recent runs on main).
+
+## Solution Applied
+
+Split into 2 files of ≤8 tests each, grouped by test type:
+
+- `test_sequential_part1.mojo` — 8 tests (creation, iteration, range tests; includes StubSequentialSampler)
+- `test_sequential_part2.mojo` — 4 tests (integration and performance tests; uses SequentialSampler directly)
+
+## CI Pattern
+
+The "Data" group in `comprehensive-tests.yml` uses wildcard `samplers/test_*.mojo` — no workflow update needed.
+`validate_test_coverage.py` had no hardcoded filename references.
+
+## Key Observation: Trim Imports Per File
+
+Part 2 does not use `assert_true` (only `assert_equal`), so the import was trimmed vs. Part 1.
+Only import what each split file's tests actually use — the pre-commit hooks will catch mismatches.
+
+## Test Distribution
+
+### Part 1 (8 tests)
+
+- test_sequential_sampler_creation
+- test_sequential_sampler_empty
+- test_sequential_sampler_yields_all_indices
+- test_sequential_sampler_order
+- test_sequential_sampler_deterministic
+- test_sequential_sampler_start_index
+- test_sequential_sampler_end_index
+- test_sequential_sampler_no_negative_indices
+
+### Part 2 (4 tests)
+
+- test_sequential_sampler_with_dataloader
+- test_sequential_sampler_reusable
+- test_sequential_sampler_iteration_speed
+- test_sequential_sampler_memory_efficiency
+
+## PR
+
+PR #4413: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4413
+
+## Commit
+
+`fix(ci): split test_sequential.mojo into 2 files per ADR-009`
+
+2 files changed: 1 deleted (test_sequential.mojo → part1 rename 67%), 1 created (test_sequential_part2.mojo)

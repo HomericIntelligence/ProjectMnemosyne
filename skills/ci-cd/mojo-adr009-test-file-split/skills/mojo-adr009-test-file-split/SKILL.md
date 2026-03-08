@@ -142,6 +142,7 @@ If the pattern ends in `test_*.mojo`, all part files are covered automatically.
 | ProjectOdyssey (PR #4306) | #3471 | `test_result.mojo` (16 tests → 2 files) | `test_result_part1-2.mojo` | "Autograd & Benchmarking" |
 | ProjectOdyssey (PR #4347) | #3488 | `test_slicing.mojo` (14 tests → 2 files) | `test_slicing_part1-2.mojo` | "Core Tensors" |
 | ProjectOdyssey (PR #4360) | #3492 | `test_arg_parser.mojo` (13 tests → 2 files) | `test_arg_parser_part1-2.mojo` | "Shared Infra & Testing" |
+| ProjectOdyssey (PR #4413) | #3624 | `test_sequential.mojo` (12 tests → 2 files) | `test_sequential_part1-2.mojo` | "Data" |
 
 ## Failed Attempts
 
