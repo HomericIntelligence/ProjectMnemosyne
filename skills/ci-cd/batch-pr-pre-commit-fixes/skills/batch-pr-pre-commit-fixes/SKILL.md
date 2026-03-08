@@ -1,8 +1,8 @@
 ---
 name: batch-pr-pre-commit-fixes
-description: "Systematically fix multiple failing PRs with pre-commit hook auto-fix issues"
+description: "Systematically fix multiple failing PRs with pre-commit hook failures — covers auto-format fixes, expanded-scope self-catch scenarios, merge conflict resolution, and BAD_PATTERNS rebase regressions"
 category: ci-cd
-date: 2026-02-15
+date: 2026-03-08
 user-invocable: false
 ---
 
@@ -12,360 +12,239 @@ user-invocable: false
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-02-15 |
-| **Objective** | Fix 6 failing PRs with pre-commit hook auto-fix issues |
-| **Outcome** | ✅ Successfully fixed all PRs by applying auto-fixes and committing |
-| **PRs Fixed** | #685, #688, #689, #691, #693, #697 |
+| **Date** | 2026-03-08 (updated; originally 2026-02-15) |
+| **Objective** | Fix failing pre-commit CI checks on multiple open PRs |
+| **Outcome** | ✅ All PRs brought to green; CI passing |
 
-## Problem Statement
+## Verified On
 
-When pre-commit hooks run in CI and automatically fix formatting issues (markdown, trailing whitespace, etc.), they don't commit the changes. This causes CI to fail with "pre-commit hook(s) made changes" even though the issues are trivial formatting problems.
-
-Multiple PRs can accumulate these failures, creating a backlog that needs systematic fixing.
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectScylla | PRs #1462, #1452 (2026-03-08) | [notes.md](../../references/notes.md) |
+| ProjectMnemosyne | PRs #685–#697 (2026-02-15) | [notes.md](../../references/notes.md) |
 
 ## When to Use
 
-Use this skill when:
+- Multiple open PRs are failing CI with `pre-commit` hook failures
+- A PR expanded a pre-commit hook's scope (e.g., from one file to `*.md`) and the new check caught pre-existing violations — a **"self-catch"** scenario
+- A branch has diverged from `main` and has merge conflicts blocking CI from even running
+- Formatting violations (ruff-format, black, markdownlint) need trivial single-line fixes
+- After a rebase, tests fail because `BAD_PATTERNS` lists got truncated
 
-- Multiple PRs are failing with "pre-commit hook(s) made changes"
-- CI shows "files were modified by this hook" but no actual code issues
-- Pre-commit hooks auto-fix formatting (markdownlint, trailing-whitespace, etc.)
-- Need to fix multiple PRs efficiently in batch
-
-**Common failure patterns:**
-
-- Markdown Lint: "files were modified by this hook"
-- Trailing Whitespace: "Fixing file.md"
-- Mixed Line Endings: Auto-fixed
-
-**Trigger phrases:**
+**Common trigger phrases:**
 
 - "Fix these failing PRs"
 - "Multiple PRs failing pre-commit"
-- "Batch fix markdown linting issues"
+- "PR failing with N tier label mismatches"
+- "Branch has merge conflicts, CI won't run"
 
 ## Verified Workflow
 
-### Step 1: Identify Failing PRs
+### Phase 0: Triage before touching anything
 
 ```bash
-# Check multiple PRs at once
-gh pr checks 685 2>&1 || true
-gh pr checks 688 2>&1 || true
-gh pr checks 689 2>&1 || true
+# Check status of all open PRs
+gh pr list --state open
+gh pr checks <number>
+
+# For each failing PR, read the CI log
+gh run view <run-id> --log-failed | head -60
+
+# Check if branch is behind main (causes merge conflicts → CI won't even run)
+gh pr view <number> --json mergeable,mergeStateStatus
+# "CONFLICTING" → rebase needed before CI can trigger
 ```
 
-Look for:
+The hook name in the CI log tells you which fix path to take:
 
-- `pre-commit fail` status
-- "files were modified by this hook" in logs
+| Hook | Fix Path |
+|------|----------|
+| `Ruff Format Python` | Auto-fix (blank lines, indentation) |
+| `Markdown Lint` | Auto-fix (MD032 blank lines) |
+| `Check Tier Label Consistency` | Manual doc fixes (see self-catch path below) |
+| `Audit Doc Policy Violations` | Check if `ProjectMnemosyne/` is on disk (local-only) |
 
-### Step 2: Systematic PR Fixing
-
-For each failing PR:
+### Phase 1: Fix trivial formatting (ruff-format, markdownlint)
 
 ```bash
-# 1. Checkout the branch
-gh pr view <PR-NUMBER> --json headRefName --jq .headRefName
-git checkout <branch-name>
-git pull origin <branch-name>
+git checkout <branch>
+git pull origin <branch>
 
-# 2. Run pre-commit to apply auto-fixes
-pre-commit run --all-files markdownlint-cli2
-
-# Or run all hooks
+# Let the hook auto-fix
 pre-commit run --all-files
 
-# 3. Check what was modified
+# Check what changed
 git status --short
 
-# 4. Stage and commit the auto-fixes
-git add <modified-files>
-git commit -m "fix(<scope>): Apply markdownlint auto-fixes to <skill-name>
-
-Pre-commit hook auto-fixed markdown formatting issues:
-- Added blank lines after list item headings per MD032
-- Ensures consistent markdown formatting across skill docs
-
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
-
-# 5. Push the fixes
-git push origin <branch-name>
+# Stage only the changed files
+git add <changed-files>
+git commit -m "fix(tests): add missing blank line between test classes"
+git push origin <branch>
 ```
 
-### Step 3: Parallel Processing Pattern
+**Key**: always `git status --short` after pre-commit to know what was auto-fixed before staging.
 
-When fixing multiple PRs, use this pattern:
+### Phase 2: Fix "self-catch" expanded-scope pre-commit hook
+
+When a PR widens a pre-commit hook (e.g., from checking one file to scanning `*.md`), and the
+wider scan catches pre-existing violations in other files the PR didn't touch:
+
+**Step 1**: Reproduce the exact CI environment (exclude untracked local dirs):
 
 ```bash
-# Fix PR #685
-git checkout <branch-685>
-pre-commit run --all-files markdownlint-cli2
-git add .
-git commit -m "fix: Apply markdownlint auto-fixes"
-git push origin <branch-685>
+# Wrong — includes ProjectMnemosyne/ which doesn't exist in CI
+pixi run python scripts/check_tier_label_consistency.py
 
-# Fix PR #688
-git checkout <branch-688>
-pre-commit run --all-files markdownlint-cli2
-git add .
-git commit -m "fix: Apply markdownlint auto-fixes"
-git push origin <branch-688>
-
-# Continue for remaining PRs...
+# Correct — matches CI (ProjectMnemosyne/ is untracked, absent in CI)
+pixi run python scripts/check_tier_label_consistency.py --exclude ProjectMnemosyne
 ```
 
-### Step 4: Verify Fixes
+**Step 2**: Fix all violations. For tier-label mismatches, watch for **contextual regex traps**
+where the regex fires on a tier number + a tier name that appears *later on the same line*:
 
-After pushing, check CI status:
+| Original text | Fires on | Correct rewrite |
+|--------------|----------|-----------------|
+| `T1-T3 (Skills/Tooling/Delegation)` | T3+Skills | `T1 (Skills) through T3 (Delegation)` |
+| `T4-T5 (Hierarchy/Hybrid)` | T5+Hierarchy | `T4 (Hierarchy) and T5 (Hybrid)` |
+| `T4-T6 (Hierarchy/Hybrid/Super)` | T6+Hierarchy | `T4 (Hierarchy) through T6 (Super)` |
+| `T0-T1 (prompts + skills)` | T1+prompts | `T0 (Prompts) or T1 (Skills)` |
+| `T1-T2 (skills/tools)` | T2+skills | `T1 (Skills) and T2 (Tooling)` |
+
+**Step 3**: Verify clean before committing:
 
 ```bash
-# Wait for CI to start
-sleep 20
-
-# Check status
-gh pr checks <PR-NUMBER>
+pixi run python scripts/check_tier_label_consistency.py --exclude ProjectMnemosyne
+# Should print: "No tier label mismatches found."
 ```
 
-## Common Pre-commit Fixes
+**Step 4**: Commit with a descriptive message:
 
-### Markdown Linting (MD032)
-
-**Issue**: Missing blank lines after list item headings
-
-**Before:**
-
-```markdown
-## When to Use
-- Item 1
+```bash
+git add <all modified .md files>
+git commit -m "docs: fix N tier label mismatches caught by expanded consistency checker"
+git push origin <branch>
 ```
 
-**After:**
+### Phase 3: Fix branches behind main (merge conflicts)
 
-```markdown
-## When to Use
+If `mergeStateStatus == "CONFLICTING"`, CI won't trigger until the branch is rebased:
 
-- Item 1
+```bash
+git checkout <branch>
+git fetch origin main
+git log --oneline HEAD..origin/main | wc -l  # How many commits behind?
+
+git rebase origin/main
+# For script files where PR added new functionality, take the PR version:
+git checkout --theirs <conflicted-script>
+git add <conflicted-script>
+git rebase --continue
 ```
 
-### Trailing Whitespace
+**After rebase**: always re-run the tests immediately:
 
-**Issue**: Spaces at end of lines
+```bash
+pixi run python -m pytest tests/unit/scripts/test_<checker>.py --override-ini="addopts=" -q
+```
 
-**Fix**: Auto-removed by `trailing-whitespace` hook
+**Common rebase regression — BAD_PATTERNS truncation**: When a PR kept only 4 patterns in
+`BAD_PATTERNS` for backwards-compat, but `main` had already expanded it to 20, the post-rebase
+test file includes tests for all 20 patterns while the script only has 4. Fix by restoring the
+full list:
 
-### Mixed Line Endings
+```python
+BAD_PATTERNS: list[tuple[str, str]] = [
+    # Original 4
+    (r"T3.*Tool", "T3 is Delegation, not Tooling"),
+    (r"T4.*Deleg", "T4 is Hierarchy, not Delegation"),
+    (r"T5.*Hier", "T5 is Hybrid, not Hierarchy"),
+    (r"T2.*Skill", "T2 is Tooling, not Skills"),
+    # Reverse/symmetric set from main (bounded to avoid cross-tier false positives)
+    (r"T2.{0,10}Deleg", "T2 is Tooling, not Delegation"),
+    (r"T3.{0,10}Hier", "T3 is Delegation, not Hierarchy"),
+    (r"T4.{0,10}Hybrid", "T4 is Hierarchy, not Hybrid"),
+    (r"T1.{0,10}Tool", "T1 is Skills, not Tooling"),
+    (r"T0.{0,10}Skill", "T0 is Prompts, not Skills"),
+    (r"T1.{0,10}Prompt", "T1 is Skills, not Prompts"),
+    (r"T2.{0,10}Prompt", "T2 is Tooling, not Prompts"),
+    (r"T3.{0,10}Skill", "T3 is Delegation, not Skills"),
+    (r"T4.{0,10}Tool", "T4 is Hierarchy, not Tooling"),
+    (r"T5.{0,10}Deleg", "T5 is Hybrid, not Delegation"),
+    (r"T6.{0,10}Hier", "T6 is Super, not Hierarchy"),
+    (r"T6.{0,10}Hybrid", "T6 is Super, not Hybrid"),
+    (r"T0.{0,10}Tool", "T0 is Prompts, not Tooling"),
+    (r"T0.{0,10}Deleg", "T0 is Prompts, not Delegation"),
+    (r"T5.{0,10}Skill", "T5 is Hybrid, not Skills"),
+    (r"T6.{0,10}Deleg", "T6 is Super, not Delegation"),
+]
+```
 
-**Issue**: Inconsistent CRLF/LF line endings
+### Phase 4: Force-push rebased branch
 
-**Fix**: Auto-normalized by `mixed-line-ending` hook
+```bash
+git push --force-with-lease origin <branch>
+```
+
+`--force-with-lease` only succeeds if nobody else pushed to the remote since your last fetch — safe for solo work.
+
+### Phase 5: Verify CI
+
+```bash
+# Wait ~30s then:
+gh pr checks <number>
+
+# If no checks appear, confirm push landed:
+gh pr view <number> --json commits  # Latest SHA should match HEAD
+
+# Check mergeable status:
+gh pr view <number> --json mergeable,mergeStateStatus
+```
 
 ## Failed Attempts
 
-### ❌ Attempt 1: Running pre-commit without checking what changed
-
-**Tried**: Just ran `pre-commit run --all-files` without reviewing changes first
-
-**Why it failed**:
-
-- Couldn't write clear commit messages without knowing what changed
-- Wasted time investigating when `git status --short` would have shown it
-
-**Lesson**: Always check `git status --short` after running pre-commit to see what was modified
-
-### ❌ Attempt 2: Using generic commit messages
-
-**Tried**: "fix: pre-commit fixes" for all commits
-
-**Why it failed**:
-
-- No visibility into what was actually fixed
-- Hard to track which PRs had which issues
-- Didn't follow conventional commit format properly
-
-**Lesson**: Use specific commit messages that mention the actual fix (markdownlint, trailing whitespace, etc.)
-
-### ❌ Attempt 3: Trying to run all PRs in parallel
-
-**Tried**: Switching between branches rapidly without completing each fix
-
-**Why it failed**:
-
-- Git state confusion
-- Accidentally committed changes to wrong branch
-- Had to reset and start over
-
-**Lesson**: Complete each PR fix sequentially - checkout, fix, commit, push - before moving to next
-
-### ❌ Attempt 4: Not waiting for CI to complete
-
-**Tried**: Moving to next PR immediately after pushing without verifying CI
-
-**Why it failed**:
-
-- Discovered later that some fixes didn't work
-- Had to go back and re-fix PRs
-- Lost track of which PRs still needed attention
-
-**Lesson**: Check `gh pr checks` after pushing to confirm CI is at least running (pending) before moving on
+| Attempt | What Happened | Fix |
+|---------|--------------|-----|
+| Fixing both PRs in parallel | Git state confusion; committed to wrong branch | Do one PR completely (checkout → fix → commit → push → verify CI started) before moving to next |
+| Running `pre-commit` without excluding untracked dirs | 63 mismatches locally vs 20 in CI; `ProjectMnemosyne/` was scanned locally | Pass `--exclude ProjectMnemosyne` to match CI environment |
+| Pre-push hook fluke test failure | `test_load_test` failed with "language, tiers unexpected" at 22% into 4725-test run; not reproducible | Retry the push — transient `_SCHEMA_CACHE` ordering issue in full test suite |
+| `git stash pop` on wrong branch | Applied main-branch stash to feature branch, causing 16 merge-conflict files in `tests/unit/analysis/` | Resolve with `git checkout --ours <dir> && git add <dir>` (feature branch didn't touch those files) |
+| Not running tests after rebase | BAD_PATTERNS regression caused 32 test failures; pushed a broken branch | Always run `pytest tests/unit/scripts/` immediately after resolving rebase conflicts |
 
 ## Results & Parameters
 
-### Session Metrics
+### Tier Label Canonical Mapping (ProjectScylla)
 
-- **PRs fixed**: 6 total (#685, #688, #689, #691, #693, #697)
-- **Time per PR**: ~2-3 minutes average
-- **Common issue**: Markdown linting (5 out of 6 PRs)
-- **Secondary issues**: Trailing whitespace (1 PR), pixi.lock sync (1 PR)
-
-### Commit Message Template
-
-```bash
-git commit -m "$(cat <<'EOF'
-fix(<scope>): Apply <hook-name> auto-fixes to <component>
-
-Pre-commit hook auto-fixed formatting issues:
-- <specific fix 1>
-- <specific fix 2>
-
-Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
-EOF
-)"
+```
+T0 = Prompts    T1 = Skills    T2 = Tooling    T3 = Delegation
+T4 = Hierarchy  T5 = Hybrid    T6 = Super
 ```
 
-**Examples:**
+### Commit Message Templates
 
-```bash
-# Markdown linting fix
-git commit -m "fix(skills): Apply markdownlint auto-fixes to issue-completion-verification"
-
-# Trailing whitespace fix
-git commit -m "fix(skills): Apply pre-commit auto-fixes to pre-commit-maintenance skill"
-
-# Coverage threshold + pixi.lock fix
-git commit -m "fix(ci): Lower coverage threshold to 72% to match actual coverage"
 ```
+fix(tests): add missing blank line between test classes
+docs: fix N tier label mismatches caught by expanded consistency checker
+fix(scripts): restore full BAD_PATTERNS set after rebase onto main
+fix(skills): Apply markdownlint auto-fixes to <skill-name>
+fix(ci): Regenerate pixi.lock after removing lint environment
+```
+
+### CI Check Names (ProjectScylla)
+
+| Check | What it runs |
+|-------|-------------|
+| `pre-commit` | All hooks in `.pre-commit-config.yaml` |
+| `test (unit, tests/unit)` | `pixi run pytest tests/unit/ --cov-fail-under=75` |
+| `test (integration, tests/integration)` | `pixi run pytest tests/integration/` |
+| `Dependency vulnerability scan` | `pip-audit` |
+| `docker-validation` | Docker build + smoke test |
 
 ### Pre-commit Hook Reference
 
-| Hook | Purpose | Common Fixes |
-|------|---------|--------------|
-| `markdownlint-cli2` | Markdown formatting | Add blank lines (MD032), fix lists |
-| `trailing-whitespace` | Remove trailing spaces | Strip end-of-line whitespace |
-| `mixed-line-ending` | Normalize line endings | Convert CRLF to LF |
-| `end-of-file-fixer` | Ensure newline at EOF | Add final newline |
-| `check-yaml` | YAML syntax validation | Format YAML files |
-
-## Workflow Optimization
-
-### For Single PR
-
-```bash
-gh pr view <NUMBER> --json headRefName --jq .headRefName | xargs git checkout
-pre-commit run --all-files
-git add -u
-git commit -m "fix: Apply pre-commit auto-fixes"
-git push
-```
-
-### For Multiple PRs
-
-Create a list of PR numbers, then iterate:
-
-```bash
-for pr in 685 688 689 691 693 697; do
-  echo "Fixing PR #$pr..."
-  branch=$(gh pr view $pr --json headRefName --jq .headRefName)
-  git checkout $branch
-  git pull origin $branch
-  pre-commit run --all-files markdownlint-cli2 || true
-  if [[ -n $(git status --short) ]]; then
-    git add -u
-    git commit -m "fix: Apply markdownlint auto-fixes"
-    git push origin $branch
-  fi
-done
-```
-
-## Common Pitfalls
-
-1. **Not reading files before editing**: Must use Read tool before Edit tool
-2. **Forgetting to pull**: Branch might have updates from CI attempts
-3. **Not checking git status**: Don't know what was actually modified
-4. **Generic commit messages**: Hard to track what was fixed
-5. **Not verifying CI**: Don't know if fix actually worked
-
-## Verification Checklist
-
-After fixing each PR:
-
-- [ ] `git status` shows no uncommitted changes
-- [ ] Commit message is specific and descriptive
-- [ ] `git push` succeeded without errors
-- [ ] `gh pr checks <NUMBER>` shows pending or passing (not failing immediately)
-
-## Related Skills
-
-- `markdownlint-troubleshooting` - Deeper markdown linting issues
-- `pre-commit-maintenance` - Updating pre-commit hooks
-- `coverage-threshold-tuning` - Fixing coverage-related CI failures
-
-## Success Patterns
-
-### Pattern 1: Markdown-Only Fixes
-
-Most PRs (5/6 in this session) only needed markdown fixes:
-
-```bash
-pre-commit run --all-files markdownlint-cli2
-git add <modified-markdown-files>
-git commit -m "fix: Apply markdownlint auto-fixes"
-git push
-```
-
-### Pattern 2: Multi-Hook Fixes
-
-Some PRs need multiple hook fixes:
-
-```bash
-# Run all hooks
-pre-commit run --all-files
-
-# Review changes
-git status --short
-
-# Commit all fixes together
-git add -u
-git commit -m "fix: Apply pre-commit auto-fixes (markdown + whitespace)"
-git push
-```
-
-### Pattern 3: Coverage + Lock File Sync
-
-One PR needed special handling:
-
-```bash
-# Fix coverage threshold
-# Edit pyproject.toml and workflow files
-
-# Regenerate pixi.lock
-pixi install
-
-# Commit all together
-git add pyproject.toml .github/workflows/test.yml pixi.lock
-git commit -m "fix(ci): Lower coverage threshold and regenerate pixi.lock"
-git push
-```
-
-## Time Savings
-
-**Without systematic approach:**
-
-- Random order, repeated checks
-- Estimated: 30-40 minutes for 6 PRs
-
-**With systematic approach:**
-
-- Sequential fixes, clear workflow
-- Actual: 12-15 minutes for 6 PRs
-- **Time saved**: 50-60%
+| Hook | Purpose | Common Fix |
+|------|---------|------------|
+| `Ruff Format Python` | Python formatting | 2 blank lines between top-level classes |
+| `markdownlint-cli2` | Markdown formatting | MD032 blank lines around lists |
+| `Check Tier Label Consistency` | Tier name correctness | Fix T2/Skills→Tooling etc., or rewrite contextual ranges |
+| `trailing-whitespace` | Strip trailing spaces | Auto-fixed by hook |
+| `end-of-file-fixer` | Ensure newline at EOF | Auto-fixed by hook |
