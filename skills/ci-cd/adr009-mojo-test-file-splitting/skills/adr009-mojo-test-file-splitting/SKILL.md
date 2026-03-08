@@ -2,7 +2,7 @@
 name: adr009-mojo-test-file-splitting
 description: "Split Mojo test files exceeding ≤10 fn test_ limit to fix ADR-009 heap corruption in CI. Use when: (1) a Mojo test file has >10 fn test_ functions, (2) CI has intermittent non-deterministic heap crashes, (3) enforcing ADR-009 compliance."
 category: ci-cd
-date: 2026-03-07
+date: 2026-03-08
 user-invocable: false
 ---
 
@@ -29,6 +29,7 @@ user-invocable: false
 ### Step 1: Count tests in the file
 
 ```bash
+# Count actual fn test_ definitions (anchored to avoid matching ADR-009 header comment)
 grep -c "^fn test_" tests/path/to/test_file.mojo
 ```
 
@@ -134,6 +135,7 @@ gh pr create --title "fix(ci): split test_file.mojo to fix ADR-009 heap corrupti
 | `git push` before commit finished | Ran push immediately after `git commit` in background | Push executed before commit was visible in git index | Wait for commit to complete before pushing |
 | PR with invalid label | `gh pr create --label fix` | Label `fix` does not exist in the repo | Check available labels with `gh label list` before using `--label` |
 | PR create before push settled | `gh pr create` ran immediately after `git push` | "you must first push the current branch" error despite branch being pushed | Allow a moment for push to propagate; verify with `git status` first |
+| ADR-009 comment inflates count | Used `grep -c "fn test_"` to count tests; ADR-009 header comment contains `fn test_` text | Count was off by 1 (comment line matched) | Use `grep -c "^fn test_"` (anchored to line start) to exclude comment lines |
 
 ## Verified On
 
@@ -141,5 +143,6 @@ gh pr create --title "fix(ci): split test_file.mojo to fix ADR-009 heap corrupti
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3466, PR #4293 | `test_early_stopping.mojo`: 16 tests → 2 files of 8/8; glob CI pattern |
 | ProjectOdyssey | Issue #3475, PR #4316 | `test_reduction_edge_cases.mojo`: 15 tests → 2 files of 8/7; explicit CI filename list |
+| ProjectOdyssey | Issue #3511, PR #4391 | `test_memory_pool.mojo`: 13 tests → 2 files of 8/5; explicit CI filename list in "Core Utilities" group |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`
