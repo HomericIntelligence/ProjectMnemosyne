@@ -1,0 +1,8 @@
+{
+  "name": "audit-shared-links",
+  "version": "1.0.0",
+  "description": "Audit shared documentation files for missing link-backs in a root markdown file. Use when: (1) adding new .claude/shared/ files that should appear in CLAUDE.md Quick Links, (2) setting up a pre-commit hook to prevent link drift, (3) implementing issue-driven documentation audits with pytest-based tests.",
+  "category": "documentation",
+  "date": "2026-03-07",
+  "tags": ["documentation", "audit", "pre-commit", "links", "claude-md", "shared-files"]
+}
