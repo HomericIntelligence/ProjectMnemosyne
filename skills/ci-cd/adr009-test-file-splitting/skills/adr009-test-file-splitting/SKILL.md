@@ -83,10 +83,29 @@ git rm tests/shared/testing/test_assertions.mojo.DEPRECATED
 ```bash
 # Verify no file exceeds 10 (count actual functions, not comments)
 grep -c "^fn test_[a-z]" tests/shared/testing/test_assertions_*.mojo
-
-# CI glob auto-picks up new files if named test_*.mojo in the right directory
-# No workflow changes needed for testing/test_*.mojo glob pattern
 ```
+
+**Check whether CI uses a glob or explicit filenames:**
+
+```bash
+# If the CI pattern is a glob (test_*.mojo), new files are auto-discovered — no change needed
+# If the CI pattern lists explicit filenames, you MUST update the workflow:
+grep -n "test_data_generators.mojo" .github/workflows/comprehensive-tests.yml
+```
+
+When a CI group uses explicit filenames (e.g., `test_imports.mojo test_data_generators.mojo ...`),
+replace the original filename with the new split filenames:
+
+```yaml
+# Before
+pattern: "test_imports.mojo test_data_generators.mojo test_model_utils.mojo ..."
+
+# After
+pattern: "test_imports.mojo test_data_generators_part1.mojo test_data_generators_part2.mojo test_data_generators_part3.mojo test_data_generators_part4.mojo test_model_utils.mojo ..."
+```
+
+`validate_test_coverage.py` uses glob patterns internally, so it will auto-discover the new
+files and flag the old filename as missing from CI if you forget to update the workflow.
 
 ### 8. Commit and push
 
@@ -98,6 +117,7 @@ All pre-commit hooks must pass (mojo format, test coverage validation).
 |---------|----------------|---------------|----------------|
 | Using `grep "^fn test_"` to count tests | Counted comment lines matching the pattern | ADR-009 header comment contained `fn test_` text at line start | Use `^fn test_[a-z]` pattern instead |
 | Expecting 61 tests in split files | Issue description said 61 tests | The actual split files in main had 59 tests (issue count was approximate) | Always verify against actual code, not issue description |
+| Assuming CI glob auto-discovers new files | Skipped checking if CI pattern was explicit filenames | CI pattern for "Shared Infra & Testing" listed `test_data_generators.mojo` by name, so new part files were uncovered | Always grep the workflow for the original filename to check if it's explicit or a glob |
 
 ## Results & Parameters
 
@@ -123,5 +143,6 @@ grep -c "^fn test_[a-z]" <file>.mojo
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3397, PR #4094 | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3420, PR #4182 | `test_data_generators.mojo` (27 tests → 4 files); CI used explicit filenames requiring workflow update |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942
