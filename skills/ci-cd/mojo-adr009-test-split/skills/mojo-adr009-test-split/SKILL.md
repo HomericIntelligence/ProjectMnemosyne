@@ -143,6 +143,7 @@ grep -c "^fn test_[a-z]" <original>_part*.mojo   # should also total 18
 | Wrong ADR-009 header format | Used docstring note: "Note: Split from... See ADR-009." | ADR-009 requires `# ADR-009:` comment block format, not a note inside the docstring | Header must be `#` comment lines at file top, before the module docstring |
 | Modifying CI workflow glob pattern | Thought new files would not be matched by existing glob | Glob `test_*.mojo` already covers `test_*_part1.mojo` | Verify existing glob before making changes; it usually already works |
 | Checking `validate_test_coverage.py` for filename refs | Searched for original filename in the script | Script uses glob patterns, not hardcoded filenames | No changes needed to coverage validation script when splitting |
+| ADR-009 header inside module docstring | Placed `# ADR-009:` comment block inside the triple-quoted module docstring | Mojo treats it as part of the string literal, not a source comment | ADR-009 header must be `#` comment lines at the absolute top of the file, before the `"""` docstring |
 
 ## Additional Notes
 
@@ -168,5 +169,6 @@ grep -n "^fn test_" tests/path/to/test_<name>_*.mojo
 | ProjectOdyssey | Issue #3444, PR #4238 | test_backward.mojo: 21 tests → 3 files; found 7 missing tests + wrong header format |
 | ProjectOdyssey | Issue #3457, PR #4278 | test_optimizer_base.mojo: 18 tests → 3 files of 6/6/6; CI glob auto-covered new files |
 | ProjectOdyssey | Issue #3477, PR #4322 | test_conv.mojo: issue said 15 tests but actual count was 20 → 3 files of 7/7/6; CI workflow explicit pattern updated |
+| ProjectOdyssey | Issue #3498, PR #4373 | test_gradient_checker_meta.mojo: 14 tests → 2 files of 8/6; ADR-009 header at file top (before docstring); CI glob auto-covered |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`
