@@ -98,6 +98,7 @@ All pre-commit hooks must pass (mojo format, test coverage validation).
 |---------|----------------|---------------|----------------|
 | Using `grep "^fn test_"` to count tests | Counted comment lines matching the pattern | ADR-009 header comment contained `fn test_` text at line start | Use `^fn test_[a-z]` pattern instead |
 | Expecting 61 tests in split files | Issue description said 61 tests | The actual split files in main had 59 tests (issue count was approximate) | Always verify against actual code, not issue description |
+| Checking CI workflow for glob update when splitting | Looked for explicit filename references to update | CI used `pattern: "test_*.mojo"` glob covering entire directory | Files named `test_*_part{N}.mojo` are auto-discovered; no workflow update needed |
 
 ## Results & Parameters
 
@@ -123,5 +124,6 @@ grep -c "^fn test_[a-z]" <file>.mojo
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3397, PR #4094 | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3440, PR #4230 | [notes-nvfp4.md](../../references/notes-nvfp4.md) |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942
