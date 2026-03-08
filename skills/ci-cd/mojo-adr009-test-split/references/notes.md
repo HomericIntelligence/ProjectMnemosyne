@@ -10,7 +10,7 @@
 
 ## Original file test inventory
 
-```
+```text
 fn test_sum_backward_shapes
 fn test_sum_backward_gradient
 fn test_mean_backward_shapes
@@ -54,6 +54,7 @@ Grouped by operation family (not arbitrary index slicing):
 ## Pre-commit results
 
 All hooks passed on first attempt:
+
 - Mojo Format: Passed
 - Check for deprecated List[Type](args) syntax: Passed
 - Validate Test Coverage: Passed
@@ -123,3 +124,55 @@ Total tests in split files: 14 (7 missing — the gradient-checking tests)
 2. CI workflow being updated does NOT mean the split files are complete
 3. `grep -c "fn test_"` over-counts when header contains the pattern — use `grep -n "fn test_"`
 4. ADR-009 header format is `#` comment lines, NOT a note inside the module docstring
+
+---
+
+# Session Notes: ADR-009 Optimizer Base Test Split (Issue #3457)
+
+## Context
+
+- **Date**: 2026-03-07
+- **Issue**: #3457 — `tests/shared/autograd/test_optimizer_base.mojo` contained 18 `fn test_` functions
+- **ADR-009 limit**: ≤10 per file
+- **CI group**: Autograd
+- **Root cause**: Same Mojo v0.26.1 heap corruption bug
+
+## Initial State
+
+Single file `tests/shared/autograd/test_optimizer_base.mojo` containing 18 tests (not previously split):
+
+- `test_get_learning_rate`, `test_set_learning_rate`, `test_learning_rate_affects_training`
+- `test_multiple_lr_updates`, `test_lr_boundary_values`, `test_lr_zero`
+- `test_zero_gradients_basic`, `test_zero_gradients_multiple_params`, `test_zero_gradients_preserves_values`
+- `test_clip_gradients_no_clipping_needed`, `test_clip_gradients_basic_clipping`, `test_clip_gradients_zero_threshold`
+- `test_clip_gradients_multiple_params`, `test_clip_gradients_mixed`, `test_clip_gradients_large_threshold`
+- `test_count_parameters_empty`, `test_count_parameters_single`, `test_optimizer_base_integration`
+
+## Actions Taken
+
+1. Read the original file and categorized all 18 tests into 3 logical groups.
+2. Created `test_optimizer_base_part1.mojo` — 6 tests: LR get/set behavior
+3. Created `test_optimizer_base_part2.mojo` — 6 tests: gradient zeroing + basic clipping
+4. Created `test_optimizer_base_part3.mojo` — 6 tests: multi-param clipping, counting, integration
+5. Deleted `test_optimizer_base.mojo` with `git rm`.
+6. Added an ADR-009 explanatory comment to `.github/workflows/comprehensive-tests.yml` (no glob changes needed).
+7. Verified `validate_test_coverage.py` had no direct filename references (uses glob patterns).
+8. All pre-commit hooks passed: `mojo format`, `check-yaml`, `validate-test-coverage`.
+9. Created PR #4278 with auto-merge enabled.
+
+## Final State
+
+- 3 files, each with exactly 6 tests
+- 18 total test functions preserved
+- CI glob `autograd/test_*.mojo` covers new files automatically
+
+## PR
+
+- PR #4278: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4278
+- Auto-merge enabled with rebase strategy
+
+## Key Gotchas (new learnings vs #3444)
+
+1. When the CI group uses a glob (`autograd/test_*.mojo`), new `_part1/2/3` files are picked up automatically — no workflow edit needed
+2. Equal splits (6/6/6) are simpler to reason about than asymmetric splits for 18-test files
+3. `validate_test_coverage.py` uses glob patterns, so no script changes are needed when splitting
