@@ -1,0 +1,8 @@
+{
+  "name": "extensor-str-truncation",
+  "version": "1.0.0",
+  "description": "Add NumPy-style truncation to Mojo tensor __str__ methods to prevent performance issues with large tensors. Use when: (1) a tensor's __str__ iterates over all elements, (2) the project targets NumPy-compatible display semantics, (3) printing large tensors (>1K elements) causes slowdowns or excessive output.",
+  "category": "tooling",
+  "date": "2026-03-07",
+  "tags": ["mojo", "tensor", "string", "truncation", "numpy", "extensor", "performance", "display"]
+}
