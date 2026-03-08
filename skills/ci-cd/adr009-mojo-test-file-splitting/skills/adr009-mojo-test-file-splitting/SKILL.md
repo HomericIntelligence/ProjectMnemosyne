@@ -141,5 +141,6 @@ gh pr create --title "fix(ci): split test_file.mojo to fix ADR-009 heap corrupti
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3466, PR #4293 | `test_early_stopping.mojo`: 16 tests → 2 files of 8/8; glob CI pattern |
 | ProjectOdyssey | Issue #3475, PR #4316 | `test_reduction_edge_cases.mojo`: 15 tests → 2 files of 8/7; explicit CI filename list |
+| ProjectOdyssey | Issue #3626, PR #4417 | `test_gradient_validation.mojo`: 12 tests → 2 files of 8/4; explicit CI filename list; `validate_test_coverage.py` did not reference file (no update needed) |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`
