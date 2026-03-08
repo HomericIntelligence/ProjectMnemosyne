@@ -1,0 +1,8 @@
+{
+  "name": "adr009-explicit-pattern-ci-update",
+  "version": "1.0.0",
+  "description": "Workflow for splitting Mojo test files (ADR-009) when the CI group uses an explicit filename list instead of a glob pattern. Use when: (1) splitting a test file in a CI group that lists filenames explicitly (not test_*.mojo glob), (2) Core Tensors or similar fixed-pattern CI groups fail intermittently with heap corruption, (3) the new split files won't be auto-discovered by the workflow.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["mojo", "adr-009", "heap-corruption", "ci", "test-split", "explicit-pattern", "workflow-update"]
+}
