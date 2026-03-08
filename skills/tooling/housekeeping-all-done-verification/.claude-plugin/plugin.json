@@ -1,0 +1,8 @@
+{
+  "name": "housekeeping-all-done-verification",
+  "version": "1.0.0",
+  "description": "Verify external state for pure housekeeping issues where all cleanup may already be complete. Use when: (1) issue describes git branch/worktree cleanup or GitHub issue closure, (2) all target artifacts (branches, worktrees, issues) may be pre-cleaned, (3) need to create an empty verification PR to close the issue.",
+  "category": "tooling",
+  "date": "2026-03-07",
+  "tags": ["housekeeping", "cleanup", "verification", "git", "github", "worktree", "branch-cleanup", "empty-commit"]
+}
