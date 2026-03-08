@@ -76,11 +76,17 @@ Replace the single entry in the exclusion list:
 
 ### Step 6: Check CI workflow patterns
 
-The CI workflow (`comprehensive-tests.yml`) typically uses glob patterns like `training/test_*.mojo`, so new `_part1` / `_part2` files are picked up automatically. Verify no hardcoded filename references exist:
+The CI workflow (`comprehensive-tests.yml`) may use either glob patterns or explicit filename lists.
+Always check before editing:
 
 ```bash
 grep -r "test_original_name" .github/workflows/
 ```
+
+- **Glob pattern** (e.g., `training/test_*.mojo`): new `_part1` / `_part2` files are picked up
+  automatically — no workflow change needed.
+- **Explicit filename list**: you MUST replace the original filename with both new filenames in
+  the workflow YAML.
 
 ### Step 7: Commit and PR
 
@@ -123,5 +129,17 @@ gh pr create --title "fix(ci): split test_file.mojo to fix ADR-009 heap corrupti
 |---------|----------------|---------------|----------------|
 | Ignore the limit | Running 16 tests in one file | Non-deterministic heap corruption crashes CI 13/20 runs | Always split at >10; don't wait for failures |
 | Reducing test count | Deleting some tests to stay under limit | Loses test coverage | Split into parts, never delete tests |
-| Hardcoding filenames in CI workflow | Updating `comprehensive-tests.yml` with explicit part1/part2 filenames | Unnecessary — the workflow uses `test_*.mojo` globs | Check glob patterns first before editing CI workflow |
+| Assuming CI uses glob patterns | Expected new files auto-picked up by glob without checking | Some CI groups (e.g., Core Tensors) use explicit filename lists, not globs | Always run `grep test_original_name .github/workflows/` before assuming glob coverage |
 | Creating backup files | Keeping `.orig` or `.bak` copies of original | Pollutes git staging and can confuse pre-commit hooks | Delete original cleanly; git history preserves it |
+| `git push` before commit finished | Ran push immediately after `git commit` in background | Push executed before commit was visible in git index | Wait for commit to complete before pushing |
+| PR with invalid label | `gh pr create --label fix` | Label `fix` does not exist in the repo | Check available labels with `gh label list` before using `--label` |
+| PR create before push settled | `gh pr create` ran immediately after `git push` | "you must first push the current branch" error despite branch being pushed | Allow a moment for push to propagate; verify with `git status` first |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Issue #3466, PR #4293 | `test_early_stopping.mojo`: 16 tests → 2 files of 8/8; glob CI pattern |
+| ProjectOdyssey | Issue #3475, PR #4316 | `test_reduction_edge_cases.mojo`: 15 tests → 2 files of 8/7; explicit CI filename list |
+
+**Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`
