@@ -183,6 +183,8 @@ Group tests by **logical category** (operation type), not alphabetically:
 | Single combined CI pattern glob | Tried `test_elementwise_dispatch_part*.mojo` wildcard | `comprehensive-tests.yml` `pattern:` field uses space-separated literal names for explicit-list groups | List all filenames explicitly when the group uses explicit filenames |
 | Keep original file + add split files | Considered keeping original for backwards compat | Would re-introduce the heap corruption bug | Delete original; replace completely |
 | Assuming glob pattern for all CI groups | Did not check CI pattern type first | Some groups use explicit filenames, some use glob | Always check CI pattern type before deciding if workflow update is needed |
+| Trusting issue description for CI group name | Issue said "Core NN Modules" | Actual CI group was "Core Utilities" — different name | Always grep the actual workflow: `grep -r "test_filename" .github/` |
+| Using label in PR creation | `gh pr create --label "fix"` | Label "fix" didn't exist in the repo | Check `gh label list` first or omit `--label` |
 
 ## Verified On
 
@@ -194,3 +196,4 @@ Group tests by **logical category** (operation type), not alphabetically:
 | ProjectOdyssey | Issue #3435, PR #4220 | Split test_arithmetic_backward.mojo (23 → 3 files), explicit CI pattern update |
 | ProjectOdyssey | Issue #3455, PR #4276 | Split test_mobilenetv1_layers.mojo (19 → 3 files), glob CI pattern auto-covered |
 | ProjectOdyssey | Issue #3458, PR #4279 | Split test_googlenet_layers.mojo (18 → 3 files, 8+6+4), explicit CI pattern update required |
+| ProjectOdyssey | Issue #3490, PR #4352 | Split test_linear.mojo (14 → 2 files, 8+6), explicit CI list; issue named wrong CI group |
