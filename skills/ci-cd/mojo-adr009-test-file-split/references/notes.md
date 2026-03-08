@@ -98,3 +98,81 @@ pattern: "... test_shape_edge_cases_part1.mojo test_shape_edge_cases_part2.mojo 
 ## PR
 
 PR #4193: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4193
+
+---
+
+# Session Notes — Issue #3488 (Fourth Application)
+
+## Date
+
+2026-03-08
+
+## Issue
+
+GitHub Issue #3488: `fix(ci): split test_slicing.mojo into 2 files per ADR-009`
+
+## Problem
+
+`tests/shared/core/test_slicing.mojo` contained 14 `fn test_` functions (357 lines),
+exceeding ADR-009's ≤10 limit. The "Core Tensors" CI group used explicit filenames in
+the pattern, requiring a direct workflow update.
+
+## Solution Applied
+
+Split into 2 files of ≤8 tests each, grouped by functionality:
+
+- `test_slicing_part1.mojo` — 8 tests (basic functionality, view semantics, reference counting, one edge case)
+- `test_slicing_part2.mojo` — 6 tests (remaining edge cases, batch extraction)
+
+## Test Distribution
+
+### Part 1 (8 tests)
+
+- test_slice_basic_1d
+- test_slice_2d_axis0
+- test_slice_4d_batch
+- test_slice_full_range
+- test_slice_is_marked_as_view
+- test_slice_refcount_increments
+- test_multiple_slices_share_refcount
+- test_slice_empty_range
+
+### Part 2 (6 tests)
+
+- test_slice_single_element
+- test_slice_out_of_bounds_start
+- test_slice_out_of_bounds_end
+- test_slice_invalid_axis
+- test_batch_extraction_uses_view
+- test_batch_extraction_pair
+
+## CI Pattern Update Required
+
+The `comprehensive-tests.yml` "Core Tensors" group (line 194) used explicit filenames:
+
+```yaml
+# Before
+pattern: "... test_slicing.mojo"
+
+# After
+pattern: "... test_slicing_part1.mojo test_slicing_part2.mojo"
+```
+
+## Key Observations
+
+1. `validate_test_coverage.py` does NOT reference individual filenames — uses directory-level patterns,
+   so no update was needed there. Always verify before assuming.
+2. CI workflow uses a space-separated string for `pattern:`, not a YAML list — simple string replacement.
+3. Pre-commit hooks (Mojo format, YAML check, test count badge) all passed cleanly.
+4. Git recognized the split as a rename for part1 (56% similarity threshold met).
+
+## PR
+
+PR #4347: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4347
+
+## Commit
+
+`fix(ci): split test_slicing.mojo into 2 files per ADR-009`
+
+3 files changed: 1 deleted (test_slicing.mojo), 2 created (test_slicing_part1-2.mojo),
+1 modified (comprehensive-tests.yml)
