@@ -2,7 +2,7 @@
 name: mojo-adr009-test-split
 description: "Split oversized Mojo test files to comply with ADR-009 (≤10 fn test_ per file) and eliminate heap corruption CI failures. Use when: a test_*.mojo file exceeds 10 fn test_ functions, CI shows intermittent libKGENCompilerRTShared.so crashes, or a test group non-deterministically fails under high load."
 category: ci-cd
-date: 2026-03-07
+date: 2026-03-08
 user-invocable: false
 ---
 
@@ -168,5 +168,6 @@ grep -n "^fn test_" tests/path/to/test_<name>_*.mojo
 | ProjectOdyssey | Issue #3444, PR #4238 | test_backward.mojo: 21 tests → 3 files; found 7 missing tests + wrong header format |
 | ProjectOdyssey | Issue #3457, PR #4278 | test_optimizer_base.mojo: 18 tests → 3 files of 6/6/6; CI glob auto-covered new files |
 | ProjectOdyssey | Issue #3477, PR #4322 | test_conv.mojo: issue said 15 tests but actual count was 20 → 3 files of 7/7/6; CI workflow explicit pattern updated |
+| ProjectOdyssey | Issue #3519, PR #4397 | test_loading.mojo: 13 tests → 2 files of 8/5; CI uses glob `test_*.mojo` so no workflow changes needed |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`
