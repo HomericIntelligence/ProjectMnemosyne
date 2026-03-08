@@ -98,6 +98,7 @@ All pre-commit hooks must pass (mojo format, test coverage validation).
 |---------|----------------|---------------|----------------|
 | Using `grep "^fn test_"` to count tests | Counted comment lines matching the pattern | ADR-009 header comment contained `fn test_` text at line start | Use `^fn test_[a-z]` pattern instead |
 | Expecting 61 tests in split files | Issue description said 61 tests | The actual split files in main had 59 tests (issue count was approximate) | Always verify against actual code, not issue description |
+| Placing ADR-009 header comment inside the docstring | Issue template showed header inside `"""..."""` | Comment style `# ADR-009:` cannot appear inside docstrings; must be outside | Place ADR-009 `#` comments before the docstring, at the top of the file |
 
 ## Results & Parameters
 
@@ -122,6 +123,20 @@ grep -c "^fn test_[a-z]" <file>.mojo
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectOdyssey | Issue #3397, PR #4094 | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3397, PR #4094 — partial split (9 files, kept source) | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3403, PR #4122 — complete replacement (42 tests → 6 files, source deleted) | [notes.md](../../references/notes.md) |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942
+
+## Variant: Complete Replacement (Delete Source File)
+
+When ALL tests must be moved out (no tests remaining in the original file), delete the source:
+
+```bash
+# Delete original instead of editing it
+git rm tests/shared/data/transforms/test_generic_transforms.mojo
+# Create 6 new files with all tests distributed
+```
+
+The CI glob pattern (`transforms/test_*.mojo`) automatically covers new `_partN.mojo` files — no
+workflow changes needed. This variant was used for `test_generic_transforms.mojo` (42 tests → 6 files).
