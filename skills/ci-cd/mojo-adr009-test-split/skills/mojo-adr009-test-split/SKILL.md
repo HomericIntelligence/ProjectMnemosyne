@@ -170,6 +170,7 @@ grep -n "^fn test_" tests/path/to/test_<name>_*.mojo
 | ProjectOdyssey | Issue #3457, PR #4278 | test_optimizer_base.mojo: 18 tests → 3 files of 6/6/6; CI glob auto-covered new files |
 | ProjectOdyssey | Issue #3477, PR #4322 | test_conv.mojo: issue said 15 tests but actual count was 20 → 3 files of 7/7/6; CI workflow explicit pattern updated |
 | ProjectOdyssey | Issue #3482, PR #4331 | test_training_loop.mojo: issue said 14 tests but actual count was 18 → 3 files of 7/7/4; CI glob auto-covered; `validate_test_coverage.py` explicit exclude list updated |
+| ProjectOdyssey | Issue #3489, PR #4348 | test_matrix_edge_cases.mojo: 14 tests → 2 files of 8/6; CI explicit pattern in Core Tensors group updated; all pre-commit hooks passed first attempt |
 
 ### When `validate_test_coverage.py` needs updating
 
