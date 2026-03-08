@@ -1,6 +1,6 @@
 ---
 name: adr009-test-file-splitting
-description: "Workflow for splitting Mojo test files that exceed ADR-009 ≤10 fn test_ limit. Use when: CI has heap corruption failures, a test file has >10 fn test_ functions, or Testing Fixtures CI group fails intermittently."
+description: "Workflow for splitting Mojo test files that exceed ADR-009 ≤10 fn test_ limit. Use when: CI has heap corruption failures, a test file has >10 fn test_ functions, or any CI group fails intermittently due to heap corruption."
 category: ci-cd
 date: 2026-03-07
 user-invocable: false
@@ -21,7 +21,7 @@ to prevent Mojo v0.26.1 heap corruption (`libKGENCompilerRTShared.so` JIT fault)
 ## When to Use
 
 - A Mojo test file has more than 10 `fn test_` functions
-- CI Testing Fixtures group fails intermittently (13/20 runs is a strong signal)
+- Any CI group fails intermittently due to heap corruption (13/20 runs is a strong signal)
 - A new large test file is being added that would exceed the limit
 - ADR-009 compliance check fails in PR review
 
@@ -49,43 +49,44 @@ Target: ≤8 per file (buffer below the 10-test limit that triggers heap corrupt
 Move tests that form a coherent group (e.g., `assert_equal_int` tests from a float file,
 `assert_type` tests from a tensor_values file). Prefer semantic groupings over arbitrary splits.
 
+For a simple 2-way split of a single file, group by test theme:
+
+- Part 1: creation, basic behavior, edge cases
+- Part 2: advanced scenarios, error handling, determinism
+
 ### 4. Create new split file with ADR-009 header
 
-Each new file must include the ADR-009 comment:
+Each new file must include the ADR-009 comment in its module docstring:
 
 ```mojo
-"""Tests for <description>.
+"""Tests for <description> - Part N: <theme>.
 
 # ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
 # Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
-# high test load. Split from test_assertions.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
+# high test load. Split from <original_file>.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
 
-Note: Split from <original_file>.mojo to satisfy ADR-009 ≤8 fn test_ target per file.
+Tests <ComponentName> which <description>.
 """
 ```
 
-### 5. Update source file
+### 5. Delete the original file (simple 2-way split)
 
-Remove moved tests from the source file:
-
-- Remove the `fn test_` function definitions
-- Remove moved functions from the `main()` call list
-- Remove now-unused imports
-
-### 6. Delete stale artifacts
+When replacing a single file with two new files:
 
 ```bash
-git rm tests/shared/testing/test_assertions.mojo.DEPRECATED
+git rm <original_file>.mojo
 ```
 
-### 7. Verify counts and CI coverage
+The new `_part1.mojo` and `_part2.mojo` files replace it entirely.
+
+### 6. Verify counts and CI coverage
 
 ```bash
 # Verify no file exceeds 10 (count actual functions, not comments)
-grep -c "^fn test_[a-z]" tests/shared/testing/test_assertions_*.mojo
+grep -c "^fn test_[a-z]" <directory>/test_<name>_part*.mojo
 
 # CI glob auto-picks up new files if named test_*.mojo in the right directory
-# No workflow changes needed for testing/test_*.mojo glob pattern
+# Check the CI workflow pattern for the affected group - usually no changes needed
 ```
 
 ### 8. Commit and push
@@ -109,7 +110,11 @@ All pre-commit hooks must pass (mojo format, test coverage validation).
 **CI glob pattern** (no changes needed for new files with `test_` prefix):
 
 ```yaml
+# Testing Fixtures group
 pattern: "testing/test_*.mojo"
+
+# Data Samplers group (part of broader Data group)
+pattern: "test_*.mojo datasets/test_*.mojo samplers/test_*.mojo transforms/test_*.mojo loaders/test_*.mojo formats/test_*.mojo"
 ```
 
 **Grep pattern for accurate count:**
@@ -122,6 +127,7 @@ grep -c "^fn test_[a-z]" <file>.mojo
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectOdyssey | Issue #3397, PR #4094 | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3397, PR #4094 (Testing Fixtures group) | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3474, PR #4312 (Data Samplers group) | [notes.md](../../references/notes.md) |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942
