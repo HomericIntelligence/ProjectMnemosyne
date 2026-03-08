@@ -37,3 +37,48 @@ https://github.com/HomericIntelligence/ProjectOdyssey/pull/4330
 ## Timing
 
 2026-03-07
+
+---
+
+# Session Notes: ADR-009 Test File Split (Issue #3503)
+
+## Date
+
+2026-03-08
+
+## Context
+
+- Repo: HomericIntelligence/ProjectOdyssey
+- Branch: 3503-auto-impl
+- Issue: #3503 - split test_pipeline.mojo (13 tests) per ADR-009
+- PR created: #4381
+
+## File split details
+
+- Original: tests/shared/data/transforms/test_pipeline.mojo (13 fn test_)
+- Part 1: test_pipeline_part1.mojo (8 tests: creation + execution + composition_start)
+- Part 2: test_pipeline_part2.mojo (5 tests: append + error_handling + utilities)
+
+## CI workflow observation
+
+The Data group in comprehensive-tests.yml uses:
+
+```text
+pattern: "test_*.mojo datasets/test_*.mojo samplers/test_*.mojo transforms/test_*.mojo loaders/test_*.mojo formats/test_*.mojo"
+```
+
+The wildcard `transforms/test_*.mojo` picks up both split files automatically.
+No workflow edit was needed.
+
+## Pre-commit results
+
+- mojo-format: Passed
+- trailing-whitespace: Passed
+- end-of-file-fixer: Passed
+- validate-test-coverage: Passed (no reference to test_pipeline.mojo in the script)
+
+## Shell environment notes
+
+- `just` not available in worktree environments — use `pixi run` directly
+- `pixi run pre-commit run` only accepts ONE hook name at a time
+- Background tasks via run_in_background may not flush output during session
