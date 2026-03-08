@@ -122,6 +122,7 @@ grep -c "^fn test_[a-z]" <file>.mojo
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectOdyssey | Issue #3397, PR #4094 | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3397, PR #4094 — split test_assertions.mojo (61 tests, testing/) | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3456, PR #4277 — split test_training_infrastructure.mojo (18 tests, training/) | [notes.md](../../references/notes.md) |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942
