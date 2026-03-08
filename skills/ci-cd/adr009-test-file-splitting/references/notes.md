@@ -258,3 +258,55 @@ Nothing. Approach was straightforward on first attempt. Pre-commit hooks passed 
 - **Workflow update**: Required — replaced `test_advanced_activations.mojo` with 3 new filenames
 - **Pre-commit hooks**: All passed on first attempt (mojo format, validate_test_coverage, YAML)
 - **Key note**: Targeting ≤8 tests per file (not just ≤10) provides a safety margin
+
+---
+
+# Session #3490: test_linear.mojo
+
+- **Issue**: #3490
+- **PR**: #4352
+- **Date**: 2026-03-08
+- **Original**: `tests/shared/core/test_linear.mojo` — 14 tests → 2 parts (8+6)
+
+## Tests in the original file
+
+1. test_linear_forward_basic
+2. test_linear_forward_batch
+3. test_linear_forward_no_bias
+4. test_linear_forward_single_feature
+5. test_linear_backward_gradients
+6. test_linear_backward_no_bias
+7. test_linear_weight_init
+8. test_linear_bias_init
+9. test_linear_backward_multi_sample
+10. test_linear_backward_accumulate_gradients
+11. test_linear_integration_forward_backward
+12. test_linear_integration_parameter_update
+13. test_linear_edge_case_single_sample
+14. test_linear_numerical_gradient_check
+
+## Split Decision
+
+- Part 1 (8 tests): tests 1–8 (forward pass + basic backward/init)
+- Part 2 (6 tests): tests 9–14 (backward multi-sample + integration + edge cases)
+- Grouping rationale: forward-facing tests first, then more complex backward/integration tests
+
+## CI Pattern Discovery
+
+The issue title mentioned "Core NN Modules" as the CI group, but the actual group was
+"Core Utilities". Found by running: `grep -r "test_linear.mojo" .github/workflows/`
+
+The "Core Utilities" group uses an explicit space-separated filename list — not a glob.
+Both the old filename removal and new filename insertion were required in the YAML.
+
+## Gotchas
+
+1. `gh pr create --label "fix"` failed — label "fix" doesn't exist in ProjectOdyssey.
+   Omit `--label` or run `gh label list` first to see available labels.
+2. Issue description said wrong CI group name. Always grep the actual workflow.
+3. `validate_test_coverage.py` runs in pre-commit — catches uncovered files automatically,
+   confirming that the CI update must be done before committing the new split files.
+
+## Pre-commit hooks
+
+All passed on first attempt: mojo format, YAML check, validate_test_coverage.py.
