@@ -1,0 +1,8 @@
+{
+  "name": "adr009-split-audit-and-recovery",
+  "version": "1.0.0",
+  "description": "Audit completed ADR-009 test file splits for dropped tests, missing headers, and secondary violations. Use when: (1) a split was previously done but issue is still open, (2) the post-split test count doesn't match the original, (3) other test files in the same CI group also violate ADR-009.",
+  "category": "ci-cd",
+  "date": "2026-03-07",
+  "tags": ["adr009", "mojo", "test-splitting", "heap-corruption", "audit", "recovery"]
+}
