@@ -83,9 +83,35 @@ git rm tests/shared/testing/test_assertions.mojo.DEPRECATED
 ```bash
 # Verify no file exceeds 10 (count actual functions, not comments)
 grep -c "^fn test_[a-z]" tests/shared/testing/test_assertions_*.mojo
+```
 
-# CI glob auto-picks up new files if named test_*.mojo in the right directory
-# No workflow changes needed for testing/test_*.mojo glob pattern
+**CI coverage — two cases:**
+
+**Case A: CI uses glob patterns** (e.g., `pattern: "test_*.mojo"`)
+
+New files are picked up automatically — no workflow changes needed.
+
+```yaml
+# Example: glob auto-discovers new files
+pattern: "testing/test_*.mojo"
+```
+
+**Case B: CI uses explicit filename lists** (e.g., `Core Tensors` group)
+
+Must manually update the pattern string to replace the original filename with the new split filenames:
+
+```yaml
+# Before:
+pattern: "... test_shape.mojo ..."
+
+# After (replace original with all 4 split files):
+pattern: "... test_shape_part1.mojo test_shape_part2.mojo test_shape_part3.mojo test_shape_part4.mojo ..."
+```
+
+Check which case applies by inspecting the workflow pattern for the relevant test group:
+
+```bash
+grep -A3 '"Core Tensors"' .github/workflows/comprehensive-tests.yml
 ```
 
 ### 8. Commit and push
@@ -98,6 +124,7 @@ All pre-commit hooks must pass (mojo format, test coverage validation).
 |---------|----------------|---------------|----------------|
 | Using `grep "^fn test_"` to count tests | Counted comment lines matching the pattern | ADR-009 header comment contained `fn test_` text at line start | Use `^fn test_[a-z]` pattern instead |
 | Expecting 61 tests in split files | Issue description said 61 tests | The actual split files in main had 59 tests (issue count was approximate) | Always verify against actual code, not issue description |
+| Assuming CI auto-discovers split files | Assumed `test_shape_part*.mojo` would be found by glob | Core Tensors CI group uses explicit filename list, not a glob | Always check whether the group uses glob or explicit list before finishing |
 
 ## Results & Parameters
 
@@ -123,5 +150,6 @@ grep -c "^fn test_[a-z]" <file>.mojo
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3397, PR #4094 | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3422, PR #4187 | test_shape.mojo (26 tests) → 4 files, explicit CI list update required |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942
