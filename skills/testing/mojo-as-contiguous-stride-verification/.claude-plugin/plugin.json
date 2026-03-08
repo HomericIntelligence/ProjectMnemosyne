@@ -1,0 +1,8 @@
+{
+  "name": "mojo-as-contiguous-stride-verification",
+  "version": "1.0.0",
+  "description": "TDD pattern for verifying stride-aware memory remapping in Mojo tensor operations. Use when: (1) testing as_contiguous() or similar stride-based copy operations, (2) verifying non-contiguous tensors produce correct row-major output, (3) writing regression tests before fixing stride-indexing bugs.",
+  "category": "testing",
+  "date": "2026-03-07",
+  "tags": ["mojo", "tensor", "stride", "contiguous", "tdd", "regression-test", "memory-layout"]
+}
