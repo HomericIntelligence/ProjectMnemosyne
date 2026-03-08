@@ -176,3 +176,54 @@ PR #4347: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4347
 
 3 files changed: 1 deleted (test_slicing.mojo), 2 created (test_slicing_part1-2.mojo),
 1 modified (comprehensive-tests.yml)
+
+---
+
+# Session Notes — Issue #3492 (Sixth Application)
+
+## Date
+
+2026-03-08
+
+## Issue
+
+GitHub Issue #3492: `fix(ci): split test_arg_parser.mojo (13 tests) — Mojo heap corruption (ADR-009)`
+
+## Problem
+
+`tests/shared/utils/test_arg_parser.mojo` contained 13 `fn test_` functions, exceeding ADR-009's ≤10
+limit. This caused intermittent `libKGENCompilerRTShared.so` JIT faults in Mojo v0.26.1, making the
+"Shared Infra & Testing" CI group fail on 13/20 recent runs.
+
+## Solution Applied
+
+Split into 2 files of ≤8 tests each:
+
+- `test_arg_parser_part1.mojo` — 8 tests (ArgumentSpec creation, ParsedArgs getters, parser
+  creation and add_argument)
+- `test_arg_parser_part2.mojo` — 5 tests (add_flag, invalid type rejection, defaults, multiple
+  values, parser populate defaults)
+
+## CI Pattern
+
+The "Shared Infra & Testing" group used wildcard `utils/test_*.mojo` — no workflow update needed.
+`validate_test_coverage.py` had no hardcoded filename references either.
+
+## Test Distribution
+
+Part 1 (8 tests): test_argument_spec_creation, test_parsed_args_string, test_parsed_args_int,
+test_parsed_args_float, test_parsed_args_bool, test_parsed_args_has, test_argument_parser_creation,
+test_argument_parser_add_arguments
+
+Part 2 (5 tests): test_argument_parser_add_flag, test_argument_parser_invalid_type,
+test_argument_defaults, test_parsed_args_multiple_values, test_parser_populates_defaults
+
+## PR
+
+PR #4360: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4360
+
+## Commit
+
+`fix(ci): split test_arg_parser.mojo to comply with ADR-009 (≤10 tests/file)`
+
+3 files changed: 1 deleted (test_arg_parser.mojo), 2 created (test_arg_parser_part1-2.mojo)
