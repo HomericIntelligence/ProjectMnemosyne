@@ -245,3 +245,16 @@ Nothing. Approach was straightforward on first attempt. Pre-commit hooks passed 
 - **Key finding**: `test_*_layers.mojo` glob does NOT match `test_googlenet_layers_part1.mojo` — explicit CI update required
 - **validate_test_coverage.py**: Caught uncovered part files, confirmed CI update was needed
 - **Pre-commit hooks**: All passed on first attempt
+
+---
+
+# Session #3462: test_advanced_activations.mojo
+
+- **Issue**: #3462
+- **PR**: #4288
+- **Original**: 17 tests → 3 parts (4+8+5)
+- **Split**: Part1=Swish/SiLU (4), Part2=Mish+ELU forward (8), Part3=ELU backward (5)
+- **CI group**: `Core Activations & Types` uses explicit space-separated filename list
+- **Workflow update**: Required — replaced `test_advanced_activations.mojo` with 3 new filenames
+- **Pre-commit hooks**: All passed on first attempt (mojo format, validate_test_coverage, YAML)
+- **Key note**: Targeting ≤8 tests per file (not just ≤10) provides a safety margin
