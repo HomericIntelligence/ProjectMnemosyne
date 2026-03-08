@@ -115,3 +115,31 @@ For 22 tests: `ceil(22/8) = 3` parts, with 8/8/6 distribution.
 | Ignoring the limit | Running 22 tests in one file | 13/20 CI runs failing with heap corruption | ADR-009 limit is real — enforce it |
 | `continue-on-error: true` | Marking group non-blocking in CI | Hides signal, doesn't fix root cause | Only use as temporary mitigation, not fix |
 | Reducing test complexity | Simplifying individual tests | Heap corruption is load-based, not complexity-based | Total `fn test_` count is the trigger, not test logic |
+| Assumed split was complete | Saw N split files and `.DEPRECATED`, assumed done | Tests were missing from split files — some categories of tests omitted | Always verify by comparing `fn test_` lists between original and split files, not just file existence |
+| Used `grep -c "fn test_"` to count tests | Counted lines matching pattern to verify ≤10 limit | ADR-009 header comment contains "fn test_" text, inflating count by 1 | Use `grep -n "fn test_"` or `grep -c "^fn test_[a-z]"` to see actual lines and verify count |
+| Wrong ADR-009 header format | Used docstring note: "Note: Split from... See ADR-009." | ADR-009 requires `# ADR-009:` comment block format, not a note inside the docstring | Header must be `#` comment lines at file top, before the module docstring |
+
+## Additional Notes
+
+### Verifying the CI workflow is already updated
+
+When a split was prepared in advance, the CI workflow may already reference the new filenames
+even though the split files are incomplete. Always check CI workflow AND test content separately:
+
+```bash
+# Check CI workflow has the new filenames
+grep "test_<name>" .github/workflows/comprehensive-tests.yml
+
+# Verify split files have all tests from the original
+grep -n "^fn test_" tests/path/to/test_<name>.mojo.DEPRECATED
+grep -n "^fn test_" tests/path/to/test_<name>_*.mojo
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Issue #3438, PR #4223 | test_reduction.mojo: 22 tests → 3 files |
+| ProjectOdyssey | Issue #3444, PR #4238 | test_backward.mojo: 21 tests → 3 files; found 7 missing tests + wrong header format |
+
+**Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`
