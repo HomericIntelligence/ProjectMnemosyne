@@ -27,9 +27,13 @@ user-invocable: false
 ### 1. Count tests in the file
 
 ```bash
-grep -c "^fn test_" tests/shared/core/test_elementwise.mojo
+grep -c "^fn test_[a-z]" tests/shared/core/test_elementwise.mojo
 # 37 — exceeds the ≤10 limit
 ```
+
+Use `^fn test_[a-z]` (not `^fn test_`) to avoid counting ADR-009 header comment lines that
+contain `fn test_` text at line start. Also: never trust the issue description's test count —
+always grep the actual file.
 
 ### 2. Plan the split
 
@@ -113,6 +117,8 @@ gh pr merge --auto --rebase
 | Shared imports via include | Extract common imports to a shared header file | Mojo v0.26.1 has no `#include` mechanism; each file must have its own full import block | Copy imports verbatim into every part file |
 | Fewer, larger parts | Split into 3 files of ~12 tests each | Still exceeds the ≤10 limit and can still trigger heap corruption | Target ≤8 per file for safety margin; hard stop at 10 |
 | Label the PR | `gh pr create --label fix` | Label `fix` does not exist in the target repo | Check available labels with `gh label list` before using `--label` |
+| Trust issue description for test count | Used count from issue body directly (said 25) | Actual count was 31 — off by 6 | Always grep `^fn test_[a-z]` to get the real count; issue descriptions are often approximate |
+| Target ≤8 only for the last split file | Initially gave last part 10 tests | Exceeded ≤8 target from issue requirements | Plan all splits upfront so each file lands ≤8 not just ≤10 |
 
 ## Results & Parameters
 
@@ -138,3 +144,12 @@ Total: 37 tests preserved
 - Before: `Core Elementwise` group failed 13/20 runs (~65% failure rate)
 - After: All 5 part files run in the same CI group; heap corruption eliminated
 - CI group name unchanged — only the `pattern:` field updated
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Issue #3409, PR #4142 — split `test_elementwise.mojo` (37 tests → 5 files) | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3424, PR #4189 — split `test_utility.mojo` (31 tests → 4 files) | [notes.md](../../references/notes.md) |
+
+**Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issues #2942, #3397
