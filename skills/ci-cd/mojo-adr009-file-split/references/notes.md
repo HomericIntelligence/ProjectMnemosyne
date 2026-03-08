@@ -83,3 +83,43 @@ pattern: "core/test_comparison_ops.mojo"
 # After
 pattern: "core/test_comparison_ops_part1.mojo test_comparison_ops_part2.mojo test_comparison_ops_part3.mojo"
 ```
+
+---
+
+# Session Notes: Mojo ADR-009 File Split — test_base.mojo (Issue #3635)
+
+## Date
+
+2026-03-08
+
+## Issue
+
+GitHub issue #3635: tests/shared/training/test_base.mojo had 11 fn test_ functions, exceeding
+ADR-009 limit of 10.
+
+## Steps
+
+1. Read .claude-prompt-3635.md for task description
+2. Read test_base.mojo — confirmed 11 fn test_ functions
+3. Checked CI workflow: uses training/test_*.mojo glob — no changes needed
+4. Checked validate_test_coverage.py — had explicit reference to test_base.mojo — needed updating
+5. Created test_base_part1.mojo (8 tests) and test_base_part2.mojo (3 tests)
+6. Deleted original test_base.mojo
+7. Updated validate_test_coverage.py to reference both new files
+8. git add, commit (pre-commit hooks all passed), push, gh pr create
+9. PR #4444 created successfully
+
+## Key files modified
+
+- tests/shared/training/test_base_part1.mojo (created)
+- tests/shared/training/test_base_part2.mojo (created)
+- tests/shared/training/test_base.mojo (deleted)
+- scripts/validate_test_coverage.py (updated)
+
+## Key Observations
+
+- CI used a glob pattern (`training/test_*.mojo`) so no workflow YAML changes were needed
+- validate_test_coverage.py had an explicit list of excluded training test files requiring update
+- Pre-commit "Validate Test Coverage" hook caught the mismatch correctly during testing
+
+## Time taken: ~10 minutes

@@ -139,6 +139,7 @@ pattern: "core/test_foo_part1.mojo test_foo_part2.mojo test_foo_part3.mojo"
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3454, PR #4270 | [notes.md](../../references/notes.md) |
+| ProjectOdyssey | Issue #3635, PR #4444 | `test_base.mojo`: 11 tests → part1 (8 tests) + part2 (3 tests); glob CI pattern; validate_test_coverage.py updated |
 
 **Related:** `docs/adr/ADR-009-heap-corruption-workaround.md`, issue #2942,
 skill `adr009-test-file-splitting` (covers glob-pattern CI workflows)
