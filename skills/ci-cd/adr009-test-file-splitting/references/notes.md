@@ -1,43 +1,42 @@
-# Session Notes: ADR-009 Test File Splitting (Issue #3397)
+# Session Notes: ADR-009 Test File Splitting
 
-## Date
+## Context
 
-2026-03-07
+- **Issue**: #3458 - `tests/models/test_googlenet_layers.mojo` had 18 `fn test_` functions
+- **ADR-009 limit**: ≤10 `fn test_` functions per file
+- **CI failure rate**: 13/20 recent runs on `main` failing intermittently
+- **Root cause**: Mojo v0.26.1 JIT heap corruption (`libKGENCompilerRTShared.so`) under high test load
 
-## Problem
+## Approach
 
-test_assertions.mojo (61 tests) was causing intermittent heap corruption in Mojo v0.26.1 CI.
-ADR-009 mandates ≤10 fn test_ per file.
+Read the original file, counted 18 tests, planned split into 3 groups:
+- Part 1: 8 tests (inception module + branch forward passes)
+- Part 2: 6 tests (concat values, initial conv, avgpool, FC)
+- Part 3: 4 tests (backward passes)
 
-## Initial State (already in main)
+## Key Discovery: CI Pattern Mismatch
 
-The file had been partially split into 7 files:
+The `Models` CI group uses pattern `test_*_layers.mojo`. New files like
+`test_googlenet_layers_part1.mojo` do NOT match because they end in `_part1.mojo`.
 
-- test_assertions_bool.mojo: 5 tests
-- test_assertions_comparison.mojo: 8 tests
-- test_assertions_equality.mojo: 8 tests
-- test_assertions_float.mojo: 10 tests (AT hard limit)
-- test_assertions_shape.mojo: 9 tests
-- test_assertions_tensor_props.mojo: 8 tests
-- test_assertions_tensor_values.mojo: 11 tests (OVER hard limit)
-- test_assertions.mojo.DEPRECATED (stale artifact)
+Fix: Explicitly list the part files in the CI pattern alongside the glob.
 
-## Actions Taken
+## Pre-commit Hook Result
 
-1. Created test_assertions_int.mojo (2 tests) - moved assert_equal_int tests from float file
-2. Updated test_assertions_float.mojo: 10 → 8 tests
-3. Created test_assertions_tensor_type.mojo (3 tests) - moved assert_type + not_equal_fails
-4. Updated test_assertions_tensor_values.mojo: 11 → 8 tests
-5. Deleted test_assertions.mojo.DEPRECATED
+All hooks passed on first attempt:
+- Mojo Format: Passed
+- Check for deprecated List[Type](args) syntax: Passed
+- Validate Test Coverage: Passed
+- Check YAML: Passed
 
-## Final State
+## Files Changed
 
-- 9 files, all ≤9 tests each
-- 59 total test functions preserved
-- CI glob testing/test_*.mojo covers new files automatically
-- PR #4094 created, auto-merge enabled
+- DELETED: `tests/models/test_googlenet_layers.mojo`
+- CREATED: `tests/models/test_googlenet_layers_part1.mojo` (8 tests)
+- CREATED: `tests/models/test_googlenet_layers_part2.mojo` (6 tests)
+- CREATED: `tests/models/test_googlenet_layers_part3.mojo` (4 tests)
+- MODIFIED: `.github/workflows/comprehensive-tests.yml` (Models group pattern)
 
-## Key Insight
+## PR
 
-The ADR-009 comment in SKILL.md headers contains the text "fn test_" which matches
-grep "^fn test_" if placed at line start. Always use "^fn test_[a-z]" for accurate counts.
+https://github.com/HomericIntelligence/ProjectOdyssey/pull/4279
