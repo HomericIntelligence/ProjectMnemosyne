@@ -1,0 +1,7 @@
+{
+  "name": "worktree-bulk-artifact-cleanup",
+  "version": "1.0.0",
+  "description": "Clean generated artifacts from multiple git worktrees without losing real changes. Use when: (1) worktrees have __pycache__ or build artifacts showing as uncommitted changes, (2) bulk cleanup of generated files across many worktrees needed.",
+  "category": "tooling",
+  "date": "2026-03-10"
+}
