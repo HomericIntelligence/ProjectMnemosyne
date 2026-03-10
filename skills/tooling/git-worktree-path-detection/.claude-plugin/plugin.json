@@ -1,0 +1,8 @@
+{
+  "name": "git-worktree-path-detection",
+  "version": "1.0.0",
+  "description": "Fix git worktree path extraction from porcelain output. Use when: (1) parsing git worktree list --porcelain, (2) extracting worktree paths by branch name, (3) building scripts that manage multiple worktrees.",
+  "category": "tooling",
+  "date": "2026-03-09",
+  "tags": ["git", "worktree", "awk", "bash", "path-detection"]
+}
