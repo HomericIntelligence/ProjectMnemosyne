@@ -1,6 +1,8 @@
 {
   "name": "rescue-broken-prs",
   "version": "1.0.0",
-  "description": "Recover and repair broken pull requests with failed CI checks",
-  "skills": "./skills"
+  "description": "Fix CI failures across multiple PRs and coordinate auto-merge. Use when: (1) multiple PRs have CI failures unrelated to code changes, (2) flaky tests need retrigger, (3) artifact/infrastructure issues block merges.",
+  "category": "ci-cd",
+  "date": "2026-03-09",
+  "tags": ["ci-cd", "automation", "pr-management", "flaky-tests", "branch-protection"]
 }
