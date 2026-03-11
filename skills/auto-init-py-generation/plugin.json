@@ -1,0 +1,11 @@
+{
+  "name": "auto-init-py-generation",
+  "version": "1.0.0",
+  "description": "Auto-generate __init__.py files with __all__ exports for Python packages with mypy implicit_reexport=false compliance",
+  "category": "tooling",
+  "tags": ["python", "mypy", "init", "exports", "ast", "code-generation"],
+  "date_created": "2026-03-11",
+  "source_project": "ProjectScylla",
+  "source_issues": ["#1359"],
+  "source_prs": ["#1472"]
+}
