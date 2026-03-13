@@ -1,0 +1,8 @@
+{
+  "name": "mojo-format-non-blocking",
+  "version": "1.0.0",
+  "description": "TRIGGER CONDITIONS: Mojo 0.26.1 formatter crashes with '_python_symbols' object has no attribute 'comptime_assert_stmt'. Use when: (1) mojo format crashes on files using comptime_assert or new syntax, (2) pre-commit CI blocks PRs due to formatter bugs, (3) multiple PRs need parallel formatting fixes. Fix: split mojo-format into advisory CI step with SKIP=mojo-format + continue-on-error; apply manual formatting from CI diff output.",
+  "category": "ci-cd",
+  "date": "2026-03-13",
+  "tags": ["ci-cd", "mojo-format", "pre-commit", "formatter-crash", "continue-on-error", "workaround", "parallel-fixes", "worktree-agents", "odyssey"]
+}
