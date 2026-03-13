@@ -1,0 +1,8 @@
+{
+  "name": "resolve-mojo-rebase-conflict",
+  "version": "1.0.0",
+  "description": "Resolve git rebase conflicts in Mojo test files where incoming commits used invalid Python syntax; replace with valid Mojo Bool-flag order-agnostic assertion pattern",
+  "category": "ci-cd",
+  "date": "2026-03-12",
+  "tags": ["mojo", "git", "rebase", "conflict-resolution", "testing", "ci-fix"]
+}
