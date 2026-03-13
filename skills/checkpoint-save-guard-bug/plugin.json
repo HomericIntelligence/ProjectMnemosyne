@@ -1,0 +1,10 @@
+{
+  "name": "checkpoint-save-guard-bug",
+  "version": "1.0.0",
+  "description": "Fix for --retry-errors not saving checkpoint when only intermediate-state runs exist. Trigger: retry-errors finds stuck runs but checkpoint is not updated on disk.",
+  "category": "debugging",
+  "created": "2026-03-13",
+  "project": "ProjectScylla",
+  "pr": "HomericIntelligence/ProjectScylla#1474",
+  "outcome": "success"
+}
