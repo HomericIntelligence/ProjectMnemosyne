@@ -1,0 +1,7 @@
+{
+  "name": "null-best-subtest-fallthrough-fix",
+  "version": "1.0.0",
+  "description": "Fix pattern for elif→if fallthrough when a primary JSON file exists but has a null key, preventing fallback to a secondary file. Use when: (1) a tier result has best_subtest=null in result.json but best_subtest.json has the correct value, (2) an if/elif chain silently skips a fallback because a primary file exists with empty/null data, (3) T5 subtests fail with 'all required tiers failed' despite lower tiers completing successfully.",
+  "category": "debugging",
+  "date": "2026-03-13"
+}
