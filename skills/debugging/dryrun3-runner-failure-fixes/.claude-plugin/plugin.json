@@ -16,5 +16,6 @@
     "tier-manager",
     "subtest-executor"
   ],
-  "user-invocable": false
+  "user-invocable": false,
+  "version": "1.0.0"
 }
