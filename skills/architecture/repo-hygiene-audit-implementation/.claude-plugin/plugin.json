@@ -1,0 +1,7 @@
+{
+  "name": "repo-hygiene-audit-implementation",
+  "version": "1.0.0",
+  "description": "Workflow for implementing repository hygiene audit fixes: triaging findings, migrating Pydantic to_dict() methods to model_dump(), adding exception logging, and fixing metadata. Use when: (1) responding to an automated code-quality audit, (2) migrating manual to_dict() to model_dump() safely, (3) adding debug logging to silent exception catches.",
+  "category": "architecture",
+  "date": "2026-03-13"
+}
