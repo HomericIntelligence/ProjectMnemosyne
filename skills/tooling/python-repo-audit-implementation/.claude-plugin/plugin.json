@@ -1,0 +1,7 @@
+{
+  "name": "python-repo-audit-implementation",
+  "version": "1.0.0",
+  "description": "Implements a multi-phase repository audit plan for Python packages: security fixes, DRY consolidation, dead code removal, error handling, CI matrix expansion, and packaging gaps. Use when: (1) a repo audit report exists with Critical/Major findings to implement, (2) bringing a Python utility library to production-grade quality, (3) consolidating subprocess wrappers or shared constants across multiple modules.",
+  "category": "tooling",
+  "date": "2026-03-13"
+}
