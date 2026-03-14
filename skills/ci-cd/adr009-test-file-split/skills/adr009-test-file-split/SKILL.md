@@ -1,8 +1,8 @@
 ---
 name: adr009-test-file-split
-description: "Split Mojo test files exceeding ADR-009 limit of ≤10 fn test_ functions to prevent heap corruption CI failures. Use when: test file has >10 fn test_ functions, CI shows intermittent libKGENCompilerRTShared.so crashes, or ADR-009 compliance check flags a file."
+description: "Split Mojo test files to comply with ADR-009 heap corruption workaround (≤10 fn test_ per file). Use when: a Mojo test file exceeds 10 fn test_ functions, CI shows intermittent heap corruption from libKGENCompilerRTShared.so, or a CI group fails non-deterministically."
 category: ci-cd
-date: 2026-03-08
+date: 2026-03-07
 user-invocable: false
 ---
 
@@ -10,127 +10,135 @@ user-invocable: false
 
 | Attribute | Value |
 |-----------|-------|
-| **Trigger** | Mojo test file has >10 `fn test_` functions |
-| **Symptom** | Intermittent CI heap corruption: `libKGENCompilerRTShared.so` JIT fault |
-| **Fix** | Split into ≤8 tests per file with ADR-009 header comment |
-| **CI Impact** | Wildcard patterns auto-discover split files — usually no workflow changes needed |
+| **Trigger** | Mojo test file with >10 `fn test_` functions causing intermittent CI failures |
+| **Root Cause** | Mojo v0.26.1 heap corruption bug (`libKGENCompilerRTShared.so`) under high test load |
+| **Fix** | Split into multiple files of ≤8 tests each (ADR-009 mandates ≤10, target ≤8 for safety margin) |
+| **CI Impact** | Glob patterns like `testing/test_*.mojo` auto-discover split files — no workflow changes needed |
+| **Effort** | ~15 minutes for a 28-test file split into 4 parts |
 
 ## When to Use
 
-- A `test_*.mojo` file has **more than 10 `fn test_`** functions (ADR-009 violation)
-- CI shows non-deterministic `libKGENCompilerRTShared.so` heap corruption crashes
-- Running `grep -c "^fn test_" <file>` returns > 10
-- ADR-009 compliance tooling flags a file as over-limit
+- A Mojo test file has more than 10 `fn test_` functions
+- CI shows intermittent failures with `libKGENCompilerRTShared.so` JIT fault in the error log
+- A CI group (e.g., "Testing Fixtures", "Shared Infra & Testing") fails non-deterministically
+- ADR-009 compliance check flags a file as exceeding the limit
+- CI failure rate across recent runs is high (e.g., 13/20) with no single reproducible root cause
 
 ## Verified Workflow
 
-### 1. Count existing test functions
+### 1. Count test functions in the file
 
 ```bash
 grep -c "^fn test_" tests/path/to/test_file.mojo
 ```
 
+If count > 10, proceed with split.
+
 ### 2. Plan the split
 
-- Target: ≤8 tests per file (buffer below the 10-function limit)
-- Name files `test_<original>_part1.mojo` and `test_<original>_part2.mojo`
-- Group logically: basic/correctness in part1, edge cases/special inputs in part2
+Divide tests into logical groups of ≤8 per file:
 
-### 3. Create part1 and part2 files
+- Group by the function under test (e.g., `zeros_tensor`, `ones_tensor`, `full_tensor`)
+- Keep integration/workflow tests together in the last file
+- Target ≤8 (not just ≤10) for a safety margin
 
-Each file must include the ADR-009 header comment in the module docstring:
+### 3. Create split files with ADR-009 header
+
+Each new file MUST include this header comment:
 
 ```mojo
-"""<Description> (Part N of 2).
-
-ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
-Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
-high test load. Split from <original_file>.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
-"""
+# ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
+# Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
+# high test load. Split from <original_file>.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
 ```
 
-Each file needs its own `fn main() raises:` that calls only its subset of tests.
+Name files with `_part1`, `_part2`, etc. suffix:
 
-### 4. Delete the original file
+```
+test_tensor_factory.mojo → test_tensor_factory_part1.mojo
+                           test_tensor_factory_part2.mojo
+                           test_tensor_factory_part3.mojo
+                           test_tensor_factory_part4.mojo
+```
+
+### 4. Each split file needs its own `main()` function
+
+```mojo
+fn main() raises:
+    """Run all tests."""
+    test_zeros_tensor_float32()
+    test_zeros_tensor_int32()
+    # ... all tests in this file
+```
+
+### 5. Delete the original file
 
 ```bash
-rm tests/path/to/test_original.mojo
+rm tests/path/to/test_file.mojo
 ```
 
-### 5. Check CI workflow coverage
-
-Check if the CI group uses a wildcard pattern that will auto-discover the new files:
+### 6. Verify test counts
 
 ```bash
-grep -A3 "path.*tests/" .github/workflows/comprehensive-tests.yml | grep pattern
+grep -c "^fn test_" tests/path/to/test_file_part*.mojo
+# Each file should show ≤8
 ```
 
-If the pattern is `test_*.mojo` or `training/test_*.mojo`, the new files are **automatically covered** — no workflow changes needed.
+### 7. Check CI workflow glob patterns
 
-If the original file was listed **explicitly by name**, update the workflow to reference both new filenames.
-
-### 6. Check validate_test_coverage.py
+Check if CI uses glob patterns or explicit filenames:
 
 ```bash
-grep "test_original" scripts/validate_test_coverage.py
+grep -r "test_tensor_factory\|testing/test_" .github/workflows/
 ```
 
-If the original file was in an exclude list, update it to reference the new filenames (or remove if they should be in CI coverage).
+- **Glob pattern** (`testing/test_*.mojo`): No changes needed — new files auto-discovered
+- **Explicit filenames**: Update workflow to reference new `_part1`, `_part2`, etc. filenames
 
-### 7. Commit
+### 8. Commit and push
 
 ```bash
-git add tests/path/to/test_original.mojo \
-        tests/path/to/test_original_part1.mojo \
-        tests/path/to/test_original_part2.mojo
-git commit -m "fix(ci): split test_<name>.mojo into 2 files per ADR-009"
+git add tests/path/to/test_file.mojo tests/path/to/test_file_part*.mojo
+git commit -m "fix(ci): split test_file.mojo into N files (ADR-009)"
 ```
-
-Pre-commit hooks validate test coverage automatically — they will catch if the split files are not covered.
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Keeping original file and adding parts | Rename original to part1, add part2 | Original still has >10 tests; ADR-009 violation remains | Must delete original; only the split files should exist |
-| Updating CI workflow explicitly | Editing `comprehensive-tests.yml` to list new filenames | Unnecessary — wildcard `test_*.mojo` patterns auto-discover split files | Check existing CI patterns before editing workflows; wildcards handle discovery |
-| Splitting at 5 tests each | Equal distribution regardless of logical grouping | Tests felt arbitrary; harder to understand what each file covers | Group logically: part1=basic/normalization, part2=edge cases/special inputs |
+| Updating CI workflow pattern | Checked `comprehensive-tests.yml` for explicit filename references | Not needed — workflow already used `testing/test_*.mojo` glob | Always check if CI uses globs before modifying workflow files |
+| Using `_part_1` naming | Considered underscore-number naming | Would sort inconsistently | Use `_part1`, `_part2` (no underscore before number) |
+| Keeping original file | Thought about keeping original with reduced tests | Would still trigger heap corruption for the remaining tests | Delete the original entirely and fully redistribute tests |
 
 ## Results & Parameters
 
-### Key numbers
+### Split Distribution for 28-test File
 
-- ADR-009 limit: **≤10** `fn test_` functions per file
-- Recommended target: **≤8** per file (2-function safety buffer)
-- Typical split: part1 ≈ 8 tests, part2 ≈ 3 tests
+| File | Tests | Content |
+|------|-------|---------|
+| `*_part1.mojo` | 8 | `zeros_tensor` + `ones_tensor` tests |
+| `*_part2.mojo` | 8 | `full_tensor` + `random_tensor` tests |
+| `*_part3.mojo` | 8 | `random_normal_tensor` + `set_tensor_value` (first half) |
+| `*_part4.mojo` | 4 | `set_tensor_value` (second half) + integration tests |
 
-### Verification commands
-
-```bash
-# Count tests in each new file
-grep -c "^fn test_" tests/path/to/test_original_part1.mojo
-grep -c "^fn test_" tests/path/to/test_original_part2.mojo
-
-# Confirm original is gone
-ls tests/path/to/test_original.mojo  # Should not exist
-
-# Verify CI discovery (wildcard must match new names)
-just test-group tests/path/to "test_*.mojo"
-```
-
-### Pre-commit hook output on success
+### ADR-009 Compliance Formula
 
 ```
-Mojo Format..............................................................Passed
-Validate Test Coverage...................................................Passed
-Trim Trailing Whitespace.................................................Passed
-Fix End of Files.........................................................Passed
+files_needed = ceil(total_tests / 8)  # target ≤8 per file
+tests_per_file ≤ 8                    # safety margin below the 10-test limit
 ```
 
-### CI group that uses wildcard pattern (no changes needed)
+### Pre-commit Hook Behavior
 
-```yaml
-- name: "Misc Tests"
-  path: "tests"
-  pattern: "test_*.mojo training/test_*.mojo ..."
+Pre-commit hooks (Mojo format, validate_test_coverage) pass automatically for split files with no extra configuration.
+
+### Key Imports per File
+
+Only import what each file needs — don't copy all imports from the original:
+
+```mojo
+from shared.testing.tensor_factory import (
+    zeros_tensor,   # only functions tested in this file
+    ones_tensor,
+)
 ```

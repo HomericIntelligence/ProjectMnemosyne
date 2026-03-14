@@ -154,6 +154,24 @@ git commit -m "fix(ci): split test_original.mojo into N files (ADR-009)"
 - **All pre-commit hooks**: Passed on first attempt
 - **PR**: #4279
 
+### Session Results (Issue #3607)
+
+- **Original file**: `tests/shared/training/test_mixed_precision.mojo` — 13 tests
+- **Split into**: 2 files of 8/5 tests (GradientScaler tests / gradient checking + clipping)
+- **CI pattern**: `training/test_*.mojo` glob in `Shared Infra` group — new files auto-discovered, no CI changes needed
+- **validate_test_coverage.py**: Exclusion list update required — replaced `test_mixed_precision.mojo` with `test_mixed_precision_part1.mojo` and `test_mixed_precision_part2.mojo`
+- **All pre-commit hooks**: Passed on first attempt (mojo format, validate_test_coverage, mypy, ruff, bandit)
+- **PR**: #4402
+
+### Session Results (Issue #3623)
+
+- **Original file**: `tests/shared/training/test_gradient_ops.mojo` — 12 tests
+- **Split into**: 2 files of 8/4 tests (accumulate + scale operations / zero operations + workflow)
+- **CI pattern**: `training/test_*.mojo` glob in `Shared Infra` group — new files auto-discovered, no CI changes needed
+- **validate_test_coverage.py**: No changes needed — no explicit reference to original filename
+- **All pre-commit hooks**: Passed on first attempt (mojo format, validate_test_coverage, YAML)
+- **PR**: #4412
+
 ### Key Parameters
 
 | Parameter | Value |
@@ -188,12 +206,23 @@ Group tests by **logical category** (operation type), not alphabetically:
 
 ## Verified On
 
-| Project | Context | Details |
-|---------|---------|---------|
-| ProjectOdyssey | Issue #3399, PR #4106 | Split test_elementwise_dispatch.mojo (47 → 6 files) |
-| ProjectOdyssey | Issue #3429, PR #4209 | Split test_activation_funcs.mojo (24 → 3 files), explicit CI update needed |
-| ProjectOdyssey | Issue #3432, PR #4215 | Split test_logging.mojo (22 → 3 files), glob CI pattern auto-covered |
-| ProjectOdyssey | Issue #3435, PR #4220 | Split test_arithmetic_backward.mojo (23 → 3 files), explicit CI pattern update |
-| ProjectOdyssey | Issue #3455, PR #4276 | Split test_mobilenetv1_layers.mojo (19 → 3 files), glob CI pattern auto-covered |
-| ProjectOdyssey | Issue #3458, PR #4279 | Split test_googlenet_layers.mojo (18 → 3 files, 8+6+4), explicit CI pattern update required |
-| ProjectOdyssey | Issue #3490, PR #4352 | Split test_linear.mojo (14 → 2 files, 8+6), explicit CI list; issue named wrong CI group |
+| Project | Issue | PR | File Split | Notes |
+|---------|-------|-----|------------|-------|
+| ProjectOdyssey | #3397 | #4094 | test_assertions.mojo (61 → 9 files) | Partially pre-split; fixed existing over-limit files |
+| ProjectOdyssey | #3399 | #4106 | test_elementwise_dispatch.mojo (47 → 6 files) | Glob CI, auto-discovered |
+| ProjectOdyssey | #3429 | #4209 | test_activation_funcs.mojo (24 → 3 files) | Explicit CI pattern required |
+| ProjectOdyssey | #3432 | #4215 | test_logging.mojo (22 → 3 files) | Glob CI, auto-discovered |
+| ProjectOdyssey | #3435 | #4220 | test_arithmetic_backward.mojo (23 → 3 files) | Explicit CI pattern required |
+| ProjectOdyssey | #3445 | #4244 | test_callbacks.mojo (20 → 3 files) | Glob CI, auto-discovered; validate_test_coverage.py exclusion list updated |
+| ProjectOdyssey | #3455 | #4276 | test_mobilenetv1_layers.mojo (19 → 3 files) | Glob CI, auto-discovered |
+| ProjectOdyssey | #3456 | #4277 | test_training_infrastructure.mojo (18 → 3 files) | Glob CI, auto-discovered |
+| ProjectOdyssey | #3458 | #4279 | test_googlenet_layers.mojo (18 → 3 files) | Explicit CI pattern required |
+| ProjectOdyssey | #3462 | — | test_advanced_activations.mojo (17 → 3 files) | — |
+| ProjectOdyssey | #3463 | #4290 | test_optimizer_utils.mojo (16 → 2 files) | validate_test_coverage.py explicit filename updated; fn test_main() doesn't count |
+| ProjectOdyssey | #3474 | #4312 | test_weighted.mojo (15 → 2 files) | Glob CI, auto-discovered |
+| ProjectOdyssey | #3490 | #4352 | test_linear.mojo (14 → 2 files) | Explicit CI list; issue named wrong CI group |
+| ProjectOdyssey | #3517 | — | test_no_grad_context.mojo | — |
+| ProjectOdyssey | #3607 | #4402 | test_mixed_precision.mojo (13 → 2 files) | Glob CI; validate_test_coverage.py exclusion list required |
+| ProjectOdyssey | #3623 | #4412 | test_gradient_ops.mojo (12 → 2 files) | Glob CI; no validate_test_coverage.py changes needed |
+
+See [references/notes.md](../references/notes.md) for full session details.
