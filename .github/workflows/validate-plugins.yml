@@ -2,18 +2,9 @@ name: Validate Plugins
 
 on:
   pull_request:
-    paths:
-      - 'skills/**'
-      - 'plugins/**'
-      - 'templates/**'
-      - 'scripts/validate_plugins.py'
   push:
     branches:
       - main
-    paths:
-      - 'skills/**'
-      - 'plugins/**'
-      - 'templates/**'
   workflow_dispatch:
 
 jobs:
