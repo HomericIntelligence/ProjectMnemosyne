@@ -1,0 +1,7 @@
+{
+  "name": "bulk-issue-dedup",
+  "version": "1.0.0",
+  "description": "Bulk deduplicate GitHub issues by clustering similar titles, identifying canonical issues, and closing all duplicates with referenced comments. Use when: (1) issue tracker has grown noisy with repeated variants of the same request, (2) a large batch of related issues needs triage, (3) you want to reduce issue count before sprint planning.",
+  "category": "tooling",
+  "date": "2026-03-13"
+}
