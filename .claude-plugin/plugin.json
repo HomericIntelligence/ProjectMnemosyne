@@ -1,8 +1,8 @@
 {
-  "name": "manage-experiment-audit",
+  "name": "scripts-coverage-bare-import-resolution",
   "version": "1.0.0",
-  "description": "Audit and fix patterns for manage_experiment.py CLI: --from batch-mode wiring, checkpoint reset logic, mock patching for local imports, test fixture gotchas",
-  "category": "debugging",
+  "description": "Resolve bare import failures (sys.path.insert patterns) when adding pytest coverage for scripts, including conftest.py setup, double-import isinstance fixes, and pytest collection prevention",
+  "category": "testing",
   "author": "ProjectScylla",
-  "created": "2026-02-24"
+  "created": "2026-03-13"
 }
