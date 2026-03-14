@@ -1,0 +1,7 @@
+{
+  "name": "pr-ci-failure-triage",
+  "version": "1.0.0",
+  "description": "Triage and fix CI failures blocking PR merges in Mojo/GitHub Actions projects. Use when: (1) multiple PRs are stuck with CI failures, (2) pre-commit markdownlint or action SHA errors appear, (3) Mojo --Werror unused return value errors block builds.",
+  "category": "ci-cd",
+  "date": "2026-03-14"
+}
