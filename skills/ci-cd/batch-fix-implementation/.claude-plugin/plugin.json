@@ -1,0 +1,7 @@
+{
+  "name": "batch-fix-implementation",
+  "version": "1.0.0",
+  "description": "Implement coordinated batch fixes across multiple files using minimal edits. Use when: (1) fixing multiple low-complexity issues in a single PR, (2) consolidating text/comment/docstring changes across 5+ files, (3) coordinating related fixes that improve code consistency.",
+  "category": "ci-cd",
+  "date": "2026-03-14"
+}
