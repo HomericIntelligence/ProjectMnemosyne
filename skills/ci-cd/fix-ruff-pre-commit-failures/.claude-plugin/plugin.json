@@ -1,0 +1,7 @@
+{
+  "name": "fix-ruff-pre-commit-failures",
+  "version": "1.0.0",
+  "description": "Systematically fix ruff pre-commit CI failures (N806, E501, format) on a PR branch. Use when: (1) pre-commit CI is failing with ruff errors on a PR, (2) you need to fix N806 uppercase variables inside functions, E501 line-too-long in docstrings, or ruff-format auto-collapse issues.",
+  "category": "ci-cd",
+  "date": "2026-03-13"
+}
