@@ -1,3 +1,11 @@
+---
+name: fix-stale-prs-and-branches
+description: "Rebase open PRs with no CI / failing CI, delete stale remote branches, commit orphaned local work as a new PR. Use when: open PRs show no checks, CI fails due to merge conflicts, stale remote branches need cleanup."
+category: tooling
+date: 2026-03-06
+user-invocable: false
+---
+
 # Skill: Fix Stale PRs and Branches
 
 ## Overview
@@ -107,6 +115,12 @@ gh pr merge <pr-number> --auto --rebase
 
 ## Failed Attempts
 
+| Attempt | What Went Wrong | Fix |
+|---------|----------------|-----|
+| `git checkout` with redirect | Safety Net blocks `git checkout` with multiple positional args | Use `git switch` exclusively |
+| `git branch -D` force delete | Safety Net blocks force-delete without merge check | Ask user to run manually after confirming PR is merged |
+| `pre-commit run <id1> <id2>` | Only accepts one hook ID at a time | Run separately or use `--all-files` |
+
 ### `git checkout` with redirect blocked by Safety Net
 
 ```bash
@@ -143,6 +157,14 @@ pre-commit run ruff-check-python ruff-format-python --all-files
 `pre-commit run` only accepts one hook ID at a time as a positional argument.
 
 **Fix**: Run them separately or just use `--all-files` without a specific hook ID.
+
+## Results & Parameters
+
+| Context | Outcome |
+|---------|---------|
+| 3 rebased PRs with CI conflicts | All CI triggered after rebase |
+| 2 stale remote branches | Deleted with `git push origin --delete` |
+| Orphaned local work | Committed as new PR |
 
 ## Key Gotchas
 
