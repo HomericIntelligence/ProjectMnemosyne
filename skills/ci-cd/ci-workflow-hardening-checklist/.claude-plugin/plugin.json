@@ -1,0 +1,7 @@
+{
+  "name": "ci-workflow-hardening-checklist",
+  "version": "1.0.0",
+  "description": "Harden GitHub Actions workflows with concurrency controls, least-privilege permissions, timeouts, and gitleaks allowlist for test fixtures. Use when: (1) workflows lack concurrency/cancel-in-progress controls, (2) gitleaks finds false positives in test fixtures or example data, (3) workflows missing permissions blocks or timeouts, (4) adding Trivy scanning to Docker build jobs.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
