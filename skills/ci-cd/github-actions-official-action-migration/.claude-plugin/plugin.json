@@ -1,0 +1,7 @@
+{
+  "name": "github-actions-official-action-migration",
+  "version": "1.0.0",
+  "description": "Migrate manual binary download steps in GitHub Actions workflows to use official published actions. Use when: (1) a tool has an official GitHub Action that replaces manual wget/curl download steps, (2) a workflow manually downloads, verifies SHA256, and runs a binary, (3) you want to eliminate manual hash maintenance burden while preserving security guarantees.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
