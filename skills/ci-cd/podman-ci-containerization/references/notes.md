@@ -1,5 +1,26 @@
 # Raw Session Notes: Podman CI Containerization
 
+## Session 2 Amendment (2026-03-15)
+
+### Change: Weekly Schedule for CI Image Rebuild
+
+Added `schedule: cron: "0 6 * * 1"` to `ci-image.yml` (PR #1494) to rebuild the container
+weekly and pick up base image security patches without requiring a code change.
+
+**Push condition simplified**: Changed from:
+```yaml
+if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+```
+to:
+```yaml
+if: github.event_name != 'pull_request'
+```
+
+**Why**: Scheduled runs always execute on the default branch — no ref check needed.
+Both scheduled and `workflow_dispatch` events should push the image.
+
+---
+
 ## Session Context
 
 - **Project**: ProjectScylla (AI agent testing framework)

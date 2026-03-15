@@ -139,6 +139,9 @@ on:
     paths: ["ci/Containerfile", "pixi.toml", "pixi.lock", ".pre-commit-config.yaml", "pyproject.toml"]
   pull_request:
     paths: ["ci/Containerfile", "pixi.toml", "pixi.lock", ".pre-commit-config.yaml", "pyproject.toml"]
+  schedule:
+    # Rebuild weekly to pick up base image security patches without code change
+    - cron: "0 6 * * 1"  # Monday 06:00 UTC
 
 permissions:
   contents: read
@@ -173,9 +176,9 @@ jobs:
           ignore-unfixed: true
           severity: HIGH,CRITICAL
 
-      # Only push on main merges, not PRs
+      # Only push on non-PR events (main pushes + scheduled + workflow_dispatch)
       - name: Push to GHCR
-        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request'
         env:
           SHORT_SHA: ${{ steps.build.outputs.short_sha }}
         run: |
