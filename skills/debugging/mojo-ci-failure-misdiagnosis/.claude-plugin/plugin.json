@@ -1,0 +1,7 @@
+{
+  "name": "mojo-ci-failure-misdiagnosis",
+  "version": "1.0.0",
+  "description": "Debugging Mojo CI failures misattributed to JIT crashes. Use when: (1) CI tests fail with 'execution crashed' or retry logic labels, (2) all tests pass locally but fail in CI, (3) --Werror causes compile errors mistaken for runtime crashes.",
+  "category": "debugging",
+  "date": "2026-03-15"
+}
