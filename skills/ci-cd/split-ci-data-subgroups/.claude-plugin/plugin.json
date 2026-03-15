@@ -1,0 +1,7 @@
+{
+  "name": "split-ci-data-subgroups",
+  "version": "1.0.0",
+  "description": "Promote a parent CI matrix group that uses explicit subdirectory patterns into dedicated leaf-level sub-groups with wildcard auto-discovery. Use when: (1) a matrix group lists multiple subdirectory patterns explicitly making it fragile, (2) new test files are silently missed because the pattern list is not updated, (3) restoring wildcard auto-pickup at the leaf level without overlap.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
