@@ -1,0 +1,10 @@
+{
+  "name": "split-file-group-tracking",
+  "version": "1.0.0",
+  "description": "TRIGGER CONDITIONS: Use when adding coverage tracking for _partN.mojo test files split from a single logical test, or when validate_test_coverage.py needs to group part files by base name.",
+  "author": { "name": "ML Odyssey Team" },
+  "category": "testing",
+  "date": "2026-03-15",
+  "tags": ["coverage", "mojo", "split-files", "partN", "test-grouping", "validate_test_coverage"],
+  "skills": "./skills"
+}
