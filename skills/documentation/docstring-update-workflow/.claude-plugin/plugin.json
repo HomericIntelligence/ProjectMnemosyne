@@ -1,0 +1,7 @@
+{
+  "name": "docstring-update-workflow",
+  "version": "1.0.0",
+  "description": "Workflow for updating stale module-level docstring examples after API signature changes. Use when: (1) a function signature changed and the module docstring still shows the old call, (2) follow-up issues exist to fix stale examples, (3) a docstring example omits required arguments.",
+  "category": "documentation",
+  "date": "2026-03-15"
+}
