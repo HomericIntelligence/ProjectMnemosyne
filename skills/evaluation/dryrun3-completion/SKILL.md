@@ -1,8 +1,8 @@
 ---
 name: "Dryrun3 Completion: Diagnose, Repair, and Analyze Interrupted Batch Experiments"
-description: "Complete interrupted dryrun experiments: diagnose broken/partial runs, clean stale git worktrees, re-run broken experiments, repair partial experiments, build loader-compatible symlink tree, and generate full analysis pipeline output."
+description: "Complete interrupted dryrun experiments: diagnose broken/partial runs, clean stale git worktrees, re-run broken experiments, repair partial experiments, build loader-compatible symlink tree, generate full analysis pipeline output, and produce Go/NoGo assessment with run classification script."
 category: evaluation
-date: 2026-03-04
+date: 2026-03-14
 user-invocable: true
 ---
 # Dryrun3 Completion: Diagnose, Repair, and Analyze Interrupted Batch Experiments
@@ -11,10 +11,10 @@ user-invocable: true
 
 | Item | Details |
 |------|---------|
-| Date | 2026-03-04 |
+| Date | 2026-03-04 (updated 2026-03-14) |
 | Objective | Complete all 47 experiments in ~/dryrun3/ to 7/7 run_results each, then generate full analysis pipeline output |
 | Outcome | Operational — 47/47 experiments complete, 329 total runs, $148.64 API cost, 34.3% pass-rate |
-| Key Learning | Stale git worktrees in shared repos block `--fresh` re-runs; `--retry-errors` batch skip logic ignores `--max-subtests` expansion |
+| Key Learning | Stale git worktrees in shared repos block `--fresh` re-runs; `--retry-errors` batch skip logic ignores `--max-subtests` expansion; full-ablation tests must never use `--max-subtests` |
 
 ## When to Use This Skill
 
@@ -25,6 +25,8 @@ Use this workflow when:
 - Stale git worktrees or branches from old broken runs exist in `~/dryrun3/repos/<hash>/`
 - You need to build a loader-compatible `~/fullruns/dryrun3/` symlink tree from timestamped experiment directories
 - You need to run `generate_all_results.py` to produce figures, tables, and stats from a complete dataset
+- You need a Go/NoGo completion assessment across all 47 tests with run classification (COMPLETE/INFRA_ERROR/ORPHAN/INTERMEDIATE)
+- Full-ablation tests were accidentally capped with `--max-subtests` and need expansion to all subtests (e.g., T3/29-41 missing after `--max-subtests 24`)
 
 ## Verified Workflow
 
@@ -230,6 +232,66 @@ Expected outputs for 47 experiments / 7 tiers:
 - 56 figures
 - 10 tables
 
+### Phase 6: Go/NoGo Assessment with Analysis Script (2026-03-14)
+
+When a new retry run is needed (e.g., full-ablation tests were capped with `--max-subtests`),
+use `scripts/analyze_dryrun3.py` to get a status report and Go/NoGo verdict before and after retrying.
+
+```bash
+pixi run python scripts/analyze_dryrun3.py --results-dir ~/dryrun3
+```
+
+**Run classification logic** (key to understanding completion state):
+
+```python
+TIER_SUBTEST_COUNTS = {"T0": 24, "T1": 10, "T2": 15, "T3": 41, "T4": 14, "T5": 15, "T6": 1}
+TERMINAL_ERROR_STATES = {"failed", "rate_limited"}
+
+# For each run in checkpoint.run_states:
+# effective_max = min(max_subtests, tier_total) if max_subtests else tier_total
+# sub_index = int(sub_id)
+# is_orphan = sub_index >= effective_max
+if is_orphan:                        -> ORPHAN      (exclude from all metrics)
+elif state == "worktree_cleaned":    -> COMPLETE    (never retry, even if bad grade)
+elif state in TERMINAL_ERROR_STATES: -> INFRA_ERROR (reset to pending, retry from scratch)
+else:                                -> INTERMEDIATE (resume from current state)
+```
+
+**Go/NoGo criteria** (all 4 must pass):
+1. All 47 tests have checkpoints
+2. `infra_error + intermediate == 0`
+3. No missing subtests per tier (coverage check)
+4. ≥ 95% of complete runs have valid `run_result.json`
+
+**Subtest coverage check** detects checkpoint gaps (e.g., T3/29-41 missing after `--max-subtests 24`):
+```python
+active = sum(1 for sub_id in run_states.get(tier_id, {}) if int(sub_id) < effective_max)
+if active < effective_max:  # missing subtests not yet created
+    flag(tier_id, actual=active, expected=effective_max)
+```
+
+### Phase 7: Fix `--max-subtests` Cap for Full-Ablation Tests (2026-03-14)
+
+Full-ablation tests (test-001/002/003) must run ALL subtests (120 total: T0=24, T1=10, ..., T3=41, ...).
+Using `--max-subtests 24` caps T3 at 24 subtests; T3/25-41 are never created in the checkpoint.
+
+**Fix**: Remove `--max-subtests` flag for full-ablation tests entirely:
+
+```bash
+# WRONG: caps at 24 — T3/25-41 never created (107 runs instead of 360)
+pixi run python scripts/manage_experiment.py run \
+  --config "tests/fixtures/tests/test-001" \
+  --max-subtests 24 --results-dir ~/dryrun3 --threads 2
+
+# CORRECT: no cap — runner detects missing subtests via _tier_has_missing_subtests()
+pixi run python scripts/manage_experiment.py run \
+  --config "tests/fixtures/tests/test-001" \
+  --results-dir ~/dryrun3 --threads 2
+```
+
+The runner's `_tier_has_missing_subtests()` detects checkpoint gaps and creates T3/29-41 on resume.
+T3/25-28 (orphaned from the capped run) will be picked up as INTERMEDIATE runs.
+
 ## Failed Attempts
 
 ### Attempt 1: Running --fresh Without Cleaning Stale Worktrees
@@ -251,6 +313,22 @@ The `--fresh` flag creates a new timestamped results directory but does NOT clea
 Phase 2 (`--fresh` re-runs for 16 broken experiments) was running and consuming API quota. Simultaneously starting Phase 3 (`--retry-errors` for 3 partial experiments) caused model validation in Phase 3 to hit rate limits. The validation logic retried 4x with ~60s backoff per attempt, resulting in ~8 minutes just to confirm the model name was valid.
 
 **Fix**: Wait for Phase 2 to fully complete before starting Phase 3. Watch for "All N experiments complete" in Phase 2's output before proceeding.
+
+### Attempt 4: Using `--max-subtests 24` for Full-Ablation Tests (2026-03-14)
+
+**What happened:**
+Full-ablation tests (test-001/002/003) were run with `--max-subtests 24`. T3 has 41 subtests, so
+subtests 25-28 were created but orphaned, and 29-41 were never created. Each test had 107 runs in
+the checkpoint instead of the expected 360. The script reported "all complete" but 13 T3 subtests
+per test were missing entirely.
+
+**Root cause:**
+The retry script comment said "run all subtests (24 max)" — a T0-centric assumption. T0 has 24
+subtests, but T3 has 41. Using `--max-subtests 24` silently under-expanded T3.
+
+**Fix**: Remove `--max-subtests` for full-ablation tests entirely. The runner defaults to
+`max_subtests=None` (all subtests per tier). The `_tier_has_missing_subtests()` method detects
+and creates the missing subtests on resume. (PR #1491)
 
 ### Attempt 3: Using --retry-errors with --max-subtests Expansion
 
@@ -329,6 +407,12 @@ results-dir: ~/dryrun3
 
 5. **Diagnose before acting.** Count run_results per experiment and categorize into broken/partial/complete before starting any repair. Using different strategies (fresh re-run vs. retry-errors) for different failure modes is more efficient and less risky than applying a single strategy to all experiments.
 
+6. **Full-ablation tests must never use `--max-subtests` (2026-03-14).** T3 has 41 subtests — using `--max-subtests 24` silently caps T3 at 24, leaving 17 subtests uncreated. Full ablation = no flag. Standard tests use `--max-subtests 3`.
+
+7. **Run classification needs four categories, not two (2026-03-14).** COMPLETE (`worktree_cleaned`) is never retried even with a bad grade. INFRA_ERROR (`failed`/`rate_limited`) is reset to `pending`. INTERMEDIATE (any other state) resumes from current position. ORPHAN (sub_index >= effective_max) is excluded entirely from metrics.
+
+8. **Subtest coverage check must account for orphan vs active (2026-03-14).** When `--max-subtests 24` was used, subtests 25-28 are in the checkpoint but are orphans; subtests 29-41 are missing. The coverage check must use `int(sub_id) < effective_max` to distinguish active vs orphan entries.
+
 ## Files and References
 
 | File | Role |
@@ -338,5 +422,9 @@ results-dir: ~/dryrun3
 | `scripts/generate_all_results.py` | Master analysis pipeline; produces figures, tables, CSVs, JSONs |
 | `~/dryrun3/repos/` | Shared git repos for worktrees; can accumulate stale branches between runs |
 | `~/fullruns/dryrun3/` | Loader-compatible symlink tree built from `~/dryrun3/` timestamped directories |
+| `scripts/analyze_dryrun3.py` | Go/NoGo analysis script; classifies runs, checks subtest coverage, reports verdict |
+| `retry_dryrun3.sh` | Batch retry script; full-ablation tests must omit `--max-subtests` |
 
-**PR**: #1404 — Fix batch skip logic to respect `--max-subtests` expansion
+**PRs**:
+- #1404 — Fix batch skip logic to respect `--max-subtests` expansion
+- #1491 — Add `scripts/analyze_dryrun3.py` analysis script + fix `retry_dryrun3.sh` to remove `--max-subtests` cap for full-ablation tests
