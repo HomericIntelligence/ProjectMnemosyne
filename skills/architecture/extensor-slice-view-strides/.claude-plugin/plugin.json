@@ -1,0 +1,7 @@
+{
+  "name": "extensor-slice-view-strides",
+  "version": "1.0.0",
+  "description": "Add stride-aware slice() view semantics and _nd_index_to_flat_offset to Mojo ExTensor for zero-copy slicing of non-contiguous tensors. Use when: (1) implementing slice() that must work on transposed/strided views, (2) fixing element access bugs in non-contiguous tensors, (3) adding a reusable view_with_strides primitive to share data pointer across reshape/slice/transpose.",
+  "category": "architecture",
+  "date": "2026-03-15"
+}
