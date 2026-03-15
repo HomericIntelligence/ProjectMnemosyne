@@ -1,0 +1,7 @@
+{
+  "name": "installation-md-ide-setup",
+  "version": "1.0.0",
+  "description": "Extend an installation.md with IDE setup section (VS Code extension, LSP config, formatter path) and tighten prerequisites with version constraints. Use when: (1) installation.md lacks IDE/editor guidance, (2) getting-started doc needs VS Code Mojo extension steps, (3) prerequisites section needs explicit version numbers.",
+  "category": "documentation",
+  "date": "2026-03-15"
+}
