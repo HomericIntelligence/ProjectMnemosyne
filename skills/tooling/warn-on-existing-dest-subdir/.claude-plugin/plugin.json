@@ -1,0 +1,7 @@
+{
+  "name": "warn-on-existing-dest-subdir",
+  "version": "1.0.0",
+  "description": "Defensive copytree pattern: emit a stderr warning before shutil.copytree(dirs_exist_ok=True) when the destination subdir already exists. Use when: (1) implementing file migration scripts that can be re-run, (2) adding observability to merge-mode copies where silent overwrites are a risk, (3) reviewing migration code for accidental overwrite hazards.",
+  "category": "tooling",
+  "date": "2026-03-15"
+}
