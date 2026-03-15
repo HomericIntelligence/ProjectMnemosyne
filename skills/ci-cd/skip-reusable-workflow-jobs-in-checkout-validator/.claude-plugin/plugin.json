@@ -1,0 +1,7 @@
+{
+  "name": "skip-reusable-workflow-jobs-in-checkout-validator",
+  "version": "1.0.0",
+  "description": "Extend a checkout-order validator to skip reusable workflow caller jobs, which have no steps of their own and must not be validated for checkout ordering. Use when: (1) a checkout-first validator fires false positives on reusable workflow caller jobs, (2) extending an existing steps-based validator to handle mixed job types, (3) adding a job-level guard before iterating over steps.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
