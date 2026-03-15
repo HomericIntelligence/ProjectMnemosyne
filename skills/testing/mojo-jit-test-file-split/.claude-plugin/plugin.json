@@ -1,0 +1,7 @@
+{
+  "name": "mojo-jit-test-file-split",
+  "version": "1.0.0",
+  "description": "Pattern for splitting Mojo test files that cause JIT heap corruption in libKGENCompilerRTShared.so. Use when: (1) a Mojo test file crashes deterministically on the Nth sequential call to a deep network forward pass, (2) crash stack traces show libKGENCompilerRTShared.so, (3) a test file exceeds 10 test functions calling complex operations.",
+  "category": "testing",
+  "date": "2026-03-15"
+}
