@@ -1,0 +1,7 @@
+{
+  "name": "mojo-run-epoch-with-batches",
+  "version": "1.0.0",
+  "description": "Test run_epoch_with_batches() in Mojo training scripts using a real DataLoader and a named step_fn. Use when: (1) a training utility that accepts a DataLoader and step_fn closure has no tests, (2) need to verify avg_loss > 0 and loader.reset() semantics, (3) step_fn must match the exact fn pointer signature fn(ExTensor, ExTensor) raises -> ExTensor.",
+  "category": "testing",
+  "date": "2026-03-15"
+}
