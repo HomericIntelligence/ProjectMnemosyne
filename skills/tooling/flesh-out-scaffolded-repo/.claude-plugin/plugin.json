@@ -1,0 +1,7 @@
+{
+  "name": "flesh-out-scaffolded-repo",
+  "version": "1.0.0",
+  "description": "Fill gaps in scaffolded repos to make them production-ready: add justfile + pixi.toml, build scripts, READMEs, and fix bash syntax bugs, hardcoded values, and script logic errors. Use when: (1) a repo was scaffolded and pushed but is missing task runner files, (2) compose/Nomad/CI files have hardcoded paths that should be env vars, (3) shell scripts have syntax errors or suppressed failures.",
+  "category": "tooling",
+  "date": "2026-03-15"
+}
