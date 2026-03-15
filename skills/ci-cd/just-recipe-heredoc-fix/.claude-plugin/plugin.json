@@ -1,0 +1,7 @@
+{
+  "name": "just-recipe-heredoc-fix",
+  "version": "1.0.0",
+  "description": "Fix heredoc-in-just-recipe whitespace errors by replacing with printf. Use when: (1) a just recipe uses a heredoc (<<EOF) that causes 'inconsistent leading whitespace' parse errors, (2) you need to emit multi-field structured text (e.g., JSON lines) inside a just shell recipe body.",
+  "category": "ci-cd",
+  "date": "2026-03-14"
+}
