@@ -1,0 +1,8 @@
+{
+  "name": "regression-test-from-issue-plan",
+  "version": "1.0.0",
+  "description": "Add missing regression tests by reading the issue's implementation plan. Use when: (1) an issue references a test by name that should exist as a harness but doesn't, (2) a bug fix landed in main but the named paired test was never added, (3) issue comments contain hand-computed expected values for a specific test.",
+  "category": "testing",
+  "date": "2026-03-15",
+  "tags": ["regression", "testing", "mojo", "issue-plan", "missing-test", "tdd", "adr-009"]
+}
