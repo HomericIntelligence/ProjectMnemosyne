@@ -1,0 +1,7 @@
+{
+  "name": "batch-image-to-idx-conversion",
+  "version": "1.0.0",
+  "description": "Extend a single-image PNG/JPEG to IDX conversion script to support batch mode via --batch flag, accepting a directory or glob pattern and writing a multi-image IDX file (count=N) matching the EMNIST test format. Use when: (1) users need to convert a directory of images for batch inference, (2) extending an existing single-image IDX converter to handle N images in one shot, (3) the target Mojo inference pipeline reads multi-image IDX files.",
+  "category": "tooling",
+  "date": "2026-03-15"
+}
