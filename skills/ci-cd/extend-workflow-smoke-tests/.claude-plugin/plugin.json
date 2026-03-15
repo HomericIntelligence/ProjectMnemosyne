@@ -1,0 +1,7 @@
+{
+  "name": "extend-workflow-smoke-tests",
+  "version": "1.0.0",
+  "description": "Extend an existing workflow-smoke-test CI workflow to cover additional GitHub Actions workflows beyond the original single workflow. Use when: (1) a smoke-test workflow exists for one workflow file and needs to cover more, (2) new critical CI workflows need regression protection, (3) a second CI job should validate properties of pre-commit, test matrix, or config validation workflows.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
