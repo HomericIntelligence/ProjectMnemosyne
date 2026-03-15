@@ -1,0 +1,7 @@
+{
+  "name": "mojo-hash-dtype-regression-guard",
+  "version": "1.0.0",
+  "description": "Test pattern to guard against __hash__ regressions where dtype_to_ordinal contribution is silently dropped. Use when: (1) verifying empty tensors with different dtypes hash differently, (2) confirming dtype is the sole hash differentiator when numel=0, (3) adding regression coverage after a dtype-in-hash feature is implemented.",
+  "category": "testing",
+  "date": "2026-03-15"
+}
