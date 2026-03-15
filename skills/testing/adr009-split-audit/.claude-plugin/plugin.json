@@ -1,0 +1,7 @@
+{
+  "name": "adr009-split-audit",
+  "version": "1.0.0",
+  "description": "Audit ADR-009 test file splits to verify no tests were silently dropped. Compares fn test_ lists between .DEPRECATED source files and their corresponding active split files, then recovers any missing tests. Use when: (1) investigating whether a test file split omitted any test functions, (2) auditing test coverage after ADR-009 heap-corruption workaround splits, (3) verifying that all tests from a deprecated file are present in the successor split files.",
+  "category": "testing",
+  "date": "2026-03-15"
+}
