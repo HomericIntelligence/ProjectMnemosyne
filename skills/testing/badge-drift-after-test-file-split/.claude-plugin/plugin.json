@@ -1,0 +1,7 @@
+{
+  "name": "badge-drift-after-test-file-split",
+  "version": "1.0.0",
+  "description": "Ensure test count badge stays accurate when a large test file is split into multiple parts. Use when: (1) a test file is split into part1/part2/etc. files, (2) a badge-check script must count all split parts, (3) unit tests need coverage for split-file naming patterns.",
+  "category": "testing",
+  "date": "2026-03-15"
+}
