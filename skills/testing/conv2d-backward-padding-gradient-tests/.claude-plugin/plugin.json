@@ -1,0 +1,7 @@
+{
+  "name": "conv2d-backward-padding-gradient-tests",
+  "version": "1.0.0",
+  "description": "Add numerical gradient checks for conv2d_backward with padding > 0 in Mojo. Use when: (1) existing conv backward tests only cover padding=0, (2) need to exercise boundary-handling in the transposed convolution path for grad_input, (3) extending padding coverage to padding=1 (same-size) and padding=2 (extended).",
+  "category": "testing",
+  "date": "2026-03-15"
+}
