@@ -77,3 +77,26 @@ shared/autograd/optimizers.mojo | 295 ++++++++++++++++++++++++++++++++++++++++
 tests/shared/test_imports.mojo  |   8 ++
 3 files changed, 304 insertions(+), 1 deletion(-)
 ```
+
+---
+
+## Session 2: Issue #3745 — AdaGrad and RMSprop (2026-03-15)
+
+**Issue**: HomericIntelligence/ProjectOdyssey#3745
+**PR**: HomericIntelligence/ProjectOdyssey#4785
+
+### Key Discovery
+
+`shared/__init__.mojo` line 66 had `# from .training.optimizers import SGD, Adam, AdamW` (commented).
+This was NEVER the active import. The real active import was added in PR #3738:
+`from shared.autograd.optimizers import SGD, Adam, AdamW`.
+
+The issue description said "extend the existing re-export line" — but there was no single
+"existing line" visible in the comment; required auditing `grep -n "^from" shared/__init__.mojo`
+to find the active one.
+
+### Changes Made
+
+- Extended line 85: `from shared.autograd.optimizers import SGD, Adam, AdamW, AdaGrad, RMSprop`
+- Added `tests/shared/autograd/test_top_level_optimizer_imports.mojo` (5 test functions)
+- Updated `tests/shared/test_imports.mojo::test_shared_optimizer_imports` to use `from shared import`
