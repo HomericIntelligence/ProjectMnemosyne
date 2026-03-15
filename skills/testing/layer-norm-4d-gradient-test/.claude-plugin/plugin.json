@@ -1,0 +1,7 @@
+{
+  "name": "layer-norm-4d-gradient-test",
+  "version": "1.0.0",
+  "description": "Pattern for writing numerical gradient tests for layer_norm_backward on 4D inputs in Mojo. Use when: (1) adding gradient validation for operations on 4D tensors, (2) extending 2D numerical gradient tests to higher-rank inputs, (3) ensuring backward pass correctness when indexing/reduction logic differs by input rank.",
+  "category": "testing",
+  "date": "2026-03-15"
+}
