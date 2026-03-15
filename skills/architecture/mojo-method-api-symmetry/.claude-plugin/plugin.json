@@ -1,0 +1,7 @@
+{
+  "name": "mojo-method-api-symmetry",
+  "version": "1.0.0",
+  "description": "Add thin method wrappers to Mojo structs to complete API symmetry with existing free functions. Use when: (1) a free function was added to a module but no corresponding method wrapper exists on the struct, (2) closing follow-up issues about API completeness after a larger feature PR, (3) reviewing a struct's method API for missing parity with its module-level counterparts.",
+  "category": "architecture",
+  "date": "2026-03-15"
+}
