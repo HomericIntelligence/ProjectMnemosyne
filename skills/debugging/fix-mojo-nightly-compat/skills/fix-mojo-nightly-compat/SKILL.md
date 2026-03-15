@@ -1,3 +1,11 @@
+---
+name: fix-mojo-nightly-compat
+description: Fix compilation errors and deprecation warnings caused by Mojo stable vs nightly version mismatches, including string indexing, alias/comptime changes, and format tool compatibility
+category: debugging
+date: 2026-03-10
+user-invocable: false
+---
+
 # Fix Mojo Nightly Compatibility Skill
 
 | Field | Value |

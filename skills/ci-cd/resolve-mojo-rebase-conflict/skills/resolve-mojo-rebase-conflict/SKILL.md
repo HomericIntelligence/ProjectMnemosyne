@@ -1,3 +1,11 @@
+---
+name: resolve-mojo-rebase-conflict
+description: Resolve git rebase conflicts in Mojo test files by converting invalid Python syntax to valid Mojo patterns using Bool flags
+category: ci-cd
+date: 2026-03-07
+user-invocable: false
+---
+
 # Resolve Mojo Rebase Conflict Skill
 
 | Field | Value |
