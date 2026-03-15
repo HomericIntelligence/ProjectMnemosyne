@@ -1,0 +1,7 @@
+{
+  "name": "pre-commit-pygrep-hook",
+  "version": "1.0.0",
+  "description": "Add a regex-based pre-commit hook using language: pygrep to detect forbidden code patterns in specific directories. Use when: (1) automating a manual grep audit as a commit-time check, (2) banning debug artifacts (NOTE/TODO/FIXME in print calls), (3) preventing deprecated syntax patterns from being re-introduced.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
