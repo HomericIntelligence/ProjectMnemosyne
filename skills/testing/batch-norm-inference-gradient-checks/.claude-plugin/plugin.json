@@ -1,0 +1,7 @@
+{
+  "name": "batch-norm-inference-gradient-checks",
+  "version": "1.0.0",
+  "description": "Add numerical gradient validation tests for batch_norm2d_backward in inference mode (training=False), covering grad_gamma and grad_beta via finite differences. Use when: (1) batch norm backward pass has inference code path untested by gradient checks, (2) grad_gamma/grad_beta gradient checks only cover training=True, (3) issue asks to mirror numerical validation to inference mode.",
+  "category": "testing",
+  "date": "2026-03-15"
+}
