@@ -1,0 +1,7 @@
+{
+  "name": "audit-driven-remediation",
+  "version": "1.0.0",
+  "description": "Systematic implementation of findings from a strict repository audit report. Use when: (1) you have a detailed audit report with graded sections and specific findings, (2) you need to implement fixes across CI, source code, docs, and packaging in a single remediation pass, (3) you want to track and verify each fix against the original audit findings.",
+  "category": "tooling",
+  "date": "2026-03-15"
+}
