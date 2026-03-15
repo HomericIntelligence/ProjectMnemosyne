@@ -1,0 +1,7 @@
+{
+  "name": "worktree-integration-test-pattern",
+  "version": "1.0.0",
+  "description": "Pattern for writing integration tests against real SKILL.md files in git worktrees, using git rev-parse --git-common-dir to locate shared build/ artifacts. Use when: (1) adding regression tests for SKILL.md transformers that must run against real file shapes, (2) test modules need to import scripts from a build/ directory not present in the worktree, (3) ensuring fix functions are idempotent on production files.",
+  "category": "testing",
+  "date": "2026-03-15"
+}
