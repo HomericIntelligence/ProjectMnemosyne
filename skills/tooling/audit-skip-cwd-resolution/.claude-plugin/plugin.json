@@ -1,0 +1,7 @@
+{
+  "name": "audit-skip-cwd-resolution",
+  "version": "1.0.0",
+  "description": "Documents the pattern for resolving --audit-skip file paths relative to CWD in migration audit scripts. Use when: (1) an audit script's skip-list path is unclear or undocumented, (2) adding an end-to-end test that verifies CWD-relative path resolution, (3) updating argparse help text to document CWD semantics.",
+  "category": "tooling",
+  "date": "2026-03-15"
+}
