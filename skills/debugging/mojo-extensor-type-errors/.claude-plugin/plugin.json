@@ -1,0 +1,7 @@
+{
+  "name": "mojo-extensor-type-errors",
+  "version": "1.0.0",
+  "description": "Fix Mojo ExTensor type errors: Int64 implicit conversion failures and missing __getitem__ overloads for List[Int] index. Use when: (1) test fails with 'cannot implicitly convert Int64 to Float32', (2) test fails with 'no matching method in call to __getitem__' for list-indexed assignment, (3) ExTensor setitem/getitem overloads are incomplete.",
+  "category": "debugging",
+  "date": "2026-03-15"
+}
