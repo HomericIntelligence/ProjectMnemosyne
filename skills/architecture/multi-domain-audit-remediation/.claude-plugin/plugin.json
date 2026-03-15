@@ -1,0 +1,7 @@
+{
+  "name": "multi-domain-audit-remediation",
+  "version": "1.0.0",
+  "description": "Workflow for implementing a multi-domain production-grade audit remediation plan touching exception handling, logging hygiene, DRY violations, CI alignment, and documentation. Use when: (1) an audit report surfaces critical/major/minor issues across several independent dimensions simultaneously, (2) converting f-string logging anti-patterns and print() calls to structured logger calls across a library codebase, (3) consolidating duplicated file discovery logic into a shared utility, (4) aligning CI coverage thresholds with pyproject.toml.",
+  "category": "architecture",
+  "date": "2026-03-14"
+}
