@@ -1,0 +1,7 @@
+{
+  "name": "precommit-version-drift-detection",
+  "version": "1.0.0",
+  "description": "Automate detection of version drift between .pre-commit-config.yaml rev: fields and pixi.toml package versions by adding a validation script and local pre-commit hook. Use when: (1) auditing external pre-commit hooks for version drift after a pixi dependency upgrade, (2) implementing automated enforcement so manual drift audits are no longer needed.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
