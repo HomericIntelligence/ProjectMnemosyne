@@ -1,0 +1,7 @@
+{
+  "name": "stale-ci-warnings-in-pr-comment",
+  "version": "1.0.0",
+  "description": "Surface stale CI pattern warnings in PR comment body rather than stderr only. Use when: (1) validate_test_coverage.py already detects stale patterns but only prints to stderr, (2) you want reviewers to see stale warnings without inspecting raw CI logs, (3) post_to_pr() should fire on stale patterns even when no uncovered files exist.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
