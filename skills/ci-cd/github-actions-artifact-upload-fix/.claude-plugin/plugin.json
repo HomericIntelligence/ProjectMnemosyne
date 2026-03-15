@@ -1,0 +1,7 @@
+{
+  "name": "github-actions-artifact-upload-fix",
+  "version": "1.0.0",
+  "description": "Fixes GitHub Actions artifact upload failures caused by empty directories or invalid artifact names. Use when: (1) artifact upload steps succeed but downloads find empty results, (2) matrix job artifact names contain spaces or special characters, (3) non-matrix jobs upload artifacts but test-results/ directory is never created.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
