@@ -1,0 +1,7 @@
+{
+  "name": "extend-structural-test-with-value-assertions",
+  "version": "1.0.0",
+  "description": "Pattern for closing the value-correctness gap in Mojo tensor tests that only assert structure (strides, contiguity) but not element values. Use when: (1) an existing test verifies is_contiguous() or _strides but skips assert_almost_equal on values, (2) a follow-up issue requests value-correctness regression coverage for as_contiguous() after transpose.",
+  "category": "testing",
+  "date": "2026-03-15"
+}
