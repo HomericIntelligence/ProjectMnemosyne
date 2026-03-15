@@ -1,0 +1,7 @@
+{
+  "name": "precommit-pixi-version-drift-check",
+  "version": "1.0.0",
+  "description": "Add a CI check that detects version drift between pre-commit rev: tags and pixi.lock resolved versions. Use when: (1) adding a new external pre-commit hook that is also installed via pixi, (2) setting up CI to prevent silent version drift, (3) investigating why pre-commit behavior differs between local and CI environments.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
