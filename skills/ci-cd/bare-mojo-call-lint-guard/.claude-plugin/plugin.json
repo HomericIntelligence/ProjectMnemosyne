@@ -1,0 +1,7 @@
+{
+  "name": "bare-mojo-call-lint-guard",
+  "version": "1.0.0",
+  "description": "Add a pre-commit hook and CI step to prevent bare 'pixi run mojo test/run' calls in workflow YAMLs without retry wrappers. Use when: (1) bare mojo calls were patched with retry but no guardrail prevents regression, (2) adding a lint step to validate-workflows.yml to enforce retry discipline.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
