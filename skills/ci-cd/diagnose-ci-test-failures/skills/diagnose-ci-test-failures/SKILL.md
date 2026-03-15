@@ -1,3 +1,11 @@
+---
+name: diagnose-ci-test-failures
+description: Triage and fix CI failures by distinguishing real bugs from Mojo JIT crashes, handling transient network failures, and fixing assertion bugs
+category: ci-cd
+date: 2026-03-12
+user-invocable: false
+---
+
 # Diagnose CI Test Failures
 
 | Field | Value |
