@@ -1,0 +1,7 @@
+{
+  "name": "security-review-false-positive-filter",
+  "version": "1.0.0",
+  "description": "Perform security code reviews with parallel false-positive filtering agents to produce high-confidence findings only. Use when: (1) reviewing a PR diff for security vulnerabilities, (2) static analysis produces noisy results that need confidence filtering, (3) ML/research codebases where internal APIs are not exposed to untrusted input.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
