@@ -1,0 +1,8 @@
+{
+  "name": "mojo-nested-fn-capture-fix",
+  "version": "1.0.0",
+  "description": "Fix Mojo compilation error: cannot synthesize fieldwise init because field has non-copyable type. Use when: (1) a nested fn captures a non-copyable struct causing fieldwise init synthesis failure, (2) getting --Werror errors about non-copyable fields in implicit capture structs.",
+  "category": "debugging",
+  "date": "2026-03-15",
+  "tags": ["mojo", "fieldwise-init", "non-copyable", "nested-fn", "capture", "compilation-error"]
+}
