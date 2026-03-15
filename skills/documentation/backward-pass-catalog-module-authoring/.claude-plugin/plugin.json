@@ -1,0 +1,7 @@
+{
+  "name": "backward-pass-catalog-module-authoring",
+  "version": "1.0.0",
+  "description": "Add a new module section to backward-pass-catalog.md documenting backward passes with formulas, shapes, and stability notes. Use when: (1) a new backward pass module needs a catalog entry, (2) an issue asks to document formulas/shapes for an untracked backward function, (3) catalog header stats are stale after new functions are implemented.",
+  "category": "documentation",
+  "date": "2026-03-15"
+}
