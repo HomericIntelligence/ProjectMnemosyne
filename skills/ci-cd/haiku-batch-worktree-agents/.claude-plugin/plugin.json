@@ -1,0 +1,7 @@
+{
+  "name": "haiku-batch-worktree-agents",
+  "version": "1.0.0",
+  "description": "Run 4 parallel Haiku sub-agents in persistent git worktrees to implement 60-80 GitHub issues in one session. Use when: (1) closing a large backlog (50+ low-complexity issues), (2) worktrees already exist from prior rounds, (3) you need resume-loop pattern to handle token-limited agents.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
