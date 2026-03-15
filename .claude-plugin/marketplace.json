@@ -25,7 +25,7 @@
     },
     {
       "name": "agent-tier-consolidation",
-      "description": "Consolidate over-segmented agent tiers in a hierarchical agent system by merging similar-level agents into a single comprehensive agent. Use when: (1) multiple agents share the same scope and only differ by seniority/complexity level, (2) agent count is growing unwieldy and tiers overlap in practice, (3) simplifying the agent hierarchy without losing capability coverage.",
+      "description": "Pattern for merging a redundant junior/lowest agent tier into its parent level in a hierarchical multi-agent system. Use when: (1) a junior tier duplicates the parent scope with less complexity, (2) consolidating to reduce total agent count and configuration overhead, (3) updating all cross-references after deletion.",
       "version": "1.0.0",
       "source": "./skills/architecture/agent-tier-consolidation",
       "category": "architecture",
@@ -34,7 +34,7 @@
         "hierarchy",
         "consolidation",
         "refactoring",
-        "claude-code"
+        "documentation"
       ]
     },
     {
@@ -74,6 +74,21 @@
       "source": "./skills/architecture/backward-compat-removal",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "bf16-apple-silicon-guard",
+      "description": "Add runtime guards to dtype/precision factory methods that raise descriptive errors on unsupported hardware. Use when: (1) adding platform-specific dtype restrictions in Mojo, (2) converting silent dtype misuse into loud runtime errors, (3) making precision factory methods testable without requiring target hardware.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/bf16-apple-silicon-guard",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "precision",
+        "apple-silicon",
+        "dtype",
+        "runtime-guard",
+        "bfloat16"
+      ]
     },
     {
       "name": "centralized-path-constants",
@@ -136,6 +151,21 @@
         "consolidation",
         "architecture",
         "complexity-reduction"
+      ]
+    },
+    {
+      "name": "constant-centralization",
+      "description": "Centralize shared constants to their canonical module and update importers. Use when: (1) duplicate constant definitions exist across modules, (2) a utility module defines constants that belong in a lower-level dependency, (3) refactoring to clarify ownership of shared configuration values.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/constant-centralization",
+      "category": "architecture",
+      "tags": [
+        "refactoring",
+        "constants",
+        "imports",
+        "dry",
+        "mojo",
+        "deduplication"
       ]
     },
     {
@@ -209,6 +239,23 @@
       "source": "./skills/architecture/e2e-resume-refactor",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "extensor-view-semantics",
+      "description": "Add view/zero-copy semantics to tensor operations in Mojo. Use when: (1) implementing stride-based tensor views without allocation, (2) adding ravel()/transpose() view support, (3) debugging non-contiguous tensor access in Mojo ExTensor.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/extensor-view-semantics",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "tensor",
+        "view-semantics",
+        "strides",
+        "zero-copy",
+        "extensor",
+        "transpose",
+        "ravel"
+      ]
     },
     {
       "name": "extract-detection-utils",
@@ -337,6 +384,21 @@
       ]
     },
     {
+      "name": "mojo-extensor-bool-method",
+      "description": "Implement __bool__ on a Mojo tensor/struct for single-element truthiness. Use when: (1) adding Python/NumPy/PyTorch-compatible boolean context to a Mojo struct, (2) un-commenting placeholder tests for __bool__, (3) following up on existing item() / __int__ / __float__ implementations.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/mojo-extensor-bool-method",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "extensor",
+        "bool",
+        "dunder",
+        "truthiness",
+        "tensor"
+      ]
+    },
+    {
       "name": "mojo-extensor-utility-methods",
       "description": "Implement standard utility methods on a Mojo tensor class (ExTensor). Use when: (1) adding Python/NumPy-compatible utility methods to a Mojo struct, (2) implementing __setitem__, __str__, __repr__, __hash__, __int__, __float__ on a type-erased tensor, (3) auditing what methods are already implemented before coding.",
       "version": "1.0.0",
@@ -350,6 +412,156 @@
         "struct-methods",
         "type-erased-storage"
       ]
+    },
+    {
+      "name": "mojo-gradient-type-naming",
+      "description": "Fix naming inconsistency between generic gradient container types and domain-specific backward pass results in Mojo ML code. Use when: (1) a backward function returns a generic GradientPair/GradientQuad with opaque field names (grad_a, grad_b) but the caller knows the semantic meaning, (2) different backward functions for the same operation (with-bias vs without-bias) return different types with inconsistent field names, (3) call sites accessing .grad_a/.grad_b need to be updated to semantically named fields.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/mojo-gradient-type-naming",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "gradient",
+        "naming",
+        "type-safety",
+        "ml",
+        "backward-pass",
+        "conv2d"
+      ]
+    },
+    {
+      "name": "mojo-method-wrapper-circular-import",
+      "description": "Add ergonomic method wrappers to Mojo structs that delegate to standalone functions, avoiding circular imports via local-scope imports inside method bodies. Use when: (1) adding method-style API to a struct whose functional implementations live in a module that imports the struct, (2) needing ergonomic tensor.op() calls alongside existing standalone op(tensor) functions.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/mojo-method-wrapper-circular-import",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "circular-import",
+        "method-wrapper",
+        "api-design",
+        "extensor",
+        "delegation-pattern"
+      ]
+    },
+    {
+      "name": "mojo-package-level-reexports",
+      "description": "Add convenience top-level re-exports to a Mojo package __init__.mojo and implement new optimizer structs. Use when: (1) enabling `from shared import SGD, Adam, AdamW` style imports in Mojo, (2) adding a new optimizer struct (AdamW) that mirrors an existing one (Adam) with a behavioral twist (decoupled weight decay), (3) activating commented-out import lines in __init__.mojo after implementation is ready.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/mojo-package-level-reexports",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "package",
+        "reexports",
+        "init",
+        "optimizer",
+        "adamw",
+        "adam",
+        "sgd",
+        "convenience-imports"
+      ]
+    },
+    {
+      "name": "mojo-python-interop-placeholder-replacement",
+      "description": "Workflow for replacing Mojo stdlib-gap placeholders with Python interop using Python.import_module(). Use when: (1) a Mojo function has a placeholder body because Mojo v0.26.1 lacks a stdlib operation (e.g. os.remove, os.rename), (2) replacing a no-op stub that silently returns True/False without doing real work, (3) implementing filesystem operations in Mojo before native stdlib support exists.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/mojo-python-interop-placeholder-replacement",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "python-interop",
+        "placeholder",
+        "stdlib-gap",
+        "file-io",
+        "os-remove"
+      ]
+    },
+    {
+      "name": "mojo-python-interop-to-stdlib",
+      "description": "Replace Python interop (Python.import_module) with Mojo native stdlib equivalents. Use when: (1) a Mojo function uses Python.import_module for os/pathlib/builtins operations that Mojo stdlib now supports, (2) refactoring away from Python interop overhead for file system operations, (3) eliminating 'from python import Python' imports from ML/AI Mojo modules.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/mojo-python-interop-to-stdlib",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "python-interop",
+        "stdlib",
+        "refactoring",
+        "os",
+        "pathlib",
+        "file-system"
+      ]
+    },
+    {
+      "name": "mojo-pythonobject-to-native-type-migration",
+      "description": "Migrate Mojo function signatures from PythonObject placeholder parameters to native Mojo struct types. Use when: (1) a function accepts PythonObject as a placeholder pending interop infrastructure, (2) the native Mojo struct is now available and has has_next()/next() iteration, (3) tests use Python.none() as a placeholder argument that needs updating to real data.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/mojo-pythonobject-to-native-type-migration",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "python-interop",
+        "migration",
+        "native-types",
+        "dataloader",
+        "pythonobject"
+      ]
+    },
+    {
+      "name": "mojo-reexport-chain-wiring",
+      "description": "Wire Mojo structs and functions through a multi-level re-export chain (__init__.mojo hierarchy) and expose canonical type aliases at the package root. Use when: (1) a struct is implemented in a leaf module but not accessible via the top-level package import, (2) a re-export chain (leaf -> subpackage -> package) needs to be completed, (3) a plan-canonical name differs from the implementation struct name and an alias is needed.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/mojo-reexport-chain-wiring",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "re-export",
+        "package",
+        "__init__",
+        "alias",
+        "shared",
+        "metrics"
+      ]
+    },
+    {
+      "name": "mojo-sequential-parametric-containers",
+      "description": "Pattern for implementing Sequential neural network module containers in Mojo using parametric compile-time types instead of dynamic List[Module] dispatch. Use when: (1) composing Module-conforming layers into a chain in Mojo, (2) hitting ImplicitlyCopyable or UnsafePointer errors from List[Trait] usage, (3) designing reusable layer containers that propagate train/eval modes and collect parameters.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/mojo-sequential-parametric-containers",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "neural-network",
+        "sequential",
+        "module",
+        "parametric",
+        "trait",
+        "layer-composition"
+      ]
+    },
+    {
+      "name": "mojo-tensor-multidim-setitem",
+      "description": "Add multi-dimensional mutable indexing to Mojo ExTensor via List[Int] __setitem__ overload. Use when: (1) adding multi-dim write access to a flat-storage tensor, (2) converting per-dimension indices to a flat offset via strides, (3) mirroring an existing multi-dim __getitem__ with a matching __setitem__.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/mojo-tensor-multidim-setitem",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "tensor",
+        "indexing",
+        "setitem",
+        "strides",
+        "multi-dimensional"
+      ]
+    },
+    {
+      "name": "multi-domain-audit-remediation",
+      "description": "Workflow for implementing a multi-domain production-grade audit remediation plan touching exception handling, logging hygiene, DRY violations, CI alignment, and documentation. Use when: (1) an audit report surfaces critical/major/minor issues across several independent dimensions simultaneously, (2) converting f-string logging anti-patterns and print() calls to structured logger calls across a library codebase, (3) consolidating duplicated file discovery logic into a shared utility, (4) aligning CI coverage thresholds with pyproject.toml.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/multi-domain-audit-remediation",
+      "category": "architecture",
+      "tags": []
     },
     {
       "name": "orphan-module-subpackage-relocation",
@@ -420,6 +632,14 @@
       "description": "Systematic workflow for preparing codebases for extensibility through extraction, parameterization, and protocol-based abstraction",
       "version": "1.0.0",
       "source": "./skills/architecture/refactor-for-extensibility",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "repo-hygiene-audit-implementation",
+      "description": "Workflow for implementing repository hygiene audit fixes: triaging findings, migrating Pydantic to_dict() methods to model_dump(), adding exception logging, and fixing metadata. Use when: (1) responding to an automated code-quality audit, (2) migrating manual to_dict() to model_dump() safely, (3) adding debug logging to silent exception catches.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/repo-hygiene-audit-implementation",
       "category": "architecture",
       "tags": []
     },
@@ -518,25 +738,18 @@
       "tags": []
     },
     {
-      "name": "verify-issue-already-implemented",
-      "description": "Verify whether a GitHub issue has already been implemented before starting work. Use when: (1) assigned to implement a GitHub issue, (2) issue prompt file exists in worktree, (3) before writing any code to avoid duplicate work.",
-      "version": "1.0.0",
-      "source": "./skills/architecture/verify-issue-already-implemented",
-      "category": "architecture",
-      "tags": [
-        "github",
-        "issues",
-        "verification",
-        "idempotency",
-        "git-log",
-        "worktree"
-      ]
-    },
-    {
       "name": "wave-based-bulk-issue-triage",
       "description": "Fix 5+ independent GitHub issues in parallel waves using Task isolation:worktree \u2014 no manual worktree setup needed. Use when you have a backlog of simple issues to clear.",
       "version": "1.0.0",
       "source": "./skills/architecture/wave-based-bulk-issue-triage",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "xterm-plan-mode-fix",
+      "description": "Fix xterm.js TUI rendering for Claude Code /plan mode in browser terminals: Unicode11 addon for box-drawing/emoji, binary WebSocket handling for PTY data, resize timing to avoid layout corruption, and layout toggle to replace unreliable auto-detection.",
+      "version": "1.0.0",
+      "source": "./skills/architecture/xterm-plan-mode-fix",
       "category": "architecture",
       "tags": []
     },
@@ -547,6 +760,64 @@
       "source": "./skills/architecture/yaml-long-line-refactor",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "adr-009-test-file-split",
+      "description": "Split Mojo test files exceeding the ADR-009 limit of 10 fn test_ functions per file to prevent heap corruption crashes in Mojo v0.26.1 CI. Use when: (1) a Mojo test file has more than 10 fn test_ functions, (2) CI shows intermittent libKGENCompilerRTShared.so JIT faults in a test group, (3) implementing ADR-009 compliance for new or existing test files.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr-009-test-file-split",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "adr-009",
+        "heap-corruption",
+        "test-splitting",
+        "ci-stability",
+        "ci-cd"
+      ]
+    },
+    {
+      "name": "adr-009-test-file-splitting",
+      "description": "Split Mojo test files exceeding the ADR-009 limit of \u226410 fn test_ functions per file to prevent intermittent heap corruption in Mojo v0.26.1. Use when: (1) a test file has more than 10 fn test_ functions, (2) CI is failing intermittently with libKGENCompilerRTShared.so heap corruption, (3) enforcing ADR-009 compliance across test suites.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr-009-test-file-splitting",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "adr-009",
+        "heap-corruption",
+        "test-splitting",
+        "ci-stability",
+        "mojo-v0.26.1"
+      ]
+    },
+    {
+      "name": "adr-test-file-split",
+      "description": "Split Mojo test files that exceed ADR-009 fn test_ function limits to prevent heap corruption CI failures. Use when: (1) a .mojo test file has more than 10 fn test_ functions, (2) CI shows intermittent heap corruption crashes (libKGENCompilerRTShared.so), (3) a test file needs to comply with ADR-009 limits.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr-test-file-split",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "adr-009",
+        "heap-corruption",
+        "test-split",
+        "ci-stability"
+      ]
+    },
+    {
+      "name": "adr-test-file-splitting",
+      "description": "Split large Mojo test files into smaller files per ADR-009 heap corruption workaround. Use when: (1) a test file exceeds the fn test_ function limit defined by an ADR, (2) CI has intermittent heap corruption crashes linked to high test load in a single file, (3) Mojo v0.26.1 libKGENCompilerRTShared.so JIT faults appear in test runs.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr-test-file-splitting",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "adr",
+        "heap-corruption",
+        "test-splitting",
+        "ci-stability"
+      ]
     },
     {
       "name": "adr009-audit-issue-creation",
@@ -564,12 +835,256 @@
       ]
     },
     {
+      "name": "adr009-comprehensive-audit",
+      "description": "Audit all Mojo test files in a family/module for ADR-009 compliance when fixing one violation, create dedicated CI group. Use when: (1) fixing an ADR-009 violation in one file and sibling files may also exceed the \u226410 test limit, (2) no dedicated CI group exists for a test family, (3) split files are buried in an overloaded CI group.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-comprehensive-audit",
+      "category": "ci-cd",
+      "tags": [
+        "adr009",
+        "mojo",
+        "heap-corruption",
+        "ci-group",
+        "test-splitting",
+        "audit"
+      ]
+    },
+    {
+      "name": "adr009-explicit-ci-pattern-update",
+      "description": "ADR-009 test file split when CI workflow uses explicit filename patterns (not globs). Use when: (1) splitting a Mojo test file whose CI group uses explicit filename lists, (2) the new split files won't be auto-discovered, (3) comprehensive-tests.yml needs updating.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-explicit-ci-pattern-update",
+      "category": "ci-cd",
+      "tags": [
+        "adr009",
+        "mojo",
+        "heap-corruption",
+        "ci",
+        "test-splitting",
+        "explicit-patterns"
+      ]
+    },
+    {
+      "name": "adr009-explicit-filename-ci-update",
+      "description": "Splitting a Mojo test file per ADR-009 when the CI workflow uses explicit filenames (not a glob). Use when: (1) the CI test group lists files by name rather than test_*.mojo wildcard, (2) splitting a test file would make the new part files invisible to CI without a workflow update.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-explicit-filename-ci-update",
+      "category": "ci-cd",
+      "tags": [
+        "adr009",
+        "mojo",
+        "heap-corruption",
+        "test-splitting",
+        "ci-matrix",
+        "explicit-filenames"
+      ]
+    },
+    {
+      "name": "adr009-explicit-pattern-ci-update",
+      "description": "Workflow for splitting Mojo test files (ADR-009) when the CI group uses an explicit filename list instead of a glob pattern. Use when: (1) splitting a test file in a CI group that lists filenames explicitly (not test_*.mojo glob), (2) Core Tensors or similar fixed-pattern CI groups fail intermittently with heap corruption, (3) the new split files won't be auto-discovered by the workflow.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-explicit-pattern-ci-update",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "adr-009",
+        "heap-corruption",
+        "ci",
+        "test-split",
+        "explicit-pattern",
+        "workflow-update"
+      ]
+    },
+    {
+      "name": "adr009-explicit-workflow-update",
+      "description": "Splitting Mojo test files per ADR-009 when the CI workflow uses explicit filename patterns (not globs). Use when: (1) a test file with >10 fn test_ functions must be split AND the CI workflow lists filenames explicitly, (2) the Core Activations or similar non-glob CI group fails due to heap corruption.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-explicit-workflow-update",
+      "category": "ci-cd",
+      "tags": [
+        "adr009",
+        "mojo",
+        "heap-corruption",
+        "test-splitting",
+        "ci-workflow",
+        "explicit-patterns"
+      ]
+    },
+    {
+      "name": "adr009-glob-pattern-auto-pickup",
+      "description": "When splitting Mojo test files per ADR-009, check if the CI workflow uses a glob pattern before editing it. Use when: (1) splitting test_*.mojo files to comply with ADR-009 \u226410 fn test_ limit, (2) verifying whether CI workflow needs updating after a test file split, (3) avoiding unnecessary workflow edits.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-glob-pattern-auto-pickup",
+      "category": "ci-cd",
+      "tags": [
+        "adr-009",
+        "mojo",
+        "test-split",
+        "ci-workflow",
+        "glob-pattern",
+        "heap-corruption"
+      ]
+    },
+    {
+      "name": "adr009-mojo-test-file-split",
+      "description": "Split oversized Mojo test files to comply with ADR-009 heap-corruption workaround (\u226410 fn test_ per file). Use when: (1) a .mojo test file exceeds 10 fn test_ functions, (2) CI shows intermittent libKGENCompilerRTShared.so JIT crashes in a test group, (3) implementing ADR-009 for a new test file.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-mojo-test-file-split",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "adr-009",
+        "heap-corruption",
+        "test-split",
+        "ci-stability"
+      ]
+    },
+    {
+      "name": "adr009-mojo-test-file-splitting",
+      "description": "Split Mojo test files that exceed the ADR-009 limit of 10 fn test_ functions per file to prevent heap corruption (libKGENCompilerRTShared.so) in Mojo v0.26.1 CI. Use when: (1) a Mojo test file has more than 10 fn test_ functions, (2) CI shows intermittent non-deterministic failures in a test group, (3) implementing ADR-009 compliance for new or existing test files.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-mojo-test-file-splitting",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "adr-009",
+        "heap-corruption",
+        "test-splitting",
+        "ci-stability",
+        "mojo-v0.26.1"
+      ]
+    },
+    {
+      "name": "adr009-split-audit-and-recovery",
+      "description": "Audit completed ADR-009 test file splits for dropped tests, missing headers, and secondary violations. Use when: (1) a split was previously done but issue is still open, (2) the post-split test count doesn't match the original, (3) other test files in the same CI group also violate ADR-009.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-split-audit-and-recovery",
+      "category": "ci-cd",
+      "tags": [
+        "adr009",
+        "mojo",
+        "test-splitting",
+        "heap-corruption",
+        "audit",
+        "recovery"
+      ]
+    },
+    {
+      "name": "adr009-test-file-split",
+      "description": "Split Mojo test files to comply with ADR-009 heap corruption workaround (\u226410 fn test_ per file). Use when: (1) a Mojo test file exceeds 10 fn test_ functions, (2) CI shows intermittent heap corruption crashes from libKGENCompilerRTShared.so, (3) a Testing Fixtures CI group is non-deterministically failing.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-test-file-split",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "adr-009",
+        "heap-corruption",
+        "test-split",
+        "ci-stability"
+      ]
+    },
+    {
+      "name": "adr009-test-file-splitting",
+      "description": "Split large Mojo test files into smaller files to avoid heap corruption crashes under high test load (ADR-009). Use when: (1) a Mojo test file exceeds 10 fn test_ functions, (2) CI shows intermittent heap corruption crashes from libKGENCompilerRTShared.so, (3) a CI group has non-deterministic failures consistent with memory pressure.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-test-file-splitting",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "testing",
+        "heap-corruption",
+        "adr-009",
+        "ci-stability",
+        "test-splitting"
+      ]
+    },
+    {
+      "name": "adr009-test-file-splitting-explicit-ci-pattern",
+      "description": "ADR-009 test file splitting when CI workflow uses explicit file lists instead of test_*.mojo glob. Use when: (1) CI pattern lists specific filenames (not a glob), (2) splitting test_fixtures.mojo or similar explicitly-referenced files, (3) validate-test-coverage pre-commit hook flags missing files.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-test-file-splitting-explicit-ci-pattern",
+      "category": "ci-cd",
+      "tags": [
+        "adr009",
+        "mojo",
+        "heap-corruption",
+        "test-splitting",
+        "ci-workflow",
+        "explicit-pattern"
+      ]
+    },
+    {
+      "name": "adr009-validate-coverage-update",
+      "description": "Update validate_test_coverage.py when splitting Mojo test files per ADR-009. Use when: (1) splitting a test file listed in validate_test_coverage.py, (2) pre-commit Validate Test Coverage hook fails after a test file split, (3) adding or removing test files that are tracked in the coverage script.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/adr009-validate-coverage-update",
+      "category": "ci-cd",
+      "tags": [
+        "adr009",
+        "test-coverage",
+        "validate-test-coverage",
+        "mojo",
+        "pre-commit",
+        "heap-corruption"
+      ]
+    },
+    {
       "name": "analyze-ci-failure-logs",
       "description": "Parse and analyze CI failure logs to identify root causes and error patterns. Use when CI builds fail to understand what broke.",
       "version": "1.0.0",
       "source": "./skills/ci-cd/analyze-ci-failure-logs",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "badge-count-drift-prevention",
+      "description": "Automate README badge count validation via pre-commit hook and Python script to prevent drift between badge values and actual file counts. Use when: (1) a README badge reflects a count that must track changing files (e.g. test count), (2) badge values drift as files are added without automation, (3) adding a pre-commit hook scoped to README changes to validate badge accuracy.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/badge-count-drift-prevention",
+      "category": "ci-cd",
+      "tags": [
+        "badge",
+        "pre-commit",
+        "readme",
+        "drift",
+        "test-count",
+        "automation",
+        "shields.io"
+      ]
+    },
+    {
+      "name": "ban-matmul-call-sites",
+      "description": "Add a system-language pre-commit hook and belt-and-suspenders CI step to ban dunder method call sites (e.g. .__matmul__()) in Mojo files while excluding function definition lines. Use when: (1) codebase has been standardized on a free-function form (matmul(A, B)) and you need to prevent dunder-call-site regression, (2) pygrep cannot express the exclusion you need, (3) you need both pre-commit and CI enforcement.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/ban-matmul-call-sites",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "mojo",
+        "matmul",
+        "dunder",
+        "hook",
+        "grep",
+        "lint",
+        "regression-prevention"
+      ]
+    },
+    {
+      "name": "bandit-config-migration",
+      "description": "Move bandit skip flags from pre-commit hook CLI args to a .bandit INI config file so suppressions are visible to developers running bandit directly. Use when: (1) bandit --skip flags are embedded in pre-commit hook entry and invisible to manual runs, (2) developers get false positives running bandit locally that CI suppresses, (3) you need documented skip rationale discoverable without reading .pre-commit-config.yaml.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/bandit-config-migration",
+      "category": "ci-cd",
+      "tags": [
+        "bandit",
+        "security",
+        "pre-commit",
+        "config",
+        "skips",
+        "pyproject.toml",
+        ".bandit",
+        "developer-experience"
+      ]
     },
     {
       "name": "bandit-precommit-security-scanner",
@@ -602,6 +1117,14 @@
         "python",
         "pixi"
       ]
+    },
+    {
+      "name": "batch-fix-implementation",
+      "description": "Implement coordinated batch fixes across multiple files using minimal edits. Use when: (1) fixing multiple low-complexity issues in a single PR, (2) consolidating text/comment/docstring changes across 5+ files, (3) coordinating related fixes that improve code consistency.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/batch-fix-implementation",
+      "category": "ci-cd",
+      "tags": []
     },
     {
       "name": "batch-pr-ci-fix",
@@ -689,6 +1212,29 @@
       "tags": []
     },
     {
+      "name": "ci-matrix-timeout-guidance",
+      "description": "Add timeout monitoring guidance comments to GitHub Actions matrix entries. Use when: (1) a CI matrix has a shared timeout and some groups may approach the limit, (2) groups have grown after consolidation and risk hitting the timeout, (3) you want to document split thresholds and file counts inline without changing runtime behavior.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/ci-matrix-timeout-guidance",
+      "category": "ci-cd",
+      "tags": [
+        "github-actions",
+        "matrix",
+        "timeout",
+        "documentation",
+        "mojo",
+        "ci-comments"
+      ]
+    },
+    {
+      "name": "ci-schema-validation-standalone-step",
+      "description": "Add a standalone CI step to validate all config files against JSON schemas on every PR. Use when: (1) a pre-commit hook validates only changed files but you need full-corpus CI validation, (2) contributors may skip pre-commit, (3) adding schema drift detection to CI for YAML/JSON config files.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/ci-schema-validation-standalone-step",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "ci-test-failure-diagnosis",
       "description": "Systematic approach to diagnosing and fixing CI test failures in PRs",
       "version": "1.0.0",
@@ -697,12 +1243,51 @@
       "tags": []
     },
     {
+      "name": "ci-workflow-optimization-phase5",
+      "description": "CI/CD speedup techniques: path filters on PR triggers, deduplicating pre-commit hooks (mypy/bandit), inlining serial jobs into compilation steps, timing data collection, and artifact retention reduction. Use when: (1) CI runs on doc-only PRs that should be skipped, (2) pre-commit duplicates type-check or SAST jobs, (3) a single-command job creates serial runner-provisioning overhead, (4) need per-test timing data to identify slow tests for nightly migration.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/ci-workflow-optimization-phase5",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "ci-zero-discovery-guard",
+      "description": "Fix silent CI false-passes caused by zero test files discovered in just test-group. Use when: (1) a CI matrix entry uses a parent directory path with subdirectory glob patterns instead of a specific path, (2) just test-group exits 0 when no test files match, (3) splitting merged CI matrix entries to prevent silent renames going undetected.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/ci-zero-discovery-guard",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "justfile",
+        "test-group",
+        "false-pass",
+        "silent-failure",
+        "ci-matrix",
+        "mojo",
+        "glob"
+      ]
+    },
+    {
       "name": "codeowners-stale-entry-removal",
       "description": "Remove stale path entries from .github/CODEOWNERS that point to non-existent directories. Use when a CODEOWNERS audit flags entries for directories that were moved or renamed.",
       "version": "1.0.0",
       "source": "./skills/ci-cd/codeowners-stale-entry-removal",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "composite-action-checkout-order",
+      "description": "Enforce that actions/checkout precedes ./.github/actions/ references in every GitHub Actions job. Use when: (1) adding checkout-order validation to a CI pipeline, (2) creating a script to audit workflow files for composite action ordering, (3) documenting checkout-first invariants for local composite actions.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/composite-action-checkout-order",
+      "category": "ci-cd",
+      "tags": [
+        "github-actions",
+        "composite-actions",
+        "workflow-validation",
+        "checkout",
+        "ci-cd"
+      ]
     },
     {
       "name": "comprehensive-pr-review-orchestration",
@@ -739,6 +1324,21 @@
         "deduplication",
         "pixi",
         "pr-comments"
+      ]
+    },
+    {
+      "name": "deduplicate-ci-test-groups",
+      "description": "Fix overlapping test group patterns in GitHub Actions matrix workflows. Use when: (1) CI test files run in multiple jobs due to wildcard overlap, (2) a parent group uses subdirectory wildcards that subsume dedicated child groups, (3) validate_test_coverage.py exclusion list is out of sync with CI patterns.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/deduplicate-ci-test-groups",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "github-actions",
+        "test-matrix",
+        "deduplication",
+        "yaml",
+        "wildcards"
       ]
     },
     {
@@ -852,6 +1452,21 @@
       "tags": []
     },
     {
+      "name": "dockerfile-env-version-pin",
+      "description": "Pin installer versions in Dockerfiles via ENV variable injection (e.g. PIXI_VERSION, NVM_VERSION) for reproducible builds. Use when: (1) a Dockerfile curl-installs a tool without a version pin, (2) Dockerfile.ci is pinned but the main Dockerfile is not, (3) you need consistency across multi-Dockerfile repos.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/dockerfile-env-version-pin",
+      "category": "ci-cd",
+      "tags": [
+        "dockerfile",
+        "pixi",
+        "version-pin",
+        "reproducibility",
+        "env",
+        "curl-install"
+      ]
+    },
+    {
       "name": "dockerfile-extras-validation",
       "description": "Validate Docker build-arg EXTRAS group names against pyproject.toml [project.optional-dependencies] at build time. Use when a Dockerfile uses a python3 -c snippet to resolve optional-dependency groups from EXTRAS and typos should fail fast rather than silently omitting deps.",
       "version": "1.0.0",
@@ -910,6 +1525,20 @@
       ]
     },
     {
+      "name": "enable-mypy-check-untyped-defs",
+      "description": "Enable mypy --check-untyped-defs flag and fix surfaced errors for full Python type-checking coverage. Use when: (1) mypy reports 'bodies of untyped functions are not checked', (2) adding stricter mypy coverage to a project, (3) enabling check_untyped_defs in pyproject.toml or pre-commit hook.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/enable-mypy-check-untyped-defs",
+      "category": "ci-cd",
+      "tags": [
+        "mypy",
+        "type-checking",
+        "python",
+        "pre-commit",
+        "ci"
+      ]
+    },
+    {
       "name": "enable-yaml-markdown-linting",
       "description": "Enable yamllint and markdownlint-cli2 pre-commit hooks with proper configuration for GitHub Actions and documentation quality",
       "version": "1.0.0",
@@ -922,6 +1551,28 @@
       "description": "Pattern for adding a pre-commit hook that enforces tests/unit/ mirroring convention \u2014 fails on test_*.py files at the root level of the unit test directory",
       "version": "1.0.0",
       "source": "./skills/ci-cd/enforce-unit-test-structure-hook",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "extend-precommit-bandit-scope",
+      "description": "Extend bandit pre-commit hook file scope to additional directories. Use when: (1) adding new Python-containing directories to a project, (2) pre-commit bandit hook misses security issues in tools/ or examples/, (3) broadening security scanning coverage in .pre-commit-config.yaml.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/extend-precommit-bandit-scope",
+      "category": "ci-cd",
+      "tags": [
+        "bandit",
+        "pre-commit",
+        "security",
+        "python",
+        "hooks"
+      ]
+    },
+    {
+      "name": "fix-ci-compilation-and-lint",
+      "description": "Fix CI failures caused by missing function declarations and markdown lint errors. Use when: (1) Mojo compilation fails with 'unknown declaration' after renaming/moving functions, (2) markdownlint MD051/MD037/MD031/MD040 errors block pre-commit.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/fix-ci-compilation-and-lint",
       "category": "ci-cd",
       "tags": []
     },
@@ -1041,6 +1692,14 @@
       "tags": []
     },
     {
+      "name": "fix-ruff-pre-commit-failures",
+      "description": "Systematically fix ruff pre-commit CI failures (N806, E501, format) on a PR branch. Use when: (1) pre-commit CI is failing with ruff errors on a PR, (2) you need to fix N806 uppercase variables inside functions, E501 line-too-long in docstrings, or ruff-format auto-collapse issues.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/fix-ruff-pre-commit-failures",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "fix-security-scan-gaps",
       "description": "Fix common GitHub Actions security scanning gaps: missing PR triggers, silenced Semgrep failures, and Gitleaks working-directory-only scans. Use when: (1) security scans only run on push to main, not PRs, (2) Semgrep has continue-on-error masking failures, (3) Gitleaks uses --no-git missing history secrets.",
       "version": "1.0.0",
@@ -1095,10 +1754,26 @@
       "tags": []
     },
     {
+      "name": "haiku-batch-worktree-agents",
+      "description": "Run 4 parallel Haiku sub-agents in persistent git worktrees to implement 60-80 GitHub issues in one session. Use when: (1) closing a large backlog (50+ low-complexity issues), (2) worktrees already exist from prior rounds, (3) you need resume-loop pattern to handle token-limited agents.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/haiku-batch-worktree-agents",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "install-workflow",
       "description": "Create GitHub Actions workflows for automated package building and distribution. Use in package phase to automate .mojopkg building and release creation.",
       "version": "1.0.0",
       "source": "./skills/ci-cd/install-workflow",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "just-recipe-heredoc-fix",
+      "description": "Fix heredoc-in-just-recipe whitespace errors by replacing with printf. Use when: (1) a just recipe uses a heredoc (<<EOF) that causes 'inconsistent leading whitespace' parse errors, (2) you need to emit multi-field structured text (e.g., JSON lines) inside a just shell recipe body.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/just-recipe-heredoc-fix",
       "category": "ci-cd",
       "tags": []
     },
@@ -1124,6 +1799,14 @@
         "mass-fix",
         "github-actions"
       ]
+    },
+    {
+      "name": "mass-pr-rebase-and-ci-fix",
+      "description": "Fix systemic CI failures blocking all PRs, enable auto-merge on all open PRs, rebase all branches onto main, and consolidate conflicting skill content into merged files. Use when: (1) main CI workflow fails with GH006 protected branch error, (2) validate check not running on PRs due to path filters, (3) 100+ PRs need rebasing after a fix lands on main, (4) many PRs conflict on the same files and need content merged.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mass-pr-rebase-and-ci-fix",
+      "category": "ci-cd",
+      "tags": []
     },
     {
       "name": "mass-pr-rebase-conflict-resolution",
@@ -1152,6 +1835,50 @@
         "nav",
         "broken-links",
         "ci-fix"
+      ]
+    },
+    {
+      "name": "mojo-adr009-file-split",
+      "description": "Split Mojo test files exceeding ADR-009 limit (\u226410 fn test_ per file) to fix heap corruption CI failures. Use when: (1) CI shows intermittent libKGENCompilerRTShared.so heap corruption crashes, (2) a test file has more than 10 fn test_ functions, (3) ADR-009 compliance check fails.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-adr009-file-split",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "adr-009",
+        "heap-corruption",
+        "ci",
+        "test-splitting"
+      ]
+    },
+    {
+      "name": "mojo-adr009-test-split",
+      "description": "Split Mojo test files exceeding the ADR-009 limit of 10 fn test_ functions per file to prevent heap corruption crashes in Mojo v0.26.1. Use when: (1) a Mojo test file has more than 10 fn test_ functions and CI is failing intermittently, (2) you need to comply with ADR-009 heap corruption workaround, (3) CI shows libKGENCompilerRTShared.so JIT faults on test groups.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-adr009-test-split",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "adr-009",
+        "heap-corruption",
+        "test-split",
+        "ci-stability"
+      ]
+    },
+    {
+      "name": "mojo-ci-wildcard-pattern-coverage",
+      "description": "Determine whether CI workflow test patterns need updating after splitting or adding Mojo test files. Use when: (1) adding new test_*.mojo files and unsure if CI workflow needs updating, (2) splitting a test file into parts and checking if the Data/Core CI groups auto-discover the new files, (3) validate_test_coverage.py reports coverage issues after a split.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-ci-wildcard-pattern-coverage",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "ci",
+        "workflow",
+        "wildcard",
+        "test-discovery",
+        "coverage",
+        "adr-009"
       ]
     },
     {
@@ -1186,6 +1913,21 @@
       ]
     },
     {
+      "name": "mojo-heap-corruption-test-split",
+      "description": "Split Mojo test files that exceed the ADR-009 limit of 10 fn test_ functions per file to prevent heap corruption in Mojo v0.26.1. Use when: (1) a test file has more than 10 fn test_ functions, (2) CI fails intermittently with libKGENCompilerRTShared.so JIT fault, (3) implementing ADR-009 heap corruption workaround.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-heap-corruption-test-split",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "heap-corruption",
+        "test-split",
+        "adr-009",
+        "ci-stability",
+        "mojo-v0.26.1"
+      ]
+    },
+    {
       "name": "mojo-jit-crash-flaky-diagnosis",
       "description": "Diagnose and distinguish genuine Mojo JIT crash failures from infrastructure flakiness in CI. Use when: (1) CI shows 'execution crashed' errors affecting unchanged test files, (2) Core test groups fail while identical code passes on main, (3) multiple unrelated test files crash in the same CI run.",
       "version": "1.0.0",
@@ -1216,6 +1958,38 @@
       ]
     },
     {
+      "name": "mojo-jit-crash-retry-limit",
+      "description": "Add retry limit and distinct failure messages to just test-group crash retry logic. Use when: (1) the blind retry loop retries all failures (not just crashes), (2) CI logs cannot distinguish 'crashed and retried' from 'normal failure', (3) follow-up to mojo-jit-crash-retry to add MAX_RETRIES limit and distinct exit messages.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-jit-crash-retry-limit",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "justfile",
+        "retry",
+        "jit-crash",
+        "ci",
+        "failure-messages",
+        "test-group"
+      ]
+    },
+    {
+      "name": "mojo-note-format-compliance",
+      "description": "Enforce # NOTE (Mojo vX.Y.Z): format in Mojo files via pre-commit hook and Python audit script. Use when: (1) adding a CI check for a comment format standard in Mojo source files, (2) implementing a pygrep pre-commit hook that requires negative lookahead regex, (3) auditing and bulk-fixing non-compliant NOTE comments across a codebase.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-note-format-compliance",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "pre-commit",
+        "pygrep",
+        "note-format",
+        "regex",
+        "compliance",
+        "ci"
+      ]
+    },
+    {
       "name": "mojo-setitem-glibc-hook-skip",
       "description": "Fix ExTensor missing __setitem__ and handle mojo format pre-commit failures caused by GLIBC version mismatch. Use when: (1) CI Core Utilities fails with 'expression must be mutable in assignment' on tensor subscript assignment, (2) mojo format pre-commit hook fails locally with GLIBC_2.32/2.33/2.34 not found errors, (3) adding __setitem__ overloads to ExTensor following _set_float64/_set_int64 internal setter pattern. Verified on ProjectOdyssey PR #3385.",
       "version": "1.0.0",
@@ -1228,6 +2002,66 @@
         "glibc",
         "pre-commit",
         "hook-skip"
+      ]
+    },
+    {
+      "name": "mojo-split-fix-import-gaps",
+      "description": "Fix missing imports when splitting Mojo test files \u2014 original files may use symbols without explicit imports that Mojo silently resolves, but split files inherit these gaps. Use when: (1) splitting a Mojo test file and encountering undefined symbol errors, (2) auditing split files for import completeness before committing.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-split-fix-import-gaps",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "imports",
+        "test-split",
+        "adr-009",
+        "heap-corruption",
+        "debugging"
+      ]
+    },
+    {
+      "name": "mojo-test-file-adr009-split",
+      "description": "Split Mojo test files exceeding ADR-009 limit (10 fn test_ per file) to prevent heap corruption in Mojo v0.26.1. Use when: (1) a .mojo test file has more than 10 fn test_ functions, (2) CI fails non-deterministically with libKGENCompilerRTShared.so JIT fault, (3) heap corruption is suspected due to high test load in Mojo v0.26.1.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-test-file-adr009-split",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "heap-corruption",
+        "adr-009",
+        "test-splitting",
+        "ci-stability",
+        "v0.26.1"
+      ]
+    },
+    {
+      "name": "mojo-test-file-split",
+      "description": "Split large Mojo test files exceeding ADR-009 fn test_ function limits to prevent heap corruption in Mojo v0.26.1 CI. Use when: (1) a test file has >10 fn test_ functions and causes intermittent libKGENCompilerRTShared.so JIT faults, (2) CI shows non-deterministic heap corruption failures on a specific test group, (3) ADR-009 compliance is required for a new or existing test file.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-test-file-split",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "testing",
+        "heap-corruption",
+        "adr-009",
+        "ci-stability",
+        "test-splitting"
+      ]
+    },
+    {
+      "name": "mojo-test-file-splitting",
+      "description": "Split oversized Mojo test files to comply with ADR-009 heap corruption workaround (\u226410 fn test_ per file). Use when: (1) a Mojo test file exceeds 10 fn test_ functions, (2) CI shows intermittent heap corruption crashes in libKGENCompilerRTShared.so, (3) a test file needs to be split while preserving all test cases and updating CI workflow references.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mojo-test-file-splitting",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "testing",
+        "heap-corruption",
+        "adr-009",
+        "ci",
+        "test-splitting"
       ]
     },
     {
@@ -1275,6 +2109,20 @@
       ]
     },
     {
+      "name": "mypy-hook-extend-coverage",
+      "description": "Extend mypy pre-commit hook coverage to additional directories beyond the initial scope. Use when: (1) mypy hook covers only one directory but ruff covers more, (2) tests/ or tools/ dirs have type annotation drift needing baseline suppression, (3) hyphenated directory names cause module resolution conflicts in mypy.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/mypy-hook-extend-coverage",
+      "category": "ci-cd",
+      "tags": [
+        "mypy",
+        "pre-commit",
+        "type-checking",
+        "hooks",
+        "python"
+      ]
+    },
+    {
       "name": "mypy-precommit-hook-pixi",
       "description": "Add mypy type checking as a pre-commit hook in pixi-managed projects. Use when: (1) adding mypy enforcement to pre-commit, (2) scripts use X|Y union syntax that mypy rejects without --python-version 3.10, (3) mirrors-mypy isolated env is missing types-PyYAML stubs.",
       "version": "1.0.0",
@@ -1299,12 +2147,71 @@
       "tags": []
     },
     {
+      "name": "pin-action-shas-to-commit",
+      "description": "Pin GitHub Actions version tags to full commit SHAs for supply chain security. Use when: (1) composite action files reference actions by mutable tag (e.g. @v8, @v0.9.4) instead of full SHA, (2) a repo enforces SHA-pinning in workflow files but composite actions under .github/actions/ were missed.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pin-action-shas-to-commit",
+      "category": "ci-cd",
+      "tags": [
+        "github-actions",
+        "security",
+        "supply-chain",
+        "sha-pinning",
+        "composite-action"
+      ]
+    },
+    {
+      "name": "pin-install-script-tag",
+      "description": "Pin a curl-piped install script to a specific version tag for reproducible Docker builds. Use when: (1) a Dockerfile uses curl | bash install.sh without a --tag or version flag, (2) a previously-pinned cargo/apt install was replaced with a pre-built binary installer but the version pin was dropped, (3) you need to prevent silent upgrades of binary tools installed via official installers.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pin-install-script-tag",
+      "category": "ci-cd",
+      "tags": [
+        "dockerfile",
+        "reproducible-builds",
+        "version-pinning",
+        "just",
+        "binary-install",
+        "install-script"
+      ]
+    },
+    {
       "name": "pin-npm-dockerfile",
       "description": "Skill: pin-npm-dockerfile. Use when working with pin npm dockerfile.",
       "version": "1.0.0",
       "source": "./skills/ci-cd/pin-npm-dockerfile",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "pixi-cache-true-http400-fix",
+      "description": "Fix prefix-dev/setup-pixi cache:true HTTP 400 failures by replacing with explicit actions/cache@v4 step. Use when: (1) CI logs show HTTP 400 errors from setup-pixi built-in caching, (2) a composite action wrapping setup-pixi still passes cache:true, (3) migrating workflows to reliable explicit pixi environment caching.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pixi-cache-true-http400-fix",
+      "category": "ci-cd",
+      "tags": [
+        "github-actions",
+        "pixi",
+        "caching",
+        "composite-action",
+        "http400",
+        "setup-pixi"
+      ]
+    },
+    {
+      "name": "pixi-cache-true-unreliable",
+      "description": "Fixes unreliable Pixi caching caused by setup-pixi's built-in cache: true option (logs 'Saved cache with ID -1'). Replace with explicit actions/cache@v5 caching both .pixi and ~/.cache/rattler/cache keyed on pixi.lock. Use when: (1) CI shows 'Saved cache with ID -1' after Pixi setup, (2) cache hits are inconsistent despite cache: true, (3) consolidating Pixi setup into a shared composite action.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pixi-cache-true-unreliable",
+      "category": "ci-cd",
+      "tags": [
+        "pixi",
+        "caching",
+        "github-actions",
+        "composite-action",
+        "dry",
+        "setup-pixi"
+      ]
     },
     {
       "name": "pixi-lock-rebase-regenerate",
@@ -1327,6 +2234,22 @@
       "description": "Reconcile duplicate package version specs between [dependencies] and [feature.dev.dependencies] in pixi.toml. Use when a package appears in both sections with conflicting constraints.",
       "version": "1.0.0",
       "source": "./skills/ci-cd/pixi-toml-dep-dedup",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "podman-ci-containerization",
+      "description": "Containerize a GitHub Actions CI pipeline using Podman (rootless, no SU) with a separate CI image, GHCR push, Trivy scanning, local runner script, and security hardening. Use when: (1) adding rootless container-based CI isolation to a Python project using pixi, (2) replacing bare ubuntu-latest runner steps with a pre-built OCI image, (3) adding secrets scanning (gitleaks) and SAST (bandit) to replace naive pygrep hooks, (4) enabling developers to run identical CI locally without Docker daemon or sudo.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/podman-ci-containerization",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "pr-ci-failure-triage",
+      "description": "Triage and fix CI failures blocking PR merges in Mojo/GitHub Actions projects. Use when: (1) multiple PRs are stuck with CI failures, (2) pre-commit markdownlint or action SHA errors appear, (3) Mojo --Werror unused return value errors block builds.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pr-ci-failure-triage",
       "category": "ci-cd",
       "tags": []
     },
@@ -1500,6 +2423,21 @@
       ]
     },
     {
+      "name": "pre-commit-version-alignment",
+      "description": "Align pre-commit hook versions with pixi/conda resolved package versions to eliminate local vs CI behavior drift. Use when: (1) pre-commit hook version differs from pixi.toml version, (2) mypy or linter behaves differently in pre-commit vs pixi run, (3) upgrading a dependency in pixi.toml requires matching pre-commit rev update.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/pre-commit-version-alignment",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "mypy",
+        "pixi",
+        "version-alignment",
+        "ci-cd",
+        "hooks"
+      ]
+    },
+    {
       "name": "pre-existing-ci-failure-triage",
       "description": "Triage CI failures on a PR to determine if they are pre-existing on main or introduced by the PR. Use when: (1) CI fails on a PR but changes look unrelated, (2) deciding whether fixes are needed before merging, (3) distinguishing flaky/infrastructure failures from code regressions.",
       "version": "1.0.0",
@@ -1511,6 +2449,21 @@
         "pre-existing",
         "flaky",
         "pr-review"
+      ]
+    },
+    {
+      "name": "precommit-timing-benchmark",
+      "description": "Add pre-commit hook runtime measurement to CI to catch performance regressions. Use when: (1) regressions in hook speed are suspected, (2) a hook config change may affect performance, (3) you want to document before/after timing improvements.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/precommit-timing-benchmark",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "benchmark",
+        "timing",
+        "performance",
+        "ci",
+        "github-actions"
       ]
     },
     {
@@ -1598,12 +2551,34 @@
       "tags": []
     },
     {
+      "name": "replace-printf-emoji-with-python-script",
+      "description": "Replace fragile shell printf emoji byte-escape encoding in CI workflows with a dedicated Python script. Use when: (1) a GitHub Actions workflow uses printf with \\xf0\\x9f byte escapes to embed emoji in shell output, (2) CI comments or report files use printf-based emoji that may fail in different locale/shell environments, (3) refactoring shell-heavy report-building steps into maintainable Python scripts.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/replace-printf-emoji-with-python-script",
+      "category": "ci-cd",
+      "tags": [
+        "emoji",
+        "printf",
+        "python",
+        "github-actions",
+        "encoding",
+        "locale",
+        "shell"
+      ]
+    },
+    {
       "name": "rescue-broken-prs",
-      "description": "Recover and repair broken pull requests with failed CI checks",
+      "description": "Fix CI failures across multiple PRs and coordinate auto-merge. Use when: (1) multiple PRs have CI failures unrelated to code changes, (2) flaky tests need retrigger, (3) artifact/infrastructure issues block merges.",
       "version": "1.0.0",
       "source": "./skills/ci-cd/rescue-broken-prs",
       "category": "ci-cd",
-      "tags": []
+      "tags": [
+        "ci-cd",
+        "automation",
+        "pr-management",
+        "flaky-tests",
+        "branch-protection"
+      ]
     },
     {
       "name": "retrigger-flaky-ci",
@@ -1617,6 +2592,23 @@
         "mojo",
         "github-actions",
         "retrigger"
+      ]
+    },
+    {
+      "name": "retry-all-mojo-workflow-calls",
+      "description": "Audit GitHub Actions workflows for unprotected bare pixi run mojo calls and apply retry logic. Use when: (1) a retry fix was applied to one workflow but other workflows still have bare pixi run mojo calls, (2) auditing CI for JIT crash resilience after discovering intermittent Mojo crashes, (3) workflows use pixi run mojo directly instead of routing through a just recipe that has retry.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/retry-all-mojo-workflow-calls",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "retry",
+        "jit-crash",
+        "github-actions",
+        "pixi",
+        "just",
+        "resilience",
+        "ci-audit"
       ]
     },
     {
@@ -1666,6 +2658,51 @@
       "tags": []
     },
     {
+      "name": "split-test-file-adr009",
+      "description": "Split a Mojo test file exceeding ADR-009 fn test_ function limit into multiple smaller files. Use when: (1) a .mojo test file has >10 fn test_ functions, (2) CI shows intermittent heap corruption crashes in Mojo v0.26.1, (3) ADR-009 compliance is needed.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/split-test-file-adr009",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "testing",
+        "adr-009",
+        "heap-corruption",
+        "ci",
+        "split"
+      ]
+    },
+    {
+      "name": "stale-ci-pattern-detection",
+      "description": "Add inverse CI coverage check that flags matrix patterns matching zero existing files as warnings. Use when: (1) a CI matrix references test paths that may have been renamed or deleted, (2) you want to catch stale entries in a test matrix without breaking CI on exit code, (3) implementing coverage validation scripts that need both forward and inverse checks.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/stale-ci-pattern-detection",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "coverage",
+        "matrix",
+        "stale-patterns",
+        "validation",
+        "testing"
+      ]
+    },
+    {
+      "name": "stale-ci-pattern-removal",
+      "description": "Remove stale file references from CI workflow test pattern strings after test files are deleted. Use when: (1) a test file was deleted but its name still appears in a GitHub Actions workflow pattern string, (2) CI fails because it references a non-existent file, (3) closing a cleanup issue where the only remaining work is a dangling workflow reference.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/stale-ci-pattern-removal",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "github-actions",
+        "cleanup",
+        "test-files",
+        "workflow",
+        "pattern-string"
+      ]
+    },
+    {
       "name": "tier-label-consistency-check",
       "description": "Pattern for adding a testable Python script + CI grep gate + pre-commit hook that prevents tier-number/tier-name mismatches from recurring in documentation. Use when a doc field has regressed 3+ times and manual audits have failed to prevent it.",
       "version": "1.1.0",
@@ -1690,6 +2727,21 @@
       "tags": []
     },
     {
+      "name": "verify-infrastructure-tracking",
+      "description": "Verify a known environment incompatibility is tracked as an open infrastructure issue before re-implementing a workaround. Use when: (1) a pre-commit hook silently skips or fails due to host environment constraints, (2) you suspect an infrastructure issue may already be tracked but need to confirm, (3) implementing issue #N whose objective is 'verify X is tracked'.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/verify-infrastructure-tracking",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "glibc",
+        "infrastructure",
+        "deduplication",
+        "tracking",
+        "mojo-format"
+      ]
+    },
+    {
       "name": "verify-pr-ci-preexisting-failures",
       "description": "Verify whether CI failures on a PR are pre-existing on main or introduced by the PR changes. Use when: (1) a PR has CI failures and you need to determine if they are caused by the PR or were already present on main, (2) reviewing a cleanup/deletion PR where no code logic was changed, (3) confirming a PR is correct and complete despite red CI checks.",
       "version": "1.0.0",
@@ -1712,11 +2764,74 @@
       "tags": []
     },
     {
+      "name": "werror-compilation-audit",
+      "description": "Systematic parallel compilation audit of all Mojo files with --Werror to find and fix warnings treated as errors. Use when: (1) adding --Werror to a build system for the first time, (2) auditing hundreds of files for hidden warnings after enabling strict mode, (3) triaging compilation warnings into fixable vs complex categories requiring new issues.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/werror-compilation-audit",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "workflow-binary-sha256-verification",
+      "description": "Add SHA256 checksum verification for binary downloads in GitHub Actions workflows to prevent supply chain attacks. Use when: (1) a workflow downloads a binary via wget/curl without integrity verification, (2) a tool is pinned to a version but the downloaded artifact is not checksummed, (3) reviewing CI security and noticing unverified binary execution.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/workflow-binary-sha256-verification",
+      "category": "ci-cd",
+      "tags": [
+        "security",
+        "sha256",
+        "supply-chain",
+        "github-actions",
+        "binary-verification",
+        "gitleaks",
+        "workflow-hardening"
+      ]
+    },
+    {
+      "name": "workflow-deduplication-pixi-composite-action",
+      "description": "Deduplicate repeated Pixi setup blocks across GitHub Actions workflows using a composite action. Use when: (1) multiple workflows repeat the same setup-pixi block, (2) consolidating CI workflows to reduce maintenance burden, (3) migrating from inline prefix-dev/setup-pixi to a centralized composite action.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/workflow-deduplication-pixi-composite-action",
+      "category": "ci-cd",
+      "tags": [
+        "github-actions",
+        "composite-action",
+        "pixi",
+        "deduplication",
+        "ci-consolidation"
+      ]
+    },
+    {
+      "name": "workflow-smoke-tests",
+      "description": "Write pytest smoke tests and pre-commit hooks to prevent GitHub Actions security workflow regressions. Use when: (1) security workflow gaps were fixed and need regression protection, (2) CI properties like triggers/flags need continuous verification, (3) a pygrep pre-commit hook should catch bad patterns in workflow files.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd/workflow-smoke-tests",
+      "category": "ci-cd",
+      "tags": [
+        "smoke-tests",
+        "pytest",
+        "pre-commit",
+        "security",
+        "regression",
+        "github-actions",
+        "gitleaks",
+        "semgrep"
+      ]
+    },
+    {
       "name": "yaml-frontmatter-validation",
       "description": "Fix CI failures caused by missing YAML frontmatter in SKILL.md files. Use when: (1) plugin validation fails with 'missing YAML frontmatter' errors, (2) multiple PRs failing with same root cause, (3) SKILL.md doesn't start with '---', (4) systematic fixes needed across main and feature branches.",
       "version": "1.0.0",
       "source": "./skills/ci-cd/yaml-frontmatter-validation",
       "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "always-retry-infra-failures",
+      "description": "Fix retry logic bugs where a flag-gated retry failed to distinguish infra crashes from bad-grade results, causing valid judge results to be discarded. Use when: (1) removing a feature flag and making its behavior unconditional, (2) fixing retry/reset logic that incorrectly targets completed runs with bad scores, (3) debugging state machine checkpoint semantics where terminal states have different meanings.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/always-retry-infra-failures",
+      "category": "debugging",
       "tags": []
     },
     {
@@ -1740,6 +2855,14 @@
       "description": "Skill: Fixing Checkpoint Config Mismatch and Data Loss",
       "version": "1.0.0",
       "source": "./skills/debugging/checkpoint-config-mismatch",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "checkpoint-disk-reconciliation",
+      "description": "Reconcile stale checkpoint states with on-disk artifacts after ProcessPool race conditions or interrupted runs. Use when: (1) --retry-errors skips runs that have valid on-disk results but stale intermediate checkpoint states, (2) judge-failed runs at worktree_cleaned need re-running, (3) checkpoint shows intermediate states but run_result.json exists on disk.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/checkpoint-disk-reconciliation",
       "category": "debugging",
       "tags": []
     },
@@ -1774,6 +2897,26 @@
       "source": "./skills/debugging/detect-code-smells",
       "category": "debugging",
       "tags": []
+    },
+    {
+      "name": "dryrun3-runner-failure-fixes",
+      "description": "Fix three E2E runner failure modes: (1) empty judge prompt on resumed runs (JUDGE_COMPLETE threshold wrong), (2) T5 inheritance hard-crash when dependent tiers failed, (3) judge responding with prose instead of JSON (regex stops at first '}'). Use when dryrun experiments show high judge failure counts, T5 ValueError on inheritance, or zero-score consensus from prose responses.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/dryrun3-runner-failure-fixes",
+      "category": "debugging",
+      "tags": [
+        "e2e",
+        "judge",
+        "resume",
+        "t5",
+        "inheritance",
+        "json-parse",
+        "regex",
+        "dryrun",
+        "stage-finalization",
+        "tier-manager",
+        "subtest-executor"
+      ]
     },
     {
       "name": "e2e-framework-bug-fixes",
@@ -1814,6 +2957,21 @@
       "source": "./skills/debugging/e2e-state-machine-bugs",
       "category": "debugging",
       "tags": []
+    },
+    {
+      "name": "extensor-bfloat16-fix",
+      "description": "Fix pattern for adding bfloat16 dtype support to Mojo ExTensor float I/O methods. Use when: (1) _set_float64/_get_float64 silently write/read zeros for bfloat16 tensors, (2) a new dtype is missing from _get_dtype_size_static causing wrong byte offsets, (3) re-enabling skipped bfloat16 tests after dtype support is added.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/extensor-bfloat16-fix",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "bfloat16",
+        "extensor",
+        "dtype",
+        "float-io",
+        "silent-failure"
+      ]
     },
     {
       "name": "extract-algorithm",
@@ -1919,6 +3077,22 @@
       "tags": []
     },
     {
+      "name": "fix-non-contiguous-tensor-stride-access",
+      "description": "Fix tensor operations that use flat index offset instead of stride-based multi-dimensional indexing for non-contiguous views. Use when: (1) a tensor copy/conversion silently produces wrong values for transposed or sliced views, (2) element access uses i*dtype_size offset rather than strides, (3) as_contiguous or similar functions assume stride-1 layout.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/fix-non-contiguous-tensor-stride-access",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "tensor",
+        "stride",
+        "non-contiguous",
+        "extensor",
+        "shape",
+        "transpose"
+      ]
+    },
+    {
       "name": "fix-randn-seed-bug",
       "description": "Fix unused seed parameter in random number generation functions. Use when: (1) Tests using seeded random inputs produce non-reproducible results, (2) randn/random functions declare seed parameter but generate different values each call, (3) assert_almost_equal fails with wildly different values for same-seeded inputs.",
       "version": "1.0.0",
@@ -2013,6 +3187,23 @@
       "tags": []
     },
     {
+      "name": "jq-compatibility-fix",
+      "description": "TRIGGER CONDITIONS: jq syntax error 'unexpected +, expecting }' when using array concatenation with conditionals (] + (if ... end)) in shell scripts. Use when: (1) jq fails with syntax errors on array concatenation, (2) script works on jq 1.6+ but fails on older versions, (3) --argjson with conditional expressions causes parse errors. Fix: build the JSON array in bash and pass it via --argjson instead of constructing it inside jq.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/jq-compatibility-fix",
+      "category": "debugging",
+      "tags": [
+        "debugging",
+        "jq",
+        "compatibility",
+        "bash",
+        "shell-script",
+        "array-concatenation",
+        "syntax-error",
+        "older-versions"
+      ]
+    },
+    {
       "name": "mock-expensive-simulations",
       "description": "Diagnose and fix pytest tests hanging due to expensive Monte Carlo or bootstrap simulation calls. Covers: identifying the hanging function, verifying the correct patch target (caller vs origin namespace), and adding an autouse conftest fixture.",
       "version": "1.0.0",
@@ -2033,6 +3224,23 @@
         "ci",
         "test-skip",
         "partial-support"
+      ]
+    },
+    {
+      "name": "mojo-extensor-bfloat16-io-fix",
+      "description": "Fix ExTensor _set_float64/_get_float64 silent failures for bfloat16 dtype by adding SIMD[DType.bfloat16, 1] branches and correcting _get_dtype_size_static. Use when: (1) ExTensor bfloat16 tensors read back zeros after _set_float64 writes, (2) auditing dtype round-trip support across float16/bfloat16/int8/float32/float64, (3) _get_dtype_size_static returns wrong byte count for a dtype causing offset corruption.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/mojo-extensor-bfloat16-io-fix",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "bfloat16",
+        "dtype",
+        "extensor",
+        "simd",
+        "silent-failure",
+        "round-trip",
+        "float64-io"
       ]
     },
     {
@@ -2084,6 +3292,68 @@
       ]
     },
     {
+      "name": "mojo-nd-slice-copy-semantics",
+      "description": "Fix Mojo multi-dimensional tensor slicing bugs caused by pointer-offset view approach on non-contiguous data. Use when: (1) N-D tensor slice tests are skipped/disabled, (2) __getitem__(*slices) returns wrong values for 2D/3D/ND slices, (3) multi-dim slicing uses self.copy() + data pointer offset which fails for non-contiguous results.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/mojo-nd-slice-copy-semantics",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "tensor",
+        "slicing",
+        "memory",
+        "copy-semantics",
+        "extensor",
+        "nd-array"
+      ]
+    },
+    {
+      "name": "mojo-serialization-ci-crash",
+      "description": "Debug Mojo serialization CI crashes from dtype string conversion mismatches and Python interop crashes. Use when: (1) mojo test crashes during hex encoding or serialization roundtrip, (2) CI fails with libKGENCompilerRTShared crash in serialization tests, (3) dtype roundtrip produces wrong type after load, (4) load_named_tensors returns wrong ordering or crashes.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/mojo-serialization-ci-crash",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "serialization",
+        "dtype",
+        "ci",
+        "crash",
+        "python-interop",
+        "os.listdir"
+      ]
+    },
+    {
+      "name": "mojo-shallow-copy-tensor-hazard",
+      "description": "Fix Mojo tensor mutation caused by shallow copy sharing _data pointer. Use when: (1) a function that receives a tensor modifies a copy but unexpectedly corrupts the caller's tensor, (2) numerical gradient checking produces wrong results despite correct math, (3) debugging silent data corruption in Mojo tensor operations.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/mojo-shallow-copy-tensor-hazard",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "tensor",
+        "memory-safety",
+        "shallow-copy",
+        "deep-copy",
+        "gradient-checker"
+      ]
+    },
+    {
+      "name": "mojo-slice-negative-step",
+      "description": "Fix negative-step slice bugs in Mojo tensor/array __getitem__(Slice). Use when: (1) reverse slicing t[::-1] returns wrong values or empty result, (2) negative-step slice result_size is 0 or incorrect, (3) slice defaults for start/end are wrong when step < 0.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/mojo-slice-negative-step",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "slice",
+        "negative-step",
+        "tensor",
+        "extensor",
+        "reverse-slice"
+      ]
+    },
+    {
       "name": "mojo-trait-conformance-fix",
       "description": "Fix Mojo struct missing trait declaration causing compile-time 'does not conform to trait' errors. Use when: (1) a struct implements trait methods (e.g. __hash__, __eq__) but is not listed in the struct trait list, (2) CI fails with 'argument type X does not conform to trait Y', (3) hash() or other trait-dispatched functions fail on a struct that has the implementation.",
       "version": "1.0.0",
@@ -2103,6 +3373,31 @@
       "description": "Skill: mypy-quick-win-fixes. Use when working with mypy quick win fixes.",
       "version": "1.0.0",
       "source": "./skills/debugging/mypy-quick-win-fixes",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "nan-hash-canonicalization",
+      "description": "Canonicalize NaN bit patterns in __hash__ for IEEE 754 float tensors to ensure hash stability. Use when: (1) a tensor's __hash__ uses bitcast of float values but NaN-containing tensors produce non-deterministic hashes, (2) different NaN payloads or sign bits produce different hash values for semantically identical NaN content, (3) follow-up to fixing float hash precision with bitcast (e.g. after mojo-hash-bitcast-floats).",
+      "version": "1.0.0",
+      "source": "./skills/debugging/nan-hash-canonicalization",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "hash",
+        "nan",
+        "ieee754",
+        "float",
+        "canonicalization",
+        "bitcast",
+        "stability"
+      ]
+    },
+    {
+      "name": "null-best-subtest-fallthrough-fix",
+      "description": "Fix pattern for elif\u2192if fallthrough when a primary JSON file exists but has a null key, preventing fallback to a secondary file. Use when: (1) a tier result has best_subtest=null in result.json but best_subtest.json has the correct value, (2) an if/elif chain silently skips a fallback because a primary file exists with empty/null data, (3) T5 subtests fail with 'all required tiers failed' despite lower tiers completing successfully.",
+      "version": "1.0.0",
+      "source": "./skills/debugging/null-best-subtest-fallthrough-fix",
       "category": "debugging",
       "tags": []
     },
@@ -2235,6 +3530,35 @@
       "tags": []
     },
     {
+      "name": "add-ci-badge-to-readme",
+      "description": "Add a GitHub Actions CI status badge to a README badge block. Use when: (1) a README is missing a CI/build status badge, (2) a new workflow has been added and should be surfaced via a badge, (3) a reviewer requests a CI badge be added to the project home page.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/add-ci-badge-to-readme",
+      "category": "documentation",
+      "tags": [
+        "readme",
+        "badge",
+        "ci",
+        "github-actions",
+        "documentation"
+      ]
+    },
+    {
+      "name": "adr-directory-tree-accuracy",
+      "description": "Update ADR directory tree listings to reflect actual filesystem contents after file deletions or additions. Use when: (1) a file is deleted/added but the ADR still shows the old listing, (2) a GitHub issue requests verifying helpers/tests directories are accurately documented, (3) an ADR directory tree shows only a subset of the files actually present.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/adr-directory-tree-accuracy",
+      "category": "documentation",
+      "tags": [
+        "adr",
+        "directory-tree",
+        "stale-docs",
+        "helpers",
+        "cleanup",
+        "accuracy"
+      ]
+    },
+    {
       "name": "adr-index-entry",
       "description": "Add a missing ADR entry to the ADR index table in docs/adr/README.md. Use when: (1) an ADR file exists under docs/adr/ but is not listed in the README index table, (2) a quality audit or issue flags a missing ADR row, (3) a new ADR was added without updating the index.",
       "version": "1.0.0",
@@ -2272,6 +3596,35 @@
       "tags": []
     },
     {
+      "name": "audit-runtime-note-prints",
+      "description": "Audit example scripts for ambiguous runtime NOTE/TODO/FIXME print statements and replace with plain status messages. Use when: (1) follow-up cleanup after fixing NOTE prints in a subset of files, (2) auditing all examples/ scripts for misleading runtime output, (3) converting Note: prefixes to factual plain text.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/audit-runtime-note-prints",
+      "category": "documentation",
+      "tags": [
+        "examples",
+        "print-statements",
+        "cleanup",
+        "runtime-output",
+        "note-prefix"
+      ]
+    },
+    {
+      "name": "audit-shared-links",
+      "description": "Audit shared documentation files for missing link-backs in a root markdown file. Use when: (1) adding new .claude/shared/ files that should appear in CLAUDE.md Quick Links, (2) setting up a pre-commit hook to prevent link drift, (3) implementing issue-driven documentation audits with pytest-based tests.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/audit-shared-links",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "audit",
+        "pre-commit",
+        "links",
+        "claude-md",
+        "shared-files"
+      ]
+    },
+    {
       "name": "auto-impl-partial-completion-check",
       "description": "Verify auto-impl issue completion when commit and PR already exist. Use when: (1) worktree branch is named <number>-auto-impl and git log shows a prior commit closing the issue, (2) an open PR already exists for the branch, (3) need to check whether implementation plan was fully executed vs partially done.",
       "version": "1.0.0",
@@ -2282,6 +3635,22 @@
         "issue-verification",
         "pr-workflow",
         "completion-check"
+      ]
+    },
+    {
+      "name": "batchnorm-epsilon-audit",
+      "description": "Audit backward-pass tester methods for undocumented epsilon/tolerance magic numbers and apply structured NOTE comment pattern. Use when: (1) following up a backward-pass epsilon audit (e.g. after #3090 pattern), (2) a tester method lacks gradient-checking constants documentation, (3) BatchNorm or Pooling backward testers need epsilon/tolerance rationale added.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/batchnorm-epsilon-audit",
+      "category": "documentation",
+      "tags": [
+        "batchnorm",
+        "epsilon",
+        "tolerance",
+        "gradient-checking",
+        "layer-testers",
+        "mojo",
+        "audit"
       ]
     },
     {
@@ -2342,6 +3711,38 @@
         "readme",
         "mojo",
         "python-interop"
+      ]
+    },
+    {
+      "name": "consolidate-duplicate-adr-references",
+      "description": "Consolidate duplicate inline comments or docstring Notes into a single ADR as the canonical source of truth, then replace each duplicate with a short cross-reference. Use when: (1) two or more functions contain nearly identical limitation/workaround comments, (2) an issue requests reducing documentation maintenance burden by centralizing a limitation note, (3) a follow-up issue from a PR asks to create a dedicated ADR for a cross-cutting concern.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/consolidate-duplicate-adr-references",
+      "category": "documentation",
+      "tags": [
+        "adr",
+        "documentation",
+        "consolidation",
+        "refactor",
+        "mojo",
+        "cross-reference",
+        "limitation"
+      ]
+    },
+    {
+      "name": "deferred-doc-placeholder",
+      "description": "Pattern for adding an HTML comment placeholder to a docs navigation index when an entire section is removed due to stub deletion. Preserves awareness of missing topics without broken links. Use when: (1) a docs/index.md section is removed after stub deletion, (2) a follow-up issue tracks restoring the navigation hub, (3) you need to mark topics as deferred with acceptance criteria for future contributors.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/deferred-doc-placeholder",
+      "category": "documentation",
+      "tags": [
+        "docs",
+        "index",
+        "placeholder",
+        "deferred",
+        "navigation",
+        "stub-deletion",
+        "html-comment"
       ]
     },
     {
@@ -2411,6 +3812,21 @@
       ]
     },
     {
+      "name": "docstring-view-vs-copy-clarification",
+      "description": "Fix docstring inconsistencies where memory semantics are mislabeled (view vs copy). Use when: (1) a docstring claims 'view' but the implementation allocates new memory, (2) a flag like _is_view contradicts the description, (3) sibling methods have inconsistent return-type documentation.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/docstring-view-vs-copy-clarification",
+      "category": "documentation",
+      "tags": [
+        "docstring",
+        "view-semantics",
+        "copy-semantics",
+        "mojo",
+        "consistency",
+        "documentation"
+      ]
+    },
+    {
       "name": "document-copy-vs-view-semantics",
       "description": "Document and clarify copy vs view semantics in tensor/array slicing operations by updating docstrings and test names. Use when: (1) a codebase has NOTE markers flagging undocumented behavior, (2) test function names contradict what the test actually asserts, (3) docstrings say 'view' but implementation returns a copy (or vice versa), (4) a cleanup issue asks to document or decide on slice semantics.",
       "version": "1.0.0",
@@ -2435,6 +3851,22 @@
       "tags": []
     },
     {
+      "name": "document-hook-glibc-incompatibility",
+      "description": "Document pre-commit hook OS/runtime incompatibilities in CONTRIBUTING.md. Use when: (1) a pre-commit hook fails due to host OS constraints rather than code errors, (2) a wrapper script already handles the incompatibility but CONTRIBUTING.md lacks a discoverable explanation, (3) contributors report confusing hook failures tied to glibc, musl, or other system library versions.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/document-hook-glibc-incompatibility",
+      "category": "documentation",
+      "tags": [
+        "pre-commit",
+        "glibc",
+        "contributing",
+        "hooks",
+        "documentation",
+        "mojo-format",
+        "debian"
+      ]
+    },
+    {
       "name": "document-magic-number-constants",
       "description": "Extract inline magic-number NOTE comments into named module-level constants with full rationale. Use when: (1) a value is used with a NOTE comment referencing an issue, (2) the same magic number appears in multiple locations, (3) a cleanup issue asks to convert inline NOTEs to docstrings.",
       "version": "1.0.0",
@@ -2448,6 +3880,37 @@
         "mojo",
         "gradient-checking",
         "precision"
+      ]
+    },
+    {
+      "name": "document-normalization-test-gotcha",
+      "description": "Document normalization backward pass test gotchas in project docs. Use when: (1) a normalization layer backward gradient test produced a false mismatch that turned out to be a mathematical identity, (2) adding a Known Gotchas section to testing-strategy.md or backward-pass-catalog.md, (3) cross-referencing test pathologies across documentation files.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/document-normalization-test-gotcha",
+      "category": "documentation",
+      "tags": [
+        "batch-norm",
+        "normalization",
+        "gradient-checking",
+        "testing-strategy",
+        "gotcha",
+        "documentation"
+      ]
+    },
+    {
+      "name": "extensor-hash-api-docs",
+      "description": "Document trait-implementing special methods (__hash__, __eq__, etc.) in Mojo struct docstrings and package __init__.mojo API listings. Use when: (1) a new dunder/trait method is added to a Mojo struct but missing from docs, (2) the package __init__.mojo module listing or section comment does not mention the trait, (3) a follow-up issue requests API surface documentation for a newly added method.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/extensor-hash-api-docs",
+      "category": "documentation",
+      "tags": [
+        "mojo",
+        "docstring",
+        "api-docs",
+        "hashable",
+        "trait",
+        "extensor",
+        "init-mojo"
       ]
     },
     {
@@ -2518,6 +3981,23 @@
       "source": "./skills/documentation/fix-tier-label-mismatches",
       "category": "documentation",
       "tags": []
+    },
+    {
+      "name": "fp16-accumulation-threshold-math-docs",
+      "description": "Document Float16 convolution skips in developer testing-strategy guides with accumulation threshold math and per-layer error tables. Use when: (1) a follow-up issue asks to add a Float16 limitations section to a testing-strategy.md or similar dev guide, (2) a plan references accumulation error = n \u00d7 \u03b5_machine math that was omitted from Success Criteria, (3) a gradient-checking parameters section needs a Float16 subsection explaining why convolution tests skip Float16.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/fp16-accumulation-threshold-math-docs",
+      "category": "documentation",
+      "tags": [
+        "float16",
+        "fp16",
+        "convolution",
+        "gradient-checking",
+        "testing-strategy",
+        "accumulation-error",
+        "documentation",
+        "follow-up-issue"
+      ]
     },
     {
       "name": "fp16-precision-test-documentation",
@@ -2653,6 +4133,37 @@
       ]
     },
     {
+      "name": "mojo-api-name-reconciliation",
+      "description": "Reconcile planned API names in Mojo test placeholders and documentation comments with actual implemented names after an import audit. Use when: (1) placeholder tests reference old planned names that diverge from implementation, (2) documentation comments in __init__.mojo use stale names, (3) following up on import audit issues to align tests with reality.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/mojo-api-name-reconciliation",
+      "category": "documentation",
+      "tags": [
+        "mojo",
+        "api-names",
+        "placeholders",
+        "reconciliation",
+        "documentation",
+        "import-audit"
+      ]
+    },
+    {
+      "name": "mojo-jit-crash-doc",
+      "description": "Document Mojo JIT compiler crashes (libKGENCompilerRTShared.so 'execution crashed') in docs/dev/ with diagnosis guide and retry workaround. Use when: (1) a CI flake produces 'execution crashed' before any test output, (2) developers report intermittent mojo test failures on known-good code, (3) a new Mojo compiler bug needs a dev-facing workaround doc.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/mojo-jit-crash-doc",
+      "category": "documentation",
+      "tags": [
+        "mojo",
+        "jit",
+        "crash",
+        "workaround",
+        "ci",
+        "debugging",
+        "documentation"
+      ]
+    },
+    {
       "name": "mojo-limitation-note-standardization",
       "description": "Standardize Mojo language/compiler limitation NOTEs to use consistent format `# NOTE (Mojo vX.Y.Z):`. Use when: (1) cleaning up documentation NOTEs that lack version info, (2) auditing Mojo codebases for inconsistent limitation comment formats, (3) implementing cleanup issues that require NOTE standardization across multiple files.",
       "version": "1.0.0",
@@ -2695,6 +4206,37 @@
         "cleanup",
         "refactoring",
         "comments"
+      ]
+    },
+    {
+      "name": "mojo-promote-constants-to-public-api",
+      "description": "Promote module-scoped Mojo constants to the package public API via __init__.mojo re-exports. Use when: (1) constants are defined with alias/comptime in a single module but needed by multiple test files, (2) an issue asks to 'export constants from public API', (3) callers must import the whole module just to get one constant value.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/mojo-promote-constants-to-public-api",
+      "category": "documentation",
+      "tags": [
+        "mojo",
+        "constants",
+        "public-api",
+        "init-mojo",
+        "re-export",
+        "tolerance",
+        "gradient-check"
+      ]
+    },
+    {
+      "name": "mojo-reexport-limitation-audit",
+      "description": "Audit Mojo __init__.mojo submodules for re-export limitations and document findings in module docstrings. Use when: (1) a follow-up issue asks to check if the re-export limitation from one submodule also affects sibling submodules, (2) a cleanup sweep requires confirming which submodules have or lack re-export limitations, (3) a docstring audit reveals some submodules are undocumented about import path correctness.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/mojo-reexport-limitation-audit",
+      "category": "documentation",
+      "tags": [
+        "mojo",
+        "reexport",
+        "audit",
+        "docstring",
+        "import-limitation",
+        "submodule"
       ]
     },
     {
@@ -2784,6 +4326,20 @@
       "tags": []
     },
     {
+      "name": "placeholder-doc-rewrite",
+      "description": "Replace placeholder documentation files with accurate, verified content. Use when: (1) a markdown file contains stub/placeholder text (e.g. 'More examples.', 'Step 1/2/3'), (2) a README links to a doc that needs real content, (3) an issue asks to write a quickstart or getting-started guide.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/placeholder-doc-rewrite",
+      "category": "documentation",
+      "tags": [
+        "documentation",
+        "markdown",
+        "quickstart",
+        "placeholder",
+        "getting-started"
+      ]
+    },
+    {
       "name": "placeholder-note-to-status-tracking",
       "description": "Clarify ambiguous NOTE: runtime print statements as intentional placeholders by converting them to STATUS: messages that reference GitHub tracking issues. Use when: (1) example or demo scripts print NOTE messages that confuse users into thinking something is broken, (2) cleanup issues require disambiguating placeholder code from unimplemented code.",
       "version": "1.0.0",
@@ -2851,6 +4407,20 @@
         "no-op",
         "documentation",
         "verification"
+      ]
+    },
+    {
+      "name": "pre-commit-pass-filenames-evaluation",
+      "description": "Evaluate whether a pre-commit hook should use pass_filenames: true or false, then document the decision inline. Use when: (1) a hook has pass_filenames: false and it's unclear if that is intentional, (2) a follow-up issue asks you to review a hook's filename-passing behavior, (3) adding a clarifying comment to .pre-commit-config.yaml for a hook that does whole-repo scanning.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/pre-commit-pass-filenames-evaluation",
+      "category": "documentation",
+      "tags": [
+        "pre-commit",
+        "ci-cd",
+        "documentation",
+        "configuration",
+        "hook"
       ]
     },
     {
@@ -2988,6 +4558,20 @@
       "tags": []
     },
     {
+      "name": "strip-note-prefix-comments",
+      "description": "Strip NOTE: prefix variants from plain comments in Mojo files without functional changes. Use when: (1) a follow-up cleanup issue asks to remove # NOTE: markers from test/example/script files, (2) files have # NOTE(#N): or # NOTE (version): variant patterns, (3) scope must be verified against actual file state before editing.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/strip-note-prefix-comments",
+      "category": "documentation",
+      "tags": [
+        "mojo",
+        "comments",
+        "cleanup",
+        "note",
+        "refactoring"
+      ]
+    },
+    {
       "name": "sync-stale-future-improvements",
       "description": "Sync stale Future Improvements sections with actual implementation. Use when a TODO/Future Improvements doc section lists a feature that has already been shipped, or code review finds a doc calling something 'planned' but grep shows it exists in source.",
       "version": "1.0.0",
@@ -3007,6 +4591,20 @@
         "blockers",
         "comments",
         "cleanup"
+      ]
+    },
+    {
+      "name": "update-stale-agent-references",
+      "description": "Find and update stale cross-references to deleted agent files in documentation. Use when: (1) agent files are deleted or consolidated, (2) docs still reference old agent names, (3) grep reveals broken links in tracking or hierarchy docs.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/update-stale-agent-references",
+      "category": "documentation",
+      "tags": [
+        "agents",
+        "cross-references",
+        "cleanup",
+        "consolidation",
+        "documentation"
       ]
     },
     {
@@ -3053,6 +4651,38 @@
       ]
     },
     {
+      "name": "verify-issue-already-implemented",
+      "description": "Check whether a GitHub issue is already implemented before starting work. Use when: (1) handed an issue via .claude-prompt-NNNN.md with branch already checked out, (2) git log shows a recent commit matching the issue title, (3) an open PR already exists for the branch.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/verify-issue-already-implemented",
+      "category": "documentation",
+      "tags": [
+        "github",
+        "issue",
+        "verification",
+        "idempotency",
+        "auto-impl",
+        "pr",
+        "worktree"
+      ]
+    },
+    {
+      "name": "workflow-readme-audit",
+      "description": "Audit a .github/workflows/README.md against actual workflow files on disk, update inventory table to match reality, and document remaining duplication. Use when: (1) workflows were added/deleted but README was not updated, (2) a consolidation pass removed workflows that are still listed, (3) inline setup steps exist across many workflows and need to be inventoried before extraction.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/workflow-readme-audit",
+      "category": "documentation",
+      "tags": [
+        "github-actions",
+        "workflows",
+        "ci",
+        "readme",
+        "audit",
+        "duplication",
+        "inventory"
+      ]
+    },
+    {
       "name": "worktree-path-awareness",
       "description": "Identifies and edits files in the correct git worktree path. Use when: (1) editing files inside a git worktree and the main repo has the same file path, (2) a commit shows no staged changes after editing a file, (3) working in .worktrees/ subdirectories where file paths shadow the main repo.",
       "version": "1.0.0",
@@ -3064,6 +4694,21 @@
         "file-editing",
         "path",
         "disambiguation"
+      ]
+    },
+    {
+      "name": "write-installation-docs",
+      "description": "Replace placeholder installation documentation with complete, accurate content. Use when: (1) installation.md or similar docs contain only placeholder text, (2) a README links to an installation guide that needs real content, (3) a follow-up issue requests writing real installation steps after initial structure was created.",
+      "version": "1.0.0",
+      "source": "./skills/documentation/write-installation-docs",
+      "category": "documentation",
+      "tags": [
+        "installation",
+        "documentation",
+        "pixi",
+        "mojo",
+        "getting-started",
+        "placeholder-replacement"
       ]
     },
     {
@@ -3475,6 +5120,37 @@
       ]
     },
     {
+      "name": "add-uint-bitwise-not-tests",
+      "description": "Add Mojo UInt bitwise NOT (~) operator tests covering all unsigned integer types. Use when: (1) extending bitwise operator test coverage for UInt8/UInt16/UInt32/UInt64, (2) a bitwise test suite covers AND/OR/XOR/shifts but omits complement operator, (3) adding operator tests to an existing Mojo test file following the raise-Error pattern.",
+      "version": "1.0.0",
+      "source": "./skills/testing/add-uint-bitwise-not-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "uint",
+        "bitwise",
+        "not",
+        "complement",
+        "unsigned",
+        "operator",
+        "testing"
+      ]
+    },
+    {
+      "name": "add-unit-tests-for-existing-script",
+      "description": "Add comprehensive pytest unit tests for an existing Python script that has no tests. Use when: (1) a script has been identified as having no test coverage, (2) a follow-up issue asks for tests after bugs were found during implementation, (3) you need to cover multiple public functions with class-grouped tests.",
+      "version": "1.0.0",
+      "source": "./skills/testing/add-unit-tests-for-existing-script",
+      "category": "testing",
+      "tags": [
+        "pytest",
+        "unit-testing",
+        "python",
+        "test-coverage",
+        "scripts"
+      ]
+    },
+    {
       "name": "agent-test-delegation",
       "description": "Test agent delegation patterns to verify hierarchy and escalation paths. Use after modifying agent structure.",
       "version": "1.0.0",
@@ -3520,6 +5196,20 @@
       ]
     },
     {
+      "name": "batch-norm-sum-squared-loss-test",
+      "description": "Replace trivial batch norm gradient test with sum(output^2) loss for real backward pass validation. Use when: (1) batch_norm2d_backward gradient test uses a non-loss-derived grad_output, (2) upgrading from non-uniform ad-hoc grad_output to a principled loss function, (3) gradient check uses arbitrary weights instead of a closed-form derivative.",
+      "version": "1.0.0",
+      "source": "./skills/testing/batch-norm-sum-squared-loss-test",
+      "category": "testing",
+      "tags": [
+        "batch-norm",
+        "gradient-checking",
+        "sum-squared-loss",
+        "mojo",
+        "backward-pass"
+      ]
+    },
+    {
       "name": "bats-shell-testing",
       "description": "Skill: bats-shell-testing. Use when working with bats shell testing.",
       "version": "1.0.0",
@@ -3544,6 +5234,14 @@
       "tags": []
     },
     {
+      "name": "checkpoint-reconcile-state-order",
+      "description": "Fix stale checkpoint run states by reconciling with on-disk artifacts before retry. Use when: (1) a reconcile function uses a state_order rank table and run states may be incomplete, (2) adding or reordering RunState enum values, (3) writing tests for checkpoint reconciliation edge cases.",
+      "version": "1.0.0",
+      "source": "./skills/testing/checkpoint-reconcile-state-order",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "cli-deep-audit-and-fix",
       "description": "Deep-audit CLI scripts for bugs, dead code, and validation gaps, then fix in dependency order with complementary tests. Use when: (1) a CLI script has grown organically and may have accumulated inconsistencies, (2) multiple code paths (single-mode vs batch-mode) could diverge, (3) you need to validate argparse resolution works correctly.",
       "version": "1.0.0",
@@ -3560,12 +5258,75 @@
       "tags": []
     },
     {
+      "name": "conv2d-backward-gradient-testing",
+      "description": "Add numerical gradient checks for conv2d_backward in Mojo using check_gradient with finite differences. Use when: (1) conv2d backward tests only check shapes/bias but not grad_input or grad_weights values, (2) adding gradient correctness tests to test_backward_conv_pool.mojo, (3) verifying grad_weights by treating the kernel as the perturbed variable.",
+      "version": "1.0.0",
+      "source": "./skills/testing/conv2d-backward-gradient-testing",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "conv2d",
+        "backward",
+        "gradient-checking",
+        "numerical-gradients",
+        "finite-differences",
+        "check_gradient"
+      ]
+    },
+    {
+      "name": "conv2d-gradient-checking",
+      "description": "Add numerical gradient checking tests for conv2d backward pass using finite differences. Use when: (1) conv2d_backward shape/value tests pass but numerical correctness is unverified, (2) adding gradient checking coverage for strided, padded, or multi-channel convolutions, (3) extending existing gradient checking test files in a Mojo project with ADR-009 heap corruption constraints.",
+      "version": "1.0.0",
+      "source": "./skills/testing/conv2d-gradient-checking",
+      "category": "testing",
+      "tags": [
+        "conv2d",
+        "gradient-checking",
+        "backward-pass",
+        "mojo",
+        "finite-differences",
+        "numerical-gradients",
+        "adr-009"
+      ]
+    },
+    {
+      "name": "conv2d-numerical-gradient-check",
+      "description": "Add numerical gradient checks for conv2d_backward grad_input and grad_weights using finite differences. Use when: (1) a conv backward pass lacks numerical gradient validation, (2) a new backward test is needed for transposed convolution paths, (3) you want to verify analytical gradients match finite differences for conv layers.",
+      "version": "1.0.0",
+      "source": "./skills/testing/conv2d-numerical-gradient-check",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "conv2d",
+        "gradient-check",
+        "backward-pass",
+        "finite-differences",
+        "numerical-gradient",
+        "transposed-convolution"
+      ]
+    },
+    {
       "name": "create-review-checklist",
       "description": "Generate customized review checklists based on type of change. Use when: (1) Starting PR review for unfamiliar change type, (2) Need specific checklist for code vs tests vs docs, (3) Large multi-type changes needing organized review.",
       "version": "1.0.0",
       "source": "./skills/testing/create-review-checklist",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "dataloader-reset-verification",
+      "description": "Test pattern to verify DataLoader reset behavior in training/validation loops. Use when: (1) implementing tests that confirm an iterator's reset() is called before iteration, (2) verifying a loop does not silently skip batches when passed a partially-consumed loader, (3) writing self-proving tests where the failure mode (division by zero) is distinct from success.",
+      "version": "1.0.0",
+      "source": "./skills/testing/dataloader-reset-verification",
+      "category": "testing",
+      "tags": [
+        "dataloader",
+        "reset",
+        "validation-loop",
+        "mojo",
+        "tdd",
+        "iterator"
+      ]
     },
     {
       "name": "deduplicate-test-fixtures",
@@ -3606,6 +5367,21 @@
       "source": "./skills/testing/dockerfile-cache-arg-ordering",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "dockerfile-cargo-free-regression",
+      "description": "Add static regression tests and pre-commit hooks to assert a forbidden shell pattern (e.g. cargo install, apt dependency) is absent from Dockerfiles. Use when: (1) a dependency has been removed from Dockerfiles and you want to prevent re-introduction, (2) adding absent-pattern guards to Dockerfiles as pygrep hooks, (3) writing parametrized pytest tests that scan Dockerfile content for forbidden strings.",
+      "version": "1.0.0",
+      "source": "./skills/testing/dockerfile-cargo-free-regression",
+      "category": "testing",
+      "tags": [
+        "dockerfile",
+        "regression",
+        "pre-commit",
+        "pygrep",
+        "absent-pattern",
+        "static-analysis"
+      ]
     },
     {
       "name": "enable-disabled-mojo-tests",
@@ -3651,6 +5427,23 @@
       "source": "./skills/testing/expand-tier-fixture-coverage",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "extensor-dtype-str-repr",
+      "description": "Pattern for implementing dtype-aware __str__/__repr__ in Mojo ExTensor and writing tests for integer/bool formatting. Use when: (1) adding string formatting to a Mojo tensor struct, (2) testing that integer types render without decimal points, (3) testing that bool types render as True/False.",
+      "version": "1.0.0",
+      "source": "./skills/testing/extensor-dtype-str-repr",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "extensor",
+        "dtype",
+        "str",
+        "repr",
+        "testing",
+        "int32",
+        "bool"
+      ]
     },
     {
       "name": "extract-dependencies",
@@ -3749,6 +5542,19 @@
       "tags": []
     },
     {
+      "name": "json-schema-validation-wiring",
+      "description": "Wire JSON schema validation into config loader methods (load_test, load_rubric). Use when adding schema validation to new config file types in ProjectScylla's ConfigLoader.",
+      "version": "1.0.0",
+      "source": "./skills/testing/json-schema-validation-wiring",
+      "category": "testing",
+      "tags": [
+        "json-schema",
+        "validation",
+        "config-loader",
+        "testing"
+      ]
+    },
+    {
       "name": "lint-code",
       "description": "Check code for style and quality issues. Use when validating code before commits.",
       "version": "1.0.0",
@@ -3765,6 +5571,97 @@
       "tags": []
     },
     {
+      "name": "mojo-adr009-test-file-split",
+      "description": "Split Mojo test files exceeding the ADR-009 limit of \u226410 fn test_ functions per file to prevent Mojo v0.26.1 heap corruption crashes. Use when: (1) a Mojo test file has more than 10 fn test_ functions, (2) CI fails intermittently with libKGENCompilerRTShared.so JIT fault, (3) implementing ADR-009 heap corruption workaround.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-adr009-test-file-split",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "adr-009",
+        "heap-corruption",
+        "test-splitting",
+        "ci-stability"
+      ]
+    },
+    {
+      "name": "mojo-as-contiguous-stride-verification",
+      "description": "TDD pattern for verifying stride-aware memory remapping in Mojo tensor operations. Use when: (1) testing as_contiguous() or similar stride-based copy operations, (2) verifying non-contiguous tensors produce correct row-major output, (3) writing regression tests before fixing stride-indexing bugs.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-as-contiguous-stride-verification",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "tensor",
+        "stride",
+        "contiguous",
+        "tdd",
+        "regression-test",
+        "memory-layout"
+      ]
+    },
+    {
+      "name": "mojo-boolable-raises-fix",
+      "description": "Fix Mojo test compile errors caused by calling Bool(t) on a struct whose __bool__ has a raises signature, preventing Boolable trait conformance. Use when: (1) CI fails with 'argument type X does not conform to trait Boolable', (2) a test uses Bool(t) but __bool__ is defined with raises, (3) you need to test that __bool__ raises without requiring Boolable conformance.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-boolable-raises-fix",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "boolable",
+        "__bool__",
+        "raises",
+        "trait-conformance",
+        "extensor",
+        "compile-error",
+        "ci-fix"
+      ]
+    },
+    {
+      "name": "mojo-bounds-test-pattern",
+      "description": "Pattern for adding symmetric boundary condition tests in Mojo by mirroring existing analogous tests. Use when: (1) adding a missing bounds check test that is symmetric to an existing one, (2) implementing follow-up test coverage for __setitem__/__getitem__ boundary conditions.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-bounds-test-pattern",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "testing",
+        "bounds-check",
+        "boundary-conditions",
+        "setitem",
+        "getitem"
+      ]
+    },
+    {
+      "name": "mojo-broadcast-edge-case-fix",
+      "description": "Fix and test broadcast_to edge cases in Mojo tensor libraries: vacuous-loop dimension guard, 0-d scalars, identity, multi-axis, and ndim-reduction errors. Use when: (1) broadcast_to succeeds incorrectly for incompatible target shapes due to empty loop in are_shapes_broadcastable, (2) adding edge-case coverage for broadcasting 0-d tensors, identity broadcasts, or multi-axis expansion, (3) need to validate ndim reduction is properly rejected.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-broadcast-edge-case-fix",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "broadcast",
+        "edge-cases",
+        "shape-ops",
+        "tensor",
+        "are_shapes_broadcastable"
+      ]
+    },
+    {
+      "name": "mojo-confusion-matrix-integration-tests",
+      "description": "Pattern for adding ConfusionMatrix integration tests to a Mojo ValidationLoop test file. Use when: (1) a ValidationLoop accepts compute_confusion=True but has no test covering that path, (2) need to verify ConfusionMatrix cell counts with known binary fixtures in Mojo, (3) adding coverage for compute_confusion flag without running full Mojo runtime locally.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-confusion-matrix-integration-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "confusion-matrix",
+        "validation-loop",
+        "integration-test",
+        "binary-classification"
+      ]
+    },
+    {
       "name": "mojo-docstring-format-precommit",
       "description": "Fix Mojo docstring formatting to pass mojo format pre-commit hook. Use when: (1) pre-commit CI fails with mojo format diff showing single-line docstrings being split, (2) long single-line docstrings exceed mojo format line length threshold, (3) adding docstrings to Mojo functions that will be reformatted by mojo format.",
       "version": "1.0.0",
@@ -3776,6 +5673,99 @@
         "pre-commit",
         "formatting",
         "ci"
+      ]
+    },
+    {
+      "name": "mojo-empty-tensor-hash-test",
+      "description": "Test pattern for verifying Mojo ExTensor __hash__ on 0-element tensors (numel=0). Use when: (1) adding edge-case coverage for hash operations on empty containers, (2) a hash loop skips its body for zero-element objects, (3) verifying hash consistency for same shape/dtype with no data.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-empty-tensor-hash-test",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "extensor",
+        "hash",
+        "empty-tensor",
+        "edge-case",
+        "zero-element"
+      ]
+    },
+    {
+      "name": "mojo-exception-message-assertion",
+      "description": "Pattern for asserting exact error message text in Mojo exception tests using 'except e:'. Use when: (1) upgrading a bare 'except:' test to assert a specific error message, (2) following up an out-of-bounds test to verify the error message string matches exactly.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-exception-message-assertion",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "exception",
+        "assert",
+        "error-message",
+        "except",
+        "bounds-check",
+        "test-upgrade"
+      ]
+    },
+    {
+      "name": "mojo-hash-collision-test",
+      "description": "Add hash collision resistance tests for Mojo tensors with same values but different dtypes. Use when: (1) verifying __hash__ distinguishes float32 vs float64 tensors, (2) expanding hash test coverage in test_utility.mojo.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-hash-collision-test",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "hash",
+        "tensor",
+        "dtype",
+        "collision",
+        "unit-test"
+      ]
+    },
+    {
+      "name": "mojo-hash-integer-dtype-coverage",
+      "description": "Add test coverage for __hash__ on integer-typed Mojo tensors where _get_float64 casts int values to Float64 before hashing. Use when: (1) adding hash tests for non-float dtypes, (2) verifying integer tensor hash consistency, (3) closing coverage gaps on dtype-dispatched float64 conversion paths.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-hash-integer-dtype-coverage",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "hash",
+        "dtype",
+        "integer",
+        "tensor",
+        "coverage"
+      ]
+    },
+    {
+      "name": "mojo-hash-shape-test",
+      "description": "Add a Mojo test verifying that tensors with identical data but different shapes produce different hashes. Use when: (1) a hash test suite covers equal tensors and different values but not different shapes, (2) adding shape-sensitivity coverage to __hash__ in ExTensor or similar structs, (3) following up on a hash test issue referencing shape collision edge cases.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-hash-shape-test",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "hash",
+        "extensor",
+        "shape",
+        "test-coverage",
+        "arange",
+        "reshape"
+      ]
+    },
+    {
+      "name": "mojo-hash-test-pattern",
+      "description": "Skill: mojo-hash-test-pattern. Use when: (1) adding tests to verify that __hash__ differentiates tensors by dtype even when logical values are identical, (2) confirming that dtype_to_ordinal is included in hash computation for Mojo tensor types, (3) following the fn-raises test pattern in Mojo test files.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-hash-test-pattern",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "hash",
+        "dtype",
+        "extensor",
+        "tensor",
+        "hash-differentiation",
+        "dtype-ordinal"
       ]
     },
     {
@@ -3795,6 +5785,84 @@
       "tags": []
     },
     {
+      "name": "mojo-multichannel-conv2d-backward-tests",
+      "description": "Pattern for testing multi-channel Conv2D backward passes in Mojo with analytically tractable gradient verification. Use when: (1) adding backward pass tests for conv layers with in_channels>1 or out_channels>1, (2) verifying grad_input/grad_weights/grad_bias shapes and values for multi-channel configurations, (3) extending single-channel backward tests to multi-channel coverage.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-multichannel-conv2d-backward-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "conv2d",
+        "backward-pass",
+        "gradient",
+        "multi-channel",
+        "testing"
+      ]
+    },
+    {
+      "name": "mojo-multidim-setitem-tests",
+      "description": "Implement variadic-Int __setitem__ on ExTensor and corresponding multi-dim tests. Use when: (1) adding stride-aware multi-dim assignment to a Mojo tensor (t[i,j]=v), (2) writing 2D/3D __setitem__ tests verifying flat index = sum(idx*stride), (3) implementing a variadic-Int setitem that delegates to 1D overload.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-multidim-setitem-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "extensor",
+        "setitem",
+        "multi-dim",
+        "strides",
+        "tensor",
+        "indexing"
+      ]
+    },
+    {
+      "name": "mojo-narrowing-cast-tests",
+      "description": "Add narrowing conversion tests to Mojo test files documenting truncation semantics of .cast[DType.uint8]() on values > 255. Use when: (1) a Mojo test file covers widening conversions but not narrowing, (2) an issue asks to document truncation/modulo semantics of integer casts, (3) you need to add boundary value tests for UInt64 -> UInt8 cast behavior.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-narrowing-cast-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "testing",
+        "narrowing-conversion",
+        "cast",
+        "uint8",
+        "uint64",
+        "truncation",
+        "boundary-values"
+      ]
+    },
+    {
+      "name": "mojo-numerical-gradient-test",
+      "description": "Add numerical gradient validation tests for Mojo ML backward passes using central finite differences. Use when: (1) adding backward pass tests to normalization or other ML layers in Mojo, (2) grad_output=ones cancellation risk needs to be avoided, (3) verifying analytical gradients match finite differences.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-numerical-gradient-test",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "gradient-checking",
+        "finite-differences",
+        "normalization",
+        "backward-pass",
+        "layer-norm",
+        "batch-norm"
+      ]
+    },
+    {
+      "name": "mojo-param-gradient-check",
+      "description": "Add numerical gradient validation for learnable parameter gradients (gamma, beta) in Mojo backward passes. Use when: (1) a backward pass returns multiple gradients and only input gradients are tested, (2) adding gradient checks for scale/shift parameters in normalization layers, (3) validating grad_gamma or grad_beta via finite differences with non-uniform grad_output.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-param-gradient-check",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "gradient-checking",
+        "batch-norm",
+        "backward-pass",
+        "finite-differences"
+      ]
+    },
+    {
       "name": "mojo-setitem-test-pattern",
       "description": "Skill: mojo-setitem-test-pattern. Use when: (1) adding tests for a new __setitem__ method on a Mojo tensor/array type, (2) testing both Float64 and Int64 setter overloads, (3) testing out-of-bounds error handling using try/except in Mojo test files.",
       "version": "1.0.0",
@@ -3808,6 +5876,22 @@
         "indexing",
         "try-except",
         "out-of-bounds"
+      ]
+    },
+    {
+      "name": "mojo-shape-value-assertions",
+      "description": "Add value-correctness assertions (assert_value_at, assert_all_values) to Mojo tensor shape tests. Use when: (1) shape tests only check element counts and dimensions but not actual values, (2) code review flags that tests pass even if the operation produces wrong values, (3) following up on newly-enabled tests that are missing content assertions.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-shape-value-assertions",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "tensor",
+        "shape",
+        "assert-value-at",
+        "assert-all-values",
+        "value-correctness",
+        "ExTensor"
       ]
     },
     {
@@ -3826,6 +5910,29 @@
       ]
     },
     {
+      "name": "mojo-subpackage-import-tests",
+      "description": "Add import tests for Mojo sub-package paths (e.g. from shared.training.callbacks import EarlyStopping) and document why negative/failure tests cannot be written. Use when: (1) a GitHub issue requests verifying a specific sub-module import path works, (2) an existing import test file only tests the parent package re-export but not the direct sub-package path, (3) you need to document Mojo compile-time import failures cannot be tested at runtime.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-subpackage-import-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "imports",
+        "subpackage",
+        "test-imports",
+        "compile-time",
+        "callbacks"
+      ]
+    },
+    {
+      "name": "mojo-test-failure-fixes",
+      "description": "Diagnose and fix Mojo test suite failures: compilation errors, missing main functions, wrong API usage, and JIT crashes. Use when: (1) Mojo tests fail with compilation errors after API changes, (2) test files lack main() entrypoints, (3) VGG/deep model tests crash with libKGENCompilerRTShared.so, (4) batch-fixing multiple test files across a repo.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-test-failure-fixes",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "mojo-test-runner",
       "description": "Run Mojo tests using mojo test command. Use when executing tests or verifying test coverage.",
       "version": "1.0.0",
@@ -3834,12 +5941,89 @@
       "tags": []
     },
     {
+      "name": "mojo-transpose-view-contiguity",
+      "description": "Add stride-based transpose view to Mojo ExTensor for testing contiguity contracts. Use when: (1) tests use direct _strides mutation instead of a real non-contiguous operation, (2) needing to verify is_contiguous()/as_contiguous() with a realistically non-contiguous tensor, (3) implementing transpose_view() that permutes strides without copying data.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-transpose-view-contiguity",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "tensor",
+        "contiguity",
+        "transpose",
+        "strides",
+        "extensor"
+      ]
+    },
+    {
       "name": "mojo-type-safety",
       "description": "Validate type safety in Mojo code including parametric types and trait constraints. Use during code review or when type errors occur.",
       "version": "1.0.0",
       "source": "./skills/testing/mojo-type-safety",
       "category": "testing",
       "tags": []
+    },
+    {
+      "name": "mojo-unsigned-wrapping-tests",
+      "description": "Document and verify wrapping arithmetic semantics for Mojo unsigned integer types at type boundaries. Use when: (1) adding boundary/overflow tests to existing Mojo unsigned type test files, (2) verifying UInt8/UInt16/UInt32/UInt64 wrap-around behavior, (3) following up on issues requesting explicit wrapping semantics documentation.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-unsigned-wrapping-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "unsigned-integers",
+        "wrapping",
+        "overflow",
+        "boundary-tests"
+      ]
+    },
+    {
+      "name": "mojo-validation-loop-accuracy-tracking",
+      "description": "Fix a Mojo ValidationLoop that hardcodes accuracy=0.0 in metrics updates and add a follow-up test verifying metrics.val_accuracy is updated after run(). Use when: (1) a ValidationLoop.run() passes a placeholder 0.0 for accuracy to update_val_metrics(), (2) a GitHub issue requests a test verifying val_accuracy is non-zero after validation, (3) you need to avoid Mojo tuple-return syntax and keep validate() returning a single Float64.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-validation-loop-accuracy-tracking",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "validation-loop",
+        "accuracy",
+        "metrics",
+        "TrainingMetrics",
+        "val_accuracy",
+        "follow-up-test",
+        "AccuracyMetric"
+      ]
+    },
+    {
+      "name": "mojo-value-verification-tests",
+      "description": "Add value-correctness assertions to Mojo shape operation tests that only verify element counts and dimensions. Use when: (1) shape tests pass but only check numel/dim not actual data, (2) adding assert_value_at/assert_all_values to split/tile/repeat/broadcast/permute tests, (3) upgrading tests from structural to behavioral verification in Mojo.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-value-verification-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "value-verification",
+        "assert-value-at",
+        "assert-all-values",
+        "shape-ops",
+        "test-quality"
+      ]
+    },
+    {
+      "name": "mojo-view-semantics-test",
+      "description": "Add Mojo tests asserting view/shared-memory semantics for tensor slicing. Use when: (1) a slice() method claims view semantics but lacks a mutation test, (2) adding regression coverage for copy-vs-view bugs in tensor ops, (3) writing TDD tests for slice() before implementing view semantics.",
+      "version": "1.0.0",
+      "source": "./skills/testing/mojo-view-semantics-test",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "tensor",
+        "slice",
+        "view-semantics",
+        "shared-memory",
+        "regression",
+        "tdd"
+      ]
     },
     {
       "name": "move-loose-test-files",
@@ -3906,6 +6090,38 @@
       "tags": []
     },
     {
+      "name": "nd-tensor-dataloader-fix",
+      "description": "Fix DataLoader.next() to support N-D tensors by replacing hardcoded 2D shape assumptions with ExTensor.slice(). Use when: (1) DataLoader.next() crashes or produces wrong shapes for 3D/4D/N-D tensors, (2) image batches with shape (N, C, H, W) lose trailing dimensions, (3) adding tests for batch slicing of multi-dimensional tensors in Mojo.",
+      "version": "1.0.0",
+      "source": "./skills/testing/nd-tensor-dataloader-fix",
+      "category": "testing",
+      "tags": [
+        "dataloader",
+        "n-d-tensor",
+        "batch-slicing",
+        "mojo",
+        "extensor",
+        "training"
+      ]
+    },
+    {
+      "name": "normalization-backward-grad-output-warning",
+      "description": "Document the grad_output=ones cancellation hazard in normalization backward tests as a shared testing guide warning. Use when: (1) a normalization layer backward test produced a false failure due to sum(x_norm)=0 cancellation, (2) you want to prevent teammates from repeating the same mistake by adding a warning to testing-patterns.md or equivalent shared guide.",
+      "version": "1.0.0",
+      "source": "./skills/testing/normalization-backward-grad-output-warning",
+      "category": "testing",
+      "tags": [
+        "batch-norm",
+        "normalization",
+        "gradient-checking",
+        "backward-pass",
+        "documentation",
+        "testing-patterns",
+        "cancellation",
+        "grad-output"
+      ]
+    },
+    {
       "name": "phase-cleanup",
       "description": "Refactor and finalize code after parallel phases complete, addressing technical debt. Use in cleanup phase to polish code before merge.",
       "version": "1.0.0",
@@ -3933,6 +6149,21 @@
         "blocked-todo",
         "mojo",
         "port"
+      ]
+    },
+    {
+      "name": "pre-commit-hook-config-tests",
+      "description": "Write pytest unit tests that verify pre-commit hook configuration from YAML (skip lists, severity flags, files: patterns) without invoking pre-commit itself. Use when: (1) a security tool hook has an intentional skip list that needs documented rationale, (2) verifying a hook's files: regex matches expected paths, (3) ensuring suppressed warnings reflect real usage in the codebase.",
+      "version": "1.0.0",
+      "source": "./skills/testing/pre-commit-hook-config-tests",
+      "category": "testing",
+      "tags": [
+        "pre-commit",
+        "bandit",
+        "security",
+        "yaml",
+        "pytest",
+        "hook-config"
       ]
     },
     {
@@ -4092,6 +6323,22 @@
       "tags": []
     },
     {
+      "name": "uint-overflow-wrap-tests",
+      "description": "Skill: uint-overflow-wrap-tests. Use when: (1) adding wrap-around/overflow tests for Mojo built-in unsigned integer types, (2) verifying modular arithmetic semantics at boundary values for UInt8/UInt16/UInt32/UInt64, (3) extending an existing unsigned integer test file with overflow correctness checks.",
+      "version": "1.0.0",
+      "source": "./skills/testing/uint-overflow-wrap-tests",
+      "category": "testing",
+      "tags": [
+        "mojo",
+        "uint",
+        "overflow",
+        "wrap-around",
+        "unsigned-integer",
+        "boundary-testing",
+        "modular-arithmetic"
+      ]
+    },
+    {
       "name": "unit-tests-untested-modules",
       "description": "Workflow for adding unit tests to previously untested source modules. Use when a quality audit identifies modules with no test file, coverage threshold is at risk, or an issue requests tests for specific untested modules.",
       "version": "1.0.0",
@@ -4178,6 +6425,20 @@
       ]
     },
     {
+      "name": "audit-stale-scripts",
+      "description": "Audit a scripts/ directory for stale one-time tools and safely remove confirmed candidates. Use when: (1) a scripts/ directory has grown with historical one-off files after bulk cleanup, (2) a follow-up audit is needed after a prior removal PR, (3) you need a repeatable caller-check pattern before deleting any script.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/audit-stale-scripts",
+      "category": "tooling",
+      "tags": [
+        "scripts",
+        "cleanup",
+        "audit",
+        "git",
+        "stale"
+      ]
+    },
+    {
       "name": "auto-impl-already-done-detection",
       "description": "Detect when an auto-impl worktree arrives with work already completed on main and a PR already open. Use when: (1) invoked in a worktree with branch pattern '<issue>-auto-impl', (2) worktree branch is clean with no staged changes, (3) issue is still open but recent git log shows a 'Closes #<issue>' commit on main.",
       "version": "1.0.0",
@@ -4221,6 +6482,29 @@
         "bulk-pr",
         "deduplication"
       ]
+    },
+    {
+      "name": "bf16-precision-recommendation",
+      "description": "Add hardware-guarded BF16 support to dtype recommendation functions. Use when: (1) enabling BF16 for large ML models in Mojo dtype utilities, (2) adding Apple Silicon hardware guard for BF16 precision selection, (3) extending precision recommendation with hardware capability parameters.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/bf16-precision-recommendation",
+      "category": "tooling",
+      "tags": [
+        "mojo",
+        "dtype",
+        "bfloat16",
+        "precision",
+        "hardware-guard",
+        "apple-silicon"
+      ]
+    },
+    {
+      "name": "bulk-issue-dedup",
+      "description": "Bulk deduplicate GitHub issues by clustering similar titles, identifying canonical issues, and closing all duplicates with referenced comments. Use when: (1) issue tracker has grown noisy with repeated variants of the same request, (2) a large batch of related issues needs triage, (3) you want to reduce issue count before sprint planning.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/bulk-issue-dedup",
+      "category": "tooling",
+      "tags": []
     },
     {
       "name": "bulk-issue-filing",
@@ -4324,6 +6608,14 @@
       "tags": []
     },
     {
+      "name": "claude-config-branch-audit",
+      "description": "Audit and fix Claude Code configuration branches for consistency with actual repo tooling. Use when: (1) reviewing a branch that adds or modifies CLAUDE.md or .claude/ config, (2) a branch introduces hook references to scripts that don't exist, (3) Python version or tooling commands in CLAUDE.md don't match the actual project setup.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/claude-config-branch-audit",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "claude-plugin-format",
       "description": "Official Claude Code plugin format requirements. Use when: (1) Creating a new plugin, (2) Debugging plugin validation errors, (3) Skills or commands not appearing after install.",
       "version": "1.0.0",
@@ -4338,6 +6630,24 @@
       "source": "./skills/tooling/claude-plugin-marketplace",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "clean-branches",
+      "description": "Clean up stale git worktrees and merged/closed remote branches. Use after a wave of PRs merges, or periodically to remove branches tracking merged PRs and pruned remote refs. Avoids batch gh issue view calls; uses PR merge status as the authoritative signal.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/clean-branches",
+      "category": "tooling",
+      "tags": [
+        "git",
+        "branches",
+        "worktrees",
+        "cleanup",
+        "stale",
+        "merged",
+        "remote",
+        "gh",
+        "prune"
+      ]
     },
     {
       "name": "cleanup-deprecated-stub",
@@ -4529,6 +6839,23 @@
       "tags": []
     },
     {
+      "name": "extensor-str-truncation",
+      "description": "Add NumPy-style truncation to Mojo tensor __str__ methods to prevent performance issues with large tensors. Use when: (1) a tensor's __str__ iterates over all elements, (2) the project targets NumPy-compatible display semantics, (3) printing large tensors (>1K elements) causes slowdowns or excessive output.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/extensor-str-truncation",
+      "category": "tooling",
+      "tags": [
+        "mojo",
+        "tensor",
+        "string",
+        "truncation",
+        "numpy",
+        "extensor",
+        "performance",
+        "display"
+      ]
+    },
+    {
       "name": "extract-logging-helper",
       "description": "Skill: extract-logging-helper. Use when working with extract logging helper.",
       "version": "1.0.0",
@@ -4537,10 +6864,32 @@
       "tags": []
     },
     {
+      "name": "fix-hardcoded-target-path",
+      "description": "Fix hardcoded output/target directory paths in migration and tooling scripts by adding CLI flag, env var fallback, and safe default. Use when: (1) a script has a hardcoded absolute path that fails on other machines, (2) a migration script reports 'directory not found' because the target path is user-specific, (3) you need to add --target-dir / env var support to make a script portable.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/fix-hardcoded-target-path",
+      "category": "tooling",
+      "tags": [
+        "portability",
+        "migration",
+        "cli-flags",
+        "env-var",
+        "path-resolution"
+      ]
+    },
+    {
       "name": "fix-incomplete-pydantic-migration",
       "description": "Fix CI test failures from incomplete Pydantic v2 migrations with bandaid approach",
       "version": "1.0.0",
       "source": "./skills/tooling/fix-incomplete-pydantic-migration",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "fix-stale-prs-and-branches",
+      "description": "Rebase open PRs that have no CI or failing CI, delete stale remote branches with no open PR, and commit orphaned local work as a new PR. Use when accumulating open PRs that diverged from main.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/fix-stale-prs-and-branches",
       "category": "tooling",
       "tags": []
     },
@@ -4663,6 +7012,20 @@
       ]
     },
     {
+      "name": "git-worktree-path-detection",
+      "description": "Fix git worktree path extraction from porcelain output. Use when: (1) parsing git worktree list --porcelain, (2) extracting worktree paths by branch name, (3) building scripts that manage multiple worktrees.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/git-worktree-path-detection",
+      "category": "tooling",
+      "tags": [
+        "git",
+        "worktree",
+        "awk",
+        "bash",
+        "path-detection"
+      ]
+    },
+    {
       "name": "git-worktree-workflow",
       "description": "Complete git worktree workflow for parallel development. Contains 4 sub-skills: (1) create - create isolated worktrees for new issues, (2) switch - navigate between worktrees, (3) sync - keep worktrees up-to-date with main, (4) cleanup - remove worktrees after PR merge. Use when working on multiple issues in parallel without stashing.",
       "version": "1.0.0",
@@ -4685,6 +7048,23 @@
       "source": "./skills/tooling/graceful-signal-handling",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "housekeeping-all-done-verification",
+      "description": "Verify external state for pure housekeeping issues where all cleanup may already be complete. Use when: (1) issue describes git branch/worktree cleanup or GitHub issue closure, (2) all target artifacts (branches, worktrees, issues) may be pre-cleaned, (3) need to create an empty verification PR to close the issue.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/housekeeping-all-done-verification",
+      "category": "tooling",
+      "tags": [
+        "housekeeping",
+        "cleanup",
+        "verification",
+        "git",
+        "github",
+        "worktree",
+        "branch-cleanup",
+        "empty-commit"
+      ]
     },
     {
       "name": "issue-completion-verification",
@@ -4725,12 +7105,41 @@
       ]
     },
     {
+      "name": "migrate-skill-aux-dirs",
+      "description": "Migrate skills that contain auxiliary subdirectories (scripts/, templates/, hooks/) alongside SKILL.md. Use when: (1) a skill dir has subdirs beyond SKILL.md that would be silently dropped, (2) fixing migrate_odyssey_skills.py to copy auxiliary content.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/migrate-skill-aux-dirs",
+      "category": "tooling",
+      "tags": [
+        "migration",
+        "skills",
+        "tooling",
+        "subdirectories",
+        "shutil"
+      ]
+    },
+    {
       "name": "mojo-build-package",
       "description": "Build Mojo packages (.mojopkg files) for distribution. Use when creating distributable libraries or during packaging phase.",
       "version": "1.0.0",
       "source": "./skills/tooling/mojo-build-package",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "mojo-extensor-method-from-issue",
+      "description": "Pattern for adding stride-view methods to ExTensor and updating tests from standalone-function workarounds to method-syntax. Use when: (1) implementing a new ExTensor method that replaces a standalone function workaround, (2) updating tests that use placeholder stride-mutation hacks, (3) pre-commit hooks catch deprecated List[Int](args) syntax in docstring examples.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/mojo-extensor-method-from-issue",
+      "category": "tooling",
+      "tags": [
+        "mojo",
+        "extensor",
+        "stride-view",
+        "pre-commit",
+        "deprecated-syntax",
+        "workaround-removal"
+      ]
     },
     {
       "name": "mojo-format",
@@ -4772,6 +7181,21 @@
       ]
     },
     {
+      "name": "mojo-package-reexport",
+      "description": "Add re-exports to Mojo package __init__.mojo files so symbols are accessible at higher-level import paths. Use when: (1) a struct or fn exists in a leaf module (e.g. shared.data.transforms) but cannot be imported from a parent package (e.g. shared.data or shared), (2) an import audit finds missing convenience imports, (3) implementing issues that ask to expose deeply-nested symbols at the package level.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/mojo-package-reexport",
+      "category": "tooling",
+      "tags": [
+        "mojo",
+        "packaging",
+        "imports",
+        "re-export",
+        "init",
+        "shared-library"
+      ]
+    },
+    {
       "name": "mypy-full-compliance-workflow",
       "description": "9-phase workflow to achieve full mypy compliance: fix all suppressed error codes incrementally, decouple tests/ overrides, remove disable_error_code entirely, and simplify the regression guard to a single invocation. Use when a project has incrementally-adopted mypy with multiple disabled error codes and you want to achieve full compliance.",
       "version": "1.0.0",
@@ -4799,6 +7223,20 @@
         "no-op",
         "worktree",
         "ci"
+      ]
+    },
+    {
+      "name": "odyssey-audit-migration-coverage",
+      "description": "Add --audit flag to a migration script that cross-references source skills against a target repo and reports coverage gaps. Use when: (1) a migration script lacks observability into what was ported vs skipped, (2) CI needs to detect new skills added to source but not yet ported to target, (3) you need a summary table with coverage percentage and non-zero exit on missing items.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/odyssey-audit-migration-coverage",
+      "category": "tooling",
+      "tags": [
+        "migration",
+        "audit",
+        "coverage",
+        "ci-ready",
+        "skill-registry"
       ]
     },
     {
@@ -4874,6 +7312,22 @@
       "tags": []
     },
     {
+      "name": "png-jpeg-to-idx-conversion",
+      "description": "Create a Python interop script converting PNG/JPEG images to IDX binary format for Mojo inference pipelines. Use when: (1) inference pipeline only accepts IDX format but users have PNG/JPEG inputs, (2) adding image-to-IDX preprocessing to ML inference examples, (3) bridging PIL/Pillow image loading into Mojo-native data formats.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/png-jpeg-to-idx-conversion",
+      "category": "tooling",
+      "tags": [
+        "python",
+        "mojo",
+        "interop",
+        "idx",
+        "image-preprocessing",
+        "inference",
+        "pillow"
+      ]
+    },
+    {
       "name": "port-reusable-scripts",
       "description": "Port and generalize reusable scripts between repositories with proper adaptations, dependency elimination, and Python path setup. Achieved zero external dependencies by rewriting PyGithub to gh CLI.",
       "version": "1.0.0",
@@ -4886,6 +7340,14 @@
       "description": "Skill: pydantic-frozen-consistency. Use when working with pydantic frozen consistency.",
       "version": "1.0.0",
       "source": "./skills/tooling/pydantic-frozen-consistency",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "python-repo-audit-implementation",
+      "description": "Implements a multi-phase repository audit plan for Python packages: security fixes, DRY consolidation, dead code removal, error handling, CI matrix expansion, and packaging gaps. Use when: (1) a repo audit report exists with Critical/Major findings to implement, (2) bringing a Python utility library to production-grade quality, (3) consolidating subprocess wrappers or shared constants across multiple modules.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/python-repo-audit-implementation",
       "category": "tooling",
       "tags": []
     },
@@ -4912,6 +7374,21 @@
       "source": "./skills/tooling/quality-audit-tracking",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "repo-audit-count-reconciliation",
+      "description": "Reconcile count mismatches across documentation files after a repository audit by counting actual on-disk files and updating all references to match. Use when: (1) agent/skill/workflow counts differ between docs, (2) audit reveals stale documentation claiming non-existent files, (3) README or CLAUDE.md counts drift from actual filesystem state.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/repo-audit-count-reconciliation",
+      "category": "tooling",
+      "tags": [
+        "audit",
+        "documentation",
+        "reconciliation",
+        "count-mismatch",
+        "agents",
+        "skills"
+      ]
     },
     {
       "name": "retrospective-hook-integration",
@@ -5039,6 +7516,14 @@
       "tags": []
     },
     {
+      "name": "worktree-bulk-artifact-cleanup",
+      "description": "Clean generated artifacts from multiple git worktrees without losing real changes. Use when: (1) worktrees have __pycache__ or build artifacts showing as uncommitted changes, (2) bulk cleanup of generated files across many worktrees needed.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/worktree-bulk-artifact-cleanup",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "worktree-cleanup",
       "description": "Remove merged or stale git worktrees. Use after PRs are merged, work is done, or when worktrees are no longer needed.",
       "version": "1.0.0",
@@ -5106,12 +7591,42 @@
       ]
     },
     {
+      "name": "yaml-frontmatter-colon-fix",
+      "description": "Fix silent data-loss when parsing YAML frontmatter containing colons in values by replacing line.partition(':') with yaml.safe_load(). Use when: (1) a markdown frontmatter parser splits on the first colon and truncates values, (2) skill descriptions or metadata fields contain colons and are silently corrupted on migration.",
+      "version": "1.0.0",
+      "source": "./skills/tooling/yaml-frontmatter-colon-fix",
+      "category": "tooling",
+      "tags": [
+        "yaml",
+        "frontmatter",
+        "parsing",
+        "migration",
+        "data-loss"
+      ]
+    },
+    {
       "name": "grpo-external-vllm",
       "description": "GRPO training with external vLLM server. Use when: (1) Running vLLM on separate GPUs, (2) Encountering vllm_skip_weight_sync errors, (3) OpenAI API parsing issues. Verified on gemma-3-12b-it.",
       "version": "1.0.0",
       "source": "./skills/training/grpo-external-vllm",
       "category": "training",
       "tags": []
+    },
+    {
+      "name": "mojo-dataloader-deferral-resolution",
+      "description": "Resolve PythonObject interop deferral placeholders in Mojo training loops by replacing them with real DataLoader iteration. Use when: (1) a Mojo function accepts PythonObject as a data loader but a native DataLoader struct already exists, (2) run_epoch() or similar training loop methods always return 0.0 due to a deferred interop placeholder, (3) Track 4 / Python-Mojo interop deferral comments exist in training code.",
+      "version": "1.0.0",
+      "source": "./skills/training/mojo-dataloader-deferral-resolution",
+      "category": "training",
+      "tags": [
+        "mojo",
+        "dataloader",
+        "training-loop",
+        "python-interop",
+        "deferral",
+        "placeholder",
+        "run-epoch"
+      ]
     },
     {
       "name": "spec-driven-experimentation",
@@ -5128,14 +7643,6 @@
       "source": "./skills/training/train-model",
       "category": "training",
       "tags": []
-    },
-    {
-      "name": "stale-doc-count-audit",
-      "description": "Audit and fix stale numeric counts in documentation (figures, tables, sub-tests) when code registries change size. Use when: (1) a figure/table registry grows but docs reference old counts, (2) an audit flags stale numbers, (3) after adding/removing enumerable outputs.",
-      "version": "1.0.0",
-      "source": "./skills/stale-doc-count-audit",
-      "category": "documentation",
-      "tags": ["documentation", "audit", "figures", "tables", "counts"]
     }
   ]
 }
