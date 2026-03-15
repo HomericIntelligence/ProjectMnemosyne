@@ -101,6 +101,7 @@ Closes #<issue>
 | Searching for count updates by number alone | `grep -n "44\|31\|3 L5"` across docs | Multiple unrelated occurrences of these numbers; hard to target | Search for the full count phrase, e.g. "3 junior types" or "44 agents" |
 | Assuming hierarchy.md table already correct | Skipped table check because it showed 31 | L5 narrative ("3 types") was still wrong even though table count was right | Always check both the table AND the narrative prose separately |
 | Updating catalog Quick Reference table row | Tried to remove the Junior Documentation Engineer row without context | `old_string` not unique without surrounding rows | Include both flanking rows in `old_string` for uniqueness |
+| Assuming config file needs deletion | Tried `git rm .claude/agents/junior-implementation-engineer.md` | File was already absent from the worktree (prior consolidation removed it) | Always check with `ls .claude/agents/junior-*` before attempting config changes |
 
 ## Results & Parameters
 
@@ -192,9 +193,59 @@ Failed: 0
 Total errors: 0
 ```
 
+### Consolidation from ProjectOdyssey issue #3963 (docs-only variant)
+
+**Before**: 2 implementation tiers at L4/L5
+
+```text
+implementation-specialist (L3)
+  → implementation-engineer (L4, full spectrum)
+  → junior-implementation-engineer (L5, docs-only stub)
+```
+
+**After**: 1 tier
+
+```text
+implementation-specialist (L3)
+  → implementation-engineer (L4, full spectrum)
+```
+
+**Agent count delta**: 31 → 30
+
+**Key difference — the junior agent file was already absent**:
+
+The `.claude/agents/junior-implementation-engineer.md` config file did not exist in the
+worktree. Only documentation files (`agents/hierarchy.md`, `agents/README.md`,
+`agents/docs/agent-catalog.md`, `agents/docs/onboarding.md`) still referenced it.
+This means the task was **documentation cleanup only** — no config changes were needed.
+
+**Documentation-only cleanup checklist**:
+
+- `agents/hierarchy.md` — remove from L5 diagram box, Level 5 narrative, count table, detailed
+  spec section, "Use Level 5" quick ref, and `Top-Down` delegation flow
+- `agents/README.md` — update Level 5 description text; update total agent count in prose
+- `agents/docs/agent-catalog.md` — remove table row; remove entire Junior Implementation
+  Engineer section; update routing entries (`"Generate boilerplate"` → Implementation Engineer;
+  `"Simple Mojo"` → Implementation Engineer)
+- `agents/docs/onboarding.md` — replace junior impl engineer Level 5 section and code
+  example with junior test engineer content; update delegation flow example
+
+**What to watch for when the config is already deleted**:
+
+The `implementation-specialist.md` `delegates_to` field already listed only
+`[implementation-engineer]` — no change needed. Similarly `implementation-engineer.md`
+already had `delegates_to: []`. No `.claude/agents/` file changes were required.
+
+**Validation output**:
+
+```text
+# No agent validation test changes needed — config files were already correct
+```
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectOdyssey | Issue #3146 — implementation engineer tier consolidation | See Results above |
+| ProjectOdyssey | Issue #3146 — implementation engineer tier consolidation (3→2 tiers) | See Results above |
 | ProjectOdyssey | Issue #3332 — test engineer tier consolidation (junior-only variant) | See Results above |
+| ProjectOdyssey | Issue #3963 — implementation engineer docs-only cleanup (config already absent) | See Results above |
