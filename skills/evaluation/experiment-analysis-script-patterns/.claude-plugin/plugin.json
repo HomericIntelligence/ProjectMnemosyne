@@ -1,0 +1,7 @@
+{
+  "name": "experiment-analysis-script-patterns",
+  "version": "1.0.0",
+  "description": "Patterns for fixing experiment analysis scripts: directory regex matching, run multiplier correctness, exit code semantics, and retry shell script error handling. Use when: (1) analysis script fails to discover experiment directories, (2) run count totals are wrong, (3) shell retry scripts abort on first test failure.",
+  "category": "evaluation",
+  "date": "2026-03-15"
+}
