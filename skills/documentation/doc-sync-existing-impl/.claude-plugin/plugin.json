@@ -1,0 +1,7 @@
+{
+  "name": "doc-sync-existing-impl",
+  "version": "1.0.0",
+  "description": "Sync documentation when an issue's fix is already implemented but docs lag behind. Use when: (1) an issue requests investigation/fix but the code fix already exists, (2) CLAUDE.md or dev docs describe old behavior instead of current wrapper/script, (3) pre-commit hook docs reference direct tool invocation instead of a compat wrapper.",
+  "category": "documentation",
+  "date": "2026-03-15"
+}
