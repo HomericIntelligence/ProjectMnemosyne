@@ -1,0 +1,7 @@
+{
+  "name": "security-review-docs-only-pr",
+  "version": "1.0.0",
+  "description": "Efficiently triage and close security reviews for PRs that contain only documentation or metadata changes. Use when: (1) a security review is requested on a PR that adds only markdown, JSON metadata, or other static documentation files, (2) you need to quickly determine whether a PR has any exploitable attack surface before performing a deeper review.",
+  "category": "documentation",
+  "date": "2026-03-15"
+}
