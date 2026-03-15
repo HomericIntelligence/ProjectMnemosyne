@@ -1,0 +1,7 @@
+{
+  "name": "mojo-hash-stability-test",
+  "version": "1.0.0",
+  "description": "Pattern for testing Mojo __hash__ determinism by hashing the same instance multiple times. Use when: (1) verifying hash stability for edge-case tensors (0-element, single-element), (2) confirming no side effects from repeated hash calls, (3) following up on hash correctness issues discovered via two-tensor comparison tests.",
+  "category": "testing",
+  "date": "2026-03-15"
+}
