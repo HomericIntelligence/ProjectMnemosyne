@@ -1,0 +1,7 @@
+{
+  "name": "unique-tmp-path-per-test-run",
+  "version": "1.0.0",
+  "description": "Replace hardcoded /tmp test file paths with unique per-run paths using a timestamp or random suffix to prevent stale state across test runs. Use when: (1) a test creates a temp file with a fixed path that may persist if the test aborts, (2) parallel or repeated test runs could collide on a shared temp file, (3) reviewing tests for stale-state cleanup issues.",
+  "category": "testing",
+  "date": "2026-03-15"
+}
