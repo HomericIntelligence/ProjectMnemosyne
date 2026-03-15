@@ -1,0 +1,7 @@
+{
+  "name": "dry-mojo-test-helper-extraction",
+  "version": "1.0.0",
+  "description": "Extract duplicated Mojo test tensor setup into a private helper function returning a tuple. Use when: (1) two or more Mojo test functions share identical tensor construction and initialization blocks, (2) planning to add more test variants that would repeat the same setup, (3) applying DRY principle to numerical gradient test suites.",
+  "category": "architecture",
+  "date": "2026-03-15"
+}
