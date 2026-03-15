@@ -1,0 +1,7 @@
+{
+  "name": "mojo-baseline-ci-compilation-fixes",
+  "version": "1.0.0",
+  "description": "Fix baseline Mojo compilation errors on main that block all open PRs from having clean CI. Use when: (1) multiple PRs have CI failing with errors inherited from main, (2) Mojo --Werror unused variable, type mismatch in full(), alias deprecation, or missing re-exports are causing test group failures.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
