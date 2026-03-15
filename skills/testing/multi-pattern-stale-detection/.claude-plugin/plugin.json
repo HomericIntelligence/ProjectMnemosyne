@@ -1,0 +1,7 @@
+{
+  "name": "multi-pattern-stale-detection",
+  "version": "1.0.0",
+  "description": "Detect stale CI matrix patterns at the sub-pattern level when space-separated multi-pattern strings are used. Use when: (1) extending coverage validators that use pattern.split() expansion, (2) a CI group has multiple space-separated patterns and individual patterns may go stale while sibling patterns keep the group alive, (3) implementing check_stale_patterns() style functions.",
+  "category": "testing",
+  "date": "2026-03-15"
+}
