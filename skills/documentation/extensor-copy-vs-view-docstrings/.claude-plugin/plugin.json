@@ -1,0 +1,8 @@
+{
+  "name": "extensor-copy-vs-view-docstrings",
+  "version": "1.0.0",
+  "description": "Document copy-vs-view memory semantics in tensor class docstrings. Use when: (1) a tensor/array class exposes both view-returning and copy-returning access methods without a clear contract documented at the class level, (2) a follow-up issue flags asymmetric documentation between slice() and __getitem__ overloads, (3) a code review finds that _is_view flag semantics are not explained at the field level.",
+  "category": "documentation",
+  "date": "2026-03-15",
+  "tags": ["mojo", "tensor", "docstring", "memory-semantics", "view", "copy", "extensor"]
+}
