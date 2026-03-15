@@ -1,0 +1,8 @@
+{
+  "name": "mojo-missing-function-from-test-import",
+  "version": "1.0.0",
+  "description": "Debug Mojo test import failures where a function exists in tests but not in the source module. Use when: (1) Mojo test imports a function that causes compilation errors, (2) CI tests are skipped due to package compilation failure, (3) investigating why a Mojo test file was added without the corresponding implementation.",
+  "category": "debugging",
+  "date": "2026-03-15",
+  "tags": ["mojo", "import", "compilation", "ci", "test-skip", "missing-function"]
+}
