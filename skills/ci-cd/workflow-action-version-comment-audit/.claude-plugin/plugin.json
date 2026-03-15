@@ -1,0 +1,7 @@
+{
+  "name": "workflow-action-version-comment-audit",
+  "version": "1.0.0",
+  "description": "Audit GitHub Actions workflow files for SHA-pinned 'uses:' lines that are missing human-readable version comments. Use when: (1) a SHA-pinning pass left some lines without '# vX.Y.Z' comments, (2) a grep audit reveals inconsistent comment coverage across workflow files, (3) adding a regression test to enforce comment presence for future pins.",
+  "category": "ci-cd",
+  "date": "2026-03-15"
+}
