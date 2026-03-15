@@ -1,0 +1,7 @@
+{
+  "name": "multidim-slice-step-validation",
+  "version": "1.0.0",
+  "description": "Fix silent incorrect results when multi-dimensional tensor slice ignores step field. Use when: (1) a variadic-slice __getitem__ silently ignores step and returns wrong data, (2) need fail-fast guard for unimplemented strided multi-dim slicing.",
+  "category": "debugging",
+  "date": "2026-03-15"
+}
