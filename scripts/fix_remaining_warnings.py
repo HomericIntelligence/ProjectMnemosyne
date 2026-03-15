@@ -7,7 +7,7 @@ Handles:
 2. Files with Failed Attempts that need better table formatting
 """
 
-import os
+import argparse
 import re
 from pathlib import Path
 from typing import List, Tuple
@@ -158,8 +158,18 @@ def improve_failed_attempts_table(content: str) -> str:
     return content[:insert_pos] + table + content[insert_pos:]
 
 
-def fix_skill_file(skill_path: Path) -> Tuple[bool, List[str]]:
-    """Fix a single SKILL.md file. Returns (modified, fixes_applied)."""
+def fix_skill_file(skill_path: Path, dry_run: bool = False) -> Tuple[bool, List[str]]:
+    """Fix a single SKILL.md file. Returns (modified, fixes_applied).
+
+    Args:
+        skill_path: Path to the SKILL.md file to process.
+        dry_run: If True, determine what would change but do not write the file.
+
+    Returns:
+        Tuple of (modified, fixes_applied) where modified is True if the file
+        was changed (or would be changed in dry-run mode) and fixes_applied is
+        a list of description strings for each fix that was applied.
+    """
     content = read_file(skill_path)
     original_content = content
     fixes = []
@@ -186,93 +196,77 @@ def fix_skill_file(skill_path: Path) -> Tuple[bool, List[str]]:
         elif content != original_content:
             fixes.append("Improved Failed Attempts table")
 
-    # Write back if modified
+    # Write back if modified (skip write in dry-run mode)
     if content != original_content:
-        write_file(skill_path, content)
+        if not dry_run:
+            write_file(skill_path, content)
         return True, fixes
 
     return False, []
 
 
-def main():
-    """Main execution."""
-    skills_dir = Path('/home/mvillmow/ProjectMnemosyne/skills')
+def main(argv: List[str] | None = None) -> None:
+    """Main execution.
 
-    # List of skills with remaining warnings (from validation output)
-    plugins_with_workflow_warning = [
-        'optimization/analyze-simd-usage',
-        'tooling/agent-run-orchestrator',
-        'architecture/track-implementation-progress',
-        'architecture/doc-update-blog',
-        'architecture/agent-hierarchy-diagram',
-        'architecture/agent-coverage-check',
-        'architecture/agent-validate-config',
-        'architecture/plan-validate-structure',
-        'testing/quality-coverage-report',
-        'testing/check-memory-safety',
-        'testing/validate-mojo-patterns',
-        'testing/agent-test-delegation',
-        'testing/review-pr-changes',
-        'testing/mojo-lint-syntax',
-        'ci-cd/install-workflow',
-    ]
+    Dynamically discovers all SKILL.md files under ``skills_dir`` via
+    ``Path.rglob("SKILL.md")`` and applies fixes to each one.  This replaces
+    the previously hardcoded plugin lists so that new skills are handled
+    automatically without requiring manual list maintenance.
 
-    plugins_with_table_warning = [
-        'evaluation/add-analysis-metric',
-        'evaluation/dryrun-validation',
-        'evaluation/e2e-checkpoint-resume',
-        'evaluation/publication-pipeline-enhancement',
-        'evaluation/processpool-rate-limit-recovery',
-        'evaluation/granular-scoring-systems',
-        'evaluation/parallel-metrics-integration',
-        'evaluation/containerize-e2e-experiments',
-        'debugging/retry-transient-errors',
-        'tooling/experiment-recovery-tools',
-        'tooling/review-task-orchestration',
-        'architecture/refactor-for-extensibility',
-        'documentation/arxiv-paper-polish',
-        'documentation/paper-final-review',
-        'documentation/academic-paper-qa',
-        'documentation/latex-architecture-section',
-        'documentation/paper-revision-workflow',
-        'documentation/paper-validation-workflow',
-        'documentation/paper-consolidation',
-        'documentation/publication-readiness-check',
-        'ci-cd/fix-ruff-linting-errors',
-        'ci-cd/ci-test-failure-diagnosis',
-        'ci-cd/rescue-broken-prs',
-    ]
+    Args:
+        argv: Argument list for parsing (defaults to sys.argv when None).
+    """
+    parser = argparse.ArgumentParser(
+        description="Fix SKILL.md validation warnings across all skills",
+    )
+    parser.add_argument(
+        "--skills-dir",
+        default="/home/mvillmow/ProjectMnemosyne/skills",
+        help="Root directory containing SKILL.md files (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Report what would change without writing any files",
+    )
+    args = parser.parse_args(argv)
 
-    all_plugins = set(plugins_with_workflow_warning + plugins_with_table_warning)
+    skills_dir = Path(args.skills_dir)
+    dry_run: bool = args.dry_run
+
+    if dry_run:
+        print("DRY RUN — no files will be written\n")
+
+    skill_files = sorted(skills_dir.rglob("SKILL.md"))
 
     total_files = 0
     modified_files = 0
-    all_fixes = []
+    all_fixes: List[str] = []
 
-    for plugin_path in all_plugins:
-        skill_file = skills_dir / plugin_path / 'skills' / Path(plugin_path).name / 'SKILL.md'
-
-        if not skill_file.exists():
-            print(f"⚠ Skipping {plugin_path} - SKILL.md not found")
-            continue
-
+    for skill_file in skill_files:
         total_files += 1
-        modified, fixes = fix_skill_file(skill_file)
+        modified, fixes = fix_skill_file(skill_file, dry_run=dry_run)
 
         if modified:
             modified_files += 1
-            print(f"✓ {plugin_path}")
+            rel_path = skill_file.relative_to(skills_dir)
+            action = "Would fix" if dry_run else "Fixed"
+            print(f"{'~' if dry_run else '✓'} {action}: {rel_path}")
             for fix in fixes:
                 print(f"  - {fix}")
                 all_fixes.append(fix)
 
     print(f"\n{'='*60}")
     print(f"Processed {total_files} SKILL.md files")
-    print(f"Modified {modified_files} files")
-    print(f"\nFixes applied:")
-    for fix_type in set(all_fixes):
-        count = all_fixes.count(fix_type)
-        print(f"  - {fix_type}: {count} files")
+    if dry_run:
+        print(f"Would modify {modified_files} files")
+    else:
+        print(f"Modified {modified_files} files")
+    if all_fixes:
+        print(f"\nFixes {'that would be ' if dry_run else ''}applied:")
+        for fix_type in set(all_fixes):
+            count = all_fixes.count(fix_type)
+            print(f"  - {fix_type}: {count} files")
 
 
 if __name__ == '__main__':
