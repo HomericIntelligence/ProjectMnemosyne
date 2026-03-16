@@ -1,0 +1,7 @@
+{
+  "name": "mass-pr-consolidation",
+  "version": "1.0.0",
+  "description": "Consolidate many open PRs into a single branch via cherry-picking to unblock CI pipelines. Use when: (1) CI queue is backed up with 50+ queued jobs, (2) dozens of open PRs need consolidation, (3) GitHub Actions compute needs to be conserved.",
+  "category": "ci-cd",
+  "date": "2026-03-16"
+}
