@@ -1,0 +1,8 @@
+{
+  "name": "prometheus-json-api-exporter-sidecar",
+  "version": "1.0.0",
+  "description": "Deploy a Python sidecar that converts JSON REST APIs to Prometheus text format when upstream services don't expose /metrics. Use when: (1) adding Prometheus scraping to services that only expose JSON APIs, (2) bridging Docker-networked services on dynamic gateway IPs, (3) debugging why all Prometheus targets show up=0.",
+  "category": "tooling",
+  "date": "2026-03-15",
+  "skills": "./skills"
+}
