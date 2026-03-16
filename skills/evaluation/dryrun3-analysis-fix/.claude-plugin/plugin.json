@@ -1,0 +1,7 @@
+{
+  "name": "dryrun3-analysis-fix",
+  "version": "1.0.0",
+  "description": "Fix 1-based subtest ID misclassification in dryrun3 analysis scripts. Use when: (1) analysis script reports 0 complete tests despite runs being finished, (2) orphan counts are unexpectedly high, (3) subtest IDs use mixed 0-based and 1-based numbering schemes.",
+  "category": "evaluation",
+  "date": "2026-03-16"
+}
