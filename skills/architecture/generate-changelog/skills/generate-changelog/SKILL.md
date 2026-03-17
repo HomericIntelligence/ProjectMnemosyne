@@ -26,7 +26,7 @@ Automatically extract commit messages and generate formatted changelog entries f
 - Creating user-facing change summaries
 - Generating development notes
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Extract commits since last tag

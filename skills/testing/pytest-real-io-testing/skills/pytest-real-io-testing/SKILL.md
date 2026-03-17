@@ -400,7 +400,7 @@ tests/unit/analysis/test_figures.py | 1079 +++++++++++++++++------------------
    - Tests fail quickly if conversion is incorrect
    - Can convert in batches and verify incrementally
 
-## Quick Reference Card
+### Quick Reference Card
 
 ### Conversion Patterns
 

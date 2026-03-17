@@ -26,7 +26,7 @@ Apply systematic refactoring techniques to improve code clarity, maintainability
 - Extracting methods and classes
 - Improving naming and organization
 
-## Quick Reference
+### Quick Reference
 
 ```python
 # Common refactoring patterns

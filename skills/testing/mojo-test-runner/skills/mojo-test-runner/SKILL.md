@@ -25,7 +25,7 @@ Execute Mojo tests with filtering and reporting.
 - TDD red-green-refactor cycle
 - Checking test coverage before PR
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Run all tests

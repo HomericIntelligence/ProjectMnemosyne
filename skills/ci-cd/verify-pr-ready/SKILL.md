@@ -14,7 +14,7 @@ Check that PR meets all requirements before merging.
 - Checking if PR is ready for automated merge
 - Before requesting final approval
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Check PR status

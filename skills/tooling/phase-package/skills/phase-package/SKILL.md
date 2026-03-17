@@ -26,7 +26,7 @@ Create distributable packages including Mojo packages (.mojopkg), archives, and 
 - Preparing components for distribution and reuse
 - Creating installable packages or release artifacts
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Build Mojo package

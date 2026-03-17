@@ -89,7 +89,7 @@ category: <category>
 - Trigger condition 1
 - Trigger condition 2
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Key commands

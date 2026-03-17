@@ -26,7 +26,7 @@ Refactor and finalize code after all parallel phases (Test, Implementation, Pack
 - Finalizing code before merge to main
 - Consolidating and polishing parallel phase outputs
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Check for code quality issues

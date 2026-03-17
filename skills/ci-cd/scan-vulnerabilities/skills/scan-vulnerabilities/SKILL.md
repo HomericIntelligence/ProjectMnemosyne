@@ -26,7 +26,7 @@ Systematically scan code for security vulnerabilities including unsafe patterns,
 - When updating dependencies
 - In CI/CD security checks
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Python security scanning

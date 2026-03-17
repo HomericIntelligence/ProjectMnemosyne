@@ -14,7 +14,7 @@ Create a pull request with automatic issue linking.
 - Ready to submit changes for review
 - Need to link PR to GitHub issue
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Create PR linked to issue (preferred)

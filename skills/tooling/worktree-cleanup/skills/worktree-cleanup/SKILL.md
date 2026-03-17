@@ -23,7 +23,7 @@ user-invocable: false
 - Free disk space
 - Maintain clean worktree list
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Remove single worktree by path

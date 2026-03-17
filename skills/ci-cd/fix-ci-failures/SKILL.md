@@ -14,7 +14,7 @@ Diagnose and fix CI failures systematically.
 - Workflow runs fail
 - Tests pass locally but fail in CI
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # View PR checks

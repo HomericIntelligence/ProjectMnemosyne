@@ -26,7 +26,7 @@ Analyze code and profile data to recommend optimization strategies for improving
 - Lowering memory usage
 - Planning SIMD or vectorization strategies
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Identify optimization opportunities

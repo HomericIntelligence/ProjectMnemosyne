@@ -17,7 +17,7 @@ Generate plan documentation following ML Odyssey's standard 9-section Template 1
 - Generating planning specifications before implementation
 - Need to follow Template 1 format with all 9 sections
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Validate existing plan has all 9 sections

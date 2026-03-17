@@ -26,7 +26,7 @@ Run linting tools to identify style issues, potential bugs, and code quality pro
 - Enforcing style consistency
 - Quick code review before merging
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Python linting

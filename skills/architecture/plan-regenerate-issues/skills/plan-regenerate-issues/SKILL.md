@@ -55,7 +55,7 @@ Regenerate issue descriptions from updated plans.
 - Need to update issue descriptions
 - Before creating new issues
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Regenerate all issues

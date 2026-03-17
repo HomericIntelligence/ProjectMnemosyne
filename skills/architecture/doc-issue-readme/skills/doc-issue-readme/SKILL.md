@@ -24,7 +24,7 @@ Post structured documentation to GitHub issues following ML Odyssey standards.
 - Tracking implementation progress
 - Consolidating findings and decisions
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Post documentation to issue

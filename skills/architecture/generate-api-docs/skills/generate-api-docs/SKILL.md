@@ -26,7 +26,7 @@ Extract docstrings from functions and classes to automatically generate API refe
 - Generating HTML API documentation
 - Maintaining up-to-date API specs
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Python with pdoc

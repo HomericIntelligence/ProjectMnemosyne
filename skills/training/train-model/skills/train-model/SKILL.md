@@ -26,7 +26,7 @@ Implement and execute model training loops including forward/backward passes, gr
 - Experimenting with hyperparameter variations
 - Reproducing paper results
 
-## Quick Reference
+### Quick Reference
 
 ```mojo
 # Mojo training loop pattern

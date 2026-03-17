@@ -26,7 +26,7 @@ Identify code quality issues, anti-patterns, and maintainability problems that s
 - Mentoring and code quality improvement
 - Planning technical debt reduction
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Python code smell detection

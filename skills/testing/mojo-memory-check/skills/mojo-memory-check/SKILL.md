@@ -25,7 +25,7 @@ Validate Mojo ownership and borrowing rules.
 - Before merging code
 - Performance testing reveals corruption
 
-## Quick Reference
+### Quick Reference
 
 ```mojo
 # Owned parameter - takes ownership

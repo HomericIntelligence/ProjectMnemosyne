@@ -25,7 +25,7 @@ Parallelize tensor and array operations using SIMD.
 - Performance-critical loops (>1000 elements)
 - Benchmark results show optimization potential
 
-## Quick Reference
+### Quick Reference
 
 ```mojo
 from sys.info import simdwidthof

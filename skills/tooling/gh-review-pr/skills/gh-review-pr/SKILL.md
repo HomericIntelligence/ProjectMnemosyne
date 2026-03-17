@@ -24,7 +24,7 @@ Evaluate PR quality and provide structured feedback.
 - Checking CI status and test coverage
 - Providing feedback to contributors
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # View PR details

@@ -25,7 +25,7 @@ Ensure Mojo code follows type safety principles.
 - Designing generic functions
 - Working with trait constraints
 
-## Quick Reference
+### Quick Reference
 
 ```mojo
 # Generic function with type parameter

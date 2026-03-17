@@ -25,7 +25,7 @@ Build compiled Mojo packages for distribution and reuse.
 - Preparing for package installation
 - Building modular components
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Build single package

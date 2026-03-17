@@ -51,7 +51,7 @@ Create new component plans and integrate into hierarchy.
 - New subsection needed
 - Modifying plan structure
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 ./scripts/create_component_plan.sh "Component Name" "parent/path"

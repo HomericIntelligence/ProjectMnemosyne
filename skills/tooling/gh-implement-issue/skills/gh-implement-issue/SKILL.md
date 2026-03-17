@@ -24,7 +24,7 @@ Complete workflow for implementing a GitHub issue from start to finish.
 - Want to follow best practices end-to-end
 - Working on assigned GitHub issue
 
-## Quick Reference
+### Quick Reference
 
 > **Note:** `<skill-dir>` is the absolute path to this skill's directory.
 > Resolve it with: `SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"`

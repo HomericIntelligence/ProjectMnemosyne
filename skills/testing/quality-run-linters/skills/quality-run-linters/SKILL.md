@@ -25,7 +25,7 @@ Run all configured linters to ensure code quality.
 - Pre-PR validation
 - Troubleshooting quality issues
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Run all linters

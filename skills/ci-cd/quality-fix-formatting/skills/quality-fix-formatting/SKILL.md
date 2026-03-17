@@ -25,7 +25,7 @@ Automatically fix code formatting issues across file types.
 - After writing new code
 - CI formatting checks fail
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Fix everything

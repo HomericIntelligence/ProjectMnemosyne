@@ -15,7 +15,7 @@ Perform structured review of PR changes against project quality standards.
 - Checking standards compliance (Python, JavaScript)
 - Verifying test coverage
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Get PR files changed

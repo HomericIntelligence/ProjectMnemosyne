@@ -15,7 +15,7 @@ Validate code quality with pre-commit hooks before committing.
 - Testing if CI will pass
 - Troubleshooting commit failures
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Run on all files

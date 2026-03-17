@@ -26,7 +26,7 @@ Measure machine learning model performance using appropriate metrics for the tas
 - Detecting overfitting or underfitting
 - Reporting model accuracy for papers and documentation
 
-## Quick Reference
+### Quick Reference
 
 ```mojo
 # Mojo model evaluation pattern

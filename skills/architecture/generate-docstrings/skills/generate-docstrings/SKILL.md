@@ -26,7 +26,7 @@ Write comprehensive docstrings for functions and classes following standard form
 - Ensuring consistent docstring format
 - Supporting API documentation generation
 
-## Quick Reference
+### Quick Reference
 
 ```python
 # Google-style docstring format

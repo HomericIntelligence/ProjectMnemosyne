@@ -26,7 +26,7 @@ Execute test suites to verify code functionality and identify regressions or fai
 - Verifying test suite passes
 - Generating test reports
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Run all tests with Mojo
