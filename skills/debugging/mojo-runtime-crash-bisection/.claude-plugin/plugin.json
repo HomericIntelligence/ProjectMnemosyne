@@ -1,0 +1,7 @@
+{
+  "name": "mojo-runtime-crash-bisection",
+  "version": "1.0.0",
+  "description": "Systematic approach for bisecting Mojo runtime crashes to create minimal reproducers and isolate root causes. Use when: (1) Mojo runtime crashes with no clear error, (2) crashes in libKGENCompilerRTShared.so or libAsyncRTRuntimeGlobals.so, (3) need to create upstream bug reports for modular/modular.",
+  "category": "debugging",
+  "date": "2026-03-16"
+}
