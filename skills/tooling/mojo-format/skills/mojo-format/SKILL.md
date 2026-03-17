@@ -25,7 +25,7 @@ Format Mojo code files to ensure consistent style.
 - Code review requests formatting fixes
 - Verifying formatting compliance
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Format single file

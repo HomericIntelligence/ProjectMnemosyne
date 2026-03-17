@@ -15,7 +15,7 @@ Run all configured linters to ensure code quality.
 - CI/CD quality checks
 - Pre-PR validation
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Run Python linter

@@ -26,7 +26,7 @@ Verify that required dependencies are installed and compatible with the project 
 - Troubleshooting import errors
 - Checking version compatibility
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Check Python dependencies

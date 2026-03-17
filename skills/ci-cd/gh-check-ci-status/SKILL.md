@@ -15,7 +15,7 @@ Verify CI/CD status of a pull request and investigate failures.
 - Investigating CI failures
 - Monitoring long-running CI jobs
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Check PR CI status

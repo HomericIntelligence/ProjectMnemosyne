@@ -26,7 +26,7 @@ Locate and document all hyperparameters mentioned in research papers including l
 - Comparing hyperparameter choices across papers
 - Planning hyperparameter tuning experiments
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Extract numeric values and parameters from papers

@@ -26,7 +26,7 @@ Analyze and document machine learning model architectures including layers, conn
 - Comparing architecture variations
 - Documenting neural network structure
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Extract architecture from paper

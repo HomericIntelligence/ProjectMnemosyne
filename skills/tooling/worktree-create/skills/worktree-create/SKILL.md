@@ -23,7 +23,7 @@ user-invocable: false
 - Want to avoid stashing/context switching overhead
 - Testing changes across different branches
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Create worktree for new branch

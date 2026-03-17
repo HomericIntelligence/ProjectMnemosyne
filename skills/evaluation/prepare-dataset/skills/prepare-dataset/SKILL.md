@@ -26,7 +26,7 @@ Load, preprocess, and validate datasets for machine learning model training incl
 - Splitting into train/validation/test sets
 - Applying data augmentation
 
-## Quick Reference
+### Quick Reference
 
 ```python
 # Dataset preparation pipeline

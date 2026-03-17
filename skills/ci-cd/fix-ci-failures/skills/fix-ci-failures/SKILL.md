@@ -25,7 +25,7 @@ Diagnose and fix CI failures systematically.
 - Tests pass locally but fail in CI
 - Need to debug CI issues
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # View PR checks

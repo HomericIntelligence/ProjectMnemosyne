@@ -33,7 +33,7 @@ Reply to PR review comments using the correct GitHub API.
 1. **PR-level comments** (general timeline): `gh pr comment`
 2. **Review comment replies** (inline code): GitHub API (see below)
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # 1. Get comment ID

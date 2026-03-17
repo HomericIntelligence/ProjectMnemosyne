@@ -26,7 +26,7 @@ Parse CI failure logs to identify root causes and categorize errors.
 - Identifying patterns in recurring failures
 - Determining if failure is environmental or code-related
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Download CI logs from artifact

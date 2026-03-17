@@ -26,7 +26,7 @@ Identify, document, and translate algorithms from research papers into structure
 - Planning implementation steps
 - Documenting algorithm variations
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Extract text from PDF focusing on algorithms

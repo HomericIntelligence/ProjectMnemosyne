@@ -25,7 +25,7 @@ Address PR review comments by implementing fixes and responding to each comment.
 - Need to notify reviewers of fixes
 - PR is blocked on feedback
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # 1. Get all review comments

@@ -27,7 +27,7 @@ and implementation details.
 - Identifying performance-critical computations
 - Planning SIMD optimization strategies
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Extract LaTeX equations from PDF

@@ -26,7 +26,7 @@ Retrieve and analyze all review comments from a pull request.
 - Verifying all comments have been addressed
 - Getting comment IDs for replies
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Get all review comments

@@ -26,7 +26,7 @@ Create standard starter code templates for new modules, test files, and configur
 - Initializing configuration files
 - Standardizing code structure across project
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Generate from templates

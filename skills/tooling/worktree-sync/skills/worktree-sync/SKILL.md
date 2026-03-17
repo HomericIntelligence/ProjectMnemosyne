@@ -24,7 +24,7 @@ user-invocable: false
 - Resolving merge conflicts
 - Feature branch is diverged from main
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Fetch latest from remote (works in any worktree)

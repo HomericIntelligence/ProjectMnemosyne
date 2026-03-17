@@ -26,7 +26,7 @@ Systematically measure function execution time, memory usage, and performance ch
 - Profiling SIMD vs scalar implementations
 - Establishing performance baselines for CI/CD
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Python benchmarking with timeit

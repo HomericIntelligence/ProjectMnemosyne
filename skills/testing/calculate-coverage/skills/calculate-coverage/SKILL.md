@@ -26,7 +26,7 @@ Measure code coverage percentage and identify which code paths are untested to e
 - Meeting coverage thresholds (typically 80%+)
 - Planning additional test cases
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Python coverage with pytest

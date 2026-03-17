@@ -26,7 +26,7 @@ Coordinate implementation phase by breaking down work, delegating to engineers, 
 - Need to delegate implementation tasks
 - Managing multiple engineering tasks simultaneously
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Review GitHub issue for implementation tasks

@@ -23,7 +23,7 @@ user-invocable: false
 - Testing different branches side-by-side
 - Comparing implementations
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # List all worktrees

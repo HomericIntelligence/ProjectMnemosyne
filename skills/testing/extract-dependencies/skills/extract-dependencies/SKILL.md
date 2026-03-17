@@ -26,7 +26,7 @@ Analyze import statements and identify all external and internal module dependen
 - Identifying circular dependencies
 - Generating dependency graphs
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Python dependency extraction

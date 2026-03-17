@@ -26,7 +26,7 @@ Coordinate test-driven development by writing tests first, then implementing to 
 - Writing unit, integration, or performance tests
 - Need test files following Mojo or Python patterns
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # TDD Cycle: Write test → Run (fail) → Implement → Run (pass) → Refactor

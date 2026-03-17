@@ -26,7 +26,7 @@ Implement input validation to ensure functions receive correct data types, shape
 - Ensuring tensor shape/dtype correctness
 - Validating configuration parameters
 
-## Quick Reference
+### Quick Reference
 
 ```python
 # Input validation pattern

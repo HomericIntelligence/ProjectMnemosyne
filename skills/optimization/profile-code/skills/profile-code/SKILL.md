@@ -26,7 +26,7 @@ Use profiling tools to measure CPU time, memory allocation, and identify perform
 - Understanding where code spends most time
 - Optimizing hot code paths
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Python CPU profiling with cProfile

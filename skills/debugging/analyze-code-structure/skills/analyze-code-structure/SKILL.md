@@ -26,7 +26,7 @@ Examine code organization, module hierarchy, and structural patterns to understa
 - Identifying code structure for documentation
 - Planning refactoring or reorganization
 
-## Quick Reference
+### Quick Reference
 
 ```bash
 # Quick code structure analysis
