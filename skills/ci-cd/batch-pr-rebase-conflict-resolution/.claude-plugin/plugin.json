@@ -1,0 +1,7 @@
+{
+  "name": "batch-pr-rebase-conflict-resolution",
+  "version": "1.0.0",
+  "description": "Batch rebase and resolve conflicts for multiple stale PRs with DIRTY merge state. Use when: (1) multiple PRs have rebase conflicts blocking merges, (2) PRs need semantic conflict resolution not blind ours/theirs.",
+  "category": "ci-cd",
+  "date": "2026-03-17"
+}
