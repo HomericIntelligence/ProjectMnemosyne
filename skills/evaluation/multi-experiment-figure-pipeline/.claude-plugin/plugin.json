@@ -1,0 +1,7 @@
+{
+  "name": "multi-experiment-figure-pipeline",
+  "version": "1.0.0",
+  "description": "Patterns for adding conditional figure generation to multi-experiment analysis pipelines. Use when: (1) adding new Altair figures to an existing figure registry, (2) implementing data-dependent guard sets for single-model or single-judge datasets, (3) creating task-level analysis figures across many experiments.",
+  "category": "evaluation",
+  "date": "2026-03-17"
+}
