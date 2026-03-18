@@ -1,0 +1,7 @@
+{
+  "name": "semantic-pr-rebase-at-scale",
+  "version": "1.0.0",
+  "description": "Rebase 50-100 open PRs against main after systemic CI fix, using parallel Sonnet sub-agents in worktree isolation with semantic conflict resolution. Use when: (1) a CI infrastructure fix lands on main breaking all open PRs, (2) need to batch-rebase 50+ PRs with conflict resolution, (3) conflicts require reading issue context to resolve semantically rather than blindly picking ours/theirs.",
+  "category": "ci-cd",
+  "date": "2026-03-17"
+}
