@@ -9,9 +9,9 @@ Search the skills registry for relevant prior learnings before starting work.
 ## Target Repository
 
 **Repository**: `HomericIntelligence/ProjectMnemosyne`
-**Clone location**: `<ProjectRoot>/build/<PID>/ProjectMnemosyne/`
+**Clone location**: `$HOME/.agent-brain/ProjectMnemosyne/`
 
-Each Claude Code session gets its own isolated clone (via process ID) to avoid interference.
+Single shared clone in user's home directory. Automatically updated before searches.
 Automatically skipped if already running in the ProjectMnemosyne repository.
 
 ## Instructions
@@ -28,29 +28,19 @@ When the user invokes this command:
      # Already in ProjectMnemosyne - use current directory
      MNEMOSYNE_DIR="."
    else
-     # Use PID-scoped build directory to avoid interference between Claude instances
-     MNEMOSYNE_DIR="build/$$/ProjectMnemosyne"
+     # Use shared home directory location
+     MNEMOSYNE_DIR="$HOME/.agent-brain/ProjectMnemosyne"
 
      if [ ! -d "$MNEMOSYNE_DIR" ]; then
        # Clone fresh
-       mkdir -p "build/$$"
+       mkdir -p "$HOME/.agent-brain"
        gh repo clone HomericIntelligence/ProjectMnemosyne "$MNEMOSYNE_DIR"
-     else
-       # Update existing clone before analysis
-       # Ensure we're on main branch
-       if ! git -C "$MNEMOSYNE_DIR" symbolic-ref HEAD | grep -q "refs/heads/main"; then
-         echo "Error: $MNEMOSYNE_DIR is not on main branch."
-         echo "Fix: rm -rf build/$$"
-         exit 1
-       fi
-
-       # Ensure no local commits or conflicts
-       if ! git -C "$MNEMOSYNE_DIR" pull --ff-only origin main; then
-         echo "Error: Cannot fast-forward $MNEMOSYNE_DIR/main. May have local commits or conflicts."
-         echo "Fix: rm -rf build/$$"
-         exit 1
-       fi
      fi
+
+     # Always update to latest main before searching
+     git -C "$MNEMOSYNE_DIR" fetch origin
+     git -C "$MNEMOSYNE_DIR" checkout main
+     git -C "$MNEMOSYNE_DIR" pull --ff-only origin main
    fi
    ```
 
@@ -61,7 +51,7 @@ When the user invokes this command:
    - Description keywords and trigger conditions
    - Tags (if present)
    - Select top 5 most relevant matches
-5. **Read SKILL.md files** for top matches only
+5. **Read skill `.md` files** for top matches only (from flat `skills/<name>.md` files)
    - Focus on: `## Failed Attempts`, `## When to Use`, `## Results & Parameters`
 6. **Present findings**:
    - What worked (verified approaches)
@@ -73,9 +63,9 @@ When the user invokes this command:
 After presenting findings, ask:
 "Would you like me to dig deeper into any of these skills, or are you ready to proceed?"
 
-If the user wants more detail, read the full SKILL.md for the most relevant matches.
+If the user wants more detail, read the full skill `.md` file for the most relevant matches.
 
-> **Note**: If the user's goal involves **creating or fixing skills**, remind them to run `/retrospective` which includes the Pre-Commit Validation Checklist, or point them to the [Top CI Failures](retrospective.md#top-ci-failures-most-common) section in the retrospective command for the most common plugin validation errors.
+> **Note**: If the user's goal involves **creating or fixing skills**, remind them to run `/retrospective` which captures session learnings and creates a new flat-format skill file.
 
 ## Output Format
 
