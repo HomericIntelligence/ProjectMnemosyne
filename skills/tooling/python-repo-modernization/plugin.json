@@ -1,8 +1,0 @@
-{
-  "name": "python-repo-modernization",
-  "version": "1.0.0",
-  "description": "Bring a Python utility package from C+ to production-grade quality: fix subpackage re-exports, raise test coverage to 75%+, create integration smoke tests, harden CI/CD pipeline, polish pre-commit hooks, and produce an installable wheel. Use when a shared utility repo is functional but not yet consumable by downstream projects.",
-  "category": "tooling",
-  "author": "ProjectHephaestus",
-  "created": "2026-03-13"
-}
