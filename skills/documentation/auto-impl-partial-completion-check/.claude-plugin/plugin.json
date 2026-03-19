@@ -1,8 +1,0 @@
-{
-  "name": "auto-impl-partial-completion-check",
-  "version": "1.0.0",
-  "description": "Verify auto-impl issue completion when commit and PR already exist. Use when: (1) worktree branch is named <number>-auto-impl and git log shows a prior commit closing the issue, (2) an open PR already exists for the branch, (3) need to check whether implementation plan was fully executed vs partially done.",
-  "category": "documentation",
-  "date": "2026-03-05",
-  "tags": ["auto-impl", "issue-verification", "pr-workflow", "completion-check"]
-}

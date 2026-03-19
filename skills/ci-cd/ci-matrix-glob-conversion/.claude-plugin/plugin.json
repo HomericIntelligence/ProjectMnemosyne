@@ -1,7 +1,0 @@
-{
-  "name": "ci-matrix-glob-conversion",
-  "version": "1.0.0",
-  "description": "Convert explicit CI matrix filename lists to glob patterns and implement check_stale_patterns(). Use when: (1) CI matrix has explicit filename lists that break on new test files, (2) a test file expects a function that doesn't yet exist in its target module, (3) converting ADR-009 split-file explicit entries to auto-discovering globs.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

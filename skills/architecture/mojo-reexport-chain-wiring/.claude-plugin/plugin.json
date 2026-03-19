@@ -1,8 +1,0 @@
-{
-  "name": "mojo-reexport-chain-wiring",
-  "version": "1.0.0",
-  "description": "Wire Mojo structs and functions through a multi-level re-export chain (__init__.mojo hierarchy) and expose canonical type aliases at the package root. Use when: (1) a struct is implemented in a leaf module but not accessible via the top-level package import, (2) a re-export chain (leaf -> subpackage -> package) needs to be completed, (3) a plan-canonical name differs from the implementation struct name and an alias is needed.",
-  "category": "architecture",
-  "date": "2026-03-07",
-  "tags": ["mojo", "re-export", "package", "__init__", "alias", "shared", "metrics"]
-}

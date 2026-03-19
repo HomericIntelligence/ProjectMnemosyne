@@ -1,7 +1,0 @@
-{
-  "name": "fix-ci-compilation-and-lint",
-  "version": "1.0.0",
-  "description": "Fix CI failures caused by missing function declarations and markdown lint errors. Use when: (1) Mojo compilation fails with 'unknown declaration' after renaming/moving functions, (2) markdownlint MD051/MD037/MD031/MD040 errors block pre-commit.",
-  "category": "ci-cd",
-  "date": "2026-03-13"
-}

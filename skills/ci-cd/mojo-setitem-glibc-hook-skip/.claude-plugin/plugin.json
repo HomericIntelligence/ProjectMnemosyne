@@ -1,8 +1,0 @@
-{
-  "name": "mojo-setitem-glibc-hook-skip",
-  "version": "1.0.0",
-  "description": "Fix ExTensor missing __setitem__ and handle mojo format pre-commit failures caused by GLIBC version mismatch. Use when: (1) CI Core Utilities fails with 'expression must be mutable in assignment' on tensor subscript assignment, (2) mojo format pre-commit hook fails locally with GLIBC_2.32/2.33/2.34 not found errors, (3) adding __setitem__ overloads to ExTensor following _set_float64/_set_int64 internal setter pattern. Verified on ProjectOdyssey PR #3385.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["mojo", "extensor", "setitem", "glibc", "pre-commit", "hook-skip"]
-}

@@ -1,8 +1,0 @@
-{
-  "name": "workflow-deduplication-pixi-composite-action",
-  "version": "1.0.0",
-  "description": "Deduplicate repeated Pixi setup blocks across GitHub Actions workflows using a composite action. Use when: (1) multiple workflows repeat the same setup-pixi block, (2) consolidating CI workflows to reduce maintenance burden, (3) migrating from inline prefix-dev/setup-pixi to a centralized composite action.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["github-actions", "composite-action", "pixi", "deduplication", "ci-consolidation"]
-}

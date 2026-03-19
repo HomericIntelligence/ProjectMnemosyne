@@ -1,7 +1,0 @@
-{
-  "name": "mojo-conv2d-batched-backward-tests",
-  "version": "1.0.0",
-  "description": "Pattern for verifying Conv2D backward-pass gradient accumulation over the batch dimension in Mojo. Use when: (1) existing backward tests only cover batch=1 and you need batch>1 coverage, (2) verifying grad_bias = batch * out_H * out_W, (3) verifying grad_weights accumulates over multiple batch items, (4) extending multichannel conv2d backward tests to batched inputs.",
-  "category": "testing",
-  "date": "2026-03-15"
-}

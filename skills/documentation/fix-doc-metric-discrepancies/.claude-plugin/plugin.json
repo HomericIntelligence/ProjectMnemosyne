@@ -1,7 +1,0 @@
-{
-  "name": "fix-doc-metric-discrepancies",
-  "version": "1.0.0",
-  "description": "Fix stale or incorrect metric values in documentation (test counts, coverage thresholds, command paths) that drift from actual codebase state. Use when a code audit reveals contradictions between docs and pyproject.toml, README, or CI config.",
-  "category": "documentation",
-  "date": "2026-02-27"
-}

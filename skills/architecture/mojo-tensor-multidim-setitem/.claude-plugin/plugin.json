@@ -1,8 +1,0 @@
-{
-  "name": "mojo-tensor-multidim-setitem",
-  "version": "1.0.0",
-  "description": "Add multi-dimensional mutable indexing to Mojo ExTensor via List[Int] __setitem__ overload. Use when: (1) adding multi-dim write access to a flat-storage tensor, (2) converting per-dimension indices to a flat offset via strides, (3) mirroring an existing multi-dim __getitem__ with a matching __setitem__.",
-  "category": "architecture",
-  "date": "2026-03-07",
-  "tags": ["mojo", "tensor", "indexing", "setitem", "strides", "multi-dimensional"]
-}

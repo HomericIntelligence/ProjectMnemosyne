@@ -1,8 +1,0 @@
-{
-  "name": "bf16-precision-recommendation",
-  "version": "1.0.0",
-  "description": "Add hardware-guarded BF16 support to dtype recommendation functions. Use when: (1) enabling BF16 for large ML models in Mojo dtype utilities, (2) adding Apple Silicon hardware guard for BF16 precision selection, (3) extending precision recommendation with hardware capability parameters.",
-  "category": "tooling",
-  "date": "2026-03-07",
-  "tags": ["mojo", "dtype", "bfloat16", "precision", "hardware-guard", "apple-silicon"]
-}

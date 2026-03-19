@@ -1,7 +1,0 @@
-{
-  "name": "always-retry-infra-failures",
-  "version": "1.0.0",
-  "description": "Fix retry logic bugs where a flag-gated retry failed to distinguish infra crashes from bad-grade results, causing valid judge results to be discarded. Use when: (1) removing a feature flag and making its behavior unconditional, (2) fixing retry/reset logic that incorrectly targets completed runs with bad scores, (3) debugging state machine checkpoint semantics where terminal states have different meanings.",
-  "category": "debugging",
-  "date": "2026-03-14"
-}

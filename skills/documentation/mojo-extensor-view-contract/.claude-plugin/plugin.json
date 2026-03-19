@@ -1,7 +1,0 @@
-{
-  "name": "mojo-extensor-view-contract",
-  "version": "1.0.0",
-  "description": "Documents the ExTensor view/owner contract for Mojo ML frameworks, covering refcount mechanics, view-returning operations, as_contiguous() guard patterns, and markdown table linting fixes. Use when: (1) documenting shared-ownership tensor semantics in Mojo, (2) fixing MD060 table-column-style linting errors, (3) expanding view contract docs with refcount lifecycle details.",
-  "category": "documentation",
-  "date": "2026-03-15"
-}

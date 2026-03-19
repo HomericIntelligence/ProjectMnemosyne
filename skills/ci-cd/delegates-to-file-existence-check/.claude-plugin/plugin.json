@@ -1,7 +1,0 @@
-{
-  "name": "delegates-to-file-existence-check",
-  "version": "1.0.0",
-  "description": "Add CI validation that every agent name listed in delegates_to frontmatter has a corresponding .md file in .claude/agents/. Use when: (1) adding delegates_to validation to an existing AgentConfigValidator, (2) catching stale cross-agent references automatically on every PR, (3) enforcing referential integrity in agent configuration files.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

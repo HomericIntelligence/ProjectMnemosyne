@@ -1,0 +1,85 @@
+---
+name: refactor-code
+description: Restructure code for improved clarity and maintainability. Use when addressing
+  code smells or technical debt.
+category: generation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Refactor Code
+
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Apply systematic refactoring techniques to improve code clarity, maintainability, and performance without changing functionality. |
+| Outcome | Operational |
+
+
+Apply systematic refactoring techniques to improve code clarity, maintainability, and performance without changing functionality.
+
+## When to Use
+
+- Addressing code smells identified in reviews
+- Reducing cyclomatic complexity
+- Extracting methods and classes
+- Improving naming and organization
+
+### Quick Reference
+
+```python
+# Common refactoring patterns
+
+# Extract method
+# BEFORE: Long function with multiple responsibilities
+def process_data(data):
+    result = validate(data)
+    formatted = format_data(result)
+    return save(formatted)
+
+# AFTER: Clear single responsibility
+def process_data(data):
+    validated = _validate_and_format(data)
+    return save(validated)
+
+def _validate_and_format(data):
+    return format_data(validate(data))
+```
+
+## Verified Workflow
+
+1. **Identify refactoring targets**: From code review or analysis tools
+2. **Plan changes**: Document what will change and why
+3. **Apply refactoring**: Use IDE refactoring tools or manual changes
+4. **Run tests**: Verify all tests still pass
+5. **Verify performance**: Check no performance regression
+
+## Output Format
+
+Refactoring report:
+
+- Issues addressed
+- Refactoring techniques applied
+- Metrics before/after (complexity, lines of code)
+- Test coverage status
+- Performance impact
+
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `detect-code-smells` skill for identifying issues
+- See CLAUDE.md > SOLID principles for refactoring goals
+- See `run-tests` skill for verification

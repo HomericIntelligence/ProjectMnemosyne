@@ -1,8 +1,0 @@
-{
-  "name": "impl-already-committed-and-pr-open",
-  "version": "1.0.0",
-  "description": "Detect and handle auto-impl worktrees where all work is already committed and a PR is already open. Use when: (1) branch is named <number>-auto-impl, (2) git status is clean with no staged changes, (3) recent git log shows a commit matching the issue title.",
-  "category": "documentation",
-  "date": "2026-03-05",
-  "tags": ["auto-impl", "pre-committed", "idempotent", "worktree", "pr"]
-}

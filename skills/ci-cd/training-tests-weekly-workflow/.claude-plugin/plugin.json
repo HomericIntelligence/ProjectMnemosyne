@@ -1,7 +1,0 @@
-{
-  "name": "training-tests-weekly-workflow",
-  "version": "1.0.0",
-  "description": "Create a weekly GitHub Actions workflow for Mojo training tests excluded from per-PR CI. Use when: (1) test files are excluded from PR CI but have no periodic workflow covering them, (2) silently-untested training/slow test files need a coverage guarantee, (3) validate_test_coverage.py exclusion lists grow without a corresponding weekly workflow.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

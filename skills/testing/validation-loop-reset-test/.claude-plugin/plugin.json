@@ -1,7 +1,0 @@
-{
-  "name": "validation-loop-reset-test",
-  "version": "1.0.0",
-  "description": "Pattern for testing that training/validation loops reset DataLoaders before iterating, using a pre-exhaustion strategy. Use when: (1) adding tests for loop reset behavior in Mojo training infrastructure, (2) verifying run() or run_subset() internal reset semantics, (3) following up on a DataLoader reset test for a parallel loop method.",
-  "category": "testing",
-  "date": "2026-03-15"
-}

@@ -1,8 +1,0 @@
-{
-  "name": "fp16-precision-test-documentation",
-  "version": "1.0.0",
-  "description": "Document Float16 precision limitations in ML test file headers with technical detail. Use when: (1) test files have inline FP16 precision NOTEs needing consolidation into file headers, (2) cleanup issues require documenting known Float16 arithmetic limitations, (3) reviewers ask why Float16 tests are skipped or use FP32 compute.",
-  "category": "documentation",
-  "date": "2026-03-04",
-  "tags": ["float16", "precision", "mojo", "testing", "documentation", "cleanup"]
-}

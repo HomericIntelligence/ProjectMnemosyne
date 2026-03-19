@@ -1,8 +1,0 @@
-{
-  "name": "dockerfile-cargo-to-prebuilt-binary",
-  "version": "1.0.0",
-  "description": "Replace slow cargo install in Dockerfiles with pre-built binary installers to eliminate Rust compilation. Use when: (1) Dockerfile uses cargo install for a tool that provides an official install.sh, (2) Docker builds are slow due to Rust compilation, (3) cargo is only a transitive dep for a single tool install.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["dockerfile", "cargo", "just", "pre-built", "build-time", "optimization", "pixi", "version-pinning"]
-}

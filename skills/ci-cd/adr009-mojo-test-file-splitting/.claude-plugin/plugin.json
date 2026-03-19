@@ -1,8 +1,0 @@
-{
-  "name": "adr009-mojo-test-file-splitting",
-  "version": "1.0.0",
-  "description": "Split Mojo test files that exceed the ADR-009 limit of 10 fn test_ functions per file to prevent heap corruption (libKGENCompilerRTShared.so) in Mojo v0.26.1 CI. Use when: (1) a Mojo test file has more than 10 fn test_ functions, (2) CI shows intermittent non-deterministic failures in a test group, (3) implementing ADR-009 compliance for new or existing test files.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["mojo", "adr-009", "heap-corruption", "test-splitting", "ci-stability", "mojo-v0.26.1"]
-}

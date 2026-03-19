@@ -1,8 +1,0 @@
-{
-  "name": "mojo-serialization-ci-crash",
-  "version": "1.0.0",
-  "description": "Debug Mojo serialization CI crashes from dtype string conversion mismatches and Python interop crashes. Use when: (1) mojo test crashes during hex encoding or serialization roundtrip, (2) CI fails with libKGENCompilerRTShared crash in serialization tests, (3) dtype roundtrip produces wrong type after load, (4) load_named_tensors returns wrong ordering or crashes.",
-  "category": "debugging",
-  "date": "2026-03-07",
-  "tags": ["mojo", "serialization", "dtype", "ci", "crash", "python-interop", "os.listdir"]
-}

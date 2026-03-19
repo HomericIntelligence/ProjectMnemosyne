@@ -1,7 +1,0 @@
-{
-  "name": "migrate-dataclass-to-pydantic",
-  "version": "1.0.0",
-  "description": "Migrate Python dataclasses to Pydantic BaseModel with validation",
-  "category": "architecture",
-  "date": "2026-02-13"
-}

@@ -1,8 +1,0 @@
-{
-  "name": "update-blocker-note",
-  "version": "1.0.0",
-  "description": "Update blocked feature NOTE comments with issue tracking references and resolution path. Use when: (1) a NOTE comment lacks a tracking issue number, (2) a blocker NOTE needs a resolution path documented, (3) cleanup issues require linking NOTEs to parent tracking issues.",
-  "category": "documentation",
-  "date": "2026-03-04",
-  "tags": ["notes", "tracking", "blockers", "comments", "cleanup"]
-}

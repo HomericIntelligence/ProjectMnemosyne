@@ -1,8 +1,0 @@
-{
-  "name": "diagnose-ci-test-failures",
-  "version": "1.0.0",
-  "description": "Triage CI test failures: separate real bugs from JIT crashes, fix tensor operation bugs, skip unimplemented feature tests with tracking issues, handle flaky link checkers",
-  "category": "ci-cd",
-  "date": "2026-03-12",
-  "tags": ["ci-cd", "testing", "mojo", "jit-crash", "triage", "debugging"]
-}

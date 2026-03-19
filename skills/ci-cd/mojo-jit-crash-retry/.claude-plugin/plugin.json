@@ -1,8 +1,0 @@
-{
-  "name": "mojo-jit-crash-retry",
-  "version": "1.0.0",
-  "description": "Diagnose and fix intermittent Mojo JIT compiler crashes in CI (libKGENCompilerRTShared.so abort). Add retry logic to test-group justfile recipe. Use when: (1) Mojo tests report 'execution crashed' before printing any output, (2) same test passes/fails non-deterministically across CI runs, (3) crash stack shows libKGENCompilerRTShared.so calling libc abort.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["mojo", "ci", "flaky-tests", "justfile", "retry", "jit-crash"]
-}

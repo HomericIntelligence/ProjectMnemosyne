@@ -1,8 +1,0 @@
-{
-  "name": "mass-pr-ci-fix",
-  "version": "1.0.0",
-  "description": "Fix CI failures across many open PRs systematically: identify root blockers, mass-rebase, fix mojo format violations, Mojo trait API mismatches, and ADR-009 heap crash retries. Use when: (1) many PRs share a common CI failure root cause, (2) pre-commit mojo format failures appear after a codebase change, (3) Mojo trait API changes break compilation across multiple branches.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["mojo", "ci", "pre-commit", "rebase", "mass-fix", "github-actions"]
-}

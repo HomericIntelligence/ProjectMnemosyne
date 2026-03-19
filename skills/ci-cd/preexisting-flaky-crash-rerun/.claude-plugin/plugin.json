@@ -1,8 +1,0 @@
-{
-  "name": "preexisting-flaky-crash-rerun",
-  "version": "1.0.0",
-  "description": "Diagnose whether CI failures are pre-existing flaky crashes unrelated to PR changes, and re-trigger CI as the sole fix. Use when: (1) CI fails with execution crashes in Mojo tests, (2) the PR diff does not touch failing test files, (3) the same tests passed on a recent main CI run.",
-  "category": "ci-cd",
-  "date": "2026-03-06",
-  "tags": ["ci", "flaky-tests", "mojo", "crash", "rerun", "pre-existing"]
-}

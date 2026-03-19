@@ -1,8 +1,0 @@
-{
-  "name": "pr-review-no-action-determination",
-  "version": "1.0.0",
-  "description": "Determine when a PR requires no fixes by distinguishing pre-existing CI failures from PR-introduced regressions. Use when: (1) CI jobs fail on a PR but the PR changes are unrelated to failing tests, (2) link-check or runtime-crash CI failures appear on a PR touching only documentation or config, (3) you need to confirm a PR is merge-ready despite red CI checks.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["pr-review", "ci-failures", "pre-existing", "no-action", "merge-ready"]
-}

@@ -1,6 +1,0 @@
-{
-  "name": "review-pr-changes",
-  "version": "1.0.0",
-  "description": "Review PR changes with structured checklist for quality and standards compliance. Use for comprehensive PR code review.",
-  "skills": "./skills"
-}

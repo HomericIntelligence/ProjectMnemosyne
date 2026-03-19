@@ -1,6 +1,0 @@
-{
-  "name": "fix-judge-file-access",
-  "version": "1.0.0",
-  "description": "Skill: Fix Judge File Access for E2E Evaluation",
-  "skills": "./skills"
-}

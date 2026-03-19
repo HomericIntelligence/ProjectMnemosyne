@@ -1,8 +1,0 @@
-{
-  "name": "fix-mypy-ruff-script-ci",
-  "version": "1.0.0",
-  "description": "Fix mypy and ruff CI failures in Python scripts caused by unused variables, missing type annotations, and bare f-strings. Use when: (1) mypy reports 'Incompatible return value type' for list with None elements, (2) ruff reports F841 unused variables or F541 f-string without placeholders, (3) pre-commit ruff-format or ruff-check hooks fail on scripts.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["mypy", "ruff", "type-annotations", "python", "ci-cd", "pre-commit"]
-}

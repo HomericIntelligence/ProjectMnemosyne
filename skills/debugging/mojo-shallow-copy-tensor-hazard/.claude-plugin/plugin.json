@@ -1,8 +1,0 @@
-{
-  "name": "mojo-shallow-copy-tensor-hazard",
-  "version": "1.0.0",
-  "description": "Fix Mojo tensor mutation caused by shallow copy sharing _data pointer. Use when: (1) a function that receives a tensor modifies a copy but unexpectedly corrupts the caller's tensor, (2) numerical gradient checking produces wrong results despite correct math, (3) debugging silent data corruption in Mojo tensor operations.",
-  "category": "debugging",
-  "date": "2026-03-07",
-  "tags": ["mojo", "tensor", "memory-safety", "shallow-copy", "deep-copy", "gradient-checker"]
-}

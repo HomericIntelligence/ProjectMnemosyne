@@ -1,7 +1,0 @@
-{
-  "name": "pool-layer-backward-tester",
-  "version": "1.0.0",
-  "description": "Implement a pooling backward pass tester (test_pool_layer_backward) in a Mojo layer_testers utility following three-tier gradient checking pattern. Use when: (1) MaxPool/AvgPool backward passes are newly implemented and need a reusable tester, (2) gradient checking for pooling layers requires numerical vs analytical validation, (3) a layer_testers.mojo file has conv/batchnorm backward testers but no pooling backward tester.",
-  "category": "testing",
-  "date": "2026-03-15"
-}

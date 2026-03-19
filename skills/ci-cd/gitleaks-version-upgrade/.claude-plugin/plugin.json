@@ -1,7 +1,0 @@
-{
-  "name": "gitleaks-version-upgrade",
-  "version": "1.0.0",
-  "description": "Upgrade Gitleaks binary version in GitHub Actions security workflows including URL, SHA256 checksum, and inline comments. Use when: (1) Gitleaks has a new stable release that should be adopted, (2) security workflow pins an outdated Gitleaks version, (3) SHA256 digest in security.yml needs refreshing after a version bump.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

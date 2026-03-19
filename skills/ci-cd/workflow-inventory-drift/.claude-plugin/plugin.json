@@ -1,8 +1,0 @@
-{
-  "name": "workflow-inventory-drift",
-  "version": "1.0.0",
-  "description": "Detect drift between .github/workflows/*.yml files on disk and the workflow inventory table in README.md. Use when: (1) adding or removing GitHub Actions workflow files, (2) setting up enforcement to keep workflow documentation in sync, (3) diagnosing why CI fails with an inventory mismatch error.",
-  "category": "ci-cd",
-  "date": "2026-03-15",
-  "tags": ["workflow", "readme", "drift", "inventory", "pre-commit", "ci", "documentation-sync", "github-actions"]
-}

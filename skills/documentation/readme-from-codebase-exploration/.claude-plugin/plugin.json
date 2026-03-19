@@ -1,8 +1,0 @@
-{
-  "name": "readme-from-codebase-exploration",
-  "version": "1.0.0",
-  "description": "Replace placeholder README.md with accurate project description by exploring the live codebase. Use when: (1) README has placeholder text like 'Description here' or 'Features list', (2) a project has grown beyond its documentation, (3) a new contributor needs to understand a codebase quickly.",
-  "category": "documentation",
-  "date": "2026-03-05",
-  "tags": ["readme", "documentation", "codebase-exploration", "onboarding", "placeholder-removal"]
-}

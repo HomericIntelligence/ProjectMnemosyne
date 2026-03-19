@@ -1,8 +1,0 @@
-{
-  "name": "pr-review-ci-flake-analysis",
-  "version": "1.0.0",
-  "description": "Analyze CI failures on a PR to distinguish pre-existing flakes from regression. Use when: (1) a review-fix plan says 'no code changes needed', (2) CI shows execution crashes unrelated to PR changes, (3) validating that a cleanup/deletion PR is safe to merge despite CI failures.",
-  "category": "ci-cd",
-  "date": "2026-03-06",
-  "tags": ["ci", "flaky-tests", "pr-review", "mojo", "heap-corruption", "adr-009"]
-}

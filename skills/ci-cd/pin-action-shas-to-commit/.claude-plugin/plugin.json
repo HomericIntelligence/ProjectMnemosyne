@@ -1,8 +1,0 @@
-{
-  "name": "pin-action-shas-to-commit",
-  "version": "1.0.0",
-  "description": "Pin GitHub Actions version tags to full commit SHAs for supply chain security. Use when: (1) composite action files reference actions by mutable tag (e.g. @v8, @v0.9.4) instead of full SHA, (2) a repo enforces SHA-pinning in workflow files but composite actions under .github/actions/ were missed.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["github-actions", "security", "supply-chain", "sha-pinning", "composite-action"]
-}

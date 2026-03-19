@@ -1,297 +1,245 @@
 #!/usr/bin/env python3
 """
-Validate plugin structure and content in the ProjectMnemosyne marketplace.
+Validate flat-format skill files (skills/*.md).
 
-This script validates:
-- plugin.json exists and has required fields (name, version, description)
-- SKILL.md exists and has required sections
-- Failed Attempts section is present (required)
-- Description is specific (20+ chars)
-- Category is valid if present (one of 8 approved)
-
-Note: category and date are optional - category is derived from directory structure.
-
-Usage:
-    python3 scripts/validate_plugins.py [plugins_dir]
-
-    If plugins_dir not provided, checks plugins/
+Checks:
+- Required YAML frontmatter fields (name, description, category, date, version)
+- Section presence (Overview, When to Use, Verified Workflow, Failed Attempts, Results & Parameters)
+- Failed Attempts table structure
+- Category validity
+- Date format (YYYY-MM-DD)
+- Quick Reference demotion check (should be ### not ##)
 """
 
-import json
 import re
 import sys
+import yaml
 from pathlib import Path
-from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
-
-# Validation thresholds
-MIN_DESCRIPTION_LENGTH = 20
-
-# Valid categories
+SKILLS_DIR = Path("skills")
 VALID_CATEGORIES = {
-    "training",
-    "evaluation",
-    "optimization",
-    "debugging",
-    "architecture",
-    "tooling",
-    "ci-cd",
-    "testing",
-    "documentation",
+    "training", "evaluation", "optimization", "debugging",
+    "architecture", "tooling", "ci-cd", "testing", "documentation"
 }
 
-# Required plugin.json fields (per official Claude Code plugin docs)
-# Note: category is derived from directory structure, date is optional metadata
-REQUIRED_PLUGIN_FIELDS = {"name", "version", "description"}
+# Color codes for terminal output
+RED = "\033[91m"
+YELLOW = "\033[93m"
+GREEN = "\033[92m"
+RESET = "\033[0m"
 
 
-@dataclass
-class ValidationResult:
-    """Result of validating a plugin."""
+def find_plugins() -> List[Path]:
+    """Find all flat skill files (skills/*.md, exclude *.notes.md)."""
+    if not SKILLS_DIR.exists():
+        return []
 
-    plugin_path: Path
-    is_valid: bool
-    errors: List[str]
-    warnings: List[str]
-
-    def __str__(self) -> str:
-        """Format validation result as string."""
-        status = "PASS" if self.is_valid else "FAIL"
-        output = [f"\n{status}: {self.plugin_path.name}"]
-
-        if self.errors:
-            output.append("  Errors:")
-            for error in self.errors:
-                output.append(f"    - {error}")
-
-        if self.warnings:
-            output.append("  Warnings:")
-            for warning in self.warnings:
-                output.append(f"    - {warning}")
-
-        return "\n".join(output)
+    files = sorted([
+        f for f in SKILLS_DIR.glob("*.md")
+        if not f.name.endswith(".notes.md") and f.is_file()
+    ])
+    return files
 
 
-def validate_plugin_json(plugin_dir: Path) -> Tuple[List[str], List[str], dict]:
-    """Validate plugin.json file."""
+def parse_frontmatter(content: str) -> Tuple[Dict, str, List[str]]:
+    """
+    Parse YAML frontmatter from markdown.
+    Returns (frontmatter_dict, body, errors).
+    """
     errors = []
-    warnings = []
-    data = {}
 
-    plugin_json_path = plugin_dir / ".claude-plugin" / "plugin.json"
-
-    if not plugin_json_path.exists():
-        errors.append("Missing .claude-plugin/plugin.json")
-        return errors, warnings, data
-
-    try:
-        with open(plugin_json_path) as f:
-            data = json.load(f)
-    except json.JSONDecodeError as e:
-        errors.append(f"Invalid JSON in plugin.json: {e}")
-        return errors, warnings, data
-
-    # Check required fields
-    missing_fields = REQUIRED_PLUGIN_FIELDS - set(data.keys())
-    if missing_fields:
-        errors.append(f"Missing required fields: {', '.join(sorted(missing_fields))}")
-
-    # Validate name format
-    if "name" in data:
-        name = data["name"]
-        if not re.match(r"^[a-z0-9-]+$", name):
-            errors.append(f"Invalid name format '{name}' (use lowercase, numbers, hyphens)")
-
-    # Validate description length
-    if "description" in data:
-        desc = data["description"]
-        if len(desc) < MIN_DESCRIPTION_LENGTH:
-            errors.append(f"Description too short ({len(desc)} chars, min {MIN_DESCRIPTION_LENGTH})")
-
-    # Validate category
-    if "category" in data:
-        category = data["category"]
-        if category not in VALID_CATEGORIES:
-            errors.append(f"Invalid category '{category}'. Valid: {', '.join(sorted(VALID_CATEGORIES))}")
-
-    # Validate date format
-    if "date" in data:
-        date = data["date"]
-        if not re.match(r"^\d{4}-\d{2}-\d{2}$", date):
-            errors.append(f"Invalid date format '{date}' (use YYYY-MM-DD)")
-
-    # Validate tags is a list
-    if "tags" in data:
-        if not isinstance(data["tags"], list):
-            errors.append("tags must be a list")
-        elif len(data["tags"]) == 0:
-            warnings.append("No tags provided - reduces searchability")
-
-    return errors, warnings, data
-
-
-def validate_skill_md(plugin_dir: Path, plugin_data: dict) -> Tuple[List[str], List[str]]:
-    """Validate SKILL.md file."""
-    errors = []
-    warnings = []
-
-    # Find SKILL.md in skills directory
-    skills_dir = plugin_dir / "skills"
-    if not skills_dir.exists():
-        errors.append("Missing skills/ directory")
-        return errors, warnings
-
-    skill_files = list(skills_dir.glob("*/SKILL.md"))
-    if not skill_files:
-        errors.append("No SKILL.md found in skills/ subdirectories")
-        return errors, warnings
-
-    skill_md_path = skill_files[0]
-
-    try:
-        content = skill_md_path.read_text()
-    except Exception as e:
-        errors.append(f"Failed to read SKILL.md: {e}")
-        return errors, warnings
-
-    # Check for YAML frontmatter
     if not content.startswith("---"):
-        errors.append("SKILL.md missing YAML frontmatter (must start with ---)")
+        errors.append("File does not start with YAML frontmatter delimiter (---)")
+        return {}, content, errors
 
-    # Check for required sections
+    parts = content.split("---", 2)
+    if len(parts) < 3:
+        errors.append("Invalid frontmatter: missing closing ---")
+        return {}, content, errors
+
+    try:
+        frontmatter = yaml.safe_load(parts[1]) or {}
+    except yaml.YAMLError as e:
+        errors.append(f"Invalid YAML frontmatter: {e}")
+        return {}, content, errors
+
+    body = parts[2].lstrip("\n")
+    return frontmatter, body, errors
+
+
+def validate_frontmatter(frontmatter: Dict, filename: str) -> List[str]:
+    """Validate required frontmatter fields."""
+    errors = []
+
+    # Required fields
+    required = ["name", "description", "category", "date", "version"]
+    for field in required:
+        if field not in frontmatter:
+            errors.append(f"Missing required field: {field}")
+        elif not frontmatter[field]:
+            errors.append(f"Empty required field: {field}")
+
+    # Category validation
+    if "category" in frontmatter:
+        cat = frontmatter["category"]
+        if cat not in VALID_CATEGORIES:
+            errors.append(f"Invalid category: {cat}. Valid: {', '.join(sorted(VALID_CATEGORIES))}")
+
+    # Date format validation (YYYY-MM-DD)
+    if "date" in frontmatter:
+        date_str = frontmatter["date"]
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", str(date_str)):
+            errors.append(f"Invalid date format: {date_str} (expected YYYY-MM-DD)")
+
+    return errors
+
+
+def validate_sections(body: str) -> List[str]:
+    """Validate required markdown sections."""
+    errors = []
+
     required_sections = [
-        ("## Overview", "Overview table"),
-        ("## When to Use", "When to Use section"),
-        ("## Verified Workflow", "Verified Workflow section"),
-        ("## Failed Attempts", "Failed Attempts section (REQUIRED)"),
-        ("## Results", "Results & Parameters section"),
+        "## Overview",
+        "## When to Use",
+        "## Verified Workflow",
+        "## Failed Attempts",
+        "## Results & Parameters",
     ]
 
-    for section_marker, section_name in required_sections:
-        if section_marker not in content:
-            if "Failed Attempts" in section_name:
-                errors.append(f"Missing {section_name}")
-            else:
-                warnings.append(f"Missing {section_name}")
+    for section in required_sections:
+        if section not in body:
+            errors.append(f"Missing required section: {section}")
 
-    # Check Failed Attempts has actual content (table)
-    if "## Failed Attempts" in content:
-        failed_section = content.split("## Failed Attempts")[1].split("##")[0]
-        if "|" not in failed_section:
-            warnings.append("Failed Attempts section should contain a table")
-
-    # Warn if ## Quick Reference appears as a top-level section alongside ## Verified Workflow
-    if "## Verified Workflow" in content and re.search(r'^## Quick Reference', content, re.MULTILINE):
-        errors.append(
-            "## Quick Reference should be a subsection (### Quick Reference) of "
-            "## Verified Workflow, not a top-level section"
-        )
-
-    return errors, warnings
+    return errors
 
 
-def validate_plugin(plugin_dir: Path) -> ValidationResult:
-    """Validate a single plugin."""
+def validate_failed_attempts_table(body: str) -> List[str]:
+    """Validate Failed Attempts table structure."""
     errors = []
-    warnings = []
 
-    # Validate plugin.json
-    json_errors, json_warnings, plugin_data = validate_plugin_json(plugin_dir)
-    errors.extend(json_errors)
-    warnings.extend(json_warnings)
+    # Find Failed Attempts section
+    if "## Failed Attempts" not in body:
+        return errors  # Already checked in validate_sections
 
-    # Validate SKILL.md
-    skill_errors, skill_warnings = validate_skill_md(plugin_dir, plugin_data)
-    errors.extend(skill_errors)
-    warnings.extend(skill_warnings)
-
-    return ValidationResult(
-        plugin_path=plugin_dir,
-        is_valid=len(errors) == 0,
-        errors=errors,
-        warnings=warnings,
+    # Extract Failed Attempts content
+    match = re.search(
+        r"## Failed Attempts\s*\n(.*?)(?:\n## |\Z)",
+        body,
+        re.DOTALL
     )
 
+    if not match:
+        return errors
 
-def find_plugins(plugins_dir: Path) -> List[Path]:
-    """Find all plugin directories."""
-    plugins = []
+    section_content = match.group(1).strip()
 
-    for category_dir in plugins_dir.iterdir():
-        if not category_dir.is_dir():
-            continue
-        if category_dir.name.startswith("."):
-            continue
+    # Check if it's a table or plain text
+    if "|" not in section_content:
+        # Allow plain text failed attempts
+        if not section_content or section_content.lower() == "none.":
+            errors.append("Failed Attempts section is empty or only contains 'None.'")
+        return errors
 
-        for plugin_dir in category_dir.iterdir():
-            if not plugin_dir.is_dir():
-                continue
-            if plugin_dir.name.startswith("."):
-                continue
+    # Validate table structure
+    lines = section_content.split("\n")
+    if len(lines) < 3:
+        errors.append("Failed Attempts table is incomplete (needs header, separator, at least one row)")
+        return errors
 
-            # Check if it has plugin structure
-            if (plugin_dir / ".claude-plugin").exists() or (plugin_dir / "skills").exists():
-                plugins.append(plugin_dir)
+    # Check header row
+    header = lines[0].strip()
+    if not all(col in header for col in ["Attempt", "What Was Tried", "Why It Failed", "Lesson Learned"]):
+        errors.append("Failed Attempts table missing required columns")
 
-    return plugins
+    return errors
 
 
-def main() -> int:
-    """Main entry point.
-
-    Usage: validate_plugins.py [scan_dir ...]
-    Defaults: skills/ plugins/
+def validate_quick_reference_heading(body: str) -> List[str]:
     """
-    scan_dir_args = sys.argv[1:] if len(sys.argv) > 1 else ["skills", "plugins"]
+    Validate that Quick Reference uses ### not ##.
+    This was a common issue in old format.
+    """
+    errors = []
 
-    all_plugins: List[Path] = []
-    for dir_arg in scan_dir_args:
-        d = Path(dir_arg)
-        if not d.exists():
-            continue
-        all_plugins.extend(find_plugins(d))
+    # Look for ## Quick Reference (should be ### Quick Reference)
+    if re.search(r"^## Quick Reference", body, re.MULTILINE):
+        errors.append("Quick Reference should use ### (h3) not ## (h2)")
 
-    if not all_plugins:
-        print(f"No plugins found in: {scan_dir_args}")
-        print("This is OK if the marketplace is empty.")
-        return 0
+    return errors
 
-    # Deduplicate by name (keep first occurrence)
-    seen: set = set()
-    plugins: List[Path] = []
-    for p in all_plugins:
-        if p.name not in seen:
-            seen.add(p.name)
-            plugins.append(p)
 
-    results = [validate_plugin(p) for p in plugins]
+def validate_plugin(filename: str) -> List[str]:
+    """Validate a single skill file. Returns list of errors."""
+    errors = []
 
-    # Print results
-    total = len(results)
-    passed = sum(1 for r in results if r.is_valid)
-    failed = total - passed
+    file_path = SKILLS_DIR / filename
 
-    print("=" * 60)
-    print("PLUGIN VALIDATION")
-    print("=" * 60)
-    print(f"Total plugins: {total}")
-    print(f"Passed: {passed}")
-    print(f"Failed: {failed}")
-    print("=" * 60)
+    try:
+        with open(file_path, "r") as f:
+            content = f.read()
+    except IOError as e:
+        return [f"Cannot read file: {e}"]
 
-    for result in results:
-        print(result)
+    # Parse frontmatter
+    frontmatter, body, parse_errors = parse_frontmatter(content)
+    errors.extend(parse_errors)
 
-    print("\n" + "=" * 60)
-    if failed == 0:
-        print("ALL VALIDATIONS PASSED")
-    else:
-        print(f"VALIDATION FAILED: {failed} plugin(s) with errors")
-    print("=" * 60)
+    if not frontmatter:
+        return errors  # Fatal error, can't continue
 
-    return 1 if failed > 0 else 0
+    # Validate frontmatter fields
+    errors.extend(validate_frontmatter(frontmatter, filename))
+
+    # Validate sections
+    errors.extend(validate_sections(body))
+
+    # Validate Failed Attempts table
+    errors.extend(validate_failed_attempts_table(body))
+
+    # Validate Quick Reference heading
+    errors.extend(validate_quick_reference_heading(body))
+
+    return errors
+
+
+def main():
+    """Main validation entry point."""
+    plugins = find_plugins()
+
+    if not plugins:
+        print(f"{RED}No skill files found in {SKILLS_DIR}{RESET}")
+        sys.exit(1)
+
+    print(f"Validating {len(plugins)} skill files...\n")
+
+    total_errors = 0
+    valid_files = 0
+
+    for plugin_file in plugins:
+        filename = plugin_file.name
+        errors = validate_plugin(filename)
+
+        if errors:
+            total_errors += len(errors)
+            print(f"{RED}✗{RESET} {filename}")
+            for error in errors:
+                print(f"    {RED}•{RESET} {error}")
+        else:
+            valid_files += 1
+            print(f"{GREEN}✓{RESET} {filename}")
+
+    # Summary
+    print(f"\n{'='*60}")
+    print(f"Validation Summary:")
+    print(f"  {GREEN}Valid{RESET}: {valid_files}/{len(plugins)}")
+    if total_errors > 0:
+        print(f"  {RED}Errors{RESET}: {total_errors}")
+    print(f"{'='*60}")
+
+    if total_errors > 0:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

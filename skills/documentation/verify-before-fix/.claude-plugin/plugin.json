@@ -1,8 +1,0 @@
-{
-  "name": "verify-before-fix",
-  "version": "1.0.0",
-  "description": "Verify PR state before implementing review fixes to avoid unnecessary changes. Use when: (1) a review fix script is generated but the PR may already be correct, (2) pre-existing CI failures are present that may not be caused by the PR, (3) a documentation-only PR has unrelated test failures blocking merge.",
-  "category": "documentation",
-  "date": "2026-03-06",
-  "tags": ["pr-review", "verification", "ci-failures", "documentation", "no-op"]
-}

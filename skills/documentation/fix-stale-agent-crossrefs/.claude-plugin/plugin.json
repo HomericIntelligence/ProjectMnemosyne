@@ -1,8 +1,0 @@
-{
-  "name": "fix-stale-agent-crossrefs",
-  "version": "1.0.0",
-  "description": "Fix stale cross-references in agent config files after specialist consolidation. Use when: (1) agent specialists are deleted/consolidated and remaining configs still link to the deleted files, (2) PR review identifies broken internal links in .claude/agents/*.md files.",
-  "category": "documentation",
-  "date": "2026-03-05",
-  "tags": ["agents", "cross-references", "consolidation", "markdown", "review-feedback"]
-}

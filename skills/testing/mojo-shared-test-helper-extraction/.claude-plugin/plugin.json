@@ -1,7 +1,0 @@
-{
-  "name": "mojo-shared-test-helper-extraction",
-  "version": "1.0.0",
-  "description": "Move duplicated Mojo test helper functions from local test files into shared testing libraries. Use when: (1) a parametric helper fn is copy-pasted across multiple test files, (2) a new test file split requires the same utility, (3) conftest re-export pattern is needed for library-defined helpers.",
-  "category": "testing",
-  "date": "2026-03-15"
-}

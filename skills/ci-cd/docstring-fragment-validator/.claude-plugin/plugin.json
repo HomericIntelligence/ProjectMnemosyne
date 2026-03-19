@@ -1,7 +1,0 @@
-{
-  "name": "docstring-fragment-validator",
-  "version": "1.0.0",
-  "description": "Pattern for adding a pre-commit hook that validates Python docstrings as complete semantic units (not line-by-line), preventing false-positive fragment detection during audits of correctly-wrapped multi-line docstrings",
-  "category": "ci-cd",
-  "date": "2026-03-03"
-}

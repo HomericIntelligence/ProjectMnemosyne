@@ -1,8 +1,0 @@
-{
-  "name": "dockerfile-cargo-free-regression",
-  "version": "1.0.0",
-  "description": "Add static regression tests and pre-commit hooks to assert a forbidden shell pattern (e.g. cargo install, apt dependency) is absent from Dockerfiles. Use when: (1) a dependency has been removed from Dockerfiles and you want to prevent re-introduction, (2) adding absent-pattern guards to Dockerfiles as pygrep hooks, (3) writing parametrized pytest tests that scan Dockerfile content for forbidden strings.",
-  "category": "testing",
-  "date": "2026-03-07",
-  "tags": ["dockerfile", "regression", "pre-commit", "pygrep", "absent-pattern", "static-analysis"]
-}

@@ -1,8 +1,0 @@
-{
-  "name": "mojo-bfloat16-factory-dtype-guards",
-  "version": "1.0.0",
-  "description": "Add bfloat16 dtype guard tests to Mojo tensor factory functions (arange, eye, linspace, randn). Use when: (1) a factory function has float16/float32/float64 dtype routing but is missing bfloat16, (2) bfloat16 tensors silently get int-truncated values instead of floats, (3) adding regression tests for a dtype routing bug fix.",
-  "category": "testing",
-  "date": "2026-03-15",
-  "tags": ["mojo", "bfloat16", "dtype-guard", "factory-functions", "regression-tests"]
-}

@@ -1,7 +1,0 @@
-{
-  "name": "werror-compilation-audit",
-  "version": "1.0.0",
-  "description": "Systematic parallel compilation audit of all Mojo files with --Werror to find and fix warnings treated as errors. Use when: (1) adding --Werror to a build system for the first time, (2) auditing hundreds of files for hidden warnings after enabling strict mode, (3) triaging compilation warnings into fixable vs complex categories requiring new issues.",
-  "category": "ci-cd",
-  "date": "2026-03-14"
-}

@@ -1,7 +1,0 @@
-{
-  "name": "fix-altair-facet-layering",
-  "version": "1.0.0",
-  "description": "Systematic workflow for fixing Altair/Vega-Lite faceted chart bugs: invisible overlays, data clipping, and domain issues",
-  "category": "debugging",
-  "date": "2026-02-08"
-}

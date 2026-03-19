@@ -1,8 +1,0 @@
-{
-  "name": "workflow-readme-audit",
-  "version": "1.0.0",
-  "description": "Audit a .github/workflows/README.md against actual workflow files on disk, update inventory table to match reality, and document remaining duplication. Use when: (1) workflows were added/deleted but README was not updated, (2) a consolidation pass removed workflows that are still listed, (3) inline setup steps exist across many workflows and need to be inventoried before extraction.",
-  "category": "documentation",
-  "date": "2026-03-07",
-  "tags": ["github-actions", "workflows", "ci", "readme", "audit", "duplication", "inventory"]
-}

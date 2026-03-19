@@ -1,7 +1,0 @@
-{
-  "name": "depthwise-conv2d-gradient-checking",
-  "version": "1.0.0",
-  "description": "Add numerical gradient checking tests for depthwise_conv2d_backward using finite differences and check_gradient(). Use when: (1) depthwise_conv2d_backward exists but only has shape/value tests and needs gradient-correctness validation, (2) adding per-channel kernel gradient tests (grad_weights) alongside grad_input and grad_bias, (3) splitting tests across files to comply with ADR-009 ≤8 fn test_ limit.",
-  "category": "testing",
-  "date": "2026-03-15"
-}

@@ -1,7 +1,0 @@
-{
-  "name": "note-variant-canonical-audit",
-  "version": "1.0.0",
-  "description": "Audit Mojo production files for non-canonical # NOTE variants: wrong issue/version order, missing version tag, or TODO-style notes masquerading as limitation notes. Use when: (1) a follow-up cleanup issue targets production shared/ files after a prior audit addressed test/example files, (2) grep shows mixed (version, #issue) vs (#issue, version) ordering, (3) limitation NOTEs lack version tags.",
-  "category": "documentation",
-  "date": "2026-03-15"
-}

@@ -1,8 +1,0 @@
-{
-  "name": "adr009-validate-coverage-update",
-  "version": "1.0.0",
-  "description": "Update validate_test_coverage.py when splitting Mojo test files per ADR-009. Use when: (1) splitting a test file listed in validate_test_coverage.py, (2) pre-commit Validate Test Coverage hook fails after a test file split, (3) adding or removing test files that are tracked in the coverage script.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["adr009", "test-coverage", "validate-test-coverage", "mojo", "pre-commit", "heap-corruption"]
-}

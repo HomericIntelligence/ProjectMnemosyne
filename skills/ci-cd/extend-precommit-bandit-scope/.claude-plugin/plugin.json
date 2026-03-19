@@ -1,8 +1,0 @@
-{
-  "name": "extend-precommit-bandit-scope",
-  "version": "1.0.0",
-  "description": "Extend bandit pre-commit hook file scope to additional directories. Use when: (1) adding new Python-containing directories to a project, (2) pre-commit bandit hook misses security issues in tools/ or examples/, (3) broadening security scanning coverage in .pre-commit-config.yaml.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["bandit", "pre-commit", "security", "python", "hooks"]
-}

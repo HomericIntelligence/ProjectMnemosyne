@@ -1,8 +1,0 @@
-{
-  "name": "delete-deprecated-stubs",
-  "version": "1.0.0",
-  "description": "Safely delete deprecated re-export stub files after verifying no code imports reference them. Use when: (1) a file is marked DEPRECATED or contains only re-export shims, (2) cleanup issues require removing consolidation leftovers, (3) need to update doc references after deletion.",
-  "category": "documentation",
-  "date": "2026-03-05",
-  "tags": ["cleanup", "deprecated", "stub", "re-export", "consolidation", "mojo"]
-}

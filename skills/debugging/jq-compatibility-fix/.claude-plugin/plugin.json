@@ -1,8 +1,0 @@
-{
-  "name": "jq-compatibility-fix",
-  "version": "1.0.0",
-  "description": "TRIGGER CONDITIONS: jq syntax error 'unexpected +, expecting }' when using array concatenation with conditionals (] + (if ... end)) in shell scripts. Use when: (1) jq fails with syntax errors on array concatenation, (2) script works on jq 1.6+ but fails on older versions, (3) --argjson with conditional expressions causes parse errors. Fix: build the JSON array in bash and pass it via --argjson instead of constructing it inside jq.",
-  "category": "debugging",
-  "date": "2026-03-12",
-  "tags": ["debugging", "jq", "compatibility", "bash", "shell-script", "array-concatenation", "syntax-error", "older-versions"]
-}

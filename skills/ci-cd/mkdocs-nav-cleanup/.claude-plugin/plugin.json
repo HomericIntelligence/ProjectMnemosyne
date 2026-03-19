@@ -1,8 +1,0 @@
-{
-  "name": "mkdocs-nav-cleanup",
-  "version": "1.0.0",
-  "description": "Fix MkDocs build failures caused by nav entries referencing deleted documentation files. Use when: (1) CI 'Deploy Documentation' job fails after deleting doc stubs, (2) mkdocs build --strict reports missing files, (3) PR deletes placeholder docs but mkdocs.yml nav still references them.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["mkdocs", "documentation", "nav", "broken-links", "ci-fix"]
-}

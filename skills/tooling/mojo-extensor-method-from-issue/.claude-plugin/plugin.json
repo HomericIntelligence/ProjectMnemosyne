@@ -1,8 +1,0 @@
-{
-  "name": "mojo-extensor-method-from-issue",
-  "version": "1.0.0",
-  "description": "Pattern for adding stride-view methods to ExTensor and updating tests from standalone-function workarounds to method-syntax. Use when: (1) implementing a new ExTensor method that replaces a standalone function workaround, (2) updating tests that use placeholder stride-mutation hacks, (3) pre-commit hooks catch deprecated List[Int](args) syntax in docstring examples.",
-  "category": "tooling",
-  "date": "2026-03-07",
-  "tags": ["mojo", "extensor", "stride-view", "pre-commit", "deprecated-syntax", "workaround-removal"]
-}

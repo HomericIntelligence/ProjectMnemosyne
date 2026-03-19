@@ -1,8 +1,0 @@
-{
-  "name": "bandit-config-migration",
-  "version": "1.0.0",
-  "description": "Move bandit skip flags from pre-commit hook CLI args to a .bandit INI config file so suppressions are visible to developers running bandit directly. Use when: (1) bandit --skip flags are embedded in pre-commit hook entry and invisible to manual runs, (2) developers get false positives running bandit locally that CI suppresses, (3) you need documented skip rationale discoverable without reading .pre-commit-config.yaml.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["bandit", "security", "pre-commit", "config", "skips", "pyproject.toml", ".bandit", "developer-experience"]
-}

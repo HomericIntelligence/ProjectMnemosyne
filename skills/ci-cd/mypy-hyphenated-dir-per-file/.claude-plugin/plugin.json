@@ -1,7 +1,0 @@
-{
-  "name": "mypy-hyphenated-dir-per-file",
-  "version": "1.0.0",
-  "description": "Add mypy pre-commit coverage for directories with hyphenated names by running mypy per-file to avoid 'Duplicate module named' errors. Use when: (1) extending mypy to cover examples/ or similar dirs with hyphenated subdirectory names, (2) pre-commit mypy hook fails with 'Duplicate module named' on files sharing a basename across hyphenated dirs.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

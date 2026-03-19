@@ -1,8 +1,0 @@
-{
-  "name": "mojo-validation-loop-accuracy-tracking",
-  "version": "1.0.0",
-  "description": "Fix a Mojo ValidationLoop that hardcodes accuracy=0.0 in metrics updates and add tests verifying metrics.val_accuracy is updated after run(). Use when: (1) a ValidationLoop.run() passes placeholder 0.0 for accuracy to update_val_metrics(), (2) a GitHub issue requests a test verifying val_accuracy is non-zero or equal to 1.0 after validation with compute_accuracy=True, (3) you need to avoid Mojo tuple-return syntax, (4) implementation is already fixed but the accuracy tracking test is missing.",
-  "category": "testing",
-  "date": "2026-03-07",
-  "tags": ["mojo", "validation-loop", "accuracy", "metrics", "TrainingMetrics", "val_accuracy", "follow-up-test", "AccuracyMetric"]
-}

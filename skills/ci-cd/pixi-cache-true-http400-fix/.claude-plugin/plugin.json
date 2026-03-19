@@ -1,8 +1,0 @@
-{
-  "name": "pixi-cache-true-http400-fix",
-  "version": "1.0.0",
-  "description": "Fix prefix-dev/setup-pixi cache:true HTTP 400 failures by replacing with explicit actions/cache@v4 step. Use when: (1) CI logs show HTTP 400 errors from setup-pixi built-in caching, (2) a composite action wrapping setup-pixi still passes cache:true, (3) migrating workflows to reliable explicit pixi environment caching.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["github-actions", "pixi", "caching", "composite-action", "http400", "setup-pixi"]
-}

@@ -1,8 +1,0 @@
-{
-  "name": "already-implemented-feature-detection",
-  "version": "1.0.0",
-  "description": "Verify whether GitHub issue requirements are already fully implemented before starting work. Use when: (1) implementing a GitHub issue that may have prior partial/full implementation, (2) a branch already has commits suggesting work was done, (3) PR already exists for the issue.",
-  "category": "tooling",
-  "date": "2026-03-05",
-  "tags": ["github", "implementation", "verification", "extensor", "mojo"]
-}

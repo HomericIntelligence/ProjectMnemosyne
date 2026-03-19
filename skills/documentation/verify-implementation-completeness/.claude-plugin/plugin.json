@@ -1,8 +1,0 @@
-{
-  "name": "verify-implementation-completeness",
-  "version": "1.0.0",
-  "description": "Verify that a GitHub issue's implementation is already complete before re-doing work. Use when: (1) assigned to implement an issue on an existing branch, (2) a prompt file says 'implement issue #N', (3) suspecting prior session already completed the work.",
-  "category": "documentation",
-  "date": "2026-03-05",
-  "tags": ["github", "verification", "idempotency", "cleanup", "pr"]
-}

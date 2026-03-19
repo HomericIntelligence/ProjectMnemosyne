@@ -1,7 +1,0 @@
-{
-  "name": "are-shapes-broadcastable-ndim-guard",
-  "version": "1.0.0",
-  "description": "Documents the pattern of adding an ndim guard to broadcasting compatibility checks so helpers self-document the no-dimension-reduction rule. Use when: (1) a broadcastability helper silently returns True for shape pairs where the target has fewer dimensions than the source, (2) you need to make a vacuous-loop bug self-documenting, (3) protecting downstream callers that rely on the helper directly.",
-  "category": "architecture",
-  "date": "2026-03-15"
-}

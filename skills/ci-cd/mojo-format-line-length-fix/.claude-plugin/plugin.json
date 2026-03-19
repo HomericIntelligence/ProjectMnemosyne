@@ -1,8 +1,0 @@
-{
-  "name": "mojo-format-line-length-fix",
-  "version": "1.0.0",
-  "description": "Fix mojo-format pre-commit CI failures caused by lines exceeding the line length limit. Use when: (1) pre-commit CI fails with mojo-format modifying a file, (2) a print() or other statement in .mojo files exceeds the line length limit, (3) you need to wrap long string literals across multiple lines in Mojo code.",
-  "category": "ci-cd",
-  "date": "2026-03-06",
-  "tags": ["mojo", "mojo-format", "line-length", "pre-commit", "ci", "formatting"]
-}

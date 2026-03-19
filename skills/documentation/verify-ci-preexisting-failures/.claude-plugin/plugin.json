@@ -1,8 +1,0 @@
-{
-  "name": "verify-ci-preexisting-failures",
-  "version": "1.0.0",
-  "description": "Verify that CI failures on a PR are pre-existing on main before attempting fixes. Use when: (1) PR has CI failures but only touches docs/markdown, (2) CI failures appear unrelated to PR changes, (3) review plan claims failures are pre-existing and need confirmation.",
-  "category": "documentation",
-  "date": "2026-03-05",
-  "tags": ["ci", "pr-review", "verification", "pre-existing", "markdown", "documentation"]
-}

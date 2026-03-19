@@ -1,7 +1,0 @@
-{
-  "name": "consolidate-ci-workflows",
-  "version": "1.0.0",
-  "description": "Consolidate overlapping GitHub Actions workflows by merging into fewer files while preserving all functionality and triggers. Use when: (1) repo has >15 workflow files, (2) multiple workflows share the same trigger paths, (3) CI complexity is making branch protection management difficult.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

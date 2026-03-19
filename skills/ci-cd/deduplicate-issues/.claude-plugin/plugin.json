@@ -1,7 +1,0 @@
-{
-  "name": "deduplicate-issues",
-  "version": "1.0.0",
-  "description": "Systematically identify and close duplicate or resolved GitHub issues",
-  "category": "ci-cd",
-  "date": "2026-02-15"
-}

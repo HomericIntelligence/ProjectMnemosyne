@@ -1,7 +1,0 @@
-{
-  "name": "installation-anchor-validator",
-  "version": "1.0.0",
-  "description": "Validate anchor fragments in markdown links pointing to an installation guide to catch regressions when headings are renamed. Use when: (1) a doc file has anchor deep-links to installation.md and headings may change, (2) adding a CI step to verify README-to-installation-guide links, (3) implementing GitHub-style slug anchors with pytest hermetic tests.",
-  "category": "documentation",
-  "date": "2026-03-15"
-}

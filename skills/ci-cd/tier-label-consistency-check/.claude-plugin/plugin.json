@@ -1,7 +1,0 @@
-{
-  "name": "tier-label-consistency-check",
-  "version": "1.1.0",
-  "description": "Pattern for adding a testable Python script + CI grep gate + pre-commit hook that prevents tier-number/tier-name mismatches from recurring in documentation. Use when a doc field has regressed 3+ times and manual audits have failed to prevent it.",
-  "category": "ci-cd",
-  "date": "2026-03-06"
-}

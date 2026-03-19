@@ -1,8 +1,0 @@
-{
-  "name": "adr009-audit-issue-creation",
-  "version": "1.0.0",
-  "description": "Audit test files for ADR-009 violations (too many fn test_ per file) and create GitHub issues per violating file. Use when: (1) CI is flaky due to Mojo heap corruption and files exceed per-file test limits, (2) a new ADR sets a per-file test count limit and you need to enumerate all violations as actionable issues, (3) you need to triage 50-150 files and create structured GitHub issues in batches without duplicates.",
-  "category": "ci-cd",
-  "date": "2026-03-06",
-  "tags": ["adr", "mojo", "heap-corruption", "github-issues", "test-splitting", "batch-operations"]
-}

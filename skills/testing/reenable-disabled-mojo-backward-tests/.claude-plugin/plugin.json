@@ -1,6 +1,0 @@
-{
-  "name": "reenable-disabled-mojo-backward-tests",
-  "version": "1.0.0",
-  "description": "Re-enable disabled Mojo backward pass tests by verifying the root cause is resolved, reading gradient type field names, and writing analytically-verifiable test cases. Use when: (1) backward tests are commented out with stale ownership/borrowing notes, (2) a comptime alias change resolved the underlying type issue, (3) gradient type field names need to be confirmed before writing tests.",
-  "skills": "./skills"
-}

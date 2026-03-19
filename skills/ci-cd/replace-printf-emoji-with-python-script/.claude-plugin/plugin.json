@@ -1,8 +1,0 @@
-{
-  "name": "replace-printf-emoji-with-python-script",
-  "version": "1.0.0",
-  "description": "Replace fragile shell printf emoji byte-escape encoding in CI workflows with a dedicated Python script. Use when: (1) a GitHub Actions workflow uses printf with \\xf0\\x9f byte escapes to embed emoji in shell output, (2) CI comments or report files use printf-based emoji that may fail in different locale/shell environments, (3) refactoring shell-heavy report-building steps into maintainable Python scripts.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["emoji", "printf", "python", "github-actions", "encoding", "locale", "shell"]
-}

@@ -1,7 +1,0 @@
-{
-  "name": "extract-detection-utils",
-  "version": "1.0.0",
-  "description": "Pattern for extracting private detection/validation functions into centralized, reusable modules with optional caching",
-  "category": "architecture",
-  "date": "2026-02-15"
-}

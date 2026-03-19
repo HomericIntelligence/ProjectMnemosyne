@@ -1,7 +1,0 @@
-{
-  "name": "podman-ci-containerization",
-  "version": "1.0.0",
-  "description": "Containerize a GitHub Actions CI pipeline using Podman (rootless, no SU) with a separate CI image, GHCR push, Trivy scanning, local runner script, and security hardening. Use when: (1) adding rootless container-based CI isolation to a Python project using pixi, (2) replacing bare ubuntu-latest runner steps with a pre-built OCI image, (3) adding secrets scanning (gitleaks) and SAST (bandit) to replace naive pygrep hooks, (4) enabling developers to run identical CI locally without Docker daemon or sudo.",
-  "category": "ci-cd",
-  "date": "2026-03-14"
-}

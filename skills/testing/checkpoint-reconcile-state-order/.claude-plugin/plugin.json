@@ -1,7 +1,0 @@
-{
-  "name": "checkpoint-reconcile-state-order",
-  "version": "1.0.0",
-  "description": "Fix stale checkpoint run states by reconciling with on-disk artifacts before retry. Use when: (1) a reconcile function uses a state_order rank table and run states may be incomplete, (2) adding or reordering RunState enum values, (3) writing tests for checkpoint reconciliation edge cases.",
-  "category": "testing",
-  "date": "2026-03-14"
-}

@@ -1,7 +1,0 @@
-{
-  "name": "bulk-fix-orphan-quick-reference",
-  "version": "1.0.0",
-  "description": "Bulk-fix SKILL.md files where ## Quick Reference appears as a top-level section alongside ## Verified Workflow. Use when: (1) validate_plugins.py reports orphaned Quick Reference warnings, (2) migrating skills from Odyssey format to Mnemosyne format in batch, (3) running a post-migration cleanup pass.",
-  "category": "tooling",
-  "date": "2026-03-15"
-}

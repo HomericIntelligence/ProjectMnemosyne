@@ -1,6 +1,0 @@
-{
-  "name": "fix-directory-not-created-before-write",
-  "version": "1.0.0",
-  "description": "Skill: Fix Directory Not Created Before Write",
-  "skills": "./skills"
-}

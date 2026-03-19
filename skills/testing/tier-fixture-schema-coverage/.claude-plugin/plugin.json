@@ -1,9 +1,0 @@
-{
-  "name": "tier-fixture-schema-coverage",
-  "version": "1.0.0",
-  "description": "Add YAML fixture files for each testing tier (t2-t6) to extend schema validation coverage. Use when: (1) a test parametrizes over tier fixture files but only t0/t1 exist, (2) new tier-specific fields (uses_tools, uses_delegation, uses_hierarchy) need schema validation, (3) expanding parametrized pytest tests to cover the full tier range. Verified on ProjectScylla issue #1381.",
-  "author": {
-    "name": "ProjectScylla Team"
-  },
-  "skills": "./skills"
-}

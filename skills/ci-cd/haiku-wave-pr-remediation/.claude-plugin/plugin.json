@@ -1,7 +1,0 @@
-{
-  "name": "haiku-wave-pr-remediation",
-  "version": "1.0.0",
-  "description": "Fix 40+ failing PRs across multiple repos using wave-based haiku sub-agents in worktrees. Use when: (1) 40+ PRs fail CI across multiple categories, (2) failures span ruff/mojo-format/deprecated-syntax/missing-ci-matrix, (3) wave-0 diagnosis identifies fixable root causes per cluster.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

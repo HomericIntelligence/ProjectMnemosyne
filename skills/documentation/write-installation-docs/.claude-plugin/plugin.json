@@ -1,8 +1,0 @@
-{
-  "name": "write-installation-docs",
-  "version": "1.0.0",
-  "description": "Replace placeholder installation documentation with complete, accurate content. Use when: (1) installation.md or similar docs contain only placeholder text, (2) a README links to an installation guide that needs real content, (3) a follow-up issue requests writing real installation steps after initial structure was created.",
-  "category": "documentation",
-  "date": "2026-03-07",
-  "tags": ["installation", "documentation", "pixi", "mojo", "getting-started", "placeholder-replacement"]
-}

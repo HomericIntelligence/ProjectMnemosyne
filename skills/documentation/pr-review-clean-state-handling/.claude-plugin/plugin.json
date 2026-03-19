@@ -1,8 +1,0 @@
-{
-  "name": "pr-review-clean-state-handling",
-  "version": "1.0.0",
-  "description": "Handle PR review plans that report no issues and no fixes required. Use when: (1) a review plan file says 'No problems found' or 'No fixes required', (2) automated review feedback reports a clean PR state, (3) CI is pending but no code changes are needed.",
-  "category": "documentation",
-  "date": "2026-03-06",
-  "tags": ["pr-review", "clean-state", "no-op", "review-feedback", "automation"]
-}

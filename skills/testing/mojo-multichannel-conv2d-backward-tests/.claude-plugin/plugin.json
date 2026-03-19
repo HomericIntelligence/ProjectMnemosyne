@@ -1,8 +1,0 @@
-{
-  "name": "mojo-multichannel-conv2d-backward-tests",
-  "version": "1.0.0",
-  "description": "Pattern for testing multi-channel Conv2D backward passes in Mojo with analytically tractable gradient verification. Use when: (1) adding backward pass tests for conv layers with in_channels>1 or out_channels>1, (2) verifying grad_input/grad_weights/grad_bias shapes and values for multi-channel configurations, (3) extending single-channel backward tests to multi-channel coverage.",
-  "category": "testing",
-  "date": "2026-03-07",
-  "tags": ["mojo", "conv2d", "backward-pass", "gradient", "multi-channel", "testing"]
-}

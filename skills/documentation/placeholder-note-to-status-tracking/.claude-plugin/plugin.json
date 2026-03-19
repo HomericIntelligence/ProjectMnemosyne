@@ -1,8 +1,0 @@
-{
-  "name": "placeholder-note-to-status-tracking",
-  "version": "1.0.0",
-  "description": "Clarify ambiguous NOTE: runtime print statements as intentional placeholders by converting them to STATUS: messages that reference GitHub tracking issues. Use when: (1) example or demo scripts print NOTE messages that confuse users into thinking something is broken, (2) cleanup issues require disambiguating placeholder code from unimplemented code.",
-  "category": "documentation",
-  "date": "2026-03-04",
-  "tags": ["cleanup", "documentation", "placeholder", "github-issues", "examples"]
-}

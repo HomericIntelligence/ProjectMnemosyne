@@ -1,8 +1,0 @@
-{
-  "name": "claude-md-token-trimming",
-  "version": "1.0.0",
-  "description": "Trim CLAUDE.md token consumption by moving verbose sections to .claude/shared/ files with summary links. Use when: (1) CLAUDE.md exceeds 1200+ lines and is consuming too many context tokens, (2) sections have detailed examples that duplicate content in dedicated docs, (3) reducing context overhead while preserving all critical information.",
-  "category": "documentation",
-  "date": "2026-03-05",
-  "tags": ["claude-md", "token-optimization", "context-reduction", "documentation", "refactoring"]
-}

@@ -1,8 +1,0 @@
-{
-  "name": "composite-action-checkout-order",
-  "version": "1.0.0",
-  "description": "Enforce that actions/checkout precedes ./.github/actions/ references in every GitHub Actions job. Use when: (1) adding checkout-order validation to a CI pipeline, (2) creating a script to audit workflow files for composite action ordering, (3) documenting checkout-first invariants for local composite actions.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["github-actions", "composite-actions", "workflow-validation", "checkout", "ci-cd"]
-}

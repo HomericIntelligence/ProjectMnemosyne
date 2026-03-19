@@ -1,7 +1,0 @@
-{
-  "name": "mojo-getitem-slice-multidim",
-  "version": "1.0.0",
-  "description": "Pattern for extending a rank-restricted Mojo __getitem__(Slice) to support N-D tensors with axis-0 semantics. Use when: (1) a Mojo tensor method raises an error for non-1D input but the logic generalises, (2) you need NumPy-style single-slice axis-0 indexing on multi-dimensional tensors, (3) you need to preserve step/reverse slicing across tensor ranks.",
-  "category": "architecture",
-  "date": "2026-03-15"
-}

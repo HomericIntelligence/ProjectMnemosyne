@@ -1,7 +1,0 @@
-{
-  "name": "ci-matrix-overlap-detection",
-  "version": "1.0.0",
-  "description": "Detect overlapping patterns in GitHub Actions CI matrix groups. Use when: (1) adding a new test matrix group that uses subdirectory wildcards, (2) a parent group's pattern may duplicate a dedicated child group, (3) implementing lint to prevent regressions like #3640 where a parent matrix group silently ran the same tests as a child group.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

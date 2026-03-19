@@ -1,8 +1,0 @@
-{
-  "name": "add-unit-tests-for-existing-script",
-  "version": "1.0.0",
-  "description": "Add comprehensive pytest unit tests for an existing Python script that has no tests. Use when: (1) a script has been identified as having no test coverage, (2) a follow-up issue asks for tests after bugs were found during implementation, (3) you need to cover multiple public functions with class-grouped tests.",
-  "category": "testing",
-  "date": "2026-03-07",
-  "tags": ["pytest", "unit-testing", "python", "test-coverage", "scripts"]
-}

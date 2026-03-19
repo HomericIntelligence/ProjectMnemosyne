@@ -1,7 +1,0 @@
-{
-  "name": "mojo-if-true-scope-fix",
-  "version": "1.0.0",
-  "description": "Documents how to replace Mojo 'if True:' constant condition anti-patterns with named helper functions for scope-based destructor testing. Use when: (1) Mojo --Werror reports constant condition warnings, (2) test files use 'if True:' to create inner scopes for refcount/destructor testing, (3) migrating memory leak tests to newer Mojo versions.",
-  "category": "testing",
-  "date": "2026-03-15"
-}

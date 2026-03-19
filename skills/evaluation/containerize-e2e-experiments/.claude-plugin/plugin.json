@@ -1,6 +1,0 @@
-{
-  "name": "containerize-e2e-experiments",
-  "version": "1.0.0",
-  "description": "Skill: Containerize E2E Experiments",
-  "skills": "./skills"
-}

@@ -1,8 +1,0 @@
-{
-  "name": "batch-low-difficulty-issue-impl",
-  "version": "1.0.0",
-  "description": "Classify, deduplicate, and batch-implement 15-30 low-difficulty GitHub issues (doc edits, text fixes, trivial cleanup) in a single session. Use when: (1) a backlog of 30+ open issues exists and needs triage, (2) many issues are pure doc/text edits with no logic changes, (3) duplicate issues need closing before implementation begins.",
-  "category": "tooling",
-  "date": "2026-03-06",
-  "tags": ["batch", "github-issues", "triage", "documentation", "bulk-pr", "deduplication"]
-}

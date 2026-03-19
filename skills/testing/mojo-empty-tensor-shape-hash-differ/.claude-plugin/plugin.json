@@ -1,7 +1,0 @@
-{
-  "name": "mojo-empty-tensor-shape-hash-differ",
-  "version": "1.0.0",
-  "description": "Test pattern for verifying that empty Mojo ExTensors with different shapes produce different hashes. Use when: (1) adding coverage that shape dimensions feed into __hash__ when numel=0, (2) verifying that [0] vs [0,0] vs [0,1] tensors are distinguishable by hash, (3) following up on empty-tensor hash equality tests with a shape-discrimination variant.",
-  "category": "testing",
-  "date": "2026-03-15"
-}

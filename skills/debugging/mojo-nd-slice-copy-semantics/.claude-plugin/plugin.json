@@ -1,8 +1,0 @@
-{
-  "name": "mojo-nd-slice-copy-semantics",
-  "version": "1.0.0",
-  "description": "Fix Mojo multi-dimensional tensor slicing bugs caused by pointer-offset view approach on non-contiguous data. Use when: (1) N-D tensor slice tests are skipped/disabled, (2) __getitem__(*slices) returns wrong values for 2D/3D/ND slices, (3) multi-dim slicing uses self.copy() + data pointer offset which fails for non-contiguous results.",
-  "category": "debugging",
-  "date": "2026-03-07",
-  "tags": ["mojo", "tensor", "slicing", "memory", "copy-semantics", "extensor", "nd-array"]
-}

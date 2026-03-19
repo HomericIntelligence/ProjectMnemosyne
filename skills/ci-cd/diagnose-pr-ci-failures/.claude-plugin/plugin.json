@@ -1,8 +1,0 @@
-{
-  "name": "diagnose-pr-ci-failures",
-  "version": "1.0.0",
-  "description": "Diagnose CI failures on a pull request by classifying them as PR-caused vs pre-existing vs flaky, then take the appropriate action. Use when: (1) CI checks fail after pushing a PR, (2) you need to determine if a failure is your fault or pre-existing, (3) intermittent Mojo runtime crashes appear in CI.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["ci", "debugging", "flaky-tests", "mojo", "github-actions", "pr-workflow"]
-}

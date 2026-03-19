@@ -1,6 +1,0 @@
-{
-  "name": "evaluation-report-fixes",
-  "version": "1.0.0",
-  "description": "Fix critical E2E evaluation report issues including timing persistence, workspace detection, judge validation, and broken links",
-  "skills": "./skills"
-}

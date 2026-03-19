@@ -1,7 +1,0 @@
-{
-  "name": "claude-config-branch-audit",
-  "version": "1.0.0",
-  "description": "Audit and fix Claude Code configuration branches for consistency with actual repo tooling. Use when: (1) reviewing a branch that adds or modifies CLAUDE.md or .claude/ config, (2) a branch introduces hook references to scripts that don't exist, (3) Python version or tooling commands in CLAUDE.md don't match the actual project setup.",
-  "category": "tooling",
-  "date": "2026-03-14"
-}

@@ -1,8 +1,0 @@
-{
-  "name": "auto-impl-already-done-detection",
-  "version": "1.0.0",
-  "description": "Detect when an auto-impl worktree arrives with work already completed on main and a PR already open. Use when: (1) invoked in a worktree with branch pattern '<issue>-auto-impl', (2) worktree branch is clean with no staged changes, (3) issue is still open but recent git log shows a 'Closes #<issue>' commit on main.",
-  "category": "tooling",
-  "date": "2026-03-05",
-  "tags": ["workflow", "github", "worktree", "auto-impl", "pre-flight", "idempotency"]
-}

@@ -1,8 +1,0 @@
-{
-  "name": "mojo-sequential-parametric-containers",
-  "version": "1.0.0",
-  "description": "Pattern for implementing Sequential neural network module containers in Mojo using parametric compile-time types instead of dynamic List[Module] dispatch. Use when: (1) composing Module-conforming layers into a chain in Mojo, (2) hitting ImplicitlyCopyable or UnsafePointer errors from List[Trait] usage, (3) designing reusable layer containers that propagate train/eval modes and collect parameters.",
-  "category": "architecture",
-  "date": "2026-03-07",
-  "tags": ["mojo", "neural-network", "sequential", "module", "parametric", "trait", "layer-composition"]
-}

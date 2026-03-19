@@ -1,7 +1,0 @@
-{
-  "name": "workflow-readme-migration-sync",
-  "version": "1.0.0",
-  "description": "Update workflow README documentation to reflect completed CI/CD migrations (e.g. composite action adoption, workflow consolidation). Use when: (1) a GitHub issue closes a deferred documentation gap after workflows are already migrated, (2) a README still describes inline steps that were replaced by composite actions, (3) cross-references in a workflow README point to sections that are now stale.",
-  "category": "documentation",
-  "date": "2026-03-15"
-}

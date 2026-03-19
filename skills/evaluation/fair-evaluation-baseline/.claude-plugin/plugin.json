@@ -1,7 +1,0 @@
-{
-  "name": "fair-evaluation-baseline",
-  "version": "1.0.0",
-  "description": "Implement baseline pipeline capture and regression detection to distinguish agent-introduced failures from pre-existing issues in E2E evaluations",
-  "category": "evaluation",
-  "date": "2025-02-15"
-}

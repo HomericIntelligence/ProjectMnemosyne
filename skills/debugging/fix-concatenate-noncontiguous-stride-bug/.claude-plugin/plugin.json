@@ -1,7 +1,0 @@
-{
-  "name": "fix-concatenate-noncontiguous-stride-bug",
-  "version": "1.0.0",
-  "description": "Fix the flat-index bug in concatenate() axis-0 non-contiguous path that ignores strides and reads wrong values for transposed/view tensors. Use when: (1) concatenate() produces wrong values for non-contiguous inputs, (2) the axis-0 else-branch calls _get_float64(i) on source tensors, (3) follow-on to fix-non-contiguous-tensor-stride-access for concatenate specifically.",
-  "category": "debugging",
-  "date": "2026-03-15"
-}

@@ -1,7 +1,0 @@
-{
-  "name": "tighten-except-exception-clauses",
-  "version": "1.0.0",
-  "description": "Audit and tighten broad except Exception clauses in Python. Use when replacing generic exception handlers with specific types.",
-  "author": { "name": "ML Odyssey Team" },
-  "skills": "./skills"
-}

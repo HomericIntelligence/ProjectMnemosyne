@@ -1,9 +1,0 @@
-{
-  "name": "codebase-quality-plan-execution",
-  "version": "1.0.0",
-  "description": "Execute a pre-analyzed codebase quality improvement plan with full test verification. Use when: (1) you have a static analysis / code-review document with categorized bugs and dead code, (2) changes span multiple files with interdependencies (type annotations, constructor signatures, serialization fields), (3) you need to keep all existing tests green throughout. Verified on Python scraper + JS frontend with 175 pytest tests.",
-  "author": {
-    "name": "ML Odyssey Team"
-  },
-  "skills": "./skills"
-}

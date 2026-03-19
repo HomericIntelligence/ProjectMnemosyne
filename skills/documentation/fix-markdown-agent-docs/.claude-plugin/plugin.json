@@ -1,8 +1,0 @@
-{
-  "name": "fix-markdown-agent-docs",
-  "version": "1.0.0",
-  "description": "Fix common markdown issues in agent hierarchy docs: malformed closing code fences, stale agent counts, and lines exceeding 120 chars. Use when: (1) agent hierarchy docs fail markdownlint, (2) agent counts in docs don't match actual agent files, (3) code fence closing tags have language specifiers.",
-  "category": "documentation",
-  "date": "2026-03-06",
-  "tags": ["markdown", "agent-docs", "hierarchy", "markdownlint", "code-fences"]
-}

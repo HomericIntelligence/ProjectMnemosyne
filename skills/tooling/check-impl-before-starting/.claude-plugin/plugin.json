@@ -1,8 +1,0 @@
-{
-  "name": "check-impl-before-starting",
-  "version": "1.0.0",
-  "description": "Check if an issue's implementation already exists before starting work. Use when: (1) implementing a GitHub issue on a pre-existing branch, (2) resuming work that may have been partially done, (3) verifying PR status before creating a new one.",
-  "category": "tooling",
-  "date": "2026-03-05",
-  "tags": ["github", "issue", "pr", "git", "workflow", "idempotency"]
-}

@@ -1,8 +1,0 @@
-{
-  "name": "adr009-comprehensive-audit",
-  "version": "1.0.0",
-  "description": "Audit all Mojo test files in a family/module for ADR-009 compliance when fixing one violation, create dedicated CI group. Use when: (1) fixing an ADR-009 violation in one file and sibling files may also exceed the ≤10 test limit, (2) no dedicated CI group exists for a test family, (3) split files are buried in an overloaded CI group.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["adr009", "mojo", "heap-corruption", "ci-group", "test-splitting", "audit"]
-}

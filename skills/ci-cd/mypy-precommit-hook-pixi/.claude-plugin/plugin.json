@@ -1,8 +1,0 @@
-{
-  "name": "mypy-precommit-hook-pixi",
-  "version": "1.0.0",
-  "description": "Add mypy type checking as a pre-commit hook in pixi-managed projects. Use when: (1) adding mypy enforcement to pre-commit, (2) scripts use X|Y union syntax that mypy rejects without --python-version 3.10, (3) mirrors-mypy isolated env is missing types-PyYAML stubs.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["mypy", "pre-commit", "type-checking", "pixi", "python", "mirrors-mypy", "types-PyYAML"]
-}

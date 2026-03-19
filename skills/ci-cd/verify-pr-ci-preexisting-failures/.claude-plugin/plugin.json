@@ -1,8 +1,0 @@
-{
-  "name": "verify-pr-ci-preexisting-failures",
-  "version": "1.0.0",
-  "description": "Verify whether CI failures on a PR are pre-existing on main or introduced by the PR changes. Use when: (1) a PR has CI failures and you need to determine if they are caused by the PR or were already present on main, (2) reviewing a cleanup/deletion PR where no code logic was changed, (3) confirming a PR is correct and complete despite red CI checks.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["ci", "pr-review", "pre-existing-failures", "cleanup", "verification"]
-}

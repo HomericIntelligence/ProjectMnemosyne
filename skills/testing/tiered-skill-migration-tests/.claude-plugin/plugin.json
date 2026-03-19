@@ -1,7 +1,0 @@
-{
-  "name": "tiered-skill-migration-tests",
-  "version": "1.0.0",
-  "description": "Pattern for testing auxiliary subdir copying in tiered skill migrations. Use when: (1) verifying tier-1/tier-2 skill migrations copy scripts/, templates/, and references/ correctly, (2) adding parametrized tests covering multiple skill tiers and subdirectory types.",
-  "category": "testing",
-  "date": "2026-03-15"
-}

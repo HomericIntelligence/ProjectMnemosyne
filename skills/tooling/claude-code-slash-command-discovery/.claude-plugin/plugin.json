@@ -1,7 +1,0 @@
-{
-  "name": "claude-code-slash-command-discovery",
-  "version": "1.0.0",
-  "description": "Fix slash commands not appearing in Claude Code autocomplete by moving .md files to the correct auto-discovered directory. Use when: (1) custom slash commands are in .claude/plugins/<name>/commands/ but don't appear in autocomplete, (2) a plugin was created without marketplace registration, (3) commands work in one project but not cross-project.",
-  "category": "tooling",
-  "date": "2026-03-15"
-}

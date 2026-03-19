@@ -1,7 +1,0 @@
-{
-  "name": "pr-conflict-rebase-workflow",
-  "version": "1.0.0",
-  "description": "Rebase conflicting PRs onto main when a merge commit introduces workflow changes. Use when: (1) multiple open PRs are CONFLICTING after a main branch merge, (2) GitHub Actions workflow files have conflicts with concurrency/permissions/timeout additions, (3) pixi.lock is in a modify/delete conflict during rebase.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

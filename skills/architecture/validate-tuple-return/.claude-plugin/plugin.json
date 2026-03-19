@@ -1,8 +1,0 @@
-{
-  "name": "validate-tuple-return",
-  "version": "1.0.0",
-  "description": "Refactor Mojo validation/evaluation functions that returned a single scalar to return Tuple[Float64, Float64] containing (loss, accuracy), eliminating a redundant second pass over the data loader. Use when: (1) a validate() function both computes metrics internally and the caller re-computes them in a second loop, (2) the forward pass runs more than twice per batch during evaluation with compute_accuracy=True, (3) accuracy is discarded inside validate() then recomputed by the caller.",
-  "category": "architecture",
-  "date": "2026-03-15",
-  "tags": ["mojo", "tuple-return", "validation-loop", "deduplication", "forward-pass", "accuracy-computation"]
-}
