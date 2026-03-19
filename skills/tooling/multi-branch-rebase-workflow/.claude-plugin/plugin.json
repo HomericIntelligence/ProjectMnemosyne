@@ -1,0 +1,7 @@
+{
+  "name": "multi-branch-rebase-workflow",
+  "version": "1.0.0",
+  "description": "Parallel multi-branch rebase with semantic conflict resolution and batch PR creation. Use when: (1) multiple branches need rebasing onto main, (2) conflicts require semantic merge rather than accept-theirs/ours, (3) batch PR creation after rebase.",
+  "category": "tooling",
+  "date": "2026-03-19"
+}
