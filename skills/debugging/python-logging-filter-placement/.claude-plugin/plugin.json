@@ -1,0 +1,7 @@
+{
+  "name": "python-logging-filter-placement",
+  "version": "1.0.0",
+  "description": "Diagnose and fix Python logging KeyError from custom format fields. Use when: (1) KeyError on %(custom_field)s in log format strings, (2) logging.Filter fields not appearing in formatted output, (3) custom context fields missing from log records in threaded applications.",
+  "category": "debugging",
+  "date": "2026-03-18"
+}
