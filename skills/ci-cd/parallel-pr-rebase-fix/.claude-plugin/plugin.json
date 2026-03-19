@@ -1,0 +1,7 @@
+{
+  "name": "parallel-pr-rebase-fix",
+  "version": "1.0.0",
+  "description": "Parallel rebase and CI fix workflow for multiple stale PRs using worktree agents. Use when: (1) many PRs are behind main and failing CI, (2) batch PR maintenance needed after large merge waves, (3) iterative CI failure diagnosis across multiple PRs.",
+  "category": "ci-cd",
+  "date": "2026-03-18"
+}
