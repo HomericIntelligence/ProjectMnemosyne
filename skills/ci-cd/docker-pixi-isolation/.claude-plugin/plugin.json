@@ -1,0 +1,7 @@
+{
+  "name": "docker-pixi-isolation",
+  "version": "1.0.0",
+  "description": "Fix Docker container Mojo stdlib failures caused by host .pixi/ bind-mount contamination. Use when: (1) CI tests fail with 'unable to locate module std' inside Docker, (2) host pixi environment leaks into container via bind mounts.",
+  "category": "ci-cd",
+  "date": "2026-03-18"
+}
