@@ -1,0 +1,7 @@
+{
+  "name": "docker-to-podman-migration",
+  "version": "1.0.0",
+  "description": "Migrate CI/CD infrastructure from Docker to Podman for container builds, test execution, and GHCR publishing. Use when: (1) replacing Docker with Podman in GitHub Actions workflows, (2) eliminating NATIVE=1 workarounds by running tests inside containers, (3) rewriting GHCR publish workflows from docker/* actions to raw podman commands.",
+  "category": "ci-cd",
+  "date": "2026-03-19"
+}
