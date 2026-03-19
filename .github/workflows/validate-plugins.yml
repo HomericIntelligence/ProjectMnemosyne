@@ -20,18 +20,14 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Validate plugins
-        run: python3 scripts/validate_plugins.py skills/ plugins/
+      - name: Validate flat-format skill files
+        run: python3 scripts/validate_plugins.py
 
-      - name: Check template validity
+      - name: Check skill template validity
         run: |
           echo "Checking template structure..."
-          if [ ! -f "templates/experiment-skill/.claude-plugin/plugin.json" ]; then
-            echo "ERROR: Template plugin.json missing"
-            exit 1
-          fi
-          if [ ! -f "templates/experiment-skill/skills/SKILL_NAME/SKILL.md" ]; then
-            echo "ERROR: Template SKILL.md missing"
+          if [ ! -f "templates/skill-template.md" ]; then
+            echo "ERROR: Template skill-template.md missing"
             exit 1
           fi
           echo "Template structure valid"

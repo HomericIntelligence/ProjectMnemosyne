@@ -48,53 +48,55 @@ Save learnings after a session (auto-creates PR).
 
 1. Read entire conversation history
 2. Extract: objective, steps taken, successes, failures, parameters
-3. Prompt user for category and skill name
-4. Generate plugin from template:
-   - `plugin.json` with metadata
-   - `SKILL.md` with 7-section format
-   - `references/notes.md` with raw details
-5. Create branch: `skill/<category>/<name>`
+3. Auto-generate skill filename: `<topic>-<subtopic>-<short-4-word-summary>`
+4. Generate skill file from template:
+   - `skills/<name>.md` with YAML frontmatter + all required sections
+   - Optional `skills/<name>.notes.md` for raw session details
+5. Create branch: `skill/<name>`
 6. Commit and push
 7. Create PR with summary
+8. After PR created, clean up worktree at `$HOME/.agent-brain/ProjectMnemosyne/`
 
 **Auto-trigger**: UserPromptSubmit hook reminds about retrospective when you type session-ending keywords.
+
+**Key changes from old format**:
+- No user prompting for category/name — auto-generated
+- Clone to `$HOME/.agent-brain/ProjectMnemosyne/` (not `build/$$/`)
+- Single flat `.md` file (not nested dirs + plugin.json)
+- Branch name is `skill/<name>` (not `skill/<category>/<name>`)
 
 ## Plugin Standards
 
 ### Required Structure
 
 ```text
-skills/<category>/<name>/
-├── .claude-plugin/
-│   └── plugin.json           # Metadata with trigger conditions
-├── skills/<name>/
-│   └── SKILL.md              # Main knowledge document
-└── references/
-    └── notes.md              # Additional context
+skills/<name>.md             # Main skill file with YAML frontmatter + markdown content
+skills/<name>.notes.md       # (Optional) Additional context from development session
 ```
 
-**Exception**: `plugins/tooling/skills-registry-commands/` stays in `plugins/` — it's the command infrastructure (advise, retrospective), not a skill to migrate.
+All skills are now flat files in the `skills/` directory. Metadata is stored as YAML frontmatter in each `.md` file.
+
+**Exception**: `plugins/tooling/skills-registry-commands/` stays in `plugins/` — it's the command infrastructure (advise, retrospective), not a skill.
 
 ### Required Fields
 
-**plugin.json**:
+**YAML Frontmatter** (in `skills/<name>.md`):
 
 - `name`: Lowercase, kebab-case identifier
-- `description`: Trigger conditions with specific use cases
+- `description`: Trigger conditions with specific use cases ("Use when: (1) ..., (2) ...")
 - `category`: One of 9 approved categories
 - `date`: Creation date (YYYY-MM-DD)
-- `tags`: Searchable keywords
+- `version`: Semantic version (e.g., "1.0.0")
+- `user-invocable`: Set to `false` for internal/sub-skills (declutters slash command menu)
+- `tags` (optional): Searchable keywords array
 
-**SKILL.md**:
+**Markdown Sections**:
 
-- YAML frontmatter (name, description, category, date)
-  - `user-invocable`: Set to `false` for internal/sub-skills (declutters slash command menu)
-  - Set to `true` only for skills users should directly invoke
 - Overview table (date, objective, outcome)
 - When to Use (trigger conditions)
-- Verified Workflow (what worked)
-- **Failed Attempts table (REQUIRED)**
-- Results & Parameters (copy-paste ready)
+- Verified Workflow (what worked, including Quick Reference subsection)
+- **Failed Attempts table (REQUIRED)** — must include: Attempt, What Was Tried, Why It Failed, Lesson Learned
+- Results & Parameters (copy-paste ready configs, expected outputs)
 
 ### Categories
 
@@ -185,17 +187,22 @@ clear, done, finished, etc.) to remind about `/retrospective`.
 See `.claude/settings.json` for configuration and
 `plugins/tooling/skills-registry-commands/hooks/settings.json.example` for reference.
 
-**Skills location**: All skills live in `skills/<category>/<name>/`. The only exception is
+**Skills location**: All skills live as flat files in `skills/` (e.g., `skills/skill-name.md`). The only exception is
 `plugins/tooling/skills-registry-commands/` which contains the /advise and /retrospective
 command infrastructure.
 
 ## Contributing a Skill
 
-1. Run `/retrospective` after a valuable session
-2. Or manually create from `templates/experiment-skill/`
-3. Fill all required sections, especially Failed Attempts
-4. PR will be validated by CI before merge
-5. `marketplace.json` auto-updates on merge
+1. Run `/retrospective` after a valuable session (preferred — auto-generates filename and structure)
+2. Or manually create from `templates/skill-template.md`
+   - Copy to `skills/<name>.md`
+   - Fill YAML frontmatter (name, description, category, date, version)
+   - Fill all required sections (Overview, When to Use, Verified Workflow, Failed Attempts, Results & Parameters)
+   - Optional: create `skills/<name>.notes.md` for raw details
+3. File format: flat markdown with YAML frontmatter, no nested directories
+4. Filename convention: `<topic>-<subtopic>-<short-4-word-summary>.md` (all lowercase, kebab-case)
+5. PR will be validated by CI before merge
+6. `marketplace.json` auto-updates on merge
 
 ## References
 
