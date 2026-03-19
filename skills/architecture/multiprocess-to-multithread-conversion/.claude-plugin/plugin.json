@@ -1,0 +1,7 @@
+{
+  "name": "multiprocess-to-multithread-conversion",
+  "version": "1.0.0",
+  "description": "Converting ProcessPoolExecutor to ThreadPoolExecutor for Python 3.14t compatibility. Use when: (1) multiprocessing hangs on free-threaded Python, (2) workers run external subprocesses making threads sufficient.",
+  "category": "architecture",
+  "date": "2026-03-18"
+}
