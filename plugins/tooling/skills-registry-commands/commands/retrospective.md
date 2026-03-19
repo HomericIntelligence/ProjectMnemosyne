@@ -4,15 +4,15 @@ description: Save session learnings as a new skill plugin
 
 # /retrospective
 
-Capture session learnings and create a new skill plugin in the ProjectMnemosyne marketplace.
+Capture session learnings and create a new flat-format skill file in the ProjectMnemosyne marketplace.
 
 ## Target Repository
 
 **Repository**: `HomericIntelligence/ProjectMnemosyne`
 **Base branch**: `main`
-**Clone location**: `<ProjectRoot>/build/<PID>/ProjectMnemosyne/`
+**Clone location**: `$HOME/.agent-brain/ProjectMnemosyne/`
 
-Each Claude Code session gets its own isolated clone (via process ID) to avoid interference.
+Single shared clone in user's home directory. Automatically cleaned after PR creation.
 Automatically skipped if already running in the ProjectMnemosyne repository.
 
 ## Instructions
@@ -26,9 +26,11 @@ When the user invokes this command:
    - Failures: What didn't work and why?
    - Parameters: What configs/settings were used?
 
-2. **Prompt for metadata**:
-   - Category (training, evaluation, optimization, debugging, architecture, tooling, ci-cd, testing, documentation)
-   - Skill name (kebab-case)
+2. **Auto-generate skill metadata** (NO user prompting):
+   - Analyze conversation topic to extract: `<topic>-<subtopic>`
+   - Generate short 4-word summary from key learning
+   - Filename: `<topic>-<subtopic>-<short-4-word-summary>` (kebab-case)
+   - Auto-detect category from conversation context (training, evaluation, optimization, debugging, architecture, tooling, ci-cd, testing, documentation)
 
 3. **Setup repository**:
    ```bash
@@ -37,225 +39,227 @@ When the user invokes this command:
    if [[ "$CURRENT_REMOTE" == *"ProjectMnemosyne"* ]] && [[ "$CURRENT_REMOTE" != *"ProjectMnemosyne-"* ]]; then
      # Already in ProjectMnemosyne - work in current directory
      MNEMOSYNE_DIR="."
+     NEED_CLEANUP=false
    else
-     # Use PID-scoped build directory - NEVER modify local repo
-     MNEMOSYNE_DIR="build/$$/ProjectMnemosyne"
+     # Use shared home directory location
+     MNEMOSYNE_DIR="$HOME/.agent-brain/ProjectMnemosyne"
+     NEED_CLEANUP=true
 
      if [ ! -d "$MNEMOSYNE_DIR" ]; then
        # Clone fresh
-       mkdir -p "build/$$"
+       mkdir -p "$HOME/.agent-brain"
        gh repo clone HomericIntelligence/ProjectMnemosyne "$MNEMOSYNE_DIR"
-     else
-       # Update existing clone
-       # Ensure we're on main branch
-       if ! git -C "$MNEMOSYNE_DIR" symbolic-ref HEAD | grep -q "refs/heads/main"; then
-         echo "Error: $MNEMOSYNE_DIR is not on main branch."
-         echo "Fix: rm -rf build/$$"
-         exit 1
-       fi
-
-       # Ensure no local commits or conflicts
-       if ! git -C "$MNEMOSYNE_DIR" pull --ff-only origin main; then
-         echo "Error: Cannot fast-forward $MNEMOSYNE_DIR/main. May have local commits or conflicts."
-         echo "Fix: rm -rf build/$$"
-         exit 1
-       fi
      fi
+
+     # Always update to latest main before starting
+     git -C "$MNEMOSYNE_DIR" fetch origin
+     git -C "$MNEMOSYNE_DIR" checkout main
+     git -C "$MNEMOSYNE_DIR" pull --ff-only origin main
 
      cd "$MNEMOSYNE_DIR"
    fi
 
    # Create branch from origin/main (clean state)
-   git checkout -b skill/<category>/<name> origin/main
+   git checkout -b skill/<name> origin/main
    ```
 
-4. **Generate plugin files** in `skills/<category>/<name>/`:
+4. **Generate skill file** as flat `skills/<name>.md`:
 
-   > ⚠️ Skills MUST be created under `skills/`, NOT under `plugins/`. The only content in `plugins/` is the command infrastructure itself (`plugins/tooling/skills-registry-commands/`).
-   > ⚠️ The `<category>` directory must be one of the 9 valid categories. `refactoring` is NOT valid — use `architecture` instead.
+   > ✅ New flat format: Single `.md` file in `skills/` root (not nested directories or plugin.json)
 
-   **File 1: `.claude-plugin/plugin.json`**
-   ```json
-   {
-     "name": "<skill-name>",
-     "version": "1.0.0",
-     "description": "<description>. Use when: (1) trigger1, (2) trigger2.",
-     "category": "<category>",
-     "date": "YYYY-MM-DD"
-   }
-   ```
-   Rules:
-   - `name`: Must match directory name, lowercase kebab-case (`^[a-z0-9-]+$`)
-   - `description`: 20+ characters, include "Use when:" trigger conditions
-   - `category`: REQUIRED — must be one of the 9 valid categories (see checklist row 6)
-   - `date`: REQUIRED — format `YYYY-MM-DD`
-   - No extra fields — only name, version, description, category, date
-   - ⚠️ The `version` field is REQUIRED — omitting it will fail CI.
-   - ⚠️ Do NOT add `author`, `skills`, `tags`, or other non-standard fields — they cause validation errors.
-
-   **File 2: `skills/<name>/SKILL.md`** with **required format**:
-   > ⚠️ SKILL.md must be at `skills/<name>/SKILL.md` (nested directory), NOT at the plugin root.
+   **File 1: `skills/<name>.md`** with **YAML frontmatter + markdown body**:
 
    ```yaml
    ---
-   name: skill-name
-   description: "Brief description. Use when: specific triggers."
+   name: <skill-name>
+   description: "Brief description of what this skill teaches. Use when: (1) trigger1, (2) trigger2."
    category: <category>
    date: YYYY-MM-DD
+   version: "1.0.0"
    user-invocable: false
+   tags: []
    ---
+
+   # Skill Title
+
+   ## Overview
+
+   | Field | Value |
+   |-------|-------|
+   | **Date** | YYYY-MM-DD |
+   | **Objective** | What was this skill developed to accomplish? |
+   | **Outcome** | Was it successful? Operational? |
+
+   ## When to Use
+
+   - Trigger condition 1
+   - Trigger condition 2
+
+   ## Verified Workflow
+
+   ### Quick Reference
+
+   ```bash
+   # Copy-paste ready commands
+   command --flag value
    ```
 
-   Required sections:
-   - ✅ **YAML frontmatter** (starts with `---`)
-   - ✅ **Overview section** with `## Overview` header and table
-   - ✅ **When to Use** with specific trigger conditions
-   - ✅ **Verified Workflow** (exact header — NOT "## Workflow")
-     > 📝 If the source skill has a `## Quick Reference` section, demote it to
-     > `### Quick Reference` as the **first subsection** of `## Verified Workflow`.
-     > Do NOT preserve it as a top-level `## Quick Reference` section.
-   - ✅ **Failed Attempts table** (MUST be table format, not prose):
-     ```markdown
-     ## Failed Attempts
+   ### Detailed Steps
 
-     | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-     |---------|----------------|---------------|----------------|
-     | ... | ... | ... | ... |
-     ```
-   - ✅ **Results & Parameters** with copy-paste configs
+   1. Step 1 description
+   2. Step 2 description
 
-   **File 3: `references/notes.md`** with raw session details
+   ## Failed Attempts
 
-5. **Validate plugin** (MUST pass before committing):
+   | Attempt | What Was Tried | Why It Failed | Lesson Learned |
+   |---------|----------------|---------------|----------------|
+   | Attempt 1 | Description | Why failed | Lesson |
+
+   ## Results & Parameters
+
+   [Copy-paste ready configs and expected outputs]
+
+   ## Verified On
+
+   | Project | Context | Details |
+   |---------|---------|---------|
+   | ProjectMnemosyne | Session context | [notes.md](./skills/<name>.notes.md) |
+   ```
+
+   Rules:
+   - Filename: lowercase kebab-case (`^[a-z0-9-]+$`) — e.g., `training-grpo-external-vllm-setup.md`
+   - `category`: one of 9 valid categories (no "refactoring" — use "architecture")
+   - All required fields in frontmatter: name, description, category, date, version
+   - All required markdown sections: Overview, When to Use, Verified Workflow, Failed Attempts, Results & Parameters
+
+   **File 2: `skills/<name>.notes.md`** (optional):
+   - Raw session details, code snippets, debugging logs
+   - Human-readable reference material
+   - Only create if additional context needed beyond main skill file
+
+5. **Validate skill** (MUST pass before committing):
 
    ### Pre-Commit Validation Checklist
 
-   Before running `validate_plugins.py`, verify these common failure points:
+   Before running `validate_plugins.py`, verify:
 
-   | # | Check | Common Error |
-   |---|-------|-------------|
-   | 1 | Skill is under `skills/<category>/<name>/` (NOT `plugins/`) | "not in skills/ directory" |
-   | 2 | `.claude-plugin/plugin.json` exists | "Missing .claude-plugin/plugin.json" |
-   | 3 | `plugin.json` has `name`, `version`, `description`, `category`, `date` fields | "Missing required fields: version" |
-   | 4 | `skills/<name>/SKILL.md` exists (nested under `skills/`) | "Missing skills/ directory" |
-   | 5 | SKILL.md starts with `---` YAML frontmatter | "missing YAML frontmatter" |
-   | 6 | `## Failed Attempts` section exists with pipe-delimited table | "Missing Failed Attempts section" |
-   | 7 | `category` in BOTH `plugin.json` AND SKILL.md frontmatter is one of: training, evaluation, optimization, debugging, architecture, tooling, ci-cd, testing, documentation | "Invalid category" |
-   | 8 | `category` directory matches the `category` field (e.g. `skills/architecture/` for `category: architecture`) | Category mismatch |
+   | # | Check | Error If Missing |
+   |---|-------|------------------|
+   | 1 | Skill is in `skills/<name>.md` (flat, NOT nested) | File in wrong location |
+   | 2 | YAML frontmatter starts with `---` | "missing YAML frontmatter" |
+   | 3 | Frontmatter has: name, description, category, date, version | "Missing required field: X" |
+   | 4 | `category` is one of: training, evaluation, optimization, debugging, architecture, tooling, ci-cd, testing, documentation | "Invalid category" |
+   | 5 | Markdown has all 5 sections: Overview, When to Use, Verified Workflow, Failed Attempts, Results & Parameters | "Missing required section" |
+   | 6 | `## Failed Attempts` has pipe-delimited table | "Failed Attempts table missing required columns" |
+   | 7 | `## Quick Reference` is subsection `### Quick Reference` (under Verified Workflow) | "Quick Reference should use ###" |
 
    ```bash
-   python3 scripts/validate_plugins.py skills/ plugins/
+   python3 scripts/validate_plugins.py
    ```
    If validation fails, fix errors and re-run. Do NOT commit until it passes.
 
 6. **Commit and push**:
    ```bash
-   git add skills/<category>/<name>/
+   git add skills/<name>.md skills/<name>.notes.md 2>/dev/null || true
    git commit -m "feat: add <name> skill
 
-Documents <brief description>.
+Documents <brief description of what was learned>.
 
 Key learnings:
 - <bullet 1>
 - <bullet 2>
 - <bullet 3>
 
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
-Co-Authored-By: Claude <noreply@anthropic.com>"
-
-   git push -u origin skill/<category>/<name>
+   git push -u origin skill/<name>
    ```
 
 7. **Create PR** (only if push succeeded):
    ```bash
-   # Write PR body to build directory (use $MNEMOSYNE_DIR from step 3)
-   cat > "$MNEMOSYNE_DIR/pr-body-<name>.md" << 'EOF'
-   ## Summary
-
-   Documents <brief description of what was learned>.
-
-   - <Key point 1>
-   - <Key point 2>
-   - <Key point 3>
-
-   ## Key Findings
-
-   **What Worked**:
-   - <Successful approach 1>
-   - <Successful approach 2>
-
-   **What Failed**:
-   - <Failed attempt 1> → <Why it failed>
-   - <Failed attempt 2> → <Why it failed>
-
-   ## Test Plan
-
-   - [ ] Validate plugin with `python3 scripts/validate_plugins.py skills/ plugins/`
-   - [ ] Install plugin and verify skill appears
-   - [ ] Check skill activation with relevant triggers
-
-   🤖 Generated with [Claude Code](https://claude.com/claude-code)
-   EOF
-
    gh pr create --repo HomericIntelligence/ProjectMnemosyne --base main \
      --title "feat: add <name> skill" \
-     --body-file "$MNEMOSYNE_DIR/pr-body-<name>.md"
+     --body "## Summary
 
-   # After successful PR creation, clean up the feature branch
-   BRANCH_NAME="skill/<category>/<name>"
-   git checkout main
-   git branch -D "$BRANCH_NAME"
+Documents <brief description of what was learned>.
+
+- <Key point 1>
+- <Key point 2>
+- <Key point 3>
+
+## Key Findings
+
+**What Worked**:
+- <Successful approach 1>
+- <Successful approach 2>
+
+**What Failed**:
+- <Failed attempt 1> → <Why it failed>
+
+## Test Plan
+
+- [ ] Validate with \`python3 scripts/validate_plugins.py\`
+- [ ] Verify skill appears in marketplace
+- [ ] Test skill discovery with relevant keywords
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+   ```
+
+8. **Cleanup** (if cloned to $HOME/.agent-brain):
+   ```bash
+   if [ "$NEED_CLEANUP" = true ]; then
+     # After PR created, remove the worktree clone
+     rm -rf "$HOME/.agent-brain/ProjectMnemosyne"
+   fi
    ```
 
 ## Common Issues & Solutions
 
-### Top CI Failures (Most Common)
+### Top Validation Failures
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| "Missing .claude-plugin/plugin.json" | Forgot to create plugin.json | Create `.claude-plugin/plugin.json` (see template in step 4) |
-| "Missing required fields: version" | plugin.json missing `version` | Add `"version": "1.0.0"` to plugin.json |
-| "Missing required fields: category" | plugin.json missing `category` or `date` | Add `"category": "<category>"` and `"date": "YYYY-MM-DD"` to plugin.json |
-| "Missing skills/ directory" | SKILL.md at plugin root or in wrong path | Move SKILL.md to `skills/<name>/SKILL.md` (nested under `skills/`) |
-| "missing YAML frontmatter" | SKILL.md doesn't start with `---` | Add `---` YAML block at top of SKILL.md |
-| "Missing Failed Attempts section" | Section absent or wrong format | Add `## Failed Attempts` with pipe-delimited table |
-| "Invalid category 'refactoring'" | `refactoring` is not a valid category | Use `architecture` instead; move skill to `skills/architecture/<name>/` |
-| Skill not found / not validated | Skill placed under `plugins/` instead of `skills/` | Move entire skill directory to `skills/<category>/<name>/` |
+| "Missing required field: X" | Frontmatter missing a field | Add field to YAML: name, description, category, date, version |
+| "Invalid category" | Category not in approved list | Use one of: training, evaluation, optimization, debugging, architecture, tooling, ci-cd, testing, documentation |
+| "missing YAML frontmatter" | Doesn't start with `---` | Add `---` at very top of file before metadata |
+| "Missing required section: X" | Missing Overview/When/Workflow/Failed/Results | Add all 5 sections with `##` headers |
+| "Failed Attempts table missing required columns" | Table format incorrect | Use: \| Attempt \| What Was Tried \| Why It Failed \| Lesson Learned \| |
+| "Quick Reference should use ###" | Using `## Quick Reference` instead of `###` | Demote to `### Quick Reference` (subsection of Verified Workflow) |
+| Skill not in marketplace | File not committed or in wrong location | Verify in `skills/<name>.md` (root of skills dir, not nested) |
 
-### Issue: "No commits between main and skill/..."
+### Issue: PR already exists
 
-**Cause**: The branch was already merged or rebased incorrectly.
+**Cause**: Branch was already pushed in previous attempt.
 
-**Solution**: Don't rebase. Create branch directly from `origin/main`:
+**Solution**: Either delete the branch and re-push, or update the existing PR:
 ```bash
-git checkout -b skill/<category>/<name> origin/main
+# Delete old branch and try again
+git push origin :skill/<name>
+git push -u origin skill/<name>
+
+# OR update existing PR
+git push origin skill/<name>
 ```
 
-### Issue: Build directory cleanup
+### Issue: Cleanup directory
 
-**Cause**: Multiple Claude Code sessions accumulate build directories.
+**Cause**: Shared clone at `$HOME/.agent-brain/ProjectMnemosyne` takes up disk space.
 
-**Solution**: Periodically clean old build directories:
+**Solution**: Safe to delete anytime — re-clones automatically on next `/advise` or `/retrospective`:
 ```bash
-# Remove all PID-scoped build directories
-rm -rf build/*/ProjectMnemosyne
-
-# Or remove the entire build directory
-rm -rf build/
+rm -rf $HOME/.agent-brain/ProjectMnemosyne
 ```
-The next `/advise` or `/retrospective` will re-clone automatically.
 
-## Required SKILL.md Sections
+## Required Sections
 
-| Section | Format |
-|---------|--------|
-| **YAML frontmatter** | Starts with `---`, includes name/description/category/date/user-invocable |
-| **Overview section** | `## Overview` header with table |
-| When to Use | Specific trigger conditions |
-| Verified Workflow | Steps that worked (exact header) + `### Quick Reference` subsection if source had one |
-| **Failed Attempts** | **TABLE format** (not prose) |
-| Results & Parameters | Copy-paste configs |
+| Section | Format | Purpose |
+|---------|--------|---------|
+| **YAML frontmatter** | Starts with `---`, includes name/description/category/date/version | Metadata for marketplace |
+| **Overview** | `## Overview` with table (date, objective, outcome) | Quick context |
+| **When to Use** | Bullet points with trigger conditions | Discoverability |
+| **Verified Workflow** | Steps that worked + `### Quick Reference` subsection | The actual solution |
+| **Failed Attempts** | Table: Attempt, What Was Tried, Why Failed, Lesson | Prevent wasted effort |
+| **Results & Parameters** | Copy-paste configs, expected outputs | Actionable reference |
 
 ## Example
 
@@ -263,4 +267,4 @@ The next `/advise` or `/retrospective` will re-clone automatically.
 /skills-registry-commands:retrospective
 ```
 
-Claude will analyze the session and guide you through creating a new skill.
+Claude will analyze the session, auto-generate the skill filename, and guide you through creating a new flat-format skill file.
