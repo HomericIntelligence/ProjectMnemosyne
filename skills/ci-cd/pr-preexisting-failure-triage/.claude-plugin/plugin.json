@@ -1,8 +1,0 @@
-{
-  "name": "pr-preexisting-failure-triage",
-  "version": "1.0.0",
-  "description": "Distinguish pre-existing CI failures from regressions introduced by a PR, then verify the PR is ready to merge. Use when: (1) a PR has CI failures and you need to determine if they are blockers, (2) a review plan states 'no fixes needed' but tasks still require verification, (3) confirming PR correctness before enabling auto-merge.",
-  "category": "ci-cd",
-  "date": "2026-03-06",
-  "tags": ["ci", "pr-review", "triage", "preexisting-failures", "merge-readiness"]
-}

@@ -1,7 +1,0 @@
-{
-  "name": "mojo-api-signature-test-fix",
-  "version": "1.0.0",
-  "description": "Fix Mojo test files when API signatures change (missing required positional args, positional/keyword conflicts). Use when: (1) tests fail with 'missing required positional arguments', (2) tests fail with 'argument passed both as positional and keyword operand', (3) updating tests after function signatures are updated.",
-  "category": "testing",
-  "date": "2026-03-15"
-}

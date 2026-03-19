@@ -1,8 +1,0 @@
-{
-  "name": "stale-ci-pattern-removal",
-  "version": "1.0.0",
-  "description": "Remove stale file references from CI workflow test pattern strings after test files are deleted. Use when: (1) a test file was deleted but its name still appears in a GitHub Actions workflow pattern string, (2) CI fails because it references a non-existent file, (3) closing a cleanup issue where the only remaining work is a dangling workflow reference.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["ci", "github-actions", "cleanup", "test-files", "workflow", "pattern-string"]
-}

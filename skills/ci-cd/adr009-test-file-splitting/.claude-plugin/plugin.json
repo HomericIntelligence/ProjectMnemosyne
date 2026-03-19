@@ -1,8 +1,0 @@
-{
-  "name": "adr009-test-file-splitting",
-  "version": "1.0.0",
-  "description": "Split large Mojo test files into smaller files to avoid heap corruption crashes under high test load (ADR-009). Use when: (1) a Mojo test file exceeds 10 fn test_ functions, (2) CI shows intermittent heap corruption crashes from libKGENCompilerRTShared.so, (3) a CI group has non-deterministic failures consistent with memory pressure.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["mojo", "testing", "heap-corruption", "adr-009", "ci-stability", "test-splitting"]
-}

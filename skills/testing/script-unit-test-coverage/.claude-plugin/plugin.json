@@ -1,7 +1,0 @@
-{
-  "name": "script-unit-test-coverage",
-  "version": "1.0.0",
-  "description": "Add unit test coverage for scripts/ that lack test files, following mocked I/O with pytest class-based tests.",
-  "author": { "name": "ML Odyssey Team" },
-  "skills": "./skills"
-}

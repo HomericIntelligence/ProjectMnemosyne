@@ -1,8 +1,0 @@
-{
-  "name": "mypy-hook-extend-coverage",
-  "version": "1.0.0",
-  "description": "Extend mypy pre-commit hook coverage to additional directories beyond the initial scope. Use when: (1) mypy hook covers only one directory but ruff covers more, (2) tests/ or tools/ dirs have type annotation drift needing baseline suppression, (3) hyphenated directory names cause module resolution conflicts in mypy.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["mypy", "pre-commit", "type-checking", "hooks", "python"]
-}

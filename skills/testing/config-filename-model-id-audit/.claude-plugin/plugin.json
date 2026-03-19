@@ -1,6 +1,0 @@
-{
-  "name": "config-filename-model-id-audit",
-  "version": "1.0.0",
-  "description": "Audit and fix YAML config files where filename stems mismatch model_id fields. Use when: (1) a filename/model_id validation was added and existing files need auditing, (2) CI emits warnings like 'Config filename X does not match model_id Y', (3) model configs use short names but model_id is versioned.",
-  "skills": "./skills"
-}

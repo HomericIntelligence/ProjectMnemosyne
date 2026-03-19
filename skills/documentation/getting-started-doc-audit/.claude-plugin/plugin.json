@@ -1,7 +1,0 @@
-{
-  "name": "getting-started-doc-audit",
-  "version": "1.0.0",
-  "description": "Audit and rewrite getting-started documentation stubs by sourcing real commands from justfile and versions from pixi.toml, removing fabricated APIs. Use when: (1) getting-started docs contain placeholder text or non-existent APIs, (2) follow-up audit requested after initial doc stub is written, (3) markdown linting fails on documentation files with broken fenced code blocks.",
-  "category": "documentation",
-  "date": "2026-03-15"
-}

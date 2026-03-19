@@ -1,7 +1,0 @@
-{
-  "name": "checkpoint-disk-reconciliation",
-  "version": "1.0.0",
-  "description": "Reconcile stale checkpoint states with on-disk artifacts after ProcessPool race conditions or interrupted runs. Use when: (1) --retry-errors skips runs that have valid on-disk results but stale intermediate checkpoint states, (2) judge-failed runs at worktree_cleaned need re-running, (3) checkpoint shows intermediate states but run_result.json exists on disk.",
-  "category": "debugging",
-  "date": "2026-03-13"
-}

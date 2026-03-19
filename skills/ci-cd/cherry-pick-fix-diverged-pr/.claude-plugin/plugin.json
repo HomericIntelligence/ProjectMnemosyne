@@ -1,8 +1,0 @@
-{
-  "name": "cherry-pick-fix-diverged-pr",
-  "version": "1.0.0",
-  "description": "Apply a local fix commit to a remote PR branch when histories have diverged (same-content commits with different SHAs). Use when: (1) a fix exists locally but can't be fast-forward pushed to the PR branch, (2) git rebase created duplicate commits with different SHAs on local vs remote, (3) review fix plan says 'no changes needed' but CI still fails because the fix was never pushed.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["cherry-pick", "diverged-branch", "pr-fix", "mojo-format", "rebase"]
-}

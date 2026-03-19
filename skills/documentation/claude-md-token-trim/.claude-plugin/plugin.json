@@ -1,7 +1,0 @@
-{
-  "name": "claude-md-token-trim",
-  "version": "1.0.0",
-  "description": "Reduce CLAUDE.md token consumption by replacing verbose/duplicate sections with concise summaries and links. Use when: (1) CLAUDE.md exceeds a line/token budget, (2) sections duplicate content already in shared docs, (3) pre-commit markdownlint MD060 table errors need fixing alongside trimming.",
-  "category": "documentation",
-  "date": "2026-03-15"
-}

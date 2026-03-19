@@ -1,8 +1,0 @@
-{
-  "name": "mojo-trait-conformance-fix",
-  "version": "1.0.0",
-  "description": "Fix Mojo struct missing trait declaration causing compile-time 'does not conform to trait' errors. Use when: (1) a struct implements trait methods (e.g. __hash__, __eq__) but is not listed in the struct trait list, (2) CI fails with 'argument type X does not conform to trait Y', (3) hash() or other trait-dispatched functions fail on a struct that has the implementation.",
-  "category": "debugging",
-  "date": "2026-03-06",
-  "tags": ["mojo", "traits", "hashable", "compile-error", "struct", "extensor"]
-}

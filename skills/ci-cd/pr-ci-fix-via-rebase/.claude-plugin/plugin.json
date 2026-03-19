@@ -1,8 +1,0 @@
-{
-  "name": "pr-ci-fix-via-rebase",
-  "version": "1.0.0",
-  "description": "Fix PR CI failures caused by a stale branch that is many commits behind main. Use when: (1) CI fails with crashes or segfaults unrelated to the PR's own changes, (2) the branch is 10+ commits behind main, (3) fuzz/integration tests pass on main but fail on the PR branch.",
-  "category": "ci-cd",
-  "date": "2026-03-06",
-  "tags": ["rebase", "ci-fix", "stale-branch", "fuzz-tests", "worktree"]
-}

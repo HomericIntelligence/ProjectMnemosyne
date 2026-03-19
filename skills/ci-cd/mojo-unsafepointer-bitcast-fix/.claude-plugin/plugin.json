@@ -1,8 +1,0 @@
-{
-  "name": "mojo-unsafepointer-bitcast-fix",
-  "version": "1.0.0",
-  "description": "Fix Mojo compile error: UnsafePointer.address_of() is not a valid API; use UnsafePointer[T](to=val).bitcast[U]()[] instead. Use when: (1) CI fails with 'value has no attribute address_of', (2) converting float values to bit representation for hashing, (3) mojo format line-length failures on raise Error() calls.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["mojo", "unsafepointer", "bitcast", "compile-error", "hash", "mojo-format"]
-}

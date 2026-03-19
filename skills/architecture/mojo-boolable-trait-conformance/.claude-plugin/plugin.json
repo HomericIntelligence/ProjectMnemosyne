@@ -1,7 +1,0 @@
-{
-  "name": "mojo-boolable-trait-conformance",
-  "version": "1.0.0",
-  "description": "Split a raising __bool__ into a non-raising Boolable-conformant __bool__ plus a bool_strict() variant. Use when: (1) a struct has fn __bool__(self) raises -> Bool preventing Boolable trait conformance, (2) you want Bool(t) syntax to work without a try/except, (3) you need NumPy-style silent False for multi-element containers alongside PyTorch-style strict raising.",
-  "category": "architecture",
-  "date": "2026-03-15"
-}

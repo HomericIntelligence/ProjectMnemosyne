@@ -1,8 +1,0 @@
-{
-  "name": "adr-status-deferred-update",
-  "version": "1.0.0",
-  "description": "Update ADR status to Accepted (Deferred) when implementation is bypassed pending language/platform support. Use when: (1) an ADR has Status: Accepted but its implementation is fully or partially bypassed, (2) the bypass is temporary pending a known platform limitation (e.g., global state, stdlib gap), (3) documentation needs to accurately reflect deferred rather than active implementation.",
-  "category": "documentation",
-  "date": "2026-03-05",
-  "tags": ["adr", "status", "deferred", "documentation", "mojo", "global-state"]
-}

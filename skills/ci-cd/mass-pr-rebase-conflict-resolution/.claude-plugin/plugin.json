@@ -1,8 +1,0 @@
-{
-  "name": "mass-pr-rebase-conflict-resolution",
-  "version": "1.0.0",
-  "description": "Rebase multiple DIRTY/CONFLICTING PRs against main, resolve merge conflicts, and fix pre-commit CI failures. Use when: (1) many PRs show DIRTY/CONFLICTING merge state after main advances, (2) pre-commit format failures need manual fixes because mojo format can't run locally, (3) the same files (e.g. extensor.mojo) conflict across many PRs with diverging implementations.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["rebase", "conflict-resolution", "pull-requests", "mojo", "pre-commit", "ci-failures"]
-}

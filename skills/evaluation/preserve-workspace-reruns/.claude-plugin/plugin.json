@@ -1,6 +1,0 @@
-{
-  "name": "preserve-workspace-reruns",
-  "version": "1.0.0",
-  "description": "Preserving git worktrees and test results when re-running E2E experiments with checkpoint resume",
-  "skills": "./skills"
-}

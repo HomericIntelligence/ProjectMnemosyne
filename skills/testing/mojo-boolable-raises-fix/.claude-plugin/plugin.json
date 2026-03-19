@@ -1,8 +1,0 @@
-{
-  "name": "mojo-boolable-raises-fix",
-  "version": "1.0.0",
-  "description": "Fix Mojo test compile errors caused by calling Bool(t) on a struct whose __bool__ has a raises signature, preventing Boolable trait conformance. Use when: (1) CI fails with 'argument type X does not conform to trait Boolable', (2) a test uses Bool(t) but __bool__ is defined with raises, (3) you need to test that __bool__ raises without requiring Boolable conformance.",
-  "category": "testing",
-  "date": "2026-03-07",
-  "tags": ["mojo", "boolable", "__bool__", "raises", "trait-conformance", "extensor", "compile-error", "ci-fix"]
-}

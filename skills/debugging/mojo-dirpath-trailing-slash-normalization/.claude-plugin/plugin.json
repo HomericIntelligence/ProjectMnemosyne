@@ -1,7 +1,0 @@
-{
-  "name": "mojo-dirpath-trailing-slash-normalization",
-  "version": "1.0.0",
-  "description": "Fix double-slash path construction in Mojo when a dirpath already has a trailing slash. Use when: (1) save_named_tensors or load_named_tensors produces paths like 'dir//file.weights', (2) directory listing or file write fails because of double slashes in constructed paths, (3) docstring examples show trailing slash but function does not normalize it.",
-  "category": "debugging",
-  "date": "2026-03-15"
-}

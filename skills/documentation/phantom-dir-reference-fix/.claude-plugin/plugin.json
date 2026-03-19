@@ -1,7 +1,0 @@
-{
-  "name": "phantom-dir-reference-fix",
-  "version": "1.0.0",
-  "description": "Remove phantom directory references from documentation when a referenced path does not exist in the repository.",
-  "category": "documentation",
-  "date": "2026-01-01"
-}

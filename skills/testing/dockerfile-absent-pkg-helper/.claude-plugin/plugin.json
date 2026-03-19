@@ -1,7 +1,0 @@
-{
-  "name": "dockerfile-absent-pkg-helper",
-  "version": "1.0.0",
-  "description": "Extract a shared assert_pkg_absent helper into conftest.py to DRY up Dockerfile absence regression tests. Use when: (1) multiple test methods repeat the same apt-get/install regex checks for different packages, (2) adding a new removed-dependency regression test, (3) refactoring Dockerfile test suites for reusability.",
-  "category": "testing",
-  "date": "2026-03-15"
-}

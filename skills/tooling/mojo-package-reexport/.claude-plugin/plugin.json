@@ -1,8 +1,0 @@
-{
-  "name": "mojo-package-reexport",
-  "version": "1.0.0",
-  "description": "Add re-exports to Mojo package __init__.mojo files so symbols are accessible at higher-level import paths. Use when: (1) a struct or fn exists in a leaf module (e.g. shared.data.transforms) but cannot be imported from a parent package (e.g. shared.data or shared), (2) an import audit finds missing convenience imports, (3) implementing issues that ask to expose deeply-nested symbols at the package level.",
-  "category": "tooling",
-  "date": "2026-03-07",
-  "tags": ["mojo", "packaging", "imports", "re-export", "init", "shared-library"]
-}

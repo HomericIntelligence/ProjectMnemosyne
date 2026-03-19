@@ -1,8 +1,0 @@
-{
-  "name": "mojo-value-verification-tests",
-  "version": "1.0.0",
-  "description": "Add value-correctness assertions to Mojo shape operation tests that only verify element counts and dimensions. Use when: (1) shape tests pass but only check numel/dim not actual data, (2) adding assert_value_at/assert_all_values to split/tile/repeat/broadcast/permute tests, (3) upgrading tests from structural to behavioral verification in Mojo.",
-  "category": "testing",
-  "date": "2026-03-07",
-  "tags": ["mojo", "value-verification", "assert-value-at", "assert-all-values", "shape-ops", "test-quality"]
-}

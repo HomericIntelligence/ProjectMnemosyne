@@ -1,7 +1,0 @@
-{
-  "name": "type-alias-removal",
-  "version": "1.0.0",
-  "description": "Systematic workflow for removing redundant type aliases and using explicit variant names",
-  "category": "architecture",
-  "date": "2026-02-15"
-}

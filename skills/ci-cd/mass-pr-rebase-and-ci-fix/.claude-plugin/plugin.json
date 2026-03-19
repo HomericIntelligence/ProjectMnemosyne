@@ -1,7 +1,0 @@
-{
-  "name": "mass-pr-rebase-and-ci-fix",
-  "version": "1.0.0",
-  "description": "Fix systemic CI failures blocking all PRs, enable auto-merge on all open PRs, rebase all branches onto main, and consolidate conflicting skill content into merged files. Use when: (1) main CI workflow fails with GH006 protected branch error, (2) validate check not running on PRs due to path filters, (3) 100+ PRs need rebasing after a fix lands on main, (4) many PRs conflict on the same files and need content merged.",
-  "category": "ci-cd",
-  "date": "2026-03-14"
-}

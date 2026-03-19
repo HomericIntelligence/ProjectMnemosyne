@@ -1,8 +1,0 @@
-{
-  "name": "mojo-hash-integer-dtype-coverage",
-  "version": "1.0.0",
-  "description": "Add test coverage for __hash__ on integer-typed Mojo tensors where _get_float64 casts int values to Float64 before hashing. Use when: (1) adding hash tests for non-float dtypes, (2) verifying integer tensor hash consistency, (3) closing coverage gaps on dtype-dispatched float64 conversion paths.",
-  "category": "testing",
-  "date": "2026-03-07",
-  "tags": ["mojo", "hash", "dtype", "integer", "tensor", "coverage"]
-}

@@ -1,8 +1,0 @@
-{
-  "name": "mojo-stride-manipulation-for-noncontiguous-tests",
-  "version": "1.0.0",
-  "description": "Technique for testing non-contiguous tensor behavior in Mojo without transpose(). Use when: (1) testing is_contiguous() or as_contiguous() but transpose() is not yet implemented, (2) need to simulate column-major or stride-permuted tensors in unit tests, (3) completing placeholder tests blocked by missing higher-level ops.",
-  "category": "testing",
-  "date": "2026-03-05",
-  "tags": ["mojo", "tensors", "strides", "non-contiguous", "testing", "extensor"]
-}

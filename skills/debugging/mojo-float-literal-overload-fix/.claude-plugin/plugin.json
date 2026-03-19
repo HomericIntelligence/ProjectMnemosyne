@@ -1,8 +1,0 @@
-{
-  "name": "mojo-float-literal-overload-fix",
-  "version": "1.0.0",
-  "description": "Fix Mojo type errors where float literals fail to match Float64 overloads by adding a Float32 overload that delegates to Float64. Use when: (1) CI fails with 'no matching method in call to __setitem__' for float literals, (2) Mojo API accepts Float64 but user code with bare float literals fails to compile, (3) ergonomic API design for Mojo numeric overloads.",
-  "category": "debugging",
-  "date": "2026-03-06",
-  "tags": ["mojo", "float32", "float64", "type-inference", "overload", "setitem", "api-ergonomics"]
-}

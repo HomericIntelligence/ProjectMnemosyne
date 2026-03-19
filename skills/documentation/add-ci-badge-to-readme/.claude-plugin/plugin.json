@@ -1,8 +1,0 @@
-{
-  "name": "add-ci-badge-to-readme",
-  "version": "1.0.0",
-  "description": "Add a GitHub Actions CI status badge to a README badge block. Use when: (1) a README is missing a CI/build status badge, (2) a new workflow has been added and should be surfaced via a badge, (3) a reviewer requests a CI badge be added to the project home page.",
-  "category": "documentation",
-  "date": "2026-03-07",
-  "tags": ["readme", "badge", "ci", "github-actions", "documentation"]
-}

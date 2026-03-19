@@ -1,9 +1,0 @@
-{
-  "name": "multi-division-fixture-management",
-  "version": "1.0.0",
-  "description": "Organize API fixtures per-division with auto-slug subdirectories and parameterized integration tests. Use when: (1) adding a second fixture set to a flat tests/fixtures/ directory, (2) capture-fixtures CLI needs to write to named subdirs, (3) integration tests need to run against all fixture sets without manual wiring. Verified on TitanSchedule (AES volleyball tournament scraper).",
-  "author": {
-    "name": "TitanSchedule Team"
-  },
-  "skills": "./skills"
-}

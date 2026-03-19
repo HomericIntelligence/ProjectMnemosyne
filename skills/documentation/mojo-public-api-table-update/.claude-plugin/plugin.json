@@ -1,8 +1,0 @@
-{
-  "name": "mojo-public-api-table-update",
-  "version": "1.0.0",
-  "description": "Update the public API comment table in a Mojo __init__.mojo to distinguish available-now exports from pending-implementation symbols. Use when: (1) live exports were added but the API table still lists them as pending, (2) a flat 'will be available once implementation completes' list needs splitting into 'available now' vs 'pending' sections, (3) a newly-added symbol is missing from the ASCII table of top-level exports.",
-  "category": "documentation",
-  "date": "2026-03-15",
-  "tags": ["mojo", "public-api", "init", "table", "documentation", "exports", "pending"]
-}

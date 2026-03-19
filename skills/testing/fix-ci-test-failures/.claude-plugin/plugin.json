@@ -1,6 +1,0 @@
-{
-  "name": "fix-ci-test-failures",
-  "version": "1.0.0",
-  "description": "Skill for fixing unit tests that pass locally but fail in CI due to symlinks and mocking issues",
-  "skills": "./skills"
-}

@@ -1,7 +1,0 @@
-{
-  "name": "dockerfile-layer-caching",
-  "version": "1.0.0",
-  "description": "Optimize Docker layer caching for Python packages when source changes more often than dependencies to prevent pip from reinstalling all dependencies on every source-only change.",
-  "category": "ci-cd",
-  "date": "2026-02-27"
-}

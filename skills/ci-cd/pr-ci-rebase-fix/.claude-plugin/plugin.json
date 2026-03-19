@@ -1,8 +1,0 @@
-{
-  "name": "pr-ci-rebase-fix",
-  "version": "1.0.0",
-  "description": "Diagnose pre-existing CI failures on a PR and fix by rebasing onto current main. Use when: (1) PR CI jobs fail with crashes or errors not caused by the PR's own changes, (2) upstream fixes have landed on main since the PR branch was created, (3) need to distinguish pre-existing failures from PR-introduced regressions.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["rebase", "ci-failures", "pre-existing", "pr-fix", "git"]
-}

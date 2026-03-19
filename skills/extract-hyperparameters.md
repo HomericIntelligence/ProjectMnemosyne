@@ -1,0 +1,75 @@
+---
+name: extract-hyperparameters
+description: Identify and document model hyperparameters from papers. Use when setting
+  up training configurations.
+category: analysis
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Extract Hyperparameters
+
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Locate and document all hyperparameters mentioned in research papers including learning rates, batch sizes, and model configurations. |
+| Outcome | Operational |
+
+
+Locate and document all hyperparameters mentioned in research papers including learning rates, batch sizes, and model configurations.
+
+## When to Use
+
+- Reproducing paper results
+- Setting up model training configurations
+- Comparing hyperparameter choices across papers
+- Planning hyperparameter tuning experiments
+
+### Quick Reference
+
+```bash
+# Extract numeric values and parameters from papers
+pdftotext paper.pdf - | grep -i "learning rate\|batch\|epochs\|weight decay\|dropout" | head -20
+
+# Common pattern search
+grep -E "\\b(lr|batch_size|epochs|momentum|dropout|layers)\\s*[=:]" config.py
+```
+
+## Verified Workflow
+
+1. **Find hyperparameter table**: Look for "Table 1" or "Hyperparameters" section
+2. **Document architecture parameters**: Layer sizes, activation functions, normalization
+3. **Extract training parameters**: Learning rate, batch size, epochs, optimizers
+4. **Note regularization**: Dropout, weight decay, batch normalization
+5. **Create configuration file**: Translate to implementation format (YAML/JSON/Mojo)
+
+## Output Format
+
+Hyperparameter documentation:
+
+- Model architecture (layers, sizes, activations)
+- Training parameters (LR, batch size, epochs)
+- Optimizer configuration (type, momentum, decay)
+- Regularization settings (dropout, L1/L2)
+- Data preprocessing (normalization, augmentation)
+- Hardware and precision (float32, float64)
+
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `prepare-dataset` skill for data configuration
+- See `train-model` skill for training implementation
+- See `/notes/review/mojo-ml-patterns.md` for Mojo configuration patterns

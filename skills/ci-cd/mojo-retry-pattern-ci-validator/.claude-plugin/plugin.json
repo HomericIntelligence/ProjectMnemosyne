@@ -1,7 +1,0 @@
-{
-  "name": "mojo-retry-pattern-ci-validator",
-  "version": "1.0.0",
-  "description": "Detect bare pixi run mojo test/run/build/package calls in GitHub Actions workflows not wrapped in a retry loop. Use when: (1) adding a new mojo workflow file, (2) auditing existing workflows for ADR-009 compliance, (3) CI enforcement after mojo-jit-crash-retry fix.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

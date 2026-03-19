@@ -1,8 +1,0 @@
-{
-  "name": "mojo-api-name-reconciliation",
-  "version": "1.0.0",
-  "description": "Reconcile planned API names in Mojo test placeholders and documentation comments with actual implemented names after an import audit. Use when: (1) placeholder tests reference old planned names that diverge from implementation, (2) documentation comments in __init__.mojo use stale names, (3) following up on import audit issues to align tests with reality.",
-  "category": "documentation",
-  "date": "2026-03-07",
-  "tags": ["mojo", "api-names", "placeholders", "reconciliation", "documentation", "import-audit"]
-}

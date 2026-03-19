@@ -1,8 +1,0 @@
-{
-  "name": "fix-security-scan-gaps",
-  "version": "1.0.0",
-  "description": "Fix common GitHub Actions security scanning gaps: missing PR triggers, silenced Semgrep failures, and Gitleaks working-directory-only scans. Use when: (1) security scans only run on push to main, not PRs, (2) Semgrep has continue-on-error masking failures, (3) Gitleaks uses --no-git missing history secrets.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["security", "gitleaks", "semgrep", "github-actions", "pull-request"]
-}

@@ -1,8 +1,0 @@
-{
-  "name": "extensor-view-semantics",
-  "version": "1.0.0",
-  "description": "Add view/zero-copy semantics to tensor operations in Mojo. Use when: (1) implementing stride-based tensor views without allocation, (2) adding ravel()/transpose() view support, (3) debugging non-contiguous tensor access in Mojo ExTensor.",
-  "category": "architecture",
-  "date": "2026-03-07",
-  "tags": ["mojo", "tensor", "view-semantics", "strides", "zero-copy", "extensor", "transpose", "ravel"]
-}

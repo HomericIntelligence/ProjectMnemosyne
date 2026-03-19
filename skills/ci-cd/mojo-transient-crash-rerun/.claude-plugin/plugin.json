@@ -1,8 +1,0 @@
-{
-  "name": "mojo-transient-crash-rerun",
-  "version": "1.0.0",
-  "description": "Identify and clear transient Mojo runner crashes in CI by re-triggering failed jobs instead of making code changes. Use when: (1) CI fails with 'mojo: error: execution crashed' and no stack frames from repo code, (2) same test group passes on main branch at same time, (3) PR only contains non-logic changes (comments, docs, formatting).",
-  "category": "ci-cd",
-  "date": "2026-03-06",
-  "tags": ["mojo", "flaky-ci", "transient-crash", "execution-crashed", "rerun", "ci-rerun"]
-}

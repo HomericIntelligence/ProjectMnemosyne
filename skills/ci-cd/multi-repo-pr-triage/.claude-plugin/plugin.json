@@ -1,8 +1,0 @@
-{
-  "name": "multi-repo-pr-triage",
-  "version": "1.0.0",
-  "description": "Triage and fix CI failures across multiple repositories using parallel sub-agents. Use when: (1) multiple repos have failing PRs that need diagnosis and fixing, (2) new repos need cloning as peers, (3) CI failures share common root causes across PRs.",
-  "category": "ci-cd",
-  "date": "2026-03-15",
-  "tags": ["ci", "multi-repo", "pr-workflow", "parallel", "github-actions", "clang-format", "mojo", "containerfile"]
-}

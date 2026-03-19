@@ -1,7 +1,0 @@
-{
-  "name": "checkpoint-recovery",
-  "version": "1.0.0",
-  "description": "Implementing checkpoint/resume functionality for long-running batch processes with rate limit handling",
-  "category": "tooling",
-  "date": "2026-02-12"
-}

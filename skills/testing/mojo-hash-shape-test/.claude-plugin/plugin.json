@@ -1,8 +1,0 @@
-{
-  "name": "mojo-hash-shape-test",
-  "version": "1.0.0",
-  "description": "Add a Mojo test verifying that tensors with identical data but different shapes produce different hashes. Use when: (1) a hash test suite covers equal tensors and different values but not different shapes, (2) adding shape-sensitivity coverage to __hash__ in ExTensor or similar structs, (3) following up on a hash test issue referencing shape collision edge cases.",
-  "category": "testing",
-  "date": "2026-03-07",
-  "tags": ["mojo", "hash", "extensor", "shape", "test-coverage", "arange", "reshape"]
-}

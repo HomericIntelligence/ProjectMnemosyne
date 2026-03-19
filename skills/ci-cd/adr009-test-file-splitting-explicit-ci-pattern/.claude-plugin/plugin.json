@@ -1,8 +1,0 @@
-{
-  "name": "adr009-test-file-splitting-explicit-ci-pattern",
-  "version": "1.0.0",
-  "description": "ADR-009 test file splitting when CI workflow uses explicit file lists instead of test_*.mojo glob. Use when: (1) CI pattern lists specific filenames (not a glob), (2) splitting test_fixtures.mojo or similar explicitly-referenced files, (3) validate-test-coverage pre-commit hook flags missing files.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["adr009", "mojo", "heap-corruption", "test-splitting", "ci-workflow", "explicit-pattern"]
-}

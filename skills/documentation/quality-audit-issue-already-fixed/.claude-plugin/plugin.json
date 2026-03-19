@@ -1,8 +1,0 @@
-{
-  "name": "quality-audit-issue-already-fixed",
-  "version": "1.0.0",
-  "description": "Handle quality audit issues that are already resolved in the codebase. Teaches the verify-before-edit pattern: read the file first, confirm the fix exists, check git log and issue state, then close without making changes.",
-  "category": "documentation",
-  "author": "ProjectScylla team",
-  "skill_file": "../skills/quality-audit-issue-already-fixed/SKILL.md"
-}

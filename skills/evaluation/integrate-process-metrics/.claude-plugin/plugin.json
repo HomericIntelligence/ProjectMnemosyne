@@ -1,6 +1,0 @@
-{
-  "name": "integrate-process-metrics",
-  "version": "1.0.0",
-  "description": "Workflow for integrating pre-implemented process metrics (R_Prog, CFP, PR Revert Rate) into the ProjectScylla analysis pipeline",
-  "skills": "./skills"
-}

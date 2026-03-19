@@ -1,7 +1,0 @@
-{
-  "name": "exclude-build-targets-from-linker-errors",
-  "version": "1.0.0",
-  "description": "Fix linker errors in Mojo builds caused by system library dependencies (e.g. libm) by excluding the affected directories from the build recipe's find command. Use when: (1) mojo build produces 'undefined reference' or 'DSO missing from command line' for libm/libstdc++ symbols, (2) example or benchmark files compile via mojo run (JIT) but fail during mojo build (AOT), (3) CI reports linker failures that are silenced by FAIL_ON_ERROR=0 workarounds.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

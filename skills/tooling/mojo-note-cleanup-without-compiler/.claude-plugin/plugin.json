@@ -1,8 +1,0 @@
-{
-  "name": "mojo-note-cleanup-without-compiler",
-  "version": "1.0.0",
-  "description": "Update Mojo compiler limitation NOTEs with tracking references when local Mojo compilation is unavailable due to GLIBC mismatch. Use when: (1) cleaning up blocker NOTEs in Mojo code on systems where Mojo cannot run locally, (2) verifying version-pinned compiler limitations without running the compiler, (3) updating comments with issue tracking references.",
-  "category": "tooling",
-  "date": "2026-03-04",
-  "tags": ["mojo", "comments", "compiler-limitations", "fp16", "simd", "glibc", "cleanup"]
-}

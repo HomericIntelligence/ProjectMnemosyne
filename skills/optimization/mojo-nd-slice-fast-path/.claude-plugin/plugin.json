@@ -1,8 +1,0 @@
-{
-  "name": "mojo-nd-slice-fast-path",
-  "version": "1.0.0",
-  "description": "Add a contiguous-memcpy fast-path for N-D tensor slices where only the first axis is non-trivially sliced. Use when: (1) profiling shows __getitem__(*slices) is a bottleneck in batch-extraction loops, (2) adding first-axis-only fast-path to an ExTensor-style type-erased tensor, (3) preserving a slow-path fallback for non-contiguous slice patterns.",
-  "category": "optimization",
-  "date": "2026-03-15",
-  "skills": "./skills"
-}

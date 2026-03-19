@@ -1,7 +1,0 @@
-{
-  "name": "ci-grep-deprecation-guard",
-  "version": "1.0.0",
-  "description": "Add a CI step that grep-blocks reappearance of deprecated identifiers. Use when: (1) deprecated names/aliases have been removed and you want a regression guard, (2) a cleanup PR removed old identifiers and follow-up CI enforcement is needed, (3) you want a no-build-required lint check for forbidden symbols.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

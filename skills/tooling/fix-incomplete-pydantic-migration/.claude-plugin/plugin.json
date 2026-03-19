@@ -1,7 +1,0 @@
-{
-  "name": "fix-incomplete-pydantic-migration",
-  "version": "1.0.0",
-  "description": "Fix CI test failures from incomplete Pydantic v2 migrations with bandaid approach",
-  "category": "tooling",
-  "date": "2026-02-13"
-}

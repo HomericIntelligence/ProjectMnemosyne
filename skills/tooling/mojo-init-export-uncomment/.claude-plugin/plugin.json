@@ -1,7 +1,0 @@
-{
-  "name": "mojo-init-export-uncomment",
-  "version": "1.0.0",
-  "description": "Activate commented-out exports in a Mojo __init__.mojo by verifying leaf-module implementations exist and using absolute paths + comptime aliases to work around the Mojo v0.26.1 re-export chain limitation. Use when: (1) __init__.mojo has commented-out imports pending implementation, (2) layer/module structs have been implemented and need to be exposed at package level, (3) API name mismatches need bridging with comptime aliases.",
-  "category": "tooling",
-  "date": "2026-03-15"
-}

@@ -1,7 +1,0 @@
-{
-  "name": "mojo-test-failure-fixes",
-  "version": "1.0.0",
-  "description": "Diagnose and fix Mojo test suite failures: compilation errors, missing main functions, wrong API usage, and JIT crashes. Use when: (1) Mojo tests fail with compilation errors after API changes, (2) test files lack main() entrypoints, (3) VGG/deep model tests crash with libKGENCompilerRTShared.so, (4) batch-fixing multiple test files across a repo.",
-  "category": "testing",
-  "date": "2026-03-13"
-}

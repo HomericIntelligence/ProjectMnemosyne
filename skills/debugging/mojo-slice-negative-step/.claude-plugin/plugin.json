@@ -1,8 +1,0 @@
-{
-  "name": "mojo-slice-negative-step",
-  "version": "1.0.0",
-  "description": "Fix negative-step slice bugs in Mojo tensor/array __getitem__(Slice). Use when: (1) reverse slicing t[::-1] returns wrong values or empty result, (2) negative-step slice result_size is 0 or incorrect, (3) slice defaults for start/end are wrong when step < 0.",
-  "category": "debugging",
-  "date": "2026-03-07",
-  "tags": ["mojo", "slice", "negative-step", "tensor", "extensor", "reverse-slice"]
-}

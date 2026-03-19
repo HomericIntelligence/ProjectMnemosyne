@@ -1,7 +1,0 @@
-{
-  "name": "fix-rebased-ci-pr-stack",
-  "version": "1.0.0",
-  "description": "Fix CI failures in a stacked PR series after rebase onto main. Use when: (1) multiple PRs in a series all have CI failures after the branch diverged from main, (2) CI checks fail because files expected by workflows do not exist yet (predecessor PR not merged), (3) third-party GitHub Actions require paid licenses for org repos, (4) pinned container image SHA256 digests are stale, (5) unit tests test the old structure that was changed in the same PR.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

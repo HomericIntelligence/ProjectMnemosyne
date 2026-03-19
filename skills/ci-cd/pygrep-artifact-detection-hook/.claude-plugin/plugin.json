@@ -1,7 +1,0 @@
-{
-  "name": "pygrep-artifact-detection-hook",
-  "version": "1.0.0",
-  "description": "Zero-dependency pattern for adding a pygrep pre-commit hook that blocks commits if banned phrases appear in source files. Covers regex design, ruff D301 fix, and test strategy for hooks without a backing script.",
-  "category": "ci-cd",
-  "date": "2026-03-03"
-}

@@ -1,8 +1,0 @@
-{
-  "name": "git-worktree-edit-placement",
-  "version": "1.0.0",
-  "description": "Correct workflow for editing files in the right git worktree when multiple worktrees share the same monorepo. Use when: (1) editing files that may land in the wrong worktree/branch, (2) changes appear in main instead of a feature branch worktree, (3) debugging why a push is rejected due to diverged remote.",
-  "category": "documentation",
-  "date": "2026-03-05",
-  "tags": ["git", "worktree", "monorepo", "branch-management", "file-editing"]
-}

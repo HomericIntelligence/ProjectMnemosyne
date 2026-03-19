@@ -1,7 +1,0 @@
-{
-  "name": "improve-automation-error-visibility",
-  "version": "1.0.0",
-  "description": "Improve error visibility in curses UI automation scripts and add granular status updates",
-  "category": "debugging",
-  "date": "2026-02-14"
-}

@@ -1,7 +1,0 @@
-{
-  "name": "layer-norm-param-gradient-checks",
-  "version": "1.0.0",
-  "description": "Add numerical gradient checks for layer_norm_backward grad_gamma and grad_beta using central finite differences. Use when: (1) layer_norm_backward returns (grad_input, grad_gamma, grad_beta) but only grad_input is numerically validated, (2) following up after batch_norm gradient checks were added to add the same pattern for layer norm, (3) validating parameter gradients in normalization layers.",
-  "category": "testing",
-  "date": "2026-03-15"
-}

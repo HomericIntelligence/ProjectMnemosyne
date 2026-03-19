@@ -1,8 +1,0 @@
-{
-  "name": "flaky-ci-crash-diagnosis",
-  "version": "1.0.0",
-  "description": "Diagnose whether CI test crashes are caused by code changes or pre-existing flakiness. Use when: (1) CI jobs show 'execution crashed' failures on a PR but the same tests previously passed on main, (2) widespread test crashes affect files unrelated to the PR changes, (3) need to distinguish introduced regressions from infrastructure flakiness.",
-  "category": "debugging",
-  "date": "2026-03-05",
-  "tags": ["ci", "flaky-tests", "crash-diagnosis", "mojo", "regression-detection"]
-}

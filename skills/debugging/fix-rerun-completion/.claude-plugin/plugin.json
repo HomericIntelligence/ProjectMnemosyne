@@ -1,6 +1,0 @@
-{
-  "name": "fix-rerun-completion",
-  "version": "1.0.0",
-  "description": "Skill: Fix Rerun Completion Failures",
-  "skills": "./skills"
-}

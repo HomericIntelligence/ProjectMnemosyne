@@ -1,8 +1,0 @@
-{
-  "name": "generator-template-placeholder-cleanup",
-  "version": "1.0.0",
-  "description": "Review TODO comments in code generator scripts and reclassify them as TEMPLATE: placeholders or actual work items. Use when: (1) a generator script contains TODO markers in its template strings, (2) you need to distinguish intentional scaffolding from implementation gaps, (3) cleaning up generator scripts as part of a cleanup issue.",
-  "category": "documentation",
-  "date": "2026-03-04",
-  "tags": ["generators", "templates", "cleanup", "todos", "placeholders", "code-generation"]
-}

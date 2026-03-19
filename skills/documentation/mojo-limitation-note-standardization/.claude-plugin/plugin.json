@@ -1,8 +1,0 @@
-{
-  "name": "mojo-limitation-note-standardization",
-  "version": "1.0.0",
-  "description": "Standardize Mojo language/compiler limitation NOTEs to use consistent format `# NOTE (Mojo vX.Y.Z):`. Use when: (1) cleaning up documentation NOTEs that lack version info, (2) auditing Mojo codebases for inconsistent limitation comment formats, (3) implementing cleanup issues that require NOTE standardization across multiple files.",
-  "category": "documentation",
-  "date": "2026-03-05",
-  "tags": ["mojo", "documentation", "cleanup", "notes", "comments", "version-tagging"]
-}

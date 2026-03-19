@@ -1,8 +1,0 @@
-{
-  "name": "adr-directory-tree-accuracy",
-  "version": "1.0.0",
-  "description": "Update ADR directory tree listings to reflect actual filesystem contents after file deletions or additions. Use when: (1) a file is deleted/added but the ADR still shows the old listing, (2) a GitHub issue requests verifying helpers/tests directories are accurately documented, (3) an ADR directory tree shows only a subset of the files actually present.",
-  "category": "documentation",
-  "date": "2026-03-07",
-  "tags": ["adr", "directory-tree", "stale-docs", "helpers", "cleanup", "accuracy"]
-}

@@ -1,8 +1,0 @@
-{
-  "name": "consolidate-duplicate-adr-references",
-  "version": "1.0.0",
-  "description": "Consolidate duplicate inline comments or docstring Notes into a single ADR as the canonical source of truth, then replace each duplicate with a short cross-reference. Use when: (1) two or more functions contain nearly identical limitation/workaround comments, (2) an issue requests reducing documentation maintenance burden by centralizing a limitation note, (3) a follow-up issue from a PR asks to create a dedicated ADR for a cross-cutting concern.",
-  "category": "documentation",
-  "date": "2026-03-07",
-  "tags": ["adr", "documentation", "consolidation", "refactor", "mojo", "cross-reference", "limitation"]
-}

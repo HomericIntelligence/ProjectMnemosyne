@@ -1,7 +1,0 @@
-{
-  "name": "stale-plan-already-resolved",
-  "version": "1.0.0",
-  "description": "Detect when an issue's implementation plan is stale because the fix was already applied. Use when: (1) an issue has a detailed plan referencing specific line numbers but the code no longer matches, (2) implementing a CI pattern change but the current pattern is already broader than requested, (3) a follow-up issue references an earlier fix that may have been superseded.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

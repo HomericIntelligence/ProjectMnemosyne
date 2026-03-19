@@ -1,6 +1,0 @@
-{
-  "name": "resume-checkpoint-bugs",
-  "version": "1.0.0",
-  "description": "Patterns for diagnosing and fixing experiment runner resume/checkpoint bugs: uppercase INTERRUPTED state casing, max_subtests ephemeral handling, missing-subtest detection, tier state reset target",
-  "skills": "./skills"
-}

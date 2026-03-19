@@ -1,7 +1,0 @@
-{
-  "name": "mojo-overload-disambiguation-with-is-defined",
-  "version": "1.0.0",
-  "description": "Pattern for adding 1-arg auto-detecting overloads in Mojo without ambiguity: use is_defined for compile-time platform detection and remove defaults from the explicit N-arg overload. Use when: (1) adding a convenience overload that auto-detects a parameter via compile-time constants, (2) avoiding 'ambiguous call' errors when both overloads share the same leading parameters, (3) detecting Apple Silicon or other platform traits at compile time in Mojo 0.26.1.",
-  "category": "training",
-  "date": "2026-03-15"
-}

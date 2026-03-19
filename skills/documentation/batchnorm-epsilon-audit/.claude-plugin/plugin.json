@@ -1,8 +1,0 @@
-{
-  "name": "batchnorm-epsilon-audit",
-  "version": "1.0.0",
-  "description": "Audit backward-pass tester methods for undocumented epsilon/tolerance magic numbers and apply structured NOTE comment pattern. Use when: (1) following up a backward-pass epsilon audit (e.g. after #3090 pattern), (2) a tester method lacks gradient-checking constants documentation, (3) BatchNorm or Pooling backward testers need epsilon/tolerance rationale added.",
-  "category": "documentation",
-  "date": "2026-03-07",
-  "tags": ["batchnorm", "epsilon", "tolerance", "gradient-checking", "layer-testers", "mojo", "audit"]
-}

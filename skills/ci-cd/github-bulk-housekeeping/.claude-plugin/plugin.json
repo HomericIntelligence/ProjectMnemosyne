@@ -1,8 +1,0 @@
-{
-  "name": "github-bulk-housekeeping",
-  "version": "1.0.0",
-  "description": "Bulk GitHub housekeeping: classify open issues by complexity, batch-close already-resolved issues, clean stale worktrees/branches, create batched PRs for simple issues, and rebase conflicting PRs onto main. Use when you have 20+ open issues, stale worktrees, or PRs with merge conflicts.",
-  "category": "ci-cd",
-  "date": "2026-02-23",
-  "user-invocable": false
-}

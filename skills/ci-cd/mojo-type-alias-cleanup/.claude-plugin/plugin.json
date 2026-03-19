@@ -1,8 +1,0 @@
-{
-  "name": "mojo-type-alias-cleanup",
-  "version": "1.0.0",
-  "description": "Fix Mojo compilation errors caused by non-existent type aliases introduced when removing deprecated type aliases. Use when: (1) CI fails with unknown type errors after removing deprecated aliases, (2) backward type names were replaced with new names that don't exist, (3) need to map removed aliases back to their canonical underlying types.",
-  "category": "ci-cd",
-  "date": "2026-03-06",
-  "tags": ["mojo", "type-alias", "deprecated", "ci-failure", "compilation"]
-}

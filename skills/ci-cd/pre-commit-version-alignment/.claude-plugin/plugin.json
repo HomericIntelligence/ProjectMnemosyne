@@ -1,8 +1,0 @@
-{
-  "name": "pre-commit-version-alignment",
-  "version": "1.0.0",
-  "description": "Align pre-commit hook versions with pixi/conda resolved package versions to eliminate local vs CI behavior drift. Use when: (1) pre-commit hook version differs from pixi.toml version, (2) mypy or linter behaves differently in pre-commit vs pixi run, (3) upgrading a dependency in pixi.toml requires matching pre-commit rev update.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["pre-commit", "mypy", "pixi", "version-alignment", "ci-cd", "hooks"]
-}

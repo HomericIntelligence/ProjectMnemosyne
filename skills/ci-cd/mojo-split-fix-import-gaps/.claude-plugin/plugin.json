@@ -1,8 +1,0 @@
-{
-  "name": "mojo-split-fix-import-gaps",
-  "version": "1.0.0",
-  "description": "Fix missing imports when splitting Mojo test files — original files may use symbols without explicit imports that Mojo silently resolves, but split files inherit these gaps. Use when: (1) splitting a Mojo test file and encountering undefined symbol errors, (2) auditing split files for import completeness before committing.",
-  "category": "ci-cd",
-  "date": "2026-03-08",
-  "tags": ["mojo", "imports", "test-split", "adr-009", "heap-corruption", "debugging"]
-}

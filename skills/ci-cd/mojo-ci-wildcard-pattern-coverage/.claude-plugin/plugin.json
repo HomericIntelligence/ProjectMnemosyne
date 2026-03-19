@@ -1,8 +1,0 @@
-{
-  "name": "mojo-ci-wildcard-pattern-coverage",
-  "version": "1.0.0",
-  "description": "Determine whether CI workflow test patterns need updating after splitting or adding Mojo test files. Use when: (1) adding new test_*.mojo files and unsure if CI workflow needs updating, (2) splitting a test file into parts and checking if the Data/Core CI groups auto-discover the new files, (3) validate_test_coverage.py reports coverage issues after a split.",
-  "category": "ci-cd",
-  "date": "2026-03-08",
-  "tags": ["mojo", "ci", "workflow", "wildcard", "test-discovery", "coverage", "adr-009"]
-}

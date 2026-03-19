@@ -1,8 +1,0 @@
-{
-  "name": "extensor-bfloat16-fix",
-  "version": "1.0.0",
-  "description": "Fix pattern for adding bfloat16 dtype support to Mojo ExTensor float I/O methods. Use when: (1) _set_float64/_get_float64 silently write/read zeros for bfloat16 tensors, (2) a new dtype is missing from _get_dtype_size_static causing wrong byte offsets, (3) re-enabling skipped bfloat16 tests after dtype support is added.",
-  "category": "debugging",
-  "date": "2026-03-07",
-  "tags": ["mojo", "bfloat16", "extensor", "dtype", "float-io", "silent-failure"]
-}

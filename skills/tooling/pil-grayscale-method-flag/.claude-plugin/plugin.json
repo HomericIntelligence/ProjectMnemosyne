@@ -1,7 +1,0 @@
-{
-  "name": "pil-grayscale-method-flag",
-  "version": "1.0.0",
-  "description": "Add a --grayscale-method CLI flag to expose multiple RGB-to-grayscale strategies (luma, average, max) via PIL. Use when: (1) a script uses PIL convert('L') and needs configurable grayscale strategies, (2) adding new --method-style flags to image preprocessing scripts, (3) fixing broken tests that call len() on PIL Images or pass raw bytes to PIL-accepting functions.",
-  "category": "tooling",
-  "date": "2026-03-15"
-}

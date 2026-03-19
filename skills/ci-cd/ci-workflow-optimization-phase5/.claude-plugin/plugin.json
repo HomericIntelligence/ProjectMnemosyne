@@ -1,7 +1,0 @@
-{
-  "name": "ci-workflow-optimization-phase5",
-  "version": "1.0.0",
-  "description": "CI/CD speedup techniques: path filters on PR triggers, deduplicating pre-commit hooks (mypy/bandit), inlining serial jobs into compilation steps, timing data collection, and artifact retention reduction. Use when: (1) CI runs on doc-only PRs that should be skipped, (2) pre-commit duplicates type-check or SAST jobs, (3) a single-command job creates serial runner-provisioning overhead, (4) need per-test timing data to identify slow tests for nightly migration.",
-  "category": "ci-cd",
-  "date": "2026-03-14"
-}

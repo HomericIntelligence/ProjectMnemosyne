@@ -1,8 +1,0 @@
-{
-  "name": "update-stale-agent-references",
-  "version": "1.0.0",
-  "description": "Find and update stale cross-references to deleted agent files in documentation. Use when: (1) agent files are deleted or consolidated, (2) docs still reference old agent names, (3) grep reveals broken links in tracking or hierarchy docs.",
-  "category": "documentation",
-  "date": "2026-03-07",
-  "tags": ["agents", "cross-references", "cleanup", "consolidation", "documentation"]
-}

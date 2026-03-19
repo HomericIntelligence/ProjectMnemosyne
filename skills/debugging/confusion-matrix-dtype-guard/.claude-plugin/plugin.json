@@ -1,7 +1,0 @@
-{
-  "name": "confusion-matrix-dtype-guard",
-  "version": "1.0.0",
-  "description": "Add dtype validation guards to Mojo metric structs that use bitcast to read tensor data, preventing silent corruption when callers pass float tensors instead of integer labels. Use when: (1) a metric update() silently accepts float32 labels and produces garbage class indices or out-of-range errors, (2) a bitcast fallback branch accepts any non-primary dtype without validation, (3) adding input validation to Mojo structs that consume typed tensors.",
-  "category": "debugging",
-  "date": "2026-03-15"
-}

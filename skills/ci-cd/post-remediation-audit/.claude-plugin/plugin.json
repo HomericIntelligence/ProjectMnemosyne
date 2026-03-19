@@ -1,7 +1,0 @@
-{
-  "name": "post-remediation-audit",
-  "version": "1.0.0",
-  "description": "Execute a structured post-remediation audit to close remaining quality gaps in a Python repository after an initial remediation round. Use when: (1) a first-pass remediation has been applied and you need a structured checklist to verify nothing was missed, (2) preparing a repo for ecosystem integration after cleanup, (3) aligning CI configuration, classifiers, release workflows, and documentation.",
-  "category": "ci-cd",
-  "date": "2026-03-14"
-}

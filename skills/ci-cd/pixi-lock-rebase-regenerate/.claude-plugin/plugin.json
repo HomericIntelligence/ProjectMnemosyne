@@ -1,7 +1,0 @@
-{
-  "name": "pixi-lock-rebase-regenerate",
-  "version": "1.0.0",
-  "description": "Correctly resolve pixi.lock conflicts during git rebase without producing a stale lock file. Use when git rebase causes pixi.lock conflicts, or CI fails with 'lock-file not up-to-date with the workspace'.",
-  "category": "ci-cd",
-  "date": "2026-02-22"
-}

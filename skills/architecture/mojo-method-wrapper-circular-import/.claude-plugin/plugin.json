@@ -1,8 +1,0 @@
-{
-  "name": "mojo-method-wrapper-circular-import",
-  "version": "1.0.0",
-  "description": "Add ergonomic method wrappers to Mojo structs that delegate to standalone functions, avoiding circular imports via local-scope imports inside method bodies. Use when: (1) adding method-style API to a struct whose functional implementations live in a module that imports the struct, (2) needing ergonomic tensor.op() calls alongside existing standalone op(tensor) functions.",
-  "category": "architecture",
-  "date": "2026-03-07",
-  "tags": ["mojo", "circular-import", "method-wrapper", "api-design", "extensor", "delegation-pattern"]
-}

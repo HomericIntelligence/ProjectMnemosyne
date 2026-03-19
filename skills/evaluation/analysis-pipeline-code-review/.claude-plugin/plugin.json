@@ -1,6 +1,0 @@
-{
-  "name": "analysis-pipeline-code-review",
-  "version": "1.0.0",
-  "description": "Skill: Analysis Pipeline Code Review",
-  "skills": "./skills"
-}

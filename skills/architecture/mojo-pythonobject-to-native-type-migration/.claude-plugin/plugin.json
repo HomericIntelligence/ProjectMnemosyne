@@ -1,8 +1,0 @@
-{
-  "name": "mojo-pythonobject-to-native-type-migration",
-  "version": "1.0.0",
-  "description": "Migrate Mojo function signatures from PythonObject placeholder parameters to native Mojo struct types. Use when: (1) a function accepts PythonObject as a placeholder pending interop infrastructure, (2) the native Mojo struct is now available and has has_next()/next() iteration, (3) tests use Python.none() as a placeholder argument that needs updating to real data.",
-  "category": "architecture",
-  "date": "2026-03-07",
-  "tags": ["mojo", "python-interop", "migration", "native-types", "dataloader", "pythonobject"]
-}

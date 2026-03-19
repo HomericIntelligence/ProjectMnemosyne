@@ -1,8 +1,0 @@
-{
-  "name": "mojo-jit-crash-flaky-diagnosis",
-  "version": "1.0.0",
-  "description": "Diagnose and distinguish genuine Mojo JIT crash failures from infrastructure flakiness in CI. Use when: (1) CI shows 'execution crashed' errors affecting unchanged test files, (2) Core test groups fail while identical code passes on main, (3) multiple unrelated test files crash in the same CI run.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["mojo", "jit", "flaky", "ci", "crash", "diagnosis"]
-}

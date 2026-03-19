@@ -1,7 +1,0 @@
-{
-  "name": "ecosystem-audit-remediation",
-  "version": "1.0.0",
-  "description": "Systematic cross-repo ecosystem audit and remediation workflow. Use when: (1) validating that multiple repos integrate correctly with documented boundaries, (2) performing ecosystem-wide bug hunts across shared contracts (NATS subjects, API fields, status enums), (3) remediating documentation drift where docs no longer match implementation.",
-  "category": "architecture",
-  "date": "2026-03-16"
-}

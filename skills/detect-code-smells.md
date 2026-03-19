@@ -1,0 +1,74 @@
+---
+name: detect-code-smells
+description: Identify code quality issues and anti-patterns. Use when reviewing code
+  for maintainability problems.
+category: analysis
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Detect Code Smells
+
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Identify code quality issues, anti-patterns, and maintainability problems that suggest need for refactoring. |
+| Outcome | Operational |
+
+
+Identify code quality issues, anti-patterns, and maintainability problems that suggest need for refactoring.
+
+## When to Use
+
+- Code review before merging
+- Identifying refactoring priorities
+- Mentoring and code quality improvement
+- Planning technical debt reduction
+
+### Quick Reference
+
+```bash
+# Python code smell detection
+pip install pylint radon
+pylint --disable=all --enable=convention,refactor module.py
+radon cc -a module.py  # Cyclomatic complexity
+radon mi -s module.py  # Maintainability index
+```
+
+## Verified Workflow
+
+1. **Scan for patterns**: Identify common code smell patterns (long functions, duplication, magic numbers)
+2. **Check complexity**: Measure cyclomatic and cognitive complexity
+3. **Evaluate naming**: Check for unclear variable/function names
+4. **Review structure**: Identify violations of SOLID principles
+5. **Document findings**: List smells with severity and recommendations
+
+## Output Format
+
+Code quality report:
+
+- Code smell type (duplication, long method, magic number, etc.)
+- Location (file:line)
+- Severity (critical/high/medium/low)
+- Explanation of the issue
+- Suggested fix or refactoring approach
+
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See CLAUDE.md > SOLID principles for design guidance
+- See CLAUDE.md > DRY and KISS principles for quality standards
+- See `refactor-code` skill for applying fixes

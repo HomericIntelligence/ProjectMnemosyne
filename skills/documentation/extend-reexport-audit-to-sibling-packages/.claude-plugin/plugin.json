@@ -1,7 +1,0 @@
-{
-  "name": "extend-reexport-audit-to-sibling-packages",
-  "version": "1.0.0",
-  "description": "Extend a Mojo re-export limitation audit from one package to sibling packages, promoting inline # NOTE comments to module docstring Note: sections. Use when: (1) a follow-up issue asks to audit packages not covered by a prior re-export audit, (2) inline # NOTE comments in __init__.mojo files need to be promoted to docstring Note: sections, (3) a package re-exports from a sibling package and needs import guidance documented.",
-  "category": "documentation",
-  "date": "2026-03-15"
-}

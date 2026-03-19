@@ -1,7 +1,0 @@
-{
-  "name": "mojo-docstring-format-precommit",
-  "version": "1.0.0",
-  "description": "Enrich sparse Mojo test function docstrings to accurately describe what the test validates, pre-formatted to pass mojo format without producing a diff. Use when: (1) a one-liner docstring exists but needs detail after feature support is added, (2) a file was split and the receiving file got a minimal docstring, (3) updating stale placeholder language in a Mojo test fn docstring.",
-  "category": "documentation",
-  "date": "2026-03-15"
-}

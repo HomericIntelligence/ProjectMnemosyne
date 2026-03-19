@@ -1,8 +1,0 @@
-{
-  "name": "fix-precommit-pass-filenames",
-  "version": "1.0.0",
-  "description": "Fix pre-commit hooks that use pass_filenames: false when they should use pass_filenames: true, removing hardcoded directory args from entry so pre-commit passes only changed files. Use when: (1) pre-commit hooks always scan entire directories instead of only changed files, (2) hooks are slower than expected on partial changes, (3) ruff/linter hooks have hardcoded directory paths in entry instead of using file filtering.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["pre-commit", "ruff", "pass-filenames", "incremental", "performance"]
-}

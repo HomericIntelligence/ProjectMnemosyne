@@ -1,7 +1,0 @@
-{
-  "name": "stale-script-detector",
-  "version": "1.0.0",
-  "description": "Detect scripts/*.py files not referenced in CI workflows, justfile, or other scripts. Use when: (1) adding a pre-commit or CI check for orphaned automation scripts, (2) auditing a scripts/ directory for one-time scripts that were never wired up, (3) following up on manual stale-script audit rounds.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

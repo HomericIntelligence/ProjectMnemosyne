@@ -1,7 +1,0 @@
-{
-  "name": "parallel-rebase-agent-worktree-isolation",
-  "version": "1.0.0",
-  "description": "Run multiple rebase agents in parallel without working tree collisions by assigning each agent a dedicated git worktree. Use when: (1) rebasing 50+ PR branches where agents switch branches and interfere with each other, (2) Safety Net hooks block git branch -D or git reset --hard in shared working tree, (3) background agents need isolated git state to avoid checkout conflicts.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

@@ -1,8 +1,0 @@
-{
-  "name": "nan-hash-canonicalization",
-  "version": "1.0.0",
-  "description": "Canonicalize NaN bit patterns in __hash__ for IEEE 754 float tensors to ensure hash stability. Use when: (1) a tensor's __hash__ uses bitcast of float values but NaN-containing tensors produce non-deterministic hashes, (2) different NaN payloads or sign bits produce different hash values for semantically identical NaN content, (3) follow-up to fixing float hash precision with bitcast (e.g. after mojo-hash-bitcast-floats).",
-  "category": "debugging",
-  "date": "2026-03-07",
-  "tags": ["mojo", "hash", "nan", "ieee754", "float", "canonicalization", "bitcast", "stability"]
-}

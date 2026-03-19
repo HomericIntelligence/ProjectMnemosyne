@@ -1,7 +1,0 @@
-{
-  "name": "python-subprocess-terminal-corruption",
-  "version": "1.0.0",
-  "description": "Fix terminal corruption from Python subprocess management and None-safe error handling patterns",
-  "category": "debugging",
-  "date": "2026-02-13"
-}

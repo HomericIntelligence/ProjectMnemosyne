@@ -1,7 +1,0 @@
-{
-  "name": "paper-iterative-accuracy-review",
-  "version": "1.0.0",
-  "description": "Apply a second-pass accuracy review to an academic paper after initial fixes, catching: (1) internal inconsistencies introduced by prior edits, (2) missed effect-size classification errors (Romano thresholds), (3) ambiguous table column headers, (4) unexplained counter-intuitive results, (5) missing pricing/cost context for readers. Use when a first round of fixes has been applied and you want to verify no new issues were introduced.",
-  "category": "documentation",
-  "date": "2026-02-22"
-}

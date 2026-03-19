@@ -1,7 +1,0 @@
-{
-  "name": "pr-rebase-pipeline",
-  "version": "1.0.0",
-  "description": "Fix a systemic CI failure blocking all PRs, then ship 13+ fixes in parallel waves using git worktrees. Use when multiple PRs share the same CI failure, or when you want to clear a backlog of simple issues in parallel.",
-  "category": "ci-cd",
-  "date": "2026-02-23"
-}

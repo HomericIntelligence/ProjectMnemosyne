@@ -1,8 +1,0 @@
-{
-  "name": "mojo-note-format-compliance",
-  "version": "1.0.0",
-  "description": "Enforce # NOTE (Mojo vX.Y.Z): format in Mojo files via pre-commit hook and Python audit script. Use when: (1) adding a CI check for a comment format standard in Mojo source files, (2) implementing a pygrep pre-commit hook that requires negative lookahead regex, (3) auditing and bulk-fixing non-compliant NOTE comments across a codebase.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["mojo", "pre-commit", "pygrep", "note-format", "regex", "compliance", "ci"]
-}

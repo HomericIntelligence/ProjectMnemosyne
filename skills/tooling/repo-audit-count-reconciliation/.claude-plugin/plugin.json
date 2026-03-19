@@ -1,8 +1,0 @@
-{
-  "name": "repo-audit-count-reconciliation",
-  "version": "1.0.0",
-  "description": "Reconcile count mismatches across documentation files after a repository audit by counting actual on-disk files and updating all references to match. Use when: (1) agent/skill/workflow counts differ between docs, (2) audit reveals stale documentation claiming non-existent files, (3) README or CLAUDE.md counts drift from actual filesystem state.",
-  "category": "tooling",
-  "date": "2026-03-07",
-  "tags": ["audit", "documentation", "reconciliation", "count-mismatch", "agents", "skills"]
-}

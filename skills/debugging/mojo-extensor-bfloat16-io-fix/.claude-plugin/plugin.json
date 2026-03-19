@@ -1,8 +1,0 @@
-{
-  "name": "mojo-extensor-bfloat16-io-fix",
-  "version": "1.0.0",
-  "description": "Fix ExTensor _set_float64/_get_float64 silent failures for bfloat16 dtype by adding SIMD[DType.bfloat16, 1] branches and correcting _get_dtype_size_static. Use when: (1) ExTensor bfloat16 tensors read back zeros after _set_float64 writes, (2) auditing dtype round-trip support across float16/bfloat16/int8/float32/float64, (3) _get_dtype_size_static returns wrong byte count for a dtype causing offset corruption.",
-  "category": "debugging",
-  "date": "2026-03-07",
-  "tags": ["mojo", "bfloat16", "dtype", "extensor", "simd", "silent-failure", "round-trip", "float64-io"]
-}

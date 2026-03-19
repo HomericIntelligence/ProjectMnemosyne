@@ -1,8 +1,0 @@
-{
-  "name": "preexisting-ci-failure-triage",
-  "version": "1.0.0",
-  "description": "Triage CI failures to determine if they are pre-existing on main branch vs caused by PR changes. Use when: (1) CI fails on a PR that only changes non-code files, (2) determining whether to block merge on CI failures, (3) reviewing PRs with runtime crashes unrelated to changed files.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["ci", "triage", "pre-existing", "pr-review", "mojo", "test-failures"]
-}

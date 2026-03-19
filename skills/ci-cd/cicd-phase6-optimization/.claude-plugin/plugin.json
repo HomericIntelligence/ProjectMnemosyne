@@ -1,7 +1,0 @@
-{
-  "name": "cicd-phase6-optimization",
-  "version": "1.0.0",
-  "description": "CI/CD optimization: pin runners to ubuntu-24.04, run pre-commit on changed files only for PRs, copy .pixi from builder stage instead of reinstalling in Dockerfile multi-stage builds, and generate before/after speedup reports via gh CLI. Use when: (1) migrating workflows off ubuntu-latest to prevent cache invalidation, (2) speeding up pre-commit CI by scoping to changed files, (3) fixing redundant pixi install in Dockerfile runtime stages, (4) measuring CI speedup with workflow duration metrics.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

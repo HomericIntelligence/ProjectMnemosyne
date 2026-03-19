@@ -1,8 +1,0 @@
-{
-  "name": "auto-impl-preflight",
-  "version": "1.0.0",
-  "description": "Pre-flight check when given a .claude-prompt-<N>.md auto-impl file: verify the issue isn't already implemented on the current branch before doing any work. Use when: (1) given a prompt file named .claude-prompt-<N>.md, (2) working in a worktree branch like <N>-auto-impl, (3) before implementing any GitHub issue from an automated prompt.",
-  "category": "tooling",
-  "date": "2026-03-05",
-  "tags": ["workflow", "github", "preflight", "auto-impl", "worktree", "duplicate-prevention"]
-}

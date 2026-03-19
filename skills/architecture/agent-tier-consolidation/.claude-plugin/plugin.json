@@ -1,8 +1,0 @@
-{
-  "name": "agent-tier-consolidation",
-  "version": "1.0.0",
-  "description": "Pattern for merging a redundant junior/lowest agent tier into its parent level in a hierarchical multi-agent system. Use when: (1) a junior tier duplicates the parent scope with less complexity, (2) consolidating to reduce total agent count and configuration overhead, (3) updating all cross-references after deletion.",
-  "category": "architecture",
-  "date": "2026-03-07",
-  "tags": ["agents", "hierarchy", "consolidation", "refactoring", "documentation"]
-}

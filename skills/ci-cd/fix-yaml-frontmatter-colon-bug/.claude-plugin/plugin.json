@@ -1,7 +1,0 @@
-{
-  "name": "fix-yaml-frontmatter-colon-bug",
-  "version": "1.0.0",
-  "description": "Fix YAML frontmatter parsing bugs where line.partition(':') silently truncates values containing colons. Use when: (1) a script parses YAML frontmatter with manual string splitting, (2) description or value fields are silently truncated at the first colon, (3) applying the same yaml.safe_load() fix pattern across sibling scripts.",
-  "category": "ci-cd",
-  "date": "2026-03-15"
-}

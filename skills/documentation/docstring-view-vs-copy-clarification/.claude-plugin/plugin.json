@@ -1,8 +1,0 @@
-{
-  "name": "docstring-view-vs-copy-clarification",
-  "version": "1.0.0",
-  "description": "Fix docstring inconsistencies where memory semantics are mislabeled (view vs copy). Use when: (1) a docstring claims 'view' but the implementation allocates new memory, (2) a flag like _is_view contradicts the description, (3) sibling methods have inconsistent return-type documentation.",
-  "category": "documentation",
-  "date": "2026-03-08",
-  "tags": ["docstring", "view-semantics", "copy-semantics", "mojo", "consistency", "documentation"]
-}

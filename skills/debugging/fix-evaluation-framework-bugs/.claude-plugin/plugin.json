@@ -1,6 +1,0 @@
-{
-  "name": "fix-evaluation-framework-bugs",
-  "version": "1.0.0",
-  "description": "Skill: Fix Evaluation Framework Bugs",
-  "skills": "./skills"
-}

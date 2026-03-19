@@ -1,8 +1,0 @@
-{
-  "name": "mojo-glibc-env-awareness",
-  "version": "1.0.0",
-  "description": "Handle Mojo projects that require newer GLIBC than the host OS provides. Use when: (1) mojo fails with GLIBC_2.32/2.33/2.34 version not found, (2) pre-commit mojo-format hook fails due to GLIBC mismatch, (3) running Mojo toolchain on older Linux distributions like Debian 10.",
-  "category": "tooling",
-  "date": "2026-03-05",
-  "tags": ["mojo", "glibc", "linux", "docker", "pre-commit", "environment"]
-}

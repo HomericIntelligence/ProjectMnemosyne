@@ -1,8 +1,0 @@
-{
-  "name": "mojo-narrowing-cast-tests",
-  "version": "1.1.0",
-  "description": "Documents how to add narrowing conversion tests in Mojo following the if/raise pattern. Use when: (1) adding UInt narrowing tests for a new target type (UInt8/UInt16/UInt32), (2) extending test_unsigned.mojo with new cast coverage, (3) documenting modular arithmetic truncation semantics for unsigned integer casts.",
-  "category": "testing",
-  "date": "2026-03-15",
-  "tags": ["mojo", "testing", "narrowing-conversion", "cast", "uint8", "uint16", "uint32", "uint64", "truncation", "boundary-values"]
-}

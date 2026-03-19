@@ -1,7 +1,0 @@
-{
-  "name": "repr-truncation-consistency",
-  "version": "1.0.0",
-  "description": "Apply NumPy-style truncation to __repr__ for consistency with __str__. Use when: (1) a class has truncated __str__ but untruncated __repr__, (2) repr() on large objects causes performance issues, (3) fixing follow-up issues after __str__ truncation was added.",
-  "category": "debugging",
-  "date": "2026-03-15"
-}

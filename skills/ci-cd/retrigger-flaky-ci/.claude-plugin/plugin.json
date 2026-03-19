@@ -1,8 +1,0 @@
-{
-  "name": "retrigger-flaky-ci",
-  "version": "1.0.0",
-  "description": "Diagnose and re-trigger pre-existing flaky CI failures on pull requests without code changes. Use when: (1) CI fails on a PR that only has cosmetic/doc changes, (2) failure is in tests not touched by the PR, (3) Mojo runtime crashes (SIGABRT, execution crashed) appear in CI logs.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["flaky-tests", "ci", "mojo", "github-actions", "retrigger"]
-}

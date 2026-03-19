@@ -1,8 +1,0 @@
-{
-  "name": "remove-shipped-feature-placeholders",
-  "version": "1.0.0",
-  "description": "Remove stale 'feature not yet supported' comments, TODO placeholders, and disabled test stubs from source code once the underlying feature ships natively. Use when: (1) an issue says to document/update a dtype or language feature that was previously aliased or stubbed out, (2) code has comments like 'X aliases to Y until Z is supported', (3) tests are disabled with pass-placeholder and TODO referencing a missing feature, (4) a cleanup issue asks to verify current support status of a previously-missing feature.",
-  "category": "documentation",
-  "date": "2026-03-04",
-  "tags": ["stale-comments", "placeholders", "todo-cleanup", "mojo", "dtype", "migration", "cleanup"]
-}

@@ -1,8 +1,0 @@
-{
-  "name": "fix-mojo-format-line-length",
-  "version": "1.0.0",
-  "description": "Fix mojo format CI failures caused by print() strings exceeding 88-char line limit when mojo cannot run locally. Use when: (1) pre-commit mojo-format hook fails in CI reformatting print() calls, (2) mojo binary is unavailable locally due to GLIBC incompatibility, (3) need to manually apply mojo format line-wrapping rules to print statements.",
-  "category": "ci-cd",
-  "date": "2026-03-05",
-  "tags": ["mojo", "mojo-format", "pre-commit", "line-length", "print", "glibc"]
-}

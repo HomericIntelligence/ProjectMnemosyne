@@ -1,8 +1,0 @@
-{
-  "name": "adr009-explicit-ci-pattern-update",
-  "version": "1.0.0",
-  "description": "ADR-009 test file split when CI workflow uses explicit filename patterns (not globs). Use when: (1) splitting a Mojo test file whose CI group uses explicit filename lists, (2) the new split files won't be auto-discovered, (3) comprehensive-tests.yml needs updating.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["adr009", "mojo", "heap-corruption", "ci", "test-splitting", "explicit-patterns"]
-}

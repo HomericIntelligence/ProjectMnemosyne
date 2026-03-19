@@ -1,8 +1,0 @@
-{
-  "name": "git-worktree-mass-cleanup",
-  "version": "1.0.0",
-  "description": "Remove all git worktrees in bulk, distinguishing merged vs active PRs, cleaning untracked dirs, and switching the main checkout to main. Use when: (1) many worktrees have accumulated and need purging after a parallel development session, (2) resetting a repo to a clean single-checkout state, (3) removing stale worktrees whose remote branches are gone.",
-  "category": "tooling",
-  "date": "2026-03-06",
-  "tags": ["git", "worktree", "cleanup", "branches", "parallel-development"]
-}

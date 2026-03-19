@@ -1,0 +1,73 @@
+---
+name: analyze-code-structure
+description: Examine code organization and identify structural patterns. Use when
+  reviewing module design.
+category: analysis
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 1
+---
+# Analyze Code Structure
+
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Examine code organization, module hierarchy, and structural patterns to understand how components are organized. |
+| Outcome | Operational |
+
+
+Examine code organization, module hierarchy, and structural patterns to understand how components are organized.
+
+## When to Use
+
+- Initial codebase review and orientation
+- Understanding existing module organization
+- Identifying code structure for documentation
+- Planning refactoring or reorganization
+
+### Quick Reference
+
+```bash
+# Quick code structure analysis
+find . -name "*.py" -o -name "*.mojo" | head -20
+tree -L 2 --dirsfirst
+grep -r "^class\|^def\|^fn\|^struct" --include="*.py" --include="*.mojo" | head -30
+```
+
+## Verified Workflow
+
+1. **Survey the codebase**: Identify top-level modules and packages
+2. **Map module hierarchy**: Create visual tree of module organization
+3. **List main components**: Classes, structs, major functions
+4. **Trace imports**: Understand module dependencies
+5. **Document findings**: Summarize structure for team
+
+## Output Format
+
+Structure analysis:
+
+- Module/package hierarchy (tree view)
+- Key components per module
+- Import dependencies
+- Layer organization (if applicable)
+- Notable patterns (MVC, singleton, factory, etc.)
+
+## Failed Attempts
+
+| Attempt | Why Failed | Lesson |
+|---------|------------|--------|
+| N/A | This skill was migrated from uncategorized | Document failures as they occur |
+
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `analyze-code-structure` tier-2 skill for deeper analysis
+- See CLAUDE.md > Modularity for design principles
+- See `identify-architecture` skill for ML-specific structure

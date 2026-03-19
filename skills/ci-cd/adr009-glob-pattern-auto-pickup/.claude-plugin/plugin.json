@@ -1,8 +1,0 @@
-{
-  "name": "adr009-glob-pattern-auto-pickup",
-  "version": "1.0.0",
-  "description": "When splitting Mojo test files per ADR-009, check if the CI workflow uses a glob pattern before editing it. Use when: (1) splitting test_*.mojo files to comply with ADR-009 ≤10 fn test_ limit, (2) verifying whether CI workflow needs updating after a test file split, (3) avoiding unnecessary workflow edits.",
-  "category": "ci-cd",
-  "date": "2026-03-08",
-  "tags": ["adr-009", "mojo", "test-split", "ci-workflow", "glob-pattern", "heap-corruption"]
-}

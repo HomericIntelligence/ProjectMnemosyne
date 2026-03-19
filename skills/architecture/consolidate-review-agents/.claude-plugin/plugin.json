@@ -1,8 +1,0 @@
-{
-  "name": "consolidate-review-agents",
-  "version": "1.0.0",
-  "description": "Merge overlapping review specialist agents into a single general-review-specialist to reduce complexity. Use when: (1) you have many fine-grained review agents with overlapping scopes, (2) a project is in early stages and doesn't need 13+ specialists, (3) you want to reduce agent count while preserving full review coverage.",
-  "category": "architecture",
-  "date": "2026-03-05",
-  "tags": ["agents", "review", "consolidation", "architecture", "complexity-reduction"]
-}

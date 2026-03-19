@@ -1,8 +1,0 @@
-{
-  "name": "worktree-prompt-already-done",
-  "version": "1.0.0",
-  "description": "Detect and confirm when a worktree issue prompt's implementation is already complete in git history. Use when: (1) invoked with a .claude-prompt-<N>.md file in a worktree branch, (2) git log shows the task commit as HEAD, (3) a PR already exists for the branch.",
-  "category": "tooling",
-  "date": "2026-03-05",
-  "tags": ["worktree", "github", "issue-tracking", "pr-management", "git-history", "automation"]
-}

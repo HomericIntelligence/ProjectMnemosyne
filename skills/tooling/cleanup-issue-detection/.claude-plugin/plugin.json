@@ -1,8 +1,0 @@
-{
-  "name": "cleanup-issue-detection",
-  "version": "1.0.0",
-  "description": "Detect when a cleanup issue has already been implemented before starting work. Use when: (1) assigned a cleanup/removal issue, (2) implementing an issue whose branch already exists on remote, (3) verifying prior auto-implementation state.",
-  "category": "tooling",
-  "date": "2026-03-05",
-  "tags": ["cleanup", "deduplication", "git", "worktree", "issue-workflow"]
-}

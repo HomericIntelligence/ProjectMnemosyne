@@ -1,8 +1,0 @@
-{
-  "name": "workflow-smoke-tests",
-  "version": "1.0.0",
-  "description": "Write pytest smoke tests and pre-commit hooks to prevent GitHub Actions security workflow regressions. Use when: (1) security workflow gaps were fixed and need regression protection, (2) CI properties like triggers/flags need continuous verification, (3) a pygrep pre-commit hook should catch bad patterns in workflow files.",
-  "category": "ci-cd",
-  "date": "2026-03-07",
-  "tags": ["smoke-tests", "pytest", "pre-commit", "security", "regression", "github-actions", "gitleaks", "semgrep"]
-}

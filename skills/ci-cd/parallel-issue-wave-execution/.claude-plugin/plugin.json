@@ -1,7 +1,0 @@
-{
-  "name": "parallel-issue-wave-execution",
-  "description": "Pattern for implementing 30+ GitHub issues in parallel waves using isolated git worktrees. Use when: (1) bulk-closing a backlog of LOW/MEDIUM/MEDIUM issues classified by difficulty, (2) running 4-5 sub-agents simultaneously with isolation='worktree', (3) fixing cascading CI failures where a shared config change (e.g. --cov-fail-under) breaks all PRs created before the fix, (4) rebasing stale PRs onto current main after a breaking config change lands.",
-  "version": "1.0.0",
-  "category": "ci-cd",
-  "date": "2026-03-01"
-}

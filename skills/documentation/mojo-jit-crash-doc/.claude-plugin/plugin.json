@@ -1,8 +1,0 @@
-{
-  "name": "mojo-jit-crash-doc",
-  "version": "1.0.0",
-  "description": "Document Mojo JIT compiler crashes (libKGENCompilerRTShared.so 'execution crashed') in docs/dev/ with diagnosis guide and retry workaround. Use when: (1) a CI flake produces 'execution crashed' before any test output, (2) developers report intermittent mojo test failures on known-good code, (3) a new Mojo compiler bug needs a dev-facing workaround doc.",
-  "category": "documentation",
-  "date": "2026-03-07",
-  "tags": ["mojo", "jit", "crash", "workaround", "ci", "debugging", "documentation"]
-}

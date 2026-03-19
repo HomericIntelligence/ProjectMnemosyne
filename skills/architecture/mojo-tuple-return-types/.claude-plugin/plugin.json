@@ -1,7 +1,0 @@
-{
-  "name": "mojo-tuple-return-types",
-  "version": "1.0.0",
-  "description": "Documents correct Mojo v0.26.1 syntax for multi-value returns: use Tuple[T,...] in return type, (v,...) in return statement, and [N] for element access. Use when: (1) writing a Mojo fn that returns multiple values, (2) encountering 'no matching function in initialization' errors on tuple return types, (3) refactoring duplicated logic into a shared helper that returns multiple computed values.",
-  "category": "architecture",
-  "date": "2026-03-15"
-}
