@@ -1,10 +1,9 @@
 ---
 name: unify-judge-validity-logic
-description: 'Skill: unify-judge-validity-logic. Use when working with unify judge
-  validity logic.'
-category: evaluation
-date: 2026-01-01
-version: 1.0.0
+description: "Unify judge validity logic"
+category: debugging
+date: 2026-03-19
+version: "1.0.0"
 user-invocable: false
 ---
 # Unify Judge Validity Logic
@@ -322,9 +321,9 @@ value = data.get("required_field", default_value)
 
 ## Related Issues
 
-- **#475** - Remove fallback compatibility paths ✅ COMPLETED
-  - All `data.get("fallback")` checks have been removed
-  - Simplified to just `data.get("is_valid", True) is not False`
+- **#475** - Remove fallback compatibility paths (future cleanup)
+  - Once old data is migrated, remove all `data.get("fallback")` checks
+  - Simplify to just `data.get("is_valid", True) is not False`
 
 ## References
 
