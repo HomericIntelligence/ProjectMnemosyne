@@ -197,12 +197,9 @@ gh pr merge --auto --rebase <pr-number>
 
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed |
-|---------|--------------|---------------|
-| Patch `restore_terminal` at import site | `patch("package.curses_ui.restore_terminal")` had no effect | Module imports function inline inside method body, not at module level |
-| Thread-based idempotency test | Second `start()` created new thread instead of no-op | Mocked `curses.wrapper` completes instantly — thread finishes before second `start()` call |
-| `check_if_paused()` after `signal_rate_limit()` | Test blocked indefinitely | `check_if_paused()` calls `_resume_event.wait()` which blocks when resume not pre-set |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test Count by Module

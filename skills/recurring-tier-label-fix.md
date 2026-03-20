@@ -89,6 +89,10 @@ gh pr create --title "fix(docs): Fix tier label mismatches in metrics-definition
 gh pr merge --auto --rebase
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts / Root Cause of Recurrence
 
 **Why this issue keeps recurring:**

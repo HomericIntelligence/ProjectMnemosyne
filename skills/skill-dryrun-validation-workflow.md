@@ -230,6 +230,10 @@ print("✅ PERFECT MATCH")
 EOF
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
 |---------|-------|------------|

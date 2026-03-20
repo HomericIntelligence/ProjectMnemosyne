@@ -119,8 +119,9 @@ In this project the affected test was:
 
 ## Failed Attempts
 
-None in this session — the approach was clear from the existing pattern. The only surprise was the pre-existing test asserting an exact warning count.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Changed

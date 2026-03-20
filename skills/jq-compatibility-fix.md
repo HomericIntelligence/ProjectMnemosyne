@@ -77,11 +77,9 @@ echo "$result" | jq .
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Keeping array concatenation but simplifying the conditional | Still uses `+` operator on arrays which is the root cause on old jq | The `+` for array concat in complex expressions is the incompatible syntax, not the conditional itself |
-| Adding jq version check to require 1.6+ | Would break installs on systems with older jq where users can't easily upgrade | Better to write compatible code than gate on tool versions |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Before (broken on old jq)

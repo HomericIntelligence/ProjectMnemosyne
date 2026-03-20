@@ -2,7 +2,7 @@
 name: phase-plan-generate
 description: Generate comprehensive plan documentation following Template 1 format.
   Use when creating plan.md files for new components or subsections.
-category: phase
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 mcp_fallback: none
@@ -130,11 +130,9 @@ Additional context, assumptions, or considerations.
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

@@ -76,15 +76,15 @@ pytest tests/             # Python tests
 # Fix code and retest
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Used `gh pr checks` without `--watch` | Got stale status, checks were still running | Use `--watch` for real-time status updates |
-| Checked status immediately after push | CI hadn't started yet, showed no checks | Wait 10-30 seconds or poll for workflow start |
-| Looked only at summary status | Missed which specific check failed | Always drill down with `gh run view <id> --log-failed` |
-| Reran all checks when one failed | Wasted CI time | Use `gh run rerun <id> --failed` to rerun only failed jobs |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |

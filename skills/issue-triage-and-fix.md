@@ -85,14 +85,9 @@ For "audit and fix" issues:
 
 ## Failed Attempts
 
-| Attempt | What Happened | Fix |
-|---------|---------------|-----|
-| `pre-commit run --all-files` in agent | Other hooks auto-modified `pyproject.toml` and `pixi.lock`, contaminating the PR with unrelated changes | Use targeted hooks: `pre-commit run ruff --all-files` only |
-| Two issues modifying same file in parallel | Would cause merge conflicts | Pre-analyze file overlap; merge into single PR or make sequential |
-| Background agents | Task IDs couldn't be retrieved with `TaskOutput` after agent exit | Use foreground agents (default); if background needed, capture ID immediately |
-| Worktree branch cleanup | PR branch was deleted when worktree was cleaned, closing the PR | Re-create branch from main and push again; or push before worktree cleanup |
-| "Investigate first" issues in early wave | Risk of making wrong fix (needed YAML audit to find root cause) | Put investigate-first issues in Wave 4 with explicit investigation steps |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Configuration

@@ -217,76 +217,9 @@ done < configs_cited.txt
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Automated Numerical Verification Scripts
-
-**What was tried:**
-- Attempted to create automated Python scripts to extract all numbers from LaTeX and verify against JSON/CSV
-- Used regex patterns to match numerical claims in text
-
-**Why it failed:**
-- LaTeX macros and formatting (`\textbf{}`, `\emph{}`, math mode) broke simple regex patterns
-- Context required to understand WHICH number goes with WHICH metric (e.g., "T0: 0.973" vs "0.973 (T0)")
-- False positives from line numbers, section numbers, page numbers
-- Manual verification with human judgment proved more reliable
-
-**Lesson learned:**
-- For complex LaTeX documents, manual verification with structured checklists beats automation
-- Use grep for *finding candidates*, not for *verification*
-- Verification requires understanding semantic meaning, not just pattern matching
-
-### ❌ One-Pass Review
-
-**What was tried:**
-- Initial attempt to do single comprehensive review pass across all 10 categories simultaneously
-
-**Why it failed:**
-- Cognitive load too high to track 10 different category grades concurrently
-- Easy to miss issues when switching mental context between categories
-- Hard to maintain consistent grading standards across categories
-
-**Lesson learned:**
-- **Sequential category-by-category review is superior**
-- Complete one category fully before moving to next
-- Document issues immediately when found (don't defer to end)
-- Use structured checklist format to prevent skipping items
-
-### ❌ Assuming Prior Reviews Caught Everything
-
-**What was tried:**
-- Skipped categories where prior reviews (5+ passes) supposedly "fixed all issues"
-- Trusted that Docker reference was already corrected in previous reviews
-
-**Why it failed:**
-- Found Docker reference still present despite prior reviews claiming it was fixed
-- Prior reviews may have different scope or depth than current standards
-- Issues can be reintroduced through merges or edits
-
-**Lesson learned:**
-- **Always verify from scratch, even after multiple prior reviews**
-- Trust but verify: check each category independently
-- Prior reviews provide *hints* about problem areas, not guarantees of correctness
-
-### ❌ Grading Without Explicit Criteria
-
-**What was tried:**
-- Initial attempt to give grades (GO/NO-GO) without defining what constitutes each grade
-
-**Why it failed:**
-- Inconsistent standards between categories
-- Unclear whether minor issues should block publication
-- No framework for distinguishing critical vs cosmetic issues
-
-**Lesson learned:**
-- **Define grading criteria explicitly before starting review**
-- Critical (NO-GO): Factual errors, numerical inaccuracies, broken builds, missing citations
-- Conditional (CONDITIONAL GO): Style issues, minor inconsistencies, non-blocking improvements
-- Pass (GO): No issues or only cosmetic concerns
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Session Parameters

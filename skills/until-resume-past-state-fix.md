@@ -1,7 +1,7 @@
 ---
 name: until-resume-past-state-fix
 description: "Skill: Fix `--until` Resume Bug — Runs Past Target State Not Skipped"
-category: uncategorized
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -145,45 +145,9 @@ def test_until_skips_run_already_past_target(self, tmp_path: Path) -> None:
 
 ## Failed Attempts
 
-None — the plan was clear and implementation went directly to the correct solution.
-
-However, two pre-commit issues were encountered:
-
-### Pre-commit: E501 Line Too Long in f-string
-
-```python
-# FAILED (line > 100 chars):
-logger.debug(
-    f"Skipping run ... "
-    f"— already at or past --until state: {self.config.until_run_state.value} "
-    f"(current: {current_run_state.value})"
-)
-
-# FIXED (split f-string):
-logger.debug(
-    f"Skipping run ... "
-    f"— already at or past --until state: "
-    f"{self.config.until_run_state.value} "
-    f"(current: {current_run_state.value})"
-)
-```
-
-### Pre-commit: Missing Return Type on Inner Helper
-
-```python
-# FAILED (mypy error: Function is missing a return type annotation):
-def tracking_action(state: RunState):
-    def _action() -> None:
-        actions_called.append(state)
-    return _action
-
-# FIXED:
-def tracking_action(state: RunState) -> Callable[[], None]:
-    def _action() -> None:
-        actions_called.append(state)
-    return _action
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified

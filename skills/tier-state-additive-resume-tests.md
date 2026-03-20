@@ -1,7 +1,7 @@
 ---
 name: tier-state-additive-resume-tests
 description: "Skill: TierStateMachine-Level Additive Resume Tests"
-category: uncategorized
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -148,42 +148,9 @@ validate_checkpoint_states(
 
 ## Failed Attempts
 
-### 1. `TierState` missing from imports — NameError at runtime
-
-**Problem**: `test_additive_resume.py` imported `RunState`, `SubtestState`, `TierID` from
-`scylla.e2e.models` but not `TierState`. Tests using `TierState.COMPLETE.value` raised
-`NameError: name 'TierState' is not defined`.
-
-**Fix**: Add `TierState` to the models import:
-```python
-from scylla.e2e.models import (
-    ExperimentConfig,
-    RunState,
-    SubtestState,
-    TierID,
-    TierState,   # required for TierStateMachine-level tests
-)
-```
-
-### 2. Pre-commit ruff-format auto-reformatting
-
-**Problem**: Ruff format changed string quoting and trailing comma style, causing the first
-pre-commit run to "fail" (hooks modified files). The second run passes cleanly.
-
-**Pattern**: Always run pre-commit twice, or stage the auto-formatted files and re-run:
-```bash
-pre-commit run --files <file>   # may auto-fix
-pre-commit run --files <file>   # should pass now
-```
-
-### 3. Asserting tier_states after SubtestStateMachine-only runs — wrong expectation
-
-**Problem**: Expecting `tier_states["T1"]` to have a value after only running subtests via
-`SubtestStateMachine` (without TierStateMachine). The field stays empty.
-
-**Rule**: Only `TierStateMachine.advance()` writes to `tier_states`. If you want to verify
-partial tier state, use `get_tier_state()` which returns `"pending"` for absent tiers.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test class added

@@ -83,12 +83,9 @@ Keep the planned fix and any newly-discovered fixes in separate commits for clea
 
 ## Failed Attempts
 
-| Attempt | Why It Failed | Fix |
-|---------|---------------|-----|
-| Plan listed only 4 README occurrences | Missed `(27 total)` tree comment on line 190 | Use `replace_all: true` on Edit tool to catch all occurrences automatically |
-| Plan only targeted README.md | `docs/analysis-prompt.md` and `references/notes.md` also had stale counts | Always grep all `*.md` files project-wide after fixing the primary file |
-| Initial fix missed "~114 sub-tests" | Only searched for figure counts, not other stale numbers | Run a broad audit agent after the targeted fix to catch cascading staleness |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files fixed in this session

@@ -133,15 +133,15 @@ def load_file(path):
     return open(path).read()
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Ran security scan only before release | Found critical issues too late | Integrate scanning into CI/CD pipeline |
-| Ignored low-severity warnings | Attackers chain low-severity issues | Address all severity levels, prioritize by risk |
-| Added secrets to .gitignore after commit | Secrets already in git history | Use git-filter-repo to remove from history |
-| Used only one scanning tool | Missed issues caught by other tools | Use multiple complementary tools |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |

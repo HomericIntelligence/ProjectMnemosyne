@@ -1,15 +1,10 @@
 ---
-name: github-actions-security-patterns
-description: "---"
-category: ci-cd
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
+
 ---
----
+
 name: github-actions-security-patterns
 description: "Secure GitHub Actions workflows against command injection via user-controlled inputs. Use when creating or reviewing workflow files."
-category: ci-cd
+category: ci-cd-cd-cd
 ---
 
 # GitHub Actions Security Patterns
@@ -46,10 +41,19 @@ category: ci-cd
 - run: pixi run scrape ${{ github.event.inputs.url }}
 ```
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-- **Direct interpolation in `run:`**: Used `${{ github.event.inputs.url }}` directly in `run:` command. Caught by security hook — this enables command injection if the input contains shell metacharacters.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Risky Inputs Reference
 
 All of these should use the `env:` pattern, never direct interpolation in `run:`:

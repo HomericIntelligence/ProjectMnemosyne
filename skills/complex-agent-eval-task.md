@@ -151,13 +151,9 @@ The judge should receive:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| `max_turns` as test.yaml field only | Not threaded to Claude CLI | Add to ExperimentConfig, pass via adapter extra_args |
-| 20 turn limit for complex task | Too restrictive for 15-file refactoring | Use 50+ turns for complex tasks |
-| Full reference patch in judge prompt | 8211 lines too long for context | Truncate to 200 lines (100 first + 50 last) |
-| Workspace state only (no patchfile) | Missing deleted files visibility | Add both patchfile AND deleted files list |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Recommended Parameters by Task Complexity

@@ -56,15 +56,15 @@ git worktree list
 # └── ProjectName-99-experiment/      # Experimental worktree
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Created worktree with branch already checked out | Git error: "fatal: 'branch' is already checked out" | Each branch can only be checked out in ONE worktree |
-| Used existing directory name | Git error: directory already exists | Choose unique path or remove existing directory |
-| Forgot to create remote branch first | Local-only branch, couldn't push | Create worktree from tracking branch or push after |
-| Created worktree inside another worktree | Nested worktrees caused confusion | Always create worktrees as siblings in parent directory |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Error | Solution |
@@ -167,13 +167,9 @@ tmux list-sessions
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Used `git checkout` to switch branches | Git error: branch checked out in another worktree | Use `cd` to switch between worktrees, not git checkout |
-| Forgot which worktree I was in | Made changes on wrong branch | Always check `git branch` or `pwd` after switching |
-| Tried to check out same branch in two worktrees | Git prevents this by design | Each branch can only be checked out in ONE worktree |
-| Used relative paths that broke after switching | cd commands failed | Use absolute paths or consistent relative paths |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Best Practices
 
 - One worktree per issue (don't share branches)
@@ -267,13 +263,9 @@ git rebase --abort
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Rebased while other worktree had same branch | Caused branch divergence, confusing state | Coordinate rebase across worktrees - only one should have the branch |
-| Forgot `--force-with-lease` after rebase | Push rejected: "non-fast-forward" | Rebase rewrites history, requires force push |
-| Rebased with uncommitted changes | Git refused to start rebase | Commit or stash changes before rebasing |
-| Used `git pull` instead of `fetch + rebase` | Created merge commits instead of linear history | Use `git fetch` + `git rebase` for clean history |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Rebase vs Merge
 
 | Approach | Use When | Command |
@@ -365,13 +357,9 @@ git push origin --delete 42-feature
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Removed worktree with uncommitted changes | Lost work (uncommitted changes deleted) | Always commit or stash before cleanup |
-| Removed worktree while still in it | Git error: cannot remove current worktree | Switch to different directory first |
-| Deleted directory without git worktree remove | Left orphan worktree entry in .git | Always use `git worktree remove`, then prune |
-| Forgot to delete branch after worktree removal | Branch clutter in local repo | Delete local and remote branches after |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Safety Checks
 
 Before removing a worktree:

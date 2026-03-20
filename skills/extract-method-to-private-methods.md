@@ -1,7 +1,7 @@
 ---
 name: extract-method-to-private-methods
 description: "Skill: Extract Closures into Private Methods"
-category: uncategorized
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -200,14 +200,6 @@ Confirm no regressions in existing `test_runner.py` tests (especially `TestResum
 
 ## Failed Attempts
 
-### Attempt: assert mock outside `with patch.object` block
-
-**What happened**: Final builder wiring test called `runner._execute_tier_groups.assert_called_once_with(...)` after the `with` block exited. `_execute_tier_groups` is a real method on the class — once the patch context exits, the attribute reverts to the original function, which has no `.assert_*` attributes.
-
-**Error**: `AttributeError: 'function' object has no attribute 'assert_called_once_with'`
-
-**Fix**: Moved the assertion inside the `with patch.object(...)` block.
-
-### Attempt: bind `mock_exec` after context exit
-
-Same root cause as above. The fix is simple: capture the mock with `as mock_exec` and assert inside the `with` block.
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |

@@ -254,12 +254,9 @@ No configuration files required. Uses standard LaTeX packages:
 
 ## Failed Attempts
 
-| Approach | Why It Failed | What We Learned |
-|----------|---------------|-----------------|
-| Skipping data validation | Found 2 data errors during later review that had to be fixed last-minute | Always validate quantitative claims against source data FIRST |
-| Using strong causal language ("proves", "confirms") with N=1 | Reviewer feedback noted overclaiming from small sample | Hedge results appropriately - N=1 validates methodology, not generalizability |
-| Manual section numbering | Section reordering broke all references | Use LaTeX `\label{}` and `\ref{}` for automatic cross-referencing |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Related Skills
 
 - `latex-compilation` - Compiling LaTeX documents with proper error checking

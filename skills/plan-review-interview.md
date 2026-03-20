@@ -106,15 +106,15 @@ Batch 3: Judge System (location, disagreement handling)
 Batch 4: Scope (audience, first test scope)
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Asked all questions at once | Overwhelming for user; decisions not linked to issues | Batch 3-4 related questions per topic |
-| Used `gh issue edit --body` | Lost original issue context; hard to track changes | Use `gh issue comment` to preserve history |
-| Generic review prompt without issue numbers | Hard to trace which decisions affect which tasks | Reference specific issue numbers in each category |
-| Updated plan without decisions table | Decisions buried in prose, hard to find | Add decisions summary table at document top |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Session Statistics
 
 | Metric | Value |

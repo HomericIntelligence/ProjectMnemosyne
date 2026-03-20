@@ -2,7 +2,7 @@
 name: mojo-type-safety
 description: Validate type safety in Mojo code including parametric types and trait
   constraints. Use during code review or when type errors occur.
-category: mojo
+category: optimization
 date: '2026-03-19'
 version: 1.0.0
 mcp_fallback: none
@@ -70,11 +70,9 @@ fn validate[size: Int]():
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

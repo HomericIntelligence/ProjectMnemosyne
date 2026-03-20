@@ -154,14 +154,9 @@ gh pr view <pr-number> --json statusCheckRollup
 
 ## Failed Attempts
 
-| Approach | Why It Failed | Lesson Learned |
-|----------|---------------|----------------|
-| Single monolithic test job | 30+ minute runtime for all tests | Use matrix strategy to parallelize |
-| No path filtering | Wasted CI on non-code changes (docs) | Filter on `**/*.py`, config files only |
-| Missing pixi cache | Slow environment reinstall every run | Enable `cache: true` in setup-pixi |
-| `fail-fast: true` | Only saw first failure, missed others | Use `fail-fast: false` to see all issues |
-| No timeout | Jobs can hang indefinitely | Set `timeout-minutes: 30` |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Complete Test Workflow (Copy-Paste Ready)

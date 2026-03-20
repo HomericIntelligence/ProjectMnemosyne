@@ -198,6 +198,10 @@ jq '.summary | {mean: .mean_score, median: .median_score, std_dev: .std_dev, dis
 # Target: std_dev < 0.03 (3% variance)
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
 |---------|-------|------------|

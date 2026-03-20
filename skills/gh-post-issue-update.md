@@ -96,15 +96,15 @@ EOF
 )"
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Used double quotes in heredoc | Variables expanded unexpectedly, broke formatting | Use `<<'EOF'` (quoted) to prevent variable expansion |
-| Posted very long single comment | Hard to read, hit character limits | Split into multiple focused comments |
-| Didn't use markdown formatting | Wall of text, hard to parse | Use headers, lists, and code blocks |
-| Posted update without PR link | Reviewers couldn't find the code | Always include PR number when work is complete |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |

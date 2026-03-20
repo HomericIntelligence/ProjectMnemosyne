@@ -5,7 +5,7 @@ description: 'TRIGGER CONDITIONS: Enforcing a cross-field semantic constraint (e
   (1) a domain invariant exists between two boolean capability flags, (2) the codebase
   uses both Pydantic models AND JSON Schema for config validation, (3) you need to
   catch the violation at both schema validation and model instantiation time.'
-category: validation
+category: tooling
 date: 2026-03-07
 version: 1.0.0
 user-invocable: false
@@ -120,10 +120,9 @@ def test_load_tier_hierarchy_without_delegation_raises_configuration_error(self,
 
 ## Failed Attempts
 
-| Attempt | What happened | Why it failed |
-|---------|--------------|---------------|
-| `pytest.raises(ConfigurationError, match="uses_delegation")` in loader test | Test failed: `AssertionError: Regex pattern did not match. Actual message: 'True was expected'` | jsonschema `if/then` error message is `"True was expected"` (from `const: true` check), not the field name. The JSON Schema layer runs before Pydantic, so the Pydantic message never appears. |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Layer | Mechanism | Error type |

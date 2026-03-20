@@ -169,6 +169,10 @@ chmod 777 "${PROJECT_DIR}/results"
 chmod 666 /output/result.json /output/stdout.log /output/stderr.log
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts (Lessons Learned)
 | Attempt | Issue | Resolution |
 |---------|-------|------------|

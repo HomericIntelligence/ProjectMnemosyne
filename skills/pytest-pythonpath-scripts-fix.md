@@ -1,12 +1,7 @@
 ---
-name: pytest-pythonpath-scripts-fix
-description: "---"
-category: testing
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
+
 ---
----
+
 name: pytest-pythonpath-scripts-fix
 description: "TRIGGER CONDITIONS: When analysis/scripts tests fail to collect due to ImportError on a scripts/ module, or when test count is suspiciously low (~1691 vs expected ~3199+), or when a pre-push hook runs fewer tests than a direct pytest invocation."
 user-invocable: false
@@ -84,11 +79,9 @@ pre-commit run --all-files
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Add `PYTHONPATH=scripts` to the pre-push hook shell command | Creates divergence: CI and direct `pytest` runs without the hook still fail; hook comment explicitly says coverage flags delegate to `pyproject.toml` | Use `pyproject.toml` as single source of truth |
-| Make `export_data` an installable package (add to `pixi.toml`) | Requires restructuring `scripts/` with `pyproject.toml` entry points; far broader change than needed; creates unsolvable conflicts per `reenable-precommit-hook` skill | YAGNI — `pythonpath` config is sufficient |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```toml

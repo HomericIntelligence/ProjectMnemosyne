@@ -71,15 +71,15 @@ git add .github/workflows/test.yml
 git commit -m "ci: update workflow"
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Used invalid action version `@v99` | Workflow failed with "action not found" | Always verify action versions exist before using |
-| Missing comma in `on: [push pull_request]` | YAML syntax error, workflow not triggered | Add commas between array elements |
-| Used `${{ job.status }}` in wrong context | Context expression failed | Verify context variables are valid for that location |
-| Forgot `runs-on` in job definition | Workflow failed immediately | Every job must specify `runs-on` |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Common Issues
 
 | Issue | Example | Fix |

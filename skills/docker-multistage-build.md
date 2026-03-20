@@ -171,75 +171,9 @@ docker run --rm -v $(pwd):/workspace app:multi-stage pytest
 
 ## Failed Attempts
 
-### ❌ Attempt 1: Using `pip install --user` with wrong PATH
-
-**What we tried:**
-
-```dockerfile
-# Builder stage
-RUN pip install --user --no-cache-dir /opt/app/
-
-# Runtime stage
-COPY --from=builder /root/.local /root/.local
-# Missing: PATH update
-```
-
-**Why it failed:**
-
-- Binaries installed to `/root/.local/bin` were not in PATH
-- Commands like `scylla` or `pytest` failed with "command not found"
-
-**Solution:**
-
-```dockerfile
-# Runtime stage
-ENV PATH=/root/.local/bin:$PATH
-```
-
-### ❌ Attempt 2: Copying only site-packages without bin/
-
-**What we tried:**
-
-```dockerfile
-COPY --from=builder /root/.local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
-# Missing: /root/.local/bin
-```
-
-**Why it failed:**
-
-- Python packages were importable, but CLI entry points were missing
-- Commands registered in setup.py `console_scripts` were unavailable
-
-**Solution:**
-
-```dockerfile
-COPY --from=builder /root/.local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
-COPY --from=builder /root/.local/bin /usr/local/bin
-```
-
-### ❌ Attempt 3: Wrong build context in docker-compose.yml
-
-**What we tried:**
-
-```yaml
-build:
-  context: .              # docker/ directory
-  dockerfile: Dockerfile
-```
-
-**Why it failed:**
-
-- Dockerfile had `COPY pyproject.toml /opt/app/` which didn't exist in docker/ directory
-- Build failed with "no such file or directory"
-
-**Solution:**
-
-```yaml
-build:
-  context: ..             # Repository root
-  dockerfile: docker/Dockerfile
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Image Size Comparison

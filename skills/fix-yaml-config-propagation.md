@@ -187,33 +187,9 @@ grep -- "--system-prompt" results/*/T0/01/*/agent/replay.sh     # Should NOT mat
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Initial Assumption: Tier-Level Config
-
-**What we tried**: Initially assumed `tier_config.system_prompt_mode` should be used
-
-**Why it failed**:
-- `TierConfig.system_prompt_mode` was hardcoded to `"custom"` for all tiers
-- Comment in code said: *"system_prompt_mode is determined per sub-test, not per tier"*
-- This was a legacy field that wasn't actually used
-
-**Learning**: When you see hardcoded values that override config, check if the field is even needed
-
-### ❌ Only Fixing the Symptom
-
-**What we tried**: Could have just changed `tier_config.system_prompt_mode` to use subtest value
-
-**Why it's wrong**:
-- Would leave duplicate fields in both `TierConfig` and `SubTestConfig`
-- Violates DRY principle
-- Creates confusion about source of truth
-
-**Learning**: When fixing config propagation bugs, check for DRY violations and eliminate duplicates
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified

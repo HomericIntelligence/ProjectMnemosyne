@@ -2,7 +2,7 @@
 name: mojo-lint-syntax
 description: Validate Mojo syntax against current v0.26.1+ standards. Use to catch
   syntax errors before compilation.
-category: mojo
+category: optimization
 date: '2026-03-19'
 version: 1.0.0
 mcp_fallback: none
@@ -123,11 +123,9 @@ Before committing Mojo code:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

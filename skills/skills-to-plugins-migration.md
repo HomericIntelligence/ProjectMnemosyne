@@ -113,10 +113,9 @@ user-invocable: true
 
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed |
-|---------|--------------|---------------|
-| ... | ... | ... |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 ...
 ```
@@ -184,14 +183,9 @@ done
 
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed |
-|---------|--------------|---------------|
-| Using category `vcs` in plugin.json | `validate_plugins.py` rejected the plugin | `vcs` is not in the approved category list — use `tooling` for VCS-related skills |
-| Leaving prose-only Failed Attempts section | Validator issued a warning | `## Failed Attempts` requires a pipe table (`|`) — convert subsections to table rows |
-| Not restoring root `.claude-plugin/plugin.json` | Root plugin would have wrong content (the PR's plugin) | Some branches clobber this file; always check `git diff origin/main .claude-plugin/plugin.json` |
-| Using `git checkout` to switch branches | Safety net blocks multi-argument `git checkout` | Use `git switch <branch>` instead |
-| Bare `git push --force` | Risky — overwrites remote changes without checking | Always use `--force-with-lease` |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Category mapping for common invalid values

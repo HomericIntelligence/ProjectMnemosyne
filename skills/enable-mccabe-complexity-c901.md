@@ -146,12 +146,9 @@ max-complexity = 12
 
 ## Failed Attempts
 
-| Attempt | Problem | Fix |
-|---------|---------|-----|
-| `ruff check --select C901 --max-complexity 10 scylla/` | `--max-complexity` is not a valid ruff CLI flag — `error: unexpected argument '--max-complexity' found` | Configure max-complexity only in `pyproject.toml` under `[tool.ruff.lint.mccabe]` |
-| Setting max-complexity=10 globally | Too many violations in orchestration code — produces noise that makes the rule useless | Use max-complexity=12 for mature codebases |
-| Refactoring all complex functions | Most complexity is inherent (retry logic, pipeline stages, CLI dispatch) — extracting helpers creates indirection without clarity gain | Suppress with annotated noqa directives instead |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Verified On
 
 | Project | Context | Details |

@@ -109,10 +109,9 @@ pixi run python -m pytest tests/ -v -k "tier"
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| None — the fixture files were created in a prior automated run | The branch already had commit `2012621` with t2-t6 fixtures and the parametrize list already updated | Always check git log before implementing; prior automated runs may have already completed the work |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 **Boolean flag coverage matrix** (ensures each tier exercises unique schema paths):

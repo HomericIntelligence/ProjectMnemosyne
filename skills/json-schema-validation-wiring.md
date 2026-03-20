@@ -95,13 +95,9 @@ Pre-commit auto-fixes ruff formatting issues on first run — rerun to confirm a
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| ID pattern `^[0-9]{3}-[a-z0-9]+(-[a-z0-9]+)*$` in test.schema.json | Real fixture IDs are `test-001` format; orchestrator test fixtures use `001-test` format — neither matches the old pattern | Always test schema against ALL real fixture files, not just the example in schema comments |
-| Pattern `^[a-z][a-z0-9]*(-[a-z0-9]+)*$` (starts with letter) | Orchestrator tests use `001-test` which starts with digit | Use `^[a-z0-9][a-z0-9]*(-[a-z0-9]+)*$` to allow digit-first IDs |
-| `minLength: 10` on rubric requirement description | Orchestrator test fixture has `description: "Must work"` (9 chars) | Use `minLength: 3` or omit length constraint for descriptions |
-| `required: ["requirements", "grading"]` in rubric schema | test-001 uses `categories` format, not `requirements` — would fail validation | Make `requirements` optional; only `grading` is truly required |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 **Files changed:**

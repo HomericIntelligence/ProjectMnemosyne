@@ -129,12 +129,9 @@ pixi run pytest tests/unit/e2e/test_rate_limit.py -v
 
 ## Failed Attempts
 
-| Approach | Why It Failed | Lesson Learned |
-|----------|---------------|----------------|
-| Adding "hit your limit" keyword detection only | Detection triggered but retry time was `None` - still failed to wait properly | Keywords alone aren't enough; must parse time from correct source |
-| Checking stderr for "resets 4pm" pattern | Pattern not in stderr for JSON responses - it's in the JSON result field | Don't assume error details are in stderr; check actual JSON structure |
-| Adding time parsing without testing against real data | Didn't catch the stdout vs stderr issue until examining actual failing reports | Always test with real-world examples from production failures |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Detection Patterns (Copy-Paste Ready)

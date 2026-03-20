@@ -118,20 +118,9 @@ def write_yaml(directory: Path, filename: str, content: str) -> Path:
 
 ## Failed Attempts
 
-### Using `python` instead of `pixi run python` in hook entry
-
-When `entry: python scripts/check_model_config_consistency.py` is used, the script cannot
-import `scylla.config.validation` because the pixi venv packages are not available in the
-pre-commit environment's `python`. Always use `pixi run python` for scripts that import
-from the project's own packages.
-
-### Forgetting `sys.path` injection
-
-Without `sys.path.insert(0, str(_REPO_ROOT))`, running the script from an arbitrary CWD
-(as pre-commit does) fails with `ModuleNotFoundError: No module named 'scylla'`. The repo
-root injection is necessary because pre-commit's `language: system` does not add the CWD
-to `sys.path`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Metric               | Value                                       |

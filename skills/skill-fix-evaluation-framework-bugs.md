@@ -233,22 +233,15 @@ with tempfile.TemporaryDirectory() as tmpdir:
 EOF
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-**None** - All solutions worked on first try.
-
-### Why Solutions Worked Immediately
-
-1. **Clear error messages** - Stack traces pointed to exact locations
-2. **Pattern recognition** - Similar bugs seen in other contexts
-3. **Test-driven validation** - Unit tests caught issues before CI
-4. **Double protection strategy** - Filter + format ensures no single point of failure
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Insights
 
 ### Critical Understandings

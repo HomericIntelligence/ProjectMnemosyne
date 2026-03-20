@@ -119,11 +119,9 @@ class TestSchemaValidation:
 
 ## Failed Attempts
 
-| Attempt | What Happened | Fix |
-|---------|---------------|-----|
-| Placed `_SCHEMAS_DIR` and `_validate_schema` between stdlib and local imports | ruff-format preserved the constant between import blocks, so `ConfigurationError` from `.models` was not yet defined when `_validate_schema` was defined — `NameError` at runtime | Move constant and helper **after all imports** (after `logger = logging.getLogger(__name__)`) |
-| Used fixture YAML field `runs_per_tier` in `evaluation` block | `jsonschema` rejected it as `additionalProperties` violation — schema uses `runs_per_eval` | Rename to match the `Field(alias=...)` value used by the schema |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 - `jsonschema` version: `>=4.0,<5` (already in `pixi.toml`)

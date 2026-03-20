@@ -225,53 +225,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-### Attempt 1 — Wrong relative path from test file to script
-
-**What happened**: The initial path in `SCRIPT="..."` used `../../../../../../tests/claude-code/...` but
-the test file is only 5 levels deep in `tests/shell/skills/github/gh-implement-issue/`, not 8.
-The result was `No such file or directory` for every test, all reporting status 127 (not found).
-
-**Diagnosis**: Counted directory levels manually instead of computing them.
-
-**Fix**: Use Python `os.path.relpath()` to compute the correct relative path:
-
-```python
-import os
-print(os.path.relpath(
-    "tests/claude-code/shared/skills/github/gh-implement-issue/scripts/preflight_check.sh",
-    "tests/shell/skills/github/gh-implement-issue"
-))
-# -> ../../../../claude-code/shared/skills/github/gh-implement-issue/scripts/preflight_check.sh
-```
-
-**Key lesson**: Never count `../` steps manually for paths more than 3 levels deep. Always compute with
-`os.path.relpath()`.
-
-### Attempt 2 — PREFLIGHT_SCRIPT defined in helper but not used
-
-**What happened**: The initial `common.bash` defined `PREFLIGHT_SCRIPT` variable pointing to the script.
-But the BATS file `load`s the helper before the test-level `SCRIPT` variable is set, and `BASH_SOURCE[0]`
-inside the helper resolves to the helper file's path, not the test file's path. The relative traversal
-in the helper was wrong for a different reason than Attempt 1.
-
-**Fix**: Define `SCRIPT` directly in the test file using `$BATS_TEST_FILENAME` (which resolves correctly
-in each test's context). Keep `common.bash` only for `setup_mocks()` and `clean_state()`.
-
-### Attempt 3 — bats not available via apt without sudo / npm without root
-
-**What happened**: `sudo apt-get install bats` required a password. `npm install -g bats` failed due to
-permissions.
-
-**Fix**: Install `bats-core` directly from GitHub into `~/.local`:
-
-```bash
-git clone --depth 1 https://github.com/bats-core/bats-core.git /tmp/bats-install/bats-core
-/tmp/bats-install/bats-core/install.sh ~/.local
-# bats is now at ~/.local/bin/bats
-```
-
-For CI, use pixi with `bats-core` from conda-forge — it's available as `bats-core = ">=1.11.0"`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Related Skills
 
 - `shellcheck-scope-templates` — ShellCheck integration patterns

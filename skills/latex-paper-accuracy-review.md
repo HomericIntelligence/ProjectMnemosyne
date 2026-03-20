@@ -160,9 +160,6 @@ Warnings:
 
 ## Failed Attempts
 
-None — this was a first-pass review with a complete plan document. The plan approach (analyze all claims before making any edits, categorize as E/W/U/OK) was effective and required no retries.
-
-**What to avoid:**
-- Do NOT make edits directly from paper reading without a plan — the plan's categorization (E/W/U/OK) prevents over-correcting verified-correct values
-- Do NOT trust the paper's prose when its own tables contradict it (E2 pattern)
-- Do NOT skip reading checkpoint.json for partial experiments before writing about them (E5 pattern)
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |

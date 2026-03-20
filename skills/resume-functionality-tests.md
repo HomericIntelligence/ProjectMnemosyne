@@ -203,12 +203,9 @@ class TestCheckpointOperations:
 
 ## Failed Attempts
 
-| Approach | Why It Failed |
-|----------|---------------|
-| Using list format for completed_runs | Checkpoint expects dict[int, str] not list[int] |
-| Round-trip JSON testing | JSON converts integer keys to strings, adjusted tests to avoid issue |
-| Mocking entire executor | Too complex, focused on validation functions instead |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test File Structure

@@ -243,53 +243,9 @@ git commit -m "feat(mypy): Enable type checking for tests/ and scripts/ director
 
 ## Failed Attempts
 
-### Running mypy per-directory without file-path filtering
-
-**Attempt**: Run `pixi run mypy scripts/` and count all error lines in the output.
-
-**Failure**: `mypy scripts/` transitively checks `scylla/` imports and reports 60+ errors from
-`scylla/` files in the output, inflating `scripts/` counts from ~13 to ~67.
-
-**Fix**: Filter each output line by the file path prefix before counting:
-```python
-if not file_match.group(1).startswith(path):
-    continue
-```
-
-### Mocking subprocess.run with a single return_value
-
-**Attempt**: `with patch("subprocess.run", return_value=mock_result)` in tests for
-`run_mypy_and_count`.
-
-**Failure**: After refactoring `run_mypy_and_count` to delegate to `run_mypy_per_dir` (which calls
-mypy 3 times), a single `return_value` is returned for all 3 calls, tripling the counts.
-
-**Fix**: Use `side_effect` with a list of 3 mocks, one per MYPY_PATH:
-```python
-with patch("subprocess.run", side_effect=[scripts_mock, scylla_mock, tests_mock]):
-    counts = check_mypy_counts.run_mypy_and_count(tmp_path)
-```
-
-### Providing side_effects in wrong directory order
-
-**Attempt**: Ordered side_effects as `[scylla_mock, tests_mock, scripts_mock]`.
-
-**Failure**: `run_mypy_per_dir` iterates `MYPY_PATHS = ["scripts/", "scylla/", "tests/"]`, so the
-first mock is consumed by the `scripts/` run. The test asserted `result["scripts/"]["arg-type"] == 1`
-but `scripts/` got the scylla output and found 0 errors (different format).
-
-**Fix**: Always match side_effects order to `MYPY_PATHS` order.
-
-### Stashing pixi.lock separately before commit
-
-**Attempt**: `git stash -- pixi.lock` then `git commit`.
-
-**Failure**: Pre-commit's internal stash conflicted with pixi re-modifying pixi.lock during hook
-execution, causing ruff-format to report "Failed" with "Stashed changes conflicted with hook
-auto-fixes... Rolling back fixes."
-
-**Fix**: Include pixi.lock in the staged files before committing.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```

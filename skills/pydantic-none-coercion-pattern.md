@@ -166,13 +166,9 @@ pre-commit run --all-files
 
 ## Failed Attempts
 
-| Approach | Why It Failed |
-|----------|---------------|
-| `dict.get("criteria_scores", {})` | Only returns `{}` when the key is **missing**; returns `None` when key exists with `null` value |
-| Typing `criteria_scores` as `Optional[dict]` in destination model | Allows `None` but then downstream code using `.items()` or `.keys()` crashes with `AttributeError: 'NoneType'` |
-| Only fixing the highest-visibility call site | The bug has 8+ manifestations across multiple files; must do a complete audit with `grep` |
-| Relying on Pydantic's `default_factory=dict` | Default only applies when the field is **not provided** at construction time; explicit `None` overrides the default and causes ValidationError |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Audit Checklist
 
 When fixing this pattern, audit ALL locations where the affected field is:

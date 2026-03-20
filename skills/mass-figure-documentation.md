@@ -134,71 +134,19 @@ gh pr merge --auto --rebase
 - Naming conventions consistent ✅
 - Auto-merge enabled on all PRs ✅
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-### ❌ Sequential Documentation (Rejected)
-
-**What we tried**: Document figures one-by-one in the main conversation.
-
-**Why it failed**:
-- Would take 30+ hours (1 hour per figure × 30 figures)
-- Context window pollution with repetitive documentation
-- High cognitive overhead switching between figures
-- No parallelization of independent work
-
-**Lesson**: Use parallel agents for independent, repetitive tasks.
-
----
-
-### ❌ Single Agent with All 30 Tasks (Not Attempted)
-
-**Why we avoided this**:
-- Single agent can't parallelize work
-- Risk of context overflow with 30 items
-- No fault isolation (one failure blocks everything)
-- Difficult to track partial progress
-
-**Lesson**: Batch similar tasks across multiple agents for fault tolerance.
-
----
-
-### ⚠️ Inconsistent Naming Convention (Partial Failure)
-
-**What happened**: First 10 agents used `figNN-description.md`, later 20 used `description.md`.
-
-**Root cause**: User requested naming change mid-execution, but first batch had already launched.
-
-**How we fixed**:
-1. Let all agents complete (don't interrupt running agents)
-2. Created post-completion PRs to rename files
-3. Used `git mv` to preserve history
-4. Two standardization PRs: #574 (7 files), #575 (3 files)
-
-**Lesson**:
-- Finalize naming conventions **before** launching agents
-- If changes occur mid-flight, fix with post-completion consolidation PR
-- Never interrupt running agents - let them complete and fix after
-
----
-
-### ❌ Missing Figure Detection (Minor Issue)
-
-**What happened**: One figure (fig02) was already documented, but we launched an agent for it.
-
-**Impact**: Minimal - agent detected existing doc and reported completion.
-
-**How to prevent**:
-```bash
-# Check for existing docs before launching agents
-for fig in figures:
-    if exists(f"docs/design/figures/{fig.name}.md"):
-        print(f"Skip {fig.id} - already documented")
-    else:
-        launch_agent(fig)
-```
-
-**Lesson**: Pre-flight checks prevent duplicate work.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Execution Metrics

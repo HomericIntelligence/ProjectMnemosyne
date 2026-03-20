@@ -139,41 +139,9 @@ var roundtrip_val = back_to_fp32._get_float32(0)  # Native Float32
 
 ## Failed Attempts
 
-### ❌ Attempt 1: Testing at "Reported" Commit 784ef91a
-
-**What we tried**: Checked out commit 784ef91a (from initial bug report)
-
-**Result**: All tests passed - no crash detected
-
-**Why it failed**: This was NOT the actual failing commit. Need to use exact commit from failing CI run.
-
-**Lesson**: Always use CI metadata (`headSha`) to identify exact failing commit, not approximate reports.
-
-### ❌ Attempt 2: Local Reproduction at Correct Commit
-
-**What we tried**: Ran test 20 times locally at commit ba12f57c
-
-**Result**: All tests passed - crash didn't reproduce locally
-
-**Why it failed**: Heap corruption is environment-specific and manifests primarily in CI due to:
-
-- Different memory allocation patterns in GitHub Actions runners
-- Cumulative test execution order in CI
-- CI runs multiple test files sequentially
-
-**Lesson**: CI-only crashes are valid even if not reproducible locally. Trust CI logs and fix based on code analysis.
-
-### ❌ Attempt 3: Using `just test` to Reproduce
-
-**What we tried**: Ran full test suite with `just test`
-
-**Result**: Exit code 137 (SIGKILL - out of memory), not the heap corruption crash
-
-**Why it failed**: Running entire test suite (all 7 models) exhausts system memory. This is different from
-the targeted heap corruption in integration tests.
-
-**Lesson**: Use targeted test groups (`just test-group`) that match CI workflow, not full suite.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Root Cause

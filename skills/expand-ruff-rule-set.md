@@ -192,30 +192,9 @@ pixi run python -m pytest tests/ -v
 
 ## Failed Attempts
 
-### Attempt 1: Committing with unstaged pixi.lock
-
-**What was tried**: Staging source files and committing without `pixi.lock`
-
-**Why it failed**: Pre-commit hooks stash unstaged files; format hook then modifies staged files but can't apply changes because the stash conflicts. Results in a loop of "Stashed changes conflicted with hook auto-fixes".
-
-**Fix**: Always `git add pixi.lock` (or any other modified lockfiles) before committing.
-
-### Attempt 2: Using --unsafe-fixes for SIM117 in test files
-
-**What was tried**: `pixi run ruff check --select SIM117 --unsafe-fixes --fix tests/`
-
-**Why it failed**: SIM117 violations where inner `with` is `pytest.raises()` cannot be auto-fixed — pytest semantics require `raises()` to be the innermost context manager. The auto-fixer correctly refuses.
-
-**Fix**: Add `SIM117` to global ignore list with documented rationale.
-
-### Attempt 3: Trying to fix all 35 C901 violations by refactoring
-
-**What was considered**: Refactoring each complex function to reduce cyclomatic complexity
-
-**Why it wasn't pursued**: Orchestration functions (run_subtest: 20, rerun_experiment: 21, build_resource_suffix: 22) have inherent complexity that can't be meaningfully reduced without introducing indirection that makes the code harder to understand. The correct approach is `# noqa: C901` with rationale.
-
-**Lesson**: max-complexity = 12 (not 10) correctly filters out incidental complexity. Functions over 12 that are still legitimately complex warrant suppression, not refactoring.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Final pyproject.toml Configuration

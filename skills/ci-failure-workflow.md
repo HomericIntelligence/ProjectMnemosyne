@@ -77,15 +77,15 @@ gh run view <run-id> --log-failed
 - Look for: `not found`, `import failed`, `version conflict`
 - Check: Package versions, environment setup
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Only looked at last 10 lines | Root cause was earlier in log | Search entire log for first occurrence of error |
-| Grepped for "error" only | Missed "FAILED" and "panic" patterns | Use comprehensive pattern: `error\|failed\|panic\|exception` |
-| Used `gh run view` for large logs | Output truncated | Download full artifact instead |
-| Analyzed wrong workflow run | Fixed unrelated issue | Verify run-id matches the failing PR check |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Output Format
 
 Provide analysis with:
@@ -184,13 +184,9 @@ gh pr checks <pr-number> --watch
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Fixed only one of multiple failures | PR still blocked on other failures | Address ALL failures before pushing |
-| Assumed local pass means CI pass | Different environments caused mismatch | Always verify environment parity |
-| Pushed fix without testing locally | Introduced new failure | Test locally before every push |
-| Ignored flaky test | Flaky test caused future failures | Fix or skip flaky tests properly |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Error | Cause | Fix |

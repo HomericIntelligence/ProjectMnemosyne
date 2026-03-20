@@ -186,28 +186,15 @@ CI workflow explicitly disables:
 
 Tests appear as `ok N ... # skip ...` in normal BATS output (not failures).
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-### Background Agent Worktree Conflict
-
-**What happened**: Launched PR1, PR2, and PR5 agents simultaneously as background tasks. The PR5 agent switched the main working tree to branch `983-pip-audit-precommit`. When the PR2 agent tried to switch to its branch, it was blocked and returned:
-> "Please run `git -C ... switch 918-consolidate-preflight-location` manually"
-
-**Root cause**: Multiple agents sharing the same git working tree fight over the current branch. Only one branch can be checked out at a time.
-
-**Fix applied**: Implemented PR2 manually after PR5 agent completed.
-
-**Prevention**: Use `isolation: "worktree"` parameter in Task tool so each agent gets its own isolated git worktree:
-```python
-Task(
-    description="PR2 implementation",
-    subagent_type="Bash",
-    prompt="...",
-    isolation="worktree",  # prevents branch conflicts
-    run_in_background=True
-)
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results
 
 | PR | Issue(s) | Key Change | Tests |

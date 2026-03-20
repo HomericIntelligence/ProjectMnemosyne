@@ -181,12 +181,9 @@ pre-commit run --files scylla/e2e/stages.py tests/unit/e2e/test_<feature>_resume
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Used `not ctx.progress_steps` as reload guard | `[]` is falsy — this would overwrite a valid empty list from `stage_capture_diff` when agent made no changes | Always use `is None` to distinguish "not set" from "set but empty" |
-| Added `# type: ignore[type-arg]` to fixture return type | Mypy flagged it as unused — `RunContext` is not generic | Remove type ignore comments that mypy itself rejects as unused |
-| Placing reload logic in `restore_run_context()` (centralized helper) | Would affect all resume paths; only `stage_finalize_run` needs the reload; consistent with existing inline-per-stage resume pattern | Keep resume guards inline at the stage that needs them — don't centralize unless multiple stages share the same pattern |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Key design decisions

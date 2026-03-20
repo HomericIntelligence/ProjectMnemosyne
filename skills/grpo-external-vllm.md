@@ -57,13 +57,9 @@ Configure GRPO (Group Relative Policy Optimization) training with an external vL
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Inline vLLM on same GPUs | OOM - training + inference compete for memory | Separate inference to dedicated GPUs |
-| `vllm_skip_weight_sync=True` | Weights diverge after few steps | External server avoids sync issues |
-| batch_size=16 | Gradient overflow with large batches | Use batch_size=4, increase gradient_accumulation |
-| Default OpenAI parsing | TRL expected different response format | Use `--chat-template` flag on server |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```yaml

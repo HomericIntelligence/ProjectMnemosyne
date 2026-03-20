@@ -72,15 +72,15 @@ gh issue view <number> --json comments --jq '.comments[].body'
 gh issue view <number> --json comments --jq '.comments | length'
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Only read issue body, skipped comments | Missed important design decisions from discussions | Always read comments - they contain implementation history |
-| Didn't check for existing PRs | Duplicated work that was already done | Check `gh pr list --search "issue:<number>"` first |
-| Assumed issue was up-to-date | Requirements had changed in comments | Read most recent comments for latest requirements |
-| Used `gh issue view` without `--comments` | Missed implementation notes from prior attempts | Always use `--comments` flag |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |

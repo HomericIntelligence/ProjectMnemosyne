@@ -106,11 +106,9 @@ pre-commit run --all-files
 
 ## Failed Attempts
 
-| Attempt | What happened | Why it failed |
-|---------|--------------|---------------|
-| Keeping raw dict mapping but adding `_validate_schema()` call | Would have required duplicating the schema call logic already in `load_defaults()` | Violates DRY; misses filename checks |
-| Using `# noqa: C901  # description` on def line | ruff-format stripped the `# noqa: C901` tag, leaving only the description comment which triggered E501 | ruff-format treats inline `# noqa` + comment as a comment-only line and removes the suppress tag |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 **Files changed:**

@@ -2,7 +2,7 @@
 name: doc-issue-readme
 description: Post structured documentation to GitHub issue as a comment. Use when
   starting work on an issue to document approach and track progress.
-category: doc
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 ---
@@ -188,11 +188,9 @@ Must be measurable checkboxes:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

@@ -62,15 +62,15 @@ gh api repos/OWNER/REPO/pulls/PR/comments \
   --jq '.[] | select(.path == "src/file.mojo")'
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Used `gh pr view --comments` | Only shows PR timeline comments, not inline review comments | Use `gh api` with `/pulls/PR/comments` endpoint |
-| Forgot to filter out replies | Got duplicate information, harder to track what needs addressing | Filter with `select(.in_reply_to_id == null)` for top-level only |
-| Didn't extract comment IDs | Couldn't reply to specific comments later | Always include `.id` in jq output |
-| Used wrong repo format in API | 404 error | Use `repos/OWNER/REPO` format, not just repo name |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Output Format
 
 Comments include:
@@ -163,13 +163,9 @@ Reply format (keep SHORT):
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Used `gh pr comment` for inline replies | Created new general comment, not a reply to the review comment | Use GitHub API `POST /repos/.../pulls/.../comments/.../replies` for inline replies |
-| Replied with long explanations | Cluttered the PR, harder to track fixes | Keep replies to 1 line: "Fixed - [what changed]" |
-| Pushed before replying to comments | Reviewer didn't know which comments were addressed | Reply to each comment THEN push |
-| Addressed only some comments | PR still blocked, wasted review cycle | Address ALL comments before requesting re-review |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |
@@ -259,13 +255,9 @@ Reply format (keep SHORT and CONCISE):
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Used `gh pr comment <pr>` | Created new PR-level comment, not a reply thread | Must use API endpoint `/pulls/PR/comments/ID/replies` |
-| Omitted `--method POST` | API returned error about method | Always include `--method POST` for creating replies |
-| Used wrong comment ID format | 404 not found | Comment IDs are numeric, get from API response |
-| Long multi-paragraph replies | Cluttered PR discussion | Keep to 1 line: "Fixed - [specific change]" |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Critical: Two Types of Comments
 
 **DO NOT confuse these**:

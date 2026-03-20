@@ -126,55 +126,9 @@ else:
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Modify workspace recovery logic only
-
-**Approach**: Add preservation check inside `_setup_workspace()` recovery path (line 1125-1128)
-
-```python
-# In _setup_workspace, around line 1125-1128
-if workspace_abs.exists():
-    should_preserve = self._should_preserve_workspace(workspace_abs, tier_id, subtest_id, run_number)
-    if should_preserve:
-        logger.info(f"Preserving existing workspace with passing results: {workspace_abs}")
-        return  # Skip workspace setup
-    else:
-        shutil.rmtree(workspace_abs)
-```
-
-**Why it failed**:
-- Recovery path only executes when git branch already exists
-- Requires passing checkpoint context deep into `_setup_workspace()`
-- Still creates git worktree command before checking
-- More complex - checks happen too late in the flow
-
-**Lesson**: Check conditions BEFORE starting expensive operations, not during recovery.
-
-### ❌ Attempt 2: Add workspace cleanup after run completes
-
-**Approach**: After each run, clean up workspaces for failing runs (after line 723)
-
-```python
-if run_result.judge_passed:
-    # Preserve workspace for passing run
-    pass
-else:
-    # Clean up workspace for failing run
-    self.workspace_manager.cleanup_worktree(workspace, branch_name)
-```
-
-**Why it failed**:
-- Solves the wrong problem - issue is **re-creation on re-run**, not cleanup
-- Doesn't address the core issue: workspace destruction during resume
-- Adds cleanup overhead after every run
-- Workspaces for failed runs might still be useful for debugging
-
-**Lesson**: Identify the actual problem point - workspace is destroyed during **setup**, not during **cleanup**.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test Command

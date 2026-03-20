@@ -111,15 +111,9 @@ cat ~/.claude/settings.json | grep -A5 "plugins"
 
 ## Failed Attempts
 
-| Attempt | Error | Root Cause | Fix |
-|---------|-------|------------|-----|
-| Remote GitHub URL registration | SSH/HTTPS authentication failed | Private repo without cached credentials | Use local path instead of GitHub URL |
-| marketplace.json with `owner: "string"` | `owner: Expected object, received string` | Schema requires owner to be an object | Change to `owner: { "name": "...", "url": "..." }` |
-| plugin.json with `date` field | `Unrecognized key(s) in object: 'date'` | Schema doesn't support date field | Remove date from plugin.json (put in SKILL.md instead) |
-| plugin.json with `category` field | `Unrecognized key(s) in object: 'category'` | Schema doesn't support category | Remove category (derive from directory structure) |
-| plugin.json with `tags` field | `Unrecognized key(s) in object: 'tags'` | Schema doesn't support tags | Remove tags (use in marketplace.json only) |
-| plugin.json with `source_project` field | `Unrecognized key(s) in object: 'source_project'` | Custom field not supported | Remove entirely |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Minimal Valid plugin.json Template

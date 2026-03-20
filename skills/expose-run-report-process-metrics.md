@@ -190,9 +190,9 @@ Add `from typing import Any` to the test file imports.
 
 ## Failed Attempts
 
-None — the approach was correct on the first try. The only fix required was adding type parameters
-(`dict[str, Any]` instead of `dict`) to satisfy mypy in the test helper method.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Gotchas
 
 1. **NaN in JSON**: Python's `json.dumps()` will serialize `float("nan")` as `NaN` by default,

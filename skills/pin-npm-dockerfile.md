@@ -166,32 +166,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-### ❌ Attempt 1: Using package.json for Docker npm installs
-
-**What we tried**: Creating a `package.json` file to manage npm dependencies
-
-**Why it failed**:
-
-- Adds unnecessary complexity for a single global CLI tool
-- Docker best practice is to keep images minimal
-- Global npm installs (`-g`) don't use package.json
-- Violates KISS principle (Keep It Simple Stupid)
-
-**Lesson**: For global CLI tools in Docker, pin directly in the `npm install -g` command rather than introducing additional dependency management files.
-
-### ❌ Attempt 2: Using `latest` tag with comment
-
-**What we tried**: Using `@latest` tag with a comment documenting the version
-
-**Why it failed**:
-
-- `@latest` is dynamic and defeats the purpose of version pinning
-- Comments can become stale and misleading
-- Doesn't prevent unexpected updates
-- Violates the goal of reproducible builds
-
-**Lesson**: Always use exact version numbers (e.g., `@2.1.42`), never tags like `@latest` or `@stable`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Configuration Used

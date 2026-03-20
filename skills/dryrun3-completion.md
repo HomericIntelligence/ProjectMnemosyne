@@ -1,12 +1,7 @@
 ---
-name: dryrun3-completion
-description: "---"
-category: evaluation
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
+
 ---
----
+
 name: "Dryrun3 Completion: Diagnose, Repair, and Analyze Interrupted Batch Experiments"
 description: "Complete interrupted dryrun experiments: diagnose broken/partial runs, clean stale git worktrees, re-run broken experiments, repair partial experiments, build loader-compatible symlink tree, generate full analysis pipeline output, and produce Go/NoGo assessment with run classification script."
 category: evaluation
@@ -300,73 +295,15 @@ pixi run python scripts/manage_experiment.py run \
 The runner's `_tier_has_missing_subtests()` detects checkpoint gaps and creates T3/29-41 on resume.
 T3/25-28 (orphaned from the capped run) will be picked up as INTERMEDIATE runs.
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-### Attempt 1: Running --fresh Without Cleaning Stale Worktrees
-
-**What happened:**
-```
-batch run failed immediately with git worktree error:
-  fatal: 'test-029_T1_01_run_01' already exists
-```
-
-**Root cause:**
-The `--fresh` flag creates a new timestamped results directory but does NOT clear old worktrees or branches from the shared `~/dryrun3/repos/<hash>/` directory. When the new run tried to create a worktree with the same branch name as the old broken run, git rejected it.
-
-**Fix**: Always run the stale worktree cleanup (Phase 1) before any `--fresh` re-runs. The cleanup must target the shared repo directories in `~/dryrun3/repos/`, not the experiment result directories.
-
-### Attempt 2: Running --retry-errors While Phase 2 Was In Progress
-
-**What happened:**
-Phase 2 (`--fresh` re-runs for 16 broken experiments) was running and consuming API quota. Simultaneously starting Phase 3 (`--retry-errors` for 3 partial experiments) caused model validation in Phase 3 to hit rate limits. The validation logic retried 4x with ~60s backoff per attempt, resulting in ~8 minutes just to confirm the model name was valid.
-
-**Fix**: Wait for Phase 2 to fully complete before starting Phase 3. Watch for "All N experiments complete" in Phase 2's output before proceeding.
-
-### Attempt 4: Using `--max-subtests 24` for Full-Ablation Tests (2026-03-14)
-
-**What happened:**
-Full-ablation tests (test-001/002/003) were run with `--max-subtests 24`. T3 has 41 subtests, so
-subtests 25-28 were created but orphaned, and 29-41 were never created. Each test had 107 runs in
-the checkpoint instead of the expected 360. The script reported "all complete" but 13 T3 subtests
-per test were missing entirely.
-
-**Root cause:**
-The retry script comment said "run all subtests (24 max)" — a T0-centric assumption. T0 has 24
-subtests, but T3 has 41. Using `--max-subtests 24` silently under-expanded T3.
-
-**Fix**: Remove `--max-subtests` for full-ablation tests entirely. The runner defaults to
-`max_subtests=None` (all subtests per tier). The `_tier_has_missing_subtests()` method detects
-and creates the missing subtests on resume. (PR #1491)
-
-### Attempt 3: Using --retry-errors with --max-subtests Expansion
-
-**What happened:**
-After completing Phase 2 with `--max-subtests 1`, re-running with `--max-subtests 3` and `--retry-errors` reported "All 47 tests already completed" immediately — no work was done.
-
-**Root cause**: The batch mode skip logic in `scripts/manage_experiment.py` (~line 597) only checked `batch_summary.json` status field. It did not check whether the checkpoint's actual subtest count was less than the requested `--max-subtests`. Since all experiments showed status="complete" in `batch_summary.json`, they were all skipped.
-
-**Fix (committed as PR #1404)**: When `--max-subtests` is specified, the batch skip logic now reads each completed experiment's checkpoint and checks if any tier has fewer completed subtests than requested. If so, the experiment is re-queued for expansion.
-
-```python
-# In scripts/manage_experiment.py batch skip logic (~line 597)
-# Before fix: only checked batch_summary.json status
-if batch_status == "complete":
-    continue  # BUG: ignores --max-subtests expansion
-
-# After fix: also check checkpoint subtest counts
-if batch_status == "complete" and max_subtests is not None:
-    checkpoint = load_checkpoint(exp_results_dir)
-    for tier_id, tier_data in checkpoint.get("subtest_states", {}).items():
-        completed_subtests = len([
-            s for s, state in tier_data.items() if state == "aggregated"
-        ])
-        if completed_subtests < max_subtests:
-            # Re-queue for expansion
-            break
-    else:
-        continue  # All tiers have enough subtests, skip
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results and Parameters
 
 ### Experiment Statistics

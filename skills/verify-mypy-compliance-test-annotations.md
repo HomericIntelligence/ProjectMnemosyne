@@ -1,12 +1,7 @@
 ---
-name: verify-mypy-compliance-test-annotations
-description: "---"
-category: testing
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
+
 ---
----
+
 name: "Skill: Verify Mypy Compliance for Test Annotations"
 description: "Pattern for verifying and adding -> None return types and parameter type hints to test functions for mypy compliance"
 category: testing
@@ -192,33 +187,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Agent added `import pandas as pd` only as a comment/local import | Ruff F821 fires when `pd.DataFrame` appears in function signatures but `import pandas as pd` is not at module level | Always verify pre-commit hooks pass after using an agent for batch annotations — check that module-level imports were actually added |
-| Agent used bare `dict` and `list` return types on fixtures | mypy `[type-arg]` error: Missing type parameters for generic type | Fixture return types must use fully parameterized generics: `dict[str, X]` not `dict`, `list[X]` not `list` |
-| None — annotations were pre-existing in `tests/unit/config/` and `tests/integration/` | N/A | Always verify before making changes; parallel audit waves frequently pre-complete issues |
-
-### Key insight: Parallel wave execution pre-completes issues
-
-In this project, the February 2026 quality audit ran 35 LOW issues across 8 parallel waves. Issues #1286 (`tests/unit/config/`) and #1288 (`tests/integration/`) were already fully annotated when executed sequentially. The correct response is:
-
-1. Run `mypy` to confirm clean state
-2. Run `pytest` to confirm passing
-3. Post a comment on the GitHub issue with the verification evidence
-4. Create an **empty (verification) commit** with `git commit --allow-empty`
-5. Push and open a PR to formally close the issue
-
-**Never skip the verification step** — even if you suspect work is done, confirm with mypy before closing.
-
-### Key insight: Always run pre-commit after agent-based batch annotation
-
-When delegating bulk annotation to a subagent, the agent may:
-- Miss module-level imports (adding imports only locally inside functions instead)
-- Use bare generic types (`dict`, `list`) instead of parameterized ones (`dict[str, X]`, `list[X]`)
-- Apply ruff formatting that differs from what pre-commit would apply
-
-**Always run `pre-commit run --files <path>/*.py` after agent annotation work** and fix any issues manually.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Instance 1: `tests/unit/config/` (issue #1286)

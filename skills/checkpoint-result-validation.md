@@ -125,13 +125,9 @@ def test_resume_skips_completed():
 
 ## Failed Attempts
 
-| Approach | Why It Failed |
-|----------|---------------|
-| Just check file existence | Partial/corrupt files exist but are invalid |
-| Validate after loading | Still pays cost of file I/O for large files |
-| Trust checkpoint metadata | Metadata can be out of sync with actual results |
-| No validation | Re-runs everything, defeats purpose of checkpoints |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Validation Pattern

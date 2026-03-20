@@ -150,22 +150,15 @@ gh issue close 657 --reason "completed"
 - **Final count**: 18 open issues
 - **All closures documented** with explanatory comments
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-**None in this session.** The workflow executed cleanly because:
-
-1. **Pre-planning phase** identified all duplicates before execution
-2. **Clear duplicate criteria** (same title, same parent, same content)
-3. **Verification step built in** (source code search for "already resolved" claims)
-4. **Systematic approach** prevented errors
-
-### Potential Pitfalls (Not Encountered)
-
-- **Closing wrong issue in a pair**: Always close the newer issue, keep the older
-- **Missing context**: Some "duplicates" may have subtle differences requiring separate issues
-- **Over-aggressive cleanup**: Issues that seem similar but address different aspects
-- **Not verifying "already resolved"**: Always check source code, not just assumptions
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Parameters & Configuration
 
 ### GitHub CLI Settings

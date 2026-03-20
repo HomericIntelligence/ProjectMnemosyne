@@ -156,34 +156,9 @@ wc -l original_module.py new_module_*.py
 
 ## Failed Attempts
 
-### Attempt: Only searching test_llm_judge.py for patch targets
-
-**What happened**: After updating all source imports and `test_llm_judge.py`, ran the e2e test suite. `test_stage_finalization.py` failed with `AttributeError: <module 'scylla.e2e.llm_judge'> does not have the attribute '_call_claude_judge'`.
-
-**Root cause**: Other test files (`test_stages.py`, `test_stage_finalization.py`, `test_experiment_setup_manager.py`) also mock functions from `llm_judge` via `patch()`. Initial search only covered the main test file.
-
-**Fix**: Always search ALL test files for `patch("old.module.` before declaring done:
-```bash
-grep -rn 'patch("package.old_module.' tests/
-```
-
-### Attempt: Using `-> Any` return type for functions with circular import
-
-**What happened**: `_parse_judge_response` and `_execute_judge_with_retry` in `judge_execution.py` need to return `JudgeResult` (defined in `llm_judge.py`), but `llm_judge.py` imports from `judge_execution.py`. Used `-> Any` to avoid the circular import.
-
-**Error**: mypy `no-any-return` error in `llm_judge.py` line 135 where `_execute_judge_with_retry` result is returned from `run_llm_judge() -> JudgeResult`.
-
-**Fix**: Use `TYPE_CHECKING` guard with `from __future__ import annotations`:
-```python
-from __future__ import annotations
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from scylla.e2e.llm_judge import JudgeResult
-
-def _parse_judge_response(response: str) -> JudgeResult: ...
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Verified On
 
 | Project | Context | Details |

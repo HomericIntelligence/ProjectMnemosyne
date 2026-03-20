@@ -137,8 +137,9 @@ pre-commit run --all-files                    # all hooks pass
 
 ## Failed Attempts
 
-None in this session — the pattern was clean and straightforward.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter         | Value                        |

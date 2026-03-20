@@ -57,15 +57,15 @@ for i in {1..5}; do
 done
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Ran test once to check flakiness | Not enough data to detect intermittent failures | Run at least 5-10 times to establish pattern |
-| Compared CI runs from different branches | Environment differences caused false positives | Compare runs on same branch/commit |
-| Ignored timing-related output | Missed timeout-based flakiness | Include timing info in analysis |
-| Tested in different environments | Results not comparable | Use same environment (Docker) for consistency |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Flaky Test Indicators
 
 **Timing Issues**:

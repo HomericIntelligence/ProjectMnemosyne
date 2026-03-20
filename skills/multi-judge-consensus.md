@@ -278,83 +278,19 @@ Trigger conditions:
 
 **Result:** Judges now explicitly state what's missing and why scores are reduced
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-### ❌ Attempt 1: Import BrokenProcessPool from concurrent.futures
-
-**What we tried:**
-```python
-from concurrent.futures import BrokenProcessPool
-```
-
-**Why it failed:**
-`ImportError: cannot import name 'BrokenProcessPool' from 'concurrent.futures'`
-
-**Root cause:**
-`BrokenProcessPool` is defined in `concurrent.futures.process`, not the top-level `concurrent.futures` module. Python's import system doesn't automatically expose all submodule exceptions.
-
-**Correct approach:**
-```python
-from concurrent.futures.process import BrokenProcessPool
-```
-
-**Lesson:** Always check the actual module hierarchy for exception classes in standard library
-
-### ❌ Attempt 2: Place judges field before required fields
-
-**What we tried:**
-```python
-@dataclass
-class RunResult:
-    judge_reasoning: str
-    judges: list[JudgeResultSummary] = field(default_factory=list)  # Optional field
-    workspace_path: Path  # Required field
-```
-
-**Why it failed:**
-```
-TypeError: non-default argument 'workspace_path' follows default argument 'judges'
-```
-
-**Root cause:**
-Dataclass fields with defaults (including `field(default_factory=...)`) must come AFTER fields without defaults. Python processes field definitions sequentially and can't have required positional arguments after optional ones.
-
-**Correct approach:**
-```python
-@dataclass
-class RunResult:
-    judge_reasoning: str
-    workspace_path: Path  # Required fields first
-    judges: list[JudgeResultSummary] = field(default_factory=list)  # Optional fields last
-```
-
-**Lesson:** Always place optional dataclass fields (with defaults or `field()`) after all required fields
-
-### ❌ Attempt 3: Forgetting backward compatibility in load()
-
-**What we initially did:**
-Changed `judge_model` to `judge_models` without updating the `load()` method
-
-**Why it failed:**
-Existing saved configs and tests still used the old `judge_model` field, causing:
-```
-TypeError: ExperimentConfig.__init__() got an unexpected keyword argument 'judge_model'
-```
-
-**Root cause:**
-The `load()` method was still trying to pass `judge_model` to the constructor, but the parameter had been renamed to `judge_models`.
-
-**Correct approach:**
-```python
-# Backward compatibility: convert old judge_model to judge_models
-if "judge_model" in data and "judge_models" not in data:
-    judge_models = [data["judge_model"]]
-else:
-    judge_models = data.get("judge_models", ["claude-opus-4-5-20251101"])
-```
-
-**Lesson:** When renaming fields in dataclasses that are persisted, always add backward compatibility in the `load()` method
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Successful Multi-Judge Execution

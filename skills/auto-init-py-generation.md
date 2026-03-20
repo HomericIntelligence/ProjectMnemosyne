@@ -93,20 +93,9 @@ pixi run python -m pytest tests/ -x  # verify no import breakage
 
 ## Failed Attempts
 
-### Manual `__init__.py` Writing
-- Writing `__init__.py` by hand for 17+ subpackages is error-prone and tedious
-- Easy to miss new symbols or include private ones
-- Script-based generation is much more reliable
-
-### Bare Imports Without `as` Alias
-- `from .module import Name` does NOT re-export under `implicit_reexport=false`
-- mypy will report errors when downstream code imports from the package
-- Must use `from .module import Name as Name` pattern
-
-### Including `__all__` Constants
-- Variables like `__all__` itself, `__version__`, etc. from submodules should be excluded
-- Filter out dunder names from the collected exports
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 - **17 `__init__.py` files** generated across `scylla/` subpackages

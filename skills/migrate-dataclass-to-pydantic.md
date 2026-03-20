@@ -210,78 +210,9 @@ pre-commit run --all-files
 
 ## Failed Attempts
 
-### ❌ Attempt 1: Import RateLimitInfo under TYPE_CHECKING
-
-**What was tried:**
-```python
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from scylla.e2e.rate_limit import RateLimitInfo
-
-class SubTestResult(BaseModel):
-    rate_limit_info: RateLimitInfo | None = None
-```
-
-**Why it failed:**
-```
-pydantic.errors.PydanticUserError: `SubTestResult` is not fully defined;
-you should define `RateLimitInfo`, then call `SubTestResult.model_rebuild()`.
-```
-
-Pydantic needs the actual type at runtime for validation, not just for type checking.
-
-**Solution:** Use string annotation + import at module end + `model_rebuild()`:
-```python
-class SubTestResult(BaseModel):
-    rate_limit_info: "RateLimitInfo | None" = None
-
-# At end of file
-from scylla.e2e.rate_limit import RateLimitInfo  # noqa: E402
-SubTestResult.model_rebuild()
-```
-
-### ❌ Attempt 2: Use model_dump() for JSON Serialization Without mode="json"
-
-**What was tried:**
-```python
-config_dict = config.model_dump()
-json.dumps(config_dict, sort_keys=True)
-```
-
-**Why it failed:**
-```
-TypeError: Object of type PosixPath is not JSON serializable
-when serializing dict item 'task_prompt_file'
-```
-
-Pydantic's default `model_dump()` returns Python objects as-is. Path objects aren't JSON serializable.
-
-**Solution:** Use `mode="json"` parameter:
-```python
-config_dict = config.model_dump(mode="json")  # Converts Path → str
-json.dumps(config_dict, sort_keys=True)
-```
-
-### ❌ Attempt 3: Forgot to Remove @dataclass Decorator
-
-**What was tried:**
-```python
-@dataclass
-class _JudgeSlotResult(BaseModel):
-    slot: JudgeSlotToRerun
-    success: bool
-```
-
-**Why it failed:**
-```
-NameError: name 'dataclass' is not defined
-```
-
-After removing the import, the decorator was still present.
-
-**Solution:** Remove all `@dataclass` decorators when converting to `BaseModel`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Migration Statistics

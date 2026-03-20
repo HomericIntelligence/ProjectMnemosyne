@@ -121,25 +121,9 @@ changes are needed and no new tests are required.
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| `grep -v "# deprecated"` to catch docstring mentions | Only strips standalone comment lines, not inline `(deprecated)` annotations in docstrings | Add a separate `grep -v "(deprecated)"` filter |
-
-### Relying on `grep -v "# deprecated"` to catch docstring mentions
-
-The existing filter `grep -v "# deprecated"` only strips lines that literally
-start with `# deprecated` (Python comment prefix). It does not match lines like:
-
-```
-    - BaseExecutionInfo (core/results.py) - Legacy dataclass (deprecated)
-```
-
-These are inside docstrings and use `(deprecated)` in parentheses at the end
-of the line. A separate `grep -v "(deprecated)"` filter is required.
-
-**Symptom**: count was 2 instead of 0 after adding `__init__.py` exclusion.
-`grep` output showed the two docstring lines in `runner.py:70` and `result.py:21`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Metric          | Value                                      |

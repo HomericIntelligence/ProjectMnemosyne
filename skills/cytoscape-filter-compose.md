@@ -195,34 +195,9 @@ def test_no_orphan_intermediate_ranking_nodes(self):
 
 ## Failed Attempts
 
-### ❌ Calling clearTrajectory() inside activateTrajectory() then re-applying day filter
-
-**Attempted**: Pass `_activeDates` into `activateTrajectory()` so it could re-apply the day filter after resetting.
-
-**Why it failed**: Creates tight coupling between trajectory.js and filter state. Two functions now share responsibility for the same state — any future filter addition requires touching both functions.
-
-**Correct approach**: Single-owner pattern — `_applyFilters` owns all visibility, helpers only layer on top.
-
-### ❌ Using cy.elements().difference() without .filter(e => e.visible())
-
-**Attempted**: `cy.elements().difference(teamCollection).style('display', 'none')` — hiding all non-team elements.
-
-**Why it failed**: This ignores the day/status filter work done in steps 2-4. Even if a node was already hidden by the day filter, it's included in `difference(teamCollection)` and `style('display', 'none')` is called redundantly — but more importantly, if `clearTrajectory()` was called first (resetting everything to visible), this hides the wrong set.
-
-**Correct approach**: `.filter(e => e.visible())` scopes the hide operation to only currently-visible elements, preserving prior filter state.
-
-### ❌ Boundary only inserted between consecutive matches
-
-**Attempted**: The original code only inserted boundaries `if i < len(timeline) - 1` — between pairs of adjacent matches.
-
-**Why it failed**: If all matches fall on Day 1 and the boundary is after the last Day 1 match (phase > last match phase), the boundary is never inserted. The intermediate ranking node becomes an orphan with no edges.
-
-### ❌ Assigning intermediate ranking phases only to their own date
-
-**Attempted**: `_dateToPhases.get(p.date).add(p.phase)` — keying boundary to the date stored on the phase (the day *before* the boundary).
-
-**Why it failed**: Selecting Day 2 in the UI doesn't include the Day 1→Day 2 boundary, so users selecting Day 2 never see the intermediate ranking at the end of Day 1. The boundary is "hidden" because it's only registered under Day 1's date.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Architecture summary

@@ -134,13 +134,9 @@ else:
 
 ## Failed Attempts
 
-| Attempt | What Failed | Why |
-|---------|-------------|-----|
-| Test: `tier_states={"t0": "config_loaded"}` (lowercase) | Preload block never triggered | `get_tier_state("T0")` uses `dict.get(tier_id, "pending")` — lowercase key `"t0"` is not found, returns default `"pending"`, preload skipped |
-| Test: `E2ERunner(mock_config, mock_tier_manager, Path("/tmp"))` | `mock_tier_manager` passed as `tiers_dir` (a Path) | Constructor signature puts `tiers_dir` before `tier_manager`; runner creates `TierManager(tiers_dir)` internally — must patch `runner.tier_manager` directly after construction |
-| Patching `TierStateMachine.advance_to_completion` post-instantiation | Method called on already-constructed instance, patch had no effect | Must use `patch.object(TierStateMachine, "advance_to_completion", side_effect=noop)` before instantiation |
-| PID-only temp file (`checkpoint.tmp.{pid}.json`) | Race condition between threads sharing same PID | Threads need unique identifiers; solution is `{pid}.{thread_id}` plus a module-level lock |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Tests Written
 
 ### Bug 1: `TestSaveCheckpointThreadSafety` in `tests/unit/e2e/test_checkpoint.py`

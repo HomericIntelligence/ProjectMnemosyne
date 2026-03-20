@@ -1,7 +1,7 @@
 ---
 name: ruff-c901-mccabe-complexity
 description: "Skill: ruff-c901-mccabe-complexity"
-category: uncategorized
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -102,20 +102,9 @@ pixi run python -m pytest tests/ -v
 
 ## Failed Attempts
 
-### Placing noqa on return type line of multi-line signatures
-
-**What was tried:** For multi-line function signatures, placed `# noqa: C901` on the closing `) -> ReturnType:` line.
-
-**Why it failed:** Ruff reports C901 violations at the line where `def` appears. For multi-line signatures, the `def` keyword is on a different line than the return type. Ruff only checks noqa on the line it reports the error, so the suppression was silently ignored and the violation persisted.
-
-**Fix:** Always place `# noqa: C901` on the `def` line itself.
-
-### Using --max-complexity CLI flag
-
-**What was tried:** `pixi run ruff check scylla/ scripts/ --select C901 --max-complexity 10`
-
-**Why it failed:** Ruff does not accept `--max-complexity` as a CLI flag. The threshold must be configured in `pyproject.toml` under `[tool.ruff.lint.mccabe]`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Final pyproject.toml config

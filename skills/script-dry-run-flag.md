@@ -153,10 +153,9 @@ help="Print all errors but exit 0 — useful for previewing violations without b
 
 ## Failed Attempts
 
-| Attempt | What Happened | Fix |
-|---------|---------------|-----|
-| Placed `if any_failure and dry_run` inside the loop | Would have returned early after the first failing file, skipping remaining files | Move the check **after** the loop so all files are always processed |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 - 7 new tests added in `TestDryRun` (33 total in the test module)

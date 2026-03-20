@@ -149,38 +149,19 @@ pixi run pre-commit run --all-files
 # All hooks should pass
 ```
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-### ❌ Attempt 1: Add identify to pixi.toml pypi-dependencies
-
-```toml
-[feature.dev.pypi-dependencies]
-identify = ">=2.6.0"
-```
-
-**Why it failed**: Pixi tries to solve dependencies for all platforms (linux-64, osx-64, osx-arm64, win-64), and conda had already pinned identify==1.2.2 across platforms, creating an unsolvable conflict.
-
-**Error**:
-
-```
-Error: failed to solve the pypi requirements of environment 'default' for platform 'osx-arm64'
-Because you require identify>=2.6.0 and identify==1.2.2, we can conclude that your requirements are unsatisfiable.
-The following PyPI packages have been pinned by the conda solve: identify==1.2.2
-```
-
-**Lesson**: Cannot override conda-pinned transitive dependencies via pypi-dependencies in pixi.toml.
-
-### ❌ Attempt 2: Upgrade pre-commit in pixi.toml
-
-```toml
-[feature.dev.dependencies]
-pre-commit = ">=4.8.0"  # Instead of >=3.0
-```
-
-**Why it failed**: While this might work in theory, it would require updating the entire pre-commit package and could introduce unintended changes to other hooks or CI behavior. Also, no guarantee newer pre-commit would pull in newer identify.
-
-**Lesson**: Upgrading the parent package (pre-commit) to force a transitive dependency upgrade is too broad and risky for a targeted fix.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## ✅ Working Solution
 
 **Document the manual upgrade step** and run it locally:

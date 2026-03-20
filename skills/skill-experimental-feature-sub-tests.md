@@ -174,32 +174,9 @@ T4:
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Runtime Filtering Instead of Discovery-Time
-
-**What we tried**: Initially considered filtering agent teams tests at runtime after loading all configs.
-
-**Why it failed**:
-- Would load unnecessary configs into memory
-- Harder to track which tests were skipped in logs
-- Results directory structure would be inconsistent
-
-**What we learned**: Filter during discovery (`_discover_subtests`) for cleaner architecture and consistent result paths.
-
-### ❌ Attempt 2: Using `--dry-run` Flag for Verification
-
-**What we tried**: Used `--dry-run` flag to verify subtest discovery.
-
-**Why it failed**: The flag doesn't exist in `run_e2e_experiment.py`.
-
-**What we learned**: Write custom verification scripts instead of relying on non-existent CLI flags. Created two verification scripts:
-- `verify_subtests.py` - Check subtest discovery
-- `verify_settings.py` - Check settings.json generation
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Subtest Discovery Verification

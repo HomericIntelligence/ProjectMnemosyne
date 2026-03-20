@@ -262,97 +262,15 @@ workspace_manager.base_repo = base_repo
 
 **Result**: Works with both old and new experiments!
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-### ❌ Attempt 1: Include Commit in `git worktree add`
-
-**What we tried**:
-
-```python
-git worktree add -b branch /path abc123  # Specify commit directly
-```
-
-**Why it failed**:
-
-- Fails when base repo not checked out to that commit
-- Doesn't fetch commit before creating worktree
-- Error: `fatal: reference is not a tree: abc123`
-
-**Solution**: Separate worktree creation from checkout (see Step 3)
-
-### ❌ Attempt 2: Checkout Commits in Base Repo
-
-**What we tried**:
-
-```python
-# Setup base repo
-git clone url base/
-git checkout abc123  # Checkout in base
-
-# Create worktree
-git worktree add /path  # Inherits from base
-```
-
-**Why it failed**:
-
-- Base repo changes state for each experiment
-- Second experiment with different commit breaks
-- Race condition: two experiments change base repo simultaneously
-
-**Solution**: Never checkout in base repo (see Step 4)
-
-### ❌ Attempt 3: Use Shallow Clone for Centralized Repos
-
-**What we tried**:
-
-```python
-git clone --depth=1 url  # Shallow clone for speed
-```
-
-**Why it failed**:
-
-- Fetching specific commits unreliable in shallow clones
-- Cannot fetch arbitrary commits (depth limitation)
-- Error: `fatal: couldn't find remote ref abc123`
-
-**Solution**: Use full clone for centralized repos (one-time cost, unlimited reuse)
-
-### ❌ Attempt 4: Integration Test with Invalid Commit
-
-**What we tried**:
-
-```python
-test_commit = "b0a8fff99de90117e46f2e0db84a3bb1b0bfc5d2"  # Hardcoded
-```
-
-**Why it failed**:
-
-- Commit doesn't exist in repository
-- Error: `fatal: reference is not a tree: b0a8fff...`
-
-**Solution**: Use `test_commit = None` to use HEAD of default branch
-
-### ❌ Attempt 5: Same Branch Names in Integration Test
-
-**What we tried**:
-
-```python
-# Experiment 1
-create_worktree(workspace1, tier_id="T0", subtest_id="01", run_number=1)
-# Branch: T0_01_run_01
-
-# Experiment 2
-create_worktree(workspace2, tier_id="T0", subtest_id="01", run_number=1)
-# Branch: T0_01_run_01 (COLLISION!)
-```
-
-**Why it failed**:
-
-- Both experiments use same tier/subtest/run numbers
-- Git error: `fatal: a branch named 'T0_01_run_01' already exists`
-
-**Solution**: Use different subtest IDs in test (subtest "02" for second experiment)
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Verification
 
 ### Unit Tests

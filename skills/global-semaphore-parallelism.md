@@ -238,75 +238,9 @@ finally:
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Using `multiprocessing.Semaphore()` Directly
-
-**What we tried**: Creating semaphore without Manager
-```python
-from multiprocessing import Semaphore
-global_semaphore = Semaphore(6)
-```
-
-**Why it failed**:
-- `multiprocessing.Semaphore` cannot be serialized for inter-process communication
-- ProcessPoolExecutor needs to serialize arguments to send to worker processes
-- Error encountered during serialization
-
-**Solution**: Use `Manager().Semaphore()` instead - Manager creates a server process that hosts shareable objects.
-
-### ❌ Attempt 2: Acquiring Semaphore in Main Process Before Submission
-
-**What we tried**: Acquire semaphore before submitting to pool
-```python
-for subtest in tier_config.subtests:
-    global_semaphore.acquire()  # ❌ Wrong place
-    future = pool.submit(_run_subtest_in_process, ...)
-```
-
-**Why it failed**:
-- Main process blocks waiting for semaphore
-- Can't submit remaining tasks to pool
-- Defeats purpose of parallel execution
-- Deadlock risk: main process holds all semaphore slots
-
-**Solution**: Acquire semaphore IN the worker process, just before expensive operation.
-
-### ❌ Attempt 3: Storing `cost_of_pass` as a Field
-
-**What we tried**: Adding `cost_of_pass` as a dataclass field
-```python
-@dataclass
-class TierResult:
-    cost_of_pass: float = 0.0  # ❌ Wrong approach
-```
-
-**Why it failed**:
-- `cost_of_pass` is derived from `best_subtest` results
-- Would require updating whenever subtest results change
-- Risk of stale/inconsistent data
-- Adds unnecessary state management
-
-**Solution**: Use `@property` to calculate on-demand from existing data.
-
-### ❌ Attempt 4: Limiting ProcessPoolExecutor max_workers
-
-**What we tried**: Reduce pool size to prevent over-subscription
-```python
-with ProcessPoolExecutor(max_workers=1) as pool:  # ❌ Too restrictive
-```
-
-**Why it failed**:
-- Limits parallelism WITHIN each tier
-- Multiple tiers still create multiple pools
-- Doesn't solve the global limit problem
-- Reduces concurrency unnecessarily when few tiers active
-
-**Solution**: Keep per-tier pools at full size, use semaphore for global coordination.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Configuration Used

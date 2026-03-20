@@ -2,7 +2,7 @@
 name: fix-docker-image-case
 description: Fix Docker SBOM and workflow failures caused by mixed-case image names
   in GitHub Actions
-category: uncategorized
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 ---
@@ -103,11 +103,9 @@ gh pr create --title "fix(ci): use lowercase image name" --body "Fixes Docker SB
 
 ## Failed Attempts
 
-| Attempt | What I Tried | Why It Failed |
-|---------|--------------|---------------|
-| Use `github.repository_owner` | `${{ github.repository_owner }}/repo` | `github.repository_owner` also preserves case |
-| Rely on `docker/metadata-action` | Expected it to lowercase everywhere | Only lowercases its own outputs, not env variables |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Successful Fix

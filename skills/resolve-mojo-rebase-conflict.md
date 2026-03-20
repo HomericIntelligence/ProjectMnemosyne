@@ -79,27 +79,23 @@ just test-group tests/shared "test_serialization.mojo"
 
 Use `just test-group <dir> <pattern>` — faster than `just test-mojo` which runs everything.
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-### `pixi run mojo test <file>`
-
-```text
-error: no such command 'test'
-```
-
-Mojo in this project does not have a `test` subcommand. Use `just test-group` instead.
-
-### Running `just test-mojo` as background task with `tail -30`
-
-The output file was empty when checked — the background task output was not flushed.
-Always run `just test-mojo` in the foreground, or use `just test-group` for a targeted check.
-
-### Replacing only part of the conflicted block
-
-If `old_string` does not include the conflict markers themselves, the Edit will succeed but
-leave stale marker lines in the file, causing a Mojo parse error. Always include the full
-block from `<<<<<<< HEAD` through `>>>>>>> <commit>` in `old_string`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Mojo vs Python Differences for Test Assertions
 
 | Python (invalid in Mojo) | Mojo equivalent |

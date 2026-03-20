@@ -92,15 +92,15 @@ line-length:
 - [ ] File ends with newline
 - [ ] No trailing whitespace
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Ran `--fix` without reviewing changes | Auto-fix broke code examples | Always review auto-fix changes before committing |
-| Fixed only reported line | Same error on adjacent lines | Fix all instances of same issue, not just reported ones |
-| Ignored MD013 line length | CI still failed | Configure exceptions in `.markdownlint.yaml` instead of ignoring |
-| Used different config locally vs CI | Inconsistent results | Use same config file in both environments |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |

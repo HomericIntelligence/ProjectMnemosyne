@@ -5,7 +5,7 @@ description: 'TRIGGER CONDITIONS: Extracting method groups from an oversized cla
   has grown beyond its target line count and contains identifiable method groups with
   shared state, (2) extracting without behavior change (pure structural refactoring),
   (3) avoiding circular imports between the host class and extracted collaborators.'
-category: refactoring
+category: architecture
 date: 2026-02-28
 version: 1.0.0
 user-invocable: false
@@ -179,15 +179,9 @@ wc -l scylla/e2e/runner.py
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| `TierResult(cost_of_pass=1.0)` in test fixtures | `cost_of_pass` is a `@property` computed from `best_subtest` — Pydantic rejects unknown fields | Never pass property names to Pydantic model constructors; check model definition first |
-| `MagicMock()` as `SubTestResult` value in `TierResult.subtest_results` | Pydantic validation rejects non-model types even in `dict` values | Create real `SubTestResult` instances via a `_make_subtest_result()` helper |
-| Top-level `from scylla.e2e.runner import is_shutdown_requested` in `parallel_tier_runner.py` | runner.py imports parallel_tier_runner.py → circular import at module load time | Use lazy local import inside the function body |
-| `wait_for_rate_limit(tier_id)` in extracted `action_pending` | Wrong signature — real function requires `(retry_after, checkpoint, checkpoint_path)` | Read the real function signature before wrapping; implement the full rate-limit check pattern |
-| `run_tier_fn: MagicMock \| None` type hint in `_make_runner()` | When a real `Callable` is passed (not a `MagicMock`), mypy rejects it as incompatible | Use `Callable[..., ReturnType] \| MagicMock \| None` or just `Callable \| None` |
-| Patching `scylla.e2e.runner.run_tier_subtests_parallel` after extraction | After the function moved to `tier_action_builder`, the old patch target silently does nothing | Update all `unittest.mock.patch` targets to the new module path |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```text

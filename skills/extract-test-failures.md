@@ -67,15 +67,15 @@ grep -B 5 "AssertionError" test_output.log | head -50
 **Timeout/Hanging**: Test takes too long, infinite loop
 - Fix: Optimize or add timeout
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Only searched for "FAILED" | Missed error types like "Error:" and "exception" | Use comprehensive pattern: `FAILED\|Error\|exception` |
-| Extracted failures without context | Couldn't understand why tests failed | Use `-A 10` to get context after match |
-| Counted raw lines instead of unique failures | Overcounted due to multi-line errors | Use `sort | uniq` to deduplicate |
-| Processed entire huge log file | Too slow, ran out of memory | Use `tail` or `head` to limit, or `grep` first |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Output Format
 
 Report failures with:

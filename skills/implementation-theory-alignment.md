@@ -86,11 +86,9 @@ If implementation is intentionally different:
 
 ## Failed Attempts
 
-| Attempt | What Failed | Why |
-|---------|-------------|-----|
-| Trusting comments | Comment said 70/30 weights | Docs said 50/50; always verify against authoritative source |
-| Partial search | Searched one file for formula | Same formula existed in multiple files with different implementations |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Key Discrepancies Found

@@ -133,35 +133,9 @@ for tier_id in TierID:
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### 1. Assuming Wrong Source of Duplication
-
-**What happened**: Initial assumption (from prior session) was that agent markdown files like `implementation-review-specialist.md` were duplicated 66 times.
-
-**Actual situation**: The duplication was config.yaml files in tier directories (5355 copies), not agent files.
-
-**Lesson**: Always run hash analysis first (`find | md5sum | uniq -c`) to identify the actual source of duplication before planning a solution.
-
-### 2. Initial T0 Migration Left Other Tiers Untouched
-
-**What happened**: Prior commit (d7dfeb9) migrated T0 CLAUDE.md files to block-based composition but left T1-T6 config.yaml files duplicated.
-
-**Actual situation**: The config.yaml duplication in T1-T6 was a separate, larger problem (5355 files vs 1034 CLAUDE.md files).
-
-**Lesson**: When tackling duplication, check ALL file types, not just the one initially identified.
-
-### 3. Per-Test Tier Directories Were Unnecessary
-
-**What happened**: Initially thought each test needed its own tier directory structure.
-
-**Actual situation**: Tier/subtest configurations are test-independent - they define what components to load (skills, agents, blocks), not test-specific settings.
-
-**Lesson**: Identify what's truly test-specific vs. shared. Only test-specific data (prompts, expected results, rubrics) needs to be per-test.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Before/After Metrics

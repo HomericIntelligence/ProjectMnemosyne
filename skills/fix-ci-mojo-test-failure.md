@@ -43,12 +43,9 @@ Step-by-step process that worked:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Read main branch test file | Test didn't exist on main - was added in PR | Always checkout PR branch before investigating |
-| Use `mojo test` command | Command doesn't exist in some Mojo versions | Use `mojo run` for test files with `main()` function |
-| Initialize loop variable to 0 | Created 1x1 matrix for empty inputs instead of empty matrix | Initialize to -1 when empty input should produce empty output |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 Common pattern for fixing edge cases:

@@ -1,7 +1,7 @@
 ---
 name: dockerfile-optional-dep-drift-guards
 description: "Skill: Dockerfile Optional-Dependency Drift Guards"
-category: uncategorized
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -153,29 +153,9 @@ If your comment uses a different separator (e.g., `:`), update the character cla
 
 ## Failed Attempts
 
-### 1. Binary Mode tomllib.load() in Tests
-
-**Problem**: Using `tomllib.load(open(PYPROJECT, 'rb'))` directly in the fixture body works but makes it harder to close the file handle cleanly. The linter (ruff) may flag unclosed file handles.
-
-**Fix**: Use `tomllib.loads(PYPROJECT.read_text())` — reads the text content first, then parses. Always closes the file.
-
-### 2. Running Only the Docker Test Subset Shows 0% Coverage
-
-**Problem**: Running `pixi run python -m pytest tests/unit/docker/ -v` reports:
-```
-FAIL Required test coverage of 9% not reached. Total coverage: 0.00%
-```
-
-**Why**: The Docker tests are pure static-analysis — they parse text files without importing any `scylla/` modules. The `addopts` coverage threshold applies globally. This is expected and NOT a bug.
-
-**Fix**: Use `--override-ini="addopts="` to skip coverage when running only docker tests in development. The full CI suite (`tests/`) provides real coverage.
-
-### 3. Regex Matching Too Broadly
-
-**Problem**: An initial regex `r"#\s+(\w+)"` matched too many things — Python keywords, section headers, etc. — producing false positives for `stale` groups.
-
-**Fix**: Anchor with `\s{3,}` (3+ spaces minimum) and require the trailing em-dash/hyphen: `r"#\s{3,}(\w+)\s+[—-]"`. This is specific to the comment format used in ProjectScylla's Dockerfile.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test counts added

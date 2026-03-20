@@ -114,14 +114,15 @@ Both call sites must be fixed: batch mode (`_run_batch`) and single-test mode (`
 6. Change `terminal_guard()` → `terminal_guard(request_shutdown)` at each call site
 7. Update tests: `until_state=X` stops with checkpoint at `X`, action that PRODUCED `X` ran, action registered for `X` did NOT run
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed |
-|---------|--------------|---------------|
-| Moved `until_state` check **before** `advance()` (exclusive semantics) | State stays at `until_state`, action for that state not executed | User wanted inclusive semantics; this stopped one transition too early |
-| Described fix as "exclusive" in PR/docstrings | Caused user confusion | State naming is counter-intuitive; "exclusive of the action" ≠ "exclusive of the state" |
-| Checked `current == until_state` after `advance()` (original code) | Agent ran when `--until replay_generated` specified | `current` was captured before `advance()`, so check fired on the wrong iteration |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Test Pattern for `until_state`
 
 ```python

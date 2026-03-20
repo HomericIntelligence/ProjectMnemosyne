@@ -124,30 +124,9 @@ uses no importable names — just modifies `sys.path`.
 
 ## Failed Attempts
 
-### Attempt 1: Adding `import export_data` as a side-effect import
-
-**What was tried:** Added `import export_data  # noqa: E402` after the sys.path guard to
-force the module into `sys.modules` before any patching.
-
-**Why it failed:** Ruff's F401 (unused import) hook removed the import since
-`export_data` is never referenced by name in the conftest module scope. The pre-commit
-hook auto-fixed the file, silently removing the guard.
-
-**Fix:** The sys.path guard alone is sufficient — `patch("export_data....")` calls
-`importlib.import_module("export_data")` internally, which works once `scripts/` is on
-`sys.path`. No explicit import needed.
-
-### Attempt 2: Assuming the test itself was broken
-
-**What was tried:** Looking for errors in `test_figures.py` or its imports.
-
-**Why it failed:** `test_figures.py` doesn't import `export_data` at all. The error
-originates in `conftest.py`'s autouse fixture, which runs before any test body. This
-is a conftest setup failure, not a test body failure.
-
-**Lesson:** When `ModuleNotFoundError` appears before the first test runs, always check
-`autouse` fixtures in conftest files up the directory tree.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Before vs After

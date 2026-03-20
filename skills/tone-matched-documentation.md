@@ -117,6 +117,10 @@ Use this skill when:
 
 ---
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts & Lessons
 
 | Attempt | Why It Failed | Key Lesson |

@@ -115,14 +115,9 @@ const effectiveLayout = isMobile ? 'phone' : (layoutOverride || deviceType)
 
 ## Failed Attempts
 
-| Attempt | Why It Failed |
-|---------|---------------|
-| Adding navigation buttons only to `Header.tsx` (desktop layout) | User was on TabletDashboard (auto-detected as tablet on WSL/touch laptop). Buttons never appeared. |
-| Inline agent creation form in sidebar | Too complex for the sidebar UI; user just wanted navigation to the setup wizard |
-| Linking `+` button to `/zoom` page | Wrong destination — user wanted the agent creation/setup wizard, not the zoom view |
-| Linking `+` button to `/settings?section=onboarding` | Correct destination but caused hydration error (OnboardingSection reads localStorage on render). Fixed with `dynamic(() => import(...), { ssr: false })` |
-| Auto-detecting tablet vs desktop via `useDeviceType` | Unreliable on WSL, touch-capable laptops, and hybrid devices. Root cause of the entire navigation issue. |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Dependencies

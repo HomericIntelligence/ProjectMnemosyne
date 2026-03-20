@@ -2,7 +2,7 @@
 name: evaluate-model
 description: Measure model performance on test datasets. Use when assessing accuracy,
   precision, recall, and other metrics.
-category: ml
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 mcp_fallback: none
@@ -71,11 +71,9 @@ Evaluation report:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

@@ -191,14 +191,15 @@ if sm:
         restore_run_context(ctx, _current)
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | What Was Tried | Why It Failed | What To Do Instead |
-|---------|----------------|---------------|--------------------|
-| Crash recovery by patching checkpoint to `failed` | Manually patched checkpoint JSON to `experiment_state=failed` so STEP 3 would trigger when bug left checkpoint in bad state (`experiment_state=complete` but `run_states=failed`) | Worked as a one-time recovery but is a manual workaround | Should not be needed once bugs 1-3 are fixed; apply the proper code fixes |
-| Using `--fresh` to restart after failed resume | Restarted the full run with `--fresh` flag to recover from a failed resume | `--fresh` destroys all previously-computed stages (worktree, baseline, replay.sh), wasting time and computation | Patch the checkpoint to `failed` state and let STEP 3 handle recovery |
-| Loading judge result only if `is_valid=True` | `restore_run_context` checked `_has_valid_judge_result()` before loading the judge result | `_has_valid_judge_result()` returns `False` for `is_valid=False` results (zero-score consensus from failed judges), causing "judgment must be set" errors even when `judge/result.json` existed | Check for file existence directly, bypassing the validity check |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Files
 
 | File | Role |

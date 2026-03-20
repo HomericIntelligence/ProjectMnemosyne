@@ -186,29 +186,9 @@ def test_root_level_tools_mapped(self, tmp_path: Path) -> None:
 
 ## Failed Attempts
 
-| Attempt | What We Tried | Why It Failed | Lesson Learned |
-|---------|---------------|---------------|----------------|
-| **Assumed feature was not implemented** | Started planning to implement the entire feature from scratch | The feature WAS already partially implemented - `mcp_servers` root-level mapping existed, and `build_resource_suffix()` was functional | Always search for existing implementation before assuming nothing exists. Use parallel Explore agents to check both implementation and configuration patterns |
-| **Test assumed filesystem structure** | Initial test used `skills: {"categories": ["github"], "names": []}` expecting category lookup to work in `/tmp/tiers` | Test directory doesn't have the shared skills directory structure, so no skills were found and assertion failed | Use explicit skill names in tests: `{"categories": [], "names": ["skill-name"]}` instead of relying on filesystem lookups |
-
-### Failed Test Code
-
-**Code that failed**:
-```python
-resources={
-    "skills": {"categories": ["github"], "names": []},  # ❌ Won't find anything
-    "tools": {"enabled": "all"},
-}
-```
-
-**Working code**:
-```python
-resources={
-    "skills": {"categories": [], "names": ["gh-create-pr-linked"]},  # ✅ Explicit names
-    "tools": {"enabled": "all"},
-}
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Prompt Message Patterns (Copy-Paste Ready)

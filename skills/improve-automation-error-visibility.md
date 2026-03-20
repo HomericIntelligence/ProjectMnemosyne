@@ -261,28 +261,9 @@ def test_granular_status_updates(implementer):
 
 ## Failed Attempts
 
-### ❌ Creating a Separate Logging Module
-
-**Attempt**: Created a separate `ui_logger.py` module with dual-logging functions.
-
-**Why it failed**:
-- Added unnecessary complexity and indirection
-- Required importing in multiple files
-- Made it harder to trace where logs were coming from
-- The helper method pattern was simpler and kept everything in one place
-
-**What worked instead**: Adding `_log()` as a method on the class itself - single responsibility, easy to understand, no extra imports.
-
-### ❌ Using Mock Unused Variables in Tests
-
-**Attempt**: Kept `mock_update` variable even when not used for assertions.
-
-**Why it failed**:
-- Pre-commit ruff check failed with F841 (unused variable)
-- Created unnecessary noise in test code
-
-**What worked instead**: Remove the `as mock_update` binding when the mock isn't needed for assertions - cleaner code that passes linting.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Final Configuration

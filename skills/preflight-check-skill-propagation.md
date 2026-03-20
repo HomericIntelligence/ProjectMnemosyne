@@ -53,21 +53,9 @@ git commit -m "docs(skills): Add preflight check to worktree-create skill"
 
 ## Failed Attempts
 
-### git add was blocked by .gitignore
-
-**Symptom**: `git add tests/claude-code/shared/skills/worktree/worktree-create/SKILL.md` printed:
-
-```
-The following paths are ignored by one of your .gitignore files:
-tests/claude-code/shared/skills/worktree
-```
-
-**Root cause**: The `worktree` directory name appears in `.gitignore`. However, the file was **already staged** in the index from a prior interactive operation, so the error was non-fatal.
-
-**Resolution**: Run `git status <file>` to confirm the file is already staged ("Changes to be committed"), then proceed directly to `git commit`. Do **not** use `-f` to force-add ignored files unless you have verified intent.
-
-**Lesson**: When `git add` is blocked by `.gitignore` for a skill file that is tracked in the repo, verify staged status first — the error message can be misleading.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Diff Summary

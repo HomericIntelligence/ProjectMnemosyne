@@ -112,17 +112,9 @@ After experiments, `/retrospective` saves findings with TECHSPEC reference:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Tiny model (32d-2L, 77K params) | Flatlined at ~0% accuracy | Minimum viable for addition is ~253K params |
-| Standard RoPE implementation | RuntimeError: dimension mismatch [32] vs [16] | Need `torch.cat((freqs, freqs), dim=-1)` to duplicate freqs |
-| d_proj=32 in attention | Performance drop of 8% | Use d_proj=64+ to avoid information bottleneck |
-| No upfront success criteria | Couldn't tell if 75% was good or bad | Define best/realistic/fail thresholds in TECHSPEC |
-| Unscoped parameter ranges | 200+ experiments, ran out of budget | Prioritize parameters, set max experiments |
-| Missing context for Claude | Claude didn't know why experiments mattered | Add "Context for Claude" section |
-| Running all params at once | Wasted compute on low-priority sweeps | Priority column + staged execution |
-| No hypothesis | Just grid search, no insight | Hypothesis-first design |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```yaml

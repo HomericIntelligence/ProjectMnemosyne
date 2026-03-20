@@ -72,15 +72,15 @@ pre-commit run --all-files
 - `-v` for verbose output
 - `-k "pattern"` to run specific tests
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Built without activating environment | Missing dependencies, wrong tool versions | Always activate environment first |
-| Skipped `-I .` flag | Module imports failed | Include current directory in path for local builds |
-| Tested only changed files | Missed breaking changes in dependencies | Run full test suite before pushing |
-| Pushed without running pre-commit | CI failed on formatting | Always run pre-commit before committing |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |

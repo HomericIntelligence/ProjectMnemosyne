@@ -100,12 +100,15 @@ class TestTargetBase:
 pixi run python -m pytest tests/ -v
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-None — the pattern was straightforward once the mutation sites were verified to not affect `RunResultBase` subtypes.
-
-The apparent mutation sites in the codebase (`scylla/executor/capture.py`, `scylla/cli/progress.py`, `scylla/e2e/command_logger.py`) mutate `ExecutionMetrics`, `RunProgress` (a dataclass), and `CommandLog` respectively — not any `RunResultBase` subtype. Always check the type before concluding mutations block `frozen=True`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Insight: Pydantic Config Inheritance
 
 When a subclass defines its own `model_config`, it **replaces** (not merges with) the parent's config. This means:

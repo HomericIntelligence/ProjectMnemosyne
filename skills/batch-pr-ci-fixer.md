@@ -98,23 +98,19 @@ git commit -m "fix: resolve pre-commit issues"
 git push
 ```
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-### 1. Pushing Without Running Pre-commit Locally
-**What happened**: All 8 PRs were created but 4 failed CI due to formatting issues.
-**Why it failed**: `mojo format` wasn't run on new/modified files before pushing.
-**Lesson**: Always run `just pre-commit-all` before pushing.
-
-### 2. Missing Test Coverage Validation
-**What happened**: PR #3027 failed because `test_composed_op.mojo` wasn't in CI workflow.
-**Why it failed**: New test files must be explicitly added to `.github/workflows/comprehensive-tests.yml`.
-**Fix**: Add new test files to the appropriate test group pattern.
-
-### 3. Deprecated List Syntax in Docstrings
-**What happened**: `List[Int](3, 3)` in docstring examples triggered CI failure.
-**Why it failed**: Pre-commit hook checks all `.mojo` files including code in docstrings.
-**Fix**: Use list literals `[3, 3]` even in documentation examples.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### PRs Created

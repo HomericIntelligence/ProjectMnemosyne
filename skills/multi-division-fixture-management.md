@@ -124,12 +124,9 @@ Adding a new division now automatically adds 7 more integration tests with zero 
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Dumping new fixtures into the same flat `tests/fixtures/` | `poolsheet_*.json` globs would mix IDs from different divisions; `plays.json` would be overwritten | Always namespace by slug from the start |
-| Fetching `event.json` twice in `capture_fixtures` (once for slug, once as step 1) | Wasted API call; left a duplicate `_save(output_dir / "event.json", event)` dangling in code | Reuse the already-fetched event; save it immediately after slug resolution |
-| Keeping `FIXTURES_DIR` as a module-level constant and using `skipif` on `_has_fixture("plays.json")` | Doesn't generalize — only tests one hardcoded dir; adding a second set requires manual code changes | Use `_fixture_dirs()` discovery + `@pytest.mark.parametrize` — zero-config scaling |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 **Test count scaling:**

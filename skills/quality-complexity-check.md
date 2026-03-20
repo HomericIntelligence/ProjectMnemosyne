@@ -127,15 +127,15 @@ def process(data):
 - Max nesting depth: 4
 - Max function length: 50 LOC
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Refactored all complex functions at once | Introduced regressions, hard to review | Refactor one function at a time with tests |
-| Ignored CC metrics during code review | Technical debt accumulated | Include complexity check in review checklist |
-| Set thresholds too strict (CC < 5) | Too many false positives, team ignored warnings | Use reasonable thresholds (CC < 15) |
-| Extracted too many tiny functions | Code became harder to follow | Balance extraction - don't over-fragment |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |

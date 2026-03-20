@@ -224,63 +224,9 @@ else:
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Writing judge_prompt.md to judge/ subdirectory
-
-**What we tried**: Initially placed `judge_prompt.md` at `run_01/judge/judge_prompt.md`
-
-```python
-# WRONG - places file in judge/ subdir
-run_dir = judge_dir.parent  # Only goes up 1 level
-judge_prompt_path = run_dir / "judge_prompt.md"
-```
-
-**Why it failed**:
-- `judge_dir` is `run_01/judge/judge_01/`
-- `judge_dir.parent` is `run_01/judge/` (still inside judge directory)
-- Should be at `run_01/judge_prompt.md` (run level, not in judge/ subdir)
-
-**Fix**: Go up 2 levels instead of 1
-
-```python
-# CORRECT - places file at run level
-run_dir = judge_dir.parent.parent  # Goes up 2 levels
-judge_prompt_path = run_dir / "judge_prompt.md"
-```
-
-**Lesson**: Carefully trace directory structures when using `parent` navigation. The judge directory has deeper nesting than expected (`run_XX/judge/judge_01/` = 3 levels deep).
-
-### ❌ Attempt 2: Using single `../` in judge replay script
-
-**What we tried**: Used `../judge_prompt.md` in judge replay script
-
-```bash
-claude \
-  --model {model} \
-  --prompt "$JUDGE_DIR/../judge_prompt.md" \  # WRONG - looks in judge/ dir
-  > "$JUDGE_DIR/response.txt"
-```
-
-**Why it failed**:
-- `JUDGE_DIR` is `run_01/judge/judge_01/`
-- `../` goes to `run_01/judge/`
-- But `judge_prompt.md` is at `run_01/` (one more level up)
-
-**Fix**: Use `../../` to go up two levels
-
-```bash
-claude \
-  --model {model} \
-  --prompt "$JUDGE_DIR/../../judge_prompt.md" \  # CORRECT
-  > "$JUDGE_DIR/response.txt"
-```
-
-**Lesson**: Match the relative path depth to the directory structure. If file is 2 levels up, use `../../`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Final Directory Structure

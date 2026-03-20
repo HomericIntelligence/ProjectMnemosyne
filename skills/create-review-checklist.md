@@ -79,15 +79,15 @@ gh pr diff <pr> --name-only | sed 's/.*\.//' | sort | uniq -c
 - [ ] Consistent with project standards
 - [ ] Required fields present
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Used single generic checklist for all PRs | Missed type-specific issues | Create tailored checklists per change type |
-| Made checklist too long (50+ items) | Reviewers skipped items | Keep to 8-12 most important items per type |
-| Didn't prioritize items | Critical issues missed | Mark items as Critical/High/Medium/Low |
-| Forgot to update checklist for project | Outdated standards checked | Review and update templates periodically |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Change Type Detection
 
 **Code Implementation**: `.py`, `.mojo`

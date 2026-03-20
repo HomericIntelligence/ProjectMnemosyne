@@ -133,9 +133,9 @@ This ensures the hook doesn't immediately fail on the codebase it's being added 
 
 ## Failed Attempts
 
-None — the `pygrep` approach worked on the first try. The only issue was the ruff D301 lint error
-on the test module docstring (caught by pre-commit during the first commit attempt, fixed immediately).
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |

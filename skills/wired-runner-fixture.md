@@ -107,15 +107,9 @@ pre-commit run --files tests/unit/e2e/test_runner.py
 
 ## Failed Attempts
 
-**None in this session.** The approach was derived from prior skill knowledge (`pytest-real-io-testing`, `shared-fixture-migration`) and worked on the first implementation.
-
-However, be aware of these potential pitfalls:
-
-- **Passing `MagicMock` as a `Path` arg** — the tests used to pass `mock_tier_manager` as `tiers_dir`, which worked at runtime (no type enforcement) but was semantically wrong. The fixture corrects this by passing a real `tmp_path / "tiers"` path.
-- **Forgetting `patch` import** — `patch.object` requires `from unittest.mock import patch` in addition to `MagicMock`.
-- **Forgetting `TierManager` import** — `patch.object` needs the class itself: `from scylla.e2e.tier_manager import TierManager`.
-- **Promoting to `conftest.py` prematurely** — keep the fixture local to the test file unless multiple test files need it (YAGNI).
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```

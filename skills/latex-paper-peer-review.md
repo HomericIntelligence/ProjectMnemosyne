@@ -239,13 +239,9 @@ thresholds---effects near 0.43 are borderline medium/large).
 
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed |
-|---------|---------------|---------------|
-| Running `export_data.py --data-dir ~/fullruns/haiku` | `ERROR: No experiments found` | Directory structure was flat timestamped dirs, not named experiment dirs |
-| Looking for `result.json` in run dirs | `JSONDecodeError: Expecting value` | Correct filename is `run_result.json` (not `result.json`) |
-| Committing without re-staging after pre-commit | Commit failed | `end-of-file-fixer` hook modifies JSON files; must `git add` them again |
-| Expecting `load_all_experiments` to work on any path | Silent "skipping" | Loader expects `<data-dir>/<exp-name>/<timestamp>/` structure; haiku-analysis had the right layout |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### fullruns Directory Structure Required by Loader

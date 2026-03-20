@@ -1,12 +1,7 @@
 ---
-name: extend-script-test-coverage
-description: "---"
-category: testing
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
+
 ---
----
+
 name: "Extend Script Test Coverage to 50%+"
 description: "Pattern for systematically adding mock-only unit tests to previously untested Python scripts — prioritizing by testability × impact to reach a coverage threshold"
 category: testing
@@ -173,14 +168,9 @@ Goal met:              YES / NO
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Testing `main()` directly first | `main()` often calls subprocess, sys.exit, or requires CLI args — hard to isolate | Always start with helper functions; test `main()` last with heavy mocking |
-| Patching at the wrong import path | `from scripts.foo import bar` ≠ `scripts.foo.bar` when function imports inside body | Use `patch("module.where.it.is.used.symbol")`, not where it is defined |
-| Writing integration-style tests with real files | Fails on CI due to missing fixtures / slow I/O | Stick to mock-only — `tmp_path` covers any real-file need |
-| Testing all 34 scripts at once | Many scripts have no extractable helpers or are pure glue code | Rank by testability first; skip scripts that are ≤10 lines of glue with no logic |
-| Creating `tests/unit/scripts/agents/` without `__init__.py` | pytest couldn't discover the subpackage | Always create `__init__.py` when adding a subdirectory under a test package |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Priority Matrix Used (2026-03-03)

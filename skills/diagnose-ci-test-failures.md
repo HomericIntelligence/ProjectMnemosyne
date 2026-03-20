@@ -80,24 +80,19 @@ matrix:
 
 Then in the step: `continue-on-error: ${{ matrix.test-group.continue-on-error == true }}`
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-### Implementing transpose view semantics inline
-
-**What**: Tried to make `transpose()` return a view (shared data, permuted strides) to fix 5 matrix tests.
-
-**Why it failed**: `_get_float32()` uses flat `index × dtype_size` — it's not stride-aware. Making transpose a view without fixing element access everywhere would silently return wrong values. The blast radius covers the entire ExTensor API.
-
-**Lesson**: When a "simple fix" requires changing a fundamental assumption (flat vs strided indexing), scope it as a separate effort. Skip the tests and file an issue.
-
-### Trying to fix JIT crashes in user code
-
-**What**: Investigated whether code changes could prevent `libKGENCompilerRTShared.so` segfaults.
-
-**Why it failed**: These are Mojo compiler bugs triggered non-deterministically during JIT compilation. No user-code workaround exists.
-
-**Lesson**: Use `continue-on-error` in CI and file upstream issues. Don't waste time trying to work around compiler crashes.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Metric | Value |

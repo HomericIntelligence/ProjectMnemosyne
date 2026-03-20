@@ -1,7 +1,7 @@
 ---
 name: t5-inherit-missing-manifest-fallback
 description: "Skill: T5 Inheritance Fallback for Missing config_manifest.json"
-category: uncategorized
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -86,10 +86,15 @@ Add to `tests/unit/e2e/test_tier_manager.py` in `TestBuildMergedBaseline`:
 - Use `continue` (not `return`) so other tiers in `inherit_from_tiers` still contribute
 - The fallback is silent from the caller's perspective — only warnings logged, no exception
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-None in this session — the plan was clear from diagnosis. The only gotcha was that `tier_manager.py` lacked `import logging` / `logger`, requiring both to be added before the fix compiled.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Parameters
 
 | Item | Value |

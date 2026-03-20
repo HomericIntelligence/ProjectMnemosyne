@@ -349,6 +349,10 @@ YOUR_METRIC = calculation_here
 
 **Key**: Provide complete instrumentation guide so future experiments can capture the data.
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
 |---------|-------|------------|

@@ -139,10 +139,9 @@ Closes #<issue-number>"
 
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed |
-|---------|--------------|---------------|
-| N/A — plan from issue was precise enough | No false starts occurred | Read issue comments with `gh issue view <N> --comments` before exploring |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Metric | Value |

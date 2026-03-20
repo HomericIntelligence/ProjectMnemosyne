@@ -117,14 +117,9 @@ for plugin_json_path in skills_root.rglob('.claude-plugin/plugin.json'):
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson Learned |
-|---------|------------|----------------|
-| `shutil.copytree(refs_src, refs_dest)` on in-place migration | `legacy_dir == target_dir`, so `rmtree(refs_dest)` deleted the source before copy | Detect `target_dir.resolve() == legacy_dir.resolve()` and skip file copies for in-place migrations |
-| Early-exit on `.claude-plugin/plugin.json` existence | Some skills had `.claude-plugin/plugin.json` but no `skills/<name>/SKILL.md` — migration skipped them | Check BOTH `.claude-plugin/plugin.json` AND `skills/<name>/SKILL.md` before skipping |
-| `git checkout HEAD -- path/` to restore deleted dir | Safety Net blocked it: "overwrite working tree" | Use `git restore .` for bulk working-tree restore; ask user for single-path restores |
-| Push feature branch directly to main | Remote had new commits → rejected | Cherry-pick onto fresh branch from `origin/main` instead |
-| `git switch <branch>` after branch deleted locally | Branch was never created locally (only cherry-picked) | Use `git log origin/main` to verify merge status before trying to switch |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```yaml

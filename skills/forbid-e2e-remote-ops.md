@@ -161,31 +161,9 @@ def test_worktree_includes_commit(self, tmp_path: Path) -> None:
 
 ## Failed Attempts
 
-### ❌ Attempt 1: Modify Prompt Blocks Directly
-
-**What was tried:** Considered adding test constraints inside CLAUDE.md prompt blocks (B02, B18)
-
-**Why it failed:**
-
-- Would contaminate ablation study by modifying prompt content
-- Different tiers use different prompt blocks - would need tier-specific logic
-- Defeats the purpose of testing prompt effectiveness in isolation
-
-**Lesson:** Safety constraints should be universal and separate from experimental variables
-
-### ❌ Attempt 2: Use Git Hooks to Block Remote Operations
-
-**What was considered:** Configure git hooks in test workspaces to reject push attempts
-
-**Why it wasn't pursued:**
-
-- Hooks run after the command is attempted (not preventive enough)
-- Doesn't prevent `gh pr create` or GitHub API calls
-- Harder to debug when hooks silently fail
-- Better to prevent at the instruction level than execution level
-
-**Lesson:** Explicit instructions are clearer than implicit enforcement mechanisms
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Verification Commands

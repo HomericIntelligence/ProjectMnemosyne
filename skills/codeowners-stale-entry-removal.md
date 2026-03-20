@@ -97,13 +97,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed |
-|---------|--------------|---------------|
-| N/A — fix was straightforward | — | — |
-
-The only subtlety: confirm `/.claude/` (not `/.claude/agents/`) is listed — the wildcard covers
-the full subtree so no new entry is needed.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 - **Files changed**: `.github/CODEOWNERS` — 1 line deleted

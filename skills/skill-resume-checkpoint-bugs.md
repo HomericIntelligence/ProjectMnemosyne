@@ -140,14 +140,15 @@ def stage_capture_baseline(ctx):
         ctx.pipeline_baseline = _run_build_pipeline(...)
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed |
-|---------|--------------|---------------|
-| Computing `experiment_dir` from `run_dir.parent.parent.parent` | `stage_capture_baseline` tests failed with wrong directory | Test fixtures for `stage_capture_baseline` don't use the full 4-level directory hierarchy. Path arithmetic assumes fixed depth that tests don't replicate. Use `ctx.experiment_dir` directly. |
-| Resetting COMPLETE tier to `"subtests_running"` when subtests are missing | New subtests still didn't run | `"subtests_running"` skips `action_pending()`. `action_config_loaded()` uses `tier_ctx.tier_config` pre-populated at resume time — limited to the old `max_subtests` count. Must reset to `"pending"` so `action_pending()` re-runs with full list. |
-| Treating `test_sets_experiment_state_to_interrupted` (asserting `"INTERRUPTED"`) as correct | Fixing production code caused test failure | The test was documenting the bug. When a test documents behavior that seems wrong, check if it's documenting a bug rather than correct behavior. |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results and Parameters
 
 ### Checkpoint State Flow (resume with expanded subtests)

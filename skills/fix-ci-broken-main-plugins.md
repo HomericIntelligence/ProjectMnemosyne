@@ -90,60 +90,14 @@ Add a minimal table immediately after the section header:
 ```markdown
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| <attempt> | <reason> | <lesson> |
-```
-
-### 5. Validate locally before pushing
-
-```bash
-python3 scripts/validate_plugins.py plugins/
-```
-
-Must show `ALL VALIDATIONS PASSED` before committing to main.
-
-### 6. Commit and push fixes to main
-
-```bash
-git add plugins/<category>/<name>/.claude-plugin/plugin.json \
-        plugins/<category>/<name>/skills/<name>/SKILL.md
-git commit -m "fix(plugins): Add missing plugin.json and YAML frontmatter for broken plugins"
-git push origin main
-```
-
-### 7. Rebase all open PR branches
-
-After main is fixed, rebase each open PR branch sequentially:
-
-```bash
-gh pr list --state open --json number,headRefName --jq '.[].headRefName' | while read branch; do
-  git fetch origin "$branch"
-  git checkout "$branch"
-  git rebase origin/main
-  git push --force-with-lease origin "$branch"
-done
-git checkout main
-```
-
-**Expected**: Some branches may have "skipped previously applied commits" — this means their content was already on main. Those PRs will auto-close (this is correct behavior, not an error).
-
-### 8. Enable auto-merge on remaining open PRs
-
-```bash
-gh pr list --state open --json number --jq '.[].number' | while read pr; do
-  gh pr merge "$pr" --auto --rebase
-done
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Pushing plugin.json without running validate first | Would have missed that SKILL.md frontmatter was also required | Always run `validate_plugins.py` locally before pushing to main |
-| Enabling auto-merge on PRs that were already closed | `gh pr merge --auto` fails with `Pull request is closed` error | Check PR state first; closed-not-merged PRs had content already on main |
-| Assuming "skipped previously applied commits" is an error | Those branches became empty and auto-closed — the content WAS already on main | Verify skills directory before investigating further |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Metric | Value |

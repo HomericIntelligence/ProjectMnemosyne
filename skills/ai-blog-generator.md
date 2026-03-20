@@ -153,15 +153,15 @@ for i, f in enumerate(files_sorted, 1):
 - Sequential numbering: Day One through Day Fifty
 - Authentic git timeline preserved via backdated commits
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Assigned day numbers without checking existing posts | Created 9+ duplicate day numbers (Day Twelve appeared twice, etc.) | Always analyze ALL existing posts before assigning numbers |
-| Used bash for-loop with complex variable substitution | Syntax errors with subshells and pipes | Use Python scripts for complex date/file manipulation |
-| Original PR merged before fixing numbering | Auto-merge completed during fix | Review PR thoroughly before enabling auto-merge |
-| Git log date filtering with `--since="DATE 00:00"` | Returned inconsistent results | Use `--since="YYYY-MM-DD" --until="YYYY-MM-DD"` format |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |

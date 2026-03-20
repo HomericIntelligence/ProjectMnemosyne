@@ -172,78 +172,9 @@ done
 
 ## Failed Attempts
 
-### ❌ Attempt 1: Using Obsolete Pixi Environment
-
-**What We Tried**: Used `pixi run -e analysis` to run regeneration tests
-
-**Why It Failed**:
-```
-Error: environment 'analysis' not found in pixi.toml
-```
-
-**Root Cause**: The `-e analysis` environment was removed in commit `4dc1b9b` (2026-02-09)
-
-**Lesson**: Always check current `pixi.toml` for available environments before using `-e` flag. The fix updated 21 files total (4 in ProjectScylla + 17 skills in ProjectMnemosyne) to remove obsolete references.
-
-**Fix**: Use default environment:
-```bash
-# WRONG (old)
-pixi run -e analysis python -m scylla.e2e.regenerate ...
-
-# RIGHT (current)
-pixi run python -m scylla.e2e.regenerate ...
-```
-
-### ❌ Attempt 2: Line Length Violations in First Commit
-
-**What Happened**: Pre-commit hook failed with ruff E501:
-
-```
-scylla/e2e/regenerate.py:324:101: E501 Line too long (116 > 100 characters)
-scylla/e2e/regenerate.py:330:101: E501 Line too long (108 > 100 characters)
-```
-
-**Violations**:
-1. Comment line: `# Reuse saved judge_prompt.md to ensure consistent evaluation (workspace may differ from original)`
-2. F-string: `f"Saved judge_prompt.md not found at {saved_judge_prompt_path}, rebuilding from workspace"`
-
-**Fix**: Break long lines:
-```python
-# Comment - split into multiple lines
-# Reuse saved judge_prompt.md to ensure consistent evaluation
-# (workspace may differ from original)
-
-# F-string - split with parentheses
-logger.warning(
-    f"Saved judge_prompt.md not found at {saved_judge_prompt_path}, "
-    "rebuilding from workspace (may be inaccurate)"
-)
-```
-
-**Lesson**: Always run `pre-commit run --all-files` before committing. Line length limits apply to ALL lines (code, comments, strings).
-
-### ❌ Attempt 3: Wrong ProjectMnemosyne Path
-
-**What We Tried**: Update skills in `build/ProjectMnemosyne`
-
-**Why It Failed**:
-```
-Directory not found: /home/mvillmow/ProjectScylla/build/ProjectMnemosyne
-```
-
-**Root Cause**: ProjectMnemosyne was cloned to `~/ProjectMnemosyne`, not `~/ProjectScylla/build/ProjectMnemosyne`
-
-**Lesson**: Verify paths before running batch updates. Use `ls -la ~/` to check actual directory locations.
-
-**Fix**: Use correct path:
-```bash
-# WRONG
-cd build/ProjectMnemosyne
-
-# RIGHT
-cd ~/ProjectMnemosyne
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified

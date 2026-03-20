@@ -110,43 +110,19 @@ pre-commit run --files scripts/validate_model_configs.py \
 
 All hooks must pass (Ruff Format, Ruff Check, Mypy, Trim Whitespace, etc.).
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-### ❌ Missing Docstrings on Test Classes/Methods
-
-**What happened:**
-Initial test file had no docstrings on test classes or methods — names were
-considered self-documenting.
-
-**Why it failed:**
-Ruff D101/D102 rules enforce docstrings on all public classes and methods,
-including test classes. The pre-commit hook failed with 34 errors.
-
-**Fix:**
-Add a one-line docstring to every test class and every `test_*` method.
-Helper methods (`_make_models_dir`) need docstrings too since they're technically
-public (no leading underscore guard applied by ruff at class level).
-
-### ❌ Forgetting `--no-cov` When Diagnosing Test Failures
-
-**What happened:**
-Running `pytest tests/unit/scripts/...` reported exit code 1 even though all
-26 tests passed. The failure was a global coverage threshold (73%) not met.
-
-**Why it failed:**
-The project has `fail_under = 73` in `pyproject.toml`. Running only the new
-test file in isolation drops total coverage to ~5%.
-
-**Fix:**
-Use `--no-cov` when running isolated test subsets:
-
-```bash
-pixi run python -m pytest tests/unit/scripts/ -v --no-cov
-```
-
-The coverage threshold is a pre-existing project-wide constraint; individual
-sub-suite runs should use `--no-cov` to avoid false failures.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Created

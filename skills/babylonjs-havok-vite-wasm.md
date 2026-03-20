@@ -1,17 +1,10 @@
 ---
 name: babylonjs-havok-vite-wasm
-description: "---"
-category: debugging
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
----
----
-name: babylonjs-havok-vite-wasm
-description: "TRIGGER CONDITIONS: When Babylon.js + Havok physics fails to initialize in a Vite dev server — blue/blank screen, WASM MIME type errors, 'incorrect response MIME type: Expected application/wasm', or 'No camera defined' on scene load"
+description: When Babylon.js Havok physics fails in Vite dev server with WASM MIME type errors
 user-invocable: false
 category: debugging
 date: 2026-03-03
+version: "1.0.0"
 ---
 
 # babylonjs-havok-vite-wasm
@@ -101,13 +94,9 @@ private async _init(): Promise<void> {
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| `assetsInclude: ['**/*.wasm']` in `vite.config.ts` | Vite still serves node_modules files through module pipeline, not as static assets. `assetsInclude` only affects bundling, not dev server static serving | Copy WASM to `public/` instead |
-| `locateFile: (path) => path` (returning path unchanged) | HavokPhysics resolves relative to its own script URL in node_modules, which Vite serves as HTML. Same MIME error | Must return absolute path `/HavokPhysics.wasm` pointing to `public/` |
-| `optimizeDeps.exclude: ['@babylonjs/havok']` alone | Prevents pre-bundling but doesn't fix WASM serving at all | Necessary but insufficient — still need `public/` copy |
-| Using `const tempCam` in constructor, referencing in `_init()` | `_init()` is a separate method, can't access constructor locals | Store as class field `private _tempCam!: FreeCamera` |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```typescript

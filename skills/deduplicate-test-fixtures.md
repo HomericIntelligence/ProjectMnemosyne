@@ -114,35 +114,9 @@ du -sh tests/fixtures/
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### 1. Misidentified Source of Duplication
-
-**What happened**: Initial assumption was that agent markdown files (e.g., `implementation-review-specialist.md`) were duplicated 66 times.
-
-**Actual situation**: The duplication was CLAUDE.md files in T0 tier directories (1034 copies), not agent files.
-
-**Lesson**: Always run the hash analysis first to identify the actual source of duplication before planning a solution.
-
-### 2. Incomplete Previous Migration
-
-**What happened**: A prior commit (d7dfeb9) claimed to "remove 197MB duplication" but the duplicated files still existed.
-
-**Actual situation**: The commit added infrastructure (`_compose_claude_md()` method) but never ran the actual migration to delete files.
-
-**Lesson**: After adding migration infrastructure, always verify the migration actually ran by checking file counts and sizes.
-
-### 3. Scope Creep Risk
-
-**What happened**: T5 tier had some duplicated files but was deferred.
-
-**Decision**: Focus on the largest source of duplication (T0 with 1034 files) and defer smaller sources to follow-up work.
-
-**Lesson**: Set clear scope boundaries. It's better to complete a focused migration than to expand scope and risk incomplete work.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Config Format

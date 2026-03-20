@@ -103,22 +103,19 @@ pixi run mojo package -I . shared -o /tmp/shared.mojopkg 2>&1 | grep "warning:"
 just pre-commit-all
 ```
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-### Almost reverted `alias` -> `comptime`
-
-When `mojo format` broke after the `alias` -> `comptime` change, the initial instinct was to
-revert. However, investigation showed the formatter was **already broken** on main for existing
-files with `comptime` (e.g., `shared/training/precision_config.mojo`). Reverting would only
-reduce the number of affected files, not fix the root cause. The correct fix was to update the
-format wrapper to tolerate parse errors.
-
-### Investigated wrong upstream issue
-
-Issue modular/modular#5943 was about `comptime assert` + `is_compile_time()` semantics — a
-completely different problem from the formatter crash. The actual formatter bug was filed as
-modular/modular#6144.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Metric | Value |

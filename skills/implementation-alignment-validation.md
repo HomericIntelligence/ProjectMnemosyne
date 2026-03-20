@@ -92,12 +92,9 @@ pixi run pytest tests/ -v --tb=short
 
 ## Failed Attempts
 
-| Attempt | Why It Failed | Lesson Learned |
-|---------|---------------|----------------|
-| Updating config without updating test fixtures | Tests failed because fixtures only had T0-T3 but validator now required T4-T6 | Always search for test fixtures when changing validators |
-| Using exact float comparisons in tests | `0.2 != 0.20000000000000007` due to floating point | Always use `pytest.approx()` for float comparisons |
-| Trusting code comments over docs | Comment said 70/30 weights, docs said 50/50 | Docs are authoritative; verify comments against docs |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Alignment Categories Found

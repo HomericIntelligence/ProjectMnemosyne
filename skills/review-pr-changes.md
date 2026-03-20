@@ -2,7 +2,7 @@
 name: review-pr-changes
 description: Review PR changes with structured checklist for quality and standards
   compliance. Use for comprehensive PR code review.
-category: review
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 ---
@@ -198,11 +198,9 @@ Comment when:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

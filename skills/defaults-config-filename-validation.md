@@ -178,26 +178,9 @@ happy path end-to-end.
 
 ## Failed Attempts
 
-### Monkeypatching `load_defaults` to exercise the warning path
-
-The first attempt used `monkeypatch.setattr(loader, "load_defaults", patched_load_defaults)`
-with a custom function that called `validate_defaults_filename` on a non-standard path.
-The patched function needed imports inside the closure, which triggered ruff violations:
-- `F841` — unused variable `original_load_defaults`
-- `N814` — CamelCase imported as constant (`DefaultsConfig as _DC`, `ConfigurationError as _CE`)
-
-**Fix**: Replace the monkeypatch with a direct call to `validate_defaults_filename(nonstandard)`.
-The loader's hard-coded path means the warning path can only be triggered by calling the
-validation function directly. This is simpler and avoids the ruff issues entirely.
-
-### Attempting field-level consistency check for DefaultsConfig
-
-An early consideration was to add a check analogous to `validate_filename_model_id_consistency`,
-comparing the filename against some field in `DefaultsConfig`. However, `DefaultsConfig` has
-no single ID field. The nearest candidates were config section names (e.g. `evaluation`,
-`output`) but those are structural keys, not identifiers. The stem-only check was the
-minimal meaningful validation that could be applied.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Metric                   | Value                                           |

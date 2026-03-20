@@ -117,26 +117,9 @@ class TestFilenameTierConsistency:
 
 ## Failed Attempts
 
-### Fixture test via loader with `_`-prefixed tier name
-
-**Attempted:** `loader.load_tier("_test-fixture")` — mirroring how model fixture test uses `load_model("_test-fixture")`
-
-**Why it failed:** `load_tier()` normalizes the tier name:
-
-```python
-tier = tier.lower().strip()
-if not tier.startswith("t"):
-    tier = f"t{tier}"  # "_test-fixture" → "t_test-fixture"
-```
-
-So it would look for `t_test-fixture.yaml` (not found) rather than `_test-fixture.yaml`.
-
-**Fix:** Test the validation function directly instead of going through the loader. Import `validate_filename_tier_consistency` and call it with a manually constructed path.
-
-### Pre-commit hook formatting failure
-
-Ruff reformatted `tests/unit/test_config_loader.py` on first commit attempt. The pre-commit hook modifies files in place but the commit still fails. Re-stage and commit again — the second commit succeeds.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files modified

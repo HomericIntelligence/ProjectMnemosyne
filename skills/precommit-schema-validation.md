@@ -148,11 +148,9 @@ class TestResolveSchema:
 
 ## Failed Attempts
 
-| Attempt | What Happened | Fix |
-|---------|---------------|-----|
-| Used `files:` as a single-line regex in `.pre-commit-config.yaml` | YAML multi-line regex with a newline in the middle caused yamllint `wrong indentation` error | Use `files: >-` (block scalar) and keep the continuation on the next line; yamllint accepts folded scalars |
-| Used `jsonschema.validate()` (raises on first error) | Only the first schema violation was shown; users had to fix-commit-fix-commit multiple times | Switch to `Draft7Validator.iter_errors()` which collects all errors |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 - `jsonschema` version: `>=4.0,<5` (already in `pixi.toml` for ProjectScylla)

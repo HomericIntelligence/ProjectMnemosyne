@@ -1,12 +1,7 @@
 ---
-name: mypy-annotate-test-functions
-description: "---"
-category: testing
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
+
 ---
----
+
 name: mypy-annotate-test-functions
 description: "Skill: mypy-annotate-test-functions. Use when annotating test functions and helper classes in pytest test files for mypy compliance."
 category: testing
@@ -113,10 +108,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-None — the workflow was straightforward. The main risk (which did not materialize) would have
-been assuming all test methods lacked annotations and making unnecessary changes. The audit-first
-approach prevented this.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |

@@ -207,39 +207,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-### ❌ Using `ast.Constant.s` in Python 3.14
-
-**Symptom**: `AttributeError: 'Constant' object has no attribute 's'` at runtime and in tests.
-
-**Root cause**: `ast.Constant.s` was deprecated in Python 3.8 and removed in Python 3.14. The
-project runs Python 3.14.3.
-
-**Fix**: Use `ast.Constant.value` instead:
-
-```python
-# WRONG (fails on Python 3.14):
-if not isinstance(value, ast.Constant) or not isinstance(value.s, str):
-    continue
-results.append((node, value.s, first_stmt.lineno))
-
-# CORRECT:
-if not isinstance(value, ast.Constant) or not isinstance(value.value, str):
-    continue
-results.append((node, value.value, first_stmt.lineno))
-```
-
-**Rule**: Always use `ast.Constant.value` for string constant nodes. `ast.Str`, `ast.Num`,
-`ast.Bytes` and their `.s`/`.n` attributes are all removed in Python 3.14+.
-
-### ❌ Line-by-line Regex Approach
-
-**Considered but rejected**: A regex-based line-by-line scanner (similar to `audit_doc_examples.py`)
-would reproduce the exact false-positive problem it's meant to fix — a continuation line read in
-isolation still looks like a fragment.
-
-**Fix**: Use `ast.parse()` to get the full docstring string, then check only the first non-empty
-line's first word. This is the correct semantic unit boundary.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 **Tests**: 35 new tests, 4034 total passed, 72.11% coverage (threshold: 9% combined / 75% unit)

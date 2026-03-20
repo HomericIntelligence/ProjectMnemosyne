@@ -4,7 +4,7 @@ description: 'TRIGGER CONDITIONS: Adding a new pairwise statistical comparison t
   to scylla/analysis/tables/comparison.py. Use when a new metric (e.g. CFP, R_Prog,
   impl_rate) needs tier-by-tier Kruskal-Wallis + Mann-Whitney U + Holm-Bonferroni
   comparison in both Markdown and LaTeX formats.'
-category: analysis
+category: evaluation
 date: 2026-03-02
 version: 1.0.0
 user-invocable: false
@@ -181,11 +181,9 @@ Expected: all hooks pass; ruff may auto-fix minor style issues on first run — 
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Using backslash in metric_name inside f-string | SyntaxError in Python <3.12 | Use a variable: `name = "R\\_Prog"` then pass `metric_name=name`, or use a raw string approach |
-| Putting `table_cfp_comparison` in `__all__` of `__init__.py` in the wrong position | No functional failure, but broke logical grouping (comparison vs detail tables) | Place new comparison table entries in the "Comparison tables" section of `__all__`, not the "Detail tables" section |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### NaN handling

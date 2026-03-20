@@ -1,12 +1,7 @@
 ---
-name: cytoscape-frontend-rewrite
-description: "---"
-category: architecture
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
+
 ---
----
+
 name: cytoscape-frontend-rewrite
 description: Full rewrite of Cytoscape.js tournament visualization — court-slot packing layout, composable filters, multi-team trajectory, single bottom toolbar
 category: architecture
@@ -296,44 +291,9 @@ cy.on('tap', function(evt) {
 
 ## Failed Attempts
 
-### ❌ Using `??` operator inside phaseRemap lookup
-
-**Attempted**: `phaseRemap ? (phaseRemap.get(rawPhase) ?? rawPhase) : rawPhase`
-
-**Issue**: `phaseRemap.get(rawPhase)` returns `undefined` when the key doesn't exist — `?? rawPhase` is correct. But `Map.get()` returning `0` (compactIndex=0) would NOT trigger `??` because 0 is not nullish. This was correct behavior but worth noting — unlike `||`, `??` does not treat `0` as falsy.
-
-**Lesson**: For Map lookups where index 0 is valid, `?? rawPhase` is correct. Do NOT use `|| rawPhase` (that would skip index 0).
-
-### ❌ phaseRemap as plain Object instead of Map
-
-**Attempted**: `const phaseRemap = {}; sortedPhases.forEach((p, i) => phaseRemap[p] = i);`
-
-**Issue**: In the old `relayoutVisible()`, phaseRemap was a plain object with numeric keys. Lookup `phaseRemap[Number(phase)]` works, but passing it to a shared helper that accepts `Map | null` requires converting. Using `Map` from the start is cleaner for the shared-helper signature.
-
-### ❌ Forgetting to null-guard `phaseRemap.get()` when it returns `undefined`
-
-**Attempted**: `const compactPhase = phaseRemap ? phaseRemap.get(rawPhase) : rawPhase;`
-
-**Problem**: If `phaseRemap` is provided but `rawPhase` is not in it (e.g., a port node's parentId phase), `Map.get()` returns `undefined`, leading to `compactPhase = undefined` → `NaN * PHASE_WIDTH = NaN` position.
-
-**Solution**: Always null-coalesce: `phaseRemap.get(rawPhase) ?? rawPhase`.
-
-### ❌ Setting `_activeTeamIds` to scalar in dropdown change handler
-
-**Attempted**: `_activeTeamIds = parseInt(select.value, 10) || null;`
-
-**Problem**: Must be an array for consistency with `activateTrajectory(cy, teamIds)`. `activateTrajectory` checks `teamIds.length === 0`.
-
-**Solution**: `_activeTeamIds = select.value ? [parseInt(select.value, 10)] : [];`
-
-### ❌ Win/loss coloring called once per teamId before inner loop
-
-**Attempted**: Calling the win/loss logic as: `teamParentNodes.filter(...).forEach(node => { teamIds.forEach(... })`
-
-**Problem**: Correct. But if the per-match loop is inside `teamIds.forEach` and the "skip if both" check uses `teamIdSet`, you can accidentally mark a win for team A and then immediately try to mark a loss for team B on the same node — the class from A stays.
-
-**Solution**: The outer `teamIds.forEach`, inner `teamParentNodes.filter().forEach` is the correct order. The "skip if both" short-circuit (`teamIdSet.has(homeTeam.id) && teamIdSet.has(awayTeam.id)`) runs per-match inside the outer loop and correctly prevents double-marking.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Architecture summary (filter composition invariants — see also: cytoscape-filter-compose)

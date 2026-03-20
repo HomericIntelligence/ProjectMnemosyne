@@ -126,14 +126,9 @@ class RunResult:
 
 ## Failed Attempts
 
-| Attempt | Why It Failed |
-|---------|---------------|
-| Forcing all RunResult types into one class | Different domains need different fields; forced inheritance added complexity |
-| Removing old class names immediately | Broke existing imports; backward-compatible aliases needed |
-| Consolidating without issues first | Lost track of what to change; issues provide checklist |
-| Using shorthand /advise command | Full prefix required: `/skills-registry-commands:advise` |
-| git reset --hard after accidental commit | Safety net blocked; files were harmless so left as-is |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Consolidation Statistics

@@ -160,11 +160,9 @@ error messages if N threads all hit the same missing path.
 
 ## Failed Attempts
 
-| # | What Was Tried | Why It Failed | Correct Approach |
-|---|----------------|---------------|-----------------|
-| 1 | Wrote new tests before running full suite after production changes | New tests passed but 3 pre-existing tests were now broken by the changed default value — only caught at final pre-commit run | Always run `pytest -x -q` after production changes, before writing any new tests |
-| 2 | Asserted on file side-effects (e.g., output file created) for early-exit test paths | Early-exit paths (`sys.exit`) never reach the file-write code; assertion always fails | Assert on `SystemExit.code` via `pytest.raises(SystemExit)` for early-exit paths; assert on file contents only for success paths |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Item | Value |

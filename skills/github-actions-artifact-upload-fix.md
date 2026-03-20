@@ -144,6 +144,10 @@ grep -A1 "sanitized-name:" .github/workflows/comprehensive-tests.yml
 grep "matrix.test-group.sanitized-name" .github/workflows/comprehensive-tests.yml
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |

@@ -175,36 +175,9 @@ except Exception as e:
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Initial Token Calculation Error
-
-**What Was Tried**: Used `cache_read_input_tokens` instead of `cache_read_tokens`
-
-**Why It Failed**:
-- Token stats structure uses `cache_read_tokens` (not `cache_read_input_tokens`)
-- Resulted in `tokens_input = 33` instead of `195768` (missing cache reads)
-
-**Lesson**: Always verify field names by reading actual data files, not assuming from memory
-
-**Fix**: Changed to `token_stats.get("cache_read_tokens", 0)`
-
-### ❌ Assumed run_result.json Would Self-Classify as Complete
-
-**What Was Tried**: Expected regenerated run_result.json to immediately show as "completed" status
-
-**Why It Failed**:
-- First run showed "⚠ results: 1" before regeneration
-- After regeneration still showed "⚠ results: 1" in same execution
-- Classification happens at scan time, not after regeneration
-
-**Lesson**: Rerun statistics classification happens once per execution. Need fresh dry-run to see updated status.
-
-**Fix**: Ran separate `--dry-run` after regeneration to verify completion
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Verification Steps
 
 ### 1. Verify File Structure

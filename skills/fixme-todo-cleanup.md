@@ -88,52 +88,9 @@ gh run rerun <run-id> --failed
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### 1. `@value` to `@fieldwise_init` Migration
-
-**What was tried**: Replace deprecated `@value` decorator with `@fieldwise_init`
-
-**Error**:
-
-```text
-error: 'TrainingCallbacks' has an explicitly declared fieldwise initializer
-```
-
-**Why it failed**: `@fieldwise_init` generates an `__init__` method, conflicting with custom `__init__`
-
-**Solution**: Remove decorator entirely, keep explicit `Copyable, Movable` conformances:
-
-```mojo
-# Before (broken)
-@fieldwise_init
-struct TrainingCallbacks(Copyable, Movable):
-    fn __init__(out self, verbose: Bool = True):
-        self.verbose = verbose
-
-# After (working)
-struct TrainingCallbacks(Copyable, Movable):
-    var verbose: Bool
-
-    fn __init__(out self, verbose: Bool = True):
-        self.verbose = verbose
-```
-
-### 2. Ralph-Loop Hook Stuck
-
-**What was tried**: Set `active: false` in ralph-loop.local.md
-
-**Why it failed**: Hook continued firing despite deactivation flag
-
-**Solution**: Delete the file entirely:
-
-```bash
-rm .claude/ralph-loop.local.md
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Items Resolved

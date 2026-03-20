@@ -3,7 +3,7 @@ name: cytoscape-edge-visibility-optimization
 description: Cytoscape.js DAG visualization bug fixes and performance patterns. Covers
   edge-at-baseline-hidden pattern, read-only graph config, day-filter phase boundary
   visibility, and role-complete trajectory highlighting.
-category: uncategorized
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 ---
@@ -145,6 +145,12 @@ const teams = (node.data('teams') || []).filter(t => t.role !== 'work');
 Work teams have `team_flow` edges in the DAG just like home/away teams. The filter was an explicit exclusion that was incorrect for the use case.
 
 ---
+
+## Verified Workflow
+
+Steps that worked:
+1. Step 1
+2. Step 2
 
 ## Failed Attempts / Pitfalls
 

@@ -120,15 +120,9 @@ Ruff will flag E402 if `from typing import Any` lands before other imports or in
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Used `object` as the annotation type for all fixture parameters | `object` is too restrictive — `"object" has no attribute "readouterr"`, `Unsupported left operand type for / ("object")` cascade errors throughout | Always use `Any` for pytest fixture parameters, not `object` |
-| Single-pass script: add `-> None` to all functions at once | Functions that return values (inner helpers, mock callbacks) got `[return-value]` errors — `-> None` is wrong for them | Run mypy after phase 1 to identify which functions need `-> Any` vs `-> None` |
-| Inserting `from typing import Any` at line 0 of file | Placed import before module docstring; caused E402 when `from __future__ import annotations` came later | Insert after docstring closes AND after any `from __future__` line |
-| Regex to insert import `from __future__` on docstring-first files | Pattern matched inside docstring body, inserting `from typing import Any` into the middle of the docstring | Check that insertion point is after the closing `"""` |
-| Multi-line def collection using paren counting | Some defs had `) -> None:` on the last line already; script added a second `) -> None:` producing unmatched `)` syntax errors | Before modifying the closing line, check it doesn't already contain `-> None` |
-| Using `generator` fixture `-> None` annotation | mypy `[misc]`: generator return type must be `Generator` or subtype | Detect `yield` in function body, annotate as `Generator[Any, None, None]` |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 **Files changed**: 62 test files

@@ -69,10 +69,9 @@ Before removing a worktree:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson Learned |
-|---------|-----------|----------------|
-| N/A | No recorded failures | N/A |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 See the workflow sections above for commands and expected outputs.

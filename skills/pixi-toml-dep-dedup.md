@@ -98,11 +98,9 @@ git commit -m "fix(deps): remove duplicate <package> specs from feature.dev.depe
 
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed |
-|---------|--------------|---------------|
-| Aligning both to identical spec | Works, but leaves unnecessary duplication | Two entries to maintain instead of one — prefer single source of truth |
-| Keeping dev spec as the authoritative one | Risk of CI and dev diverging | `[dependencies]` is what locked CI environments use |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 Concrete fix applied to ProjectScylla (issue #1354):

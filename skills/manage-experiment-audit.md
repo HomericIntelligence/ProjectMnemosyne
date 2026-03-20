@@ -1,22 +1,19 @@
 ---
 name: manage-experiment-audit
-description: "Skill: manage-experiment-audit"
-category: uncategorized
+description: "Audit and fix manage_experiment.py CLI"
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
 ---
-# Skill: manage-experiment-audit
 
 ## Overview
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-02-24 |
-| Project | ProjectScylla |
-| Objective | Audit and fix manage_experiment.py CLI surface, --from logic, batch mode dispatch, and test coverage |
-| Outcome | Bug fixed, 13 new tests, stale artifacts cleaned, docs updated |
-| Commit | 068dbc4 on branch consolidate-run-command |
+| **Date** | 2026-02-24 |
+| **Objective** | Audit and fix manage_experiment.py CLI surface, --from logic, and batch mode dispatch |
+| **Outcome** | Bug fixed, tests added, docs updated |
 
 ## When to Use
 
@@ -204,3 +201,19 @@ def test_from_with_checkpoint_calls_reset_and_run(self, tmp_path):
     assert reset_calls[0][1] == "replay_generated"
     assert len(run_calls) == 1  # NOTE: run_calls not wired above — use run_calls.append in mock
 ```
+
+## Verified Workflow
+
+Steps that worked:
+1. Step 1
+2. Step 2
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.

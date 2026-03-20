@@ -188,6 +188,14 @@ done
 gh issue close 400 --comment "Fixed in PR #508 - [brief explanation]"
 ```
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts & Lessons Learned
 
 ### ❌ Failed: Creating All Worktrees Upfront

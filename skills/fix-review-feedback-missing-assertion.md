@@ -1,12 +1,7 @@
 ---
-name: fix-review-feedback-missing-assertion
-description: "---"
-category: testing
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
+
 ---
----
+
 name: "Skill: Fix Review Feedback — Missing Mock Assertion"
 description: "Pattern for fixing a misleading test that names/documents both setup and baseline assertions but only asserts one — add the missing mock capture and assertion"
 category: testing
@@ -114,9 +109,9 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
 ## Failed Attempts
 
-None — the fix was straightforward: a single `as mock_X` capture + one `assert_called_once()` line.
-The only wrinkle was ruff reformatting the long line, which required running pre-commit twice.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |

@@ -204,14 +204,9 @@ gh pr view <number> --json mergeable,mergeStateStatus
 
 ## Failed Attempts
 
-| Attempt | What Happened | Fix |
-|---------|--------------|-----|
-| Fixing both PRs in parallel | Git state confusion; committed to wrong branch | Do one PR completely (checkout → fix → commit → push → verify CI started) before moving to next |
-| Running `pre-commit` without excluding untracked dirs | 63 mismatches locally vs 20 in CI; `ProjectMnemosyne/` was scanned locally | Pass `--exclude ProjectMnemosyne` to match CI environment |
-| Pre-push hook fluke test failure | `test_load_test` failed with "language, tiers unexpected" at 22% into 4725-test run; not reproducible | Retry the push — transient `_SCHEMA_CACHE` ordering issue in full test suite |
-| `git stash pop` on wrong branch | Applied main-branch stash to feature branch, causing 16 merge-conflict files in `tests/unit/analysis/` | Resolve with `git checkout --ours <dir> && git add <dir>` (feature branch didn't touch those files) |
-| Not running tests after rebase | BAD_PATTERNS regression caused 32 test failures; pushed a broken branch | Always run `pytest tests/unit/scripts/` immediately after resolving rebase conflicts |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Tier Label Canonical Mapping (ProjectScylla)

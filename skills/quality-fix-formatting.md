@@ -2,7 +2,7 @@
 name: quality-fix-formatting
 description: Automatically fix code formatting issues using mojo format, markdownlint,
   and pre-commit hooks. Use when formatting checks fail or before committing code.
-category: quality
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 mcp_fallback: none
@@ -210,11 +210,9 @@ Fix locally and push if CI fails.
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

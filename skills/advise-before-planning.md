@@ -289,73 +289,9 @@ None found
 
 ## Failed Attempts
 
-### ❌ Attempt 1: Using `--message` flag
-
-**What was tried:**
-
-```python
-result = subprocess.run(
-    ["claude-code", "--message", prompt],
-    ...
-)
-```
-
-**Why it failed:**
-
-- `claude-code` binary doesn't exist (correct binary is `claude`)
-- `--message` is for interactive sessions, not batch/automation mode
-- This would hang waiting for user interaction
-
-**Fix:**
-
-```python
-result = subprocess.run(
-    ["claude", "--print", prompt],  # Use --print for non-interactive
-    ...
-)
-```
-
-### ❌ Attempt 2: Using `/advise` slash command directly
-
-**What was tried:**
-Initially planned to invoke the `/advise` skill directly as a slash command in the prompt.
-
-**Why it failed:**
-
-- Slash commands only work in interactive Claude Code sessions
-- `--print` mode doesn't support slash command invocation
-- Would require spawning an interactive session (heavyweight)
-
-**Fix:**
-Instead, the advise prompt instructs Claude to:
-
-1. Read the marketplace.json file directly using its file-reading tools
-2. Search for relevant plugins by keywords/tags
-3. Read matching SKILL.md files
-4. Output structured findings
-
-This achieves the same result without slash command infrastructure.
-
-### ❌ Attempt 3: Not setting CLAUDECODE environment variable
-
-**What was tried:**
-Running `claude` CLI from within a Claude Code session without special handling.
-
-**Why it failed:**
-
-- Claude CLI detects nested sessions and may show warnings or alter behavior
-- Can cause confusion in error messages
-
-**Fix:**
-
-```python
-result = subprocess.run(
-    cmd,
-    env={"CLAUDECODE": ""},  # Bypass nested-session guard
-    ...
-)
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Copy-Paste Configuration
