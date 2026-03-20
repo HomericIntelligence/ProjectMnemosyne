@@ -175,35 +175,9 @@ Use this approach when you observe:
 
 ## Failed Attempts
 
-### ❌ Attempt 1: Keep GradeScale as Configurable
-**What we tried:** Initially kept GradeScale classes thinking they might be needed for custom grading scales.
-
-**Why it failed:**
-- No YAML files actually customized the grade scale
-- All production code already used the centralized function
-- Maintaining duplicate code for unused configurability violated YAGNI
-
-**Lesson:** Check actual usage before preserving "flexibility" - dead code is technical debt.
-
-### ❌ Attempt 2: Remove GradingConfig Entirely
-**What we tried:** Attempted to remove the entire GradingConfig class since we removed grade_scale.
-
-**Why it failed:**
-- `pass_threshold` field was still actively used across the codebase
-- Different tests/rubrics legitimately needed different pass thresholds (0.60, 0.80, etc.)
-
-**Lesson:** Only remove what's truly unused - validate dependencies before deletion.
-
-### ❌ Attempt 3: Batch Multiple Todo Completions
-**What we tried:** Marking several todos as complete at once after finishing a group of related changes.
-
-**Why it failed:**
-- Best practice is to mark each todo complete immediately after finishing
-- Batching makes progress tracking less accurate
-- User loses visibility into incremental progress
-
-**Lesson:** Mark todos complete as soon as each task finishes, not in batches.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Insights
 
 ### 1. User's Explicit Requirements Matter

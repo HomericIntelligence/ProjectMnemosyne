@@ -2,7 +2,7 @@
 name: skills-agent-field
 description: Pattern for specifying which agent type should execute a skill using
   the agent field in Claude Code v2.1.0.
-category: uncategorized
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 user-invocable: false
@@ -49,7 +49,7 @@ agent: mojo-specialist  # Route to Mojo specialist agent
 name: mojo-simd-optimize
 description: Apply SIMD optimizations to Mojo code
 agent: mojo-optimization-specialist
-category: optimization
+category: tooling
 ---
 ```
 
@@ -58,7 +58,7 @@ category: optimization
 name: mojo-memory-check
 description: Verify memory safety in Mojo code
 agent: mojo-memory-specialist
-category: testing
+category: tooling
 ---
 ```
 
@@ -89,7 +89,7 @@ category: tooling
 name: quality-security-scan
 description: Scan code for security vulnerabilities
 agent: security-review-specialist
-category: architecture
+category: tooling
 ---
 ```
 
@@ -98,7 +98,7 @@ category: architecture
 name: quality-complexity-check
 description: Analyze code complexity metrics
 agent: code-quality-specialist
-category: architecture
+category: tooling
 ---
 ```
 
@@ -120,12 +120,9 @@ category: architecture
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Using agent field without defining agents | Skill fails to execute if agent doesn't exist | Define agents before referencing in skills |
-| Circular agent dependencies | Agent A calls skill requiring Agent B which calls skill requiring Agent A | Design clear agent hierarchy with delegation patterns |
-| Over-specialization | Creating too many agent types fragments knowledge | Start with broad agents, specialize only when needed |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Mojo Skills Template
@@ -135,7 +132,7 @@ category: architecture
 name: mojo-skill-name
 description: Mojo-specific functionality
 agent: mojo-specialist
-category: optimization | testing | debugging
+category: tooling | testing | debugging
 tags: ["mojo", "performance", "memory-safety"]
 ---
 ```
@@ -159,7 +156,7 @@ tags: ["github", "workflow", "automation"]
 name: review-skill-name
 description: Code quality and review automation
 agent: review-specialist
-category: architecture | testing
+category: tooling | testing
 tags: ["code-review", "quality", "standards"]
 ---
 ```

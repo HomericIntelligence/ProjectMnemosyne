@@ -168,44 +168,9 @@ gh issue close 687
 
 ## Failed Attempts
 
-| Attempt | What Failed | Fix |
-|---------|------------|-----|
-| `--enable-error-code` to audit override coverage | Flag re-enables globally-disabled codes but does NOT override `[[tool.mypy.overrides]]` module blocks | Temporarily remove the overrides block from pyproject.toml to see true error counts |
-| `warn_unused_ignores = true` without updating overrides | Existing `# type: ignore[method-assign]` in `tests/` became `unused-ignore` warnings | Add `"unused-ignore"` to the `[[tool.mypy.overrides]]` disable_error_code list |
-| Bare `import tomllib` after removing tomli fallback | Ruff E402 fires because import appears after `sys.path.insert()` calls | Add `# noqa: E402` to the import line |
-
-### `--enable-error-code` does NOT override an active [[tool.mypy.overrides]] block
-
-**What happened**: Ran `pixi run mypy tests/ --enable-error-code method-assign` and got `0 errors`, concluded the tests/ override was dead weight and removed it.
-
-**What actually happened**: The `[[tool.mypy.overrides]]` in `pyproject.toml` still suppresses the codes. The `--enable-error-code` CLI flag re-enables codes that are *globally* disabled, but does **not** override a module-level override section.
-
-**Correct diagnostic**:
-```bash
-# WRONG: this doesn't reveal real errors if an override is active
-pixi run mypy tests/ --enable-error-code method-assign
-
-# CORRECT: temporarily remove the [[tool.mypy.overrides]] block from pyproject.toml,
-# then run mypy to see true error count
-pixi run mypy tests/ 2>&1 | grep "error:" | sed 's/.*\[//;s/\]//' | sort | uniq -c
-```
-
-**Result of removing override prematurely**: 106 errors surfaced across 9 codes. Had to restore the override and add `"unused-ignore"` as a 10th suppressed code (because `warn_unused_ignores = true` globally flags the suppressors themselves).
-
-### `warn_unused_ignores = true` cascades into override suppressors
-
-**What happened**: Enabled `warn_unused_ignores = true` globally. The `# type: ignore[method-assign]` comments in `tests/` now produce `unused-ignore` warnings because the override suppresses `method-assign`, making the explicit comment redundant.
-
-**Fix**: Add `"unused-ignore"` to the `[[tool.mypy.overrides]]` `disable_error_code` list alongside the other codes. This suppresses the circular warning until the override is fully removed (in #940).
-
-### Removing `try/except ImportError` for stdlib modules needs `# noqa: E402`
-
-**What happened**: Replaced the tomli fallback with bare `import tomllib`. Ruff caught `E402` (module-level import not at top of file) because the import appears after `sys.path.insert(...)` calls.
-
-**Fix**: Add `# noqa: E402` to the import line, same as the adjacent `from common import get_repo_root  # noqa: E402`.
-
----
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Final pyproject.toml [tool.mypy] state after this session

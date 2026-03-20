@@ -126,13 +126,15 @@ for line in result.stdout.splitlines():
 `splitlines()` splits on all line boundary sequences (`\n`, `\r\n`, `\r`) and does NOT
 strip leading/trailing whitespace from individual lines.
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed |
-|---------|--------------|---------------|
-| Assumed unquoting code was correct, only planned to add tests | Tests failed immediately | The bug only manifests with single-line stdout — existing tests used multi-line stdout where `strip()` only removes trailing `\n`, not the leading space |
-| Using `strip()` on per-line basis after split | Would work but is unnecessary | `splitlines()` is the idiomatic fix |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Insight
 
 The existing tests (multi-line stdout like `"M  file1\nA  file2\n"`) passed because

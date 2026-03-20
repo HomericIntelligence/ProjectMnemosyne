@@ -211,33 +211,9 @@ pixi run python -m pytest tests/unit/ -v
 
 ## Failed Attempts
 
-### Ruff D102 — missing docstrings on test methods
-
-**What happened**: Initial test file had no per-method docstrings. Pre-commit ruff hook failed with
-10 `D102 Missing docstring in public method` errors (one per test method in a class).
-
-**Fix**: Add a one-line docstring to every test method. Test *classes* already had class docstrings
-but ruff requires method-level docstrings too when the `D102` rule is enabled.
-
-```python
-# Wrong (fails ruff D102)
-def test_importable_from_package(self) -> None:
-    assert DEFAULT_AGENT_MODEL is not None
-
-# Correct
-def test_importable_from_package(self) -> None:
-    """Constants exported from scylla.config package are not None."""
-    assert DEFAULT_AGENT_MODEL is not None
-```
-
-### Import ordering — constants before loader/models
-
-**What happened**: First attempt added the `from .constants import ...` line after `.models`.
-Ruff reordered it alphabetically (`.constants` < `.loader` < `.models`), which also happens to be
-the correct dependency order (constants has no deps, so importing it first is safe).
-
-**Takeaway**: Always add stdlib-only constant modules as the first local import in `__init__.py`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter          | Value                                  |

@@ -120,10 +120,9 @@ pre-commit run --files scylla/metrics/grading.py scylla/e2e/llm_judge.py \
 
 ## Failed Attempts
 
-None in this session — the approach was straightforward.
-
-**Pitfall to avoid**: Do not forget to search `tests/` for existing tests that assert `AssertionError` for the old assert-based validation. There was one in `tests/unit/test_grading_consistency.py::test_metrics_grading_validates_range` that caused 1 test failure after the production fix, requiring an update to expect `ValueError`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | File | Change |

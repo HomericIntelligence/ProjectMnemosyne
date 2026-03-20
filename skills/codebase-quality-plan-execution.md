@@ -3,7 +3,7 @@ name: codebase-quality-plan-execution
 description: Execute a pre-analyzed codebase improvement plan. Applies categorized
   fixes (type safety, dead code, error handling, performance, frontend bugs) across
   multiple files with continuous test verification.
-category: uncategorized
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 ---
@@ -95,6 +95,10 @@ In this session:
 ### Step 6 — Update the test assertion, not the code, when the test's premise changes
 
 The `test_each_team_has_correct_edge_count` test expected `matches + 1` edges. After the routing fix, teams feeding unscheduled brackets correctly get additional `ranking_end` edges from bracket ports. The formula changed; the test was updated to `>= matches + 1` with an explanation.
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
 
 ## Failed Attempts / Pitfalls
 

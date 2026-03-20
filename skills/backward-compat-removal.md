@@ -223,30 +223,15 @@ If you have BOTH documentation cleanup AND code refactoring:
 **Tests renamed** (1 function):
 - `test_build_judges_df_fallback_judge_invalid` → `test_build_judges_df_invalid_judge`
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-### ❌ Attempt: Keep Tests "Just in Case"
-
-**What we tried**: Consider keeping the deprecated tests disabled with `@pytest.mark.skip`
-
-**Why it failed**:
-- Tests exercising deprecated code paths have zero value once the code is removed
-- Skipped tests create maintenance burden (someone has to remember why they're skipped)
-- If the compatibility code is truly gone, the tests can't pass anyway
-
-**Lesson**: Delete tests that only exercise deprecated code. Keep only tests that verify core functionality.
-
-### ❌ Attempt: Update Tests Instead of Deleting
-
-**What we tried**: Modify `test_regenerate_consensus_rejects_fallback_judgments` to test `is_valid=False` instead
-
-**Why it failed**:
-- Other tests already cover `is_valid=False` behavior
-- The test name explicitly references `fallback`, making it confusing
-- Duplication of test coverage with no added value
-
-**Lesson**: If a test's PURPOSE was to verify backward compatibility, delete it. If a test's NAME references the old field but it tests the new field, rename it.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Common Patterns
 
 ### Pattern: Compatibility Shim

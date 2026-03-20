@@ -185,9 +185,9 @@ at implementation time. The discrepancy arose because:
 
 ## Failed Attempts
 
-None — the fix was straightforward once the actual violation count was verified against mypy output.
-The only "gotcha" was the stated-vs-actual count discrepancy (5 in issue → 2 actual violations).
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Related Skills
 
 - `fix-ruff-linting-errors` — systematic approach to fixing linting errors for CI

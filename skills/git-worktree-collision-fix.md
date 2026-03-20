@@ -1,7 +1,7 @@
 ---
 name: git-worktree-collision-fix
 description: "Skill: git-worktree-collision-fix"
-category: automation
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -168,20 +168,15 @@ class MetricsInfoBase(BaseModel):
 3. Run parallel dry run: `--tiers T0 T1 --threads 2 --max-subtests 2` to verify no branch collisions
 4. All 2219+ unit tests must pass before pushing
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-### Proactive `git branch -D` before worktree creation
-
-**What was tried**: `56a281d` added `git branch -D $branch_name` before `git worktree add`. This works for branches that are not checked out anywhere, but **fails silently** when the branch is still checked out in a live (or stale-but-not-pruned) worktree. The worktree add then fails because the branch still exists.
-
-**Why it failed**: `git branch -D` cannot delete a branch that is currently checked out in a worktree, even after `git worktree prune` (prune only removes stale metadata, not live worktrees). The correct solution is to make branch names globally unique per experiment, eliminating the need for cleanup entirely.
-
-### Using `dict.get("field", default)` as null guard
-
-**What was tried**: The original code used `data.get("score", 0.0)` assuming the default covers null values. This is a Python gotcha: `.get(key, default)` only uses the default when the key is **absent**. When the key exists with value `null` (Python `None`), `.get()` returns `None`. `float(None)` raises `TypeError`.
-
-**Correct pattern**: `data.get("key") or default` — the `or` catches both missing keys and null/falsy values.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Observations
 
 - **T0 tier F-grades are expected**: T0 runs agents with empty system prompt by design. Haiku with no context defaults to asking clarifying questions. These are correct baseline measurements, not bugs.

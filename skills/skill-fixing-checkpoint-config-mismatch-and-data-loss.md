@@ -172,27 +172,9 @@ def load(cls, path: Path) -> ExperimentConfig:
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Manually Match Original CLI Args
-
-**Tried**: Asked user to remember exact original command with 3 judges.
-
-**Why It Failed**: User didn't remember exact args, and this approach doesn't scale. Users shouldn't need to track original commands.
-
-**Lesson**: Don't require users to remember CLI args - checkpoint should be self-contained.
-
-### ❌ Attempt 2: Considered Adding Config to Checkpoint Object
-
-**Tried**: Thought about embedding full config dict in checkpoint itself.
-
-**Why We Didn't**: Checkpoint already references `experiment_dir`, which contains `config/experiment.json`. No need to duplicate data.
-
-**Lesson**: Leverage existing data structures before adding new ones.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Repair Script Execution

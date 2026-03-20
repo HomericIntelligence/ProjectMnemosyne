@@ -234,65 +234,9 @@ Example: "Code works but uses 8 lines where 3 would suffice" → -0.15
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Using only `git diff HEAD~1`
-
-**What we tried**: Compare HEAD against previous commit to find agent-created files
-
-```python
-result = subprocess.run(
-    ["git", "diff", "--name-only", "HEAD~1", "HEAD"],
-    cwd=workspace_path, ...
-)
-```
-
-**Why it failed**: Agent didn't commit files - they remained untracked. `git diff` only shows committed changes between refs, not untracked files.
-
-**Lesson**: Need both committed (git diff) AND uncommitted (git status) detection.
-
-### ❌ Attempt 2: Using only `git ls-files`
-
-**What we tried**: List all tracked files as fallback
-
-```python
-result = subprocess.run(["git", "ls-files"], cwd=workspace_path, ...)
-```
-
-**Why it failed**: Only shows tracked files. Untracked files like `hello.py` were invisible.
-
-**Lesson**: Must use `git status --porcelain` to find untracked files.
-
-### ❌ Attempt 3: Assuming Haiku 4.5 doesn't exist
-
-**What we tried**: Mapped `haiku-4-5` → `claude-haiku-4-0-20250514` with warning
-
-```python
-"haiku-4-5": "claude-haiku-4-0-20250514",  # Note: Haiku 4.5 doesn't exist yet
-if model_shorthand == "haiku-4-5":
-    logger.warning("Haiku 4.5 doesn't exist yet. Using Haiku 4.0 instead.")
-```
-
-**Why it failed**: Haiku 4.5 DOES exist as `claude-haiku-4-5` (released recently)
-
-**Lesson**: Always verify model IDs from official documentation before hardcoding assumptions.
-
-### ❌ Attempt 4: Keeping unused `status_code` variable
-
-**What we tried**: Parse git status with status code extraction
-
-```python
-status_code = line[:2]  # XY status codes
-file_path = line[3:].strip()
-```
-
-**Why it failed**: Variable assigned but never used - pre-commit hook caught it with ruff
-
-**Lesson**: Don't extract data you don't need. Status indicators come from separate logic.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Model ID Mappings (Copy-Paste Ready)

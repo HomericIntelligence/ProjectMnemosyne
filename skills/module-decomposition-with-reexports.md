@@ -1,7 +1,7 @@
 ---
 name: module-decomposition-with-reexports
 description: "Skill: Module Decomposition with Backward-Compatible Re-exports"
-category: uncategorized
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -209,50 +209,6 @@ wc -l scylla/e2e/stages.py scylla/e2e/run_report.py
 
 ## Failed Attempts
 
-### Attempt: Underestimating line count reduction
-
-**What happened**: The plan predicted `stages.py` would reach ~900 lines after extracting
-`stage_process_metrics.py` and `stage_finalization.py`. Actual result was 1,016 — still over 1,000.
-
-**Root cause**: `stage_execute_judge` (183 lines) was not included in the plan's extraction list.
-
-**Fix**: Also extracted `stage_execute_judge` into `stage_finalization.py`. This brought `stages.py`
-to 855 lines.
-
-**Lesson**: After the first extraction pass, re-measure with `wc -l` and check the largest remaining
-functions with `grep -n "^def " file.py`. If still over 1,000, identify the next largest function
-and extract it too.
-
-### Attempt: Extracting without checking circular import risk
-
-**What happened**: `stage_finalization.py` needed `RunContext` (defined in `stages.py`), which imports
-from `stage_finalization.py`. This would have been a circular import.
-
-**Fix**: Used `TYPE_CHECKING` guard:
-```python
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from scylla.e2e.stages import RunContext
-```
-
-With `from __future__ import annotations`, all type annotations are strings at runtime — no import
-needed at runtime.
-
-**Lesson**: Always check if new modules need types from the original module. If yes, use
-`TYPE_CHECKING` + `from __future__ import annotations`.
-
-### Attempt: Forgetting `import X as X` syntax for private functions
-
-**What happened**: Initially used bare `from scylla.e2e.stage_process_metrics import _get_diff_stat`
-in `stages.py`. This would fail mypy `implicit_reexport=false` for callers doing
-`from scylla.e2e.stages import _get_diff_stat`.
-
-**Fix**: Always use `import X as X` for re-exports:
-```python
-from scylla.e2e.stage_process_metrics import (
-    _get_diff_stat as _get_diff_stat,
-)
-```
-
-**Note**: Private functions (leading `_`) still need re-export if any other module imports them
-from the original location. Check with `grep -r "from scylla.e2e.stages import" scylla/ tests/`.
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |

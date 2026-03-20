@@ -176,11 +176,9 @@ assert parsed[0]["file"] == "scylla/bad.py"
 
 ## Failed Attempts
 
-| Attempt | Problem | Fix |
-|---------|---------|-----|
-| Running only the new test file to check coverage | `coverage --fail-under=9%` kicks in even for single-file runs; total drops to ~2% | Run `tests/` excluding slow tests, or use `-p no:cov` flag |
-| Keeping `EXCLUDED_PREFIXES` alongside the new helper | Dead code, adds confusion — the helper makes it redundant | Remove `EXCLUDED_PREFIXES` entirely |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Changes Made

@@ -113,14 +113,15 @@ When `conftest.py` inserts a script directory into `sys.path` at collection time
 
 **Total**: 30 patches corrected — all 3796 tests passing.
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-### Attempted: Leave `patch("subprocess.run")` global patches unchanged
-
-**Result**: Tests passed in main repo but failed in worktree environments where module import order could differ, causing the wrong `subprocess.run` to be intercepted.
-
-**Why it failed**: In isolated worktree environments, the mock's namespace resolution was ambiguous. Using the fully-qualified call-site path (`scylla.adapters.base_cli.subprocess.run`) is unambiguous regardless of environment.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Future Prevention
 
 Add this to adapter test review checklist: any `patch("subprocess.run"` should be `patch("<module>.subprocess.run"`. Consider a ruff/grep CI check:

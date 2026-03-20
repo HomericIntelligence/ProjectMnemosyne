@@ -117,8 +117,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-None — the task was a straight documentation edit with no code changes required, so no approaches failed. The only subtlety was confirming that `docs/arxiv/` dryrun snapshot references were out of scope before declaring the grep clean.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |

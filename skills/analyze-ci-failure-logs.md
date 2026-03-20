@@ -2,7 +2,7 @@
 name: analyze-ci-failure-logs
 description: Parse and analyze CI failure logs to identify root causes and error patterns.
   Use when CI builds fail to understand what broke.
-category: ci
+category: ci-cd
 date: '2026-03-19'
 version: 1.0.0
 user-invocable: false

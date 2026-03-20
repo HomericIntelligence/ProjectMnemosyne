@@ -98,7 +98,6 @@ FAILED tests/unit/config/test_json_schemas.py::TestTierSchema::test_real_tier_fi
 
 ## Failed Attempts
 
-None — the change was straightforward. The only non-obvious aspect is remembering to:
-- Change the parameter type from `str` to `Path`
-- Remove the path join (`FIXTURES_DIR / fixture_file`) since glob already returns full paths
-- Add `ids=` to keep readable test output
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |

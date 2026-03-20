@@ -97,8 +97,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-None — straightforward docstring edit. The only subtlety was recognizing that a prior PR (#1121) had partially fixed the issue (removed "which have no Mojo equivalents") but left the sentence still referencing specific Python libraries unnecessarily. The fix required replacing the entire docstring, not just trimming a phrase.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |

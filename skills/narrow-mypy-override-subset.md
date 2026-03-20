@@ -163,14 +163,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-### Attempted Full Override Removal
-
-Initially removed the entire `[[tool.mypy.overrides]]` block and ran full mypy — got 105 errors
-across 12 files in `tests/unit/e2e/`, `tests/unit/analysis/`, `tests/unit/automation/`, and
-other subdirs. These are not in scope for #1287.
-
-**Lesson**: Check all subdirs before removing a broad override, not just the target subdir.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```

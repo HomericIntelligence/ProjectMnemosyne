@@ -174,27 +174,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| `ConfigLoader('config')` | Double-wraps the path: looks for `config/config/models/` | Always pass `'.'` or the repo root |
-| Running audit script without `2>&1` | WARNING goes to stderr, not stdout — missed by script | Pipe both stdout+stderr when checking output |
-
-### ❌ Attempt 1: Wrong `ConfigLoader` base path
-
-**What was tried:**
-```bash
-python -c "from scylla.config.loader import ConfigLoader; loader = ConfigLoader('config'); ..."
-```
-
-**Why it failed:**
-- `ConfigLoader` constructs `base_path / "config" / "models"` internally
-- Passing `'config'` as base results in `config/config/models/` which doesn't exist
-- Returns empty dict with no warnings — looks like success but finds nothing
-
-**Lesson:**
-Always verify `base_path` resolves to the project root. Use `ConfigLoader('.')` or
-`ConfigLoader(Path(__file__).parent.parent...)`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Renamed

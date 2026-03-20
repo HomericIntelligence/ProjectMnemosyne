@@ -5,7 +5,7 @@ description: 'TRIGGER CONDITIONS: Adding new figure functions to the generate_fi
   but is not called from scripts/generate_figures.py, (2) registering batch-generated
   figures so they run automatically with all other figures, (3) wiring process-metric
   or other optional figures into the report pipeline.'
-category: analysis
+category: evaluation
 date: 2026-02-27
 version: 1.0.0
 user-invocable: false
@@ -129,11 +129,9 @@ pre-commit run --all-files
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Running `pytest tests/unit/analysis/test_figures.py` directly | `conftest.py` `mock_power_simulations` fixture patches `export_data.mann_whitney_power` — requires `export_data` module to already be in `sys.modules`, which only happens when the full test suite or directory is collected first | Always run `tests/unit/analysis/` (directory) or `tests/` (full) to test `test_figures.py`; never run the file alone |
-| Considered adding a new `"process"` dispatch category | Would require adding an `elif` branch to `main()` — unnecessary complexity since `"tier"` already dispatches `(runs_df, output_dir, render=render)` identically | Use the existing category that matches the call signature; only add new categories when the call signature differs |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Conftest / test_figures.py: Known Import Quirk
 
 `tests/unit/analysis/conftest.py` has an `autouse` fixture that patches `export_data` (a top-level script module):

@@ -145,13 +145,9 @@ def execute_pipeline(worker_id: str):
 
 ## Failed Attempts
 
-| Approach | Why It Failed |
-|----------|---------------|
-| Logging only start events | Can't tell when stages complete or how long they took |
-| Logging only completion | Can't tell if worker is stuck during execution |
-| Using progress bars | Doesn't work well with multiple parallel workers |
-| Polling worker state | Race conditions, complex synchronization needed |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Stage Logging Pattern

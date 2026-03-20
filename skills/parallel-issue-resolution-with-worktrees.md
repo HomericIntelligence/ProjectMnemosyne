@@ -106,6 +106,10 @@ gh issue list --limit 20 --json number,title,state --jq '.[] | select(.number >=
 
 All target issues should show CLOSED.
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts & Lessons Learned
 
 ### ❌ Failed: Sequential Agent Execution

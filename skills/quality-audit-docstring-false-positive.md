@@ -1,12 +1,7 @@
 ---
-name: quality-audit-docstring-false-positive
-description: "---"
-category: documentation
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
+
 ---
----
+
 name: quality-audit-docstring-false-positive
 description: "Use when a quality audit flags a module docstring as a sentence fragment, but the docstring is actually grammatically complete. Covers triage, fix pattern, and PR workflow."
 user-invocable: false
@@ -70,11 +65,9 @@ How to handle recurring quality-audit flags on module docstrings that are gramma
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Simply moving the line break | Produces essentially same content — audit may flag again | Change sentence structure, not just whitespace |
-| Checking if tests are needed | None needed — pure docs change | `pre-commit run --files` is sufficient verification for docstring-only fixes |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 The working fix pattern for a wrapped-sentence false positive:

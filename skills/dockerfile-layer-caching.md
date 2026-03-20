@@ -109,13 +109,9 @@ RUN pip install --user --no-cache-dir --no-deps /opt/scylla/
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| `pip install --no-build-isolation -e .` with only `pyproject.toml` | hatchling raises `FileNotFoundError: package dir 'scylla' does not exist` — editable install requires source tree | Editable installs cannot be split; use `--no-deps` on the final install instead |
-| `pip install .` (no `--no-deps`) in layer 3 | pip re-resolves and re-downloads deps from PyPI even when already installed | Always use `--no-deps` for the package-only step |
-| `tomllib.loads(open(...).read())` | `tomllib.loads` expects `str`; TOML files must be opened in binary mode `rb` and use `tomllib.load()` | Use `tomllib.load(open(path, 'rb'))` not `tomllib.loads(open(path).read())` |
-| `python -c "import toml; ..."` (third-party `toml` package) | Builder stage does not have `toml` installed; `tomllib` is stdlib since Python 3.11 | Use `tomllib` (stdlib); avoids an extra `pip install toml` layer |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Cache behavior matrix

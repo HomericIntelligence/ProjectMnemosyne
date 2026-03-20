@@ -164,39 +164,9 @@ pixi run pytest tests/unit/e2e/test_subtest_executor.py -v
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Fixing Only the Subprocess CWD
-
-**What was tried:**
-- Fixed only line 809 (`cwd=workspace.resolve()`)
-- Left line 1022 unchanged (`cwd=str(workspace)`)
-
-**Why it failed:**
-- The command logger still logged relative paths
-- Generated `replay.sh` contained relative `cd` commands
-- When replay.sh executed, it couldn't navigate to the directory
-
-**Lesson learned:**
-Both locations must be fixed together - the subprocess execution AND the command logging must use absolute paths.
-
-### ❌ Attempt 2: Investigating Worktree Creation
-
-**What was tried:**
-- Initially suspected worktree creation was the issue
-- Checked for "fatal: a branch named 'T6_01_run_01' already exists" errors
-
-**Why it failed:**
-- This was a red herring from a different run (T6)
-- The real issue was path resolution, not worktree creation
-- T6's failure was actually due to timeout, not path issues
-
-**Lesson learned:**
-Don't get distracted by errors from different tier runs - focus on the pattern across all failed runs.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Before Fix

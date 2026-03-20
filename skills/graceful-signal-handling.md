@@ -148,13 +148,9 @@ if is_shutdown_requested():
 
 ## Failed Attempts
 
-| Approach | Why It Failed |
-|----------|---------------|
-| Using KeyboardInterrupt exception | Doesn't work well with ProcessPoolExecutor, can leave workers in bad state |
-| Only checking shutdown at tier boundaries | Workers can run for 30+ seconds, too coarse-grained |
-| Polling shutdown flag every N seconds | Race conditions and complexity, hard to get right |
-| Not using finally block | Checkpoint not saved if exception occurs |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Signal Handling Pattern

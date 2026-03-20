@@ -2,7 +2,7 @@
 name: gh-review-pr
 description: Comprehensively review a pull request including code changes, CI status,
   and adherence to project standards. Use when asked to review a PR.
-category: github
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 ---
@@ -113,11 +113,9 @@ Provide review with sections:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

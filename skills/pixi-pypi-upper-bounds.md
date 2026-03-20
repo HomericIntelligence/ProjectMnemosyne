@@ -119,10 +119,12 @@ jsonschema = ">=4.0,<5"
 defusedxml = ">=0.7,<1"
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| `altair = ">=5.0,<6"` | Downgraded altair 6.0.0 → 5.5.0; altair 5.x uses `TypedDict(closed=True)` unsupported in Python 3.14 | Always check Python version compatibility before tightening bounds |
-| `pixi lock` after editing toml | Reported "already up-to-date" even when the effective constraint changed | Use `pixi update <pkg>` to force re-resolution, then `pixi install` |
-| `parents[4]` path for test file | Resolved to wrong directory in a git worktree (`.worktrees/` parent) | Always verify `Path(__file__).parents[N]` with a quick Python snippet |
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |

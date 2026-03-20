@@ -286,56 +286,15 @@ pixi run pytest tests/unit/analysis/ -v --tb=short | grep "passed"
 - ✅ No `unittest.mock` imports in test files
 - ✅ All tests use `tmp_path` instead of mocks
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Keep `clear_patches` Fixture
-
-**What We Tried:**
-- Keep `clear_patches` autouse fixture in conftest.py
-- Use `patch.stopall()` between tests to clear mocks
-
-**Why It Failed:**
-- `clear_patches` fixture wasn't called between test files
-- Mocks from `test_figures.py` still leaked into `test_integration.py`
-- Autouse fixtures don't isolate across different test modules
-
-**Lesson Learned:**
-Mock cleanup fixtures are insufficient for cross-file isolation. The only reliable solution is to remove mocks entirely.
-
-### ❌ Attempt 2: Use Mock Verification for Content Tests
-
-**What We Tried:**
-- Access mock call args to verify data structure
-- Pattern: `call_args = mock.call_args; data_df = call_args[0][3]`
-
-**Why It Failed:**
-- Brittle - depends on positional argument order
-- Doesn't verify actual file output
-- Still requires mocks (defeating the purpose)
-- More complex than reading actual CSV files
-
-**Lesson Learned:**
-Reading real CSV files with `pd.read_csv()` is simpler and more robust than inspecting mock call arguments.
-
-### ❌ Attempt 3: Partial Mock Removal
-
-**What We Tried:**
-- Remove mocks from basic tests only
-- Keep mocks for "complex" content verification tests
-
-**Why It Failed:**
-- Partial mocks still cause pollution
-- Creates inconsistent test patterns
-- Doesn't solve the isolation problem
-
-**Lesson Learned:**
-All-or-nothing approach required. Either use mocks everywhere (with isolation issues) or use real I/O everywhere (clean isolation).
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Validation
 
 ### Test Conversion Statistics

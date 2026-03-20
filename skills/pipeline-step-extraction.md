@@ -1,7 +1,7 @@
 ---
 name: pipeline-step-extraction
 description: "Skill: Pipeline Step Extraction (CC>15 Reduction)"
-category: uncategorized
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -167,35 +167,9 @@ Use `unittest.mock.patch` with `side_effect` for subprocess, `wraps` is unnecess
 
 ## Failed Attempts
 
-### Placing `# noqa: C901` removal before promoting inline imports
-
-**What was tried:** Removed `# noqa: C901` from `run_llm_judge` before moving `import time` and
-`from datetime import datetime, timezone` to module level.
-
-**Why it failed:** Ruff C901 counts every statement, including `import` statements inside a function
-body. The inline imports contributed to the CC count. Promoting them to module level reduced CC by 2,
-which was enough to clear the threshold for `run_llm_judge`.
-
-**Fix:** Always promote inline imports before measuring residual CC and removing noqa.
-
-### Using `_output` prefix when the test asserts on the variable
-
-**What was tried:** Renamed all unpacked tuple variables to `_passed, _na, _output` uniformly.
-
-**Why it failed:** Two test cases asserted `"not available" in output` — once `output` was renamed
-to `_output`, the assertion referenced an undefined name (`F821: undefined name 'output'`).
-
-**Fix:** Only prefix variables that are genuinely unused. If a test asserts on `output`, keep it as
-`output`. If a source file ignores the third element, use `_output`.
-
-### Splitting `_gather_judge_context` to also handle the retry loop
-
-**What was tried:** Tried to fold both context gathering and the LLM retry loop into one extracted
-function.
-
-**Why it failed:** The resulting function still had CC > 12 (retry loop has 3+ branches). The two
-phases must be separate to keep each helper below threshold.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### CC before and after

@@ -123,21 +123,9 @@ pixi run pytest tests/ --tb=short
 
 ## Failed Attempts
 
-### 1. Using pytest filterwarnings for Test* classes
-**What was tried**: Adding `filterwarnings` to pyproject.toml to suppress `PytestCollectionWarning`
-```toml
-filterwarnings = [
-    "ignore::pytest.PytestCollectionWarning:scylla.*",
-]
-```
-**Why it failed**: Warnings are raised from test file context, not the module being collected. Pattern didn't match.
-**Solution**: Rename classes to avoid `Test*` prefix entirely.
-
-### 2. Using replace_all without checking internal references
-**What was tried**: Renamed class with `replace_all=true` on class definition only
-**Why it failed**: Missed internal references within the same file (method return types, docstrings)
-**Solution**: Run `replace_all` on entire file, then verify with grep.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified

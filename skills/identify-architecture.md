@@ -2,7 +2,7 @@
 name: identify-architecture
 description: Analyze ML model architecture from papers and code. Use when understanding
   model structure for implementation.
-category: analysis
+category: evaluation
 date: '2026-03-19'
 version: 1.0.0
 mcp_fallback: none
@@ -63,11 +63,9 @@ Architecture documentation:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

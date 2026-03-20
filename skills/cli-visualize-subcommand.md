@@ -141,15 +141,9 @@ class TestCmdVisualize:
 
 ## Failed Attempts
 
-| Attempt | What Failed | Why | Fix |
-|---------|-------------|-----|-----|
-| Uppercase ANSI code variables | `GREEN = "32"` caused ruff N806 | ruff requires function-scope variables to be lowercase | Rename to `green`, `red`, `yellow`, `dim` |
-| Trailing space in connector prefix | `r"  \-- "` produced double-space in f-string | Prefix already ended with space, format string added another | Remove trailing space: `r"  \--"` |
-| Long f-string in verbose block | `f"  Duration: {_format_duration(started, last_updated)}"` hit E501 (111 chars) | 100-char line limit | Extract to intermediate: `dur = _format_duration(...); duration = f"  Duration: {dur}"` |
-| Long run label f-string | `f"{run_cont} {connector} run_{int(run_num_str):02d} [{run_state}]{result_str}"` hit E501 | 102 chars | Extract: `run_label = f"run_{...}"; print(f"... {run_label} ...")` |
-| Long test docstring | Exceeded 100 chars | ruff E501 | Shorten docstring |
-| Identical ternary branches | `"+--" if is_last else "+--"` — all connectors were same | Copy-paste error; both branches produced identical strings | Fix to `r"\--" if is_last else "+--"` |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### `--until replay_generated` (stop before Claude executes)

@@ -138,13 +138,9 @@ pixi run python -m pytest tests/unit/scripts/ -v
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Creating `tmp_path / "defaults.yaml"` for check_defaults_filename test | `main()` looks for `_REPO_ROOT / "config" / "defaults.yaml"`, not `_REPO_ROOT / "defaults.yaml"` | Always replicate the exact subdirectory path, not just the filename |
-| Using `capsys: object` type annotation | mypy reports `"object" has no attribute "readouterr"` — object doesn't have pytest fixture methods | Use `pytest.CaptureFixture[str]` for capsys parameter type |
-| Assigning `mock_root_logger = mock_get_logger.return_value` without using it | ruff F841: local variable assigned but never used | Remove unused assignments; just call the patched function without capturing mock return values you won't assert on |
-| Using `patch("import_issues.logging.FileHandler") as mock_fh` without asserting on `mock_fh` | ruff F841 again | Either assert `mock_fh.assert_not_called()` or drop the `as mock_fh` alias |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 **Test counts by script:**

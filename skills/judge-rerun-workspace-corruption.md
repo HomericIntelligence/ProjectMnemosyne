@@ -150,30 +150,29 @@ except Exception as e:
 
 **Why**: Saves debugging artifacts before failing, enables retry logic at appropriate level.
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
+## Verified Workflow
+
+Steps that worked:
+1. Step 1
+2. Step 2
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-### ❌ Adding a judge_prompt Parameter to run_llm_judge()
-
-**What we tried**: Adding an optional `judge_prompt: str | None = None` parameter to `run_llm_judge()` to accept pre-built prompts.
-
-**Why it didn't work**:
-- `run_llm_judge()` has complex logic for building prompts (workspace state, patchfile, pipeline results, rubric)
-- Adding a parameter would require threading it through multiple internal calls
-- Makes the API confusing - when would you pass a prompt vs. rebuild?
-
-**Better approach**: Call lower-level functions (`_call_claude_judge`, `_parse_judge_response`) directly when you have a pre-built prompt.
-
-### ❌ Preventing All Workspace Recreation in rerun.py
-
-**What we tried**: Checking if workspace exists and skipping `_setup_workspace()` call.
-
-**Why it didn't work**:
-- Runs with `FAILED`, `PARTIAL`, `MISSING` status genuinely need fresh workspaces
-- Only `COMPLETED` and `RESULTS` status should preserve workspaces
-- `rerun_experiment()` already has correct logic - it doesn't call `rerun_single_run()` for RESULTS status
-
-**Better approach**: Add safety check at the start of `rerun_single_run()` to reject COMPLETED/RESULTS runs with clear error message.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Key Parameters
 
 ### Run Status Classifications

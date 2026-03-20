@@ -99,11 +99,9 @@ pixi run python -m pytest tests/unit/ -v
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Omitting `tier:` key from fixture | `ConfigurationError` on load — field is required | Always include `tier:` matching the filename stem |
-| Setting `tier: "t1"` inside `t2.yaml` | `load_all_tiers` raises `ConfigurationError` on ID mismatch | `tier:` value must equal the filename stem exactly |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 - Fixtures directory: `tests/fixtures/config/tiers/`

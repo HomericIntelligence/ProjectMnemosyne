@@ -2,7 +2,7 @@
 name: claude-code-v21-adoption
 description: Systematic approach to adopting Claude Code v2.1.0 features. Use when
   upgrading to new Claude Code version or analyzing CHANGELOG for feature adoption.
-category: uncategorized
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 user-invocable: false
@@ -181,13 +181,9 @@ Capture the workflow for future version upgrades.
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson Learned |
-|---------|-----------|----------------|
-| Adding `disallowedTools` array to agent frontmatter | Field not supported in v2.1.0 - only CLI `--disallowedTools` works | Always verify CHANGELOG mentions frontmatter support, not just CLI flags |
-| Using single PR for all 5 features | Too much scope, harder to review | Separate PRs for independent features, combine only closely related ones |
-| Implementing features before researching with /advise | Missed existing skills about claude-plugin-format and schema constraints | Always start with `/advise` to leverage prior team knowledge |
-| Assuming all CHANGELOG features apply to frontmatter | Some features (disallowedTools) are CLI-only | Distinguish CLI/settings features from frontmatter features |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Feature Adoption Checklist

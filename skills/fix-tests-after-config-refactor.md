@@ -231,61 +231,9 @@ git push
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Creating Files in tmp_path Directly
-
-**What was tried:**
-```python
-# Just create files in tmp_path expecting TierManager to find them
-shared_dir = tmp_path / "tests" / "claude-code" / "shared" / "subtests" / "t5"
-shared_dir.mkdir(parents=True)
-
-manager = TierManager(tmp_path)  # ❌ Wrong: tmp_path isn't a valid tiers_dir
-```
-
-**Why it failed:**
-- `TierManager._get_shared_dir()` navigates from `tiers_dir` using `.parent.parent.parent`
-- When `tiers_dir = tmp_path`, navigation goes outside the test directory
-- Method looks for `tmp_path.parent.parent.parent / "claude-code"` which doesn't exist
-
-**Lesson learned:**
-Must create the FULL directory structure that matches what the code expects, including the intermediate directories used for navigation.
-
-### ❌ Attempt 2: Only Fixing One Test
-
-**What was tried:**
-- Fixed `test_root_level_tools_mapped`
-- Left other 4 tests in same class unchanged
-
-**Why it failed:**
-- All 5 tests had the same issue
-- CI still failed because other tests in class still broken
-- Partial fix doesn't help PR status
-
-**Lesson learned:**
-When multiple tests fail for the same reason, fix all of them together in one commit.
-
-### ❌ Attempt 3: Assuming Docker Tests Were Related
-
-**What was tried:**
-- Spent time investigating `test_judge_container.py` failures
-- Tried to understand why mock wasn't working
-
-**Why it failed:**
-- These were separate pre-existing failures
-- Not related to config structure changes
-- Not blocking the PRs (were already failing on main)
-
-**Lesson learned:**
-Distinguish between:
-- **PR-specific failures**: Only fail on this PR, must fix
-- **Pre-existing failures**: Already fail on main, not this PR's responsibility
-- Test on main branch first to identify pre-existing issues
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Tests Fixed

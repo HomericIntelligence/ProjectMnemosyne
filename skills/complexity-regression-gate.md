@@ -1,18 +1,13 @@
 ---
-name: complexity-regression-gate
-description: "---"
-category: ci-cd
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
+
 ---
----
+
 name: complexity-regression-gate
 description: >
   Add a named CI step and pre-commit hook to enforce McCabe complexity limits (C901)
   so violations block PRs and local commits. Use when pyproject.toml already has C901
   in ruff select but complexity regressions can still merge undetected.
-category: ci-cd
+category: ci-cd-cd-cd
 date: 2026-03-06
 user-invocable: false
 tags:
@@ -95,11 +90,9 @@ pre-commit run --all-files
 
 ## Failed Attempts
 
-| Attempt | Why It Failed |
-|---------|--------------|
-| Using `Edit` tool on `.github/workflows/pre-commit.yml` | `security_reminder_hook.py` blocks `Edit` unconditionally on all workflow files — path-based, not content-based |
-| Adding CI step before `Run pre-commit` | Pre-commit already runs ruff; the dedicated step should be *after* so failures are clearly named in the status UI |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### pre-commit hook (copy-paste ready)

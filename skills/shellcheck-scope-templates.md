@@ -104,13 +104,9 @@ pixi run python -m pytest tests/ -v
 
 ## Failed Attempts
 
-None — the subdirectory `.shellcheckrc` approach worked on the first try.
-
-The alternative approaches from the issue were intentionally skipped:
-
-- **Option 2** (inline `# shellcheck disable=` comments): Requires modifying every template file; verbose and harder to maintain
-- **Option 3** (file pattern config): ShellCheck doesn't natively support per-pattern configs; requires wrapper scripts
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Gotchas
 
 ### Tracked files in gitignored directories

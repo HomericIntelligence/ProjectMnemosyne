@@ -157,13 +157,9 @@ class TestExperimentDirNoneIsNoop:            # Guard against None dir
 
 ## Failed Attempts
 
-### 1. None — All approaches succeeded on first attempt
-
-The implementation was straightforward because:
-- The dead-PID technique eliminated the need for mocking `os.kill`
-- `make_checkpoint()` from `conftest.py` already accepted all needed fields
-- `ResumeManager.handle_zombie()` had a clean single-responsibility API
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test counts (11 total)

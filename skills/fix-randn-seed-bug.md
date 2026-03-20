@@ -124,12 +124,9 @@ pixi run mojo test tests/shared/training/test_training_loop.mojo -I .
 
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed | Lesson Learned |
-|---------|---------------|---------------|----------------|
-| Assumed model was non-deterministic | Thought SimpleMLP weights were random | Model actually uses constant init (`init_value=0.1`) | Check model initialization before blaming the model |
-| Thought test logic was wrong | Assumed comparing wrong values | Test was correct - same input should give same output | Trust the test assertions, trace the actual values |
-| Looked at model forward pass | Checked for state mutation in forward() | forward() doesn't mutate state, just creates output | The inputs themselves were different, not the model |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified

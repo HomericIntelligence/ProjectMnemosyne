@@ -195,23 +195,19 @@ def format_duration(seconds: float) -> str:
         return f"{secs}s"
 ```
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-### ❌ Attempt 1: Using `.get()` with defaults
-**What we tried**: Using `.get("key", "default")` pattern throughout
-**Why it failed**: When key exists but value is None, `.get()` returns None (not the default)
-**Lesson**: Use `or` coalescing for None-safe defaults: `value = dict.get("key") or "default"`
-
-### ❌ Attempt 2: Reading flat JSON structure
-**What we tried**: `report.get("best_overall_tier")` and `report.get("frontier_cop")`
-**Why it failed**: Actual JSON structure nests data under `summary` and `children` keys
-**Lesson**: Always read reference implementation (e.g., `scylla/e2e/run_report.py`) to verify JSON structure before writing extraction logic
-
-### ❌ Attempt 3: Relying on subprocess stdout/stderr capture
-**What we tried**: Only capturing stdout/stderr, assuming terminal would stay clean
-**Why it failed**: Child processes inherit stdin by default, can alter terminal settings
-**Lesson**: Always use `stdin=subprocess.DEVNULL` for subprocess calls that don't need user input, especially in parallel/background execution
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified

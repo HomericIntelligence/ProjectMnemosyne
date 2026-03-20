@@ -114,12 +114,9 @@ except Exception as e:
 
 ## Failed Attempts
 
-| Approach | Why It Failed |
-|----------|---------------|
-| Progress bars (tqdm) | Doesn't work well with multiple parallel workers producing output |
-| Periodic timer-based updates | Can't show accurate completion count without coordination |
-| Only logging start/end | Users still see long gaps with no output during execution |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Progress Log Format

@@ -128,16 +128,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-### 1. Looking for a separate visualize test file
-**What was tried**: `glob tests/**/*visualize*` expecting a dedicated test file.
-**Why it failed**: Tests live inside the monolithic `test_manage_experiment.py` under `TestCmdVisualize`.
-**Solution**: Search for the class name directly: `grep -n "TestCmdVisualize" tests/unit/e2e/test_manage_experiment.py`.
-
-### 2. Assuming `--states-only --format table` uses `_visualize_table()`
-**What was tried**: Initial assumption that `--format` would always route to the corresponding renderer.
-**Why it was wrong**: `cmd_visualize()` checks `args.states_only` **first**, before reading `args.output_format`. The states-only path is completely independent.
-**Solution**: Read `cmd_visualize()` source before writing assertions.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Tests Added (6)

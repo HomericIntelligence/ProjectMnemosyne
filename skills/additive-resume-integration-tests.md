@@ -125,59 +125,9 @@ for tier_id, subtests in previous_cp.run_states.items():
 
 ## Failed Attempts
 
-### 1. `assert "T1" in cp.tier_states` — Wrong assertion target
-
-**Problem**: Asserting `tier_states` contains a new tier after `SubtestStateMachine` only.
-
-**Root cause**: `tier_states` is only populated when `TierStateMachine.advance_to_completion()` runs. SubtestStateMachine only updates `subtest_states` and (via StateMachine) `run_states`.
-
-**Fix**: Assert on `run_states` instead:
-```python
-# WRONG:
-assert "T1" in cp_after.tier_states
-
-# CORRECT:
-assert "T1" in cp_after.run_states, "T1 runs not found in checkpoint"
-```
-
-### 2. Mypy error: `dict[SubtestState, object]` for mixed MagicMock + Callable dict
-
-**Problem**: Mixing `MagicMock()` with regular callables in a dict causes mypy to widen the value type to `object`.
-
-**Fix**: Use `cast()` to explicitly type the dict:
-```python
-from typing import cast
-from collections.abc import Callable
-from unittest.mock import MagicMock
-
-subtest_actions: dict[SubtestState, Callable[[], None]] = cast(
-    dict[SubtestState, Callable[[], None]],
-    {
-        SubtestState.PENDING: my_callable,
-        SubtestState.RUNS_IN_PROGRESS: MagicMock(),
-        SubtestState.RUNS_COMPLETE: MagicMock(),
-    },
-)
-```
-
-### 3. Mypy variable name shadowing across for-loops
-
-**Problem**: Reusing variable names (`tier_id`, `subtests`, `state`) across multiple for-loops in the same function scope causes mypy to infer conflicting types.
-
-**Root cause**: In the monotonic check, `subtests` is `dict[str, dict[str, str]]` (from `run_states`). Then in the no-failed check, another loop uses `subtests` bound to `dict[str, str]` (from `subtest_states`) — mypy sees conflicting type assignments.
-
-**Fix**: Use unique variable names for each for-loop scope:
-```python
-# Monotonic check (run_states iteration):
-for tier_id, subtests in previous_cp.run_states.items():  # subtests: dict[str, dict[str, str]]
-    ...
-
-# No-failed check (subtest_states iteration) — use different names:
-for t_id, sub_map in cp.subtest_states.items():  # sub_map: dict[str, str]
-    for sub_id, sub_state in sub_map.items():
-        assert sub_state != "failed"
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test counts

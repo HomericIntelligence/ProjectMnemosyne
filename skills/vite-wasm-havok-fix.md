@@ -109,16 +109,9 @@ npx vite build      # must succeed
 
 ## Failed Attempts
 
-### ❌ Keeping `@babylonjs/havok` in `optimizeDeps.include`
-
-The default/original config. Vite pre-bundles the JS into `.vite/deps/` but does not copy the WASM binary. The `HavokPhysics.wasm` fetch returns 404. Everything inside `_init()` after the `await` never runs.
-
-### ❌ Relying on `.catch(console.error)` alone
-
-With only console logging, the failure is invisible to the user — they see a blank blue screen with no indication of the problem. Makes diagnosis significantly harder.
-
----
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Working `vite.config.ts`

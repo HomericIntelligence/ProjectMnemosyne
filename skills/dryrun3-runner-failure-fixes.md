@@ -182,12 +182,9 @@ pre-commit run --all-files
 
 ## Failed Attempts
 
-| Attempt | What Was Tried | Why It Failed | Lesson |
-|---------|---------------|---------------|--------|
-| Regex fix only for prose responses | Changed regex in `utils.py` only | Haiku still returns prose when context is wrong — regex can't fix a missing prompt | Need both regex fix AND retry with JSON reminder |
-| Hard-fail T5 for any missing tier | Original behavior: `ValueError` on first missing tier | Partial-failure experiments are valid; T5 should succeed if ≥1 tier completed | Use `continue` + post-loop check |
-| Resume at `JUDGE_COMPLETE` threshold | Only reloaded prompt if run was fully past judging | A crashed mid-judge run lands at `JUDGE_PROMPT_BUILT`, not `JUDGE_COMPLETE` | Match threshold to where prompt is first persisted |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified

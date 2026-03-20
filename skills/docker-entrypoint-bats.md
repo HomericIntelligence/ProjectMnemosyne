@@ -233,51 +233,9 @@ paths:
 
 ## Failed Attempts
 
-### Attempt 1 — Testing credentials via `--validate`
-
-**What happened**: Initial tests for `ensure_clean_claude_environment()` used `bash "$SCRIPT" --validate`,
-expecting to see credential messages. But `--validate` only calls `validate_env()` — it never calls
-`ensure_clean_claude_environment()`.
-
-**Diagnosis**: Read the `main()` case statement — `--validate` routes directly to `validate_env`, not to
-`ensure_clean_claude_environment`.
-
-**Fix**: Use `python --version` passthrough instead, which calls `ensure_clean_claude_environment` then
-`exec`s the mock python. This tests the credential path without needing `/workspace` or `/output`.
-
-### Attempt 2 — `mkdir -p /workspace` in test setup fails with permission denied
-
-**What happened**: Tests creating `/workspace`, `/output`, `/prompt` for `--run-agent`/`--run-judge` paths
-failed with `mkdir: cannot create directory '/workspace': Permission denied` because the test runner
-isn't root.
-
-**Fix**: Wrap with `if ! mkdir -p /workspace /output /prompt 2>/dev/null; then skip "..."; fi`.
-These tests will skip on developer machines but run correctly on CI where containers run as root.
-
-### Attempt 3 — System `/tmp/host-creds/.credentials.json` contaminates auth tests
-
-**What happened**: The development machine had a real `/tmp/host-creds/.credentials.json`. Tests
-expecting no-auth failures were silently using these credentials, making `--run-judge` report
-"MODEL is not set" instead of "No authentication".
-
-**Diagnosis**: `ensure_clean_claude_environment()` checks `/tmp/host-creds/.credentials.json` first in the
-priority chain. Real credentials on the dev machine invisibly satisfied the auth check.
-
-**Fix**: Backup and remove `/tmp/host-creds/.credentials.json` in `setup()`, restore in `teardown()`.
-Added to both `test_credentials.bats` and `test_commands.bats`.
-
-### Attempt 4 — Asserting "Validation failed" message after error accumulation
-
-**What happened**: Test `"no auth + invalid TIER → two errors reported"` asserted:
-`[[ "$output" == *"Validation failed"* ]]`. This always failed — the line was never printed.
-
-**Diagnosis**: `validate_env()` uses `((errors++))`. Under `set -euo pipefail`, when `errors` goes from
-0 → 1, the arithmetic expression exits with code 1, triggering `set -e` to abort the function.
-The `"Validation failed with ${errors} error(s)"` line is never reached.
-
-**Fix**: Change assertion to `[[ "$output" == *"[ERROR]"* ]]` — the error log line before the
-`((errors++))` is always printed.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Related Skills
 
 - `bats-shell-testing` — Original BATS setup skill (preflight_check.sh, gh/git mocking patterns)

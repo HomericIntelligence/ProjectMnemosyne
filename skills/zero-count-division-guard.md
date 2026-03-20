@@ -1,7 +1,7 @@
 ---
 name: zero-count-division-guard
 description: "Skill: Zero-Count Division Guard in Metric Collection Functions"
-category: uncategorized
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -110,10 +110,15 @@ pixi run python -m pytest tests/unit/ -v --override-ini="addopts="
 pre-commit run --all-files
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-None — the fix was straightforward once the root cause was identified from the CI traceback. The key insight was that the collection function, not the check function, was the right place to fix, because returning `None` for "unavailable" was already the established contract used elsewhere in the codebase.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Why Fix at the Collection Layer (Not the Check Layer)
 
 Two options exist:

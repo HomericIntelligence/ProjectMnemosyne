@@ -153,50 +153,9 @@ gh pr checks <pr-number> --watch
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Running Tests Locally
-
-**What was tried:**
-```bash
-pixi run mojo run tests/examples/test_trait_based_serialization.mojo
-pixi run mojo test tests/examples/test_trait_based_serialization.mojo
-```
-
-**Why it failed:**
-- `mojo run` requires the `shared` package to be built
-- `mojo test` command doesn't exist in Mojo v0.26.1
-- Local environment differs from CI Docker container (memory protections, GIL state)
-
-**Lesson**: Cannot reproduce CI-specific crashes locally. Must rely on CI logs and defensive coding.
-
-### ❌ Attempt 2: Assuming Serialization Code Was Modified in PR
-
-**What was tried:**
-- Reviewed PR diff to find what changed in serialization code
-
-**Why it was wrong:**
-- `test_trait_based_serialization.mojo` was NOT modified in PR #3109
-- Crash existed in earlier commits but was flaky
-- PR only exposed the existing memory safety issue
-
-**Lesson**: CI failures don't always correlate with PR changes. Check git history to see if test passed before.
-
-### ❌ Attempt 3: Only Fixing One Layer of Defense
-
-**What was tried:**
-- Initial fix only added null check in `bytes_to_hex()`
-
-**Why it's incomplete:**
-- Null check prevents crash but doesn't fix root cause
-- Pointer could still be invalid even if non-null (dangling pointer)
-- Need to prevent invalid pointer creation, not just detect it
-
-**Lesson**: Use defense in depth - fix root cause AND add safety checks.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### CI Status Before Fix

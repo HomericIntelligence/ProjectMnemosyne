@@ -2,7 +2,7 @@
 name: prepare-dataset
 description: Process and validate datasets for training. Use when setting up data
   pipelines.
-category: ml
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 mcp_fallback: none
@@ -71,11 +71,9 @@ Dataset preparation report:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

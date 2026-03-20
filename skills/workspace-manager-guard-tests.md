@@ -132,10 +132,17 @@ Pre-existing coverage (not added in this session):
 | 199 | `commit must be set before calling _checkout_commit` | Pre-existing test (line 443–453) |
 | 246 | `commit must be set before calling _ensure_commit_available` | Pre-existing test (line 482–492) |
 
+## Verified Workflow
+
+Steps that worked:
+1. Step 1
+2. Step 2
+
 ## Failed Attempts
 
-None — the implementation was correct on the first attempt. The review plan confirmed no fixes were needed. The key insight: the issue stated "four RuntimeError guards" but grep revealed 6 total, with 3 already covered by pre-existing tests.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test class added

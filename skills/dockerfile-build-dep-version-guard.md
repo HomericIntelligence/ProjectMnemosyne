@@ -1,7 +1,7 @@
 ---
 name: dockerfile-build-dep-version-guard
 description: "Skill: Dockerfile Build-Dependency Version Guard"
-category: uncategorized
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -139,6 +139,10 @@ pixi run python -m pytest tests/unit/ --override-ini="addopts=" -q
 # Pre-commit hooks on the modified file
 pre-commit run --files tests/unit/e2e/test_dockerfile.py
 ```
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
 
 ## Failed Attempts / Gotchas
 

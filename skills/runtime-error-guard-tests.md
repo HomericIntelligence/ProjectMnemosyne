@@ -434,26 +434,9 @@ subprocess-failure guard under test.
 
 ## Failed Attempts
 
-### 1. Trying to Test All Guards in One Parametrize Call
-
-**Problem**: Attempted to test all 3 `write_report` guards plus all 2 `finalize_run` guards in a single `@pytest.mark.parametrize`. This fails because:
-- `write_report` requires `run_result` (set by `finalize_run`) to be present for `agent_result` and `judgment` guards to fire — you can't set up both contexts in a single fixture teardown.
-- The `run_result` guard fires first, so you can't test `agent_result` guard without a valid `run_result`.
-
-**Fix**: Use separate test classes (`TestStageFinalizeRunGuards` and `TestStageWriteReportGuards`) with different setup logic, calling `stage_finalize_run` as the setup step inside `TestStageWriteReportGuards`.
-
-### 2. Forgetting `criteria_scores` in `judgment` dict
-
-**Problem**: `stage_finalize_run` accesses `judgment["criteria_scores"]` when building the `E2ERunResult`. Tests that omitted this key caused a `KeyError` before reaching the guard.
-
-**Fix**: Always include `"criteria_scores": {}` in the judgment dict used for setup.
-
-### 3. `_find_existing_checkpoint` not patched in runner guard test
-
-**Problem**: Without patching `_find_existing_checkpoint`, the runner checks the real filesystem for a checkpoint file, which doesn't exist in a unit test — it raises `FileNotFoundError` before the guard.
-
-**Fix**: `patch.object(runner, "_find_existing_checkpoint", return_value=None)` to simulate no existing checkpoint.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test counts added — Session 1 (#1144, 2026-02-27)

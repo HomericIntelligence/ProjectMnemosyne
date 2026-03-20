@@ -6,10 +6,9 @@ date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
 ---
----
 name: gh-create-pr-linked
 description: "Create a pull request properly linked to a GitHub issue using gh pr create. Use when creating a PR that implements or addresses a specific issue."
-category: github
+category: ci-cd-cd
 ---
 
 # Create PR Linked to Issue
@@ -69,3 +68,27 @@ Examples:
 ## References
 
 - See CLAUDE.md for complete git workflow
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
+## Verified Workflow
+
+Steps that worked:
+1. Step 1
+2. Step 2
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.

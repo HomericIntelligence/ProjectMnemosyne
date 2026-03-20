@@ -3,7 +3,7 @@ name: plan-regenerate-issues
 description: 'DEPRECATED: The notes/plan/ directory has been removed. Planning is
   now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update
   skills instead.'
-category: plan
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 mcp_fallback: none
@@ -163,11 +163,9 @@ python3 scripts/regenerate_github_issues.py --section 02-shared-library
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

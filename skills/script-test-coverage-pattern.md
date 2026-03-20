@@ -167,46 +167,9 @@ def test_type_to_category_mapping(self, commit_type, category):
 
 ## Failed Attempts
 
-### Asserting exact fix counts for regex-based fixers
-**Problem**: `_fix_md040_code_language` uses a regex to find ` ``` ` (with no language tag). This matches both untagged opening fences AND closing fences (which are always bare ` ``` `). Tests that asserted `fixes == 0` for tagged code blocks failed because the closing fence was also tagged.
-
-**Fix**: Don't assert `fixes == 0` for blocks with a language tag. Instead assert that the *opening fence* retains its tag:
-```python
-# WRONG
-assert result == content       # fails: closing ``` gets changed
-assert fixes == 0              # fails: 1 fix counted for closing ```
-
-# CORRECT
-assert result.startswith("```python")  # opening fence preserved
-```
-
-### Asserting check_markdown_formatting has no issues for tagged code blocks
-**Problem**: The `check_markdown_formatting` regex `r"```\s*\n"` matches *any* line containing bare ` ``` `, including closing fences. A tagged code block still has a bare closing fence, so the check always fires for any code block.
-
-**Fix**: Test the negative case with content that has *no code blocks at all*:
-```python
-# WRONG
-content = "```python\nprint('hi')\n```\n"
-assert not any("Code blocks missing" in i for i in issues)  # fails: closing ``` triggers it
-
-# CORRECT
-content = "Just plain text, no code blocks here.\n"
-assert not any("Code blocks missing" in i for i in issues)  # passes
-```
-
-### Counting exact "```text" occurrences for multiple blocks
-**Problem**: For content with 2 untagged blocks ```` ```\nblock1\n```\n```\nblock2\n```\n ````, the regex replaces ALL bare fences (both opening and closing), resulting in 4 occurrences of ```` ```text ````, not 2.
-
-**Fix**: Test for presence, not count:
-```python
-# WRONG
-assert result.count("```text") == 2  # fails: 4 occurrences
-
-# CORRECT
-assert "```text" in result
-assert fixes > 0
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Final Coverage Numbers

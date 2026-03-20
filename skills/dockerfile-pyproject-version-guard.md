@@ -1,12 +1,7 @@
 ---
-name: dockerfile-pyproject-version-guard
-description: "---"
-category: testing
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
+
 ---
----
+
 name: "Skill: Dockerfile/pyproject.toml Version Guard Tests"
 description: "Pattern for extending Dockerfile pin regression tests to cross-validate against pyproject.toml constraints, preventing silent version drift"
 category: testing
@@ -156,31 +151,9 @@ Expected: 5 tests pass, all hooks green.
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| `# type: ignore[no-redef]` on tomli import | Mypy on Python ≥3.11 flagged as `unused-ignore` | Bare import in else-branch is correct; mypy only type-checks reachable branch |
-| Single combined test | Harder to diagnose failures — unclear if pyproject.toml is missing hatchling vs version out-of-range | Split into two tests: parseable + constraint-satisfied |
-
-### ❌ Attempt 1: `# type: ignore[no-redef]` on tomli fallback import
-
-**What we tried:**
-```python
-import tomli as tomllib  # type: ignore[no-redef]
-```
-
-**Why it failed:**
-- Mypy on Python 3.14 (stdlib `tomllib` available) sees the `else` branch as dead code
-- Reports: `error: Unused "type: ignore" comment  [unused-ignore]`
-- Pre-commit mypy hook fails
-
-**Fix:**
-```python
-import tomli as tomllib   # no comment needed
-```
-
-Mypy only type-checks the branch it can reach at the configured Python version.
-The `else` branch is silently ignored when `sys.version_info >= (3, 11)` is true.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test counts

@@ -121,8 +121,9 @@ Expected: all tests pass including the new assertion.
 
 ## Failed Attempts
 
-None — this was a minimal, targeted change with a clear path.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 **Files changed**: 2

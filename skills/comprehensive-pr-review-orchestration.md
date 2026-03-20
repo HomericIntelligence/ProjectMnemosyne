@@ -178,57 +178,19 @@ gh pr view PR_NUMBER --json comments --jq '.comments[-1]'
 gh issue view ISSUE_NUMBER --json comments --jq '.comments[-1]'
 ```
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-### ❌ Attempt 1: Use inline review comments with gh API
-
-**What we tried**: Post inline review comments using `gh api repos/.../pulls/.../comments` with line numbers
-
-**Why it failed**: GitHub API requires complex parameters for inline comments:
-- `commit_id` must be exact commit SHA from PR
-- Requires `side`, `start_line`, `line` parameters
-- Requires `subject_type` or `positioning` or `position` or `in_reply_to`
-- Error: "No subschema in 'oneOf' matched" with missing parameter errors
-
-**Example failed attempt:**
-```bash
-gh api repos/.../pulls/3109/comments \
-  -X POST \
-  -f body="Comment text" \
-  -f path="file.mojo" \
-  -f commit_id="abc123" \
-  -F line=263 \
-  -f subject_type="line"
-
-# Error: Invalid request - positioning/position/in_reply_to not supplied
-```
-
-**Lesson**: Inline review comments have complex API requirements. Use simple PR comments instead.
-
-### ❌ Attempt 2: File review comments during agent execution
-
-**What we considered**: Have the orchestrator agent post review comments directly while running
-
-**Why we didn't**:
-- Agents should focus on analysis, not GitHub API interaction
-- Better separation of concerns: agent analyzes, user/script posts
-- Easier to retry posting if API calls fail
-- User can review findings before posting
-
-**Lesson**: Keep agent focused on analysis, file comments after agent completes.
-
-### ❌ Attempt 3: Implement fixes in the review
-
-**What we avoided**: Implementing the fixes ourselves instead of filing comments
-
-**Why we didn't**:
-- User explicitly requested "file review comments for others to fix"
-- Better for engineer to learn from fixing their own issues
-- Review workflow != implementation workflow
-- Maintains clear ownership and accountability
-
-**Lesson**: When user asks to file comments, don't implement - just review and document.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Agent Configuration

@@ -249,43 +249,9 @@ with ThreadPoolExecutor(max_workers=self.options.max_workers) as executor:
 
 ## Failed Attempts
 
-### Attempt 1: Wrapping the long error_output f-string in parentheses
-
-**What failed**: Tried wrapping the long f-string in parentheses to satisfy E501:
-```python
-error_output = (
-    f"EXIT CODE: {e.returncode}\n\nSTDOUT:\n{e.stdout or ''}\n\nSTDERR:\n{e.stderr or ''}"
-)
-```
-Ruff formatter unwrapped the parentheses back to a single line. The string was still > 100 chars.
-
-**Fix**: Extract variables first:
-```python
-stdout = e.stdout or ""
-stderr = e.stderr or ""
-error_output = f"EXIT CODE: {e.returncode}\n\nSTDOUT:\n{stdout}\n\nSTDERR:\n{stderr}"
-```
-
-### Attempt 2: Using `# type: ignore[return-value]` for session_id
-
-**What failed**: Added `# type: ignore[return-value]` but mypy reported it was (a) unused and (b) the actual error was `no-any-return`.
-
-**Fix**: Declare the variable with an explicit type annotation:
-```python
-session_id: str | None = data.get("session_id")
-return session_id  # no type: ignore needed
-```
-
-### Attempt 3: Prompts with content that includes curly braces
-
-**What worked**: The `REVIEW_FIX_PROMPT` includes a commit message format block with `{variables}`. Since the prompt uses Python `.format()`, any literal braces in the prompt template would need to be doubled (`{{` and `}}`).
-
-**Avoided by**: The commit message format uses backtick code blocks and the `{pr_number}` / `{issue_number}` placeholders in the format string are actual template variables (they should be replaced). No literal curly braces needed in the prompt string.
-
-### Attempt 4: CI log fetch via `--branch --pr=N`
-
-The CI log fetch command uses `gh run list --branch --pr={pr_number}`. In practice this flag combination may not work as expected with `gh` CLI — the `--branch` flag expects a branch name, not `--pr=N`. Wrapped in `contextlib.suppress(Exception)` so it degrades gracefully. Real integration testing needed.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Claude invocation parameters

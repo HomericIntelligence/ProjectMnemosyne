@@ -96,13 +96,9 @@ python scripts/generate_marketplace.py
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Writing notes.md before reading | File write error - must read first | Always read files before writing to them |
-| Assuming all `source:` were frontmatter | Some were inline code examples | Use `^source:` regex to match only frontmatter |
-| Manual file-by-file updates | Too slow for 33 plugins | Use sed/batch scripts for bulk changes |
-| Removing source URLs | URLs are references, not project sources | Only remove `source: ProjectName`, keep reference URLs |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Changed Per Plugin

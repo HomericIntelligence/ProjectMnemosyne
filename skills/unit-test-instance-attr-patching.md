@@ -85,24 +85,9 @@ Use `is` only when you want to verify the *exact same object* was returned (e.g.
 
 ## Failed Attempts
 
-### `patch.object(runner, "experiment_dir", Path("/results"))` as context manager
-
-**What happened**: The test passed `Path` as the new value, but `patch.object` for a plain instance attribute sets the attribute on the *class*, not the instance. Inside the `with` block the attribute had the wrong value, so `get_baseline_for_subtest` was never called.
-
-**Fix**: Assign `runner.experiment_dir = Path("/results")` directly before the call.
-
-### `assert updated_baseline is new_baseline` for Pydantic model
-
-**What happened**: `AssertionError` — two separate `TierBaseline` instances with identical fields are `==` but different objects in memory.
-
-**Fix**: Use `assert updated_baseline == new_baseline`.
-
-### Passing `mock_tier_manager` as constructor arg expecting it to be used
-
-**What happened**: `E2ERunner(config, mock_tier_manager, Path("/tmp"))` — the second arg is `tiers_dir: Path`, not a `TierManager`. The constructor ignores it and builds `TierManager(tiers_dir)`. Assertions on `mock_tier_manager` always failed because it was never the runner's actual `tier_manager`.
-
-**Fix**: Override `runner.tier_manager` after construction.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```python

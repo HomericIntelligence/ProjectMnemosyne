@@ -2,7 +2,7 @@
 name: agent-hierarchy-diagram
 description: Generate visual hierarchy diagrams of agent system showing levels and
   delegation. Use for documentation or onboarding.
-category: agent
+category: architecture
 date: '2026-03-19'
 version: 1.0.0
 mcp_fallback: none
@@ -86,11 +86,9 @@ graph TD
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

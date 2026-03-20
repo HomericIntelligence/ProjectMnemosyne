@@ -173,14 +173,9 @@ to subtest/tier/experiment states.
 
 ## Failed Attempts
 
-| Attempt | What We Tried | Why It Failed |
-|---------|--------------|---------------|
-| Patching `scylla.e2e.runner.is_zombie` in tests | Patching module-level attribute | `is_zombie` is imported locally inside function block; must patch `scylla.e2e.health.is_zombie` |
-| Patching `manage_experiment.reset_runs_for_from_state` | Module-level patch | Imported locally inside `if` block; must patch `scylla.e2e.checkpoint.reset_runs_for_from_state` |
-| Using `_load_checkpoint_and_config` directly in tests | Fails config hash validation | Saved checkpoint has mismatched hash; must mock `_load_checkpoint_and_config` and inject checkpoint directly |
-| Capturing CLI tiers after `_load_checkpoint_and_config` | `self.config` already overwritten | Must capture `_cli_tiers = list(self.config.tiers_to_run)` BEFORE the load call |
-| Resetting only `experiment_state` without resetting tier/subtest states | Tier state machine sees `complete` tier | Must also reset `tier_states[tier_id] == "failed"` → `"pending"` and same for subtest_states |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### PRs

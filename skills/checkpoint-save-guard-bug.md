@@ -29,12 +29,19 @@ user-invocable: false
 4. Fix: moved `reset_count += 1` to count ALL non-completed runs (before the terminal-state check), not just terminal resets
 5. Updated two test assertions to match new semantics (2->4, 0->4)
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-| Attempt | Why It Failed |
-|---------|---------------|
-| N/A | Bug was straightforward once identified; no failed approaches |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 **Root cause pattern**: Function return value counts only a subset of affected items, but caller uses it as a "did anything change?" guard for persistence. The fix is to count all affected items, not just the subset that was mutated.

@@ -4,7 +4,7 @@ description: 'TRIGGER CONDITIONS: Adding new aggregated metrics to build_subtest
   tier_summary(), or model_comparison() in scylla/analysis/dataframes.py. Use when
   extending the analysis layer with new per-run measurements that need mean/median/std
   at the subtest, tier, or model-comparison level.'
-category: analysis
+category: evaluation
 date: 2026-03-02
 version: 1.0.0
 user-invocable: false
@@ -185,13 +185,9 @@ pre-commit run --files scylla/analysis/dataframes.py tests/unit/analysis/conftes
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Used `pd.isfinite()` in test assertion | `pandas` has no `isfinite` attribute — only `numpy` does | Always use `np.isfinite()`, never `pd.isfinite()` |
-| Type hint `list[float \| None]` for helper param | mypy: `list` is invariant, `list[float]` ≠ `list[float \| None]` | Use `Sequence[float \| None]` from `collections.abc` — covariant, accepts both |
-| Adding NaN guards to production `compute_subtest_stats()` | Unnecessary — pandas `.mean()/.median()/.std()` already skip NaN by default | Trust `skipna=True` default; only add guards in fixtures that lack the column entirely |
-| Checking `"r_prog" in result.columns` for `model_comparison()` output | `model_comparison()` uses raw `.agg()` which creates MultiIndex columns — `"r_prog"` is not a flat column | Use `("r_prog", "mean") in list(result.columns)` for MultiIndex agg output |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### New columns added (12 per aggregation function)

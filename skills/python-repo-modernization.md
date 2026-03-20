@@ -1,12 +1,7 @@
 ---
-name: python-repo-modernization
-description: "---"
-category: tooling
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
+
 ---
----
+
 name: python-repo-modernization
 description: "Bring a Python utility package from C+ to production-grade quality in one session: fix package re-exports, raise test coverage to 75%+, create integration smoke tests, harden CI/CD pipeline, and produce an installable wheel. Use when: a shared utility repo is functional but not yet consumable by downstream projects."
 category: tooling

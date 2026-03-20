@@ -233,35 +233,15 @@ After adding B, SIM, C4, RUF to a mature Python codebase (~18K lines):
 | RUF012 | 1 | Manual fix |
 | **Total** | **233** | **0 remaining** |
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-### Attempting to fix SIM117 in pytest tests
-
-SIM117 suggests merging nested `with` statements. For pytest, this breaks because
-`pytest.raises()` **must** be the innermost context manager. Attempting to merge:
-
-```python
-# BROKEN — pytest.raises() must be innermost
-with mock.patch("sys.argv", [...]), pytest.raises(SystemExit) as exc_info:
-    main()
-# exc_info.value.code would fail — raises() needs to be innermost
-```
-
-**Resolution**: Add `"SIM117"` to the global `ignore` list in `pyproject.toml`.
-
-### Using `--unsafe-fixes` without reviewing changes
-
-The unsafe fixes include SIM105 (`try/except/pass` → `contextlib.suppress`) which
-sometimes applies in ways that lose important contextual comments. Always review
-the diff after `--unsafe-fixes --fix`.
-
-### Trying to keep `# noqa: C901` after RUF100 cleanup
-
-When RUF100 removes `# noqa: C901` directives (because C901 is not enabled), those
-same lines may become E501 violations if the `# noqa: C901  # description` was long.
-You cannot keep the noqa directive (RUF100 will re-flag it next run).
-**Correct fix**: Remove the entire inline comment; the information belongs in the docstring.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Configuration
 
 ```toml

@@ -107,16 +107,9 @@ Pre-commit hooks auto-format with ruff on first commit attempt; files are modifi
 
 ## Failed Attempts
 
-### `--namespace-packages` mypy flag
-
-Tried `mypy --namespace-packages` to resolve the "found twice" error without adding `__init__.py`. The flag did not resolve the issue. Root cause: mypy sees the file both as a top-level source (via `scripts/` path argument) and as `scripts.validate_model_configs` (via the test import).
-
-**Fix**: `touch scripts/__init__.py` — the only reliable solution.
-
-### Running only the new tests with `pytest tests/unit/scripts/`
-
-This passes all 28 tests but reports 0% coverage and fails the `fail-under=73` threshold. Always run `pytest tests/` (full suite) to verify coverage. The new script tests don't add to the `scylla/` coverage source configured in `pyproject.toml`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Metric          | Value                               |

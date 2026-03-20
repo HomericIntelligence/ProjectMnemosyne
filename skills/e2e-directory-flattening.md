@@ -130,32 +130,19 @@ if self.config.max_subtests is not None:
     tier_config.subtests = tier_config.subtests[:self.config.max_subtests]
 ```
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-### 1. Judge prompt per-run (incorrect)
-
-**What was tried:** Initially placed `judge_prompt.md` in each run directory.
-
-**Why it failed:** The judge prompt, criteria, and rubric are uniform across ALL tiers/subtests/runs. Duplicating them wastes space and makes updates harder.
-
-**Solution:** Place grading materials at experiment root level once.
-
-### 2. Missed logs/ subdirectory in base.py
-
-**What was tried:** Updated `subtest_executor.py` to pass run_dir directly, but logs still appeared in `logs/` subdirectory.
-
-**Why it failed:** The `write_logs()` method in `adapters/base.py` was creating the `logs/` subdirectory independently.
-
-**Solution:** Update `base.py:write_logs()` to write directly to `output_dir` instead of `output_dir/logs/`.
-
-### 3. Workspace per-run (inefficient)
-
-**What was tried:** Originally each run created its own workspace via git clone.
-
-**Why it failed:** Extremely slow - cloning repository N times per subtest. Also wastes disk space.
-
-**Solution:** Use git worktrees at subtest level, shared across all runs.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### CLI Usage

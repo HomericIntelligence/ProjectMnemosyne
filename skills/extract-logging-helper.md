@@ -167,11 +167,9 @@ Ruff will collapse single-line f-strings inside `logger.info(...)` — let it re
 
 ## Failed Attempts
 
-### None in this session
-
-The implementation was straightforward once the call-site ordering was confirmed. The main subtlety was
-ensuring `_log_checkpoint_resume` was placed **before** `_load_checkpoint_and_config` in the class body.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Code Changes

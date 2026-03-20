@@ -1,7 +1,7 @@
 ---
 name: explicit-false-schema-fixture-tests
 description: "Skill: Explicit-False Schema Fixture Tests"
-category: uncategorized
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -150,13 +150,15 @@ pre-commit run --all-files
 
 Both paths should be covered. The explicit-false path is the one that t0/t1 fixtures use for documentation clarity.
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-None — the implementation was straightforward because:
-- Fixture files already had the explicit fields
-- The Pydantic model already had correct defaults
-- Only tests were missing
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results
 
 - 11 new tests added (8 schema, 3 loader — parametrized = 11 test IDs)

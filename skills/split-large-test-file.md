@@ -237,37 +237,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-### ❌ Adding sys.path.insert When pyproject.toml Already Handles It
-
-**Risk**: The implementation plan referenced `sys.path.insert(0, str(Path(__file__).parent...parent / "scripts"))` as a pattern from similar projects.
-
-**What actually happened**: The original file had NO `sys.path.insert`. The project uses
-`pythonpath = [".", "scripts"]` in `pyproject.toml` — no per-file path manipulation needed.
-
-**Fix**: Check the original file and `pyproject.toml` before writing headers. If `pythonpath`
-covers `scripts/`, omit `sys.path.insert` entirely.
-
-**Detection command**:
-```bash
-grep "sys.path" tests/unit/e2e/test_manage_experiment.py
-grep "pythonpath" pyproject.toml
-```
-
-### ❌ Not Checking Which Symbols Are Used at Module Level vs. Inside Methods
-
-**Risk**: Adding `from manage_experiment import cmd_run` at module level in files where
-`cmd_run` is only imported inside test method bodies (local import pattern).
-
-**What to do**: Before writing each new file's header, grep the sections for module-level
-vs. method-level usage:
-
-```bash
-sed -n '<start>,<end>p' file.py | grep -E "^from|^import"   # module-level only
-sed -n '<start>,<end>p' file.py | grep "from manage_experiment import" | grep "^        "  # method-level
-```
-
-Only import at module level what appears at the module level.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 **Baseline**: 119 tests collected

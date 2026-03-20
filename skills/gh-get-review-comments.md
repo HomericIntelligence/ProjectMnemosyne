@@ -2,7 +2,7 @@
 name: gh-get-review-comments
 description: Retrieve all review comments from a pull request using the GitHub API.
   Use when you need to see what feedback has been provided on a PR.
-category: github
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 user-invocable: false

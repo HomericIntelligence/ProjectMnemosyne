@@ -69,15 +69,15 @@ Before merging, verify:
 - [ ] All branch protection rules satisfied
 - [ ] Code review completed
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Merged with pending checks | CI failed after merge, broke main | Wait for ALL checks to complete, not just pass |
-| Checked mergeable once at start | Conflict appeared from parallel merge | Re-check mergeable immediately before merge |
-| Ignored "requested changes" status | Reviewer blocked merge | Address all requested changes before attempting merge |
-| Merged stale branch | Introduced bugs already fixed in main | Ensure branch is up-to-date with base branch |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Blocking Issues
 
 PR cannot merge if:

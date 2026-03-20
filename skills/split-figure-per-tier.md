@@ -189,47 +189,9 @@ corr_df.to_csv(corr_csv_path, index=False)  # NameError!
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Keep Faceting on Full Dataset
-
-**What we tried**: Used `facet(column="tier:N")` on the full 7,236-row dataset.
-
-**Why it failed**: Altair's `facet()` doesn't split the data before passing it to `alt.Chart()`. The full dataset is still embedded in the Vega-Lite spec, hitting the 5,000-row limit.
-
-**Error**:
-```
-altair.utils.schemapi.SchemaValidationError: Invalid specification
-Data source has more than 5000 rows
-```
-
-**Lesson**: Faceting is a visual operation, not a data-splitting operation. Always filter data before passing to `alt.Chart()`.
-
-### ❌ Attempt 2: Forgot to Add Tier Column to Multi-Facet Data
-
-**What we tried**: Refactored fig14 to loop over tiers, but forgot to add `"tier": row["tier"]` to the pairs dictionary.
-
-**Why it failed**: The per-tier filtering `pairs_df[pairs_df["tier"] == tier]` failed because the `tier` column didn't exist, resulting in empty dataframes and no output files.
-
-**Lesson**: When restructuring data (e.g., pivot → pairs), ensure ALL grouping columns are preserved in the new structure.
-
-### ❌ Attempt 3: Left Leftover Code from Old Implementation
-
-**What we tried**: Refactored fig14 to remove correlation computation, but forgot to delete the CSV save at the end of the function.
-
-**Why it failed**: `corr_df.to_csv()` failed with `NameError: name 'corr_df' is not defined` because the variable was removed during refactoring.
-
-**Error**:
-```python
-corr_csv_path = output_dir / "fig14_judge_agreement_correlations.csv"
-corr_df.to_csv(corr_csv_path, index=False)  # NameError!
-```
-
-**Lesson**: After removing computation logic, grep for all variable references and delete corresponding I/O operations.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Figure Generation Results

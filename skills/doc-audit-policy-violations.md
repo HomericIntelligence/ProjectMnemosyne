@@ -161,44 +161,6 @@ The only historical violation (`--label` in `CONTRIBUTING.md`) was already fixed
 
 ## Failed Attempts
 
-### Import pattern: `from common import get_repo_root` fails under pytest
-
-**What happened**: `scripts/common.py` re-exports `get_repo_root` with `from common import get_repo_root`. This works when running scripts directly (CWD = `scripts/`), but fails under pytest because `scripts/` is on `sys.path` as a package (`pythonpath = ["."]` in `pyproject.toml`), so `import common` resolves to the module but `from common import get_repo_root` inside `audit_doc_examples.py` fails at collection time.
-
-**Fix**: Import directly from `scylla.automation.git_utils`:
-
-```python
-# WRONG — fails under pytest
-from common import get_repo_root
-
-# CORRECT — works everywhere
-from scylla.automation.git_utils import get_repo_root
-```
-
-**Note**: `scripts/check_model_config_consistency.py` avoids this because it doesn't use `common.py` at all.
-
-### First regex for `push-direct-to-main` was too broad
-
-**What happened**: The initial pattern `r"git\s+push\b(?!.*--delete\b).*\b(?:origin\s+main|...)\b"` flagged `git push origin main  # BLOCKED - Will be rejected by GitHub` in CLAUDE.md.
-
-**Fix**: Added `(?![^#]*#)` negative lookahead to exclude lines with inline comments:
-
-```python
-r"git\s+push\b(?!.*--delete\b)(?![^#]*#).*\b(?:origin\s+main|origin\s+master|...)\b"
-```
-
-### First regex for `no-label-in-pr-create` was too broad
-
-**What happened**: The initial bidirectional pattern `r"gh\s+pr\s+create\b.*--label\b|--label\b.*gh\s+pr\s+create\b"` matched a prose line inside a commit message body: `CONTRIBUTING.md which included --label in the gh pr create example.`
-
-**Fix**: Anchored the pattern to command-like lines starting with `gh` (with optional leading whitespace):
-
-```python
-r"^\s*(?:gh|\$\s*gh|\\)\s*(?:pr\s+create\b.*--label\b|.*--label\b.*gh\s+pr\s+create\b)"
-```
-
-### Ruff D102: missing docstrings in test methods
-
-**What happened**: First version of test file had test methods without docstrings. Ruff enforces D102 (missing docstring in public method) including for test methods.
-
-**Fix**: Add a one-line docstring to every test method. These can be concise (e.g., `"""Should flag gh pr create that includes --label."""`).
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |

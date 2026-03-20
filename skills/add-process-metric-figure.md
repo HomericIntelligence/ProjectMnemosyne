@@ -6,7 +6,7 @@ description: 'TRIGGER CONDITIONS: Adding a new figure function to scylla/analysi
   corresponding figure in process_metrics.py, (2) a follow-up issue says ''add a figure
   for <metric> following the same pattern as fig_r_prog_by_tier'', (3) a process metric
   column was added in a prior issue but the figure was deferred.'
-category: analysis
+category: evaluation
 date: 2026-03-02
 version: 1.0.0
 user-invocable: false
@@ -233,11 +233,9 @@ PYTHONPATH=scripts pixi run python -m pytest tests/unit/analysis/ -v --no-cov
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Writing the long `logger.warning(...)` call on one line | ruff-format auto-wraps lines >88 chars during pre-commit | Write `logger.warning(...)` content as it will be after wrapping, or just let ruff fix it on first pass |
-| Considered a `.facet().properties()` chaining issue for box-plots | Checked `fix-altair-facet-layering` skill — that issue is specific to `alt.layer()` + `.facet()`. Simple `.mark_boxplot().encode().facet().properties()` works without any workaround | Box-plot doesn't use `alt.layer()`, so the facet-layering quirk doesn't apply |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files changed (3 files, 0 new files)

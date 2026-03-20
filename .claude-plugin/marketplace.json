@@ -8,206 +8,6 @@
   "version": "1.0.0",
   "plugins": [
     {
-      "name": "agent-coverage-check",
-      "description": "Check agent configuration coverage across hierarchy levels and phases. Use to ensure complete agent system coverage.",
-      "version": "1.0.0",
-      "source": "./skills/agent-coverage-check.md",
-      "category": "agent",
-      "tags": []
-    },
-    {
-      "name": "agent-hierarchy-diagram",
-      "description": "Generate visual hierarchy diagrams of agent system showing levels and delegation. Use for documentation or onboarding.",
-      "version": "1.0.0",
-      "source": "./skills/agent-hierarchy-diagram.md",
-      "category": "agent",
-      "tags": []
-    },
-    {
-      "name": "agent-run-orchestrator",
-      "description": "Run section orchestrators to coordinate multi-component workflows. Use when starting work on a section.",
-      "version": "1.0.0",
-      "source": "./skills/agent-run-orchestrator.md",
-      "category": "agent",
-      "tags": []
-    },
-    {
-      "name": "agent-test-delegation",
-      "description": "Test agent delegation patterns to verify hierarchy and escalation paths. Use after modifying agent structure.",
-      "version": "1.0.0",
-      "source": "./skills/agent-test-delegation.md",
-      "category": "agent",
-      "tags": []
-    },
-    {
-      "name": "agent-validate-config",
-      "description": "Validate agent YAML frontmatter and configuration. Use before committing agent changes or in CI.",
-      "version": "1.0.0",
-      "source": "./skills/agent-validate-config.md",
-      "category": "agent",
-      "tags": []
-    },
-    {
-      "name": "add-analysis-metric",
-      "description": "TRIGGER CONDITIONS: Adding new aggregated metrics to build_subtests_df(), tier_summary(), or model_comparison() in scylla/analysis/dataframes.py. Use when extending the analysis layer with new per-run measurements that need mean/median/std at the subtest, tier, or model-comparison level.",
-      "version": "1.0.0",
-      "source": "./skills/add-analysis-metric.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "add-comparison-table",
-      "description": "TRIGGER CONDITIONS: Adding a new pairwise statistical comparison table to scylla/analysis/tables/comparison.py. Use when a new metric (e.g. CFP, R_Prog, impl_rate) needs tier-by-tier Kruskal-Wallis + Mann-Whitney U + Holm-Bonferroni comparison in both Markdown and LaTeX formats.",
-      "version": "1.0.0",
-      "source": "./skills/add-comparison-table.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "add-process-metric-figure",
-      "description": "TRIGGER CONDITIONS: Adding a new figure function to scylla/analysis/figures/process_metrics.py for a per-run process metric (e.g. strategic_drift, r_prog, cfp, pr_revert_rate). Use when: (1) a new nullable column exists in build_runs_df() output but has no corresponding figure in process_metrics.py, (2) a follow-up issue says 'add a figure for <metric> following the same pattern as fig_r_prog_by_tier', (3) a process metric column was added in a prior issue but the figure was deferred.",
-      "version": "1.0.0",
-      "source": "./skills/add-process-metric-figure.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "analyze-code-structure",
-      "description": "Examine code organization and identify structural patterns. Use when reviewing module design.",
-      "version": "1.0.0",
-      "source": "./skills/analyze-code-structure.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "analyze-equations",
-      "description": "Parse and interpret mathematical equations from research papers. Use when extracting formulas for implementation.",
-      "version": "1.0.0",
-      "source": "./skills/analyze-equations.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "benchmark-functions",
-      "description": "Measure function performance and compare implementations. Use when optimizing critical code paths.",
-      "version": "1.0.0",
-      "source": "./skills/benchmark-functions.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "calculate-coverage",
-      "description": "Measure test coverage and identify untested code. Use when assessing test completeness.",
-      "version": "1.0.0",
-      "source": "./skills/calculate-coverage.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "check-dependencies",
-      "description": "Validate and verify dependencies are available and compatible. Use when setting up environments.",
-      "version": "1.0.0",
-      "source": "./skills/check-dependencies.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "detect-code-smells",
-      "description": "Identify code quality issues and anti-patterns. Use when reviewing code for maintainability problems.",
-      "version": "1.0.0",
-      "source": "./skills/detect-code-smells.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "extend-statistical-tests",
-      "description": "TRIGGER CONDITIONS: Adding a new nullable per-run metric to all four statistical test sections (normality, omnibus, pairwise, effect sizes) in scripts/export_data.py compute_statistical_results(). Use when surfacing process or quality metrics in statistical_results.json.",
-      "version": "1.0.0",
-      "source": "./skills/extend-statistical-tests.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "extract-algorithm",
-      "description": "Parse and document algorithm pseudocode from research papers. Use when preparing for implementation.",
-      "version": "1.0.0",
-      "source": "./skills/extract-algorithm.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "extract-dependencies",
-      "description": "Analyze imports and identify all module dependencies. Use when mapping project structure.",
-      "version": "1.0.0",
-      "source": "./skills/extract-dependencies.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "extract-hyperparameters",
-      "description": "Identify and document model hyperparameters from papers. Use when setting up training configurations.",
-      "version": "1.0.0",
-      "source": "./skills/extract-hyperparameters.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "identify-architecture",
-      "description": "Analyze ML model architecture from papers and code. Use when understanding model structure for implementation.",
-      "version": "1.0.0",
-      "source": "./skills/identify-architecture.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "lint-code",
-      "description": "Check code for style and quality issues. Use when validating code before commits.",
-      "version": "1.0.0",
-      "source": "./skills/lint-code.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "profile-code",
-      "description": "Measure execution time and memory usage of code. Use when analyzing performance characteristics.",
-      "version": "1.0.0",
-      "source": "./skills/profile-code.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "rename-figure-convention",
-      "description": "TRIGGER CONDITIONS: Renaming figure functions to match the fig{NN}_{description} sequential naming convention in ProjectScylla. Use when: (1) figure functions use ad-hoc names instead of sequential numbers (e.g. fig_r_prog_by_tier instead of fig28_r_prog_by_tier), (2) --list-figures output is out of alphabetical/sequential order, (3) a follow-up issue asks to standardize figure naming after figures were wired with unsequenced names.",
-      "version": "1.0.0",
-      "source": "./skills/rename-figure-convention.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "suggest-optimizations",
-      "description": "Identify performance optimization opportunities. Use when improving code efficiency.",
-      "version": "1.0.0",
-      "source": "./skills/suggest-optimizations.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "validate-inputs",
-      "description": "Check function inputs for correctness and safety. Use when implementing defensive programming.",
-      "version": "1.0.0",
-      "source": "./skills/validate-inputs.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
-      "name": "wire-figure-pipeline",
-      "description": "TRIGGER CONDITIONS: Adding new figure functions to the generate_figures.py pipeline in ProjectScylla. Use when: (1) a new figure function exists in scylla/analysis/figures/ but is not called from scripts/generate_figures.py, (2) registering batch-generated figures so they run automatically with all other figures, (3) wiring process-metric or other optional figures into the report pipeline.",
-      "version": "1.0.0",
-      "source": "./skills/wire-figure-pipeline.md",
-      "category": "analysis",
-      "tags": []
-    },
-    {
       "name": "Refactor for Extensibility",
       "description": "Systematic workflow for preparing codebases for extensibility through extraction, parameterization, and protocol-based abstraction",
       "version": "1.0.0",
@@ -224,6 +24,38 @@
       "tags": []
     },
     {
+      "name": "agent-coverage-check",
+      "description": "Check agent configuration coverage across hierarchy levels and phases. Use to ensure complete agent system coverage.",
+      "version": "1.0.0",
+      "source": "./skills/agent-coverage-check.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "agent-hierarchy-diagram",
+      "description": "Generate visual hierarchy diagrams of agent system showing levels and delegation. Use for documentation or onboarding.",
+      "version": "1.0.0",
+      "source": "./skills/agent-hierarchy-diagram.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "agent-run-orchestrator",
+      "description": "Run section orchestrators to coordinate multi-component workflows. Use when starting work on a section.",
+      "version": "1.0.0",
+      "source": "./skills/agent-run-orchestrator.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "agent-test-delegation",
+      "description": "Test agent delegation patterns to verify hierarchy and escalation paths. Use after modifying agent structure.",
+      "version": "1.0.0",
+      "source": "./skills/agent-test-delegation.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
       "name": "agent-tier-consolidation",
       "description": "Pattern for merging a redundant junior agent tier into its parent level. Use when: a lowest-level junior tier duplicates the parent scope with simpler tasks and the distinction adds configuration overhead without meaningful value.",
       "version": "1.0.0",
@@ -236,6 +68,14 @@
       "description": "Convert agent configurations to skills when tasks are fixed/predictable. Use when: (1) agent performs repeatable automation steps without adaptive reasoning, (2) reducing agent count to simplify hierarchy, (3) moving fixed-step workflows to the right abstraction layer.",
       "version": "1.0.0",
       "source": "./skills/agent-to-skill-conversion.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "agent-validate-config",
+      "description": "Validate agent YAML frontmatter and configuration. Use before committing agent changes or in CI.",
+      "version": "1.0.0",
+      "source": "./skills/agent-validate-config.md",
       "category": "architecture",
       "tags": []
     },
@@ -314,6 +154,14 @@
       "description": "Systematic approach to finding and consolidating duplicate code",
       "version": "1.0.0",
       "source": "./skills/codebase-consolidation.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "collaborator-extraction-tdd",
+      "description": "TRIGGER CONDITIONS: Extracting method groups from an oversized class (>800 lines) into dedicated collaborator classes using TDD. Use when: (1) a class has grown beyond its target line count and contains identifiable method groups with shared state, (2) extracting without behavior change (pure structural refactoring), (3) avoiding circular imports between the host class and extracted collaborators.",
+      "version": "1.0.0",
+      "source": "./skills/collaborator-extraction-tdd.md",
       "category": "architecture",
       "tags": []
     },
@@ -689,6 +537,14 @@
       "tags": []
     },
     {
+      "name": "parallel-test-generation-for-module-decomposition",
+      "description": "Parallel Test Generation for Module Decomposition",
+      "version": "1.0.0",
+      "source": "./skills/parallel-test-generation-for-module-decomposition.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
       "name": "pydantic-base-class-hierarchy",
       "description": "Skill: pydantic-base-class-hierarchy",
       "version": "1.0.0",
@@ -848,54 +704,6 @@
       "version": "1.0.0",
       "source": "./skills/yaml-long-line-refactor.md",
       "category": "architecture",
-      "tags": []
-    },
-    {
-      "name": "add-shell-log-level",
-      "description": "Skill: add-shell-log-level",
-      "version": "1.0.0",
-      "source": "./skills/add-shell-log-level.md",
-      "category": "automation",
-      "tags": []
-    },
-    {
-      "name": "batch-pr-rebase-workflow",
-      "description": "Skill: batch-pr-rebase-workflow",
-      "version": "1.0.0",
-      "source": "./skills/batch-pr-rebase-workflow.md",
-      "category": "automation",
-      "tags": []
-    },
-    {
-      "name": "git-worktree-collision-fix",
-      "description": "Skill: git-worktree-collision-fix",
-      "version": "1.0.0",
-      "source": "./skills/git-worktree-collision-fix.md",
-      "category": "automation",
-      "tags": []
-    },
-    {
-      "name": "analyze-ci-failure-logs",
-      "description": "Parse and analyze CI failure logs to identify root causes and error patterns. Use when CI builds fail to understand what broke.",
-      "version": "1.0.0",
-      "source": "./skills/analyze-ci-failure-logs.md",
-      "category": "ci",
-      "tags": []
-    },
-    {
-      "name": "fix-ci-failures",
-      "description": "Diagnose and fix CI/CD failures by analyzing logs, reproducing locally, and applying fixes. Use when CI checks fail on pull requests.",
-      "version": "1.0.0",
-      "source": "./skills/fix-ci-failures.md",
-      "category": "ci",
-      "tags": []
-    },
-    {
-      "name": "install-workflow",
-      "description": "Create GitHub Actions workflows for automated package building and distribution. Use in package phase to automate .mojopkg building and release creation.",
-      "version": "1.0.0",
-      "source": "./skills/install-workflow.md",
-      "category": "ci",
       "tags": []
     },
     {
@@ -1071,6 +879,14 @@
       "description": "Update validate_test_coverage.py when splitting Mojo test files per ADR-009. Use when: splitting a test file listed in validate_test_coverage.py, pre-commit Validate Test Coverage hook fails after a split, or adding/removing tracked test files.",
       "version": "1.0.0",
       "source": "./skills/adr009-validate-coverage-update.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "analyze-ci-failure-logs",
+      "description": "Parse and analyze CI failure logs to identify root causes and error patterns. Use when CI builds fail to understand what broke.",
+      "version": "1.0.0",
+      "source": "./skills/analyze-ci-failure-logs.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -1579,6 +1395,14 @@
       "tags": []
     },
     {
+      "name": "fix-ci-failures",
+      "description": "Diagnose and fix CI/CD failures by analyzing logs, reproducing locally, and applying fixes. Use when CI checks fail on pull requests.",
+      "version": "1.0.0",
+      "source": "./skills/fix-ci-failures.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "fix-ci-mojo-test-failure",
       "description": "TRIGGER CONDITIONS: CI failing with Mojo test assertion error, edge case handling missing",
       "version": "1.0.0",
@@ -1790,6 +1614,14 @@
       "description": "Fix 40+ failing PRs across multiple repos using wave-based haiku sub-agents in worktrees. Use when: many PRs fail CI across heterogeneous categories (ruff/mojo-format/deprecated-syntax/missing-ci-matrix/JIT-crash), wave-0 diagnosis identifies per-cluster root causes, parallel haiku agents in isolated worktrees are needed.",
       "version": "1.0.0",
       "source": "./skills/haiku-wave-pr-remediation.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "install-workflow",
+      "description": "Create GitHub Actions workflows for automated package building and distribution. Use in package phase to automate .mojopkg building and release creation.",
+      "version": "1.0.0",
+      "source": "./skills/install-workflow.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -2769,6 +2601,14 @@
       "tags": []
     },
     {
+      "name": "babylonjs-havok-vite-wasm",
+      "description": "When Babylon.js Havok physics fails in Vite dev server with WASM MIME type errors",
+      "version": "1.0.0",
+      "source": "./skills/babylonjs-havok-vite-wasm.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
       "name": "checkpoint-disk-reconciliation",
       "description": "Reconcile stale checkpoint states with on-disk artifacts after ProcessPool race conditions or interrupted runs. Use when: checkpoint shows intermediate states but disk has valid results, --retry-errors skips runs that completed on disk, or judge-failed runs need re-running.",
       "version": "1.0.0",
@@ -3332,22 +3172,6 @@
       "version": "1.0.0",
       "source": "./skills/vite-wasm-havok-fix.md",
       "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "doc-issue-readme",
-      "description": "Post structured documentation to GitHub issue as a comment. Use when starting work on an issue to document approach and track progress.",
-      "version": "1.0.0",
-      "source": "./skills/doc-issue-readme.md",
-      "category": "doc",
-      "tags": []
-    },
-    {
-      "name": "doc-update-blog",
-      "description": "Update development blog with implementation milestones, learnings, and progress. Use after completing major milestones or phases.",
-      "version": "1.0.0",
-      "source": "./skills/doc-update-blog.md",
-      "category": "doc",
       "tags": []
     },
     {
@@ -4415,6 +4239,70 @@
       "tags": []
     },
     {
+      "name": "add-analysis-metric",
+      "description": "TRIGGER CONDITIONS: Adding new aggregated metrics to build_subtests_df(), tier_summary(), or model_comparison() in scylla/analysis/dataframes.py. Use when extending the analysis layer with new per-run measurements that need mean/median/std at the subtest, tier, or model-comparison level.",
+      "version": "1.0.0",
+      "source": "./skills/add-analysis-metric.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "add-comparison-table",
+      "description": "TRIGGER CONDITIONS: Adding a new pairwise statistical comparison table to scylla/analysis/tables/comparison.py. Use when a new metric (e.g. CFP, R_Prog, impl_rate) needs tier-by-tier Kruskal-Wallis + Mann-Whitney U + Holm-Bonferroni comparison in both Markdown and LaTeX formats.",
+      "version": "1.0.0",
+      "source": "./skills/add-comparison-table.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "add-process-metric-figure",
+      "description": "TRIGGER CONDITIONS: Adding a new figure function to scylla/analysis/figures/process_metrics.py for a per-run process metric (e.g. strategic_drift, r_prog, cfp, pr_revert_rate). Use when: (1) a new nullable column exists in build_runs_df() output but has no corresponding figure in process_metrics.py, (2) a follow-up issue says 'add a figure for <metric> following the same pattern as fig_r_prog_by_tier', (3) a process metric column was added in a prior issue but the figure was deferred.",
+      "version": "1.0.0",
+      "source": "./skills/add-process-metric-figure.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "analyze-code-structure",
+      "description": "Examine code organization and identify structural patterns. Use when reviewing module design.",
+      "version": "1.0.0",
+      "source": "./skills/analyze-code-structure.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "analyze-equations",
+      "description": "Parse and interpret mathematical equations from research papers. Use when extracting formulas for implementation.",
+      "version": "1.0.0",
+      "source": "./skills/analyze-equations.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "benchmark-functions",
+      "description": "Measure function performance and compare implementations. Use when optimizing critical code paths.",
+      "version": "1.0.0",
+      "source": "./skills/benchmark-functions.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "calculate-coverage",
+      "description": "Measure test coverage and identify untested code. Use when assessing test completeness.",
+      "version": "1.0.0",
+      "source": "./skills/calculate-coverage.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "check-dependencies",
+      "description": "Validate and verify dependencies are available and compatible. Use when setting up environments.",
+      "version": "1.0.0",
+      "source": "./skills/check-dependencies.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "complex-agent-eval-task",
       "description": "Create sophisticated E2E test cases for AI agents using real PRs as reference solutions",
       "version": "1.0.0",
@@ -4435,6 +4323,14 @@
       "description": "Improving diagnostic clarity of LLM judge warning messages by adding specific failure details",
       "version": "1.0.0",
       "source": "./skills/debug-evaluation-logs.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "detect-code-smells",
+      "description": "Identify code quality issues and anti-patterns. Use when reviewing code for maintainability problems.",
+      "version": "1.0.0",
+      "source": "./skills/detect-code-smells.md",
       "category": "evaluation",
       "tags": []
     },
@@ -4511,6 +4407,38 @@
       "tags": []
     },
     {
+      "name": "extend-statistical-tests",
+      "description": "TRIGGER CONDITIONS: Adding a new nullable per-run metric to all four statistical test sections (normality, omnibus, pairwise, effect sizes) in scripts/export_data.py compute_statistical_results(). Use when surfacing process or quality metrics in statistical_results.json.",
+      "version": "1.0.0",
+      "source": "./skills/extend-statistical-tests.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "extract-algorithm",
+      "description": "Parse and document algorithm pseudocode from research papers. Use when preparing for implementation.",
+      "version": "1.0.0",
+      "source": "./skills/extract-algorithm.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "extract-dependencies",
+      "description": "Analyze imports and identify all module dependencies. Use when mapping project structure.",
+      "version": "1.0.0",
+      "source": "./skills/extract-dependencies.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "extract-hyperparameters",
+      "description": "Identify and document model hyperparameters from papers. Use when setting up training configurations.",
+      "version": "1.0.0",
+      "source": "./skills/extract-hyperparameters.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "fair-evaluation-baseline",
       "description": "Implement baseline pipeline capture and regression detection to distinguish agent-introduced failures from pre-existing issues in E2E evaluations",
       "version": "1.0.0",
@@ -4531,6 +4459,14 @@
       "description": "Eliminate duplicate grading definitions and consolidate to single source of truth",
       "version": "1.0.0",
       "source": "./skills/grading-consolidation.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "identify-architecture",
+      "description": "Analyze ML model architecture from papers and code. Use when understanding model structure for implementation.",
+      "version": "1.0.0",
+      "source": "./skills/identify-architecture.md",
       "category": "evaluation",
       "tags": []
     },
@@ -4583,6 +4519,14 @@
       "tags": []
     },
     {
+      "name": "lint-code",
+      "description": "Check code for style and quality issues. Use when validating code before commits.",
+      "version": "1.0.0",
+      "source": "./skills/lint-code.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "mojo-test-fixture-creation",
       "description": "Mojo Test Fixture Creation",
       "version": "1.0.0",
@@ -4615,6 +4559,14 @@
       "tags": []
     },
     {
+      "name": "profile-code",
+      "description": "Measure execution time and memory usage of code. Use when analyzing performance characteristics.",
+      "version": "1.0.0",
+      "source": "./skills/profile-code.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "pydantic-type-consolidation-metrics-judgment",
       "description": "Skill: pydantic-type-consolidation-metrics-judgment. Use when working with pydantic type consolidation metrics judgment.",
       "version": "1.0.0",
@@ -4623,10 +4575,26 @@
       "tags": []
     },
     {
+      "name": "rename-figure-convention",
+      "description": "TRIGGER CONDITIONS: Renaming figure functions to match the fig{NN}_{description} sequential naming convention in ProjectScylla. Use when: (1) figure functions use ad-hoc names instead of sequential numbers (e.g. fig_r_prog_by_tier instead of fig28_r_prog_by_tier), (2) --list-figures output is out of alphabetical/sequential order, (3) a follow-up issue asks to standardize figure naming after figures were wired with unsequenced names.",
+      "version": "1.0.0",
+      "source": "./skills/rename-figure-convention.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "resume-from-failed-experiment",
       "description": "Fix resume-from-FAILED experiment in E2E state machine framework \u2014 three compounding bugs where terminal states cause immediate exit, --retry-errors is silently ignored in single mode, and saved tiers_to_run overrides CLI tiers on resume",
       "version": "1.0.0",
       "source": "./skills/resume-from-failed-experiment.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "suggest-optimizations",
+      "description": "Identify performance optimization opportunities. Use when improving code efficiency.",
+      "version": "1.0.0",
+      "source": "./skills/suggest-optimizations.md",
       "category": "evaluation",
       "tags": []
     },
@@ -4647,179 +4615,19 @@
       "tags": []
     },
     {
-      "name": "generate-api-docs",
-      "description": "Create API reference documentation from docstrings. Use when documenting public module interfaces.",
+      "name": "validate-inputs",
+      "description": "Check function inputs for correctness and safety. Use when implementing defensive programming.",
       "version": "1.0.0",
-      "source": "./skills/generate-api-docs.md",
-      "category": "generation",
+      "source": "./skills/validate-inputs.md",
+      "category": "evaluation",
       "tags": []
     },
     {
-      "name": "generate-boilerplate",
-      "description": "Create starter code from templates. Use when setting up new modules or test files.",
+      "name": "wire-figure-pipeline",
+      "description": "TRIGGER CONDITIONS: Adding new figure functions to the generate_figures.py pipeline in ProjectScylla. Use when: (1) a new figure function exists in scylla/analysis/figures/ but is not called from scripts/generate_figures.py, (2) registering batch-generated figures so they run automatically with all other figures, (3) wiring process-metric or other optional figures into the report pipeline.",
       "version": "1.0.0",
-      "source": "./skills/generate-boilerplate.md",
-      "category": "generation",
-      "tags": []
-    },
-    {
-      "name": "generate-changelog",
-      "description": "Create changelog from git commits. Use when preparing release notes.",
-      "version": "1.0.0",
-      "source": "./skills/generate-changelog.md",
-      "category": "generation",
-      "tags": []
-    },
-    {
-      "name": "generate-docstrings",
-      "description": "Create docstrings for functions and classes. Use when documenting code APIs.",
-      "version": "1.0.0",
-      "source": "./skills/generate-docstrings.md",
-      "category": "generation",
-      "tags": []
-    },
-    {
-      "name": "refactor-code",
-      "description": "Restructure code for improved clarity and maintainability. Use when addressing code smells or technical debt.",
-      "version": "1.0.0",
-      "source": "./skills/refactor-code.md",
-      "category": "generation",
-      "tags": []
-    },
-    {
-      "name": "gh-get-review-comments",
-      "description": "Retrieve all review comments from a pull request using the GitHub API. Use when you need to see what feedback has been provided on a PR.",
-      "version": "1.0.0",
-      "source": "./skills/gh-get-review-comments.md",
-      "category": "github",
-      "tags": []
-    },
-    {
-      "name": "gh-implement-issue",
-      "description": "End-to-end implementation workflow for a GitHub issue from planning through PR creation. Use when starting work on an issue from scratch.",
-      "version": "1.0.0",
-      "source": "./skills/gh-implement-issue.md",
-      "category": "github",
-      "tags": []
-    },
-    {
-      "name": "gh-reply-review-comment",
-      "description": "Reply to PR review comments using the correct GitHub API endpoint. Use when responding to inline code review feedback (not gh pr comment).",
-      "version": "1.0.0",
-      "source": "./skills/gh-reply-review-comment.md",
-      "category": "github",
-      "tags": []
-    },
-    {
-      "name": "gh-review-pr",
-      "description": "Comprehensively review a pull request including code changes, CI status, and adherence to project standards. Use when asked to review a PR.",
-      "version": "1.0.0",
-      "source": "./skills/gh-review-pr.md",
-      "category": "github",
-      "tags": []
-    },
-    {
-      "name": "evaluate-model",
-      "description": "Measure model performance on test datasets. Use when assessing accuracy, precision, recall, and other metrics.",
-      "version": "1.0.0",
-      "source": "./skills/evaluate-model.md",
-      "category": "ml",
-      "tags": []
-    },
-    {
-      "name": "prepare-dataset",
-      "description": "Process and validate datasets for training. Use when setting up data pipelines.",
-      "version": "1.0.0",
-      "source": "./skills/prepare-dataset.md",
-      "category": "ml",
-      "tags": []
-    },
-    {
-      "name": "train-model",
-      "description": "Execute model training with optimization algorithms. Use when running training loops on datasets.",
-      "version": "1.0.0",
-      "source": "./skills/train-model.md",
-      "category": "ml",
-      "tags": []
-    },
-    {
-      "name": "analyze-simd-usage",
-      "description": "Analyze SIMD usage opportunities in Mojo code. Use to find performance optimization opportunities.",
-      "version": "1.0.0",
-      "source": "./skills/analyze-simd-usage.md",
-      "category": "mojo",
-      "tags": []
-    },
-    {
-      "name": "check-memory-safety",
-      "description": "Check Mojo code for memory safety issues (ownership violations, use-after-free, etc.). Use to catch memory bugs.",
-      "version": "1.0.0",
-      "source": "./skills/check-memory-safety.md",
-      "category": "mojo",
-      "tags": []
-    },
-    {
-      "name": "mojo-build-package",
-      "description": "Build Mojo packages (.mojopkg files) for distribution. Use when creating distributable libraries or during packaging phase.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-build-package.md",
-      "category": "mojo",
-      "tags": []
-    },
-    {
-      "name": "mojo-format",
-      "description": "Format Mojo code using mojo format command. Use when preparing code for commit or when formatting checks fail.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-format.md",
-      "category": "mojo",
-      "tags": []
-    },
-    {
-      "name": "mojo-lint-syntax",
-      "description": "Validate Mojo syntax against current v0.26.1+ standards. Use to catch syntax errors before compilation.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-lint-syntax.md",
-      "category": "mojo",
-      "tags": []
-    },
-    {
-      "name": "mojo-memory-check",
-      "description": "Verify memory safety in Mojo code including ownership, borrowing, and lifetime management. Use when reviewing code or debugging memory issues.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-memory-check.md",
-      "category": "mojo",
-      "tags": []
-    },
-    {
-      "name": "mojo-simd-optimize",
-      "description": "Apply SIMD optimizations to Mojo code for parallel computation. Use when optimizing performance-critical tensor and array operations.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-simd-optimize.md",
-      "category": "mojo",
-      "tags": []
-    },
-    {
-      "name": "mojo-test-runner",
-      "description": "Run Mojo tests using mojo test command. Use when executing tests or verifying test coverage.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-test-runner.md",
-      "category": "mojo",
-      "tags": []
-    },
-    {
-      "name": "mojo-type-safety",
-      "description": "Validate type safety in Mojo code including parametric types and trait constraints. Use during code review or when type errors occur.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-type-safety.md",
-      "category": "mojo",
-      "tags": []
-    },
-    {
-      "name": "validate-mojo-patterns",
-      "description": "Validate Mojo code patterns (out self, mut, List, etc.) against best practices. Use to ensure code follows project standards.",
-      "version": "1.0.0",
-      "source": "./skills/validate-mojo-patterns.md",
-      "category": "mojo",
+      "source": "./skills/wire-figure-pipeline.md",
+      "category": "evaluation",
       "tags": []
     },
     {
@@ -4827,6 +4635,22 @@
       "description": "Pattern for implementing ThreadPoolExecutor-based parallelization of I/O-bound tasks in Python CLI tools",
       "version": "1.0.0",
       "source": "./skills/parallel-io-bound-execution-with-threadpoolexecutor.md",
+      "category": "optimization",
+      "tags": []
+    },
+    {
+      "name": "analyze-simd-usage",
+      "description": "Analyze SIMD usage opportunities in Mojo code. Use to find performance optimization opportunities.",
+      "version": "1.0.0",
+      "source": "./skills/analyze-simd-usage.md",
+      "category": "optimization",
+      "tags": []
+    },
+    {
+      "name": "check-memory-safety",
+      "description": "Check Mojo code for memory safety issues (ownership violations, use-after-free, etc.). Use to catch memory bugs.",
+      "version": "1.0.0",
+      "source": "./skills/check-memory-safety.md",
       "category": "optimization",
       "tags": []
     },
@@ -4869,6 +4693,38 @@
       "tags": []
     },
     {
+      "name": "mojo-build-package",
+      "description": "Build Mojo packages (.mojopkg files) for distribution. Use when creating distributable libraries or during packaging phase.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-build-package.md",
+      "category": "optimization",
+      "tags": []
+    },
+    {
+      "name": "mojo-format",
+      "description": "Format Mojo code using mojo format command. Use when preparing code for commit or when formatting checks fail.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-format.md",
+      "category": "optimization",
+      "tags": []
+    },
+    {
+      "name": "mojo-lint-syntax",
+      "description": "Validate Mojo syntax against current v0.26.1+ standards. Use to catch syntax errors before compilation.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-lint-syntax.md",
+      "category": "optimization",
+      "tags": []
+    },
+    {
+      "name": "mojo-memory-check",
+      "description": "Verify memory safety in Mojo code including ownership, borrowing, and lifetime management. Use when reviewing code or debugging memory issues.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-memory-check.md",
+      "category": "optimization",
+      "tags": []
+    },
+    {
       "name": "mojo-nd-slice-fast-path",
       "description": "Add a contiguous-memcpy fast-path for N-D tensor slices where only the first axis is non-trivially sliced. Use when optimizing batch-extraction in training loops.",
       "version": "1.0.0",
@@ -4877,131 +4733,35 @@
       "tags": []
     },
     {
-      "name": "phase-cleanup",
-      "description": "Refactor and finalize code after parallel phases complete, addressing technical debt. Use in cleanup phase to polish code before merge.",
+      "name": "mojo-simd-optimize",
+      "description": "Apply SIMD optimizations to Mojo code for parallel computation. Use when optimizing performance-critical tensor and array operations.",
       "version": "1.0.0",
-      "source": "./skills/phase-cleanup.md",
-      "category": "phase",
+      "source": "./skills/mojo-simd-optimize.md",
+      "category": "optimization",
       "tags": []
     },
     {
-      "name": "phase-implement",
-      "description": "Coordinate implementation phase by delegating tasks and ensuring code quality. Use during implementation phase to manage engineer tasks.",
+      "name": "mojo-test-runner",
+      "description": "Run Mojo tests using mojo test command. Use when executing tests or verifying test coverage.",
       "version": "1.0.0",
-      "source": "./skills/phase-implement.md",
-      "category": "phase",
+      "source": "./skills/mojo-test-runner.md",
+      "category": "optimization",
       "tags": []
     },
     {
-      "name": "phase-package",
-      "description": "Create distributable packages including .mojopkg files and archives. Use during package phase to prepare components for distribution.",
+      "name": "mojo-type-safety",
+      "description": "Validate type safety in Mojo code including parametric types and trait constraints. Use during code review or when type errors occur.",
       "version": "1.0.0",
-      "source": "./skills/phase-package.md",
-      "category": "phase",
+      "source": "./skills/mojo-type-safety.md",
+      "category": "optimization",
       "tags": []
     },
     {
-      "name": "phase-plan-generate",
-      "description": "Generate comprehensive plan documentation following Template 1 format. Use when creating plan.md files for new components or subsections.",
+      "name": "validate-mojo-patterns",
+      "description": "Validate Mojo code patterns (out self, mut, List, etc.) against best practices. Use to ensure code follows project standards.",
       "version": "1.0.0",
-      "source": "./skills/phase-plan-generate.md",
-      "category": "phase",
-      "tags": []
-    },
-    {
-      "name": "phase-test-tdd",
-      "description": "Generate test files and coordinate test-driven development (TDD). Use when creating tests before implementation or during test phase.",
-      "version": "1.0.0",
-      "source": "./skills/phase-test-tdd.md",
-      "category": "phase",
-      "tags": []
-    },
-    {
-      "name": "plan-create-component",
-      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
-      "version": "1.0.0",
-      "source": "./skills/plan-create-component.md",
-      "category": "plan",
-      "tags": []
-    },
-    {
-      "name": "plan-regenerate-issues",
-      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
-      "version": "1.0.0",
-      "source": "./skills/plan-regenerate-issues.md",
-      "category": "plan",
-      "tags": []
-    },
-    {
-      "name": "plan-validate-structure",
-      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
-      "version": "1.0.0",
-      "source": "./skills/plan-validate-structure.md",
-      "category": "plan",
-      "tags": []
-    },
-    {
-      "name": "quality-coverage-report",
-      "description": "Generate test coverage reports showing which code paths are tested. Use to identify untested code and improve test coverage.",
-      "version": "1.0.0",
-      "source": "./skills/quality-coverage-report.md",
-      "category": "quality",
-      "tags": []
-    },
-    {
-      "name": "quality-fix-formatting",
-      "description": "Automatically fix code formatting issues using mojo format, markdownlint, and pre-commit hooks. Use when formatting checks fail or before committing code.",
-      "version": "1.0.0",
-      "source": "./skills/quality-fix-formatting.md",
-      "category": "quality",
-      "tags": []
-    },
-    {
-      "name": "quality-run-linters",
-      "description": "Run all configured linters including mojo format, markdownlint, and pre-commit hooks. Use before committing code to ensure quality standards are met.",
-      "version": "1.0.0",
-      "source": "./skills/quality-run-linters.md",
-      "category": "quality",
-      "tags": []
-    },
-    {
-      "name": "collaborator-extraction-tdd",
-      "description": "TRIGGER CONDITIONS: Extracting method groups from an oversized class (>800 lines) into dedicated collaborator classes using TDD. Use when: (1) a class has grown beyond its target line count and contains identifiable method groups with shared state, (2) extracting without behavior change (pure structural refactoring), (3) avoiding circular imports between the host class and extracted collaborators.",
-      "version": "1.0.0",
-      "source": "./skills/collaborator-extraction-tdd.md",
-      "category": "refactoring",
-      "tags": []
-    },
-    {
-      "name": "parallel-test-generation-for-module-decomposition",
-      "description": "Parallel Test Generation for Module Decomposition",
-      "version": "1.0.0",
-      "source": "./skills/parallel-test-generation-for-module-decomposition.md",
-      "category": "refactoring",
-      "tags": []
-    },
-    {
-      "name": "review-pr-changes",
-      "description": "Review PR changes with structured checklist for quality and standards compliance. Use for comprehensive PR code review.",
-      "version": "1.0.0",
-      "source": "./skills/review-pr-changes.md",
-      "category": "review",
-      "tags": []
-    },
-    {
-      "name": "track-implementation-progress",
-      "description": "Track implementation progress against plan. Use to monitor component delivery and identify blockers.",
-      "version": "1.0.0",
-      "source": "./skills/track-implementation-progress.md",
-      "category": "review",
-      "tags": []
-    },
-    {
-      "name": "scan-vulnerabilities",
-      "description": "Detect security vulnerabilities in code and dependencies. Use when auditing security.",
-      "version": "1.0.0",
-      "source": "./skills/scan-vulnerabilities.md",
-      "category": "security",
+      "source": "./skills/validate-mojo-patterns.md",
+      "category": "optimization",
       "tags": []
     },
     {
@@ -6362,10 +6122,26 @@
       "tags": []
     },
     {
+      "name": "add-shell-log-level",
+      "description": "Skill: add-shell-log-level",
+      "version": "1.0.0",
+      "source": "./skills/add-shell-log-level.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "advise-before-planning",
       "description": "Integrate team knowledge search before automated planning workflows",
       "version": "1.0.0",
       "source": "./skills/advise-before-planning.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "agent-hooks-pattern",
+      "description": "Pattern for agent-scoped lifecycle hooks in Claude Code v2.1.0. Use when implementing custom agents with safety controls or tool restrictions.",
+      "version": "1.0.0",
+      "source": "./skills/agent-hooks-pattern.md",
       "category": "tooling",
       "tags": []
     },
@@ -6453,6 +6229,14 @@
       "description": "Classify, deduplicate, and batch-implement 15-30 low-difficulty GitHub issues (doc edits, text fixes, trivial cleanup) in a single session. Use when: (1) a large backlog of open issues needs triage, (2) many issues are pure doc/text changes, (3) duplicate issues need closing before implementation.",
       "version": "1.0.0",
       "source": "./skills/batch-low-difficulty-issue-impl.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "batch-pr-rebase-workflow",
+      "description": "Skill: batch-pr-rebase-workflow",
+      "version": "1.0.0",
+      "source": "./skills/batch-pr-rebase-workflow.md",
       "category": "tooling",
       "tags": []
     },
@@ -6553,10 +6337,26 @@
       "tags": []
     },
     {
+      "name": "claude-code-v21-adoption",
+      "description": "Systematic approach to adopting Claude Code v2.1.0 features. Use when upgrading to new Claude Code version or analyzing CHANGELOG for feature adoption.",
+      "version": "1.0.0",
+      "source": "./skills/claude-code-v21-adoption.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "claude-config-branch-audit",
       "description": "Audit and fix Claude Code configuration branches for consistency with actual repo tooling. Use when: reviewing a branch that modifies CLAUDE.md or .claude/ settings, hook scripts are referenced but don't exist, or Python version and commands are misaligned with the project's actual tooling.",
       "version": "1.0.0",
       "source": "./skills/claude-config-branch-audit.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "claude-plugin-format",
+      "description": "Official Claude Code plugin format requirements. Use when creating new plugins, debugging \"plugin has invalid manifest\" errors, or when skills/commands don't appear after installation.",
+      "version": "1.0.0",
+      "source": "./skills/claude-plugin-format.md",
       "category": "tooling",
       "tags": []
     },
@@ -6625,6 +6425,14 @@
       "tags": []
     },
     {
+      "name": "codebase-quality-plan-execution",
+      "description": "Execute a pre-analyzed codebase improvement plan. Applies categorized fixes (type safety, dead code, error handling, performance, frontend bugs) across multiple files with continuous test verification.",
+      "version": "1.0.0",
+      "source": "./skills/codebase-quality-plan-execution.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "config-default-model-drift",
       "description": "Skill: config-default-model-drift. Use when working with config default model drift.",
       "version": "1.0.0",
@@ -6649,10 +6457,26 @@
       "tags": []
     },
     {
+      "name": "contributing-md-structure-sync",
+      "description": "contributing-md-structure-sync",
+      "version": "1.0.0",
+      "source": "./skills/contributing-md-structure-sync.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "coverage-threshold-tuning",
       "description": "Tune pytest coverage thresholds to match actual coverage baselines and avoid CI failures",
       "version": "1.0.0",
       "source": "./skills/coverage-threshold-tuning.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "cytoscape-edge-visibility-optimization",
+      "description": "Cytoscape.js DAG visualization bug fixes and performance patterns. Covers edge-at-baseline-hidden pattern, read-only graph config, day-filter phase boundary visibility, and role-complete trajectory highlighting.",
+      "version": "1.0.0",
+      "source": "./skills/cytoscape-edge-visibility-optimization.md",
       "category": "tooling",
       "tags": []
     },
@@ -6697,10 +6521,58 @@
       "tags": []
     },
     {
+      "name": "doc-issue-readme",
+      "description": "Post structured documentation to GitHub issue as a comment. Use when starting work on an issue to document approach and track progress.",
+      "version": "1.0.0",
+      "source": "./skills/doc-issue-readme.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "doc-update-blog",
+      "description": "Update development blog with implementation milestones, learnings, and progress. Use after completing major milestones or phases.",
+      "version": "1.0.0",
+      "source": "./skills/doc-update-blog.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "docker-optional-dep-layer-caching",
       "description": "TRIGGER CONDITIONS: When a Dockerfile uses tomllib to extract pyproject.toml runtime deps for layer caching but omits optional-dependency groups, causing them to be reinstalled on every source change when installed as extras",
       "version": "1.0.0",
       "source": "./skills/docker-optional-dep-layer-caching.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "dockerfile-build-dep-version-guard",
+      "description": "Skill: Dockerfile Build-Dependency Version Guard",
+      "version": "1.0.0",
+      "source": "./skills/dockerfile-build-dep-version-guard.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "dockerfile-digest-consistency-guard",
+      "description": "Skill: Dockerfile Digest Consistency Guard",
+      "version": "1.0.0",
+      "source": "./skills/dockerfile-digest-consistency-guard.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "dockerfile-optional-dep-drift-guards",
+      "description": "Skill: Dockerfile Optional-Dependency Drift Guards",
+      "version": "1.0.0",
+      "source": "./skills/dockerfile-optional-dep-drift-guards.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "dryrun-process-metrics-assertions",
+      "description": "Skill: Dryrun process_metrics Assertions in Integration Tests",
+      "version": "1.0.0",
+      "source": "./skills/dryrun-process-metrics-assertions.md",
       "category": "tooling",
       "tags": []
     },
@@ -6727,6 +6599,14 @@
       "tags": []
     },
     {
+      "name": "evaluate-model",
+      "description": "Measure model performance on test datasets. Use when assessing accuracy, precision, recall, and other metrics.",
+      "version": "1.0.0",
+      "source": "./skills/evaluate-model.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "execution-stage-logging",
       "description": "Add structured stage logging with timing to track worker thread progress through multi-stage pipelines",
       "version": "1.0.0",
@@ -6741,6 +6621,14 @@
       ]
     },
     {
+      "name": "explicit-false-schema-fixture-tests",
+      "description": "Skill: Explicit-False Schema Fixture Tests",
+      "version": "1.0.0",
+      "source": "./skills/explicit-false-schema-fixture-tests.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "extensor-str-truncation",
       "description": "Add NumPy-style truncation to Mojo tensor __str__ methods to prevent performance issues with large tensors. Use when: (1) a tensor __str__ iterates all elements, (2) NumPy-compatible display semantics are desired, (3) printing large tensors causes slowdowns.",
       "version": "1.0.0",
@@ -6753,6 +6641,22 @@
       "description": "Skill: extract-logging-helper. Use when working with extract logging helper.",
       "version": "1.0.0",
       "source": "./skills/extract-logging-helper.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "extract-method-to-private-methods",
+      "description": "Skill: Extract Closures into Private Methods",
+      "version": "1.0.0",
+      "source": "./skills/extract-method-to-private-methods.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "fix-docker-image-case",
+      "description": "Fix Docker SBOM and workflow failures caused by mixed-case image names in GitHub Actions",
+      "version": "1.0.0",
+      "source": "./skills/fix-docker-image-case.md",
       "category": "tooling",
       "tags": []
     },
@@ -6789,10 +6693,58 @@
       "tags": []
     },
     {
+      "name": "generate-api-docs",
+      "description": "Create API reference documentation from docstrings. Use when documenting public module interfaces.",
+      "version": "1.0.0",
+      "source": "./skills/generate-api-docs.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "generate-boilerplate",
+      "description": "Create starter code from templates. Use when setting up new modules or test files.",
+      "version": "1.0.0",
+      "source": "./skills/generate-boilerplate.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "generate-changelog",
+      "description": "Create changelog from git commits. Use when preparing release notes.",
+      "version": "1.0.0",
+      "source": "./skills/generate-changelog.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "generate-docstrings",
+      "description": "Create docstrings for functions and classes. Use when documenting code APIs.",
+      "version": "1.0.0",
+      "source": "./skills/generate-docstrings.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "gh-batch-merge-by-labels",
       "description": "Batch merge multiple PRs by label matching",
       "version": "1.0.0",
       "source": "./skills/gh-batch-merge-by-labels.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "gh-get-review-comments",
+      "description": "Retrieve all review comments from a pull request using the GitHub API. Use when you need to see what feedback has been provided on a PR.",
+      "version": "1.0.0",
+      "source": "./skills/gh-get-review-comments.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "gh-implement-issue",
+      "description": "End-to-end implementation workflow for a GitHub issue from planning through PR creation. Use when starting work on an issue from scratch.",
+      "version": "1.0.0",
+      "source": "./skills/gh-implement-issue.md",
       "category": "tooling",
       "tags": []
     },
@@ -6829,10 +6781,34 @@
       "tags": []
     },
     {
+      "name": "gh-reply-review-comment",
+      "description": "Reply to PR review comments using the correct GitHub API endpoint. Use when responding to inline code review feedback (not gh pr comment).",
+      "version": "1.0.0",
+      "source": "./skills/gh-reply-review-comment.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "gh-review-pr",
+      "description": "Comprehensively review a pull request including code changes, CI status, and adherence to project standards. Use when asked to review a PR.",
+      "version": "1.0.0",
+      "source": "./skills/gh-review-pr.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "git-worktree-cleanup",
       "description": "Clean up stale git worktrees after parallel wave execution. Use when multiple worktrees remain from merged PRs, especially nested worktrees from agent-in-agent workflows.",
       "version": "1.0.0",
       "source": "./skills/git-worktree-cleanup.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "git-worktree-collision-fix",
+      "description": "Skill: git-worktree-collision-fix",
+      "version": "1.0.0",
+      "source": "./skills/git-worktree-collision-fix.md",
       "category": "tooling",
       "tags": []
     },
@@ -6907,6 +6883,14 @@
       "tags": []
     },
     {
+      "name": "json-schema-from-pydantic-models",
+      "description": "Skill: json-schema-from-pydantic-models",
+      "version": "1.0.0",
+      "source": "./skills/json-schema-from-pydantic-models.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "lazy-clone-dependency",
       "description": "Pattern for lazy-cloning a missing external git repository dependency instead of skipping a workflow step",
       "version": "1.0.0",
@@ -6923,6 +6907,14 @@
         "threading",
         "gh"
       ]
+    },
+    {
+      "name": "manage-experiment-audit",
+      "description": "Audit and fix manage_experiment.py CLI",
+      "version": "1.0.0",
+      "source": "./skills/manage-experiment-audit.md",
+      "category": "tooling",
+      "tags": []
     },
     {
       "name": "merged-pr-noop-detection",
@@ -6953,6 +6945,14 @@
       "description": "Skill: model-config-naming-validation",
       "version": "1.0.0",
       "source": "./skills/model-config-naming-validation.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "module-decomposition-with-reexports",
+      "description": "Skill: Module Decomposition with Backward-Compatible Re-exports",
+      "version": "1.0.0",
+      "source": "./skills/module-decomposition-with-reexports.md",
       "category": "tooling",
       "tags": []
     },
@@ -7077,6 +7077,46 @@
       "tags": []
     },
     {
+      "name": "phase-cleanup",
+      "description": "Refactor and finalize code after parallel phases complete, addressing technical debt. Use in cleanup phase to polish code before merge.",
+      "version": "1.0.0",
+      "source": "./skills/phase-cleanup.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "phase-implement",
+      "description": "Coordinate implementation phase by delegating tasks and ensuring code quality. Use during implementation phase to manage engineer tasks.",
+      "version": "1.0.0",
+      "source": "./skills/phase-implement.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "phase-package",
+      "description": "Create distributable packages including .mojopkg files and archives. Use during package phase to prepare components for distribution.",
+      "version": "1.0.0",
+      "source": "./skills/phase-package.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "phase-plan-generate",
+      "description": "Generate comprehensive plan documentation following Template 1 format. Use when creating plan.md files for new components or subsections.",
+      "version": "1.0.0",
+      "source": "./skills/phase-plan-generate.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "phase-test-tdd",
+      "description": "Generate test files and coordinate test-driven development (TDD). Use when creating tests before implementation or during test phase.",
+      "version": "1.0.0",
+      "source": "./skills/phase-test-tdd.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "pil-grayscale-method-flag",
       "description": "Add a --grayscale-method {luma,average,max} CLI flag to image preprocessing scripts using PIL. Use when: adding configurable grayscale strategies to a PIL-based script, fixing broken PIL image tests, or extending argparse CLIs with algorithm-selection flags.",
       "version": "1.0.0",
@@ -7085,10 +7125,42 @@
       "tags": []
     },
     {
+      "name": "pipeline-step-extraction",
+      "description": "Skill: Pipeline Step Extraction (CC>15 Reduction)",
+      "version": "1.0.0",
+      "source": "./skills/pipeline-step-extraction.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "pixi-pypi-upper-bounds",
       "description": "Add explicit upper version bounds to pixi.toml [pypi-dependencies]. Use when auditing or hardening dependency version constraints to prevent silent breakage on major releases.",
       "version": "1.0.0",
       "source": "./skills/pixi-pypi-upper-bounds.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "plan-create-component",
+      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
+      "version": "1.0.0",
+      "source": "./skills/plan-create-component.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "plan-regenerate-issues",
+      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
+      "version": "1.0.0",
+      "source": "./skills/plan-regenerate-issues.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "plan-validate-structure",
+      "description": "DEPRECATED: The notes/plan/ directory has been removed. Planning is now done directly through GitHub issues. See gh-read-issue-context and gh-post-issue-update skills instead.",
+      "version": "1.0.0",
+      "source": "./skills/plan-validate-structure.md",
       "category": "tooling",
       "tags": []
     },
@@ -7125,6 +7197,14 @@
       "tags": []
     },
     {
+      "name": "pr-merge-conflict-resolution",
+      "description": "Systematic workflow for rebasing PRs and resolving merge conflicts. Use when PR branch is behind main with conflicts.",
+      "version": "1.0.0",
+      "source": "./skills/pr-merge-conflict-resolution.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "pr-review-automation",
       "description": "TRIGGER CONDITIONS: Adding a new automation class that reviews and fixes open PRs via Claude Code. Use when: (1) building a PR fix workflow on top of implement_issues.py, (2) creating a two-phase Claude workflow (analysis then fix) for automated PR remediation, (3) adding new Enum/State/Options models to scylla/automation/models.py following existing patterns.",
       "version": "1.0.0",
@@ -7141,10 +7221,26 @@
       "tags": []
     },
     {
+      "name": "prepare-dataset",
+      "description": "Process and validate datasets for training. Use when setting up data pipelines.",
+      "version": "1.0.0",
+      "source": "./skills/prepare-dataset.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "pydantic-frozen-consistency",
       "description": "Skill: pydantic-frozen-consistency. Use when working with pydantic frozen consistency.",
       "version": "1.0.0",
       "source": "./skills/pydantic-frozen-consistency.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "pydantic-json-schema-dual-validation",
+      "description": "TRIGGER CONDITIONS: Enforcing a cross-field semantic constraint (e.g., field A=true requires field B=true) in a config model loaded from YAML. Use when: (1) a domain invariant exists between two boolean capability flags, (2) the codebase uses both Pydantic models AND JSON Schema for config validation, (3) you need to catch the violation at both schema validation and model instantiation time.",
+      "version": "1.0.0",
+      "source": "./skills/pydantic-json-schema-dual-validation.md",
       "category": "tooling",
       "tags": []
     },
@@ -7181,6 +7277,46 @@
       "tags": []
     },
     {
+      "name": "quality-coverage-report",
+      "description": "Generate test coverage reports showing which code paths are tested. Use to identify untested code and improve test coverage.",
+      "version": "1.0.0",
+      "source": "./skills/quality-coverage-report.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "quality-fix-formatting",
+      "description": "Automatically fix code formatting issues using mojo format, markdownlint, and pre-commit hooks. Use when formatting checks fail or before committing code.",
+      "version": "1.0.0",
+      "source": "./skills/quality-fix-formatting.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "quality-run-linters",
+      "description": "Run all configured linters including mojo format, markdownlint, and pre-commit hooks. Use before committing code to ensure quality standards are met.",
+      "version": "1.0.0",
+      "source": "./skills/quality-run-linters.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "rebase-conflict-resolution-and-hook-exclusions",
+      "description": "Skill: Rebase Conflict Resolution and Pre-commit Hook Exclusions",
+      "version": "1.0.0",
+      "source": "./skills/rebase-conflict-resolution-and-hook-exclusions.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "refactor-code",
+      "description": "Restructure code for improved clarity and maintainability. Use when addressing code smells or technical debt.",
+      "version": "1.0.0",
+      "source": "./skills/refactor-code.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "repo-audit-count-reconciliation",
       "description": "Reconcile count mismatches across documentation files after a repository audit. Use when: counts in CLAUDE.md/README/hierarchy docs differ, audit reveals stale agent or skill counts, or on-disk file counts don't match any documented number.",
       "version": "1.0.0",
@@ -7201,6 +7337,30 @@
       "description": "Integrate /retrospective skill into automation pipelines to automatically capture session learnings",
       "version": "1.0.0",
       "source": "./skills/retrospective-integration.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "review-pr-changes",
+      "description": "Review PR changes with structured checklist for quality and standards compliance. Use for comprehensive PR code review.",
+      "version": "1.0.0",
+      "source": "./skills/review-pr-changes.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "ruff-c901-mccabe-complexity",
+      "description": "Skill: ruff-c901-mccabe-complexity",
+      "version": "1.0.0",
+      "source": "./skills/ruff-c901-mccabe-complexity.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "scan-vulnerabilities",
+      "description": "Detect security vulnerabilities in code and dependencies. Use when auditing security.",
+      "version": "1.0.0",
+      "source": "./skills/scan-vulnerabilities.md",
       "category": "tooling",
       "tags": []
     },
@@ -7237,6 +7397,14 @@
       "tags": []
     },
     {
+      "name": "skills-agent-field",
+      "description": "Pattern for specifying which agent type should execute a skill using the agent field in Claude Code v2.1.0.",
+      "version": "1.0.0",
+      "source": "./skills/skills-agent-field.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "split-figure-per-tier",
       "description": "Split figures that exceed Vega-Lite row limit specs",
       "version": "1.0.0",
@@ -7249,6 +7417,14 @@
       "description": "Remove stale one-time fix/migration scripts safely. Use when: scripts/ directory has accumulated one-time scripts no longer needed, cleaning up before releases, or reducing contributor confusion.",
       "version": "1.0.0",
       "source": "./skills/stale-script-cleanup.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "t5-inherit-missing-manifest-fallback",
+      "description": "Skill: T5 Inheritance Fallback for Missing config_manifest.json",
+      "version": "1.0.0",
+      "source": "./skills/t5-inherit-missing-manifest-fallback.md",
       "category": "tooling",
       "tags": []
     },
@@ -7283,10 +7459,42 @@
       ]
     },
     {
+      "name": "tier-state-additive-resume-tests",
+      "description": "Skill: TierStateMachine-Level Additive Resume Tests",
+      "version": "1.0.0",
+      "source": "./skills/tier-state-additive-resume-tests.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "tone-matched-documentation",
       "description": "Fill placeholder sections in documents while matching the author's existing writing style and tone",
       "version": "1.0.0",
       "source": "./skills/tone-matched-documentation.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "track-implementation-progress",
+      "description": "Track implementation progress against plan. Use to monitor component delivery and identify blockers.",
+      "version": "1.0.0",
+      "source": "./skills/track-implementation-progress.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "train-model",
+      "description": "Execute model training with optimization algorithms. Use when running training loops on datasets.",
+      "version": "1.0.0",
+      "source": "./skills/train-model.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "until-resume-past-state-fix",
+      "description": "Skill: Fix `--until` Resume Bug \u2014 Runs Past Target State Not Skipped",
+      "version": "1.0.0",
+      "source": "./skills/until-resume-past-state-fix.md",
       "category": "tooling",
       "tags": []
     },
@@ -7327,6 +7535,14 @@
       "description": "Defensive copytree pattern: emit stderr warning before shutil.copytree(dirs_exist_ok=True) when destination already exists. Use when: adding observability to re-runnable migration scripts, preventing silent overwrites.",
       "version": "1.0.0",
       "source": "./skills/warn-on-existing-dest-subdir.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "worktree-branch-cleanup",
+      "description": "Skill: Worktree & Branch Cleanup After Parallel Wave Execution",
+      "version": "1.0.0",
+      "source": "./skills/worktree-branch-cleanup.md",
       "category": "tooling",
       "tags": []
     },
@@ -7387,6 +7603,14 @@
       "tags": []
     },
     {
+      "name": "zero-count-division-guard",
+      "description": "Skill: Zero-Count Division Guard in Metric Collection Functions",
+      "version": "1.0.0",
+      "source": "./skills/zero-count-division-guard.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "grpo-external-vllm",
       "description": "GRPO training with external vLLM server for distributed GPU setups",
       "version": "1.0.0",
@@ -7419,219 +7643,115 @@
       "tags": []
     },
     {
-      "name": "agent-hooks-pattern",
-      "description": "Pattern for agent-scoped lifecycle hooks in Claude Code v2.1.0. Use when implementing custom agents with safety controls or tool restrictions.",
+      "name": "close-script-test-gap-cmd-run-repair",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/agent-hooks-pattern.md",
+      "source": "./skills/close-script-test-gap-cmd-run-repair.md",
       "category": "uncategorized",
       "tags": []
     },
     {
-      "name": "claude-code-v21-adoption",
-      "description": "Systematic approach to adopting Claude Code v2.1.0 features. Use when upgrading to new Claude Code version or analyzing CHANGELOG for feature adoption.",
+      "name": "complexity-regression-gate",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/claude-code-v21-adoption.md",
+      "source": "./skills/complexity-regression-gate.md",
       "category": "uncategorized",
       "tags": []
     },
     {
-      "name": "claude-plugin-format",
-      "description": "Official Claude Code plugin format requirements. Use when creating new plugins, debugging \"plugin has invalid manifest\" errors, or when skills/commands don't appear after installation.",
+      "name": "cytoscape-frontend-rewrite",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/claude-plugin-format.md",
+      "source": "./skills/cytoscape-frontend-rewrite.md",
       "category": "uncategorized",
       "tags": []
     },
     {
-      "name": "codebase-quality-plan-execution",
-      "description": "Execute a pre-analyzed codebase improvement plan. Applies categorized fixes (type safety, dead code, error handling, performance, frontend bugs) across multiple files with continuous test verification.",
+      "name": "dockerfile-pyproject-version-guard",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/codebase-quality-plan-execution.md",
+      "source": "./skills/dockerfile-pyproject-version-guard.md",
       "category": "uncategorized",
       "tags": []
     },
     {
-      "name": "contributing-md-structure-sync",
-      "description": "contributing-md-structure-sync",
+      "name": "dryrun3-completion",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/contributing-md-structure-sync.md",
+      "source": "./skills/dryrun3-completion.md",
       "category": "uncategorized",
       "tags": []
     },
     {
-      "name": "cytoscape-edge-visibility-optimization",
-      "description": "Cytoscape.js DAG visualization bug fixes and performance patterns. Covers edge-at-baseline-hidden pattern, read-only graph config, day-filter phase boundary visibility, and role-complete trajectory highlighting.",
+      "name": "extend-script-test-coverage",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/cytoscape-edge-visibility-optimization.md",
+      "source": "./skills/extend-script-test-coverage.md",
       "category": "uncategorized",
       "tags": []
     },
     {
-      "name": "dockerfile-build-dep-version-guard",
-      "description": "Skill: Dockerfile Build-Dependency Version Guard",
+      "name": "fix-review-feedback-missing-assertion",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/dockerfile-build-dep-version-guard.md",
+      "source": "./skills/fix-review-feedback-missing-assertion.md",
       "category": "uncategorized",
       "tags": []
     },
     {
-      "name": "dockerfile-digest-consistency-guard",
-      "description": "Skill: Dockerfile Digest Consistency Guard",
+      "name": "fix-review-feedback-runner-path-untested",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/dockerfile-digest-consistency-guard.md",
+      "source": "./skills/fix-review-feedback-runner-path-untested.md",
       "category": "uncategorized",
       "tags": []
     },
     {
-      "name": "dockerfile-optional-dep-drift-guards",
-      "description": "Skill: Dockerfile Optional-Dependency Drift Guards",
+      "name": "github-actions-security-patterns",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/dockerfile-optional-dep-drift-guards.md",
+      "source": "./skills/github-actions-security-patterns.md",
       "category": "uncategorized",
       "tags": []
     },
     {
-      "name": "dryrun-process-metrics-assertions",
-      "description": "Skill: Dryrun process_metrics Assertions in Integration Tests",
+      "name": "mypy-annotate-test-functions",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/dryrun-process-metrics-assertions.md",
+      "source": "./skills/mypy-annotate-test-functions.md",
       "category": "uncategorized",
       "tags": []
     },
     {
-      "name": "explicit-false-schema-fixture-tests",
-      "description": "Skill: Explicit-False Schema Fixture Tests",
+      "name": "pytest-pythonpath-scripts-fix",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/explicit-false-schema-fixture-tests.md",
+      "source": "./skills/pytest-pythonpath-scripts-fix.md",
       "category": "uncategorized",
       "tags": []
     },
     {
-      "name": "extract-method-to-private-methods",
-      "description": "Skill: Extract Closures into Private Methods",
+      "name": "python-repo-modernization",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/extract-method-to-private-methods.md",
+      "source": "./skills/python-repo-modernization.md",
       "category": "uncategorized",
       "tags": []
     },
     {
-      "name": "fix-docker-image-case",
-      "description": "Fix Docker SBOM and workflow failures caused by mixed-case image names in GitHub Actions",
+      "name": "quality-audit-docstring-false-positive",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/fix-docker-image-case.md",
+      "source": "./skills/quality-audit-docstring-false-positive.md",
       "category": "uncategorized",
       "tags": []
     },
     {
-      "name": "json-schema-from-pydantic-models",
-      "description": "Skill: json-schema-from-pydantic-models",
+      "name": "verify-mypy-compliance-test-annotations",
+      "description": "",
       "version": "1.0.0",
-      "source": "./skills/json-schema-from-pydantic-models.md",
+      "source": "./skills/verify-mypy-compliance-test-annotations.md",
       "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "manage-experiment-audit",
-      "description": "Skill: manage-experiment-audit",
-      "version": "1.0.0",
-      "source": "./skills/manage-experiment-audit.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "module-decomposition-with-reexports",
-      "description": "Skill: Module Decomposition with Backward-Compatible Re-exports",
-      "version": "1.0.0",
-      "source": "./skills/module-decomposition-with-reexports.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "pipeline-step-extraction",
-      "description": "Skill: Pipeline Step Extraction (CC>15 Reduction)",
-      "version": "1.0.0",
-      "source": "./skills/pipeline-step-extraction.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "pr-merge-conflict-resolution",
-      "description": "Systematic workflow for rebasing PRs and resolving merge conflicts. Use when PR branch is behind main with conflicts.",
-      "version": "1.0.0",
-      "source": "./skills/pr-merge-conflict-resolution.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "rebase-conflict-resolution-and-hook-exclusions",
-      "description": "Skill: Rebase Conflict Resolution and Pre-commit Hook Exclusions",
-      "version": "1.0.0",
-      "source": "./skills/rebase-conflict-resolution-and-hook-exclusions.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "ruff-c901-mccabe-complexity",
-      "description": "Skill: ruff-c901-mccabe-complexity",
-      "version": "1.0.0",
-      "source": "./skills/ruff-c901-mccabe-complexity.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "skills-agent-field",
-      "description": "Pattern for specifying which agent type should execute a skill using the agent field in Claude Code v2.1.0.",
-      "version": "1.0.0",
-      "source": "./skills/skills-agent-field.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "t5-inherit-missing-manifest-fallback",
-      "description": "Skill: T5 Inheritance Fallback for Missing config_manifest.json",
-      "version": "1.0.0",
-      "source": "./skills/t5-inherit-missing-manifest-fallback.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "tier-state-additive-resume-tests",
-      "description": "Skill: TierStateMachine-Level Additive Resume Tests",
-      "version": "1.0.0",
-      "source": "./skills/tier-state-additive-resume-tests.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "until-resume-past-state-fix",
-      "description": "Skill: Fix `--until` Resume Bug \u2014 Runs Past Target State Not Skipped",
-      "version": "1.0.0",
-      "source": "./skills/until-resume-past-state-fix.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "worktree-branch-cleanup",
-      "description": "Skill: Worktree & Branch Cleanup After Parallel Wave Execution",
-      "version": "1.0.0",
-      "source": "./skills/worktree-branch-cleanup.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "zero-count-division-guard",
-      "description": "Skill: Zero-Count Division Guard in Metric Collection Functions",
-      "version": "1.0.0",
-      "source": "./skills/zero-count-division-guard.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "pydantic-json-schema-dual-validation",
-      "description": "TRIGGER CONDITIONS: Enforcing a cross-field semantic constraint (e.g., field A=true requires field B=true) in a config model loaded from YAML. Use when: (1) a domain invariant exists between two boolean capability flags, (2) the codebase uses both Pydantic models AND JSON Schema for config validation, (3) you need to catch the violation at both schema validation and model instantiation time.",
-      "version": "1.0.0",
-      "source": "./skills/pydantic-json-schema-dual-validation.md",
-      "category": "validation",
       "tags": []
     }
   ]

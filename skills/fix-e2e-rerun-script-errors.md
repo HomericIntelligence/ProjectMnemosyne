@@ -227,43 +227,15 @@ checkpoint.mark_run_completed(
 from scylla.e2e.subtest_executor import SubTestExecutor, _commit_test_config
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### Attempt 1: Using `raise` Instead of `return None` for T5 Inheritance
-
-**What Was Tried**:
-```python
-except ValueError as e:
-    logger.error(f"Failed to build merged baseline: {e}")
-    raise  # Re-raise the exception
-```
-
-**Why It Failed**:
-- Crashed the entire rerun process
-- Prevented processing of other runs
-- Left partially-created workspaces without cleanup
-
-**Lesson Learned**:
-For rerun operations, graceful degradation is better than crashing. Return `None` to skip the problematic run and continue with others. Always clean up resources (worktrees) before returning.
-
-### Attempt 2: Not Cleaning Up Workspace on T5 Failure
-
-**What Was Tried**:
-Initial fix returned `None` but didn't clean up the git worktree created by `_setup_workspace()`.
-
-**Why It Failed**:
-- Left orphaned git worktrees
-- Caused conflicts on subsequent rerun attempts
-- Branch names were marked as "in use"
-
-**Lesson Learned**:
-Always pair resource creation with cleanup. When returning early from error handling, ensure all allocated resources (worktrees, directories) are properly released.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Verification
 
 ### Test Command

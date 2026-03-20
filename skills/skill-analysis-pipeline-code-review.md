@@ -326,92 +326,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### 1. Single Mega-PR Approach
-
-**What we tried**: Create one PR with all 26 fixes (P0-P3).
-
-**Why it failed**:
-- PR diff was 900+ lines across 19 files - unreviewable
-- One failing test blocked all other fixes
-- Couldn't prioritize critical bugs vs nice-to-have improvements
-- Risk of merge conflicts if other work happened in parallel
-
-**Lesson**: For 4,000+ line pipelines, use phased PRs by priority level. Max 3-5 issues per PR.
-
-### 2. Implement Statistical Functions from Scratch
-
-**What we tried**: Implement Krippendorff's alpha from formula in paper (114 lines of custom code).
-
-**Why it failed**:
-- Implementation had subtle bugs (fell through to wrong branch)
-- Hard to validate without reference implementation
-- Reinventing the wheel when `krippendorff` package exists
-- No confidence in correctness
-
-**Lesson**: Use authoritative statistical packages (scipy, krippendorff, statsmodels) and wrap them. Don't implement from scratch unless no package exists.
-
-### 3. Normal Approximation for Confidence Intervals
-
-**What we tried**: Use `mean ± 1.96*std` for confidence intervals on small samples.
-
-**Why it failed**:
-- Normal approximation breaks down for n=10 (T6 has 10 runs per subtest)
-- Binary data near boundaries (pass/fail rates) violate normality assumption
-- Inconsistent with bootstrap CI used elsewhere in pipeline
-
-**Lesson**: Use bootstrap (BCa method) for small samples and non-normal data. Only use normal approximation for n > 30 and continuous data.
-
-### 4. Percentile Bootstrap Instead of BCa
-
-**What we tried**: Use simple percentile method for bootstrap CI.
-
-**Why it failed**:
-- Percentile method has poor coverage for small samples (n=10)
-- BCa (bias-corrected and accelerated) provides better coverage
-- Both have same computational cost
-- No reason to use inferior method
-
-**Lesson**: Always use BCa bootstrap for research pipelines. Set `method="BCa"` in scipy.stats.bootstrap.
-
-### 5. Manual Consistency Clamping in Each File
-
-**What we tried**: Duplicate the consistency formula (1 - std/mean) in 5 files, with clamping in some but not others.
-
-**Why it failed**:
-- Inconsistent behavior (some files returned negative values)
-- Bug in one file (table06 could produce NaN if mean_score=0)
-- Hard to fix all 5 instances without missing one
-- Created maintenance burden
-
-**Lesson**: Extract formulas to helper functions immediately, even for "simple" calculations. Duplication always leads to bugs.
-
-### 6. Hardcoded Judge Column Names
-
-**What we tried**: Hardcode `judge_pivot.columns = [..., "judge_1", "judge_2", "judge_3"]` in Table 3 and Fig 14.
-
-**Why it failed**:
-- Crashes with ValueError if experiment has <3 judges
-- Assumes 3 judges forever (brittle)
-- Makes code fragile to experiment configuration changes
-
-**Lesson**: Use dynamic column handling based on actual data. Never hardcode assumptions about data shape.
-
-### 7. No Error Isolation in Generation Scripts
-
-**What we tried**: Generate all 15 figures sequentially in one loop without try/except.
-
-**Why it failed**:
-- One figure crash killed all subsequent figures
-- Lost 14 figures due to 1 bug
-- Hard to debug which figure failed
-
-**Lesson**: Add try/except per item in generation loops. Log errors but continue generating other outputs.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Final Metrics

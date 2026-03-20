@@ -110,20 +110,9 @@ git commit -m "docs(docker): align Dockerfile Python version with pyproject.toml
 
 ## Failed Attempts
 
-### ❌ Attempt: Updating only the first `FROM` line in a multi-stage build
-
-**What Went Wrong**:
-
-In a multi-stage Dockerfile, there are two `FROM` lines (builder + runtime). Updating only the
-first one leaves the runtime stage on the old version. Additionally, the `COPY --from=builder`
-path contains the Python version (e.g., `python3.14`) and must also be updated.
-
-**Prevention**: Always grep for ALL version references in the Dockerfile before committing:
-
-```bash
-grep -n "3\.[0-9][0-9]\|python3\.[0-9]" docker/Dockerfile
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Changed (Issue #1118)

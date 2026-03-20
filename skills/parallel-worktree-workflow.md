@@ -138,23 +138,23 @@ git worktree list  # Should show only main worktree
 - All PRs are created
 - No uncommitted work remains
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-### ❌ Attempt 1: Sequential Task Execution
-**What we tried**: Process issues one at a time with single agent
-**Why it failed**: Would take 3x longer (each task took ~5 minutes)
-**Lesson**: Use parallelization when tasks are independent
-
-### ❌ Attempt 2: Parallel Agents Without Worktrees
-**What we tried**: Launch multiple agents in same repository
-**Why it failed**: Risk of file conflicts, harder to track which agent is doing what
-**Lesson**: Worktrees provide clean isolation
-
-### ❌ Attempt 3: Complex In-Place Refactoring (God Class)
-**What we tried**: Immediately decompose 2269-line file during audit
-**Why it failed**: Too risky for single session, high chance of breaking tests
-**Lesson**: For complex refactoring, file GitHub issue + add known-issue comment instead of immediate fix
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Verified Parameters
 
 ### Parallel Execution Results

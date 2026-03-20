@@ -126,15 +126,15 @@ def assign_grade(self, weighted_score: float) -> str:
     return "F"
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why It Failed |
-|---------|---------------|
-| Using A/A- grades | Confusing naming; S/A clearer for "super" vs "excellent" |
-| Academic 95/85/75/65 thresholds | Too strict; 95% unrealistic for complex tasks |
-| Allowing scores > 1.0 | Invalid state; should be an error, not accepted |
-| Defining grading in each rubric file | Duplication; changes require updating many files |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Industry Standards Research
 
 Sources that informed this design:

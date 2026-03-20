@@ -102,12 +102,9 @@ gh pr merge --auto --rebase
 
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed | Lesson Learned |
-|---------|---------------|---------------|----------------|
-| Build ARM64 without pixi support | Docker workflow tried `linux/arm64` | Dockerfile runs `pixi install --frozen` which validates platform | Check pixi.toml platforms before enabling multi-arch builds |
-| Ignore Docker failures | Left ARM64 in workflow, Docker failed on every PR | `build-and-push` wasn't a required check but blocked auto-merge | Non-required failing checks still cause friction |
-| Fix via pixi platform add | Considered adding ARM64 to pixi.toml | Would require regenerating lock file and testing | Removal is simpler when ARM64 not actually needed |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified

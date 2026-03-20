@@ -119,14 +119,19 @@ EOF
 gh pr merge --auto --rebase
 ```
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-| Attempt | What happened | Why it failed | Fix |
-|---------|---------------|---------------|-----|
-| Single pre-commit run | Hooks appeared to fail even after fixing | Ruff format modifies files in-place on first pass; the hook itself is the fix | Re-run `pre-commit run --all-files` after the first failure |
-| Not updating MYPY_KNOWN_ISSUES.md | `check-mypy-counts` hook failed with count mismatch | New test files with mock signatures added `arg-type` errors not in the documented baseline | Run `python scripts/check_mypy_counts.py --update` and stage the result |
-| Long lines in CLI help text | Ruff E501 fired on comment-block lines, not code | Help text strings are checked like code for line length | Wrap at natural break with newline + indent continuation |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Project-Specific Commands

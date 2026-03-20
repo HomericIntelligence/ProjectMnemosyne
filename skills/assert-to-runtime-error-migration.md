@@ -162,22 +162,9 @@ Closes #<issue>
 
 ## Failed Attempts
 
-### Attempt 1: Writing a direct test for the logically-unreachable guard
-
-**What was tried**: Patching `_parse_judge_response` to raise `StopIteration` (a non-`ValueError`) to force the for-else to fire with `last_parse_error=None`, then assert `RuntimeError` is raised.
-
-**Why it failed**: `StopIteration` bubbles out of the loop body as an unhandled exception — it does NOT trigger the `for...else` clause. Python's `for...else` only fires when the loop iterator is exhausted normally (not via `break`). A `StopIteration` raised inside the loop body causes the for-loop to silently exhaust in Python 3.7+ (due to PEP 479), which unexpectedly triggers the `else` clause but with wrong behavior.
-
-**Fix**: Test the observable behavior instead — confirm that when all attempts raise `ValueError`, a `ValueError` (not `RuntimeError`) is re-raised. This proves `last_parse_error` is always set when the `else` clause fires.
-
-### Attempt 2: Forgetting to import `EvalSummary` in the runner test file
-
-**What was tried**: Adding a test class `TestFinalizeTestSummaryGuard` that used `EvalSummary` without importing it.
-
-**Why it failed**: `NameError: name 'EvalSummary' is not defined` — the existing imports only covered the symbols needed by pre-existing tests.
-
-**Fix**: Add `EvalSummary` to the import block from `scylla.executor.runner`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Conversion Table (Issue #1143)

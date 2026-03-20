@@ -320,63 +320,15 @@ For unclear failures, don't guess - plan to investigate:
 - Makes implementation straightforward
 - Easy to verify changes are in the right place
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-### ❌ Initially Tried to Fix Without Reading Code
-
-**What happened:**
-Started to plan fixes based only on skip reason messages without examining actual code.
-
-**Why it failed:**
-
-- Skip reasons were vague ("Pre-existing failure")
-- Couldn't determine actual root cause from message alone
-- Would have created incomplete plan
-
-**Fix:**
-Read each affected test file and understand:
-
-- What the test is actually checking
-- What the implementation does
-- Why the assertion might be failing
-
-**Lesson:**
-Always read the actual code before planning fixes - don't trust summary messages.
-
-### ❌ Assumed All Skips Had Same Root Cause
-
-**What happened:**
-Initially thought all 4 skipped tests were Pydantic migration issues because of commit 38a3df1 mention.
-
-**Why it failed:**
-
-- CLI test was actually a format mismatch (test IDs changed)
-- Rate limit test was a directory structure issue
-- Only 2/4 were actually Pydantic-related
-
-**Fix:**
-Investigate each test individually - different symptoms can have different causes even in related issues.
-
-**Lesson:**
-Don't over-generalize - examine each affected component separately.
-
-### ❌ Tried to Plan Pydantic Fixes Without Running Tests
-
-**What happened:**
-Attempted to guess what Pydantic fields were missing by reading model definitions.
-
-**Why it failed:**
-
-- Models can be complex with inherited fields
-- Required fields might be in validators or computed properties
-- Can't know the exact error without running the test
-
-**Fix:**
-For investigation-required fixes, plan includes "run test first to see error" as explicit step.
-
-**Lesson:**
-For unclear failures, plan the investigation, don't try to solve it in the plan.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Verification
 
 ### Plan Deliverables

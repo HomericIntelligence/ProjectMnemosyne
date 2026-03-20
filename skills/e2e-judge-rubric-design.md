@@ -204,15 +204,9 @@ You are an expert evaluator for AI agent task completion.
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Check `subtype` before `is_error` | Rate-limited runs have BOTH `"subtype": "success"` AND `"is_error": true` - marked as passing | Always check error conditions FIRST |
-| 120s timeout for judge | Opus model needs more time for thorough evaluation | Use 20 minutes (1200s) for Opus |
-| Pass prompt as CLI argument | Shell argument length limits; hard to maintain | Use `--system-prompt-file` with checked-in file |
-| 4 generic criteria | Missing security, testability, edge cases - incomplete evaluation | Expand to 10 criteria across weighted categories |
-| Single pass threshold (score only) | Low correctness could still pass with high style scores | Require BOTH score >= 0.7 AND correctness >= 0.8 |
-| No validity tracking | Couldn't distinguish "rate limited" from "failed evaluation" | Add `is_valid` field to JudgeResult |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |

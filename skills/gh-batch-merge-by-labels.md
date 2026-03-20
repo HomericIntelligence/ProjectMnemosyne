@@ -53,15 +53,15 @@ for pr in $(gh pr list --label "ready-to-merge" --json number --jq '.[].number')
 done
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Merged without checking CI status | Broke main branch with failing tests | Always verify `gh pr checks` passes first |
-| Merged PRs with conflicts in wrong order | Later merges failed due to conflicts | Check dependencies and merge in dependency order |
-| Used `--merge` instead of `--squash` | Messy git history with many commits | Use `--squash` for clean single-commit merges |
-| Didn't check for merge conflicts first | Batch script failed midway | Verify `mergeable: true` for all PRs before starting |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Merge Options
 
 **Squash Merge** (recommended):

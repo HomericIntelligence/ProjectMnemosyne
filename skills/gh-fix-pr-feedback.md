@@ -6,10 +6,9 @@ date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
 ---
----
 name: gh-fix-pr-feedback
 description: "Address PR review feedback by making changes and replying to comments."
-category: github
+category: ci-cd-cd
 ---
 
 # Fix PR Review Feedback
@@ -63,3 +62,27 @@ After addressing feedback:
 ## References
 
 - See CLAUDE.md for PR workflow
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
+## Verified Workflow
+
+Steps that worked:
+1. Step 1
+2. Step 2
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.

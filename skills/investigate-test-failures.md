@@ -173,6 +173,14 @@ gh issue comment <issue_number> --repo anthropics/claude-code \
 4. Reproduction steps
 5. Impact on benchmarking/production
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts (What Didn't Work)
 
 ### ❌ Initial Assumption: Framework Bug

@@ -4,7 +4,7 @@ description: 'TRIGGER CONDITIONS: Adding a new nullable per-run metric to all fo
   statistical test sections (normality, omnibus, pairwise, effect sizes) in scripts/export_data.py
   compute_statistical_results(). Use when surfacing process or quality metrics in
   statistical_results.json.'
-category: analysis
+category: evaluation
 date: 2026-03-02
 version: 1.0.0
 user-invocable: false
@@ -230,12 +230,9 @@ pre-commit run --files scripts/export_data.py tests/unit/analysis/test_export_da
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Extending static `metric_configs` list in `_compute_omnibus_tests()` with hard-coded column access | `KeyError: 'r_prog'` on DataFrames that lack the column (e.g. `test_compute_statistical_results_degenerate_data`) | Use a conditional append loop instead of extending the static list |
-| Same issue in `_compute_pairwise_comparisons()` and `_compute_effect_sizes()` — forgot guards | `KeyError` on minimal test DataFrames | Always add `if metric not in df.columns: continue` before accessing optional columns |
-| Forgot `import pytest` when adding `@pytest.mark.parametrize` | `NameError: name 'pytest' is not defined` | Check imports at top of test file before adding parametrize decorators |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Invariants
 
 - **Process metrics use consecutive pairs only** — `pairwise_comparisons` and `effect_sizes`

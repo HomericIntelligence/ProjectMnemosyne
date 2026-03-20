@@ -3,7 +3,7 @@ name: claude-plugin-format
 description: Official Claude Code plugin format requirements. Use when creating new
   plugins, debugging "plugin has invalid manifest" errors, or when skills/commands
   don't appear after installation.
-category: uncategorized
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 ---
@@ -159,15 +159,9 @@ REQUIRED_PLUGIN_FIELDS = {"name", "version", "description"}
 
 ## Failed Attempts
 
-| Attempt | Why it Failed | Lesson Learned |
-|---------|---------------|----------------|
-| Adding `tags` to plugin.json | "Unrecognized key(s) in object: 'tags'" error | Tags only go in marketplace.json index, not individual plugin.json files |
-| Root-level `marketplace.json` | Claude Code doesn't read it | Must be `.claude-plugin/marketplace.json` per official docs |
-| Extra frontmatter in SKILL.md (`category`, `invokedBy`, `source`, `date`) | Plugin validator rejected unknown fields | Only `name` and `description` allowed in SKILL.md frontmatter |
-| Putting skills in project `.claude/skills/` AND plugin `skills/` | Duplication and confusion | Use plugin `skills/` directory only |
-| Expecting `tags` field in validation | CI failed because official schema doesn't require it | Only validate `name`, `version`, `description` |
-| Using `/advise` as a skill instead of command | Skill didn't show up for users to invoke | Skills are auto-activated, commands are user-invocable |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Valid plugin.json (copy-paste ready)

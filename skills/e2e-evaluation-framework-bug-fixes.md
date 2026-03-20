@@ -490,41 +490,9 @@ def save_checkpoint(checkpoint: E2ECheckpoint, path: Path) -> None:
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### Failed Attempt 1: Using sed to Fix replay.sh Post-Generation
-**What we tried**: Modify replay.sh after generation to fix paths
-**Why it failed**: Too fragile, didn't address root cause (execution flow backwards)
-**Learning**: Must fix execution flow, not patch output
-
-### Failed Attempt 2: Setting PYTHONPYCACHEPREFIX in Adapter
-**What we tried**: Set env var in adapter's `_prepare_env()` method
-**Why it failed**: This affects agent's Python execution, not framework's
-**Learning**: Only set PYTHONPYCACHEPREFIX on framework subprocess calls (build pipeline)
-
-### Failed Attempt 3: Iterating Over All Agents for --agent Flag
-**What we tried**: Extract all agents from resources and add them all to CLI
-**Why it failed**: Each subtest has ONE designated agent, not a list
-**Learning**: Read subtest config carefully - single agent per subtest
-
-### Failed Attempt 4: Using git diff HEAD for Uncommitted Files
-**What we tried**: `git diff HEAD` to capture all changes
-**Why it failed**: Only shows staged changes, misses unstaged files
-**Learning**: Need BOTH `git diff` (unstaged) AND `git diff --cached` (staged)
-
-### Failed Attempt 5: Reading Log Files After replay.sh Execution
-**What we tried**: Read cmd_0000_stdout.log after replay.sh runs
-**Why it failed**: Log files exist but are EMPTY until update_last_command()
-**Learning**: Use subprocess.stdout directly, then write to logs
-
-### Failed Attempt 6: Using Relative Path for replay.sh
-**What we tried**: `subprocess.run(["bash", str(replay_script)], cwd=workspace)`
-**Why it failed**: replay_script was relative, cwd=workspace made it invalid
-**Learning**: Always use `replay_script.resolve()` for absolute path
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Validation Run Results

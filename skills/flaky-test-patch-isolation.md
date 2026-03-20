@@ -81,6 +81,10 @@ def test_something(self):
         ...
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts / Alternatives Considered
 
 | Approach | Why Rejected |

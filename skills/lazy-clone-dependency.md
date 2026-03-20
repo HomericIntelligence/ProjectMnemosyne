@@ -147,12 +147,9 @@ from pathlib import Path
 
 ## Failed Attempts
 
-| Approach | Why It Failed |
-|----------|---------------|
-| `threading.Lock` alone (no `fcntl`) | Only prevents races within one process; parallel `plan_issues.py` invocations across separate processes can still double-clone |
-| Single `fcntl` lock without threading lock | `fcntl` locks are per-process, not per-thread; two threads in the same process share the file descriptor and the lock is re-entrant, allowing both through simultaneously |
-| Checking `mnemosyne_root.exists()` outside the lock | Classic TOCTOU: both threads pass the check before either acquires the lock, leading to a double-clone attempt |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Changed

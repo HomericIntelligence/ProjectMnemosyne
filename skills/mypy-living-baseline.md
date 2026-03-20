@@ -155,33 +155,9 @@ def valid_md(tmp_path: Path) -> Path:
 
 ## Failed Attempts
 
-### Comma-separated `--enable-error-code` flag
-
-**Attempt**: `pixi run mypy ... --enable-error-code assignment,operator,arg-type`
-
-**Failure**: `mypy: error: Invalid error code(s): assignment,operator,arg-type`
-
-**Fix**: Pass each code as a separate `--enable-error-code` flag.
-
-### Unanchored regex for error code extraction
-
-**Attempt**: `grep -o '\[[a-z][a-z0-9-]*\]'` on mypy output lines
-
-**Failure**: Lines containing `[arg-type]` with messages mentioning types like `"list[str | None]"`
-were double-counted because `[str]` inside the message also matched.
-
-**Fix**: Use end-of-line anchor: `grep -oP '\[([a-z][a-z0-9-]*)\]$'`
-
-### Initial count measurement before writing the validation script
-
-**Attempt**: Measure counts, put them in the markdown, then write the script.
-
-**Failure**: The new `scripts/check_mypy_counts.py` file introduces new `var-annotated` and `misc`
-type errors (2 additional errors), making the documented counts immediately stale.
-
-**Fix**: Always run `python scripts/check_mypy_counts.py --update` after all implementation files
-are written, then commit the final updated markdown.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```

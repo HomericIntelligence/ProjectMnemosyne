@@ -98,28 +98,19 @@ if self.options.enable_retrospective and state.session_id:
 
 **Key**: Check both feature flag AND required data, always mark COMPLETED even if retrospective fails
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-### ❌ Testing Claude CLI JSON Output in Nested Session
-
-**Tried**: Running `claude --print "Hello" --output-format json` in test
-
-**Failed**: `"Error: Claude Code cannot be launched inside another Claude Code session"`
-
-**Why**: By design to prevent resource conflicts and crashes
-
-**Solution**: Mock subprocess calls in unit tests, validate JSON parsing logic separately
-
-### ❌ Resuming Session Without Tool Permissions
-
-**Tried**: Using `--message` flag to invoke retrospective without explicit tool permissions
-
-**Failed**: Retrospective runs but cannot commit to ProjectMnemosyne or create PR
-
-**Why**: Resumed sessions need explicit `--allowedTools` for git/gh operations
-
-**Solution**: Use command-style invocation with `--tools` and `--allowedTools` flags
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Component | Value | Rationale |

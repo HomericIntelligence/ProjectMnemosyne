@@ -137,12 +137,9 @@ Closes #712"
 
 ## Failed Attempts
 
-| Attempt | What Went Wrong | Fix |
-|---------|----------------|-----|
-| Tests used `runner = E2ERunner(mock_config, mock_tier_manager, Path("/tmp/exp"))` assuming third arg becomes `experiment_dir` | Third arg is `results_base_dir`; `experiment_dir` is set later by `_create_fresh_experiment` | Pass `Path("/tmp")` as third arg and set `runner.experiment_dir = Path("/tmp/exp")` explicitly |
-| Did not overwrite `runner.tier_manager` in tests | `__init__` wraps `tiers_dir` in `TierManager(tiers_dir)`, so the mock was never used | Always set `runner.tier_manager = mock_tier_manager` after construction |
-| Kept logger.info as single f-string | E501 — 104 chars > 100 limit enforced by ruff | Split into two adjacent f-strings on separate lines |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 - **Files changed**: `scylla/e2e/runner.py`, `tests/unit/e2e/test_runner.py`

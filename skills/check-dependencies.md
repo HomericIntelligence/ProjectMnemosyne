@@ -2,7 +2,7 @@
 name: check-dependencies
 description: Validate and verify dependencies are available and compatible. Use when
   setting up environments.
-category: analysis
+category: evaluation
 date: '2026-03-19'
 version: 1.0.0
 mcp_fallback: none
@@ -62,11 +62,9 @@ Dependency validation report:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

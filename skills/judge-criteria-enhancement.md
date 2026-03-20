@@ -252,56 +252,9 @@ def _has_valid_agent_result(run_dir: Path) -> bool:
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Restricting Agent File Creation
-
-**What We Tried**: Initial plan included changing task prompts to say "Don't create extra files unless necessary"
-
-**Why It Failed**:
-- User clarified: "I don't want the task prompt to change to produce less files, just to specify that agents need to cleanup after themselves for temporary files"
-- This would restrict legitimate documentation and test creation
-- The problem is over-engineering, not file creation itself
-
-**Lesson**:
-- Judge criteria should handle quality assessment, not prompt restrictions
-- Cleanup instructions should focus on temporary files only (build artifacts, cache)
-- Don't prevent agents from creating documentation/tests when appropriate
-
-### ❌ Attempt 2: Using Bonus-Only Scoring for Test Quality
-
-**What We Considered**: Making test_quality only give bonus points (no penalty for missing tests)
-
-**Why It Failed**:
-- User chose "penalize unnecessary tests" approach
-- A 1-line task with 200-line test suite should score low on test_quality
-- Need to penalize both missing tests (when required) AND unnecessary tests (for trivial tasks)
-
-**Lesson**: Proportionality criteria should penalize deviations in BOTH directions (too little AND too much)
-
-### ❌ Attempt 3: Line Length Violations in Test Assertions
-
-**What Happened**: First commit attempt failed pre-commit hooks with E501 (line too long)
-
-**Error**:
-```
-tests/unit/e2e/test_tier_manager.py:34:101: E501 Line too long (104 > 100)
-expected = "Maximize usage of all available tools..." + CLEANUP_INSTRUCTIONS
-```
-
-**Fix**: Break into multi-line string concatenation:
-```python
-expected = (
-    "Maximize usage of all available tools to complete this task."
-    + CLEANUP_INSTRUCTIONS
-)
-```
-
-**Lesson**: When adding constants to test assertions, watch for line length limits (100 chars). Use parenthesized multi-line strings.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Judge Criteria Configuration

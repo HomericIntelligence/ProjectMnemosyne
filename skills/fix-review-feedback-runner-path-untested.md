@@ -1,12 +1,7 @@
 ---
-name: fix-review-feedback-runner-path-untested
-description: "---"
-category: testing
-date: 2026-03-19
-version: "1.0.0"
-user-invocable: false
+
 ---
----
+
 name: "Skill: Fix Review Feedback — Runner Path Untested (Direct Delegate Test)"
 description: "Pattern for fixing a test that calls an internal delegate directly instead of through the runner entry point, when the issue requirement specifies the entry point must be exercised"
 category: testing
@@ -151,10 +146,9 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
 ## Failed Attempts
 
-**Wrong class name:** Initially imported `ExperimentRunner` — the actual class is `E2ERunner`.
-- Detection: `ImportError: cannot import name 'ExperimentRunner' from 'scylla.e2e.runner'`
-- Fix: `grep -n "^class " scylla/e2e/runner.py` to find the actual class name before writing the test
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |

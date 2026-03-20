@@ -65,15 +65,15 @@ SKIP=hook-name git commit -m "message"
 | `check-added-large-files` | Prevent large files | No |
 | `mixed-line-ending` | Fix line endings | Yes |
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Used `--no-verify` to skip hooks | CI still failed, wasted time | Never bypass hooks - fix the underlying issue |
-| Forgot to stage auto-fixed files | Commit succeeded but files weren't included | Run `git add .` after hooks auto-fix |
-| Ran hooks on unstaged files only | Missed issues in staged changes | Use `--all-files` or ensure changes are staged |
-| Skipped pre-commit install on new clone | Hooks didn't run, CI failed | Always run `pre-commit install` on fresh clones |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Error | Solution |

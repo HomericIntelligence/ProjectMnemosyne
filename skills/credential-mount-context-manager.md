@@ -224,14 +224,9 @@ rm -rf ~/.scylla-temp-creds-*  # adapt glob to your naming convention
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Add `time.sleep(1)` before `shutil.rmtree()` in `finally` | Adds latency to every run even when cleanup succeeds; doesn't fix the race for long mounts | Use retry loop with sleep only on failure |
-| Catch `Exception` broadly and log | Catches non-OSError failures that shouldn't be silenced (e.g., PermissionError on bad paths) | Catch `OSError` specifically |
-| Use `/tmp` instead of `~` for temp dirs | WSL2 doesn't expose `/tmp` contents to Docker by default without explicit bind | Use home dir or a known Docker-accessible path |
-| Pass `temp_cleanup` sentinel in volume dict and collect in `_run_with_volumes()` | Dict leak between creation and try; sentinel is fragile and couples volume config to cleanup logic | Decouple lifecycle via context manager |
-| Move cleanup to `__del__` on container manager | Not guaranteed to run; GC timing unpredictable | Use explicit context manager with `finally` |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Retry Parameters (Tuned for WSL2 Docker)

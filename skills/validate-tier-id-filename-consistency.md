@@ -147,22 +147,9 @@ pre-commit run --all-files
 
 ## Failed Attempts
 
-### Attempted: Creating a shared fixture file for the mismatch case
-
-**What**: Considered placing `tmismatch.yaml` (with `tier: t99`) in `tests/fixtures/config/tiers/` to be picked up by the glob.
-
-**Why it failed**: The existing `test_load_all_tiers` asserts `len(tiers) == 2`. Adding a file that triggers a `ConfigurationError` mid-iteration would break that test, and placing a valid but intentionally-mismatched fixture would change the count to 3.
-
-**Resolution**: Use `tmp_path` in the mismatch test instead. Isolated loader with its own temp directory — no impact on shared fixtures.
-
-### Pre-commit E501 line-too-long
-
-**What**: First docstring attempt was 101 characters, exceeding the 100-char limit.
-
-**Fix**: Shortened `"when filename stem and config.tier disagree"` to `"when filename and config.tier disagree"`.
-
-**Pattern**: Always check docstring line length when the method name is already long (e.g., `test_load_all_tiers_mismatched_id_raises`).
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Production change

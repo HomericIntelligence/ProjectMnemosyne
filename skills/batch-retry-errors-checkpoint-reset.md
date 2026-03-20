@@ -164,16 +164,15 @@ if args.retry_errors and not (from_run_state or from_tier_state or from_experime
             logger.info(f"--retry-errors: reset {reset_count} failed/rate-limited run(s) for retry")
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | What Happened | Fix |
-|---------|---------------|-----|
-| Used `reset_runs_for_from_state(status_filter=["failed"])` for both modes | Misses `rate_limited` runs — they aren't recorded in `completed_runs` so `get_run_status()` returns `None` | Switch to direct `run_states` iteration via `_reset_terminal_runs()` |
-| Test A and B used single `--config` arg | Single config with no `test-*` subdirs triggers single-test mode, not batch mode — `completed_ids` skip logic never runs | Use two `--config` args (`test-001` + `test-002`) to force batch mode dispatch (`len(configs) > 1`) |
-| Updated single-mode tests still patched `reset_runs_for_from_state` | After replacing implementation, mock was never called → `assert len(reset_calls) == 1` failed | Drop mock; instead call `load_checkpoint()` after `cmd_run()` and assert `run_states` directly on disk |
-| Annotated `_reset_terminal_runs` with `"E2ECheckpoint"` string forward reference | Mypy error: `Missing type parameters for generic type "dict"` at nearby line | Use `Any` type annotation — checkpoint is duck-typed and `Any` is already imported |
-| `dict[str, dict]` annotation for `last_by_test` | Mypy: `Missing type parameters for generic type "dict"` | Use `dict[str, dict[str, Any]]` |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Batch Mode Dispatch Decision Tree
 
 ```

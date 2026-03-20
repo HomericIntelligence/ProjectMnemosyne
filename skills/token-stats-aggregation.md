@@ -160,12 +160,9 @@ assert result.tokens_input == 100
 
 ## Failed Attempts
 
-| Attempt | What Was Tried | Why It Failed | Solution |
-|---------|----------------|---------------|----------|
-| Direct field replacement | Replaced `tokens_input` and `tokens_output` fields directly with `token_stats` object | Broke existing code and tests that accessed the old field names directly | Add `@property` decorators that compute legacy values from the new structure |
-| Single test file fix | Fixed one test file (test_claude_code.py) and expected others to pass | Other adapter tests (cline, opencode, openai_codex) had identical issues with old parameter names and logs directory assertions | Check all similar test files and apply consistent fixes across the entire test suite |
-| Wrong log directory | Tests expected logs at `output_dir/logs/stdout.log` | Implementation writes directly to `output_dir/stdout.log` (no subdirectory) | Update test assertions to match actual implementation path |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Token Statistics Available from Claude Code JSON

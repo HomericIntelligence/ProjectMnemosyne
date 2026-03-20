@@ -187,11 +187,9 @@ def test_to_dict(self) -> None:
 
 ## Failed Attempts
 
-| Approach | Why It Failed | Lesson Learned |
-|----------|---------------|----------------|
-| **Make timing fields optional** | Initial consideration to make `agent_duration_seconds` and `judge_duration_seconds` optional for backward compatibility | User explicitly requested "ignore old formats, just focus on new format, don't need to worry about compatibility" - clean breaks are acceptable when explicitly requested |
-| **Only track total duration** | Original implementation only had `duration_seconds` | Cannot support tiebreaker use case or identify performance bottlenecks without component-level timing |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Data Model Changes

@@ -226,28 +226,9 @@ def test_rubric_conflict_float_tolerance(tmp_path):
 
 ## Failed Attempts
 
-### 1. Placing conflict detection in `load_all_experiments()` instead of `load_rubric_weights()`
-
-**What was considered:** Detect conflicts in `load_all_experiments()` by comparing rubric dicts loaded per-experiment.
-
-**Why it was rejected:** `load_rubric_weights()` already iterates all rubric.yaml files and is the right abstraction layer. Putting the detection in `load_all_experiments()` would duplicate the rubric-reading logic. The loader layer detects; callers decide whether to use rubric weights for analysis.
-
-### 2. Using `!=` for float comparison
-
-**Problem:** JSON serialisation round-trips can introduce tiny floating-point differences (e.g., `10.0` stored as `10.000000000000001`). Using `!=` would produce spurious conflicts on identical logical values.
-
-**Fix:** Use `abs(w1 - w2) <= 1e-6` as the "same value" threshold.
-
-### 3. Pre-push hook flaky test blocking push
-
-**Problem:** The `test_run_single_with_mocks` test failed intermittently when the pre-push hook ran the 3183-test full suite under system load. The test passes in isolation and in smaller subsets.
-
-**Root cause:** The worktree was branched from an older `origin/main` that lacked the `fix(tests): replace timing assertion with sleep mock in test_retry.py` fix. The flaky retry timing test (`test_uses_longer_initial_delay`) caused the hook to abort early, which stopped test collection at position 1688 and caused `test_run_single_with_mocks` to register as a failure.
-
-**Fix:** `git fetch origin main && git rebase origin/main` to pick up the timing fix before pushing.
-
----
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test coverage added

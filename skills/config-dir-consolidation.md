@@ -154,12 +154,9 @@ ls config/
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Keeping `config_dir` as param name in loader | Confusing — loader no longer needs `config/` parent, just the dir with `tiers.yaml` | Rename param to `tiers_dir` to match what it actually points to |
-| Forgetting `to_dict()` when removing model field | Would have caused JSON serialization tests to fail | Always search for `"field_name"` string literals, not just `field_name` attribute references |
-| Only updating the loader constructor signature | Auto-detection in `TierManager.__init__` still pointed to old path | Search for all hardcoded path computations referencing the old dir |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Deleted

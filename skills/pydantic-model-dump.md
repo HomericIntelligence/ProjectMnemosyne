@@ -94,12 +94,9 @@ python scripts/run_e2e_experiment.py
 
 ## Failed Attempts
 
-| Approach | Why It Failed |
-|----------|---------------|
-| Using `.dict()` method | Pydantic v2 deprecated `.dict()`, use `.model_dump()` instead |
-| Adding custom `.to_dict()` to BaseModel | Overriding Pydantic methods breaks model functionality |
-| Type checking before call | Doesn't solve the problem, just detects it |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Fix Pattern

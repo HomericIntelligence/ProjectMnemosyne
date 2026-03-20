@@ -2,7 +2,7 @@
 name: agent-validate-config
 description: Validate agent YAML frontmatter and configuration. Use before committing
   agent changes or in CI.
-category: agent
+category: architecture
 date: '2026-03-19'
 version: 1.0.0
 mcp_fallback: none
@@ -48,7 +48,7 @@ Required YAML frontmatter fields:
 name: agent-name              # kebab-case identifier
 description: "Brief desc"     # One sentence purpose
 mcp_fallback: none
-category: agent               # Classification
+category: architecture               # Classification
 level: 0-5                    # Hierarchy level
 phase: Plan|Test|Implementation|Package|Cleanup
 ---
@@ -75,11 +75,9 @@ Validation includes:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

@@ -305,46 +305,9 @@ cy.elements().removeClass('team-win team-loss edge-highlight dimmed');
 
 ## Failed Attempts
 
-### ❌ Using `display:none` for highlight (same as filter)
-
-**Attempted**: Re-using the existing `activateTrajectory()` for node click — it hides non-team elements with `display:none`.
-
-**Problem**: Node click filtered the view identically to the team dropdown. Clicking a day filter button afterwards showed only the node-clicked team's matches for that day (Bug 5). The two interactions entangled their state.
-
-**Lesson**: Visual highlight (dimming) and data filter (hiding) must be completely separate operations. Highlight: use CSS classes + inline opacity. Filter: use `display:none`.
-
-### ❌ Putting `node:hidden` template first in nodeHtmlLabel array
-
-**Attempted**: Adding the `node:hidden` catch-all as the first entry, thinking "first match wins".
-
-**Problem**: `cytoscape-node-html-label` uses `.slice().reverse()` internally — it checks templates from last to first. Adding `node:hidden` first meant it was checked last, after `node[type="match"]` already matched.
-
-**Lesson**: Always add the `node:hidden` catch-all as the **last** entry so it's checked first by the extension.
-
-### ❌ Re-rendering HTML overlays by calling `cy.nodeHtmlLabel()` again
-
-**Attempted**: Calling `cy.nodeHtmlLabel([...])` a second time after updating `_highlightState` to force overlay re-render.
-
-**Problem**: The extension initializes on the first call and doesn't support being re-initialized. Calling it twice causes duplicate overlays.
-
-**Lesson**: Force re-render by nudging node data (`n.data('_hl', Date.now())`). The extension watches for data changes and re-calls the template function.
-
-### ❌ Dimming via Cytoscape `opacity` style alone (no HTML overlay dimming)
-
-**Attempted**: Only using `node.addClass('dimmed')` with `{ selector: 'node.dimmed', style: { opacity: 0.15 } }` to dim nodes.
-
-**Problem**: Cytoscape's `opacity` style applies to canvas-drawn elements (the node shape, edges). It does NOT affect the HTML `<div>` overlay rendered by `cytoscape-node-html-label`. The match cards stayed at full opacity even when the node shape was dimmed.
-
-**Lesson**: HTML overlays require their own inline `style="opacity:0.15"` applied inside the template function (`buildMatchCardHTML`/`buildRankingCardHTML`). Cytoscape CSS selectors don't propagate to HTML elements.
-
-### ❌ Toggling highlight by checking `_activeTeamIds` instead of `_highlightedTeamIds`
-
-**Attempted**: Toggle logic: `const alreadyHighlighted = _activeTeamIds.includes(clickedId);`
-
-**Problem**: Node click no longer sets `_activeTeamIds` (it only sets `_highlightedTeamIds`), so `_activeTeamIds` is always empty from the node-click perspective. The toggle never triggered.
-
-**Lesson**: Maintain a separate `_highlightedTeamIds` array purely for node-click state. Toggle by comparing against it, not `_activeTeamIds`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### State architecture summary

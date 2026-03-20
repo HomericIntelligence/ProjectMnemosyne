@@ -120,79 +120,15 @@ pre-commit run yamllint --all-files
 pre-commit run --all-files
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-### ❌ Attempt 1: Strict sequence indentation
-
-**What we tried**:
-
-```yaml
-indentation:
-  spaces: 2
-  indent-sequences: true  # Too strict
-```
-
-**Why it failed**:
-
-- Generated 30+ errors in test YAML files with patterns like:
-
-  ```yaml
-  resources:
-    agents:
-      levels:
-      - 3  # yamllint expected 6 spaces, got 4
-  ```
-
-- The strict rule expects sequence items to be indented relative to their parent key
-- Many existing files use a more compact style
-
-**Lesson**: Use `indent-sequences: whatever` for flexibility unless strict alignment is a project requirement.
-
-### ❌ Attempt 2: Default truthy values
-
-**What we tried**:
-
-```yaml
-truthy:
-  allowed-values: ['true', 'false', 'yes', 'no']  # Missing 'on'/'off'
-```
-
-**Why it failed**:
-
-- GitHub Actions workflows use `on:` as a trigger keyword:
-
-  ```yaml
-  on:  # yamllint error: truthy value should be one of [false, no, true, yes]
-    push:
-      branches: [main]
-  ```
-
-- The word "on" is interpreted as a boolean by YAML parsers
-- GitHub Actions specifically chose this keyword despite the YAML ambiguity
-
-**Lesson**: Always include `'on'` and `'off'` in truthy allowed values for repositories with GitHub Actions.
-
-### ❌ Attempt 3: Default braces spacing
-
-**What we tried**:
-
-```yaml
-# Using default braces rule (max-spaces-inside: 0)
-```
-
-**Why it failed**:
-
-- GitHub Actions uses `${{ expression }}` syntax with spaces:
-
-  ```yaml
-  if: ${{ github.event_name == 'push' }}  # yamllint: too many spaces inside braces
-  ```
-
-- The default rule expects `${{expression}}` with no spaces
-- GitHub Actions documentation consistently shows spaces in examples
-
-**Lesson**: Set `braces: max-spaces-inside: 1` to allow GitHub Actions expression syntax.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Validation
 
 ### Final Configuration (.yamllint.yaml)

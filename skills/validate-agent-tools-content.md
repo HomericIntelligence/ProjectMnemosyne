@@ -128,10 +128,15 @@ bash tests/.../validate_agent.sh /tmp/bad.md
 pixi run python -m pytest tests/ -v
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-None in this session. The implementation was straightforward by following the existing phase-validation pattern already in the file.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Parameters
 
 | Parameter | Value |

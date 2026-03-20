@@ -168,47 +168,9 @@ failures. Solution: `git add pixi.lock` before committing.
 
 ## Failed Attempts
 
-### Matching pydantic's `model_validate` signature with `**kwargs: Any`
-
-**Attempt**: Change subclass signature to `def model_validate(cls, data: Any, **kwargs: Any) -> MyModel:`
-
-**Failure**: Mypy 1.19 still reports `[override]` — pydantic's base method uses keyword-only
-params (declared with `*`), not `**kwargs`. The two signatures are structurally incompatible
-regardless of `**kwargs`.
-
-**Fix**: Rename the method to `from_dict()` entirely.
-
-### Using `bool | None` as `__exit__` return type
-
-**Attempt**: Change from `-> bool` to `-> bool | None`
-
-**Failure**: Mypy still reports `exit-return` because the method body has `return False` which
-is typed as `bool`, and mypy says `"bool" is invalid as return type for "__exit__"` when the
-method always returns `False`.
-
-**Fix**: Change return type to `None` AND replace `return False` with a comment. The `None` return
-type is semantically correct — returning `None` from `__exit__` is falsy and does not suppress
-exceptions, same as `return False`.
-
-### Wrapping `set()` call in `list()` to fix `call-overload`
-
-**Attempt**: `set(list(merged["agents"]["names"]))` — hoping `list()` would be typed as `list[Any]`
-
-**Failure**: `list(Any)` has the same overload problem: `No overload variant of "list" matches
-argument type "object"`. The root cause is that nested dict access returns `object`, not `Any`.
-
-**Fix**: Use `# type: ignore[call-overload]` directly on the `set()` call.
-
-### Relying on `ignore_errors = true` for tests
-
-**Assumption**: `ignore_errors = true` in `[[tool.mypy.overrides]]` for `tests.*` would suppress
-all test errors including `call-overload`.
-
-**Failure**: Mypy 1.19 still reports `call-overload` errors from test files even with
-`ignore_errors = true`. The override does not work for this error code in this version.
-
-**Fix**: Add `# type: ignore[call-overload]` directly on the offending test line.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```

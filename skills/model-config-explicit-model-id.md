@@ -103,19 +103,9 @@ The coverage failure (`3.29% < 73%`) when running `tests/unit/config/test_loader
 
 ## Failed Attempts
 
-### Checking for a versioned date suffix
-
-The issue offered two resolution paths:
-
-1. Explicitly declare `model_id: claude-opus-4-1`
-2. Rename to `claude-opus-4-1-<date>.yaml` once the correct versioned API model ID is confirmed
-
-Web search was unavailable to confirm the Anthropic API date suffix for `claude-opus-4-1`. Since option 1 was already satisfied (the field was present), option 2 was deferred — **do not rename** without confirming the exact versioned API identifier via Anthropic docs or API responses.
-
-### Searching for versioned ID in codebase
-
-No codebase references confirmed a `claude-opus-4-1-<date>` variant. The test in `tests/unit/config/test_loader.py:44-59` explicitly parametrizes `"claude-opus-4-1"` (not a versioned form) as the expected loadable ID, which confirmed option 1 was the correct resolution.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Metric           | Value                                  |

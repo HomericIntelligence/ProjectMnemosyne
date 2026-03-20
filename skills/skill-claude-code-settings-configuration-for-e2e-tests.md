@@ -155,27 +155,9 @@ self.tier_manager.prepare_workspace(
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Running Tests Without pixi
-
-**What was tried**: Running E2E tests directly with `python scripts/run_e2e_experiment.py`
-
-**Why it failed**: Missing dependencies (pydantic not found) because the script needs to run within the pixi environment
-
-**Lesson**: Always use `pixi run python` for scripts that require project dependencies
-
-### ❌ Attempt 2: Using json.dumps without write
-
-**What was tried**: Initially used `.write_text(json.dumps(settings, indent=2))`
-
-**Why it failed**: While this worked, using a context manager with `json.dump()` is more idiomatic and safer
-
-**Lesson**: Use `with open() as f: json.dump()` for writing JSON files
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Verification Commands

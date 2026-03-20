@@ -77,12 +77,9 @@ Extend Docker Layer 2 `tomllib` extraction to include `[project.optional-depende
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Using `ENV EXTRAS` instead of `ARG EXTRAS` | ENV persists into the final image and leaks build config into runtime containers | Always use `ARG` for build-time-only values |
-| Passing `EXTRAS` directly in the python snippet without `EXTRAS="$EXTRAS"` | Shell subshell `$(...)` inherits the builder's ARG as a shell variable but Python's `os.environ` only sees variables passed explicitly | Pass ARG values via `KEY=value python3 -c ...` prefix |
-| Placing `ARG EXTRAS=""` after `COPY pyproject.toml` | ARG is in scope for the subsequent RUN, but moving it before COPY makes the Dockerfile self-documenting and keeps the caching contract explicit | Declare ARG before the COPY it gate-keeps |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```yaml

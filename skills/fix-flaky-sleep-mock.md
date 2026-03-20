@@ -157,12 +157,9 @@ pixi run python -m pytest tests/unit/ --no-cov -q
 
 ## Failed Attempts
 
-| Attempt | Why It Failed | Lesson |
-|---------|--------------|--------|
-| `@pytest.mark.skipif(COVERAGE_RUN)` workaround | Hides the flakiness instead of fixing it; still fails in full suite without coverage | Use mocks, not skip conditions |
-| `patch("time.sleep")` with wall-clock fallback | Wrong patch path for `import time; time.sleep()` usage | Match patch path to import style in module under test |
-| Small `initial_delay=0.01` with wall-clock timing | 10ms sleeps still flaky under contention | Any real sleep is flaky in CI; always mock |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Changed

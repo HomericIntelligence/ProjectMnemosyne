@@ -2,7 +2,7 @@
 name: gh-reply-review-comment
 description: Reply to PR review comments using the correct GitHub API endpoint. Use
   when responding to inline code review feedback (not gh pr comment).
-category: github
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 user-invocable: false

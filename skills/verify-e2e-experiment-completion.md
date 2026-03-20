@@ -198,72 +198,15 @@ cd ~/ProjectScylla && pixi run python scripts/run_e2e_experiment.py \
   -v
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Using rerun_judges.py --regenerate-only
-
-**Command:**
-```bash
-pixi run python scripts/rerun_judges.py \
-  ~/fullruns/test001-nothinking-haiku/2026-01-23T17-01-08-test-001 \
-  --regenerate-only -v
-```
-
-**Error:**
-```
-Could not auto-detect tiers directory. Please ensure the experiment was created
-with a valid test fixture directory.
-```
-
-**Why it failed:**
-- Script expects symlinks to tiers directory in experiment folder
-- Auto-detection logic couldn't find test fixture path from symlinks
-- No command-line option to specify tiers directory manually
-
-**Correct approach:** Use `run_e2e_experiment.py` with `--tiers-dir` instead.
-
-### ❌ Attempt 2: Trusting checkpoint.json status
-
-**Assumption:**
-```bash
-jq -r .status checkpoint.json
-# Output: "completed"
-```
-
-**Reality:**
-- Checkpoint showed "completed" but 1,188/1,227 judge aggregations were missing (Sonnet)
-- T4 tier had only 80/110 agent runs (Haiku)
-- Checkpoint updates are async and can be stale if process interrupted
-
-**Lesson:** Always verify filesystem state, don't trust checkpoint alone.
-
-### ❌ Attempt 3: Counting run_result.json as proof of completion
-
-**Observation:**
-- Haiku: 1133 run_result.json files (even more than expected 1130!)
-- Sonnet: 1130 run_result.json files (exactly as expected)
-
-**Problem:**
-- Extra files from retries don't mean all expected runs completed
-- Missing runs in specific subtests (like T4/08, T4/09, etc.)
-- Need to verify distribution across all tiers, not just total count
-
-**Correct verification:**
-```bash
-# Check expected vs actual per tier
-for tier in T0 T1 T2 T3 T4 T5 T6; do
-    num_subtests=$(ls -d $exp_dir/$tier/*/ | wc -l)
-    num_agents=$(find $exp_dir/$tier -name "agent" -type d | wc -l)
-    expected=$((num_subtests * 10))
-    echo "$tier: $num_agents / $expected"
-done
-```
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Validation
 
 ### Bugs Fixed in regenerate_results.py

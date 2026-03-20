@@ -140,10 +140,15 @@ patch("scylla.e2e.resume_manager.is_zombie", return_value=False)
 
 There were 6 occurrences in `test_runner.py` to update.
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-None — the approach was straightforward once the mock path rule was understood.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Rule: Mock Patch Paths After Import Refactoring
 
 When moving an import from **lazy/inline** (`from x import y` inside a function) to **module-level**,

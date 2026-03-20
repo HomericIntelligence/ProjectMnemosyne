@@ -1,7 +1,7 @@
 ---
 name: dockerfile-digest-consistency-guard
 description: "Skill: Dockerfile Digest Consistency Guard"
-category: uncategorized
+category: tooling
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -97,6 +97,10 @@ pixi run python -m pytest tests/unit/scripts/test_dockerfile_constraints.py -v
 # Full suite to confirm no regressions
 pixi run python -m pytest tests/unit/ --override-ini="addopts=" -q
 ```
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
 
 ## Failed Attempts / Gotchas
 

@@ -122,10 +122,9 @@ pre-commit run --files scylla/config/validation.py scylla/config/loader.py tests
 
 ## Failed Attempts
 
-None on this task — the approach was straightforward given the existing codebase patterns.
-
----
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Metric            | Value                          |

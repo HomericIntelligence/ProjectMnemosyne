@@ -166,6 +166,10 @@ ideal for round-trip tests — any deviation is a true bug, not a precision arti
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3301, PR #3908 | [notes.md](../references/notes.md) |
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |

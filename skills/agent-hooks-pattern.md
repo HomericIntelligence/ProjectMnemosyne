@@ -2,7 +2,7 @@
 name: agent-hooks-pattern
 description: Pattern for agent-scoped lifecycle hooks in Claude Code v2.1.0. Use when
   implementing custom agents with safety controls or tool restrictions.
-category: uncategorized
+category: tooling
 date: '2026-03-19'
 version: 1.0.0
 user-invocable: false
@@ -117,12 +117,9 @@ hooks:
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Adding `disallowedTools` array to agent frontmatter | Field not supported in v2.1.0 - only CLI/settings.json support `--disallowedTools` | Use hooks with deny decision for tool blocking |
-| SessionEnd hooks for user messages | SessionEnd hooks cannot display messages to users | Use UserPromptSubmit hooks for session-end messages |
-| Blocking tools without proper deny message | Users confused why tool calls silently failed | Always include clear `message` field in deny responses |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Junior Engineer Agent Template

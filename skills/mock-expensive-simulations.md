@@ -171,26 +171,9 @@ Ruff will reformat the `with` block to use parenthesized form — accept this an
 
 ## Failed Attempts
 
-### Attempt 1: Git bisect with incorrect "good" baseline
-
-**What was tried:** Running `git bisect bad HEAD; git bisect good <main-sha>` and expecting to find a commit on the branch that introduced the hang.
-
-**Why it failed:** The "good" baseline (`origin/main`) also hangs. Bisect was operating with a wrong assumption — both endpoints are "bad". The hang is pre-existing on main from a much earlier commit (`6babcbd`).
-
-**Lesson:** Always verify that the baseline (main) does NOT hang before starting bisect. Test `timeout 60 pixi run python -m pytest <hanging-files> --no-cov -q` on a clean checkout of main first.
-
-### Attempt 2: Patching only `scylla.analysis.stats.*`
-
-**What was tried (hypothetically):** Patching `scylla.analysis.stats.mann_whitney_power` only.
-
-**Why it fails:** `export_data.py` uses `from scylla.analysis.stats import mann_whitney_power`, which binds the name `mann_whitney_power` in `export_data`'s own module namespace. Patching the origin module after the import has no effect on the already-bound name.
-
-**Fix:** Patch `export_data.mann_whitney_power` (the caller's namespace). Use `create=True` since `export_data` is loaded via `sys.path.insert` and may not be in the normal module registry.
-
-### Attempt 3: Reducing `n_simulations` in config.yaml
-
-**Why it's not the right approach:** Changing `config.yaml` affects production behaviour, not just tests. It also requires knowledge of which config value controls which function, and the change may silently reduce statistical rigor in reports. Mocking at the test boundary is cleaner.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Before vs After

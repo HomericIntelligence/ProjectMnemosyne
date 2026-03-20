@@ -99,22 +99,15 @@ pixi run python scripts/run_experiment.py --all-tiers --fresh
 ls -la results/experiment/tier_name/  # Should exist immediately
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-**None** - The root cause was clear from the stack trace and the first solution worked.
-
-### Why This Worked First Try
-
-1. **Clear error message** pointed to exact file path
-2. **Stack trace** showed `save_selection()` calling `open()` on non-existent directory
-3. **Code inspection** revealed assignment without creation
-4. **Pattern recognition** from pathlib behavior: assignment ≠ creation
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Insights
 
 ### Critical Understanding

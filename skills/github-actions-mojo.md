@@ -74,13 +74,9 @@ Configure GitHub Actions CI/CD for Mojo projects using pixi.
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Manual Mojo install | Version mismatch, PATH issues | Use pixi for dependency management |
-| Single test job | 30+ min runtime | Split into parallel matrix jobs |
-| No caching | Slow reinstalls every run | Enable pixi cache |
-| `mojo test .` | Didn't find all tests | Specify explicit paths |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ```yaml

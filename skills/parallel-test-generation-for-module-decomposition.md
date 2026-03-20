@@ -1,7 +1,7 @@
 ---
 name: parallel-test-generation-for-module-decomposition
 description: "Parallel Test Generation for Module Decomposition"
-category: refactoring
+category: architecture
 date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
@@ -37,26 +37,19 @@ user-invocable: false
    - Fix mypy `type: ignore` comments separately
 5. **Run full test suite** + pre-commit before committing
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-### 1. Regex-based auto-docstring insertion
-**What:** Used regex to add docstrings to test methods missing them.
-**Why it failed:** The regex `r'^( +)(def test_\w+...)` matched methods that already had docstrings from the agent, producing duplicate docstrings with mismatched indentation. Ruff reported `invalid-syntax: Unexpected indentation`.
-**Fix:** Remove duplicate docstrings by scanning for consecutive docstring lines (ignoring blank lines between them).
-**Lesson:** Check if docstring already exists before inserting. Better: instruct agents to include docstrings in the first place.
-
-### 2. Bulk variable rename for RUF059 (unused unpacked vars)
-**What:** `content.replace(', na,', ', _na,')` to prefix unused tuple elements with `_`.
-**Why it failed:** Renamed the unpacking variable but not the `assert na is True` usage on later lines, creating `F821 Undefined name 'na'` errors.
-**Fix:** Either rename both unpacking AND usage, or use `ruff --fix --unsafe-fixes --select RUF059` which handles it correctly.
-**Lesson:** Never do partial renames with string replace. Use ruff's built-in unsafe fixes for RUF059.
-
-### 3. Removing type: ignore comments preemptively
-**What:** Removed `# type: ignore[arg-type]` and `# type: ignore[misc]` based on mypy reporting `unused-ignore`.
-**Why it failed:** The `unused-ignore` was only reported in one mypy configuration; the `arg-type` errors were real when checked by pre-commit's mypy hook (different strictness settings).
-**Fix:** Only remove `type: ignore` comments after verifying with the **pre-commit mypy hook**, not standalone mypy.
-**Lesson:** Pre-commit mypy may have different settings than standalone mypy. Always verify removals against the hook.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Agent Prompt Template for Test File Generation

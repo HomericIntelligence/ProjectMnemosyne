@@ -128,43 +128,9 @@ Use this skill when you encounter:
 
 ## Failed Attempts
 
-
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Initial approach | See details below | Refer to notes in this section |
-
-### ❌ Attempt 1: Delete fixtures entirely without replacement
-
-**What was tried:**
-- Deleted `tests/fixtures/config/` directory completely
-- Expected tests to use production `config/` directly
-
-**Why it failed:**
-- ConfigLoader uses `base_path / "config" / "models"` pattern
-- Tests need isolated fixtures at `tests/fixtures/` base path
-- Breaking test isolation principle
-
-**Lesson learned:**
-- Test fixtures serve a different purpose than production configs
-- Tests need minimal, isolated, stable configs
-- Production configs can change without breaking tests
-
-### ❌ Attempt 2: Use production tier markdown files for tests
-
-**What was tried:**
-- Tried to make tests load `t0-prompts.md`, `t1-skills.md` directly
-- Expected tier loader to parse markdown for test configs
-
-**Why it failed:**
-- Tests expect YAML tier configs (e.g., `t0.yaml`, `t1.yaml`)
-- Production uses markdown prompt templates, not YAML configs
-- ConfigLoader tier loading expects specific YAML structure
-
-**Lesson learned:**
-- Test fixtures can have different structure than production
-- Use simple YAML for tests, complex templates for production
-- Tests validate the loader, not the production data format
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Final Structure

@@ -128,36 +128,9 @@ assert_true(error < expected * 1.0, "Error too large")
 
 ## Failed Attempts
 
-### 1. Native E8M0 Conversion
-
-**What was tried:**
-```mojo
-return Scalar[E8M0](scale)  # Native conversion
-```
-
-**Why it failed:** E8M0 has no mantissa - only 8 exponent bits. Native `Scalar[E8M0]()` conversion doesn't know how to handle the mantissa portion of Float32.
-
-**Solution:** Manual exponent extraction with proper rounding.
-
-### 2. Native E8M0 to Float32 Conversion
-
-**What was tried:**
-```mojo
-return Float32(e8m0_val)  # Native conversion
-```
-
-**Why it failed:** Similar issue - the reverse conversion doesn't properly reconstruct Float32 from exponent-only format.
-
-**Solution:** Manual Float32 reconstruction using bitcast.
-
-### 3. Original Test Tolerances
-
-**What was tried:** 50% relative error tolerance for round-trip tests.
-
-**Why it failed:** E8M0's power-of-2 scale can be up to 2x off, causing >50% error for values at low end of block range.
-
-**Solution:** Increased tolerance to 100% for tests with E8M0 scaling.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Type Mapping

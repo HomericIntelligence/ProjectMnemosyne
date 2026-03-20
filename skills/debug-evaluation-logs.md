@@ -140,14 +140,15 @@ if result.returncode != 0:
 
 **Key Pattern**: Try to extract structured errors first, then fall back to plain text, checking both stdout and stderr.
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Approach | Why It Failed | Lesson Learned |
-|----------|---------------|----------------|
-| None | Initial approach worked | Proper exploration phase identified exact problem locations and solutions |
-
-**Note**: This skill had no failed attempts because the diagnostic phase clearly identified both issues (generic warnings and missing error messages) before implementation began.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results
 
 ### Build Pipeline Warning Output

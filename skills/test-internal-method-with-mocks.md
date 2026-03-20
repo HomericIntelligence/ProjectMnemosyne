@@ -105,36 +105,19 @@ def _make_tier_result(
 | Selection logic | T5 present | Multiple tiers with different CoP | Baseline from lowest-CoP tier |
 | Missing winner | T5 present | Tier with `best_subtest=None` | `None`, no calls to `tier_manager` |
 
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
 ## Failed Attempts
 
-### Attempt 1: Passing MagicMock as tier_manager argument
-
-```python
-# WRONG — mock_tier_manager ends up as tiers_dir, not runner.tier_manager
-runner = E2ERunner(mock_config, mock_tier_manager, Path("/tmp"))
-```
-
-This silently creates `runner.tier_manager = TierManager(mock_tier_manager)`. Assertions on `mock_tier_manager.get_baseline_for_subtest` always fail because the real `TierManager` (not the mock) is called.
-
-**Fix**: Create runner with `Path("/tmp")` as `tiers_dir`, then reassign:
-
-```python
-runner = E2ERunner(mock_config, Path("/tmp"), Path("/tmp"))
-runner.tier_manager = mock_tier_manager
-```
-
-### Attempt 2: Omitting tiers_to_run in the "no T5" fixture
-
-The default `tiers_to_run=list(TierID)` includes T5. The "early return" test would never trigger.
-
-**Fix**: Always pass `tiers_to_run=[TierID.T0, TierID.T1]` explicitly for fixtures intended to exclude T5.
-
-### Attempt 3: Not setting experiment_dir
-
-`_select_best_baseline_from_group` builds `self.experiment_dir / tier_id.value / subtest_id`. If `experiment_dir` is `None` (the default), this raises `TypeError: unsupported operand type(s) for /: 'NoneType' and 'str'`.
-
-**Fix**: `runner.experiment_dir = Path("/tmp/exp")` before calling the method.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 - **File modified**: `tests/unit/e2e/test_runner.py`

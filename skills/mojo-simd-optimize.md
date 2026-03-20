@@ -2,7 +2,7 @@
 name: mojo-simd-optimize
 description: Apply SIMD optimizations to Mojo code for parallel computation. Use when
   optimizing performance-critical tensor and array operations.
-category: mojo
+category: optimization
 date: '2026-03-19'
 version: 1.0.0
 mcp_fallback: none
@@ -65,11 +65,9 @@ for i in range(0, size, width):
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | This skill was migrated from uncategorized | Document failures as they occur |
-
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.

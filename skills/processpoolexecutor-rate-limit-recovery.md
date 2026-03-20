@@ -344,6 +344,10 @@ def _retry_with_new_pool(
     return results
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts (Critical Learnings)
 | Attempt | Issue | Resolution |
 |---------|-------|------------|

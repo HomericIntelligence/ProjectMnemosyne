@@ -111,15 +111,15 @@ Why not chosen.
 - **Deprecated** - No longer recommended
 - **Superseded** - Replaced by newer ADR
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Created ADR without alternatives section | Reviewers questioned if other options were considered | Always document at least 2 alternatives with reasons for rejection |
-| Used vague context descriptions | Decision rationale unclear months later | Include specific constraints, requirements, and technical details |
-| Skipped consequences section | Unexpected issues during implementation | Always think through positive, negative, and neutral impacts |
-| Created ADR after implementation | Lost opportunity for team input | Create ADR during decision-making, not after |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |

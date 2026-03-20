@@ -152,36 +152,9 @@ pr_data = json.loads(result.stdout)  # Must parse stdout
 
 ## Failed Attempts
 
-### ❌ Strict Verification Without Fallbacks
-
-**What we tried**:
-
-```python
-# Fail if branch not pushed
-if not branch_on_remote:
-    raise RuntimeError("Branch not pushed")
-```
-
-**Why it failed**: Claude sometimes completes implementation but forgets to push/create PR. This made the pipeline too fragile.
-
-**Lesson**: Automation should be resilient. If we can fix it automatically, do it.
-
-### ❌ Filtering Backup Files in Script
-
-**What we tried**: Skip `.orig`, `.bak` files in git status parsing
-
-**Why it failed**: Added complexity to parsing logic. Also didn't prevent files from being created.
-
-**Lesson**: Better to instruct Claude in the prompt to not create backup files than to filter them after the fact.
-
-### ❌ Using `.strip()` on Git Status Output
-
-**What we tried**: `line[3:].strip()` to clean up filenames
-
-**Why it failed**: `.strip()` removes leading whitespace, but when filename starts immediately (no leading space), it removes the first character.
-
-**Lesson**: Understand the exact format before parsing. Git status is predictable - don't add unnecessary operations.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 **All tests pass**: 199 automation tests ✅

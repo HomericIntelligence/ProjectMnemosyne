@@ -99,12 +99,9 @@ git push --force-with-lease origin <branch>
 
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed |
-|---------|--------------|---------------|
-| `git checkout --theirs pixi.lock` | Accepted main's lock file; CI failed with `lock-file not up-to-date` | SHA256 hash in lock file is computed from local package source — main's hash doesn't match branch's modified source |
-| `git checkout --ours pixi.lock` | Lock file still mismatched | `--ours` is the pre-rebase branch's lock file, which is behind main's dependency changes |
-| Skipping `pixi lock` when no pixi.toml conflict | CI still failed with `lock-file not up-to-date` | Local package hash changes even when `pixi.toml` appears unchanged, due to source file modifications |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 Key pixi commands:

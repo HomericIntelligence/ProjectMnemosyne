@@ -182,18 +182,9 @@ The command exits non-zero on any mismatch, making it directly usable as a pre-c
 
 ## Failed Attempts
 
-### Importing ConfigLoader at module level
-
-Attempted to add `from scylla.config import ConfigLoader` to the top-level imports
-in `main.py`. This works but is inconsistent with the existing `list_models` pattern
-which uses a local import inside the function. Reverted to match the existing pattern.
-
-### Using `err=True` for MISMATCH lines
-
-Initially considered routing all output to stderr. Changed to stdout for MISMATCH lines
-so they are captured when piped (`scylla audit models | grep MISMATCH`), with only the
-summary count on stderr.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Metric            | Value                                               |

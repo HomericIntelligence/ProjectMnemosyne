@@ -176,13 +176,9 @@ def load(cls, path: Path) -> ExperimentConfig:
 
 ## Failed Attempts
 
-| Approach | Why It Failed | Lesson Learned |
-|----------|---------------|----------------|
-| Adding `language` field with default value | Python dataclass error: "non-default argument 'language' follows default argument 'timeout_seconds'" | Required fields MUST come before optional fields in dataclass definition |
-| Using backward-compatible defaults (`language: str = "mojo"`) | User explicitly requested NO backward compatibility | When making breaking changes, fail fast with clear error messages rather than silent defaults |
-| Forgetting to update `to_dict()` method | Test failures: `KeyError: 'language'` when loading from JSON | Every config class needs serialization updated in 3 places: field definition, `to_dict()`, and `load()` |
-| Line-too-long linting errors | Validation error messages exceeded 100 char limit | Break long strings across multiple lines or simplify messages |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Python Pipeline Commands

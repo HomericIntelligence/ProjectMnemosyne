@@ -137,13 +137,15 @@ gh pr create --title "fix(docs): Fix all tier label mismatches in metrics-defini
 gh pr merge --auto --rebase
 ```
 
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
 ## Failed Attempts
 
-| Attempt | What Happened | Why It Failed |
-|---------|--------------|---------------|
-| Trusting issue's line numbers (239, 253, 267) | Those lines were already correct | Prior PR #1345 had partially fixed the file; always read the file before editing |
-| Stopping after fixing 3 lines | Multiple other sections still had old tier numbering | The issue said "verify no other mismatches" — must scan the full file |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Observations
 
 1. **Prior partial fixes are common** — this issue recurred 4 times across March 2026 audits. Each prior fix corrected some but not all occurrences. Always do a full file scan with `grep -n "T[0-9]"`.

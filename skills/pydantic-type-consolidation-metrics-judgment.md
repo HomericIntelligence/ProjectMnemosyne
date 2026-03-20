@@ -228,38 +228,9 @@ class TestBaseRunMetricsDeprecation:
 
 ## Failed Attempts
 
-### ❌ Attempt: Keeping `cost_usd` Required in MetricsInfoBase
-
-**What we considered**:
-
-```python
-cost_usd: float = Field(..., description="Cost in USD")  # Required
-```
-
-**Why we didn't do it**:
-
-- `BaseRunMetrics` (legacy dataclass) had `cost_usd` as a required positional field
-- But `MetricsInfoBase` is a *base* type — downstream contexts may not have cost yet
-- Making it required would force `cost_usd=0.0` workarounds at every construction site
-
-**Solution**: `cost_usd: float = Field(default=0.0, ...)` — optional with zero default.
-Matches the `duration_seconds=0.0` pattern from `ExecutionInfoBase`.
-
-### ❌ Attempt: Keeping `impl_rate` Required in JudgmentInfoBase
-
-**What we considered**:
-
-```python
-impl_rate: float = Field(..., description="Implementation rate")  # Required
-```
-
-**Why we didn't do it**:
-
-- In contexts where judgment only produces a pass/fail, `impl_rate` may not be computed
-- The base should support minimal construction (`passed=True` is enough)
-
-**Solution**: `impl_rate: float = Field(default=0.0, ...)`.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test Coverage

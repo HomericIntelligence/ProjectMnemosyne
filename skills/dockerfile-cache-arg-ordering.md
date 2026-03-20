@@ -118,11 +118,9 @@ No new helpers needed — reuse existing infrastructure.
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Anchoring on `"EXTRAS"` alone | String appears in comments and other lines | Use a more specific anchor like `"os.environ.get"` which is unique to the RUN |
-| Creating a separate test class | Overkill — one test fits naturally in existing `TestBuilderStageOrdering` | Prefer adding to existing class when the invariant belongs to the same stage |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test Delta

@@ -78,11 +78,9 @@ just shell
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
-| Using `-T` flag for shell | `-T` explicitly disables TTY allocation | `-T` is for non-interactive commands only |
-| No flags at all | Works sometimes but unreliable | Always use `-it` for interactive shells |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### The Fix

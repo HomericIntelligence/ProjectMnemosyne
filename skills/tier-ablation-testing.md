@@ -88,12 +88,9 @@ tests/fixtures/tests/test-001/t{N}/NN-name/
 
 ## Failed Attempts
 
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| Pass evaluation context as CLI arg | `[Errno 7] Argument list too long` for T6 | Write to temp file, use `-p` flag instead |
-| Direct `evaluation_context` in cmd | OS command line limit (~128KB) exceeded | Large prompts must use file-based passing |
-| T6 with all configs combined | Context size explodes with full CLAUDE.md + skills + agents | Always test highest tier combinations early |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Sample T0 Judgment (00-empty sub-test)

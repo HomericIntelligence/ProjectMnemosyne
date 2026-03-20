@@ -119,11 +119,9 @@ valid_tier = {"tier": "t0", "name": "Prompts", "description": "desc", "subtests"
 
 ## Failed Attempts
 
-| Attempt | What Happened | Fix |
-|---------|---------------|-----|
-| Test data included `subtests` and `description` fields | `jsonschema.ValidationError`: "Additional properties are not allowed ('subtests' was unexpected)" — tier schema has `additionalProperties: false` | Read the actual schema file first; use only fields listed in `properties` |
-| Used bare `dict` type annotation on test variable (`invalid_data: dict = ...`) | mypy `[type-arg]` error: "Missing type parameters for generic type 'dict'" | Annotate with full params: `invalid_data: dict[str, str] = ...` |
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 - Cache dict type: `dict[str, dict[str, Any]]` (keyed by filename, value is the parsed schema)

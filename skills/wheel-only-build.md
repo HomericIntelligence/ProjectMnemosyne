@@ -72,8 +72,9 @@ No test changes needed — this is a build configuration change only.
 
 ## Failed Attempts
 
-None — the change was identified and applied correctly on the first attempt. The hatchling `targets` key was already documented behavior; no trial-and-error was required.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Minimal diff to `pyproject.toml`

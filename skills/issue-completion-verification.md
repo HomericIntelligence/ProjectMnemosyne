@@ -115,30 +115,9 @@ git status
 
 ## Failed Attempts
 
-### ❌ Attempting to Create PR for Already-Merged Work
-
-**Tried**: Creating a new PR from the branch when commits were already on main
-
-**Why it failed**:
-
-- Branch tracking showed `[origin/main]` instead of `[origin/594-auto-impl]`
-- The work had already been merged via PR #680
-- Creating a duplicate PR would fail with "no changes to merge"
-
-**Lesson**: Always check git history and search for merged PRs **before** attempting to create a new PR.
-
-### ❌ Assuming Issue Auto-Closes from Commit Message
-
-**Tried**: Assuming "Closes #594" in commit message would auto-close the issue
-
-**Why it failed**:
-
-- GitHub's auto-close only triggers when PRs are merged via the GitHub UI
-- Direct pushes to main (bypassing PR) don't trigger auto-close
-- Sometimes GitHub's automation simply fails for unknown reasons
-
-**Lesson**: Always verify issue state after PR merge, even if "Closes #XXX" syntax was used correctly.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Commands Used

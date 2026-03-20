@@ -6,7 +6,7 @@ description: 'TRIGGER CONDITIONS: Renaming figure functions to match the fig{NN}
   (2) --list-figures output is out of alphabetical/sequential order, (3) a follow-up
   issue asks to standardize figure naming after figures were wired with unsequenced
   names.'
-category: analysis
+category: evaluation
 date: 2026-03-02
 version: 1.0.0
 user-invocable: false
@@ -200,8 +200,9 @@ pre-commit run --files \
 
 ## Failed Attempts
 
-None — the rename was clean on the first pass. The key insight enabling this was the implementation plan prepared in the GitHub issue comment, which pre-mapped all line numbers and confirmed fig27 as the ceiling before any edits.
-
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Critical Lesson: Plan the Target Numbers First
 
 The `mass-figure-documentation` skill documented a cautionary lesson: if you start editing before confirming the target numbers, you risk mid-flight inconsistency. The correct sequence is:
