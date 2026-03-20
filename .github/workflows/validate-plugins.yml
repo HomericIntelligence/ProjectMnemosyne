@@ -20,6 +20,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install dependencies
+        run: pip install pyyaml
+
       - name: Validate flat-format skill files
         run: python3 scripts/validate_plugins.py
 
