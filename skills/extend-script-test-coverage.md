@@ -1,11 +1,9 @@
 ---
-
----
-
-name: "Extend Script Test Coverage to 50%+"
-description: "Pattern for systematically adding mock-only unit tests to previously untested Python scripts — prioritizing by testability × impact to reach a coverage threshold"
+name: extend-script-test-coverage
+description: Pattern for systematically adding mock-only unit tests to previously untested Python scripts — prioritizing by testability × impact to reach a coverage threshold
 category: testing
 date: 2026-03-03
+version: 1.0.0
 user-invocable: false
 ---
 # Extend Script Test Coverage to 50%+

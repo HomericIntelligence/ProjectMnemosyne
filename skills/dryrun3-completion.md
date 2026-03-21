@@ -1,11 +1,9 @@
 ---
-
----
-
-name: "Dryrun3 Completion: Diagnose, Repair, and Analyze Interrupted Batch Experiments"
-description: "Complete interrupted dryrun experiments: diagnose broken/partial runs, clean stale git worktrees, re-run broken experiments, repair partial experiments, build loader-compatible symlink tree, generate full analysis pipeline output, and produce Go/NoGo assessment with run classification script."
+name: dryrun3-completion
+description: 'Complete interrupted dryrun experiments: diagnose broken/partial runs, clean stale git worktrees, re-run broken experiments, repair partial experiments, build loader-compatible symlink tree, generate full analysis pipeline output, and produce Go/NoGo assessment with run classification script.'
 category: evaluation
 date: 2026-03-14
+version: 1.0.0
 user-invocable: true
 ---
 # Dryrun3 Completion: Diagnose, Repair, and Analyze Interrupted Batch Experiments

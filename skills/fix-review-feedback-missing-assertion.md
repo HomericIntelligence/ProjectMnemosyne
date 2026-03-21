@@ -1,11 +1,9 @@
 ---
-
----
-
-name: "Skill: Fix Review Feedback — Missing Mock Assertion"
-description: "Pattern for fixing a misleading test that names/documents both setup and baseline assertions but only asserts one — add the missing mock capture and assertion"
+name: fix-review-feedback-missing-assertion
+description: Pattern for fixing a misleading test that names/documents both setup and baseline assertions but only asserts one — add the missing mock capture and assertion
 category: testing
 date: 2026-03-02
+version: 1.0.0
 user-invocable: false
 ---
 # Skill: Fix Review Feedback — Missing Mock Assertion in Patch Context Manager

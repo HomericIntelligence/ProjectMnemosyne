@@ -1,11 +1,9 @@
 ---
-
----
-
-name: "Skill: Fix Review Feedback — Runner Path Untested (Direct Delegate Test)"
-description: "Pattern for fixing a test that calls an internal delegate directly instead of through the runner entry point, when the issue requirement specifies the entry point must be exercised"
+name: fix-review-feedback-runner-path-untested
+description: Pattern for fixing a test that calls an internal delegate directly instead of through the runner entry point, when the issue requirement specifies the entry point must be exercised
 category: testing
 date: 2026-03-02
+version: 1.0.0
 user-invocable: false
 ---
 # Skill: Fix Review Feedback — Runner Path Untested (Direct Delegate Test)

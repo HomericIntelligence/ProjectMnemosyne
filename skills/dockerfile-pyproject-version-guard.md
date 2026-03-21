@@ -1,11 +1,9 @@
 ---
-
----
-
-name: "Skill: Dockerfile/pyproject.toml Version Guard Tests"
-description: "Pattern for extending Dockerfile pin regression tests to cross-validate against pyproject.toml constraints, preventing silent version drift"
+name: dockerfile-pyproject-version-guard
+description: Pattern for extending Dockerfile pin regression tests to cross-validate against pyproject.toml constraints, preventing silent version drift
 category: testing
 date: 2026-03-02
+version: 1.0.0
 user-invocable: false
 ---
 # Skill: Dockerfile/pyproject.toml Version Guard Tests

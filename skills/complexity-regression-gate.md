@@ -1,23 +1,11 @@
 ---
-
----
-
 name: complexity-regression-gate
-description: >
-  Add a named CI step and pre-commit hook to enforce McCabe complexity limits (C901)
-  so violations block PRs and local commits. Use when pyproject.toml already has C901
-  in ruff select but complexity regressions can still merge undetected.
-category: ci-cd-cd-cd
+description: 'Add a named CI step and pre-commit hook to enforce McCabe complexity limits (C901) so violations block PRs and local commits. Use when pyproject.toml already has C901 in ruff select but complexity regressions can still merge undetected.\n'
+category: ci-cd
 date: 2026-03-06
+version: 1.0.0
 user-invocable: false
-tags:
-  - ruff
-  - c901
-  - mccabe
-  - complexity
-  - pre-commit
-  - github-actions
-  - regression-gate
+tags: ['ruff', 'c901', 'mccabe', 'complexity', 'pre-commit', 'github-actions', 'regression-gate']
 ---
 
 # Skill: complexity-regression-gate

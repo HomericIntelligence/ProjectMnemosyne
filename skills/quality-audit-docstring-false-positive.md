@@ -1,12 +1,10 @@
 ---
-
----
-
 name: quality-audit-docstring-false-positive
-description: "Use when a quality audit flags a module docstring as a sentence fragment, but the docstring is actually grammatically complete. Covers triage, fix pattern, and PR workflow."
-user-invocable: false
+description: Use when a quality audit flags a module docstring as a sentence fragment, but the docstring is actually grammatically complete. Covers triage, fix pattern, and PR workflow.
 category: documentation
 date: 2026-03-03
+version: 1.0.0
+user-invocable: false
 ---
 
 # quality-audit-docstring-false-positive
