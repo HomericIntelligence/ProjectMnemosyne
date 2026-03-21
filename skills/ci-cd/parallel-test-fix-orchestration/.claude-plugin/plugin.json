@@ -1,7 +1,0 @@
-{
-  "name": "parallel-test-fix-orchestration",
-  "version": "1.0.0",
-  "description": "Orchestrate mass parallel test fixes using worktree-isolated agents, each producing its own PR. Use when: (1) CI has many (10+) failing test files across categories, (2) failures are independent and can be fixed in parallel, (3) each fix should be a separate PR for clean review.",
-  "category": "ci-cd",
-  "date": "2026-03-18"
-}

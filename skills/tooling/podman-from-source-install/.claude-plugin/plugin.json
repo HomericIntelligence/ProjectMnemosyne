@@ -1,7 +1,0 @@
-{
-  "name": "podman-from-source-install",
-  "version": "1.0.0",
-  "description": "Build and install full Podman 4.0+ from source on Debian/PureOS systems where apt repos only ship 3.x. Use when: (1) host has GLIBC < 2.32 and needs a container engine for Mojo development, (2) apt repos only provide Podman 3.x, (3) GitHub static binary fails because it is podman-remote not full podman.",
-  "category": "tooling",
-  "date": "2026-03-19"
-}

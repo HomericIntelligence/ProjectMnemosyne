@@ -1,7 +1,0 @@
-{
-  "name": "podman-nextjs-ci-container",
-  "version": "1.0.0",
-  "description": "Build Podman/Docker dev containers for Next.js projects with full CI simulation. Use when: (1) creating a Containerfile for a Node.js/Next.js project, (2) running test/lint/typecheck/build inside a container, (3) debugging container build failures with native modules.",
-  "category": "ci-cd",
-  "date": "2026-03-19"
-}

@@ -1,7 +1,0 @@
-{
-  "name": "logging-context-deduplication",
-  "version": "1.0.0",
-  "description": "Fix duplicated context prefixes in structured logging pipelines. Use when: (1) log lines show the same tier/subtest/run info twice, (2) logging filters inject context that message f-strings also include, (3) empty context renders as [//] or similar artifacts.",
-  "category": "debugging",
-  "date": "2026-03-18"
-}

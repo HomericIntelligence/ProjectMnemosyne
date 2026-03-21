@@ -1,7 +1,0 @@
-{
-  "name": "mojo-bitcast-uaf-blog-and-ci-fix",
-  "version": "1.0.0",
-  "description": "Debug Mojo UnsafePointer.bitcast use-after-free, create blog PR on separate branch, fix CI failures from gitignore and test coverage hooks. Use when: (1) Mojo crashes in libKGEN after allocation churn with bitcast writes, (2) need to create documentation PR on separate branch while fix branch is active, (3) test_*.mojo artifacts trigger validate-test-coverage hook.",
-  "category": "debugging",
-  "date": "2026-03-17"
-}

@@ -1,7 +1,0 @@
-{
-  "name": "mass-pr-rebase-parallel-agents",
-  "version": "1.0.0",
-  "description": "Batch rebase and fix 100+ open PRs using parallel sub-agents with worktree isolation. Use when: (1) many PRs are CONFLICTING after main branch changes, (2) systemic CI failures need fixing before mass rebase, (3) orchestrating parallel worktree-based rebases at scale.",
-  "category": "ci-cd",
-  "date": "2026-03-17"
-}

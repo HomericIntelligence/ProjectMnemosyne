@@ -529,6 +529,14 @@
       "tags": []
     },
     {
+      "name": "multiprocess-to-multithread-conversion",
+      "description": "Converting ProcessPoolExecutor to ThreadPoolExecutor for Python 3.14t compatibility. Use when: multiprocessing hangs on free-threaded Python, or workers run external subprocesses making threads sufficient.",
+      "version": "1.0.0",
+      "source": "./skills/multiprocess-to-multithread-conversion.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
       "name": "orphan-module-subpackage-relocation",
       "description": "Relocate an orphaned root-level module into the correct sub-package using copy, import update, re-export, and deletion workflow.",
       "version": "1.0.0",
@@ -971,6 +979,14 @@
       "tags": []
     },
     {
+      "name": "batch-pr-rebase-conflict-resolution",
+      "description": "Batch rebase and resolve conflicts for multiple stale PRs. Use when: multiple PRs are DIRTY and blocking merges.",
+      "version": "1.0.0",
+      "source": "./skills/batch-pr-rebase-conflict-resolution.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "batch-review-plan-implementation",
       "description": "Implements multiple automated review plans for PRs, handling OPEN PRs via rebase+push and skipping MERGED PRs with only transient CI failures. Use when: automated implementer generated review-plan-*.md files with phase=failed in review JSON, need to process 10+ stale PR branches at once.",
       "version": "1.0.0",
@@ -1023,6 +1039,14 @@
       "description": "Promote a CI grep warning into a hard exit-1 enforcement gate for deprecated symbols",
       "version": "1.0.0",
       "source": "./skills/ci-deprecation-enforcement.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "ci-failure-triage-dockerfile-precommit",
+      "description": "Diagnose and fix CI failures from Dockerfile GID collisions and pre-commit hook arg-passing bugs. Use when: Docker builds fail with 'GID already exists', pre-commit hooks scan entire repo unexpectedly, or bash -c entry hooks silently lose filenames.",
+      "version": "1.0.0",
+      "source": "./skills/ci-failure-triage-dockerfile-precommit.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -1267,6 +1291,22 @@
       "tags": []
     },
     {
+      "name": "docker-pixi-isolation",
+      "description": "Fix Docker container Mojo stdlib failures caused by host .pixi/ bind-mount contamination. Use when: CI tests fail with 'unable to locate module std' inside Docker containers.",
+      "version": "1.0.0",
+      "source": "./skills/docker-pixi-isolation.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "docker-to-podman-migration",
+      "description": "Migrate CI/CD from Docker to Podman for container builds, test execution, and GHCR publishing. Use when: replacing Docker with Podman in GitHub Actions, eliminating NATIVE=1 workarounds, rewriting GHCR publish workflows.",
+      "version": "1.0.0",
+      "source": "./skills/docker-to-podman-migration.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "dockerfile-cargo-to-prebuilt-binary",
       "description": "Replace slow cargo install in Dockerfiles with pre-built binary installers to eliminate Rust compilation. Use when: Dockerfile uses cargo install for a tool (just, ripgrep, fd, etc.) that provides an official binary installer, and builds are slow due to Rust compilation overhead.",
       "version": "1.0.0",
@@ -1474,6 +1514,14 @@
       "tags": []
     },
     {
+      "name": "fix-podman-rootless-ci",
+      "description": "Fix rootless Podman CI failures: Dockerfile ARG scoping, workspace UID mapping, compose provider compatibility. Use when: container builds fail with empty ARG values across FROM boundaries, bind-mounted files have Permission denied, or docker-compose doesn't support Podman extensions.",
+      "version": "1.0.0",
+      "source": "./skills/fix-podman-rootless-ci.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "fix-precommit-pass-filenames",
       "description": "Fix pre-commit hooks that use pass_filenames: false when they should use pass_filenames: true, removing hardcoded directory args so pre-commit passes only changed files. Use when: hooks always scan entire directories instead of only changed files, or linter entry commands have hardcoded directory paths.",
       "version": "1.0.0",
@@ -1650,6 +1698,14 @@
       "tags": []
     },
     {
+      "name": "mass-pr-consolidation",
+      "description": "Consolidate many open PRs into one branch via cherry-picking. Use when: CI queue is massively backed up, dozens of PRs need merging, or GitHub Actions compute is constrained.",
+      "version": "1.0.0",
+      "source": "./skills/mass-pr-consolidation.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "mass-pr-rebase-and-ci-fix",
       "description": "Fix systemic CI failures blocking all PRs, enable auto-merge on all open PRs, rebase all branches onto main, and merge conflicting skill content. Use when: main CI workflow fails with protected branch error, validate check has path filters preventing it from running, 100+ PRs need rebasing, or many PRs conflict on the same files.",
       "version": "1.0.0",
@@ -1662,6 +1718,14 @@
       "description": "Rebase multiple DIRTY/CONFLICTING PRs against main, resolve merge conflicts, and fix pre-commit format CI failures without local mojo format. Use when: (1) many PRs show DIRTY merge state after main advances, (2) mojo format fails in CI but can't run locally due to GLIBC incompatibility, (3) same files conflict across many PRs.",
       "version": "1.0.0",
       "source": "./skills/mass-pr-rebase-conflict-resolution.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "mass-pr-rebase-parallel-agents",
+      "description": "Batch rebase 100+ conflicting PRs using parallel sub-agents with worktree isolation. Use when: many PRs are CONFLICTING after main changes, systemic CI needs fixing first.",
+      "version": "1.0.0",
+      "source": "./skills/mass-pr-rebase-parallel-agents.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -1897,10 +1961,26 @@
       "tags": []
     },
     {
+      "name": "parallel-pr-rebase-fix",
+      "description": "Parallel rebase and CI fix workflow for multiple stale PRs using worktree agents. Use when: many PRs behind main, batch PR maintenance after merge waves, iterative CI diagnosis.",
+      "version": "1.0.0",
+      "source": "./skills/parallel-pr-rebase-fix.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "parallel-rebase-agent-worktree-isolation",
       "description": "Run multiple rebase agents in parallel without working tree collisions by assigning each agent a dedicated git worktree. Use when: (1) rebasing 50+ PR branches where agents switch branches and interfere with each other, (2) Safety Net hooks block git branch -D or git reset --hard in shared working tree, (3) background agents need isolated git state to avoid checkout conflicts.",
       "version": "1.0.0",
       "source": "./skills/parallel-rebase-agent-worktree-isolation.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "parallel-test-fix-orchestration",
+      "description": "Orchestrate mass parallel test fixes using worktree-isolated agents with one PR per fix. Use when: CI has many independent test failures that need systematic resolution.",
+      "version": "1.0.0",
+      "source": "./skills/parallel-test-fix-orchestration.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -1973,6 +2053,14 @@
       "description": "Containerize GitHub Actions CI using Podman (rootless, no SU) with a separate CI image, GHCR push, Trivy scanning, local runner script, and security hardening. Use when: adding container isolation to pixi-based Python CI, enabling local CI parity without Docker daemon, replacing pygrep security hooks with bandit/gitleaks.",
       "version": "1.0.0",
       "source": "./skills/podman-ci-containerization.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "podman-nextjs-ci-container",
+      "description": "Build Podman/Docker dev containers for Next.js projects with full CI simulation. Use when: creating Containerfiles for Node.js/Next.js, running CI in containers, debugging native module builds.",
+      "version": "1.0.0",
+      "source": "./skills/podman-nextjs-ci-container.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -2297,6 +2385,14 @@
       "tags": []
     },
     {
+      "name": "semantic-pr-rebase-at-scale",
+      "description": "Rebase 50-100 open PRs against main using parallel sub-agents with semantic conflict resolution. Use when: (1) systemic CI fix lands on main breaking all open PRs, (2) 50+ PRs need batch rebase, (3) conflicts need issue-context-aware resolution.",
+      "version": "1.0.0",
+      "source": "./skills/semantic-pr-rebase-at-scale.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "skill-batch-eof-worktree-cleanup",
       "description": "Batch Worktree Consolidation & EOF Fixing",
       "version": "1.0.0",
@@ -2617,6 +2713,14 @@
       "tags": []
     },
     {
+      "name": "checkpoint-intermediate-state-resume",
+      "description": "Fixing checkpoint resume when runs are stuck in intermediate states or subtests are orphaned. Use when: experiment marked complete but runs not terminal, subtest_states without run_states, or ProcessPool checkpoint save races.",
+      "version": "1.0.0",
+      "source": "./skills/checkpoint-intermediate-state-resume.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
       "name": "checkpoint-save-guard-bug",
       "description": "Fix for --retry-errors not persisting checkpoint when only intermediate-state runs exist",
       "version": "1.0.0",
@@ -2652,6 +2756,14 @@
       "description": "Composing multiple Cytoscape.js visibility filters (day, status, team trajectory) without mutual state reset. Covers the single-owner pattern, boundary edge insertion in DAGs, and avoiding relayout thrash.",
       "version": "1.0.0",
       "source": "./skills/cytoscape-filter-compose.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "dryrun-checkpoint-cleanup",
+      "description": "Clean up dryrun experiment data: workspace dirs, stuck checkpoints, superseded experiments. Use when: dryrun analysis shows NOGO with fixable blockers.",
+      "version": "1.0.0",
+      "source": "./skills/dryrun-checkpoint-cleanup.md",
       "category": "debugging",
       "tags": []
     },
@@ -2694,6 +2806,14 @@
       "description": "Debugging rate limit detection when error messages appear in JSON response fields instead of stderr",
       "version": "1.0.0",
       "source": "./skills/e2e-rate-limit-detection.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "e2e-runner-hang-signal-fixes",
+      "description": "Fix E2E experiment runner hanging and ignoring Ctrl+C/Ctrl+Z signals during parallel execution. Use when: manage_experiment.py hangs, signals are ignored, or SIGTSTP does graceful shutdown instead of force kill.",
+      "version": "1.0.0",
+      "source": "./skills/e2e-runner-hang-signal-fixes.md",
       "category": "debugging",
       "tags": []
     },
@@ -2865,10 +2985,34 @@
       "tags": []
     },
     {
+      "name": "logging-context-deduplication",
+      "description": "Fix duplicated context prefixes in structured logging pipelines. Use when: log lines show the same context twice, or empty context renders as [//].",
+      "version": "1.0.0",
+      "source": "./skills/logging-context-deduplication.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
       "name": "mock-expensive-simulations",
       "description": "Diagnose and fix pytest tests hanging due to expensive Monte Carlo or bootstrap simulation calls, with correct patch target (caller vs origin namespace) identification",
       "version": "1.0.0",
       "source": "./skills/mock-expensive-simulations.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "mojo-bitcast-uaf-blog-and-ci-fix",
+      "description": "Debug Mojo UnsafePointer.bitcast use-after-free, create blog PR on separate branch, fix CI from gitignore/test-coverage hooks. Use when: (1) Mojo crashes after allocation churn with bitcast writes, (2) creating doc PRs on separate branches, (3) test artifacts trigger CI hooks.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-bitcast-uaf-blog-and-ci-fix.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "mojo-ci-failure-misdiagnosis",
+      "description": "Debugging Mojo CI failures misattributed to JIT crashes. Use when: CI tests fail with retry labels, all tests pass locally, or --Werror masks the real error.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-ci-failure-misdiagnosis.md",
       "category": "debugging",
       "tags": []
     },
@@ -2957,6 +3101,14 @@
       "description": "Fix flat-index bugs in Mojo tensor ops that ignore strides on non-contiguous inputs. Use when: debugging wrong element order after transpose/slice, or implementing copy loops that must respect non-C-order layouts.",
       "version": "1.0.0",
       "source": "./skills/mojo-noncontiguous-reshape-fix.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "mojo-runtime-crash-bisection",
+      "description": "Systematic approach for bisecting Mojo runtime crashes to create minimal reproducers and isolate root causes. Use when: Mojo crashes in runtime libraries, need upstream bug reports.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-runtime-crash-bisection.md",
       "category": "debugging",
       "tags": []
     },
@@ -3095,6 +3247,14 @@
         "field_validator",
         "checkpoint"
       ]
+    },
+    {
+      "name": "python-logging-filter-placement",
+      "description": "Diagnose and fix Python logging KeyError from custom format fields. Use when: KeyError on %(custom_field)s, filter fields missing from output, or custom context not appearing in threaded logs.",
+      "version": "1.0.0",
+      "source": "./skills/python-logging-filter-placement.md",
+      "category": "debugging",
+      "tags": []
     },
     {
       "name": "python-subprocess-terminal-corruption",
@@ -4335,6 +4495,14 @@
       "tags": []
     },
     {
+      "name": "dryrun3-analysis-fix",
+      "description": "Fix 1-based subtest ID misclassification in dryrun3 analysis scripts. Use when: analysis script misreports complete/orphan/missing counts due to mixed ID numbering schemes.",
+      "version": "1.0.0",
+      "source": "./skills/dryrun3-analysis-fix.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "e2e-agent-judge-timing",
       "description": "Add separate agent and judge timing fields to E2E test results for tiebreaker ranking",
       "version": "1.0.0",
@@ -4531,6 +4699,14 @@
       "description": "Mojo Test Fixture Creation",
       "version": "1.0.0",
       "source": "./skills/mojo-test-fixture-creation.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "multi-experiment-figure-pipeline",
+      "description": "Patterns for adding conditional figure generation to multi-experiment analysis pipelines. Use when: adding new Altair figures with data-dependent guards, creating task-level analysis, or scaling figure pipelines to large experiment counts.",
+      "version": "1.0.0",
+      "source": "./skills/multi-experiment-figure-pipeline.md",
       "category": "evaluation",
       "tags": []
     },
@@ -5000,6 +5176,14 @@
       "description": "Fix stale checkpoint run states by reconciling with on-disk artifacts. Use when: adding RunState enum values, testing checkpoint reconcile edge cases, or debugging silent rank-comparison failures.",
       "version": "1.0.0",
       "source": "./skills/checkpoint-reconcile-state-order.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "checkpoint-test-fixture-patterns",
+      "description": "Patterns for building consistent checkpoint test fixtures with hierarchical state. Use when: writing tests for resume/retry logic, debugging orphan detector resets, or setting up checkpoint state for state machine tests.",
+      "version": "1.0.0",
+      "source": "./skills/checkpoint-test-fixture-patterns.md",
       "category": "testing",
       "tags": []
     },
@@ -5779,6 +5963,14 @@
       "tags": []
     },
     {
+      "name": "orphan-aware-test-fixtures",
+      "description": "Patterns for fixing test fixtures that break when checkpoint integrity detectors are added. Use when: adding orphan detection to resume pipelines, or when aggregated states get unexpectedly reset.",
+      "version": "1.0.0",
+      "source": "./skills/orphan-aware-test-fixtures.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "placeholder-test-staleness-annotations",
       "description": "Upgrade pass-only placeholder tests with TODO annotations, cross-issue references, and concrete test specs. Use when: placeholder tests contain only `pass`, are blocked on an unimplemented dependency, or need to be made grep-discoverable.",
       "version": "1.0.0",
@@ -6166,6 +6358,14 @@
       "description": "Systematic implementation of findings from a strict repository audit. Use when: you have a graded audit report with major/minor findings to remediate across CI, source, docs, and packaging.",
       "version": "1.0.0",
       "source": "./skills/audit-driven-remediation.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "audit-implementation",
+      "description": "Implements repository audit findings as concrete fixes via PRs. Use when: audit report needs actionable implementation, triage of findings into fix vs defer.",
+      "version": "1.0.0",
+      "source": "./skills/audit-implementation.md",
       "category": "tooling",
       "tags": []
     },
@@ -7005,6 +7205,14 @@
       "tags": []
     },
     {
+      "name": "multi-branch-rebase-workflow",
+      "description": "Parallel multi-branch rebase with semantic conflict resolution and batch PR creation. Use when: (1) multiple branches need rebasing, (2) semantic conflict resolution needed, (3) batch PR creation after rebase.",
+      "version": "1.0.0",
+      "source": "./skills/multi-branch-rebase-workflow.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "mypy-full-compliance-workflow",
       "description": "9-phase workflow to achieve full mypy compliance by fixing all suppressed error codes incrementally, decoupling tests/ overrides, and removing disable_error_code entirely",
       "version": "1.0.0",
@@ -7189,6 +7397,14 @@
       "tags": []
     },
     {
+      "name": "podman-from-source-install",
+      "description": "Build and install full Podman 4.0+ from source on Debian/PureOS. Use when: apt repos only ship 3.x, GitHub static binary is podman-remote not full podman, or host GLIBC < 2.32 requires a container engine.",
+      "version": "1.0.0",
+      "source": "./skills/podman-from-source-install.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "port-reusable-scripts",
       "description": "Port and generalize reusable scripts between repositories with proper adaptations, dependency elimination, and Python path setup. Achieved zero external dependencies by rewriting PyGithub to gh CLI.",
       "version": "1.0.0",
@@ -7225,6 +7441,14 @@
       "description": "Process and validate datasets for training. Use when setting up data pipelines.",
       "version": "1.0.0",
       "source": "./skills/prepare-dataset.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "prometheus-json-api-exporter-sidecar",
+      "description": "Deploy a Python sidecar that converts JSON REST APIs to Prometheus text format. Use when: upstream services expose JSON (not /metrics), all Prometheus targets show up=0, or bridging Docker-networked services.",
+      "version": "1.0.0",
+      "source": "./skills/prometheus-json-api-exporter-sidecar.md",
       "category": "tooling",
       "tags": []
     },
@@ -7425,6 +7649,14 @@
       "description": "Skill: T5 Inheritance Fallback for Missing config_manifest.json",
       "version": "1.0.0",
       "source": "./skills/t5-inherit-missing-manifest-fallback.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "tailscale-maestro-setup",
+      "description": "Set up Tailscale on Linux and configure cross-host AI Maestro connectivity. Use when: (1) enabling Tailscale on Debian/Linux, (2) connecting multiple AI Maestro instances across machines, (3) diagnosing network connectivity issues between hosts.",
+      "version": "1.0.0",
+      "source": "./skills/tailscale-maestro-setup.md",
       "category": "tooling",
       "tags": []
     },

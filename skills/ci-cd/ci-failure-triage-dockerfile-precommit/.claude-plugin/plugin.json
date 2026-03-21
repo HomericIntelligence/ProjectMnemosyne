@@ -1,7 +1,0 @@
-{
-  "name": "ci-failure-triage-dockerfile-precommit",
-  "version": "1.0.0",
-  "description": "Diagnose and fix CI failures caused by Dockerfile build errors and pre-commit hook bugs. Use when: (1) Docker build fails with groupadd/useradd GID/UID collisions in CI, (2) pre-commit hooks grep entire repo instead of target files, (3) bash -c hooks silently drop positional args.",
-  "category": "ci-cd",
-  "date": "2026-03-16"
-}

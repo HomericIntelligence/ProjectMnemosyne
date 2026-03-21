@@ -1,7 +1,0 @@
-{
-  "name": "e2e-runner-hang-signal-fixes",
-  "version": "1.0.0",
-  "description": "Fix E2E experiment runner hanging and ignoring Ctrl+C/Ctrl+Z by replacing blocking as_completed/future.result loops with wait(timeout) polling, adding shutdown checks to subprocess.communicate and rate-limit sleep loops, and fixing SIGTSTP handler conflicts. Use when: (1) manage_experiment.py hangs after tier initialization messages, (2) Ctrl+C has no effect during parallel tier/subtest execution, (3) Ctrl+Z does graceful shutdown instead of force-killing the process group.",
-  "category": "debugging",
-  "date": "2026-03-18"
-}

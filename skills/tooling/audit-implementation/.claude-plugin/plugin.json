@@ -1,7 +1,0 @@
-{
-  "name": "audit-implementation",
-  "version": "1.0.0",
-  "description": "Implements actionable findings from repository audit reports into concrete fixes via feature branches and PRs. Use when: (1) a repository audit has been completed and findings need implementation, (2) you need to triage audit findings into actionable vs informational items.",
-  "category": "tooling",
-  "date": "2026-03-17"
-}
