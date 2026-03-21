@@ -1,7 +1,6 @@
 ---
-name: 'Skill: Fix Mock Patch Call-Site Targets'
-description: Fix unittest.mock.patch targets that point to the wrong namespace (definition-site
-  instead of call-site), causing mocks to have no effect in isolated environments
+name: skill-fix-mock-patch-call-site-targets
+description: Fix unittest.mock.patch targets that point to the wrong namespace (definition-site instead of call-site), causing mocks to have no effect in isolated environments
 category: testing
 date: 2026-03-03
 version: 1.0.0

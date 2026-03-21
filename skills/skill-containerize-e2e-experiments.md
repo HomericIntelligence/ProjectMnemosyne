@@ -1,5 +1,5 @@
 ---
-name: 'Skill: Containerize E2E Experiments'
+name: skill-containerize-e2e-experiments
 description: 'Skill: Containerize E2E Experiments'
 category: evaluation
 date: 2026-01-15

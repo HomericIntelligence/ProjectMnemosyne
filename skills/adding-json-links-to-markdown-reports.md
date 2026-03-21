@@ -1,5 +1,5 @@
 ---
-name: Adding JSON Links to Markdown Reports
+name: adding-json-links-to-markdown-reports
 description: Add JSON result links to markdown reports for structured data access
 category: evaluation
 date: 2026-01-08

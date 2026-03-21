@@ -1,7 +1,6 @@
 ---
-name: Config Filename / Model ID Audit
-description: Audit and fix YAML config files where filename stems mismatch model_id
-  fields
+name: config-filename-model-id-audit
+description: Audit and fix YAML config files where filename stems mismatch model_id fields
 category: testing
 date: 2026-02-19
 version: 1.0.0

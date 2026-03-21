@@ -1,7 +1,6 @@
 ---
-name: 'Skill: Preserve Workspaces on E2E Experiment Re-runs'
-description: Preserving git worktrees and test results when re-running E2E experiments
-  with checkpoint resume
+name: skill-preserve-workspaces-on-e2e-experiment-re-runs
+description: Preserving git worktrees and test results when re-running E2E experiments with checkpoint resume
 category: evaluation
 date: 2026-01-08
 version: 1.0.0

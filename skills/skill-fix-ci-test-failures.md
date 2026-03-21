@@ -1,7 +1,6 @@
 ---
-name: 'Skill: Fix CI Test Failures'
-description: Skill for fixing unit tests that pass locally but fail in CI due to symlinks
-  and mocking issues
+name: skill-fix-ci-test-failures
+description: Skill for fixing unit tests that pass locally but fail in CI due to symlinks and mocking issues
 category: testing
 date: 2026-01-17
 version: 1.0.0

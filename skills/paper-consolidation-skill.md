@@ -1,7 +1,6 @@
 ---
-name: Paper Consolidation Skill
-description: Consolidate scattered LaTeX paper files into unified directory structure
-  with publication readiness fixes
+name: paper-consolidation-skill
+description: Consolidate scattered LaTeX paper files into unified directory structure with publication readiness fixes
 category: documentation
 date: 2026-02-07
 version: 1.0.0

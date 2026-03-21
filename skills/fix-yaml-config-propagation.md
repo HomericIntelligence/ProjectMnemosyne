@@ -1,7 +1,6 @@
 ---
-name: Fix YAML Config Propagation
-description: Debug pattern for fixing YAML config fields that aren't propagating to
-  execution, plus eliminating DRY violations in config dataclasses
+name: fix-yaml-config-propagation
+description: Debug pattern for fixing YAML config fields that aren't propagating to execution, plus eliminating DRY violations in config dataclasses
 category: debugging
 date: 2026-02-05
 version: 1.0.0

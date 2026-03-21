@@ -1,7 +1,6 @@
 ---
-name: 'Academic Paper QA: LaTeX Validation & Data Accuracy'
-description: Validate and fix data accuracy issues, structural problems, and LaTeX
-  compilation errors in academic papers
+name: academic-paper-qa-latex-validation-data-accuracy
+description: Validate and fix data accuracy issues, structural problems, and LaTeX compilation errors in academic papers
 category: documentation
 date: 2026-02-06
 version: 1.0.0

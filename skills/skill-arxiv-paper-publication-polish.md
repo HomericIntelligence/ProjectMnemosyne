@@ -1,5 +1,5 @@
 ---
-name: 'Skill: arXiv Paper Publication Polish'
+name: skill-arxiv-paper-publication-polish
 description: 'Skill: arXiv Paper Publication Polish'
 category: documentation
 date: 2026-02-07

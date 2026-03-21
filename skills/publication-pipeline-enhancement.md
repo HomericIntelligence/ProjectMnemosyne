@@ -1,5 +1,5 @@
 ---
-name: Publication Pipeline Enhancement
+name: publication-pipeline-enhancement
 description: Publication Pipeline Enhancement
 category: evaluation
 date: 2026-01-31

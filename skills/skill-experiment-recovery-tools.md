@@ -1,5 +1,5 @@
 ---
-name: 'Skill: Experiment Recovery Tools'
+name: skill-experiment-recovery-tools
 description: 'Skill: Experiment Recovery Tools'
 category: tooling
 date: 2026-01-29

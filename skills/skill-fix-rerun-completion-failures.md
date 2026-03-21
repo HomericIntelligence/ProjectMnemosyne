@@ -1,5 +1,5 @@
 ---
-name: 'Skill: Fix Rerun Completion Failures'
+name: skill-fix-rerun-completion-failures
 description: 'Skill: Fix Rerun Completion Failures'
 category: debugging
 date: 2026-02-02

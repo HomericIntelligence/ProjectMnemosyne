@@ -1,7 +1,6 @@
 ---
-name: Refactor for Extensibility
-description: Systematic workflow for preparing codebases for extensibility through
-  extraction, parameterization, and protocol-based abstraction
+name: refactor-for-extensibility
+description: Systematic workflow for preparing codebases for extensibility through extraction, parameterization, and protocol-based abstraction
 category: architecture
 date: 2026-02-05
 version: 1.0.0

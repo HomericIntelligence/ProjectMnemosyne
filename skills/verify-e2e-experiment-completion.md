@@ -1,5 +1,5 @@
 ---
-name: Verify E2E Experiment Completion
+name: verify-e2e-experiment-completion
 description: Verify E2E Experiment Completion
 category: evaluation
 date: 2026-02-05

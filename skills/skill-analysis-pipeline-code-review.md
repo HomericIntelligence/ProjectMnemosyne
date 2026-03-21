@@ -1,5 +1,5 @@
 ---
-name: 'Skill: Analysis Pipeline Code Review'
+name: skill-analysis-pipeline-code-review
 description: 'Skill: Analysis Pipeline Code Review'
 category: evaluation
 date: 2026-01-31

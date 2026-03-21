@@ -1,5 +1,5 @@
 ---
-name: Rescue Broken PRs
+name: rescue-broken-prs
 description: Rescue Broken PRs
 category: ci-cd
 date: 2026-02-06

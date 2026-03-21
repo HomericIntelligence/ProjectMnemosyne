@@ -1,7 +1,6 @@
 ---
-name: 'Skill: Vega-Lite Analysis Pipeline'
-description: Build comprehensive analysis pipelines with text-based Vega-Lite figures
-  and statistical tables for research papers
+name: skill-vega-lite-analysis-pipeline
+description: Build comprehensive analysis pipelines with text-based Vega-Lite figures and statistical tables for research papers
 category: evaluation
 date: 2026-01-30
 version: 1.0.0

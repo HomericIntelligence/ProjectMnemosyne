@@ -1,7 +1,6 @@
 ---
-name: Parallel Metrics Integration into Statistical Pipelines
-description: Skill for integrating multiple metrics into statistical analysis pipelines
-  in parallel
+name: parallel-metrics-integration-into-statistical-pipelines
+description: Skill for integrating multiple metrics into statistical analysis pipelines in parallel
 category: evaluation
 date: 2026-02-01
 version: 1.0.0

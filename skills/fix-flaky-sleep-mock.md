@@ -1,7 +1,6 @@
 ---
-name: Fix Flaky Sleep Mock
-description: Fix timing-sensitive tests by replacing wall-clock assertions with deterministic
-  time.sleep mocks
+name: fix-flaky-sleep-mock
+description: Fix timing-sensitive tests by replacing wall-clock assertions with deterministic time.sleep mocks
 category: testing
 date: 2026-02-27
 version: 1.0.0

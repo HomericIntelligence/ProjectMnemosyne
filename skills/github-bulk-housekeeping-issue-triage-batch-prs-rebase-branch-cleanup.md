@@ -1,8 +1,6 @@
 ---
-name: 'GitHub Bulk Housekeeping: Issue Triage, Batch PRs, Rebase, Branch Cleanup'
-description: Classify open issues by complexity, batch-close resolved ones, clean
-  stale worktrees/branches, create batched PRs for simple issues, and rebase conflicting
-  PRs onto main
+name: github-bulk-housekeeping-issue-triage-batch-prs-rebase-branch-cleanup
+description: Classify open issues by complexity, batch-close resolved ones, clean stale worktrees/branches, create batched PRs for simple issues, and rebase conflicting PRs onto main
 category: ci-cd
 date: 2026-02-23
 version: 1.0.0

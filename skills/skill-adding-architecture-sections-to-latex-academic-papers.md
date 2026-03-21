@@ -1,7 +1,6 @@
 ---
-name: 'Skill: Adding Architecture Sections to LaTeX Academic Papers'
-description: Add architecture sections to academic LaTeX papers with TikZ diagrams,
-  including fixing common TikZ syntax errors and managing arxiv builds
+name: skill-adding-architecture-sections-to-latex-academic-papers
+description: Add architecture sections to academic LaTeX papers with TikZ diagrams, including fixing common TikZ syntax errors and managing arxiv builds
 category: documentation
 date: 2026-02-07
 version: 1.0.0

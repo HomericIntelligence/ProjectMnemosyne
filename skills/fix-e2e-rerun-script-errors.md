@@ -1,7 +1,6 @@
 ---
-name: Fix E2E Rerun Script Errors
-description: 'Fix common errors in E2E rerun script: SubTestExecutor constructor parameters,
-  checkpoint status validation, and T5 inheritance failures'
+name: fix-e2e-rerun-script-errors
+description: 'Fix common errors in E2E rerun script: SubTestExecutor constructor parameters, checkpoint status validation, and T5 inheritance failures'
 category: debugging
 date: 2026-01-29
 version: 1.0.0

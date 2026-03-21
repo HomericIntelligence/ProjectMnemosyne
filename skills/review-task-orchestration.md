@@ -1,5 +1,5 @@
 ---
-name: Review Task Orchestration
+name: review-task-orchestration
 description: Review Task Orchestration
 category: tooling
 date: 2026-02-01

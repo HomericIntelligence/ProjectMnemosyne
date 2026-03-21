@@ -1,8 +1,6 @@
 ---
-name: 'Skill: Hybrid LLM Judge with Granular Scoring'
-description: Hybrid LLM judge evaluation system combining objective checklists (80%)
-  with subjective engineering judgment (20%) to achieve low-variance (<10%) granular
-  scoring
+name: skill-hybrid-llm-judge-with-granular-scoring
+description: Hybrid LLM judge evaluation system combining objective checklists (80%) with subjective engineering judgment (20%) to achieve low-variance (<10%) granular scoring
 category: evaluation
 date: 2026-01-10
 version: 1.0.0

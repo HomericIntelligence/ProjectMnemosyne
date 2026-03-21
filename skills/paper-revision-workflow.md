@@ -1,7 +1,6 @@
 ---
-name: Paper Revision Workflow
-description: 'Systematic workflow for revising research papers: data validation, structural
-  improvements, and tone unification'
+name: paper-revision-workflow
+description: 'Systematic workflow for revising research papers: data validation, structural improvements, and tone unification'
 category: documentation
 date: 2026-02-01
 version: 1.0.0

@@ -1,7 +1,6 @@
 ---
-name: Parallel I/O-Bound Execution with ThreadPoolExecutor
-description: Pattern for implementing ThreadPoolExecutor-based parallelization of
-  I/O-bound tasks in Python CLI tools
+name: parallel-i-o-bound-execution-with-threadpoolexecutor
+description: Pattern for implementing ThreadPoolExecutor-based parallelization of I/O-bound tasks in Python CLI tools
 category: optimization
 date: 2026-01-30
 version: 1.0.0

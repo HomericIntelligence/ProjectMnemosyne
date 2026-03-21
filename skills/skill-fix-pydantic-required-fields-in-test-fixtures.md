@@ -1,7 +1,6 @@
 ---
-name: 'Skill: Fix Pydantic Required Fields in Test Fixtures'
-description: Fix test failures caused by missing required fields in Pydantic model
-  fixtures after data model evolution
+name: skill-fix-pydantic-required-fields-in-test-fixtures
+description: Fix test failures caused by missing required fields in Pydantic model fixtures after data model evolution
 category: testing
 date: 2026-01-11
 version: 1.0.0
