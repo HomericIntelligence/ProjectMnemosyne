@@ -1,7 +1,6 @@
 ---
-name: Academic Paper Validation
-description: Systematic workflow for validating and improving academic paper quality
-  through data accuracy checks, statistical rigor improvements, and noise reduction
+name: academic-paper-validation
+description: Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical rigor improvements, and noise reduction
 category: documentation
 date: 2026-02-06
 version: 1.0.0

@@ -1,5 +1,5 @@
 ---
-name: Fix Tests After Config Refactor
+name: fix-tests-after-config-refactor
 description: Fix Tests After Config Refactor
 category: testing
 date: 2026-01-17

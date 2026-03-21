@@ -1,5 +1,5 @@
 ---
-name: ProcessPoolExecutor Rate Limit Recovery
+name: processpoolexecutor-rate-limit-recovery
 description: Robust ProcessPoolExecutor rate limit recovery for E2E evaluation frameworks
 category: evaluation
 date: 2026-01-10

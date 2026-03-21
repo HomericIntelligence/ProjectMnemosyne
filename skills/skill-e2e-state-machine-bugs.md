@@ -1,7 +1,6 @@
 ---
-name: 'Skill: E2E State Machine Bugs'
-description: Fix --until off-by-one in advance_to_completion() loops and disconnected
-  terminal signal handlers in manage_experiment.py
+name: skill-e2e-state-machine-bugs
+description: Fix --until off-by-one in advance_to_completion() loops and disconnected terminal signal handlers in manage_experiment.py
 category: debugging
 date: 2026-02-24
 version: 1.0.0

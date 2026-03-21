@@ -1,7 +1,6 @@
 ---
-name: 'Skill: Dryrun Validation Workflow'
-description: Complete workflow for re-running dryrun experiments, generating analysis
-  outputs, and validating results against baseline
+name: skill-dryrun-validation-workflow
+description: Complete workflow for re-running dryrun experiments, generating analysis outputs, and validating results against baseline
 category: evaluation
 date: 2026-02-05
 version: 1.0.0

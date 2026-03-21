@@ -1,5 +1,5 @@
 ---
-name: 'Skill: Fix Evaluation Framework Bugs'
+name: skill-fix-evaluation-framework-bugs
 description: 'Skill: Fix Evaluation Framework Bugs'
 category: debugging
 date: 2026-01-18

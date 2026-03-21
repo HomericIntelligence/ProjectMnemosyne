@@ -1,5 +1,5 @@
 ---
-name: CI Test Failure Diagnosis
+name: ci-test-failure-diagnosis
 description: Systematic approach to diagnosing and fixing CI test failures in PRs
 category: ci-cd
 date: 2026-02-02

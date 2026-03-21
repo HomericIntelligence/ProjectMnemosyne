@@ -1,8 +1,8 @@
 ---
-name: E2E Evaluation Framework Bug Fixes
+name: e2e-evaluation-framework-bug-fixes
 description: E2E Evaluation Framework Bug Fixes
 category: debugging
-date: '2026-03-19'
+date: 2026-03-19
 version: 1.0.0
 user-invocable: false
 ---

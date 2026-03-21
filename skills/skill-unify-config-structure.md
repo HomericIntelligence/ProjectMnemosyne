@@ -1,5 +1,5 @@
 ---
-name: 'Skill: Unify Config Structure'
+name: skill-unify-config-structure
 description: 'Skill: Unify Config Structure'
 category: architecture
 date: 2026-01-17

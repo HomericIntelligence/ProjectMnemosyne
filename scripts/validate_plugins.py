@@ -92,6 +92,12 @@ def validate_frontmatter(frontmatter: Dict, filename: str) -> List[str]:
         if not re.match(r"^\d{4}-\d{2}-\d{2}$", str(date_str)):
             errors.append(f"Invalid date format: {date_str} (expected YYYY-MM-DD)")
 
+    # Name format validation (kebab-case: lowercase alphanumeric + hyphens only)
+    if "name" in frontmatter:
+        name = str(frontmatter["name"])
+        if not re.match(r"^[a-z0-9-]+$", name):
+            errors.append(f"Invalid name format: '{name}' must be kebab-case (lowercase, hyphens, no spaces)")
+
     return errors
 
 

@@ -1,9 +1,6 @@
 ---
-name: Paper Iterative Accuracy Review
-description: 'Second-pass review after initial paper fixes: catch internal inconsistencies
-  introduced by edits, verify statistical effect-size labels against defined thresholds,
-  clarify ambiguous table headers, explain counter-intuitive results, and add missing
-  pricing context'
+name: paper-iterative-accuracy-review
+description: 'Second-pass review after initial paper fixes: catch internal inconsistencies introduced by edits, verify statistical effect-size labels against defined thresholds, clarify ambiguous table headers, explain counter-intuitive results, and add missing pricing context'
 category: documentation
 date: 2026-02-22
 version: 1.0.0

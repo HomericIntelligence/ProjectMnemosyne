@@ -1,8 +1,6 @@
 ---
-name: 'Skill: Integrate Process Metrics into Analysis Pipeline'
-description: "Workflow for wiring pre-implemented process metrics (R_Prog, CFP, PR\
-  \ Revert Rate, Strategic Drift) into the ProjectScylla loader \u2192 dataframes\
-  \ \u2192 figures stack"
+name: skill-integrate-process-metrics-into-analysis-pipeline
+description: Workflow for wiring pre-implemented process metrics (R_Prog, CFP, PR Revert Rate, Strategic Drift) into the ProjectScylla loader → dataframes → figures stack
 category: evaluation
 date: 2026-02-27
 version: 1.0.0

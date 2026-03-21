@@ -1,8 +1,8 @@
 ---
-name: Paper Final Review - Publication Readiness Workflow
+name: paper-final-review-publication-readiness-workflow
 description: Paper Final Review - Publication Readiness Workflow
 category: documentation
-date: '2026-03-19'
+date: 2026-03-19
 version: 1.0.0
 user-invocable: false
 ---

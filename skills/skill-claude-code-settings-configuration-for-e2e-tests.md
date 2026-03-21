@@ -1,7 +1,6 @@
 ---
-name: 'Skill: Claude Code Settings Configuration for E2E Tests'
-description: Configure Claude Code settings.json for E2E test workspaces to control
-  thinking mode and other workspace-level settings
+name: skill-claude-code-settings-configuration-for-e2e-tests
+description: Configure Claude Code settings.json for E2E test workspaces to control thinking mode and other workspace-level settings
 category: debugging
 date: 2026-01-16
 version: 1.0.0

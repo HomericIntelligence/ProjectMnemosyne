@@ -1,5 +1,5 @@
 ---
-name: E2E Path Resolution Fix
+name: e2e-path-resolution-fix
 description: E2E Path Resolution Fix
 category: debugging
 date: 2026-01-17

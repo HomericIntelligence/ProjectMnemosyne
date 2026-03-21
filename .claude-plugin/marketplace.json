@@ -8,22 +8,6 @@
   "version": "1.0.0",
   "plugins": [
     {
-      "name": "Refactor for Extensibility",
-      "description": "Systematic workflow for preparing codebases for extensibility through extraction, parameterization, and protocol-based abstraction",
-      "version": "1.0.0",
-      "source": "./skills/refactor-for-extensibility.md",
-      "category": "architecture",
-      "tags": []
-    },
-    {
-      "name": "Skill: Unify Config Structure",
-      "description": "Skill: Unify Config Structure",
-      "version": "1.0.0",
-      "source": "./skills/skill-unify-config-structure.md",
-      "category": "architecture",
-      "tags": []
-    },
-    {
       "name": "agent-coverage-check",
       "description": "Check agent configuration coverage across hierarchy levels and phases. Use to ensure complete agent system coverage.",
       "version": "1.0.0",
@@ -585,6 +569,14 @@
       "tags": []
     },
     {
+      "name": "refactor-for-extensibility",
+      "description": "Systematic workflow for preparing codebases for extensibility through extraction, parameterization, and protocol-based abstraction",
+      "version": "1.0.0",
+      "source": "./skills/refactor-for-extensibility.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
       "name": "repo-hygiene-audit-implementation",
       "description": "Workflow for implementing repository hygiene audit fixes. Use when: (1) an automated audit surfaces actionable code quality issues, (2) migrating Pydantic to_dict() to model_dump(), (3) adding debug logging to silent exception catches.",
       "version": "1.0.0",
@@ -621,6 +613,14 @@
       "description": "Extracting a complex multi-concern method into a dedicated collaborator class using TDD. Use when a method violates SRP, triggers complexity suppressions (C901), or mixes 3+ distinct concerns.",
       "version": "1.0.0",
       "source": "./skills/single-responsibility-extraction.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "skill-unify-config-structure",
+      "description": "Skill: Unify Config Structure",
+      "version": "1.0.0",
+      "source": "./skills/skill-unify-config-structure.md",
       "category": "architecture",
       "tags": []
     },
@@ -712,30 +712,6 @@
       "version": "1.0.0",
       "source": "./skills/yaml-long-line-refactor.md",
       "category": "architecture",
-      "tags": []
-    },
-    {
-      "name": "CI Test Failure Diagnosis",
-      "description": "Systematic approach to diagnosing and fixing CI test failures in PRs",
-      "version": "1.0.0",
-      "source": "./skills/ci-test-failure-diagnosis.md",
-      "category": "ci-cd",
-      "tags": []
-    },
-    {
-      "name": "GitHub Bulk Housekeeping: Issue Triage, Batch PRs, Rebase, Branch Cleanup",
-      "description": "Classify open issues by complexity, batch-close resolved ones, clean stale worktrees/branches, create batched PRs for simple issues, and rebase conflicting PRs onto main",
-      "version": "1.0.0",
-      "source": "./skills/github-bulk-housekeeping-issue-triage-batch-prs-rebase-branch-cleanup.md",
-      "category": "ci-cd",
-      "tags": []
-    },
-    {
-      "name": "Rescue Broken PRs",
-      "description": "Rescue Broken PRs",
-      "version": "1.0.0",
-      "source": "./skills/rescue-broken-prs.md",
-      "category": "ci-cd",
       "tags": []
     },
     {
@@ -1095,6 +1071,14 @@
       "description": "Add a standalone CI step to validate all config files against JSON schemas on every PR, ensuring schema drift is caught even when pre-commit was skipped",
       "version": "1.0.0",
       "source": "./skills/ci-schema-validation-standalone-step.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "ci-test-failure-diagnosis",
+      "description": "Systematic approach to diagnosing and fixing CI test failures in PRs",
+      "version": "1.0.0",
+      "source": "./skills/ci-test-failure-diagnosis.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -1638,6 +1622,14 @@
       "description": "GitHub Actions CI setup for pytest projects using pixi with parallel test execution",
       "version": "1.0.0",
       "source": "./skills/github-actions-pytest-pixi.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "github-bulk-housekeeping-issue-triage-batch-prs-rebase-branch-cleanup",
+      "description": "Classify open issues by complexity, batch-close resolved ones, clean stale worktrees/branches, create batched PRs for simple issues, and rebase conflicting PRs onto main",
+      "version": "1.0.0",
+      "source": "./skills/github-bulk-housekeeping-issue-triage-batch-prs-rebase-branch-cleanup.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -2329,6 +2321,14 @@
       "tags": []
     },
     {
+      "name": "rescue-broken-prs",
+      "description": "Rescue Broken PRs",
+      "version": "1.0.0",
+      "source": "./skills/rescue-broken-prs.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "resolve-mojo-rebase-conflict",
       "description": "Resolve git rebase conflicts in Mojo test files by converting invalid Python syntax to valid Mojo patterns using Bool flags",
       "version": "1.0.0",
@@ -2593,102 +2593,6 @@
       "tags": []
     },
     {
-      "name": "E2E Evaluation Framework Bug Fixes",
-      "description": "E2E Evaluation Framework Bug Fixes",
-      "version": "1.0.0",
-      "source": "./skills/e2e-evaluation-framework-bug-fixes.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "E2E Path Resolution Fix",
-      "description": "E2E Path Resolution Fix",
-      "version": "1.0.0",
-      "source": "./skills/e2e-path-resolution-fix.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "Fix E2E Rerun Script Errors",
-      "description": "Fix common errors in E2E rerun script: SubTestExecutor constructor parameters, checkpoint status validation, and T5 inheritance failures",
-      "version": "1.0.0",
-      "source": "./skills/fix-e2e-rerun-script-errors.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "Fix YAML Config Propagation",
-      "description": "Debug pattern for fixing YAML config fields that aren't propagating to execution, plus eliminating DRY violations in config dataclasses",
-      "version": "1.0.0",
-      "source": "./skills/fix-yaml-config-propagation.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "Skill: Claude Code Settings Configuration for E2E Tests",
-      "description": "Configure Claude Code settings.json for E2E test workspaces to control thinking mode and other workspace-level settings",
-      "version": "1.0.0",
-      "source": "./skills/skill-claude-code-settings-configuration-for-e2e-tests.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "Skill: E2E State Machine Bugs",
-      "description": "Fix --until off-by-one in advance_to_completion() loops and disconnected terminal signal handlers in manage_experiment.py",
-      "version": "1.0.0",
-      "source": "./skills/skill-e2e-state-machine-bugs.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "Skill: Fix Directory Not Created Before Write",
-      "description": "Skill: Fix Directory Not Created Before Write",
-      "version": "1.0.0",
-      "source": "./skills/skill-fix-directory-not-created-before-write.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "Skill: Fix Evaluation Framework Bugs",
-      "description": "Skill: Fix Evaluation Framework Bugs",
-      "version": "1.0.0",
-      "source": "./skills/skill-fix-evaluation-framework-bugs.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "Skill: Fix Judge File Access for E2E Evaluation",
-      "description": "Skill: Fix Judge File Access for E2E Evaluation",
-      "version": "1.0.0",
-      "source": "./skills/skill-fix-judge-file-access-for-e2e-evaluation.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "Skill: Fix Rerun Completion Failures",
-      "description": "Skill: Fix Rerun Completion Failures",
-      "version": "1.0.0",
-      "source": "./skills/skill-fix-rerun-completion-failures.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "Skill: Fixing Checkpoint Config Mismatch and Data Loss",
-      "description": "Skill: Fixing Checkpoint Config Mismatch and Data Loss",
-      "version": "1.0.0",
-      "source": "./skills/skill-fixing-checkpoint-config-mismatch-and-data-loss.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "Skill: Resume Checkpoint Bugs",
-      "description": "Fix experiment runner resume bugs: uppercase INTERRUPTED state, max_subtests ephemeral handling, missing-subtest detection, and tier state reset target selection",
-      "version": "1.0.0",
-      "source": "./skills/skill-resume-checkpoint-bugs.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
       "name": "always-retry-infra-failures",
       "description": "Fix retry logic bugs where a flag-gated retry conflates infra crashes with bad-grade results, discarding valid judge results. Use when: removing a retry flag to make behavior unconditional, fixing state machine reset logic that incorrectly resets completed runs, or debugging checkpoint semantics with multiple terminal state meanings.",
       "version": "1.0.0",
@@ -2776,6 +2680,14 @@
       "tags": []
     },
     {
+      "name": "e2e-evaluation-framework-bug-fixes",
+      "description": "E2E Evaluation Framework Bug Fixes",
+      "version": "1.0.0",
+      "source": "./skills/e2e-evaluation-framework-bug-fixes.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
       "name": "e2e-framework-crash-recovery-bugs",
       "description": "Fix E2E framework crash-recovery bugs including checkpoint thread-safety race conditions, resume state machine AssertionError on tier_config=None, and LLM judge returning conversational text instead of JSON",
       "version": "1.0.0",
@@ -2798,6 +2710,14 @@
       "description": "E2E Judge Prompt Reuse",
       "version": "1.0.0",
       "source": "./skills/e2e-judge-prompt-reuse.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "e2e-path-resolution-fix",
+      "description": "E2E Path Resolution Fix",
+      "version": "1.0.0",
+      "source": "./skills/e2e-path-resolution-fix.md",
       "category": "debugging",
       "tags": []
     },
@@ -2854,6 +2774,14 @@
       "description": "Fix the flat-index bug in concatenate() axis-0 non-contiguous path that ignores strides and reads wrong values for transposed/view tensors. Use when: (1) concatenate() produces wrong values for non-contiguous inputs, (2) the axis-0 else-branch calls _get_float64(i) on source tensors, (3) follow-on to fix-non-contiguous-tensor-stride-access for concatenate specifically.",
       "version": "1.0.0",
       "source": "./skills/fix-concatenate-noncontiguous-stride-bug.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "fix-e2e-rerun-script-errors",
+      "description": "Fix common errors in E2E rerun script: SubTestExecutor constructor parameters, checkpoint status validation, and T5 inheritance failures",
+      "version": "1.0.0",
+      "source": "./skills/fix-e2e-rerun-script-errors.md",
       "category": "debugging",
       "tags": []
     },
@@ -2925,6 +2853,14 @@
       "description": "Skill: fix-s101-assert-to-runtimeerror. Use when fixing Ruff S101 violations in production code by replacing bare assert guards with RuntimeError raises.",
       "version": "1.0.0",
       "source": "./skills/fix-s101-assert-to-runtimeerror.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "fix-yaml-config-propagation",
+      "description": "Debug pattern for fixing YAML config fields that aren't propagating to execution, plus eliminating DRY violations in config dataclasses",
+      "version": "1.0.0",
+      "source": "./skills/fix-yaml-config-propagation.md",
       "category": "debugging",
       "tags": []
     },
@@ -3295,10 +3231,74 @@
       "tags": []
     },
     {
+      "name": "skill-claude-code-settings-configuration-for-e2e-tests",
+      "description": "Configure Claude Code settings.json for E2E test workspaces to control thinking mode and other workspace-level settings",
+      "version": "1.0.0",
+      "source": "./skills/skill-claude-code-settings-configuration-for-e2e-tests.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "skill-e2e-state-machine-bugs",
+      "description": "Fix --until off-by-one in advance_to_completion() loops and disconnected terminal signal handlers in manage_experiment.py",
+      "version": "1.0.0",
+      "source": "./skills/skill-e2e-state-machine-bugs.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "skill-fix-directory-not-created-before-write",
+      "description": "Skill: Fix Directory Not Created Before Write",
+      "version": "1.0.0",
+      "source": "./skills/skill-fix-directory-not-created-before-write.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "skill-fix-evaluation-framework-bugs",
+      "description": "Skill: Fix Evaluation Framework Bugs",
+      "version": "1.0.0",
+      "source": "./skills/skill-fix-evaluation-framework-bugs.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "skill-fix-judge-file-access-for-e2e-evaluation",
+      "description": "Skill: Fix Judge File Access for E2E Evaluation",
+      "version": "1.0.0",
+      "source": "./skills/skill-fix-judge-file-access-for-e2e-evaluation.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "skill-fix-rerun-completion-failures",
+      "description": "Skill: Fix Rerun Completion Failures",
+      "version": "1.0.0",
+      "source": "./skills/skill-fix-rerun-completion-failures.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "skill-fixing-checkpoint-config-mismatch-and-data-loss",
+      "description": "Skill: Fixing Checkpoint Config Mismatch and Data Loss",
+      "version": "1.0.0",
+      "source": "./skills/skill-fixing-checkpoint-config-mismatch-and-data-loss.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
       "name": "skill-path-resolution-fix",
       "description": "Skill: skill-path-resolution-fix. Use when working with skill path resolution fix.",
       "version": "1.0.0",
       "source": "./skills/skill-path-resolution-fix.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "skill-resume-checkpoint-bugs",
+      "description": "Fix experiment runner resume bugs: uppercase INTERRUPTED state, max_subtests ephemeral handling, missing-subtest detection, and tier state reset target selection",
+      "version": "1.0.0",
+      "source": "./skills/skill-resume-checkpoint-bugs.md",
       "category": "debugging",
       "tags": []
     },
@@ -3335,7 +3335,7 @@
       "tags": []
     },
     {
-      "name": "Academic Paper QA: LaTeX Validation & Data Accuracy",
+      "name": "academic-paper-qa-latex-validation-data-accuracy",
       "description": "Validate and fix data accuracy issues, structural problems, and LaTeX compilation errors in academic papers",
       "version": "1.0.0",
       "source": "./skills/academic-paper-qa-latex-validation-data-accuracy.md",
@@ -3343,7 +3343,7 @@
       "tags": []
     },
     {
-      "name": "Academic Paper Review & Quality Improvement",
+      "name": "academic-paper-review-quality-improvement",
       "description": "Comprehensive academic paper review workflow: data validation, tone formalization, error correction, and reproducibility fixes",
       "version": "1.0.0",
       "source": "./skills/academic-paper-review-quality-improvement.md",
@@ -3351,74 +3351,10 @@
       "tags": []
     },
     {
-      "name": "Academic Paper Validation",
+      "name": "academic-paper-validation",
       "description": "Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical rigor improvements, and noise reduction",
       "version": "1.0.0",
       "source": "./skills/academic-paper-validation.md",
-      "category": "documentation",
-      "tags": []
-    },
-    {
-      "name": "Paper Consolidation Skill",
-      "description": "Consolidate scattered LaTeX paper files into unified directory structure with publication readiness fixes",
-      "version": "1.0.0",
-      "source": "./skills/paper-consolidation-skill.md",
-      "category": "documentation",
-      "tags": []
-    },
-    {
-      "name": "Paper Final Review - Publication Readiness Workflow",
-      "description": "Paper Final Review - Publication Readiness Workflow",
-      "version": "1.0.0",
-      "source": "./skills/paper-final-review-publication-readiness-workflow.md",
-      "category": "documentation",
-      "tags": []
-    },
-    {
-      "name": "Paper Iterative Accuracy Review",
-      "description": "Second-pass review after initial paper fixes: catch internal inconsistencies introduced by edits, verify statistical effect-size labels against defined thresholds, clarify ambiguous table headers, explain counter-intuitive results, and add missing pricing context",
-      "version": "1.0.0",
-      "source": "./skills/paper-iterative-accuracy-review.md",
-      "category": "documentation",
-      "tags": []
-    },
-    {
-      "name": "Paper Revision Workflow",
-      "description": "Systematic workflow for revising research papers: data validation, structural improvements, and tone unification",
-      "version": "1.0.0",
-      "source": "./skills/paper-revision-workflow.md",
-      "category": "documentation",
-      "tags": []
-    },
-    {
-      "name": "Paper Validation Workflow",
-      "description": "Paper Validation Workflow",
-      "version": "1.0.0",
-      "source": "./skills/paper-validation-workflow.md",
-      "category": "documentation",
-      "tags": []
-    },
-    {
-      "name": "Publication Readiness Review",
-      "description": "Comprehensive 10-category GO/NO-GO assessment framework for academic paper publication readiness",
-      "version": "1.0.0",
-      "source": "./skills/publication-readiness-review.md",
-      "category": "documentation",
-      "tags": []
-    },
-    {
-      "name": "Skill: Adding Architecture Sections to LaTeX Academic Papers",
-      "description": "Add architecture sections to academic LaTeX papers with TikZ diagrams, including fixing common TikZ syntax errors and managing arxiv builds",
-      "version": "1.0.0",
-      "source": "./skills/skill-adding-architecture-sections-to-latex-academic-papers.md",
-      "category": "documentation",
-      "tags": []
-    },
-    {
-      "name": "Skill: arXiv Paper Publication Polish",
-      "description": "Skill: arXiv Paper Publication Polish",
-      "version": "1.0.0",
-      "source": "./skills/skill-arxiv-paper-publication-polish.md",
       "category": "documentation",
       "tags": []
     },
@@ -3991,10 +3927,50 @@
       "tags": []
     },
     {
+      "name": "paper-consolidation-skill",
+      "description": "Consolidate scattered LaTeX paper files into unified directory structure with publication readiness fixes",
+      "version": "1.0.0",
+      "source": "./skills/paper-consolidation-skill.md",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "paper-final-review-publication-readiness-workflow",
+      "description": "Paper Final Review - Publication Readiness Workflow",
+      "version": "1.0.0",
+      "source": "./skills/paper-final-review-publication-readiness-workflow.md",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "paper-iterative-accuracy-review",
+      "description": "Second-pass review after initial paper fixes: catch internal inconsistencies introduced by edits, verify statistical effect-size labels against defined thresholds, clarify ambiguous table headers, explain counter-intuitive results, and add missing pricing context",
+      "version": "1.0.0",
+      "source": "./skills/paper-iterative-accuracy-review.md",
+      "category": "documentation",
+      "tags": []
+    },
+    {
       "name": "paper-readiness-epic",
       "description": "Skill: paper-readiness-epic. Use when working with paper readiness epic.",
       "version": "1.0.0",
       "source": "./skills/paper-readiness-epic.md",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "paper-revision-workflow",
+      "description": "Systematic workflow for revising research papers: data validation, structural improvements, and tone unification",
+      "version": "1.0.0",
+      "source": "./skills/paper-revision-workflow.md",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "paper-validation-workflow",
+      "description": "Paper Validation Workflow",
+      "version": "1.0.0",
+      "source": "./skills/paper-validation-workflow.md",
       "category": "documentation",
       "tags": []
     },
@@ -4071,6 +4047,14 @@
       "tags": []
     },
     {
+      "name": "publication-readiness-review",
+      "description": "Comprehensive 10-category GO/NO-GO assessment framework for academic paper publication readiness",
+      "version": "1.0.0",
+      "source": "./skills/publication-readiness-review.md",
+      "category": "documentation",
+      "tags": []
+    },
+    {
       "name": "quality-audit-issue-already-fixed",
       "description": "Verify and close quality audit issues that reference problems already resolved in the codebase",
       "version": "1.0.0",
@@ -4139,6 +4123,22 @@
       "description": "Efficiently triage and close security reviews for PRs containing only documentation or metadata changes. Use when: a security review is triggered on a PR that adds only markdown files, JSON metadata, or other static documentation with no executable code.",
       "version": "1.0.0",
       "source": "./skills/security-review-docs-only-pr.md",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "skill-adding-architecture-sections-to-latex-academic-papers",
+      "description": "Add architecture sections to academic LaTeX papers with TikZ diagrams, including fixing common TikZ syntax errors and managing arxiv builds",
+      "version": "1.0.0",
+      "source": "./skills/skill-adding-architecture-sections-to-latex-academic-papers.md",
+      "category": "documentation",
+      "tags": []
+    },
+    {
+      "name": "skill-arxiv-paper-publication-polish",
+      "description": "Skill: arXiv Paper Publication Polish",
+      "version": "1.0.0",
+      "source": "./skills/skill-arxiv-paper-publication-polish.md",
       "category": "documentation",
       "tags": []
     },
@@ -4271,134 +4271,6 @@
       "tags": []
     },
     {
-      "name": "Adding JSON Links to Markdown Reports",
-      "description": "Add JSON result links to markdown reports for structured data access",
-      "version": "1.0.0",
-      "source": "./skills/adding-json-links-to-markdown-reports.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Parallel Metrics Integration into Statistical Pipelines",
-      "description": "Skill for integrating multiple metrics into statistical analysis pipelines in parallel",
-      "version": "1.0.0",
-      "source": "./skills/parallel-metrics-integration-into-statistical-pipelines.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "ProcessPoolExecutor Rate Limit Recovery",
-      "description": "Robust ProcessPoolExecutor rate limit recovery for E2E evaluation frameworks",
-      "version": "1.0.0",
-      "source": "./skills/processpoolexecutor-rate-limit-recovery.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Publication Pipeline Enhancement",
-      "description": "Publication Pipeline Enhancement",
-      "version": "1.0.0",
-      "source": "./skills/publication-pipeline-enhancement.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Skill: Add Analysis Metric to Pipeline",
-      "description": "Workflow for adding new metrics to ProjectScylla analysis pipeline",
-      "version": "1.0.0",
-      "source": "./skills/skill-add-analysis-metric-to-pipeline.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Skill: Analysis Pipeline Code Review",
-      "description": "Skill: Analysis Pipeline Code Review",
-      "version": "1.0.0",
-      "source": "./skills/skill-analysis-pipeline-code-review.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Skill: Containerize E2E Experiments",
-      "description": "Skill: Containerize E2E Experiments",
-      "version": "1.0.0",
-      "source": "./skills/skill-containerize-e2e-experiments.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Skill: Dryrun Validation Workflow",
-      "description": "Complete workflow for re-running dryrun experiments, generating analysis outputs, and validating results against baseline",
-      "version": "1.0.0",
-      "source": "./skills/skill-dryrun-validation-workflow.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Skill: E2E Evaluation Report Fixes",
-      "description": "Fix critical E2E evaluation report issues including timing persistence, workspace detection, judge validation, and broken links",
-      "version": "1.0.0",
-      "source": "./skills/skill-e2e-evaluation-report-fixes.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Skill: Experimental Feature Sub-tests",
-      "description": "Add A/B testing for experimental features in evaluation tiers using parallel sub-tests with environment variable feature flags",
-      "version": "1.0.0",
-      "source": "./skills/skill-experimental-feature-sub-tests.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Skill: Export Process Metrics to Summary JSON",
-      "description": "Workflow for wiring pre-existing dataframe columns into the export_data.py summary JSON output",
-      "version": "1.0.0",
-      "source": "./skills/skill-export-process-metrics-to-summary-json.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Skill: Hybrid LLM Judge with Granular Scoring",
-      "description": "Hybrid LLM judge evaluation system combining objective checklists (80%) with subjective engineering judgment (20%) to achieve low-variance (<10%) granular scoring",
-      "version": "1.0.0",
-      "source": "./skills/skill-hybrid-llm-judge-with-granular-scoring.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Skill: Integrate Process Metrics into Analysis Pipeline",
-      "description": "Workflow for wiring pre-implemented process metrics (R_Prog, CFP, PR Revert Rate, Strategic Drift) into the ProjectScylla loader \u2192 dataframes \u2192 figures stack",
-      "version": "1.0.0",
-      "source": "./skills/skill-integrate-process-metrics-into-analysis-pipeline.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Skill: Preserve Workspaces on E2E Experiment Re-runs",
-      "description": "Preserving git worktrees and test results when re-running E2E experiments with checkpoint resume",
-      "version": "1.0.0",
-      "source": "./skills/skill-preserve-workspaces-on-e2e-experiment-re-runs.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Skill: Vega-Lite Analysis Pipeline",
-      "description": "Build comprehensive analysis pipelines with text-based Vega-Lite figures and statistical tables for research papers",
-      "version": "1.0.0",
-      "source": "./skills/skill-vega-lite-analysis-pipeline.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Verify E2E Experiment Completion",
-      "description": "Verify E2E Experiment Completion",
-      "version": "1.0.0",
-      "source": "./skills/verify-e2e-experiment-completion.md",
-      "category": "evaluation",
-      "tags": []
-    },
-    {
       "name": "add-analysis-metric",
       "description": "TRIGGER CONDITIONS: Adding new aggregated metrics to build_subtests_df(), tier_summary(), or model_comparison() in scylla/analysis/dataframes.py. Use when extending the analysis layer with new per-run measurements that need mean/median/std at the subtest, tier, or model-comparison level.",
       "version": "1.0.0",
@@ -4419,6 +4291,14 @@
       "description": "TRIGGER CONDITIONS: Adding a new figure function to scylla/analysis/figures/process_metrics.py for a per-run process metric (e.g. strategic_drift, r_prog, cfp, pr_revert_rate). Use when: (1) a new nullable column exists in build_runs_df() output but has no corresponding figure in process_metrics.py, (2) a follow-up issue says 'add a figure for <metric> following the same pattern as fig_r_prog_by_tier', (3) a process metric column was added in a prior issue but the figure was deferred.",
       "version": "1.0.0",
       "source": "./skills/add-process-metric-figure.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "adding-json-links-to-markdown-reports",
+      "description": "Add JSON result links to markdown reports for structured data access",
+      "version": "1.0.0",
+      "source": "./skills/adding-json-links-to-markdown-reports.md",
       "category": "evaluation",
       "tags": []
     },
@@ -4719,6 +4599,14 @@
       "tags": []
     },
     {
+      "name": "parallel-metrics-integration-into-statistical-pipelines",
+      "description": "Skill for integrating multiple metrics into statistical analysis pipelines in parallel",
+      "version": "1.0.0",
+      "source": "./skills/parallel-metrics-integration-into-statistical-pipelines.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "persist-process-metrics-resume",
       "description": "TRIGGER CONDITIONS: Persisting process_metrics (progress_steps, change_results) through a resume scenario when a run crashes between DIFF_CAPTURED and RUN_FINALIZED in ProjectScylla's 16-stage pipeline. Use when a stage needs to reload previously-computed data from a JSON artifact when ctx fields are None on resume.",
       "version": "1.0.0",
@@ -4735,10 +4623,26 @@
       "tags": []
     },
     {
+      "name": "processpoolexecutor-rate-limit-recovery",
+      "description": "Robust ProcessPoolExecutor rate limit recovery for E2E evaluation frameworks",
+      "version": "1.0.0",
+      "source": "./skills/processpoolexecutor-rate-limit-recovery.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "profile-code",
       "description": "Measure execution time and memory usage of code. Use when analyzing performance characteristics.",
       "version": "1.0.0",
       "source": "./skills/profile-code.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "publication-pipeline-enhancement",
+      "description": "Publication Pipeline Enhancement",
+      "version": "1.0.0",
+      "source": "./skills/publication-pipeline-enhancement.md",
       "category": "evaluation",
       "tags": []
     },
@@ -4763,6 +4667,94 @@
       "description": "Fix resume-from-FAILED experiment in E2E state machine framework \u2014 three compounding bugs where terminal states cause immediate exit, --retry-errors is silently ignored in single mode, and saved tiers_to_run overrides CLI tiers on resume",
       "version": "1.0.0",
       "source": "./skills/resume-from-failed-experiment.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "skill-add-analysis-metric-to-pipeline",
+      "description": "Workflow for adding new metrics to ProjectScylla analysis pipeline",
+      "version": "1.0.0",
+      "source": "./skills/skill-add-analysis-metric-to-pipeline.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "skill-analysis-pipeline-code-review",
+      "description": "Skill: Analysis Pipeline Code Review",
+      "version": "1.0.0",
+      "source": "./skills/skill-analysis-pipeline-code-review.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "skill-containerize-e2e-experiments",
+      "description": "Skill: Containerize E2E Experiments",
+      "version": "1.0.0",
+      "source": "./skills/skill-containerize-e2e-experiments.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "skill-dryrun-validation-workflow",
+      "description": "Complete workflow for re-running dryrun experiments, generating analysis outputs, and validating results against baseline",
+      "version": "1.0.0",
+      "source": "./skills/skill-dryrun-validation-workflow.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "skill-e2e-evaluation-report-fixes",
+      "description": "Fix critical E2E evaluation report issues including timing persistence, workspace detection, judge validation, and broken links",
+      "version": "1.0.0",
+      "source": "./skills/skill-e2e-evaluation-report-fixes.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "skill-experimental-feature-sub-tests",
+      "description": "Add A/B testing for experimental features in evaluation tiers using parallel sub-tests with environment variable feature flags",
+      "version": "1.0.0",
+      "source": "./skills/skill-experimental-feature-sub-tests.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "skill-export-process-metrics-to-summary-json",
+      "description": "Workflow for wiring pre-existing dataframe columns into the export_data.py summary JSON output",
+      "version": "1.0.0",
+      "source": "./skills/skill-export-process-metrics-to-summary-json.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "skill-hybrid-llm-judge-with-granular-scoring",
+      "description": "Hybrid LLM judge evaluation system combining objective checklists (80%) with subjective engineering judgment (20%) to achieve low-variance (<10%) granular scoring",
+      "version": "1.0.0",
+      "source": "./skills/skill-hybrid-llm-judge-with-granular-scoring.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "skill-integrate-process-metrics-into-analysis-pipeline",
+      "description": "Workflow for wiring pre-implemented process metrics (R_Prog, CFP, PR Revert Rate, Strategic Drift) into the ProjectScylla loader \u2192 dataframes \u2192 figures stack",
+      "version": "1.0.0",
+      "source": "./skills/skill-integrate-process-metrics-into-analysis-pipeline.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "skill-preserve-workspaces-on-e2e-experiment-re-runs",
+      "description": "Preserving git worktrees and test results when re-running E2E experiments with checkpoint resume",
+      "version": "1.0.0",
+      "source": "./skills/skill-preserve-workspaces-on-e2e-experiment-re-runs.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "skill-vega-lite-analysis-pipeline",
+      "description": "Build comprehensive analysis pipelines with text-based Vega-Lite figures and statistical tables for research papers",
+      "version": "1.0.0",
+      "source": "./skills/skill-vega-lite-analysis-pipeline.md",
       "category": "evaluation",
       "tags": []
     },
@@ -4799,19 +4791,19 @@
       "tags": []
     },
     {
+      "name": "verify-e2e-experiment-completion",
+      "description": "Verify E2E Experiment Completion",
+      "version": "1.0.0",
+      "source": "./skills/verify-e2e-experiment-completion.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
       "name": "wire-figure-pipeline",
       "description": "TRIGGER CONDITIONS: Adding new figure functions to the generate_figures.py pipeline in ProjectScylla. Use when: (1) a new figure function exists in scylla/analysis/figures/ but is not called from scripts/generate_figures.py, (2) registering batch-generated figures so they run automatically with all other figures, (3) wiring process-metric or other optional figures into the report pipeline.",
       "version": "1.0.0",
       "source": "./skills/wire-figure-pipeline.md",
       "category": "evaluation",
-      "tags": []
-    },
-    {
-      "name": "Parallel I/O-Bound Execution with ThreadPoolExecutor",
-      "description": "Pattern for implementing ThreadPoolExecutor-based parallelization of I/O-bound tasks in Python CLI tools",
-      "version": "1.0.0",
-      "source": "./skills/parallel-io-bound-execution-with-threadpoolexecutor.md",
-      "category": "optimization",
       "tags": []
     },
     {
@@ -4933,83 +4925,19 @@
       "tags": []
     },
     {
+      "name": "parallel-i-o-bound-execution-with-threadpoolexecutor",
+      "description": "Pattern for implementing ThreadPoolExecutor-based parallelization of I/O-bound tasks in Python CLI tools",
+      "version": "1.0.0",
+      "source": "./skills/parallel-io-bound-execution-with-threadpoolexecutor.md",
+      "category": "optimization",
+      "tags": []
+    },
+    {
       "name": "validate-mojo-patterns",
       "description": "Validate Mojo code patterns (out self, mut, List, etc.) against best practices. Use to ensure code follows project standards.",
       "version": "1.0.0",
       "source": "./skills/validate-mojo-patterns.md",
       "category": "optimization",
-      "tags": []
-    },
-    {
-      "name": "Config Filename / Model ID Audit",
-      "description": "Audit and fix YAML config files where filename stems mismatch model_id fields",
-      "version": "1.0.0",
-      "source": "./skills/config-filename-model-id-audit.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
-      "name": "Defensive Analysis Patterns",
-      "description": "Defensive programming patterns for statistical analysis pipelines to handle data quality issues gracefully",
-      "version": "1.0.0",
-      "source": "./skills/defensive-analysis-patterns.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
-      "name": "Fix Flaky Sleep Mock",
-      "description": "Fix timing-sensitive tests by replacing wall-clock assertions with deterministic time.sleep mocks",
-      "version": "1.0.0",
-      "source": "./skills/fix-flaky-sleep-mock.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
-      "name": "Fix Tests After Config Refactor",
-      "description": "Fix Tests After Config Refactor",
-      "version": "1.0.0",
-      "source": "./skills/fix-tests-after-config-refactor.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
-      "name": "Skill: CLI Deep Audit and Fix",
-      "description": "Deep-audit CLI scripts across 8 dimensions (bugs, dead code, duplication, validation placement, error messaging, exception safety, test coverage gaps, argparse resolution) then fix in dependency order with complementary tests.",
-      "version": "1.0.0",
-      "source": "./skills/skill-cli-deep-audit-and-fix.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
-      "name": "Skill: Fix CI Test Failures",
-      "description": "Skill for fixing unit tests that pass locally but fail in CI due to symlinks and mocking issues",
-      "version": "1.0.0",
-      "source": "./skills/skill-fix-ci-test-failures.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
-      "name": "Skill: Fix Mock Patch Call-Site Targets",
-      "description": "Fix unittest.mock.patch targets that point to the wrong namespace (definition-site instead of call-site), causing mocks to have no effect in isolated environments",
-      "version": "1.0.0",
-      "source": "./skills/skill-fix-mock-patch-call-site-targets.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
-      "name": "Skill: Fix Pydantic Required Fields in Test Fixtures",
-      "description": "Fix test failures caused by missing required fields in Pydantic model fixtures after data model evolution",
-      "version": "1.0.0",
-      "source": "./skills/skill-fix-pydantic-required-fields-in-test-fixtures.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
-      "name": "Skill: Replace Pytest Mocks with Real File I/O",
-      "description": "Pattern for replacing pytest mocks with real file I/O to fix test isolation issues",
-      "version": "1.0.0",
-      "source": "./skills/skill-replace-pytest-mocks-with-real-file-io.md",
-      "category": "testing",
       "tags": []
     },
     {
@@ -5196,6 +5124,14 @@
       "tags": []
     },
     {
+      "name": "config-filename-model-id-audit",
+      "description": "Audit and fix YAML config files where filename stems mismatch model_id fields",
+      "version": "1.0.0",
+      "source": "./skills/config-filename-model-id-audit.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "conv2d-all-gradients-dedicated-file",
       "description": "Create a dedicated test file to gradient-check all three conv2d backward outputs (grad_input, grad_weights, grad_bias) across multiple configurations. Use when: conv2d backward grad_weights and grad_bias lack finite-difference validation and a new dedicated file is needed.",
       "version": "1.0.0",
@@ -5264,6 +5200,14 @@
       "description": "Eliminate duplicated test fixture files using runtime block-based composition. Use when: test fixtures have duplicate YAML blocks, find | md5sum shows duplication, want single source of truth for shared configs.",
       "version": "1.0.0",
       "source": "./skills/deduplicate-test-fixtures.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "defensive-analysis-patterns",
+      "description": "Defensive programming patterns for statistical analysis pipelines to handle data quality issues gracefully",
+      "version": "1.0.0",
+      "source": "./skills/defensive-analysis-patterns.md",
       "category": "testing",
       "tags": []
     },
@@ -5380,10 +5324,26 @@
       "tags": []
     },
     {
+      "name": "fix-flaky-sleep-mock",
+      "description": "Fix timing-sensitive tests by replacing wall-clock assertions with deterministic time.sleep mocks",
+      "version": "1.0.0",
+      "source": "./skills/fix-flaky-sleep-mock.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "fix-placeholder-code-ci",
       "description": "Fix CI failures caused by partially commented placeholder code and dtype migration assertion mismatches",
       "version": "1.0.0",
       "source": "./skills/fix-placeholder-code-ci.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "fix-tests-after-config-refactor",
+      "description": "Fix Tests After Config Refactor",
+      "version": "1.0.0",
+      "source": "./skills/fix-tests-after-config-refactor.md",
       "category": "testing",
       "tags": []
     },
@@ -6105,6 +6065,46 @@
       "tags": []
     },
     {
+      "name": "skill-cli-deep-audit-and-fix",
+      "description": "Deep-audit CLI scripts across 8 dimensions (bugs, dead code, duplication, validation placement, error messaging, exception safety, test coverage gaps, argparse resolution) then fix in dependency order with complementary tests.",
+      "version": "1.0.0",
+      "source": "./skills/skill-cli-deep-audit-and-fix.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "skill-fix-ci-test-failures",
+      "description": "Skill for fixing unit tests that pass locally but fail in CI due to symlinks and mocking issues",
+      "version": "1.0.0",
+      "source": "./skills/skill-fix-ci-test-failures.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "skill-fix-mock-patch-call-site-targets",
+      "description": "Fix unittest.mock.patch targets that point to the wrong namespace (definition-site instead of call-site), causing mocks to have no effect in isolated environments",
+      "version": "1.0.0",
+      "source": "./skills/skill-fix-mock-patch-call-site-targets.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "skill-fix-pydantic-required-fields-in-test-fixtures",
+      "description": "Fix test failures caused by missing required fields in Pydantic model fixtures after data model evolution",
+      "version": "1.0.0",
+      "source": "./skills/skill-fix-pydantic-required-fields-in-test-fixtures.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "skill-replace-pytest-mocks-with-real-file-i-o",
+      "description": "Pattern for replacing pytest mocks with real file I/O to fix test isolation issues",
+      "version": "1.0.0",
+      "source": "./skills/skill-replace-pytest-mocks-with-real-file-io.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "split-file-group-tracking",
       "description": "TRIGGER CONDITIONS: Use when adding coverage tracking for _partN.mojo test files split from a single logical test, or when validate_test_coverage.py needs to group part files by base name using regex.",
       "version": "1.0.0",
@@ -6295,22 +6295,6 @@
       "version": "1.0.0",
       "source": "./skills/zombie-detection-integration-tests.md",
       "category": "testing",
-      "tags": []
-    },
-    {
-      "name": "Review Task Orchestration",
-      "description": "Review Task Orchestration",
-      "version": "1.0.0",
-      "source": "./skills/review-task-orchestration.md",
-      "category": "tooling",
-      "tags": []
-    },
-    {
-      "name": "Skill: Experiment Recovery Tools",
-      "description": "Skill: Experiment Recovery Tools",
-      "version": "1.0.0",
-      "source": "./skills/skill-experiment-recovery-tools.md",
-      "category": "tooling",
       "tags": []
     },
     {
@@ -7573,6 +7557,14 @@
       "tags": []
     },
     {
+      "name": "review-task-orchestration",
+      "description": "Review Task Orchestration",
+      "version": "1.0.0",
+      "source": "./skills/review-task-orchestration.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "ruff-c901-mccabe-complexity",
       "description": "Skill: ruff-c901-mccabe-complexity",
       "version": "1.0.0",
@@ -7617,6 +7609,14 @@
       "description": "Systematic audit and consolidation of skills marketplace plugins",
       "version": "1.0.0",
       "source": "./skills/skill-audit-and-merge.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "skill-experiment-recovery-tools",
+      "description": "Skill: Experiment Recovery Tools",
+      "version": "1.0.0",
+      "source": "./skills/skill-experiment-recovery-tools.md",
       "category": "tooling",
       "tags": []
     },

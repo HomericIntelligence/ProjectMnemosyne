@@ -1,5 +1,5 @@
 ---
-name: Paper Validation Workflow
+name: paper-validation-workflow
 description: Paper Validation Workflow
 category: documentation
 date: 2026-02-07

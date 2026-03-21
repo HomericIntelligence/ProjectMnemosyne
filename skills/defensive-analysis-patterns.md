@@ -1,7 +1,6 @@
 ---
-name: Defensive Analysis Patterns
-description: Defensive programming patterns for statistical analysis pipelines to
-  handle data quality issues gracefully
+name: defensive-analysis-patterns
+description: Defensive programming patterns for statistical analysis pipelines to handle data quality issues gracefully
 category: testing
 date: 2026-02-01
 version: 1.0.0

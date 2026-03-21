@@ -1,7 +1,6 @@
 ---
-name: 'Skill: E2E Evaluation Report Fixes'
-description: Fix critical E2E evaluation report issues including timing persistence,
-  workspace detection, judge validation, and broken links
+name: skill-e2e-evaluation-report-fixes
+description: Fix critical E2E evaluation report issues including timing persistence, workspace detection, judge validation, and broken links
 category: evaluation
 date: 2026-01-10
 version: 1.0.0

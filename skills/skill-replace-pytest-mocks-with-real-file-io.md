@@ -1,7 +1,6 @@
 ---
-name: 'Skill: Replace Pytest Mocks with Real File I/O'
-description: Pattern for replacing pytest mocks with real file I/O to fix test isolation
-  issues
+name: skill-replace-pytest-mocks-with-real-file-i-o
+description: Pattern for replacing pytest mocks with real file I/O to fix test isolation issues
 category: testing
 date: 2026-02-05
 version: 1.0.0

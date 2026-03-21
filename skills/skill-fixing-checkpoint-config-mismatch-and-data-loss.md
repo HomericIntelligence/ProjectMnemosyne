@@ -1,5 +1,5 @@
 ---
-name: 'Skill: Fixing Checkpoint Config Mismatch and Data Loss'
+name: skill-fixing-checkpoint-config-mismatch-and-data-loss
 description: 'Skill: Fixing Checkpoint Config Mismatch and Data Loss'
 category: debugging
 date: 2026-01-22

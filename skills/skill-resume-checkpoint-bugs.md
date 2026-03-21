@@ -1,7 +1,6 @@
 ---
-name: 'Skill: Resume Checkpoint Bugs'
-description: 'Fix experiment runner resume bugs: uppercase INTERRUPTED state, max_subtests
-  ephemeral handling, missing-subtest detection, and tier state reset target selection'
+name: skill-resume-checkpoint-bugs
+description: 'Fix experiment runner resume bugs: uppercase INTERRUPTED state, max_subtests ephemeral handling, missing-subtest detection, and tier state reset target selection'
 category: debugging
 date: 2026-02-26
 version: 1.0.0

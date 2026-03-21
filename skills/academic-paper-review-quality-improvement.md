@@ -1,7 +1,6 @@
 ---
-name: Academic Paper Review & Quality Improvement
-description: 'Comprehensive academic paper review workflow: data validation, tone
-  formalization, error correction, and reproducibility fixes'
+name: academic-paper-review-quality-improvement
+description: 'Comprehensive academic paper review workflow: data validation, tone formalization, error correction, and reproducibility fixes'
 category: documentation
 date: 2026-02-05
 version: 1.0.0

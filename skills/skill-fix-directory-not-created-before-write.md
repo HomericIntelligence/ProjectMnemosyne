@@ -1,5 +1,5 @@
 ---
-name: 'Skill: Fix Directory Not Created Before Write'
+name: skill-fix-directory-not-created-before-write
 description: 'Skill: Fix Directory Not Created Before Write'
 category: debugging
 date: 2026-01-18

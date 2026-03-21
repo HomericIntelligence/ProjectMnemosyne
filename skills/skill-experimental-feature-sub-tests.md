@@ -1,7 +1,6 @@
 ---
-name: 'Skill: Experimental Feature Sub-tests'
-description: Add A/B testing for experimental features in evaluation tiers using parallel
-  sub-tests with environment variable feature flags
+name: skill-experimental-feature-sub-tests
+description: Add A/B testing for experimental features in evaluation tiers using parallel sub-tests with environment variable feature flags
 category: evaluation
 date: 2026-02-05
 version: 1.0.0

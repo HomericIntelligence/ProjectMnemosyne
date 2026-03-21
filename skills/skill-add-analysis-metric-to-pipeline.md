@@ -1,5 +1,5 @@
 ---
-name: 'Skill: Add Analysis Metric to Pipeline'
+name: skill-add-analysis-metric-to-pipeline
 description: Workflow for adding new metrics to ProjectScylla analysis pipeline
 category: evaluation
 date: 2026-01-31

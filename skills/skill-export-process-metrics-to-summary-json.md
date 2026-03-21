@@ -1,7 +1,6 @@
 ---
-name: 'Skill: Export Process Metrics to Summary JSON'
-description: Workflow for wiring pre-existing dataframe columns into the export_data.py
-  summary JSON output
+name: skill-export-process-metrics-to-summary-json
+description: Workflow for wiring pre-existing dataframe columns into the export_data.py summary JSON output
 category: evaluation
 date: 2026-02-27
 version: 1.0.0

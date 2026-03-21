@@ -1,5 +1,5 @@
 ---
-name: 'Skill: Fix Judge File Access for E2E Evaluation'
+name: skill-fix-judge-file-access-for-e2e-evaluation
 description: 'Skill: Fix Judge File Access for E2E Evaluation'
 category: debugging
 date: 2026-01-18

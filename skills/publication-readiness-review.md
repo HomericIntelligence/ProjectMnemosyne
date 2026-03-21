@@ -1,7 +1,6 @@
 ---
-name: Publication Readiness Review
-description: Comprehensive 10-category GO/NO-GO assessment framework for academic
-  paper publication readiness
+name: publication-readiness-review
+description: Comprehensive 10-category GO/NO-GO assessment framework for academic paper publication readiness
 category: documentation
 date: 2026-02-07
 version: 1.0.0
