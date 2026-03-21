@@ -24,7 +24,7 @@ tags:
 | Attribute | Value |
 |-----------|-------|
 | **Date** | 2026-03-03 |
-| **Objective** | Fix planner silently skipping the advise step when `build/ProjectMnemosyne` was not present locally |
+| **Objective** | Fix planner silently skipping the advise step when ProjectMnemosyne was not present locally |
 | **Outcome** | ✅ `_ensure_mnemosyne()` clones the repo on first use; advise step proceeds normally |
 | **Project** | ProjectScylla |
 | **Issue** | [#1324](https://github.com/HomericIntelligence/ProjectScylla/issues/1324) |
@@ -72,7 +72,7 @@ Add a method to the class that:
 2. Re-checks existence inside the lock (TOCTOU guard)
 3. Acquires an **`fcntl` file lock** (prevents double-clone across parallel processes on the same machine)
 4. Re-checks existence again inside the file lock
-5. Runs `gh repo clone <org>/<repo> <dest>` via `subprocess.run(check=True)`
+5. Runs `gh repo clone <org>/<repo> <dest>` via `subprocess.run(check=True)` to standardized location `$HOME/.agent-brain/ProjectMnemosyne`
 6. Returns `True` on success, `False` on `CalledProcessError` (with a warning log)
 
 ```python

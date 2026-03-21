@@ -94,9 +94,8 @@ def _call_claude(
 def _run_advise(self, issue_number: int, issue_title: str, issue_body: str) -> str:
     """Search team knowledge base for relevant prior learnings."""
     try:
-        # Locate ProjectMnemosyne
-        repo_root = get_repo_root()
-        mnemosyne_root = repo_root / "build" / "ProjectMnemosyne"
+        # Locate ProjectMnemosyne at standardized location
+        mnemosyne_root = Path.home() / ".agent-brain" / "ProjectMnemosyne"
 
         if not mnemosyne_root.exists():
             logger.warning(
@@ -133,7 +132,7 @@ def _run_advise(self, issue_number: int, issue_title: str, issue_body: str) -> s
 - Return `""` (empty string) on any failure
 - Log warnings but don't raise exceptions
 - Check for both directory and marketplace.json existence
-- Use relative path from repo root (`build/ProjectMnemosyne`)
+- Use standardized path: `$HOME/.agent-brain/ProjectMnemosyne`
 
 ### 3. Inject Findings into Main Context
 

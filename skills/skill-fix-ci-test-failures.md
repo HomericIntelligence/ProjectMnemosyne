@@ -199,10 +199,10 @@ After merging this skill to ProjectScylla, copy to team knowledge base:
 ```bash
 # Copy skill to ProjectMnemosyne
 cp -r .claude-plugin/skills/fix-ci-test-failures \
-  ../build/ProjectMnemosyne/skills/testing/
+  $HOME/.agent-brain/ProjectMnemosyne/skills/testing/
 
 # Create PR in ProjectMnemosyne
-cd ../build/ProjectMnemosyne
+cd $HOME/.agent-brain/ProjectMnemosyne
 git checkout -b skill/testing/fix-ci-test-failures
 git add skills/testing/fix-ci-test-failures
 git commit -m "feat(skills): Add fix-ci-test-failures from ProjectScylla"

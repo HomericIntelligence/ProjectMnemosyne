@@ -22,7 +22,7 @@ user-invocable: false
 ## When to Use
 
 - Adding integration tests for scripts that transform or validate SKILL.md files
-- Test module needs to import from `build/ProjectMnemosyne/scripts/` which lives only in the main repo, not in git worktrees
+- Test module needs to import from `$HOME/.agent-brain/ProjectMnemosyne/scripts/` which lives only in the main repo, not in git worktrees
 - Verifying that fix functions are idempotent (second pass returns `modified=False`)
 - Guarding against regressions on real-world file shapes vs. synthetic fixtures
 
@@ -37,19 +37,8 @@ import sys
 from pathlib import Path
 
 def _find_scripts_dir() -> Path:
-    worktree_root = Path(__file__).parent.parent
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--git-common-dir"],
-            cwd=worktree_root, capture_output=True, text=True, check=True,
-        )
-        main_repo_root = Path(result.stdout.strip()).parent
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        main_repo_root = worktree_root
-    candidate = main_repo_root / "build" / "ProjectMnemosyne" / "scripts"
-    if candidate.is_dir():
-        return candidate
-    return worktree_root / "build" / "ProjectMnemosyne" / "scripts"
+    # Standard clone location: $HOME/.agent-brain/ProjectMnemosyne/scripts
+    return Path.home() / ".agent-brain" / "ProjectMnemosyne" / "scripts"
 
 sys.path.insert(0, str(_find_scripts_dir()))
 from fix_remaining_warnings import fix_skill_file, has_orphan_quick_reference
@@ -164,25 +153,12 @@ class TestRealFileIntegration:
     def test_fix_is_idempotent(self, tmp_path) -> None: ...
 ```
 
-### `_find_scripts_dir()` for worktree-aware imports
+### `_find_scripts_dir()` for standardized import path
 
 ```python
 def _find_scripts_dir() -> Path:
-    """Resolve build/ProjectMnemosyne/scripts/ from any worktree."""
-    worktree_root = Path(__file__).parent.parent
-    try:
-        result = subprocess.run(
-            ["git", "rev-parse", "--git-common-dir"],
-            cwd=worktree_root, capture_output=True, text=True, check=True,
-        )
-        git_common_dir = Path(result.stdout.strip())
-        main_repo_root = git_common_dir.parent
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        main_repo_root = worktree_root
-    candidate = main_repo_root / "build" / "ProjectMnemosyne" / "scripts"
-    if candidate.is_dir():
-        return candidate
-    return worktree_root / "build" / "ProjectMnemosyne" / "scripts"
+    """Resolve $HOME/.agent-brain/ProjectMnemosyne/scripts/ - the standard clone location."""
+    return Path.home() / ".agent-brain" / "ProjectMnemosyne" / "scripts"
 ```
 
 Run tests with:

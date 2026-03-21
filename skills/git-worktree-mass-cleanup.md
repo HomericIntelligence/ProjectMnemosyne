@@ -140,7 +140,7 @@ ls .worktrees/             # Should be empty
 | `git branch -d` on merged branches | Used safe delete flag for rebase-merged PRs | "not fully merged" error — rebase leaves no merge commit in current branch history | Always use `git branch -D` when remote branch is confirmed deleted (PR merged) |
 | `git worktree remove` without cleaning untracked dirs | Tried removing worktrees containing `ProjectMnemosyne/` | "contains modified or untracked files" error blocks removal | Pre-clean `rm -rf $wt/ProjectMnemosyne` before `git worktree remove` |
 | `git -C path symbolic-ref HEAD` piped to `head -2` | Attempted to check branch with head pipe | `head` doesn't accept `-C` as git does — it's a git flag, not shell | Don't pipe `git -C` subcommands to `head`; use separate commands |
-| Using `$$` in `mkdir -p` and `gh repo clone` in same command | Tried PID-scoped clone with `build/$$` | Shell expanded `$$` in one context but the existing `build/ProjectMnemosyne` dir caused conflict | Check for existing clone first; use `--ff-only pull` to update rather than re-clone |
+| Using shell PID expansion for clone location | Tried to create PID-scoped clones with dynamic paths | Shell `$$` expands inconsistently across different contexts and existing dirs cause conflicts | Use a fixed path like `$HOME/.agent-brain/ProjectMnemosyne` instead; check for existing clone first |
 
 ## Results & Parameters
 

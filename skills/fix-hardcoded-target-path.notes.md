@@ -2,8 +2,8 @@
 
 ## Issue
 
-GitHub issue #3311: `migrate_odyssey_skills.py` had `MNEMOSYNE_DIR = Path("/home/mvillmow/Odyssey2/build/ProjectMnemosyne")`
-which does not exist. Anyone running the script got `ERROR: ProjectMnemosyne directory not found`.
+GitHub issue #3311: `migrate_odyssey_skills.py` had a hardcoded path that doesn't exist on other machines.
+Anyone running the script got `ERROR: ProjectMnemosyne directory not found`.
 
 ## Root Cause
 

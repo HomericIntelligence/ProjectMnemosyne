@@ -47,7 +47,7 @@ Look for:
 
 ### 2. Fix the shell script (add self-location idiom)
 
-Add at the top of the script (after shebang and comments, before `set -`):
+Add at the top of the script (after shebang and comments, before `set -uo pipefail`):
 
 ```bash
 # Self-locating: works regardless of caller's CWD
@@ -117,7 +117,7 @@ Apply the same Quick Reference fix to the Mnemosyne SKILL.md:
 
 ```bash
 # Check what's in Mnemosyne
-cat build/ProjectMnemosyne/plugins/tooling/gh-implement-issue/skills/gh-implement-issue/SKILL.md
+cat $HOME/.agent-brain/ProjectMnemosyne/plugins/tooling/gh-implement-issue/skills/gh-implement-issue/SKILL.md
 
 # Apply the same Note callout and <skill-dir> pattern
 # Add Pre-Flight Check Results table, updated Error Handling rows, references
@@ -131,11 +131,11 @@ Update `references/notes.md` with:
 Commit Mnemosyne on its own branch:
 
 ```bash
-git -C build/ProjectMnemosyne checkout -b skill/tooling/gh-implement-issue-preflight-sync
-git -C build/ProjectMnemosyne add plugins/tooling/gh-implement-issue/
-git -C build/ProjectMnemosyne commit -m "fix(skills): Sync preflight_check.sh sections into gh-implement-issue skill"
-git -C build/ProjectMnemosyne push -u origin skill/tooling/gh-implement-issue-preflight-sync
-cd build/ProjectMnemosyne && gh pr create --title "..." --body "..."
+git -C $HOME/.agent-brain/ProjectMnemosyne checkout -b skill/tooling/gh-implement-issue-preflight-sync
+git -C $HOME/.agent-brain/ProjectMnemosyne add plugins/tooling/gh-implement-issue/
+git -C $HOME/.agent-brain/ProjectMnemosyne commit -m "fix(skills): Sync preflight_check.sh sections into gh-implement-issue skill"
+git -C $HOME/.agent-brain/ProjectMnemosyne push -u origin skill/tooling/gh-implement-issue-preflight-sync
+cd $HOME/.agent-brain/ProjectMnemosyne && gh pr create --title "..." --body "..."
 ```
 
 ### 6. Commit and PR (ProjectScylla)

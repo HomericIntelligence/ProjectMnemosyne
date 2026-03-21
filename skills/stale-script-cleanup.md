@@ -97,7 +97,7 @@ gh pr merge --auto --rebase
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Running `just pre-commit-all` | Used `just` command runner | `just` was not in PATH on this system | Fall back to `pixi run pre-commit run --all-files` when `just` is unavailable |
-| Using `$$` for PID-scoped build dir in bash | `MNEMOSYNE_DIR="build/$$/..."` then `echo $MNEMOSYNE_DIR` | `$$` expands to the shell PID at assignment but the variable was empty when echoed in a new shell invocation | Use a fixed path like `build/mnemosyne/ProjectMnemosyne` instead of relying on `$$` across separate Bash tool calls |
+| Using shell PID expansion for clone location | `MNEMOSYNE_DIR="build/$$/..."` pattern | `$$` expands unpredictably across different contexts; doesn't work across separate tool invocations | Use a fixed standardized path like `$HOME/.agent-brain/ProjectMnemosyne` instead |
 
 ## Results & Parameters
 

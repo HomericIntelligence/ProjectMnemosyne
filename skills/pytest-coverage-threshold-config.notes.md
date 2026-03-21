@@ -326,9 +326,9 @@ Push to ProjectMnemosyne:
 
 ```bash
 cp -r .claude-plugin/skills/pytest-coverage-threshold-config \
-  build/ProjectMnemosyne/skills/
+  $HOME/.agent-brain/ProjectMnemosyne/skills/
 
-cd build/ProjectMnemosyne
+cd $HOME/.agent-brain/ProjectMnemosyne
 git checkout -b skill/ci-cd/pytest-coverage-threshold-config
 git add skills/pytest-coverage-threshold-config
 git commit -m "feat(skills): Add pytest-coverage-threshold-config from ProjectScylla"

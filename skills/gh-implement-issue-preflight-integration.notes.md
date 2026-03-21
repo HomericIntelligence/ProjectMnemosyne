@@ -28,11 +28,11 @@
   - 4 new Error Handling rows for pre-flight conditions
   - Reference to `issue-preflight-check` skill in References section
 
-- `build/ProjectMnemosyne/skills/issue-preflight-check/SKILL.md`
+- `$HOME/.agent-brain/ProjectMnemosyne/skills/issue-preflight-check/SKILL.md`
   - "Complementary Skills" #2 updated: "future enhancement" → ✅ COMPLETED in #735
   - "Integration Opportunities" updated similarly
 
-- `build/ProjectMnemosyne/skills/issue-preflight-check/references/integration-examples.md`
+- `$HOME/.agent-brain/ProjectMnemosyne/skills/issue-preflight-check/references/integration-examples.md`
   - Integration 1 block replaced with actual shipped implementation
   - Added usage instructions and behavior table
 
