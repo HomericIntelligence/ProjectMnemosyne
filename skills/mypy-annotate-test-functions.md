@@ -1,11 +1,9 @@
 ---
-
----
-
 name: mypy-annotate-test-functions
-description: "Skill: mypy-annotate-test-functions. Use when annotating test functions and helper classes in pytest test files for mypy compliance."
+description: 'Skill: mypy-annotate-test-functions. Use when annotating test functions and helper classes in pytest test files for mypy compliance.'
 category: testing
 date: 2026-03-02
+version: 1.0.0
 user-invocable: false
 ---
 

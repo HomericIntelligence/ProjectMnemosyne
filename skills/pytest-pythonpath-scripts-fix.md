@@ -1,12 +1,10 @@
 ---
-
----
-
 name: pytest-pythonpath-scripts-fix
-description: "TRIGGER CONDITIONS: When analysis/scripts tests fail to collect due to ImportError on a scripts/ module, or when test count is suspiciously low (~1691 vs expected ~3199+), or when a pre-push hook runs fewer tests than a direct pytest invocation."
-user-invocable: false
+description: 'TRIGGER CONDITIONS: When analysis/scripts tests fail to collect due to ImportError on a scripts/ module, or when test count is suspiciously low (~1691 vs expected ~3199+), or when a pre-push hook runs fewer tests than a direct pytest invocation.'
 category: testing
 date: 2026-02-27
+version: 1.0.0
+user-invocable: false
 ---
 
 # pytest-pythonpath-scripts-fix

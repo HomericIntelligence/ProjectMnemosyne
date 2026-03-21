@@ -1,11 +1,9 @@
 ---
-
----
-
 name: cytoscape-frontend-rewrite
 description: Full rewrite of Cytoscape.js tournament visualization — court-slot packing layout, composable filters, multi-team trajectory, single bottom toolbar
 category: architecture
 date: 2026-02-27
+version: 1.0.0
 user-invocable: false
 ---
 

@@ -1,11 +1,9 @@
 ---
-
----
-
-name: "Skill: Verify Mypy Compliance for Test Annotations"
-description: "Pattern for verifying and adding -> None return types and parameter type hints to test functions for mypy compliance"
+name: verify-mypy-compliance-test-annotations
+description: Pattern for verifying and adding -> None return types and parameter type hints to test functions for mypy compliance
 category: testing
 date: 2026-03-02
+version: 1.0.0
 user-invocable: false
 ---
 # Skill: Verify Mypy Compliance for Test Annotations

@@ -1,10 +1,9 @@
 ---
-
----
-
 name: github-actions-security-patterns
-description: "Secure GitHub Actions workflows against command injection via user-controlled inputs. Use when creating or reviewing workflow files."
-category: ci-cd-cd-cd
+description: Secure GitHub Actions workflows against command injection via user-controlled inputs. Use when creating or reviewing workflow files.
+category: ci-cd
+date: 2026-03-20
+version: 1.0.0
 ---
 
 # GitHub Actions Security Patterns

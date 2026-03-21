@@ -1,11 +1,9 @@
 ---
-
----
-
-name: "Close Script Test Gap: cmd_run() and cmd_repair() Edge Cases"
-description: "Pattern for extending existing CLI test files to cover command-handler argument flow and repair edge cases using mocks only"
+name: close-script-test-gap-cmd-run-repair
+description: Pattern for extending existing CLI test files to cover command-handler argument flow and repair edge cases using mocks only
 category: testing
 date: 2026-02-27
+version: 1.0.0
 user-invocable: false
 ---
 # Close Script Test Gap: cmd_run() and cmd_repair() Edge Cases

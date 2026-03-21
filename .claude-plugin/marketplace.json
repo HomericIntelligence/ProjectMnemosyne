@@ -190,6 +190,14 @@
       "tags": []
     },
     {
+      "name": "cytoscape-frontend-rewrite",
+      "description": "Full rewrite of Cytoscape.js tournament visualization \u2014 court-slot packing layout, composable filters, multi-team trajectory, single bottom toolbar",
+      "version": "1.0.0",
+      "source": "./skills/cytoscape-frontend-rewrite.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
       "name": "cytoscape-interaction-patterns",
       "description": "Patterns for separating node-click highlight (visual dimming) from filter-based hiding in Cytoscape.js, and for working around cytoscape-node-html-label HTML overlay persistence. Use when node click should be visual-only (not hide nodes), or when HTML overlay cards remain visible after their Cytoscape node is hidden.",
       "version": "1.0.0",
@@ -1139,6 +1147,22 @@
       "tags": []
     },
     {
+      "name": "complexity-regression-gate",
+      "description": "Add a named CI step and pre-commit hook to enforce McCabe complexity limits (C901) so violations block PRs and local commits. Use when pyproject.toml already has C901 in ruff select but complexity regressions can still merge undetected.\\n",
+      "version": "1.0.0",
+      "source": "./skills/complexity-regression-gate.md",
+      "category": "ci-cd",
+      "tags": [
+        "ruff",
+        "c901",
+        "mccabe",
+        "complexity",
+        "pre-commit",
+        "github-actions",
+        "regression-gate"
+      ]
+    },
+    {
       "name": "composite-action-checkout-order",
       "description": "Enforce that actions/checkout precedes ./.github/actions/ references in every GitHub Actions job. Use when: adding checkout-order validation CI, auditing workflows for composite action ordering bugs, or documenting the checkout-first invariant.",
       "version": "1.0.0",
@@ -1622,6 +1646,14 @@
       "description": "GitHub Actions CI setup for pytest projects using pixi with parallel test execution",
       "version": "1.0.0",
       "source": "./skills/github-actions-pytest-pixi.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "github-actions-security-patterns",
+      "description": "Secure GitHub Actions workflows against command injection via user-controlled inputs. Use when creating or reviewing workflow files.",
+      "version": "1.0.0",
+      "source": "./skills/github-actions-security-patterns.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -4055,6 +4087,14 @@
       "tags": []
     },
     {
+      "name": "quality-audit-docstring-false-positive",
+      "description": "Use when a quality audit flags a module docstring as a sentence fragment, but the docstring is actually grammatically complete. Covers triage, fix pattern, and PR workflow.",
+      "version": "1.0.0",
+      "source": "./skills/quality-audit-docstring-false-positive.md",
+      "category": "documentation",
+      "tags": []
+    },
+    {
       "name": "quality-audit-issue-already-fixed",
       "description": "Verify and close quality audit issues that reference problems already resolved in the codebase",
       "version": "1.0.0",
@@ -4379,6 +4419,14 @@
       "description": "Fix 1-based subtest ID misclassification in dryrun3 analysis scripts. Use when: analysis script misreports complete/orphan/missing counts due to mixed ID numbering schemes.",
       "version": "1.0.0",
       "source": "./skills/dryrun3-analysis-fix.md",
+      "category": "evaluation",
+      "tags": []
+    },
+    {
+      "name": "dryrun3-completion",
+      "description": "Complete interrupted dryrun experiments: diagnose broken/partial runs, clean stale git worktrees, re-run broken experiments, repair partial experiments, build loader-compatible symlink tree, generate full analysis pipeline output, and produce Go/NoGo assessment with run classification script.",
+      "version": "1.0.0",
+      "source": "./skills/dryrun3-completion.md",
       "category": "evaluation",
       "tags": []
     },
@@ -5116,6 +5164,14 @@
       "tags": []
     },
     {
+      "name": "close-script-test-gap-cmd-run-repair",
+      "description": "Pattern for extending existing CLI test files to cover command-handler argument flow and repair edge cases using mocks only",
+      "version": "1.0.0",
+      "source": "./skills/close-script-test-gap-cmd-run-repair.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "cmd-visualize-filter-format-coverage",
       "description": "cmd_visualize Filter \u00d7 Format Coverage Tests",
       "version": "1.0.0",
@@ -5260,6 +5316,14 @@
       "tags": []
     },
     {
+      "name": "dockerfile-pyproject-version-guard",
+      "description": "Pattern for extending Dockerfile pin regression tests to cross-validate against pyproject.toml constraints, preventing silent version drift",
+      "version": "1.0.0",
+      "source": "./skills/dockerfile-pyproject-version-guard.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "enable-disabled-mojo-tests",
       "description": "Re-enable disabled Mojo test files by identifying resolved blockers and writing real tests. Use when: a test file has a NOTE stub saying tests are pending, the blocking components are now implemented, or a cleanup issue requires converting skip stubs to real test functions.",
       "version": "1.0.0",
@@ -5288,6 +5352,14 @@
       "description": "Expand YAML fixture files and test parametrize lists when adding new tiers to the testing tier registry. Use when tier count assertions or schema parametrize lists are out of sync with fixture files.",
       "version": "1.0.0",
       "source": "./skills/expand-tier-fixture-coverage.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "extend-script-test-coverage",
+      "description": "Pattern for systematically adding mock-only unit tests to previously untested Python scripts \u2014 prioritizing by testability \u00d7 impact to reach a coverage threshold",
+      "version": "1.0.0",
+      "source": "./skills/extend-script-test-coverage.md",
       "category": "testing",
       "tags": []
     },
@@ -5336,6 +5408,22 @@
       "description": "Fix CI failures caused by partially commented placeholder code and dtype migration assertion mismatches",
       "version": "1.0.0",
       "source": "./skills/fix-placeholder-code-ci.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "fix-review-feedback-missing-assertion",
+      "description": "Pattern for fixing a misleading test that names/documents both setup and baseline assertions but only asserts one \u2014 add the missing mock capture and assertion",
+      "version": "1.0.0",
+      "source": "./skills/fix-review-feedback-missing-assertion.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "fix-review-feedback-runner-path-untested",
+      "description": "Pattern for fixing a test that calls an internal delegate directly instead of through the runner entry point, when the issue requirement specifies the entry point must be exercised",
+      "version": "1.0.0",
+      "source": "./skills/fix-review-feedback-runner-path-untested.md",
       "category": "testing",
       "tags": []
     },
@@ -5867,6 +5955,14 @@
       ]
     },
     {
+      "name": "mypy-annotate-test-functions",
+      "description": "Skill: mypy-annotate-test-functions. Use when annotating test functions and helper classes in pytest test files for mypy compliance.",
+      "version": "1.0.0",
+      "source": "./skills/mypy-annotate-test-functions.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
       "name": "mypy-living-baseline",
       "description": "Skill: mypy-living-baseline. Use when working with mypy living baseline.",
       "version": "1.0.0",
@@ -5959,6 +6055,14 @@
       "description": "Write pytest unit tests that verify pre-commit hook configuration from YAML. Use when: a security hook has an intentional skip list needing rationale, verifying files: pattern coverage, or ensuring suppressions reflect real codebase usage.",
       "version": "1.0.0",
       "source": "./skills/pre-commit-hook-config-tests.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "pytest-pythonpath-scripts-fix",
+      "description": "TRIGGER CONDITIONS: When analysis/scripts tests fail to collect due to ImportError on a scripts/ module, or when test count is suspiciously low (~1691 vs expected ~3199+), or when a pre-push hook runs fewer tests than a direct pytest invocation.",
+      "version": "1.0.0",
+      "source": "./skills/pytest-pythonpath-scripts-fix.md",
       "category": "testing",
       "tags": []
     },
@@ -6254,6 +6358,14 @@
       "description": "Pattern for testing that training/validation loops reset DataLoaders before iterating, using a pre-exhaustion strategy. Use when: adding tests for loop reset behavior, verifying run() or run_subset() semantics, or writing parallel tests across loop methods.",
       "version": "1.0.0",
       "source": "./skills/validation-loop-reset-test.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "verify-mypy-compliance-test-annotations",
+      "description": "Pattern for verifying and adding -> None return types and parameter type hints to test functions for mypy compliance",
+      "version": "1.0.0",
+      "source": "./skills/verify-mypy-compliance-test-annotations.md",
       "category": "testing",
       "tags": []
     },
@@ -7461,6 +7573,14 @@
       "tags": []
     },
     {
+      "name": "python-repo-modernization",
+      "description": "Bring a Python utility package from C+ to production-grade quality in one session: fix package re-exports, raise test coverage to 75%+, create integration smoke tests, harden CI/CD pipeline, and produce an installable wheel. Use when: a shared utility repo is functional but not yet consumable by downstream projects.",
+      "version": "1.0.0",
+      "source": "./skills/python-repo-modernization.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "python-version-alignment",
       "description": "Align Python version across pyproject.toml classifiers, pixi.toml, and Dockerfile when drift is detected",
       "version": "1.0.0",
@@ -7872,118 +7992,6 @@
       "version": "1.0.0",
       "source": "./skills/spec-driven-experimentation.md",
       "category": "training",
-      "tags": []
-    },
-    {
-      "name": "close-script-test-gap-cmd-run-repair",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/close-script-test-gap-cmd-run-repair.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "complexity-regression-gate",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/complexity-regression-gate.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "cytoscape-frontend-rewrite",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/cytoscape-frontend-rewrite.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "dockerfile-pyproject-version-guard",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/dockerfile-pyproject-version-guard.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "dryrun3-completion",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/dryrun3-completion.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "extend-script-test-coverage",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/extend-script-test-coverage.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "fix-review-feedback-missing-assertion",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/fix-review-feedback-missing-assertion.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "fix-review-feedback-runner-path-untested",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/fix-review-feedback-runner-path-untested.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "github-actions-security-patterns",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/github-actions-security-patterns.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "mypy-annotate-test-functions",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/mypy-annotate-test-functions.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "pytest-pythonpath-scripts-fix",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/pytest-pythonpath-scripts-fix.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "python-repo-modernization",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/python-repo-modernization.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "quality-audit-docstring-false-positive",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/quality-audit-docstring-false-positive.md",
-      "category": "uncategorized",
-      "tags": []
-    },
-    {
-      "name": "verify-mypy-compliance-test-annotations",
-      "description": "",
-      "version": "1.0.0",
-      "source": "./skills/verify-mypy-compliance-test-annotations.md",
-      "category": "uncategorized",
       "tags": []
     }
   ]
