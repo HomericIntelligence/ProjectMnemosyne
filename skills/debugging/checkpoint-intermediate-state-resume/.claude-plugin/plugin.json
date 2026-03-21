@@ -1,7 +1,0 @@
-{
-  "name": "checkpoint-intermediate-state-resume",
-  "version": "1.0.0",
-  "description": "Fixing checkpoint resume when runs are stuck in intermediate states or subtests are orphaned. Use when: (1) experiment marked complete but runs not at terminal state, (2) subtest_states exist without corresponding run_states, (3) ProcessPool checkpoint save race conditions.",
-  "category": "debugging",
-  "date": "2026-03-17"
-}

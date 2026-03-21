@@ -1,7 +1,0 @@
-{
-  "name": "orphan-aware-test-fixtures",
-  "version": "1.0.0",
-  "description": "Patterns for fixing test fixtures that break when checkpoint integrity detectors are added. Use when: (1) adding orphan/integrity detection to resume pipelines, (2) fixing test failures where aggregated states get unexpectedly reset to pending, (3) rebasing branches that add checkpoint invariants.",
-  "category": "testing",
-  "date": "2026-03-17"
-}

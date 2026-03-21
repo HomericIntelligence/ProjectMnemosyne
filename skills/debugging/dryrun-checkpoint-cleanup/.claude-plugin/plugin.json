@@ -1,7 +1,0 @@
-{
-  "name": "dryrun-checkpoint-cleanup",
-  "version": "1.0.0",
-  "description": "Clean up dryrun experiment data: delete leftover workspace directories, patch stuck checkpoint states, and remove superseded experiment dirs. Use when: (1) dryrun analysis shows NOGO with stuck/intermediate runs, (2) workspace directories accumulate after worktree cleanup, (3) superseded experiment dirs need removal.",
-  "category": "debugging",
-  "date": "2026-03-17"
-}

@@ -1,7 +1,0 @@
-{
-  "name": "tailscale-maestro-setup",
-  "version": "1.0.0",
-  "description": "Set up Tailscale on Linux and configure cross-host AI Maestro connectivity. Use when: (1) enabling Tailscale on Debian/Linux, (2) connecting multiple AI Maestro instances across machines, (3) diagnosing network connectivity issues between hosts.",
-  "category": "tooling",
-  "date": "2026-03-17"
-}
