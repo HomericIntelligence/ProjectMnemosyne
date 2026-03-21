@@ -1,0 +1,7 @@
+{
+  "name": "fix-podman-rootless-ci",
+  "version": "1.0.0",
+  "description": "Fix rootless Podman CI failures including Dockerfile ARG scoping across multi-stage builds, workspace UID mapping permissions, and compose provider compatibility. Use when: (1) Podman compose builds fail with 'can't find uid for user' in multi-stage Dockerfiles, (2) bind-mounted workspace files have Permission denied inside containers on CI, (3) docker-compose CLI plugin doesn't support Podman-specific features like userns_mode.",
+  "category": "ci-cd",
+  "date": "2026-03-20"
+}
