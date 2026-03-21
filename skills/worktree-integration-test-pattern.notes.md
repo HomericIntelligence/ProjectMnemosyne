@@ -19,30 +19,19 @@ that use the real `.claude/skills/worktree-create/SKILL.md` as a fixture and ass
 
 ## Key Challenge: Worktree Import Path
 
-The `fix_remaining_warnings.py` script lives in `build/ProjectMnemosyne/scripts/`, which
-exists only in the **main repo checkout**, not in git worktrees. A naive relative path
-from the worktree root fails at import time.
+The `fix_remaining_warnings.py` script lives in the standardized location
+`$HOME/.agent-brain/ProjectMnemosyne/scripts/` which is consistent across all environments.
 
 ### Solution
 
-Use `git rev-parse --git-common-dir` to locate the main repo's `.git/` directory, then
-go one level up to get the main repo root:
-
-```
-worktree .git file → /home/mvillmow/ProjectOdyssey/.git/worktrees/issue-3780
-git rev-parse --git-common-dir → /home/mvillmow/ProjectOdyssey/.git
-main_repo_root = /home/mvillmow/ProjectOdyssey
-scripts_dir = /home/mvillmow/ProjectOdyssey/build/ProjectMnemosyne/scripts
-```
-
-### What Failed First
+Use the standardized clone location directly:
 
 ```python
-# WRONG — build/ doesn't exist in the worktree
-sys.path.insert(0, str(Path(__file__).parent.parent / "build" / "ProjectMnemosyne" / "scripts"))
+sys.path.insert(0, str(Path.home() / ".agent-brain" / "ProjectMnemosyne" / "scripts"))
 ```
 
-This produced `ModuleNotFoundError: No module named 'fix_remaining_warnings'`.
+This works from any worktree or regular checkout, since all clones use the same
+`$HOME/.agent-brain/ProjectMnemosyne` location.
 
 ## Real Fixture
 

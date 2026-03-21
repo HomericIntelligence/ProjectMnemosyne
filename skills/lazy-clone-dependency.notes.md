@@ -4,11 +4,11 @@
 2026-03-03
 
 ## Issue
-[ProjectScylla #1324](https://github.com/HomericIntelligence/ProjectScylla/issues/1324) — `plan_issues.py` was silently skipping the advise step when `build/ProjectMnemosyne` was absent.
+[ProjectScylla #1324](https://github.com/HomericIntelligence/ProjectScylla/issues/1324) — `plan_issues.py` was silently skipping the advise step when ProjectMnemosyne was absent.
 
 ## Symptom
 ```
-2026-03-03 06:36:36 [WARNING] scylla.automation.planner: ProjectMnemosyne not found at build/ProjectMnemosyne, skipping advise step
+2026-03-03 06:36:36 [WARNING] scylla.automation.planner: ProjectMnemosyne not found, skipping advise step
 ^C2026-03-03 06:36:43 [ERROR] scylla.automation.planner: Failed to plan issue #1322: Claude failed:
 ```
 

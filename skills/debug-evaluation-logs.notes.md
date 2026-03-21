@@ -308,7 +308,7 @@ ProjectScylla/src/scylla/e2e/llm_judge.py
 
 ```bash
 # Navigate to ProjectMnemosyne
-cd build/ProjectMnemosyne
+cd $HOME/.agent-brain/ProjectMnemosyne
 
 # Update main branch
 git checkout main && git pull

@@ -31,7 +31,7 @@ user-invocable: false
 
 ```python
 # Before — hardcoded, breaks on other machines
-MNEMOSYNE_DIR = Path("/home/mvillmow/Odyssey2/build/ProjectMnemosyne")
+MNEMOSYNE_DIR = Path("/tmp/ProjectMnemosyne")  # nosec B108
 MNEMOSYNE_SKILLS_DIR = MNEMOSYNE_DIR / "skills"
 ```
 
