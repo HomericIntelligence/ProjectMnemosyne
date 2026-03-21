@@ -1,0 +1,7 @@
+{
+  "name": "experiment-dataset-triage",
+  "version": "1.0.0",
+  "description": "Triage experiment datasets for paper readiness by analyzing checkpoint states, detecting inconsistencies, and planning phased resume execution. Use when: (1) assessing which experiment runs are complete enough for publication, (2) diagnosing checkpoint state inconsistencies like tiers marked complete with unfinished runs, (3) planning phased experiment resumption with --until flags.",
+  "category": "evaluation",
+  "date": "2026-03-21"
+}
