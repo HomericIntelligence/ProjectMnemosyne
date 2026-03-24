@@ -96,31 +96,20 @@ Claude automatically:
 
 ```text
 skills/
-├── training/           # ML training experiments
-├── evaluation/         # Model evaluation
-├── optimization/       # Performance tuning
-├── debugging/          # Bug investigation
-├── architecture/       # Design decisions
-├── tooling/            # Automation tools
-├── ci-cd/              # Pipeline configurations
-├── testing/            # Test strategies
-└── documentation/      # Paper writing and docs
+├── <name>.md               # Flat skill files with YAML frontmatter
+├── <name>.notes.md         # (Optional) Additional session context
+└── ...
 
 plugins/
 └── tooling/
     └── skills-registry-commands/   # /advise and /retrospective commands
 ```
 
-Each skill follows the plugin structure:
+Each skill is a flat markdown file with YAML frontmatter:
 
 ```text
-skills/<category>/<name>/
-├── .claude-plugin/
-│   └── plugin.json         # Metadata and trigger conditions
-├── skills/<name>/
-│   └── SKILL.md            # Main knowledge document
-└── references/
-    └── notes.md            # Additional context
+skills/<name>.md             # Main skill file with YAML frontmatter + markdown content
+skills/<name>.notes.md       # (Optional) Additional context from development session
 ```
 
 ## Available Skills
@@ -138,13 +127,13 @@ See `marketplace.json` for the complete searchable index of available skills. Th
 
 ### Option 2: Manual
 
-1. Copy `templates/experiment-skill/` to `skills/<category>/<name>/`
-2. Fill in `plugin.json` with specific trigger conditions
-3. Write `SKILL.md` with all required sections
+1. Copy `templates/skill-template.md` to `skills/<name>.md`
+2. Fill in YAML frontmatter (name, description, category, date, version)
+3. Fill all required markdown sections
 4. **Include "Failed Attempts" table** (required!)
 5. Create PR
 
-### Required Sections in SKILL.md
+### Required Sections in Skill Files
 
 - **Overview table**: Date, objective, outcome
 - **When to Use**: Specific trigger conditions
@@ -157,16 +146,16 @@ See `marketplace.json` for the complete searchable index of available skills. Th
 
 All PRs are validated by CI:
 
-- `plugin.json` has required fields
-- `SKILL.md` has required sections
-- Failed Attempts section is present
+- YAML frontmatter has required fields (name, description, category, date, version)
+- All required markdown sections are present
+- Failed Attempts section is present with proper table format
 - Description is specific (20+ chars)
 - Category is valid
 
 Run validation locally:
 
 ```bash
-python3 scripts/validate_plugins.py skills/
+python3 scripts/validate_plugins.py
 ```
 
 ## Ecosystem
