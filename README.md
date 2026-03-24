@@ -160,12 +160,39 @@ python3 scripts/validate_plugins.py
 
 ## Ecosystem
 
+### Core Platform
+
 | Project | Purpose |
 |---------|---------|
-| [ProjectOdyssey](https://github.com/HomericIntelligence/ProjectOdyssey) | Training and capability development |
-| [ProjectKeystone](https://github.com/HomericIntelligence/ProjectKeystone) | Communication and coordination |
-| [ProjectScylla](https://github.com/HomericIntelligence/ProjectScylla) | Testing and optimization |
-| **ProjectMnemosyne** | Knowledge, skills, and memory |
+| [Odysseus](https://github.com/HomericIntelligence/Odysseus) | Ecosystem orchestrator and architecture documentation |
+| **ProjectMnemosyne** | Knowledge, skills, and memory (this repo) |
+| [ProjectHephaestus](https://github.com/HomericIntelligence/ProjectHephaestus) | Shared utilities and foundational tools used across the ecosystem |
+
+### Agent Mesh Infrastructure
+
+| Project | Purpose |
+|---------|---------|
+| [Myrmidons](https://github.com/HomericIntelligence/Myrmidons) | GitOps agent provisioning — agent definitions as code, reconciliation against ai-maestro API |
+| [AchaeanFleet](https://github.com/HomericIntelligence/AchaeanFleet) | Container images for the heterogeneous agent mesh — base images, Dockerfiles, Compose, Nomad/Dagger CI |
+
+### Services
+
+| Project | Purpose |
+|---------|---------|
+| [ProjectKeystone](https://github.com/HomericIntelligence/ProjectKeystone) | DAG execution and task coordination |
+| [ProjectHermes](https://github.com/HomericIntelligence/ProjectHermes) | Webhook-to-NATS messaging bridge |
+| [ProjectTelemachy](https://github.com/HomericIntelligence/ProjectTelemachy) | Workflow engine |
+| [ProjectProteus](https://github.com/HomericIntelligence/ProjectProteus) | CI/CD pipeline management |
+| [ProjectArgus](https://github.com/HomericIntelligence/ProjectArgus) | Observability and monitoring |
+
+### Training & Testing
+
+| Project | Purpose |
+|---------|---------|
+| [ProjectOdyssey](https://github.com/HomericIntelligence/ProjectOdyssey) | Training framework written in Mojo |
+| [ProjectScylla](https://github.com/HomericIntelligence/ProjectScylla) | Testing, optimization, and resilience evaluation |
+
+> **Note**: Skills produced by any of the above repositories can be contributed to ProjectMnemosyne via `/retrospective` so that learnings are shared across the ecosystem.
 
 ## Why Mnemosyne?
 
