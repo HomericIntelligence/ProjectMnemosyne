@@ -10,60 +10,13 @@ Verifies that:
 - fix_skill_file() respects the dry_run parameter
 """
 
-import sys
 from pathlib import Path
 
 import pytest
 
-# Add scripts directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
-
 from fix_remaining_warnings import fix_skill_file, main
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-CLEAN_SKILL_MD = """\
----
-name: test-skill
-description: "A test skill."
-category: tooling
-date: 2026-01-01
-user-invocable: false
----
-
-# Test Skill
-
-## Overview
-
-| Field | Value |
-|-------|-------|
-| Date | 2026-01-01 |
-| Objective | Test |
-| Outcome | Pass |
-
-## When to Use
-
-- When testing
-
-## Verified Workflow
-
-### Step 1
-
-Do the thing.
-
-## Failed Attempts
-
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | No failures | Document as they occur |
-
-## Results & Parameters
-
-N/A
-"""
+from conftest import CLEAN_SKILL_MD, make_skill_file
 
 NEEDS_WORKFLOW_FIX = """\
 ---
@@ -142,13 +95,6 @@ No failures recorded.
 
 N/A
 """
-
-
-def make_skill_file(directory: Path, content: str) -> Path:
-    """Write a SKILL.md into *directory* and return its path."""
-    skill_file = directory / "SKILL.md"
-    skill_file.write_text(content)
-    return skill_file
 
 
 # ---------------------------------------------------------------------------

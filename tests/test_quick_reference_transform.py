@@ -9,13 +9,7 @@ Verifies that:
 - No change when file has no Quick Reference or already has it as subsection
 """
 
-import sys
 from pathlib import Path
-
-import pytest
-
-# Add scripts directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
 from fix_remaining_warnings import (
     add_verified_workflow_wrapper,
@@ -25,77 +19,14 @@ from fix_remaining_warnings import (
 )
 from validate_plugins import validate_skill_md
 
-
-# ---------------------------------------------------------------------------
-# Fixtures / helpers
-# ---------------------------------------------------------------------------
-
-FRONTMATTER = """\
----
-name: test-skill
-description: "A test skill for unit testing purposes."
-category: tooling
-date: 2026-01-01
-user-invocable: false
----
-"""
-
-OVERVIEW = """\
-# Test Skill
-
-## Overview
-
-| Field | Value |
-|-------|-------|
-| Date | 2026-01-01 |
-| Objective | Test |
-| Outcome | Test |
-
-## When to Use
-
-- Condition A
-- Condition B
-
-"""
-
-QUICK_REFERENCE_CONTENT = """\
-## Quick Reference
-
-```bash
-# Key commands
-git status
-git log
-```
-
-"""
-
-VERIFIED_WORKFLOW_CONTENT = """\
-## Verified Workflow
-
-### Step 1
-
-Do the thing.
-
-### Step 2
-
-Do another thing.
-
-"""
-
-FAILED_ATTEMPTS = """\
-## Failed Attempts
-
-| Attempt | Why Failed | Lesson |
-|---------|------------|--------|
-| N/A | No failures yet | Document failures as they occur |
-
-"""
-
-RESULTS = """\
-## Results & Parameters
-
-N/A - workflow pattern skill.
-"""
+from conftest import (
+    SAMPLE_FAILED_ATTEMPTS as FAILED_ATTEMPTS,
+    SAMPLE_FRONTMATTER as FRONTMATTER,
+    SAMPLE_OVERVIEW as OVERVIEW,
+    SAMPLE_QUICK_REFERENCE as QUICK_REFERENCE_CONTENT,
+    SAMPLE_RESULTS as RESULTS,
+    SAMPLE_VERIFIED_WORKFLOW as VERIFIED_WORKFLOW_CONTENT,
+)
 
 
 def make_skill(
