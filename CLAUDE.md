@@ -59,11 +59,11 @@ Save learnings after a session (auto-creates PR).
 
 **Auto-trigger**: UserPromptSubmit hook reminds about retrospective when you type session-ending keywords.
 
-**Key changes from old format**:
-- No user prompting for category/name — auto-generated
-- Clone to `$HOME/.agent-brain/ProjectMnemosyne/` (not `build/$$/`)
-- Single flat `.md` file (not nested dirs + plugin.json)
-- Branch name is `skill/<name>` (not `skill/<category>/<name>`)
+**Format notes**:
+- Category/name are auto-generated (no user prompting)
+- Clone location: `$HOME/.agent-brain/ProjectMnemosyne/`
+- Single flat `.md` file with YAML frontmatter
+- Branch name: `skill/<name>`
 
 ## Plugin Standards
 
