@@ -12,8 +12,10 @@ Capture session learnings and create a new flat-format skill file in the Project
 **Base branch**: `main`
 **Clone location**: `$HOME/.agent-brain/ProjectMnemosyne/`
 
-Single shared clone in user's home directory. Automatically cleaned after PR creation.
+Single shared clone in user's home directory. Persists across sessions for faster access.
 Automatically skipped if already running in the ProjectMnemosyne repository.
+
+> **Note**: Never delete ~/.agent-brain/. This is a persistent shared location that caches repository clones across sessions for faster access.
 
 ## Instructions
 
@@ -39,11 +41,9 @@ When the user invokes this command:
    if [[ "$CURRENT_REMOTE" == *"ProjectMnemosyne"* ]] && [[ "$CURRENT_REMOTE" != *"ProjectMnemosyne-"* ]]; then
      # Already in ProjectMnemosyne - work in current directory
      MNEMOSYNE_DIR="."
-     NEED_CLEANUP=false
    else
-     # Use shared home directory location
+     # Use shared home directory location (persistent cache)
      MNEMOSYNE_DIR="$HOME/.agent-brain/ProjectMnemosyne"
-     NEED_CLEANUP=true
 
      if [ ! -d "$MNEMOSYNE_DIR" ]; then
        # Clone fresh
@@ -205,14 +205,6 @@ Documents <brief description of what was learned>.
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    ```
 
-8. **Cleanup** (if cloned to $HOME/.agent-brain):
-   ```bash
-   if [ "$NEED_CLEANUP" = true ]; then
-     # After PR created, remove the worktree clone
-     rm -rf "$HOME/.agent-brain/ProjectMnemosyne"
-   fi
-   ```
-
 ## Common Issues & Solutions
 
 ### Top Validation Failures
@@ -239,15 +231,6 @@ git push -u origin skill/<name>
 
 # OR update existing PR
 git push origin skill/<name>
-```
-
-### Issue: Cleanup directory
-
-**Cause**: Shared clone at `$HOME/.agent-brain/ProjectMnemosyne` takes up disk space.
-
-**Solution**: Safe to delete anytime — re-clones automatically on next `/advise` or `/retrospective`:
-```bash
-rm -rf $HOME/.agent-brain/ProjectMnemosyne
 ```
 
 ## Required Sections
