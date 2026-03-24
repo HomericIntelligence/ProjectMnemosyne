@@ -55,7 +55,6 @@ Save learnings after a session (auto-creates PR).
 5. Create branch: `skill/<name>`
 6. Commit and push
 7. Create PR with summary
-8. After PR created, clean up worktree at `$HOME/.agent-brain/ProjectMnemosyne/`
 
 **Auto-trigger**: UserPromptSubmit hook reminds about retrospective when you type session-ending keywords.
 
