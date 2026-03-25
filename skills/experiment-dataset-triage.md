@@ -3,6 +3,7 @@ name: experiment-dataset-triage
 description: "Triage experiment datasets for paper readiness by analyzing checkpoint states, detecting inconsistencies, and planning phased resume. Use when: assessing experiment completion, diagnosing stale checkpoints, or planning phased --until execution."
 category: evaluation
 date: 2026-03-21
+version: "1.0.0"
 user-invocable: false
 ---
 

@@ -3,6 +3,7 @@ name: batch-subprocess-signal-hang
 description: "Debugging batch mode hangs caused by subprocess stdin blocking, signal group isolation, and worker-thread terminal calls. Use when: (1) batch/parallel workers hang on exit, (2) Ctrl+C stops working after os.setpgrp(), (3) subprocess.run blocks waiting for stdin."
 category: debugging
 date: 2026-03-20
+version: "1.0.0"
 user-invocable: false
 ---
 

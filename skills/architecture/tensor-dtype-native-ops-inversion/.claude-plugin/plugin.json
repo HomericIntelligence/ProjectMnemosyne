@@ -1,7 +1,0 @@
-{
-  "name": "tensor-dtype-native-ops-inversion",
-  "version": "1.0.0",
-  "description": "Invert wrapper pattern for parametric tensor operations: make Tensor[dtype] typed implementations the core, with runtime-typed AnyTensor dispatching via ordinal table. Use when: (1) migrating from runtime-typed to compile-time typed tensor ops, (2) eliminating dtype branching and bitcasts from hot paths, (3) designing a 3-layer architecture (AnyTensor API -> dispatch -> typed core).",
-  "category": "architecture",
-  "date": "2026-03-22"
-}
