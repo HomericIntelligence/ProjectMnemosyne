@@ -1,0 +1,147 @@
+---
+name: architecture-python-src-layout-migration
+description: "Pattern for migrating a Python project from flat layout (package/ at repo root) to src-layout (src/package/). Use when: (1) moving a Python package into src/ for ecosystem compliance, (2) updating all filesystem path references after a directory restructure, (3) fixing Path(__file__) navigations after adding a directory level."
+category: architecture
+date: '2026-03-25'
+version: 1.0.0
+user-invocable: false
+verification: verified-local
+tags: [python, src-layout, migration, pyproject, hatchling, directory-restructure]
+---
+
+# Skill: Python Flat-to-Src-Layout Migration
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-03-25 |
+| **Objective** | Migrate a Python project from flat layout (`package/` at repo root) to src-layout (`src/package/`) |
+| **Outcome** | Successful — 4782 tests pass, all 30 pre-commit hooks pass, package imports resolve correctly |
+| **Verification** | verified-local (CI validation pending on PR) |
+
+## When to Use
+
+- Migrating a Python project from flat layout to src-layout for ecosystem consistency
+- Performing a large-scale directory restructure that affects build config, CI, Docker, scripts, tests, and docs
+- Updating `Path(__file__)` navigations after adding a directory level to the package hierarchy
+- Updating pre-commit hook `files:` patterns after moving source directories
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Move the package (preserves git history)
+mkdir -p src && git mv <package>/ src/<package>/
+
+# 2. Update pyproject.toml
+#    packages = ["src/<package>"]
+#    force-include: "src/<package>/..." = "<package>/..."
+#    pythonpath = ["src", "scripts"]
+#    --cov=src/<package>
+#    source = ["src/<package>", ...]
+#    mypy_path = "src"
+
+# 3. Regenerate pixi.lock (editable install SHA256 invalidated)
+pixi install
+
+# 4. Verify import resolution
+python -c "import <package>; print(<package>.__file__)"
+# Should print: .../src/<package>/__init__.py
+
+# 5. Run tests
+pytest tests/ -x
+
+# 6. Run pre-commit
+pre-commit run --all-files
+```
+
+### Detailed Steps
+
+1. **Move the package**: `mkdir -p src && git mv <package>/ src/<package>/` — uses `git mv` to preserve full file history via `git log --follow`.
+
+2. **Update `pyproject.toml`** (8 changes):
+   - `[tool.hatch.build.targets.wheel] packages = ["src/<package>"]`
+   - `[tool.hatch.build.targets.wheel.force-include]` — source path changes, target stays same for wheel
+   - `[tool.pytest.ini_options] pythonpath = ["src", "scripts"]` — change `"."` to `"src"`
+   - `addopts --cov=src/<package>`
+   - `[tool.coverage.run] source = ["src/<package>", ...]`
+   - `[tool.mypy] mypy_path = "src"` — so mypy resolves package imports
+   - Update all comments referencing the old path
+
+3. **Update `pixi.toml`**: Change lint/format task commands from `<package>` to `src/<package>`.
+
+4. **Update `.pre-commit-config.yaml`** — THREE types of changes per hook:
+   - `files:` regex patterns: `^<package>/` → `^src/<package>/`, `^(scripts|<package>)/` → `^(scripts|src/<package>)/`
+   - `entry:` commands: paths in ruff/mypy/bandit commands
+   - `description:` strings referencing the old path
+
+5. **Update CI workflows**: grep exclusion paths, `--cov=` values, trigger `paths:` patterns, timing probe paths.
+
+6. **Update Dockerfile**: `COPY` source paths. The target path inside the container may also change.
+
+7. **Update `Path(__file__)` navigations**: Each `.parent.parent.parent` (navigating to project root) gains one extra `.parent` since the package is one level deeper. Count: `src/<package>/<subpackage>/file.py` needs 4 `.parent` calls to reach project root.
+
+8. **Update scripts**: Default path arguments (`default="<package>/"` → `default="src/<package>/"`), docstring examples, `_is_<package>_file()` helpers (`root / "<package>"` → `root / "src" / "<package>"`).
+
+9. **Update test data**: Tests that create `tmp_path / "<package>"` to simulate repo structure need `tmp_path / "src" / "<package>"` AND `mkdir(parents=True)` since the `src/` parent doesn't exist.
+
+10. **Regenerate `pixi.lock`**: `pixi install` — the editable install SHA256 is invalidated by the source move.
+
+11. **Comprehensive sweep**: Run `grep -rn '"<package>/' --include='*.py' --include='*.toml' --include='*.yaml' --include='*.yml' --include='*.md' .` and filter out `src/<package>`, `.pixi/`, and `build/` to catch remaining references.
+
+12. **Validate doc/config consistency**: If the project has consistency-checking scripts (e.g., `check_doc_config_consistency.py`), these will catch mismatches between `--cov=` in README and `pyproject.toml`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Test `mkdir()` without `parents=True` | Changed `tmp_path / "scylla"` to `tmp_path / "src" / "scylla"` but kept `mkdir()` | `FileNotFoundError` — `src/` parent directory doesn't exist in `tmp_path` | When adding a directory level to test fixtures, always add `parents=True` to `mkdir()` calls |
+| Missing `--cov=` in README | Updated most README references but missed a `--cov=scylla` inside a code block | Pre-commit `check-doc-config-consistency` hook caught the mismatch | Run the full pre-commit suite, not just tests — consistency checkers catch documentation drift |
+| Write-protected `.claude/` directory | Tried to update example paths in `.claude/agents/` and `.claude/shared/` files | Permission denied in don't-ask mode for `.claude/` directory edits | Agent config files under `.claude/` may be write-protected; these are informational-only and don't affect builds |
+
+## Results & Parameters
+
+### Key pyproject.toml Configuration (src-layout with hatchling)
+
+```toml
+[tool.hatch.build.targets.wheel]
+packages = ["src/<package>"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/<package>/data" = "<package>/data"
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "scripts"]
+
+[tool.mypy]
+mypy_path = "src"
+
+[tool.coverage.run]
+source = ["src/<package>", "scripts"]
+```
+
+### Scope of Changes (ProjectScylla example)
+
+| Category | Files Modified | Key Changes |
+|----------|---------------|-------------|
+| Build config | 3 (pyproject.toml, pixi.toml, pixi.lock) | packages, pythonpath, mypy_path, coverage source |
+| Pre-commit | 1 (.pre-commit-config.yaml) | 7 hooks with file patterns and entry commands |
+| CI workflows | 3 (test.yml, pre-commit.yml, docker-test.yml) | grep paths, --cov, trigger paths |
+| Docker | 1 (Dockerfile) | COPY source path |
+| Python source | 4 files | Path(__file__) + one extra .parent |
+| Scripts | 5 files | Default paths, docstrings, scope helpers |
+| Tests | 4 files | Test data paths, assertions, mkdir(parents=True) |
+| Documentation | 12+ files | All filesystem path references |
+| **Total** | **197 files** (including 160+ renames) | |
+
+### Import Behavior
+
+Python import statements (`from <package>.foo import bar`) do **not** change — only filesystem path references. This is the primary benefit of src-layout: the package name is decoupled from the directory structure.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectScylla | Issue #1523, PR #1555 | Migrated `scylla/` → `src/scylla/`, 4782 tests pass, 30 pre-commit hooks pass |
