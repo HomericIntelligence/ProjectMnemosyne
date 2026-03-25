@@ -1,73 +1,26 @@
-# ci-coverage-threshold-single-source — History
+# ci-coverage-threshold-single-source - History
 
 ## v2.0.0 (2026-03-25)
 
-**Changed by:** Issue #1511, PR #1554 — raise combined coverage floor from 9% to 75%
+**Changed by:** Issue #1511, PR #1554 - raise combined coverage floor from 9% to 75%
 **Verification:** verified-local
 
 ### What changed
-- Extended skill to cover removing `--cov-fail-under` from pyproject.toml addopts (not just CI workflows)
-- Added dual-threshold design pattern (combined floor in pyproject.toml + per-step floors in CI)
+- Extended skill to cover removing --cov-fail-under from pyproject.toml addopts (not just CI)
+- Added dual-threshold design pattern (combined floor + per-step CI floors)
 - Added guidance on updating consistency check scripts that validate addopts
-- Added `pixi run test-unit` local task pattern for CI parity
+- Added pixi run test-unit local task pattern for CI parity
 - Added 2 new Failed Attempts entries
-- Updated Results & Parameters with new data points
 
 ### Why
-v1.0.0 only covered removing `--cov-fail-under` from CI workflows to let pyproject.toml be the single source.
-Issue #1511 revealed the reverse case: `--cov-fail-under=9` in pyproject.toml addopts was redundant with
-`[tool.coverage.report].fail_under = 9`, and the 9% floor was cosmetically low. The fix removed the addopts
-flag entirely and raised `fail_under` to 75%, making `[tool.coverage.report]` the true single source of truth
-for local runs, while CI continues to use `--override-ini="addopts="` with its own per-step floors.
+v1.0.0 only covered removing --cov-fail-under from CI workflows.
+Issue #1511 revealed --cov-fail-under=9 in addopts was redundant with fail_under=9,
+and the 9% floor was cosmetically low. The fix removed the addopts flag and raised
+fail_under to 75%.
 
 ### Previous version (v1.0.0) snapshot
----
-name: ci-coverage-threshold-single-source
-description: Remove explicit --cov-fail-under from CI workflows and rely on pyproject.toml
-  as the single source of truth for coverage threshold.
-category: ci-cd
-date: 2026-02-20
-version: 1.0.0
-user-invocable: false
----
-# Skill: ci-coverage-threshold-single-source
 
-## Overview
-
-| Field     | Value |
-|-----------|-------|
-| Date      | 2026-02-20 |
-| Issue     | #754 |
-| PR        | #868 |
-| Objective | Align coverage threshold between CI and local by removing explicit --cov-fail-under from CI |
-| Outcome   | Success — single source of truth established in pyproject.toml; CI now enforces 73% matching local |
-
-## When to Use
-
-- CI passes with a lower coverage threshold than local development enforces
-- --cov-fail-under=N appears in a GitHub Actions workflow AND fail_under = M exists in pyproject.toml with N != M
-- You want a single source of truth for the coverage threshold
-- A PR introduces a coverage regression that CI doesn't catch but local runs do
-
-## Verified Workflow
-
-1. Diagnose: grep for cov-fail-under in CI and pyproject.toml
-2. Remove --cov-fail-under from CI pytest invocations
-3. Verify trailing whitespace
-4. Commit and PR
-
-## Failed Attempts
-
-| Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
-| N/A | Direct approach worked | N/A | Solution was straightforward |
-
-## Results & Parameters
-
-| Parameter | Value |
-|-----------|-------|
-| Threshold removed from CI | --cov-fail-under=72 |
-| Authoritative threshold | fail_under = 73 |
-| Files changed | .github/workflows/test.yml |
+Single source of truth skill covering CI workflow --cov-fail-under removal.
+Issue #754, PR #868. Threshold removed: --cov-fail-under=72. Authoritative: fail_under=73.
 
 ---
