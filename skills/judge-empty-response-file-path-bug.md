@@ -1,162 +1,130 @@
 ---
 name: judge-empty-response-file-path-bug
-description: "Fix judge producing empty responses when temp file path passed as CLI prompt after tool access removed. Use when: (1) all judges return empty responses across all models, (2) judge_prompt was passed as file path without Read tool access, (3) judge invocation uses --allowedTools empty string."
+description: "Fix judge producing empty responses when prompt consumed by variadic --allowedTools flag. Use when: (1) all judges return empty responses across all models, (2) CLI positional arg placed after variadic flag like --allowedTools, (3) checkpoint has invalid zero-score judge results needing reset."
 category: debugging
 date: 2026-03-25
-version: "1.0.0"
+version: "2.0.0"
 user-invocable: false
 tags: []
 ---
 
-# Judge Empty Response File Path Bug
+# Judge Empty Response — Variadic Flag Consuming Prompt
 
 ## Overview
 
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-03-25 |
-| **Objective** | Fix LLM judge returning empty responses causing "Judge response does not contain valid JSON" failures across all models |
-| **Outcome** | ✅ Root cause identified and fixed in PR #1543 — temp file path passed as CLI positional arg after tool access removed |
+| **Objective** | Fix LLM judge returning empty responses causing "Judge response does not contain valid JSON" across all models |
+| **Outcome** | Root cause: --allowedTools variadic flag consumed positional prompt arg. Fixed in PR #1543 + #1544. Checkpoint reset procedure for invalidated results. |
 
 ## When to Use
 
-- All 3 judge models (Opus, Sonnet, Haiku) return empty responses simultaneously
-- Error message: `Judge response does not contain valid JSON.\nResponse:` (nothing after "Response:")
-- Judge invocation uses `--allowedTools ""` (no tool access)
-- Judge prompt was written to temp file and file PATH passed as positional CLI argument
-- Bimodal failure: entire subtests fail uniformly, not individual runs
+- All judge models (Opus, Sonnet, Haiku) return empty responses simultaneously
+- Error: `Judge response does not contain valid JSON.\nResponse:` (nothing after "Response:")
+- CLI returns exit 1: `Error: Input must be provided either through stdin or as a prompt argument`
+- Positional prompt arg placed after a variadic CLI flag (--allowedTools, --tools, etc.)
+- Checkpoint has zero-score is_valid=False judge results that need re-running
 
 ## Verified Workflow
 
 ### Quick Reference
 
 ```bash
-# Diagnostic: test if Claude CLI receives prompt content vs file path
-# Run OUTSIDE of Claude Code (CLAUDECODE=1 interferes with nested invocations)
+# DIAGNOSTIC: Test if CLI receives prompt (run OUTSIDE Claude Code)
+# Test stdin (correct approach):
+echo 'Return JSON: {"test": true}' | \
+  claude --print --output-format text --model claude-haiku-4-5 \
+  --dangerously-skip-permissions --allowedTools ""
+# Expected: non-empty response
 
-# Test 1: Content as positional arg (correct approach)
+# Test positional arg AFTER --allowedTools (broken):
 claude --print --output-format text --model claude-haiku-4-5 \
   --dangerously-skip-permissions --allowedTools "" \
-  'Return ONLY this JSON: {"test": true}' \
-  > /tmp/judge_test1.txt 2>&1 < /dev/null
-echo "Bytes: $(wc -c < /tmp/judge_test1.txt)"
-cat /tmp/judge_test1.txt
-# Expected: non-empty response with JSON
-
-# Test 2: File path as positional arg (broken approach)
-echo 'Return ONLY this JSON: {"test": true}' > /tmp/test_prompt.md
-claude --print --output-format text --model claude-haiku-4-5 \
-  --dangerously-skip-permissions --allowedTools "" \
-  "/tmp/test_prompt.md" \
-  > /tmp/judge_test2.txt 2>&1 < /dev/null
-echo "Bytes: $(wc -c < /tmp/judge_test2.txt)"
-cat /tmp/judge_test2.txt
-# Expected: empty or confused response (model sees literal path string)
+  'Return JSON: {"test": true}' < /dev/null
+# Expected: exit 1 "Input must be provided"
 ```
 
 ### Detailed Steps
 
-#### Root Cause Analysis
+#### 1. Root Cause: Variadic --allowedTools Consumes Positional Args
 
-1. **Identify the pattern**: All models fail identically → systemic CLI invocation issue, not model-specific
-2. **Check error logs**: `Response:` followed by nothing → `result.stdout` is empty string
-3. **Compare invocation patterns**: Adapter (`claude_code.py:221`) passes content directly; judge was passing file path
-
-#### The Bug
-
-The `_call_claude_judge()` function wrote evaluation context to a temp file and passed the **file path** as the CLI positional `[prompt]` argument:
+The Claude Code CLI flag `--allowedTools <tools...>` is variadic -- it consumes all subsequent non-flag arguments as tool names. When the evaluation context was placed as a positional arg after `--allowedTools ""`, the CLI parser consumed it as a tool argument, leaving no prompt for the model.
 
 ```python
-# BROKEN: passes file PATH, not content
-cmd = [..., "-p", prompt_file_path]
-# "-p" is --print (redundant), prompt_file_path is the [prompt] positional arg
-# Model receives literal string "/tmp/judge_prompt_abc123.md"
+# BROKEN: positional arg consumed by variadic --allowedTools
+cmd = [
+    "claude", "--print", "--output-format", "text",
+    "--allowedTools", "",          # variadic: consumes everything after
+    evaluation_context,            # eaten as a tool name, not the prompt!
+]
+# CLI error: "Input must be provided either through stdin or as a prompt argument"
 ```
 
-This worked historically because the judge had `--allowedTools Read,Glob,Grep` and `cwd=workspace`, so the model could use the `Read` tool to open the temp file.
+User-confirmed tests:
+- Test 1 (positional arg after --allowedTools): EXIT 1, 0 bytes stdout
+- Test 2 (file path after --allowedTools): EXIT 1, 0 bytes stdout
+- Test 3 (stdin pipe): EXIT 0, response received
 
-When commit `2c97efc3` (2026-03-22) removed tool access (`--allowedTools ""`) and `cwd`, the model could no longer read the file. It received only a file path string as its user message, with no way to access the actual content.
-
-#### The Fix (PR #1543, commit 9421614c)
-
-Pass evaluation context content directly as the positional argument, matching the adapter pattern:
+#### 2. The Fix: Always Pipe Via Stdin (PR #1544)
 
 ```python
-# FIXED: passes content directly
+# FIXED: pipe via stdin, avoids variadic flag issue AND ARG_MAX limits
 cmd = [
-    "claude", "--model", model, "--print", "--output-format", "text",
-    "--dangerously-skip-permissions", "--allowedTools", "",
+    "claude", "--print", "--output-format", "text",
+    "--dangerously-skip-permissions",
+    "--allowedTools", "",
     "--system-prompt-file", str(JUDGE_SYSTEM_PROMPT_FILE),
 ]
-
-# For very large prompts (T5/T6), pipe via stdin to avoid ARG_MAX
-max_arg_length = 1_000_000
-stdin_input = None
-if len(evaluation_context) < max_arg_length:
-    cmd.append(evaluation_context)  # Content as positional arg
-else:
-    stdin_input = evaluation_context  # Pipe via stdin
 
 result = subprocess.run(
     cmd, capture_output=True, text=True, timeout=1200,
     env={k: v for k, v in os.environ.items() if k != "CLAUDECODE"},
-    input=stdin_input,
+    input=evaluation_context,  # stdin pipe -- always works
 )
 ```
 
-#### Resume Trap
+#### 3. Reset Checkpoint for Invalid Judge Results
 
-**Critical**: If resuming an existing experiment checkpoint, already-completed subtests have their zero-score results baked in. The fix only applies to subtests still in `pending` state. To re-judge failed subtests, either:
-- Start a fresh experiment run
-- Use `rerun_judges.py` to re-judge specific subtests
-- Manually reset subtest states in the checkpoint to `pending`
-
-#### Diagnostics Added
-
-- `_JudgeParseError` class preserves stdout/stderr when judge parsing fails
-- `_save_judge_failure()` writes stdout.log and stderr.log to judge-specific directories
-- Retry warning now logs `stdout_len` and `stderr_len` for debugging
+After fixing the code, already-completed subtests have zero-score is_valid=False results baked into the checkpoint. Reset run states to re-run the judge stage. See Results section for the reset script.
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Initial diagnosis | Suspected `--output-format text` vs `json` mismatch | Testing from within Claude Code gave misleading results (CLAUDECODE=1 env var interferes) | Always test CLI invocations outside of Claude Code sessions |
-| Verify from shell | Ran `claude -p "hello"` from within Claude Code bash | All invocations returned empty due to nested session interference | Cannot reliably test Claude CLI from within a Claude Code session |
-| Resume old run | Applied fix and resumed old checkpoint | Already-completed subtests won't re-judge — results baked into checkpoint | Code fixes don't retroactively fix completed checkpoint states |
+| Pass content as positional arg (PR #1543) | Replaced temp file path with prompt content as positional CLI arg | --allowedTools is variadic and consumed the positional arg | Variadic CLI flags consume all subsequent non-flag args; use stdin piping instead |
+| Test CLI from within Claude Code | Ran claude -p "hello" from bash tool | All invocations returned empty due to CLAUDECODE=1 env var | Never test Claude CLI invocations from within a Claude Code session |
+| Resume old checkpoint after code fix | Applied fix and resumed old experiment | Already-completed subtests had zero-score results baked in | Code fixes don't retroactively fix completed checkpoint states; must reset run states |
+| Diagnose as output-format text issue | Initially suspected text vs json output format mismatch | Testing was unreliable inside Claude Code; actual issue was argument parsing | Get user confirmation with external tests before committing to a theory |
 
 ## Results & Parameters
 
-### Files Modified (PR #1543)
+### PRs
 
-| File | Change |
-|------|--------|
-| `scylla/e2e/llm_judge.py` | Pass content directly as positional arg, stdin fallback for >1MB, empty-response guard |
-| `scylla/e2e/stage_finalization.py` | `_JudgeParseError` with stdout/stderr, `_save_judge_failure()` helper, retry logging |
+| PR | Change |
+|----|--------|
+| #1543 | Pass prompt content instead of temp file path + diagnostics |
+| #1544 | Pipe via stdin instead of positional arg (fixes variadic flag) |
 
-### Key Patterns
+### CLI Patterns
 
-**Claude Code CLI prompt passing**:
-- Positional arg is literal text content, NOT a file path reader
-- `-p` is `--print` flag, NOT `--prompt`
-- No `--prompt` or `--message` flag exists
-- For file-based prompts: model needs Read tool access OR content must be piped/passed directly
-- `stdin=subprocess.DEVNULL` prevents stdin-waiting issues
-- `input=content` pipes content via stdin for large prompts
+| Pattern | Works? | Why |
+|---------|--------|-----|
+| `--allowedTools "" "prompt"` | No | Variadic flag consumes prompt as tool name |
+| `echo "prompt" \| claude --allowedTools ""` | Yes | Stdin not affected by variadic flags |
+| `subprocess.run(cmd, input=prompt)` | Yes | Python pipes via stdin |
 
-**Adapter reference** (`claude_code.py:221`):
-```python
-cmd.append(prompt)  # prompt is text CONTENT, not file path
-```
+### State Machine Reset Reference
 
-### Test Results
-
-- 4782 unit tests pass
-- All pre-commit hooks pass (ruff, mypy, complexity, bandit)
-- Manual validation pending (must run outside Claude Code)
+| Current State | Reset To | Effect |
+|---------------|----------|--------|
+| worktree_cleaned (run) | judge_prompt_built | Re-runs judge stage |
+| aggregated (subtest) | pending | Re-dispatches subtest |
+| complete (tier) | config_loaded | Re-dispatches tier |
+| complete (experiment) | tiers_dispatched | Resumes experiment |
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectScylla | haiku-2 fullrun T0 judge failures | 21/24 subtests failed, fix in PR #1543 |
+| ProjectScylla | haiku-2 fullrun T0 judge failures | 21/24 subtests failed; PRs #1543 + #1544; checkpoint reset for 15 subtests |
