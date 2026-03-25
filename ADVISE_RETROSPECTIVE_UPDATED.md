@@ -40,10 +40,10 @@ Both `/advise` and `/retrospective` commands have been updated to work with the 
    - Example: `training-grpo-external-vllm-setup.md`
    - Auto-detect category from conversation context
 
-2. **Clone Location**
-   - Before: `<ProjectRoot>/build/<PID>/ProjectMnemosyne/` (isolated)
-   - After: `$HOME/.agent-brain/ProjectMnemosyne/` (shared)
-   - Automatic cleanup after PR creation
+2. **Work Isolation**
+   - Before: `<ProjectRoot>/build/<PID>/ProjectMnemosyne/` (isolated clone per session)
+   - After: Git worktrees from base repo (isolated per branch, cleaned up after PR)
+   - Base repo: current directory if in ProjectMnemosyne, else persistent cache at `$HOME/.agent-brain/ProjectMnemosyne/`
 
 3. **File Structure**
    - Before:
@@ -108,12 +108,12 @@ Both `/advise` and `/retrospective` commands have been updated to work with the 
 
 **After**:
 ```
-1. Clone to shared $HOME/.agent-brain
+1. Create git worktree from base repo for branch isolation
 2. Auto-generate skill filename (no user input!)
 3. Create single flat skills/<name>.md file + optional notes
 4. Validate (simpler, single command)
 5. Commit and create PR
-6. Auto-cleanup (remove clone)
+6. Clean up worktree (git worktree remove + prune)
 ```
 
 ## Key Improvements
@@ -122,7 +122,7 @@ Both `/advise` and `/retrospective` commands have been updated to work with the 
 1. **No manual metadata entry** — filename auto-generated from conversation
 2. **Simpler file structure** — single .md file instead of nested directories
 3. **Faster retrospective** — skip the prompt dialogs
-4. **Auto-cleanup** — no accumulating build directories
+4. **Worktree cleanup** — `git worktree remove` after each PR, no stale directories
 
 ### For System
 1. **Reduced disk usage** — shared clone instead of PID-scoped copies
@@ -140,7 +140,7 @@ Both `/advise` and `/retrospective` commands have been updated to work with the 
 - [ ] Skill file created in correct format (YAML frontmatter + markdown)
 - [ ] Validation passes with `python3 scripts/validate_plugins.py`
 - [ ] PR created with correct title and body
-- [ ] Clone auto-cleaned after PR creation
+- [ ] Worktree cleaned up after PR creation (`git worktree remove`)
 - [ ] Re-running `/advise` uses cached clone and updates it
 
 ## Migration Complete

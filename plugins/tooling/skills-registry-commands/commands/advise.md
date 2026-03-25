@@ -9,12 +9,9 @@ Search the skills registry for relevant prior learnings before starting work.
 ## Target Repository
 
 **Repository**: `HomericIntelligence/ProjectMnemosyne`
-**Clone location**: `$HOME/.agent-brain/ProjectMnemosyne/`
+**Cache location**: `$HOME/.agent-brain/ProjectMnemosyne/` (persistent read-only cache)
 
-Single shared clone in user's home directory. Automatically updated before searches.
-Automatically skipped if already running in the ProjectMnemosyne repository.
-
-> **Note**: Never delete ~/.agent-brain/. This is a persistent shared location that caches repository clones across sessions for faster access.
+Automatically updated before searches. Skipped if already running in the ProjectMnemosyne repository.
 
 ## Instructions
 
