@@ -14,6 +14,8 @@ Usage:
 import json
 import sys
 import yaml
+from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
@@ -91,6 +93,11 @@ def generate_marketplace() -> Dict[str, Any]:
     # Sort by category then name
     plugin_entries.sort(key=lambda x: (x["category"], x["name"]))
 
+    # Compute category statistics
+    category_counts = dict(sorted(
+        Counter(entry["category"] for entry in plugin_entries).items()
+    ))
+
     # Official marketplace format
     marketplace = {
         "name": "ProjectMnemosyne",
@@ -100,6 +107,9 @@ def generate_marketplace() -> Dict[str, Any]:
         },
         "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
         "version": "1.0.0",
+        "total_plugins": len(plugin_entries),
+        "categories": category_counts,
+        "last_updated": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "plugins": plugin_entries,
     }
 
@@ -125,7 +135,11 @@ def main() -> int:
         json.dump(marketplace, f, indent=2)
 
     print(f"Generated {output_file}")
-    print(f"  Skills indexed: {len(marketplace['plugins'])}")
+    print(f"  Total skills: {marketplace['total_plugins']}")
+    print(f"  Last updated: {marketplace['last_updated']}")
+    print(f"  Categories:")
+    for category, count in marketplace["categories"].items():
+        print(f"    {category}: {count}")
 
     return 0
 
