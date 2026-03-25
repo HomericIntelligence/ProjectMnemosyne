@@ -1,9 +1,9 @@
 ---
 name: mojo-circular-import-type-identity-fix
-description: "Fix Mojo 'cannot implicitly convert X to X' errors caused by circular imports that trigger dual type compilation. Use when: (1) Mojo compiler reports 'cannot implicitly convert Type to Type' where both types have the same name, (2) cross-package imports create A->B->A cycles in Mojo, (3) struct operators delegate to external modules that import the struct back."
+description: "Fix Mojo 'cannot implicitly convert X to X' errors caused by circular imports that trigger dual type compilation. Use when: (1) Mojo compiler reports 'cannot implicitly convert Type to Type' where both types have the same name, (2) cross-package imports create A->B->A cycles in Mojo, (3) struct operators delegate to external modules that import the struct back, (4) typed dispatch files create reverse dependencies back to the public API package."
 category: architecture
 date: 2026-03-23
-version: "1.0.0"
+version: "2.0.0"
 user-invocable: false
 tags:
   - mojo
@@ -18,8 +18,8 @@ tags:
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-03-23 |
-| **Objective** | Fix 255+ CI compilation errors ("cannot implicitly convert 'AnyTensor' to 'AnyTensor'") caused by circular imports between shared/core/any_tensor.mojo and shared/tensor/tensor.mojo |
-| **Outcome** | Successful. Moved AnyTensor to shared/tensor/, implemented operators inline, 590 files updated, build passes with --Werror |
+| **Objective** | Fix 255+ CI compilation errors ("cannot implicitly convert 'AnyTensor' to 'AnyTensor'") caused by circular imports between shared.core and shared.tensor packages |
+| **Outcome** | Successful in two phases: Phase 1 (PR #5062) moved AnyTensor, Phase 2 (PR #5063) broke remaining circular deps by deleting fake wrappers and extracting utilities |
 
 ## When to Use
 
@@ -28,6 +28,7 @@ tags:
 - A struct's operator methods (`__add__`, etc.) delegate to external module functions that import the struct type
 - A Mojo package `__init__.mojo` re-exports types from another package that imports back
 - Build worked before a refactoring that split types across packages
+- "Typed dispatch" files import back into the public API package they're supposed to serve
 
 ## Verified Workflow
 
@@ -41,10 +42,12 @@ Root cause diagnosis:
   4. The cycle causes Mojo to compile X.mojo twice with different type identities
 
 Fix strategy (in priority order):
-  A. Co-locate: Move files into the same package (siblings can import each other)
-  B. Inline operators: Implement math on the struct using internal data, not external functions
-  C. Remove re-exports: Don't re-export types in __init__.mojo across package boundaries
-  D. Function-scoped imports: ONLY works if the callee doesn't import back to the caller's package
+  A. Delete fake wrappers: If a "typed" file just roundtrips through AnyTensor with zero callers, delete it
+  B. Extract utilities: Move pure utility functions (no tensor deps) to a base package
+  C. Function-scoped imports: Convert module-level imports to function-body imports (deferred resolution)
+  D. Co-locate: Move files into the same package (siblings can import each other)
+  E. Inline operators: Implement math on the struct using internal data, not external functions
+  F. Remove re-exports: Don't re-export types in __init__.mojo across package boundaries
 ```
 
 ### Detailed Steps
@@ -55,85 +58,107 @@ Fix strategy (in priority order):
 # Find where the type is defined
 grep -rn "struct AnyTensor" --include="*.mojo" .
 
-# Find all files that import it
-grep -rn "from.*import AnyTensor" --include="*.mojo" .
-
-# Trace the cycle: if AnyTensor is in package A and imports from package B,
-# check if package B imports AnyTensor
+# Find all cross-package imports that create cycles
+# Package A -> Package B:
+grep -rn "^from shared\.tensor\.typed" shared/core/ --include="*.mojo"
+# Package B -> Package A (REVERSE — this is the problem):
+grep -rn "^from shared\.core" shared/tensor/typed/ --include="*.mojo"
 ```
 
-#### Step 2: Co-locate related types in the same package
+#### Step 2: Classify each reverse import
 
-Move the type definition to the same package as its dependencies. In our case:
-- `any_tensor.mojo` (defines AnyTensor) moved from `shared/core/` to `shared/tensor/`
-- `tensor.mojo` (defines Tensor[dtype]) was already in `shared/tensor/`
-- Both types now use relative imports: `from .tensor import Tensor`, `from .any_tensor import AnyTensor`
+| Classification | Action | Example |
+|----------------|--------|---------|
+| **Fake typed wrapper** (converts Tensor→AnyTensor, calls core fn, converts back) with zero callers | **DELETE** | `typed/matrix.mojo`, `typed/reduction.mojo`, `typed/conv.mojo` |
+| **Pure utility function** with no tensor dependencies | **MOVE** to `shared/base/` | `_resolve_shape` (just resolves -1 dims in shape lists) |
+| **Function needed** but only in 1-2 call sites | **Function-scoped import** | `as_contiguous` in `typed/arithmetic.mojo` |
+| **Constants-only import** | **KEEP** (no cycle risk) | `activation_constants` in `typed/activation.mojo` |
 
-#### Step 3: Implement operators as self-contained math
+#### Step 3: Delete fake typed wrappers
 
-Following the Mojo stdlib pattern (SIMD uses `__mlir_op`, ComplexSIMD uses inline field math):
-
-```mojo
-# BAD: Delegates to external module (creates cycle if that module imports AnyTensor)
-fn __add__(self, other: AnyTensor) raises -> AnyTensor:
-    from shared.core.arithmetic import add  # CYCLE: arithmetic imports AnyTensor
-    return add(self, other)
-
-# GOOD: Self-contained using internal data + existing base imports
-fn __add__(self, other: AnyTensor) raises -> AnyTensor:
-    @always_inline
-    fn _add[T: DType](x: Scalar[T], y: Scalar[T]) -> Scalar[T]:
-        return x + y
-    return _anytensor_binary_op[_add](self, other)
-```
-
-The `_anytensor_binary_op` helper uses only `shared.base.broadcasting` and `shared.base.dtype_ordinal` (no cycle).
-
-#### Step 4: Remove cross-package re-exports from `__init__.mojo`
-
-```mojo
-# BAD: shared/core/__init__.mojo re-exports from shared.tensor
-from shared.tensor.any_tensor import AnyTensor, zeros, ones  # Creates cycle!
-
-# GOOD: Comment explaining where to import from
-# AnyTensor is in shared.tensor.any_tensor. Import directly:
-#   from shared.tensor.any_tensor import AnyTensor, zeros, ones
-```
-
-#### Step 5: Ensure public APIs use the runtime-typed tensor
-
-Layer `forward()` methods should take `AnyTensor` (public API), not `Tensor[dtype]` (internal):
-
-```mojo
-# BAD: Exposes internal type in public API
-fn forward(mut self, input: Tensor[Self.dtype]) raises -> Tensor[Self.dtype]:
-
-# GOOD: Public API uses runtime-typed tensor
-fn forward(mut self, input: AnyTensor) raises -> AnyTensor:
-```
-
-#### Step 6: Update all import paths
+A "fake typed wrapper" is a function that:
+1. Takes `Tensor[dt]` or `AnyTensor` input
+2. Converts to `AnyTensor` via `.as_any()`
+3. Calls the `shared.core` function (e.g., `matmul`, `sum`)
+4. Converts result back via `.as_tensor[dt]()`
+5. Has **zero external callers**
 
 ```bash
-# Bulk update absolute imports
-find . -name '*.mojo' -exec sed -i 's/from shared\.core\.any_tensor import/from shared.tensor.any_tensor import/g' {} +
+# Verify zero callers before deleting
+grep -rn "_dispatch_matmul_typed\|_dispatch_sum_typed\|_dispatch_conv2d_typed" \
+  shared/ tests/ --include="*.mojo"
+# If no matches → safe to delete
 
-# Update relative imports in the old package
-find shared/core/ -name '*.mojo' -exec sed -i 's/from \.any_tensor import/from shared.tensor.any_tensor import/g' {} +
-
-# Verify no stale imports remain
-grep -r "from shared.core.any_tensor import" --include="*.mojo" .
+rm shared/tensor/typed/matrix.mojo
+rm shared/tensor/typed/reduction.mojo
+rm shared/tensor/typed/conv.mojo
 ```
+
+#### Step 4: Extract pure utilities to base package
+
+For functions with no tensor dependencies (only uses `List[Int]`, `String`, etc.):
+
+```mojo
+# Create shared/base/shape_utils.mojo
+"""Shape utility functions with no tensor dependencies."""
+from collections import List
+
+fn _resolve_shape(new_shape: List[Int], total_elements: Int) raises -> List[Int]:
+    # ... pure logic, no tensor imports needed
+```
+
+Update importers:
+```mojo
+# In shared/core/shape.mojo:
+from shared.base.shape_utils import _resolve_shape
+
+# In shared/tensor/typed/shape.mojo:
+from shared.base.shape_utils import _resolve_shape
+```
+
+#### Step 5: Convert to function-scoped imports
+
+For imports that can't be deleted or moved:
+
+```mojo
+# BEFORE (module-level — creates cycle):
+from shared.core.shape import as_contiguous
+
+fn _broadcast_binary_typed[...](a, b) raises -> ...:
+    var a_cont = ... if a.is_contiguous() else as_contiguous(...)
+
+# AFTER (function-scoped — defers resolution):
+fn _broadcast_binary_typed[...](a, b) raises -> ...:
+    # NOTE: Function-scoped import to avoid circular dependency
+    from shared.core.shape import as_contiguous
+    var a_cont = ... if a.is_contiguous() else as_contiguous(...)
+```
+
+#### Step 6: Verify the dependency graph
+
+```bash
+# No module-level function imports from core in tensor/typed:
+grep -rn "^from shared\.core" shared/tensor/typed/ --include="*.mojo"
+# Should only show constants imports (e.g., activation_constants)
+
+# Function-scoped imports are indented (OK):
+grep -rn "    from shared\.core" shared/tensor/typed/ --include="*.mojo"
+
+# Build and test
+mojo package -I "$REPO_ROOT" shared -o /tmp/shared.mojopkg
+```
+
+Target: `shared.base ← shared.tensor ← shared.core` (clean DAG, no cycles)
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Function-scoped imports in any_tensor.mojo | Changed `from shared.tensor.tensor import Tensor` from top-level to inside `as_tensor()` method | Mojo still resolves the module at package compilation time, triggering the cycle through `__init__.mojo` re-exports | Function-scoped imports do NOT prevent cycles if the target module is in a package whose `__init__.mojo` imports back |
-| Remove re-exports from `__init__.mojo` only | Removed AnyTensor re-export from `shared/core/__init__.mojo` | Operators still called `from shared.core.arithmetic import add` (function-scoped), which triggered `shared.core` package compilation, which imported `shared.tensor.any_tensor` | Even removing re-exports is insufficient if the struct has function-scoped imports to modules in the other package |
-| Move typed ops to `shared/tensor/typed/` | Created `shared/tensor/typed/` directory with typed implementations | The typed files imported from BOTH `shared.tensor.tensor` AND `shared.core.any_tensor`, plus some imported back into `shared.core` (conv, matrix, reduction) | Moving implementation files doesn't help if they create new cross-package import chains |
-| Keep operators delegating to `shared.core.arithmetic` | Operators used `from shared.core.arithmetic import add` inside method bodies | `shared.core.arithmetic` imports `AnyTensor` at top level (needed in function signatures), creating `shared.tensor.any_tensor -> shared.core.arithmetic -> shared.tensor.any_tensor` cycle | Struct operators MUST be self-contained or delegate only to same-package functions |
-| Create `factories.mojo` with imports from both `.tensor` and `.any_tensor` | `factories.mojo` imported from both sibling modules | Mojo compiled both modules when resolving the package, creating dual type identities for `Tensor[dtype]` | Even intra-package diamond dependencies (A->B, A->C, B->C) can cause type identity issues during package compilation |
+| Moving AnyTensor only (Phase 1) | Moved AnyTensor from shared.core to shared.tensor | Fixed some cycles but shared.tensor.typed still imported from shared.core (matrix, reduction, conv, shape, arithmetic), maintaining the cycle | Moving a type to break one cycle can leave other cycles intact; must audit ALL cross-package imports |
+| Checking import paths | Verified all files use `from shared.tensor.any_tensor import AnyTensor` (same path everywhere) | All paths were identical — the error persisted | Type identity errors are NOT caused by different import paths; they're caused by dual compilation contexts from circular deps |
+| Function-scoped imports everywhere | Considered making ALL reverse imports function-scoped | Works as a band-aid for 1-2 imports but doesn't address fake wrapper files that shouldn't exist | Prefer deleting dead code over working around it; function-scoped imports are for imports that genuinely need to exist |
+| Keep operators delegating to shared.core.arithmetic | Operators used `from shared.core.arithmetic import add` inside method bodies | shared.core.arithmetic imports AnyTensor at top level, creating shared.tensor.any_tensor -> shared.core.arithmetic -> shared.tensor.any_tensor cycle | Struct operators MUST be self-contained or delegate only to same-package functions |
+| Create typed wrapper files that call back into shared.core | typed/matrix.mojo called shared.core.matrix.matmul (AnyTensor roundtrip) | Created reverse dependency AND added no real typed computation | Typed dispatch files must implement actual typed logic, not just wrap AnyTensor calls |
 
 ## Results & Parameters
 
@@ -141,56 +166,69 @@ grep -r "from shared.core.any_tensor import" --include="*.mojo" .
 
 ```text
 shared/base/          (zero dependencies on other shared packages)
+  |- shape_utils.mojo     (_resolve_shape — pure utility)
+  |- broadcasting.mojo
+  |- dtype_ordinal.mojo
   |
   v
 shared/tensor/        (depends only on shared.base)
-  |- tensor_traits.mojo   (no imports from shared.*)
-  |- tensor.mojo          (imports .any_tensor, shared.base)
-  |- any_tensor.mojo      (imports .tensor, .tensor_traits, shared.base)
-  |- tensor_io.mojo       (imports .any_tensor)
-  |- factories.mojo       (imports .tensor, .any_tensor)
+  |- tensor.mojo          (Tensor[dtype])
+  |- any_tensor.mojo      (AnyTensor)
+  |- typed/               (typed dispatch cores)
+  |   |- activation.mojo    (real typed impl, imports only constants from core)
+  |   |- elementwise.mojo   (real typed impl, no core imports)
+  |   |- arithmetic.mojo    (function-scoped core import for as_contiguous)
+  |   |- shape.mojo          (imports _resolve_shape from shared.base)
   |
   v
 shared/core/          (depends on shared.tensor and shared.base)
-  |- arithmetic.mojo      (imports shared.tensor.any_tensor)
-  |- activation.mojo      (imports shared.tensor.any_tensor)
-  |- layers/*.mojo        (imports shared.tensor.any_tensor)
-  |
-  v
-shared/tensor/typed/  (depends on shared.tensor, shared.base, function-scoped shared.core)
+  |- activation.mojo      (public API, dispatches to shared.tensor.typed)
+  |- arithmetic.mojo      (public API, dispatches to shared.tensor.typed)
+  |- shape.mojo            (public API, dispatches to shared.tensor.typed)
 ```
 
 ### Key Mojo Compiler Behavior
 
 - **Type identity is per-compilation-unit**: If module A is compiled twice (via two different import paths), the types it defines are DIFFERENT types
 - **Package `__init__.mojo` imports all submodules**: When any file in a package is imported, Mojo may compile the entire package including `__init__.mojo`
-- **Function-scoped imports still trigger module compilation**: `from X import Y` inside a function body still causes X to be compiled, just deferred
-- **Cross-package re-exports are the most dangerous pattern**: `shared/core/__init__.mojo` importing from `shared.tensor.any_tensor` means ANY import from `shared.core` can trigger `shared.tensor` compilation
+- **Function-scoped imports still trigger module compilation**: `from X import Y` inside a function body still causes X to be compiled, just deferred to call time
+- **Constants-only imports are safe**: Importing compile-time constants doesn't create type identity issues
+- **Cross-package re-exports are dangerous**: `shared/core/__init__.mojo` importing from `shared.tensor.any_tensor` means ANY import from `shared.core` can trigger `shared.tensor` compilation
 
-### Mojo Stdlib Operator Pattern
+### Decision Tree for Reverse Dependencies
 
-```mojo
-# SIMD.__add__: Uses MLIR intrinsic (self-contained)
-fn __add__(self, rhs: Self) -> Self:
-    return Self(mlir_value=__mlir_op.`pop.add`(self._mlir_value, rhs._mlir_value))
+```text
+Found module-level import from Package A in Package B (reverse dep):
 
-# ComplexSIMD.__add__: Inline math on fields (self-contained)
-fn __add__(self, rhs: Self) -> Self:
-    return Self(self.re + rhs.re, self.im + rhs.im)
+1. Is the file a pure wrapper with zero callers?
+   YES → DELETE the file (safest, removes 100+ lines of dead code)
 
-# AnyTensor.__add__: Inline dtype dispatch (self-contained)
-fn __add__(self, other: AnyTensor) raises -> AnyTensor:
-    fn _add[T: DType](x: Scalar[T], y: Scalar[T]) -> Scalar[T]:
-        return x + y
-    return _anytensor_binary_op[_add](self, other)
+2. Is the imported function a pure utility with no package deps?
+   YES → MOVE to shared/base/ (break the cycle at the root)
 
-# SIMD.__iadd__: Delegates to regular operator (self-contained)
-fn __iadd__(mut self, rhs: Self):
-    self = self + rhs
+3. Is the import used in only 1-2 function bodies?
+   YES → Convert to function-scoped import (deferred resolution)
+
+4. Is it a constants-only import?
+   YES → KEEP (constants don't create compilation cycles)
+
+5. None of the above?
+   → Consider co-locating or inlining the logic
 ```
+
+### Impact (Combined Phases)
+
+| Metric | Phase 1 (PR #5062) | Phase 2 (PR #5063) |
+|--------|--------------------|--------------------|
+| Files changed | 590 | 8 |
+| Lines added | ~2000 | 80 |
+| Lines removed | ~2000 | 712 |
+| Net lines | ~0 | -632 |
+| Compilation errors fixed | 255+ initial | Remaining after Phase 1 |
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectOdyssey | PR #5062 | Moved AnyTensor from shared/core/ to shared/tensor/, 590 files changed, build passes with --Werror, 233 tests pass |
+| ProjectOdyssey | PR #5062 | Phase 1: Moved AnyTensor from shared/core/ to shared/tensor/, inlined operators |
+| ProjectOdyssey | PR #5063 | Phase 2: Deleted 3 fake typed wrappers, extracted _resolve_shape to shared/base, function-scoped imports |
