@@ -1,23 +1,19 @@
 ---
-description: Save session learnings as a new skill plugin
+description: Save session learnings as a new skill plugin. Use after experiments, debugging sessions, or when you want to preserve team knowledge.
 ---
 
 # /retrospective
 
-Capture session learnings and create a new flat-format skill file in the ProjectMnemosyne marketplace.
+Capture session learnings and create or amend a skill file in the ProjectMnemosyne marketplace.
 
 ## Target Repository
 
 **Repository**: `HomericIntelligence/ProjectMnemosyne`
 **Base branch**: `main`
-**Work isolation**: Git worktrees (auto-created per branch, cleaned up after PR creation)
+**Clone location**: `$HOME/.agent-brain/ProjectMnemosyne/`
 
-All skill creation work MUST be done in an isolated git worktree. The base repository
-(either the current directory or a persistent cache at `$HOME/.agent-brain/ProjectMnemosyne/`)
-is used only to spawn worktrees — never work directly in it.
-
-> **Important**: Always use `git worktree add` for branch isolation and `git worktree remove`
-> for cleanup. Never use `rm -rf` on repository directories.
+Single shared clone in user's home directory. Automatically cleaned after PR creation.
+Automatically skipped if already running in the ProjectMnemosyne repository.
 
 ## Instructions
 
@@ -36,39 +32,126 @@ When the user invokes this command:
    - Filename: `<topic>-<subtopic>-<short-4-word-summary>` (kebab-case)
    - Auto-detect category from conversation context (training, evaluation, optimization, debugging, architecture, tooling, ci-cd, testing, documentation)
 
-3. **Setup repository and create worktree**:
+3. **CRITICAL — Search for existing skills to amend**:
+
+   Before creating a new file, search the registry for skills covering the same topic:
+
+   ```bash
+   MNEMOSYNE_DIR="$HOME/.agent-brain/ProjectMnemosyne"
+   # Search by keywords from the skill name
+   ls "$MNEMOSYNE_DIR/skills/" | grep -i "<keyword1>\|<keyword2>\|<keyword3>" | grep -v ".notes.md" | grep -v ".history"
+   # Also search descriptions in frontmatter
+   grep -l "<keyword>" "$MNEMOSYNE_DIR/skills/"*.md 2>/dev/null | head -20
+   ```
+
+   **If an existing skill covers the same topic → AMEND it** (don't create a new file):
+
+   a. Read the existing skill to understand its current state
+   b. Archive the current version to the history log (see Step 4)
+   c. Update the skill `.md` in-place with new learnings:
+      - Add new Failed Attempts rows to the table
+      - Update the Verified Workflow if the approach changed
+      - Update Results & Parameters with new data
+      - Bump the `version` in frontmatter (e.g., `1.0.0` → `2.0.0`)
+      - Update the `date` to today
+   d. Update the changelog in the history file
+
+   **If no existing skill matches → Create a new skill** (proceed to Step 5)
+
+4. **History log management** (for amendments):
+
+   When amending an existing skill, preserve the previous version in `skills/<name>.history`:
+
+   **File: `skills/<name>.history`**
+
+   This is an append-only log. Each entry records what changed and why. Format:
+
+   ```markdown
+   # <skill-name> — History
+
+   ## v2.0.0 (YYYY-MM-DD)
+
+   **Changed by:** Session context (e.g., "PR #5107 gradient checking fixes")
+   **Verification:** verified-ci | verified-local | verified-precommit | unverified
+
+   ### What changed
+   - Updated tolerance from 1e-2 absolute to rtol=1e-2 + atol=1e-2 combined
+   - Added check_gradient() as preferred API over check_gradients()
+   - Added 2 new Failed Attempts entries
+
+   ### Why
+   Previous approach (v1.0.0) used check_gradients() with absolute tolerance.
+   CI showed this fails for multi-channel conv2d where gradient magnitudes reach ~32-126.
+   Relative tolerance via check_gradient() handles large magnitudes correctly.
+
+   ### Previous version (v1.0.0) snapshot
+   <paste the full previous skill content here as a reference>
+
+   ---
+
+   ## v1.0.0 (YYYY-MM-DD)
+
+   **Initial version.**
+   ```
+
+   **Rules for history files:**
+   - Append new entries at the TOP (newest first)
+   - Always include: version, date, what changed, why, previous snapshot
+   - The snapshot preserves the exact previous content for auditability
+   - Add a reference from the main skill file: `**History:** [changelog](./skills/<name>.history)`
+
+5. **CRITICAL — Honesty gate for "Verified Workflow"**:
+
+   Before writing the "Verified Workflow" section, answer these questions honestly:
+   - Was the workflow actually executed end-to-end? (Not just pre-commit hooks — the actual tests/code)
+   - Did CI pass with these changes? If not, the section MUST be titled "Proposed Workflow" not "Verified Workflow"
+   - Were the results observed in CI, or only locally? If only locally, state: "Verified locally only — CI validation pending"
+
+   **Verification levels** (must be stated in the skill):
+   - `verified-ci`: Tests pass in CI (highest confidence)
+   - `verified-local`: Tests pass locally but not confirmed in CI
+   - `verified-precommit`: Only pre-commit hooks pass (formatting, linting)
+   - `unverified`: Approach is theoretically sound but never executed
+
+   Add this as a frontmatter field:
+   ```yaml
+   verification: verified-ci | verified-local | verified-precommit | unverified
+   ```
+
+6. **Setup repository**:
    ```bash
    # Detect if already in ProjectMnemosyne
    CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
    if [[ "$CURRENT_REMOTE" == *"ProjectMnemosyne"* ]] && [[ "$CURRENT_REMOTE" != *"ProjectMnemosyne-"* ]]; then
-     # Already in ProjectMnemosyne - use current repo as base
-     MNEMOSYNE_BASE="$(git rev-parse --show-toplevel)"
+     # Already in ProjectMnemosyne - work in current directory
+     MNEMOSYNE_DIR="."
+     NEED_CLEANUP=false
    else
-     # Use persistent cache as base repo for worktree creation
-     MNEMOSYNE_BASE="$HOME/.agent-brain/ProjectMnemosyne"
+     # Use shared home directory location
+     MNEMOSYNE_DIR="$HOME/.agent-brain/ProjectMnemosyne"
+     NEED_CLEANUP=true
 
-     if [ ! -d "$MNEMOSYNE_BASE" ]; then
+     if [ ! -d "$MNEMOSYNE_DIR" ]; then
        # Clone fresh
        mkdir -p "$HOME/.agent-brain"
-       gh repo clone HomericIntelligence/ProjectMnemosyne "$MNEMOSYNE_BASE"
+       gh repo clone HomericIntelligence/ProjectMnemosyne "$MNEMOSYNE_DIR"
      fi
+
+     # Always update to latest main before starting
+     git -C "$MNEMOSYNE_DIR" fetch origin
+     git -C "$MNEMOSYNE_DIR" checkout main
+     git -C "$MNEMOSYNE_DIR" pull --ff-only origin main
+
+     cd "$MNEMOSYNE_DIR"
    fi
 
-   # Ensure we have latest main
-   git -C "$MNEMOSYNE_BASE" fetch origin
-   git -C "$MNEMOSYNE_BASE" checkout main 2>/dev/null || true
-   git -C "$MNEMOSYNE_BASE" pull --ff-only origin main 2>/dev/null || true
-
-   # Create an isolated worktree for the new skill branch
-   WORKTREE_DIR="/tmp/mnemosyne-skill-<name>"
-   git -C "$MNEMOSYNE_BASE" worktree add "$WORKTREE_DIR" -b skill/<name> origin/main
-
-   cd "$WORKTREE_DIR"
+   # Create branch from origin/main (clean state)
+   git checkout -b skill/<name> origin/main
    ```
 
-4. **Generate skill file** as flat `skills/<name>.md`:
+7. **Generate or amend skill file** as flat `skills/<name>.md`:
 
-   > ✅ New flat format: Single `.md` file in `skills/` root (not nested directories or plugin.json)
+   > New flat format: Single `.md` file in `skills/` root (not nested directories or plugin.json)
 
    **File 1: `skills/<name>.md`** with **YAML frontmatter + markdown body**:
 
@@ -80,6 +163,8 @@ When the user invokes this command:
    date: YYYY-MM-DD
    version: "1.0.0"
    user-invocable: false
+   verification: <verified-ci|verified-local|verified-precommit|unverified>
+   history: <name>.history  # Only present if skill has been amended
    tags: []
    ---
 
@@ -92,6 +177,8 @@ When the user invokes this command:
    | **Date** | YYYY-MM-DD |
    | **Objective** | What was this skill developed to accomplish? |
    | **Outcome** | Was it successful? Operational? |
+   | **Verification** | verified-ci / verified-local / verified-precommit / unverified |
+   | **History** | [changelog](./<name>.history) |
 
    ## When to Use
 
@@ -126,21 +213,27 @@ When the user invokes this command:
 
    | Project | Context | Details |
    |---------|---------|---------|
-   | ProjectMnemosyne | Session context | [notes.md](./skills/<name>.notes.md) |
+   | ProjectName | Session context | [notes.md](./skills/<name>.notes.md) |
    ```
 
    Rules:
    - Filename: lowercase kebab-case (`^[a-z0-9-]+$`) — e.g., `training-grpo-external-vllm-setup.md`
    - `category`: one of 9 valid categories (no "refactoring" — use "architecture")
-   - All required fields in frontmatter: name, description, category, date, version
+   - All required fields in frontmatter: name, description, category, date, version, verification
    - All required markdown sections: Overview, When to Use, Verified Workflow, Failed Attempts, Results & Parameters
+   - **If verification is `unverified` or `verified-precommit`**: rename the section to "Proposed Workflow" instead of "Verified Workflow" and add a warning: "> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms."
 
    **File 2: `skills/<name>.notes.md`** (optional):
    - Raw session details, code snippets, debugging logs
    - Human-readable reference material
    - Only create if additional context needed beyond main skill file
 
-5. **Validate skill** (MUST pass before committing):
+   **File 3: `skills/<name>.history`** (created on first amendment):
+   - Append-only changelog with version snapshots
+   - Referenced from main skill file via `history` frontmatter field
+   - See Step 4 for format
+
+8. **Validate skill** (MUST pass before committing):
 
    ### Pre-Commit Validation Checklist
 
@@ -161,12 +254,15 @@ When the user invokes this command:
    ```
    If validation fails, fix errors and re-run. Do NOT commit until it passes.
 
-6. **Commit and push**:
+9. **Commit and push**:
    ```bash
+   # For new skills:
    git add skills/<name>.md skills/<name>.notes.md 2>/dev/null || true
    git commit -m "feat: add <name> skill
 
 Documents <brief description of what was learned>.
+
+Verification: <verified-ci|verified-local|verified-precommit|unverified>
 
 Key learnings:
 - <bullet 1>
@@ -175,20 +271,43 @@ Key learnings:
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 
+   # For amendments:
+   git add skills/<name>.md skills/<name>.history skills/<name>.notes.md 2>/dev/null || true
+   git commit -m "feat: amend <name> skill (v<X.0.0>)
+
+<Brief description of what changed and why>.
+
+Verification: <level>
+Previous version archived in <name>.history
+
+Key changes:
+- <change 1>
+- <change 2>
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+
    git push -u origin skill/<name>
    ```
 
-7. **Create PR** (only if push succeeded):
-   ```bash
-   gh pr create --repo HomericIntelligence/ProjectMnemosyne --base main \
-     --title "feat: add <name> skill" \
-     --body "## Summary
+10. **Create PR** (only if push succeeded):
+    ```bash
+    gh pr create --repo HomericIntelligence/ProjectMnemosyne --base main \
+      --title "feat: <add|amend> <name> skill" \
+      --body "## Summary
+
+<New skill | Amends existing skill from v<old> to v<new>>.
 
 Documents <brief description of what was learned>.
 
 - <Key point 1>
 - <Key point 2>
 - <Key point 3>
+
+## Verification Level
+
+**<verified-ci|verified-local|verified-precommit|unverified>**
+
+<If not verified-ci, explain what is pending>
 
 ## Key Findings
 
@@ -206,17 +325,36 @@ Documents <brief description of what was learned>.
 - [ ] Test skill discovery with relevant keywords
 
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
-   ```
 
-8. **Clean up worktree** (REQUIRED after PR creation):
-   ```bash
-   # Return to the base repo directory first
-   cd "$MNEMOSYNE_BASE" 2>/dev/null || cd -
+    # Enable auto-merge so the PR merges automatically once CI passes
+    gh pr merge --auto --rebase --repo HomericIntelligence/ProjectMnemosyne
+    ```
 
-   # Remove the worktree
-   git -C "$MNEMOSYNE_BASE" worktree remove "$WORKTREE_DIR"
-   git -C "$MNEMOSYNE_BASE" worktree prune
-   ```
+11. **Cleanup** (if cloned to $HOME/.agent-brain):
+    ```bash
+    if [ "$NEED_CLEANUP" = true ]; then
+      # After PR created, remove the worktree clone
+      rm -rf "$HOME/.agent-brain/ProjectMnemosyne"
+    fi
+    ```
+
+## Amendment Workflow Summary
+
+```text
+Existing skill found?
+├─ YES → Amend workflow:
+│   1. Read existing skill
+│   2. Create/append to <name>.history with previous version snapshot
+│   3. Update <name>.md in-place (new data, bump version, update date)
+│   4. Add history frontmatter field if first amendment
+│   5. Commit both files
+│
+└─ NO → New skill workflow:
+    1. Create <name>.md with full template
+    2. Optionally create <name>.notes.md
+    3. No history file needed yet
+    4. Commit
+```
 
 ## Common Issues & Solutions
 
@@ -232,17 +370,6 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 | "Quick Reference should use ###" | Using `## Quick Reference` instead of `###` | Demote to `### Quick Reference` (subsection of Verified Workflow) |
 | Skill not in marketplace | File not committed or in wrong location | Verify in `skills/<name>.md` (root of skills dir, not nested) |
 
-### Issue: Stale worktree
-
-**Cause**: Worktree from a previous failed `/retrospective` was not cleaned up.
-
-**Solution**: List and remove stale worktrees:
-```bash
-git worktree list
-git worktree remove /tmp/mnemosyne-skill-<name>
-git worktree prune
-```
-
 ### Issue: PR already exists
 
 **Cause**: Branch was already pushed in previous attempt.
@@ -257,12 +384,21 @@ git push -u origin skill/<name>
 git push origin skill/<name>
 ```
 
+### Issue: Cleanup directory
+
+**Cause**: Shared clone at `$HOME/.agent-brain/ProjectMnemosyne` takes up disk space.
+
+**Solution**: Safe to delete anytime — re-clones automatically on next `/advise` or `/retrospective`:
+```bash
+rm -rf $HOME/.agent-brain/ProjectMnemosyne
+```
+
 ## Required Sections
 
 | Section | Format | Purpose |
 |---------|--------|---------|
-| **YAML frontmatter** | Starts with `---`, includes name/description/category/date/version | Metadata for marketplace |
-| **Overview** | `## Overview` with table (date, objective, outcome) | Quick context |
+| **YAML frontmatter** | Starts with `---`, includes name/description/category/date/version/verification | Metadata for marketplace |
+| **Overview** | `## Overview` with table (date, objective, outcome, verification) | Quick context |
 | **When to Use** | Bullet points with trigger conditions | Discoverability |
 | **Verified Workflow** | Steps that worked + `### Quick Reference` subsection | The actual solution |
 | **Failed Attempts** | Table: Attempt, What Was Tried, Why Failed, Lesson | Prevent wasted effort |
@@ -274,4 +410,4 @@ git push origin skill/<name>
 /skills-registry-commands:retrospective
 ```
 
-Claude will analyze the session, auto-generate the skill filename, and guide you through creating a new flat-format skill file.
+Claude will analyze the session, check for existing skills to amend, and either update an existing skill (with history) or create a new one.
