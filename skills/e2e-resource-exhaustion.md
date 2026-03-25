@@ -3,6 +3,7 @@ name: e2e-resource-exhaustion
 description: "Diagnose and fix machine crashes from memory/disk exhaustion during parallel E2E experiment runs. Use when: experiment runner hangs, WSL2 VM crashes, or disk fills with uncleaned workspaces."
 category: optimization
 date: 2026-03-22
+version: "1.0.0"
 user-invocable: false
 ---
 
