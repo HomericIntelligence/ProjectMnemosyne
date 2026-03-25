@@ -99,7 +99,7 @@ pixi run test-shell
    - Verify `just --list` succeeds
    - Verify expected recipes are present (test, lint, format, typecheck, etc.)
    - Regression guard: no heredocs in justfile (`grep -cE '<<\s*[A-Z_]'`)
-   - **Sync test**: parse `[tasks]` from pixi.toml and verify each has a matching just recipe (skip utility-only tasks like `plan-issues`)
+   - **Sync test**: parse `[tasks]` from `pixi.toml` and verify each has a matching just recipe (skip utility-only tasks like `plan-issues`)
 
 6. **Update project docs** (e.g., CLAUDE.md) with a Quick Start section showing justfile commands.
 
