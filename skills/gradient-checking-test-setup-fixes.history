@@ -1,0 +1,62 @@
+# gradient-checking-test-setup-fixes — History
+
+## v2.0.0 (2026-03-25)
+
+**Changed by:** PR #5107 second commit — CI showed v1.0.0 approach still failed for conv2d/depthwise
+**Verification:** verified-local
+
+### What changed
+
+- Conv2d and depthwise conv2d: switched from `check_gradients()` to `check_gradient()` (the real fix)
+- v1.0.0 only changed epsilon from 1e-4 to default 3e-4 — this reduced diff from 0.134 to 0.046 but still failed absolute tolerance of 0.01
+- Root cause was `check_gradients()` using pure absolute tolerance `|diff| >= 0.01`, not epsilon
+- `check_gradient()` uses combined tolerance: `|diff| <= atol + rtol * max_magnitude`
+- Updated decision tree: ALL gradient checking should use `check_gradient()`, not just normalization layers
+- Added 2 new Failed Attempts entries documenting the v1.0.0 approach failing
+
+### Why
+
+v1.0.0 correctly identified the batch norm cancellation issue but misdiagnosed the conv2d/depthwise
+failures as an epsilon problem. The actual root cause was the tolerance MODEL — `check_gradients()`
+applies pure absolute tolerance (`|diff| >= 0.01`) which is too tight when gradient magnitudes
+reach 32-126. Even with the correct epsilon=3e-4, the diff of 0.046 at magnitude 32.4 still exceeds
+the absolute threshold.
+
+`check_gradient()` uses `assert_gradients_close()` with `|diff| <= atol + rtol * max_magnitude`:
+- Conv2d multi-channel: 0.046 < (0.01 + 0.01*32.4) = 0.334
+- Depthwise conv2d: 0.010 < (0.01 + 0.01*126.4) = 1.274
+
+### Previous version (v1.0.0) snapshot
+
+---
+name: gradient-checking-test-setup-fixes
+description: 'Fix gradient checking test failures caused by pathological test setup
+  (uniform inputs, wrong epsilon, degenerate cases). Use when: (1) gradient checking
+  tests fail with analytical~0 vs numerical~nonzero for normalization layers, (2)
+  multi-channel conv2d gradient checks exceed tolerance due to accumulated float32
+  precision, (3) depthwise conv2d tests fail with uniform inputs.'
+category: testing
+date: 2026-03-25
+version: 1.0.0
+user-invocable: false
+tags:
+  - gradient-checking
+  - batch-norm
+  - conv2d
+  - depthwise-conv2d
+  - float32-precision
+  - test-setup
+---
+
+[Full v1.0.0 content preserved in git history — see commit that created this skill]
+
+Key differences from v2.0.0:
+- Recommended `check_gradients()` with adjusted epsilon for conv2d (FAILED in CI)
+- Decision tree said "NO normalization → use check_gradients()" (WRONG — should always use check_gradient())
+- Did not identify absolute vs relative tolerance as the root cause
+
+---
+
+## v1.0.0 (2026-03-25)
+
+**Initial version.**
