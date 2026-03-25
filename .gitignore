@@ -7,3 +7,9 @@ worktrees/
 
 # build artifacts
 build/
+
+# Pixi environment
+.pixi/
+
+# Pytest cache
+.pytest_cache/
