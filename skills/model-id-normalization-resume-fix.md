@@ -84,7 +84,7 @@ parser.add_argument("--judge-model", default=DEFAULT_JUDGE_MODEL)
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Prior commit 8717d9ba | Updated model ID constants and YAML files to new naming convention | Old IDs baked into saved `experiment.json` survived — no normalization on load | Renaming constants is not enough when serialized configs persist on disk. Must add normalization at the deserialization boundary. |
-| Prior commit 079a9926 | Added model validation that calls Claude CLI to check model IDs | Short aliases like `"sonnet"` failed validation because no expansion function existed, and the error message implied aliases were supported | If error messages mention a feature (short aliases), the feature must actually be implemented. |
+| Prior commit 079a9926 | Added model validation that calls Claude CLI to check model IDs | Short aliases like `"sonnet"` failed validation because no expansion function existed, and the error message *implied* aliases were supported | If error messages mention a feature (short aliases), the feature must actually be implemented. |
 
 ## Results & Parameters
 
