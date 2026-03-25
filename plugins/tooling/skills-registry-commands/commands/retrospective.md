@@ -10,12 +10,14 @@ Capture session learnings and create a new flat-format skill file in the Project
 
 **Repository**: `HomericIntelligence/ProjectMnemosyne`
 **Base branch**: `main`
-**Clone location**: `$HOME/.agent-brain/ProjectMnemosyne/`
+**Work isolation**: Git worktrees (auto-created per branch, cleaned up after PR creation)
 
-Single shared clone in user's home directory. Persists across sessions for faster access.
-Automatically skipped if already running in the ProjectMnemosyne repository.
+All skill creation work MUST be done in an isolated git worktree. The base repository
+(either the current directory or a persistent cache at `$HOME/.agent-brain/ProjectMnemosyne/`)
+is used only to spawn worktrees — never work directly in it.
 
-> **Note**: Never delete ~/.agent-brain/. This is a persistent shared location that caches repository clones across sessions for faster access.
+> **Important**: Always use `git worktree add` for branch isolation and `git worktree remove`
+> for cleanup. Never use `rm -rf` on repository directories.
 
 ## Instructions
 
@@ -34,33 +36,34 @@ When the user invokes this command:
    - Filename: `<topic>-<subtopic>-<short-4-word-summary>` (kebab-case)
    - Auto-detect category from conversation context (training, evaluation, optimization, debugging, architecture, tooling, ci-cd, testing, documentation)
 
-3. **Setup repository**:
+3. **Setup repository and create worktree**:
    ```bash
    # Detect if already in ProjectMnemosyne
    CURRENT_REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
    if [[ "$CURRENT_REMOTE" == *"ProjectMnemosyne"* ]] && [[ "$CURRENT_REMOTE" != *"ProjectMnemosyne-"* ]]; then
-     # Already in ProjectMnemosyne - work in current directory
-     MNEMOSYNE_DIR="."
+     # Already in ProjectMnemosyne - use current repo as base
+     MNEMOSYNE_BASE="$(git rev-parse --show-toplevel)"
    else
-     # Use shared home directory location (persistent cache)
-     MNEMOSYNE_DIR="$HOME/.agent-brain/ProjectMnemosyne"
+     # Use persistent cache as base repo for worktree creation
+     MNEMOSYNE_BASE="$HOME/.agent-brain/ProjectMnemosyne"
 
-     if [ ! -d "$MNEMOSYNE_DIR" ]; then
+     if [ ! -d "$MNEMOSYNE_BASE" ]; then
        # Clone fresh
        mkdir -p "$HOME/.agent-brain"
-       gh repo clone HomericIntelligence/ProjectMnemosyne "$MNEMOSYNE_DIR"
+       gh repo clone HomericIntelligence/ProjectMnemosyne "$MNEMOSYNE_BASE"
      fi
-
-     # Always update to latest main before starting
-     git -C "$MNEMOSYNE_DIR" fetch origin
-     git -C "$MNEMOSYNE_DIR" checkout main
-     git -C "$MNEMOSYNE_DIR" pull --ff-only origin main
-
-     cd "$MNEMOSYNE_DIR"
    fi
 
-   # Create branch from origin/main (clean state)
-   git checkout -b skill/<name> origin/main
+   # Ensure we have latest main
+   git -C "$MNEMOSYNE_BASE" fetch origin
+   git -C "$MNEMOSYNE_BASE" checkout main 2>/dev/null || true
+   git -C "$MNEMOSYNE_BASE" pull --ff-only origin main 2>/dev/null || true
+
+   # Create an isolated worktree for the new skill branch
+   WORKTREE_DIR="/tmp/mnemosyne-skill-<name>"
+   git -C "$MNEMOSYNE_BASE" worktree add "$WORKTREE_DIR" -b skill/<name> origin/main
+
+   cd "$WORKTREE_DIR"
    ```
 
 4. **Generate skill file** as flat `skills/<name>.md`:
@@ -205,6 +208,16 @@ Documents <brief description of what was learned>.
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
    ```
 
+8. **Clean up worktree** (REQUIRED after PR creation):
+   ```bash
+   # Return to the base repo directory first
+   cd "$MNEMOSYNE_BASE" 2>/dev/null || cd -
+
+   # Remove the worktree
+   git -C "$MNEMOSYNE_BASE" worktree remove "$WORKTREE_DIR"
+   git -C "$MNEMOSYNE_BASE" worktree prune
+   ```
+
 ## Common Issues & Solutions
 
 ### Top Validation Failures
@@ -218,6 +231,17 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 | "Failed Attempts table missing required columns" | Table format incorrect | Use: \| Attempt \| What Was Tried \| Why It Failed \| Lesson Learned \| |
 | "Quick Reference should use ###" | Using `## Quick Reference` instead of `###` | Demote to `### Quick Reference` (subsection of Verified Workflow) |
 | Skill not in marketplace | File not committed or in wrong location | Verify in `skills/<name>.md` (root of skills dir, not nested) |
+
+### Issue: Stale worktree
+
+**Cause**: Worktree from a previous failed `/retrospective` was not cleaned up.
+
+**Solution**: List and remove stale worktrees:
+```bash
+git worktree list
+git worktree remove /tmp/mnemosyne-skill-<name>
+git worktree prune
+```
 
 ### Issue: PR already exists
 

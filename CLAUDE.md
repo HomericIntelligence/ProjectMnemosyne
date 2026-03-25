@@ -49,18 +49,20 @@ Save learnings after a session (auto-creates PR).
 1. Read entire conversation history
 2. Extract: objective, steps taken, successes, failures, parameters
 3. Auto-generate skill filename: `<topic>-<subtopic>-<short-4-word-summary>`
-4. Generate skill file from template:
+4. Create git worktree for branch isolation (all work done in worktree, not base repo)
+5. Generate skill file from template:
    - `skills/<name>.md` with YAML frontmatter + all required sections
    - Optional `skills/<name>.notes.md` for raw session details
-5. Create branch: `skill/<name>`
-6. Commit and push
-7. Create PR with summary
+6. Create branch: `skill/<name>`
+7. Commit and push
+8. Create PR with summary
+9. Clean up worktree with `git worktree remove`
 
 **Auto-trigger**: UserPromptSubmit hook reminds about retrospective when you type session-ending keywords.
 
 **Format notes**:
 - Category/name are auto-generated (no user prompting)
-- Clone location: `$HOME/.agent-brain/ProjectMnemosyne/`
+- Work isolation: git worktrees (auto-created per branch, cleaned up after PR)
 - Single flat `.md` file with YAML frontmatter
 - Branch name: `skill/<name>`
 
