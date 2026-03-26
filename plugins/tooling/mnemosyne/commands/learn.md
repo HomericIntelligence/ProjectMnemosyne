@@ -2,7 +2,7 @@
 description: Save session learnings as a new skill plugin. Use after experiments, debugging sessions, or when you want to preserve team knowledge.
 ---
 
-# /retrospective
+# /learn
 
 Capture session learnings and create or amend a skill file in the ProjectMnemosyne marketplace.
 
@@ -396,7 +396,7 @@ git push origin skill/<name>
 
 **Cause**: Shared clone at `$HOME/.agent-brain/ProjectMnemosyne` takes up disk space.
 
-**Solution**: Safe to delete anytime — re-clones automatically on next `/advise` or `/retrospective`:
+**Solution**: Safe to delete anytime — re-clones automatically on next `/advise` or `/learn`:
 ```bash
 rm -rf $HOME/.agent-brain/ProjectMnemosyne
 ```
@@ -415,7 +415,7 @@ rm -rf $HOME/.agent-brain/ProjectMnemosyne
 ## Example
 
 ```
-/skills-registry-commands:retrospective
+/mnemosyne:learn
 ```
 
 Claude will analyze the session, check for existing skills to amend, and either update an existing skill (with history) or create a new one.
