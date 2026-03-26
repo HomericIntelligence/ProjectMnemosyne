@@ -1,0 +1,29 @@
+# tooling-justfile-pixi-ecosystem-wrapping — History
+
+## v2.0.0 (2026-03-25)
+
+**Changed by:** ProjectHephaestus issue #35 — add justfile for ecosystem convention
+**Verification:** verified-local
+
+### What changed
+- Added Python library repo template (Template A) alongside existing CI-heavy template (Template B)
+- Added `*ARGS` parameterization pattern for `test` and `lint` recipes
+- Added "When to Use" trigger for Python library repos without CI recipes
+- Added ProjectHephaestus to "Verified On" table
+- Updated description to cover Python library repos, not just CI-heavy projects
+
+### Why
+v1.0.0 only documented the pattern for ProjectScylla which has CI container recipes
+(ci-build, ci-test, ci-lint, ci-all) and BATS sync tests. Python library repos like
+ProjectHephaestus have a simpler justfile — just test/lint/format/typecheck/audit/pre-commit
+with `*ARGS` forwarding. The simpler template is the more common case across the ecosystem.
+
+### Previous version (v1.0.0) snapshot
+
+See git history for full v1.0.0 content (commit `42ae0b14`).
+
+---
+
+## v1.0.0 (2026-03-25)
+
+**Initial version.**
