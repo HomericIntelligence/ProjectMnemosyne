@@ -59,7 +59,7 @@ The "Failed Attempts" section is the most valuable - prevents repeated mistakes.
 
 **Changes**:
 - Added SessionEnd hook to `.claude/settings.json`
-- Copied `retrospective-trigger.py` to `.claude/hooks/`
+- Copied `learn-trigger.py` to `.claude/hooks/`
 - Used worktree workflow to avoid conflicts
 
 ### 4. Created PRs
@@ -96,7 +96,7 @@ The "Failed Attempts" section is the most valuable - prevents repeated mistakes.
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/retrospective-trigger.py\"",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/learn-trigger.py\"",
             "timeout": 120
           }
         ]
@@ -106,7 +106,7 @@ The "Failed Attempts" section is the most valuable - prevents repeated mistakes.
 }
 ```
 
-### retrospective-trigger.py
+### learn-trigger.py
 
 - Reads JSON input from stdin
 - Triggers only on `"exit"` or `"clear"` reasons

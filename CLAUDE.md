@@ -58,7 +58,7 @@ Save learnings after a session (auto-creates PR).
 8. Create PR with summary
 9. Clean up worktree with `git worktree remove`
 
-**Auto-trigger**: UserPromptSubmit hook reminds about retrospective when you type session-ending keywords.
+**Auto-trigger**: UserPromptSubmit hook reminds about `/learn` when you type session-ending keywords.
 
 **Format notes**:
 - Category/name are auto-generated (no user prompting)
@@ -77,7 +77,7 @@ skills/<name>.notes.md       # (Optional) Additional context from development se
 
 All skills are now flat files in the `skills/` directory. Metadata is stored as YAML frontmatter in each `.md` file.
 
-**Exception**: `plugins/tooling/mnemosyne/` stays in `plugins/` — it's the command infrastructure (advise, retrospective), not a skill.
+**Exception**: `plugins/tooling/mnemosyne/` stays in `plugins/` — it's the command infrastructure (advise, learn), not a skill.
 
 ### Required Fields
 

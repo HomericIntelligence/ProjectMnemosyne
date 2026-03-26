@@ -64,7 +64,7 @@ gh issue list --repo ORG/REPO --state open --limit 100 --json number,title,body,
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Content filter on CODE_OF_CONDUCT.md | Sub-agent tried to write Contributor Covenant text | API content filtering policy blocked the output (twice) | Governance documents with conduct/harassment language may trigger content filters — handle these in the main session where you can write shorter, adapted versions |
-| Sub-agent retrospective | Asked completed agents to run /retrospective | Agents are one-shot — once they return results, their context is gone | Sub-agents cannot run follow-up commands after completion; capture learnings from the main session instead |
+| Sub-agent retrospective | Asked completed agents to run /learn | Agents are one-shot — once they return results, their context is gone | Sub-agents cannot run follow-up commands after completion; capture learnings from the main session instead |
 | Branch already exists from failed agent | Retry agent tried to create same branch name | Previous failed agent had already pushed the branch | Use `-v2` suffix or delete remote branch before retrying with same name |
 
 ## Results & Parameters

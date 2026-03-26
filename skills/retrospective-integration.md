@@ -1,6 +1,6 @@
 ---
 name: retrospective-integration
-description: Integrate /retrospective skill into automation pipelines to automatically
+description: Integrate /learn skill into automation pipelines to automatically
   capture session learnings
 category: tooling
 date: 2026-02-13
@@ -41,7 +41,7 @@ except (json.JSONDecodeError, AttributeError):
 
 **Key**: Use `.get()` for graceful None return, log warnings but never fail pipeline
 
-### 2. Resume Session to Run Retrospective with Proper Permissions
+### 2. Resume Session to Run Learn with Proper Permissions
 
 **Critical**: When resuming a session to run `/learn`, you MUST provide tool permissions for git and gh commands:
 

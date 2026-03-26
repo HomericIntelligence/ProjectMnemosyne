@@ -87,7 +87,7 @@ Update `.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/retrospective-trigger.py\"",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/learn-trigger.py\"",
             "timeout": 120,
             "once": true
           }
@@ -101,13 +101,13 @@ Update `.claude/settings.json`:
 ### 3. Copy Hook Script
 
 ```bash
-cp /path/to/ProjectMnemosyne/.claude/hooks/retrospective-trigger.py .claude/hooks/
+cp /path/to/ProjectMnemosyne/.claude/hooks/learn-trigger.py .claude/hooks/
 ```
 
 ### 4. Commit and Create PR
 
 ```bash
-git add .claude/settings.json .claude/hooks/retrospective-trigger.py
+git add .claude/settings.json .claude/hooks/learn-trigger.py
 git commit -m "feat(hooks): add SessionEnd hook for retrospective prompts"
 git push -u origin retrospective-hook
 gh pr create --title "feat(hooks): add SessionEnd hook" --body "..."
@@ -142,7 +142,7 @@ After marketplace registration:
       "hooks": [
         {
           "type": "command",
-          "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/retrospective-trigger.py\"",
+          "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/learn-trigger.py\"",
           "timeout": 120,
           "once": true
         }

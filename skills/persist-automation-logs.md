@@ -156,7 +156,7 @@ Add `state_dir.mkdir()` and save failure output:
 
 ```python
 def _run_retrospective(self, session_id: str, worktree_path: Path, issue_number: int) -> None:
-    """Resume Claude session to run /retrospective."""
+    """Resume Claude session to run /learn."""
     self.state_dir.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
     log_file = self.state_dir / f"retrospective-{issue_number}.log"
 
