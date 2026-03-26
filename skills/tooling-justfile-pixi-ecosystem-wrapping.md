@@ -1,10 +1,12 @@
 ---
 name: tooling-justfile-pixi-ecosystem-wrapping
-description: "Add justfile wrapping pixi tasks for ecosystem convention alignment. Use when: (1) a project uses pixi.toml but lacks a justfile, (2) cross-repo task invocation needs just scylla-* convention, (3) adding BATS tests to verify justfile-pixi sync."
+description: "Add justfile wrapping pixi tasks for ecosystem convention alignment. Use when: (1) a project uses pixi.toml but lacks a justfile, (2) Python library repo needs consistent CLI, (3) cross-repo task invocation needs just <project>-<task> convention, (4) adding BATS tests to verify justfile-pixi sync."
 category: tooling
 date: 2026-03-25
-version: "1.0.0"
+version: "2.0.0"
 user-invocable: false
+verification: verified-local
+history: tooling-justfile-pixi-ecosystem-wrapping.history
 tags:
   - justfile
   - pixi
@@ -20,12 +22,15 @@ tags:
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-03-25 |
-| **Objective** | Add a justfile to a pixi-managed project so that cross-repo orchestration (e.g., Odysseus invoking `just scylla-*`) works via the HomericIntelligence ecosystem convention |
-| **Outcome** | Successful — justfile created with 12 recipes, BATS sync test, all CI hooks passing |
+| **Objective** | Add a justfile to a pixi-managed project so that cross-repo orchestration and developer CLI is consistent via the HomericIntelligence ecosystem convention |
+| **Outcome** | Successful — verified on both CI-heavy (Scylla, 12 recipes) and library (Hephaestus, 7 recipes) repos |
+| **Verification** | verified-local |
+| **History** | [changelog](./tooling-justfile-pixi-ecosystem-wrapping.history) |
 
 ## When to Use
 
 - A project has `pixi.toml` tasks but no `justfile`
+- A Python library repo needs a consistent developer CLI (test, lint, format, typecheck, audit)
 - Cross-repo orchestrators (e.g., Odysseus) need to invoke tasks via `just <project>-<task>`
 - You need to verify justfile recipes stay in sync with pixi tasks
 - Adding `just` as a conda-forge dev dependency in pixi.toml
@@ -35,90 +40,175 @@ tags:
 ### Quick Reference
 
 ```bash
-# 1. Add just as dev dependency in pixi.toml
+# 1. (Optional) Add just as dev dependency in pixi.toml
 # [feature.dev.dependencies]
 # just = ">=1.25.0,<2"
 
-# 2. Regenerate lock file
-pixi install
+# 2. Create justfile (see templates below)
 
-# 3. Create justfile (see template below)
+# 3. Verify
+just --list
 
-# 4. Verify
-pixi run just --list
-
-# 5. Run BATS sync test
+# 4. (Optional) Run BATS sync test if available
 pixi run test-shell
 ```
 
 ### Detailed Steps
 
-1. **Add `just` to `pixi.toml`** under `[feature.dev.dependencies]` — it's a dev-only tool, not needed in CI lint or production environments.
+1. **Decide if `just` needs to be a pixi dependency.** If `just` is already installed system-wide or via another mechanism, skip adding it to pixi.toml. For repos where `just` is the only way to discover it, add it under `[feature.dev.dependencies]`.
 
-2. **Run `pixi install`** to regenerate `pixi.lock`. Always commit the updated lock file.
-
-3. **Create `justfile`** at project root with these conventions:
+2. **Create `justfile`** at project root with these conventions:
    - `default` recipe: `@just --list` (ecosystem standard)
    - Each recipe delegates to `pixi run <task>` (single source of truth stays in pixi.toml)
    - Add a comment above each recipe describing what it does
    - **Never use heredocs** in justfile recipes (known `just` pitfall — use `printf` instead)
    - For tasks without a pixi equivalent (e.g., `typecheck`), call the tool directly via `pixi run mypy ...`
+   - Use `*ARGS` forwarding for recipes where users commonly pass extra flags (test, lint)
 
-4. **Justfile template**:
-   ```just
-   # Project task runner — delegates to pixi run
-   # Ecosystem convention: justfile + pixi
+3. **Choose the right template** based on project type:
 
-   # List all available recipes
-   default:
-       @just --list
+### Template A: Python Library Repo (e.g., Hephaestus)
 
-   # Run pytest
-   test:
-       pixi run test
+```just
+# ProjectName task runner
+# Convention: justfile delegates to pixi tasks
 
-   # Run ruff check
-   lint:
-       pixi run lint
+default:
+    @just --list
 
-   # Run ruff format
-   format:
-       pixi run format
+# === Test ===
 
-   # Run mypy type checker
-   typecheck:
-       pixi run mypy scylla scripts tests
+# Run tests (accepts optional args, e.g. `just test tests/unit/`)
+test *ARGS:
+    pixi run pytest {{ ARGS }}
 
-   # Run all pre-commit hooks
-   pre-commit:
-       pixi run pre-commit run --all-files
-   ```
+# === Code Quality ===
 
-5. **Create BATS sync test** at `tests/shell/justfile/test_justfile.bats`:
+# Run linter
+lint *ARGS:
+    pixi run lint {{ ARGS }}
+
+# Run formatter
+format:
+    pixi run format
+
+# Run type checker
+typecheck:
+    pixi run mypy <package>/
+
+# === Security ===
+
+# Run dependency audit
+audit:
+    pixi run audit
+
+# === Checks ===
+
+# Run pre-commit hooks on all files
+pre-commit:
+    pixi run pre-commit run --all-files
+```
+
+Key decisions for library repos:
+- `test *ARGS` forwards to pytest (e.g., `just test tests/unit/ -v`)
+- `lint *ARGS` forwards to ruff check (e.g., `just lint --fix`)
+- `format` has no args — ruff format targets are fixed in pixi.toml
+- `typecheck` calls `pixi run mypy` directly since there's typically no pixi task for it
+- No CI recipes needed — CI runs pixi tasks directly
+
+### Template B: CI-Heavy Repo (e.g., Scylla)
+
+```just
+# Project task runner — delegates to pixi run
+# Ecosystem convention: justfile + pixi
+
+# List all available recipes
+default:
+    @just --list
+
+# Run pytest
+test:
+    pixi run test
+
+# Run ruff check
+lint:
+    pixi run lint
+
+# Run ruff format
+format:
+    pixi run format
+
+# Run mypy type checker
+typecheck:
+    pixi run mypy scylla scripts tests
+
+# Run all pre-commit hooks
+pre-commit:
+    pixi run pre-commit run --all-files
+
+# Run CI build
+ci-build:
+    pixi run ci-build
+
+# Run CI lint
+ci-lint:
+    pixi run ci-lint
+
+# Run CI tests
+ci-test:
+    pixi run ci-test
+
+# Run full CI suite
+ci-all:
+    pixi run ci-all
+
+# Run dependency audit
+audit:
+    pixi run audit
+
+# Run BATS shell tests
+test-shell:
+    pixi run test-shell
+```
+
+4. **(Optional) Create BATS sync test** at `tests/shell/justfile/test_justfile.bats`:
    - Verify `justfile` exists at project root
    - Verify `just --list` succeeds
-   - Verify expected recipes are present (test, lint, format, typecheck, etc.)
+   - Verify expected recipes are present
    - Regression guard: no heredocs in justfile (`grep -cE '<<\s*[A-Z_]'`)
-   - **Sync test**: parse `[tasks]` from `pixi.toml` and verify each has a matching just recipe (skip utility-only tasks like `plan-issues`)
+   - **Sync test**: parse `[tasks]` from `pixi.toml` and verify each has a matching just recipe
 
-6. **Update project docs** (e.g., CLAUDE.md) with a Quick Start section showing justfile commands.
+5. **Verify** — run `just --list` to confirm no parse errors and all recipes show descriptions.
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| N/A — clean implementation | Direct pixi run delegation | Did not fail | Following the ecosystem convention from prior skills (flesh-out-scaffolded-repo, just-recipe-heredoc-fix) avoided all known pitfalls |
+| N/A — clean implementation (Scylla) | Direct pixi run delegation | Did not fail | Following the ecosystem convention from prior skills avoided all known pitfalls |
+| N/A — clean implementation (Hephaestus) | Direct pixi run delegation with `*ARGS` | Did not fail | Pattern is now well-established; `*ARGS` forwarding works cleanly for test and lint |
 
 ## Results & Parameters
 
-### Pixi.toml Addition
+### Pixi.toml Addition (optional)
 
 ```toml
 [feature.dev.dependencies]
 just = ">=1.25.0,<2"
 ```
 
-### Recipe-to-Pixi Mapping
+### Recipe-to-Pixi Mapping (Library Repo — Hephaestus)
+
+| Recipe | Delegates To | Notes |
+|--------|-------------|-------|
+| `default` | `@just --list` | Ecosystem standard |
+| `test *ARGS` | `pixi run pytest {{ ARGS }}` | Forwards args to pytest |
+| `lint *ARGS` | `pixi run lint {{ ARGS }}` | Forwards args to ruff check |
+| `format` | `pixi run format` | ruff format |
+| `typecheck` | `pixi run mypy hephaestus/` | No pixi task; calls mypy directly |
+| `audit` | `pixi run audit` | pip-audit scan |
+| `pre-commit` | `pixi run pre-commit run --all-files` | All hooks |
+
+### Recipe-to-Pixi Mapping (CI-Heavy Repo — Scylla)
 
 | Recipe | Delegates To | Notes |
 |--------|-------------|-------|
@@ -135,13 +225,9 @@ just = ">=1.25.0,<2"
 | `audit` | `pixi run audit` | pip-audit scan |
 | `pre-commit` | `pixi run pre-commit run --all-files` | All hooks |
 
-### BATS Test Coverage
-
-- 11 tests: existence, list, 7 recipe checks, no-heredoc guard, pixi sync test
-- All pass in < 100ms total
-
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectScylla | Issue #1506 — ecosystem convention alignment | PR #1550 |
+| ProjectHephaestus | Issue #35 — add justfile for ecosystem convention | PR #72 |
