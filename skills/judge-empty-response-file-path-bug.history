@@ -1,0 +1,50 @@
+# judge-empty-response-file-path-bug — History
+
+## v3.0.0 (2026-03-25)
+
+**Changed by:** PR #1558 — stream-json workaround for Claude CLI v2.1.83 empty result bug
+**Verification:** verified-local
+
+### What changed
+- Added new failure mode: Claude CLI v2.1.83 `--print` returns empty `result` field despite model generating tokens
+- Updated Verified Workflow to use `--output-format stream-json --verbose` and parse `type:assistant` events
+- Added `_extract_response_from_stream()` helper function reference
+- Added 2 new Failed Attempts rows (text output format, json output format)
+- Updated CLI Patterns table with stream-json approach
+- Filed upstream bug: anthropics/claude-code#39028
+
+### Why
+After fixing the variadic --allowedTools issue (v2.0.0), stdin piping worked correctly.
+However, Claude CLI v2.1.83 introduced a regression where the `result` field in --print mode
+is always empty. The model generates tokens (confirmed via stream events, cost charged),
+but the output is discarded before reaching stdout. Workaround: parse stream-json events
+instead of relying on the result field.
+
+### Previous version (v2.0.0) snapshot
+---
+name: judge-empty-response-file-path-bug
+description: "Fix judge producing empty responses when prompt consumed by variadic --allowedTools flag. Use when: (1) all judges return empty responses across all models, (2) CLI positional arg placed after variadic flag like --allowedTools, (3) checkpoint has invalid zero-score judge results needing reset."
+category: debugging
+date: 2026-03-25
+version: "2.0.0"
+user-invocable: false
+tags: []
+---
+
+# Judge Empty Response — Variadic Flag Consuming Prompt
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-03-25 |
+| **Objective** | Fix LLM judge returning empty responses causing "Judge response does not contain valid JSON" across all models |
+| **Outcome** | Root cause: --allowedTools variadic flag consumed positional prompt arg. Fixed in PR #1543 + #1544. Checkpoint reset procedure for invalidated results. |
+
+(full content preserved in git history)
+
+---
+
+## v2.0.0 (2026-03-25)
+
+**Initial version** (created as v2.0.0 due to prior iteration history).
