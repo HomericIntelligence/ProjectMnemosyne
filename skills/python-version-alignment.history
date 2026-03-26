@@ -1,5 +1,45 @@
 # python-version-alignment — History
 
+## v3.0.0 (2026-03-25)
+
+**Changed by:** Issue #58 — Add Python 3.13 to CI test matrix and classifiers (ProjectHephaestus PR #112)
+**Verification:** verified-local
+
+### What changed
+- Added "Part C: Adding New Python Release to CI" workflow section for forward-looking version additions
+- Added "When to Use" triggers for new stable Python releases not yet in classifiers/CI
+- Added Failed Attempts entry noting pixi caveat applies to version additions too
+- Added v3.0.0 Results & Parameters section with Issue #58 details
+- Added ProjectHephaestus Issue #58 to Verified On table
+- Bumped version from 2.0.0 to 3.0.0
+
+### Why
+v2.0.0 covered expanding the matrix to test all *claimed* versions (backward-looking). This update covers the complementary case: adding a *new* Python release that isn't yet claimed (forward-looking). The workflow is simpler (just add version + classifier) but includes the important caveat that pixi-based CI still won't actually test the new version without the setup-python migration from v2.0.0.
+
+### Previous version (v2.0.0) snapshot
+---
+name: python-version-alignment
+description: "Align Python version across pyproject.toml, pixi.toml, Dockerfile, and CI test matrix. Use when: (1) classifiers don't match CI matrix, (2) Dockerfile uses wrong Python, (3) pixi ignores setup-python in multi-version CI."
+category: tooling
+date: 2026-03-25
+version: "2.0.0"
+user-invocable: false
+verification: verified-local
+history: python-version-alignment.history
+tags:
+- python
+- ci-cd
+- test-matrix
+- pixi
+- setup-python
+- version-drift
+- github-actions
+---
+
+(Full content preserved in git history — see commit for v2.0.0)
+
+---
+
 ## v2.0.0 (2026-03-25)
 
 **Changed by:** Issue #44 — Expand CI test matrix to cover Python 3.10+ (ProjectHephaestus PR #75)
