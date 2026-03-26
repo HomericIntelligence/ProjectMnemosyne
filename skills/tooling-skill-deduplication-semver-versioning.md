@@ -1,0 +1,131 @@
+---
+name: tooling-skill-deduplication-semver-versioning
+description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes."
+category: tooling
+date: 2026-03-25
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
+---
+
+# Skill Deduplication and Semantic Versioning
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-03-25 |
+| **Objective** | Merge 16 duplicate adr009-* skills into 3 consolidated skills, and add semver rules to the /retrospective command |
+| **Outcome** | 16 skills merged to 3 (net -13), 35 unique Failed Attempts preserved, semver rules added |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- Multiple skills share a common prefix (e.g., `adr009-*`, `pr-review-*`, `mojo-test-*`)
+- `/advise` returns redundant or contradictory advice for the same topic
+- Need to identify duplicate clusters in a large skills registry (1000+ skills)
+- Updating `/retrospective` versioning rules to use semantic versioning
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Find duplicate clusters by 2-part prefix
+ls skills/*.md | grep -v notes.md | grep -v history | sed 's|skills/||;s|\.md$||' | \
+  awk -F'-' '{print $1"-"$2}' | sort | uniq -c | sort -rn | head -20
+
+# List all skills in a cluster
+ls skills/<prefix>*.md | grep -v notes.md | grep -v history
+
+# Read descriptions to group by subtopic
+for f in skills/<prefix>*.md; do
+  echo "=== $(basename $f .md) ==="; head -5 "$f" | grep "^description:"; echo
+done
+```
+
+### Detailed Steps
+
+**Phase 1: Identify duplicate clusters**
+
+1. List all skill names, extract 2-part prefixes, count occurrences
+2. Focus on clusters with 3+ skills sharing a prefix
+3. Read descriptions to sub-group within each cluster (e.g., adr009-* split into: test-splitting, CI-patterns, audit)
+
+**Phase 2: Merge each sub-group**
+
+For each sub-group of duplicates:
+
+1. Read ALL source skills — extract unique content from each:
+   - Failed Attempts rows (deduplicate by lesson, not exact text)
+   - Verified Workflow steps (combine into comprehensive workflow)
+   - When to Use triggers (union of all triggers)
+   - Results & Parameters (merge all configs)
+2. Write a single consolidated skill at `skills/<merged-name>.md`:
+   - Use `version: "1.0.0"` (new consolidated skill, not an amendment)
+   - Description covers ALL trigger conditions from all sources
+   - All unique learnings preserved
+3. Delete all superseded source `.md` and `.notes.md` files
+4. No `.history` file needed — this is a new v1.0.0 skill, not an amendment
+
+**Phase 3: Validate**
+
+```bash
+python3 scripts/validate_plugins.py
+```
+
+**Phase 4: Use parallel agents for large merges**
+
+For multiple clusters, launch parallel agents (one per group) in the same worktree. Each agent reads its group's skills and writes the merged output.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Parallel agents in same worktree | Launched 3 agents to merge 3 groups simultaneously in one worktree | Worked fine — no conflicts since each agent writes different files | Parallel agents in a shared worktree work when they touch non-overlapping files |
+| Major-only version bumps | Always bump X.0.0 for any amendment | Loses information about change scale — a typo fix looks the same as a full rewrite | Use semver: Major for rewrites/merges, Minor for new findings, Patch for typos |
+| Merging by exact text dedup | Tried deduplicating Failed Attempts by exact row match | Different skills describe the same lesson with different wording | Deduplicate by lesson/concept, not by exact text match |
+
+## Results & Parameters
+
+### Deduplication Results (ADR-009 Proof of Concept)
+
+```yaml
+skills_before: 16
+skills_after: 3
+net_reduction: 13 skills (-81%)
+lines_before: 3279
+lines_after: 864
+unique_lessons_preserved: 35 Failed Attempts rows
+```
+
+### Semver Rules for /retrospective
+
+| Change Type | Bump | When |
+|-------------|------|------|
+| Major (X.0.0) | `1.0.0` → `2.0.0` | Merge skills, rewrite workflow, change core recommendation |
+| Minor (0.X.0) | `1.0.0` → `1.1.0` | Add findings, failed attempts, extend workflow |
+| Patch (0.0.X) | `1.0.0` → `1.0.1` | Fix typos, formatting, metadata |
+
+### Top Duplicate Clusters Remaining (for future merges)
+
+```
+9  pr-review-*
+8  mojo-test-*
+7  skill-fix-*
+7  pre-commit-*
+7  mojo-hash-*
+7  mojo-extensor-*
+7  github-actions-*
+7  git-worktree-*
+5  mojo-jit-*
+5  mass-pr-*
+5  batch-pr-*
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectMnemosyne | PR #1040, merged 16 adr009 skills + added semver | 2026-03-25 session |
