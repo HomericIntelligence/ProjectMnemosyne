@@ -3,9 +3,10 @@ name: logging-handler-registry-deduplication
 description: "Fix Python get_logger() adding duplicate handlers on repeated calls. Use when: (1) logger adds multiple StreamHandlers after repeated get_logger() calls, (2) file handler is silently skipped on second call, (3) parent logger propagation causes duplicate output."
 category: debugging
 date: 2026-03-25
-version: "1.0.0"
+version: "2.0.0"
 user-invocable: false
 verification: verified-local
+history: logging-handler-registry-deduplication.history
 tags:
   - python
   - logging
@@ -21,8 +22,9 @@ tags:
 |-------|-------|
 | **Date** | 2026-03-25 |
 | **Objective** | Fix `get_logger()` adding duplicate handlers when called multiple times for the same logger name, and allow incremental handler addition (e.g., file handler on second call) |
-| **Outcome** | Successful — all three bugs fixed with a module-level registry pattern |
-| **Verification** | verified-local (389 unit tests pass, ruff/mypy clean) |
+| **Outcome** | Successful — two verified approaches: module-level registry (v1) and isinstance-based inspection (v2) |
+| **Verification** | verified-local (438 tests pass) |
+| **History** | [changelog](./logging-handler-registry-deduplication.history) |
 
 ## When to Use
 
@@ -34,7 +36,47 @@ tags:
 
 ## Verified Workflow
 
-### Quick Reference
+Two approaches are verified. Choose based on complexity needs.
+
+### Approach A: isinstance-based handler inspection (simpler, no external state)
+
+Inspect `logger.handlers` directly with type checks. No module-level registry needed.
+
+#### Quick Reference
+
+```python
+import os
+
+def get_logger(name: str, log_file: str | None = None) -> logging.Logger:
+    logger = logging.getLogger(name)
+
+    # Console: only add if no StreamHandler (non-FileHandler) exists
+    # IMPORTANT: FileHandler is a subclass of StreamHandler, so exclude it
+    has_console = any(
+        isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+        for h in logger.handlers
+    )
+    if not has_console:
+        logger.addHandler(logging.StreamHandler(sys.stdout))
+
+    # File: only add if no FileHandler for this resolved path exists
+    if log_file:
+        resolved = os.path.abspath(log_file)
+        has_file = any(
+            isinstance(h, logging.FileHandler) and h.baseFilename == resolved
+            for h in logger.handlers
+        )
+        if not has_file:
+            logger.addHandler(logging.FileHandler(log_file))
+
+    return logger
+```
+
+**Key gotcha**: `logging.FileHandler` is a subclass of `logging.StreamHandler`. The console handler check must use `and not isinstance(h, logging.FileHandler)` to avoid counting file handlers as console handlers.
+
+### Approach B: Module-level registry (more explicit, handles custom handler types)
+
+#### Quick Reference
 
 ```python
 # Module-level registry — tracks handler keys per logger name
@@ -56,44 +98,40 @@ def get_logger(name: str, log_file: str | None = None) -> logging.Logger:
     return logger
 ```
 
-### Detailed Steps
+### Detailed Steps (both approaches)
 
-1. **Add a module-level registry** — `_configured_loggers: dict[str, set[str]] = {}` mapping logger names to sets of handler keys (e.g., `{"console", "/path/to/file.log"}`)
-
-2. **Replace `if not logger.handlers` with registry checks** — The naive guard fails because:
+1. **Replace `if not logger.handlers` with per-handler-type checks** — The naive guard fails because:
    - It's all-or-nothing: if handlers exist, no new ones can be added
    - It doesn't distinguish handler types (console vs file)
    - Python's logging hierarchy means `logger.handlers` can be empty while parent handles output
 
-3. **Check each handler type independently**:
-   - Console: `if "console" not in configured` — add StreamHandler once
-   - File: `if log_file and log_file not in configured` — add FileHandler per unique path
+2. **Check each handler type independently**:
+   - Console: only add if no console StreamHandler exists
+   - File: only add if no FileHandler for the same resolved path exists
 
-4. **Set `logger.propagate = False`** — Prevents parent loggers (especially root) from duplicating messages that child loggers already handle
+3. **Compare file paths using resolved absolute paths** — `FileHandler.baseFilename` stores the absolute path, so compare against `os.path.abspath(log_file)` to handle relative vs absolute equivalence
 
-5. **Always update level** — Call `logger.setLevel()` on every invocation so subsequent calls with a different level take effect
+4. **Always update level** — Call `logger.setLevel()` on every invocation so subsequent calls with a different level take effect
 
-6. **Write tests with cleanup** — Use an `autouse` pytest fixture that clears the registry and logger handlers after each test to prevent cross-test contamination
+5. **Consider `logger.propagate = False`** — Prevents parent loggers (especially root) from duplicating messages that child loggers already handle
 
-### Test Cleanup Pattern
+### When to prefer each approach
 
-```python
-@pytest.fixture(autouse=True)
-def _clean_logging_registry():
-    yield
-    for name in list(_configured_loggers):
-        if name.startswith("test."):
-            _configured_loggers.pop(name, None)
-            logging.getLogger(name).handlers.clear()
-```
+| Criterion | Approach A (isinstance) | Approach B (registry) |
+|-----------|------------------------|----------------------|
+| External state | None | Module-level dict |
+| Test cleanup | No cleanup needed | Must clear registry between tests |
+| Custom handler types | Requires isinstance checks for each type | Just add a string key |
+| Simplicity | Simpler for standard handlers | Better for complex handler setups |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | `if not logger.handlers` guard | Check if logger already has any handlers before adding | All-or-nothing: blocks adding file handler on second call; doesn't prevent duplicates if handlers are removed and re-added | Track handler types individually, not just presence/absence |
-| Check handler types on logger | Inspect `type(h)` for existing handlers | Doesn't distinguish between two different file paths; would need to inspect `baseFilename` attribute | Use a string-keyed registry that tracks exact handler identity (console key + file path) |
+| Check `type(h)` without attribute inspection | Inspect `type(h)` for existing handlers | Doesn't distinguish between two different file paths; would need to inspect `baseFilename` attribute | Must compare `baseFilename` (absolute path) to deduplicate file handlers |
 | Rely on `propagate=True` (default) | Let parent loggers handle output | Parent + child both emit when both have handlers, causing duplicate lines | Set `propagate=False` on any logger that has its own handlers |
+| isinstance check without FileHandler exclusion | Check `isinstance(h, logging.StreamHandler)` for console detection | FileHandler is a subclass of StreamHandler, so file handlers are counted as console handlers, preventing console handler from being added | Always use `isinstance(h, StreamHandler) and not isinstance(h, FileHandler)` for console detection |
 
 ## Results & Parameters
 
@@ -124,4 +162,5 @@ logger5 = get_logger("app", level=logging.DEBUG)  # Level changed to DEBUG
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | Issue #32 — PR #70 | Fixed `hephaestus/logging/utils.py:get_logger()`, 389 tests pass |
+| ProjectHephaestus | Issue #32 — PR #70 | Fixed duplicate console handlers with registry approach, 389 tests pass |
+| ProjectHephaestus | Issue #54 — PR #98 | Fixed file handler silently dropped on subsequent calls with isinstance approach, 438 tests pass |
