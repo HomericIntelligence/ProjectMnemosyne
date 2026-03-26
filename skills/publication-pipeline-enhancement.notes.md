@@ -281,7 +281,7 @@ statsmodels = ">=0.14"  # For OLS regression and model diagnostics
 User requested three prompts during session:
 1. Continuation prompts: "wp3", "lets cleanup", "continue working"
 2. Final analysis prompt request: "give me a prompt to do a final analysis in another agent"
-3. Skills registry: `/retrospective` command
+3. Skills registry: `/learn` command
 
 No negative feedback or correction requests throughout session.
 

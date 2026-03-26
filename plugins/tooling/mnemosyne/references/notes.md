@@ -5,10 +5,10 @@ A complete skills registry system for Claude agents, including commands, hooks, 
 ## What's Included
 
 ```
-skills-registry-commands/
+mnemosyne/
 ├── skills/
 │   ├── advise/SKILL.md              # /advise command
-│   ├── retrospective/SKILL.md       # /retrospective command
+│   ├── retrospective/SKILL.md       # /learn command
 │   ├── documentation-patterns/SKILL.md  # How to write good skills
 │   └── validation-workflow/SKILL.md     # CI/CD setup
 ├── hooks/
@@ -26,7 +26,7 @@ skills-registry-commands/
 ### 1. Copy Plugin to Your Project
 
 ```bash
-cp -r plugins/tooling/skills-registry-commands your-project/plugins/tooling/
+cp -r plugins/tooling/mnemosyne your-project/plugins/tooling/
 ```
 
 ### 2. Install Hooks
@@ -34,10 +34,10 @@ cp -r plugins/tooling/skills-registry-commands your-project/plugins/tooling/
 ```bash
 mkdir -p your-project/.claude/hooks
 
-cp plugins/tooling/skills-registry-commands/hooks/retrospective-trigger.py \
+cp plugins/tooling/mnemosyne/hooks/retrospective-trigger.py \
    your-project/.claude/hooks/
 
-cp plugins/tooling/skills-registry-commands/hooks/settings.json.example \
+cp plugins/tooling/mnemosyne/hooks/settings.json.example \
    your-project/.claude/settings.json
 ```
 
@@ -46,7 +46,7 @@ cp plugins/tooling/skills-registry-commands/hooks/settings.json.example \
 ```bash
 mkdir -p your-project/scripts
 
-cp plugins/tooling/skills-registry-commands/scripts/*.py \
+cp plugins/tooling/mnemosyne/scripts/*.py \
    your-project/scripts/
 ```
 
@@ -65,7 +65,7 @@ Search skills registry for relevant experiments before starting work.
 4. Summarize: what worked, what failed, recommended parameters
 5. Always prioritize Failed Attempts - these prevent wasted effort
 
-### /retrospective
+### /learn
 
 Save learnings after a session (auto-creates PR).
 
@@ -96,7 +96,7 @@ mkdir -p plugins/{training,evaluation,optimization,debugging,architecture,toolin
 | Component | Purpose |
 |-----------|---------|
 | `/advise` | Search registry before starting work |
-| `/retrospective` | Capture learnings after sessions |
+| `/learn` | Capture learnings after sessions |
 | `documentation-patterns` | How to write discoverable skills |
 | `validation-workflow` | CI/CD for quality enforcement |
 | `retrospective-trigger.py` | Auto-prompt on session end |

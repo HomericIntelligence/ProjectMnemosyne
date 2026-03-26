@@ -63,7 +63,7 @@ claude plugin marketplace list
 
 ## Quick Start
 
-These commands work inside any Claude Code session after installation. All skill discovery and installation is handled automatically through the `/advise` and `/retrospective` commands.
+These commands work inside any Claude Code session after installation. All skill discovery and installation is handled automatically through the `/advise` and `/learn` commands.
 
 ### Search for Knowledge
 
@@ -80,7 +80,7 @@ Claude will search the marketplace for relevant prior learnings and return:
 ### Save Your Learnings
 
 ```text
-/retrospective
+/learn
 ```
 
 After an experiment or debugging session, capture your learnings as a new skill.
@@ -102,7 +102,7 @@ skills/
 
 plugins/
 └── tooling/
-    └── skills-registry-commands/   # /advise and /retrospective commands
+    └── mnemosyne/   # /advise and /learn commands
 ```
 
 Each skill is a flat markdown file with YAML frontmatter:
@@ -121,7 +121,7 @@ See `marketplace.json` for the complete searchable index of available skills. Th
 ### Option 1: Automatic (Recommended)
 
 1. Complete an experiment or debugging session
-2. Run `/retrospective`
+2. Run `/learn`
 3. Follow the prompts to categorize and name the skill
 4. PR is created automatically
 
@@ -192,7 +192,7 @@ python3 scripts/validate_plugins.py
 | [ProjectOdyssey](https://github.com/HomericIntelligence/ProjectOdyssey) | Training framework written in Mojo |
 | [ProjectScylla](https://github.com/HomericIntelligence/ProjectScylla) | Testing, optimization, and resilience evaluation |
 
-> **Note**: Skills produced by any of the above repositories can be contributed to ProjectMnemosyne via `/retrospective` so that learnings are shared across the ecosystem.
+> **Note**: Skills produced by any of the above repositories can be contributed to ProjectMnemosyne via `/learn` so that learnings are shared across the ecosystem.
 
 ## Why Mnemosyne?
 

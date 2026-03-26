@@ -86,7 +86,7 @@ description: Brief description of what the command does
 
 6. **Implement auto-invocation of /advise** — Use the Skill tool:
    ```
-   Skill(skill: "skills-registry-commands:advise", args: "<task description>")
+   Skill(skill: "mnemosyne:advise", args: "<task description>")
    ```
 
 7. **Use Agent tool with model parameter** for spawning tiered sub-agents:
@@ -163,7 +163,7 @@ Key rules from `wave-based-bulk-issue-triage` skill:
 | Integration | Required? | How |
 |-------------|-----------|-----|
 | ProjectMnemosyne `/advise` | Yes (auto) | Skill tool invocation in Phase 1 |
-| ProjectMnemosyne `/retrospective` | No (suggest) | User decides in Phase 5 |
+| ProjectMnemosyne `/learn` | No (suggest) | User decides in Phase 5 |
 | AI Maestro | No (detect) | Check for `~/.aimaestro/` directory |
 | ProjectScylla T0-T6 | No (when relevant) | Only for agent evaluation tasks |
 

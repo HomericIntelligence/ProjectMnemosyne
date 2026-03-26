@@ -108,7 +108,7 @@ if re.search(r'^## Failed Attempts.*?$', content, re.MULTILINE):
 
 ## Documentation Updates
 
-Also updated `/retrospective` skill documentation to:
+Also updated `/learn` skill documentation to:
 - Add explicit ✅ CORRECT and ❌ INCORRECT format examples for Failed Attempts
 - Clarify that pipe (`|`) characters are REQUIRED by CI
 - Show best practice: summary table + detailed subsections

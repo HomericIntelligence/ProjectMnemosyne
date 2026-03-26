@@ -99,7 +99,7 @@ experiments = [
 
 ### 4. Capture Results Back to Skills Registry
 
-After experiments, `/retrospective` saves findings with TECHSPEC reference:
+After experiments, `/learn` saves findings with TECHSPEC reference:
 
 ```markdown
 ## Results vs TECHSPEC Predictions

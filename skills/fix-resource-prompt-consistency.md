@@ -277,6 +277,6 @@ tests/unit/e2e/test_tier_manager.py::TestDiscoverSubtestsRootLevelMapping::test_
 
 ## Related Skills
 
-- `skills-registry-commands:advise` - Search for prior learnings before starting
+- `mnemosyne:advise` - Search for prior learnings before starting
 - Test-first development for configuration changes
 - Parallel agent usage for faster exploration

@@ -9,7 +9,7 @@ Both `/advise` and `/retrospective` commands have been updated to work with the 
 ## Changes Overview
 
 ### /advise Command
-**File**: `plugins/tooling/skills-registry-commands/commands/advise.md`
+**File**: `plugins/tooling/mnemosyne/commands/advise.md`
 
 #### Key Updates:
 1. **Clone Location**
@@ -30,7 +30,7 @@ Both `/advise` and `/retrospective` commands have been updated to work with the 
    - Focus sections: Failed Attempts, When to Use, Results & Parameters
 
 ### /retrospective Command
-**File**: `plugins/tooling/skills-registry-commands/commands/retrospective.md`
+**File**: `plugins/tooling/mnemosyne/commands/retrospective.md`
 
 #### Key Updates:
 1. **Auto-Generate Filename** (Major Change!)

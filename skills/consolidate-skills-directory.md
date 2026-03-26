@@ -19,7 +19,7 @@ Migrate from a dual `plugins/` + `skills/` structure to a single canonical `skil
 |------|---------|
 | Date | 2026-02-23 |
 | Objective | Consolidate 225 plugins/ + 88 legacy skills/ into a single skills/ directory |
-| Outcome | ✅ 310 skills in skills/, plugins/ contains only skills-registry-commands |
+| Outcome | ✅ 310 skills in skills/, plugins/ contains only mnemosyne |
 
 ## When to Use
 
@@ -65,7 +65,7 @@ for category in plugins/*/; do
   cat_name=$(basename "$category")
   for plugin in "$category"*/; do
     plugin_name=$(basename "$plugin")
-    [ "$cat_name/$plugin_name" = "tooling/skills-registry-commands" ] && continue
+    [ "$cat_name/$plugin_name" = "tooling/mnemosyne" ] && continue
     mkdir -p "skills/$cat_name"
     [ -d "skills/$cat_name/$plugin_name" ] && rm -rf "skills/$cat_name/$plugin_name"
     mv "$plugin" "skills/$cat_name/$plugin_name"
@@ -89,7 +89,7 @@ find skills -maxdepth 1 -mindepth 1 -type d | grep -v -E "^skills/(architecture|
 
 - `.github/workflows/validate-plugins.yml`: trigger on `skills/**` + `plugins/**`, pass both to script
 - `.github/workflows/update-marketplace.yml`: same
-- `plugins/tooling/skills-registry-commands/commands/retrospective.md`: generate into `skills/<category>/<name>/`
+- `plugins/tooling/mnemosyne/commands/retrospective.md`: generate into `skills/<category>/<name>/`
 - `CLAUDE.md`, `README.md`, `.claude/shared/plugin-standards.md`: update Required Structure section
 
 ### 6. Add YAML frontmatter to migrated legacy SKILL.md files
@@ -126,7 +126,7 @@ for plugin_json_path in skills_root.rglob('.claude-plugin/plugin.json'):
 # Final state after migration
 skills_count: 310
 skills_location: skills/<category>/<name>/
-exception: plugins/tooling/skills-registry-commands/  # stays in plugins/
+exception: plugins/tooling/mnemosyne/  # stays in plugins/
 
 # Validation command
 validate: python3 scripts/validate_plugins.py skills/ plugins/

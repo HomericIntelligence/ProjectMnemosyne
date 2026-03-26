@@ -285,7 +285,7 @@ Task tool with:
 
 ## Retrospective Skill Creation
 
-User requested: `/skills-registry-commands:retrospective`
+User requested: `/mnemosyne:learn`
 User specified: "make sure retrospective only goes to ProjectMnemosyne"
 
 **Skill Details**:

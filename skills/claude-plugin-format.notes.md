@@ -9,7 +9,7 @@
 ## Problem Discovery Timeline
 
 ### Issue 1: Skills not appearing
-User installed `skills-registry-commands` plugin but `/advise` and `/retrospective` didn't appear.
+User installed `mnemosyne` plugin but `/advise` and `/learn` didn't appear.
 
 **Investigation**:
 - Checked plugin structure
@@ -68,17 +68,17 @@ version: 1.0.0
 - `scripts/generate_marketplace.py` - output to `.claude-plugin/`
 - `scripts/validate_plugins.py` - removed non-standard required fields
 - `plugins/ci-cd/github-actions-mojo/.claude-plugin/plugin.json` - removed tags
-- `plugins/tooling/skills-registry-commands/.claude-plugin/plugin.json` - removed tags
+- `plugins/tooling/mnemosyne/.claude-plugin/plugin.json` - removed tags
 - `plugins/training/grpo-external-vllm/.claude-plugin/plugin.json` - removed tags
 - `plugins/training/spec-driven-experimentation/.claude-plugin/plugin.json` - removed tags
-- `plugins/tooling/skills-registry-commands/skills/advise/SKILL.md` - removed category, invokedBy
-- `plugins/tooling/skills-registry-commands/skills/retrospective/SKILL.md` - removed category, invokedBy
-- `plugins/tooling/skills-registry-commands/skills/documentation-patterns/SKILL.md` - removed category, source, date
-- `plugins/tooling/skills-registry-commands/skills/validation-workflow/SKILL.md` - removed category, source, date
+- `plugins/tooling/mnemosyne/skills/advise/SKILL.md` - removed category, invokedBy
+- `plugins/tooling/mnemosyne/skills/retrospective/SKILL.md` - removed category, invokedBy
+- `plugins/tooling/mnemosyne/skills/documentation-patterns/SKILL.md` - removed category, source, date
+- `plugins/tooling/mnemosyne/skills/validation-workflow/SKILL.md` - removed category, source, date
 
 ### Added
-- `plugins/tooling/skills-registry-commands/commands/advise.md` - slash command
-- `plugins/tooling/skills-registry-commands/commands/retrospective.md` - slash command
+- `plugins/tooling/mnemosyne/commands/advise.md` - slash command
+- `plugins/tooling/mnemosyne/commands/retrospective.md` - slash command
 
 ## Commits Created
 
@@ -103,7 +103,7 @@ After all fixes:
 - Plugin validation script passes: 4/4 plugins valid
 - Marketplace location correct: `.claude-plugin/marketplace.json`
 - No schema errors on installation
-- Commands appear as `/skills-registry-commands:advise` and `/skills-registry-commands:retrospective`
+- Commands appear as `/mnemosyne:advise` and `/mnemosyne:learn`
 
 ## Lessons for Future Plugins
 

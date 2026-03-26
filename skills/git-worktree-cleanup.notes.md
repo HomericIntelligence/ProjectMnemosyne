@@ -41,7 +41,7 @@ BLOCKED by Safety Net
 Reason: git worktree remove --force can delete uncommitted changes. Remove --force flag.
 ```
 
-The untracked files were `ProjectMnemosyne/` directories — transient clones from prior `/retrospective`
+The untracked files were `ProjectMnemosyne/` directories — transient clones from prior `/learn`
 operations. Not project files, but Safety Net couldn't know that.
 
 **Workaround for next time**: Use `rm -rf .worktrees/issue-NNNN/ProjectMnemosyne` first, then

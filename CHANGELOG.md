@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Removed legacy `build/$$` and `build/ProjectMnemosyne` directory references.
-- Corrected skills-registry-commands source path in marketplace.
+- Corrected mnemosyne source path in marketplace.
 - Resolved marketplace validation issues and missing frontmatter fields.
 - Enforced kebab-case names in skill frontmatter.
 - Migrated 29 remaining old-format skills to flat structure.
@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Skills are now single `.md` files with YAML frontmatter in the `skills/` directory.
 - Branch naming changed from `skill/<category>/<name>` to `skill/<name>`.
 - Skill filenames follow `<topic>-<subtopic>-<short-4-word-summary>.md` convention.
-- Updated `/advise` and `/retrospective` commands for flat file format.
+- Updated `/advise` and `/learn` commands for flat file format.
 - Updated validation scripts, marketplace generation, templates, docs, and CI.
 
 ### Added
@@ -50,8 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2025-12-29
 
 ### Added
-- `/advise` and `/retrospective` slash commands.
-- skills-registry-commands plugin infrastructure.
+- `/advise` and `/learn` slash commands.
+- mnemosyne plugin infrastructure.
 - Initial batch of skills: batch-pr-ci-fix, claude-plugin-format, retrospective-hook-integration.
 
 ### Fixed
@@ -62,7 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2025-12-28
 
 ### Added
-- Skills marketplace with `/advise` and `/retrospective` commands.
+- Skills marketplace with `/advise` and `/learn` commands.
 - `marketplace.json` for searchable skill index.
 - Plugin validation with `validate_plugins.py`.
 - CI pipeline for PR validation.

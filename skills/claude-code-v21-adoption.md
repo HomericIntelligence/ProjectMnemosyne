@@ -196,7 +196,7 @@ Capture the workflow for future version upgrades.
 - [ ] Update templates with new fields
 - [ ] Document in CLAUDE.md
 - [ ] Create documentation skills for complex patterns
-- [ ] Run `/retrospective` after completion
+- [ ] Run `/learn` after completion
 
 ### PR Template
 

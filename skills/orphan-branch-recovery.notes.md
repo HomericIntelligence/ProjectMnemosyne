@@ -78,14 +78,14 @@ git push origin --delete skill/debugging/fixme-todo-cleanup-v2
 
 ## Root Cause
 
-Someone ran `/retrospective` from within ProjectOdyssey's working directory but pushed to ProjectMnemosyne-marketplace's remote. This created a branch with ProjectOdyssey's entire history instead of branching from ProjectMnemosyne-marketplace's main.
+Someone ran `/learn` from within ProjectOdyssey's working directory but pushed to ProjectMnemosyne-marketplace's remote. This created a branch with ProjectOdyssey's entire history instead of branching from ProjectMnemosyne-marketplace's main.
 
 ## Prevention
 
 1. Always verify you're in the correct repository before pushing
 2. Check `git remote -v` matches expected repository
 3. Use separate directories for different projects
-4. The `/retrospective` command now clones the target repo to a build directory to avoid this issue
+4. The `/learn` command now clones the target repo to a build directory to avoid this issue
 
 ## Key Commands Reference
 

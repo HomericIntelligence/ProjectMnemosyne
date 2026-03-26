@@ -19,7 +19,7 @@ How to write skills that Claude can find and use effectively.
 
 ## When to Use
 
-- Creating a new skill after `/retrospective`
+- Creating a new skill after `/learn`
 - Improving an existing skill's discoverability
 - Writing trigger conditions for `/advise` matching
 - Documenting failed attempts (most valuable content)
@@ -185,7 +185,7 @@ skill_quality_indicators:
 
 From the Sionic AI blog:
 
-1. **Frictionless contribution**: `/retrospective` takes 30 seconds; Claude writes it
+1. **Frictionless contribution**: `/learn` takes 30 seconds; Claude writes it
 2. **Reward specificity**: Skills with precise descriptions get surfaced, reused, cited
 3. **Celebrate failures**: "I tried X and it broke because Y" is the most valuable content
 4. **Timing matters**: Capture knowledge while fresh (end-of-session, not two weeks later)

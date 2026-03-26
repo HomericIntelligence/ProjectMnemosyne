@@ -56,7 +56,7 @@ Added tags to these plugin.json files:
 - claude-plugin-format: plugin, validation, schema, claude-code, format
 - claude-plugin-marketplace: marketplace, registry, plugin, claude-code, installation
 - verify-issue-before-work: github, issues, workflow, verification, duplicate-prevention
-- skills-registry-commands: skills, advise, retrospective, knowledge-capture, team-learning
+- mnemosyne: skills, advise, retrospective, knowledge-capture, team-learning
 - grpo-external-vllm: ml, training, llm, vllm, grpo, reinforcement-learning
 - spec-driven-experimentation: ml, training, methodology, experiments, ablation, hyperparameters
 

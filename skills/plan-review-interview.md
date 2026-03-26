@@ -156,4 +156,4 @@ sections:
 ## References
 
 - See `/advise` for searching existing knowledge
-- See `/retrospective` for capturing session learnings
+- See `/learn` for capturing session learnings
