@@ -122,3 +122,4 @@ In this case, `-> None` is more honest — callers should handle errors via try/
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | Issue #43, PR #74 | Fixed 4 IO functions, 384 tests pass |
+| ProjectHephaestus | Issue #50, PR #88 | Same 4 IO functions, part of full audit remediation, 387 tests pass |

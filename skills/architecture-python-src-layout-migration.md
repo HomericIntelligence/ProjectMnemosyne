@@ -178,3 +178,4 @@ Simpler projects (no Dockerfile, no `Path(__file__)` navigations, CI that resolv
 | ProjectScylla | Issue #1523, PR #1555 | Migrated `scylla/` → `src/scylla/`, 4782 tests pass, 30 pre-commit hooks pass |
 | ProjectHephaestus | Issue #41, PR #73 | Migrated `hephaestus/` → `src/hephaestus/`, 384 unit + 51 integration tests pass, 82% coverage |
 | ProjectHephaestus | Issue #49, PR #83 | Combined justfile + src-layout migration as single atomic PR; fixed `__version__` metadata lookup with non-matching distribution name |
+| ProjectHephaestus | Issue #50, PR #88 | Full audit remediation: src-layout + justfile + return types + structured logging + CI matrix + docs in single PR |
