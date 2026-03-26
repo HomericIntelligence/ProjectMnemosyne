@@ -18,12 +18,12 @@ PR process.
 
 ## How to Contribute a Skill
 
-### Option 1: Automatic via `/retrospective` (Recommended)
+### Option 1: Automatic via `/learn` (Recommended)
 
-The easiest way to contribute is using the `/retrospective` command after a valuable session:
+The easiest way to contribute is using the `/learn` command after a valuable session:
 
 1. Complete an experiment, debugging session, or development task.
-2. Run `/retrospective` in your Claude Code session.
+2. Run `/learn` in your Claude Code session.
 3. Claude automatically:
    - Reads your entire conversation history.
    - Extracts successes, failures, and parameters.

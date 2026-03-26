@@ -18,7 +18,7 @@ plugins/
 ├── evaluation/     (32 skills)
 ├── optimization/   (8 skills)
 ├── testing/        (37 skills)
-├── tooling/        (38 skills including skills-registry-commands)
+├── tooling/        (38 skills including mnemosyne)
 └── training/       (3 skills)
 
 skills/
@@ -71,4 +71,4 @@ These 10 skills (across 3 commits) were added directly to `plugins/` and needed 
 
 - 971 files changed in PR #183
 - 310 total skills, all passing validation
-- 309 sources in `./skills/`, 1 in `./plugins/` (skills-registry-commands)
+- 309 sources in `./skills/`, 1 in `./plugins/` (mnemosyne)

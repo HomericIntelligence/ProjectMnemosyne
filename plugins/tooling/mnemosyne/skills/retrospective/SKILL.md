@@ -4,7 +4,7 @@ description: Save session learnings as a new skill plugin. Use after experiments
 user-invocable: false
 ---
 
-# /retrospective
+# /learn
 
 Capture session learnings and create a new skill plugin with PR.
 
@@ -54,6 +54,6 @@ N/A — this skill describes a workflow pattern.
 
 ## References
 
-- See `commands/retrospective.md` for the full command implementation
+- See `commands/learn.md` for the full command implementation
 - See `validation-workflow` for CI validation details
 - See `documentation-patterns` for writing quality skills

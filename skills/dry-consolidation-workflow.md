@@ -46,7 +46,7 @@ Use this workflow when:
 
 ```bash
 # Use /advise to search team knowledge
-/skills-registry-commands:advise analyze codebase for duplicates DRY
+/mnemosyne:advise analyze codebase for duplicates DRY
 ```
 
 **What this does**:

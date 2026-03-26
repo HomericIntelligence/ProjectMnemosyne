@@ -8,7 +8,7 @@ version: 1.0.0
 ---
 # Retrospective Hook Integration
 
-Setup SessionEnd hooks to automatically prompt for `/retrospective` when ending Claude Code sessions.
+Setup SessionEnd hooks to automatically prompt for `/learn` when ending Claude Code sessions.
 
 ## Overview
 
@@ -22,7 +22,7 @@ Setup SessionEnd hooks to automatically prompt for `/retrospective` when ending 
 ## When to Use
 
 - Integrating ProjectMnemosyne skills marketplace with another repository
-- Setting up `/advise` and `/retrospective` commands in a new project
+- Setting up `/advise` and `/learn` commands in a new project
 - Configuring automatic session-end knowledge capture prompts
 - Implementing worktree-based workflow to avoid conflicts with other Claude instances
 

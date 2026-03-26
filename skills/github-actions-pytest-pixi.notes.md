@@ -296,7 +296,7 @@ All unit tests passing before CI setup.
 ### Investigation
 ```bash
 # Search skills registry
-/skills-registry-commands:advise Make sure all tests are added to CI/CD correctly
+/mnemosyne:advise Make sure all tests are added to CI/CD correctly
 
 # Check existing config
 grep -r "pytest" pyproject.toml pixi.toml

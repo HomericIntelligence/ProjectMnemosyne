@@ -87,6 +87,6 @@ claude plugin marketplace list
 Key points from blog:
 
 - `/advise` command searches marketplace before work
-- `/retrospective` captures learnings and creates PR
+- `/learn` captures learnings and creates PR
 - Failed Attempts section is required in SKILL.md
 - Plugin structure: `.claude-plugin/plugin.json` + `skills/*/SKILL.md`

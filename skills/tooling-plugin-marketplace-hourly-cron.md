@@ -45,10 +45,10 @@ tags:
 claude plugin marketplace update ProjectMnemosyne
 
 # 2. Update the installed plugin to pick up new versions
-claude plugin update skills-registry-commands@ProjectMnemosyne
+claude plugin update mnemosyne@ProjectMnemosyne
 
 # Install as hourly cron (runs at minute 0 of every hour):
-(crontab -l 2>/dev/null; echo "0 * * * * /home/<user>/.local/bin/claude plugin marketplace update ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update skills-registry-commands@ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1") | crontab -
+(crontab -l 2>/dev/null; echo "0 * * * * /home/<user>/.local/bin/claude plugin marketplace update ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update mnemosyne@ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1") | crontab -
 ```
 
 ### Detailed Steps
@@ -66,7 +66,7 @@ claude plugin update skills-registry-commands@ProjectMnemosyne
 5. **Install the cron job**:
    ```bash
    (crontab -l 2>/dev/null; echo "# Update ProjectMnemosyne plugin marketplace hourly
-   0 * * * * /home/<user>/.local/bin/claude plugin marketplace update ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update skills-registry-commands@ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1") | crontab -
+   0 * * * * /home/<user>/.local/bin/claude plugin marketplace update ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update mnemosyne@ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1") | crontab -
    ```
 
 6. **Verify installation**: `crontab -l`
@@ -104,12 +104,12 @@ claude plugin update skills-registry-commands@ProjectMnemosyne
 # Schedule: every hour at minute 0
 # Log file: /tmp/claude-plugin-update.log
 # Binary: absolute path to claude CLI
-0 * * * * /home/<user>/.local/bin/claude plugin marketplace update ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update skills-registry-commands@ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1
+0 * * * * /home/<user>/.local/bin/claude plugin marketplace update ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1 && /home/<user>/.local/bin/claude plugin update mnemosyne@ProjectMnemosyne >> /tmp/claude-plugin-update.log 2>&1
 ```
 
 ### Adapting for Other Marketplaces
 
-Replace `ProjectMnemosyne` and `skills-registry-commands@ProjectMnemosyne` with your marketplace and plugin names:
+Replace `ProjectMnemosyne` and `mnemosyne@ProjectMnemosyne` with your marketplace and plugin names:
 
 ```bash
 # List your marketplaces

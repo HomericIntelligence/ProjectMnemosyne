@@ -13,7 +13,7 @@ user-invocable: false
 |-----------|-------|
 | **Date** | 2026-02-13 |
 | **Category** | Automation |
-| **Objective** | Integrate `/retrospective` skill into `implement_issues.py` to automatically capture learnings |
+| **Objective** | Integrate `/learn` skill into `implement_issues.py` to automatically capture learnings |
 | **Outcome** | ✅ Success - Full implementation with comprehensive test coverage |
 | **PR** | https://github.com/HomericIntelligence/ProjectScylla/pull/609 |
 
@@ -43,13 +43,13 @@ except (json.JSONDecodeError, AttributeError):
 
 ### 2. Resume Session to Run Retrospective with Proper Permissions
 
-**Critical**: When resuming a session to run `/retrospective`, you MUST provide tool permissions for git and gh commands:
+**Critical**: When resuming a session to run `/learn`, you MUST provide tool permissions for git and gh commands:
 
 ```python
 run([
     "claude",
     "--resume", session_id,
-    "/skills-registry-commands:retrospective commit the results and create a PR",
+    "/mnemosyne:learn commit the results and create a PR",
     "--print",
     "--tools", "Bash",
     "--allowedTools", "Bash(git:*)",
@@ -58,7 +58,7 @@ run([
 ```
 
 **Key Points**:
-- Use `/skills-registry-commands:retrospective` as the command (not `--message`)
+- Use `/mnemosyne:learn` as the command (not `--message`)
 - Add explicit instructions: "commit the results and create a PR"
 - `--print` mode for non-interactive execution
 - `--tools "Bash"` enables Bash tool
@@ -71,7 +71,7 @@ run([
 # ❌ Missing tool permissions
 run([
     "claude", "--resume", session_id, "--message",
-    "Use the /skills-registry-commands:retrospective skill..."
+    "Use the /mnemosyne:learn skill..."
 ], ...)
 ```
 

@@ -38,7 +38,7 @@ Claude: Found 2 related skills...
   - Recommended: batch_size=4, learning_rate=1e-5
 ```
 
-### /retrospective
+### /learn
 
 Save learnings after a session (auto-creates PR).
 
@@ -77,7 +77,7 @@ skills/<name>.notes.md       # (Optional) Additional context from development se
 
 All skills are now flat files in the `skills/` directory. Metadata is stored as YAML frontmatter in each `.md` file.
 
-**Exception**: `plugins/tooling/skills-registry-commands/` stays in `plugins/` — it's the command infrastructure (advise, retrospective), not a skill.
+**Exception**: `plugins/tooling/mnemosyne/` stays in `plugins/` — it's the command infrastructure (advise, retrospective), not a skill.
 
 ### Required Fields
 
@@ -172,7 +172,7 @@ The project uses Claude Code hooks for automatic retrospective prompts.
 This project uses UserPromptSubmit hooks instead.
 
 **UserPromptSubmit Hook**: Triggers when user types session-ending keywords (exit, quit,
-clear, done, finished, etc.) to remind about `/retrospective`.
+clear, done, finished, etc.) to remind about `/learn`.
 
 **NEW in v2.1.0**: Hooks support `once: true` field to execute only once per session:
 ```json
@@ -186,15 +186,15 @@ clear, done, finished, etc.) to remind about `/retrospective`.
 ```
 
 See `.claude/settings.json` for configuration and
-`plugins/tooling/skills-registry-commands/hooks/settings.json.example` for reference.
+`plugins/tooling/mnemosyne/hooks/settings.json.example` for reference.
 
 **Skills location**: All skills live as flat files in `skills/` (e.g., `skills/skill-name.md`). The only exception is
-`plugins/tooling/skills-registry-commands/` which contains the /advise and /retrospective
+`plugins/tooling/mnemosyne/` which contains the /advise and /learn
 command infrastructure.
 
 ## Contributing a Skill
 
-1. Run `/retrospective` after a valuable session (preferred — auto-generates filename and structure)
+1. Run `/learn` after a valuable session (preferred — auto-generates filename and structure)
 2. Or manually create from `templates/skill-template.md`
    - Copy to `skills/<name>.md`
    - Fill YAML frontmatter (name, description, category, date, version)

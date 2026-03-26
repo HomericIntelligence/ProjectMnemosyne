@@ -25,7 +25,7 @@ tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 - Multiple skills share a common prefix (e.g., `adr009-*`, `pr-review-*`, `mojo-test-*`)
 - `/advise` returns redundant or contradictory advice for the same topic
 - Need to identify duplicate clusters in a large skills registry (1000+ skills)
-- Updating `/retrospective` versioning rules to use semantic versioning
+- Updating `/learn` versioning rules to use semantic versioning
 
 ## Verified Workflow
 

@@ -216,5 +216,5 @@ python3 scripts/validate_plugins.py plugins/
 
 - PR #108: https://github.com/HomericIntelligence/ProjectMnemosyne/pull/108
 - CI validation script: `scripts/validate_plugins.py`
-- Related skill: `skills-registry-commands:validation-workflow`
-- Related skill: `skills-registry-commands:documentation-patterns`
+- Related skill: `mnemosyne:validation-workflow`
+- Related skill: `mnemosyne:documentation-patterns`

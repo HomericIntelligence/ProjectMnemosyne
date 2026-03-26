@@ -109,8 +109,8 @@ success_rate: 100%
 ### Files Modified for Worktree Migration
 
 ```
-plugins/tooling/skills-registry-commands/commands/retrospective.md  # Primary: new worktree setup + cleanup
-plugins/tooling/skills-registry-commands/commands/advise.md          # Minor: remove "Never delete" note
+plugins/tooling/mnemosyne/commands/retrospective.md  # Primary: new worktree setup + cleanup
+plugins/tooling/mnemosyne/commands/advise.md          # Minor: remove "Never delete" note
 CLAUDE.md                                                            # Update workflow description
 ADVISE_RETROSPECTIVE_UPDATED.md                                      # Update workflow comparison
 ```

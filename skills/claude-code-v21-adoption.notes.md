@@ -34,7 +34,7 @@ Updated sub-skills:
 - ci-failure-workflow: analyze, fix
 - gh-pr-review-workflow: fix-feedback, get-comments, reply-comment
 - git-worktree-workflow: cleanup, create, switch, sync
-- skills-registry-commands: advise, documentation-patterns, retrospective, validation-workflow
+- mnemosyne: advise, documentation-patterns, retrospective, validation-workflow
 
 ### PR #71: Agent hooks + tool blocking
 **Branch**: `feature/agent-hooks`

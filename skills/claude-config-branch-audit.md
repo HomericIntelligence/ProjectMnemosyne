@@ -109,7 +109,7 @@ git commit -m "fix(claude): <summary of fixes>"
 ```json
 {
   "enabledPlugins": {
-    "skills-registry-commands@ProjectMnemosyne": true,
+    "mnemosyne@ProjectMnemosyne": true,
     "safety-net@cc-marketplace": true
   }
 }

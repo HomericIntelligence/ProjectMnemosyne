@@ -163,7 +163,7 @@ def _run_retrospective(self, session_id: str, worktree_path: Path, issue_number:
     try:
         result = run([
             "claude", "--resume", session_id,
-            "/skills-registry-commands:retrospective commit the results and create a PR",
+            "/mnemosyne:learn commit the results and create a PR",
             "--print", "--permission-mode", "dontAsk",
             "--allowedTools", "Read,Write,Edit,Glob,Grep,Bash",
         ], cwd=self.repo_root, timeout=600)

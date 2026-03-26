@@ -2,7 +2,7 @@
 
 ## Context
 
-Session focused on analyzing the Hugging Face blog post about Claude Code skills training and setting up `/advise` and `/retrospective` commands in ProjectOdyssey by integrating with the ProjectMnemosyne marketplace.
+Session focused on analyzing the Hugging Face blog post about Claude Code skills training and setting up `/advise` and `/learn` commands in ProjectOdyssey by integrating with the ProjectMnemosyne marketplace.
 
 ## Initial Discovery
 
@@ -18,7 +18,7 @@ Session focused on analyzing the Hugging Face blog post about Claude Code skills
    - Returns: what worked, what failed, recommended parameters
    - Triggered before starting new work
 
-2. **`/retrospective`**: Auto-save session learnings as a new skill
+2. **`/learn`**: Auto-save session learnings as a new skill
    - Analyzes entire conversation
    - Extracts successes, failures, parameters
    - Creates PR automatically
@@ -42,7 +42,7 @@ The "Failed Attempts" section is the most valuable - prevents repeated mistakes.
 ### 1. Explored ProjectMnemosyne Repository
 
 - Repository already had 5 skills (grpo-external-vllm, mojo-simd-errors, github-actions-mojo, layerwise-gradient-check, skill-marketplace-design)
-- `/advise` and `/retrospective` skills already implemented in `.claude/skills/`
+- `/advise` and `/learn` skills already implemented in `.claude/skills/`
 - CI/CD automation for marketplace.json generation
 - SessionEnd hook infrastructure already present
 
@@ -72,7 +72,7 @@ The "Failed Attempts" section is the most valuable - prevents repeated mistakes.
 ### User Question Clarifications
 
 1. **Repository existence**: Clarified repo was private at ~/ProjectMnemosyne-marketplace
-2. **Command naming**: Confirmed `/retrospective` (not `/introspective`)
+2. **Command naming**: Confirmed `/learn` (not `/introspective`)
 3. **Setup method**: Chose marketplace registration over copying skills
 4. **README enhancements**: Installation focus, no troubleshooting section
 
