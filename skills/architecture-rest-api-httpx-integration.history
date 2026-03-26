@@ -1,0 +1,30 @@
+# architecture-rest-api-httpx-integration — History
+
+## v1.0.0 (2026-03-25)
+
+**Initial version.**
+
+Created from ProjectScylla issue #1504 session — adding AI Maestro REST API integration.
+Covered: httpx client pattern, Pydantic config integration, error hierarchy, test mocking patterns.
+Missing `verification` frontmatter field (added in v2.0.0).
+
+### Previous version (v1.0.0) snapshot
+
+```yaml
+---
+name: architecture-rest-api-httpx-integration
+description: "Pattern for adding REST API client integration to a Python project using httpx. Use when: (1) adding HTTP client to codebase with no existing HTTP dependency, (2) integrating external REST API with Pydantic config system, (3) wiring optional feature into existing config hierarchy."
+category: architecture
+date: 2026-03-25
+version: "1.0.0"
+user-invocable: false
+tags:
+  - httpx
+  - rest-api
+  - pydantic
+  - config-integration
+  - http-client
+---
+```
+
+Sections: Overview, When to Use, Verified Workflow (Quick Reference + Detailed Steps + Key Patterns), Failed Attempts (3 entries), Results & Parameters, Verified On.
