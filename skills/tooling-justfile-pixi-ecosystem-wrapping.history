@@ -1,5 +1,32 @@
 # tooling-justfile-pixi-ecosystem-wrapping — History
 
+## v3.0.0 (2026-03-25)
+
+**Changed by:** ProjectHephaestus issue #48 — one-command bootstrap and dev workflows
+**Verification:** verified-local
+
+### What changed
+- Added `bootstrap` recipe pattern (`pixi install` + `pixi run pre-commit install`)
+- Added `check` composite recipe (`just lint && just typecheck && just test`)
+- Added configurable variables at top of justfile (`src_dirs`, `test_dir`) to avoid path duplication
+- Updated Template A to include all 9 recipes (was 7)
+- Added documentation update workflow (Step 5): how to update README.md and CLAUDE.md to reference `just` recipes
+- Added "DRY violation" trigger to "When to Use" section
+- Added failed attempt: `pre-commit install` in git worktrees with `core.hooksPath` set
+- Added ProjectHephaestus PR #77 to "Verified On" table
+
+### Why
+v2.0.0 Template A was minimal — no `bootstrap` or `check` recipe, no configurable variables,
+and no guidance on updating project docs. The actual Hephaestus justfile (PR #77) evolved beyond
+the template with these patterns, and the docs update (README.md + CLAUDE.md) is a key part of
+the DX improvement that should be documented.
+
+### Previous version (v2.0.0) snapshot
+
+See git diff for full v2.0.0 content.
+
+---
+
 ## v2.0.0 (2026-03-25)
 
 **Changed by:** ProjectHephaestus issue #35 — add justfile for ecosystem convention
