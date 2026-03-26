@@ -1,10 +1,9 @@
 {
   "name": "mnemosyne",
-  "version": "1.0.0",
-  "description": "Complete skills registry system with 4 components: (1) /advise command - search skills before starting work, (2) /learn command - capture session learnings as new skills, (3) documentation-patterns skill - how to write effective skill docs, (4) validation-workflow skill - CI/CD for plugin validation. Use when setting up team knowledge capture or implementing the mnemosyne skills pattern.",
+  "version": "2.0.0",
+  "description": "Skills registry for the HomericIntelligence ecosystem. Provides documentation-patterns and validation-workflow skills for skill authoring. Commands have moved to the hephaestus plugin in ProjectHephaestus.",
   "author": {
     "name": "ML Odyssey Team"
   },
-  "commands": "./commands",
   "skills": "./skills"
 }
