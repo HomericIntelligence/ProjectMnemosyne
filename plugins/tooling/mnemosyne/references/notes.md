@@ -1,4 +1,4 @@
-# Skills Registry Commands - Complete Setup
+# Mnemosyne - Complete Setup
 
 A complete skills registry system for Claude agents, including commands, hooks, validation, and documentation patterns.
 
@@ -8,11 +8,11 @@ A complete skills registry system for Claude agents, including commands, hooks, 
 mnemosyne/
 ├── skills/
 │   ├── advise/SKILL.md              # /advise command
-│   ├── retrospective/SKILL.md       # /learn command
+│   ├── learn/SKILL.md               # /learn command
 │   ├── documentation-patterns/SKILL.md  # How to write good skills
 │   └── validation-workflow/SKILL.md     # CI/CD setup
 ├── hooks/
-│   ├── retrospective-trigger.py     # SessionEnd hook
+│   ├── learn-trigger.py             # SessionEnd hook
 │   └── settings.json.example        # Hook configuration
 ├── scripts/
 │   ├── validate_plugins.py          # PR validation
@@ -34,7 +34,7 @@ cp -r plugins/tooling/mnemosyne your-project/plugins/tooling/
 ```bash
 mkdir -p your-project/.claude/hooks
 
-cp plugins/tooling/mnemosyne/hooks/retrospective-trigger.py \
+cp plugins/tooling/mnemosyne/hooks/learn-trigger.py \
    your-project/.claude/hooks/
 
 cp plugins/tooling/mnemosyne/hooks/settings.json.example \
@@ -99,7 +99,7 @@ mkdir -p plugins/{training,evaluation,optimization,debugging,architecture,toolin
 | `/learn` | Capture learnings after sessions |
 | `documentation-patterns` | How to write discoverable skills |
 | `validation-workflow` | CI/CD for quality enforcement |
-| `retrospective-trigger.py` | Auto-prompt on session end |
+| `learn-trigger.py` | Auto-prompt on session end |
 | `validate_plugins.py` | PR validation script |
 | `generate_marketplace.py` | Marketplace index generator |
 

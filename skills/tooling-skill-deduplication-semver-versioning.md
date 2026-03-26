@@ -16,7 +16,7 @@ tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-03-25 |
-| **Objective** | Merge 16 duplicate adr009-* skills into 3 consolidated skills, and add semver rules to the /retrospective command |
+| **Objective** | Merge 16 duplicate adr009-* skills into 3 consolidated skills, and add semver rules to the /learn command |
 | **Outcome** | 16 skills merged to 3 (net -13), 35 unique Failed Attempts preserved, semver rules added |
 | **Verification** | verified-ci |
 
@@ -100,7 +100,7 @@ lines_after: 864
 unique_lessons_preserved: 35 Failed Attempts rows
 ```
 
-### Semver Rules for /retrospective
+### Semver Rules for /learn
 
 | Change Type | Bump | When |
 |-------------|------|------|

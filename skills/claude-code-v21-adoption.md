@@ -169,12 +169,12 @@ Update `CLAUDE.md` with new field usage:
   - `agent`: Optional agent type (e.g., mojo-specialist)
 ```
 
-### 7. Create Retrospective
+### 7. Create Learn
 
 After completing all PRs:
 
 ```text
-/retrospective
+/learn
 ```
 
 Capture the workflow for future version upgrades.

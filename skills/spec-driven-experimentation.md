@@ -133,7 +133,7 @@ workflow:
   2. Run /advise to check prior work
   3. Generate experiments from spec
   4. Execute priority-ordered
-  5. /retrospective to save findings
+  5. /learn to save findings
   6. Update TECHSPEC with results
 
 # Anti-patterns

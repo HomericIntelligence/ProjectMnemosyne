@@ -61,7 +61,7 @@ version: 1.0.0
 ### Deleted
 - `/marketplace.json` (wrong location)
 - `/.claude/skills/advise/` (duplicate)
-- `/.claude/skills/retrospective/` (duplicate)
+- `/.claude/skills/learn/` (duplicate)
 
 ### Updated
 - `.claude-plugin/marketplace.json` - moved from root, updated with current 4 plugins
@@ -72,13 +72,13 @@ version: 1.0.0
 - `plugins/training/grpo-external-vllm/.claude-plugin/plugin.json` - removed tags
 - `plugins/training/spec-driven-experimentation/.claude-plugin/plugin.json` - removed tags
 - `plugins/tooling/mnemosyne/skills/advise/SKILL.md` - removed category, invokedBy
-- `plugins/tooling/mnemosyne/skills/retrospective/SKILL.md` - removed category, invokedBy
+- `plugins/tooling/mnemosyne/skills/learn/SKILL.md` - removed category, invokedBy
 - `plugins/tooling/mnemosyne/skills/documentation-patterns/SKILL.md` - removed category, source, date
 - `plugins/tooling/mnemosyne/skills/validation-workflow/SKILL.md` - removed category, source, date
 
 ### Added
 - `plugins/tooling/mnemosyne/commands/advise.md` - slash command
-- `plugins/tooling/mnemosyne/commands/retrospective.md` - slash command
+- `plugins/tooling/mnemosyne/commands/learn.md` - slash command
 
 ## Commits Created
 
@@ -88,7 +88,7 @@ version: 1.0.0
 4. `db4f54d` - fix: remove tags from plugin.json (not in official schema)
 5. `e55f911` - feat: add advise and retrospective as slash commands
 6. `c2e4c9c` - fix: remove non-standard frontmatter fields from SKILL.md files
-7. `af63c35` - fix: add target repository to /retrospective command
+7. `af63c35` - fix: add target repository to /learn command
 
 ## Key Documentation References
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Hook triggered on UserPromptSubmit when user types session-ending keywords.
-Adds context reminding about /retrospective - does not block.
+Adds context reminding about /learn - does not block.
 
 Receives JSON input with:
 - prompt: The user's prompt text
@@ -43,8 +43,8 @@ def main():
                 "hookSpecificOutput": {
                     "hookEventName": "UserPromptSubmit",
                     "additionalContext": (
-                        "[Retrospective Reminder] Before ending this session, "
-                        "consider running /retrospective to capture any learnings."
+                        "[Learn Reminder] Before ending this session, "
+                        "consider running /learn to capture any learnings."
                     ),
                 }
             }

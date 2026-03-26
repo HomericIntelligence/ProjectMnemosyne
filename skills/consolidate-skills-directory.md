@@ -89,7 +89,7 @@ find skills -maxdepth 1 -mindepth 1 -type d | grep -v -E "^skills/(architecture|
 
 - `.github/workflows/validate-plugins.yml`: trigger on `skills/**` + `plugins/**`, pass both to script
 - `.github/workflows/update-marketplace.yml`: same
-- `plugins/tooling/mnemosyne/commands/retrospective.md`: generate into `skills/<category>/<name>/`
+- `plugins/tooling/mnemosyne/commands/learn.md`: generate into `skills/<category>/<name>/`
 - `CLAUDE.md`, `README.md`, `.claude/shared/plugin-standards.md`: update Required Structure section
 
 ### 6. Add YAML frontmatter to migrated legacy SKILL.md files

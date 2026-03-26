@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Renamed `skills-registry-commands` plugin to `mnemosyne`.
+- Renamed `/retrospective` command to `/learn`.
+
 ### Added
 - `CONTRIBUTING.md` with skill contribution guidelines, quality standards, and PR process.
 - `CHANGELOG.md` in Keep a Changelog format.

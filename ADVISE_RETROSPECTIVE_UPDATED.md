@@ -1,8 +1,8 @@
-# Advise & Retrospective Commands - Updated for Flat Files
+# Advise & Learn Commands - Updated for Flat Files
 
 ## Summary
 
-Both `/advise` and `/retrospective` commands have been updated to work with the new flat-format skill structure.
+Both `/advise` and `/learn` commands have been updated to work with the new flat-format skill structure.
 
 **Completed**: 2026-03-19
 
@@ -29,8 +29,8 @@ Both `/advise` and `/retrospective` commands have been updated to work with the 
    - Unchanged: still searches marketplace.json, presents findings
    - Focus sections: Failed Attempts, When to Use, Results & Parameters
 
-### /retrospective Command
-**File**: `plugins/tooling/mnemosyne/commands/retrospective.md`
+### /learn Command
+**File**: `plugins/tooling/mnemosyne/commands/learn.md`
 
 #### Key Updates:
 1. **Auto-Generate Filename** (Major Change!)
@@ -94,7 +94,7 @@ Both `/advise` and `/retrospective` commands have been updated to work with the 
 4. Present findings
 ```
 
-### Retrospective - Before vs After
+### Learn - Before vs After
 
 **Before**:
 ```
@@ -134,7 +134,7 @@ Both `/advise` and `/retrospective` commands have been updated to work with the 
 
 - [ ] `/advise <query>` reads from flat `skills/*.md` files
 - [ ] Marketplace.json is correctly parsed with `source: ./skills/<name>.md`
-- [ ] `/retrospective` auto-generates filename from conversation
+- [ ] `/learn` auto-generates filename from conversation
 - [ ] Auto-generated filename follows `<topic>-<subtopic>-<4words>` pattern
 - [ ] Category is auto-detected (not prompted)
 - [ ] Skill file created in correct format (YAML frontmatter + markdown)
@@ -146,7 +146,7 @@ Both `/advise` and `/retrospective` commands have been updated to work with the 
 ## Migration Complete
 
 ✅ All 930 skills converted to flat format
-✅ Advise and retrospective commands updated
+✅ Advise and learn commands updated
 ✅ Validation and marketplace generation updated
 ✅ CI workflows updated
 ✅ Documentation (CLAUDE.md) updated

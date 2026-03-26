@@ -16,14 +16,14 @@ tags: [auto-merge, rebase, worktree, retrospective, advise, agent-brain, pr-mana
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-03-25 |
-| **Objective** | Enable auto-merge on 14 open PRs, rebase all against main, and migrate /retrospective and /advise commands from clone+rm-rf pattern to git worktree isolation |
+| **Objective** | Enable auto-merge on 14 open PRs, rebase all against main, and migrate /learn and /advise commands from clone+rm-rf pattern to git worktree isolation |
 | **Outcome** | 13/14 PRs merged (1 auto-merging), worktree migration PR merged |
 | **Verification** | verified-ci |
 
 ## When to Use
 
 - Multiple open PRs need auto-merge enabled and rebasing against main
-- Command files (advise.md, retrospective.md) reference `rm -rf` on shared directories like `$HOME/.agent-brain/`
+- Command files (advise.md, learn.md) reference `rm -rf` on shared directories like `$HOME/.agent-brain/`
 - Migrating any clone-based workflow to git worktree isolation
 - Need to replace "Never delete X" guardrails with proper worktree lifecycle management
 
@@ -42,7 +42,7 @@ git -C /tmp/rebase-pr-<number> rebase origin/main
 git -C /tmp/rebase-pr-<number> push --force-with-lease origin <branch>
 git worktree remove /tmp/rebase-pr-<number>
 
-# Worktree pattern for /retrospective
+# Worktree pattern for /learn
 MNEMOSYNE_BASE="$(git rev-parse --show-toplevel)"
 git -C "$MNEMOSYNE_BASE" worktree add /tmp/mnemosyne-skill-<name> -b skill/<name> origin/main
 cd /tmp/mnemosyne-skill-<name>
@@ -109,7 +109,7 @@ success_rate: 100%
 ### Files Modified for Worktree Migration
 
 ```
-plugins/tooling/mnemosyne/commands/retrospective.md  # Primary: new worktree setup + cleanup
+plugins/tooling/mnemosyne/commands/learn.md  # Primary: new worktree setup + cleanup
 plugins/tooling/mnemosyne/commands/advise.md          # Minor: remove "Never delete" note
 CLAUDE.md                                                            # Update workflow description
 ADVISE_RETROSPECTIVE_UPDATED.md                                      # Update workflow comparison
