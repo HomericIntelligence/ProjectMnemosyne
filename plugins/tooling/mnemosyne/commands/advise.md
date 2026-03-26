@@ -104,7 +104,7 @@ If the user wants more detail, read the full skill `.md` file and its `.history`
 for the most relevant matches.
 
 > **Note**: If the user's goal involves **creating or fixing skills**, remind them to run
-> `/retrospective` which captures session learnings and creates or amends a skill file.
+> `/learn` which captures session learnings and creates or amends a skill file.
 
 ## Output Format
 
@@ -150,7 +150,7 @@ param1: value1
 ### Invocation
 
 ```bash
-/skills-registry-commands:advise training a model with GRPO
+/mnemosyne:advise training a model with GRPO
 ```
 
 ### Output
