@@ -52,8 +52,16 @@ When the user invokes this command:
       - Add new Failed Attempts rows to the table
       - Update the Verified Workflow if the approach changed
       - Update Results & Parameters with new data
-      - Bump the `version` in frontmatter (e.g., `1.0.0` → `2.0.0`)
+      - Bump the `version` using **semantic versioning** (see table below)
       - Update the `date` to today
+
+   **Semantic versioning rules for skill amendments:**
+
+   | Change Type | Bump | When to Use | Examples |
+   |-------------|------|-------------|----------|
+   | **Major** (X.0.0) | `1.0.0` → `2.0.0` | Merge multiple skills, rewrite verified workflow, change core recommendation | Consolidating 5 duplicate skills; replacing recommended API |
+   | **Minor** (0.X.0) | `1.0.0` → `1.1.0` | Add new findings, new failed attempts, extend workflow with new steps | Adding 2 Failed Attempts rows; new "When to Use" trigger |
+   | **Patch** (0.0.X) | `1.0.0` → `1.0.1` | Fix typos, formatting, metadata corrections, clarify existing text | Fix category typo; fix broken markdown table |
    d. Update the changelog in the history file
 
    **If no existing skill matches → Create a new skill** (proceed to Step 5)
