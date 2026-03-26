@@ -1,0 +1,99 @@
+# generate-changelog — History
+
+## v2.0.0 (2026-03-25)
+
+**Changed by:** Issue #33 — pipe delimiter bug fix in ProjectHephaestus `hephaestus/git/changelog.py`
+**Verification:** verified-local
+
+### What changed
+- Added critical bug documentation: `|` delimiter in git log `--pretty=format` breaks when commit subjects contain pipe characters
+- Added fix: use `%x09` (tab) as delimiter instead of `|`, since tabs never appear in git commit subjects
+- Added nested parentheses scope parsing fix (`index()`/`rindex()` instead of chained `split()`)
+- Added Failed Attempts entries documenting the pipe delimiter and scope parsing pitfalls
+- Added edge-case test patterns for `parse_commit()` and `categorize_commits()`
+- Updated Quick Reference with correct format string
+- Upgraded verification level to `verified-local`
+- Bumped version to 2.0.0
+
+### Why
+Previous version (v1.0.0) was a generic workflow description. This session discovered and fixed a real bug where `git log --pretty=format:%h|%s|%an` produces garbled output when commit subjects contain `|` characters (e.g. `feat: add A|B toggle`). The `split("|", 2)` in `parse_commit()` would incorrectly split the subject. Additionally, chained `split("(")[1].split(")")[0]` for scope extraction broke on nested parentheses like `feat(core(sub)): msg`.
+
+### Previous version (v1.0.0) snapshot
+---
+name: generate-changelog
+description: Create changelog from git commits. Use when preparing release notes.
+category: tooling
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Generate Changelog
+
+## Overview
+
+| Item | Details |
+|------|---------|
+| Date | N/A |
+| Objective | Automatically extract commit messages and generate formatted changelog entries for release notes and version history. |
+| Outcome | Operational |
+
+
+Automatically extract commit messages and generate formatted changelog entries for release notes and version history.
+
+## When to Use
+
+- Preparing release notes
+- Documenting version history
+- Creating user-facing change summaries
+- Generating development notes
+
+### Quick Reference
+
+```bash
+# Extract commits since last tag
+git log v1.0.0..HEAD --pretty=format:"%h - %s (%an) %d"
+
+# Group by conventional commit type
+git log --pretty=format:"%h %s" | grep -E "^[a-f0-9]+ (feat|fix|docs|refactor|test):"
+
+# Generate markdown changelog
+git log --reverse --pretty=format:"- %s (%h)" > CHANGELOG.md
+```
+
+## Verified Workflow
+
+1. **Extract commits**: Get commit messages since last release
+2. **Parse convention**: Identify conventional commit types (feat, fix, docs, etc.)
+3. **Categorize changes**: Group into sections (Features, Fixes, Documentation, etc.)
+4. **Format output**: Create readable markdown or text format
+5. **Add context**: Include version number, date, and links
+
+## Output Format
+
+Changelog entry:
+
+- Version number and release date
+- Features section (new capabilities)
+- Fixes section (bug fixes)
+- Documentation section (doc updates)
+- Breaking changes (if any)
+- Contributors
+- Version links (GitHub compare)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `doc-update-blog` skill for blog post updates
+- See git documentation for commit message conventions
+- See <https://keepachangelog.com/> for changelog format standards
+
+---
