@@ -263,3 +263,4 @@ just = ">=1.25.0,<2"
 | ProjectScylla | Issue #1506 — ecosystem convention alignment | PR #1550 |
 | ProjectHephaestus | Issue #35 — add justfile for ecosystem convention | PR #72 |
 | ProjectHephaestus | Issue #48 — bootstrap, check, variables, docs update | PR #77 |
+| ProjectHephaestus | Issue #49 — combined justfile + src-layout atomic migration | PR #83 |
