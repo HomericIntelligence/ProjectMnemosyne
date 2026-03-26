@@ -3,8 +3,10 @@ name: architecture-rest-api-httpx-integration
 description: "Pattern for adding REST API client integration to a Python project using httpx. Use when: (1) adding HTTP client to codebase with no existing HTTP dependency, (2) integrating external REST API with Pydantic config system, (3) wiring optional feature into existing config hierarchy."
 category: architecture
 date: 2026-03-25
-version: "1.0.0"
+version: "2.0.0"
 user-invocable: false
+verification: verified-ci
+history: architecture-rest-api-httpx-integration.history
 tags:
   - httpx
   - rest-api
@@ -22,6 +24,8 @@ tags:
 | **Date** | 2026-03-25 |
 | **Objective** | Add AI Maestro REST API integration to ProjectScylla - HTTP client, Pydantic models, error hierarchy, config wiring, and tests |
 | **Outcome** | Successful - 31 tests pass, 96.6% coverage on new module, all pre-commit hooks pass |
+| **Verification** | verified-ci |
+| **History** | [changelog](./architecture-rest-api-httpx-integration.history) |
 
 ## When to Use
 
@@ -57,36 +61,36 @@ pixi run python -m pytest tests/unit/<module>/ -v
 
 ### Detailed Steps
 
-1. **Add dependency to both `pixi.toml` and `pyproject.toml`** - pixi.toml controls the dev environment, pyproject.toml controls the package. Both need httpx.
+1. **Add dependency to both \`pixi.toml\` and \`pyproject.toml\`** - pixi.toml controls the dev environment, pyproject.toml controls the package. Both need httpx.
 
-2. **Create error hierarchy first** (`errors.py`):
-   - Base exception (e.g., `MaestroError`)
+2. **Create error hierarchy first** (\`errors.py\`):
+   - Base exception (e.g., \`MaestroError\`)
    - Connection error subclass for network/timeout failures
-   - API error subclass with `status_code` and `response_body` attributes
+   - API error subclass with \`status_code\` and \`response_body\` attributes
 
-3. **Create Pydantic models** (`models.py`):
-   - Config model with `enabled: bool = False` (opt-in pattern)
+3. **Create Pydantic models** (\`models.py\`):
+   - Config model with \`enabled: bool = False\` (opt-in pattern)
    - Request/response models for API payloads
-   - Use `Field(default_factory=dict)` for dict fields (Pydantic None coercion safety)
+   - Use \`Field(default_factory=dict)\` for dict fields (Pydantic None coercion safety)
 
-4. **Create HTTP client** (`client.py`):
-   - Context manager support (`__enter__`/`__exit__`)
-   - Central `_request()` helper that maps httpx exceptions to custom errors
-   - Health check returns `None` on failure (never raises)
+4. **Create HTTP client** (\`client.py\`):
+   - Context manager support (\`__enter__\`/\`__exit__\`)
+   - Central \`_request()\` helper that maps httpx exceptions to custom errors
+   - Health check returns \`None\` on failure (never raises)
    - Other methods raise on failure
-   - Use `response.json() or {}` to guard against null JSON responses
+   - Use \`response.json() or {}\` to guard against null JSON responses
 
-5. **Create `__init__.py`** with explicit re-exports using `import X as X` pattern (required when `implicit_reexport=false` in mypy)
+5. **Create \`__init__.py\`** with explicit re-exports using \`import X as X\` pattern (required when \`implicit_reexport=false\` in mypy)
 
 6. **Wire into config system**:
-   - Import in `config/models.py` using `from module import Class as Class` for re-export
-   - Add optional field to both `DefaultsConfig` and `ScyllaConfig`
-   - Pass through in `config/loader.py` merge logic
-   - Export from `config/__init__.py` and add to `__all__`
+   - Import in \`config/models.py\` using \`from module import Class as Class\` for re-export
+   - Add optional field to both \`DefaultsConfig\` and \`ScyllaConfig\`
+   - Pass through in \`config/loader.py\` merge logic
+   - Export from \`config/__init__.py\` and add to \`__all__\`
 
-7. **Update JSON schema** (`defaults.schema.json`) with new property
+7. **Update JSON schema** (\`defaults.schema.json\`) with new property
 
-8. **Write comprehensive tests** using `unittest.mock.patch` on `httpx.Client`
+8. **Write comprehensive tests** using \`unittest.mock.patch\` on \`httpx.Client\`
 
 ### Key Pattern: Mocking httpx in Tests
 
@@ -116,9 +120,9 @@ from scylla.maestro.client import MaestroClient as MaestroClient
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| `type: ignore[arg-type]` on Pydantic int fields | Added `# type: ignore[arg-type]` to test calls like `MaestroConfig(timeout_seconds=0)` | Mypy flagged them as `unused-ignore` because `0` and `301` are valid `int` types - Pydantic validates at runtime, not type level | Don't add `type: ignore` for Pydantic runtime validators on correctly-typed fields; the validation is runtime, not type-level |
-| Plain import for re-export | `from scylla.maestro.models import MaestroConfig` in `config/models.py` | Mypy `implicit_reexport=false` setting means plain imports are not re-exported from the module | Always use `import X as X` pattern when a symbol needs to be importable from the importing module |
-| `# noqa: SLF001` on private attribute access in tests | Added noqa comments on `client._client = mock_http` lines | A linter automatically removed these comments | The linter configuration allows private access in test files via per-file-ignores |
+| \`type: ignore[arg-type]\` on Pydantic int fields | Added \`# type: ignore[arg-type]\` to test calls like \`MaestroConfig(timeout_seconds=0)\` | Mypy flagged them as \`unused-ignore\` because \`0\` and \`301\` are valid \`int\` types - Pydantic validates at runtime, not type level | Don't add \`type: ignore\` for Pydantic runtime validators on correctly-typed fields; the validation is runtime, not type-level |
+| Plain import for re-export | \`from scylla.maestro.models import MaestroConfig\` in \`config/models.py\` | Mypy \`implicit_reexport=false\` setting means plain imports are not re-exported from the module | Always use \`import X as X\` pattern when a symbol needs to be importable from the importing module |
+| \`# noqa: SLF001\` on private attribute access in tests | Added noqa comments on \`client._client = mock_http\` lines | A linter automatically removed these comments | The linter configuration allows private access in test files via per-file-ignores |
 
 ## Results & Parameters
 
@@ -155,13 +159,21 @@ config_data["maestro"] = defaults.maestro
 
 | Module | Coverage |
 |--------|----------|
-| `scylla/maestro/errors.py` | 100% |
-| `scylla/maestro/models.py` | 100% |
-| `scylla/maestro/client.py` | 96.6% |
+| \`scylla/maestro/errors.py\` | 100% |
+| \`scylla/maestro/models.py\` | 100% |
+| \`scylla/maestro/client.py\` | 96.6% |
 | **Total** | **31 tests, 0 failures** |
+
+### Full Suite Verification
+
+| Metric | Value |
+|--------|-------|
+| Total tests | 4,921 passed, 2 skipped |
+| Total coverage | 77.49% |
+| CI checks | CodeQL + Analyze (actions, python) all pass |
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectScylla | Issue #1504 - Add AI Maestro REST API integration | PR #1548, all CI hooks pass |
+| ProjectScylla | Issue #1504 - Add AI Maestro REST API integration | PR #1548, CI passed (CodeQL + unit/integration), 4921 tests pass, 77.49% total coverage |
