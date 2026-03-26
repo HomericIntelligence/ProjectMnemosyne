@@ -3,7 +3,7 @@ name: architecture-python-src-layout-migration
 description: "Pattern for migrating a Python project from flat layout (package/ at repo root) to src-layout (src/package/). Use when: (1) moving a Python package into src/ for ecosystem compliance, (2) updating all filesystem path references after a directory restructure, (3) fixing Path(__file__) navigations after adding a directory level."
 category: architecture
 date: '2026-03-25'
-version: "2.0.0"
+version: "3.0.0"
 user-invocable: false
 verification: verified-local
 history: architecture-python-src-layout-migration.history
@@ -18,7 +18,7 @@ tags: [python, src-layout, migration, pyproject, hatchling, directory-restructur
 |-------|-------|
 | **Date** | 2026-03-25 |
 | **Objective** | Migrate a Python project from flat layout (`package/` at repo root) to src-layout (`src/package/`) |
-| **Outcome** | Successful on 2 projects — validated across large (4782 tests) and small (384 tests) repos |
+| **Outcome** | Successful on 2 projects — validated across large (4782 tests) and small (435 tests) repos |
 | **Verification** | verified-local (CI validation pending on PRs) |
 | **History** | [changelog](./architecture-python-src-layout-migration.history) |
 
@@ -49,9 +49,9 @@ mkdir -p src && git mv <package>/ src/<package>/
 # 3. Regenerate pixi.lock (editable install SHA256 invalidated)
 pixi install
 
-# 4. Verify import resolution
-python -c "import <package>; print(<package>.__file__)"
-# Should print: .../src/<package>/__init__.py
+# 4. Verify import resolution AND __version__
+python -c "import <package>; print(<package>.__file__); print(<package>.__version__)"
+# Should print: .../src/<package>/__init__.py  AND the correct version (not "unknown")
 
 # 5. Run tests
 pytest tests/ -x
@@ -96,9 +96,11 @@ pre-commit run --all-files
 
 12. **Comprehensive sweep**: Run `grep -rn '"<package>/' --include='*.py' --include='*.toml' --include='*.yaml' --include='*.yml' --include='*.md' .` and filter out `src/<package>`, `.pixi/`, and `build/` to catch remaining references.
 
-13. **Update documentation**: CLAUDE.md, README.md, docs/README.md — directory structure diagrams, command examples, key file paths.
+13. **Verify `__version__` metadata**: If the package uses `importlib.metadata.version()`, check the argument matches the *distribution* name (from `pyproject.toml [project] name`), not the *import* name. E.g., `version("HomericIntelligence-Hephaestus")` not `version("hephaestus")`. This is especially important when the PyPI distribution name differs from the import name.
 
-14. **Validate doc/config consistency**: If the project has consistency-checking scripts (e.g., `check_doc_config_consistency.py`), these will catch mismatches between `--cov=` in README and `pyproject.toml`.
+14. **Update documentation**: CLAUDE.md, README.md, docs/README.md — directory structure diagrams, command examples, key file paths.
+
+15. **Validate doc/config consistency**: If the project has consistency-checking scripts (e.g., `check_doc_config_consistency.py`), these will catch mismatches between `--cov=` in README and `pyproject.toml`.
 
 ## Failed Attempts
 
@@ -108,6 +110,7 @@ pre-commit run --all-files
 | Missing `--cov=` in README | Updated most README references but missed a `--cov=scylla` inside a code block | Pre-commit `check-doc-config-consistency` hook caught the mismatch | Run the full pre-commit suite, not just tests — consistency checkers catch documentation drift |
 | Write-protected `.claude/` directory | Tried to update example paths in `.claude/agents/` and `.claude/shared/` files | Permission denied in don't-ask mode for `.claude/` directory edits | Agent config files under `.claude/` may be write-protected; these are informational-only and don't affect builds |
 | Missed `description:` in pre-commit hooks | Updated `entry:` and `files:` in pre-commit hooks but forgot to update `description:` text | Description still referenced old path (cosmetic but inconsistent) | Pre-commit hooks have THREE path references: `entry:`, `files:`, and `description:` — check all three |
+| `__version__` broke after migration | `importlib.metadata.version("hephaestus")` returned `PackageNotFoundError` after move | PyPI distribution name is `HomericIntelligence-Hephaestus`, not `hephaestus` — `importlib.metadata` uses the *distribution* name, not the *import* name | After src-layout migration, verify `__version__` resolves. If the distribution name differs from the package name, `importlib.metadata.version()` must use the distribution name (e.g., `version("HomericIntelligence-Hephaestus")`) |
 
 ## Results & Parameters
 
@@ -150,6 +153,20 @@ source = ["src/<package>"]
 
 Python import statements (`from <package>.foo import bar`) do **not** change — only filesystem path references. This is the primary benefit of src-layout: the package name is decoupled from the directory structure.
 
+### `__version__` Metadata Gotcha
+
+If the PyPI distribution name differs from the import name (e.g., `HomericIntelligence-Hephaestus` installed as `hephaestus`), then `importlib.metadata.version("hephaestus")` raises `PackageNotFoundError`. The fix:
+
+```python
+# Wrong — uses import name
+__version__ = version("hephaestus")  # PackageNotFoundError
+
+# Correct — uses distribution name from pyproject.toml [project] name
+__version__ = version("HomericIntelligence-Hephaestus")  # "0.4.0"
+```
+
+This is not caused by the src-layout migration itself, but the migration is when you're most likely to discover it (since you're re-testing imports).
+
 ### Key Observation: Complexity Scales with Project Features
 
 Simpler projects (no Dockerfile, no `Path(__file__)` navigations, CI that resolves through pyproject.toml) need far fewer changes. The core changes are always: `git mv`, pyproject.toml, pixi.toml, .pre-commit-config.yaml, and documentation. Steps 6-10 are conditional.
@@ -160,3 +177,4 @@ Simpler projects (no Dockerfile, no `Path(__file__)` navigations, CI that resolv
 |---------|---------|---------|
 | ProjectScylla | Issue #1523, PR #1555 | Migrated `scylla/` → `src/scylla/`, 4782 tests pass, 30 pre-commit hooks pass |
 | ProjectHephaestus | Issue #41, PR #73 | Migrated `hephaestus/` → `src/hephaestus/`, 384 unit + 51 integration tests pass, 82% coverage |
+| ProjectHephaestus | Issue #49, PR #83 | Combined justfile + src-layout migration as single atomic PR; fixed `__version__` metadata lookup with non-matching distribution name |

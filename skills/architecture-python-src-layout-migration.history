@@ -1,5 +1,40 @@
 # architecture-python-src-layout-migration -- History
 
+## v3.0.0 (2026-03-25)
+
+**Changed by:** ProjectHephaestus Issue #49, PR #83 -- combined justfile + src-layout atomic migration
+**Verification:** verified-local
+
+### What changed
+- Added `__version__` metadata gotcha: `importlib.metadata.version()` requires distribution name, not import name
+- Added new failed attempt: `__version__` broke when distribution name differs from import name
+- Added step 13 (verify `__version__` metadata) to Detailed Steps
+- Updated Quick Reference step 4 to also verify `__version__`
+- Added third ProjectHephaestus entry in "Verified On" table (PR #83)
+- Updated test count from 384 to 435 (384 unit + 51 integration)
+
+### Why
+Issue #49 combined justfile addition (#35/#48) and src-layout migration (#41) as a single atomic PR.
+During post-migration validation, `hephaestus.__version__` returned "unknown" because `importlib.metadata.version("hephaestus")` failed -- the PyPI distribution name is `HomericIntelligence-Hephaestus`.
+This is a subtle bug that only surfaces when the distribution name differs from the import name, and the migration is the most likely time to catch it.
+
+### Previous version (v2.0.0) snapshot
+---
+name: architecture-python-src-layout-migration
+description: "Pattern for migrating a Python project from flat layout (package/ at repo root) to src-layout (src/package/). Use when: (1) moving a Python package into src/ for ecosystem compliance, (2) updating all filesystem path references after a directory restructure, (3) fixing Path(__file__) navigations after adding a directory level."
+category: architecture
+date: '2026-03-25'
+version: "2.0.0"
+user-invocable: false
+verification: verified-local
+history: architecture-python-src-layout-migration.history
+tags: [python, src-layout, migration, pyproject, hatchling, directory-restructure]
+---
+
+(See v2.0.0 content in git history -- omitted for brevity as changes were incremental from v1.0.0)
+
+---
+
 ## v2.0.0 (2026-03-25)
 
 **Changed by:** ProjectHephaestus Issue #41, PR #73 -- src-layout migration
