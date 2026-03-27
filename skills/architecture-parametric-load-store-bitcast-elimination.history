@@ -1,0 +1,29 @@
+# architecture-parametric-load-store-bitcast-elimination — History
+
+## v1.1.0 (2026-03-27)
+
+**Changed by:** PR #5175 — fixing pooling module bitcast crash in bench_simd and test_alexnet_layers
+**Verification:** verified-ci (pending — CI running on fix-remaining-ci-failures branch)
+
+### What changed
+- Added pooling.mojo as critical missed location for bitcast migration
+- Added Failed Attempt: pooling bitcast[Float32] crashes on float16 tensors
+- Updated migration statistics with shared/core/pooling.mojo patterns
+- Added "When to Use" trigger for pooling/conv operations with multi-dtype support
+- Added note about _get_float64/_set_float64 as the preferred safe API
+
+### Why
+v1.0.0 migrated shared/training/ (101 patterns) but noted ~395 patterns remaining in
+shared/core/. The pooling module (shared/core/pooling.mojo) used `x._data.bitcast[Float32]()[idx]`
+for ALL six pooling functions. This reads wrong memory offsets for float16 tensors (2-byte
+elements read as 4-byte float32), producing garbage NaN/Inf values. The crash manifested as
+"max pooling output contains NaN or Inf" in test_alexnet_layers.mojo and bench_simd.mojo.
+
+### Previous version (v1.0.0) snapshot
+[Preserved in git history — see commit that created this file]
+
+---
+
+## v1.0.0 (2026-03-25)
+
+**Initial version.**
