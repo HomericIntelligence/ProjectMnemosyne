@@ -6,9 +6,10 @@ description: 'Run multiple rebase agents in parallel without working tree collis
   Net hooks block git branch -D or git reset --hard in shared working tree, (3) background
   agents need isolated git state to avoid checkout conflicts.'
 category: ci-cd
-date: 2026-03-15
-version: 1.0.0
+date: 2026-03-27
+version: "1.1.0"
 user-invocable: false
+history: parallel-rebase-agent-worktree-isolation.history
 ---
 ## Overview
 
@@ -17,15 +18,18 @@ user-invocable: false
 | **Problem** | Multiple background agents rebasing branches switch git checkout, colliding with each other and blocking the main conversation's commits |
 | **Root cause** | All agents share the same working tree; branch switches by one agent leave another in unexpected state mid-rebase |
 | **Fix** | Give each agent a dedicated `git worktree` so they operate on isolated directory copies |
-| **Scale** | Tested with 70 PRs rebased via 2 parallel agents + 1 main conversation agent |
+| **Scale** | Tested with 70 PRs (v1.0) and 13 PRs batched 3-4 per agent (v1.1) |
+| **History** | [changelog](./parallel-rebase-agent-worktree-isolation.history) |
 
 ## When to Use
 
 - Launching 2+ background agents to mass-rebase branches in parallel
 - Agents use `git switch`/`git checkout` and leave rebase-in-progress state behind
 - Safety Net blocks `git branch -D` or `git reset --hard` in the shared working tree
-- CI failures on all PRs require rebasing 50+ branches quickly
+- CI failures on all PRs require rebasing many branches quickly
 - Main conversation needs to commit while background agents are running
+- Using `Agent(isolation: "worktree")` for automatic worktree management
+- Batching 3-4 PRs per agent for efficiency (sequential within, parallel across)
 
 ## Verified Workflow
 
@@ -207,15 +211,49 @@ by_s={}
 | Use `git reset --hard origin/<branch>` to sync diverged local branch | Safety Net blocked the command | `reset --hard` is classified as destructive | Use `git pull --rebase origin/<branch>` instead |
 | Commit matrix.mojo fix while batch 1 agent was switching branches | Commit landed on `tmp-rebase-3956` instead of `fix-baseline-ci-errors` | Agent switched branches between our `git add` and `git commit` | When agents are actively switching branches in the same worktree, either wait for them to finish or do your work in a separate worktree |
 | Agent used prefix `tmp-r2-*` for temp branches, same as other agent | Two agents used same temp branch names | First agent created `tmp-r2-4096`, second agent tried to create same name | Include unique batch ID in temp branch prefix: `tmp-b1-<N>`, `tmp-b2-<N>` |
+| Spawned agents while parent was in plan mode | Agents completed analysis but couldn't execute any writes | Plan mode is INHERITED by sub-agents — they can only read files, not edit/commit/push | Always exit plan mode BEFORE spawning execution agents |
+| Agents sharing main repo worktree found stale rebase state | Agent B found Agent A's interrupted rebase on `5108-auto-impl` with conflict in `justfile` | Multiple agents checking out branches in the same `.git` directory leave stale `rebase-merge/` state | Use `Agent(isolation: "worktree")` — gives each agent its own git worktree automatically |
+| 1 PR per agent for 13 PRs | Spawned 13 individual agents | Excessive agent spawn overhead; 5-agent-per-wave limit means 3 waves minimum | Batch 3-4 PRs per agent (sequential within agent) — 4 agents handle 13 PRs in 1 wave |
 
 ## Results & Parameters
 
-### Session outcome
+### Session outcomes
 
+**v1.1 (2026-03-27):**
+- **13 PRs** rebased with 4 batched agents (3-4 PRs each)
+- **5 conflicts** resolved semantically (CI workflow, justfile, Dockerfile)
+- **Time**: ~7 minutes with 4 parallel agents
+- Used `Agent(isolation: "worktree")` for automatic worktree management
+
+**v1.0 (2026-03-15):**
 - **70 PRs** rebased from 125 commits behind → 0 behind main
 - **0 DIRTY** PRs (was 12+)
 - **All PRs** have auto-merge enabled
 - **Time**: ~45 minutes with 3 parallel agents
+
+### Pre-rebase conflict check
+
+```bash
+# Check all PRs for conflicts BEFORE spawning agents
+for pr in $(gh pr list --state open --json number --jq '.[].number'); do
+  branch=$(gh pr view $pr --json headRefName --jq '.headRefName')
+  git fetch origin "$branch" 2>/dev/null
+  conflicts=$(git merge-tree --merge-base origin/main origin/main "origin/$branch" 2>&1 | grep -c "CONFLICT")
+  echo "PR#$pr: $conflicts conflicts"
+done
+```
+
+### Batching strategy
+
+```yaml
+# Optimal: 3-4 PRs per agent
+# Each agent processes PRs sequentially (checkout → rebase → push → next)
+# Agents run in parallel across different worktrees
+agents: 4
+prs_per_agent: 3-4
+total_prs: 13
+waves: 1  # All agents launch simultaneously
+```
 
 ### Temp branch naming convention
 
