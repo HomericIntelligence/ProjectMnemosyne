@@ -1,0 +1,30 @@
+# mass-pr-rebase-parallel-agents — History
+
+## v1.0.0 (2026-03-17)
+
+**Initial version.**
+
+**Changed by:** ProjectOdyssey mass rebase session — 138 open PRs, 80+ conflicting
+**Verification:** verified-local
+
+### Content
+- Batch rebase 100+ conflicting PRs using parallel sub-agents
+- `--theirs` strategy for all conflict resolution
+- 5-9 parallel agents, 10-12 PRs per batch
+- No phased ordering or semantic resolution
+- No pixi.lock special handling
+- No CI fix integration (Phase 4)
+- No handling of closed/superseded PRs
+
+### Previous version (v1.0.0) snapshot
+
+```yaml
+name: mass-pr-rebase-parallel-agents
+description: 'Batch rebase 100+ conflicting PRs using parallel sub-agents with worktree isolation.'
+category: ci-cd
+date: 2026-03-17
+version: 1.0.0
+verification: verified-local
+```
+
+Key approach: Use `--theirs` for all conflicts, batch into groups of 10-12, launch 5-9 parallel agents.
