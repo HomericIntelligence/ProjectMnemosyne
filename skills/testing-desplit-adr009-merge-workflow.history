@@ -1,0 +1,55 @@
+# testing-desplit-adr009-merge-workflow — History
+
+## v2.0.0 (2026-03-27)
+
+**Changed by:** PR #5130 — fixing CI failures from the de-split merge
+**Verification:** verified-ci
+
+### What changed
+- Added critical Failed Attempt: merge script `<top-level>` dedup bug drops struct definitions
+- Added critical Failed Attempt: unclosed docstring from merge script
+- Added critical Failed Attempt: stale `_part` imports in `run_all_tests.mojo`
+- Added critical Failed Attempt: `DEFAULT_SEED` comptime constant dropped by same bug
+- Updated Verified Workflow with post-merge audit steps
+- Updated Results with list of files damaged by dedup bug
+- Updated verification from `verified-local` to `verified-ci`
+- Noted merge script was deleted (served its purpose, had ruff violations)
+
+### Why
+v1.0.0 documented the merge workflow but missed a critical bug in the merge script:
+`_deduplicate_functions()` assigned ALL struct/alias/var definitions the name `"<top-level>"`,
+causing only the first struct per file to survive deduplication. This silently dropped 4 struct
+definitions across 3 files, causing CI compile failures. Additionally, `run_all_tests.mojo`
+still imported from `_partN` module names, and `test_tensor_fuzz.mojo` lost its `DEFAULT_SEED`
+constant. The merge script also had ruff lint/format violations that failed CI.
+
+### Previous version (v1.0.0) snapshot
+
+```yaml
+---
+name: testing-desplit-adr009-merge-workflow
+description: 'Reverse ADR-009 test file splitting by merging _partN.mojo files back
+  into single test files. Use when: (1) ADR-009 workaround is no longer needed, (2)
+  test file bloat from splitting needs cleanup, (3) merging split Mojo test files
+  with deduplication.'
+category: testing
+date: 2026-03-25
+version: 1.0.0
+user-invocable: false
+verification: verified-local
+tags:
+  - adr-009
+  - test-splitting
+  - merge
+  - mojo
+  - refactor
+  - myrmidon-swarm
+---
+[Full v1.0.0 content preserved in git history at commit that created this file]
+```
+
+---
+
+## v1.0.0 (2026-03-25)
+
+**Initial version.**
