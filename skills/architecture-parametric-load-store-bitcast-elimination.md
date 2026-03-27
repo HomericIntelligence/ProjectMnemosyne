@@ -2,9 +2,10 @@
 name: architecture-parametric-load-store-bitcast-elimination
 description: "Add parametric load[dtype]/store[dtype]/data_ptr[dtype] API to AnyTensor to eliminate raw _data.bitcast UAF vulnerabilities. Use when: (1) raw _data.bitcast[T]() patterns cause ASAP destruction UAF in Mojo, (2) designing safe element access for runtime-typed tensors, (3) migrating bulk pointer patterns to a centralized API, (4) uniform test weights cause numerical overflow through deep networks."
 category: architecture
-date: 2026-03-25
-version: "1.0.0"
+date: 2026-03-27
+version: "1.1.0"
 user-invocable: false
+history: architecture-parametric-load-store-bitcast-elimination.history
 tags:
   - mojo
   - tensor
@@ -40,6 +41,8 @@ patterns to prevent ASAP destruction use-after-free in Mojo.
 - Need per-element typed access without runtime dtype dispatch overhead
 - Migrating SIMD bulk pointer patterns to a centralized, auditable API
 - Uniform test weights (`full(shape, scale)`) cause `inf` overflow through deep conv networks
+- Pooling operations crash with NaN/Inf on float16 tensors (bitcast[Float32] reads wrong offsets)
+- Any `_data.bitcast[Float32]()` in code that handles multiple dtypes (float16, float32, float64)
 
 ## Verified Workflow
 
@@ -154,6 +157,8 @@ pixi run mojo build --sanitize address -g -I "$(pwd)" -I . \
 | `data_ptr` without `origin=MutAnyOrigin` | Agent's version returned `UnsafePointer[Scalar[dtype]]` | Compile error -- return type doesn't match `_data.bitcast` which has `origin=MutAnyOrigin` | Always include `origin=MutAnyOrigin` on returned pointers from AnyTensor |
 | `sizeof[Scalar[dtype]]()` for offset | Tried to compute byte offset manually | Not available in Mojo 0.26.1 stdlib | Use `self._data.bitcast[Scalar[dtype]]()[index]` -- pointer arithmetic handles sizing automatically |
 | He init with uniform weights in VGG16 test | `full(shape, sqrt(2/fan_in))` for all-same weights | Exponential growth: gain per layer = `sqrt(2*fan_in)`, not 1.0 like random He init | He init assumes random (cancellation); uniform weights need `1/fan_in` for unit gain |
+| Pooling bitcast[Float32] on float16 tensors | `x._data.bitcast[Float32]()[in_idx]` in all 6 pooling functions | Float16 = 2 bytes but bitcast[Float32] reads 4 bytes at `base + idx*4` — wrong offsets, garbage NaN/Inf | Use `_get_float64(idx)` / `_set_float64(idx, val)` which handles all dtypes correctly via proper byte sizing |
+| Missed pooling module in initial migration | Migrated shared/training/ (101 patterns) but left shared/core/pooling.mojo | Pooling has 6 functions with bitcast reads/writes; float16 tests crash with "max pooling output contains NaN or Inf" | After any bitcast migration, grep the ENTIRE codebase for remaining patterns — `grep -rn "bitcast\[Float32\]" shared/` |
 
 ## Results & Parameters
 
@@ -182,8 +187,16 @@ training_module:
   asan_errors_before: "bad-free + heap-use-after-free"
   asan_errors_after: 0
 
+pooling_module:
+  file: "shared/core/pooling.mojo"
+  functions_fixed: 6  # maxpool2d, avgpool2d, global_avgpool2d (fwd + bwd each)
+  pattern: "_data.bitcast[Float32]()[idx]"
+  replacement: "_get_float64(idx) / _set_float64(idx, val)"
+  root_cause: "Float16 elements are 2 bytes; bitcast[Float32] reads 4 bytes at wrong offsets"
+  symptom: "max pooling output contains NaN or Inf"
+
 broader_codebase:
-  shared_core_remaining: ~395 patterns (future PRs)
+  shared_core_remaining: ~389 patterns (future PRs, was ~395 before pooling fix)
   tests_remaining: ~2458 patterns (future PRs)
 ```
 
@@ -205,3 +218,4 @@ gain_per_layer:
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | PR #5097 | 101+ bitcast patterns replaced, ASAN clean, VGG16 numerical fix |
+| ProjectOdyssey | PR #5175 | Pooling bitcast fix: 6 functions migrated to _get_float64/_set_float64 |
