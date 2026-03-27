@@ -1,171 +1,211 @@
 ---
 name: mass-pr-rebase-parallel-agents
-description: 'Batch rebase 100+ conflicting PRs using parallel sub-agents with worktree
-  isolation. Use when: many PRs are CONFLICTING after main changes, systemic CI needs
-  fixing first.'
+description: 'Batch rebase 10-100+ conflicting PRs using parallel sub-agents with
+  worktree isolation and semantic conflict resolution. Use when: many PRs are CONFLICTING,
+  some have CI failures, and pixi.lock/overlapping files need phased ordering.'
 category: ci-cd
-date: 2026-03-17
-version: 1.0.0
+date: 2026-03-27
+version: 2.0.0
 user-invocable: false
+verification: verified-local
+history: mass-pr-rebase-parallel-agents.history
+tags: []
 ---
 # Mass PR Rebase with Parallel Agents
 
 ## Overview
 
-| Attribute | Value |
-|-----------|-------|
-| **Scope** | Repository-wide PR maintenance |
-| **Scale** | 138 open PRs, 80+ conflicting |
-| **Duration** | ~20 minutes for all rebases |
-| **Parallelism** | 5-9 sub-agents simultaneously |
-| **Success Rate** | 100% (0 failures across 96 rebases) |
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-03-27 |
+| **Objective** | Batch rebase conflicting PRs and fix CI failures using parallel agents with semantic conflict resolution |
+| **Outcome** | Success — verified across two sessions (96 PRs in ProjectOdyssey, 20 PRs in ProjectScylla) |
+| **Verification** | verified-local |
+| **History** | [changelog](./mass-pr-rebase-parallel-agents.history) |
 
 ## When to Use
 
-- A major refactor lands on main (e.g., import style change) causing mass conflicts
-- 10+ PRs show CONFLICTING status simultaneously
-- CI has systemic failures blocking all PRs (fix main first, then rebase)
-- Need to rebase PRs that touch overlapping files (e.g., shared/__init__.mojo)
+- A major refactor lands on main causing mass conflicts (10+ PRs CONFLICTING)
+- Mix of CONFLICTING PRs and MERGEABLE-but-CI-failing PRs
+- PRs touch overlapping files (CLI, config, pixi.lock) requiring phased ordering
+- Need semantic conflict resolution (not just `--theirs`) to preserve PR intent
+- Auto-generated lockfiles (pixi.lock) need regeneration after rebase
 
 ## Verified Workflow
 
-### Phase 0: Fix Systemic CI on Main First
-
-Before rebasing any PRs, identify and fix failures that affect ALL PRs:
-
-1. Check CI on a recent MERGEABLE PR: `gh pr checks <number>`
-2. Check CI on main: `gh run list --branch main --limit 5`
-3. Categorize failures as systemic vs PR-specific
-4. Create a single fix PR for all systemic issues
-
-**Common systemic failures found:**
-
-| Failure | Root Cause | Fix |
-|---------|-----------|-----|
-| pre-commit hook uses `just` | `just` not installed in pre-commit CI env | Inline the bash command directly |
-| mypy on wrapper scripts | `sys.path` manipulation invisible to static analysis | Add `# type: ignore[attr-defined]` |
-| markdownlint on `*_backward` in tables | Unescaped `*` interpreted as emphasis | Escape with `\*\_backward` |
-| Docker `mkdir: Permission denied` | `build/` dir created inside container on bind mount | Create dir on host before entering Docker |
-| Template .mojo files fail build | Placeholder code doesn't compile | Exclude `papers/_template/` from build find |
-
-### Phase 1: Classify PRs
+### Quick Reference
 
 ```bash
-# Get all PRs grouped by mergeability
+# Classify PRs
+gh pr list --state open --limit 200 --json number,headRefName,mergeable,autoMergeRequest \
+  --jq '[group_by(.mergeable)[] | {status: .[0].mergeable, count: length}]'
+
+# Launch parallel rebase agent (with worktree isolation)
+# Agent tool: isolation: "worktree", prompt includes rebase + pre-commit + push
+
+# Verify after push
+gh pr view <number> --json mergeable,state
+```
+
+### Phase 0: Fix Systemic CI on Main First
+
+Before rebasing, fix failures that affect ALL PRs:
+
+1. Check CI: `gh pr checks <number>` on a recent MERGEABLE PR
+2. Check main: `gh run list --branch main --limit 5`
+3. Categorize as systemic vs PR-specific
+4. Create a single fix PR for systemic issues
+
+### Phase 1: Classify and Order PRs
+
+```bash
+# Group by mergeability
 gh pr list --state open --limit 200 --json number,headRefName,mergeable \
   --jq '[group_by(.mergeable)[] | {status: .[0].mergeable, count: length}]'
 
-# List all CONFLICTING PRs with branch names
-gh pr list --state open --limit 200 --json number,headRefName,mergeable \
-  --jq '.[] | select(.mergeable == "CONFLICTING") | "\(.number) \(.headRefName)"'
+# Check which files each PR touches (for ordering)
+for pr in <numbers>; do
+  branch=$(gh pr view $pr --json headRefName -q .headRefName)
+  echo "=== PR #$pr ($branch) ==="
+  git diff --name-only origin/main...origin/"$branch" | head -20
+done
 ```
 
-**IMPORTANT**: `gh pr list --limit 100` is the default and may miss older PRs. Always use `--limit 200` or higher.
+**IMPORTANT**: Always use `--limit 200` or higher. Default limit misses older PRs.
+
+**Order by complexity** (process simple PRs first to avoid compounding conflicts):
+
+| Phase | Criteria | Parallelism |
+|-------|----------|-------------|
+| Simple (1-2 files) | Single file changes, docs | Fully parallel |
+| Moderate (3-15 files, no lockfile) | Feature PRs not touching pixi.lock | Parallel if non-overlapping |
+| Lockfile cluster (touches pixi.lock) | PRs modifying pixi.toml/pixi.lock | Parallel OK (each regenerates independently) |
+| CI-only fixes (MERGEABLE but failing) | Pre-commit/test failures | Parallel |
+| Massive refactors (50+ files) | Layout migrations, renames | DEFER until others merge |
 
 ### Phase 2: Batch Rebase with Parallel Agents
 
-Split PRs into batches of 10-12 and launch sub-agents in parallel:
+Launch sub-agents with **worktree isolation** — each agent gets an isolated repo copy:
 
+```python
+# Agent tool configuration
+Agent(
+    description="Rebase PR #XXXX",
+    isolation="worktree",  # CRITICAL: isolates each agent
+    prompt="""Rebase PR #XXXX (branch: YYYY) onto origin/main and push.
+    1. git fetch origin main && git fetch origin YYYY
+    2. git checkout YYYY
+    3. git rebase origin/main — resolve conflicts SEMANTICALLY (keep PR intent)
+    4. pixi.lock rule: rm pixi.lock && git add pixi.lock && git rebase --continue
+       Then: pixi lock after rebase completes
+    5. pre-commit run --all-files — fix any issues
+    6. git push --force-with-lease origin YYYY
+    7. gh pr view XXXX --json mergeable,state"""
+)
 ```
-Agent prompt template for each batch:
-- Fetch branch, create worktree under worktrees/<pr-number>
-- Rebase onto origin/main
-- Resolve conflicts with --theirs strategy
-- Force push with --force-with-lease
-- Enable auto-merge: gh pr merge <number> --auto --rebase
-- Clean up worktree
-```
 
-**Key conflict resolution strategies:**
+**Conflict resolution — semantic, not blind:**
 
-| File Pattern | Strategy |
-|-------------|----------|
-| `.github/workflows/*.yml` | `--theirs` (keep PR's version) |
-| `scripts/*.py` | `--theirs` (keep PR's version) |
-| `shared/**/*.mojo` | `--theirs` (keep PR's version) |
-| `tests/**/*.mojo` | `--theirs` (keep PR's version) |
-| `.pre-commit-config.yaml` | `--theirs` (keep PR's version) |
-| Rename/rename conflicts | Use `git show REBASE_HEAD:<path>` to extract content |
-| Modify/delete conflicts | `git rm` if PR intended deletion |
+| File Type | Strategy |
+|-----------|----------|
+| `pixi.lock` | Delete, continue rebase, regenerate with `pixi lock`. **NEVER** use `--ours`/`--theirs` |
+| `pixi.toml` | Merge both sides (keep main's deps + PR's new deps) |
+| Feature code (cli, config, models) | Read PR intent, combine both sides semantically |
+| Schemas (JSON) | Check for duplicate keys, consolidate into single definition |
+| Tests (deleted on main) | Accept deletion if main removed the feature |
+| `.pre-commit-config.yaml` | Check for duplicate hook entries after merge |
+| Workflows (`.github/`) | Keep main's security patterns (SHA pins, env vars) |
 
-**Conflict resolution command pattern:**
+**Batch sizing:**
+
+| Scale | Agents | PRs/Agent |
+|-------|--------|-----------|
+| 10-20 PRs | 3-4 | 3-5 |
+| 20-50 PRs | 4-6 | 5-10 |
+| 50-100+ PRs | 5-9 | 10-12 |
+
+### Phase 3: Fix CI-Only Failures (MERGEABLE PRs)
+
+For PRs that are MERGEABLE but failing CI, launch parallel fix agents:
+
+| Failure Type | Diagnosis | Fix Pattern |
+|-------------|-----------|-------------|
+| Schema validation | Duplicate keys in JSON, field mismatch | Remove duplicates, align with schema |
+| Forbidden phrases in docs | Test enforces terminology rules | Replace terms (e.g., "failure injection" → "fault injection") |
+| Version consistency hooks | Aspirational version refs > canonical | Add smart exclusions (fenced code, inline code, URLs) |
+| Pre-commit formatting | ruff-format, markdownlint | `pre-commit run --all-files` auto-fixes |
+
+### Phase 4: Handle Closed/Superseded PRs
+
+Expect 15-25% of PRs to be already closed or superseded:
+
+- **Rebase produces empty commit** → PR's changes are already on main
+- **PR shows CLOSED state** → Check if a newer PR delivered the same work
+- **Cannot reopen after force-push** → Create new PR if changes are still needed
+- **Log these** — don't waste time investigating, just skip and note
+
+### Phase 5: Monitor and Clean Up
 
 ```bash
-# Standard --theirs resolution
-git -C worktrees/<pr> checkout --theirs <file>
-git -C worktrees/<pr> add <file>
-GIT_EDITOR=true git -C worktrees/<pr> rebase --continue
-
-# For rename conflicts where --theirs doesn't work
-git -C worktrees/<pr> show REBASE_HEAD:<original-path> > worktrees/<pr>/<new-path>
-git -C worktrees/<pr> add <new-path>
-GIT_EDITOR=true git -C worktrees/<pr> rebase --continue
-```
-
-### Phase 3: Monitor and Clean Up
-
-```bash
-# Verify all PRs are MERGEABLE
+# Verify final state
 gh pr list --state open --limit 200 --json number,mergeable \
   --jq '[group_by(.mergeable)[] | {status: .[0].mergeable, count: length}]'
 
 # Clean up worktrees
 git worktree prune
-
-# Check CI queue status
-gh run list --branch <branch> --limit 5 --json status,conclusion
 ```
-
-### Quick Reference
-
-| Step | Command | Notes |
-|------|---------|-------|
-| List conflicting | `gh pr list --limit 200 --json number,mergeable --jq '...'` | Use limit 200+ |
-| Create worktree | `git worktree add worktrees/<pr> origin/<branch>` | Use worktrees/ dir |
-| Rebase | `git -C worktrees/<pr> rebase origin/main` | In worktree |
-| Resolve conflicts | `git checkout --theirs <file> && git add <file>` | --theirs for most |
-| Continue rebase | `GIT_EDITOR=true git rebase --continue` | Avoid editor |
-| Force push | `git push --force-with-lease origin <branch>` | Never --force |
-| Auto-merge | `gh pr merge <pr> --auto --rebase` | Enable immediately |
-| Cleanup | `git worktree remove worktrees/<pr>` | Per worktree |
-| Prune | `git worktree prune` | After all done |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Native builds in CI | Changed `just build` to `just native build` in workflows | User wants Docker builds, not native | Fix Docker permissions instead of bypassing Docker |
-| Fix only alexnet download_cifar10.py | Added type:ignore to one wrapper | Same file exists in resnet18/ and vgg16/ | Always search for all copies of a file pattern |
-| Using `--limit 100` for PR listing | Default gh pr list limit | Missed 34 older conflicting PRs | Always use `--limit 200` or higher |
-| Single agent for all rebases | Considered processing sequentially | Would take hours for 80+ PRs | Parallel agents (5-9) complete in ~20 minutes |
+| `--theirs` for all conflicts | Blind conflict resolution | Loses PR-specific work when main has diverged significantly | Use semantic resolution — read PR intent and combine both sides |
+| `--ours`/`--theirs` for pixi.lock | Standard git conflict resolution on lockfiles | pixi.lock encodes SHA256 of local editable package; merged version is always invalid | Always delete pixi.lock, continue rebase, regenerate with `pixi lock` |
+| Using `--limit 100` for PR listing | Default gh pr list limit | Missed older conflicting PRs | Always use `--limit 200` or higher |
+| Single agent for all rebases | Considered processing sequentially | Would take hours for 20+ PRs | Parallel agents with worktree isolation complete in minutes |
+| No phased ordering | Rebase all PRs at once regardless of complexity | Compounding conflicts when interdependent PRs land in wrong order | Process simple PRs first, defer massive refactors |
+| Rebasing closed/superseded PRs | Spent time resolving conflicts on PRs already delivered by other work | Empty commits after rebase — wasted effort | Check PR state before investing in conflict resolution |
+| Not running pre-commit before push | Pushed rebased branches without local validation | Primary cause of CI failures on auto-impl branches | Always run `pre-commit run --all-files` before every push |
 
 ## Results & Parameters
 
-### Session Results
+### Session Results (v2.0.0 — ProjectScylla, 2026-03-27)
+
+- **21 open PRs** processed (17 CONFLICTING + 3 CI-failing + 1 already merged)
+- **16 PRs** rebased and pushed to MERGEABLE state
+- **4 PRs** found already closed/superseded (skipped)
+- **1 PR** deferred (202-file src-layout migration)
+- **Semantic conflict resolution** across CLI, config, schema, maestro module files
+- **pixi.lock** regenerated on 7 PRs
+
+### Session Results (v1.0.0 — ProjectOdyssey, 2026-03-17)
 
 - **138 total open PRs** processed
 - **96 PRs rebased** and force-pushed (0 failures)
-- **17 PRs** were already closed (commits on main)
+- **17 PRs** were already closed
 - **All conflicts** resolved with `--theirs` strategy
-- **Auto-merge** enabled on all open PRs
-
-### Optimal Batch Size
-
-```
-PRs per agent: 10-12 (sweet spot)
-Parallel agents: 5-9 (limited by git lock contention)
-Total time: ~20 min for 80+ PRs
-```
 
 ### Agent Configuration
 
 ```yaml
+# v2.0.0: Use built-in worktree isolation
+subagent_type: general-purpose
+isolation: "worktree"  # Each agent gets isolated repo copy
+# No need for manual worktree management
+
+# v1.0.0: Manual worktree management
 subagent_type: general-purpose
 run_in_background: true
-# No isolation: "worktree" needed - agents create their own worktrees
 ```
 
 ### CI Impact
 
 Mass force-pushing overwhelms CI runners. All PR runs queue simultaneously.
 Plan for 30-60 min CI queue drain after batch rebases.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectScylla | 21 PRs (17 conflicting + 3 CI-failing), semantic resolution, pixi.lock regen | 2026-03-27 |
+| ProjectOdyssey | 138 PRs, 80+ conflicting, `--theirs` strategy | 2026-03-17 |
