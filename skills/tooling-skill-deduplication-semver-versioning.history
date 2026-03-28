@@ -1,12 +1,32 @@
+# tooling-skill-deduplication-semver-versioning -- History
+
+## v1.1.0 (2026-03-27)
+
+**Changed by:** PR #1075 -- consolidate Mojo test splitting skills (10->1)
+**Verification:** verified-ci
+
+### What changed
+- Added new deduplication result: mojo-test-* cluster (10->1, 90% reduction)
+- Added Failed Attempts row: aggressive consolidation to 1 file works when content is truly redundant
+- Updated "Top Duplicate Clusters Remaining" to reflect mojo-test-* is now resolved
+- Added new Verified On entry for PR #1075
+- Added guidance on handling .notes.md files during deduplication
+
+### Why
+The mojo-test-* cluster (10 files covering Mojo ADR-009 test splitting) was identified as the
+next-largest duplicate cluster. Consolidation to a single file proved feasible because all 10
+files covered the same core workflow with minor variations. This validates that even large
+clusters (10 files) can consolidate to 1 when the content is truly redundant.
+
+### Previous version (v1.0.0) snapshot
 ---
 name: tooling-skill-deduplication-semver-versioning
 description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes."
 category: tooling
-date: 2026-03-27
-version: "1.1.0"
+date: 2026-03-25
+version: "1.0.0"
 user-invocable: false
 verification: verified-ci
-history: tooling-skill-deduplication-semver-versioning.history
 tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 ---
 
@@ -16,11 +36,10 @@ tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-03-27 |
-| **Objective** | Merge duplicate skill clusters into consolidated skills, with semantic versioning for amendments |
-| **Outcome** | Two rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9). Semver rules added. |
+| **Date** | 2026-03-25 |
+| **Objective** | Merge 16 duplicate adr009-* skills into 3 consolidated skills, and add semver rules to the /learn command |
+| **Outcome** | 16 skills merged to 3 (net -13), 35 unique Failed Attempts preserved, semver rules added |
 | **Verification** | verified-ci |
-| **History** | [changelog](./tooling-skill-deduplication-semver-versioning.history) |
 
 ## When to Use
 
@@ -59,7 +78,7 @@ done
 
 For each sub-group of duplicates:
 
-1. Read ALL source skills — extract unique content from each:
+1. Read ALL source skills -- extract unique content from each:
    - Failed Attempts rows (deduplicate by lesson, not exact text)
    - Verified Workflow steps (combine into comprehensive workflow)
    - When to Use triggers (union of all triggers)
@@ -68,9 +87,8 @@ For each sub-group of duplicates:
    - Use `version: "1.0.0"` (new consolidated skill, not an amendment)
    - Description covers ALL trigger conditions from all sources
    - All unique learnings preserved
-3. Delete all superseded source `.md` and `.notes.md` files (remember to delete both)
-4. No `.history` file needed — this is a new v1.0.0 skill, not an amendment
-5. If another agent may have already deleted some files, skip them silently (`git rm` will error on missing files)
+3. Delete all superseded source `.md` and `.notes.md` files
+4. No `.history` file needed -- this is a new v1.0.0 skill, not an amendment
 
 **Phase 3: Validate**
 
@@ -86,17 +104,13 @@ For multiple clusters, launch parallel agents (one per group) in the same worktr
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Parallel agents in same worktree | Launched 3 agents to merge 3 groups simultaneously in one worktree | Worked fine — no conflicts since each agent writes different files | Parallel agents in a shared worktree work when they touch non-overlapping files |
-| Major-only version bumps | Always bump X.0.0 for any amendment | Loses information about change scale — a typo fix looks the same as a full rewrite | Use semver: Major for rewrites/merges, Minor for new findings, Patch for typos |
+| Parallel agents in same worktree | Launched 3 agents to merge 3 groups simultaneously in one worktree | Worked fine -- no conflicts since each agent writes different files | Parallel agents in a shared worktree work when they touch non-overlapping files |
+| Major-only version bumps | Always bump X.0.0 for any amendment | Loses information about change scale -- a typo fix looks the same as a full rewrite | Use semver: Major for rewrites/merges, Minor for new findings, Patch for typos |
 | Merging by exact text dedup | Tried deduplicating Failed Attempts by exact row match | Different skills describe the same lesson with different wording | Deduplicate by lesson/concept, not by exact text match |
-| Splitting into multiple consolidated files | Planned 10 mojo-test-* files into 2-3 sub-groups | All 10 files covered the same core workflow with minor variations | When content is truly redundant, even large clusters (10 files) can consolidate to 1 |
-| Forgetting .notes.md files | Deleted .md files but forgot accompanying .notes.md | Orphaned .notes.md files clutter the skills directory | Always delete both .md and .notes.md when removing source skills |
 
 ## Results & Parameters
 
-### Deduplication Results
-
-**Round 1: ADR-009 cluster (2026-03-25)**
+### Deduplication Results (ADR-009 Proof of Concept)
 
 ```yaml
 skills_before: 16
@@ -107,30 +121,19 @@ lines_after: 864
 unique_lessons_preserved: 35 Failed Attempts rows
 ```
 
-**Round 2: Mojo test splitting cluster (2026-03-27)**
-
-```yaml
-skills_before: 10
-skills_after: 1
-net_reduction: 9 skills (-90%)
-lines_deleted: 2499
-lines_added: 250
-unique_lessons_preserved: 12 Failed Attempts rows, 17 Verified On entries
-files_deleted: 20 (10 .md + 10 .notes.md)
-```
-
 ### Semver Rules for /learn
 
 | Change Type | Bump | When |
 |-------------|------|------|
-| Major (X.0.0) | `1.0.0` → `2.0.0` | Merge skills, rewrite workflow, change core recommendation |
-| Minor (0.X.0) | `1.0.0` → `1.1.0` | Add findings, failed attempts, extend workflow |
-| Patch (0.0.X) | `1.0.0` → `1.0.1` | Fix typos, formatting, metadata |
+| Major (X.0.0) | `1.0.0` -> `2.0.0` | Merge skills, rewrite workflow, change core recommendation |
+| Minor (0.X.0) | `1.0.0` -> `1.1.0` | Add findings, failed attempts, extend workflow |
+| Patch (0.0.X) | `1.0.0` -> `1.0.1` | Fix typos, formatting, metadata |
 
 ### Top Duplicate Clusters Remaining (for future merges)
 
 ```
 9  pr-review-*
+8  mojo-test-*
 7  skill-fix-*
 7  pre-commit-*
 7  mojo-hash-*
@@ -142,11 +145,14 @@ files_deleted: 20 (10 .md + 10 .notes.md)
 5  batch-pr-*
 ```
 
-Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1).
-
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectMnemosyne | PR #1040, merged 16 adr009 skills + added semver | 2026-03-25 session |
-| ProjectMnemosyne | PR #1075, merged 10 mojo-test-* skills into 1 | 2026-03-27 session |
+
+---
+
+## v1.0.0 (2026-03-25)
+
+**Initial version.**
