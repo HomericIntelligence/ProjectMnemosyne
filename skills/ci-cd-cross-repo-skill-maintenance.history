@@ -1,12 +1,42 @@
+# ci-cd-cross-repo-skill-maintenance — History
+
+## v1.1.0 (2026-03-28)
+
+**Changed by:** Session context (myrmidon-swarm skill fix — make /learn mandatory;
+ProjectScylla retrospective→learn rename; HomericIntelligence/ProjectHephaestus#205)
+**Verification:** verified-precommit (PR created; CI pending)
+
+### What changed
+
+- Added new "Verified On" entry for ProjectHephaestus#205 (myrmidon-swarm skill fix)
+- Added Failed Attempts row documenting sub-agent workflow that completed code changes
+  but did not finish the git workflow (no commit, no push, no PR)
+- Added new trigger condition in When to Use: fixing incorrect auto-invoke directives
+  in a skill definition
+- Added new Key Patterns row: git operations must be done in main context after sub-agent
+
+### Why
+
+The myrmidon-swarm skill in ProjectHephaestus had three bugs:
+1. Phase 5 said "Suggest running /hephaestus:learn" — should be mandatory auto-invoke
+2. Integrations section said "Do not auto-invoke — let the user decide" — wrong
+3. Final Summary template referenced `/retrospective` (old, deleted command) instead of `/hephaestus:learn`
+
+The fix required editing `$HOME/.agent-brain/ProjectHephaestus/skills/myrmidon-swarm/SKILL.md`
+directly and creating a PR. The sub-agent approach was attempted but the agent returned without
+completing git operations — main context had to handle commit/push/PR.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
 ---
 name: ci-cd-cross-repo-skill-maintenance
-description: "Fix conflicting rename/refactor PRs and coordinate skill definition updates across repositories. Use when: (1) a rename PR shows CONFLICTING status after main advances, (2) a skill definition in repo A needs updating because of changes in repo B, (3) batch-resolving homogeneous conflicts in a refactor PR, (4) fixing incorrect auto-invoke directives in a skill definition."
+description: "Fix conflicting rename/refactor PRs and coordinate skill definition updates across repositories. Use when: (1) a rename PR shows CONFLICTING status after main advances, (2) a skill definition in repo A needs updating because of changes in repo B, (3) batch-resolving homogeneous conflicts in a refactor PR."
 category: ci-cd
-date: 2026-03-28
-version: "1.1.0"
+date: 2026-03-26
+version: "1.0.0"
 user-invocable: false
 verification: verified-local
-history: ci-cd-cross-repo-skill-maintenance.history
 tags:
   - cross-repo
   - skill-maintenance
@@ -21,11 +51,10 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-03-28 |
-| **Objective** | Fix conflicting rename PRs, coordinate skill definition updates, and fix incorrect skill behavior directives across repositories |
-| **Outcome** | Multiple PRs across ProjectMnemosyne and ProjectHephaestus successfully merged |
+| **Date** | 2026-03-26 |
+| **Objective** | Fix a conflicting rename PR in ProjectMnemosyne and coordinate a skill definition update in ProjectHephaestus |
+| **Outcome** | PR #1061 rebased and MERGEABLE, skill definition PR #203 created in ProjectHephaestus |
 | **Verification** | verified-local |
-| **History** | [changelog](./ci-cd-cross-repo-skill-maintenance.history) |
 
 ## When to Use
 
@@ -33,8 +62,6 @@ tags:
 - All conflicts follow the same pattern (e.g., both sides changed the same text references being renamed)
 - A skill definition in one repo (e.g., ProjectHephaestus) needs a coordinated update because of changes in another repo (e.g., ProjectMnemosyne)
 - You need to validate a plugin repository after resolving conflicts to ensure no structural corruption
-- A skill definition has incorrect auto-invoke directives (e.g., says "suggest" instead of "auto-invoke", references a deleted command)
-- Fixing stale command references in skill files (e.g., `/retrospective` → `/hephaestus:learn`)
 
 ## Verified Workflow
 
@@ -57,19 +84,6 @@ python3 scripts/validate_plugins.py
 # 4. Push and verify merge state
 git push --force-with-lease
 gh pr view <number> --json mergeStateStatus --jq '.mergeStateStatus'
-
-# 5. Fix skill definition in second repo — always do git ops in main context
-HEPHAESTUS_DIR="$HOME/.agent-brain/ProjectHephaestus"
-git -C "$HEPHAESTUS_DIR" fetch origin
-git -C "$HEPHAESTUS_DIR" checkout -b fix-skill origin/main
-# ... edit SKILL.md ...
-git -C "$HEPHAESTUS_DIR" add <files>
-git -C "$HEPHAESTUS_DIR" commit -m "fix(skills): <description>"
-git -C "$HEPHAESTUS_DIR" push -u origin fix-skill
-gh pr create --repo HomericIntelligence/ProjectHephaestus ...
-PR_NUMBER=$(gh pr list --repo HomericIntelligence/ProjectHephaestus \
-  --head fix-skill --json number --jq '.[0].number')
-gh pr merge "$PR_NUMBER" --auto --rebase --repo HomericIntelligence/ProjectHephaestus
 ```
 
 ### Detailed Steps
@@ -77,7 +91,6 @@ gh pr merge "$PR_NUMBER" --auto --rebase --repo HomericIntelligence/ProjectHepha
 **Phase 1: Fix the conflicting rename PR**
 
 1. Fetch latest main and check out the PR branch:
-
    ```bash
    git fetch origin
    git checkout <branch>
@@ -87,7 +100,6 @@ gh pr merge "$PR_NUMBER" --auto --rebase --repo HomericIntelligence/ProjectHepha
 2. When rebase stops at a conflict, check if all conflicts follow the same pattern. For a rename PR, conflicts are almost always the same: both sides changed the text being renamed.
 
 3. Batch-resolve with `--theirs` (the PR's version is the rename target):
-
    ```bash
    # List conflicting files
    git diff --name-only --diff-filter=U
@@ -102,14 +114,12 @@ gh pr merge "$PR_NUMBER" --auto --rebase --repo HomericIntelligence/ProjectHepha
 4. Repeat for each rebase step if multiple commits conflict. The pattern is the same each time.
 
 5. Validate and push:
-
    ```bash
    python3 scripts/validate_plugins.py  # e.g., 1059/1059 valid
    git push --force-with-lease
    ```
 
 6. Verify PR is now MERGEABLE:
-
    ```bash
    gh pr view <number> --json mergeStateStatus --jq '.mergeStateStatus'
    # Expected: MERGEABLE
@@ -118,34 +128,22 @@ gh pr merge "$PR_NUMBER" --auto --rebase --repo HomericIntelligence/ProjectHepha
 **Phase 2: Coordinate the skill definition update in the second repo**
 
 1. Clone or update the skill-definition repo (e.g., ProjectHephaestus):
-
    ```bash
-   # Prefer the shared clone at $HOME/.agent-brain if already present
-   HEPHAESTUS_DIR="$HOME/.agent-brain/ProjectHephaestus"
-   git -C "$HEPHAESTUS_DIR" fetch origin
-   git -C "$HEPHAESTUS_DIR" checkout main
-   git -C "$HEPHAESTUS_DIR" pull --ff-only origin main
-   git -C "$HEPHAESTUS_DIR" checkout -b fix-skill-definition origin/main
+   gh repo clone HomericIntelligence/ProjectHephaestus /tmp/ProjectHephaestus
+   cd /tmp/ProjectHephaestus
+   git checkout -b update-skill-definition origin/main
    ```
 
 2. Edit the skill definition to reflect the new behavior, naming, or execution model.
 
-3. **CRITICAL**: Do git operations (add/commit/push/PR) in the main context, not inside a
-   sub-agent. Sub-agents that edit files may return without completing the git workflow
-   (see Failed Attempts).
-
-4. Commit, push, and create a PR linking to the original rename PR:
-
+3. Commit, push, and create a PR linking to the original rename PR:
    ```bash
-   git -C "$HEPHAESTUS_DIR" add <files>
-   git -C "$HEPHAESTUS_DIR" commit -m "fix(skills): update <skill> definition for <change>"
-   git -C "$HEPHAESTUS_DIR" push -u origin fix-skill-definition
-   gh pr create --repo HomericIntelligence/ProjectHephaestus \
-     --title "Fix <skill> definition" \
+   git add <files>
+   git commit -m "feat(skills): update <skill> definition for <change>"
+   git push -u origin update-skill-definition
+   gh pr create --title "Update <skill> definition" \
      --body "Coordinates with HomericIntelligence/ProjectMnemosyne#<number>"
-   PR_NUMBER=$(gh pr list --repo HomericIntelligence/ProjectHephaestus \
-     --head fix-skill-definition --json number --jq '.[0].number')
-   gh pr merge "$PR_NUMBER" --auto --rebase --repo HomericIntelligence/ProjectHephaestus
+   gh pr merge --auto --rebase
    ```
 
 **Phase 3: Verify both PRs**
@@ -168,8 +166,7 @@ Is the PR a rename/refactor where the intent is to change text references?
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| N/A (Phase 1) | Direct approach worked first try | N/A | Batch `--theirs` was correct because all 8 conflicts followed the identical rename pattern |
-| Sub-agent for skill definition fix | Delegated the myrmidon-swarm SKILL.md edits to a sub-agent | Agent made all file edits correctly but returned to main context without running git add/commit/push/PR | Sub-agents may not complete git workflows — always run git operations in main context after the agent returns |
+| N/A | Direct approach worked first try | N/A | Batch `--theirs` was correct because all 8 conflicts followed the identical rename pattern |
 
 ## Results & Parameters
 
@@ -198,25 +195,19 @@ secondary_pr:
   number: 203
   change: "Add Execution Model section to /learn skill definition"
 
-myrmidon_fix_pr:
-  repo: ProjectHephaestus
-  number: 205
-  change: "Fix myrmidon-swarm skill: make /learn auto-invoke mandatory, fix stale /retrospective reference"
-
 dependency: none  # PRs are independently mergeable
-coordination: "Secondary PRs reference primary for context"
+coordination: "Secondary PR references primary for context"
 ```
 
 ### Key Patterns
 
 | Pattern | Description |
 |---------|-------------|
-| Homogeneous conflicts | All conflicts in a rename PR tend to be the same pattern — safe to batch-resolve |
-| `--theirs` for renames | The PR branch has the correct renamed text; main has the old text — always take theirs |
+| Homogeneous conflicts | All conflicts in a rename PR tend to be the same pattern -- safe to batch-resolve |
+| `--theirs` for renames | The PR branch has the correct renamed text; main has the old text -- always take theirs |
 | Validate after resolve | Always run the repo's validation script before pushing (e.g., `validate_plugins.py`) |
-| Independent PRs | Cross-repo updates should not block each other — file them as separate PRs |
+| Independent PRs | Cross-repo updates should not block each other -- file them as separate PRs |
 | Link PRs for context | Reference the related PR in the body so reviewers understand the coordination |
-| Git ops in main context | Sub-agents may not complete git workflows — always run add/commit/push/PR in main context |
 
 ## Verified On
 
@@ -224,11 +215,16 @@ coordination: "Secondary PRs reference primary for context"
 |---------|---------|---------|
 | ProjectMnemosyne | PR #1061, rename retrospective to learn (8 conflicts resolved) | 2026-03-26 session |
 | ProjectHephaestus | PR #203, add Execution Model section to /learn skill | 2026-03-26 session |
-| ProjectHephaestus | PR #205, fix myrmidon-swarm skill auto-invoke directives | 2026-03-28 session |
 
 ## References
 
 - [tooling-plugin-command-codebase-rename](tooling-plugin-command-codebase-rename.md) - The rename operation itself (41-file content changes)
-- [tooling-python-codebase-symbol-rename](tooling-python-codebase-symbol-rename.md) - Renaming Python symbols across a Python codebase
 - [mass-pr-rebase-conflict-resolution](mass-pr-rebase-conflict-resolution.md) - Batch-rebasing many PRs with diverse conflicts
 - [pixi-lock-rebase-regenerate](pixi-lock-rebase-regenerate.md) - Related: lock file regeneration after rebase
+```
+
+---
+
+## v1.0.0 (2026-03-26)
+
+**Initial version.**
