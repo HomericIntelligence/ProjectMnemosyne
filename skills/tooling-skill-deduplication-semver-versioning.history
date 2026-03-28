@@ -1,5 +1,39 @@
 # tooling-skill-deduplication-semver-versioning -- History
 
+## v1.5.0 (2026-03-28)
+
+**Changed by:** PR #1097 -- consolidate 4 adr009-* skills into 1 with OBSOLETE notice
+**Verification:** verified-ci
+
+### What changed
+- Added Round 6 deduplication result: 4 adr009-* skills -> 1 (ADR-009 declared OBSOLETE)
+- Added "Special case: OBSOLETE topics" guidance to Verified Workflow
+- Added Failed Attempts row: stopping at 3 when topic is OBSOLETE
+- Added new trigger: skill covers a topic that is now OBSOLETE
+- Updated "Top Duplicate Clusters Remaining" to note PR #1097
+- Added new Verified On entry for PR #1097
+
+### Why
+After Round 5 consolidated 12 adr009 skills into 3 well-organized sub-skills, the ADR-009
+workaround was declared fixed at the compiler/runtime level. The user requirement to add a
+prominent OBSOLETE notice motivated further consolidation from 3 to 1: splitting the notice
+across 3 separate skill files would fragment the OBSOLETE message. A single canonical skill
+with the OBSOLETE notice immediately after the Overview table was the correct design.
+Also merged adr009-ci-pattern-updates.md (4th file) into the same consolidated skill.
+
+### Previous version (v1.4.0) snapshot
+date: 2026-03-28
+version: "1.4.0"
+Outcome: Five rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5); 9 conv2d-gradient-* merged to 3 (net -6); 12 adr009-test-splitting-* merged to 3 (net -9). Semver rules added.
+Verified On:
+- ProjectMnemosyne | PR #1040, merged 16 adr009 skills + added semver | 2026-03-25 session
+- ProjectMnemosyne | PR #1075, merged 10 mojo-test-* skills into 1 | 2026-03-27 session
+- ProjectMnemosyne | PR #1077, merged 6 deprecated-file-cleanup-* skills into 1 | 2026-03-28 session
+- ProjectMnemosyne | PR #1080, merged 9 conv2d-gradient-* skills into 3 | 2026-03-28 session
+- ProjectMnemosyne | PR #1086, re-consolidated 12 adr009-test-splitting-* skills into 3 | 2026-03-28 session
+
+---
+
 ## v1.4.0 (2026-03-28)
 
 **Changed by:** PR #1086 -- re-consolidate ADR-009 test splitting skills (12->3, second pass)
