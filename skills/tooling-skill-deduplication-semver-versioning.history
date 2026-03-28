@@ -1,5 +1,32 @@
 # tooling-skill-deduplication-semver-versioning -- History
 
+## v1.3.0 (2026-03-28)
+
+**Changed by:** PR #1085 -- consolidate CI failure triage skills (18->3)
+**Verification:** verified-ci
+
+### What changed
+- Added Round 4 deduplication result: CI-failure-triage cluster (18->3, 83% reduction)
+- New finding: large clusters with clear topic sub-divisions benefit from splitting by topic (not forcing to 1)
+- Updated "Top Duplicate Clusters Remaining" to note CI failure triage cluster resolved
+- Added new Verified On entry for PR #1085
+
+### Why
+18 CI failure triage skills were identified across ci-*, diagnose-*, fix-ci-*, pre-existing-*, verify-ci-*
+prefixes. Unlike prior rounds where a single merged skill worked, these 18 files contained 3 distinct
+topics: (1) log reading/diagnosis, (2) concrete fix patterns, (3) pre-existing failure triage. Splitting
+into 3 focused skills preserved the topic separation and prevented one monolithic skill from becoming
+too broad. Key new learning: when a cluster spans clear sub-domains, split by topic even if it means
+3 output files instead of 1.
+
+### Previous version (v1.2.0) snapshot
+date: 2026-03-28
+version: "1.2.0"
+Outcome: Three rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5). Semver rules added.
+Verified On: PR #1040, PR #1075, PR #1077
+
+---
+
 ## v1.2.0 (2026-03-28)
 
 **Changed by:** PR #1077 -- consolidate deprecated file cleanup skills (6->1)

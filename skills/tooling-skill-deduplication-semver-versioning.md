@@ -3,7 +3,7 @@ name: tooling-skill-deduplication-semver-versioning
 description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes."
 category: tooling
 date: 2026-03-28
-version: "1.2.0"
+version: "1.3.0"
 user-invocable: false
 verification: verified-ci
 history: tooling-skill-deduplication-semver-versioning.history
@@ -18,7 +18,7 @@ tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 |-------|-------|
 | **Date** | 2026-03-28 |
 | **Objective** | Merge duplicate skill clusters into consolidated skills, with semantic versioning for amendments |
-| **Outcome** | Three rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5). Semver rules added. |
+| **Outcome** | Four rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5); 18 CI-failure-triage-* merged to 3 (net -15). Semver rules added. |
 | **Verification** | verified-ci |
 | **History** | [changelog](./tooling-skill-deduplication-semver-versioning.history) |
 
@@ -131,6 +131,23 @@ unique_lessons_preserved: 8 Failed Attempts rows
 consolidated_into: deprecated-file-stub-cleanup
 ```
 
+**Round 4: CI failure triage cluster (2026-03-28)**
+
+```yaml
+skills_before: 18
+skills_after: 3
+net_reduction: 15 skills (-83%)
+files_deleted: 35 (18 .md + 17 .notes.md)
+lines_deleted: 4303
+lines_added: 1034
+unique_lessons_preserved: 25+ Failed Attempts rows across 3 skills
+consolidated_into:
+  - ci-cd-failure-diagnosis-log-analysis (7 sources)
+  - ci-cd-failure-fix-patterns (6 sources)
+  - ci-cd-preexisting-failure-triage (5 sources)
+split_strategy: by_topic_not_prefix (3 distinct topics within ci-* prefix)
+```
+
 ### Semver Rules for /learn
 
 | Change Type | Bump | When |
@@ -154,7 +171,7 @@ consolidated_into: deprecated-file-stub-cleanup
 5  batch-pr-*
 ```
 
-Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-file-*` cluster (was 6) resolved in PR #1077 (6->1).
+Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-file-*` cluster (was 6) resolved in PR #1077 (6->1). CI failure triage cluster (was 18+) resolved in PR #1085 (18->3).
 
 ## Verified On
 
@@ -163,3 +180,4 @@ Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-fi
 | ProjectMnemosyne | PR #1040, merged 16 adr009 skills + added semver | 2026-03-25 session |
 | ProjectMnemosyne | PR #1075, merged 10 mojo-test-* skills into 1 | 2026-03-27 session |
 | ProjectMnemosyne | PR #1077, merged 6 deprecated-file-cleanup-* skills into 1 | 2026-03-28 session |
+| ProjectMnemosyne | PR #1085, merged 18 CI-failure-triage-* skills into 3 | 2026-03-28 session |
