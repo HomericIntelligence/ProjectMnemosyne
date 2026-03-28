@@ -1,11 +1,12 @@
 ---
 name: batch-pr-rebase-conflict-resolution-workflow
-description: "Use when: (1) many PRs show DIRTY/CONFLICTING merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files)."
+description: "Use when: (1) many PRs show DIRTY/CONFLICTING merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files), (6) delegating mass rebase to a Myrmidon swarm of parallel agents."
 category: ci-cd
-date: 2026-03-28
-version: "1.0.0"
+date: 2026-03-27
+version: "1.1.0"
 user-invocable: false
-verification: unverified
+verification: verified-local
+history: batch-pr-rebase-conflict-resolution-workflow.history
 tags: []
 ---
 # Batch PR Rebase and Conflict Resolution Workflow
@@ -14,9 +15,10 @@ tags: []
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-03-28 |
-| **Objective** | Rebase many stale/conflicting PRs, resolve merge conflicts, wave-based execution, cherry-pick consolidation |
-| **Outcome** | Consolidated from 7 source skills |
+| **Date** | 2026-03-27 |
+| **Objective** | Rebase many stale/conflicting PRs, resolve merge conflicts, wave-based execution, cherry-pick consolidation, Myrmidon swarm delegation |
+| **Outcome** | Consolidated from 7 source skills; extended with Myrmidon swarm pattern (v1.1.0) |
+| **History** | [changelog](./batch-pr-rebase-conflict-resolution-workflow.history) |
 
 ## When to Use
 
@@ -29,10 +31,14 @@ tags: []
 - CI queue has 50+ queued/in-progress runs blocking all PRs (use cherry-pick consolidation)
 - A systemic workflow failure blocks all PRs from getting required CI checks
 
+- Delegating parallel rebase to a Myrmidon swarm of Haiku agents (≤5 agents per wave)
+- Branch list has multiple 0-commits-ahead entries to skip before launching agents
+
 **Common trigger phrases:**
 - "Fix these failing PRs", "Multiple PRs with DIRTY state"
 - "Rebase all branches onto main", "Mass rebase after merge wave"
 - "CI queue is backed up with 800+ jobs"
+- "Use the Myrmidon swarm to rebase all branches"
 
 ## Verified Workflow
 
@@ -108,6 +114,61 @@ on:
 ```
 
 Merge the fix first, then rebase all PRs to pick up the new trigger.
+
+### Phase 0.5: Pre-flight Branch Classification (Required Before Swarm Launch)
+
+Before launching any agents, classify all remote branches to identify which actually need
+rebasing. Branches with 0 commits ahead of main are already in main — skip them entirely.
+
+```bash
+# Identify branches worth rebasing (skip 0-commits-ahead)
+for branch in $(git branch -r | grep -v "origin/main\|origin/HEAD\|gh-pages" | sed 's/  origin\///'); do
+  ahead=$(git rev-list --count origin/main..origin/$branch 2>/dev/null)
+  behind=$(git rev-list --count origin/$branch..origin/main 2>/dev/null)
+  pr=$(gh pr list --head "$branch" --json number,state --jq '.[0].number' 2>/dev/null)
+  echo "$branch: $ahead ahead, $behind behind, PR: $pr"
+done
+```
+
+**Typical output for 13 branches:**
+- 5 branches: `0 ahead` → already merged, skip
+- 8 branches: `N ahead, M behind` → need rebase
+
+**CRITICAL**: Present the branch list for human confirmation before launching agents on mass operations. An ambiguous "rebase all branches" instruction may target only a specific branch.
+
+### Myrmidon Swarm Execution Pattern
+
+When delegating parallel rebase to a Myrmidon swarm:
+
+**Wave sizing**: Max 5 agents per wave to avoid resource exhaustion.
+
+```
+Total branches: 8
+Wave 1: branches 1-5 (parallel)
+Wave 2: branches 6-8 (parallel, after Wave 1 complete)
+```
+
+**Model tier selection**:
+- Haiku: sufficient for mechanical rebase (fetch, rebase, push)
+- Sonnet: escalate only if conflict requires understanding domain-specific logic
+- Opus: not needed for rebase work
+
+**Agent instructions that work reliably**:
+
+```
+- Use --force-with-lease not --force
+- Never git add -A or git add . — stage specific files only
+- If rebase results in an empty commit, run git rebase --skip
+- If conflict cannot be confidently resolved, abort and report — do not guess
+- For CI/workflow files (.github/), prefer main's version unless branch change is clearly additive
+```
+
+**Conflict resolution defaults for agents**:
+- `.github/workflows/` files: take main's version (more comprehensive patterns)
+- Empty commits after rebase: `git rebase --skip` (branch changes already in main)
+- Unresolvable conflicts: abort and escalate to orchestrator
+
+**Expected results**: ~75% clean rebase, ~25% simple workflow file conflicts. Total wall-clock: ~5 min for 8 branches with Haiku agents.
 
 ### Phase 1: Triage PRs by Status and Identify Superseded PRs
 
@@ -464,6 +525,8 @@ git fetch origin main && git pull --ff-only origin main
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
+| Wrong-target mass operation | Launched swarm with "rebase all branches" before confirming scope | User intended only one specific branch; swarm rebased 8 branches | For mass operations, present branch list for human confirmation before launching |
+| No-PR branch with deleted remote | `fix-ci-failures-asan-circular-benchmark` had remote deleted from failed earlier push | Force-with-lease rejected; branch appeared gone | Detect via `git ls-remote --heads origin <branch>` — if empty, push as new branch (`git push -u origin`) |
 | `git add .` during rebase | Used `git add .` to stage resolved files | Accidentally committed untracked files (repro_crash, output.sanitize) | Always use `git add SPECIFIC_FILE` during rebase, never `git add .` |
 | `git checkout main 2>&1` | Used `2>&1` redirect with git checkout | Safety Net parsed `2>&1` as positional args | Use `git switch` instead of `git checkout` to avoid safety net issues |
 | `git branch -D temp-N` | Force-deleted temp branch | Safety Net blocked `-D` flag | Use `git branch -d` (safe delete) instead |
@@ -554,6 +617,7 @@ gh api rate_limit --jq '.rate | "Limit: \(.limit), Remaining: \(.remaining), Res
 | Scale | Method | Time |
 |-------|--------|------|
 | 3-10 PRs (DIRTY) | Sequential: temp branch → rebase → push → auto-merge | ~2-3 min/PR |
+| 8 branches | Myrmidon swarm: 2 waves of Haiku agents (5+3), max 5 per wave | ~5 min total |
 | 10-30 PRs | Batch rebase script + semantic conflict resolution | 1-2 hours |
 | 30-160 PRs | Mass rebase script + wave execution | 2-4 hours |
 | 130+ PRs with 800+ CI jobs | Cancel CI + cherry-pick consolidation | Eliminates ~$2000+ compute |
@@ -570,3 +634,4 @@ gh api rate_limit --jq '.rate | "Limit: \(.limit), Remaining: \(.remaining), Res
 | ProjectScylla | 30 stale PRs, 2 closed duplicates, 6 quick-wins, 2026-02-20 | batch-pr-rebase-workflow source |
 | ProjectScylla | PRs #1462, #1452 pre-commit + conflict fix, 2026-03-08 | batch-pr-pre-commit-fixes source |
 | ProjectOdyssey | PR #3189 (single PR staleness fix), 2026-03-05 | pr-ci-fix-via-rebase source |
+| ProjectOdyssey | 8 branches, Myrmidon swarm 2-wave (5+3 Haiku agents), ~5 min, 2026-03-27 | 6/8 clean, 2/8 workflow conflicts resolved by taking main's version |
