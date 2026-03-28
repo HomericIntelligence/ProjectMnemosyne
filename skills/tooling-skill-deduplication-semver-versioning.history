@@ -1,5 +1,45 @@
 # tooling-skill-deduplication-semver-versioning -- History
 
+## v1.2.0 (2026-03-28)
+
+**Changed by:** PR #1079 -- consolidate preflight/verify-before-work skills (9->2)
+**Verification:** verified-ci
+
+### What changed
+
+- Added new deduplication result: preflight cluster (9->2, 78% reduction)
+- Added sub-grouping heuristic: "manual workflow vs automation patterns" split axis
+- Added Failed Attempts row: `gh pr merge --auto --squash` fails if squash disabled
+- Updated "Top Duplicate Clusters Remaining" to remove `preflight-*` count
+- Added new Verified On entry for PR #1079
+
+### Why
+
+The preflight cluster (9 files) split cleanly along a "manual vs automation" axis rather
+than being pure duplicates. This validates a new sub-grouping heuristic: when a cluster
+contains both "how to do X manually" and "how to build automation for X", split into two
+consolidated files rather than forcing a single merge. Also discovered that
+`gh pr merge --auto --squash` fails silently when the repo disables squash merging;
+the fallback is `--rebase`.
+
+### Previous version (v1.1.0) snapshot
+
+---
+name: tooling-skill-deduplication-semver-versioning
+description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes."
+category: tooling
+date: 2026-03-27
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: tooling-skill-deduplication-semver-versioning.history
+tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
+---
+
+See v1.1.0 entry below for full content snapshot.
+
+---
+
 ## v1.1.0 (2026-03-27)
 
 **Changed by:** PR #1075 -- consolidate Mojo test splitting skills (10->1)
