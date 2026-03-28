@@ -1,9 +1,9 @@
 ---
 name: tooling-skill-deduplication-semver-versioning
-description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes."
+description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes, (4) deduplicating thematic clusters (same concern, varying prefixes) not just common-prefix clusters."
 category: tooling
 date: 2026-03-28
-version: "1.3.0"
+version: "1.4.0"
 user-invocable: false
 verification: verified-ci
 history: tooling-skill-deduplication-semver-versioning.history
@@ -18,13 +18,14 @@ tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 |-------|-------|
 | **Date** | 2026-03-28 |
 | **Objective** | Merge duplicate skill clusters into consolidated skills, with semantic versioning for amendments |
-| **Outcome** | Four rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5); 9 conv2d-gradient-* merged to 3 (net -6). Semver rules added. |
+| **Outcome** | Five rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5); 9 conv2d-gradient-* merged to 3 (net -6); 18 CI matrix/glob-* merged to 4 (net -14). Semver rules added. |
 | **Verification** | verified-ci |
 | **History** | [changelog](./tooling-skill-deduplication-semver-versioning.history) |
 
 ## When to Use
 
 - Multiple skills share a common prefix (e.g., `adr009-*`, `pr-review-*`, `mojo-test-*`)
+- Multiple skills share a common **theme** across different prefixes (e.g., all about CI matrix patterns spread across `ci-catchall-*`, `ci-matrix-*`, `ci-workflow-glob-*`, `mojo-ci-*`, `stale-ci-*`)
 - `/advise` returns redundant or contradictory advice for the same topic
 - Need to identify duplicate clusters in a large skills registry (1000+ skills)
 - Updating `/learn` versioning rules to use semantic versioning
@@ -38,7 +39,10 @@ tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 ls skills/*.md | grep -v notes.md | grep -v history | sed 's|skills/||;s|\.md$||' | \
   awk -F'-' '{print $1"-"$2}' | sort | uniq -c | sort -rn | head -20
 
-# List all skills in a cluster
+# Find thematic clusters (CI-related): keywords across many prefixes
+ls skills/*.md | grep -v notes.md | grep -i "ci-\|ci_\|-ci-\|-ci\." | sed 's|skills/||;s|\.md$||'
+
+# List all skills in a prefix cluster
 ls skills/<prefix>*.md | grep -v notes.md | grep -v history
 
 # Read descriptions to group by subtopic
@@ -53,7 +57,9 @@ done
 
 1. List all skill names, extract 2-part prefixes, count occurrences
 2. Focus on clusters with 3+ skills sharing a prefix
-3. Read descriptions to sub-group within each cluster (e.g., adr009-* split into: test-splitting, CI-patterns, audit)
+3. For large thematic areas (e.g., all CI skills), also use keyword grep across prefixes to find thematic clusters that don't share a common prefix
+4. Read descriptions to sub-group within each cluster (e.g., adr009-* split into: test-splitting, CI-patterns, audit)
+5. Read the actual skill content — descriptions often don't reveal the true overlap
 
 **Phase 2: Merge each sub-group**
 
@@ -94,6 +100,8 @@ For multiple clusters, launch parallel agents (one per group) in the same worktr
 | Cross-category consolidation | Source skills had mismatched categories (e.g., one marked `documentation`, rest `tooling`) | Category was set per-skill rather than reflecting the actual content topic | When consolidating, pick the most accurate category for the merged skill's actual function, not just the majority |
 | Over-splitting subtopics | Planned 9 conv2d skills into more than 3 groups | Content analysis showed clear 3-way split: finite-difference checks, depthwise-specific quirks, analytical-value tests | Group by actual usage scenario (how the tests are written), not by file naming pattern |
 | Depthwise mixed with standard conv2d | Considered merging depthwise into the standard conv2d finite-differences skill | Depthwise has critical API differences (kernel shape, field names, tolerance API) that warrant a dedicated skill | Even when topics are adjacent, separate skills when the API contract differs significantly |
+| Prefix-only clustering | Only searched for common-prefix groups (e.g., `ci-matrix-*`) | Missed thematic clusters where related skills had different prefixes (`ci-catchall-*`, `mojo-ci-*`, `stale-ci-*`, `reenable-*`) | After prefix clustering, also do keyword-grep clustering for domain areas (e.g., all CI, all Mojo, all git) |
+| Reading only descriptions to assess overlap | Skimmed YAML description field to decide if skills overlapped | Descriptions are often too brief — two skills with different descriptions can teach the same lesson | Always read the full skill content before deciding whether to merge |
 
 ## Results & Parameters
 
@@ -149,6 +157,32 @@ split_into:
 key_insight: topic-adjacent skills with different APIs warrant separate skills even in same domain
 ```
 
+**Round 5: CI matrix/glob thematic cluster (2026-03-28)**
+
+```yaml
+skills_before: 18
+skills_after: 4
+net_reduction: 14 skills (-78%)
+files_deleted: 34 (18 .md + 16 .notes.md)
+lines_before: 3721
+lines_after: 1295
+unique_lessons_preserved: all Failed Attempts rows merged
+discovery_method: keyword-grep across prefixes (thematic, not prefix-based)
+split_into:
+  - ci-matrix-group-management (9 sources: split, promote, consolidate, dedup, timeout, flaky, mypy entry)
+  - ci-glob-pattern-conversion (5 sources: explicit→wildcard, catch-all timeout, wildcard detection)
+  - ci-stale-pattern-cleanup (2 sources: detect and remove stale patterns)
+  - ci-workflow-file-consolidation (2 sources: merge workflow files, ADR-009 CI updates)
+key_insight: thematic clusters span many prefixes; keyword-grep finds them better than prefix counting
+```
+
+### Thematic Cluster Grouping Heuristics
+
+For thematic merges (not prefix-based), group by the functional concern:
+- Group by the action performed (split vs. convert vs. detect vs. consolidate)
+- Group by the artifact modified (matrix group vs. glob pattern vs. workflow file)
+- Keep each output skill focused enough to have a clear, distinct "When to Use" trigger
+
 ### Semver Rules for /learn
 
 | Change Type | Bump | When |
@@ -172,7 +206,7 @@ key_insight: topic-adjacent skills with different APIs warrant separate skills e
 5  batch-pr-*
 ```
 
-Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-file-*` cluster (was 6) resolved in PR #1077 (6->1). `conv2d-gradient-*` cluster (was 9) resolved in PR #1080 (9->3).
+Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-file-*` cluster (was 6) resolved in PR #1077 (6->1). `conv2d-gradient-*` cluster (was 9) resolved in PR #1080 (9->3). CI matrix/glob thematic cluster resolved in PR #1088 (18->4).
 
 ## Verified On
 
@@ -182,3 +216,4 @@ Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-fi
 | ProjectMnemosyne | PR #1075, merged 10 mojo-test-* skills into 1 | 2026-03-27 session |
 | ProjectMnemosyne | PR #1077, merged 6 deprecated-file-cleanup-* skills into 1 | 2026-03-28 session |
 | ProjectMnemosyne | PR #1080, merged 9 conv2d-gradient-* skills into 3 | 2026-03-28 session |
+| ProjectMnemosyne | PR #1088, merged 18 CI matrix/glob skills into 4 (thematic cluster) | 2026-03-28 session |

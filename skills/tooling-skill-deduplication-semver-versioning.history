@@ -1,5 +1,40 @@
 # tooling-skill-deduplication-semver-versioning -- History
 
+## v1.4.0 (2026-03-28)
+
+**Changed by:** PR #1088 -- consolidate CI matrix/glob pattern skills (18->4, thematic cluster)
+**Verification:** verified-ci
+
+### What changed
+- Added Round 5 deduplication result: CI matrix/glob thematic cluster (18->4, 78% reduction)
+- Added trigger for thematic (non-prefix) clusters in "When to Use"
+- Added keyword-grep command to Quick Reference for finding thematic clusters
+- Added Phase 1 steps: keyword-grep for thematic areas, reading full skill content
+- Added 2 new Failed Attempts rows: prefix-only clustering misses thematic clusters; description-only assessment misleading
+- Added "Thematic Cluster Grouping Heuristics" subsection to Results & Parameters
+- Updated "Top Duplicate Clusters Remaining" note to reflect CI matrix cluster is resolved
+- Added new Verified On entry for PR #1088
+
+### Why
+18 CI skills covering matrix group management, glob pattern conversion, stale pattern cleanup,
+and workflow file consolidation were spread across many different prefixes (ci-catchall-*, ci-matrix-*,
+ci-workflow-glob-*, mojo-ci-*, stale-ci-*, reenable-*, consolidate-ci-*, deduplicate-ci-*). The
+prefix-only clustering approach (which found adr009-* and mojo-test-*) would have missed this group.
+Keyword-grep across all skills/\*.md files for "ci" in the filename revealed the full extent of the
+thematic cluster. This validates extending the discovery workflow beyond prefix counting alone.
+
+### Previous version (v1.3.0) snapshot
+date: 2026-03-28
+version: "1.3.0"
+Outcome: Four rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5); 9 conv2d-gradient-* merged to 3 (net -6). Semver rules added.
+Verified On:
+- ProjectMnemosyne | PR #1040, merged 16 adr009 skills + added semver | 2026-03-25 session
+- ProjectMnemosyne | PR #1075, merged 10 mojo-test-* skills into 1 | 2026-03-27 session
+- ProjectMnemosyne | PR #1077, merged 6 deprecated-file-cleanup-* skills into 1 | 2026-03-28 session
+- ProjectMnemosyne | PR #1080, merged 9 conv2d-gradient-* skills into 3 | 2026-03-28 session
+
+---
+
 ## v1.3.0 (2026-03-28)
 
 **Changed by:** PR #1080 -- consolidate conv2d gradient checking skills (9->3)
