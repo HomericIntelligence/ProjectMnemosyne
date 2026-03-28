@@ -3,7 +3,7 @@ name: tooling-skill-deduplication-semver-versioning
 description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes."
 category: tooling
 date: 2026-03-28
-version: "1.3.0"
+version: "1.4.0"
 user-invocable: false
 verification: verified-ci
 history: tooling-skill-deduplication-semver-versioning.history
@@ -18,7 +18,7 @@ tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 |-------|-------|
 | **Date** | 2026-03-28 |
 | **Objective** | Merge duplicate skill clusters into consolidated skills, with semantic versioning for amendments |
-| **Outcome** | Four rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5); 9 conv2d-gradient-* merged to 3 (net -6). Semver rules added. |
+| **Outcome** | Five rounds: 16 adr009-* → 3 (net -13); 10 mojo-test-* → 1 (net -9); 6 deprecated-file-cleanup-* → 1 (net -5); 9 conv2d-gradient-* → 3 (net -6); 17 batch/mass-pr-* → 3 (net -14). Semver rules added. |
 | **Verification** | verified-ci |
 | **History** | [changelog](./tooling-skill-deduplication-semver-versioning.history) |
 
@@ -94,6 +94,7 @@ For multiple clusters, launch parallel agents (one per group) in the same worktr
 | Cross-category consolidation | Source skills had mismatched categories (e.g., one marked `documentation`, rest `tooling`) | Category was set per-skill rather than reflecting the actual content topic | When consolidating, pick the most accurate category for the merged skill's actual function, not just the majority |
 | Over-splitting subtopics | Planned 9 conv2d skills into more than 3 groups | Content analysis showed clear 3-way split: finite-difference checks, depthwise-specific quirks, analytical-value tests | Group by actual usage scenario (how the tests are written), not by file naming pattern |
 | Depthwise mixed with standard conv2d | Considered merging depthwise into the standard conv2d finite-differences skill | Depthwise has critical API differences (kernel shape, field names, tolerance API) that warrant a dedicated skill | Even when topics are adjacent, separate skills when the API contract differs significantly |
+| Single monolithic skill for heterogeneous clusters | Considered merging all 17 batch/mass PR operation skills into one file | Skills covered 3 distinct scenarios (CI fixing, conflict rebasing, worktree isolation) that are triggered independently | When a cluster spans distinct operational scenarios, semantic sub-grouping into 2-3 skills is better than one large monolith |
 
 ## Results & Parameters
 
@@ -149,6 +150,23 @@ split_into:
 key_insight: topic-adjacent skills with different APIs warrant separate skills even in same domain
 ```
 
+**Round 5: Batch/mass PR operations cluster (2026-03-28)**
+
+```yaml
+skills_before: 17
+skills_after: 3
+net_reduction: 14 skills (-82%)
+files_deleted: 34 (17 .md + 15 .notes.md + 2 .history companions)
+lines_deleted: 5207
+lines_added: 1468
+split_into:
+  - batch-pr-ci-fix-workflow (CI failure diagnosis + fix: formatting, pre-commit, JSON, links, staleness)
+  - batch-pr-rebase-conflict-resolution-workflow (mass rebase, wave-based execution, cherry-pick consolidation)
+  - parallel-pr-worktree-workflow (git worktree isolation for parallel agents, bulk skill PR triage)
+key_insight: heterogeneous clusters (some about CI fixing, some about rebase, some about worktrees)
+           benefit from semantic sub-grouping rather than a single monolithic skill
+```
+
 ### Semver Rules for /learn
 
 | Change Type | Bump | When |
@@ -172,7 +190,7 @@ key_insight: topic-adjacent skills with different APIs warrant separate skills e
 5  batch-pr-*
 ```
 
-Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-file-*` cluster (was 6) resolved in PR #1077 (6->1). `conv2d-gradient-*` cluster (was 9) resolved in PR #1080 (9->3).
+Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-file-*` cluster (was 6) resolved in PR #1077 (6->1). `conv2d-gradient-*` cluster (was 9) resolved in PR #1080 (9->3). `batch-pr-*/mass-pr-*/parallel-pr-*` cluster (was 17) resolved in PR #1089 (17->3).
 
 ## Verified On
 
@@ -182,3 +200,4 @@ Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-fi
 | ProjectMnemosyne | PR #1075, merged 10 mojo-test-* skills into 1 | 2026-03-27 session |
 | ProjectMnemosyne | PR #1077, merged 6 deprecated-file-cleanup-* skills into 1 | 2026-03-28 session |
 | ProjectMnemosyne | PR #1080, merged 9 conv2d-gradient-* skills into 3 | 2026-03-28 session |
+| ProjectMnemosyne | PR #1089, merged 17 batch/mass/parallel-pr-* skills into 3 | 2026-03-28 session |

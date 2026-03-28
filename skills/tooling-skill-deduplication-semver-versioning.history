@@ -1,5 +1,25 @@
 # tooling-skill-deduplication-semver-versioning -- History
 
+## v1.4.0 (2026-03-28)
+
+**Changed by:** PR #1089 -- consolidate 17 batch/mass PR operation skills into 3
+**Verification:** verified-ci
+
+### What changed
+- Added Round 5 deduplication result: batch/mass/parallel-pr-* cluster (17->3, 82% reduction)
+- Added 1 new Failed Attempts row: single monolithic skill for heterogeneous clusters
+- Updated Outcome summary to reflect 5 rounds total
+- Updated "Top Duplicate Clusters Remaining" note with PR #1089 resolution
+- Added Verified On entry for PR #1089
+
+### Why
+The batch/mass PR operations cluster (17 files: batch-pr-*, mass-pr-*, parallel-pr-*, bulk-pr-*, pr-ci-*)
+was the next large deduplication target. Split into 3 skills by operational scenario (CI fixing, conflict
+rebasing, worktree isolation) rather than merging all 17 into one monolith — validates the sub-grouping
+pattern when a cluster covers distinct triggering scenarios.
+
+---
+
 ## v1.3.0 (2026-03-28)
 
 **Changed by:** PR #1080 -- consolidate conv2d gradient checking skills (9->3)
