@@ -1,5 +1,42 @@
 # tooling-skill-deduplication-semver-versioning -- History
 
+## v1.2.0 (2026-03-28)
+
+**Changed by:** PR #1077 -- consolidate deprecated file cleanup skills (6->1)
+**Verification:** verified-ci
+
+### What changed
+- Added new deduplication result: deprecated-file-cleanup-* cluster (6->1, 83% reduction)
+- Added Failed Attempts row: cross-category consolidation — pick the correct category for merged output, not the majority
+- Updated "Top Duplicate Clusters Remaining" to reflect deprecated-file-* is now resolved
+- Added new Verified On entry for PR #1077
+
+### Why
+Six overlapping skills covering the same topic (safe deletion of deprecated files/stubs) were identified
+as a consolidation target. Sources included mismatched categories (`documentation` vs `tooling`). The
+merged skill `deprecated-file-stub-cleanup.md` preserved all 8 unique learnings including the Mojo
+directory-vs-file resolution insight, the grep-all-file-types rule, and GLIBC/mojo-format workaround.
+
+### Previous version (v1.1.0) snapshot
+---
+name: tooling-skill-deduplication-semver-versioning
+description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes."
+category: tooling
+date: 2026-03-27
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: tooling-skill-deduplication-semver-versioning.history
+tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
+
+Outcome: Two rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9). Semver rules added.
+
+Verified On:
+- ProjectMnemosyne | PR #1040, merged 16 adr009 skills + added semver | 2026-03-25 session
+- ProjectMnemosyne | PR #1075, merged 10 mojo-test-* skills into 1 | 2026-03-27 session
+
+---
+
 ## v1.1.0 (2026-03-27)
 
 **Changed by:** PR #1075 -- consolidate Mojo test splitting skills (10->1)
