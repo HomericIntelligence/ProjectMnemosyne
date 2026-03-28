@@ -1,5 +1,35 @@
 # tooling-skill-deduplication-semver-versioning -- History
 
+## v1.4.0 (2026-03-28)
+
+**Changed by:** PR #1086 -- re-consolidate ADR-009 test splitting skills (12->3, second pass)
+**Verification:** verified-ci
+
+### What changed
+- Added Round 5 deduplication result: adr009-test-splitting-* cluster (12->3, 75% reduction)
+- Added Failed Attempts row: one-time merges are not durable — /learn creates re-duplications organically
+- Updated "Top Duplicate Clusters Remaining" note to reflect PR #1086
+- Added new Verified On entry for PR #1086
+
+### Why
+After Round 1 merged 16 adr009-* skills into 3, subsequent /learn sessions created 12 new duplicate
+skills covering the same ADR-009 test splitting topic. This confirms that deduplication is not
+permanent — it must be re-run periodically. The 12 files were re-consolidated back into 3 canonical
+skills (workflow, audit/recovery, desplit/merge). The desplit skill preserves a critical dedup bug
+warning in the merge script that drops struct definitions by assigning them all the name "<top-level>".
+
+### Previous version (v1.3.0) snapshot
+date: 2026-03-28
+version: "1.3.0"
+Outcome: Four rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5); 9 conv2d-gradient-* merged to 3 (net -6). Semver rules added.
+Verified On:
+- ProjectMnemosyne | PR #1040, merged 16 adr009 skills + added semver | 2026-03-25 session
+- ProjectMnemosyne | PR #1075, merged 10 mojo-test-* skills into 1 | 2026-03-27 session
+- ProjectMnemosyne | PR #1077, merged 6 deprecated-file-cleanup-* skills into 1 | 2026-03-28 session
+- ProjectMnemosyne | PR #1080, merged 9 conv2d-gradient-* skills into 3 | 2026-03-28 session
+
+---
+
 ## v1.3.0 (2026-03-28)
 
 **Changed by:** PR #1080 -- consolidate conv2d gradient checking skills (9->3)
