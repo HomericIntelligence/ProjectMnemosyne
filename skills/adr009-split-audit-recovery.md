@@ -1,20 +1,17 @@
 ---
-name: adr009-split-audit
-description: 'Audit Mojo test files for ADR-009 compliance, create GitHub issues for violations,
-  split files, verify no tests were dropped, and recover missing tests. Use when: (1) CI
-  is failing due to Mojo heap corruption linked to per-file test count violations, (2) an
-  ADR mandates a test limit and you need to enumerate all violations as actionable issues,
-  (3) investigating whether a test file split omitted any test functions, (4) verifying that
-  all tests from a deprecated file are present in successor split files, (5) a split was
-  previously done but tests are still failing or the issue remains open, (6) the post-split
-  test count does not match the original file count, (7) other test files in the same CI group
-  also violate ADR-009, (8) fixing an ADR-009 violation and sibling files may also exceed
-  the limit, (9) no dedicated CI group exists for the test family, (10) split files are
-  buried in an overloaded CI group.'
+name: adr009-split-audit-recovery
+description: "Use when: (1) auditing the entire codebase for ADR-009 violations and creating
+  GitHub issues in bulk, (2) after any ADR-009 test file split to verify no tests were dropped,
+  (3) investigating a CI failure that references a test that should exist, (4) recovering dropped
+  tests from a deprecated file or git history, (5) a split was completed but the issue remains
+  open and test counts don't match, (6) other test files in the same CI group also violate
+  ADR-009, (7) closing duplicate issues created by a background batch script that re-ran from
+  index 0, (8) performing periodic health checks on the test split inventory."
 category: testing
-date: 2026-03-25
-version: 1.0.0
+date: 2026-03-28
+version: "1.0.0"
 user-invocable: false
+verification: unverified
 tags:
   - adr-009
   - mojo
@@ -22,35 +19,32 @@ tags:
   - test-splitting
   - ci-cd
   - audit
+  - recovery
 ---
+
 ## Overview
 
 | Field | Value |
 |-------|-------|
 | **Problem** | ADR-009 limits Mojo test files to <=10 `fn test_` functions to avoid heap corruption; violations cause flaky CI, splits can silently drop tests, and issues must be tracked per-file |
 | **ADR** | ADR-009 -- max <=10 `fn test_` functions per `.mojo` file |
-| **Scope** | Audit, issue creation, file splitting, post-split verification, dropped-test recovery, and CI group management |
+| **Scope** | Codebase-wide audit, batch issue creation, post-split verification, dropped-test recovery, and CI group management |
 | **Risk** | Dropped gradient/backward tests give false confidence; duplicate issue waves from backgrounded scripts; secondary violations in sibling files |
 
 ## When to Use
 
 - CI on `main` fails 10+/20 runs with random group rotation (load-dependent heap corruption)
-- An ADR specifies a per-file `fn test_` limit (e.g. <=10) and `grep -c "^fn test_"` shows 50+ files over the limit
+- An ADR specifies a per-file `fn test_` limit and `grep -c "^fn test_"` shows 50+ files over the limit
 - You need traceable, actionable issues for every violation before starting any splits
 - After any ADR-009 test file split to verify completeness
 - When investigating a CI failure that references a test that "should exist"
 - After restoring from git history and finding fewer tests than expected
 - Periodically as a health check on the test split inventory
-- When opening a follow-up issue from a split PR (e.g., #3444 -> #4241)
-- A split was completed (`.DEPRECATED` file exists, new files reference CI workflow), but the issue is still open
+- A split was completed (`.DEPRECATED` file exists), but the issue is still open
 - The sum of `fn test_` counts in split files is less than the original file's count
 - Other test files referenced in the same CI group also exceed 10 `fn test_` functions
 - Split files are missing the required ADR-009 header comment block
-- An issue asks to fix one ADR-009 file but related files in the same directory may also violate the limit
-- Split files for a test family are scattered across an overloaded CI group
-- No dedicated CI group exists for a family of related tests
 - A CI group has >15 test files (risk of slow or flaky runs)
-- After splitting, the original file needs to be tracked as `.DEPRECATED`
 
 ## Verified Workflow
 
@@ -75,7 +69,7 @@ find tests/ -name "*.DEPRECATED"
 grep "^fn test_" <file>.DEPRECATED | sed 's/fn //; s/(.*$//' | sort > /tmp/dep.txt
 
 # 3. Extract test names from active split files
-grep -h "^fn test_" tests/shared/core/test_<prefix>*.mojo | sed 's/fn //; s/(.*$//' | sort > /tmp/split.txt
+grep -h "^fn test_" tests/path/to/test_<prefix>*.mojo | sed 's/fn //; s/(.*$//' | sort > /tmp/split.txt
 
 # 4. Find missing tests
 comm -23 /tmp/dep.txt /tmp/split.txt
@@ -85,7 +79,7 @@ git log --oneline --diff-filter=D -- "tests/**/<file>.mojo"
 git show <parent-commit>^:<path>/<file>.mojo | grep "^fn test_"
 
 # --- Comprehensive family audit ---
-for f in tests/shared/core/test_<family>_*.mojo; do
+for f in tests/path/to/test_<family>_*.mojo; do
   count=$(grep -c "^fn test_" "$f" 2>/dev/null || echo 0)
   echo "$f: $count tests"
 done
@@ -172,15 +166,15 @@ for file_path, test_count, ci_group, run_ids in VIOLATING_FILES[0:20]:
 ```
 
 **Critical**: Run `python3 script.py --start 0 20`, then `--start 20 55`, etc. Never use
-`run_in_background=True` for this loop -- 502 errors + early termination cause the script to
+`run_in_background=True` for this loop — 502 errors + early termination cause the script to
 re-run from index 0, generating duplicate waves.
 
 ### Step 5: Audit the entire file family (comprehensive)
 
-When fixing one file, audit ALL sibling files in the same directory:
+When fixing one file, audit ALL sibling files in the same directory or CI group:
 
 ```bash
-for f in tests/shared/core/test_<family>_*.mojo; do
+for f in tests/path/to/test_<family>_*.mojo; do
   count=$(grep -c "^fn test_" "$f" 2>/dev/null || echo 0)
   echo "$f: $count tests"
 done
@@ -213,7 +207,7 @@ test_extensor_slicing.mojo (19 tests) ->
 # high test load. Split from <original_file>.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
 ```
 
-**Header format matters** -- prose docstrings mentioning ADR-009 are NOT equivalent to the required `# ADR-009:` comment block.
+**Header format matters** — prose docstrings mentioning ADR-009 are NOT equivalent to the required `# ADR-009:` comment block.
 
 ### Step 8: Rename originals to .DEPRECATED
 
@@ -221,11 +215,11 @@ test_extensor_slicing.mojo (19 tests) ->
 git mv tests/path/test_original.mojo tests/path/test_original.mojo.DEPRECATED
 ```
 
-This follows the established ADR-009 pattern and preserves git history.
+This follows the established ADR-009 pattern and preserves git history for post-split audits.
 
-### Step 9: Create or update dedicated CI group
+### Step 9: Create or update dedicated CI group (if needed)
 
-In `.github/workflows/comprehensive-tests.yml`, add a new group **before** the overloaded group:
+In `.github/workflows/comprehensive-tests.yml`, add a new group before the overloaded group:
 
 ```yaml
 # ---- <Family> tests (split per ADR-009 to avoid heap corruption) ----
@@ -236,11 +230,11 @@ In `.github/workflows/comprehensive-tests.yml`, add a new group **before** the o
 
 Remove the same files from the overloaded group to avoid duplicate runs. Target <=10 files per CI group.
 
-### Step 10: Post-split audit -- verify no tests were dropped
+### Step 10: Post-split audit — verify no tests were dropped
 
 ```bash
 # Build original test set from .DEPRECATED or git history
-grep "^fn test_" tests/shared/core/test_foo.mojo.DEPRECATED \
+grep "^fn test_" tests/path/to/test_foo.mojo.DEPRECATED \
   | sed 's/fn //; s/(.*$//' | sort > /tmp/orig.txt
 
 # For files deleted without .DEPRECATED marker:
@@ -248,7 +242,7 @@ SPLIT_COMMIT=$(git log --oneline -- "tests/path/to/test_original.mojo" | head -1
 git show $SPLIT_COMMIT -- "tests/path/to/test_original.mojo" | grep "^-fn test_" > /tmp/orig.txt
 
 # Build split file test set
-grep -h "^fn test_" tests/shared/core/test_foo_*.mojo \
+grep -h "^fn test_" tests/path/to/test_foo_*.mojo \
   | sed 's/fn //; s/(.*$//' | sort > /tmp/split.txt
 
 # Find gaps
@@ -262,7 +256,7 @@ If non-empty: each line is a dropped test that must be recovered.
 For each dropped test, get the implementation from the deprecated file or git history:
 
 ```bash
-grep -n "fn test_missing_test_name" tests/shared/core/test_foo.mojo.DEPRECATED
+grep -n "fn test_missing_test_name" tests/path/to/test_foo.mojo.DEPRECATED
 # Or from git:
 git show $SPLIT_COMMIT -- "tests/path/to/test_original.mojo" | grep -A 40 "^-fn test_missing_name"
 ```
@@ -282,13 +276,13 @@ for num in <ids>; do gh issue close "$num" --comment "Duplicate."; done
 
 ```bash
 # Confirm per-file counts
-grep -c "^fn test_[a-z]" tests/shared/core/test_*.mojo | grep -v ".DEPRECATED"
+grep -c "^fn test_[a-z]" tests/path/to/*.mojo | grep -v ".DEPRECATED"
 
 # Re-run gap check (should show 0 missing)
-for deprecated in tests/shared/core/*.DEPRECATED; do
+for deprecated in tests/path/to/*.DEPRECATED; do
     echo "=== $deprecated ==="
     grep "^fn test_" "$deprecated" | sed 's/fn //; s/(.*$//' | sort > /tmp/dep_tests.txt
-    grep -h "^fn test_" tests/shared/core/*.mojo 2>/dev/null \
+    grep -h "^fn test_" tests/path/to/*.mojo 2>/dev/null \
         | sed 's/fn //; s/(.*$//' | sort > /tmp/split_tests.txt
     missing=$(comm -23 /tmp/dep_tests.txt /tmp/split_tests.txt)
     if [ -z "$missing" ]; then
@@ -324,15 +318,9 @@ Related: #2942, ADR-009 (`docs/adr/ADR-009-heap-corruption-workaround.md`)
 
 ## Fix
 
-Split `{file_path}` into **{num_files} files** of <=8 tests each:
-  - `test_{base}_part1.mojo` (~8 tests)
-  - `test_{base}_part2.mojo` (~8 tests)
-  ...
+Split `{file_path}` into **{num_files} files** of <=8 tests each.
 
-Each split file must include the ADR-009 header comment:
-```mojo
-# ADR-009: This file is intentionally limited to <=10 fn test_ functions.
-```
+Each split file must include the ADR-009 header comment.
 
 ## Acceptance Criteria
 
@@ -348,63 +336,67 @@ Each split file must include the ADR-009 header comment:
 ### Pattern: False completion in commit messages
 
 Split commit messages often say "All N tests preserved" even when they aren't. The commit author
-counted tests in the new split files but may have missed gradient tests that require more
-complex setup. Always verify with `comm -23` rather than trusting commit messages.
+counted tests in the new split files but may have missed gradient tests. Always verify with
+`comm -23` rather than trusting commit messages.
 
 ### Pattern: Tests present under different names
 
-`test_operators_preserve_shape` (in `test_extensor_abs_ops.mojo`) and
-`test_unary_ops_preserve_shape` (in deprecated) are different tests despite similar intent.
-The comm-based diff catches this correctly -- a name change is not the same as preservation.
+`test_operators_preserve_shape` (in split file) and `test_unary_ops_preserve_shape` (in deprecated)
+are different tests despite similar intent. The comm-based diff catches this correctly — a name
+change is not the same as preservation.
 
 ### Pattern: Split files may exceed deprecated count
 
 Later commits often add new tests to split files. This is expected and correct. The audit
-only checks for tests that exist in deprecated but not in any split file -- the reverse
-(new tests in splits not in deprecated) is fine.
+only checks for tests that exist in deprecated but not in any split file.
 
 ### Pattern: Wildcard CI patterns absorb new split files
 
 CI workflows using `test_extensor_*.mojo` wildcards automatically pick up new split files.
-Only workflows with explicit filename lists (like the "Core Gradient" group) need updating
-when a new split file is added.
+Only workflows with explicit filename lists need updating when a new split file is added.
+
+### Pattern: Stale issue plans
+
+Issue plans generated by planning agents reflect a point-in-time snapshot. Between plan
+generation and implementation, other PRs may have already fixed some or all issues.
+Always re-audit current state rather than blindly implementing the plan.
 
 ## Key Invariants
 
-- **Always audit secondary files** in the same CI group -- they often have violations too
+- **Always audit secondary files** in the same CI group — they often have violations too
 - **Always verify test counts** from git history before closing an issue
-- **Dropped tests are silent** -- no compiler or CI error warns you; only manual count comparison reveals them
-- **Header format matters** -- prose docstrings mentioning ADR-009 are NOT equivalent to the required comment block
+- **Dropped tests are silent** — no compiler or CI error warns you; only manual count comparison reveals them
+- **Header format matters** — prose docstrings mentioning ADR-009 are NOT equivalent to the required comment block
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Background batch script | Used `run_in_background=True` for the 60-file batch | 502 GitHub API errors caused early exit; the task system then re-ran from index 0, creating 3 duplicate waves (41 + 64 + 8 duplicates) | Never background a sequential issue-creation loop -- run synchronously with explicit `--start N M` index ranges |
+| Background batch script | Used `run_in_background=True` for the 60-file batch | 502 GitHub API errors caused early exit; task system re-ran from index 0, creating 3 duplicate waves (41 + 64 + 8 duplicates) | Never background a sequential issue-creation loop — run synchronously with explicit `--start N M` index ranges |
 | Single large batch | Ran all 115 files in one `--start 0 115` call | Same problem: 502 error mid-run then background re-execution from 0 | Break into batches of <=20 and run each synchronously |
 | Retry via inline Python | Used inline `python3 -c "exec(open(...)...)"` to retry single failures | Works fine for individual retries but obscures which issues were created | Use the script with `--start` args for all batch work |
-| Checking background output files | Tried `strings` and `grep` on persisted task output (54KB HTML-heavy) | GitHub 502 HTML bodies polluted the output making grep/strings useless | After any background run, use `gh issue list` to authoritatively check what was created |
-| Fix only the issue-specified file | Addressed only `test_extensor_new_methods.mojo` as listed in the issue | That file was already split in a previous commit; sibling files `test_extensor_slicing.mojo` (19) and `test_extensor_unary_ops.mojo` (12) still violated ADR-009 | Always audit ALL files in the family, not just the one named in the issue |
-| Using `_part1`/`_part2` naming | Issue body suggested `test_extensor_new_methods_part1.mojo` as the naming convention | Generic names lose semantic context about what tests are in each file | Use descriptive semantic suffixes (`_1d`, `_2d`, `_edge`, `_neg_pos`, `_abs_ops`) |
-| Leaving split files in overloaded CI group | Split files were added to the existing "Core Utilities" group | "Core Utilities" had 26 files -- too large, poor failure signal isolation | Create a dedicated CI group for the file family after splitting |
-| Assuming issue file is unresolved | Treated `test_extensor_new_methods.mojo` as still needing splitting | It was already split in commit `8a78d3aa`; DEPRECATED file existed | Check git log for the target file before starting work: `git log --all --oneline -- path/to/file` |
-| Trusted commit message | Assumed "All 21 tests preserved" in split commit message was accurate | Commit message was aspirational; actual audit found 1 dropped test in extensor splits | Always verify with `comm -23` diff, never trust commit message counts |
-| Searched only .DEPRECATED files | Looked only for `.DEPRECATED` marker files to find deprecated sources | `test_backward.mojo` was deleted entirely (no `.DEPRECATED` left); required `git log --diff-filter=D` | Check both `.DEPRECATED` files AND git-deleted files |
+| Checking background output files | Tried `strings` and `grep` on persisted task output (54KB HTML-heavy) | GitHub 502 HTML bodies polluted the output | After any background run, use `gh issue list` to authoritatively check what was created |
+| Fix only the issue-specified file | Addressed only the file named in the issue | That file was already split; sibling files still violated ADR-009 | Always audit ALL files in the family, not just the one named in the issue |
+| Using `_part1`/`_part2` naming everywhere | Generic names for all splits | Generic names lose semantic context | Use descriptive semantic suffixes (`_1d`, `_2d`, `_edge`) when possible |
+| Leaving split files in overloaded CI group | Added split files to existing "Core Utilities" group | "Core Utilities" had 26 files — too large, poor failure signal isolation | Create a dedicated CI group for the file family after splitting |
+| Assuming issue file is unresolved | Treated a file as still needing splitting | It was already split; DEPRECATED file existed | Check `git log --all --oneline -- path/to/file` before starting work |
+| Trusted commit message | Assumed "All 21 tests preserved" in split commit message was accurate | Commit message was aspirational; audit found 1 dropped test | Always verify with `comm -23` diff, never trust commit message counts |
+| Searched only .DEPRECATED files | Looked only for `.DEPRECATED` marker files | Some files were deleted entirely (no `.DEPRECATED`); required `git log --diff-filter=D` | Check both `.DEPRECATED` files AND git-deleted files |
 | Checking files individually | Manually read each split file looking for missing tests | Error-prone, slow, easy to miss tests with similar names | Use `comm -23` set difference for reliable gap detection |
-| Assuming plan was current | Issue plan said 10 tests were missing; checked those first | Earlier PRs (#127d8e02, d1420696) had already restored the backward and gradient_checking tests | Always re-audit current state from source; plan may be stale |
-| Assumed split was complete | Checked only that the original file was deleted and new files existed in CI workflow | 3 tests were silently dropped; count 13 != 16 | Always compare `git show <split_commit> \| grep "^-fn test_"` count vs split file count |
-| Checked only the primary file | Audited `test_gradient_checking.mojo` split files only | `test_gradient_validation.mojo` (12 tests, same CI group) was still violating ADR-009 | Always audit ALL files referenced in the CI group pattern, not just the issue's primary file |
-| Prose docstring as ADR-009 header | Initial splits used `"Note: Split from X due to ADR-009"` in docstring | Issue spec requires exact `# ADR-009:` comment block format | Check issue acceptance criteria for exact header format requirements |
+| Assuming plan was current | Implemented the issue plan directly | Earlier PRs had already fixed some issues in the plan | Always re-audit current state; plan may be stale |
+| Assumed split was complete | Checked only that original was deleted and new files existed in CI | 3 tests were silently dropped; count 13 != 16 | Always compare `git show <split_commit> \| grep "^-fn test_"` count vs split file count |
+| Checked only the primary file | Audited only the issue's specified file | `test_gradient_validation.mojo` (12 tests, same CI group) still violated ADR-009 | Always audit ALL files in the CI group, not just the issue's primary file |
+| Prose docstring as ADR-009 header | Used `"Note: Split from X due to ADR-009"` in docstring | Issue spec requires exact `# ADR-009:` comment block format | Check acceptance criteria for exact header format requirements |
 
 ## Results & Parameters
 
-### ADR-009 limits
+### ADR-009 Limits
 
 - Hard limit: <=10 `fn test_` per file
 - Target: <=8 for safety buffer
 - Recovery test always fits if deprecated file had <=10 tests total
 
-### Script parameters
+### Script Parameters
 
 ```python
 LIMIT = 10          # ADR-009 max fn test_ per file
@@ -413,7 +405,7 @@ BATCH_SIZE = 20     # max files per synchronous run
 LABELS = ["bug", "testing", "ci-cd"]
 ```
 
-### Issue creation audit (2026-03-06, ProjectOdyssey)
+### Issue Creation Audit (2026-03-06, ProjectOdyssey)
 
 | Metric | Value |
 |--------|-------|
@@ -425,16 +417,7 @@ LABELS = ["bug", "testing", "ci-cd"]
 | Issue numbers | #3396--#3640 |
 | Tracking issue updated | #3330 |
 
-### Comprehensive family audit (2026-03-07, issue #3476)
-
-```text
-test_extensor_slicing.mojo: 19 tests -> 3 files (8, 6, 5)
-test_extensor_unary_ops.mojo: 12 tests -> 2 files (5, 7)
-New "Core ExTensor" CI group: 10 files, all <=10 tests
-"Core Utilities" group: extensor files removed (was 26 files)
-```
-
-### Post-split recovery audit (2026-03-07, test_gradient_checking.mojo)
+### Post-Split Recovery Audit (2026-03-07, test_gradient_checking.mojo)
 
 | Metric | Value |
 |--------|-------|
@@ -444,7 +427,7 @@ New "Core ExTensor" CI group: 10 files, all <=10 tests
 | Secondary violation | `test_gradient_validation.mojo` -- 12 tests (found via CI group audit) |
 | Final split result | 4 files: 9, 7, 8, 4 tests |
 
-### Split completeness audit (2026-03-15, ProjectOdyssey)
+### Split Completeness Audit (2026-03-15, ProjectOdyssey)
 
 | Deprecated File | Deprecated Count | Split Count | Missing |
 |---|---|---|---|
@@ -458,7 +441,7 @@ New "Core ExTensor" CI group: 10 files, all <=10 tests
 **Fix applied**: Added `test_unary_ops_preserve_shape` to `test_extensor_neg_pos.mojo`
 (5 -> 6 tests). PR: HomericIntelligence/ProjectOdyssey#4877
 
-### Commit pattern
+### Commit Pattern
 
 ```bash
 git commit -m "fix(ci): split <family> test files and add <Group> CI group (ADR-009)
@@ -482,3 +465,4 @@ Closes #<issue>
 | ProjectOdyssey | Issue #3476, extensor family comprehensive audit and CI group creation | PR with semantic splits and dedicated "Core ExTensor" CI group |
 | ProjectOdyssey | Issue #3444, gradient checking split recovery | 3 dropped tests recovered, secondary violation in test_gradient_validation.mojo |
 | ProjectOdyssey | PR #4877, split completeness audit across all deprecated files | 1 dropped test found and fixed in test_extensor_unary_ops split |
+| ProjectOdyssey | Issue #4241, follow-up verification of backward/gradient splits | Stale plan found; 1 new unrelated dropped test discovered by expanding audit scope |
