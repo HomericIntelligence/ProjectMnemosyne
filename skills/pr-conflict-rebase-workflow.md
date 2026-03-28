@@ -3,10 +3,12 @@ name: pr-conflict-rebase-workflow
 description: 'Rebase conflicting PRs onto main when a merge commit introduces workflow
   changes. Use when: (1) multiple open PRs are CONFLICTING after a main branch merge,
   (2) GitHub Actions workflow files conflict over concurrency/permissions/timeout
-  additions, (3) pixi.lock is in a modify/delete conflict during rebase.'
+  additions, (3) pixi.lock is in a modify/delete conflict during rebase, (4) two
+  independent CI fix branches both modified the same workflow file with different
+  approaches — one already merged to main and the other needs rebasing.'
 category: ci-cd
 date: 2026-03-15
-version: 1.0.0
+version: 1.1.0
 user-invocable: false
 ---
 ## Overview
@@ -17,7 +19,7 @@ user-invocable: false
 | **Complexity** | Medium |
 | **Time** | 10–20 min per PR |
 | **Risk** | Low (uses `--force-with-lease`) |
-| **Triggers** | CONFLICTING PRs after a main merge, GitHub Actions workflow conflicts, pixi.lock modify/delete |
+| **Triggers** | CONFLICTING PRs after a main merge, GitHub Actions workflow conflicts, pixi.lock modify/delete, two CI fix branches with different approaches to same file |
 
 ## When to Use
 
@@ -25,6 +27,7 @@ user-invocable: false
 - GitHub Actions `.yml` files conflict on `concurrency`/`permissions`/`timeout-minutes` blocks added by a hardening commit
 - `pixi.lock` has a modify/delete conflict (branch deleted it, main has it)
 - A branch has multiple commits, some adding a feature and some reverting it — each rebase step must be resolved independently
+- Two independent CI fix branches both modified the same workflow file with different approaches (e.g., one used `builds/benchmarks/` volume path, the other used `/tmp/` + `podman cp`) — one merged first, now the other needs rebasing
 - You need to push rebased branches without losing the PR auto-merge setting
 
 ## Verified Workflow
@@ -122,11 +125,51 @@ git commit -m "chore: regenerate pixi.lock after rebase onto main"
 
 **NEVER** use `--ours` or `--theirs` for `pixi.lock` — the file encodes SHA256 of the local editable package and must be regenerated from scratch.
 
-### Step 5 — Verify and push
+### Step 5 — Hunt for orphaned lines before pushing
+
+**Critical**: After resolving all conflict markers (`<<<<<<<`/`=======`/`>>>>>>>`), lines from
+the losing approach that were OUTSIDE the conflict markers can remain silently in the file.
+These "orphaned lines" belong to the discarded approach but were not inside a conflict block.
+
+**Example**: If branch used `/tmp/benchmark-results/` + `podman cp` but main's `builds/benchmarks/`
+approach won, the following lines may survive outside conflict markers:
+
+```bash
+# Line 95 — outside conflict block, but belongs to discarded /tmp/ approach:
+podman compose exec -T odysseus bash -c "mkdir -p /tmp/benchmark-results"
+
+# Line 125 — outside conflict block:
+podman cp "$CONTAINER_ID:/tmp/benchmark-results/$SUITE.json" "benchmark-results/$SUITE.json"
+```
+
+**How to detect orphaned lines**: After resolving conflict markers, grep for key identifiers
+of the discarded approach:
+
+```bash
+# Example for a /tmp/ vs builds/ conflict:
+grep -n "/tmp/benchmark-results\|podman cp" .github/workflows/benchmark.yml
+
+# General pattern: grep for any reference to the approach that lost:
+grep -n "<keyword-from-discarded-approach>" <conflicted-file>
+
+# Confirm no conflict markers remain (legitimate === in comments is OK):
+grep -n "^<<<\|^>>>\|^===" <file>
+```
+
+**Decision rule when resolving CI workflow conflicts between two different fix approaches**:
+
+- Take the approach already on `main` — it is established convention
+- Simpler approach wins (fewer moving parts = less CI breakage surface)
+- If one approach requires extra steps (copy commands, temp directories), prefer the approach that avoids them
+
+### Step 6 — Verify and push
 
 ```bash
 # Confirm no conflict markers remain
 grep -r "<<<<<<" .github/ pixi.toml pyproject.toml
+
+# Confirm no orphaned lines from discarded approach (grep for its key patterns)
+# e.g.: grep -n "/tmp/benchmark-results\|podman cp" .github/workflows/benchmark.yml
 
 # Run pre-commit
 pre-commit run --all-files
@@ -135,7 +178,7 @@ pre-commit run --all-files
 git push --force-with-lease origin HEAD:<original-branch-name>
 ```
 
-### Step 6 — Enable auto-merge
+### Step 7 — Enable auto-merge
 
 ```bash
 gh pr merge --auto --rebase <N>
@@ -151,8 +194,16 @@ gh pr list --json number,mergeable,autoMergeRequest
 | Edit tool for workflow conflict | Used `Edit` tool to replace conflict markers in `.github/workflows/pre-commit.yml` | Pre-commit hook blocked the Edit with a security reminder; file remained unchanged | Use `Write` tool (full file rewrite) for GitHub Actions files when `Edit` is blocked by security hooks |
 | Single-step conflict resolution for multi-commit rebase | Assumed the rebase would have one conflict round (add container) | Branch had 3 commits: add container, fix other things, *remove* container — second conflict had opposite intent | Always check `git log origin/<branch>` before rebasing to understand commit sequence and intent |
 | `--ours`/`--theirs` for pixi.lock | (Pattern to avoid, not attempted) | Would produce stale SHA256 hashes — CI fails with "lock-file not up-to-date" | Always `rm pixi.lock && git add pixi.lock`, then regenerate with `pixi lock` |
+| Resolving conflict markers without checking orphaned lines | Cleared all `<<<<<<<`/`=======`/`>>>>>>>` markers in `benchmark.yml` but missed lines from the discarded `/tmp/` approach that lived outside the conflict block | `mkdir -p /tmp/benchmark-results` and `podman cp` commands remained in the file after resolution, referencing the discarded approach | After clearing conflict markers, always grep for key identifiers of the losing approach — lines outside markers can survive silently |
+| Rebasing wrong branch | Initially attempted to rebase `fix-ci-root-causes` (already merged to main) before user clarified the intended branch | Branch was already on main; rebase produced empty diff | Confirm the exact branch name with the user before starting; check `gh pr list` to verify the branch is still open |
 
 ## Results & Parameters
+
+### Session outcome (2026-03-27)
+
+| Branch | Conflict | Resolution | Orphaned lines |
+|--------|----------|------------|----------------|
+| fix-ci-failures-asan-circular-benchmark | `benchmark.yml`: `/tmp/benchmark-results/` + `podman cp` vs `builds/benchmarks/` | Took main's `builds/benchmarks/` approach — simpler, no copy step, already established | Removed `mkdir -p /tmp/benchmark-results` (line 95) and `podman cp` (line 125) after conflict resolution |
 
 ### Session outcome (2026-03-15)
 
@@ -180,12 +231,20 @@ Is the conflict in pixi.lock?
   YES → rm pixi.lock && git add pixi.lock → pixi lock after rebase
 
 Is the conflict in a GitHub Actions .yml file?
-  YES → Read commit message for intent
-        Add feature commit? → Keep main's additions AND branch's additions
-        Remove feature commit? → Keep main's additions, drop branch's removed feature
-        New job/trigger? → Merge both — branch's on: block + main's concurrency/permissions
+  Are both sides independent CI fixes to the same workflow with DIFFERENT approaches?
+    YES → Take main's approach (already established convention)
+          Then grep for orphaned lines from the discarded approach and remove them
+  Are both sides adding DIFFERENT features to the same workflow?
+    YES → Read commit message for intent
+          Add feature commit? → Keep main's additions AND branch's additions
+          Remove feature commit? → Keep main's additions, drop branch's removed feature
+          New job/trigger? → Merge both — branch's on: block + main's concurrency/permissions
+
+After resolving all conflict markers — hunt for orphaned lines:
+  grep -n "<keywords-from-discarded-approach>" <file>
+  Remove any lines that belong to the approach that lost
 
 Are there more commits in this rebase?
   YES → git rebase --continue and repeat
-  NO → verify + pre-commit + push --force-with-lease
+  NO → verify + orphaned-line check + pre-commit + push --force-with-lease
 ```
