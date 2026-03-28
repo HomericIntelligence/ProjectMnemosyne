@@ -1,5 +1,35 @@
 # tooling-skill-deduplication-semver-versioning -- History
 
+## v1.3.0 (2026-03-28)
+
+**Changed by:** PR #1080 -- consolidate conv2d gradient checking skills (9->3)
+**Verification:** verified-ci
+
+### What changed
+- Added Round 4 deduplication result: conv2d-gradient-* cluster (9->3, 67% reduction)
+- Added 2 new Failed Attempts rows: over-splitting subtopics; depthwise mixed with standard conv2d
+- Updated "Top Duplicate Clusters Remaining" note to reflect conv2d-gradient-* is resolved
+- Added new Verified On entry for PR #1080
+
+### Why
+Nine overlapping conv2d gradient testing skills were identified as a consolidation target.
+Unlike prior rounds (10->1), this cluster warranted 3 outputs because the source skills covered
+three genuinely distinct scenarios: standard conv2d finite-difference checks, depthwise-specific
+API quirks (different kernel shape, field names, tolerance API), and analytical-value tests using
+all-ones configurations. Merging depthwise into the standard skill would have buried critical
+API differences (`.grad_weights` not `.grad_kernel`; `tolerance:` not `rtol`/`atol`).
+
+### Previous version (v1.2.0) snapshot
+date: 2026-03-28
+version: "1.2.0"
+Outcome: Three rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5). Semver rules added.
+Verified On:
+- ProjectMnemosyne | PR #1040, merged 16 adr009 skills + added semver | 2026-03-25 session
+- ProjectMnemosyne | PR #1075, merged 10 mojo-test-* skills into 1 | 2026-03-27 session
+- ProjectMnemosyne | PR #1077, merged 6 deprecated-file-cleanup-* skills into 1 | 2026-03-28 session
+
+---
+
 ## v1.2.0 (2026-03-28)
 
 **Changed by:** PR #1077 -- consolidate deprecated file cleanup skills (6->1)
