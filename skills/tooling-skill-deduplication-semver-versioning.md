@@ -3,7 +3,7 @@ name: tooling-skill-deduplication-semver-versioning
 description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes."
 category: tooling
 date: 2026-03-28
-version: "1.3.0"
+version: "1.4.0"
 user-invocable: false
 verification: verified-ci
 history: tooling-skill-deduplication-semver-versioning.history
@@ -18,7 +18,7 @@ tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 |-------|-------|
 | **Date** | 2026-03-28 |
 | **Objective** | Merge duplicate skill clusters into consolidated skills, with semantic versioning for amendments |
-| **Outcome** | Four rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5); 9 conv2d-gradient-* merged to 3 (net -6). Semver rules added. |
+| **Outcome** | Five rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5); 9 conv2d-gradient-* merged to 3 (net -6); 12 adr009-test-splitting-* merged to 3 (net -9). Semver rules added. |
 | **Verification** | verified-ci |
 | **History** | [changelog](./tooling-skill-deduplication-semver-versioning.history) |
 
@@ -94,6 +94,7 @@ For multiple clusters, launch parallel agents (one per group) in the same worktr
 | Cross-category consolidation | Source skills had mismatched categories (e.g., one marked `documentation`, rest `tooling`) | Category was set per-skill rather than reflecting the actual content topic | When consolidating, pick the most accurate category for the merged skill's actual function, not just the majority |
 | Over-splitting subtopics | Planned 9 conv2d skills into more than 3 groups | Content analysis showed clear 3-way split: finite-difference checks, depthwise-specific quirks, analytical-value tests | Group by actual usage scenario (how the tests are written), not by file naming pattern |
 | Depthwise mixed with standard conv2d | Considered merging depthwise into the standard conv2d finite-differences skill | Depthwise has critical API differences (kernel shape, field names, tolerance API) that warrant a dedicated skill | Even when topics are adjacent, separate skills when the API contract differs significantly |
+| Assuming one-time merges are durable | Merged adr009-* cluster in Round 1 (16->3), assumed stable | /learn calls after the merge created 9 new duplicate skills covering the same adr009 split topic | Deduplication is not permanent; re-duplication occurs organically — schedule periodic re-consolidation passes |
 
 ## Results & Parameters
 
@@ -131,6 +132,22 @@ net_reduction: 5 skills (-83%)
 files_deleted: 12 (6 .md + 6 .notes.md)
 unique_lessons_preserved: 8 Failed Attempts rows
 consolidated_into: deprecated-file-stub-cleanup
+```
+
+**Round 5: ADR-009 test splitting second pass (2026-03-28)**
+
+```yaml
+skills_before: 12
+skills_after: 3
+net_reduction: 9 skills (-75%)
+files_deleted: 19 (12 .md + 5 .notes.md + 1 .history + 1 extra notes)
+lines_deleted: 2745
+lines_added: 553
+split_into:
+  - adr009-test-file-split-workflow (ci-cd): how to split — full CI pattern fork, import audit, compile hang variant
+  - adr009-split-audit-recovery (testing): codebase audit, batch issue creation, dropped-test recovery
+  - adr009-desplit-merge-workflow (testing): reversing splits; CRITICAL dedup bug where struct defs get "<top-level>" name
+key_insight: prior round merged these to 3, but subsequent /learn calls recreated 9 more duplicates — re-consolidation needed
 ```
 
 **Round 4: Conv2D gradient testing cluster (2026-03-28)**
@@ -172,7 +189,7 @@ key_insight: topic-adjacent skills with different APIs warrant separate skills e
 5  batch-pr-*
 ```
 
-Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-file-*` cluster (was 6) resolved in PR #1077 (6->1). `conv2d-gradient-*` cluster (was 9) resolved in PR #1080 (9->3).
+Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-file-*` cluster (was 6) resolved in PR #1077 (6->1). `conv2d-gradient-*` cluster (was 9) resolved in PR #1080 (9->3). ADR-009 second pass (12 re-duplicated) resolved in PR #1086 (12->3).
 
 ## Verified On
 
@@ -182,3 +199,4 @@ Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-fi
 | ProjectMnemosyne | PR #1075, merged 10 mojo-test-* skills into 1 | 2026-03-27 session |
 | ProjectMnemosyne | PR #1077, merged 6 deprecated-file-cleanup-* skills into 1 | 2026-03-28 session |
 | ProjectMnemosyne | PR #1080, merged 9 conv2d-gradient-* skills into 3 | 2026-03-28 session |
+| ProjectMnemosyne | PR #1086, re-consolidated 12 adr009-test-splitting-* skills into 3 (cluster re-duplicated after prior merge) | 2026-03-28 session |
