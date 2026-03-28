@@ -1,5 +1,41 @@
 # tooling-skill-deduplication-semver-versioning -- History
 
+## v1.2.0 (2026-03-28)
+
+**Changed by:** PR #1078 -- consolidate 13 already-implemented detection skills into 2
+**Verification:** verified-ci
+
+### What changed
+- Added Round 3 deduplication result: 13 already-implemented detection skills -> 2 (net -11, -85%)
+- Added Failed Attempts row: semantic grouping is required when clusters lack a shared prefix
+- Updated "Top Duplicate Clusters Remaining" note to reflect this cluster is resolved
+- Added PR #1078 to Verified On table
+- Bumped date to 2026-03-28
+
+### Why
+The already-implemented detection cluster (13 skills) had no obvious shared prefix but covered the
+same "check before you start" topic. The consolidation revealed an important lesson: within a
+semantic cluster, skills may split into distinct subtopics (generic preflight vs cleanup-specific),
+requiring 2 output files instead of 1. This differs from previous rounds where all skills merged
+to a single file.
+
+### Previous version (v1.1.0) snapshot
+---
+name: tooling-skill-deduplication-semver-versioning
+description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes."
+category: tooling
+date: 2026-03-27
+version: "1.1.0"
+user-invocable: false
+verification: verified-ci
+history: tooling-skill-deduplication-semver-versioning.history
+tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
+
+Outcome: Two rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9). Semver rules added.
+Verified On: PR #1040, PR #1075
+
+---
+
 ## v1.1.0 (2026-03-27)
 
 **Changed by:** PR #1075 -- consolidate Mojo test splitting skills (10->1)

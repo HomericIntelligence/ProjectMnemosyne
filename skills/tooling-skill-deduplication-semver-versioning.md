@@ -2,8 +2,8 @@
 name: tooling-skill-deduplication-semver-versioning
 description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes."
 category: tooling
-date: 2026-03-27
-version: "1.1.0"
+date: 2026-03-28
+version: "1.2.0"
 user-invocable: false
 verification: verified-ci
 history: tooling-skill-deduplication-semver-versioning.history
@@ -16,9 +16,9 @@ tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-03-27 |
+| **Date** | 2026-03-28 |
 | **Objective** | Merge duplicate skill clusters into consolidated skills, with semantic versioning for amendments |
-| **Outcome** | Two rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9). Semver rules added. |
+| **Outcome** | Three rounds: 16 adr009-* to 3 (net -13); 10 mojo-test-* to 1 (net -9); 13 already-implemented detection skills to 2 (net -11, +8 .notes.md). Semver rules added. |
 | **Verification** | verified-ci |
 | **History** | [changelog](./tooling-skill-deduplication-semver-versioning.history) |
 
@@ -91,6 +91,7 @@ For multiple clusters, launch parallel agents (one per group) in the same worktr
 | Merging by exact text dedup | Tried deduplicating Failed Attempts by exact row match | Different skills describe the same lesson with different wording | Deduplicate by lesson/concept, not by exact text match |
 | Splitting into multiple consolidated files | Planned 10 mojo-test-* files into 2-3 sub-groups | All 10 files covered the same core workflow with minor variations | When content is truly redundant, even large clusters (10 files) can consolidate to 1 |
 | Forgetting .notes.md files | Deleted .md files but forgot accompanying .notes.md | Orphaned .notes.md files clutter the skills directory | Always delete both .md and .notes.md when removing source skills |
+| Grouping semantically different skills | 13 already-implemented detection skills looked uniform from prefixes | Two distinct subtopics: generic preflight check vs cleanup-specific (file existence + minimal gap) | For skill groups without a shared prefix, read descriptions carefully and split by semantic focus, not just by name similarity |
 
 ## Results & Parameters
 
@@ -119,6 +120,19 @@ unique_lessons_preserved: 12 Failed Attempts rows, 17 Verified On entries
 files_deleted: 20 (10 .md + 10 .notes.md)
 ```
 
+**Round 3: Already-implemented detection skills (2026-03-28)**
+
+```yaml
+skills_before: 13
+skills_after: 2
+net_reduction: 11 skills (-85%), plus 8 .notes.md companions removed
+lines_deleted: ~1893
+lines_added: ~422
+consolidated_into: issue-already-implemented-preflight-check + issue-cleanup-already-resolved-detection
+unique_failure_modes_preserved: 15+ Failed Attempts rows across 2 files
+split_rationale: semantic grouping — generic preflight vs cleanup/deletion-specific detection
+```
+
 ### Semver Rules for /learn
 
 | Change Type | Bump | When |
@@ -142,7 +156,7 @@ files_deleted: 20 (10 .md + 10 .notes.md)
 5  batch-pr-*
 ```
 
-Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1).
+Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). Already-implemented detection cluster resolved in PR #1078 (13->2).
 
 ## Verified On
 
@@ -150,3 +164,4 @@ Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1).
 |---------|---------|---------|
 | ProjectMnemosyne | PR #1040, merged 16 adr009 skills + added semver | 2026-03-25 session |
 | ProjectMnemosyne | PR #1075, merged 10 mojo-test-* skills into 1 | 2026-03-27 session |
+| ProjectMnemosyne | PR #1078, merged 13 already-implemented detection skills into 2 | 2026-03-28 session |
