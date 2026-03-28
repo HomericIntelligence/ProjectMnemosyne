@@ -1,0 +1,50 @@
+# batch-pr-rebase-conflict-resolution-workflow — History
+
+## v1.1.0 (2026-03-27)
+
+**Changed by:** Session — mass parallel rebase of 8 branches using Myrmidon swarm
+**Verification:** verified-local
+
+### What changed
+
+- Added "Phase 0.5: Pre-flight Branch Classification" with the `git rev-list` triage snippet
+- Added Myrmidon swarm wave execution guidance (wave sizing, model tier selection)
+- Added 2 new Failed Attempts rows: wrong-target mass operation and no-PR branch handling
+- Updated "Session Scale Reference" with Myrmidon swarm row (8 branches, ~5 min)
+- Updated "Verified On" with 2026-03-27 ProjectOdyssey Myrmidon swarm session
+- Added `verification: verified-local` to frontmatter (was `unverified`)
+- Bumped version 1.0.0 → 1.1.0
+
+### Why
+
+The original skill covered the mechanics of batch rebase but lacked:
+1. The pre-flight classification pattern to identify branches worth rebasing
+   (0-commits-ahead branches are already in main and should be skipped entirely).
+2. Concrete Myrmidon swarm wave-sizing guidance (max 5 per wave, Haiku tier for
+   mechanical work, escalate to Sonnet only for domain-logic conflicts).
+3. The "confirm list before launching" principle for mass operations that could
+   target wrong branches.
+
+### Previous version (v1.0.0) snapshot
+
+<details>
+<summary>Full v1.0.0 content</summary>
+
+```
+---
+name: batch-pr-rebase-conflict-resolution-workflow
+description: "Use when: (1) many PRs show DIRTY/CONFLICTING merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files)."
+category: ci-cd
+date: 2026-03-28
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: []
+---
+```
+
+(Full body omitted for brevity — see git history for complete v1.0.0 content)
+
+</details>
+
+---
