@@ -1,5 +1,33 @@
 # tooling-skill-deduplication-semver-versioning -- History
 
+## v1.3.0 (2026-03-28)
+
+**Changed by:** PR #1083 -- consolidate 15 worktree-* skills into 4 (functional grouping)
+**Verification:** verified-ci
+
+### What changed
+- Added Round 4 deduplication result: 15 worktree-* skills into 4 (net -11, 73% reduction)
+- Added new "When to Use" trigger: lifecycle-phase skills belonging together
+- Added Phase 5 to workflow: functional-role grouping strategy
+- Added 2 new Failed Attempts rows: grouping-only-by-prefix, deleting .history files
+- Updated "Top Duplicate Clusters Remaining" list with current state
+- Added new Verified On entry for PR #1083
+
+### Why
+15 overlapping worktree-operation skills were consolidated into 4 functional groups. Key insight:
+prefix-based grouping alone was insufficient — `parallel-rebase-agent-worktree-isolation` would
+not appear under `worktree-*` prefix. Functional role grouping (lifecycle / cleanup / parallel /
+migration+testing) produced more discoverable consolidated skills.
+
+### Previous version (v1.2.0) snapshot
+---
+name: tooling-skill-deduplication-semver-versioning
+version: "1.2.0"
+date: 2026-03-28
+Outcome: Three rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5). Semver rules added.
+Verified On: PR #1040, PR #1075, PR #1077
+---
+
 ## v1.2.0 (2026-03-28)
 
 **Changed by:** PR #1077 -- consolidate deprecated file cleanup skills (6->1)
