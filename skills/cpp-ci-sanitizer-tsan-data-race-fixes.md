@@ -1,0 +1,294 @@
+---
+name: cpp-ci-sanitizer-tsan-data-race-fixes
+description: "Diagnose and fix C++ CI failures from ThreadSanitizer (TSan) data races, hung tests under sanitizers, and MSan build failures. Use when: (1) TSan reports data races in C++ CI, (2) a test hangs indefinitely under TSan causing job timeout, (3) MSan build fails due to uninstrumented stdlib in CMake probing steps, (4) Docker COPY paths are wrong after CMake changes CMAKE_RUNTIME_OUTPUT_DIRECTORY."
+category: ci-cd
+date: 2026-03-27
+version: "1.0.0"
+user-invocable: false
+verification: verified-precommit
+tags:
+  - tsan
+  - sanitizers
+  - data-race
+  - msan
+  - cmake
+  - dockerfile
+  - cpp20
+  - github-actions
+---
+
+# C++ CI Sanitizer: TSan Data Race Fixes
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-03-27 |
+| **Objective** | Fix 3 persistent CI failures: 11 TSan data races, 1 hung test causing 30-min timeout, MSan build failure from uninstrumented stdlib |
+| **Outcome** | TSan races fixed with targeted mutex/atomic additions; hung test disabled with GitHub issue filed; MSan removed from CI matrix with GitHub issue filed |
+| **Verification** | verified-precommit (PR pushed, CI running at time of capture) |
+
+## When to Use
+
+- TSan CI job reports `WARNING: ThreadSanitizer: data race` with failing tests
+- A test hangs under TSan/ASan causing the CI job to hit its wall-clock timeout (job killed, not failed)
+- MSan CI build fails with: `Failed to determine the source files for the regular expression backend`
+- Docker image scanning fails because `COPY --from=builder` paths are wrong after `CMAKE_RUNTIME_OUTPUT_DIRECTORY` was set
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been fully validated end-to-end in CI. The code fixes were reviewed pre-commit; CI validation was pending at capture time. Treat as a hypothesis until CI confirms.
+
+### Quick Reference
+
+```bash
+# 1. Identify CI failure type
+gh pr checks <pr-number>
+gh run list --branch main --limit 5
+
+# 2. Get failure details (targeted grep — --log-failed often misses build output)
+gh run view <run-id> --log-failed 2>&1 | tail -80        # Overview
+gh run view <run-id> --log 2>&1 | grep "WARNING: ThreadSanitizer: data race" | head -40   # TSan races
+gh run view <run-id> --log 2>&1 | grep "error\|fail" | tail -30  # MSan build errors
+
+# 3. Find the hung test (test that started but never completed)
+gh run view <run-id> --log 2>&1 | grep -oP 'Start\s+(\d+):' | grep -oP '\d+' | sort -un > /tmp/started.txt
+gh run view <run-id> --log 2>&1 | grep -oP 'Test\s+#(\d+):' | grep -oP '\d+' | sort -un > /tmp/completed.txt
+comm -23 /tmp/started.txt /tmp/completed.txt   # Shows hung test number(s)
+
+# 4. Fix TSan races: add mutex to shared RNG / shared maps
+# 5. Disable hung test: rename to DISABLED_TestName
+# 6. Remove MSan from CI matrix
+# 7. Fix Dockerfile COPY paths if CMAKE_RUNTIME_OUTPUT_DIRECTORY changed
+```
+
+### Detailed Steps
+
+#### Step 1: Diagnose TSan Data Races
+
+Use `gh run view <run-id> --log` (not `--log-failed`) with targeted grep to get full stack traces. The `--log-failed` flag often shows git cleanup output but misses actual build/test error text.
+
+```bash
+gh run view <run-id> --log 2>&1 | grep -A 20 "WARNING: ThreadSanitizer: data race" | head -100
+```
+
+Common race patterns in C++ multi-agent systems:
+
+| Race Pattern | Root Cause | Fix |
+|---|---|---|
+| Shared `std::mt19937 rng_` | Worker threads call `generateLatency()` / `shouldDropPacket()` concurrently | Add `mutable std::mutex rng_mutex_`; lock in both methods |
+| Shared `std::unordered_map<string, size_t>` | `registerAgent()`, `submit()`, `getAgentNode()` run concurrently | Add `mutable std::mutex map_mutex_`; lock in all 4 methods |
+| `std::function<bool()> readiness_check_` | Server thread reads while another thread calls `setReadinessCheck()` | Add `mutable std::mutex readiness_mutex_`; use `std::atomic<int>` for fd/port fields |
+
+For `server_fd_` and `port_` in a health-check server, use atomics to avoid mutex overhead:
+```cpp
+std::atomic<int> server_fd_{-1};
+std::atomic<uint16_t> port_{0};
+// In stop():
+int fd = server_fd_.exchange(-1);  // Atomically get-and-clear
+if (fd >= 0) close(fd);
+```
+
+#### Step 2: Find and Disable the Hung Test
+
+A hung test causes the CI job to be killed (not failed) after the wall-clock timeout. The GTest/ctest output shows `Start N:` lines but no corresponding `N/M Test #N:` completion lines.
+
+```bash
+# Extract test IDs from log
+gh run view <run-id> --log 2>&1 | grep "Start " | grep -oP '\d+(?=:)' | sort -un > /tmp/started.txt
+gh run view <run-id> --log 2>&1 | grep "Test #" | grep -oP '(?<=#)\d+' | sort -un > /tmp/completed.txt
+comm -23 /tmp/started.txt /tmp/completed.txt
+```
+
+Once identified, disable the test in GTest by prefixing with `DISABLED_`:
+```cpp
+// Before:
+TEST(ThreadPoolTest, NoWorkAfterShutdown) { ... }
+// After:
+TEST(ThreadPoolTest, DISABLED_NoWorkAfterShutdown) { ... }
+```
+
+Add a ctest per-test timeout to prevent future hangs:
+```makefile
+# In the Makefile test target, add --timeout flag:
+ctest --output-on-failure --timeout 120
+```
+
+File a GitHub issue for follow-up investigation:
+```bash
+gh issue create \
+  --title "fix: ThreadPoolTest.NoWorkAfterShutdown hangs indefinitely under TSan" \
+  --body "## Summary
+The test \`ThreadPoolTest.NoWorkAfterShutdown\` hangs when \`pool.submit()\` is called after \`pool.shutdown()\` under TSan instrumentation.
+
+## Reproduction
+Run \`ctest\` with TSan build. Test #338 of 489 starts at T+0:00 and never completes.
+
+## Current state
+Test disabled with \`DISABLED_\` prefix.
+
+## Investigation needed
+- Determine why submit-after-shutdown deadlocks under TSan but not in non-sanitized builds
+- Likely a TSan-specific false positive or a real deadlock exposed by TSan's slower execution"
+```
+
+#### Step 3: Remove MSan from CI Matrix
+
+MSan (MemorySanitizer) fails to build projects that use Google Benchmark or other libraries whose CMake configuration runs small test programs. Under MSan, those probe programs fail because they use uninstrumented stdlib.
+
+**Error signature**:
+```
+Failed to determine the source files for the regular expression backend
+```
+
+**Fix**: Remove `msan` from the sanitizer matrix in `.github/workflows/ci.yml`:
+```yaml
+# Before:
+matrix:
+  sanitizer: [asan, ubsan, tsan, msan, lsan]
+
+# After:
+matrix:
+  sanitizer: [asan, ubsan, tsan, lsan]
+```
+
+File a GitHub issue explaining the root cause and what a proper fix would require:
+```bash
+gh issue create \
+  --title "fix: MSan builds fail due to uninstrumented Google Benchmark stdlib probe" \
+  --body "## Summary
+MSan CI builds fail because Google Benchmark's CMake config runs small test programs to probe regex backend (\`HAVE_STD_REGEX\`, \`HAVE_POSIX_REGEX\`). Under MSan, these programs crash because they use uninstrumented stdlib.
+
+## Root cause
+MSan requires ALL code — including stdlib — to be compiled with MSan instrumentation. This means building an instrumented libc++ from source, then pointing CMake at it.
+
+## Current state
+MSan removed from CI sanitizer matrix.
+
+## Proper fix
+1. Build instrumented libc++ with \`-fsanitize=memory\`
+2. Set \`CMAKE_CXX_FLAGS\` to use the instrumented stdlib
+3. This is a multi-hour build; best done in a separate Docker stage
+
+## Coverage gap
+ASan + UBSan + LSan provide substantial overlap. MSan's unique value (uninitialized reads) can be partially covered by Valgrind \`--track-origins=yes\`."
+```
+
+#### Step 4: Fix Dockerfile COPY Paths
+
+When `CMAKE_RUNTIME_OUTPUT_DIRECTORY` is set to `${CMAKE_BINARY_DIR}/bin`, binaries land in `/workspace/build/bin/` not `/workspace/build/`.
+
+```dockerfile
+# Before (wrong — binary doesn't exist here):
+COPY --from=builder /workspace/build/my_binary /usr/local/bin/
+
+# After (correct — CMake outputs to /bin/ subdir):
+COPY --from=builder /workspace/build/bin/my_binary /usr/local/bin/
+```
+
+Check the actual output directory:
+```bash
+git grep "CMAKE_RUNTIME_OUTPUT_DIRECTORY" CMakeLists.txt
+# If it says: set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+# Then all COPY paths need /bin/ suffix
+```
+
+#### Step 5: Create Fix Branch from main
+
+When creating a fix branch to address CI failures, always start from `main` — not from a stale feature branch:
+
+```bash
+git checkout main && git pull origin main
+git checkout -b fix/ci-tsan-msan-hung-test-$(date +%Y%m%d-%H%M%S)
+# Make changes
+git add <files>
+git commit -m "fix: resolve TSan data races, disable hung test, remove MSan from CI"
+git push -u origin <branch>
+gh pr create --title "fix: resolve CI failures (TSan races, hung test, MSan build)"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Using `--log-failed` for full error context | `gh run view <id> --log-failed` to see build errors | Output shows git cleanup/restore steps but misses actual compilation and test output | Use `gh run view <id> --log` with targeted `grep` patterns instead |
+| Increasing TSan job timeout | Proposed setting a longer `timeout-minutes` on the TSan GitHub Actions job | User explicitly rejected: "reduce/disable instead" — a hung test wastes CI minutes at any timeout | Disable the hung test + add `--timeout 120` to ctest; do not increase job timeout |
+| Fixing MSan by instrumenting libc++ | Discussed compiling instrumented libc++ from source | Multi-hour build, complex CI setup, not worth it when ASan+UBSan+LSan cover most cases | Remove MSan from CI matrix and file an issue for later |
+| Creating fix branch from feature branch | Checked out from a feature branch that had stash | Stash pop caused merge conflicts with main changes | Always `git checkout main && git pull` before creating a fix branch |
+
+## Results & Parameters
+
+### TSan-Safe Pattern for Shared RNG
+
+```cpp
+// Header:
+class SimulatedNetwork {
+    mutable std::mutex rng_mutex_;
+    std::mt19937 rng_;  // NOT atomic — too complex; mutex is fine
+
+    double generateLatency() const {
+        std::lock_guard<std::mutex> lock(rng_mutex_);
+        return dist_(rng_);
+    }
+};
+```
+
+### TSan-Safe Pattern for Agent Registry Map
+
+```cpp
+class SimulatedCluster {
+    mutable std::mutex agent_map_mutex_;
+    std::unordered_map<std::string, size_t> agent_node_map_;
+
+    void registerAgent(const std::string& id, size_t node) {
+        std::lock_guard<std::mutex> lock(agent_map_mutex_);
+        agent_node_map_[id] = node;
+    }
+    size_t getAgentNode(const std::string& id) const {
+        std::lock_guard<std::mutex> lock(agent_map_mutex_);
+        return agent_node_map_.at(id);
+    }
+};
+```
+
+### TSan-Safe Pattern for Health Check Server
+
+```cpp
+class HealthCheckServer {
+    std::atomic<int> server_fd_{-1};
+    std::atomic<uint16_t> port_{0};
+    mutable std::mutex readiness_mutex_;
+    std::function<bool()> readiness_check_;
+
+    void stop() {
+        int fd = server_fd_.exchange(-1);  // Atomic get-and-clear
+        if (fd >= 0) ::close(fd);
+    }
+    void setReadinessCheck(std::function<bool()> check) {
+        std::lock_guard<std::mutex> lock(readiness_mutex_);
+        readiness_check_ = std::move(check);
+    }
+};
+```
+
+### ctest Timeout Flag
+
+```makefile
+test:
+	cd build && ctest --output-on-failure --timeout 120
+```
+
+### CI Matrix Without MSan
+
+```yaml
+strategy:
+  matrix:
+    sanitizer: [asan, ubsan, tsan, lsan]
+    # msan removed: requires instrumented libc++ (see issue #144)
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| HomericIntelligence/ProjectKeystone | PR #146 — fix CI failures on main and 2 open PRs | C++20 HMAS, GCC/Clang, GitHub Actions, Google Benchmark |
