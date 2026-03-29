@@ -1,0 +1,60 @@
+# centralized-path-constants — History
+
+## v2.0.0 (2026-03-28)
+
+**Changed by:** Session — ProjectScylla PRs #1738/#1739 (in_progress/completed phase split)
+**Verification:** verified-ci
+
+### What changed
+- Extended pattern to support phase-routed paths (`in_progress/` vs `completed/`) via `completed=False` keyword argument
+- Added `get_experiment_dir_from_run()` helper for reverse path derivation
+- Added `promote_run_to_completed()` utility function
+- Added critical lesson: 17 bypass violations found post-merge when directory structure changed — added pre-merge audit grep command
+- Added "Phase-Routed Paths" section to Verified Workflow
+- Updated Failed Attempts with bypass violation lesson
+
+### Why
+v1.0.0 documented the basic centralization pattern (AGENT_DIR, JUDGE_DIR constants + helpers).
+This session revealed a critical gap: when the directory structure itself changes (adding `in_progress/`/`completed/` phases), even code that uses helpers can bypass the routing if the helpers don't carry the phase parameter. 17 files needed post-merge fixes.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: centralized-path-constants
+description: Create central path constants module to prevent hardcoded path inconsistencies
+category: architecture
+date: 2026-01-04
+version: 1.0.0
+tags:
+- paths
+- refactoring
+- consistency
+- constants
+- dry-principle
+---
+# Centralized Path Constants
+
+## Overview
+
+| Attribute | Value |
+|-----------|-------|
+| **Date** | 2026-01-04 |
+| **Objective** | Eliminate hardcoded path construction and create single source of truth for directory structure |
+| **Outcome** | ✅ Created paths module with constants and helpers, preventing inconsistencies |
+| **Project** | ProjectScylla |
+| **PR** | [#137](https://github.com/HomericIntelligence/ProjectScylla/pull/137) |
+
+## When to Use
+
+Use this pattern when:
+- Multiple files construct the same paths with hardcoded strings
+- Path logic is duplicated across modules
+- Refactoring directory structure requires changes in many places
+- Resume/checkpoint logic needs to validate path existence
+- Risk of typos in path strings (e.g., `"agent"` vs `"agents"`)
+
+[... full v1.0.0 content as above ...]
+```
+
+---

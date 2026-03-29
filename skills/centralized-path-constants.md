@@ -1,216 +1,169 @@
 ---
 name: centralized-path-constants
-description: Create central path constants module to prevent hardcoded path inconsistencies
+description: "Create central path constants module to prevent hardcoded path inconsistencies. Use when: (1) multiple files construct the same paths inline, (2) directory structure changes require updating many files, (3) a directory structure has phases (e.g., in_progress/completed) that must be routed at a single point."
 category: architecture
-date: 2026-01-04
-version: 1.0.0
+date: 2026-03-28
+version: "2.0.0"
+user-invocable: false
+verification: verified-ci
+history: centralized-path-constants.history
 tags:
-- paths
-- refactoring
-- consistency
-- constants
-- dry-principle
+  - paths
+  - refactoring
+  - consistency
+  - constants
+  - dry-principle
+  - phase-routing
 ---
+
 # Centralized Path Constants
 
 ## Overview
 
 | Attribute | Value |
 |-----------|-------|
-| **Date** | 2026-01-04 |
-| **Objective** | Eliminate hardcoded path construction and create single source of truth for directory structure |
-| **Outcome** | ✅ Created paths module with constants and helpers, preventing inconsistencies |
+| **Date** | 2026-03-28 |
+| **Objective** | Eliminate hardcoded path construction; create single source of truth for directory structure including phase-based routing |
+| **Outcome** | ✅ v1.0.0: basic centralization. v2.0.0: phase-routed paths (in_progress/completed split) |
+| **Verification** | verified-ci |
+| **History** | [changelog](./centralized-path-constants.history) |
 | **Project** | ProjectScylla |
-| **PR** | [#137](https://github.com/HomericIntelligence/ProjectScylla/pull/137) |
+| **PRs** | [#137](https://github.com/HomericIntelligence/ProjectScylla/pull/137), [#1738](https://github.com/HomericIntelligence/ProjectScylla/pull/1738) |
 
 ## When to Use
 
-Use this pattern when:
 - Multiple files construct the same paths with hardcoded strings
 - Path logic is duplicated across modules
 - Refactoring directory structure requires changes in many places
 - Resume/checkpoint logic needs to validate path existence
 - Risk of typos in path strings (e.g., `"agent"` vs `"agents"`)
-
-## Problem
-
-**Scattered Path Construction**:
-```python
-# File 1:
-agent_dir = run_dir / "agent"
-result_file = agent_dir / "result.json"
-
-# File 2:
-agent_results = run_dir / "agent" / "result.json"  # Typo risk
-
-# File 3:
-if (run_dir / "agents" / "result.json").exists():  # BUG: wrong dir name!
-```
-
-**Issues**:
-1. No single source of truth
-2. Typos cause silent failures
-3. Refactoring requires finding all string occurrences
-4. Testing path logic is difficult
+- **NEW**: The directory structure has phases (e.g., `in_progress/` vs `completed/`) — routing must be centralized or bypass violations will appear at every path construction site
 
 ## Verified Workflow
 
-### 1. Create Paths Module
-
-**File**: `src/<package>/paths.py`
+### Quick Reference
 
 ```python
-"""Path constants and helpers for directory structure.
-
-Centralizes all path logic to ensure consistency.
-"""
+# paths.py — minimal structure
 from pathlib import Path
+import shutil
 
-# Directory name constants
+# Phase constants (if using phase-split)
+IN_PROGRESS_DIR = "in_progress"
+COMPLETED_DIR = "completed"
+
+# Sub-directory constants
 AGENT_DIR = "agent"
 JUDGE_DIR = "judge"
 RESULT_FILE = "result.json"
 
+# Basic helpers
 def get_agent_dir(run_dir: Path) -> Path:
-    """Get agent artifacts directory for a run."""
     return run_dir / AGENT_DIR
 
 def get_judge_dir(run_dir: Path) -> Path:
-    """Get judge artifacts directory for a run."""
     return run_dir / JUDGE_DIR
 
-def get_agent_result_file(run_dir: Path) -> Path:
-    """Get agent result.json file path."""
-    return get_agent_dir(run_dir) / RESULT_FILE
+# Phase-routed helpers (keyword-only completed= for safety)
+def get_tier_dir(experiment_dir: Path, tier_id: str, *, completed: bool = False) -> Path:
+    phase = COMPLETED_DIR if completed else IN_PROGRESS_DIR
+    return experiment_dir / phase / tier_id
 
-def get_judge_result_file(run_dir: Path) -> Path:
-    """Get judge result.json file path."""
-    return get_judge_dir(run_dir) / RESULT_FILE
+def get_subtest_dir(experiment_dir, tier_id, subtest_id, *, completed=False):
+    return get_tier_dir(experiment_dir, tier_id, completed=completed) / subtest_id
+
+def get_run_dir(experiment_dir, tier_id, subtest_id, run_num, *, completed=False):
+    return get_subtest_dir(experiment_dir, tier_id, subtest_id, completed=completed) / f"run_{run_num:02d}"
+
+def get_experiment_dir_from_run(run_dir: Path) -> Path:
+    """Reverse derivation — 4 levels up: run -> subtest -> tier -> phase -> experiment."""
+    return run_dir.parent.parent.parent.parent
+
+def promote_run_to_completed(experiment_dir, tier_id, subtest_id, run_num) -> Path:
+    src = get_run_dir(experiment_dir, tier_id, subtest_id, run_num, completed=False)
+    dst = get_run_dir(experiment_dir, tier_id, subtest_id, run_num, completed=True)
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.move(str(src), str(dst))
+    # IMPORTANT: copy (not move) shared baseline so sibling runs can also be promoted
+    baseline = src.parent / "pipeline_baseline.json"
+    if baseline.exists():
+        shutil.copy2(str(baseline), str(dst.parent / "pipeline_baseline.json"))
+    return dst
 ```
 
-### 2. Update Imports
+### Detailed Steps
 
-```python
-# Old:
-# (no imports, paths hardcoded inline)
+#### Basic Centralization (v1.0.0 pattern)
 
-# New:
-from <package>.paths import (
-    RESULT_FILE,
-    get_agent_dir,
-    get_agent_result_file,
-    get_judge_dir,
-    get_judge_result_file,
-)
+1. **Create `paths.py`** with directory name constants and helper functions
+2. **Import in callers** — replace every `run_dir / "agent"` with `get_agent_dir(run_dir)`
+3. **Use constants for filenames** — `RESULT_FILE` not `"result.json"`
+4. **Write tests** verifying helper return values
+
+#### Phase-Routed Paths (v2.0.0 addition)
+
+1. **Add `IN_PROGRESS_DIR`/`COMPLETED_DIR`** constants
+2. **Add `completed=False` parameter** (keyword-only with `*`) to all phase-sensitive helpers
+3. **Default to `in_progress`** — callers doing active work don't need to change
+4. **Callers doing read/report work** explicitly pass `completed=True`
+5. **Run pre-merge audit** to catch bypass violations before merging
+
+### Pre-Merge Audit (CRITICAL for directory structure changes)
+
+```bash
+# Find all sites that bypass paths.py and construct paths directly
+# Run before merging any PR that changes directory structure
+grep -rn "experiment_dir / \|experiment_dir/" src/ scripts/ \
+  | grep -v "paths.py" \
+  | grep -v "# noqa" \
+  | grep -v "__pycache__" \
+  | grep -v ".pyc"
 ```
 
-### 3. Replace Hardcoded Paths
+**Expected output:** Zero hits. Any hit is a bypass violation that must be fixed.
 
-```python
-# Before:
-agent_dir = run_dir / "agent"
-judge_dir = run_dir / "judge"
-agent_result_file = agent_dir / "result.json"
-
-# After:
-agent_dir = get_agent_dir(run_dir)
-judge_dir = get_judge_dir(run_dir)
-agent_result_file = get_agent_result_file(run_dir)
-```
-
-### 4. Use Constants for Literals
-
-```python
-# Before:
-with open(agent_dir / "result.json", "w") as f:
-    json.dump(data, f)
-
-# After:
-with open(agent_dir / RESULT_FILE, "w") as f:
-    json.dump(data, f)
-```
-
-### 5. Verify with Tests
-
-```python
-def test_path_consistency():
-    """Ensure all path helpers return consistent results."""
-    run_dir = Path("/tmp/run_01")
-
-    # Agent paths
-    assert get_agent_dir(run_dir) == run_dir / "agent"
-    assert get_agent_result_file(run_dir) == run_dir / "agent" / "result.json"
-
-    # Judge paths
-    assert get_judge_dir(run_dir) == run_dir / "judge"
-    assert get_judge_result_file(run_dir) == run_dir / "judge" / "result.json"
-```
+**When to run:** Before every PR that adds or changes a path-level constant in `paths.py`.
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| N/A | Direct approach worked | N/A | Solution was straightforward |
+| Basic string paths | Direct `run_dir / "agent"` in every file | Typos (`"agents"` vs `"agent"`) caused silent failures | Use constants from paths.py even for short strings |
+| Phase split without audit | Added in_progress/completed split but didn't audit all callers | 17 files post-merge still used `experiment_dir / tier_id` directly — silent wrong-dir reads | ALWAYS run the pre-merge audit grep before merging a directory structure change |
+| `shutil.move` for shared baseline | Moved `pipeline_baseline.json` with the first run during promotion | Second run in same subtest can't find baseline — it was moved away | Use `shutil.copy2` for files shared across sibling runs; only move the run directory itself |
+| Stale fallback after refactor | Left `elif` fallback pointing to old path | `best_subtest.json` in new `completed/` was never reached; fallback silently returned wrong data | Delete stale fallbacks entirely; don't leave "just in case" code pointing at wrong locations |
+
 ## Results & Parameters
 
-### Pattern Template
+### Bypass Violation Count by Category (2026-03-28 experience)
 
-```python
-# paths.py structure:
+When the `in_progress/completed` split was added, **17 bypass violations** were found post-merge across:
 
-# 1. Constants (uppercase)
-SUBDIR_NAME = "subdirectory"
-FILE_NAME = "file.json"
+| Module | Violations | Fix |
+|--------|-----------|-----|
+| `tier_manager.py` | 3 | `get_tier_dir(..., completed=True)` |
+| `parallel_tier_runner.py` | 1 | `get_subtest_dir(..., completed=True)` |
+| `regenerate.py` | 3 | `get_run_dir/get_tier_dir/get_subtest_dir(completed=True)` |
+| `manage_experiment.py` | 2 | Check both `completed/` and `in_progress/` |
+| `resume_manager.py` | 2 | `get_run_dir` + frozenset update |
+| `tier_action_builder.py` | 1 | Remove stale fallback |
+| Test fixtures | 5+ | Update to use `completed/` prefix |
 
-# 2. Directory getters
-def get_subdir(parent: Path) -> Path:
-    return parent / SUBDIR_NAME
+**Lesson:** The pre-merge grep would have found all 17 in 5 seconds.
 
-# 3. File path getters
-def get_file(parent: Path) -> Path:
-    return get_subdir(parent) / FILE_NAME
+### `completed=` Routing Decision Table
 
-# 4. Optional: Validation helpers
-def has_valid_structure(parent: Path) -> bool:
-    return get_file(parent).exists()
-```
-
-### Migration Checklist
-
-- [x] Create `paths.py` module
-- [x] Define directory name constants
-- [x] Create helper functions for each path type
-- [x] Import in files that construct paths
-- [x] Replace hardcoded strings with helpers
-- [x] Replace file name strings with constants
-- [x] Run tests to verify no regressions
-- [x] Update documentation if paths change
-
-### Benefits Achieved
-
-1. **Single Source of Truth**: One place to update directory structure
-2. **Type Safety**: Path objects instead of strings reduce bugs
-3. **Consistency**: Impossible to have typos across files
-4. **Refactoring**: Change directory name once, all code updates
-5. **Testing**: Easy to mock/test path logic
-6. **Documentation**: Self-documenting helper function names
-
-## Key Learnings
-
-1. **Centralize Early**: Add paths module at project start, not after bugs appear
-2. **Helper Functions Over Constants**: `get_agent_dir()` > `AGENT_DIR` for complex paths
-3. **Compose Helpers**: Build complex paths from simple ones (`get_agent_result_file` uses `get_agent_dir`)
-4. **No Magic Strings**: Even file names should be constants
-5. **Foundation for Validation**: Centralized paths enable centralized validation logic
-
-## Related Skills
-
-- `architecture/dry-principle` - Don't Repeat Yourself patterns
-- `refactor/extract-module` - When to create new modules
-- `testing/path-mocking` - Testing code with file system dependencies
+| Site | `completed=` | Reason |
+|------|-------------|--------|
+| Active run execution (PENDING to DIFF_CAPTURED) | `False` | Work is in-flight |
+| Judging and reporting (PROMOTED_TO_COMPLETED+) | `True` | Only completed runs are judged |
+| Rehydration / resume scanning | `True` | Completed runs have stable data |
+| Aggregation, analysis, loader | `True` | Must only aggregate finished runs |
+| Repair / reconcile commands | Both | Run may be in either phase |
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectScylla | PR #137 - Path standardization foundation for resume logic | [notes.md](../../references/notes.md) |
+| ProjectScylla | PR #137 — initial path standardization | Basic constants and helpers |
+| ProjectScylla | PRs #1738/#1739 — in_progress/completed split | Phase-routed paths, 17 post-merge bypass violations found and fixed |
