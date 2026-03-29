@@ -1,0 +1,450 @@
+# batch-pr-ci-fix-workflow — Version History
+# Archived: 2026-03-29 (superseded by v2.0.0)
+
+---
+name: batch-pr-ci-fix-workflow
+description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging."
+category: ci-cd
+date: 2026-03-28
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: []
+---
+# Batch PR CI Fix Workflow
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-03-28 |
+| **Objective** | Diagnose and fix CI failures across multiple open PRs — formatting, pre-commit hooks, broken JSON, MkDocs link errors, rebase-based fixes |
+| **Outcome** | Consolidated from 6 source skills |
+
+## When to Use
+
+- Multiple open PRs have failing CI checks (formatting, pre-commit, broken links, mypy, JSON validation)
+- A common CI failure pattern affects many PRs and needs a root-cause fix on `main` first
+- PRs have CONFLICTING/DIRTY merge state from being behind main (merge conflicts block CI from running)
+- A batch edit corrupted JSON files across many plugin files
+- You need to enable auto-merge across 20+ open PRs at once
+- A PR CI failure is caused by branch staleness (crashes unrelated to the PR's own changes)
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Assess open PRs and CI status
+gh pr list --state open --json number,title,headRefName --limit 100
+gh pr checks <pr-number>
+gh pr checks <pr-number> 2>&1 | grep -E "(fail|pending)"
+
+# 2. Get failure logs
+gh run view <run-id> --log-failed | head -100
+
+# 3. Fix each PR (pick appropriate fix path below)
+
+# 4. Enable auto-merge
+gh pr merge <pr-number> --auto --rebase
+
+# 5. Monitor
+gh pr view <pr-number> --json state,mergedAt
+```
+
+### Phase 0: Triage Before Touching Anything
+
+```bash
+# Check status of all open PRs
+gh pr list --state open
+gh pr checks <number>
+
+# For each failing PR, read the CI log
+gh run view <run-id> --log-failed | head -60
+
+# Check if branch is behind main (causes merge conflicts → CI won't even run)
+gh pr view <number> --json mergeable,mergeStateStatus
+# "CONFLICTING" → rebase needed before CI can trigger
+```
+
+The hook name in the CI log tells you which fix path to take:
+
+| Hook / Error | Fix Path |
+|------|----------|
+| `Ruff Format Python` | Auto-fix (blank lines, indentation) |
+| `Markdown Lint` | Auto-fix (MD032 blank lines) |
+| `Check Tier Label Consistency` | Manual doc fixes (see self-catch path below) |
+| `mojo-format` | Run `pixi run mojo format <file>` or read CI diff |
+| `validate-test-coverage` | Add missing test file to CI workflow patterns |
+| `ruff-check-python` | Fix unused imports/variables |
+| Broken markdown links (MkDocs strict) | Remove or fix link |
+| Invalid JSON | Use Python json module fix (see bulk JSON path) |
+
+### Phase 1: Fix Root Cause on Main First (When a Common Pattern Exists)
+
+If many PRs all fail with the same format error:
+
+```bash
+# Find which file fails format on any PR
+gh run view <run_id> --log-failed 2>&1 | grep "reformatted"
+
+# Check the file's long lines (code limit = 88 chars, markdown = 120 chars)
+awk 'length > 88 {print NR": "length": "$0}' <file> | head -20
+```
+
+1. Create branch from main, fix the formatting/API issue
+2. Push, create PR, enable auto-merge: `gh pr merge --auto --rebase`
+3. Wait for it to merge, then mass-rebase all PRs (see `batch-pr-rebase-conflict-resolution-workflow`)
+
+### Phase 2: Fix Trivial Formatting Failures (ruff-format, markdownlint)
+
+```bash
+git checkout <branch>
+git pull origin <branch>
+
+# Let the hook auto-fix
+pre-commit run --all-files
+
+# Check what changed
+git status --short
+
+# Stage only the changed files
+git add <changed-files>
+git commit -m "fix(tests): add missing blank line between test classes"
+git push origin <branch>
+```
+
+**Key**: always `git status --short` after pre-commit to know what was auto-fixed before staging.
+
+### Phase 3: Fix "Self-Catch" Expanded-Scope Pre-commit Hook
+
+When a PR widens a pre-commit hook (e.g., from checking one file to scanning `*.md`) and the wider scan catches pre-existing violations in other files the PR didn't touch:
+
+**Step 1**: Reproduce the exact CI environment (exclude untracked local dirs):
+
+```bash
+# Wrong — includes local directories that don't exist in CI
+pixi run python scripts/check_tier_label_consistency.py
+
+# Correct — matches CI (exclude untracked local checkouts)
+pixi run python scripts/check_tier_label_consistency.py --exclude ProjectMnemosyne
+```
+
+**Step 2**: Fix all violations and verify clean:
+
+```bash
+pixi run python scripts/check_tier_label_consistency.py --exclude ProjectMnemosyne
+# Should print: "No tier label mismatches found."
+```
+
+**Step 3**: Commit with a descriptive message:
+
+```bash
+git add <all modified files>
+git commit -m "docs: fix N tier label mismatches caught by expanded consistency checker"
+git push origin <branch>
+```
+
+### Phase 4: Fix MkDocs Strict Mode Link Failures
+
+MkDocs strict mode aborts on broken/unrecognized links:
+
+| Error Type | Example | Fix |
+|-----------|---------|-----|
+| Link to non-existent file | `[Math](math.md)` when file doesn't exist | Remove link or create file |
+| Cross-directory link | `[Workflow](../../.github/workflows/file.yml)` | Convert to backtick code reference |
+| Unrecognized relative link | `[Examples](../../examples/)` | Use valid docs-relative path or remove |
+
+**Detection pattern:**
+```
+WARNING - Doc file 'path/to/file.md' contains a link 'target.md', but the target is not found
+Aborted with N warnings in strict mode!
+```
+
+```bash
+# Switch to PR branch
+git checkout <branch-name>
+
+# Find broken links
+gh run view <run-id> --log 2>&1 | grep -B5 "Aborted with.*warnings"
+
+# Edit file to remove/fix link
+git add <file>
+git commit -m "fix(docs): remove broken link to non-existent file"
+git push origin <branch-name>
+```
+
+### Phase 5: Fix Branches Behind Main (Merge Conflicts)
+
+If `mergeStateStatus == "CONFLICTING"`, CI won't trigger until the branch is rebased:
+
+```bash
+git checkout <branch>
+git fetch origin main
+git log --oneline HEAD..origin/main | wc -l  # How many commits behind?
+
+git rebase origin/main
+# For conflicted files where PR version should win:
+git checkout --theirs <conflicted-file>
+git add <conflicted-file>
+git rebase --continue
+```
+
+**After rebase**: always re-run tests and pre-commit:
+
+```bash
+pre-commit run --all-files || true
+git add -u && git commit -m "fix: apply pre-commit auto-fixes" || true
+git push --force-with-lease origin <branch>
+```
+
+For `pixi.lock` conflicts:
+```bash
+git checkout --theirs pixi.lock
+pixi install
+git add pixi.lock
+git rebase --continue
+```
+
+### Phase 6: Fix Pre-existing Staleness Crashes
+
+When CI shows `mojo: error: execution crashed` or other crashes in tests the PR never touched:
+
+```bash
+# Confirm failures are pre-existing (not PR-introduced)
+gh run list --branch main --limit 5
+gh pr diff <PR-number> --name-only  # PR-touched files
+
+# Check how far behind main the branch is
+git fetch origin main
+git log --oneline HEAD..origin/main
+
+# Rebase onto current main
+git rebase origin/main
+git push --force-with-lease origin <branch-name>
+```
+
+**Key indicator**: if failing test files are NOT in the PR's changed files list, the failures are pre-existing — always rebase before investigating code.
+
+### Phase 7: Fix Bulk-Corrupted JSON Files
+
+When a batch edit left broken JSON (trailing commas, orphaned array items):
+
+```bash
+# Diagnose scope
+python3 scripts/validate_plugins.py skills/ plugins/ 2>&1 | grep -c "Invalid JSON"
+```
+
+Use Python for safe, idempotent repair (NOT xargs/shell):
+
+**Fix valid JSON (remove unwanted key):**
+```python
+import json, pathlib
+for f in pathlib.Path('skills/').rglob('plugin.json'):
+    try:
+        data = json.loads(f.read_text())
+        if 'tags' in data:
+            del data['tags']
+            f.write_text(json.dumps(data, indent=2) + '\n')
+    except Exception:
+        pass  # Handle broken JSON separately
+```
+
+**Fix trailing commas (regex):**
+```python
+import re
+fixed_text = re.sub(r',(\s*[}\]])', r'\1', text)
+```
+
+**Fix orphaned array blocks (line-by-line state machine):**
+```python
+in_orphaned_block = False
+in_valid_array = False
+
+for line in lines:
+    stripped = line.strip()
+    if re.match(r'"[^"]+"\s*:\s*\[', stripped):
+        in_valid_array = True; in_orphaned_block = False
+        new_lines.append(line)
+        if stripped.endswith(']') or stripped.endswith('],'):
+            in_valid_array = False
+        continue
+    if stripped in (']', '],'):
+        if in_valid_array:
+            new_lines.append(line); in_valid_array = False
+        elif in_orphaned_block:
+            in_orphaned_block = False  # skip closing bracket
+        else:
+            new_lines.append(line)
+        continue
+    is_bare_string = (stripped.startswith('"') and
+                      not re.match(r'"[^"]+"\s*:', stripped) and
+                      (stripped.endswith('",') or stripped.endswith('"')))
+    if is_bare_string:
+        if in_valid_array:
+            new_lines.append(line)
+        else:
+            in_orphaned_block = True
+        continue
+    new_lines.append(line)
+```
+
+```bash
+# Verify before committing
+python3 scripts/validate_plugins.py skills/ plugins/ 2>&1 | tail -5
+
+# Stage only modified tracked files (NOT git add -A)
+git add $(git diff --name-only)
+```
+
+### Phase 8: Enable Auto-Merge
+
+```bash
+# Try rebase first (squash/merge-commit may be disabled)
+gh pr merge <pr-number> --auto --rebase
+
+# PRs reporting "Pull request is in clean status" → merge directly
+gh pr merge --rebase <number>
+
+# Batch enable auto-merge
+for pr in <list>; do
+  gh pr merge "$pr" --auto --rebase || echo "Failed: PR #$pr"
+done
+```
+
+**Expected failures to ignore:**
+- `Pull request is already merged` → already done
+- `Pull request is in clean status` → merge directly instead
+- `Protected branch rules not configured for this branch` → check `baseRefName`
+
+### Phase 9: Verify
+
+```bash
+# Check merge status
+gh pr view <pr-number> --json state,mergedAt
+
+# List recently merged PRs
+gh pr list --state merged --limit 5 --json number,title,mergedAt
+
+# Verify no open PRs remain
+gh pr list --state open
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Run mojo format locally | `pixi run mojo format <file>` | GLIBC version mismatch on local machine | Can't run mojo format locally; use CI logs to identify what changed |
+| `git checkout origin/$branch -b temp` | Single command to create tracking branch | Git syntax error: can't update paths and switch simultaneously | Use `git fetch origin $branch && git checkout -b temp origin/$branch` |
+| Fixing link-check by editing unrelated files | Considered modifying CLAUDE.md | Failure was pre-existing on main; fixing out-of-scope | Verify if failure also exists on `main` before attempting a targeted fix |
+| Reproducing CI hook with local untracked dirs | Ran hook without `--exclude ProjectMnemosyne` | Local clone included ProjectMnemosyne dir which doesn't exist in CI | Always exclude untracked directories that exist locally but not in CI |
+| xargs/shell to fix bulk JSON | `xargs -I{} sh -c 'fix...'` | Safety Net blocks `xargs -I{} sh -c` patterns | Use Python's `json` module for safe, idempotent JSON repair |
+| `git add skills/` or `git add -A` after JSON fix | Staged all files including untracked directories | Picks up nested untracked directories | Use `git add $(git diff --name-only)` — stages only modified tracked files |
+| Run `gh pr merge --auto --squash` | Tried squash merge method on rebase-only repo | Usually fails if squash disabled | Test in order: `--squash` → `--merge` → `--rebase`; rebase works on rebase-only repos |
+| Investigate test code for root cause (pre-existing crash) | Considered reading crashing test files to find a code fix | Tests crashing due to Mojo runtime issue already fixed upstream | When failures are in untouched test files and main passes them, always rebase before investigating code |
+| GraphQL PR status query | `gh pr list --json statusCheckRollup` | 504 Gateway Timeout under load from 40+ simultaneous CI runs | Fall back to per-PR `gh pr checks <number>` calls |
+| Empty commit to trigger CI after rebase | Pushed empty commit that didn't touch `skills/**` | Validate workflow had path filter — didn't trigger | Remove path filters entirely from validate workflows; the fix is in the workflow config |
+
+## Results & Parameters
+
+### Key Commands Reference
+
+```bash
+# List open PRs
+gh pr list --state open --json number,title,headRefName
+
+# Check CI status
+gh pr checks <pr-number>
+gh pr checks <pr-number> 2>&1 | grep -E "(fail|pending)"
+
+# Get failure logs
+gh run view <run-id> --log-failed
+
+# Rebase and push
+git fetch origin main
+git rebase origin/main
+git push --force-with-lease origin <branch-name>
+
+# Enable auto-merge
+gh pr merge <pr-number> --auto --rebase
+
+# Batch enable auto-merge
+gh pr list --state open --json number --jq '.[].number' --limit 1000 | \
+  while read pr; do gh pr merge "$pr" --auto --rebase || echo "Failed: PR #$pr"; done
+
+# Check merge status
+gh pr view <pr-number> --json state,mergedAt
+```
+
+### Common MkDocs Strict Mode CI Check Names
+
+```
+build-docs, build-mojo, build-python, build-validation,
+pre-commit, security-report, Test Report,
+Mojo Package Compilation, Code Quality Analysis, secret-scan
+```
+
+### Pre-commit Hook Reference
+
+| Hook | Purpose | Common Fix |
+|------|---------|------------|
+| `Ruff Format Python` | Python formatting | 2 blank lines between top-level classes |
+| `markdownlint-cli2` | Markdown formatting | MD032 blank lines around lists |
+| `Check Tier Label Consistency` | Tier name correctness | Fix tier label ranges |
+| `trailing-whitespace` | Strip trailing spaces | Auto-fixed by hook |
+| `end-of-file-fixer` | Ensure newline at EOF | Auto-fixed by hook |
+
+### Mojo Format Common Patterns
+
+```mojo
+# Long ternary (exceeds 88 chars) → mojo format wraps:
+var epsilon = (
+    GRADIENT_CHECK_EPSILON_FLOAT32 if dtype
+    == DType.float32 else GRADIENT_CHECK_EPSILON_OTHER
+)
+
+# Struct trait declaration (>88 chars) → wrapped:
+struct Foo(
+    Copyable, Movable, Sized, Stringable, Representable, Hashable
+):
+
+# Extra blank lines: 2 between top-level definitions (not 3)
+```
+
+### Mojo Hashable Trait (v0.26.1+) Correct Signature
+
+```mojo
+fn __hash__[H: Hasher](self, mut hasher: H):
+    hasher.write(value1)
+    hasher.write(value2)
+# NOT: fn __hash__(self) -> UInt
+# NOT: inout hasher (use mut)
+# NOT: hasher.update() (use hasher.write())
+```
+
+### JSON Corruption Pattern Counts (Reference)
+
+| Pattern | Fix Method |
+|---------|------------|
+| Valid JSON with unwanted key | `json.loads` + `del data['key']` |
+| Trailing comma only | Regex: `re.sub(r',(\s*[}\]])', r'\1', text)` |
+| Orphaned array (no subsequent fields) | Line-by-line state machine |
+| Orphaned array (with subsequent fields) | State machine with `in_valid_array` tracking |
+
+### Time Savings
+
+- Manual approach: ~2-3 hours (fix each PR individually)
+- Batch approach: ~45 minutes (parallel analysis, pattern-based fixes)
+- Savings: ~60-70% time reduction
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Batch merge of 3 documentation PRs | CI fix session 2025-12-29 |
+| ProjectOdyssey | 8 PRs created and 4 CI fixes, 2025-12-31 | batch-pr-ci-fixer source |
+| ProjectScylla | PRs #1462, #1452 pre-commit fixes, 2026-03-08 | batch-pr-pre-commit-fixes source |
+| ProjectMnemosyne | PRs #685-#697 pre-commit fixes, 2026-02-15 | batch-pr-pre-commit-fixes source |
+| ProjectOdyssey | 40+ PRs, mojo format root fix + mass rebase, 2026-03-06/07 | mass-pr-ci-fix source |
+| ProjectMnemosyne | PR #306 JSON fix + 25 PRs auto-merge, 2026-03-05 | bulk-pr-json-repair-and-automerge source |
+| ProjectOdyssey | PR #3189 pre-existing crash fix via rebase, 2026-03-05 | pr-ci-rebase-fix source |

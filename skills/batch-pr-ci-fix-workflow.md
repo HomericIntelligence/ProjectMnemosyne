@@ -1,11 +1,11 @@
 ---
 name: batch-pr-ci-fix-workflow
-description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging."
+description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration."
 category: ci-cd
-date: 2026-03-28
-version: "1.0.0"
+date: 2026-03-29
+version: "2.0.0"
 user-invocable: false
-verification: unverified
+verification: verified-ci
 tags: []
 ---
 # Batch PR CI Fix Workflow
@@ -14,9 +14,9 @@ tags: []
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-03-28 |
-| **Objective** | Diagnose and fix CI failures across multiple open PRs — formatting, pre-commit hooks, broken JSON, MkDocs link errors, rebase-based fixes |
-| **Outcome** | Consolidated from 6 source skills |
+| **Date** | 2026-03-29 |
+| **Objective** | Diagnose and fix CI failures across multiple open PRs — formatting, pre-commit hooks, broken JSON, MkDocs link errors, rebase-based fixes, required vs non-required checks, src-layout migration conflicts |
+| **Outcome** | Consolidated from 6 source skills (v1.0.0) + new learnings from ProjectScylla PRs #1739/#1734/#1737/#1740 (v2.0.0) |
 
 ## When to Use
 
@@ -26,6 +26,10 @@ tags: []
 - A batch edit corrupted JSON files across many plugin files
 - You need to enable auto-merge across 20+ open PRs at once
 - A PR CI failure is caused by branch staleness (crashes unrelated to the PR's own changes)
+- **[NEW v2.0.0]** You need to distinguish required (blocking) checks from non-required (advisory) checks
+- **[NEW v2.0.0]** Auto-merge was cleared by a force-push and must be re-enabled
+- **[NEW v2.0.0]** A branch conflicts with a src-layout migration and standard rebase fails immediately
+- **[NEW v2.0.0]** Pre-existing failures look like blockers but are not required checks
 
 ## Verified Workflow
 
@@ -76,6 +80,36 @@ The hook name in the CI log tells you which fix path to take:
 | `ruff-check-python` | Fix unused imports/variables |
 | Broken markdown links (MkDocs strict) | Remove or fix link |
 | Invalid JSON | Use Python json module fix (see bulk JSON path) |
+| `bats` (command not found) | Pre-existing on main — NOT a required check, ignore |
+| `docker-build-timing` (Trivy CVEs) | Pre-existing on main — NOT a required check, ignore |
+
+### Phase 0.5: [NEW v2.0.0] Identify Required vs Non-Required Checks
+
+Not all failing checks block a PR merge. Required checks are configured in GitHub branch protection
+rules. Non-required checks may fail without preventing auto-merge.
+
+```bash
+# See which checks are required (branch protection rules)
+gh api repos/{owner}/{repo}/branches/main --jq '.protection.required_status_checks.contexts[]'
+
+# Alternative: check PR status with context
+gh pr checks <pr-number> 2>&1
+# Required checks show as blocking; non-required appear in CI but don't gate merge
+
+# Confirm a failure is pre-existing on main (not introduced by this PR)
+gh run list --branch main --status failure --limit 5
+gh run view <main-run-id> --log-failed | grep "<check-name>"
+```
+
+**Decision rule**: If a check fails on `main` too and is NOT in the required_status_checks list,
+treat it as advisory-only. Never spend time fixing advisory failures when required checks pass.
+
+**Known pre-existing non-required failures in ProjectScylla** (as of 2026-03-29):
+- `bats` — `fail: command not found` — bats test runner not installed in CI environment
+- `docker-build-timing` — Trivy CVE scanner reports known CVEs — not a required gate
+
+**When in doubt**: Enable auto-merge and let GitHub report whether it can proceed. If auto-merge
+reports "Waiting for required checks", those are the blocking ones.
 
 ### Phase 1: Fix Root Cause on Main First (When a Common Pattern Exists)
 
@@ -113,9 +147,30 @@ git push origin <branch>
 
 **Key**: always `git status --short` after pre-commit to know what was auto-fixed before staging.
 
+**ruff-format after identifier rename**: When a rename shortens variable/function names, multi-line
+expressions may now fit on one line. ruff-format will collapse them. Run:
+
+```bash
+# Targeted ruff-format only (faster than --all-files when only formatting changed)
+pre-commit run ruff-format-python --all-files
+git add -u
+git commit -m "fix(format): apply ruff format after identifier rename"
+git push origin <branch>
+```
+
+**Test assertion renames**: When an identifier is renamed (e.g., `Retrospective` → `Learn`), search
+for string literals in test files — they are NOT auto-updated by rename refactoring:
+
+```bash
+# Find old strings in test files
+grep -r "OldName" tests/
+# Fix each assertion manually, then run pre-commit to catch any formatting cascade
+```
+
 ### Phase 3: Fix "Self-Catch" Expanded-Scope Pre-commit Hook
 
-When a PR widens a pre-commit hook (e.g., from checking one file to scanning `*.md`) and the wider scan catches pre-existing violations in other files the PR didn't touch:
+When a PR widens a pre-commit hook (e.g., from checking one file to scanning `*.md`) and the wider
+scan catches pre-existing violations in other files the PR didn't touch:
 
 **Step 1**: Reproduce the exact CI environment (exclude untracked local dirs):
 
@@ -127,14 +182,7 @@ pixi run python scripts/check_tier_label_consistency.py
 pixi run python scripts/check_tier_label_consistency.py --exclude ProjectMnemosyne
 ```
 
-**Step 2**: Fix all violations and verify clean:
-
-```bash
-pixi run python scripts/check_tier_label_consistency.py --exclude ProjectMnemosyne
-# Should print: "No tier label mismatches found."
-```
-
-**Step 3**: Commit with a descriptive message:
+**Step 2**: Fix all violations and verify clean, then commit:
 
 ```bash
 git add <all modified files>
@@ -152,20 +200,11 @@ MkDocs strict mode aborts on broken/unrecognized links:
 | Cross-directory link | `[Workflow](../../.github/workflows/file.yml)` | Convert to backtick code reference |
 | Unrecognized relative link | `[Examples](../../examples/)` | Use valid docs-relative path or remove |
 
-**Detection pattern:**
-```
-WARNING - Doc file 'path/to/file.md' contains a link 'target.md', but the target is not found
-Aborted with N warnings in strict mode!
-```
-
 ```bash
-# Switch to PR branch
+# Switch to PR branch and find broken links
 git checkout <branch-name>
-
-# Find broken links
 gh run view <run-id> --log 2>&1 | grep -B5 "Aborted with.*warnings"
 
-# Edit file to remove/fix link
 git add <file>
 git commit -m "fix(docs): remove broken link to non-existent file"
 git push origin <branch-name>
@@ -203,29 +242,44 @@ git add pixi.lock
 git rebase --continue
 ```
 
+### Phase 5.5: [NEW v2.0.0] Recover Auto-Merge After Force-Push
+
+After any `git push --force-with-lease` or `git push --force` (rebase, amend), GitHub clears
+the auto-merge setting. This is **silent** — there is no notification.
+
+```bash
+# After force-push, always re-enable auto-merge
+git push --force-with-lease origin <branch>
+gh pr merge <pr-number> --auto --rebase
+
+# Verify auto-merge is active
+gh pr view <pr-number> --json autoMergeRequest
+# Should show: {"autoMergeRequest": {"mergeMethod": "rebase", ...}}
+# NOT: {"autoMergeRequest": null}
+```
+
+**Pattern**: force-push → auto-merge cleared → PR sits open indefinitely even after CI passes.
+**Detection**: PR is green (all checks pass) but not merging. Check `--json autoMergeRequest`.
+**Fix**: Always call `gh pr merge --auto --rebase` immediately after every force-push.
+
 ### Phase 6: Fix Pre-existing Staleness Crashes
 
-When CI shows `mojo: error: execution crashed` or other crashes in tests the PR never touched:
+When CI shows crashes in tests the PR never touched:
 
 ```bash
 # Confirm failures are pre-existing (not PR-introduced)
 gh run list --branch main --limit 5
 gh pr diff <PR-number> --name-only  # PR-touched files
 
-# Check how far behind main the branch is
-git fetch origin main
-git log --oneline HEAD..origin/main
-
 # Rebase onto current main
 git rebase origin/main
 git push --force-with-lease origin <branch-name>
 ```
 
-**Key indicator**: if failing test files are NOT in the PR's changed files list, the failures are pre-existing — always rebase before investigating code.
+**Key indicator**: if failing test files are NOT in the PR's changed files list, the failures are
+pre-existing — always rebase before investigating code.
 
 ### Phase 7: Fix Bulk-Corrupted JSON Files
-
-When a batch edit left broken JSON (trailing commas, orphaned array items):
 
 ```bash
 # Diagnose scope
@@ -244,7 +298,7 @@ for f in pathlib.Path('skills/').rglob('plugin.json'):
             del data['tags']
             f.write_text(json.dumps(data, indent=2) + '\n')
     except Exception:
-        pass  # Handle broken JSON separately
+        pass
 ```
 
 **Fix trailing commas (regex):**
@@ -253,51 +307,15 @@ import re
 fixed_text = re.sub(r',(\s*[}\]])', r'\1', text)
 ```
 
-**Fix orphaned array blocks (line-by-line state machine):**
-```python
-in_orphaned_block = False
-in_valid_array = False
-
-for line in lines:
-    stripped = line.strip()
-    if re.match(r'"[^"]+"\s*:\s*\[', stripped):
-        in_valid_array = True; in_orphaned_block = False
-        new_lines.append(line)
-        if stripped.endswith(']') or stripped.endswith('],'):
-            in_valid_array = False
-        continue
-    if stripped in (']', '],'):
-        if in_valid_array:
-            new_lines.append(line); in_valid_array = False
-        elif in_orphaned_block:
-            in_orphaned_block = False  # skip closing bracket
-        else:
-            new_lines.append(line)
-        continue
-    is_bare_string = (stripped.startswith('"') and
-                      not re.match(r'"[^"]+"\s*:', stripped) and
-                      (stripped.endswith('",') or stripped.endswith('"')))
-    if is_bare_string:
-        if in_valid_array:
-            new_lines.append(line)
-        else:
-            in_orphaned_block = True
-        continue
-    new_lines.append(line)
-```
-
 ```bash
-# Verify before committing
+# Verify then stage only modified tracked files
 python3 scripts/validate_plugins.py skills/ plugins/ 2>&1 | tail -5
-
-# Stage only modified tracked files (NOT git add -A)
 git add $(git diff --name-only)
 ```
 
 ### Phase 8: Enable Auto-Merge
 
 ```bash
-# Try rebase first (squash/merge-commit may be disabled)
 gh pr merge <pr-number> --auto --rebase
 
 # PRs reporting "Pull request is in clean status" → merge directly
@@ -309,21 +327,68 @@ for pr in <list>; do
 done
 ```
 
-**Expected failures to ignore:**
-- `Pull request is already merged` → already done
-- `Pull request is in clean status` → merge directly instead
-- `Protected branch rules not configured for this branch` → check `baseRefName`
+### Phase 9: [NEW v2.0.0] Handle src-Layout Migration Conflicts (Branch Reconstruction)
 
-### Phase 9: Verify
+When a branch was forked **before** a src-layout migration (e.g., `scylla/` → `src/scylla/`),
+standard rebase fails immediately with path conflicts on every file the PR touched.
+
+**Detection signals:**
+- Branch is 10+ commits behind main
+- `mergeStateStatus == "CONFLICTING"` (DIRTY)
+- CI shows only CodeQL/security checks — full CI suite didn't even run
+- `git rebase origin/main` immediately conflicts on old paths that no longer exist
+
+**Decision: Rebase vs Reconstruct**
+
+```
+Should I reconstruct instead of rebase?
+├── Is branch 10+ commits behind main?           → +1 toward reconstruct
+├── Did main undergo a src-layout/path migration? → +2 toward reconstruct
+├── Does the PR delete entire module directories? → +1 toward reconstruct
+├── Are there 5+ conflicted files on rebase?      → +1 toward reconstruct
+└── Score >= 3 → Reconstruct from main
+    Score < 3  → Attempt rebase with --theirs resolution
+```
+
+**Reconstruction workflow:**
 
 ```bash
-# Check merge status
+# 1. Analyze the old PR's net effect
+git log --oneline <old-branch>
+git diff origin/main...<old-branch> --stat
+git diff origin/main...<old-branch> --name-only --diff-filter=A  # added files
+git diff origin/main...<old-branch> --name-only --diff-filter=D  # deleted files
+
+# Read a file from the old branch using old paths
+git show <old-branch>:<old-path/to/file.py>
+
+# 2. Create a new branch from current main
+git checkout -b feat/<description>-v2 origin/main
+
+# 3. Apply the net effect as targeted edits (NOT cherry-pick of old commits)
+#    Rewrite old paths to match new layout (e.g. scylla/ → src/scylla/)
+
+# 4. Validate
+pre-commit run --all-files
+pytest tests/ -x -q
+
+# 5. Create new PR, close old one
+gh pr create --title "..." --body "..."
+gh pr close <old-pr-number> --comment "Superseded by #<new-pr-number> — branch reconstructed from main after src-layout migration conflict."
+```
+
+**What to copy from the old branch**: Read each commit's diff carefully. Copy the *logical intent*,
+not the patch. Old paths must be rewritten to match the new layout.
+
+**Git auto-drops already-applied commits**: If some of the old PR's commits were already applied to
+main, `git rebase` silently drops them (detects identical patch content even with different message).
+This is expected — don't worry about "missing" commits that were already upstream.
+
+### Phase 10: Verify
+
+```bash
 gh pr view <pr-number> --json state,mergedAt
-
-# List recently merged PRs
 gh pr list --state merged --limit 5 --json number,title,mergedAt
-
-# Verify no open PRs remain
 gh pr list --state open
 ```
 
@@ -332,15 +397,18 @@ gh pr list --state open
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Run mojo format locally | `pixi run mojo format <file>` | GLIBC version mismatch on local machine | Can't run mojo format locally; use CI logs to identify what changed |
-| `git checkout origin/$branch -b temp` | Single command to create tracking branch | Git syntax error: can't update paths and switch simultaneously | Use `git fetch origin $branch && git checkout -b temp origin/$branch` |
-| Fixing link-check by editing unrelated files | Considered modifying CLAUDE.md | Failure was pre-existing on main; fixing out-of-scope | Verify if failure also exists on `main` before attempting a targeted fix |
-| Reproducing CI hook with local untracked dirs | Ran hook without `--exclude ProjectMnemosyne` | Local clone included ProjectMnemosyne dir which doesn't exist in CI | Always exclude untracked directories that exist locally but not in CI |
-| xargs/shell to fix bulk JSON | `xargs -I{} sh -c 'fix...'` | Safety Net blocks `xargs -I{} sh -c` patterns | Use Python's `json` module for safe, idempotent JSON repair |
-| `git add skills/` or `git add -A` after JSON fix | Staged all files including untracked directories | Picks up nested untracked directories | Use `git add $(git diff --name-only)` — stages only modified tracked files |
-| Run `gh pr merge --auto --squash` | Tried squash merge method on rebase-only repo | Usually fails if squash disabled | Test in order: `--squash` → `--merge` → `--rebase`; rebase works on rebase-only repos |
-| Investigate test code for root cause (pre-existing crash) | Considered reading crashing test files to find a code fix | Tests crashing due to Mojo runtime issue already fixed upstream | When failures are in untouched test files and main passes them, always rebase before investigating code |
-| GraphQL PR status query | `gh pr list --json statusCheckRollup` | 504 Gateway Timeout under load from 40+ simultaneous CI runs | Fall back to per-PR `gh pr checks <number>` calls |
-| Empty commit to trigger CI after rebase | Pushed empty commit that didn't touch `skills/**` | Validate workflow had path filter — didn't trigger | Remove path filters entirely from validate workflows; the fix is in the workflow config |
+| `git checkout origin/$branch -b temp` | Single command to create tracking branch | Git syntax error | Use `git fetch origin $branch && git checkout -b temp origin/$branch` |
+| Fixing link-check by editing unrelated files | Considered modifying CLAUDE.md | Failure was pre-existing on main | Verify if failure also exists on `main` before attempting a fix |
+| Reproducing CI hook with local untracked dirs | Ran hook without `--exclude ProjectMnemosyne` | Local clone had dirs that don't exist in CI | Always exclude untracked directories that exist locally but not in CI |
+| xargs/shell to fix bulk JSON | `xargs -I{} sh -c 'fix...'` | Safety Net blocks pattern | Use Python's `json` module for safe, idempotent JSON repair |
+| `git add skills/` or `git add -A` after JSON fix | Staged untracked directories | Picks up nested untracked directories | Use `git add $(git diff --name-only)` |
+| Run `gh pr merge --auto --squash` | Tried squash on rebase-only repo | Squash disabled | Test in order: `--squash` → `--merge` → `--rebase` |
+| Investigate test code for pre-existing crash | Read crashing test files | Already fixed upstream | When failures are in untouched files and main passes them, rebase first |
+| GraphQL PR status query | `gh pr list --json statusCheckRollup` | 504 Gateway Timeout under load | Fall back to per-PR `gh pr checks <number>` calls |
+| Empty commit to trigger CI after rebase | Pushed empty commit | Validate workflow had path filter | Remove path filters from validate workflows |
+| Standard rebase on post-migration branch | `git rebase origin/main` on stale branch | Immediate conflicts (old paths gone) | When branch pre-dates structural migration, reconstruct from main |
+| Treating `bats`/`docker-build-timing` as blockers | Investigated Trivy CVEs and bats install | Both fail on main — not required checks | Verify a check fails on main before treating it as required |
+| Not re-enabling auto-merge after force-push | Force-pushed, assumed auto-merge persisted | GitHub silently clears auto-merge on force-push | After every force-push: immediately run `gh pr merge --auto --rebase` |
 
 ## Results & Parameters
 
@@ -357,28 +425,35 @@ gh pr checks <pr-number> 2>&1 | grep -E "(fail|pending)"
 # Get failure logs
 gh run view <run-id> --log-failed
 
+# Check if check is required
+gh api repos/{owner}/{repo}/branches/main --jq '.protection.required_status_checks.contexts[]'
+
 # Rebase and push
-git fetch origin main
-git rebase origin/main
+git fetch origin main && git rebase origin/main
 git push --force-with-lease origin <branch-name>
 
-# Enable auto-merge
+# Enable auto-merge (ALWAYS do this after force-push too)
 gh pr merge <pr-number> --auto --rebase
+
+# Check auto-merge status
+gh pr view <pr-number> --json autoMergeRequest
 
 # Batch enable auto-merge
 gh pr list --state open --json number --jq '.[].number' --limit 1000 | \
   while read pr; do gh pr merge "$pr" --auto --rebase || echo "Failed: PR #$pr"; done
-
-# Check merge status
-gh pr view <pr-number> --json state,mergedAt
 ```
 
-### Common MkDocs Strict Mode CI Check Names
+### Required vs Non-Required Check Decision Tree
 
 ```
-build-docs, build-mojo, build-python, build-validation,
-pre-commit, security-report, Test Report,
-Mojo Package Compilation, Code Quality Analysis, secret-scan
+Is a check failing?
+├── Does it also fail on main?
+│   ├── YES → Is it in required_status_checks?
+│   │         ├── YES → Must fix (rare — required check broken on main)
+│   │         └── NO  → Advisory only; skip and proceed
+│   └── NO  → PR introduced the failure; must fix
+└── Is mergeStateStatus == "CONFLICTING"?
+    └── YES → Full CI may not have run; rebase first, then re-evaluate
 ```
 
 ### Pre-commit Hook Reference
@@ -399,13 +474,6 @@ var epsilon = (
     GRADIENT_CHECK_EPSILON_FLOAT32 if dtype
     == DType.float32 else GRADIENT_CHECK_EPSILON_OTHER
 )
-
-# Struct trait declaration (>88 chars) → wrapped:
-struct Foo(
-    Copyable, Movable, Sized, Stringable, Representable, Hashable
-):
-
-# Extra blank lines: 2 between top-level definitions (not 3)
 ```
 
 ### Mojo Hashable Trait (v0.26.1+) Correct Signature
@@ -413,25 +481,13 @@ struct Foo(
 ```mojo
 fn __hash__[H: Hasher](self, mut hasher: H):
     hasher.write(value1)
-    hasher.write(value2)
-# NOT: fn __hash__(self) -> UInt
-# NOT: inout hasher (use mut)
-# NOT: hasher.update() (use hasher.write())
+# NOT: fn __hash__(self) -> UInt; NOT: inout hasher; NOT: hasher.update()
 ```
-
-### JSON Corruption Pattern Counts (Reference)
-
-| Pattern | Fix Method |
-|---------|------------|
-| Valid JSON with unwanted key | `json.loads` + `del data['key']` |
-| Trailing comma only | Regex: `re.sub(r',(\s*[}\]])', r'\1', text)` |
-| Orphaned array (no subsequent fields) | Line-by-line state machine |
-| Orphaned array (with subsequent fields) | State machine with `in_valid_array` tracking |
 
 ### Time Savings
 
 - Manual approach: ~2-3 hours (fix each PR individually)
-- Batch approach: ~45 minutes (parallel analysis, pattern-based fixes)
+- Batch approach: ~45 minutes
 - Savings: ~60-70% time reduction
 
 ## Verified On
@@ -445,3 +501,4 @@ fn __hash__[H: Hasher](self, mut hasher: H):
 | ProjectOdyssey | 40+ PRs, mojo format root fix + mass rebase, 2026-03-06/07 | mass-pr-ci-fix source |
 | ProjectMnemosyne | PR #306 JSON fix + 25 PRs auto-merge, 2026-03-05 | bulk-pr-json-repair-and-automerge source |
 | ProjectOdyssey | PR #3189 pre-existing crash fix via rebase, 2026-03-05 | pr-ci-rebase-fix source |
+| ProjectScylla | PRs #1739/#1734 ruff-format + test assertion fixes; PR #1737→#1740 src-layout reconstruction, 2026-03-29 | v2.0.0 additions |
