@@ -1,12 +1,29 @@
+# cpp-ci-sanitizer-tsan-data-race-fixes — History
+
+## v1.1.0 (2026-03-28)
+
+**Changed by:** Repo audit session on ProjectKeystone
+**Verification:** unverified
+
+### What changed
+- Added repo audit methodology (parallel Explore agents, 15-section strict grading)
+- Added audit quick-win workflow (SECURITY.md, .editorconfig, templates, .gitignore)
+- Added issue filing workflow (11 structured GitHub issues from audit findings)
+- Added new Failed Attempts (GCC 10.2 local build, gh label creation)
+- Updated Verified On table with PR #147 and issues #148-#158
+
+### Why
+Same session extended from CI fixes to a full repo audit. The audit methodology and quick-win pattern is reusable across projects.
+
+### Previous version (v1.0.0) snapshot
 ---
 name: cpp-ci-sanitizer-tsan-data-race-fixes
-description: "Diagnose and fix C++ CI failures from ThreadSanitizer (TSan) data races, hung tests under sanitizers, and MSan build failures. Also covers repo audit methodology and batch issue filing from audit findings. Use when: (1) TSan reports data races in C++ CI, (2) a test hangs indefinitely under TSan causing job timeout, (3) MSan build fails due to uninstrumented stdlib in CMake probing steps, (4) Docker COPY paths are wrong after CMake changes CMAKE_RUNTIME_OUTPUT_DIRECTORY, (5) after fixing CI failures run a strict repo audit, (6) filing batch GitHub issues from audit findings."
+description: "Diagnose and fix C++ CI failures from ThreadSanitizer (TSan) data races, hung tests under sanitizers, and MSan build failures. Use when: (1) TSan reports data races in C++ CI, (2) a test hangs indefinitely under TSan causing job timeout, (3) MSan build fails due to uninstrumented stdlib in CMake probing steps, (4) Docker COPY paths are wrong after CMake changes CMAKE_RUNTIME_OUTPUT_DIRECTORY."
 category: ci-cd
-date: 2026-03-28
-version: "1.1.0"
-history: cpp-ci-sanitizer-tsan-data-race-fixes.history
+date: 2026-03-27
+version: "1.0.0"
 user-invocable: false
-verification: unverified
+verification: verified-precommit
 tags:
   - tsan
   - sanitizers
@@ -16,8 +33,6 @@ tags:
   - dockerfile
   - cpp20
   - github-actions
-  - repo-audit
-  - issue-filing
 ---
 
 # C++ CI Sanitizer: TSan Data Race Fixes
@@ -28,7 +43,7 @@ tags:
 |-------|-------|
 | **Date** | 2026-03-27 |
 | **Objective** | Fix 3 persistent CI failures: 11 TSan data races, 1 hung test causing 30-min timeout, MSan build failure from uninstrumented stdlib |
-| **Outcome** | TSan races fixed with targeted mutex/atomic additions; hung test disabled with GitHub issue filed; MSan removed from CI matrix with GitHub issue filed; repo audit scored B (83.9%) with 11 issues filed (#148-#158); quick-wins PR #147 merged |
+| **Outcome** | TSan races fixed with targeted mutex/atomic additions; hung test disabled with GitHub issue filed; MSan removed from CI matrix with GitHub issue filed |
 | **Verification** | verified-precommit (PR pushed, CI running at time of capture) |
 
 ## When to Use
@@ -37,8 +52,6 @@ tags:
 - A test hangs under TSan/ASan causing the CI job to hit its wall-clock timeout (job killed, not failed)
 - MSan CI build fails with: `Failed to determine the source files for the regular expression backend`
 - Docker image scanning fails because `COPY --from=builder` paths are wrong after `CMAKE_RUNTIME_OUTPUT_DIRECTORY` was set
-- After fixing CI failures, run a strict repo audit to find related issues
-- When filing batch GitHub issues from audit findings
 
 ## Verified Workflow
 
@@ -220,8 +233,6 @@ gh pr create --title "fix: resolve CI failures (TSan races, hung test, MSan buil
 | Increasing TSan job timeout | Proposed setting a longer `timeout-minutes` on the TSan GitHub Actions job | User explicitly rejected: "reduce/disable instead" — a hung test wastes CI minutes at any timeout | Disable the hung test + add `--timeout 120` to ctest; do not increase job timeout |
 | Fixing MSan by instrumenting libc++ | Discussed compiling instrumented libc++ from source | Multi-hour build, complex CI setup, not worth it when ASan+UBSan+LSan cover most cases | Remove MSan from CI matrix and file an issue for later |
 | Creating fix branch from feature branch | Checked out from a feature branch that had stash | Stash pop caused merge conflicts with main changes | Always `git checkout main && git pull` before creating a fix branch |
-| Local GCC 10.2 build | Tried `make compile.debug.native` with host GCC 10.2.1 | GCC 10.2 lacks C++20 coroutine support (needs clang-18) | Always verify host compiler version before attempting native builds; use Docker for older hosts |
-| GitHub issue labels | Used `gh issue create --label "ci-cd"` | Labels didn't exist in the repo | Create issues without labels or create labels first with `gh label create` |
 
 ## Results & Parameters
 
@@ -294,25 +305,14 @@ strategy:
     # msan removed: requires instrumented libc++ (see issue #144)
 ```
 
-### Audit Quick Wins PR
-
-- **PR #147**: SECURITY.md, .editorconfig, issue/PR templates, .gitignore improvements
-- Single commit addressing 7 audit findings at once
-
-### Issues Filed from Audit
-
-- **#148-#158**: circular dependency, disabled tests, dual logging, DRY violations, coverage gaps, CI caching, naming conventions, security scans, release automation, stale agents, stale docs
-- 11 structured issues with severity, evidence, and suggested fixes
-
-### Audit Score
-
-- **Overall**: B (83.9%), NO-GO verdict
-- **Architecture**: A-
-- **Testing**: B-
-
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | HomericIntelligence/ProjectKeystone | PR #146 — fix CI failures on main and 2 open PRs | C++20 HMAS, GCC/Clang, GitHub Actions, Google Benchmark |
-| HomericIntelligence/ProjectKeystone | Repo audit + quick wins | PR #147, Issues #148-#158 |
+
+---
+
+## v1.0.0 (2026-03-27)
+
+**Initial version.**
