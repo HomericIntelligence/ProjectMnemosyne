@@ -13,3 +13,6 @@ build/
 
 # Pytest cache
 .pytest_cache/
+
+# Local Claude Code settings (user-specific permissions)
+.claude/settings.local.json

@@ -33,6 +33,7 @@ name: test-skill
 description: "A test skill for unit testing purposes."
 category: tooling
 date: 2026-01-01
+version: "1.0.0"
 user-invocable: false
 ---
 """
@@ -100,6 +101,7 @@ name: test-skill
 description: "A test skill."
 category: tooling
 date: 2026-01-01
+version: "1.0.0"
 user-invocable: false
 ---
 
@@ -140,6 +142,7 @@ SAMPLE_PLUGIN_JSON = {
     "description": "A test plugin for unit testing purposes.",
     "category": "tooling",
     "date": "2026-01-01",
+    "user-invocable": False,
 }
 
 

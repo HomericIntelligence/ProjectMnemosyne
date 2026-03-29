@@ -1,8 +1,9 @@
 {
-  "name": "stale-doc-count-audit",
-  "version": "1.0.0",
-  "description": "Audit and fix stale numeric counts in documentation when code registries change size. Use when figures, tables, or sub-test counts in docs don't match the actual code.",
-  "category": "documentation",
-  "author": "ProjectScylla",
-  "created": "2026-03-13"
+  "name": "ProjectMnemosyne",
+  "version": "2.1.0",
+  "description": "Skills marketplace for the HomericIntelligence agentic ecosystem. Use when: (1) searching for prior learnings with /advise, (2) saving session knowledge with /learn.",
+  "author": {
+    "name": "HomericIntelligence"
+  },
+  "skills": "./skills"
 }
