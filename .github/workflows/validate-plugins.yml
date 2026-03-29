@@ -7,6 +7,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -21,10 +24,13 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install pyyaml
+        run: pip install -r requirements-dev.txt
 
       - name: Validate flat-format skill files
         run: python3 scripts/validate_plugins.py
+
+      - name: Run test suite
+        run: pytest tests/test_generate_marketplace.py -v
 
       - name: Check skill template validity
         run: |

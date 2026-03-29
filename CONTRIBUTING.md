@@ -168,7 +168,7 @@ docs: update migration status - 100% complete
 All PRs are validated by CI. Run validation locally before submitting:
 
 ```bash
-python3 scripts/validate_plugins.py skills/
+python3 scripts/validate_plugins.py
 ```
 
 The validator checks:
