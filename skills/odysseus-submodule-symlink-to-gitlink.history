@@ -1,0 +1,24 @@
+# odysseus-submodule-symlink-to-gitlink — History
+
+## v2.0.0 (2026-03-29)
+
+**Changed by:** Skill split — BUILD_ROOT and rebase content extracted to separate skills
+**Verification:** verified-local
+
+### What changed
+- Removed BUILD_ROOT meta-repo justfile pattern (moved to `meta-repo-build-root-pattern`)
+- Removed rebase full-file-rewrite conflict strategy (moved to `rebase-full-file-rewrite-conflict`)
+- Narrowed scope to symlink→gitlink conversion only
+- Added URL casing mismatch as explicit Failed Attempts row
+- Updated description to reflect narrowed scope
+
+### Why
+Original v1.0.0 combined three independent learnings into one skill. Skills covering unrelated topics
+reduce discoverability — someone searching for rebase conflict resolution would not search for
+"submodule symlink". Split into three focused skills.
+
+---
+
+## v1.0.0 (2026-03-29)
+
+**Initial version.** Combined symlink conversion, BUILD_ROOT pattern, and rebase conflict strategy.
