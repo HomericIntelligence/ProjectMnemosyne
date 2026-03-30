@@ -1,0 +1,28 @@
+# meta-repo-build-root-pattern — History
+
+## v1.1.0 (2026-03-29)
+
+**Changed by:** Odysseus full e2e build session — all 5 targets passing
+**Verification:** verified-local
+
+### What changed
+- Updated Mojo delegation pattern: use `BUILD_ROOT="{{BUILD_ROOT}}/<Name>" just build` env var override instead of delegating without any build dir control
+- ProjectOdyssey adopts `env_var_or_default("BUILD_ROOT", ...)` so it works from both its own dir and the meta-repo
+- When Podman is running and BUILD_ROOT is outside the workspace, `_run` mounts it at `/ext-build` and rewrites paths — no `NATIVE=1` needed
+- Added `_test-keystone` to complete the test recipe (Keystone was missing)
+- Added link to related skill `cpp-scaffold-cmake-test-path-fix`
+- Updated Results & Parameters to reflect full end-to-end build (all 5 targets verified)
+- Added history frontmatter field
+
+### Why
+PR #67 added the build recipes, but the initial implementation had two gaps discovered during
+the first full e2e build run (PR #68):
+1. `_build-odyssey` had no way to redirect Mojo build artifacts — needed BUILD_ROOT env var
+   pattern in ProjectOdyssey's justfile so artifacts land in root build/ProjectOdyssey/
+2. `test` recipe only covered 3 of 4 C++ repos (Keystone was missing)
+
+---
+
+## v1.0.0 (2026-03-29)
+
+**Initial version.** Documented BUILD_ROOT pattern as part of PR #67.

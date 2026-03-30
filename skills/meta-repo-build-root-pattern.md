@@ -3,9 +3,10 @@ name: meta-repo-build-root-pattern
 description: "Orchestrate out-of-tree CMake builds in a meta-repo justfile without importing build tool dependencies into the root pixi.toml. Use when: (1) adding a just build recipe to a meta-repo that coordinates multiple C++/CMake submodules, (2) redirecting all build artifacts into a single root build/ directory, (3) the meta-repo should stay lean — each submodule manages its own pixi environment."
 category: architecture
 date: 2026-03-29
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
+history: meta-repo-build-root-pattern.history
 tags: [cmake, justfile, meta-repo, build-root, out-of-tree, pixi, submodule, mojo]
 ---
 
@@ -17,8 +18,9 @@ tags: [cmake, justfile, meta-repo, build-root, out-of-tree, pixi, submodule, moj
 |-------|-------|
 | **Date** | 2026-03-29 |
 | **Objective** | Add `just build` to the Odysseus meta-repo that compiles C++/CMake submodules into `<root>/build/<Name>/` using CMake's native out-of-tree support, without adding cmake/ninja/etc. to root pixi.toml |
-| **Outcome** | Successful. PR #67 added just build/test/lint/clean recipes. All C++/CMake repos build into root build/ directory. Mojo repo delegates to submodule's own just build. |
+| **Outcome** | Successful. PR #67 added just build/test/lint/clean recipes. PR #68 fixed e2e gaps. All 5 targets build; 489/489 Keystone tests pass. |
 | **Verification** | verified-local — CI only validates configs/YAML, not actual cmake execution |
+| **History** | [changelog](./meta-repo-build-root-pattern.history) |
 
 ## When to Use
 
@@ -45,9 +47,10 @@ _build-agamemnon:
         -DCMAKE_BUILD_TYPE=Debug -G Ninja
     cmake --build "{{BUILD_ROOT}}/ProjectAgamemnon"
 
-# Mojo repos cannot redirect build dir — delegate to submodule's own just
+# Mojo repos: pass BUILD_ROOT as env var so artifacts land in root build/
+# ProjectOdyssey reads BUILD_ROOT via env_var_or_default — no NATIVE=1 needed
 _build-odyssey:
-    cd research/ProjectOdyssey && just build
+    cd research/ProjectOdyssey && BUILD_ROOT="{{BUILD_ROOT}}/ProjectOdyssey" just build
 
 clean:
     rm -rf "{{BUILD_ROOT}}"
@@ -59,7 +62,7 @@ clean:
 
 2. For each C++/CMake submodule, add a private recipe using `cmake -S <submodule_path> -B {{BUILD_ROOT}}/<Name>`. The `-B` flag overrides whatever `binaryDir` is set in the submodule's `CMakePresets.json` — the command-line flag always wins.
 
-3. For Mojo repos: delegate with `cd <path> && just build`. Mojo doesn't support `-B` style external build dirs; artifacts stay in the submodule's own `build/`. This is acceptable.
+3. For Mojo repos: delegate with `BUILD_ROOT="{{BUILD_ROOT}}/<Name>" just build` from within the submodule directory. The submodule must declare `BUILD_ROOT := env_var_or_default("BUILD_ROOT", repo_root / "build")` and use it throughout. When `BUILD_ROOT` is outside the repo and Podman is used, the `_run` helper mounts it into the container at `/ext-build` and rewrites paths in the command — so the same recipe works whether the container is running or not, and whether called from the project directory or the meta-repo.
 
 4. Do NOT add cmake, ninja, cxx-compiler, or any build tool to the root `pixi.toml`. Each submodule runs `pixi install` in its own directory to get its own tools.
 
