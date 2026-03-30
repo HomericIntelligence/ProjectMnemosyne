@@ -1,13 +1,36 @@
+# batch-pr-rebase-myrmidon-wave-execution — History
+
+## v1.1.0 (2026-03-30)
+
+**Changed by:** PR #65 follow-up session (ProjectHephaestus auto-impl branch fixes)
+**Verification:** verified-ci
+
+### What changed
+- **CORRECTED Phase 4**: v1.0.0 had pixi task path rule backwards. `mypy = "mypy hephaestus/"` IS correct; bare `mypy = "mypy"` causes pre-commit to fail with "Missing target module". CI steps must NOT re-pass the path.
+- Added Phase 4b: pixi.toml version field banned (check-version-single-source hook)
+- Added new failed attempts: S101 assert pattern, stale PR CI not triggering, pixi.toml version field
+- Added ruff S101 rule: `assert x is not None` is flagged; use `if x is None: raise ImportError(...)` instead
+- Added stale PR CI trigger finding: force-with-lease push on long-stale branch may only trigger CodeQL; fix is rebase onto fresh main + re-push
+- Added `if/raise` as the canonical type-narrowing guard pattern (fixes both mypy union-attr and ruff S101)
+- Updated pixi.lock conflict strategy: always `rm pixi.lock && pixi install` during rebase (not just `git checkout --theirs`)
+- Bumped version 1.0.0 → 1.1.0
+- Updated date to 2026-03-30
+- Added history frontmatter field
+
+### Why
+v1.0.0 Phase 4 recommendation was inverted: it labeled `mypy = "mypy hephaestus/"` as WRONG when it is in fact the correct pattern used in PR #65. The bare `mypy = "mypy"` breaks pre-commit (the hook calls `pixi run mypy` with no args and mypy receives no target). Additional findings from PR #65: ruff S101 (assert ban), stale branch CI non-trigger, and pixi.toml version field prohibition.
+
+### Previous version (v1.0.0) snapshot
+
 ---
 name: batch-pr-rebase-myrmidon-wave-execution
-description: "Conflict-aware batch PR update using myrmidon-swarm wave execution. Use when: (1) 10+ open PRs are stale and failing CI, (2) multiple PRs touch the same files and must be sequenced, (3) some PRs are superseded and should be closed, (4) pixi task path or ruff S101/mypy type-narrowing issues arise during PR fixes."
+description: "Conflict-aware batch PR update using myrmidon-swarm wave execution. Use when: (1) 10+ open PRs are stale and failing CI, (2) multiple PRs touch the same files and must be sequenced, (3) some PRs are superseded and should be closed, (4) pixi.toml task definitions cause duplicate-path expansion errors in CI."
 category: ci-cd
-date: 2026-03-30
-version: "1.1.0"
+date: 2026-03-29
+version: "1.0.0"
 user-invocable: false
 verification: verified-ci
-history: batch-pr-rebase-myrmidon-wave-execution.history
-tags: [git, rebase, pr, parallel, myrmidon, wave, batch, conflict, pixi, mypy, ruff]
+tags: [git, rebase, pr, parallel, myrmidon, wave, batch, conflict]
 ---
 # Batch PR Rebase: Myrmidon Wave Execution
 
@@ -15,22 +38,19 @@ tags: [git, rebase, pr, parallel, myrmidon, wave, batch, conflict, pixi, mypy, r
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-03-30 |
+| **Date** | 2026-03-29 |
 | **Objective** | Conflict-aware batch PR update using myrmidon-swarm wave execution across 30+ open PRs in ProjectHephaestus |
-| **Outcome** | Successful — all PRs merged with CI passing; 14 actionable learnings captured across two sessions |
+| **Outcome** | Successful — all PRs merged with CI passing; 8 actionable learnings captured |
 | **Verification** | verified-ci |
-| **History** | [changelog](./batch-pr-rebase-myrmidon-wave-execution.history) |
 
 ## When to Use
 
 - 10+ open PRs are stale (behind main) with failing CI
 - Multiple PRs touch the same files (logging init, config, IO modules) requiring ordered sequencing
 - Mix of superseded and valid PRs needing triage before rebasing
-- pixi.toml mypy task path is causing pre-commit failure ("Missing target module") or CI "Duplicate module" error
-- ruff S101 flag on `assert x is not None` guards — need if/raise pattern instead
+- pixi.toml task definitions are causing "Duplicate module" errors in CI (`mypy` invoked with double path)
 - pytest `caplog` fixture is failing to capture logs from `ContextLogger` (propagation issue)
 - Full-file-rewrite conflicts need manual delta application instead of auto-merge
-- Force-pushed stale PR branch is not triggering all `pull_request` CI workflows (only CodeQL fires)
 
 ## Verified Workflow
 
@@ -125,18 +145,14 @@ git add <file>
 # Do NOT use auto-merge or mergetool — produces incoherent hybrid content
 ```
 
-#### pixi.lock conflicts — always delete and regenerate
-
-During rebase, pixi.lock conflicts must NEVER be merged manually — always regenerate:
+#### pixi.lock conflicts
 
 ```bash
-rm pixi.lock
-pixi install          # Regenerates pixi.lock from pixi.toml + current deps
+git checkout --theirs pixi.lock
+pixi install
 git add pixi.lock
 git rebase --continue
 ```
-
-`git checkout --theirs pixi.lock` is an acceptable shortcut when the lock file content is known-good from main, but `rm + pixi install` is the safest and most reliable approach.
 
 #### CI/workflow file conflicts
 
@@ -146,92 +162,27 @@ git checkout --ours .github/workflows/<file>
 git add .github/workflows/<file>
 ```
 
-#### pixi.toml version field conflict — always take main's side
+### Phase 4: Fix pixi Task Definition Double-Path Expansion
 
-The `check-version-single-source` pre-commit hook bans `version = "x.y.z"` in pixi.toml's `[workspace]` section. If a rebased branch adds a version field and main removed it, always take main's side:
+**Symptom**: CI fails with `mypy: error: Duplicate module named 'hephaestus'` or similar.
 
-```bash
-# During conflict resolution in pixi.toml:
-# If you see `version = "..."` in <<<< HEAD (your branch), remove it.
-# pyproject.toml is the sole version authority — never add version to pixi.toml.
-git checkout --ours pixi.toml  # Take main's version (no version field)
-git add pixi.toml
-```
-
-### Phase 4: pixi Task Path — Correct Definition and CI Invocation
-
-**The rule**: The pixi task MUST bake in the target path. CI steps must NOT re-pass the path.
+**Root cause**: pixi.toml defines a task with the path embedded in the task definition, and CI passes the path again as an argument.
 
 ```toml
-# CORRECT — task bakes in the path (pre-commit hook calls `pixi run mypy` with no extra args)
+# WRONG — causes double-path expansion:
+# pixi run mypy hephaestus/ → expands to: mypy hephaestus/ hephaestus/
 [tasks]
 mypy = "mypy hephaestus/"
 
-# CI step: pixi run mypy  (no path arg — the task already has it)
-```
-
-**Why bare `mypy = "mypy"` breaks pre-commit**: The pre-commit hook calls `pixi run mypy` with no arguments. mypy receives no target and fails with "Missing target module or package". The path MUST be baked into the pixi task.
-
-**Why CI must NOT re-pass the path**: If CI calls `pixi run mypy hephaestus/`, pixi appends that to the task definition, producing `mypy hephaestus/ hephaestus/` → "Duplicate module named 'hephaestus'" error.
-
-**The tension in one table**:
-
-| Caller | Command | Expands to | Result |
-|--------|---------|------------|--------|
-| pre-commit hook | `pixi run mypy` | `mypy hephaestus/` | Correct |
-| CI step (correct) | `pixi run mypy` | `mypy hephaestus/` | Correct |
-| CI step (wrong) | `pixi run mypy hephaestus/` | `mypy hephaestus/ hephaestus/` | "Duplicate module" error |
-
-**Canonical pixi.toml task definition** for ProjectHephaestus:
-
-```toml
+# CORRECT — task is the binary only; CI step passes the path:
 [tasks]
-mypy = "mypy hephaestus/"
+mypy = "mypy"
+# CI: pixi run mypy hephaestus/  → expands to: mypy hephaestus/  ✓
 ```
 
-### Phase 5: ruff S101 — Assert Banned; Use if/raise Pattern
+Always define pixi tasks as the bare binary name when the CI step passes path arguments separately.
 
-**Symptom**: ruff reports `S101 Use of assert detected` on guards like `assert module is not None`.
-
-**Rule**: ruff S101 bans `assert` statements in production code. Use `if/raise` instead.
-
-**The if/raise pattern** also satisfies mypy's type narrowing for `Module | None` union types — after the if/raise, mypy narrows the type to `Module`:
-
-```python
-# WRONG — ruff S101 violation:
-import tomllib  # type: Module | None
-assert tomllib is not None, "tomllib is required"
-
-# CORRECT — satisfies both ruff S101 and mypy type narrowing:
-if tomllib is None:
-    raise ImportError(
-        "tomllib is required. Install Python 3.11+ or install the 'tomli' backport."
-    )
-# After this guard, mypy knows tomllib: Module (not Module | None)
-tomllib.loads(...)  # No union-attr error
-```
-
-**Key insight**: The `assert` approach fixes mypy's `union-attr` error but introduces a new ruff S101 violation. The `if/raise` pattern fixes BOTH simultaneously.
-
-### Phase 6: Stale PR Branch — CI May Not Re-trigger on Force-Push
-
-**Symptom**: After `git push --force-with-lease` on a long-stale PR branch (no recent CI run), only CodeQL (dynamic trigger) fires. The `pull_request` workflows for pre-commit, Test, and lint do not trigger.
-
-**Root cause**: GitHub's `pull_request` event may not re-trigger if the branch had no recent workflow runs (stale state).
-
-**Fix**: Rebase onto fresh main + re-push:
-
-```bash
-# Instead of just force-pushing the rebased branch:
-git fetch origin main
-git rebase origin/main  # Rebase creates a NEW commit sequence
-git push --force-with-lease origin HEAD:<branch>
-# The new commit SHA reliably triggers all pull_request workflows
-```
-
-This creates a genuinely new commit sequence on top of the current main tip, which GitHub recognizes as a `pull_request` synchronize event and fires all required workflow runs.
-
-### Phase 7: Fix pytest caplog with ContextLogger
+### Phase 5: Fix pytest caplog with ContextLogger
 
 **Symptom**: `pytest caplog` fixture shows empty records even though ContextLogger emits logs.
 
@@ -256,7 +207,7 @@ def test_something_with_caplog(caplog):
 
 **Alternative**: Use a dedicated `LogCapture` fixture that installs a handler directly on the specific logger, bypassing root logger dependency.
 
-### Phase 8: Push and Enable Auto-Merge
+### Phase 6: Push and Enable Auto-Merge
 
 ```bash
 git push --force-with-lease origin HEAD:<branch>
@@ -269,7 +220,7 @@ gh pr view <N> --repo <repo> --json autoMergeRequest
 # Should show mergeMethod: "rebase", NOT null
 ```
 
-### Phase 9: Worktree Cleanup
+### Phase 7: Worktree Cleanup
 
 ```bash
 # Per-PR cleanup (do immediately after push, before starting next PR)
@@ -286,12 +237,7 @@ git branch -d $(git branch | grep tmp- | tr -d ' ') 2>/dev/null || true
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Local branch checkout | `git checkout <branch>` on local repo | Safety Net blocks `git reset --hard` when local branch diverges from remote | Always use fresh worktree from `origin/<branch>` — never local checkout for rebase work |
-| Bare `mypy = "mypy"` in pixi.toml | Defined task as bare binary without path | pre-commit hook calls `pixi run mypy` with no args → mypy fails "Missing target module" | Task must bake in the path: `mypy = "mypy hephaestus/"` |
-| CI step passing path to pixi run | `pixi run mypy hephaestus/` in CI | Double-path expansion: `mypy hephaestus/ hephaestus/` → "Duplicate module" error | CI steps must call `pixi run mypy` with NO extra path argument |
-| `assert x is not None, "msg"` guard | Used assert for Module or None type narrowing | ruff S101 flags assert as banned in production code | Use `if x is None: raise ImportError("msg")` — fixes both mypy union-attr and ruff S101 |
-| Force-push on long-stale PR without rebase | `git push --force-with-lease` without first rebasing onto fresh main | Only CodeQL triggered; pull_request workflows for pre-commit/Test/lint did not fire | Rebase onto current main first — the new commit sequence reliably triggers all workflows |
-| `version = "0.5.0"` in pixi.toml | Added version field to `[workspace]` section during conflict resolution | `check-version-single-source` pre-commit hook bans version in pixi.toml | During rebase conflicts in pixi.toml, always take main's side (no version field) |
-| Merging pixi.lock conflicts manually | Tried to reconcile pixi.lock conflict hunks by hand | Lock file format is machine-generated — manual merge produces corrupt lock | Always `rm pixi.lock && pixi install` to regenerate cleanly |
+| `mypy = "mypy hephaestus/"` in pixi.toml | Defined task with path embedded | pixi expands to `mypy hephaestus/ hephaestus/` causing "Duplicate module named 'hephaestus'" error | Define tasks as bare binaries; let CI steps pass path arguments |
 | auto-merge on full-file-rewrite conflicts | Used `git mergetool` or accepted auto-merged result | Produced incoherent hybrid of two complete rewrites — corrupted module logic | Use `git checkout --theirs <file>` then manually apply the small delta from the other side |
 | caplog without propagation fix | Ran pytest with `caplog.at_level(logging.DEBUG)` on ContextLogger output | `propagate=False` on logger prevents records reaching root logger where caplog installs handlers | Add `logger.propagate = True` in try/finally block around caplog test section |
 | Treating CVE scan failures as blockers | Investigated pygments/requests CVE failures before checking required checks | CVE scan (dependency vulnerability) is not a required branch protection check — does not block merge | Always query `required_status_checks` first; advisory failures should be deferred |
@@ -300,38 +246,6 @@ git branch -d $(git branch | grep tmp- | tr -d ' ') 2>/dev/null || true
 | Not re-enabling auto-merge after force-push | Force-pushed rebased branch, assumed auto-merge persisted | GitHub silently clears auto-merge setting on every force-push | After every `--force-with-lease` push: immediately run `gh pr merge --auto --rebase` |
 
 ## Results & Parameters
-
-### pixi Task Path Rule — Decision Table
-
-```
-pixi task definition:   mypy = "mypy hephaestus/"   (path baked in)
-
-Caller                  Command                       Expands to                   OK?
-pre-commit hook         pixi run mypy                 mypy hephaestus/             YES
-CI step                 pixi run mypy                 mypy hephaestus/             YES
-CI step (wrong)         pixi run mypy hephaestus/     mypy hephaestus/ hephaestus/ NO
-```
-
-### if/raise Type-Narrowing Guard Pattern
-
-```python
-# Canonical pattern for Module | None imports (satisfies mypy + ruff S101)
-tomllib: types.ModuleType | None = None
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    try:
-        import tomli as tomllib  # type: ignore[no-redef]
-    except ImportError:
-        pass
-
-def parse_toml(content: str) -> dict:
-    if tomllib is None:
-        raise ImportError(
-            "tomllib/tomli is required. Use Python 3.11+ or: pip install tomli"
-        )
-    return tomllib.loads(content)  # mypy: tomllib is Module here (narrowed)
-```
 
 ### Wave Ordering for Logging PRs (Reference)
 
@@ -359,6 +273,21 @@ def test_logger_output(caplog):
         logger.propagate = False
 ```
 
+### pixi Task Definition Fix
+
+```toml
+# Pattern: bare binary in task definition, path in CI invocation
+[tasks]
+mypy = "mypy"
+ruff = "ruff"
+pytest = "pytest"
+
+# CI step:
+# pixi run mypy hephaestus/ tests/
+# pixi run ruff check hephaestus/ tests/
+# pixi run pytest tests/unit -v
+```
+
 ### Worktree Per-PR Time Budget
 
 | PR Type | Estimated Time |
@@ -368,8 +297,6 @@ def test_logger_output(caplog):
 | Full-file-rewrite conflict | ~10-15 min |
 | Superseded (empty diff) | ~1 min (close PR) |
 | caplog/propagation fix | ~5 min |
-| ruff S101 + mypy guard fix | ~5 min |
-| Stale branch CI not triggering | ~3 min (rebase onto fresh main + re-push) |
 
 ### Session Scale Reference
 
@@ -384,7 +311,6 @@ def test_logger_output(caplog):
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | 30+ open PRs, myrmidon-swarm wave execution, 2026-03-29 | pixi task expansion fix, caplog propagation fix, logging PR wave ordering |
-| ProjectHephaestus | PR #65 follow-up session, 2026-03-30 | pixi task path correction, ruff S101 if/raise, stale PR CI trigger, pixi.toml version field ban |
 
 ## References
 
@@ -392,3 +318,9 @@ def test_logger_output(caplog):
 - [batch-pr-ci-fix-workflow](batch-pr-ci-fix-workflow.md) — CI failure triage and required vs non-required checks
 - [parallel-pr-worktree-workflow](parallel-pr-worktree-workflow.md) — Agent isolation with worktrees
 - [haiku-wave-pr-remediation](haiku-wave-pr-remediation.md) — Myrmidon haiku wave agent patterns
+
+---
+
+## v1.0.0 (2026-03-29)
+
+**Initial version.**
