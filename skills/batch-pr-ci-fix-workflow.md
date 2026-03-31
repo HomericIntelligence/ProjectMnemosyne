@@ -3,7 +3,7 @@ name: batch-pr-ci-fix-workflow
 description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration."
 category: ci-cd
 date: 2026-03-29
-version: "2.0.0"
+version: "2.1.0"
 user-invocable: false
 verification: verified-ci
 tags: []
@@ -409,6 +409,13 @@ gh pr list --state open
 | Standard rebase on post-migration branch | `git rebase origin/main` on stale branch | Immediate conflicts (old paths gone) | When branch pre-dates structural migration, reconstruct from main |
 | Treating `bats`/`docker-build-timing` as blockers | Investigated Trivy CVEs and bats install | Both fail on main — not required checks | Verify a check fails on main before treating it as required |
 | Not re-enabling auto-merge after force-push | Force-pushed, assumed auto-merge persisted | GitHub silently clears auto-merge on force-push | After every force-push: immediately run `gh pr merge --auto --rebase` |
+| Library target with main() breaks ctest | `add_library(Foo src/main.cpp)` + test linking GTest::gtest_main | Two main() symbols — library's wins, GTest never runs, ctest reports 0 tests | Library targets must NEVER contain main(); use version_info.cpp stub |
+| Missing CMake test preset for coverage | CI runs `ctest --preset coverage` but no test preset defined | "No such test preset" error | Always add test presets matching configure presets in CMakePresets.json |
+| clang-format only on new files | Ran clang-format on src/ files but not test/ or version.hpp | CI checks ALL files including pre-existing ones | Run `clang-format -i` on ALL .cpp/.hpp files, not just new ones |
+| Hermes pixi task calls `just` without dependency | `pixi run lint` → `just lint` → exit 127 | `just` not in pixi.toml [dependencies] | If pixi tasks delegate to `just`, add `just` to pixi dependencies + update lockfile |
+| Fixing pixi.toml without updating lockfile | Added `just` to pixi.toml but didn't run `pixi install` | CI uses `--locked` flag — stale lockfile fails | Always run `pixi install` after changing pixi.toml to update pixi.lock |
+| claude-review.yml requiring API key | SGSG template includes claude-review.yml | Fails without ANTHROPIC_API_KEY secret | Remove claude-review.yml — use Claude Code CLI for reviews instead |
+| Superseded PR still failing CI | Old PR #58 had same changes as newer #59 but without fixes | Duplicate PRs with diverged fix state | Close the older PR with "superseded by #XX" comment |
 
 ## Results & Parameters
 
