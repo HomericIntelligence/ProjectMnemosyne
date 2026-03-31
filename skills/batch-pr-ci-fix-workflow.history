@@ -1,4 +1,19 @@
 # batch-pr-ci-fix-workflow — Version History
+
+## v2.1.0 (2026-03-30)
+
+**Changed by:** E2E pipeline CI fixes across 5 repos (Agamemnon#3, Nestor#1, Hermes#59, Myrmidons#60, Odysseus#68)
+**Verification:** verified-local (CI re-runs pending)
+
+### What changed
+- Added 8 new Failed Attempts for C++20/CMake CI patterns
+- New patterns: library main() vs GTest conflict, missing CMake test presets, clang-format scope, pixi just dependency, pixi lockfile staleness, claude-review.yml removal, superseded PR handling
+
+### Why
+Fixing CI across 5 repos for the E2E pipeline revealed C++20-specific CI failure patterns not covered by v2.0.0 (which focused on Python/Mojo repos). The library main() conflict is particularly subtle — GTest silently doesn't run.
+
+---
+
 # Archived: 2026-03-29 (superseded by v2.0.0)
 
 ---
