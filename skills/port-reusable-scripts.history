@@ -1,0 +1,253 @@
+# port-reusable-scripts — History
+
+## v1.1.0 (2026-03-30)
+
+**Changed by:** Session context — porting `scylla.automation` library (~4,400 lines, 16 modules) from ProjectScylla to `hephaestus.automation` in ProjectHephaestus via 4 sequential PRs (#209–212), followed by ProjectScylla cleanup PR #1742.
+**Verification:** verified-ci — PRs #209–212 all passed full CI (Python 3.10–3.13, lint, mypy, pre-commit).
+
+### What changed
+- Added 4 new Failed Attempts rows: pydantic only in pixi.toml, coverage failures for orchestrator modules, force-push to stale branch triggering only CodeQL, assert pattern triggering ruff S101
+- Extended Verified Workflow with 3 new patterns: pyproject.toml + pixi.lock pairing, orchestrator coverage omit list, API adapter pattern
+- Added new "Large Library Port" variant section for full library migrations (vs individual scripts)
+- Updated Results & Parameters with new session statistics
+- Bumped version to 1.1.0, updated date to 2026-03-30
+
+### Why
+Previous v1.0.0 documented script-level porting (17 standalone scripts). This session involved porting a full installable Python library with pydantic models, subprocess-orchestrating modules, CI infrastructure, and cross-repo API mismatches. Surfaced several new failure modes not covered by v1.0.0.
+
+### Previous version (v1.0.0) snapshot
+
+---
+name: port-reusable-scripts
+description: Port and generalize reusable scripts between repositories with proper
+  adaptations, dependency elimination, and Python path setup. Achieved zero external
+  dependencies by rewriting PyGithub to gh CLI.
+category: tooling
+date: 2026-02-12
+version: 1.0.0
+user-invocable: false
+---
+# Skill: Port Reusable Scripts Between Repositories
+
+## Overview
+
+| Aspect | Details |
+|--------|---------|
+| **Date** | 2026-02-12 |
+| **Objective** | Port 17 reusable scripts from ProjectOdyssey to ProjectScylla across 5 sequential PRs |
+| **Outcome** | ✅ All 17 scripts ported successfully. Zero external dependencies added. Scripts work without PYTHONPATH. |
+| **Key Achievement** | Eliminated PyGithub dependency by rewriting to use `gh` CLI subprocess calls |
+| **Time Investment** | ~12.5 hours for complete 17-script migration |
+
+## When to Use This Skill
+
+1. **Cross-Repository Script Migration** - Porting utility scripts between projects
+2. **Script Generalization** - Removing domain-specific code, updating to modern standards
+3. **Dependency Elimination** - Replacing heavy libraries with CLI tools
+4. **Large-Scale Refactoring** - Breaking migrations into sequential, reviewable PRs
+
+## Verified Workflow
+
+### Phase 1: Inventory and Planning
+
+**Filter for reusable scripts** - Exclude:
+- Domain-specific (Mojo, ML, etc.)
+- Issue-specific fixes
+- One-time migrations
+- Hardcoded generators
+
+**Organize into categories:**
+- Foundation (common utilities, retry, validation)
+- Agent management (frontmatter, stats, validation)
+- Documentation (markdown fixes, links, READMEs)
+- Git/GitHub (changelog, PR merging)
+- Config/Coverage (linting, validation, coverage)
+
+**Plan sequential PRs:**
+```
+PR 1 (Foundation) → PR 2, 3, 4, 5 (all depend on PR 1)
+```
+
+### Phase 2: Per-Script Adaptation
+
+#### Step 1: Remove Domain-Specific Content
+
+```python
+# REMOVE Mojo-specific:
+MOJO_KEYWORDS = {...}
+def validate_mojo_content(...): ...
+
+# REMOVE ML-specific:
+self.deprecated_keys = {"optimizer.type": ...}
+self.perf_thresholds = {"batch_size": (1, 1024)}
+```
+
+#### Step 2: Add Target-Repo Content
+
+```python
+# ADD Scylla evaluation sections:
+REQUIRED_SECTIONS = {"Role", "Scope", "Evaluation Focus"}
+WORKFLOW_PHASES = ["Plan", "Test", "Implementation", "Review"]
+
+# ADD Scylla labels:
+LABEL_COLORS = {"research": "d4c5f9", "evaluation": "1d76db"}
+```
+
+#### Step 3: Modernize Type Hints (Python 3.10+)
+
+```python
+# OLD:
+from typing import Optional, Dict, List
+def func(x: Optional[str]) -> Dict[str, List[int]]:
+
+# NEW:
+def func(x: str | None) -> dict[str, list[int]]:
+```
+
+#### Step 4: CRITICAL - Eliminate External Dependencies
+
+**Replace PyGithub with gh CLI subprocess:**
+
+```python
+# BEFORE (PyGithub dependency):
+from github import Github
+g = Github(token)
+repo = g.get_repo("owner/repo")
+prs = repo.get_pulls(state='open')
+
+# AFTER (gh CLI subprocess):
+import subprocess
+
+def get_repo_name() -> str:
+    result = subprocess.run(
+        ["gh", "repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"],
+        capture_output=True, text=True
+    )
+    return result.stdout.strip()
+
+def get_open_prs():
+    result = subprocess.run(
+        ["gh", "pr", "list", "--state", "open", "--json", "number,title"],
+        capture_output=True, text=True
+    )
+    return json.loads(result.stdout)
+```
+
+**Benefits:**
+- ✅ Zero Python dependencies
+- ✅ Uses existing `gh auth`
+- ✅ Faster for simple queries
+- ✅ More portable
+
+#### Step 5: Implement Real Functionality
+
+```python
+# BEFORE (stub):
+def parse_coverage_report(coverage_file: Path) -> float | None:
+    print("Not implemented")
+    return None
+
+# AFTER (real XML parsing):
+import xml.etree.ElementTree as ET
+
+def parse_coverage_report(coverage_file: Path) -> float | None:
+    """Parse Cobertura XML from pytest-cov."""
+    if not coverage_file.exists():
+        return None
+    try:
+        tree = ET.parse(coverage_file)
+        root = tree.getroot()
+        line_rate = root.get("line-rate")
+        return float(line_rate) * 100.0 if line_rate else None
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return None
+```
+
+#### Step 6: CRITICAL - Fix Python Path Issues
+
+**Add this to EVERY script:**
+
+```python
+#!/usr/bin/env python3
+"""Script docstring."""
+
+import sys
+from pathlib import Path
+
+# Enable importing from repo root and scripts directory
+_SCRIPT_DIR = Path(__file__).parent
+_REPO_ROOT = _SCRIPT_DIR.parent
+sys.path.insert(0, str(_REPO_ROOT))
+sys.path.insert(0, str(_SCRIPT_DIR))
+
+from common import get_repo_root  # noqa: E402
+```
+
+#### Step 7: Fix Pre-commit Errors
+
+**Common errors:**
+
+```python
+# D400: First line should end with period
+# D401: Use imperative mood
+# E501: Line too long
+```
+
+#### Step 8: Deduplicate Common Code
+
+```python
+# GOOD - reuse existing:
+from scylla.automation.git_utils import get_repo_root
+```
+
+### Phase 3: Sequential PR Creation
+
+```bash
+git checkout -b port-<category>-tools
+pre-commit run --all-files
+git commit -m "feat(scripts): add <category> tools (PR X/5)..."
+git push -u origin port-<category>-tools
+gh pr create ...
+gh pr merge --auto --rebase
+```
+
+## Failed Attempts & Lessons
+
+### ❌ Failed: Scripts required PYTHONPATH
+
+**Solution:** Add path setup to every script (see Step 6)
+
+### ❌ Failed: Using PyGithub library
+
+**Solution:** Rewrote to gh CLI subprocess calls
+
+### ❌ Failed: Leaving stubs
+
+**Solution:** Implemented real XML parsing
+
+### ⚠️ Warning: Pre-commit iterations
+
+**Pattern:** Expect 3-4 fix cycles per PR
+
+## Results & Parameters
+
+| Metric | Value |
+|--------|-------|
+| Scripts ported | 17 |
+| PRs created | 5 |
+| Lines ported | ~4,500 |
+| External deps added | 0 |
+
+## Key Takeaways
+
+1. **Sequential PRs > Monolithic**
+2. **CLI tools > Libraries**
+3. **Reuse > Duplicate**
+4. **Real > Stub**
+5. **Self-contained > Environment**
+6. **Generalize > Copy**
+7. **Budget iterations**
+8. **Type hints matter**
+
+---
