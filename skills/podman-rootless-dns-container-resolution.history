@@ -1,0 +1,29 @@
+# podman-rootless-dns-container-resolution — History
+
+## v1.1.0 (2026-03-30)
+
+**Changed by:** E2E pipeline DNS debugging — start-stack.sh workaround script
+**Verification:** verified-local
+
+### What changed
+- Added start-stack.sh launcher script pattern as the recommended workaround
+- Documented root cause: aardvark-dns gateway IP (10.89.2.1) mismatches container resolv.conf (10.89.0.1) across compose recreate cycles
+- Added `network_mode` DNS aliases finding: explicit aliases don't help
+- Added `dns_enabled: true` driver option finding: doesn't fix the issue
+- Added Promtail socket mount pattern for log shipping
+- New failed attempt: patching /etc/resolv.conf inside running container (glibc caches NXDOMAIN)
+
+### Why
+The v1.0.0 approach of manually restarting containers with direct IPs worked but was tedious.
+The start-stack.sh script automates the entire process: compose up → discover IPs → restart
+NATS-dependent services with direct IPs. Also discovered that the root cause is aardvark-dns
+binding to a different subnet than the containers' gateway.
+
+### Previous version (v1.0.0) snapshot
+(See skills/podman-rootless-dns-container-resolution.md at commit containing v1.0.0)
+
+---
+
+## v1.0.0 (2026-03-30)
+
+**Initial version.**

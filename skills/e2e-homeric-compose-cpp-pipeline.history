@@ -1,0 +1,25 @@
+# e2e-homeric-compose-cpp-pipeline — History
+
+## v1.1.0 (2026-03-30)
+
+**Changed by:** E2E pipeline iteration — DNS workaround, Promtail, GitHub push
+**Verification:** verified-local
+
+### What changed
+- Added Promtail container for log shipping (10th container)
+- Documented podman socket mount requirement for Promtail docker_sd_configs
+- Added start-stack.sh launcher pattern as recommended startup method
+- Added 2 new Failed Attempts (Promtail socket, compose-only DNS)
+- Updated topology from 9 to 10 containers
+
+### Why
+v1.0.0 described `podman compose up -d` as the startup method, but DNS failures
+meant services couldn't connect to NATS. The start-stack.sh launcher automates
+the IP discovery workaround. Also, Promtail needs the podman socket mounted to
+discover container logs via docker_sd_configs.
+
+---
+
+## v1.0.0 (2026-03-30)
+
+**Initial version.**
