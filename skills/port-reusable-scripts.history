@@ -1,5 +1,51 @@
 # port-reusable-scripts — History
 
+## v1.2.0 (2026-03-30)
+
+**Changed by:** Session context — porting 7 validation/resilience scripts + 2 core library modules from ProjectScylla to ProjectHephaestus as installable library modules with CLI entry points (PRs #213–218), followed by ProjectScylla thin-wrapper PR #1743.
+**Verification:** verified-ci — PR #218 (resilience subpackage) merged with full CI green; PRs #213–217 in CI queue with auto-merge enabled.
+
+### What changed
+- Added Phase 0 pre-port audit section (CRITICAL step before writing any code)
+- Added Phase 3b: backwards-compatible thin wrappers with symbol re-exports pattern
+- Added Phase 3c: cross-repo PR dependency ordering guidance
+- Added Phase 3d: parallel agents template for independent module extensions
+- Added 2 new Failed Attempts rows: creating new modules without auditing, thin wrappers with main()-only
+- Extended When to Use with 2 new triggers: extending existing modules, backwards-compatible wrappers
+- Updated Results & Parameters with third migration session statistics
+- Added Parallel PR Layer Template alongside Sequential template
+- Updated Copy-Paste Checklist with pre-port audit steps and thin wrapper steps
+- Expanded Key Takeaways from 10 to 15 items
+- Added Haiku vs Sonnet model selection guidance
+
+### Why
+PRs #213–217 revealed that Hephaestus already had partial implementations of many ported modules — the port was an extension, not a net-new file creation. This surfaced two new failure modes not present in v1.0.0 or v1.1.0: (1) creating duplicate modules/entry points, and (2) thin wrappers that broke source-repo tests importing internal symbols. Also validated 6-parallel-agent wave pattern for independent module PRs.
+
+### Previous version (v1.1.0) snapshot
+
+```
+---
+name: port-reusable-scripts
+description: >-
+  Port and generalize reusable scripts or full libraries between repositories with
+  proper adaptations, dependency elimination, and Python path setup. Covers both
+  script-level migrations and full installable package ports. Use when migrating
+  utility scripts or libraries from one project to another, deprecating source-repo
+  code after a successful port, or resolving CI failures during cross-repo library
+  migration.
+category: tooling
+date: 2026-03-30
+version: 1.1.0
+user-invocable: false
+verification: verified-ci
+history: port-reusable-scripts.history
+tags: []
+---
+[Full v1.1.0 content preserved in git history at commit prior to v1.2.0 amendment]
+```
+
+---
+
 ## v1.1.0 (2026-03-30)
 
 **Changed by:** Session context — porting `scylla.automation` library (~4,400 lines, 16 modules) from ProjectScylla to `hephaestus.automation` in ProjectHephaestus via 4 sequential PRs (#209–212), followed by ProjectScylla cleanup PR #1742.
