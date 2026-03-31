@@ -1,0 +1,151 @@
+# pixi-lock-rebase-regenerate — History
+
+## v1.1.0 (2026-03-30)
+
+**Changed by:** Session — Fixing stale pixi.lock CI failures across 5 feature branches in ProjectHephaestus (version bump 0.5.0 → 0.6.0 + resilience subpackage)
+**Verification:** verified-local
+
+### What changed
+- Added new "When to Use" trigger: all-identical CI failures across multiple PRs from the same staleness event
+- Added `### Quick Reference` subsection under Verified Workflow (required by validator)
+- Added root-cause diagnosis step using `gh run view <id> --log-failed` for multi-branch triage
+- Extended workflow: new "Multi-Branch Parallel Fix" section using git worktrees for simultaneous execution
+- Added `verification` and `tags` frontmatter fields (missing from v1.0.0)
+- Added 3 new entries to the Failed Attempts table
+- Updated Results & Parameters with parallel execution timing results
+- Added batch-PR triage commands to Quick Reference
+
+### Why
+The v1.0.0 skill documented the single-branch fix (rebase + pixi install + commit). This session
+demonstrated that when a main-branch version bump (with new subpackage) causes identical lock staleness
+across 5 PRs simultaneously, the fastest fix is parallel worktree execution — all 5 fixes run at the
+same time with zero conflicts and complete in ~1 minute total. This pattern wasn't captured before.
+
+### Previous version (v1.0.0) snapshot
+
+```
+---
+name: pixi-lock-rebase-regenerate
+description: Correctly resolve pixi.lock conflicts during git rebase without producing
+  a stale lock file. Use when git rebase causes pixi.lock conflicts, or CI fails with
+  'lock-file not up-to-date with the workspace'.
+category: ci-cd
+date: 2026-02-22
+version: 1.0.0
+user-invocable: true
+---
+# Pixi Lock Rebase Regenerate
+
+## Overview
+
+| Attribute | Value |
+|-----------|-------|
+| **Date** | 2026-02-22 |
+| **Objective** | Correctly resolve `pixi.lock` conflicts during `git rebase` without producing a stale lock file |
+| **Outcome** | Eliminates `lock-file not up-to-date` CI failures caused by accepting one side of a pixi.lock conflict |
+
+## When to Use This Skill
+
+Use this pattern whenever:
+- Running `git rebase` on a branch that includes `pixi.lock`
+- A merge conflict occurs in `pixi.lock`
+- The branch modifies `pixi.toml` (adds/removes dependencies or tasks)
+- CI fails with: `lock-file not up-to-date with the workspace`
+
+**Do NOT use `--ours` or `--theirs`** to resolve a `pixi.lock` conflict — either side may be stale
+relative to the rebased branch's actual `pixi.toml`.
+
+## Root Cause
+
+`pixi.lock` encodes the exact resolved dependency graph plus a SHA256 hash of the local
+editable package. When you rebase:
+
+1. The branch's `pyproject.toml` or `pixi.toml` may differ from main's
+2. Even if `pixi.toml` is identical, the local package hash changes whenever source files change
+3. Accepting either `--ours` or `--theirs` produces a lock file whose hash doesn't match the
+   rebased branch's actual source tree
+4. `pixi install --locked` then fails because the hash is wrong
+
+## Verified Workflow
+
+### During `git rebase origin/main`
+
+When `pixi.lock` shows as conflicted:
+
+```bash
+# Step 1: Delete the conflicted file entirely
+rm pixi.lock
+
+# Step 2: Stage the deletion to mark conflict resolved
+git add pixi.lock
+
+# Step 3: Continue the rebase
+git rebase --continue
+```
+
+Repeat for each commit that conflicts on `pixi.lock`.
+
+### After rebase completes
+
+```bash
+# Regenerate the lock file from scratch
+pixi lock
+
+# Verify it installs correctly
+pixi install --locked
+
+# Stage the regenerated lock file
+git add pixi.lock
+```
+
+### If no pixi.lock conflict occurred but pixi.toml was modified
+
+Always regenerate anyway if `pixi.toml` differs between branches:
+
+```bash
+git diff origin/main..HEAD -- pixi.toml  # check if modified
+pixi lock                                  # regenerate if it was
+```
+
+### Full rebase sequence
+
+```bash
+git fetch origin
+git switch -c <branch> origin/<branch>
+git rebase origin/main
+# ... resolve conflicts, using delete+add for pixi.lock ...
+pixi lock                                   # always regenerate after rebase
+pre-commit run --all-files
+# Fix any pre-commit failures
+git add pixi.lock
+git add -u
+git commit -m "fix(deps): regenerate pixi.lock after rebase on main"
+git push --force-with-lease origin <branch>
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+Key pixi commands:
+```bash
+pixi lock              # regenerate pixi.lock (reads pixi.toml, resolves all deps)
+pixi install --locked  # verify lock file is consistent (what CI runs)
+```
+
+## Related Skills
+
+- `parallel-worktree-workflow` — running parallel rebases in isolated worktrees
+- `pixi-pip-audit-severity-filter` — configuring pip-audit in the pixi lint environment
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectScylla | Multiple PRs on 2026-02-22 with pixi.lock conflicts and CI failures | [notes.md](../../references/notes.md) |
+```
+
+---
