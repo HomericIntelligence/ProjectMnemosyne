@@ -3,7 +3,8 @@ name: e2e-homeric-compose-cpp-pipeline
 description: "Wire HomericIntelligence C++20 services into a podman compose E2E stack with NATS JetStream, Prometheus, Grafana. Use when: (1) setting up the full E2E pipeline, (2) adding new C++20 services to the compose stack, (3) debugging multi-container C++ service orchestration."
 category: architecture
 date: 2026-03-30
-version: "1.0.0"
+version: "1.1.0"
+history: e2e-homeric-compose-cpp-pipeline.history
 user-invocable: false
 verification: verified-local
 tags:
@@ -56,7 +57,7 @@ curl localhost:8085/health     # Hermes (Python)
 curl localhost:8222/healthz    # NATS
 ```
 
-### Service Topology (9 containers)
+### Service Topology (10 containers)
 
 ```
 NATS (nats:latest, :4222/:8222)
@@ -68,6 +69,7 @@ NATS (nats:latest, :4222/:8222)
 
 Prometheus (:19090) ← scrapes argus-exporter
 Loki (:13100) ← log aggregation
+Promtail ← scrapes container logs → ships to Loki
 Grafana (:13001) ← dashboards from Prometheus + Loki
 ```
 
@@ -114,6 +116,8 @@ CMD ["ProjectFoo_server"]
 | `depends_on: condition: service_healthy` | Wait for healthy NATS before starting services | Combined with NATS healthcheck failure, blocks all dependent containers | Use simple `depends_on` (start-order only) for scratch images |
 | Same host ports as existing services | Ports 9090, 3100, 3001, 9100 | Zombie `rootlessport` processes from crashed containers hold ports | Remap to non-conflicting ports (19090, 13100, 13001, 19100) |
 | Python stubs for Agamemnon/Nestor | FastAPI Python services as temporary implementation | Violates architecture constraint: all services must be C++/Mojo | Implement in C++20 with cpp-httplib + nlohmann-json + nats.c |
+| Promtail docker_sd without socket | Promtail config uses `docker_sd_configs` but no socket mounted | "Cannot connect to the Docker daemon at unix:///var/run/podman/podman.sock" | Mount podman socket: `- /run/user/1000/podman/podman.sock:/var/run/podman/podman.sock:ro` |
+| Using `podman compose up` alone | Expected DNS to work after compose up | Podman rootless DNS gateway mismatch — services can't resolve each other | Use `start-stack.sh` launcher: compose up → discover IPs → restart services with direct IPs |
 
 ## Results & Parameters
 
