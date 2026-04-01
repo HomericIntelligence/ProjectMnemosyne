@@ -1,5 +1,28 @@
 # batch-pr-ci-fix-workflow — Version History
 
+## v2.2.0 (2026-03-31)
+
+**Changed by:** Ecosystem PR cleanup — Hephaestus#226, Agamemnon#3, Telemachy#64, Keystone#146
+**Verification:** verified-ci
+
+### What changed
+- Added Phase 11: pytest caplog `r.message` vs `r.getMessage()` / `caplog.messages` distinction
+- Added Phase 12: gcovr 0% coverage fix — parse XML report instead of bare `--print-summary`
+- Added Phase 13: Ruff F841 not auto-fixable — needs manual fix or `--unsafe-fixes`
+- Updated triage table with new error → fix path mappings
+- Added `--admin` fallback for repos with auto-merge disabled
+- Added 5 new Failed Attempts rows
+- Added `history` frontmatter field (was missing)
+
+### Why
+Fixing 20+ PRs across the full HomericIntelligence ecosystem revealed Python testing patterns
+(caplog, env var delimiter bugs), gcovr CI misconfiguration, and C++ atomic/POSIX ADL collisions.
+The gcovr 0% issue is particularly deceptive — CI appears to measure coverage but reports 0%.
+The caplog `r.message` bug is subtle — the raw format template often contains the expected text
+but with `%s` placeholders, so substring searches fail silently depending on the message.
+
+---
+
 ## v2.1.0 (2026-03-30)
 
 **Changed by:** E2E pipeline CI fixes across 5 repos (Agamemnon#3, Nestor#1, Hermes#59, Myrmidons#60, Odysseus#68)
