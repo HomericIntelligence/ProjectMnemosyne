@@ -1,0 +1,63 @@
+# conan-hybrid-cpp20-turnkey-packaging — History
+
+## v1.1.0 (2026-04-01)
+
+**Changed by:** Keystone Conan migration + E2E install validation (Odysseus turnkey packaging plan)
+**Verification:** verified-local
+
+### What changed
+- Added ProjectKeystone as 4th verified project (6 FetchContent deps migrated, cista kept as FetchContent)
+- Added concurrentqueue, spdlog, benchmark as Conan target mappings
+- Added new Failed Attempts: include dir migration pattern, concurrentqueue Conan name
+- Added E2E Conan install validation workflow (conan export → consumer project → cmake install)
+- Added pip install validation for Python packages alongside C++ Conan validation
+- Added hello-world myrmidon creation pattern for E2E worker stubs
+- Added Hermes Dockerfile creation pattern for Python FastAPI services in E2E compose
+- Extended "When to Use" with E2E install validation and meta-repo orchestration triggers
+- Updated Results & Parameters with full target name mapping table
+
+### Why
+v1.0.0 covered initial Conan migration for Agamemnon/Nestor/Charybdis (simple repos with 2-3 deps).
+Keystone is more complex: 6 FetchContent deps, circular library dependencies, optional gRPC feature flag,
+extensive install() targets. The migration revealed include directory patterns that differ from the simpler
+repos. Additionally, the ecosystem needed E2E validation that installed packages actually work, which
+required creating Dockerfiles, myrmidon workers, and Conan consumer test projects.
+
+### Previous version (v1.0.0) snapshot
+
+```yaml
+---
+name: conan-hybrid-cpp20-turnkey-packaging
+description: "Hybrid Conan 2.x + FetchContent packaging for C++20 CMake repos. Use when: (1) migrating a FetchContent-only project to Conan, (2) some deps aren't on ConanCenter so you need both, (3) integrating Conan with CMakePresets.json."
+category: tooling
+date: 2026-03-31
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - conan
+  - cmake
+  - fetchcontent
+  - cpp20
+  - packaging
+---
+
+# Hybrid Conan 2.x + FetchContent for C++20 CMake Projects
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-03-31 |
+| **Objective** | Migrate C++20 CMake repos from pure FetchContent to hybrid Conan + FetchContent |
+| **Outcome** | Successful — 3 repos build and test with hybrid deps |
+| **Verification** | verified-local |
+
+[Full content preserved in git history]
+```
+
+---
+
+## v1.0.0 (2026-03-31)
+
+**Initial version.**
