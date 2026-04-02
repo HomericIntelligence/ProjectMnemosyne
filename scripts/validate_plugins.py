@@ -175,6 +175,36 @@ def validate_quick_reference_heading(body: str) -> List[str]:
     return errors
 
 
+def validate_skill_md(plugin_dir: Path, _plugin_json: Dict) -> Tuple[List[str], List[str]]:
+    """Validate a legacy plugin-style skill directory.
+
+    Returns ``(errors, warnings)`` where orphaned top-level Quick Reference
+    headings are emitted as warnings, matching the historical test contract.
+    """
+    errors: List[str] = []
+    warnings: List[str] = []
+
+    skill_files = sorted(plugin_dir.rglob("SKILL.md"))
+    if not skill_files:
+        return ["Missing SKILL.md"], warnings
+
+    content = skill_files[0].read_text()
+    frontmatter, body, parse_errors = parse_frontmatter(content)
+    errors.extend(parse_errors)
+
+    if not frontmatter:
+        return errors, warnings
+
+    errors.extend(validate_frontmatter(frontmatter, skill_files[0].name))
+    errors.extend(validate_sections(body))
+    errors.extend(validate_failed_attempts_table(body))
+
+    if re.search(r"^## Quick Reference", body, re.MULTILINE):
+        warnings.append("Quick Reference should be a subsection (###) under Verified Workflow")
+
+    return errors, warnings
+
+
 def validate_plugin(filename: str) -> List[str]:
     """Validate a single skill file. Returns list of errors."""
     errors = []
