@@ -30,7 +30,7 @@ jobs:
         run: python3 scripts/validate_plugins.py
 
       - name: Run test suite
-        run: pytest tests/test_generate_marketplace.py -v
+        run: pytest tests/ -v
 
       - name: Check skill template validity
         run: |
