@@ -1,5 +1,67 @@
 # git-worktree-management-patterns — History
 
+## v2.2.0 (2026-04-03)
+
+**Changed by:** Session — generalized sandbox/worktree operating pattern
+**Verification:** verified-local
+
+### What changed
+- Added a new workdir-first recommendation for sandboxed harnesses: once a dedicated worktree exists, run normal git commands from inside that worktree instead of repeatedly driving them through `git -C <worktree>`
+- Updated the Quick Reference and sync examples to prefer `cd <worktree>` followed by plain `git ...` commands for `status`, `add`, `commit`, `push`, and `rebase`
+- Added a new Failed Attempts entry documenting repeated permission prompts and shared metadata lock failures caused by `git -C <worktree>` as the default write loop
+- Added a new Results & Parameters table that splits parent-repo orchestration tasks from per-worktree day-to-day git tasks
+- Bumped version from 2.1.0 to 2.2.0
+
+### Why
+In sandboxed or permission-gated agent harnesses, the mental model "worktree exists, so
+`git -C <worktree>` is equivalent to running inside it" is incomplete. Git still writes through
+shared worktree metadata in the base repository, and some harnesses scope approvals or
+permissions by the command's working directory and command prefix. That combination produces
+repeated permission prompts and `*.lock` failures even though the branch itself is isolated.
+
+The generalized lesson is: use the parent repo for worktree orchestration, but once the
+worktree exists, treat that worktree as the execution root for normal git operations.
+
+### Previous version (v2.1.0) snapshot
+
+Relevant v2.1.0 guidance before this amendment:
+
+```markdown
+### Quick Reference
+
+```bash
+# Create worktree for new issue
+git worktree add .worktrees/issue-<N> -b <N>-feature-name
+
+# List all worktrees
+git worktree list
+
+# Switch to worktree (just cd)
+cd <repo>/.worktrees/issue-<N>
+
+# Confirm you're on the right branch
+git -C <worktree-path> branch --show-current
+
+# Sync feature branch with main
+git fetch origin && git -C <worktree> rebase origin/main
+```
+
+### Syncing Feature Branches with Main
+
+```bash
+# Fetch latest (works from any worktree)
+git fetch origin
+
+# Rebase feature branch (preferred — linear history)
+git -C .worktrees/issue-<N> rebase origin/main
+
+# Force push after rebase (required)
+git -C .worktrees/issue-<N> push --force-with-lease origin <branch>
+```
+```
+
+---
+
 ## v2.1.0 (2026-04-03)
 
 **Changed by:** Session — policy update for branch deletion across all cleanup skills in ProjectMnemosyne
