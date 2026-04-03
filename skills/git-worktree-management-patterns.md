@@ -1,9 +1,9 @@
 ---
 name: git-worktree-management-patterns
-description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user"
+description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`."
 category: tooling
 date: 2026-04-03
-version: "2.1.0"
+version: "2.2.0"
 user-invocable: false
 verification: unverified
 history: git-worktree-management-patterns.history
@@ -11,7 +11,7 @@ tags: []
 ---
 # git-worktree-management-patterns
 
-Consolidated skill for all git worktree patterns: creation, switching, syncing, cleanup (single and mass), correct file edit placement, programmatic path detection from porcelain output, stale origin/HEAD fallback fixes, and branch name collision fixes in parallel automation.
+Consolidated skill for all git worktree patterns: creation, switching, syncing, cleanup (single and mass), correct file edit placement, programmatic path detection from porcelain output, stale origin/HEAD fallback fixes, branch name collision fixes in parallel automation, and workdir-first operation in sandboxed harnesses.
 
 ## Overview
 
@@ -19,7 +19,7 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 |-------|-------|
 | Date | 2026-04-03 |
 | Objective | Consolidated skill covering all git worktree creation, use, and cleanup patterns — including branch deletion policy |
-| Outcome | v2.1.0: Added branch deletion deferral policy and worktree completion requirement |
+| Outcome | v2.2.0: Added workdir-first guidance for sandboxed harnesses and recorded the repeated `git -C <worktree>` permission-prompt failure mode |
 | Verification | unverified |
 | History | [changelog](./git-worktree-management-patterns.history) |
 
@@ -38,6 +38,7 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 - Branch name collisions in parallel E2E test runs (`fatal: A branch named '...' already exists`)
 - After mass parallel auto-implementation sessions leaving 20+ worktrees
 - Any time you would normally run `git branch -d` or `git branch -D` — defer to user instead
+- Git commands run from a parent harness keep triggering permission prompts or `*.lock` errors while the actual edits live inside a dedicated worktree
 
 ## Verified Workflow
 
@@ -50,17 +51,21 @@ git worktree add .worktrees/issue-<N> -b <N>-feature-name
 # List all worktrees
 git worktree list
 
-# Switch to worktree (just cd)
+# Switch to worktree (just cd) and stay there for day-to-day git operations
 cd <repo>/.worktrees/issue-<N>
+git branch --show-current
+git status
+git add <files>
+git commit -m "type(scope): summary"
+git push -u origin <branch>
 
-# Confirm you're on the right branch
-git -C <worktree-path> branch --show-current
-
-# Sync feature branch with main
-git fetch origin && git -C <worktree> rebase origin/main
+# Sync feature branch with main from inside the worktree
+git fetch origin
+git rebase origin/main
 
 # Remove single worktree
-git worktree remove <path>
+cd <repo>
+git worktree remove .worktrees/issue-<N>
 
 # Prune stale entries
 git worktree prune
@@ -68,6 +73,39 @@ git worktree prune
 # Fix stale origin/HEAD
 git fetch origin && git remote set-head origin --auto
 ```
+
+### Operating Inside The Worktree (Sandbox-Friendly Default)
+
+When an agent or harness already has a dedicated worktree, treat that worktree as
+the command root for normal git operations.
+
+**Default pattern:**
+
+```bash
+# Parent repo: create or inspect worktrees
+git worktree add .worktrees/issue-123 -b issue-123-fix
+git worktree list
+
+# Then enter the worktree and stay there
+cd .worktrees/issue-123
+git branch --show-current
+git status
+git add <files>
+git commit -m "fix: example"
+git push -u origin issue-123-fix
+```
+
+Use `git -C <path>` sparingly for parent-repo orchestration tasks such as:
+
+- creating worktrees
+- listing or pruning worktrees
+- auditing many worktrees from one control shell
+
+Avoid `git -C <worktree>` as the default for repeated `status`, `add`, `commit`,
+`push`, and `rebase` steps in sandboxed harnesses. In permission-gated
+environments, those commands often still write through the shared worktree
+metadata under the base repo, which can trigger repeated approval prompts or
+`*.lock` failures even though the real work belongs to one isolated worktree.
 
 ### Branch Deletion Policy
 
@@ -179,14 +217,14 @@ alias wtcd='cd $(git worktree list | fzf | awk "{print \$1}")'
 ### Syncing Feature Branches with Main
 
 ```bash
-# Fetch latest (works from any worktree)
+# From inside the feature worktree
 git fetch origin
 
 # Rebase feature branch (preferred — linear history)
-git -C .worktrees/issue-<N> rebase origin/main
+git rebase origin/main
 
 # Force push after rebase (required)
-git -C .worktrees/issue-<N> push --force-with-lease origin <branch>
+git push --force-with-lease origin <branch>
 
 # If conflicts during rebase
 git status  # see conflicted files
@@ -465,6 +503,7 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 | `git worktree remove` without cleaning untracked dirs | Tried removing worktrees containing `ProjectMnemosyne/` | "contains modified or untracked files" error | Pre-clean `rm -rf $wt/ProjectMnemosyne` before `git worktree remove` |
 | grep + awk on branch line of porcelain output | `grep "branch.*/$BRANCH$" \| awk '{print $2}'` | Extracts the git ref, not the filesystem path | Path is on the preceding `worktree` line; use awk to track it |
 | `git branch -D` in stale cleanup automation | Force-delete in cleanup script | Too aggressive — deletes unmerged branches silently | Use `git branch -d` (safe delete) in automation to preserve unmerged branches |
+| Repeated `git -C <worktree>` for add/commit/push | Drove day-to-day git operations from a parent harness instead of the worktree itself | Permission-gated harnesses kept asking for approvals and Git wrote locks through shared worktree metadata | Once the worktree exists, use that directory as `cwd`/`workdir` and run plain `git ...` commands there |
 | merge-base without `-C` repo context | `git merge-base --is-ancestor main "$BRANCH"` without `-C` | Runs in wrong repo context when CWD is a worktree | Always use `git -C "$WORK_DIR"` for explicit context |
 | `git -C path` piped to `head` | Used `head` to limit output of `git -C` subcommand | `head` doesn't accept `-C` as git does | Don't pipe `git -C` subcommands to `head`; use separate commands |
 | Direct worktree creation without fetching | `git worktree add -b name path origin/main` on stale clone | `origin/main` did not exist locally (only `origin/master`) | Always fetch origin before referencing remote refs in worktree commands |
@@ -498,6 +537,14 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 | 33 worktrees | ~3 min | All removed successfully |
 | 20 stale (merged) | ~1 min | No --force needed after cleaning untracked dirs |
 | 13 active | ~1 min | 2 needed --force for modified tracked files |
+
+### Harness-aware git operation split
+
+| Task type | Preferred context | Why |
+|-----------|-------------------|-----|
+| Worktree creation, listing, prune, fleet-wide audit | Parent repo | These are genuinely repo-wide orchestration steps |
+| `status`, `add`, `commit`, `push`, `rebase`, conflict resolution for one issue branch | Inside that worktree | Avoids repeated permission prompts and shared metadata lock failures in sandboxed harnesses |
+| Cross-worktree inspection from one control shell | Parent repo with targeted `git -C <path>` | Fine for read-mostly audits; don't use it as the default write loop |
 
 ### Identifying [gone] branches
 
