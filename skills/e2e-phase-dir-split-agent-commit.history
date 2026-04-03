@@ -2,11 +2,10 @@
 name: e2e-phase-dir-split-agent-commit
 description: "Split E2E run directories into in_progress/ and completed/ phases with atomic promotion, agent git commit, and off-peak scheduling. Use when: (1) agent crashes or interrupted runs pollute results with phantom 0.0 scores, (2) judging must be isolated from in-flight runs, (3) rm -rf in_progress/ must be safe for clean restart."
 category: architecture
-date: 2026-04-02
-version: "1.1.0"
-history: e2e-phase-dir-split-agent-commit.history
+date: 2026-03-28
+version: "1.0.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
 tags:
   - e2e
   - directory-structure
@@ -23,12 +22,12 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-02 |
+| **Date** | 2026-03-28 |
 | **Objective** | Prevent agent crashes and interrupted runs from polluting pass_rate stats; isolate judging from in-flight work; enable clean restarts |
-| **Outcome** | ✅ Operational — all 5439 tests pass, 78.44% coverage, PRs #1738, #1739, #1748 merged |
-| **Verification** | verified-local |
+| **Outcome** | ✅ Operational — all 5439 tests pass, 78.44% coverage, PRs #1738 and #1739 merged |
+| **Verification** | verified-ci |
 | **Project** | ProjectScylla |
-| **PRs** | [#1738](https://github.com/HomericIntelligence/ProjectScylla/pull/1738), [#1739](https://github.com/HomericIntelligence/ProjectScylla/pull/1739), [#1748](https://github.com/HomericIntelligence/ProjectScylla/pull/1748) |
+| **PRs** | [#1738](https://github.com/HomericIntelligence/ProjectScylla/pull/1738), [#1739](https://github.com/HomericIntelligence/ProjectScylla/pull/1739) |
 
 ## When to Use
 
@@ -37,7 +36,6 @@ tags:
 - You need to restart a failed experiment without losing already-judged results
 - Judging and reporting must only operate on completed, stable run data
 - You want off-peak API scheduling to avoid rate limits during peak hours
-- Stage 3 ENOENT on promote after multi-stage --until execution
 
 ## Verified Workflow
 
@@ -174,9 +172,6 @@ PENDING → ... → AGENT_COMPLETE
 | 3 | `promote_run_to_completed` used `shutil.move` for `pipeline_baseline.json` | First run's baseline would be gone after promotion; sibling runs in the same subtest need it too | Use `shutil.copy2` for the baseline (copy not move) so siblings can also be promoted |
 | 4 | Committed CONDITIONAL GO before adding missing tests | `_get_patchfile` committed-diff fallback had no test; `test_stage_promote.py` didn't exist as separate file | Run strict audit before marking implementation complete; create test files for every new stage |
 | 5 | `resume_manager._STATES_PAST_AGENT_COMPLETE` not updated | New states `AGENT_CHANGES_COMMITTED` and `PROMOTED_TO_COMPLETED` not included — resume into these states would skip agent result validation | Whenever new RunStates are added, grep for all frozensets/lists of RunState values and update them |
-| 6 | `_reset_non_completed_runs()` only treated `worktree_cleaned` as safe | `promoted_to_completed` runs got their tier/subtest cascaded to pending, forcing re-promote on already-moved directories → ENOENT | Any new RunState that means "data safely persisted in completed/" MUST be added to the skip set in `_reset_non_completed_runs()` |
-| 7 | `promote_run_to_completed()` had no existence guard on source | `shutil.move()` on missing `in_progress/` path crashes with ENOENT instead of being idempotent | Always guard `shutil.move()` with source existence check; if dest already exists, return it |
-| 8 | Log message "reset 357 non-completed run(s) for retry" appeared normal | 357/360 runs being reset was the smoking gun — almost everything was being incorrectly reset, but the log didn't flag it as abnormal | When reset count is close to total run count, it's likely a bug in the reset logic, not normal operation |
 
 ## Results & Parameters
 
@@ -223,31 +218,6 @@ _STATES_PAST_AGENT_COMPLETE = frozenset({
 })
 ```
 
-### Reset Skip List Fix
-
-```python
-# scripts/manage_experiment.py:358
-# Before (broken):
-if state == "worktree_cleaned":
-    continue
-
-# After (fixed):
-if state in ("worktree_cleaned", "promoted_to_completed"):
-    continue
-```
-
-### Idempotent Promote Guard
-
-```python
-# src/scylla/e2e/paths.py — promote_run_to_completed()
-src = get_run_dir(experiment_dir, tier_id, subtest_id, run_num, completed=False)
-dst = get_run_dir(experiment_dir, tier_id, subtest_id, run_num, completed=True)
-
-# Guard: if already promoted, return existing destination
-if not src.exists() and dst.exists():
-    return dst
-```
-
 ### Clean Restart Procedure
 
 ```bash
@@ -263,4 +233,3 @@ python scripts/manage_experiment.py run --config test-dir --from agent_complete
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectScylla | PRs #1738/#1739 — haiku-2 production run prep | 5439 tests, 78.44% coverage |
-| ProjectScylla | PR #1748 — fix promoted_to_completed reset bug | 89 tests pass, ENOENT resolved |
