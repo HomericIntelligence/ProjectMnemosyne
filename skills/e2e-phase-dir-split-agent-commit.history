@@ -1,9 +1,9 @@
 ---
 name: e2e-phase-dir-split-agent-commit
-description: "Split E2E run directories into in_progress/ and completed/ phases with atomic promotion, agent git commit, and off-peak scheduling. Use when: (1) agent crashes or interrupted runs pollute results with phantom 0.0 scores, (2) judging must be isolated from in-flight runs, (3) rm -rf in_progress/ must be safe for clean restart, (4) Stage 3 ENOENT on promote after multi-stage execution."
+description: "Split E2E run directories into in_progress/ and completed/ phases with atomic promotion, agent git commit, and off-peak scheduling. Use when: (1) agent crashes or interrupted runs pollute results with phantom 0.0 scores, (2) judging must be isolated from in-flight runs, (3) rm -rf in_progress/ must be safe for clean restart."
 category: architecture
 date: 2026-03-28
-version: "1.1.0"
+version: "1.0.0"
 user-invocable: false
 verification: verified-ci
 tags:
@@ -14,8 +14,6 @@ tags:
   - off-peak
   - phase-split
   - run-lifecycle
-  - debugging
-  - idempotency
 ---
 
 # E2E Phase Directory Split + Agent Commit + Off-Peak Scheduling
@@ -26,10 +24,10 @@ tags:
 |-------|-------|
 | **Date** | 2026-03-28 |
 | **Objective** | Prevent agent crashes and interrupted runs from polluting pass_rate stats; isolate judging from in-flight work; enable clean restarts |
-| **Outcome** | ✅ Operational — PRs #1738, #1739, and #1748 merged |
+| **Outcome** | ✅ Operational — all 5439 tests pass, 78.44% coverage, PRs #1738 and #1739 merged |
 | **Verification** | verified-ci |
 | **Project** | ProjectScylla |
-| **PRs** | [#1738](https://github.com/HomericIntelligence/ProjectScylla/pull/1738), [#1739](https://github.com/HomericIntelligence/ProjectScylla/pull/1739), [#1748](https://github.com/HomericIntelligence/ProjectScylla/pull/1748) |
+| **PRs** | [#1738](https://github.com/HomericIntelligence/ProjectScylla/pull/1738), [#1739](https://github.com/HomericIntelligence/ProjectScylla/pull/1739) |
 
 ## When to Use
 
@@ -38,7 +36,6 @@ tags:
 - You need to restart a failed experiment without losing already-judged results
 - Judging and reporting must only operate on completed, stable run data
 - You want off-peak API scheduling to avoid rate limits during peak hours
-- Stage 3 ENOENT on promote after multi-stage execution (`_reset_non_completed_runs()` incorrectly resets `promoted_to_completed` runs, causing `stage_promote_to_completed()` to fail with `[Errno 2] No such file or directory`)
 
 ## Verified Workflow
 
@@ -64,9 +61,6 @@ def promote_run_to_completed(experiment_dir, tier_id, subtest_id, run_num):
     src = get_run_dir(..., completed=False)
     dst = get_run_dir(..., completed=True)
     dst.parent.mkdir(parents=True, exist_ok=True)
-    # v1.1.0: Idempotency guard — if source already moved, return existing dst
-    if not src.exists() and dst.exists():
-        return dst
     shutil.move(str(src), str(dst))
     # Copy (not move) pipeline_baseline.json so siblings can also use it
     baseline = src.parent / "pipeline_baseline.json"
@@ -178,9 +172,6 @@ PENDING → ... → AGENT_COMPLETE
 | 3 | `promote_run_to_completed` used `shutil.move` for `pipeline_baseline.json` | First run's baseline would be gone after promotion; sibling runs in the same subtest need it too | Use `shutil.copy2` for the baseline (copy not move) so siblings can also be promoted |
 | 4 | Committed CONDITIONAL GO before adding missing tests | `_get_patchfile` committed-diff fallback had no test; `test_stage_promote.py` didn't exist as separate file | Run strict audit before marking implementation complete; create test files for every new stage |
 | 5 | `resume_manager._STATES_PAST_AGENT_COMPLETE` not updated | New states `AGENT_CHANGES_COMMITTED` and `PROMOTED_TO_COMPLETED` not included — resume into these states would skip agent result validation | Whenever new RunStates are added, grep for all frozensets/lists of RunState values and update them |
-| 6 | `_reset_non_completed_runs()` only treated `worktree_cleaned` as terminal in its skip list | `promoted_to_completed` runs were reset to `pending`, forcing re-execution of `stage_promote_to_completed()` on runs whose `in_progress/` directory was already moved to `completed/` — ENOENT crash | Any state representing "data safely persisted" must be added to the reset skip list; treat `promoted_to_completed` as terminal alongside `worktree_cleaned` |
-| 7 | `promote_run_to_completed()` had no idempotency guard — `shutil.move()` on a missing source crashes | When source `in_progress/` path is already moved but state was reset, `shutil.move()` raises `FileNotFoundError` instead of recognizing the destination already exists | Add defense-in-depth: `if not src.exists() and dst.exists(): return dst` before `shutil.move()` |
-| 8 | "Reset 357 non-completed run(s) for retry" log message looked normal but was the smoking gun | 357 out of 360 total runs being reset means almost everything was reset — the number should have been close to 0 for a Stage 3 resume, not close to total | When diagnosing multi-stage failures, compare reset count against total run count; a reset count near total indicates the skip list is incomplete |
 
 ## Results & Parameters
 
@@ -227,21 +218,6 @@ _STATES_PAST_AGENT_COMPLETE = frozenset({
 })
 ```
 
-### Reset Skip List (v1.1.0)
-
-In `_reset_non_completed_runs()` (`scripts/manage_experiment.py`), the skip set must include all
-states where run data has been safely persisted to `completed/`:
-
-```python
-# manage_experiment.py — _reset_non_completed_runs()
-_SKIP_STATES = ("worktree_cleaned", "promoted_to_completed")
-# Any run in these states has already moved data to completed/
-# and MUST NOT be reset to pending
-```
-
-**Diagnostic**: If the "Reset N non-completed run(s) for retry" log shows N close to total
-run count, the skip list is missing a terminal state.
-
 ### Clean Restart Procedure
 
 ```bash
@@ -257,4 +233,3 @@ python scripts/manage_experiment.py run --config test-dir --from agent_complete
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectScylla | PRs #1738/#1739 — haiku-2 production run prep | 5439 tests, 78.44% coverage |
-| ProjectScylla | PR #1748 — fix `_reset_non_completed_runs()` + idempotent promote guard | 89 tests pass locally, verified-local |
