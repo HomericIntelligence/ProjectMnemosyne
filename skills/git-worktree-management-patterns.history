@@ -1,0 +1,59 @@
+# git-worktree-management-patterns — History
+
+## v2.1.0 (2026-04-03)
+
+**Changed by:** Session — policy update for branch deletion across all cleanup skills in ProjectMnemosyne
+**Verification:** unverified
+
+### What changed
+- Added "Branch Deletion Policy" section establishing that agents must NEVER autonomously delete branches
+- Updated "Single Worktree Cleanup" section to remove autonomous `git branch -d/-D` steps; replaced with user-facing summary pattern
+- Updated "Mass Cleanup" Phase 5 to report `[gone]` branches rather than bulk-deleting them
+- Updated "Automated Stale Worktree Cleanup Pattern" to use `git branch -d` only (safe) and note the deferral policy
+- Updated "Identifying [gone] branches" Quick Reference to not run the bulk delete command
+- Updated the "Key insight" note about `-D` to clarify it's an option to present to the user, not an autonomous action
+- Added "Worktree Cleanup Completion Requirement" section: all worktrees must be removed before reporting work done
+- Updated `when-to-use` triggers to reflect new policy
+- Added 2 new Failed Attempts entries documenting the consequences of autonomous branch deletion
+- Bumped version from 2.0.0 → 2.1.0, updated date
+
+### Why
+Multiple cleanup skill files in ProjectMnemosyne were instructing agents to autonomously delete branches
+(both local and remote) without user confirmation. This is a destructive action — a branch deleted with
+`-D` cannot be recovered without `git reflog` and is easy to lose. The user (Micah) wants agents to
+always present the list of branches that are safe to delete and defer the deletion decision to the user.
+This prevents accidental data loss during parallel wave cleanup sessions.
+
+Additionally, worktree skills lacked an explicit "must clean up all worktrees before finishing" requirement,
+leading to orphaned worktrees after session completion.
+
+### Previous version (v2.0.0) snapshot
+
+The previous version's key branch deletion patterns were:
+
+```bash
+# Phase 5: Final cleanup (old)
+git branch -v | grep '\[gone\]' | awk '{print $1}' | xargs git branch -D
+
+# Single cleanup (old)
+git branch -d <branch>
+git branch -D <branch>  # if -d refuses
+```
+
+And "Identifying [gone] branches" included:
+```bash
+# Delete them all at once
+git branch -v | grep '\[gone\]' | awk '{print $1}' | xargs git branch -D
+```
+
+Full v2.0.0 content preserved in git history (commit before this amendment).
+
+---
+
+## v2.0.0 (2026-03-29)
+
+**Initial consolidated version.**
+
+Merged from 7 individual skills: git-worktree-cleanup, git-worktree-collision-fix,
+git-worktree-edit-placement, git-worktree-mass-cleanup, git-worktree-path-detection,
+git-worktree-stale-origin-head-fallback, git-worktree-workflow.
