@@ -1,11 +1,12 @@
 ---
 name: git-worktree-management-patterns
-description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs"
+description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user"
 category: tooling
-date: 2026-03-29
-version: "2.0.0"
+date: 2026-04-03
+version: "2.1.0"
 user-invocable: false
 verification: unverified
+history: git-worktree-management-patterns.history
 tags: []
 ---
 # git-worktree-management-patterns
@@ -16,10 +17,11 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-03-29 |
-| Objective | Consolidated skill covering all git worktree creation, use, and cleanup patterns |
-| Outcome | Merged from 7 skills: cleanup, collision-fix, edit-placement, mass-cleanup, path-detection, stale-origin-head-fallback, workflow |
+| Date | 2026-04-03 |
+| Objective | Consolidated skill covering all git worktree creation, use, and cleanup patterns — including branch deletion policy |
+| Outcome | v2.1.0: Added branch deletion deferral policy and worktree completion requirement |
 | Verification | unverified |
+| History | [changelog](./git-worktree-management-patterns.history) |
 
 ## When to Use
 
@@ -35,6 +37,7 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 - `git symbolic-ref refs/remotes/origin/HEAD --short` returns "not a symbolic ref"
 - Branch name collisions in parallel E2E test runs (`fatal: A branch named '...' already exists`)
 - After mass parallel auto-implementation sessions leaving 20+ worktrees
+- Any time you would normally run `git branch -d` or `git branch -D` — defer to user instead
 
 ## Verified Workflow
 
@@ -64,6 +67,64 @@ git worktree prune
 
 # Fix stale origin/HEAD
 git fetch origin && git remote set-head origin --auto
+```
+
+### Branch Deletion Policy
+
+**CRITICAL: Never delete branches autonomously. Always defer to the user.**
+
+Deleting a branch with `-D` is irreversible (without `git reflog`). Agents must never run `git branch -d` or `git branch -D` on their own. Instead:
+
+1. Check which branches are safe to delete:
+   ```bash
+   # Branches whose remote is gone (merged/closed PR):
+   git branch -v | grep '\[gone\]'
+
+   # Verify content already in main:
+   git cherry origin/main <branch>
+   # Lines with '-' = in main (safe); Lines with '+' = not in main (keep)
+   ```
+
+2. Present a summary to the user:
+   ```
+   Branches safe to delete (content confirmed in main):
+     - 123-feature (PR #456 MERGED, [gone])
+     - worktree-agent-abc ([gone])
+
+   Branches to keep (open PR or unconfirmed):
+     - 789-wip (PR #101 OPEN)
+
+   To delete: git branch -d 123-feature worktree-agent-abc
+   Or ask me to delete specific branches after reviewing.
+   ```
+
+3. Wait for user confirmation before running any branch deletion command.
+
+**For remote branch deletion** (also user-confirmed only): Use `gh api` — NOT `git push origin --delete` (which triggers pre-push hooks):
+```bash
+REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+gh api --method DELETE "repos/$REPO/git/refs/heads/<branch-name>"
+```
+
+### Worktree Cleanup Completion Requirement
+
+**Always clean up all worktrees before reporting work complete.** Do not declare a task done until:
+
+```bash
+git worktree list   # must show only the main working tree
+```
+
+Cleanup sequence:
+```bash
+# 1. Remove each non-main worktree (deepest-nested first)
+rm -rf "<path>/ProjectMnemosyne"   # clean untracked dirs first if present
+git worktree remove "<path>"
+
+# 2. Prune stale metadata
+git worktree prune
+
+# 3. Verify
+git worktree list   # should show only main
 ```
 
 ### Creating Worktrees
@@ -198,14 +259,12 @@ git worktree remove ".worktrees/issue-N"
 # Prune stale metadata
 git worktree prune
 
-# Delete local branch (try safe delete first)
-git branch -d <branch>        # safe: refuses unmerged
-git branch -D <branch>        # force: needed for rebase-merged PRs
-
-# Verify
-git worktree list
-git branch
+# Verify clean state
+git worktree list   # should show only main
+git branch -v       # review branch state — present to user for deletion decision
 ```
+
+**Do NOT delete branches here.** Use the Branch Deletion Policy above — present the list and defer to user.
 
 **Safety Net interaction**: `git worktree remove --force` is blocked when untracked files are present. Delete untracked directories first, then remove without `--force`.
 
@@ -216,13 +275,13 @@ git branch
 git worktree list
 git branch -v  # [gone] = remote deleted = merged
 
-# Phase 2: Remove stale worktrees (merged PRs)
+# Phase 2: Remove stale worktrees (merged PRs) — branch deletion deferred to user
 STALE="3033 3061 3062 3063"
 for issue in $STALE; do
   rm -rf ".worktrees/issue-$issue/ProjectMnemosyne" \
          ".worktrees/issue-$issue/.issue_implementer"
   git worktree remove ".worktrees/issue-$issue" 2>/dev/null || true
-  git branch -D "${issue}-auto-impl" 2>/dev/null || true
+  # Do NOT delete branches here — report to user after cleanup
 done
 
 # Phase 3: Check active worktrees for uncommitted changes
@@ -247,17 +306,20 @@ done
 # Phase 5: Final cleanup
 git worktree prune
 git fetch --prune
-git branch -v | grep '\[gone\]' | awk '{print $1}' | xargs git branch -D
 git checkout main && git pull origin main
 
-# Verify
-git worktree list    # only main repo
-git branch -v        # main + open PR branches only
+# Verify worktrees are clean
+git worktree list    # should show only main repo
 git status           # clean
 ls .worktrees/       # empty
+
+# Report stale branches to user — do NOT delete autonomously
+echo "Branches with deleted remotes ([gone]) — safe to delete after confirming:"
+git branch -v | grep '\[gone\]'
+# Present this list to the user and ask them to confirm before deleting
 ```
 
-**Key insight**: Use `git branch -D` (not `-d`) for rebase-merged PRs — rebase leaves no merge commit, so `-d` refuses with "not fully merged".
+**Key insight**: Rebase-merged PRs require `-D` (not `-d`) because rebase leaves no merge commit, so `-d` refuses with "not fully merged". However, still defer this to the user — present the list and let them run the deletion after reviewing.
 
 ### Programmatic Path Detection from Porcelain Output
 
@@ -307,12 +369,18 @@ while IFS= read -r WT_PATH; do
     OPEN_PRS=$(gh pr list --head "$WT_BRANCH" --state open --json number 2>/dev/null)
     [ -n "$OPEN_PRS" ] && [ "$OPEN_PRS" != "[]" ] && continue
 
-    # Safe to remove
+    # Safe to remove worktree
     git worktree remove "$WT_PATH" 2>/dev/null
-    git branch -d "$WT_BRANCH" 2>/dev/null  # -d (safe), NOT -D
+    # Do NOT delete branch — collect for user review
+    SAFE_TO_DELETE_BRANCHES+=("$WT_BRANCH")
 done < <(git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}')
 
 git worktree prune 2>/dev/null
+
+# Present branch list to user for their deletion decision:
+echo "Worktrees removed. The following branches may be safe to delete:"
+printf '  - %s\n' "${SAFE_TO_DELETE_BRANCHES[@]}"
+echo "Review each, then: git branch -d <branch>  (or -D for rebase-merged PRs)"
 ```
 
 ### Fixing Stale origin/HEAD and Missing origin/main
@@ -402,6 +470,8 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 | Direct worktree creation without fetching | `git worktree add -b name path origin/main` on stale clone | `origin/main` did not exist locally (only `origin/master`) | Always fetch origin before referencing remote refs in worktree commands |
 | Auto-detect via symbolic-ref on fresh clone | `git symbolic-ref refs/remotes/origin/HEAD --short` | `origin/HEAD` is never set automatically on clone | Requires explicit `git remote set-head origin --auto` |
 | Remove parent nested worktree before children | Removed depth-1 worktree that contained depth-2 entries | Left orphaned entries in git tracking | Remove deepest-nested first (depth 3 → 2 → 1) |
+| Autonomous branch deletion during cleanup | Agent ran `git branch -D` for all `[gone]` branches without asking | Destructive — `-D` is irreversible without reflog; user may not have intended those branches to be gone | Always present the list and defer deletion to the user |
+| Reporting completion with worktrees still present | Agent declared task done without removing agent worktrees | Orphaned worktrees accumulate; subsequent runs detect stale entries | Always verify `git worktree list` shows only main before reporting done |
 
 ## Results & Parameters
 
@@ -432,10 +502,12 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 ### Identifying [gone] branches
 
 ```bash
-# List all branches with gone remotes
+# List all branches with gone remotes — present to user, do NOT delete autonomously
 git branch -v | grep '\[gone\]'
+```
 
-# Delete them all at once
+**Do NOT run bulk delete automatically.** Present the list to the user. If user confirms, they can run:
+```bash
 git branch -v | grep '\[gone\]' | awk '{print $1}' | xargs git branch -D
 ```
 
