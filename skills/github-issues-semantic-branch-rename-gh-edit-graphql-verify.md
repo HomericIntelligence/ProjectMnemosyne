@@ -3,7 +3,7 @@ name: github-issues-semantic-branch-rename-gh-edit-graphql-verify
 description: "Semantically rename default-branch references across GitHub issue titles, bodies, and authored comments using gh. Use when: (1) a repository default branch changed and existing issues still mention the old branch, (2) search results include ambiguous English uses that must not be blindly replaced, (3) you need to edit an existing issue comment you authored."
 category: tooling
 date: 2026-04-03
-version: "1.0.0"
+version: "1.0.1"
 user-invocable: false
 verification: verified-local
 tags:
@@ -22,7 +22,7 @@ tags:
 |-------|-------|
 | **Date** | 2026-04-03 |
 | **Objective** | Rename stale branch-name references in GitHub issues without corrupting unrelated natural-language uses of the same word |
-| **Outcome** | Successful — updated live issue titles, bodies, and one authored comment in `LLM360/Radiance` while leaving ordinary-English `main` references untouched |
+| **Outcome** | Successful — updated live issue titles, bodies, and one authored comment in a real repository while leaving ordinary-English `main` references untouched |
 | **Verification** | verified-local |
 
 ## When to Use
@@ -126,34 +126,33 @@ gh search issues <OLD_BRANCH> --repo <OWNER>/<REPO> \
 **Live parameters that worked**:
 
 ```text
-Repository: LLM360/Radiance
-Confirmed default branch: master
-Old branch text: main
-New branch text: master
-Edited issue title/body: #8
-Edited issue body cross-reference: #2
-Edited comment node: IC_kwDORusmTM74wCBI
+Repository: <OWNER>/<REPO>
+Confirmed default branch: <NEW_BRANCH>
+Old branch text: <OLD_BRANCH>
+New branch text: <NEW_BRANCH>
+Edited issue title/body: one target issue
+Edited issue body cross-reference: one related issue
+Edited comment node: one authored issue-comment node ID
 ```
 
 **Verification commands**:
 
 ```bash
-gh search issues main --repo LLM360/Radiance \
+gh search issues <OLD_BRANCH> --repo <OWNER>/<REPO> \
   --match title,body,comments --limit 100 --json number,title,url
 
-gh issue view 8 --comments --json number,title,body,comments,url
-gh issue view 2 --json number,title,body,url
+gh issue view <PRIMARY_ISSUE> --comments --json number,title,body,comments,url
+gh issue view <RELATED_ISSUE> --json number,title,body,url
 ```
 
 **Expected remaining hits after a correct semantic cleanup**:
 
 - issue bodies or comments where `main` is ordinary English, not the branch name
 - examples observed in the live verification run:
-  - `#1` main roadmap
-  - `#23` main ingestion path
-  - `#26` main shell
-  - `#4` main product shell
-  - `#32` main roadmap
+  - `main roadmap`
+  - `main ingestion path`
+  - `main shell`
+  - `main product shell`
 
 **Important constraint**:
 
@@ -163,4 +162,4 @@ gh issue view 2 --json number,title,body,url
 
 | Project | Context | Details |
 |---------|---------|---------|
-| Radiance | Semantic GitHub issue cleanup after confirming the repo default branch is `master` | Updated issue `#8` title/body, updated issue `#8` authored comment via `updateIssueComment`, updated issue `#2` cross-reference, and verified that remaining `main` matches were ordinary-English false positives |
+| GitHub repository | Semantic issue cleanup after confirming the repo default branch had changed | Updated one issue title/body, one related issue body, and one authored issue comment via `updateIssueComment`, then verified that the remaining matches were ordinary-English false positives |
