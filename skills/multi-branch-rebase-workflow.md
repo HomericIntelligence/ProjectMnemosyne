@@ -1,11 +1,13 @@
 ---
 name: multi-branch-rebase-workflow
 description: 'Parallel multi-branch rebase with semantic conflict resolution and batch
-  PR creation. Use when: (1) multiple branches need rebasing, (2) semantic conflict
-  resolution needed, (3) batch PR creation after rebase.'
+  PR creation. Includes prevention: ALWAYS branch from origin/main to avoid stale
+  bases. Use when: (1) creating feature branches (always from origin/main), (2) multiple
+  branches need rebasing, (3) semantic conflict resolution needed, (4) batch PR creation
+  after rebase.'
 category: tooling
-date: 2026-03-19
-version: 1.0.0
+date: 2026-04-03
+version: 2.0.0
 user-invocable: false
 ---
 # Multi-Branch Rebase Workflow
@@ -21,6 +23,8 @@ user-invocable: false
 
 ## When to Use
 
+- **Before creating any feature branch** -- use Step 0 to branch from `origin/main` and avoid stale bases entirely
+- **Especially in submodules** -- submodule checkouts are often on detached HEAD at old pins, not on `main`
 - Multiple feature branches have fallen behind main and need rebasing
 - Some branches have conflicts that require semantic understanding (not just accept-theirs/ours)
 - Batch PR creation is needed after rebase
@@ -28,9 +32,45 @@ user-invocable: false
 
 ## Verified Workflow
 
+### Step 0: Prevention -- Always Branch from origin/main (CRITICAL)
+
+**Most rebase conflicts are avoidable.** The single biggest cause of batch rebase pain is
+creating branches from stale starting points instead of from `origin/main`.
+
+```bash
+# CORRECT -- Always do this before creating a feature branch:
+git fetch origin main
+git checkout -b my-feature-branch origin/main   # Branch FROM origin/main, not HEAD
+
+# For submodules specifically (often on detached HEAD at old pins):
+cd submodule/
+git fetch origin main
+git checkout -b chore/my-fix origin/main   # NOT from detached HEAD
+```
+
+**NEVER do this:**
+```bash
+git checkout -b my-feature-branch           # Branches from HEAD which may be stale
+git checkout -b my-feature-branch origin    # Ambiguous, may resolve to old ref
+```
+
+**Why this matters for submodules:**
+In a meta-repo like Odysseus, submodule checkouts are pinned to specific SHAs (often
+weeks or months behind main). If you `cd` into a submodule and create a branch from
+the current HEAD, your branch starts from the old pin -- not from current main. Every
+commit that landed on main since that pin becomes a potential conflict.
+
+**Observed failure rate (2026-04-03):** 5 out of 5 PRs created from stale submodule
+HEADs had merge conflicts. All were fixable by rebasing onto origin/main, but the
+entire rebase wave was avoidable if branches had been created from origin/main initially.
+
 ### Quick Reference
 
 ```bash
+# 0. ALWAYS start from origin/main
+git fetch origin main
+git checkout -b my-feature origin/main
+
 # 1. Triage branches by complexity
 for branch in $BRANCHES; do
   git log --oneline main..$branch | wc -l  # commits ahead
@@ -128,6 +168,9 @@ git worktree prune
 | `git rebase --continue --no-edit` | Skip editor during rebase continue | `--no-edit` is not a valid git rebase flag | Use `GIT_EDITOR=true git rebase --continue` instead |
 | Parallel worktree for current branch | `git worktree add /tmp/X CURRENT_BRANCH` | Git error: branch already checked out | Rebase current branch in-place, use worktrees only for other branches |
 | All parallel tool calls in one block | Starting 4 worktree creates + rebase together | One failure cancels all parallel calls | Separate worktree creation from rebase, or handle errors gracefully |
+| Branched from detached HEAD in submodule | `git checkout -b chore/fix` from detached HEAD at old pin | Branch was based on stale commit, main had 3-10 new commits with governance files and CI fixes | Always `git fetch origin main` then branch from `origin/main` explicitly |
+| Branched from current branch without fetch | `git checkout -b feat/x` on submodule's current branch | Current branch was behind main | Specify `origin/main` as the start point |
+| Assumed main hadn't moved | Didn't fetch before branching | Main had governance files, CI fixes, coverage improvements merged since submodule pin | Always `git fetch origin main` first, even if you think main is up to date |
 
 ## Results & Parameters
 

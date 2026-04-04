@@ -53,3 +53,46 @@ All with auto-merge (rebase strategy) enabled.
 - Simple rebases (4 branches): ~2 minutes each
 - Complex rebase (4513, 26 conflicts): ~6 minutes via sub-agent
 - PR creation (6 PRs): ~1 minute total (parallel)
+
+---
+
+## Amendment: 2026-04-03 -- Prevention via origin/main branching
+
+### Context
+
+During a governance compliance session in Odysseus meta-repo, 5 submodule PRs were created
+by agents branching from the current submodule HEAD (detached at old pins). All 5 PRs
+came back CONFLICTING because main had moved forward with governance files, CI fixes,
+and coverage improvements since the pins.
+
+### Root Cause
+
+Submodule checkouts in Odysseus are pinned to specific SHAs. When an agent `cd`s into
+a submodule and runs `git checkout -b chore/my-fix`, the branch starts from the pinned
+SHA -- not from current main. This is a systemic issue because:
+
+1. Meta-repos always have submodules pinned behind main
+2. Agents naturally branch from HEAD, which is the pinned SHA
+3. The further behind the pin, the more conflicts on PR creation
+
+### Fix Applied
+
+Added **Step 0: Prevention** to the skill as the first verified workflow step.
+The rule is simple and unconditional:
+
+```bash
+git fetch origin main
+git checkout -b my-feature-branch origin/main
+```
+
+This is especially critical for submodules where HEAD is almost never on main.
+
+### Failure Rate Observed
+
+- 5/5 PRs created from stale HEADs had merge conflicts
+- All 5 required a rebase wave to fix
+- 0/5 would have conflicted if branched from origin/main initially
+
+### Version Bump
+
+v1.0.0 -> v2.0.0 (added prevention as a core workflow step, not just a tip)
