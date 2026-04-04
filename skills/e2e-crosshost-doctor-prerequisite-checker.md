@@ -1,0 +1,253 @@
+---
+name: e2e-crosshost-doctor-prerequisite-checker
+description: "Build a `just doctor` prerequisite checker for the HomericIntelligence cross-host E2E pipeline. Use when: (1) creating or extending the doctor diagnostic tool, (2) adding new check categories or dependency verifications, (3) debugging missing prerequisites on worker/control hosts, (4) implementing auto-install modes for CI or fresh host setup."
+category: tooling
+date: 2026-04-04
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - e2e
+  - doctor
+  - prerequisite
+  - cross-host
+  - deployment
+  - verification
+  - podman
+  - tailscale
+  - cpp20
+  - homeric-intelligence
+  - wsl2
+---
+
+# E2E Cross-Host Doctor Prerequisite Checker
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-04 |
+| **Objective** | Create a `just doctor` prerequisite checker/installer for the HomericIntelligence cross-host E2E evaluation pipeline, organized by component categories from docs/architecture.md |
+| **Outcome** | ~530-line bash script (`e2e/doctor.sh`) with 7 check categories, role filtering (`--role worker|control`), auto-install mode (`--install`), and post-deployment service health verification (`--check-services`). All 3 role modes verified on control host. |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Creating a new doctor/prerequisite checker for a distributed deployment pipeline
+- Adding new check categories to an existing doctor script (follow the architecture.md-driven pattern)
+- Debugging why a fresh host fails to build or run HomericIntelligence services
+- Setting up CI gates that verify prerequisites before E2E pipeline execution
+- Extending the `--install` auto-fix mode with new dependency installers
+- Verifying cross-host service health after deployment (`--check-services`)
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Check-only mode (all hosts)
+just doctor
+
+# Check + auto-install missing dependencies
+just doctor --install
+
+# Check only worker-host dependencies (skips C++ build chain)
+just doctor --role worker
+
+# Check only control-host dependencies (skips container runtime)
+just doctor --role control
+
+# Post-deployment service health verification
+just doctor --check-services --worker-ip 100.92.173.32 --control-ip 100.73.61.56
+
+# Combined: worker role + install
+just doctor --role worker --install
+```
+
+### Design Principles
+
+1. **Architecture-driven organization**: Check categories map 1:1 to the component inventory in `docs/architecture.md`. This ensures the doctor stays in sync with the system and makes it obvious where to add new checks.
+
+2. **Role filtering**: The `--role worker|control` flag scopes checks per host type. Worker hosts skip C++ build chain checks (they run containers only). Control hosts skip container runtime checks (they build and run native binaries).
+
+3. **Composable exit codes**: Exit 0 on all pass, exit 1 on any failure. This makes the doctor composable with CI pipelines (`just doctor && just e2e-test`).
+
+4. **Install mode as opt-in**: The `--install` flag enables auto-fix for missing dependencies. Without it, the doctor is read-only and safe for diagnostics.
+
+### The 7 Check Categories
+
+| # | Category | Scope | Key Checks |
+|---|----------|-------|------------|
+| 1 | Core Tooling | all hosts | git, just, python3, pip3, curl, jq |
+| 2 | Tailscale (Network Topology) | all hosts | tailscale binary, tailscaled running, peer reachability (if IPs provided) |
+| 3 | Container Runtime (AchaeanFleet) | worker only | podman, podman compose, podman socket, aardvark-dns PID staleness |
+| 4 | C++ Build Chain | control only | cmake >= 3.20, ninja, g++ >= 11, libssl-dev, make, conan >= 2.0, Conan default profile, pixi |
+| 5 | Python Dependencies | all hosts | nats-py (required by odysseus-console.py) |
+| 6 | Submodule Health | all hosts | submodules initialized, Myrmidons ai-maestro references, symlink resolution |
+| 7 | Service Health (Cross-Host) | --check-services | NATS, Agamemnon, Hermes, Grafana, Prometheus, argus-exporter (worker); Nestor (control) |
+
+### Detailed Steps
+
+1. **Output helpers**: Define `check_pass()`, `check_fail()`, `check_warn()`, `check_skip()` with color codes and counters. Reuse the color palette from `e2e/lib/common.sh` for consistency.
+
+2. **Argument parsing**: Use a `while [[ $# -gt 0 ]]` loop with `case` for `--install`, `--role`, `--check-services`, `--worker-ip`, `--control-ip`.
+
+3. **Version comparison helper**: The `version_gte()` function uses `sort -V` for semantic version comparison:
+   ```bash
+   version_gte() {
+       printf '%s\n%s\n' "$2" "$1" | sort -V | head -1 | grep -qF "$2"
+   }
+   ```
+   This returns 0 (true) if `$1 >= $2`. Used for cmake >= 3.20, g++ >= 11, conan >= 2.0.
+
+4. **Role gating**: Define `should_check_worker()` and `should_check_control()` helpers that check the `$ROLE` variable. Entire category sections are wrapped in `if should_check_*; then ... else check_skip ...; fi`.
+
+5. **Aardvark-dns staleness check** (WSL2-specific): Read PID from `${XDG_RUNTIME_DIR}/containers/networks/aardvark-dns/aardvark.pid`, test with `kill -0`, warn if stale. With `--install`, remove the stale PID file.
+
+6. **Myrmidons ai-maestro detection**: `grep -r "aim_" "$MYRMIDONS_DIR/scripts/"` catches stale function references. This is critical because the Myrmidons submodule pin can lag behind migrations.
+
+7. **Symlink resolution**: Iterate `git submodule status` output, run `readlink -f` on each path, warn on broken symlinks.
+
+8. **Summary**: Print pass/fail/warn counts. If any failures and `--install` was not used, print a hint to run `just doctor --install`.
+
+### File Layout
+
+```
+e2e/doctor.sh           # The doctor script (~530 lines)
+justfile                 # Integration: doctor *ARGS: bash e2e/doctor.sh {{ ARGS }}
+```
+
+### Install Commands by Dependency
+
+| Dependency | Install Method |
+|------------|---------------|
+| git, python3, pip3, curl, jq, podman, cmake, ninja-build, g++, libssl-dev, make | `apt-get install -y <pkg>` |
+| just | `cargo install just` or prebuilt binary via `just.systems/install.sh` |
+| tailscale | `curl -fsSL https://tailscale.com/install.sh \| sh` |
+| conan | `pip3 install --break-system-packages conan` |
+| pixi | `curl -fsSL https://pixi.sh/install.sh \| bash` |
+| nats-py | `pip3 install --break-system-packages nats-py` |
+| podman socket | `systemctl --user enable --now podman.socket` |
+| Conan profile | `conan profile detect --force` |
+| submodules | `git submodule update --init --recursive` |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Conan via pixi | Assumed conan would be available through pixi environment since the justfile uses `pixi run conan install` | Conan is expected to be system-installed. Agamemnon's pixi.toml does not declare conan as a dependency. The `pixi run` invocation works because pixi falls through to system PATH. | The doctor check correctly expects system-installed conan. Do not add conan to pixi.toml; it is a system prerequisite. |
+| Single flat check list | Initially wrote all checks in a flat sequence without category sections | Hard to map failures back to the architecture component that needs attention, and no way to skip irrelevant checks per host role | Organize checks by architecture.md component hierarchy (7 categories) and gate by role |
+| Reusing common.sh directly | Tried `source e2e/lib/common.sh` for color and output helpers | common.sh defines functions for E2E test phases (PHASE_START, PHASE_END) that conflict with the doctor's simpler pass/fail/skip model | Define doctor-specific helpers (check_pass, check_fail, check_warn, check_skip) that match common.sh's color palette but have different semantics |
+
+## Results & Parameters
+
+### Configuration
+
+```yaml
+# File location
+file: e2e/doctor.sh
+lines: ~530
+language: bash
+
+# Justfile integration
+justfile_recipe: |
+  doctor *ARGS:
+      bash e2e/doctor.sh {{ ARGS }}
+
+# CLI flags
+flags:
+  --install: "Auto-install missing dependencies"
+  --role: "worker | control | all (default: all)"
+  --check-services: "Enable post-deployment service health checks"
+  --worker-ip: "Tailscale IP of worker host (used with --check-services)"
+  --control-ip: "Tailscale IP of control host (used with --check-services)"
+
+# Version requirements
+versions:
+  cmake: ">= 3.20"
+  g++: ">= 11"
+  conan: ">= 2.0"
+
+# Key paths
+paths:
+  podman_socket: "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/podman/podman.sock"
+  aardvark_pid: "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/containers/networks/aardvark-dns/aardvark.pid"
+  myrmidons_scripts: "provisioning/Myrmidons/scripts/"
+
+# Service health endpoints (Section 7)
+service_endpoints:
+  nats: "http://<worker_ip>:8222/healthz"
+  agamemnon: "http://<worker_ip>:8080/v1/health"
+  hermes: "http://<worker_ip>:8085/health"
+  grafana: "http://<worker_ip>:3001/api/health"
+  prometheus: "http://<worker_ip>:9090/-/healthy"
+  argus_exporter: "http://<worker_ip>:9100/metrics"
+  nestor: "http://<control_ip>:8081/v1/health"
+
+# Exit codes
+exit_codes:
+  0: "All checks passed"
+  1: "One or more checks failed"
+```
+
+### Expected Output
+
+Successful run on a fully-configured control host:
+
+```
+HomericIntelligence Doctor - E2E Pipeline Prerequisites
+===============================================
+  Role: all    Install: false
+
+Core Tooling
+  [pass] git 2.43.0
+  [pass] just 1.25.2
+  [pass] python3 3.12.3
+  [pass] pip3 24.0
+  [pass] curl 8.5.0
+  [pass] jq 1.7.1
+
+Tailscale (Network Topology)
+  [pass] tailscale 1.62.0
+  [pass] tailscaled running
+
+Container Runtime (AchaeanFleet)
+  [pass] podman 4.9.3
+  [pass] podman compose 1.0.6
+  [pass] podman socket active
+  [pass] aardvark-dns OK
+
+C++ Build Chain
+  [pass] cmake 3.28.3 (>= 3.20)
+  [pass] ninja 1.11.1
+  [pass] g++ 13.2.0 (>= 11)
+  [pass] libssl-dev 3.0.13
+  [pass] make 4.3
+  [pass] conan 2.3.0 (>= 2.0)
+  [pass] Conan default profile exists
+  [pass] pixi 0.18.0
+
+Python Dependencies
+  [pass] nats-py 2.7.2
+
+Submodule Health
+  [pass] All 15 submodules initialized
+  [pass] Myrmidons targets Agamemnon (not ai-maestro)
+  [pass] All submodule paths resolve
+
+===============================================
+All 22 checks passed.
+```
+
+## Related Skills
+
+| Skill | Relationship |
+|-------|-------------|
+| `e2e-homeric-compose-cpp-pipeline` | The E2E pipeline that this doctor validates prerequisites for |
+| `architecture-crosshost-nats-compose-deployment` | The cross-host deployment topology whose services the doctor verifies |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| Odysseus | feat/crosshost-e2e-pipeline branch | Ran `just doctor`, `just doctor --role worker`, `just doctor --role control` on control host. All 3 modes passed. |
