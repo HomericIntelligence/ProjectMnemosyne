@@ -1,0 +1,20 @@
+# e2e-crosshost-doctor-prerequisite-checker -- History
+
+## v1.1.0 (2026-04-04)
+
+**Changed by:** SSH podman socket fix -- DBUS/XDG_RUNTIME_DIR env var handling
+**Verification:** verified-local
+
+### What changed
+- Added SSH/systemd user session handling guidance (step 8 in Detailed Steps): export `XDG_RUNTIME_DIR` and `DBUS_SESSION_BUS_ADDRESS` fallbacks before `systemctl --user` calls
+- Added new Failed Attempts entry: "Podman socket enable over SSH (silent failure)" documenting the `2>/dev/null` error swallowing and missing env vars
+- Updated podman socket install row with SSH caveat noting linger requirement
+- Added new "When to Use" entry for diagnosing `systemctl --user` failures over SSH
+- Added new "Verified On" entry for PR #82 / issue #81
+- Added tags: ssh, systemd, dbus, linger
+
+### Why
+Running `just doctor --role worker --install` over SSH failed silently at `e2e/doctor.sh:233` because `systemctl --user enable --now podman.socket` requires `$DBUS_SESSION_BUS_ADDRESS` and `$XDG_RUNTIME_DIR`, which are not set in SSH sessions. The error was swallowed by `2>/dev/null`. The fix exports fallback values for these env vars and provides actionable diagnostics when the systemd user instance is not running (requires `loginctl enable-linger`). Key insight: setting env vars alone is insufficient if there is no systemd user instance at all.
+
+### References
+- Odysseus PR #82, issue #81
