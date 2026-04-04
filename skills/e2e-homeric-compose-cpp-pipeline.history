@@ -1,5 +1,30 @@
 # e2e-homeric-compose-cpp-pipeline — History
 
+## v1.3.0 (2026-04-03)
+
+**Changed by:** Dual-runtime verification, distroless NATS fix, aardvark-dns workaround, Docker build fixes, argus-exporter migration
+**Verification:** verified-local
+
+### What changed
+- Changed NATS image from `nats:latest` (distroless) to `nats:alpine` for compose healthcheck compatibility
+- Added aardvark-dns stale state workaround for WSL2 rootless podman (kill PID before fresh start)
+- Added Docker build requirements: `make` package + `conan profile detect --force` in Dockerfiles
+- Migrated argus-exporter from removed ai-maestro (`MAESTRO_URL`/`:23000`) to `AGAMEMNON_URL`/`NESTOR_URL` with `/v1/agents`, `/v1/tasks`, `/v1/health` endpoints and `hi_*` metric prefix
+- Fixed port mapping mismatch: start-stack.sh mapped argus-exporter to `-p 19100:9100` instead of `-p 9100:9100`
+- Verified dual-runtime compatibility: both podman compose and docker compose pass all 7 E2E phases with same docker-compose.e2e.yml
+- Added 5 new Failed Attempts (nats:latest healthcheck, aardvark-dns stale state, Docker build without make, Docker build without profile, argus-exporter MAESTRO_URL)
+- Updated description to include docker compose as verified runtime
+- Added docker tag to metadata
+
+### Why
+Expanding the pipeline to support both podman and docker runtimes uncovered multiple issues:
+distroless nats:latest breaks shell healthchecks, WSL2 podman aardvark-dns accumulates stale
+DNS mappings across down/up cycles, Docker cached builds lack make and Conan default profiles,
+and argus-exporter still referenced the removed ai-maestro service. All resolved and verified
+across both runtimes.
+
+---
+
 ## v1.2.0 (2026-03-30)
 
 **Changed by:** PR review fixes — portability, security, consistency
