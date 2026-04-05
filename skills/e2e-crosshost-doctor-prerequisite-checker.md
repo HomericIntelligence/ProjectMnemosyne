@@ -3,7 +3,7 @@ name: e2e-crosshost-doctor-prerequisite-checker
 description: "Build a `just doctor` prerequisite checker for the HomericIntelligence cross-host E2E pipeline. Use when: (1) creating or extending the doctor diagnostic tool, (2) adding new check categories or dependency verifications, (3) debugging missing prerequisites on worker/control hosts, (4) implementing auto-install modes for CI or fresh host setup."
 category: tooling
 date: 2026-04-04
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 tags:
@@ -22,6 +22,9 @@ tags:
   - systemd
   - dbus
   - linger
+  - source-build
+  - unit-files
+  - service-in-template
 ---
 
 # E2E Cross-Host Doctor Prerequisite Checker
@@ -44,6 +47,7 @@ tags:
 - Extending the `--install` auto-fix mode with new dependency installers
 - Verifying cross-host service health after deployment (`--check-services`)
 - Diagnosing `systemctl --user` failures over SSH (missing `$DBUS_SESSION_BUS_ADDRESS` / `$XDG_RUNTIME_DIR`)
+- Diagnosing podman socket enable failures when podman was installed from source and `systemctl --user` reports "Unit podman.socket could not be found"
 
 ## Verified Workflow
 
@@ -120,7 +124,30 @@ just doctor --role worker --install
    ```
    If `systemctl --user` still fails (systemd user instance not running), print actionable diagnostics suggesting `sudo loginctl enable-linger $USER` then reconnect. Never swallow `systemctl --user` errors with `2>/dev/null` -- capture stderr and surface it on failure.
 
-9. **Summary**: Print pass/fail/warn counts. If any failures and `--install` was not used, print a hint to run `just doctor --install`.
+9. **Source-built podman unit file detection and install** (for `--install` path, podman socket check): Before calling `systemctl --user enable --now podman.socket`, verify the unit exists:
+   ```bash
+   if ! systemctl --user cat podman.socket &>/dev/null; then
+       # Unit not found — podman likely installed from source without unit files
+       # Search known source tree locations
+       for src_dir in ~/.local/src/podman-*/contrib/systemd/user \
+                      /usr/local/src/podman-*/contrib/systemd/user; do
+           if [[ -d "$src_dir" ]]; then
+               mkdir -p ~/.config/systemd/user
+               cp "$src_dir/podman.socket" ~/.config/systemd/user/podman.socket
+               # Process .service.in template: substitute @@PODMAN@@ with actual binary path
+               sed "s|@@PODMAN@@|$(command -v podman)|g" \
+                   "$src_dir/podman.service.in" \
+                   > ~/.config/systemd/user/podman.service
+               systemctl --user daemon-reload
+               break
+           fi
+       done
+   fi
+   systemctl --user enable --now podman.socket
+   ```
+   Verify success with `systemctl --user is-active podman.socket` and check the socket file exists at `/run/user/$(id -u)/podman/podman.sock`. Fix: PR Odysseus#86, issue #85.
+
+10. **Summary**: Print pass/fail/warn counts. If any failures and `--install` was not used, print a hint to run `just doctor --install`.
 
 ### File Layout
 
@@ -139,7 +166,7 @@ justfile                 # Integration: doctor *ARGS: bash e2e/doctor.sh {{ ARGS
 | conan | `pip3 install --break-system-packages conan` |
 | pixi | `curl -fsSL https://pixi.sh/install.sh \| bash` |
 | nats-py | `pip3 install --break-system-packages nats-py` |
-| podman socket | `systemctl --user enable --now podman.socket` -- **SSH caveat**: requires `XDG_RUNTIME_DIR` and `DBUS_SESSION_BUS_ADDRESS` env vars; if systemd user instance is not running, must first run `sudo loginctl enable-linger $USER` and reconnect (see Failed Attempts) |
+| podman socket | `systemctl --user enable --now podman.socket` -- **SSH caveat**: requires `XDG_RUNTIME_DIR` and `DBUS_SESSION_BUS_ADDRESS` env vars; if systemd user instance is not running, must first run `sudo loginctl enable-linger $USER` and reconnect. **Source-build caveat**: if podman was built from source, the systemd unit files may not be installed. Check with `systemctl --user cat podman.socket`; if missing, copy `podman.socket` and process `podman.service.in` from `~/.local/src/podman-*/contrib/systemd/user/` into `~/.config/systemd/user/` then `daemon-reload` before enabling (see Detailed Step 9 and Failed Attempts) |
 | Conan profile | `conan profile detect --force` |
 | submodules | `git submodule update --init --recursive` |
 
@@ -151,6 +178,7 @@ justfile                 # Integration: doctor *ARGS: bash e2e/doctor.sh {{ ARGS
 | Single flat check list | Initially wrote all checks in a flat sequence without category sections | Hard to map failures back to the architecture component that needs attention, and no way to skip irrelevant checks per host role | Organize checks by architecture.md component hierarchy (7 categories) and gate by role |
 | Reusing common.sh directly | Tried `source e2e/lib/common.sh` for color and output helpers | common.sh defines functions for E2E test phases (PHASE_START, PHASE_END) that conflict with the doctor's simpler pass/fail/skip model | Define doctor-specific helpers (check_pass, check_fail, check_warn, check_skip) that match common.sh's color palette but have different semantics |
 | Podman socket enable over SSH (silent failure) | `just doctor --role worker --install` ran `systemctl --user enable --now podman.socket` in the install path (`e2e/doctor.sh:233`), with stderr redirected to `/dev/null` | SSH sessions lack `$DBUS_SESSION_BUS_ADDRESS` and `$XDG_RUNTIME_DIR` env vars. Without these, `systemctl --user` cannot connect to the user's D-Bus session bus. The error was silently swallowed by `2>/dev/null`, and the fallback `check_warn` message told the user to run the same failing command manually. Confirmed with `loginctl show-user $USER --property=Linger` showing `Linger=no`. | (1) Always export `XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"` and `DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=${XDG_RUNTIME_DIR}/bus}"` before calling `systemctl --user`. (2) Setting env vars alone is NOT sufficient if the systemd user instance is not running at all (SSH without linger). Must detect this case and print actionable diagnostics: suggest `sudo loginctl enable-linger $USER`, then reconnect, or run from a desktop session. (3) Never swallow `systemctl --user` errors with `2>/dev/null` -- capture and surface them. Fix: PR Odysseus#82, issue #81. |
+| `systemctl --user` when unit files missing (source-built podman) | After PR #82 fixed env vars and linger, `systemctl --user enable --now podman.socket` still failed with "Unit podman.socket could not be found" on a host with podman 5.8.1 built from source to `~/.local/bin/podman` | Podman installed from source does not automatically install systemd user unit files. The `podman.socket` and `podman.service` units were absent from `~/.config/systemd/user/` and all systemd search paths. PR #82's env var fix was necessary but not sufficient — once the D-Bus session was reachable, the unit itself was simply missing. The error message "Unit podman.socket could not be found" is the key diagnostic signal. Source trees (e.g. `~/.local/src/podman-5.8.1/contrib/systemd/user/`) contain `podman.socket` and `podman.service.in` (a template requiring `@@PODMAN@@` substitution with the actual binary path). | Before calling `systemctl --user enable`, probe with `systemctl --user cat podman.socket`. If it fails, search `~/.local/src/podman-*/contrib/systemd/user/` and `/usr/local/src/podman-*/contrib/systemd/user/` for the unit templates. Copy `podman.socket` directly; process `podman.service.in` through `sed "s|@@PODMAN@@|$(command -v podman)|g"` to produce `podman.service`. Install both to `~/.config/systemd/user/`, run `systemctl --user daemon-reload`, then proceed with `enable --now`. Fix: PR Odysseus#86, issue #85. |
 
 ## Results & Parameters
 
@@ -265,3 +293,4 @@ All 22 checks passed.
 |---------|---------|---------|
 | Odysseus | feat/crosshost-e2e-pipeline branch | Ran `just doctor`, `just doctor --role worker`, `just doctor --role control` on control host. All 3 modes passed. |
 | Odysseus | main branch, PR #82 (issue #81) | Fixed `just doctor --role worker --install` failing to enable podman socket over SSH due to missing `$DBUS_SESSION_BUS_ADDRESS` and `$XDG_RUNTIME_DIR`. Verified locally on worker host via SSH. |
+| Odysseus | main branch, PR #86 (issue #85) | Fixed `just doctor --role worker --install` failing to enable podman socket when podman 5.8.1 was built from source (`~/.local/bin/podman`) and systemd unit files were not installed. Implemented unit file detection and install from source tree `contrib/systemd/user/`. Verified: `systemctl --user is-active podman.socket` → `active`, socket at `/run/user/1000/podman/podman.sock`. |
