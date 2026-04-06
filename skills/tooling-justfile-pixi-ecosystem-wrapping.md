@@ -1,9 +1,9 @@
 ---
 name: tooling-justfile-pixi-ecosystem-wrapping
-description: "Add justfile wrapping pixi tasks for ecosystem convention alignment. Use when: (1) a project uses pixi.toml but lacks a justfile, (2) Python library repo needs consistent CLI, (3) cross-repo task invocation needs just <project>-<task> convention, (4) adding BATS tests to verify justfile-pixi sync, (5) docs reference individual pixi run commands instead of just recipes."
+description: "Add justfile wrapping pixi tasks for ecosystem convention alignment. Use when: (1) a project uses pixi.toml but lacks a justfile, (2) Python library repo needs consistent CLI, (3) cross-repo task invocation needs just <project>-<task> convention, (4) adding BATS tests to verify justfile-pixi sync, (5) docs reference individual pixi run commands instead of just recipes, (6) adding just <prefix>-<recipe> delegation recipes to a meta-repo (Odysseus) that delegate to submodule justfiles."
 category: tooling
-date: 2026-03-25
-version: "3.0.0"
+date: 2026-04-05
+version: "4.0.0"
 user-invocable: false
 verification: verified-local
 history: tooling-justfile-pixi-ecosystem-wrapping.history
@@ -13,6 +13,10 @@ tags:
   - ecosystem
   - bats
   - convention
+  - meta-repo
+  - submodule
+  - myrmidon-swarm
+  - delegation
 ---
 
 # Justfile-Pixi Ecosystem Task Wrapping
@@ -21,9 +25,9 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-03-25 |
-| **Objective** | Add a justfile to a pixi-managed project so that cross-repo orchestration and developer CLI is consistent via the HomericIntelligence ecosystem convention |
-| **Outcome** | Successful — verified on both CI-heavy (Scylla, 12 recipes) and library (Hephaestus, 9 recipes) repos |
+| **Date** | 2026-04-05 |
+| **Objective** | Add a justfile to a pixi-managed project so that cross-repo orchestration and developer CLI is consistent via the HomericIntelligence ecosystem convention; or add just <prefix>-<recipe> delegation recipes to a meta-repo |
+| **Outcome** | Successful — verified on CI-heavy (Scylla, 12 recipes), library (Hephaestus, 9 recipes), and meta-repo delegation (Odysseus, 4 submodules) |
 | **Verification** | verified-local |
 | **History** | [changelog](./tooling-justfile-pixi-ecosystem-wrapping.history) |
 
@@ -35,6 +39,7 @@ tags:
 - You need to verify justfile recipes stay in sync with pixi tasks
 - Adding `just` as a conda-forge dev dependency in pixi.toml
 - README.md and CLAUDE.md document individual `pixi run` commands instead of `just` recipes (DRY violation)
+- Adding `just <prefix>-<recipe>` delegation entries to a **meta-repo** (Odysseus) so users can run submodule tasks from the root without `cd`-ing into submodules
 
 ## Verified Workflow
 
@@ -194,6 +199,107 @@ test-shell:
     pixi run test-shell
 ```
 
+### Template C: Meta-Repo Delegation (e.g., Odysseus)
+
+Use this template when adding `just <prefix>-<recipe>` entries to the Odysseus meta-repo justfile so operators can invoke submodule tasks without leaving the root directory.
+
+**Pre-condition**: The submodule must already have a justfile with the recipes being delegated. Always create and merge the submodule PRs **first**, then add delegation recipes to Odysseus.
+
+```just
+# === AchaeanFleet (infrastructure/AchaeanFleet) ===
+
+# Build AchaeanFleet container images
+fleet-build:
+    cd infrastructure/AchaeanFleet && just build
+
+# Run AchaeanFleet tests
+fleet-test:
+    cd infrastructure/AchaeanFleet && just test
+
+# Validate AchaeanFleet configuration
+fleet-validate:
+    cd infrastructure/AchaeanFleet && just validate
+
+# === ProjectProteus (ci-cd/ProjectProteus) ===
+
+# Build Proteus CI/CD artifacts
+proteus-build:
+    cd ci-cd/ProjectProteus && just build
+
+# Run Proteus pipeline tests
+proteus-test:
+    cd ci-cd/ProjectProteus && just test
+
+# Lint Proteus pipeline configs
+proteus-lint:
+    cd ci-cd/ProjectProteus && just lint
+
+# === ProjectMnemosyne (shared/ProjectMnemosyne) ===
+
+# Validate Mnemosyne skill files
+mnemosyne-validate:
+    cd shared/ProjectMnemosyne && just validate
+
+# Run Mnemosyne tests
+mnemosyne-test:
+    cd shared/ProjectMnemosyne && just test
+
+# === ProjectHephaestus (shared/ProjectHephaestus) ===
+
+# Run Hephaestus tests
+hephaestus-test:
+    cd shared/ProjectHephaestus && just test
+
+# Run Hephaestus linter
+hephaestus-lint:
+    cd shared/ProjectHephaestus && just lint
+```
+
+Key conventions for meta-repo delegation:
+- **Naming**: `<prefix>-<recipe>` where prefix is a short identifier matching the repo's role (e.g., `fleet`, `proteus`, `mnemosyne`, `hephaestus`)
+- **Section headers**: `# === Component Name (RepoName) ===` to group recipes by submodule
+- **Delegation pattern**: `cd <submodule-path> && just <recipe>` — never invoke pixi/tools directly; let each submodule's justfile be the interface
+- **No BUILD_ROOT override needed** for pure task delegation (unlike the CMake BUILD_ROOT pattern). Only pass env vars if the submodule's justfile reads them.
+- **Submodule-first ordering**: The submodule's justfile recipes must exist before Odysseus delegates to them. If the submodule lacks the recipe, the delegation call fails silently.
+
+### Submodule-First Workflow for Meta-Repo Delegation
+
+When adding delegation recipes to Odysseus for multiple submodules, use a **2-wave myrmidon swarm**:
+
+**Wave 1** (parallel): Create PRs in each submodule that needs justfile changes
+
+```bash
+# One Sonnet agent per submodule, each working in its own worktree
+# Agent task: verify or add the target recipes in the submodule justfile
+# Then: branch → commit → push → gh pr create → gh pr merge --auto --rebase
+```
+
+**Wave 2** (sequential, single agent): After Wave 1 PRs merge, update Odysseus
+
+```bash
+# 1. Update submodule pins to merged main SHAs
+for sub in infrastructure/AchaeanFleet ci-cd/ProjectProteus shared/ProjectMnemosyne shared/ProjectHephaestus; do
+  git -C "$sub" fetch origin main
+  git -C "$sub" checkout origin/main
+done
+git add infrastructure/AchaeanFleet ci-cd/ProjectProteus shared/ProjectMnemosyne shared/ProjectHephaestus
+
+# 2. Add delegation recipes to Odysseus justfile (Template C pattern above)
+
+# 3. Commit both changes together
+git commit -m "feat(justfile): add delegation recipes for fleet, proteus, mnemosyne, hephaestus"
+
+# 4. Push and open Odysseus PR
+gh pr create --title "feat(justfile): add delegation recipes for 4 submodule repos" --body "..."
+```
+
+**Wave sizing** (verified on 4 submodules):
+- Wave 1: 3 Sonnet agents in parallel (one per submodule needing changes; skip if recipe already exists)
+- Wave 2: 1 Sonnet agent for Odysseus justfile + pin updates
+- Total: 4 agents, 2 waves, ~3 minutes wall-clock time
+
+**Critical**: Never put Wave 1 submodule work and Wave 2 Odysseus work in the same agent or same PR. The Odysseus justfile delegates to recipes that must already be merged before the delegation recipes land.
+
 4. **(Optional) Create BATS sync test** at `tests/shell/justfile/test_justfile.bats`:
    - Verify `justfile` exists at project root
    - Verify `just --list` succeeds
@@ -215,6 +321,9 @@ test-shell:
 | N/A — clean implementation (Scylla) | Direct pixi run delegation | Did not fail | Following the ecosystem convention from prior skills avoided all known pitfalls |
 | N/A — clean implementation (Hephaestus v1) | Direct pixi run delegation with `*ARGS` | Did not fail | Pattern is now well-established; `*ARGS` forwarding works cleanly for test and lint |
 | bootstrap in git worktree | `pixi run pre-commit install` in a worktree with `core.hooksPath` set | pre-commit refuses to install when `core.hooksPath` is set | `just bootstrap` works in normal clones; in worktrees with custom hook paths, pre-commit install may fail — this is a git config issue, not a justfile issue |
+| NATS-based containerized pipeline for meta-repo delegation | Used claude-myrmidon-multi.py with 18 NATS consumers, fan-out/fan-in coordination, security-scoped container volumes | Massively overengineered — pipeline machinery added complexity without benefit for a task that is fundamentally "edit justfiles in 4 repos" | When the actual work is file edits and PRs, use a simple myrmidon swarm with worktrees — not a containerized pipeline |
+| All agents modify Odysseus justfile in the same wave | Attempted Wave 1 where all agents (submodule + Odysseus) ran in parallel | Concurrent writes to the same file (Odysseus justfile) caused conflicts | Serialize writes to shared files — Odysseus justfile edits must happen in a separate wave after submodule PRs are merged |
+| Single consolidated PR across all repos | Tried to open one PR touching submodule justfiles and Odysseus justfile simultaneously | Odysseus delegation recipes reference recipes that didn't exist yet in submodule justfiles | Submodule justfile PRs must be merged first; Odysseus delegation recipes are Wave 2 only |
 
 ## Results & Parameters
 
@@ -256,6 +365,28 @@ just = ">=1.25.0,<2"
 | `audit` | `pixi run audit` | pip-audit scan |
 | `pre-commit` | `pixi run pre-commit run --all-files` | All hooks |
 
+### Meta-Repo Delegation Parameters (Odysseus — 4 submodules)
+
+| Parameter | Value |
+|-----------|-------|
+| **Wave 1 agents** | 3 Sonnet (one per submodule needing justfile changes), parallel |
+| **Wave 2 agents** | 1 Sonnet (Odysseus justfile + submodule pin updates), sequential |
+| **Total agents** | 4 agents across 2 waves |
+| **Wall-clock time** | Wave 1: ~70s, Wave 2: ~120s, total: ~3 minutes |
+| **Submodules covered** | AchaeanFleet, ProjectProteus, ProjectMnemosyne, ProjectHephaestus |
+| **Isolation** | worktree per submodule agent |
+
+### Delegation Recipe Naming Convention
+
+| Submodule | Prefix | Example Recipes |
+|-----------|--------|----------------|
+| infrastructure/AchaeanFleet | `fleet` | `fleet-build`, `fleet-test`, `fleet-validate` |
+| ci-cd/ProjectProteus | `proteus` | `proteus-build`, `proteus-test`, `proteus-lint` |
+| shared/ProjectMnemosyne | `mnemosyne` | `mnemosyne-validate`, `mnemosyne-test` |
+| shared/ProjectHephaestus | `hephaestus` | `hephaestus-test`, `hephaestus-lint` |
+| control/ProjectAgamemnon | `agamemnon` | `agamemnon-build`, `agamemnon-test` |
+| control/ProjectNestor | `nestor` | `nestor-build`, `nestor-test` |
+
 ## Verified On
 
 | Project | Context | Details |
@@ -264,3 +395,4 @@ just = ">=1.25.0,<2"
 | ProjectHephaestus | Issue #35 — add justfile for ecosystem convention | PR #72 |
 | ProjectHephaestus | Issue #48 — bootstrap, check, variables, docs update | PR #77 |
 | ProjectHephaestus | Issue #49 — combined justfile + src-layout atomic migration | PR #83 |
+| Odysseus (meta-repo) | 4-submodule delegation: AchaeanFleet, ProjectProteus, ProjectMnemosyne, ProjectHephaestus — 2-wave myrmidon swarm, 2026-04-05 | Wave 1: 3 Sonnet agents added/verified submodule recipes in parallel (~70s); Wave 2: 1 Sonnet agent added Odysseus delegation recipes + pin updates (~120s); verified with `just --list` |

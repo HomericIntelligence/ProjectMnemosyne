@@ -1,5 +1,34 @@
 # tooling-justfile-pixi-ecosystem-wrapping — History
 
+## v4.0.0 (2026-04-05)
+
+**Changed by:** Odysseus meta-repo delegation task — 4-submodule myrmidon swarm with submodule-first workflow
+**Verification:** verified-local
+
+### What changed
+- Added **Template C: Meta-Repo Delegation** with the `cd <submodule-path> && just <recipe>` pattern and section header convention
+- Added **Submodule-First Workflow** section: 2-wave myrmidon swarm (Wave 1: submodule PRs in parallel, Wave 2: Odysseus delegation + pin updates)
+- Updated "When to Use" to include meta-repo delegation trigger
+- Updated frontmatter description to mention `just <prefix>-<recipe>` delegation
+- Added 3 new failed attempts: NATS pipeline overengineering, concurrent writes to Odysseus justfile, single consolidated PR across repos
+- Added "Meta-Repo Delegation Parameters" table (4 submodules, 2 waves, ~3 min total)
+- Added "Delegation Recipe Naming Convention" table for all submodules
+- Added Odysseus row to "Verified On" table
+- Added tags: `meta-repo`, `submodule`, `myrmidon-swarm`, `delegation`
+
+### Why
+Template A and B covered individual repo justfiles (pixi delegation). The meta-repo delegation
+pattern (Odysseus `just fleet-build` → `cd infrastructure/AchaeanFleet && just build`) is a
+distinct use case with its own pitfalls: submodule-first ordering, wave serialization to avoid
+shared-file conflicts, and the overengineering trap of containerized pipelines. These learnings
+belong here since they extend the justfile ecosystem convention to the top-level meta-repo.
+
+### Previous version (v3.0.0) snapshot
+
+See git diff for full v3.0.0 content.
+
+---
+
 ## v3.0.0 (2026-03-25)
 
 **Changed by:** ProjectHephaestus issue #48 — one-command bootstrap and dev workflows
