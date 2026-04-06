@@ -3,7 +3,7 @@ name: bulk-issue-terminology-migration
 description: "Update all GitHub issues across a multi-repo org to remove deprecated terminology references. Use when: (1) an ADR or architectural decision deprecates a component name that appears in many open issues, (2) doing a mass rename (e.g., ai-maestro → Agamemnon) across 5+ repos with 50+ issues, (3) need to purge all traces of deprecated terminology from issue tracker."
 category: tooling
 date: 2026-04-05
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
 tags: [github, issues, bulk-update, terminology, migration, myrmidon-swarm]
@@ -90,6 +90,13 @@ Before writing agent prompts, produce an explicit bidirectional mapping table:
 | `aimaestro-mesh` | `homeric-mesh` | Network names |
 | `maestro-apply` | `agamemnon-apply` | CLI dispatch |
 | `maestro_*` metrics | `agamemnon_*` | Prometheus metric prefixes |
+| `_aim_*` functions | `_agamemnon_*` | Internal bash function name prefixes (e.g., `_aim_curl` → `_agamemnon_curl`) |
+| `aim_*` functions | `agamemnon_*` | Public bash function name prefixes (e.g., `aim_check_connection` → `agamemnon_check_connection`) |
+| `AIM_TLS_SKIP_VERIFY` | `AGAMEMNON_TLS_VERIFY` | **Inverted semantics** — SKIP_VERIFY=true becomes TLS_VERIFY=false; value must be logically negated, not just renamed |
+
+> **Note on bash function names:** Discovery scans for env vars and class names can miss internal function name prefixes in shell scripts. When a bash-heavy repo is in scope (e.g., Myrmidons), explicitly include function-prefix patterns (`_aim_`, `aim_`) in the per-repo scan regex.
+
+> **Note on inverted flag names:** When the old and new names have opposite semantic suffixes (SKIP vs non-inverted), mechanical string replacement is **wrong** — the boolean value must be logically negated. Flag these in the mapping table explicitly and instruct agents to handle them with a comment explaining the inversion.
 
 **Flag context-sensitive cases** — terms that look the same but need different treatment depending on the repo. Example: Scylla's `MaestroClient` was a local class targeting Agamemnon's chaos endpoints; it needed renaming too, but the rationale differs from Telemachy's `MaestroClient`.
 
@@ -146,6 +153,8 @@ done
 gh search issues "old-term" --owner OrgName --state open --json number,title,repository
 ```
 
+**Verified working (2026-04-05):** The `gh issue list | jq` post-scan approach was executed after the ADR-006 migration and returned 0 remaining matches across all 10 repos. This confirms the scan correctly reflects live GitHub state with no caching lag. The title scan via `gh search issues` also returned 0 results. This verification step can be trusted as a definitive pass/fail gate.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -155,6 +164,7 @@ gh search issues "old-term" --owner OrgName --state open --json number,title,rep
 | 1 agent per issue | Spawning 80 agents for 80 issues | Excessive agent spawn overhead; hits parallelism limits | Batch 10-20 issues per agent grouped by repo |
 | Single agent for all 80 issues | One agent handling all repos | Context window risk; slow (sequential); no fault isolation | Split into 5 parallel agents capped at ~20 issues each |
 | Blind string replace | Simple `sed 's/ai-maestro/ProjectAgamemnon/g'` approach | "MaestroClient" in ProjectScylla referred to Scylla's own internal class, needs separate rationale | Use Sonnet agents that reason about context, not mechanical sed |
+| Mechanical rename of inverted flags | Renaming `AIM_TLS_SKIP_VERIFY` → `AGAMEMNON_TLS_VERIFY` without adjusting the value | The semantics are inverted: `SKIP_VERIFY=true` means TLS disabled, but `TLS_VERIFY=true` means TLS enabled — mechanical rename reverses the security setting | Flag inverted-semantic pairs in the mapping table explicitly; instruct agents to negate the value and add an explanatory comment |
 
 ## Results & Parameters
 
@@ -211,3 +221,10 @@ Append to every updated issue body to provide audit trail:
 | Project | Context | Details |
 |---------|---------|---------|
 | HomericIntelligence | ADR-006 ai-maestro → Agamemnon migration, 2026-04-05 | ~80 issues across 10 repos |
+
+## Changelog
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.1.0 | 2026-04-05 | Added bash function name prefixes (`_aim_*`, `aim_*`) to terminology mapping; added inverted flag semantic warning for `AIM_TLS_SKIP_VERIFY` → `AGAMEMNON_TLS_VERIFY`; added Failed Attempts row for inverted flag mechanical rename; confirmed Phase 5 verification returns accurate 0-remaining results |
+| 1.0.0 | 2026-04-05 | Initial skill creation |
