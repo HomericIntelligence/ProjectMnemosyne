@@ -4,8 +4,9 @@ description: Review a LaTeX research paper for factual accuracy against raw expe
   data, statistical outputs, and codebase constants before publication
 category: documentation
 date: 2026-02-22
-version: 1.0.0
+version: 2.0.0
 user-invocable: false
+tags: [latex, paper, review, accuracy, statistics, data-verification, publication]
 ---
 # Skill: latex-paper-accuracy-review
 
@@ -13,10 +14,10 @@ user-invocable: false
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-02-22 |
-| Category | research |
+| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0) |
+| Category | documentation |
 | Objective | Review a LaTeX research paper for factual accuracy against raw experiment data, statistical outputs, and codebase source files |
-| Outcome | Success — 6 errors (E1–E6) and 4 warnings (W1, W5, W6, W9) identified and fixed in a single session |
+| Outcome | Two successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs |
 
 ## When to Use
 
@@ -25,141 +26,232 @@ user-invocable: false
 - When code and paper share constants/thresholds that must stay consistent
 - After a long paper-writing session where numbers were typed manually from reports
 - When partial/incomplete experiments are referenced in a paper
+- When a paper has been revised multiple times and claims may have drifted from data
 
 ## Verified Workflow
 
-### Step 1: Build the accuracy review plan
+### Step 1: Parallel exploration for comprehensive coverage
 
-Use a subagent (Plan or Explore) to cross-check every quantitative claim in the paper against source data. Organize findings into three tiers:
+Launch 3 parallel Explore agents simultaneously for maximum coverage:
+
+1. **Paper text agent** — reads the full `.tex` file, extracts every quantitative claim (numbers, percentages, statistical test results, cost figures, counts)
+2. **Source data agent** — reads all data files (CSV, JSON, generated tables) and builds a ground-truth reference
+3. **Figures/tables/bib agent** — checks figure captions, table column counts, bibliography completeness, cross-references
+
+This parallel-first approach gives comprehensive coverage in a single pass and avoids serial bottlenecks.
+
+### Step 2: Build the accuracy review plan
+
+Cross-check every quantitative claim against source data. Organize findings into tiers:
 
 - **ERRORS** — must fix before publication (factual errors, contradictions, arithmetic mistakes)
 - **WARNINGS** — should fix (imprecision, inconsistency, misleading framing)
 - **UNVERIFIABLE** — note what cannot be checked without external data
 - **VERIFIED OK** — explicitly confirm correct values to build confidence
 
-For each ISSUE record:
+For each issue record:
 - Exact location (section, line numbers)
 - The claim as written
 - The actual value from source
 - The source file/path
 - The specific fix required
 
-### Step 2: Prioritize fixes
+### Step 3: Prioritize fixes
 
 Apply in this order:
-1. Arithmetic errors (wrong totals, sums)
+1. Arithmetic errors (wrong totals, sums, averages)
 2. Claims directly contradicted by the paper's own tables
-3. Fabricated/extrapolated data for incomplete experiments
-4. Code/paper constant mismatches (thresholds, formulas)
-5. Overly broad claims that don't hold across all cases
-6. Statistical test attribution errors (which test produced which stat)
-7. Normality/distribution blanket claims with exceptions
+3. Statistical test attribution errors (which test produced which stat — see Pattern 6)
+4. LaTeX structural errors (column specifiers, nan values — see Patterns 9-10)
+5. Fabricated/extrapolated data for incomplete experiments
+6. Code/paper constant mismatches (thresholds, formulas)
+7. Overly broad claims that don't hold across all cases (see Pattern 7)
+8. Missing citations for borrowed thresholds or methodologies
+9. Missing p-values in pairwise comparisons
+10. Ambiguous column headers or undefined terms in tables
 
-### Step 3: Apply fixes systematically
+### Step 4: Apply fixes systematically
 
 Use `Edit` tool with exact string replacement. For each fix:
 - Replace the exact wrong text
 - Verify with `Grep` that old text is gone
 - Read the changed section to confirm correctness
 
-### Step 4: Commit
+### Step 5: Commit
 
-Conventional commit with full list of E/W items fixed in the message body.
+Conventional commit with full list of issues fixed in the message body.
+
+### Quick Reference
+
+```bash
+# Key source files to verify against
+runs.csv              # Ground truth: individual run data (scores, costs, durations)
+summary.json          # Aggregated experiment statistics
+statistical_results.json  # omnibus_tests (KW), pairwise_comparisons, effect_sizes
+srh_tier_experiment.json  # SRH interaction tests (tier/experiment factors)
+judges.csv            # Inter-rater reliability data
+criteria.csv          # Per-criterion scoring data
+subtests.csv          # Per-subtest aggregates
+tables/*.tex          # Generated LaTeX tables (check these, not just prose)
+
+# Key verification commands
+grep -c "pattern" data/runs.csv        # Count occurrences in run data
+python3 -c "import json; d=json.load(open('file.json')); print(d['key'])"  # Spot-check JSON values
+wc -l data/runs.csv                    # Verify row counts
+```
 
 ## Common Error Patterns Found in ProjectScylla Papers
 
 ### Pattern 1: Tier-level vs subtest-level metric confusion
-**Symptom:** "Tier X achieved 0% pass rate" when one subtest passed  
-**Root cause:** Tier-level "Best Score" uses tiebreaker selection; losing subtest metrics are dropped from tier summary  
+**Symptom:** "Tier X achieved 0% pass rate" when one subtest passed
+**Root cause:** Tier-level "Best Score" uses tiebreaker selection; losing subtest metrics are dropped from tier summary
 **Fix:** Report per-subtest breakdown, note tiebreaker selection rationale
 
 ### Pattern 2: Cross-task blanket claim from single-task observation
-**Symptom:** "T0 framework failure is consistent across all three tasks" — actually only one task shows it  
-**Root cause:** Writing from memory of worst case; not cross-checking tables already in the paper  
+**Symptom:** "T0 framework failure is consistent across all three tasks" — actually only one task shows it
+**Root cause:** Writing from memory of worst case; not cross-checking tables already in the paper
 **Fix:** Restrict claim to the specific test(s) where it holds; cite other tests' actual values
 
 ### Pattern 3: Arithmetic sum error in suite counts
-**Symptom:** "113 subtests (T0: 24, T1: 10, ...)" where per-tier counts add to 120  
-**Root cause:** Manual addition error; per-tier counts sourced from YAML file counts (correct), sum typed from memory (wrong)  
+**Symptom:** "113 subtests (T0: 24, T1: 10, ...)" where per-tier counts add to 120
+**Root cause:** Manual addition error; per-tier counts sourced from YAML file counts (correct), sum typed from memory (wrong)
 **Fix:** Always verify total = sum(per-tier counts); use `wc` or count YAML files directly
 
 ### Pattern 4: Code/paper threshold mismatch
-**Symptom:** Cliff's δ thresholds in paper (0.147/0.330/0.474) differ from code (0.11/0.28/0.43)  
-**Root cause:** Two different published conventions exist (Cohen-derived vs Romano et al. 2006); paper used wrong one  
-**Fix:** Always grep the codebase for the actual thresholds used (`scylla/analysis/stats.py`); cite Romano et al. 2006 for ProjectScylla  
-**Correct thresholds (Romano et al. 2006):** negligible <0.11, small <0.28, medium <0.43, large ≥0.43
+**Symptom:** Cliff's delta thresholds in paper (0.147/0.330/0.474) differ from code (0.11/0.28/0.43)
+**Root cause:** Two different published conventions exist (Cohen-derived vs Romano et al. 2006); paper used wrong one
+**Fix:** Always grep the codebase for the actual thresholds used (`scylla/analysis/stats.py`); cite Romano et al. 2006 for ProjectScylla
+**Correct thresholds (Romano et al. 2006):** negligible <0.11, small <0.28, medium <0.43, large >=0.43
 
 ### Pattern 5: Fabricated partial experiment results
-**Symptom:** "T1 achieves 0.83 at 100% pass rate" for a test that only has 1 run completed  
-**Root cause:** Extrapolating from expected pattern rather than reading checkpoint.json  
-**Fix:** Always read `checkpoint.json` for partial experiments; only report what is actually in the checkpoint  
+**Symptom:** "T1 achieves 0.83 at 100% pass rate" for a test that only has 1 run completed
+**Root cause:** Extrapolating from expected pattern rather than reading checkpoint.json
+**Fix:** Always read `checkpoint.json` for partial experiments; only report what is actually in the checkpoint
 **Source files:** `~/fullruns/haiku/<timestamp>-<test-id>/checkpoint.json`
 
-### Pattern 6: Statistical test attribution
-**Symptom:** "Score: H(6) = 22.63, p = 0.0009" listed under Kruskal-Wallis omnibus — but score isn't in the KW omnibus  
-**Root cause:** The stat actually comes from Scheirer-Ray-Hare interaction test tier effect  
-**Fix:** Check `data/statistical_results.json` — `omnibus_tests` array (KW) vs `interaction_tests` array (SRH)  
-**Rule:** KW omnibus tests: pass_rate, impl_rate, duration, cost. Score tested via SRH tier effect.
+### Pattern 6: Statistical test attribution (KW vs SRH)
+**Symptom:** "Score: H(6) = 22.63, p = 0.0009" listed under Kruskal-Wallis omnibus — but score isn't in the KW omnibus
+**Root cause:** The stat actually comes from Scheirer-Ray-Hare interaction test tier effect, not KW
+**Fix:** Check `data/statistical_results.json` — `omnibus_tests` array (KW) vs `srh_tier_experiment.json` (SRH tier/experiment factors)
+**Rule:** KW omnibus tests standalone metrics: pass_rate, impl_rate, duration_seconds. Score and Cost tier effects come from SRH tier factor. Papers commonly present these together without distinguishing their source — this is a subtle but critical methodological distinction.
+**Table fix pattern:** Add a "Source" column distinguishing KW vs SRH provenance for each row
 
 ### Pattern 7: Blanket normality claim with exceptions
-**Symptom:** "All tier/metric combinations failed Shapiro-Wilk (p < 0.001)" — T6 actually passes  
-**Root cause:** T6 has n=15 (small); SW test is underpowered at small n, returns high p-values  
+**Symptom:** "All tier/metric combinations failed Shapiro-Wilk (p < 0.001)" — T6 actually passes
+**Root cause:** T6 has n=15 (small); SW test is underpowered at small n, returns high p-values
 **Fix:** "Nearly all... T6 score (p=0.329) and T6 cost (p=0.177) passed normality (n=15); non-parametric applied throughout for consistency"
+**Scope verification:** Check the actual scope of normality testing. "All 14 tier x metric combinations" may actually mean 7 tiers x 2 metrics (Score, Cost) = 14, not 7 x 7 = 49. Always read the generated table (e.g., `tab10_normality_tests.tex`) to verify scope — the table reveals the truth faster than re-deriving from prose.
 
 ### Pattern 8: Understated cost ratios
-**Symptom:** "T3/T4 cost 3.5–4× more than T1/T2" — some pairs are 7×  
-**Root cause:** Author computed one favorable comparison (T3/T1=3.55×) and generalized  
+**Symptom:** "T3/T4 cost 3.5-4x more than T1/T2" — some pairs are 7x
+**Root cause:** Author computed one favorable comparison (T3/T1=3.55x) and generalized
 **Fix:** Compute all four cross-products (T3/T1, T3/T2, T4/T1, T4/T2) and report the full range or all pairs
+
+### Pattern 9: LaTeX column specifier mismatch (NEW in v2.0.0)
+**Symptom:** `{lrrrrrr}` (7 column specifiers) for a table with 6 actual data fields
+**Root cause:** Extra column specifier added during editing; LaTeX compiles without error but causes subtle spacing issues
+**Fix:** Count the header fields in the table and match against the column specifier string. Check all `\begin{tabular}{...}` lines.
+**Detection:** `grep -n 'begin{tabular}' paper.tex` then manually verify each one
+
+### Pattern 10: nan values in generated LaTeX tables (NEW in v2.0.0)
+**Symptom:** "All Judges (Overall) & nan & nan & nan" appearing in a table row
+**Root cause:** Data generation script produced nan for an aggregate row; the row was included verbatim in the .tex file
+**Fix:** Remove the offending row entirely, or trace back to the data pipeline to fix the nan generation
+
+### Pattern 11: Missing p-values in pairwise comparisons (NEW in v2.0.0)
+**Symptom:** Paper discusses T3->T4 transition without reporting the Dunn's test p-value
+**Root cause:** Author focused on significant results and omitted non-significant pairwise comparisons
+**Fix:** Add "Dunn's p=X.XXX (n.s.)" for completeness; non-significant results are still informative
+
+### Pattern 12: Ambiguous table column definitions (NEW in v2.0.0)
+**Symptom:** "Best Tier" column in a table without definition of what "best" means
+**Root cause:** Column meaning is obvious to the author but not to readers
+**Fix:** Add a footnote defining the criterion (e.g., "Best Tier = tier with highest pass rate")
+
+### Pattern 13: Cost rounding errors (NEW in v2.0.0)
+**Symptom:** "$0.224 for test-002" when total_cost / num_runs = $0.226
+**Root cause:** Intermediate rounding or using pre-rounded source values
+**Fix:** Recompute from raw data: total_cost / count. Verify: `python3 -c "print(81.28/360)"`
+
+### Pattern 14: Pass rate computation confusion (NEW in v2.0.0)
+**Symptom:** Different pass rates when computing from raw data vs paper values
+**Root cause:** Paper uses consensus_score > 0.5 as pass threshold, but naive computation uses score > 0
+**Fix:** Always verify the pass criterion definition before computing. Check the paper's methodology section for the threshold. Raw count of non-zero scores gives different results than consensus-based thresholds.
 
 ## Key Source Files for ProjectScylla Papers
 
 | Claim type | Source file |
 |------------|-------------|
+| Individual run data (ground truth) | `docs/arxiv/haiku/data/runs.csv` |
+| Experiment aggregates | `docs/arxiv/haiku/data/summary.json` |
+| KW omnibus tests | `docs/arxiv/haiku/data/statistical_results.json` → `omnibus_tests` |
+| Pairwise comparisons | `docs/arxiv/haiku/data/statistical_results.json` → `pairwise_comparisons` |
+| Effect sizes | `docs/arxiv/haiku/data/statistical_results.json` → `effect_sizes` |
+| SRH interaction tests | `docs/arxiv/haiku/data/srh_tier_experiment.json` |
+| Inter-rater reliability | `docs/arxiv/haiku/data/judges.csv` |
+| Per-criterion scores | `docs/arxiv/haiku/data/criteria.csv` |
+| Per-subtest aggregates | `docs/arxiv/haiku/data/subtests.csv` |
+| Generated LaTeX tables | `docs/arxiv/haiku/tables/*.tex` |
 | Experiment totals (cost, duration) | `~/fullruns/haiku/<ts>-<test>/batch_summary.json` |
 | Tier best scores/pass rates | `~/fullruns/haiku/<ts>-<test>/<TIER>/report.md` |
-| Subtest-level results | `~/fullruns/haiku/<ts>-<test>/<TIER>/<subtest>/report.md` |
 | Partial experiment state | `~/fullruns/haiku/<ts>-<test>/checkpoint.json` |
-| Aggregate tier statistics | `docs/arxiv/haiku/data/tab01_tier_summary.md` |
-| Pairwise statistics | `docs/arxiv/haiku/data/tab02_pairwise_comparisons.md` |
-| Statistical test outputs | `docs/arxiv/haiku/data/statistical_results.json` |
-| Cliff's δ thresholds | `scylla/analysis/stats.py:260-264` |
-| Pass threshold (0.60) | `scylla/metrics/grading.py:13` |
+| Cliff's delta thresholds | `scylla/analysis/stats.py:260-264` |
+| Pass threshold | `scylla/metrics/grading.py` (check for consensus_score threshold) |
 | Bootstrap config | `scylla/analysis/config.yaml:11-15` |
 | Subtest YAML counts | `tests/claude-code/shared/subtests/<tier>/` |
 
 ## Results & Parameters
 
-### Session outcome (2026-02-22)
+### Session outcome v2.0.0 (2026-04-05)
+- Paper: `docs/arxiv/haiku/paper.tex` (2,020 lines, 1,080 runs, 7 tiers, 3 experiments, $122.31 total)
+- Critical issues found and fixed: 6
+- Important issues found and fixed: 3
+- Minor issues found and fixed: 1
+- Claims verified correct: 30+
+- Files changed: 4
+- Review method: 3 parallel exploration agents + systematic cross-verification
+
+### Session outcome v1.0.0 (2026-02-22)
 - Paper: `docs/arxiv/haiku/paper.tex` (first draft, ~884 lines)
-- Errors found and fixed: 6 (E1–E6)
+- Errors found and fixed: 6 (E1-E6)
 - Warnings fixed: 4 (W1, W5, W6, W9)
-- Warnings noted but not fixed: 5 (W2–W4, W7–W8 — either correct or low priority)
-- Unverifiable: 3 (U1–U3)
+- Warnings noted but not fixed: 5 (W2-W4, W7-W8 — either correct or low priority)
+- Unverifiable: 3 (U1-U3)
 - Verified correct: all batch summary figures, all per-test table values, all aggregate tier values, all KW stats
 
 ### Commit format
 ```
-fix(research): correct factual errors and warnings in Haiku analysis paper
+fix(research): correct factual errors in Haiku analysis paper
 
 Apply accuracy review fixes to docs/arxiv/haiku/paper.tex:
 
-Errors (must fix):
-- E1: T1 test-007 pass rate — subtest-01 had 40% pass rate, not 0%
-- E2: T0 framework failure — restrict to test-002 only
-- E3: Subtest total 113 → 120 (arithmetic error)
-- E4: Cliff's delta thresholds — Romano et al. 2006 (0.11/0.28/0.43)
-- E5: test-021 — remove fabricated scores; only 1 run completed
-- E6: test-022 T0 — only one subtest has data
+Critical:
+- KW/SRH table mixing: added Source column distinguishing test provenance
+- Normality scope: "all 14 tier x metric" -> "all 14 tier x {Score, Cost}"
+- Missing citation: added Romano et al. (2006) for Cliff's delta thresholds
+- nan in table: removed "All Judges (Overall) & nan & nan & nan" row
+- Extra column specifiers: {lrrrrrr} -> {lrrrrr} in 3 tables
+- Cost rounding: $0.224 -> $0.226 for test-002
 
-Warnings:
-- W1: Delegation cost ratios now specific (3.5–7.1×)
-- W5: Token precision 41.7M total / 40.4M cache
-- W6: Score stat attributed to SRH not KW omnibus
-- W9: Normality exceptions (T6 score p=0.329, cost p=0.177)
+Important:
+- Missing p-value: added Dunn's p=0.058 (n.s.) for T3->T4
+- Best Tier ambiguity: added footnote defining criterion
+
+Minor:
+- Spacing from extra column specifier
 ```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectScylla | Haiku analysis paper v1.0.0 (2026-02-22) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
+| ProjectScylla | Haiku analysis paper v2.0.0 (2026-04-05) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| N/A | Direct approach worked | N/A | Solution was straightforward |
+| Exploration agent claim about judges | Agent reported all judges used claude-opus-4-6 | Misread judges.csv — 3 distinct judge models were actually present | Always verify exploration agent claims against raw data before treating them as findings |
+| Pass rate from raw score > 0 | Computed pass_rate as proportion of runs with score > 0 | Paper uses consensus_score > 0.5 as pass threshold, giving different rates (e.g., T3=0.783 vs correct 0.759) | Always verify the pass criterion definition in the methodology section before computing pass rates from raw data |
+| Git diff for change verification | Used git diff to verify targeted edits | Working tree had 125 files / 170K+ lines of unstaged changes from prior experiment reruns; edits were lost in noise | In a dirty working tree, verify individual file content with Read rather than relying on git diff |
