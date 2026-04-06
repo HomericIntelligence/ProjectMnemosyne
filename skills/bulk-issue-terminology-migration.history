@@ -1,0 +1,37 @@
+# bulk-issue-terminology-migration — History
+
+## v1.1.0 (2026-04-05)
+
+**Changed by:** /learn workflow — post-session amendment from ADR-006 migration
+**Verification:** verified-local
+
+### What changed
+- Extended terminology mapping table with bash function name prefixes: `_aim_*` → `_agamemnon_*` (internal) and `aim_*` → `agamemnon_*` (public), discovered by Agent 3 (Myrmidons) during the migration
+- Added mapping entry and warning note for inverted-semantic flag `AIM_TLS_SKIP_VERIFY` → `AGAMEMNON_TLS_VERIFY` — the SKIP inversion means the boolean value must be logically negated, not just renamed
+- Added two note callouts in Phase 2: one prompting explicit bash function-prefix scans for shell-heavy repos, one warning about inverted semantic suffixes requiring value negation
+- Added Failed Attempts row for mechanical rename of inverted flags (security regression risk)
+- Added verification confirmation to Phase 5: the `gh issue list | jq` post-scan approach returned 0 remaining across all 10 repos — confirmed as a reliable definitive pass/fail gate
+- Added Changelog table at end of skill
+- Bumped version 1.0.0 → 1.1.0; date remains 2026-04-05 (same calendar day)
+
+### Why
+v1.0.0 captured the core workflow but missed two term categories discovered during execution: (1)
+bash function name prefixes in shell-heavy repos (Myrmidons) were not in the original mapping, and
+(2) `AIM_TLS_SKIP_VERIFY` → `AGAMEMNON_TLS_VERIFY` has inverted semantics — a mechanical rename
+would silently reverse a TLS security setting. These are not edge cases; any shell-heavy repo in
+future migrations will have function prefixes, and inverted flag names are a recurring pattern when
+APIs are redesigned. The verification confirmation rounds out the skill with evidence that Phase 5
+works as designed.
+
+### Previous version (v1.0.0) frontmatter snapshot
+
+---
+name: bulk-issue-terminology-migration
+description: "Update all GitHub issues across a multi-repo org to remove deprecated terminology references."
+category: tooling
+date: 2026-04-05
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [github, issues, bulk-update, terminology, migration, myrmidon-swarm]
+---
