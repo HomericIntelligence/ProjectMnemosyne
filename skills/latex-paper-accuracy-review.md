@@ -4,9 +4,9 @@ description: Review a LaTeX research paper for factual accuracy against raw expe
   data, statistical outputs, and codebase constants before publication
 category: documentation
 date: 2026-02-22
-version: 2.0.0
+version: 3.0.0
 user-invocable: false
-tags: [latex, paper, review, accuracy, statistics, data-verification, publication]
+tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex]
 ---
 # Skill: latex-paper-accuracy-review
 
@@ -14,10 +14,10 @@ tags: [latex, paper, review, accuracy, statistics, data-verification, publicatio
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0) |
+| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0), 2026-04-06 (v3.0.0) |
 | Category | documentation |
 | Objective | Review a LaTeX research paper for factual accuracy against raw experiment data, statistical outputs, and codebase source files |
-| Outcome | Two successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs |
+| Outcome | Three successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs; v3.0.0 discovered bootstrap CIs mislabeled as Clopper-Pearson, 536 missing judge evaluations, and BH monotonicity comment errors |
 
 ## When to Use
 
@@ -27,6 +27,8 @@ tags: [latex, paper, review, accuracy, statistics, data-verification, publicatio
 - After a long paper-writing session where numbers were typed manually from reports
 - When partial/incomplete experiments are referenced in a paper
 - When a paper has been revised multiple times and claims may have drifted from data
+- When confidence intervals are reported and need independent verification (e.g., Clopper-Pearson vs bootstrap)
+- When judge evaluations may be missing or incomplete across experiment conditions
 
 ## Verified Workflow
 
@@ -56,19 +58,54 @@ For each issue record:
 - The source file/path
 - The specific fix required
 
+### Step 2b: Independent CI verification (NEW in v3.0.0)
+
+When the paper reports confidence intervals, independently recompute them to verify:
+
+```python
+# Clopper-Pearson exact CIs (binomial proportion)
+from scipy.stats import beta as beta_dist
+def clopper_pearson(k, n, alpha=0.05):
+    lo = beta_dist.ppf(alpha/2, k, n - k + 1) if k > 0 else 0.0
+    hi = beta_dist.ppf(1 - alpha/2, k + 1, n - k) if k < n else 1.0
+    return lo, hi
+
+# Example: 17 passes out of 24 trials
+lo, hi = clopper_pearson(17, 24)  # [0.495, 0.882]
+```
+
+**Critical check**: If paper says "Clopper-Pearson 95% CI" but the intervals are narrower than exact Clopper-Pearson bounds, they are likely bootstrap CIs mislabeled. Bootstrap percentile CIs and Clopper-Pearson CIs are computed differently and can diverge significantly, especially at small n.
+
+**Also verify**: Count judge evaluations per experiment x tier combination. Missing evaluations are a critical undisclosed finding. Use:
+```bash
+# Count evaluations per experiment and tier
+python3 -c "
+import csv
+from collections import Counter
+with open('data/judges.csv') as f:
+    rows = list(csv.DictReader(f))
+counts = Counter((r['experiment'], r['tier']) for r in rows)
+for key, count in sorted(counts.items()):
+    print(f'{key}: {count}')
+print(f'Total: {len(rows)}')
+"
+```
+
 ### Step 3: Prioritize fixes
 
 Apply in this order:
 1. Arithmetic errors (wrong totals, sums, averages)
 2. Claims directly contradicted by the paper's own tables
-3. Statistical test attribution errors (which test produced which stat — see Pattern 6)
-4. LaTeX structural errors (column specifiers, nan values — see Patterns 9-10)
-5. Fabricated/extrapolated data for incomplete experiments
-6. Code/paper constant mismatches (thresholds, formulas)
-7. Overly broad claims that don't hold across all cases (see Pattern 7)
-8. Missing citations for borrowed thresholds or methodologies
-9. Missing p-values in pairwise comparisons
-10. Ambiguous column headers or undefined terms in tables
+3. Confidence interval methodology errors (e.g., bootstrap mislabeled as exact — see Pattern 15)
+4. Statistical test attribution errors (which test produced which stat — see Pattern 6)
+5. LaTeX structural errors (column specifiers, nan values — see Patterns 9-10)
+6. Fabricated/extrapolated data for incomplete experiments
+7. Code/paper constant mismatches (thresholds, formulas)
+8. Missing data disclosures (e.g., missing evaluations — see Pattern 16)
+9. Overly broad claims that don't hold across all cases (see Pattern 7)
+10. Missing citations for borrowed thresholds or methodologies
+11. Missing p-values in pairwise comparisons
+12. Ambiguous column headers or undefined terms in tables
 
 ### Step 4: Apply fixes systematically
 
@@ -178,6 +215,31 @@ wc -l data/runs.csv                    # Verify row counts
 **Root cause:** Paper uses consensus_score > 0.5 as pass threshold, but naive computation uses score > 0
 **Fix:** Always verify the pass criterion definition before computing. Check the paper's methodology section for the threshold. Raw count of non-zero scores gives different results than consensus-based thresholds.
 
+### Pattern 15: Bootstrap CIs mislabeled as Clopper-Pearson (NEW in v3.0.0)
+**Symptom:** Paper claims "Clopper-Pearson 95% CI" but the reported intervals are narrower than exact binomial bounds
+**Root cause:** The analysis pipeline computes bootstrap percentile CIs (resampling-based) but the paper labels them as Clopper-Pearson (exact). The two methods are fundamentally different: Clopper-Pearson inverts the binomial test and is conservative; bootstrap percentile CIs resample the observed data and can be anti-conservative at small n.
+**Detection:** Independently compute Clopper-Pearson CIs using `scipy.stats.beta.ppf` and compare with paper values. If they don't match, check the pipeline code for `np.percentile` or `bootstrap` calls.
+**Fix:** Either (a) relabel as "bootstrap percentile 95% CI" or (b) recompute using actual Clopper-Pearson formula. Option (a) is preferred when bootstrap was the intentional method.
+**Example:** For 17/24 passes: Clopper-Pearson gives [0.495, 0.882], bootstrap might give [0.542, 0.833]. The difference matters for interpretation.
+
+### Pattern 16: Missing judge evaluations across conditions (NEW in v3.0.0)
+**Symptom:** Paper reports evaluation results but does not disclose that some experiment x tier combinations have fewer evaluations than expected
+**Root cause:** Judge evaluation pipeline may have failures, timeouts, or skipped conditions. If one experiment has 1,620 evaluations and another has only 1,084, the 536-evaluation gap should be disclosed.
+**Detection:** Count evaluations per experiment in judges.csv. Compare against expected count (runs x judges_per_run). Any shortfall > 5% should be flagged.
+**Fix:** Add a disclosure in the methodology section: "test-001 has N fewer judge evaluations than test-002/test-003 due to [reason]" and note any impact on inter-rater reliability calculations.
+
+### Pattern 17: BH monotonicity enforcement comment errors (NEW in v3.0.0)
+**Symptom:** Code comments describe Benjamini-Hochberg monotonicity enforcement incorrectly (e.g., "enforce monotonicity: each adjusted p must be >= the next smaller" when the algorithm actually enforces "each adjusted p must be <= the next larger")
+**Root cause:** BH adjustment sorts p-values ascending, applies correction from largest to smallest, then enforces monotonicity by taking cumulative minimums (each value <= the one after it in the sorted order). Comments often get the direction wrong.
+**Detection:** Read the actual BH implementation and verify comments match the algorithm direction.
+**Fix:** Correct comments to accurately describe the monotonicity direction. The standard BH step-up procedure enforces: `p_adj[i] = min(p_adj[i], p_adj[i+1])` scanning right-to-left.
+
+### Pattern 18: Consensus method description errors (NEW in v3.0.0)
+**Symptom:** Paper describes judge consensus as "majority vote" but the actual implementation uses mean score thresholding
+**Root cause:** Natural language shorthand ("majority") diverges from implementation (mean > threshold)
+**Detection:** Read the grading/consensus code and compare with paper methodology section
+**Fix:** Describe the actual method: "consensus score computed as the mean of N judge scores, with pass threshold at 0.5"
+
 ## Key Source Files for ProjectScylla Papers
 
 | Claim type | Source file |
@@ -201,6 +263,18 @@ wc -l data/runs.csv                    # Verify row counts
 | Subtest YAML counts | `tests/claude-code/shared/subtests/<tier>/` |
 
 ## Results & Parameters
+
+### Session outcome v3.0.0 (2026-04-06)
+- Paper: `docs/arxiv/haiku/paper.tex` (N=3 experiment data refresh, 7 tiers, 3 experiments, 120 subtests)
+- Review approach: phased — data accuracy first, then statistical methodology, then LaTeX quality
+- Key findings:
+  - Bootstrap CIs mislabeled as Clopper-Pearson throughout paper (critical)
+  - 536 missing judge evaluations in test-001 vs test-002/test-003 (critical, undisclosed)
+  - BH monotonicity enforcement comments incorrect in analysis code (important)
+  - Consensus method described as "majority vote" but implemented as mean thresholding (important)
+- Independent CI verification: computed Clopper-Pearson CIs using `scipy.stats.beta.ppf` and compared against paper values
+- LaTeX engine compatibility: used `iftex` package with `\ifpdftex` guards to make preamble work with both pdflatex and tectonic/XeTeX
+- Verification level: verified-local (tectonic builds paper to 50-page 978KB PDF)
 
 ### Session outcome v2.0.0 (2026-04-05)
 - Paper: `docs/arxiv/haiku/paper.tex` (2,020 lines, 1,080 runs, 7 tiers, 3 experiments, $122.31 total)
@@ -247,6 +321,7 @@ Minor:
 |---------|---------|---------|
 | ProjectScylla | Haiku analysis paper v1.0.0 (2026-02-22) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 | ProjectScylla | Haiku analysis paper v2.0.0 (2026-04-05) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
+| ProjectScylla | Haiku analysis paper v3.0.0 (2026-04-06) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 
 ## Failed Attempts
 
@@ -255,3 +330,5 @@ Minor:
 | Exploration agent claim about judges | Agent reported all judges used claude-opus-4-6 | Misread judges.csv — 3 distinct judge models were actually present | Always verify exploration agent claims against raw data before treating them as findings |
 | Pass rate from raw score > 0 | Computed pass_rate as proportion of runs with score > 0 | Paper uses consensus_score > 0.5 as pass threshold, giving different rates (e.g., T3=0.783 vs correct 0.759) | Always verify the pass criterion definition in the methodology section before computing pass rates from raw data |
 | Git diff for change verification | Used git diff to verify targeted edits | Working tree had 125 files / 170K+ lines of unstaged changes from prior experiment reruns; edits were lost in noise | In a dirty working tree, verify individual file content with Read rather than relying on git diff |
+| Trusting CI labels without recomputation | Accepted paper's "Clopper-Pearson 95% CI" labels at face value | Independent computation with `scipy.stats.beta.ppf` showed values did not match; they were actually bootstrap percentile CIs | Always recompute confidence intervals independently; never trust labels without verification |
+| Assuming complete judge evaluations | Did not initially count judge evaluations per experiment x tier | test-001 had 536 fewer evaluations than expected; this gap was undisclosed in the paper | Count evaluations per condition early in the review; missing data is a critical finding that affects all downstream statistics |
