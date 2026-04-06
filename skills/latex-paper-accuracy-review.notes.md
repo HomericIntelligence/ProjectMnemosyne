@@ -1,3 +1,56 @@
+## 2026-04-06: latex-paper-accuracy-review v3.0.0 — N=3 Experiment Data Refresh and Academic Review
+
+Session: ProjectScylla academic review of docs/arxiv/haiku/paper.tex after N=3 experiment data refresh
+Review approach: phased — data accuracy first, then statistical methodology, then LaTeX quality
+Source files: runs.csv, summary.json, statistical_results.json, srh_tier_experiment.json, judges.csv
+
+### Review methodology
+- Phase 1: Cross-checked every quantitative claim against source data files
+- Phase 2: Independently computed Clopper-Pearson CIs using scipy.stats.beta.ppf to verify paper claims
+- Phase 3: Counted judge evaluations per experiment x tier to discover missing data
+- Phase 4: Verified statistical method comments in analysis code against algorithm behavior
+- Phase 5: Made LaTeX preamble engine-agnostic using iftex package
+
+### Key findings
+
+| Finding | Severity | Details |
+|---------|----------|---------|
+| Bootstrap CIs mislabeled as Clopper-Pearson | Critical | Paper claimed "Clopper-Pearson 95% CI" but independent computation showed values were bootstrap percentile CIs. E.g., for 17/24 passes: Clopper-Pearson gives [0.495, 0.882] vs paper's narrower bootstrap values |
+| 536 missing judge evaluations in test-001 | Critical | test-002 and test-003 each had ~1,620 evaluations; test-001 had only ~1,084. The 536-evaluation gap was undisclosed |
+| BH monotonicity comment errors | Important | Code comments described BH monotonicity enforcement direction incorrectly |
+| Consensus method misdescription | Important | Paper described judge consensus as "majority vote" but implementation uses mean score > 0.5 threshold |
+
+### LaTeX engine compatibility fix
+- Problem: Paper used `\pdfoutput=1`, `\usepackage[T1]{fontenc}`, `\usepackage[utf8]{inputenc}` which are pdfTeX-specific
+- These cause errors when building with tectonic (XeTeX backend): `hpdftex.def` loads with undefined control sequences
+- Fix: Added `\usepackage{iftex}` and wrapped pdfTeX-specific commands in `\ifpdftex...\fi` guards
+- Result: Paper builds cleanly with both pdflatex and tectonic
+
+### Verification commands used
+```bash
+# Independent Clopper-Pearson CI verification
+python3 -c "
+from scipy.stats import beta as beta_dist
+k, n = 17, 24  # passes, total
+lo = beta_dist.ppf(0.025, k, n - k + 1)
+hi = beta_dist.ppf(0.975, k + 1, n - k)
+print(f'Clopper-Pearson 95% CI: [{lo:.3f}, {hi:.3f}]')
+"
+
+# Count judge evaluations per experiment
+python3 -c "
+import csv
+from collections import Counter
+with open('data/judges.csv') as f:
+    rows = list(csv.DictReader(f))
+counts = Counter(r['experiment'] for r in rows)
+for exp, count in sorted(counts.items()):
+    print(f'{exp}: {count}')
+"
+```
+
+---
+
 ## 2026-04-05: latex-paper-accuracy-review v2.0.0 — Haiku Paper Comprehensive Review
 
 Session: ProjectScylla academic review of docs/arxiv/haiku/paper.tex (2,020 lines)
