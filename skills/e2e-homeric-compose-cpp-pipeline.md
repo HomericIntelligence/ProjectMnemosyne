@@ -1,9 +1,9 @@
 ---
 name: e2e-homeric-compose-cpp-pipeline
-description: "Wire HomericIntelligence C++20 services into a podman/docker compose E2E stack with NATS JetStream, Prometheus, Grafana. Use when: (1) setting up the full E2E pipeline, (2) adding new C++20 services to the compose stack, (3) debugging multi-container C++ service orchestration, (4) troubleshooting podman vs docker runtime differences, (5) running on hosts without rootlessport or external internet access."
+description: "Wire HomericIntelligence C++20 services into a podman/docker compose E2E stack with NATS JetStream, Prometheus, Grafana. Use when: (1) setting up the full E2E pipeline, (2) adding new C++20 services to the compose stack, (3) debugging multi-container C++ service orchestration, (4) troubleshooting podman vs docker runtime differences, (5) running on hosts without rootlessport or external internet access, (6) debugging Hermes webhook event type mapping (only task.updated/completed/failed/agent.* supported), (7) writing healthchecks compatible with both podman-compose 1.5.0 and Docker Compose (use CMD+sh+-c not CMD-SHELL array)."
 category: architecture
 date: 2026-04-06
-version: "1.4.0"
+version: "1.5.0"
 history: e2e-homeric-compose-cpp-pipeline.history
 user-invocable: false
 verification: verified-local
@@ -195,6 +195,9 @@ CMD ["ProjectFoo_server"]
 | `run-hello-world.sh` Phase 3 event type `task.created` (v1.4) | Phase 3 sends `event: task.created` to Hermes webhook | Hermes `_TASK_EVENTS` only maps `task.updated`, `task.completed`, `task.failed`, `agent.*` — `task.created` is silently dropped, no NATS message published | Change Phase 3 test event to `task.updated` |
 | IPC test runner T4 port override (v1.4) | `run-ipc-tests.sh --topology t4` used without patching process.sh | `process.sh` sourced unconditionally overwrites T4 ports with T1 non-standard ports (`AGAMEMNON_PORT=18080`, `NATS_MONITOR_PORT=18222`) — tests time out or target wrong ports | Topology-aware port selection: T4 must override to standard ports (8080, 8222) after sourcing `process.sh` |
 | Grafana datasource hostnames in host-network mode (v1.4) | Provisioned datasources used service names (`http://prometheus:9090`, `http://loki:3100`) | With `--network=host`, service-name DNS does not resolve (no compose-managed bridge network) | Change datasource URLs to `http://localhost:9090` and `http://localhost:3100` for host-network deployments |
+| `task.created` event to Hermes (v1.5) | Sent `task.created` webhook event to Hermes for Phase 3 test validation | Hermes `_TASK_EVENTS` only maps `task.updated`, `task.completed`, `task.failed`, `agent.*` — `task.created` is silently dropped with zero error and zero NATS message published | Always use `task.updated` for test webhook validation calls |
+| `worker.py` in `start-myrmidon` recipe (v1.5) | Referenced `provisioning/Myrmidons/hello-world/worker.py` in justfile `start-myrmidon` recipe | File does not exist — the Python NATS JetStream subscriber worker is `main.py` | Use `main.py`; it subscribes to `hi.myrmidon.hello.>` via JetStream push consumer and publishes completion to `hi.tasks.{team_id}.{task_id}.completed` via core NATS |
+| CMD-SHELL array in healthcheck (podman-compose 1.5.0) (v1.5) | Used `["CMD-SHELL", "wget ..."]` in `docker-compose.yml` healthcheck definitions | podman-compose 1.5.0 rejects the CMD-SHELL array format (Docker Compose accepts it) with a parse error | Use `["CMD", "sh", "-c", "wget ..."]` for dual-runtime compatibility |
 
 ## Results & Parameters
 
@@ -296,12 +299,36 @@ grafana_analytics_fix: |
     - GF_ANALYTICS_CHECK_FOR_UPDATES=false
     - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
 
-# Hermes event type mapping (v1.4.0)
+# Hermes event type mapping (v1.4.0, confirmed v1.5.0)
 hermes_event_types: |
-  # _TASK_EVENTS supported by Hermes webhook→NATS bridge:
-  # task.updated, task.completed, task.failed, agent.*
-  # NOT supported (silently dropped): task.created
+  # _TASK_EVENTS supported by Hermes webhook→NATS bridge (strict allowlist):
+  #   task.updated, task.completed, task.failed, agent.*
+  # NOT supported (silently dropped — no error, no NATS message): task.created
   # run-hello-world.sh Phase 3 must use event: task.updated
+  # Valid event types: task.updated | task.completed | task.failed | agent.*
+
+# hello-world myrmidon worker entrypoint (v1.5.0)
+hello_world_myrmidon_worker: |
+  # File: provisioning/Myrmidons/hello-world/main.py  (NOT worker.py — does not exist)
+  # Subscribes to: hi.myrmidon.hello.>  (JetStream push consumer)
+  # Publishes completion to: hi.tasks.{team_id}.{task_id}.completed  (core NATS)
+  # justfile start-myrmidon recipe must reference main.py
+
+# CMD array format for dual-runtime healthchecks (v1.5.0)
+healthcheck_cmd_array: |
+  # podman-compose 1.5.0 REJECTS CMD-SHELL array format; Docker Compose accepts it.
+  # For dual-runtime compatibility, always use CMD+sh+-c form:
+  #
+  # WRONG (Docker only):
+  #   test: ["CMD-SHELL", "wget -qO- http://localhost:8222/healthz || exit 1"]
+  #
+  # CORRECT (dual-runtime):
+  #   test: ["CMD", "sh", "-c", "wget -qO- http://localhost:8222/healthz || exit 1"]
+  healthcheck:
+    test: ["CMD", "sh", "-c", "wget -qO- http://localhost:PORT/healthz || exit 1"]
+    interval: 5s
+    timeout: 3s
+    retries: 5
 
 # IPC topology port selection (v1.4.0)
 ipc_topology_ports: |
