@@ -1,9 +1,9 @@
 ---
 name: git-worktree-management-patterns
-description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`."
+description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents."
 category: tooling
-date: 2026-04-03
-version: "2.2.0"
+date: 2026-04-06
+version: "2.3.0"
 user-invocable: false
 verification: unverified
 history: git-worktree-management-patterns.history
@@ -17,9 +17,9 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-04-03 |
+| Date | 2026-04-06 |
 | Objective | Consolidated skill covering all git worktree creation, use, and cleanup patterns — including branch deletion policy |
-| Outcome | v2.2.0: Added workdir-first guidance for sandboxed harnesses and recorded the repeated `git -C <worktree>` permission-prompt failure mode |
+| Outcome | v2.3.0: Added stale /tmp/mnemosyne-skill-* blocker pattern for parallel /learn sub-agents; orchestrator pre-cleanup and timestamp-suffix alternative |
 | Verification | unverified |
 | History | [changelog](./git-worktree-management-patterns.history) |
 
@@ -39,6 +39,7 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 - After mass parallel auto-implementation sessions leaving 20+ worktrees
 - Any time you would normally run `git branch -d` or `git branch -D` — defer to user instead
 - Git commands run from a parent harness keep triggering permission prompts or `*.lock` errors while the actual edits live inside a dedicated worktree
+- Before spawning parallel `/hephaestus:learn` sub-agents, need to clean stale `/tmp/mnemosyne-skill-*` directories left by prior `/learn` invocations that failed to clean up
 
 ## Verified Workflow
 
@@ -511,6 +512,7 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 | Remove parent nested worktree before children | Removed depth-1 worktree that contained depth-2 entries | Left orphaned entries in git tracking | Remove deepest-nested first (depth 3 → 2 → 1) |
 | Autonomous branch deletion during cleanup | Agent ran `git branch -D` for all `[gone]` branches without asking | Destructive — `-D` is irreversible without reflog; user may not have intended those branches to be gone | Always present the list and defer deletion to the user |
 | Reporting completion with worktrees still present | Agent declared task done without removing agent worktrees | Orphaned worktrees accumulate; subsequent runs detect stale entries | Always verify `git worktree list` shows only main before reporting done |
+| Stale `/tmp/mnemosyne-skill-*` path | Parallel `/learn` sub-agents used predictable `/tmp` paths from prior session | `git worktree add` refused: directory already exists; Safety Net blocked `rm -rf` inside sub-agent | Orchestrator must clean stale paths before spawning sub-agents; use timestamp suffix for guaranteed uniqueness |
 
 ## Results & Parameters
 
@@ -529,6 +531,27 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 | `git worktree remove --force` (untracked files) | Yes | Delete untracked files first, then remove without `--force` |
 | `git branch -D` | No | Allowed |
 | `git reset --hard` | Yes | N/A — use `pull --rebase` instead |
+| `rm -rf /tmp/mnemosyne-skill-*` inside sub-agent | Yes | Run from orchestrator (main conversation) before spawning sub-agents |
+
+### Stale /tmp/mnemosyne-skill-* cleanup before parallel /learn sub-agents
+
+When spawning multiple parallel sub-agents for `/hephaestus:learn`, each sub-agent creates a worktree at a predictable path like `/tmp/mnemosyne-skill-<name>`. If a prior session left stale directories (due to agent timeout, Safety Net blocking cleanup, or session interrupt), `git worktree add` fails with `fatal: '/tmp/mnemosyne-skill-<name>' already exists`.
+
+**Orchestrator pre-cleanup (run in main conversation before spawning sub-agents):**
+```bash
+# Clean all stale mnemosyne skill worktrees before launching /learn sub-agents
+rm -rf /tmp/mnemosyne-skill-* 2>/dev/null || true
+git -C "$HOME/.agent-brain/ProjectMnemosyne" worktree prune
+```
+
+**Alternative — unique paths per invocation (eliminates collisions, harder to target for cleanup):**
+```bash
+WORKTREE_DIR="/tmp/mnemosyne-$(date +%s)-e2e-homeric"
+```
+
+**Sub-agent preferred cleanup order:**
+1. `git -C "$MNEMOSYNE_DIR" worktree remove "$WORKTREE_DIR"` (preferred — updates git registry)
+2. Fall back to `rm -rf "$WORKTREE_DIR"` only if `worktree remove` fails
 
 ### Scale reference for mass cleanup
 
