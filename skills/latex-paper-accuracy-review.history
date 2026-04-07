@@ -1,5 +1,43 @@
 # latex-paper-accuracy-review — History
 
+## v3.1.0 (2026-04-06)
+
+**Changed by:** Session — Fourth review pass with Opus 4.6 (1M context)
+**Verification:** verified-local (pixi run paper-build, 42035 bytes, 14 files)
+
+### What changed
+- Bumped version from 3.0.0 to 3.1.0
+- Added Step 0 (Consult prior review notes) to Verified Workflow
+- Added 2 new error patterns: Pattern 19 (pipeline pass classification vs threshold mismatch), Pattern 20 (subtle cost rounding at third decimal place)
+- Added 2 new "When to Use" triggers for late-stage rounding review and pipeline pass classification
+- Added tags: BCa-bootstrap, pass-classification, rounding
+- Updated Overview outcome to include v3.1.0 findings
+- Added v3.1.0 session outcome to Results & Parameters
+- Added "Name the method precisely" guidance in Step 2b
+
+### Why
+Fourth review pass of `docs/arxiv/haiku/paper.tex`. After 3 prior review rounds, remaining issues shifted to subtle rounding discrepancies ($0.039 vs $0.038, $0.099 vs $0.098), undisclosed pipeline pass classification mismatches (16/1080 runs), and unnamed bootstrap CI method. Consulted prior skills before starting to prevent redundant work.
+
+### Previous version (v3.0.0) snapshot
+
+Key v3.0.0 content before this amendment:
+
+```markdown
+date: 2026-04-06
+version: 3.0.0
+tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex]
+
+| Outcome | Three successful sessions — v1.0.0, v2.0.0, v3.0.0 |
+
+## Common Error Patterns
+Patterns 1-18 (no Patterns 19-20)
+
+## Verified Workflow
+Steps 1-5 (no Step 0)
+```
+
+---
+
 ## v3.0.0 (2026-04-06)
 
 **Changed by:** Session — N=3 experiment data refresh and academic review (third pass)
