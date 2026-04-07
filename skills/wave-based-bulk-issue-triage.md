@@ -1,11 +1,14 @@
 ---
 name: wave-based-bulk-issue-triage
 description: "Fix 5+ independent GitHub issues in parallel waves using Task isolation:worktree.\
-  \ No manual worktree setup \u2014 Claude Code auto-manages isolation."
+  \ No manual worktree setup \u2014 Claude Code auto-manages isolation. Also covers\
+  \ bulk gh issue create via myrmidon swarm (plain Agent calls, no worktrees needed)."
 category: architecture
-date: 2026-02-22
-version: 1.0.0
+date: 2026-04-06
+version: 1.1.0
 user-invocable: false
+verification: verified-local
+history: wave-based-bulk-issue-triage.history
 ---
 # Skill: Wave-Based Bulk Issue Triage
 
@@ -24,6 +27,7 @@ Use this skill when:
 2. **Issues fall into categories** — e.g., simple doc/config fixes vs. test additions
 3. **Issues modify different files** — no shared file conflicts
 4. **Want maximum parallelism** with minimal orchestration overhead
+5. **Filing 10+ GitHub issues from an audit or walkthrough report** — use myrmidon swarm (plain Agent calls, no worktrees needed)
 
 **Don't use when:**
 - Issues depend on each other (use sequential PRs)
@@ -143,8 +147,57 @@ You are fixing GitHub issue #NNN in the ProjectScylla repository.
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| N/A | Direct approach worked | N/A | Solution was straightforward |
+| N/A | Direct approach worked for code-fix waves | N/A | Solution was straightforward |
+| Body quoting (2026-04-06) | Single-quoted `--body '...'` strings with apostrophes/single quotes embedded | Shell interprets `'` inside `'...'` as end of string, breaking the command | Use `--body-file /tmp/issue-body.md` for any body containing single quotes or apostrophes |
 ## Results & Parameters
+
+### Myrmidon Swarm Pattern for Bulk Issue Filing (2026-04-06)
+
+When filing 10+ `gh issue create` calls (e.g., from a walkthrough or audit report), use the **myrmidon swarm** (plain Agent calls) instead of `Task(isolation="worktree")`. No file modifications means no worktrees needed.
+
+**Pattern:**
+
+```
+Wave 1 (≤5 Haiku agents in parallel):
+  Agent 1: gh issue create --repo ORG/REPO --title "..." --label "..." --body-file /tmp/issue-1.md
+  Agent 2: gh issue create --repo ORG/REPO --title "..." --label "..." --body-file /tmp/issue-2.md
+  ...
+
+Wave 2 (≤5 Haiku agents):
+  ...
+
+Wave 3 (remainder):
+  ...
+```
+
+**Rules:**
+1. Each agent gets exactly one `gh issue create` command
+2. Multi-line or apostrophe-containing bodies: write to a temp file first, then pass `--body-file /tmp/issue-N.md`
+3. Labels: pass multiple `--label` flags (one per label), **not** comma-separated in a single flag
+4. Wave limit: **≤5 agents per wave** to prevent GitHub API rate limiting
+5. Model tier: **Haiku** — fully-specified `gh issue create` calls require no design decisions
+6. No worktrees needed since no repository files are modified
+
+**Verified performance:** 11 issues filed in ~30 seconds total (3 waves: 5+5+1 agents) on HomericIntelligence/Odysseus (issues #99–109, 2026-04-06).
+
+#### Body-File Pattern for Complex Issue Bodies
+
+```bash
+# In each agent's prompt:
+cat > /tmp/issue-body.md << 'EOF'
+## Summary
+...content with 'single quotes' and apostrophes freely...
+
+## Steps to Reproduce
+...
+EOF
+gh issue create \
+  --repo ORG/REPO \
+  --title "Issue title" \
+  --label "bug" \
+  --label "priority:high" \
+  --body-file /tmp/issue-body.md
+```
 
 ### Session Results (2026-02-22)
 
@@ -194,3 +247,4 @@ Add a comment in the plan when excluding:
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectScylla | Wave 6+7, PRs #1051-#1059 | [notes.md](references/notes.md) |
+| HomericIntelligence/Odysseus | Bulk issue filing, issues #99-#109 (2026-04-06) | 11 issues, 3 waves (5+5+1 Haiku agents), ~30s total |
