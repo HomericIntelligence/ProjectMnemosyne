@@ -2,8 +2,8 @@
 name: architecture-crosshost-nats-compose-deployment
 description: "Deploy HomericIntelligence ecosystem across two Tailscale hosts using Docker Compose overlays and direct NATS connections. Use when: (1) splitting the E2E stack across multiple machines, (2) configuring NATS leafnode or direct connections over Tailscale, (3) debugging cross-host service communication, (4) setting up NATS-to-Loki log forwarding bridges."
 category: architecture
-date: 2026-04-03
-version: "1.0.0"
+date: 2026-04-06
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
 tags:
@@ -17,6 +17,8 @@ tags:
   - e2e
   - homeric-intelligence
   - loki
+  - native-binary
+  - pythonpath
 ---
 
 # Cross-Host NATS Compose Deployment
@@ -25,9 +27,9 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-03 |
+| **Date** | 2026-04-06 |
 | **Objective** | Deploy HomericIntelligence ecosystem across two Tailscale hosts for E2E agent evaluation |
-| **Outcome** | Two-host deployment with worker host running full compose stack and control host running native Nestor + odysseus-console. Direct NATS over Tailscale, no leaf node needed. |
+| **Outcome** | Two-host deployment with worker host running full compose stack and control host running native Nestor + odysseus-console. Direct NATS over Tailscale, no leaf node needed. Full 6-phase cross-host validation PASS confirmed 2026-04-06. |
 | **Verification** | verified-local |
 
 ## When to Use
@@ -37,6 +39,8 @@ tags:
 - Debugging cross-host service communication issues (DNS, ports, connectivity)
 - Setting up NATS-to-Loki log forwarding for distributed observability
 - Understanding when NATS leaf nodes add value vs. when direct connections suffice
+- Running NATS as a native binary when rootlessport is absent (slirp4netns port remapping issue)
+- Diagnosing `No module named 'hermes'` when starting Hermes with uvicorn
 
 ## Verified Workflow
 
@@ -58,6 +62,31 @@ WORKER_HOST_IP=100.92.173.32 just crosshost-test $WORKER_HOST_IP
 # Control host — start event viewer
 just odysseus-console nats://100.92.173.32:4222
 ```
+
+### Native Binary Startup Pattern (when rootlessport absent)
+
+When `rootlessport` is not available on the worker host, podman's slirp4netns network stack remaps container ports to ephemeral ports invisible to external hosts. In this case, run all services as native binaries:
+
+```bash
+# Worker host: start all services as native binaries (when rootlessport absent)
+
+# NATS — must use native binary when rootlessport missing
+~/.local/bin/nats-server -js -p 4222 -m 8222 > /tmp/nats-crosshost.log &
+sleep 2 && curl http://localhost:4222/varz | python3 -c "import sys,json; d=json.load(sys.stdin); print('NATS OK:', d['server_id'][:12])"
+
+# Agamemnon
+NATS_URL=nats://localhost:4222 ./control/ProjectAgamemnon/build/debug/ProjectAgamemnon_server > /tmp/agamemnon-crosshost.log &
+
+# Hermes — PYTHONPATH=src required
+cd infrastructure/ProjectHermes
+PYTHONPATH=src pixi run python -m uvicorn hermes.main:app --host 0.0.0.0 --port 8085 > /tmp/hermes-crosshost.log &
+cd -
+
+# hello-myrmidon Python worker
+python3 provisioning/Myrmidons/hello-world/main.py > /tmp/myrmidon-crosshost.log &
+```
+
+**Important:** If NATS port changes mid-session (e.g., switching from container to native binary), restart both Agamemnon and Hermes — they do not automatically reconnect to the new NATS address.
 
 ### Deployment Topology
 
@@ -192,6 +221,9 @@ The Myrmidons submodule was pinned to an old commit still targeting `ai-maestro`
 | Direct leaf.conf to port 4222 | Connected leaf node to NATS client port | Leaf nodes require dedicated leafnode listener port (7422) | Always use the leafnode-specific port (7422), not the client port (4222) |
 | Submodule scripts as-is | Tried to use provisioning/Myrmidons scripts | Submodule pinned to old commit with `aim_*` functions targeting ai-maestro | Verify submodule pins match standalone checkouts after migrations |
 | Keystone as transport daemon | Planned to use Keystone to bridge BlazingMQ to NATS | Keystone is a C++ library with MessageBus abstraction, not a deployable service. No BlazingMQ binary exists. | Components connect to NATS directly; Keystone transport abstraction is aspirational |
+| NATS via podman container with slirp4netns | `podman run -d --network=host` for NATS | slirp4netns (rootless network stack when rootlessport absent) remaps port 4222 to an ephemeral port (e.g., 14222) invisible to external clients; cross-host `curl http://<worker-ip>:4222/varz` gets "Connection refused" | Start NATS as a native binary (`~/.local/bin/nats-server -js -p 4222 -m 8222`) when rootlessport is absent |
+| Hermes started without PYTHONPATH | `pixi run python -m uvicorn hermes.main:app` | `src/` directory is not on PYTHONPATH by default; fails with `No module named 'hermes'` | Always prefix with `PYTHONPATH=src`: `PYTHONPATH=src pixi run python -m uvicorn hermes.main:app --host 0.0.0.0 --port 8085` |
+| No restart after NATS port change | Left Agamemnon and Hermes running when switching NATS from container to native binary | Running processes lose their NATS connection and do not automatically reconnect to the new address | Restart both services after NATS is stable on the correct port |
 
 ## Results & Parameters
 
@@ -245,6 +277,7 @@ env_vars:
 
 ## Verified On
 
-| Project | Context | Details |
-|---------|---------|---------|
-| Odysseus | Cross-host E2E deployment | 2-host topology: worker (epimetheus) + control host over Tailscale mesh |
+| Project | Date | Details |
+|---------|------|---------|
+| Odysseus | 2026-04-03 | Cross-host E2E deployment — 2-host topology: worker (epimetheus) + control host over Tailscale mesh |
+| Odysseus | 2026-04-06 | Full cross-host validation PASS after firewalld fix; all 6 checks: NATS reachable, Agamemnon health, Hermes webhook, task lifecycle, observability metrics |
