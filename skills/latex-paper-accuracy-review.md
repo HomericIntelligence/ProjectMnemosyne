@@ -3,10 +3,10 @@ name: latex-paper-accuracy-review
 description: Review a LaTeX research paper for factual accuracy against raw experiment
   data, statistical outputs, and codebase constants before publication
 category: documentation
-date: 2026-04-06
-version: 4.0.0
+date: 2026-04-07
+version: 5.0.0
 user-invocable: false
-tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex, rounding, BCa-bootstrap, pass-classification, grading-scale, majority-vote, cliffs-delta, myrmidon-swarm]
+tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex, rounding, BCa-bootstrap, pass-classification, grading-scale, majority-vote, cliffs-delta, myrmidon-swarm, causal-language, H-comparison, CI-rehabilitation, cross-reference-rename, abstract-conclusions-redundancy]
 ---
 # Skill: latex-paper-accuracy-review
 
@@ -14,10 +14,10 @@ tags: [latex, paper, review, accuracy, statistics, data-verification, publicatio
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0), 2026-04-06 (v3.0.0, v3.1.0, v4.0.0) |
+| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0), 2026-04-06 (v3.0.0, v3.1.0, v4.0.0), 2026-04-07 (v5.0.0) |
 | Category | documentation |
 | Objective | Review a LaTeX research paper for factual accuracy against raw experiment data, statistical outputs, and codebase source files |
-| Outcome | Five successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs; v3.0.0 discovered bootstrap CIs mislabeled as Clopper-Pearson, 536 missing judge evaluations, and BH monotonicity comment errors; v3.1.0 found 2 cost rounding errors, 16 pass/score>0.5 mismatches, and unnamed bootstrap CI method; v4.0.0 found grading scale paper-vs-code mismatch (864/1080 rows), pass classification mechanism wrong (majority vote vs threshold, 16 mismatches prove difference), Cliff's delta FAIR vs journal threshold convention, judge agreement N-value on pivoted data (360 vs 2696), and recurring column specifier off-by-one. Used myrmidon swarm (2 Sonnet + 3 Haiku) for independent verification. |
+| Outcome | Six successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs; v3.0.0 discovered bootstrap CIs mislabeled as Clopper-Pearson, 536 missing judge evaluations, and BH monotonicity comment errors; v3.1.0 found 2 cost rounding errors, 16 pass/score>0.5 mismatches, and unnamed bootstrap CI method; v4.0.0 found grading scale paper-vs-code mismatch (864/1080 rows), pass classification mechanism wrong (majority vote vs threshold), Cliff's delta FAIR vs journal convention, judge agreement N on pivoted data, and recurring column specifier off-by-one; v5.0.0 found causal language in observational study headings, H-statistic comparison across different df, non-significant result rehabilitated via uncorrected CI, undefined cross-reference from section rename, and abstract/conclusions near-verbatim redundancy. Used full myrmidon swarm with systematic false positive tracking. |
 
 ## When to Use
 
@@ -34,6 +34,12 @@ tags: [latex, paper, review, accuracy, statistics, data-verification, publicatio
 - When paper documents grading scales, classification thresholds, or effect size conventions that may have been manually typed rather than derived from source code
 - When using multi-agent (myrmidon swarm) review to get independent verification across methodology, framing, and mechanical checks
 - When analysis code aggregates data (e.g., pivot_table) and the paper cites the raw N rather than the aggregated N
+- After 5+ review rounds when remaining issues shift from data accuracy to interpretive framing (causal language, statistical comparison validity, hedging consistency)
+- When paper headings or findings use causal language ("causes", "drives") in an observational (non-randomized) study design
+- When comparing test statistics (e.g., H-values) across terms with different degrees of freedom
+- When a non-significant result (after multiple comparison correction) is rehabilitated using an uncorrected confidence interval
+- When sections have been renamed during iterative editing and cross-references may be stale
+- When the Abstract and Conclusions contain near-verbatim repetition of the same statistics
 
 ## Verified Workflow
 
@@ -117,7 +123,12 @@ For thorough academic review, deploy a myrmidon swarm with role-based specializa
 
 **Critical lesson**: When delegating data verification to budget-class (Haiku) agents, provide the EXACT computation formula, not just "compute X from the data." Haiku students are excellent at exhaustive mechanical verification but produce false positives when they infer the wrong computation method (e.g., computing CoP as `sum(cost_of_passed_runs)/count` instead of `mean_cost/pass_rate`, or computing consistency at run-level instead of subtest-level).
 
-**What works well**: Sonnet professors catch higher-level framing and logic issues that mechanical checking misses (e.g., "first" without hedging, causal language, missing T6 caveats, Pareto qualification needed).
+**What works well**: Sonnet professors catch higher-level framing and logic issues that mechanical checking misses (e.g., "first" without hedging, causal language, missing T6 caveats, Pareto qualification needed, pseudoreplication concerns, H-statistic comparison validity across different df).
+
+**False positive tracking (NEW in v5.0.0)**: Always verify agent claims before accepting them. In v5.0.0, Student 3 reported "7 critical undefined references" that were all false positives because the labels existed in `\input{}` table files that Haiku did not check. False positive rates by task type:
+- Haiku on mechanical number verification: 0% false positive (excellent)
+- Haiku on structural analysis (cross-references, labels): ~50% false positive (check `\input{}` files)
+- Sonnet on higher-level methodology: low false positive (1 debatable of 8 in v5.0.0)
 
 ### Step 3: Prioritize fixes
 
@@ -327,6 +338,36 @@ print(f'Mismatches: {mismatches}')
 **Files:** tab05_cost_analysis.tex, tab08_summary_statistics.tex (in this session); tab03, line 718/774/826 (in v2.0.0)
 **Note:** This pattern was already documented as Pattern 9 in v2.0.0 but recurred in DIFFERENT tables in v4.0.0, suggesting the generation pipeline has a systematic off-by-one issue. The fix should address the generation code, not just individual tables.
 
+### Pattern 26: Causal language in observational study headings (NEW in v5.0.0)
+**Symptom:** A finding heading says "X causes Y" but the paper's own threats-to-validity section acknowledges confounded design (non-randomized tier assignment)
+**Root cause:** Internal contradiction between a heading's causal assertion and the body text's caveats. Headings are often written assertively for readability without checking consistency with the limitations section.
+**Detection:** Grep for "cause", "drives", "leads to", "results in" in section headings and finding titles; cross-check against the threats/limitations section for confounding acknowledgments
+**Fix:** Use "is associated with" or "correlates with" in headings; reserve "causes" for experimental (randomized) designs. If the paper's own limitations section acknowledges confounding, causal language anywhere in the paper is an internal contradiction.
+
+### Pattern 27: H-statistic comparison across different degrees of freedom (NEW in v5.0.0)
+**Symptom:** Paper compares SRH interaction H=223.5 (df=12) against main effect H=91.3 (df=6) and calls the interaction the "largest effect"
+**Root cause:** Raw H-values from Kruskal-Wallis or SRH tests are not comparable across terms with different degrees of freedom. Each H is compared to its own chi-squared distribution with its own df. A larger H with more df does not necessarily indicate a stronger effect.
+**Detection:** Look for comparisons of H-statistics across terms; verify that the terms have the same df before accepting relative magnitude claims
+**Fix:** Add a df caveat when comparing H-statistics (e.g., "H=223.5, df=12 vs H=91.3, df=6; note that raw H-values are not directly comparable across different df"), or use SS decomposition (sum-of-squares) for proper effect size comparison across terms.
+
+### Pattern 28: Non-significant result rehabilitated via uncorrected CI (NEW in v5.0.0)
+**Symptom:** A pairwise comparison is p=0.058 (non-significant after Holm correction), but the paper then uses "bootstrap CI excluding zero" to claim the effect exists
+**Root cause:** The bootstrap CI is uncorrected for multiple comparisons. A CI consistent with the Holm-corrected test would be wider and would include zero. Using an uncorrected CI to rehabilitate a result that failed a corrected test is methodologically inconsistent.
+**Detection:** When a pairwise test is non-significant after correction, check whether the paper uses an uncorrected CI to claim the effect anyway. The CI and the hypothesis test must use the same correction level.
+**Fix:** Either (a) present the CI as uncorrected and note that it is not adjusted for multiple comparisons, without claiming the effect exists, or (b) compute a Bonferroni/Holm-adjusted CI that is consistent with the corrected test. Cannot simultaneously call a test non-significant and use an uncorrected CI to claim the effect.
+
+### Pattern 29: Undefined cross-reference from section rename (NEW in v5.0.0)
+**Symptom:** `\ref{sec:aggregate}` references a section that was later renamed to `sec:cross_task`, producing undefined reference warnings or wrong section numbers
+**Root cause:** A common artifact of iterative editing — when a `\label{}` is changed to reflect a new section name, all `\ref{}` calls to the old label must also be updated. This is easy to miss in a large document.
+**Detection:** After renaming any `\label{}`, grep for all `\ref{}` and `\autoref{}` calls to the old label name. Also check `\input{}` files for cross-references.
+**Fix:** Rename the label and update all references. Use `grep -rn 'sec:old_name' *.tex tables/*.tex` to find all occurrences.
+
+### Pattern 30: Abstract/Conclusions near-verbatim redundancy (NEW in v5.0.0)
+**Symptom:** The same statistics appear word-for-word in both the Abstract and Conclusions sections (e.g., identical sentences with the same numbers, same phrasing)
+**Root cause:** Copy-paste from Abstract to Conclusions (or vice versa) during writing, without rephrasing for the different rhetorical purpose of each section
+**Detection:** Compare the Abstract and Conclusions side by side; flag any sentences that share >80% of their words
+**Fix:** The Abstract should state results concisely for readers deciding whether to read the paper. The Conclusions should synthesize findings, discuss implications, and add interpretive insight. Conclusions should use interpretive language referencing findings (e.g., "These results suggest...") rather than restating raw statistics verbatim.
+
 ## Key Source Files for ProjectScylla Papers
 
 | Claim type | Source file |
@@ -354,6 +395,27 @@ print(f'Mismatches: {mismatches}')
 | Table generation (column specs) | `scylla/reporting/` (check tabular specifier generation for off-by-one) |
 
 ## Results & Parameters
+
+### Session outcome v5.0.0 (2026-04-07)
+- Paper: `docs/arxiv/haiku/paper.tex` (sixth review pass -- 1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
+- Model: Opus 4.6 (1M context)
+- Review approach: Consulted prior review skills (v4.0.0), then 3 parallel Explore agents (paper text, source data, LaTeX structure), then full myrmidon swarm (2 Sonnet professors + 3 Haiku students) with systematic false positive tracking
+- New patterns discovered: 5
+  - Pattern 26: Causal language in observational study headings (heading said "causes" but threats section acknowledged confounded design)
+  - Pattern 27: H-statistic comparison across different df (H=223.5 df=12 vs H=91.3 df=6 not directly comparable)
+  - Pattern 28: Non-significant result rehabilitated via uncorrected CI (T3-T4 p=0.058 n.s. after Holm, but uncorrected bootstrap CI used to claim effect)
+  - Pattern 29: Undefined cross-reference from section rename (`\ref{sec:aggregate}` referenced renamed `sec:cross_task`)
+  - Pattern 30: Abstract/Conclusions near-verbatim redundancy (same statistics repeated word-for-word)
+- Myrmidon swarm results:
+  - Professor 1 (Sonnet, statistical methodology): pseudoreplication concern, causal language, H-comparison issue, T3-T4 CI inconsistency; low false positive (1 debatable of 8)
+  - Professor 2 (Sonnet, experimental design): Cliff driven by 1 task, impl_rate bias, criteria cross-experiment, T6 overanalysis; low false positive (0 of 19)
+  - Student 1 (Haiku, tier table verification): 140/140 cells verified correct; 0% false positive
+  - Student 2 (Haiku, SRH/pairwise verification): all KW, SRH, pairwise, effect sizes verified correct; 0% false positive
+  - Student 3 (Haiku, LaTeX quality): found sec:aggregate issue; but 7 "critical" undefined refs were FALSE POSITIVES (~50% false positive on structural analysis)
+- Key shift: After 5 prior rounds, remaining issues shifted from data accuracy to interpretive framing (causal language, statistical comparison validity, hedging consistency)
+- Build: `pixi run --environment docs paper-build` (clean)
+- Verification level: verified-local
+- PR: HomericIntelligence/ProjectScylla (fix-paper-accuracy-v5 branch)
 
 ### Session outcome v4.0.0 (2026-04-06)
 - Paper: `docs/arxiv/haiku/paper.tex` (fifth review pass — 2,084 lines, 1,080 runs, 7 tiers, 3 experiments)
@@ -449,6 +511,7 @@ Minor:
 | ProjectScylla | Haiku analysis paper v3.0.0 (2026-04-06) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 | ProjectScylla | Haiku analysis paper v3.1.0 (2026-04-06) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 | ProjectScylla | Haiku analysis paper v4.0.0 (2026-04-06) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
+| ProjectScylla | Haiku analysis paper v5.0.0 (2026-04-07) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 
 ## Failed Attempts
 
@@ -461,3 +524,5 @@ Minor:
 | Assuming complete judge evaluations | Did not initially count judge evaluations per experiment x tier | test-001 had 536 fewer evaluations than expected; this gap was undisclosed in the paper | Count evaluations per condition early in the review; missing data is a critical finding that affects all downstream statistics |
 | Haiku student computing CoP incorrectly | Student 1 computed CoP as sum(cost_of_passed_runs)/count instead of mean_cost/pass_rate | Produced false positive discrepancies that required manual verification to dismiss | When delegating data verification to budget-class agents, provide the EXACT computation formula, not just "compute X from the data" |
 | Haiku student computing consistency incorrectly | Student 1 computed consistency at run-level instead of subtest-level | Produced false positive discrepancies in consistency metrics | Same lesson: provide the exact formula and aggregation level |
+| Haiku student reporting false positive undefined references | Student 3 reported 7 "critical" undefined `\ref{}` targets | Labels existed in `\input{}` table files that Haiku did not check | When Haiku students check LaTeX cross-references, explicitly instruct them to also check `\input{}` files for `\label{}` definitions |
+| Using uncorrected CI to rehabilitate non-significant test | Tried to claim T3-T4 effect via "bootstrap CI excluding zero" after Holm correction showed p=0.058 (n.s.) | The bootstrap CI is uncorrected for multiple comparisons; a Holm-consistent CI would include zero | CI and hypothesis test must use the same multiple comparison correction level; cannot mix corrected test with uncorrected CI |

@@ -1,5 +1,48 @@
 # latex-paper-accuracy-review — History
 
+## v4.0.0 (2026-04-06)
+
+**Changed by:** Session — Fifth review pass with myrmidon swarm (Opus 4.6, 1M context)
+**Verification:** verified-local (pixi run paper-build, clean)
+
+### What changed
+- Bumped version from 3.1.0 to 4.0.0
+- Added Step 2c (Myrmidon swarm independent verification) to Verified Workflow
+- Added 5 new error patterns: Pattern 21 (grading scale paper-vs-code mismatch), Pattern 22 (pass classification majority vote vs threshold), Pattern 23 (Cliff's delta FAIR vs journal convention), Pattern 24 (judge agreement N on pivoted data), Pattern 25 (column specifier off-by-one is systematic)
+- Added myrmidon swarm composition and role-based instructions in Step 2c
+- Added "When to Use" triggers for grading scales, myrmidon swarm review, pivoted data N-values
+- Added 2 new Failed Attempts rows (Haiku student CoP and consistency false positives)
+- Added v4.0.0 session outcome to Results & Parameters
+- Added v4.0.0 row to Verified On table
+- Extended Key Source Files table with grading scale, judge agreement analysis, table generation entries
+- Added tags: grading-scale, majority-vote, cliffs-delta, myrmidon-swarm
+
+### Why
+Fifth review pass of `docs/arxiv/haiku/paper.tex`. After 4 prior review rounds, deployed a myrmidon swarm (2 Sonnet professors + 3 Haiku students) for independent multi-perspective review. Found grading scale paper-vs-code mismatch (864/1080 rows matched paper scale, 1080/1080 matched code scale), pass classification mechanism wrong (majority vote vs threshold, 16 mismatches prove difference), Cliff's delta FAIR vs journal threshold convention, judge agreement N-value on pivoted data (360 vs 2,696), and recurring column specifier off-by-one in additional tables.
+
+### Previous version (v3.1.0) snapshot
+
+Key v3.1.0 content before this amendment:
+
+```markdown
+date: 2026-04-06
+version: 3.1.0
+tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex, rounding, BCa-bootstrap, pass-classification]
+
+| Outcome | Four successful sessions -- v1.0.0, v2.0.0, v3.0.0, v3.1.0 |
+
+## Common Error Patterns
+Patterns 1-20 (no Patterns 21-25)
+
+## Verified Workflow
+Steps 0-5 (no Step 2c)
+
+## Myrmidon swarm
+(not yet documented)
+```
+
+---
+
 ## v3.1.0 (2026-04-06)
 
 **Changed by:** Session — Fourth review pass with Opus 4.6 (1M context)

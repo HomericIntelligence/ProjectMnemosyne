@@ -1,3 +1,80 @@
+## 2026-04-07: latex-paper-accuracy-review v5.0.0 — Sixth Review Pass with Full Myrmidon Swarm + Systematic False Positive Tracking
+
+Session: ProjectScylla v6.0 academic review of docs/arxiv/haiku/paper.tex (1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
+Model: Opus 4.6 (1M context)
+PR: HomericIntelligence/ProjectScylla (fix-paper-accuracy-v5 branch)
+
+### Review methodology
+- Phase 1: Consulted prior review skills (v4.0.0) from ProjectMnemosyne -- prevented redundant work
+- Phase 2: 3 parallel Explore agents (paper text, source data, LaTeX structure) for comprehensive Phase 1 coverage
+- Phase 3: Myrmidon swarm deployment (2 Sonnet professors + 3 Haiku students) with explicit role assignments and EXACT formulas for Haiku
+- Phase 4: Direct verification of agent claims before accepting (caught Student 3's false positives)
+- Phase 5: Incremental build verification after each fix batch
+
+### Myrmidon swarm composition and results (v5.0.0)
+
+| Agent | Model | Role | Key Findings | False Positive Rate |
+|-------|-------|------|--------------|---------------------|
+| Professor 1 | Sonnet | Statistical methodology | Pseudoreplication concern, causal language, H-comparison issue, T3-T4 CI inconsistency | Low (1 debatable of 8) |
+| Professor 2 | Sonnet | Experimental design | Cliff driven by 1 task, impl_rate bias, criteria cross-experiment, T6 overanalysis | Low (0 false of 19) |
+| Student 1 | Haiku | Tier table verification | 140/140 cells verified correct | 0% |
+| Student 2 | Haiku | SRH/pairwise stats verification | All KW, SRH, pairwise, effect sizes verified correct | 0% |
+| Student 3 | Haiku | LaTeX quality check | Found sec:aggregate issue; but 7 "critical" undefined refs were FALSE POSITIVES | ~50% on critical |
+
+### New patterns discovered (26-30)
+
+**Pattern 26: Causal language in observational study headings**
+- Finding 2 heading said "causes" but the paper's own threats section acknowledged confounded design
+- Internal contradiction between heading assertion and body text caveat
+- Fix: Use "is associated with" in headings; reserve "causes" for experimental (randomized) designs
+
+**Pattern 27: H-statistic comparison across different degrees of freedom**
+- Paper compared SRH interaction H=223.5 (df=12) vs main effect H=91.3 (df=6) as "largest effect"
+- Raw H-values are not comparable across terms with different df -- each is compared to its own chi-squared distribution
+- Fix: Add df caveat when comparing H-statistics, or use SS decomposition for proper comparison
+
+**Pattern 28: Non-significant result rehabilitated via uncorrected CI**
+- T3-T4 was p=0.058 (n.s. after Holm) but paper used "CI excluding zero" to claim effect exists
+- Bootstrap CI is uncorrected for multiple comparisons; a CI consistent with Holm correction would include zero
+- Fix: Cannot simultaneously call a test non-significant and then use uncorrected CI to claim the effect
+
+**Pattern 29: Undefined cross-reference from section rename**
+- `\ref{sec:aggregate}` referenced a section that was later renamed to `sec:cross_task`
+- The old label was never updated -- a common artifact of iterative editing
+- Fix: After renaming any `\label{}`, grep for all `\ref{}` to that old label
+
+**Pattern 30: Abstract/Conclusions near-verbatim redundancy**
+- Same statistics repeated word-for-word in Abstract and Conclusions
+- Conclusions should synthesize and add insight, not repeat numbers
+- Fix: Conclusions should use interpretive language referencing findings, not restate raw statistics
+
+### Key shift at v5.0.0
+After 5 prior rounds, remaining issues shifted from data accuracy to interpretive framing -- causal language, statistical comparison validity, hedging consistency. This represents a maturity curve in iterative paper review:
+- Rounds 1-2: Factual errors, arithmetic mistakes, missing data
+- Rounds 3-4: Subtle rounding, methodology labeling, disclosure gaps
+- Rounds 5-6: Interpretive framing, causal language, statistical comparison validity
+
+### False positive tracking lessons
+1. Haiku students: 0% false positive on mechanical number verification, ~50% false positive on structural analysis (they do not check `\input{}` files for labels)
+2. Sonnet professors catch higher-level issues (pseudoreplication, causal language, H-comparison validity) that no amount of mechanical checking finds
+3. False positive tracking is essential -- Student 3's "7 critical undefined references" were all false positives because labels existed in `\input{}` files
+4. The "CI excluding zero" rehabilitation of a non-significant Holm-corrected test is a subtle but important methodological error
+5. Undefined cross-references from section renames are a common late-stage artifact -- always grep for old labels after renaming
+
+### What worked well
+- 3 parallel Explore agents (paper text, source data, LaTeX structure) for comprehensive Phase 1 coverage
+- Myrmidon swarm with clear role assignments and EXACT formulas for Haiku students
+- Direct verification of agent claims before accepting (caught Student 3's false positives)
+- Consulting prior skills (v4.0.0) before starting prevented redundant work
+- Incremental build verification after each fix batch
+
+### What failed
+- Student 3 did not check `\input{}` table files for labels -- reported 7 false positive "undefined references"
+- Professor 1's pseudoreplication concern (C1) is valid but not actionable without re-running all statistics
+- Professor 1's alpha-on-aggregated-data concern (C3) is debatable -- the paper's choice is defensible
+
+---
+
 ## 2026-04-06: latex-paper-accuracy-review v4.0.0 — Fifth Review Pass with Myrmidon Swarm
 
 Session: ProjectScylla v5.0 academic review of docs/arxiv/haiku/paper.tex (2,084 lines, 1,080 runs, 7 tiers, 3 experiments)
