@@ -1,5 +1,24 @@
 # e2e-crosshost-doctor-prerequisite-checker -- History
 
+## v1.3.0 (2026-04-06)
+
+**Changed by:** firewalld blocking Tailscale service ports — cross-host port diagnosis and worker provisioning fix
+**Verification:** verified-local (epimetheus 2026-04-06 — firewall fix unblocked all 6 cross-host test phases)
+
+### What changed
+- Added two new "When to Use" triggers: diagnosing cross-host port blocks despite Tailscale connectivity working; setting up new worker host in HomericIntelligence Tailscale mesh
+- Added Detailed Step 10: firewalld / Tailscale zone check with doctor.sh integration snippet, `--install` auto-fix, worker provisioning checklist (`firewall-cmd --permanent --zone=trusted --add-interface=tailscale0`), and diagnostic guidance ("No route to host" vs. connection timeout)
+- Renumbered old step 10 (Summary) to step 11
+- Added new Failed Attempts entry: "Misdiagnosed as Tailscale ACL" — documenting the "No route to host" ICMP reject signal, the false Tailscale ACL hypothesis, and the firewalld root cause on epimetheus
+- Added new "Verified On" entry for epimetheus worker (2026-04-06)
+- Added tags: firewalld, firewall, worker-provisioning
+
+### Why
+After fixing Tailscale connectivity and SSH access to the epimetheus worker, all service port connections (`curl http://<worker-ip>:4222/varz`, ports 8080, 8085, 3001, 9090, 9100) returned "No route to host". Initial diagnosis pointed at Tailscale ACL policy, but Tailscale's default ACL is "allow all". The ICMP reject (not a silent timeout) indicated the worker's kernel firewall was the culprit. `firewalld` (active on Debian 11+) had `tailscale0` in the `public` zone, which blocks most inbound ports. Adding `tailscale0` to the `trusted` zone immediately unblocked all 6 cross-host E2E test phases. Key insight: "No route to host" = ICMP reject = local firewall; connection timeout = silent drop = Tailscale ACL or routing. The doctor script does not currently surface this check — adding it prevents future engineers from spending time on the Tailscale admin console when the answer is on the worker host.
+
+### References
+- Validated on epimetheus (Debian 11, firewalld active), 2026-04-06
+
 ## v1.2.0 (2026-04-04)
 
 **Changed by:** Source-built podman socket fix -- systemd unit file detection and install
