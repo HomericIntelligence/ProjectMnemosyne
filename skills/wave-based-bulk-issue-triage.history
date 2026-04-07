@@ -1,0 +1,47 @@
+# History: wave-based-bulk-issue-triage
+
+## v1.1.0 — 2026-04-06
+
+**Amendment**: Add myrmidon swarm pattern for bulk `gh issue create` operations.
+
+### Changes from v1.0.0
+- Bumped version to 1.1.0, updated date to 2026-04-06
+- Added `verification: verified-local` to frontmatter (was missing)
+- Added `history` frontmatter field pointing to this file
+- Extended description to cover bulk gh issue create via myrmidon swarm
+- **When to Use**: Added item 5 — filing 10+ GitHub issues from an audit or walkthrough report
+- **Results**: New section "Myrmidon Swarm Pattern for Bulk Issue Filing" covering:
+  - Plain Agent calls (not Task isolation:worktree) for pure gh issue create
+  - Haiku model tier for fully-specified commands requiring no design decisions
+  - Wave limit: ≤5 agents per wave to prevent API rate limiting
+  - No worktrees needed when no repository files are modified
+  - Body-file pattern for issue bodies containing single quotes or apostrophes
+  - Verified: 11 issues in ~30s (HomericIntelligence/Odysseus #99-#109)
+- **Failed Attempts**: Added body quoting gotcha — single-quoted strings break on embedded apostrophes; use `--body-file` instead
+- **Verified On**: Added HomericIntelligence/Odysseus entry
+
+### Verification
+- verified-local: 11 issues filed on HomericIntelligence/Odysseus (#99-109) on 2026-04-06
+
+---
+
+## v1.0.0 — 2026-02-22 (snapshot)
+
+**Original skill** — Wave-based bulk issue triage using `Task(isolation="worktree")`.
+
+### Summary
+- Verified on ProjectScylla: 8 PRs created (Wave 6+7), 23 new tests, ~2 min per wave
+- Pattern: Group issues by complexity → Wave A (simple) then Wave B (test additions)
+- Key innovation: `Task(isolation="worktree")` — zero manual worktree management
+- Issues resolved: #920, #930, #959, #985, #986, #987, #898, #1042
+- PRs created: #1051–#1059
+
+### Frontmatter at v1.0.0
+```yaml
+name: wave-based-bulk-issue-triage
+description: "Fix 5+ independent GitHub issues in parallel waves using Task isolation:worktree. No manual worktree setup — Claude Code auto-manages isolation."
+category: architecture
+date: 2026-02-22
+version: 1.0.0
+user-invocable: false
+```
