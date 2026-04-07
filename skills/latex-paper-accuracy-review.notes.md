@@ -1,3 +1,77 @@
+## 2026-04-06: latex-paper-accuracy-review v4.0.0 — Fifth Review Pass with Myrmidon Swarm
+
+Session: ProjectScylla v5.0 academic review of docs/arxiv/haiku/paper.tex (2,084 lines, 1,080 runs, 7 tiers, 3 experiments)
+Model: Opus 4.6 (1M context)
+PR: HomericIntelligence/ProjectScylla#1754
+
+### Review methodology
+- Phase 1: Consulted prior review skills (v3.1.0) from ProjectMnemosyne — prevented redundant work
+- Phase 2: 3 parallel Explore agents for comprehensive paper/data/stats coverage
+- Phase 3: Direct verification of critical claims with Python scripts
+- Phase 4: Myrmidon swarm deployment (2 Sonnet professors + 3 Haiku students)
+- Phase 5: Incremental fixes verified with `pixi run paper-build` after each batch
+
+### Myrmidon swarm composition and results
+
+| Agent | Model | Role | Key Findings |
+|-------|-------|------|--------------|
+| Professor 1 | Sonnet | Statistical methodology review | Pass rate definition conflict in Section 6.2, overclaims ("first" without hedge, causal language) |
+| Professor 2 | Sonnet | Experimental design/framing review | T6 caveat needed, Pareto qualification needed |
+| Student 1 | Haiku | Tier summary table verification | 100% stat match (39/39), but FALSE POSITIVES on CoP (wrong formula) and consistency (wrong aggregation level) |
+| Student 2 | Haiku | SRH/pairwise stats verification | All H-stats, df values, p-values verified correct |
+| Student 3 | Haiku | LaTeX quality check | Column specifier issues in tab05 and tab08 |
+
+### New patterns discovered (21-25)
+
+**Pattern 21: Grading scale paper-vs-code mismatch**
+- Paper: S>=0.95, B>=0.65, C>=0.50, D>=0.35, F<0.35
+- Code: S==1.00, B>=0.60, C>=0.40, D>=0.20, F<0.20
+- Paper scale matched 864/1080 rows; code scale matched 1080/1080
+- Source: `src/scylla/metrics/grading.py:111-145`
+
+**Pattern 22: Pass classification — majority vote vs threshold**
+- Paper said "consensus score > 0.5" but actual mechanism is majority vote of judges' individual pass/fail decisions
+- `majority_vote(judge_passed)` vs `passed` column: 0 mismatches
+- `consensus_score > 0.5` vs `passed` column: 16 mismatches
+- Evidence: score=0.487, passed=True (2/3 judges passed); score=0.635, passed=False (1/2 judges passed)
+
+**Pattern 23: Cliff's delta — FAIR vs journal thresholds**
+- Romano et al. 2006 published TWO papers:
+  - Journal (JEE, SAT/ACT): 0.147/0.33/0.474
+  - FAIR conference (NSSE): 0.11/0.28/0.43
+- Code uses FAIR thresholds; paper cited journal article
+- Impact: T3-T4 delta=-0.116 changes from "negligible" to "small"
+
+**Pattern 24: Judge agreement N on pivoted data**
+- Paper claimed N=2,696 but computation used pivot_table with index=['tier', 'subtest', 'run_number'] (no experiment dimension)
+- This averages across experiments, producing N=360 data points
+- Raw judges.csv has 2,696 rows; unique (tier, subtest, run_number) = 360
+
+**Pattern 25: Column specifier off-by-one is systematic**
+- tab05_cost_analysis.tex: {llrrrrrrrr} (10 specs) for 9-column table
+- tab08_summary_statistics.tex: {llrrrrrrrrrrr} (13 specs) for 12-column table
+- Same pattern as Pattern 9 (v2.0.0) but different tables — suggests generation pipeline issue
+
+### Myrmidon swarm lessons learned
+1. Haiku students are excellent at exhaustive mechanical verification (39/39 stats correct) but produce false positives when they don't know the exact computation formula
+2. Sonnet professors catch higher-level framing/logic issues that mechanical checking misses
+3. When delegating to Haiku, provide the EXACT formula (e.g., "CoP = mean_cost / pass_rate" not "compute CoP")
+4. Student false positives require manual verification overhead — net benefit is still positive but factor in verification time
+
+### What worked well
+- Consulting prior skills before starting prevented redundant verification of already-fixed issues
+- 3 parallel Explore agents in Phase 1 gave comprehensive coverage in one pass
+- Direct Python verification scripts for critical claims (majority vote vs threshold, grading scale)
+- Myrmidon swarm provided independent multi-perspective review
+- Incremental build verification after each fix batch
+
+### What failed
+- Student 1 computed CoP as sum(cost_of_passed_runs)/count instead of mean_cost/pass_rate
+- Student 1 computed consistency at run-level instead of subtest-level
+- Both produced false positive discrepancies requiring manual dismissal
+
+---
+
 ## 2026-04-06: latex-paper-accuracy-review v3.0.0 — N=3 Experiment Data Refresh and Academic Review
 
 Session: ProjectScylla academic review of docs/arxiv/haiku/paper.tex after N=3 experiment data refresh

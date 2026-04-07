@@ -4,9 +4,9 @@ description: Review a LaTeX research paper for factual accuracy against raw expe
   data, statistical outputs, and codebase constants before publication
 category: documentation
 date: 2026-04-06
-version: 3.1.0
+version: 4.0.0
 user-invocable: false
-tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex, rounding, BCa-bootstrap, pass-classification]
+tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex, rounding, BCa-bootstrap, pass-classification, grading-scale, majority-vote, cliffs-delta, myrmidon-swarm]
 ---
 # Skill: latex-paper-accuracy-review
 
@@ -14,10 +14,10 @@ tags: [latex, paper, review, accuracy, statistics, data-verification, publicatio
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0), 2026-04-06 (v3.0.0, v3.1.0) |
+| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0), 2026-04-06 (v3.0.0, v3.1.0, v4.0.0) |
 | Category | documentation |
 | Objective | Review a LaTeX research paper for factual accuracy against raw experiment data, statistical outputs, and codebase source files |
-| Outcome | Four successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs; v3.0.0 discovered bootstrap CIs mislabeled as Clopper-Pearson, 536 missing judge evaluations, and BH monotonicity comment errors; v3.1.0 found 2 cost rounding errors, 16 pass/score>0.5 mismatches, and unnamed bootstrap CI method, verified 60+ claims correct |
+| Outcome | Five successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs; v3.0.0 discovered bootstrap CIs mislabeled as Clopper-Pearson, 536 missing judge evaluations, and BH monotonicity comment errors; v3.1.0 found 2 cost rounding errors, 16 pass/score>0.5 mismatches, and unnamed bootstrap CI method; v4.0.0 found grading scale paper-vs-code mismatch (864/1080 rows), pass classification mechanism wrong (majority vote vs threshold, 16 mismatches prove difference), Cliff's delta FAIR vs journal threshold convention, judge agreement N-value on pivoted data (360 vs 2696), and recurring column specifier off-by-one. Used myrmidon swarm (2 Sonnet + 3 Haiku) for independent verification. |
 
 ## When to Use
 
@@ -31,6 +31,9 @@ tags: [latex, paper, review, accuracy, statistics, data-verification, publicatio
 - When judge evaluations may be missing or incomplete across experiment conditions
 - After 3+ review rounds when remaining issues are likely subtle rounding discrepancies rather than factual errors
 - When a pipeline pre-computes pass/fail differently from the paper's stated threshold (e.g., judge_passed field vs consensus_score > 0.5)
+- When paper documents grading scales, classification thresholds, or effect size conventions that may have been manually typed rather than derived from source code
+- When using multi-agent (myrmidon swarm) review to get independent verification across methodology, framing, and mechanical checks
+- When analysis code aggregates data (e.g., pivot_table) and the paper cites the raw N rather than the aggregated N
 
 ## Verified Workflow
 
@@ -98,6 +101,23 @@ for key, count in sorted(counts.items()):
 print(f'Total: {len(rows)}')
 "
 ```
+
+### Step 2c: Myrmidon swarm independent verification (NEW in v4.0.0)
+
+For thorough academic review, deploy a myrmidon swarm with role-based specialization:
+
+**Professor agents (Sonnet-class):**
+- Professor 1: Statistical methodology review — verify test choices, assumptions, effect size conventions
+- Professor 2: Experimental design and framing review — check overclaims, causal language, missing caveats
+
+**Student agents (Haiku-class):**
+- Student 1: Tier summary table verification — exhaustive mechanical check of every number in every table
+- Student 2: SRH/pairwise stats verification — verify all H-stats, df values, p-values against data files
+- Student 3: LaTeX quality check — column specifiers, cross-references, formatting consistency
+
+**Critical lesson**: When delegating data verification to budget-class (Haiku) agents, provide the EXACT computation formula, not just "compute X from the data." Haiku students are excellent at exhaustive mechanical verification but produce false positives when they infer the wrong computation method (e.g., computing CoP as `sum(cost_of_passed_runs)/count` instead of `mean_cost/pass_rate`, or computing consistency at run-level instead of subtest-level).
+
+**What works well**: Sonnet professors catch higher-level framing and logic issues that mechanical checking misses (e.g., "first" without hedging, causal language, missing T6 caveats, Pareto qualification needed).
 
 ### Step 3: Prioritize fixes
 
@@ -271,6 +291,42 @@ print(f'Mismatches: {mismatches}')
 **Detection:** Recompute all per-run costs from `runs.csv` using `total_cost / count` and compare to 3 decimal places. Use `round(value, 3)` consistently.
 **Fix:** Replace with correctly rounded values. After 3+ review rounds, cost rounding errors at the third decimal place are the most common remaining issue type.
 
+### Pattern 21: Grading scale paper-vs-code mismatch (NEW in v4.0.0)
+**Symptom:** Paper documents grading thresholds (e.g., S>=0.95, B>=0.65, C>=0.50, D>=0.35, F<0.35) but code uses different thresholds (e.g., S==1.00, B>=0.60, C>=0.40, D>=0.20, F<0.20)
+**Root cause:** Paper grading scale was manually typed rather than derived from the code's `assign_letter_grade()` function
+**Detection:** Compare code grade function against every row in runs.csv: `code_grade(score) == actual_grade` for all rows. Paper scale matched only 864/1080 rows while code scale matched 1080/1080.
+**Fix:** Always derive grading scales from the code's actual grading function; never manually type thresholds
+**Source file:** `src/scylla/metrics/grading.py:111-145` (the `assign_letter_grade` function)
+
+### Pattern 22: Pass classification mechanism wrong — majority vote vs threshold (NEW in v4.0.0)
+**Symptom:** Paper says "consensus score > 0.5" but actual mechanism is majority vote of judges' individual pass/fail decisions
+**Root cause:** Paper described an intuitive threshold mechanism rather than the actual pipeline implementation
+**Detection:** Compare `majority_vote(judge_passed)` against runs.csv `passed` column (0 mismatches) vs `consensus_score > 0.5` (16 mismatches). The 16 mismatches prove these are different mechanisms.
+**Evidence:** score=0.487 with passed=True (2/3 judges passed, majority True despite score < 0.5); score=0.635 with passed=False (1/2 judges passed, not majority)
+**Fix:** Read the actual pipeline code to determine pass classification logic; never assume threshold-based
+**Rule:** When a paper says "score > X implies pass," verify this against every row. Even a few mismatches prove the mechanism is different from what's described.
+
+### Pattern 23: Cliff's delta threshold convention mismatch — journal vs FAIR conference (NEW in v4.0.0)
+**Symptom:** Paper cites Romano et al. 2006 with thresholds 0.147/0.33/0.474 but code uses 0.11/0.28/0.43
+**Root cause:** Romano et al. published TWO papers in 2006 — a journal article (JEE, about SAT/ACT) with thresholds 0.147/0.33/0.474 and a FAIR conference paper (about NSSE) with thresholds 0.11/0.28/0.43. The code uses the FAIR thresholds but the paper cited the journal article.
+**Impact:** Classification changes at boundaries — e.g., T3-T4 delta=-0.116 is "negligible" under journal thresholds but "small" under FAIR thresholds
+**Detection:** grep codebase for actual threshold values in stats.py; compare against paper's stated values and bibliography entry
+**Fix:** Ensure the bibliography entry matches the source whose thresholds are actually used in code. Update or add the correct bib entry.
+
+### Pattern 24: Judge agreement N-value computed on pivoted/averaged data (NEW in v4.0.0)
+**Symptom:** Paper says "computed on N=2,696 available judge evaluations" but actual computation uses pivot_table averaging across experiments, producing N=360 data points
+**Root cause:** The analysis code (e.g., `detail.py:40-55`) uses `pivot_table` with `index=['tier', 'subtest', 'run_number']` WITHOUT the experiment dimension, which averages judge scores across experiments
+**Detection:** Count unique `(tier, subtest, run_number)` combos in judges.csv = 360; compare vs total rows = 2,696
+**Fix:** Describe the actual computation unit in the paper; if recomputing, include experiment in the pivot index to preserve individual evaluations
+**Rule:** When a paper cites N for an agreement metric, verify whether the analysis code aggregates before computing. The raw row count and the aggregated unit count are often very different.
+
+### Pattern 25: Column specifier off-by-one is systematic, not one-time (NEW in v4.0.0)
+**Symptom:** `{llrrrrrrrr}` (10 specifiers) for a 9-column table; `{llrrrrrrrrrrr}` (13 specifiers) for a 12-column table
+**Root cause:** Extra column specifiers added during table generation; LaTeX compiles without error but causes subtle spacing
+**Detection:** Count header fields and match against tabular specifier string for ALL tables, not just the ones flagged in prior reviews
+**Files:** tab05_cost_analysis.tex, tab08_summary_statistics.tex (in this session); tab03, line 718/774/826 (in v2.0.0)
+**Note:** This pattern was already documented as Pattern 9 in v2.0.0 but recurred in DIFFERENT tables in v4.0.0, suggesting the generation pipeline has a systematic off-by-one issue. The fix should address the generation code, not just individual tables.
+
 ## Key Source Files for ProjectScylla Papers
 
 | Claim type | Source file |
@@ -293,8 +349,29 @@ print(f'Mismatches: {mismatches}')
 | Consistency metric direction | `scylla/analysis/statistics.py:173` (1-CV formula, higher = more consistent) |
 | Bootstrap config | `scylla/analysis/config.yaml:11-15` |
 | Subtest YAML counts | `tests/claude-code/shared/subtests/<tier>/` |
+| Grading scale (letter grades) | `src/scylla/metrics/grading.py:111-145` (assign_letter_grade function) |
+| Judge agreement analysis | `scylla/analysis/detail.py:40-55` (pivot_table aggregation, check index columns) |
+| Table generation (column specs) | `scylla/reporting/` (check tabular specifier generation for off-by-one) |
 
 ## Results & Parameters
+
+### Session outcome v4.0.0 (2026-04-06)
+- Paper: `docs/arxiv/haiku/paper.tex` (fifth review pass — 2,084 lines, 1,080 runs, 7 tiers, 3 experiments)
+- Model: Opus 4.6 (1M context)
+- Review approach: Consulted prior review skills (v3.1.0), then 3 parallel Explore agents (paper/data/stats), then myrmidon swarm (2 Sonnet professors + 3 Haiku students) for independent verification
+- New patterns discovered: 5
+  - Pattern 21: Grading scale paper-vs-code mismatch (paper scale matched 864/1080, code scale matched 1080/1080)
+  - Pattern 22: Pass classification via majority vote, not threshold (16 mismatches prove difference)
+  - Pattern 23: Cliff's delta FAIR vs journal convention (Romano et al. published TWO 2006 papers)
+  - Pattern 24: Judge agreement N on pivoted data (360 units vs 2,696 raw rows)
+  - Pattern 25: Column specifier off-by-one is systematic (recurred in different tables from v2.0.0)
+- Myrmidon swarm results:
+  - Haiku students: 100% stat match (39/39), column specifier issues found, false positives on CoP/consistency (wrong computation method)
+  - Sonnet professors: pass rate definition conflict in Section 6.2, overclaims ("first" without hedge, causal language), T6 caveat needed, Pareto qualification needed
+- Claims verified correct: 60+ (all tier-level and experiment-level pass rates, all SRH H-stats/df/p-values, all pairwise p-values, all Cliff's delta values, Krippendorff's alpha, Spearman rho, Pearson r, cost figures, CoP values)
+- Build: `pixi run --environment docs paper-build` (clean)
+- Verification level: verified-local
+- PR: HomericIntelligence/ProjectScylla#1754
 
 ### Session outcome v3.1.0 (2026-04-06)
 - Paper: `docs/arxiv/haiku/paper.tex` (fourth review pass, same N=3 data)
@@ -371,6 +448,7 @@ Minor:
 | ProjectScylla | Haiku analysis paper v2.0.0 (2026-04-05) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 | ProjectScylla | Haiku analysis paper v3.0.0 (2026-04-06) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 | ProjectScylla | Haiku analysis paper v3.1.0 (2026-04-06) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
+| ProjectScylla | Haiku analysis paper v4.0.0 (2026-04-06) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 
 ## Failed Attempts
 
@@ -381,3 +459,5 @@ Minor:
 | Git diff for change verification | Used git diff to verify targeted edits | Working tree had 125 files / 170K+ lines of unstaged changes from prior experiment reruns; edits were lost in noise | In a dirty working tree, verify individual file content with Read rather than relying on git diff |
 | Trusting CI labels without recomputation | Accepted paper's "Clopper-Pearson 95% CI" labels at face value | Independent computation with `scipy.stats.beta.ppf` showed values did not match; they were actually bootstrap percentile CIs | Always recompute confidence intervals independently; never trust labels without verification |
 | Assuming complete judge evaluations | Did not initially count judge evaluations per experiment x tier | test-001 had 536 fewer evaluations than expected; this gap was undisclosed in the paper | Count evaluations per condition early in the review; missing data is a critical finding that affects all downstream statistics |
+| Haiku student computing CoP incorrectly | Student 1 computed CoP as sum(cost_of_passed_runs)/count instead of mean_cost/pass_rate | Produced false positive discrepancies that required manual verification to dismiss | When delegating data verification to budget-class agents, provide the EXACT computation formula, not just "compute X from the data" |
+| Haiku student computing consistency incorrectly | Student 1 computed consistency at run-level instead of subtest-level | Produced false positive discrepancies in consistency metrics | Same lesson: provide the exact formula and aggregation level |
