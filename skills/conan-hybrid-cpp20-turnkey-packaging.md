@@ -2,8 +2,8 @@
 name: conan-hybrid-cpp20-turnkey-packaging
 description: "Hybrid Conan 2.x + FetchContent packaging for C++20 CMake repos with E2E install validation. Use when: (1) migrating a FetchContent-only project to Conan, (2) some deps aren't on ConanCenter so you need both, (3) integrating Conan with CMakePresets.json, (4) validating installed packages work end-to-end across a multi-repo ecosystem."
 category: tooling
-date: 2026-04-01
-version: "1.1.0"
+date: 2026-04-07
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 history: conan-hybrid-cpp20-turnkey-packaging.history
@@ -24,7 +24,7 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-01 |
+| **Date** | 2026-04-07 |
 | **Objective** | Migrate C++20 CMake repos from pure FetchContent to hybrid Conan + FetchContent, then validate installed packages work end-to-end |
 | **Outcome** | Successful — 4 C++ repos (Agamemnon, Nestor, Charybdis, Keystone) build and test with hybrid deps; E2E install validation scripts created |
 | **Verification** | verified-local |
@@ -212,6 +212,7 @@ cmake --build build
 | Keeping `${dep_SOURCE_DIR}` include paths | After switching to `find_package(concurrentqueue)`, left `${concurrentqueue_SOURCE_DIR}` in `target_include_directories` | Variable is empty — Conan deps don't set FetchContent variables | Remove all `${*_SOURCE_DIR}` include paths for Conan deps. Conan targets propagate their include dirs automatically via `target_link_libraries`. |
 | `concurrentqueue/1.0.4cci.2` Conan name | Assumed ConanCenter uses `cci.2` suffix for concurrentqueue | Actual package name is `concurrentqueue/1.0.4` (no suffix) | Always verify exact package names with `conan search "pkgname/*"` before writing conanfile.py |
 | Linking `yaml-cpp` directly (no namespace) | Used `target_link_libraries(... yaml-cpp)` | Conan provides `yaml-cpp::yaml-cpp` namespaced target — bare `yaml-cpp` resolves to FetchContent target which no longer exists | Always use Conan namespace pattern: `yaml-cpp::yaml-cpp`, `spdlog::spdlog`, `concurrentqueue::concurrentqueue` |
+| Conan dep PRIVATE on library with public headers | Linked `spdlog::spdlog` as PRIVATE on `keystone_concurrency` which has `logger.hpp` as a public header; `concurrentqueue::concurrentqueue` linked only to `keystone_core` but not to `keystone_concurrency` whose public header `work_stealing_queue.hpp` includes it | CMake configure succeeds (targets declared), but compilation fails: `fatal error: 'spdlog/fmt/fmt.h' file not found` — PRIVATE deps don't propagate include dirs to consumers that include public headers | Use PUBLIC for any Conan dep whose types/includes appear in a PUBLIC header. PRIVATE is only correct if the dep is used exclusively in .cpp sources. Audit with: `grep -r "#include <spdlog/" include/` — any hit means PUBLIC. |
 
 ## Results & Parameters
 
@@ -259,6 +260,34 @@ conan_profile: |
   compiler.cppstd=20
   build_type=Debug  # or Release for default profile
   arch=x86_64
+```
+
+### CMake visibility rule for Conan deps in public headers
+
+If a library's PUBLIC header (`#include <dep/header.h>`) uses a Conan dep, link that dep as `PUBLIC`
+so include paths propagate to all consumers. `PRIVATE` is only correct if the dep is used exclusively
+in `.cpp` sources and never appears in any installed header.
+
+**Symptom of wrong visibility:** CMake configure succeeds (targets exist), but compilation fails with
+`fatal error: 'dep/header.h' file not found` in consumer code that includes your library's headers.
+
+```cmake
+# WRONG — spdlog PRIVATE even though logger.hpp (#include <spdlog/fmt/fmt.h>) is a public header
+target_link_libraries(keystone_concurrency
+  PUBLIC keystone_core
+  PRIVATE spdlog::spdlog)          # BAD: include dirs don't propagate
+
+# CORRECT — both PUBLIC because public headers expose these deps
+target_link_libraries(keystone_concurrency
+  PUBLIC
+    keystone_core
+    spdlog::spdlog
+    concurrentqueue::concurrentqueue)
+
+# Audit pattern: grep public headers before choosing visibility
+grep -r "#include <spdlog/"        include/   # → any hit means spdlog must be PUBLIC
+grep -r "#include <concurrentqueue" include/  # → any hit means concurrentqueue must be PUBLIC
+grep -r "#include <nlohmann/"      include/   # → any hit means nlohmann_json must be PUBLIC
 ```
 
 ## Verified On
