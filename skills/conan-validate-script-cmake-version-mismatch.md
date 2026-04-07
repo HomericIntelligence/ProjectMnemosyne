@@ -3,7 +3,8 @@ name: conan-validate-script-cmake-version-mismatch
 description: "Fix validate-conan-install.sh failing on hosts with CMake < 3.20, and fix IPC test runner T4 port override bug. Use when: (1) conan package export succeeds but consumer CMake configure fails with 'CMake 3.20 or higher required', (2) validate-conan-install.sh works on CI but fails on Debian 11 or Ubuntu 20.04 hosts, (3) adding conan validation to older distros where system CMake is 3.16-3.19, (4) IPC test runner ignores --port override and binds to wrong port."
 category: tooling
 date: 2026-04-06
-version: "1.0.0"
+version: "1.1.0"
+history: conan-validate-script-cmake-version-mismatch.history
 user-invocable: false
 verification: verified-local
 tags:
@@ -68,6 +69,16 @@ ss -tlnp | grep ipc_test_runner   # shows wrong port (e.g. default 9000)
 # Fix: ensure argparse/CLI parser processes --port BEFORE socket bind
 # Pattern: parse args → extract port → bind socket (never use a hardcoded default after bind)
 ```
+
+### Confirmed Fixes (Committed to Odysseus main 2026-04-06)
+
+Both proposed fixes from v1.0.0 have been committed to Odysseus main:
+
+1. **cmake_minimum_required lowered 3.20 → 3.16** in `e2e/conan-consumer/CMakeLists.txt`
+   — This is Option B from the Quick Reference. Lowering to 3.16 (the minimum with full toolchain-file support) allows the consumer build phase to succeed on Debian 11 (CMake 3.18.4), Ubuntu 20.04 (CMake 3.16), and any host in the 3.16–3.19 range without requiring pixi's conda-forge cmake.
+
+2. **T4 port override fixed via `else` branch in `e2e/lib/topology.sh` `topology_wait_healthy()`**
+   — The function now sets `AGAMEMNON_PORT` to `8080` and `NATS_MONITOR_PORT` to `8222` in an explicit `else` branch when no override is provided, instead of relying on an unset variable default that was silently clobbered before the caller's `--port` flag could take effect.
 
 ### Detailed Steps — Issue 1: CMake Version Mismatch
 
