@@ -1,5 +1,77 @@
 # e2e-homeric-compose-cpp-pipeline — History
 
+## v1.5.0 (2026-04-06)
+
+**Changed by:** Three new failure modes from 2026-04-06 Odysseus E2E walkthrough
+**Verification:** verified-local (fixes committed to Odysseus main 2026-04-06)
+
+### What changed
+- Added Failed Attempt: `task.created` event silently dropped by Hermes (only `task.updated`, `task.completed`, `task.failed`, `agent.*` supported)
+- Added Failed Attempt: `worker.py` nonexistent in hello-world myrmidon (correct file: `main.py`, subscribes to `hi.myrmidon.hello.>` via JetStream push consumer)
+- Added Failed Attempt: CMD-SHELL array format rejected by podman-compose 1.5.0 (use `["CMD", "sh", "-c", "..."]` for dual-runtime compatibility)
+- Updated `hermes_event_types` Results block with explicit valid event type list and zero-error silent-drop callout
+- Added `hello_world_myrmidon_worker` Results block documenting `main.py` entrypoint and NATS subjects
+- Added `healthcheck_cmd_array` Results block with dual-runtime compatible healthcheck template
+- Updated description frontmatter to add items (6) and (7) covering Hermes event mapping and CMD array format
+
+### Why
+The 2026-04-06 full E2E walkthrough on epimetheus uncovered three new failure modes not present in prior sessions. The Hermes webhook event type bug caused Phase 3 of run-hello-world.sh to silently succeed (webhook accepted) but publish nothing to NATS. The worker.py issue caused start-myrmidon to fail with "No such file or directory". The CMD-SHELL format caused podman-compose 1.5.0 to reject all healthcheck definitions.
+
+### Previous version (v1.4.0) snapshot
+
+```
+---
+name: e2e-homeric-compose-cpp-pipeline
+description: "Wire HomericIntelligence C++20 services into a podman/docker compose E2E stack with NATS JetStream, Prometheus, Grafana. Use when: (1) setting up the full E2E pipeline, (2) adding new C++20 services to the compose stack, (3) debugging multi-container C++ service orchestration, (4) troubleshooting podman vs docker runtime differences, (5) running on hosts without rootlessport or external internet access."
+category: architecture
+date: 2026-04-06
+version: "1.4.0"
+history: e2e-homeric-compose-cpp-pipeline.history
+user-invocable: false
+verification: verified-local
+tags:
+  - e2e
+  - compose
+  - podman
+  - docker
+  - cpp20
+  - nats
+  - prometheus
+  - grafana
+  - homeric-intelligence
+  - dual-runtime
+  - wsl2
+  - host-network
+  - grafana-analytics
+---
+
+# HomericIntelligence E2E Compose Pipeline (C++20 + NATS)
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-06 |
+| **Objective** | Wire all HomericIntelligence services into a dual-runtime (podman + docker) compose E2E stack for testing |
+| **Outcome** | 10-container stack running on both podman compose and docker compose: NATS, Agamemnon (C++), Nestor (C++), Hermes (Python), hello-myrmidon (C++), Prometheus, Loki, Promtail, Grafana, argus-exporter. All 7 E2E phases passing on both runtimes. Host-network workaround documented for rootlessport-absent hosts. |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Setting up the HomericIntelligence E2E pipeline from scratch
+- Adding a new C++20 service to the compose stack
+- Debugging service-to-service communication in the HomericIntelligence mesh
+- Understanding the architecture: what connects to what, on which ports
+- Troubleshooting podman vs docker runtime differences
+- Fixing WSL2-specific DNS or container networking issues
+- Running on hosts without rootlessport (use host-network workaround below)
+- Diagnosing Grafana startup hangs on low-IO or air-gapped hosts
+
+[... full v1.4.0 content — see git history for complete snapshot ...]
+```
+
+---
+
 ## v1.4.0 (2026-04-06)
 
 **Changed by:** Host-network workaround, Grafana analytics hang fix, Hermes event type mapping, IPC T4 port override, datasource hostname fix for host-network mode
