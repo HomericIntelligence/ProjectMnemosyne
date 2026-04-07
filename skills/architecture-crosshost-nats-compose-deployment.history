@@ -1,0 +1,24 @@
+# architecture-crosshost-nats-compose-deployment -- History
+
+## v1.1.0 (2026-04-06)
+
+**Changed by:** Full cross-host validation PASS — slirp4netns port remapping fix, Hermes PYTHONPATH fix
+**Verification:** verified-local
+
+### What changed
+- Bumped version to 1.1.0, updated date to 2026-04-06
+- Updated Overview Outcome to note full 6-phase cross-host validation PASS confirmed 2026-04-06
+- Added two new "When to Use" entries: rootlessport-absent NATS native binary scenario; Hermes `No module named 'hermes'` diagnosis
+- Added new "Native Binary Startup Pattern" subsection in Verified Workflow with complete startup sequence and NATS reconnection warning
+- Added three new Failed Attempts rows:
+  1. NATS via podman container with slirp4netns — rootlessport absent causes ephemeral port remapping
+  2. Hermes started without PYTHONPATH — `No module named 'hermes'`; fix: `PYTHONPATH=src pixi run ...`
+  3. No restart after NATS port change — Agamemnon/Hermes lose connection, do not auto-reconnect
+- Updated Verified On table: added 2026-04-06 entry with 6-check full validation result; added Date column
+- Added tags: native-binary, pythonpath
+
+### Why
+Cross-host validation 2026-04-06 uncovered three blockers not present in the initial 2026-04-03 session. (1) On a host where rootlessport is absent, podman's slirp4netns remaps NATS port 4222 to an ephemeral port (e.g. 14222), making `curl http://<worker-ip>:4222/varz` return "Connection refused" from external hosts even though the container appeared to start cleanly. Fix: run nats-server as a native binary. (2) Starting Hermes via `pixi run python -m uvicorn hermes.main:app` fails with `No module named 'hermes'` because the `src/` layout is not automatically added to PYTHONPATH. Fix: prefix with `PYTHONPATH=src`. (3) After switching NATS from container to native binary the running Agamemnon and Hermes processes do not reconnect — both must be restarted once NATS is stable on port 4222.
+
+### References
+- Odysseus cross-host E2E session 2026-04-06
