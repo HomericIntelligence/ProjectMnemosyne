@@ -97,3 +97,38 @@ Paper: docs/arxiv/haiku/paper.tex
 - W1: T3/T2=5.29x, T4/T2=7.08x (paper said "3.5-4x")
 - W6: H=22.63 is SRH tier effect, not KW omnibus (score not in KW omnibus)
 - W9: T6 score W=0.935 p=0.329, T6 cost W=0.918 p=0.177 (both normal)
+## 2026-04-06: latex-paper-accuracy-review v3.1.0 — Fourth Review Pass (Opus 4.6)
+
+Session: ProjectScylla academic review of docs/arxiv/haiku/paper.tex — fourth pass
+Model: Opus 4.6 (1M context)
+
+### Review methodology
+- Phase 1: Consulted ProjectMnemosyne skills (3 matching) and prior review notes
+- Phase 2: Launched 3 parallel Explore agents for comprehensive paper/data/stats exploration
+- Phase 3: Direct verification of all quantitative claims against runs.csv, summary.json, statistical_results.json, srh_tier_experiment.json
+- Phase 4: Applied 4 fixes and verified clean build
+
+### Findings
+
+| Finding | Severity | Details |
+|---------|----------|---------|
+| T4 cost rounding in test-001 table | Important | Paper said $0.039, actual $0.038472 → $0.038 |
+| T5 cost rounding in test-003 table | Important | Paper said $0.099, actual $0.098453 → $0.098 |
+| 16 passed/score>0.5 mismatches undisclosed | Important | Pipeline pre-computes pass via judge_passed, 16/1080 (1.5%) mismatch threshold |
+| Bootstrap CI method unnamed | Important | Code uses BCa with 10k resamples, paper just said "Bootstrap" |
+| Consistency metric direction | Verified correct | 1-CV formula confirmed, higher=more consistent |
+| All pass rates, SRH, pairwise, effect sizes | Verified correct | 60+ claims cross-checked |
+| No contractions, no raw Unicode | Verified correct | Clean LaTeX |
+
+### Fixes applied
+1. Line 743: T4 cost $0.039 → $0.038
+2. Line 864: T5 cost $0.099 → $0.098
+3. Line 664: Added "BCa method, 10,000 resamples"
+4. Lines 469-475: Added footnote disclosing 16 pipeline pass classification discrepancies
+
+### Build verification
+- Command: `pixi run --environment docs paper-build`
+- Result: Clean build, tarball created (42035 bytes, 14 files)
+
+### Key lesson
+After 3 prior review rounds, the remaining issues are subtle rounding discrepancies and disclosure gaps rather than factual errors. The prior reviews caught all the major structural issues (test naming, comparison counts, CI labeling, engine compatibility).
