@@ -1,6 +1,94 @@
 # Session Notes: Academic Paper QA
 
-## Raw Session Details
+## Version History
+
+### v1.1.0 (2026-04-06)
+- Added Phase 2: Statistical Methodology Verification workflow
+- Added Phase 3: Table Semantics Verification workflow
+- Added Failed Attempts 6-8 (automated contraction detection, reviewer threshold assumptions, C(k,2) comparison count)
+- Added statistical methodology fixes table to Results
+- Updated build instructions to prefer tectonic via pixi
+- Added 5 new Key Takeaways (statistical test verification, comparison counting, reviewer verification, automated finding verification, table semantics)
+- Updated References with Romano (2006)
+
+### v1.0.0 (2026-02-06)
+- Initial creation from paper QA session
+
+---
+
+## v1.1.0 Session Details
+
+### Date
+2026-04-06
+
+### Context
+Thorough academic review of a LaTeX paper (docs/arxiv/haiku/paper.tex) presenting a multi-task ablation study of agentic coding architectures using Claude Haiku 4.5. Cross-checked every quantitative claim against source data files (runs.csv, summary.json, statistical_results.json, srh_tier_experiment.json, judges.csv, generated tables).
+
+### Conversation Flow
+
+1. **Initial request**: Full academic review of Haiku paper with quantitative claim verification
+2. **Data validation phase**: Read all source CSV/JSON files, verified 60+ quantitative claims
+3. **Statistical methodology check**: Discovered u_statistic field in JSON, identified Dunn's vs Mann-Whitney U mismatch
+4. **Comparison count verification**: Counted 7 actual comparisons vs claimed 21=C(7,2)
+5. **Table semantics check**: Identified mixed mean/total conventions in token columns
+6. **Automated finding verification**: Debunked false contraction detection from exploration agent
+7. **Reviewer assumption check**: Identified that review prompt cited wrong Cliff's delta thresholds
+8. **Fix application**: Applied 3 fixes (C1 footnote, I5 test name x4, I6 comparison count)
+9. **Build verification**: Compiled with tectonic via pixi docs environment
+
+### Source Data Files Referenced
+- `docs/arxiv/haiku/paper.tex` - Main paper under review
+- `docs/arxiv/haiku/tables/tab05_cost_analysis.tex` - Token cost table needing footnote
+- `runs.csv` - Raw experiment run data
+- `summary.json` - Aggregated experiment summary
+- `statistical_results.json` - Pairwise comparison results (contained u_statistic field)
+- `srh_tier_experiment.json` - Scheirer-Ray-Hare tier experiment results
+- `judges.csv` - LLM judge evaluation data
+
+### Errors Found and Fixed
+
+#### C1 (Critical): Token Column Semantics
+- **Location**: docs/arxiv/haiku/tables/tab05_cost_analysis.tex
+- **Issue**: Token columns show per-run means for tier rows but absolute totals for the Total row, with no label
+- **Fix**: Added footnote clarifying the mixed convention
+
+#### I5 (Important): Statistical Test Name
+- **Location**: docs/arxiv/haiku/paper.tex (4 locations)
+- **Issue**: Paper said "Dunn's test" but JSON data contained `u_statistic` field indicating Mann-Whitney U
+- **Fix**: Changed "Dunn's test" to "Mann-Whitney U test" in all 4 locations
+
+#### I6 (Important): Pairwise Comparison Count
+- **Location**: docs/arxiv/haiku/paper.tex
+- **Issue**: Paper claimed "21 pairwise comparisons (C(7,2))" but statistical_results.json contained only 7 comparisons
+- **Fix**: Changed to "7 planned comparisons (6 adjacent transitions plus T0-T6)"
+
+### False Positives Identified
+1. **Contraction detection**: Agent reported "5 contractions at lines 112, 117, 133, 271, 400" -- regex verification showed zero contractions
+2. **Cliff's delta thresholds**: Review prompt cited 0.11/0.28/0.43 but paper correctly uses Romano (2006) 0.147/0.33/0.474
+
+### Build and Verification
+- **Build command**: `pixi run --environment docs paper-build`
+- **Build tool**: tectonic
+- **Result**: Clean compilation, valid LaTeX output
+- **CI**: No CI pipeline exists for paper compilation (verified-local only)
+
+### Key Patterns Learned
+
+1. **JSON field names are ground truth**: `u_statistic` means Mann-Whitney U was computed, not Dunn's
+2. **Count actual data, not theoretical**: C(k,2) gives theoretical maximum, not actual comparisons conducted
+3. **Verify the verifier**: Automated tools and review prompts can both contain errors
+4. **Mixed aggregation needs labels**: Tables mixing per-row means with total-row sums need footnotes
+5. **Recompute from raw data**: The most reliable verification is recomputing statistics from source CSV/JSON
+
+### Tools/Technologies
+- LaTeX (tectonic via pixi)
+- Python (data verification scripts)
+- JSON/CSV source data files
+- Git (version control)
+
+---
+
+## v1.0.0 Session Details
 
 ### Date
 2026-02-06
@@ -38,7 +126,7 @@ User had a research paper (`docs/paper.tex`) describing the Scylla framework wit
 8. **Markdown syntax (lines 939-951)**: Table 1 used Markdown pipes instead of LaTeX tabular
 
 #### Compilation Errors Fixed
-1. **Unicode characters**: ρ, Δ, α not escaped → replaced with `$\rho$`, `$\Delta$`, `$\alpha$`
+1. **Unicode characters**: Greek letters not escaped, replaced with math mode equivalents
 2. **Table column mismatch**: 5 columns declared but 4 in header
 3. **Unescaped underscores**: `code_quality`, `build_pipeline`, `overall_quality` in auto-generated tables
 4. **Path issues**: `paper-dryrun/tables/` not transformed to `tables/` in arXiv build
@@ -92,7 +180,7 @@ Added note: "Additional diagnostic figures available in repository but show no v
 #### paper.tex
 - Pages: 33
 - Size: 5.77 MB PDF
-- Compilation: ✓ Clean (pdflatex × 2)
+- Compilation: Clean (pdflatex x 2)
 
 #### ArXiv Submission (main.tex)
 - Pages: 34
@@ -103,15 +191,15 @@ Added note: "Additional diagnostic figures available in repository but show no v
 #### Commit
 - Hash: c0755dc
 - Branch: update-paper
-- Pre-commit: ✓ All hooks passed
+- Pre-commit: All hooks passed
 - Message: Comprehensive commit covering data accuracy, structure, content, and build fixes
 
 ### Key Patterns Learned
 
 1. **Always validate claims against source data**: Don't trust broad ranges or approximations
-2. **Search for Unicode before compiling**: `grep -n "[ρΔαμσ]" file.tex`
+2. **Search for Unicode before compiling**: Check for Greek letters in source
 3. **Check table column counts**: Match tabular spec with header exactly
-4. **Escape auto-generated content**: CSV → LaTeX needs underscore escaping
+4. **Escape auto-generated content**: CSV to LaTeX needs underscore escaping
 5. **Cover all path variations**: Don't assume one regex catches all cases
 6. **Remove zero-variance content**: Figures that show nothing dilute the message
 7. **Consolidate overlapping sections**: Abstract/Summary/Introduction often redundant
@@ -125,7 +213,7 @@ grep -n "correlation" docs/paper.tex
 cat docs/paper-dryrun/figures/fig09_criteria_by_tier.csv
 
 # Unicode search
-grep -n "α" docs/paper.tex
+grep -n "alpha" docs/paper.tex
 
 # LaTeX compilation
 cd docs/ && pdflatex -interaction=nonstopmode paper.tex
