@@ -1,5 +1,56 @@
 # conan-hybrid-cpp20-turnkey-packaging — History
 
+## v1.2.0 (2026-04-07)
+
+**Changed by:** ProjectKeystone CI fix — CMake `target_link_libraries` PUBLIC vs PRIVATE visibility for Conan deps in public headers
+**Verification:** verified-precommit
+
+### What changed
+- Added new Failed Attempts row: Conan dep linked as PRIVATE on a library whose PUBLIC headers `#include` that dep
+- Added new Results & Parameters rule: CMake visibility rule for Conan deps in public headers (grep pattern to audit public headers before choosing PRIVATE vs PUBLIC)
+- Bumped version 1.1.0 → 1.2.0 (new failed attempt + new rule)
+
+### Why
+v1.1.0 already documented the "Keeping `${dep_SOURCE_DIR}` include paths" failure (Conan deps missing entirely).
+This is a distinct failure mode: deps ARE declared in Conan and linked via `target_link_libraries`, but with wrong
+CMake visibility (PRIVATE instead of PUBLIC). CMake configure succeeds because targets exist, but compilation fails
+with `fatal error: 'spdlog/fmt/fmt.h' file not found` because PRIVATE deps don't propagate include directories to
+consumers that include the library's PUBLIC headers. The fix: any Conan dep whose types/includes appear in a PUBLIC
+header must be linked PUBLIC, not PRIVATE.
+
+ProjectKeystone CI was failing because `keystone_concurrency` had `spdlog::spdlog` as PRIVATE even though
+`include/concurrency/logger.hpp` (a public header) does `#include <spdlog/fmt/fmt.h>`. Same for
+`concurrentqueue::concurrentqueue` — `include/concurrency/work_stealing_queue.hpp` does
+`#include <concurrentqueue.h>` but the dep was only linked to `keystone_core`, not `keystone_concurrency`.
+
+### Previous version (v1.1.0) snapshot
+
+```yaml
+---
+name: conan-hybrid-cpp20-turnkey-packaging
+description: "Hybrid Conan 2.x + FetchContent packaging for C++20 CMake repos with E2E install validation. Use when: (1) migrating a FetchContent-only project to Conan, (2) some deps aren't on ConanCenter so you need both, (3) integrating Conan with CMakePresets.json, (4) validating installed packages work end-to-end across a multi-repo ecosystem."
+category: tooling
+date: 2026-04-01
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: conan-hybrid-cpp20-turnkey-packaging.history
+tags:
+  - conan
+  - cmake
+  - fetchcontent
+  - cpp20
+  - packaging
+  - e2e
+  - pip
+  - docker
+---
+```
+
+[Full content preserved in git history]
+
+---
+
 ## v1.1.0 (2026-04-01)
 
 **Changed by:** Keystone Conan migration + E2E install validation (Odysseus turnkey packaging plan)
