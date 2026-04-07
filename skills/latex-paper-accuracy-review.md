@@ -3,10 +3,10 @@ name: latex-paper-accuracy-review
 description: Review a LaTeX research paper for factual accuracy against raw experiment
   data, statistical outputs, and codebase constants before publication
 category: documentation
-date: 2026-02-22
-version: 3.0.0
+date: 2026-04-06
+version: 3.1.0
 user-invocable: false
-tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex]
+tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex, rounding, BCa-bootstrap, pass-classification]
 ---
 # Skill: latex-paper-accuracy-review
 
@@ -14,10 +14,10 @@ tags: [latex, paper, review, accuracy, statistics, data-verification, publicatio
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0), 2026-04-06 (v3.0.0) |
+| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0), 2026-04-06 (v3.0.0, v3.1.0) |
 | Category | documentation |
 | Objective | Review a LaTeX research paper for factual accuracy against raw experiment data, statistical outputs, and codebase source files |
-| Outcome | Three successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs; v3.0.0 discovered bootstrap CIs mislabeled as Clopper-Pearson, 536 missing judge evaluations, and BH monotonicity comment errors |
+| Outcome | Four successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs; v3.0.0 discovered bootstrap CIs mislabeled as Clopper-Pearson, 536 missing judge evaluations, and BH monotonicity comment errors; v3.1.0 found 2 cost rounding errors, 16 pass/score>0.5 mismatches, and unnamed bootstrap CI method, verified 60+ claims correct |
 
 ## When to Use
 
@@ -29,8 +29,14 @@ tags: [latex, paper, review, accuracy, statistics, data-verification, publicatio
 - When a paper has been revised multiple times and claims may have drifted from data
 - When confidence intervals are reported and need independent verification (e.g., Clopper-Pearson vs bootstrap)
 - When judge evaluations may be missing or incomplete across experiment conditions
+- After 3+ review rounds when remaining issues are likely subtle rounding discrepancies rather than factual errors
+- When a pipeline pre-computes pass/fail differently from the paper's stated threshold (e.g., judge_passed field vs consensus_score > 0.5)
 
 ## Verified Workflow
+
+### Step 0: Consult prior review notes (NEW in v3.1.0)
+
+Before starting a new review pass, search ProjectMnemosyne for existing review skills and their `.notes.md` files. Prior sessions document what was already fixed and verified, preventing redundant work. After 3+ rounds, the remaining issues shift from factual errors to subtle rounding discrepancies and disclosure gaps.
 
 ### Step 1: Parallel exploration for comprehensive coverage
 
@@ -75,6 +81,8 @@ lo, hi = clopper_pearson(17, 24)  # [0.495, 0.882]
 ```
 
 **Critical check**: If paper says "Clopper-Pearson 95% CI" but the intervals are narrower than exact Clopper-Pearson bounds, they are likely bootstrap CIs mislabeled. Bootstrap percentile CIs and Clopper-Pearson CIs are computed differently and can diverge significantly, especially at small n.
+
+**Name the method precisely** (NEW in v3.1.0): If bootstrap CIs are used, specify the variant (BCa, percentile, basic) and the number of resamples in the paper. E.g., "bootstrap 95% CI (BCa method, 10,000 resamples)" rather than just "bootstrap 95% CI".
 
 **Also verify**: Count judge evaluations per experiment x tier combination. Missing evaluations are a critical undisclosed finding. Use:
 ```bash
@@ -240,6 +248,29 @@ wc -l data/runs.csv                    # Verify row counts
 **Detection:** Read the grading/consensus code and compare with paper methodology section
 **Fix:** Describe the actual method: "consensus score computed as the mean of N judge scores, with pass threshold at 0.5"
 
+### Pattern 19: Pipeline pass classification vs threshold mismatch (NEW in v3.1.0)
+**Symptom:** Paper defines pass as consensus_score > 0.5, but some runs with score > 0.5 are marked as failed (or vice versa)
+**Root cause:** The evaluation pipeline pre-computes a `judge_passed` field using its own logic, which may not exactly match a simple score > 0.5 threshold. In ProjectScylla, 16/1080 (1.5%) of runs have this mismatch.
+**Detection:** Compare `passed` column (from pipeline's `judge_passed`) against `consensus_score > 0.5` for every row:
+```python
+import csv
+mismatches = 0
+with open('data/runs.csv') as f:
+    for row in csv.DictReader(f):
+        passed = row['passed'].lower() == 'true'
+        score_pass = float(row['consensus_score']) > 0.5
+        if passed != score_pass:
+            mismatches += 1
+print(f'Mismatches: {mismatches}')
+```
+**Fix:** Add a footnote disclosing the mismatch rate and explaining that the pipeline's pre-computed classification is used for all reported pass rates.
+
+### Pattern 20: Subtle cost rounding at third decimal place (NEW in v3.1.0)
+**Symptom:** Paper reports $0.039 per run but actual mean is $0.038472; paper reports $0.099 but actual is $0.098453
+**Root cause:** At 3 decimal places, the difference between rounding $0.0385 to $0.039 vs the correct $0.038 is subtle but accumulates across tables and cross-references
+**Detection:** Recompute all per-run costs from `runs.csv` using `total_cost / count` and compare to 3 decimal places. Use `round(value, 3)` consistently.
+**Fix:** Replace with correctly rounded values. After 3+ review rounds, cost rounding errors at the third decimal place are the most common remaining issue type.
+
 ## Key Source Files for ProjectScylla Papers
 
 | Claim type | Source file |
@@ -259,10 +290,27 @@ wc -l data/runs.csv                    # Verify row counts
 | Partial experiment state | `~/fullruns/haiku/<ts>-<test>/checkpoint.json` |
 | Cliff's delta thresholds | `scylla/analysis/stats.py:260-264` |
 | Pass threshold | `scylla/metrics/grading.py` (check for consensus_score threshold) |
+| Consistency metric direction | `scylla/analysis/statistics.py:173` (1-CV formula, higher = more consistent) |
 | Bootstrap config | `scylla/analysis/config.yaml:11-15` |
 | Subtest YAML counts | `tests/claude-code/shared/subtests/<tier>/` |
 
 ## Results & Parameters
+
+### Session outcome v3.1.0 (2026-04-06)
+- Paper: `docs/arxiv/haiku/paper.tex` (fourth review pass, same N=3 data)
+- Model: Opus 4.6 (1M context)
+- Review approach: consulted 3 prior review skills from ProjectMnemosyne, then launched 3 parallel Explore agents
+- Issues found and fixed: 4
+  - T4 cost rounding: $0.039 -> $0.038 (actual $0.038472)
+  - T5 cost rounding: $0.099 -> $0.098 (actual $0.098453)
+  - 16 passed/score>0.5 mismatches: added footnote disclosing pipeline pre-computed pass classification
+  - Bootstrap CI method unnamed: added "(BCa method, 10,000 resamples)"
+- Claims verified correct: 60+ (all tier-level and experiment-level pass rates, all SRH H-stats/df/p-values, all pairwise p-values, all Cliff's delta values, Krippendorff's alpha, Spearman rho, Pearson r, cost figures, CoP values)
+- No contractions, no raw Unicode, all cross-references resolve
+- Metric direction verified in source code: consistency = 1-CV (statistics.py:173), higher = better
+- Build: `pixi run --environment docs paper-build` (clean, 42035 bytes, 14 files)
+- Verification level: verified-local
+- False positives: 0 (prior review skills provided accurate guidance)
 
 ### Session outcome v3.0.0 (2026-04-06)
 - Paper: `docs/arxiv/haiku/paper.tex` (N=3 experiment data refresh, 7 tiers, 3 experiments, 120 subtests)
@@ -322,6 +370,7 @@ Minor:
 | ProjectScylla | Haiku analysis paper v1.0.0 (2026-02-22) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 | ProjectScylla | Haiku analysis paper v2.0.0 (2026-04-05) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 | ProjectScylla | Haiku analysis paper v3.0.0 (2026-04-06) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
+| ProjectScylla | Haiku analysis paper v3.1.0 (2026-04-06) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 
 ## Failed Attempts
 

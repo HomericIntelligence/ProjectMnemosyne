@@ -1,0 +1,52 @@
+# latex-paper-accuracy-review — History
+
+## v3.0.0 (2026-04-06)
+
+**Changed by:** Session — N=3 experiment data refresh and academic review (third pass)
+**Verification:** verified-local (tectonic builds paper to 50-page 978KB PDF)
+
+### What changed
+- Bumped version from 2.0.0 to 3.0.0, updated date to 2026-04-06
+- Added Step 2b (Independent CI verification) to Verified Workflow
+- Added 4 new error patterns: Pattern 15 (bootstrap CIs mislabeled as Clopper-Pearson), Pattern 16 (missing judge evaluations), Pattern 17 (BH monotonicity comment errors), Pattern 18 (consensus method description errors)
+- Updated Overview outcome to include v3.0.0 findings
+- Added 2 new "When to Use" triggers for CI verification and missing judge evaluations
+- Added 2 new Failed Attempts rows (trusting CI labels, assuming complete evaluations)
+- Added v3.0.0 session outcome to Results & Parameters
+- Added v3.0.0 row to Verified On table
+- Extended Key Source Files table with pass threshold, bootstrap config, and subtest YAML counts
+- Added tags: confidence-intervals, iftex
+
+### Why
+Third review pass of `docs/arxiv/haiku/paper.tex` after N=3 experiment data refresh.
+Discovered that bootstrap CIs were mislabeled as Clopper-Pearson throughout the paper
+(critical), 536 missing judge evaluations in test-001 were undisclosed (critical),
+BH monotonicity enforcement comments in analysis code were incorrect (important),
+and consensus method was described as "majority vote" but implemented as mean
+thresholding (important).
+
+### Previous version (v2.0.0) snapshot
+
+Key v2.0.0 content before this amendment:
+
+```markdown
+date: 2026-04-05
+version: 2.0.0
+tags: [latex, paper, review, accuracy, statistics, data-verification, publication]
+
+| Outcome | Two successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line
+first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor
+issue in a 2,020-line paper with 1,080 runs |
+
+## When to Use
+(last items)
+- When a paper has been revised multiple times and claims may have drifted from data
+
+## Common Error Patterns
+Patterns 1-14 (no Patterns 15-18)
+
+## Key Source Files
+(no pass threshold, bootstrap config, or subtest YAML count entries)
+```
+
+---
