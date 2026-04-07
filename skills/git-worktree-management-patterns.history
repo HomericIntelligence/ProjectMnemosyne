@@ -1,5 +1,60 @@
 # git-worktree-management-patterns — History
 
+## v2.3.0 (2026-04-06)
+
+**Changed by:** Session — stale /tmp/mnemosyne-skill-* blocker pattern for parallel /learn sub-agents
+**Verification:** verified-local (observed in Odysseus e2e walkthrough session 2026-04-06)
+
+### What changed
+- Bumped version from 2.2.0 to 2.3.0, updated date to 2026-04-06
+- Extended `description` / When to Use list with item (12): "cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents"
+- Added new "When to Use" bullet for the pre-spawn cleanup pattern
+- Added new Failed Attempts row: Stale `/tmp/mnemosyne-skill-*` path blocking parallel `/learn` sub-agents
+- Added new Safety Net interaction row for `rm -rf /tmp/mnemosyne-skill-*` inside sub-agents
+- Added new Results & Parameters section "Stale /tmp/mnemosyne-skill-* cleanup before parallel /learn sub-agents" with orchestrator pre-cleanup snippet and timestamp-suffix alternative
+
+### Why
+During a `/hephaestus:learn` session that spawned 3 parallel sub-agents to amend ProjectMnemosyne
+skills, 2 of the 3 agents immediately failed with a worktree creation error because
+`/tmp/mnemosyne-skill-<name>` directories from prior `/learn` invocations still existed on disk.
+The shared clone's worktree registry still referenced these paths, so `git worktree add` refused
+to create new worktrees at the same paths.
+
+Root cause: `/learn` sub-agents create worktrees at predictable paths. If a prior session's
+cleanup failed (due to agent timeout, Safety Net blocking `rm -rf`, or session interrupt),
+the directory persists and the next invocation hits `fatal: already exists`. The Safety Net
+also blocks `rm -rf /tmp/mnemosyne-skill-*` when run inside a sub-agent, so the fix must be
+run by the orchestrator (main conversation) before spawning sub-agents.
+
+### Previous version (v2.2.0) snapshot
+
+Key v2.2.0 guidance before this amendment:
+
+```markdown
+description: "Use when: (1) ... (11) avoiding repeated permission prompts in sandboxed harnesses
+by running git from inside the worktree instead of driving every command through `git -C <path>`."
+
+date: 2026-04-03
+version: "2.2.0"
+
+| Outcome | v2.2.0: Added workdir-first guidance for sandboxed harnesses and recorded the repeated
+`git -C <worktree>` permission-prompt failure mode |
+
+## When to Use
+(last item)
+- Git commands run from a parent harness keep triggering permission prompts or `*.lock` errors
+  while the actual edits live inside a dedicated worktree
+
+## Safety Net interaction
+| Operation | Blocked? | Workaround |
+|-----------|----------|------------|
+| `git worktree remove --force` (untracked files) | Yes | Delete untracked files first, then remove without `--force` |
+| `git branch -D` | No | Allowed |
+| `git reset --hard` | Yes | N/A — use `pull --rebase` instead |
+```
+
+---
+
 ## v2.2.0 (2026-04-03)
 
 **Changed by:** Session — generalized sandbox/worktree operating pattern
