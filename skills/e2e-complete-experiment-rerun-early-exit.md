@@ -113,6 +113,35 @@ pixi run python -m pytest tests/unit/e2e/test_runner.py -v -k "already_complete"
 |---------|----------------|---------------|----------------|
 | N/A | Direct early-exit approach worked | N/A | The `_current_exp_state` variable was already available |
 
+## Results & Parameters
+
+### Configuration
+
+```python
+# Early-exit guard — insert in runner.py:run() after state machine completes,
+# before the load_experiment_tier_results() rehydrate path:
+if (
+    _current_exp_state == ExperimentState.COMPLETE
+    and _last_experiment_result is None
+):
+    # Already complete, no new work done - skip expensive rehydrate
+    return _aggregate_results(tier_results, start_time)
+```
+
+### Expected Output
+
+- Re-running a COMPLETE experiment returns in < 1 second (vs 3.5 minutes)
+- No `rglob("run_result.json")` scan occurs; memory usage stays constant
+- `_aggregate_results({}, start_time)` returns a truthy `ExperimentResult`
+- Caller (`manage_experiment.py`) `if results:` check passes
+
+### Test Parameters
+
+```bash
+# Verify the fix
+pixi run python -m pytest tests/unit/e2e/test_runner.py -v -k "already_complete"
+```
+
 ## Traps and Pitfalls
 
 ### 1. `_TERMINAL_STATES` is Deceptively Narrow
