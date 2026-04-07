@@ -1,0 +1,41 @@
+# conan-validate-script-cmake-version-mismatch — History
+
+## v1.1.0 (2026-04-06)
+
+**Changed by:** Confirmed both proposed fixes committed to Odysseus main 2026-04-06
+**Verification:** verified-local
+
+### What changed
+- Bumped version 1.0.0 → 1.1.0
+- Added `history:` field to frontmatter pointing to this file
+- Added "Confirmed Fixes" subsection in Workflow documenting both commits:
+  (a) `cmake_minimum_required` lowered 3.20 → 3.16 in `e2e/conan-consumer/CMakeLists.txt` — allows Phase 3 consumer build to pass on Debian 11 (CMake 3.18.4) and Ubuntu 20.04 (CMake 3.16) without requiring pixi-provided cmake
+  (b) T4 port override fixed via `else` branch in `e2e/lib/topology.sh` `topology_wait_healthy()` — sets `AGAMEMNON_PORT:-8080` and `NATS_MONITOR_PORT:-8222` explicitly so the caller's `--port` flag is not silently clobbered
+
+### Why
+At v1.0.0 both fixes were proposed but not yet merged. The 2026-04-06 session confirmed both were committed to Odysseus main, closing the loop on Phase 3 consumer build failure and the T4 port override regression.
+
+### Previous version (v1.0.0) snapshot
+
+```
+---
+name: conan-validate-script-cmake-version-mismatch
+description: "Fix validate-conan-install.sh failing on hosts with CMake < 3.20, and fix IPC test runner T4 port override bug. Use when: (1) conan package export succeeds but consumer CMake configure fails with 'CMake 3.20 or higher required', (2) validate-conan-install.sh works on CI but fails on Debian 11 or Ubuntu 20.04 hosts, (3) adding conan validation to older distros where system CMake is 3.16-3.19, (4) IPC test runner ignores --port override and binds to wrong port."
+category: tooling
+date: 2026-04-06
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - conan
+  - cmake
+  - validation
+  - e2e
+  - debian
+  - pixi
+  - ipc
+  - test-runner
+  - port
+  - homeric-intelligence
+---
+```
