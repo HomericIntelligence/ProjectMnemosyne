@@ -1,9 +1,9 @@
 ---
 name: e2e-homeric-compose-cpp-pipeline
-description: "Wire HomericIntelligence C++20 services into a podman/docker compose E2E stack with NATS JetStream, Prometheus, Grafana. Use when: (1) setting up the full E2E pipeline, (2) adding new C++20 services to the compose stack, (3) debugging multi-container C++ service orchestration, (4) troubleshooting podman vs docker runtime differences."
+description: "Wire HomericIntelligence C++20 services into a podman/docker compose E2E stack with NATS JetStream, Prometheus, Grafana. Use when: (1) setting up the full E2E pipeline, (2) adding new C++20 services to the compose stack, (3) debugging multi-container C++ service orchestration, (4) troubleshooting podman vs docker runtime differences, (5) running on hosts without rootlessport or external internet access."
 category: architecture
-date: 2026-04-03
-version: "1.3.0"
+date: 2026-04-06
+version: "1.4.0"
 history: e2e-homeric-compose-cpp-pipeline.history
 user-invocable: false
 verification: verified-local
@@ -19,6 +19,8 @@ tags:
   - homeric-intelligence
   - dual-runtime
   - wsl2
+  - host-network
+  - grafana-analytics
 ---
 
 # HomericIntelligence E2E Compose Pipeline (C++20 + NATS)
@@ -27,9 +29,9 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-03 |
+| **Date** | 2026-04-06 |
 | **Objective** | Wire all HomericIntelligence services into a dual-runtime (podman + docker) compose E2E stack for testing |
-| **Outcome** | 10-container stack running on both podman compose and docker compose: NATS, Agamemnon (C++), Nestor (C++), Hermes (Python), hello-myrmidon (C++), Prometheus, Loki, Promtail, Grafana, argus-exporter. All 7 E2E phases passing on both runtimes. |
+| **Outcome** | 10-container stack running on both podman compose and docker compose: NATS, Agamemnon (C++), Nestor (C++), Hermes (Python), hello-myrmidon (C++), Prometheus, Loki, Promtail, Grafana, argus-exporter. All 7 E2E phases passing on both runtimes. Host-network workaround documented for rootlessport-absent hosts. |
 | **Verification** | verified-local |
 
 ## When to Use
@@ -40,6 +42,8 @@ tags:
 - Understanding the architecture: what connects to what, on which ports
 - Troubleshooting podman vs docker runtime differences
 - Fixing WSL2-specific DNS or container networking issues
+- Running on hosts without rootlessport (use host-network workaround below)
+- Diagnosing Grafana startup hangs on low-IO or air-gapped hosts
 
 ## Verified Workflow
 
@@ -82,6 +86,43 @@ Prometheus (:19090) ← scrapes argus-exporter
 Loki (:13100) ← log aggregation
 Promtail ← scrapes container logs → ships to Loki
 Grafana (:13001) ← dashboards from Prometheus + Loki
+```
+
+### Host-Network Workaround (rootlessport absent)
+
+When `rootlessport` is not installed on the host, bridge-networked containers start but never bind ports on the host — `start-stack.sh` will hang at `podman wait --condition=healthy`. Use `--network=host` for all containers instead:
+
+```bash
+# Kill stale aardvark-dns first (always safe to run)
+kill $(cat /run/user/$(id -u)/containers/networks/aardvark-dns/aardvark.pid 2>/dev/null) 2>/dev/null || true
+
+# Start all services with host networking
+podman run -d --name odysseus-nats-1 --network=host nats:alpine -js -m 8222
+podman run -d --name odysseus-agamemnon-1 --network=host \
+  -e NATS_URL=nats://localhost:4222 \
+  localhost/odysseus-agamemnon:latest
+# ... repeat for all services
+
+# Grafana: MUST disable analytics to prevent startup hang on air-gapped/slow hosts
+# (Grafana blocks at usagestats.collector HTTP call to grafana.net after ~16m of SQLite migrations)
+podman run -d --name odysseus-grafana-1 --network=host \
+  -e GF_ANALYTICS_REPORTING_ENABLED=false \
+  -e GF_ANALYTICS_CHECK_FOR_UPDATES=false \
+  -e GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false \
+  -e GF_AUTH_ANONYMOUS_ENABLED=true \
+  grafana/grafana:latest
+```
+
+**Important:** When using `--network=host`, provisioned datasources in Grafana must reference `localhost` rather than service names:
+- `http://prometheus:9090` → `http://localhost:9090`
+- `http://loki:3100` → `http://localhost:3100`
+
+Add these env vars to the grafana service in `docker-compose.e2e.yml` for compose-based deployments on any host:
+```yaml
+environment:
+  - GF_ANALYTICS_REPORTING_ENABLED=false
+  - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+  - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
 ```
 
 ### Detailed Steps
@@ -149,6 +190,11 @@ CMD ["ProjectFoo_server"]
 | Docker build without conan profile | Ran `conan install` in fresh Docker container | No Conan default profile exists in fresh containers | Run `conan profile detect --force` before `conan install` |
 | argus-exporter with MAESTRO_URL | Started exporter pointing to ai-maestro on port 23000 | ai-maestro removed per ADR-006 — service doesn't exist | Migrate to `AGAMEMNON_URL`/`NESTOR_URL` with `/v1/agents`, `/v1/tasks`, `/v1/health` and `hi_*` prefix |
 | Port mapping mismatch in start-stack.sh | start-stack.sh mapped argus-exporter to `-p 19100:9100` | Test script expected `:9100` matching compose file definition | Ensure start-stack.sh port mappings match compose file: `-p 9100:9100` |
+| `start-stack.sh` hang at `podman wait --condition=healthy` (v1.4) | Called `podman wait --condition=healthy odysseus_nats_1` in start-stack.sh | rootlessport absent → NATS starts but never binds bridge-network ports → healthy condition never reached, wait blocks forever | Kill wait PID from a separate SSH session; switch all containers to `--network=host` |
+| Grafana startup hang at `usagestats.collector` (v1.4) | Started Grafana without analytics env vars on epimetheus | After ~16m SQLite schema migrations, Grafana makes an external HTTP call to grafana.net; hosts without internet access or with slow links block indefinitely | Add `GF_ANALYTICS_REPORTING_ENABLED=false`, `GF_ANALYTICS_CHECK_FOR_UPDATES=false`, `GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false` to grafana service in `docker-compose.e2e.yml` |
+| `run-hello-world.sh` Phase 3 event type `task.created` (v1.4) | Phase 3 sends `event: task.created` to Hermes webhook | Hermes `_TASK_EVENTS` only maps `task.updated`, `task.completed`, `task.failed`, `agent.*` — `task.created` is silently dropped, no NATS message published | Change Phase 3 test event to `task.updated` |
+| IPC test runner T4 port override (v1.4) | `run-ipc-tests.sh --topology t4` used without patching process.sh | `process.sh` sourced unconditionally overwrites T4 ports with T1 non-standard ports (`AGAMEMNON_PORT=18080`, `NATS_MONITOR_PORT=18222`) — tests time out or target wrong ports | Topology-aware port selection: T4 must override to standard ports (8080, 8222) after sourcing `process.sh` |
+| Grafana datasource hostnames in host-network mode (v1.4) | Provisioned datasources used service names (`http://prometheus:9090`, `http://loki:3100`) | With `--network=host`, service-name DNS does not resolve (no compose-managed bridge network) | Change datasource URLs to `http://localhost:9090` and `http://localhost:3100` for host-network deployments |
 
 ## Results & Parameters
 
@@ -231,6 +277,41 @@ agamemnon_build: ~90s (94 cmake targets)
 nestor_build: ~70s (48 cmake targets)
 myrmidon_build: ~60s (89 cmake targets)
 hermes_build: ~15s (pip install)
+
+# Host-network workaround (v1.4.0 — rootlessport absent)
+host_network_workaround: |
+  # SYMPTOM: start-stack.sh hangs at `podman wait --condition=healthy`
+  # ROOT CAUSE: rootlessport absent → bridge networking never binds host ports
+  # FIX: use --network=host for ALL containers
+  kill $(cat /run/user/$(id -u)/containers/networks/aardvark-dns/aardvark.pid 2>/dev/null) 2>/dev/null || true
+  podman run -d --name odysseus-nats-1 --network=host nats:alpine -js -m 8222
+  # Add GF_ANALYTICS_* env vars to prevent Grafana blocking at usagestats.collector
+
+# Grafana analytics env vars (v1.4.0)
+grafana_analytics_fix: |
+  # Add to grafana service in docker-compose.e2e.yml to prevent startup hang on air-gapped hosts
+  # Grafana blocks ~indefinitely after SQLite migrations when grafana.net call times out
+  environment:
+    - GF_ANALYTICS_REPORTING_ENABLED=false
+    - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+    - GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false
+
+# Hermes event type mapping (v1.4.0)
+hermes_event_types: |
+  # _TASK_EVENTS supported by Hermes webhook→NATS bridge:
+  # task.updated, task.completed, task.failed, agent.*
+  # NOT supported (silently dropped): task.created
+  # run-hello-world.sh Phase 3 must use event: task.updated
+
+# IPC topology port selection (v1.4.0)
+ipc_topology_ports: |
+  # process.sh sets T1 non-standard ports (AGAMEMNON_PORT=18080, NATS_MONITOR_PORT=18222)
+  # T4 topology requires standard ports — override AFTER sourcing process.sh:
+  source process.sh
+  if [ "$TOPOLOGY" = "t4" ]; then
+    AGAMEMNON_PORT=8080
+    NATS_MONITOR_PORT=8222
+  fi
 ```
 
 ## Verified On
@@ -239,3 +320,4 @@ hermes_build: ~15s (pip install)
 |---------|---------|---------|
 | Odysseus | Full E2E pipeline on feat/cpp-skeleton branch | 9-container stack with C++20 Agamemnon, Nestor, hello-myrmidon |
 | Odysseus | Dual-runtime E2E on fix/governance-compliance-files branch | 10-container stack passing all 7 phases on both podman compose and docker compose. WSL2 aardvark-dns workaround verified. |
+| Odysseus | Host-network validation on epimetheus (SSH) | Validated host-network workaround on rootlessport-absent host. Grafana analytics hang, Hermes task.created drop, IPC T4 port override, and datasource hostname issues all confirmed and resolved. |

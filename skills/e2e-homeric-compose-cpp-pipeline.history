@@ -1,5 +1,30 @@
 # e2e-homeric-compose-cpp-pipeline — History
 
+## v1.4.0 (2026-04-06)
+
+**Changed by:** Host-network workaround, Grafana analytics hang fix, Hermes event type mapping, IPC T4 port override, datasource hostname fix for host-network mode
+**Verification:** verified-local (epimetheus SSH session)
+
+### What changed
+- Added host-network workaround section: when rootlessport is absent, bridge networking never binds host ports; `start-stack.sh` hangs at `podman wait --condition=healthy`; fix is `--network=host` for all containers
+- Added Grafana analytics env vars (`GF_ANALYTICS_REPORTING_ENABLED=false`, `GF_ANALYTICS_CHECK_FOR_UPDATES=false`, `GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES=false`) to prevent startup hang after ~16m SQLite migrations on air-gapped or slow-network hosts
+- Documented `run-hello-world.sh` Phase 3 failure: `task.created` event silently dropped by Hermes; fix is to use `task.updated` instead
+- Documented IPC test runner T4 port override bug: `process.sh` sourced unconditionally overwrites T4 ports with T1 non-standard ports; topology-aware override required after sourcing
+- Documented Grafana datasource hostname fix for host-network deployments: service names (`prometheus`, `loki`) must become `localhost`
+- Added 5 new Failed Attempts to the table
+- Added `host_network_workaround`, `grafana_analytics_fix`, `hermes_event_types`, `ipc_topology_ports` snippets to Results
+- Updated description, date, version, and tags in frontmatter
+- Added epimetheus validation to Verified On table
+
+### Why
+Live validation on epimetheus (rootlessport-absent host, no external internet access) uncovered five
+new failure modes not encountered in the original WSL2/Docker Desktop validation: bridge networking
+silently failing without rootlessport, Grafana blocking on analytics HTTP calls to grafana.net after
+lengthy SQLite migrations, an event type mismatch in the Hermes webhook bridge, a port variable
+clobber in the IPC test runner, and service-name DNS failures in host-network mode.
+
+---
+
 ## v1.3.0 (2026-04-03)
 
 **Changed by:** Dual-runtime verification, distroless NATS fix, aardvark-dns workaround, Docker build fixes, argus-exporter migration
