@@ -1,5 +1,26 @@
 # latex-paper-accuracy-review — History
 
+## v7.0.0 (2026-04-08)
+
+**Changed by:** Session — Eighth review pass with full myrmidon swarm + implementation review (Opus 4.6, 1M context)
+**Verification:** verified-local (pixi run paper-build, clean, 991,600 bytes, 14 files, 51 pages)
+
+### What changed
+- Bumped version from 6.0.0 to 7.0.0
+- Added 7 new error patterns: Pattern 36 (cross-section regression from prior fix), Pattern 37 (eliminates possibility from n.s. result), Pattern 38 (unobserved mechanistic claim), Pattern 39 (definite article for one-of-many Pareto tiers), Pattern 40 (BCa bootstrap for binary n=9), Pattern 41 (alpha computed on experiment-averaged data), Pattern 42 (untracked reproducibility script)
+- New pattern category: cross-section regression
+- Added implementation review dimension (code correctness, pipeline quality, repo health)
+- Updated Haiku FP documentation: ddof=0 vs ddof=1 and raw vs pivoted computation produce systematic FPs
+- Added v7.0.0 session outcome, Verified On entry
+- Added tags: eliminates-possibility, unobserved-mechanism, pareto-definite-article, BCa-binary-n9, alpha-aggregation, SRH-tie-correction, untracked-reproducibility-script, cross-section-regression
+
+### Why
+Eighth review pass of `docs/arxiv/haiku/paper.tex`. After 6 prior rounds focused on data accuracy → methodology → framing → prose-data direction, the 7th round found cross-section regressions (fixes applied to Abstract but not Conclusions), overstated null findings, unobserved mechanistic claims, and a reproducibility failure (untracked script). All 43 inline numbers, 56 appendix values, and all table cells were independently verified correct — confirming 0% mechanical error rate after 7 rounds. Implementation review found latent code bugs (is_valid parsing, SRH negative ss_ab) that don't affect current paper numbers but could affect future papers.
+
+### Previous version (v6.0.0) snapshot
+
+Key v6.0.0 content before this amendment: 35 patterns, 6 prior sessions, prose-data direction alignment as newest category.
+
 ## v5.0.0 (2026-04-07)
 
 **Changed by:** Session — Sixth review pass with full myrmidon swarm + systematic false positive tracking (Opus 4.6, 1M context)

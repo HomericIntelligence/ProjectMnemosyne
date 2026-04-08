@@ -1,3 +1,74 @@
+## 2026-04-08: latex-paper-accuracy-review v7.0.0 — Eighth Review Pass: Cross-Section Regression & Implementation Review
+
+Session: ProjectScylla v7.0 academic review of docs/arxiv/haiku/paper.tex (1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
+Model: Opus 4.6 (1M context)
+PR: HomericIntelligence/ProjectScylla#1756
+
+### Review methodology
+- Phase 1: Consulted prior review skills (v6.0.0) from ProjectMnemosyne
+- Phase 2: 3 parallel Explore agents (paper text, source data, LaTeX structure)
+- Phase 3: Full myrmidon swarm (2 Sonnet professors + 3 Haiku students) + 3 implementation reviewers
+- Phase 4: Independent verification of all agent findings (dismissed 16 false positives)
+- Phase 5: Incremental build verification after fixes
+
+### Myrmidon swarm composition and results (v7.0.0)
+
+| Agent | Model | Role | Key Findings | False Positive Rate |
+|-------|-------|------|-------------|---------------------|
+| Professor 1 | Sonnet | Statistical methodology | BCa n=9, alpha aggregation, untracked script, SRH ties | 0/7 (0%) |
+| Professor 2 | Sonnet | Narrative consistency | "consistently" regression, "eliminates possibility", "multiplicative", Pareto article | 0/10 (0%) |
+| Student 1 | Haiku | Inline numbers | 43/43 match (1 FP: misattributed line to wrong experiment) | 1/43 (2.3%) |
+| Student 2 | Haiku | Table cross-check | 139 cells, 15 FPs from ddof=0 and raw vs pivoted computation | 15/139 (10.8%) |
+| Student 3 | Haiku | Appendix/figures | 56/56 verified | 0/56 (0%) |
+| Code Review | Sonnet | Pipeline correctness | SRH negative ss_ab, Holm docstring, Krippendorff N | 1/9 (11%) — Krippendorff N=360 verified correct |
+| Strict Review | Sonnet | Pipeline quality | Grade B-, is_valid parsing, N/A-as-zero | N/A |
+| Health Check | Haiku | Repo health | PASS | N/A |
+
+### New patterns discovered (36-42)
+
+**Pattern 36: Cross-section regression from prior fix**
+- Abstract fixed in v6 to "outperform in aggregate" but Conclusions still said "consistently outperform"
+- Root cause: Fixes applied to one section without checking all other sections for the same language
+- Detection: After any hedging fix, grep for the old phrasing across ALL sections
+
+**Pattern 37: "Eliminates the possibility" from non-significant result**
+- Finding 4 said "eliminates the possibility of a cost--quality trade-off" but p=0.676 under N=3 power
+- Contradicted by paper's own Limitations section ("real but small effects may be undetectable with N=3")
+- Fix: "provides no evidence of a cost--quality trade-off under current statistical power"
+
+**Pattern 38: Unobserved mechanistic claim in observational study**
+- "Not additive but multiplicative" posits a specific functional form from observational data
+- Study observes zero pass rate but cannot distinguish additive from multiplicative failure
+- Fix: Threshold/catastrophic framing with "cannot be determined from observational data alone"
+
+**Pattern 39: Definite article for one-of-many Pareto-optimal tiers**
+- "The aggregate Pareto-optimal tier" but T0, T1, and T2 are all Pareto-optimal
+- Fix: "the highest-pass-rate Pareto-optimal tier (T0 and T1 also lie on the Pareto frontier)"
+
+**Pattern 40: BCa bootstrap for binary data at very small n**
+- BCa at n=9 binary has poor coverage (degenerate jackknife influence values)
+- Clopper-Pearson exact [0.299, 0.901] is wider and more appropriate
+- Fix: Added caveat and exact interval for comparison
+
+**Pattern 41: Krippendorff alpha on experiment-averaged data**
+- Pivoting by (tier, subtest, run_number) WITHOUT experiment averages across experiments
+- Conflates inter-experiment variability with inter-rater disagreement
+- Fix: Added disclosure noting the averaging and its methodological implication
+
+**Pattern 42: Untracked reproducibility script**
+- `scripts/analyze_tier_task_interaction.py` was untracked despite producing the central SRH finding
+- Main pipeline degenerates with single model; separate script was needed but never committed
+- Fix: Committed the script
+
+### Key shifts at v7.0.0
+- After 6 prior rounds, ALL mechanical numbers verified correct (0% error rate confirmed by 3 independent agents)
+- New error class: cross-section regression (fixes in one section not propagated to others)
+- Implementation review added: found latent code bugs that don't affect current paper but could affect future papers
+- Haiku students still produce systematic FPs when given imprecise computation instructions (ddof, aggregation method)
+- Professor agents maintain 0% FP rate on methodology and narrative consistency checks
+
+---
+
 ## 2026-04-07: latex-paper-accuracy-review v6.0.0 — Seventh Review Pass: Prose-Data Direction Alignment
 
 Session: ProjectScylla v6.0 academic review of docs/arxiv/haiku/paper.tex (1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
