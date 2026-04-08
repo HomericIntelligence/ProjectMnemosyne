@@ -31,13 +31,13 @@ RESET = "\033[0m"
 
 
 def find_plugins() -> List[Path]:
-    """Find all flat skill files (skills/*.md, exclude *.notes.md)."""
+    """Find all flat skill files (skills/*.md, exclude *.notes*.md and *.history)."""
     if not SKILLS_DIR.exists():
         return []
 
     files = sorted([
         f for f in SKILLS_DIR.glob("*.md")
-        if not f.name.endswith(".notes.md") and f.is_file()
+        if not re.match(r".*\.notes(-\w+)?\.md$", f.name) and f.is_file()
     ])
     return files
 
