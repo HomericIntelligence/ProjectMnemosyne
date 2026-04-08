@@ -1,13 +1,18 @@
 ---
-name: mojo-jit-crash-diagnosis-and-retry
+name: mojo-jit-crash-retry
 description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) adding or refining retry logic in just test-group to distinguish JIT flakiness from real test failures, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all"
 category: debugging
-date: 2026-03-29
-version: "2.1.0"
+date: 2026-04-08
+version: "2.2.0"
 user-invocable: false
 verification: verified-precommit
-history: mojo-jit-crash-diagnosis-and-retry.history
-tags: []
+tags:
+  - mojo
+  - jit
+  - crash
+  - retry
+  - ci
+  - libKGENCompilerRTShared
 ---
 # Mojo JIT Crash Diagnosis and Retry
 
@@ -15,10 +20,22 @@ tags: []
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-03-29 |
+| Date | 2026-04-07 |
 | Objective | Consolidated patterns for diagnosing Mojo JIT compiler crashes, distinguishing flaky infrastructure failures from real test bugs, implementing retry logic, splitting test files, and documenting workarounds |
-| Outcome | Merged from 5 source skills; amended 2026-04-07 with concrete root causes from ProjectOdyssey PR #5197-5204 |
-| Verification | verified-precommit |
+name: mojo-jit-crash-retry
+description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) adding or refining retry logic in just test-group to distinguish JIT flakiness from real test failures, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all"
+category: debugging
+date: 2026-04-08
+version: "2.2.0"
+user-invocable: false
+verification: verified-precommit
+tags:
+  - mojo
+  - jit
+  - crash
+  - retry
+  - ci
+  - libKGENCompilerRTShared
 
 ## When to Use
 

@@ -1,12 +1,12 @@
 ---
 name: adr009-test-file-split-workflow
-description: "OBSOLETE — ADR-009 has been fixed. Historical reference for Mojo test file splitting and de-splitting. Use when: understanding existing split files, reversing splits, investigating legacy heap corruption workarounds, auditing for dropped tests, or recovering dropped test implementations from git history."
-category: ci-cd
-date: 2026-03-28
-version: "1.0.0"
+description: "OBSOLETE — ADR-009 has been fixed. Historical reference for Mojo test file splitting and de-splitting. Use when: (1) understanding existing _partN.mojo split files, (2) reversing splits by merging part files back, (3) investigating legacy heap corruption workarounds, (4) auditing for dropped tests, (5) recovering dropped test implementations from git history, (6) diagnosing compile hangs (>120s) from heavyweight backward-pass tests in existing split files, (7) enforcing the ADR-009 per-file test count limit via pre-commit hook on existing files"
+category: testing
+date: 2026-04-07
+version: "2.1.0"
 user-invocable: false
 verification: unverified
-tags: [adr-009, mojo, test-splitting, obsolete, historical]
+tags: [adr-009, mojo, test-splitting, obsolete, historical, ci-cd, pre-commit, compile-hang]
 ---
 
 ## Overview
@@ -209,6 +209,122 @@ pixi run pre-commit run check-yaml --files .github/workflows/comprehensive-tests
 ```
 
 Do NOT use `just pre-commit` in worktree shell environments — `just` is not installed there.
+
+### Part A2: Fixing Compile Hangs (>120s) by Moving Heavyweight Tests
+
+When an existing split file compiles too slowly (>120s) due to backward-pass tests that instantiate large parametric types (e.g., FC layers with 9216→4096 weights):
+
+1. Identify the overloaded file: `grep -n "fn test_" tests/models/test_foo_part4.mojo`
+2. Find a sibling part file with capacity (pick one with fewer than 8 tests):
+   ```bash
+   for f in tests/models/test_foo_part*.mojo; do
+     echo "$f: $(grep -c '^fn test_[a-z]' $f)"
+   done
+   ```
+3. Move the heavyweight tests: copy function body to sibling, add to sibling's `main()`, delete from original, remove from original's `main()`
+4. Update docstrings in both files
+5. Verify counts: original should decrease, sibling should increase but stay ≤10
+6. Commit:
+   ```bash
+   SKIP=mojo-format git commit -m "fix(tests): move backward tests from partN to partM to resolve compile hang"
+   ```
+
+**Never delete backward-pass tests** — a compile hang is a sign the file needs splitting/rebalancing, not test deletion. Check existing sibling capacity before creating a new part file.
+
+### Part A3: ADR-009 Count Guard Pre-Commit Hook
+
+Add a pre-commit hook to enforce the per-file limit going forward:
+
+**Script** (`scripts/check_test_count.py`):
+```python
+import re, sys
+from pathlib import Path
+from typing import List
+
+LIMIT = 10  # ADR-009: stay below the ~15-test crash threshold
+_TEST_FN_RE = re.compile(r"^\s*fn test_", re.MULTILINE)  # re.MULTILINE is CRITICAL
+
+def is_mojo_test_file(path: Path) -> bool:
+    return path.suffix == ".mojo" and "tests" in path.parts
+
+def count_tests_in_file(path: Path) -> int:
+    try:
+        return len(_TEST_FN_RE.findall(path.read_text(encoding="utf-8")))
+    except OSError:
+        return 0
+
+def check_files(file_paths: List[str]) -> int:
+    violations = []
+    for raw in file_paths:
+        path = Path(raw)
+        if not is_mojo_test_file(path):
+            continue
+        count = count_tests_in_file(path)
+        if count > LIMIT:
+            violations.append(f"  {path}: {count} tests (limit: {LIMIT}) — split per ADR-009")
+    if violations:
+        for msg in violations:
+            print(msg)
+        return 1
+    print(f"All test file(s) within the {LIMIT}-test limit.")
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(check_files(sys.argv[1:]))
+```
+
+**Pre-commit hook** (`.pre-commit-config.yaml`):
+```yaml
+- id: check-test-count
+  name: Check Mojo Test Count (ADR-009)
+  description: Fail if any Mojo test file exceeds 10 tests (heap-corruption threshold per ADR-009)
+  entry: python3 scripts/check_test_count.py
+  language: system
+  files: '^tests/.*\.mojo$'
+  pass_filenames: true
+```
+
+Key choices:
+- `pass_filenames: true` — pre-commit passes only staged files; script never walks repo
+- `files: '^tests/.*\.mojo$'` — scoped to test Mojo files; production files skipped
+- `language: system` — uses project's pixi/system Python, no virtualenv needed
+- `re.MULTILINE` — CRITICAL: `^` only matches start of string without it; catches all lines
+
+### Part A4: Diagnosing and Fixing Mojo Test Suite Failures
+
+Run and capture: `just test-mojo 2>&1 | tee /tmp/test-all-output.log`
+
+Categorize each `❌ FAILED after 3 attempts:` entry:
+
+| Category | Error Pattern | Fix |
+|----------|--------------|-----|
+| No main | `module does not define a 'main' function` | Add `fn main() raises:` calling all test functions |
+| Relative import | `cannot import relative to a top-level package` | Skip file in test runner (library file, not a test) |
+| String indexing | `no matching method in call to '__getitem__'` | Use `.as_bytes()[j]` and compare to ASCII codes |
+| Float type | `cannot be converted from 'Float32' to 'Float64'` | `full()` always takes `Float64` fill value |
+| Wrong import name | `module 'X' does not contain 'Y'` | Grep actual function names in source module |
+| Wrong arg order | `value passed to 'atol' cannot be converted from StringLiteral` | `assert_close_float(a, b, rtol, atol, message)` — message is 5th arg |
+| `List.size()` | `'List[T]' value has no attribute 'size'` | Use `len(list)` instead |
+| Duplicate var | `invalid redefinition of '__'` | Use unique names `_bn2_rm`, `_bn2_rv` for nested batch norm outputs |
+| Reshape needed | `Incompatible dimensions for matmul: 1 != N` | Flatten 4D→2D after `global_avgpool2d` before `linear` |
+| JIT crash | `execution crashed` / `libKGENCompilerRTShared.so` | File upstream issue, skip in test runner |
+
+### Part A5: Split Distribution Reference
+
+| Original File | Tests | Parts | Distribution |
+|---------------|-------|-------|-------------|
+| test_assertions.mojo | 61 | 9 | ~7 each |
+| test_activations.mojo | 45 | 6 | ~7-8 each |
+| test_elementwise.mojo | 37 | 5 | 5/8/8/6/10 |
+| test_elementwise_dispatch.mojo | 47 | 6 | ~8 each |
+| test_losses.mojo | 28 | 4 | 7/7/7/7 |
+| test_reduction.mojo | 22 | 3 | 8/8/6 |
+| test_backward.mojo | 21 | 3 | 4/9/8 |
+| test_normalization.mojo | 21 | 3 | 8/8/5 |
+| test_conv.mojo | 20 | 3 | 7/7/6 |
+| test_optimizer_base.mojo | 18 | 3 | 6/6/6 |
+| test_comparison_ops.mojo | 19 | 3 | 6/6/7 |
+| test_linear.mojo | 14 | 2 | 7/7 |
 
 ### Part B: De-Splitting / Merge-Back Workflow
 
@@ -419,6 +535,17 @@ Always re-audit current state.
 | Running full test suite locally | `just test-mojo` to validate merged files | Crashes the machine due to resource constraints | Use `just test-group` for targeted checks, push to CI for full validation |
 | CI pattern `test_initializers_*.mojo` | Wildcard matched old `_part*.mojo` AND `_validation.mojo` | Lost coverage of `test_initializers_validation.mojo` | Use `test_initializers*.mojo` (no underscore before wildcard) |
 | Merge script `--dry-run` expecting no side effects | Dry-run wrote to dual-version base files in-place | Script's dual-version handling modified base files | True dry-run needs to skip ALL file writes |
+| Reducing test complexity instead of splitting | Simplified individual tests to reduce JIT load | Heap corruption is load-based (total `fn test_` count), not complexity-based | Total function count is the trigger, not test logic |
+| No `re.MULTILINE` flag in count guard | Used `re.compile(r"^\s*fn test_")` without flag | `^` only matches the very start of the string; subsequent occurrences missed | Always use `re.MULTILINE` when matching line-anchored patterns in multi-line files |
+| `pass_filenames: false` in count guard hook | Script walked entire `tests/` tree | Ran on every commit regardless of what was staged | Use `pass_filenames: true`; let pre-commit filter to staged files |
+| Filtering by filename prefix only in count guard | Checked `path.name.startswith("test_")` | Would accept `test_foo.mojo` outside `tests/`, flagging production files | Check both suffix AND that `"tests"` appears in `path.parts` |
+| Split into a new part file when siblings had capacity | Created brand new `test_foo_part6.mojo` | Overkill — existing part5 had only 6 tests out of 10 | Check existing sibling capacity with `for f in test_foo_part*.mojo; do grep -c '^fn test_[a-z]' $f; done` before creating new part files |
+| Deleting backward tests to fix compile hang | Removed `test_fc1_backward_float32` | Loses test coverage for backward passes | Move to a sibling part file with capacity; a compile hang is a sign the file needs splitting, not test deletion |
+| Using `Float32` in `full()` calls | Passed `Float32(0.1)` as fill value | `full()` signature requires `Float64` fill_value | Check function signatures before assuming type compatibility |
+| No reshape after `global_avgpool2d` | Skipped reshape step before `linear()` | Passed 4D tensor `(B,C,1,1)` to `linear()` which expects 2D | `global_avgpool2d` always returns 4D; always reshape to 2D before FC layers |
+| Splitting VGG16 main() to run only 3 tests | Reduced tests in main() to avoid 4th JIT crash | User rejected — ADR-009 was wrong explanation; root cause was in maxpool2d | Always investigate root cause before applying ADR-009 workarounds |
+| Modifying CI workflow glob unnecessarily | Thought new files would not match existing glob | Glob `test_*.mojo` already covers `test_*_part1.mojo` | Verify existing glob before making workflow changes |
+| Assuming split completeness from file existence | Saw N split files and `.DEPRECATED`, assumed done | Tests were missing from split files — categories of tests omitted | Always verify by comparing `fn test_` lists between original and split files |
 
 ## Results & Parameters
 
@@ -431,8 +558,12 @@ Always re-audit current state.
 | Naming convention | `test_<original>_partN.mojo` |
 | ADR-009 header comment | Required in every split file |
 | Mojo version affected | v0.26.1 (JIT fault in libKGENCompilerRTShared.so) |
+| CI failure rate before fix | ~65% (13/20 runs) |
 | CI failure pattern | Non-deterministic, load-dependent |
 | ADR reference | `docs/adr/ADR-009-heap-corruption-workaround.md` |
+| Count guard script LIMIT | 10 (crash threshold is ~15) |
+| Count guard regex | `^\s*fn test_` with `re.MULTILINE` |
+| Compile hang threshold | >120s compile time signals heavyweight tests needing rebalance |
 
 ### Safe Test Limits by Network Scale (Historical)
 

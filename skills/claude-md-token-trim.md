@@ -5,8 +5,8 @@ description: 'Reduce CLAUDE.md token consumption by replacing verbose/duplicate 
   (2) sections duplicate content already in shared docs, (3) pre-commit markdownlint
   MD060 table errors need fixing alongside trimming.'
 category: documentation
-date: 2026-03-15
-version: 1.0.0
+date: 2026-04-07
+version: 1.1.0
 user-invocable: false
 ---
 ## Overview
@@ -24,23 +24,28 @@ user-invocable: false
 - Sections exist that fully duplicate content in `.claude/shared/` docs
 - Pre-commit `markdownlint-cli2` reports MD060 table column style errors in existing tables
 - A PR/issue requests "reduce CLAUDE.md" or "trim token consumption"
+- Sections contain long code-block examples that explain concepts (not rules)
+- Content duplicates or elaborates on dedicated docs in `.claude/shared/` or `docs/dev/`
 
 ## Verified Workflow
 
 ### Quick Reference
 
 ```bash
-# 1. Count lines
+# 1. Audit sections by line number
+grep -n "^##\|^###\|^####" CLAUDE.md
+
+# 2. Count lines
 wc -l CLAUDE.md
 
-# 2. Run markdownlint before editing (baseline)
+# 3. Run markdownlint before editing (baseline)
 pixi run npx markdownlint-cli2 CLAUDE.md
 
-# 3. After edits, verify
+# 4. After edits, verify
 wc -l CLAUDE.md
 pixi run npx markdownlint-cli2 CLAUDE.md  # must be 0 errors
 
-# 4. Commit + PR
+# 5. Commit + PR
 git add CLAUDE.md
 git commit -m "docs(claude-md): trim CLAUDE.md from X to Y lines"
 gh pr create ...
@@ -66,7 +71,20 @@ pixi run npx markdownlint-cli2 CLAUDE.md 2>&1 > /tmp/after.txt
 diff /tmp/before.txt /tmp/after.txt
 ```
 
-### Step 2 — Identify high-value trim targets
+### Step 2 — Audit sections by category
+
+Read CLAUDE.md headings with line numbers to categorize each section:
+
+```bash
+grep -n "^##\|^###\|^####" CLAUDE.md
+```
+
+Classify each section as:
+- **Keep full**: Critical rules, decision trees, quick-ref tables
+- **Trim examples**: Keep bullets/tables, remove code-block examples
+- **Move + link**: Pure reference content that belongs in `.claude/shared/`
+
+### Step 3 — Identify high-value trim targets
 
 Read the full file and look for:
 
@@ -83,8 +101,30 @@ Read the full file and look for:
 - CRITICAL RULES section (branch protection, PR workflow)
 - Any section with no corresponding link destination
 - Mojo-specific critical patterns (out self, mut, ^, etc.)
+- Decision trees used in every interaction
+- Quick reference tables (e.g., Thinking Budget, Hook Types)
+- Any section prefixed with `⚠️` or containing enforcement language
 
-### Step 3 — Apply edits with Edit tool
+### Step 4 — Apply move+link for reference sections
+
+Create `.claude/shared/<section-name>.md` with full content, then replace
+the CLAUDE.md section with a 2-5 line summary + link:
+
+```markdown
+### Output Style Guidelines
+
+Use repo-relative file paths with line numbers for code references. Structure PR/issue comments with
+`## Summary`, `## Changes Made`, `## Files Modified`, `## Verification` sections.
+
+See [Output Style Guidelines](.claude/shared/output-style-guidelines.md) for complete examples.
+```
+
+**For trim-examples sections** — remove markdown code-block examples that illustrate points already stated in bullet form. Keep:
+- Bullet lists of when/when-not
+- Tables (budget, hook types, tool selection)
+- Decision trees (text-art `├─` style)
+
+### Step 5 — Apply edits with Edit tool
 
 Use the `Edit` tool (not sed/awk) for all edits so changes are reviewable.
 
@@ -113,39 +153,14 @@ All markdown files must follow these standards to pass `markdownlint-cli2` linti
 
 - **MD031/MD040**: Fenced code blocks must have blank lines before/after and a language tag
 - **MD032**: Lists must be surrounded by blank lines
-- **MD022**: Headings must be surrounded by blank lines
-- **MD013**: Lines must not exceed 120 characters (code blocks and URLs exempt)
 
 **Quick check before committing**: blank lines around all code blocks, lists, and headings;
 language on all code fences; no lines >120 chars; file ends with newline.
 
-```bash
-pixi run npx markdownlint-cli2 path/to/file.md
-```
-
 <!-- AFTER: ~12 lines -->
 ```
 
-**Pattern: Collapse verbose CLI blocks**
-
-```markdown
-<!-- BEFORE: Detailed table + pull/run/build sections = 41 lines -->
-
-### Docker Registry (GHCR)
-
-Images published to GHCR: `ghcr.io/homericintelligence/projectodyssey:{main,main-ci,main-prod}`.
-
-```bash
-docker pull ghcr.io/homericintelligence/projectodyssey:main  # ~2GB runtime
-just docker-up    # Start dev environment
-just docker-shell # Open shell in container
-just docker-build-ci runtime  # Build locally
-```
-
-<!-- AFTER: ~8 lines -->
-```
-
-### Step 4 — Fix MD060 table column style errors
+### Step 6 — Fix MD060 table column style errors
 
 MD060 errors occur when table separator rows use compact notation (`|---|---|`) instead of
 spaced notation (`| --- | --- |`). Fix all tables in the file:
@@ -166,7 +181,7 @@ Run markdownlint after each batch of table fixes to confirm:
 pixi run npx markdownlint-cli2 CLAUDE.md 2>&1 | grep MD060
 ```
 
-### Step 5 — Verify and commit
+### Step 7 — Verify and commit
 
 ```bash
 # Final line count
@@ -204,10 +219,14 @@ EOF
 | Running `just pre-commit-all` to validate | Used `just pre-commit-all` as the validation step | Fails with unrelated pixi environment "Text file busy" errors — exit code 1 even when all hooks pass | Run `pixi run npx markdownlint-cli2 CLAUDE.md` directly instead of `just pre-commit-all`; the individual hooks pass even when the recipe itself errors |
 | Assuming MD060 errors were introduced by edits | Saw MD060 in post-edit lint output | Errors existed before edits (confirmed with `git stash` + re-run) | Always baseline lint before editing so you know which errors you introduced vs. which are pre-existing |
 | Editing with Bash sed | Considered `sed -i` for bulk replacements | sed is not the preferred tool per project conventions; edits are not reviewable | Always use the `Edit` tool for file modifications — it shows clear diffs and is tool-auditable |
+| Running `just pre-commit-all` directly | Used `just` command runner | `just` not in PATH in this shell environment | Use `pre-commit` directly from `.pixi/envs/default/bin/pre-commit` |
+| Running `pixi run just pre-commit-all` | Pixi doesn't expose `just` as a run target | `just: command not found` inside pixi env | Run pre-commit directly, not via just |
+| Running `pixi run markdownlint-cli2` | Tried to lint markdown directly | `markdownlint-cli2: command not found` as pixi task | Use `pre-commit run --all-files` which invokes it correctly |
+| Editing main repo instead of worktree | Made all CLAUDE.md edits to `/home/mvillmow/Odyssey2/CLAUDE.md` | Worktree at `.worktrees/issue-3158/` tracks a different branch | Must `cp` changes from main repo to worktree, or edit worktree directly |
 
 ## Results & Parameters
 
-**Session result** (2026-03-15):
+**Session result** (2026-03-15, markdownlint + MD060):
 
 - File: `CLAUDE.md`
 - Before: 1,257 lines
@@ -216,7 +235,13 @@ EOF
 - Target was ≤1,200 lines — achieved ≤1,012
 - Markdownlint: 0 errors after fixing MD060 in 3 tables
 
-**Sections trimmed and savings:**
+**Session result** (2026-03-05, move+link approach):
+
+- Before: 1,786 lines
+- After: 1,199 lines
+- Reduction: 587 lines (33%)
+
+**Sections trimmed and savings (markdownlint session):**
 
 | Section | Lines Saved | Technique |
 | ------- | ----------- | --------- |
@@ -226,3 +251,24 @@ EOF
 | Docker Registry detailed table + sections | ~33 | Collapse to 8-line summary |
 | Agent Testing per-script commands | ~28 | Collapse to single loop + one-line summary |
 | MD060 table fixes (3 tables) | -3 | Spacing fixes added 3 lines |
+
+**Sections moved to `.claude/shared/` (move+link session):**
+
+| New File | Content Moved From | Lines Saved |
+|----------|-------------------|-------------|
+| `.claude/shared/output-style-guidelines.md` | Output Style Guidelines section | ~144 lines |
+| `.claude/shared/tool-use-optimization.md` | Tool Use Optimization + Agentic Loop Patterns | ~210 lines |
+
+**Key preservation rules** — always keep in CLAUDE.md (never move to shared):
+- `## ⚠️ CRITICAL RULES` section in full
+- Git workflow with concrete `gh pr create` examples
+- Commit message format with HEREDOC example
+- `### Mojo Development Guidelines` (Critical Patterns table)
+- All `### Pre-Commit Hook Policy - STRICT ENFORCEMENT` content
+
+**Pre-commit invocation** (workaround for GLIBC environment issues):
+
+```bash
+# Works — skips mojo-format which fails due to GLIBC version mismatch
+SKIP=mojo-format /path/to/.pixi/envs/default/bin/pre-commit run --all-files
+```
