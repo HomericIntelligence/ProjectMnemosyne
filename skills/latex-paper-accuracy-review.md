@@ -3,10 +3,10 @@ name: latex-paper-accuracy-review
 description: Review a LaTeX research paper for factual accuracy against raw experiment
   data, statistical outputs, and codebase constants before publication
 category: documentation
-date: 2026-04-07
-version: 6.0.0
+date: 2026-04-08
+version: 7.0.0
 user-invocable: false
-tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex, rounding, BCa-bootstrap, pass-classification, grading-scale, majority-vote, cliffs-delta, myrmidon-swarm, causal-language, H-comparison, CI-rehabilitation, cross-reference-rename, abstract-conclusions-redundancy, prose-data-direction, duration-direction, pareto-dominance, consistently-contradiction, monotonic-degradation]
+tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex, rounding, BCa-bootstrap, pass-classification, grading-scale, majority-vote, cliffs-delta, myrmidon-swarm, causal-language, H-comparison, CI-rehabilitation, cross-reference-rename, abstract-conclusions-redundancy, prose-data-direction, duration-direction, pareto-dominance, consistently-contradiction, monotonic-degradation, eliminates-possibility, unobserved-mechanism, pareto-definite-article, BCa-binary-n9, alpha-aggregation, SRH-tie-correction, untracked-reproducibility-script, cross-section-regression]
 ---
 # Skill: latex-paper-accuracy-review
 
@@ -14,7 +14,7 @@ tags: [latex, paper, review, accuracy, statistics, data-verification, publicatio
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0), 2026-04-06 (v3.0.0, v3.1.0, v4.0.0), 2026-04-07 (v5.0.0, v6.0.0) |
+| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0), 2026-04-06 (v3.0.0, v3.1.0, v4.0.0), 2026-04-07 (v5.0.0, v6.0.0), 2026-04-08 (v7.0.0) |
 | Category | documentation |
 | Objective | Review a LaTeX research paper for factual accuracy against raw experiment data, statistical outputs, and codebase source files |
 | Outcome | Seven successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs; v3.0.0 discovered bootstrap CIs mislabeled as Clopper-Pearson, 536 missing judge evaluations, and BH monotonicity comment errors; v3.1.0 found 2 cost rounding errors, 16 pass/score>0.5 mismatches, and unnamed bootstrap CI method; v4.0.0 found grading scale paper-vs-code mismatch (864/1080 rows), pass classification mechanism wrong (majority vote vs threshold), Cliff's delta FAIR vs journal convention, judge agreement N on pivoted data, and recurring column specifier off-by-one; v5.0.0 found causal language in observational study headings, H-statistic comparison across different df, non-significant result rehabilitated via uncorrected CI, undefined cross-reference from section rename, and abstract/conclusions near-verbatim redundancy; v6.0.0 found duration direction claim factually wrong (Cliff's delta sign misinterpreted), "consistently" contradicts "task-contingent" in same paragraph, "monotonic degradation" from non-monotonic per-task data, "spends computational budget" vs 17s fast-failure evidence, and Pareto-dominance asserted from non-significant cost difference. New pattern category: prose-data direction alignment. All 5 myrmidon agents achieved 0% false positive rate. |
@@ -409,6 +409,49 @@ print(f'Mismatches: {mismatches}')
 **Fix:** Added "$p=0.676$, non-significant" caveats and per-task exceptions at all 3 locations
 **Category:** Prose-data direction alignment -- claiming dominance from a non-significant statistical test
 
+### Pattern 36: Cross-section regression from prior fix (NEW in v7.0.0)
+**Symptom:** Abstract was fixed in v6 to say "outperform in aggregate" but Conclusions still said "consistently outperform"
+**Root cause:** When fixing a word in one section, the same word in other sections (Abstract, Introduction, Discussion, Conclusions) may not be updated. Each section is edited independently and prior fixes can be missed.
+**Detection:** After any hedging fix, grep for the old phrasing across ALL sections. Use `grep -n 'old_word' paper.tex` to find all occurrences.
+**Fix:** Changed Conclusions to match Abstract: "outperform in aggregate" with task-dependent reversal note
+**Category:** Cross-section regression -- a fix applied to one section creates an inconsistency with other sections that use the same language
+
+### Pattern 37: "Eliminates the possibility" from non-significant result (NEW in v7.0.0)
+**Symptom:** Paper said non-significant cost finding "eliminates the possibility of a cost--quality trade-off" and calls quality degradation "a pure loss"
+**Root cause:** A non-significant result under low power does not eliminate the possibility -- it merely fails to detect a difference. The paper's own Limitations section acknowledged this, creating an internal contradiction.
+**Detection:** When a null/n.s. finding is described as "eliminating" or "ruling out" something, verify the power analysis supports such strong language
+**Fix:** Changed to "provides no evidence of a cost--quality trade-off under current statistical power" and "appears as a net loss with no detected compensating benefit"
+
+### Pattern 38: Unobserved mechanistic claim in observational study (NEW in v7.0.0)
+**Symptom:** Paper claimed coordination overhead is "not additive but multiplicative" -- positing a specific functional form from observational data
+**Root cause:** The study observes a zero pass rate but cannot distinguish additive from multiplicative failure mechanisms. The mechanistic claim goes beyond what the data can support.
+**Detection:** Look for claims about HOW something works (mechanism) vs WHAT was observed (association). Mechanistic claims require experimental manipulation, not just observation.
+**Fix:** Changed to threshold/catastrophic framing with "the specific failure mechanism cannot be determined from observational data alone"
+
+### Pattern 39: Definite article for one-of-many Pareto-optimal tiers (NEW in v7.0.0)
+**Symptom:** Paper said T2 is "the aggregate Pareto-optimal tier" but T0 and T1 are also on the Pareto frontier
+**Root cause:** When multiple tiers are Pareto-optimal, using "the" implies singularity. T2 is the highest-pass-rate Pareto-optimal tier, but not the only one.
+**Detection:** When Pareto language uses "the," verify the tier is uniquely optimal, not one of several
+**Fix:** Changed to "the highest-pass-rate Pareto-optimal tier in the aggregate data (T0 and T1 also lie on the Pareto frontier at similar costs)"
+
+### Pattern 40: BCa bootstrap for binary data at very small n (NEW in v7.0.0)
+**Symptom:** Paper used BCa bootstrap CI [0.333, 0.889] for T6 pass rate with n=9 binary observations without noting BCa-specific limitations
+**Root cause:** BCa bootstrap has poor coverage properties for binary data at n=9 because the jackknife influence values are degenerate. The Clopper-Pearson exact interval is methodologically more appropriate.
+**Detection:** When bootstrap CIs are reported for binary outcomes at n<20, check whether the BCa method's small-sample limitations are acknowledged
+**Fix:** Added note about BCa coverage properties and Clopper-Pearson exact interval [0.299, 0.901] for comparison
+
+### Pattern 41: Krippendorff alpha computed on experiment-averaged data (NEW in v7.0.0)
+**Symptom:** Paper reported alpha on N=360 scores averaged across experiments, without noting that averaging conflates inter-experiment variability with inter-rater disagreement
+**Root cause:** The analysis code pivots by (tier, subtest, run_number) WITHOUT experiment, causing mean aggregation across experiments. This is a valid methodological choice but changes what alpha measures.
+**Detection:** When alpha is reported with a specific N, verify the aggregation unit and whether averaging across conditions was performed
+**Fix:** Added disclosure noting the averaging and its methodological implication
+
+### Pattern 42: Untracked script producing paper's central finding (NEW in v7.0.0)
+**Symptom:** `scripts/analyze_tier_task_interaction.py` was untracked in git despite being the source of the paper's SRH tier×experiment interaction results (H=223.5)
+**Root cause:** The main export pipeline (`export_data.py`) runs SRH with agent_model as factor_a, which degenerates with a single model. A separate script was written for the correct tier×experiment analysis but never committed.
+**Detection:** For every data file cited in the paper's reproducibility section, verify the generating script is tracked in version control
+**Fix:** Committed the script to the repository
+
 ## Key Source Files for ProjectScylla Papers
 
 | Claim type | Source file |
@@ -436,6 +479,34 @@ print(f'Mismatches: {mismatches}')
 | Table generation (column specs) | `scylla/reporting/` (check tabular specifier generation for off-by-one) |
 
 ## Results & Parameters
+
+### Session outcome v7.0.0 (2026-04-08)
+- Paper: `docs/arxiv/haiku/paper.tex` (eighth review pass -- 1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
+- Model: Opus 4.6 (1M context)
+- Review approach: Consulted prior review skills (v6.0.0), 3 parallel Explore agents, then full myrmidon swarm (2 Sonnet professors + 3 Haiku students) + 3 implementation reviewers (Sonnet code review, Sonnet strict pipeline, Haiku health check)
+- New pattern category: **cross-section regression** -- where a fix applied in one section creates an inconsistency with other sections using the same language
+- New patterns discovered: 7
+  - Pattern 36: Cross-section regression from prior fix ("consistently" fixed in Abstract but not Conclusions)
+  - Pattern 37: "Eliminates the possibility" from non-significant result (overstated null under low power)
+  - Pattern 38: Unobserved mechanistic claim ("not additive but multiplicative") in observational study
+  - Pattern 39: Definite article for one-of-many Pareto-optimal tiers ("the" → "a/the highest-pass-rate")
+  - Pattern 40: BCa bootstrap for binary data at very small n (n=9, poor coverage properties)
+  - Pattern 41: Krippendorff alpha computed on experiment-averaged data (conflates variability sources)
+  - Pattern 42: Untracked script producing paper's central finding (reproducibility failure)
+- Myrmidon swarm results:
+  - Professor 1 (Sonnet, statistical methodology): BCa n=9, alpha aggregation, untracked script, SRH ties; 0/7 (0% FP)
+  - Professor 2 (Sonnet, narrative consistency): "consistently" regression, "eliminates possibility", "multiplicative", Pareto article, "two-cluster", Finding titles, Abstract-Conclusions overlap; 0/10 (0% FP)
+  - Student 1 (Haiku, inline number verification): 43/43 match after FP dismissal; 1 FP (misread line attribution)
+  - Student 2 (Haiku, table cross-check): 139 cells, 15 FPs from wrong computation method (ddof=0 vs ddof=1, raw vs pivoted); 0 real mismatches after independent verification
+  - Student 3 (Haiku, appendix/figure verification): 56/56 verified; 0% FP
+  - Code Review (Sonnet): SRH negative ss_ab, Holm docstring error; Cliff's delta, Pareto, bootstrap, pass classification all verified correct
+  - Strict Pipeline (Sonnet): Grade B-, is_valid parsing bug (latent, all data has is_valid=True), N/A-as-zero in impl_rate
+  - Health Check (Haiku): PASS, no showstoppers
+- Key improvement over v6.0.0: (1) Haiku FP rate for computation-based tasks remains problematic when not given exact formulas/parameters (ddof, pivot method), (2) cross-section regression is a new error class not previously catalogued, (3) implementation review found latent code bugs that don't affect current paper but could affect future papers
+- Edits applied: 10 edits across CRITICAL (1), IMPORTANT (6), MINOR (3) severity levels
+- Build: `pixi run --environment docs paper-build` (clean, 991,600 bytes, 14 files, 51 pages)
+- Verification level: verified-local
+- PR: HomericIntelligence/ProjectScylla#1756
 
 ### Session outcome v6.0.0 (2026-04-07)
 - Paper: `docs/arxiv/haiku/paper.tex` (seventh review pass -- 1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
@@ -577,6 +648,7 @@ Minor:
 | ProjectScylla | Haiku analysis paper v4.0.0 (2026-04-06) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 | ProjectScylla | Haiku analysis paper v5.0.0 (2026-04-07) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 | ProjectScylla | Haiku analysis paper v6.0.0 (2026-04-07) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
+| ProjectScylla | Haiku analysis paper v7.0.0 (2026-04-08) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 
 ## Failed Attempts
 
