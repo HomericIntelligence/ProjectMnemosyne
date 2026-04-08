@@ -4,9 +4,9 @@ description: Review a LaTeX research paper for factual accuracy against raw expe
   data, statistical outputs, and codebase constants before publication
 category: documentation
 date: 2026-04-07
-version: 5.0.0
+version: 6.0.0
 user-invocable: false
-tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex, rounding, BCa-bootstrap, pass-classification, grading-scale, majority-vote, cliffs-delta, myrmidon-swarm, causal-language, H-comparison, CI-rehabilitation, cross-reference-rename, abstract-conclusions-redundancy]
+tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex, rounding, BCa-bootstrap, pass-classification, grading-scale, majority-vote, cliffs-delta, myrmidon-swarm, causal-language, H-comparison, CI-rehabilitation, cross-reference-rename, abstract-conclusions-redundancy, prose-data-direction, duration-direction, pareto-dominance, consistently-contradiction, monotonic-degradation]
 ---
 # Skill: latex-paper-accuracy-review
 
@@ -14,10 +14,10 @@ tags: [latex, paper, review, accuracy, statistics, data-verification, publicatio
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0), 2026-04-06 (v3.0.0, v3.1.0, v4.0.0), 2026-04-07 (v5.0.0) |
+| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0), 2026-04-06 (v3.0.0, v3.1.0, v4.0.0), 2026-04-07 (v5.0.0, v6.0.0) |
 | Category | documentation |
 | Objective | Review a LaTeX research paper for factual accuracy against raw experiment data, statistical outputs, and codebase source files |
-| Outcome | Six successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs; v3.0.0 discovered bootstrap CIs mislabeled as Clopper-Pearson, 536 missing judge evaluations, and BH monotonicity comment errors; v3.1.0 found 2 cost rounding errors, 16 pass/score>0.5 mismatches, and unnamed bootstrap CI method; v4.0.0 found grading scale paper-vs-code mismatch (864/1080 rows), pass classification mechanism wrong (majority vote vs threshold), Cliff's delta FAIR vs journal convention, judge agreement N on pivoted data, and recurring column specifier off-by-one; v5.0.0 found causal language in observational study headings, H-statistic comparison across different df, non-significant result rehabilitated via uncorrected CI, undefined cross-reference from section rename, and abstract/conclusions near-verbatim redundancy. Used full myrmidon swarm with systematic false positive tracking. |
+| Outcome | Seven successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs; v3.0.0 discovered bootstrap CIs mislabeled as Clopper-Pearson, 536 missing judge evaluations, and BH monotonicity comment errors; v3.1.0 found 2 cost rounding errors, 16 pass/score>0.5 mismatches, and unnamed bootstrap CI method; v4.0.0 found grading scale paper-vs-code mismatch (864/1080 rows), pass classification mechanism wrong (majority vote vs threshold), Cliff's delta FAIR vs journal convention, judge agreement N on pivoted data, and recurring column specifier off-by-one; v5.0.0 found causal language in observational study headings, H-statistic comparison across different df, non-significant result rehabilitated via uncorrected CI, undefined cross-reference from section rename, and abstract/conclusions near-verbatim redundancy; v6.0.0 found duration direction claim factually wrong (Cliff's delta sign misinterpreted), "consistently" contradicts "task-contingent" in same paragraph, "monotonic degradation" from non-monotonic per-task data, "spends computational budget" vs 17s fast-failure evidence, and Pareto-dominance asserted from non-significant cost difference. New pattern category: prose-data direction alignment. All 5 myrmidon agents achieved 0% false positive rate. |
 
 ## When to Use
 
@@ -40,6 +40,11 @@ tags: [latex, paper, review, accuracy, statistics, data-verification, publicatio
 - When a non-significant result (after multiple comparison correction) is rehabilitated using an uncorrected confidence interval
 - When sections have been renamed during iterative editing and cross-references may be stale
 - When the Abstract and Conclusions contain near-verbatim repetition of the same statistics
+- When paper prose interprets the direction of an effect size (e.g., Cliff's delta sign) and the interpretation may be backwards
+- When paper uses universality words ("consistently", "always", "invariably") adjacent to hedging words ("task-dependent", "contingent") creating logical contradictions
+- When paper claims "monotonic" trends from aggregate data that may not hold per-experiment
+- When paper describes resource consumption (e.g., "spends computational budget") but duration data suggests fast failures
+- When paper asserts Pareto-dominance but one of the dimensions has a non-significant statistical test
 
 ## Verified Workflow
 
@@ -125,10 +130,11 @@ For thorough academic review, deploy a myrmidon swarm with role-based specializa
 
 **What works well**: Sonnet professors catch higher-level framing and logic issues that mechanical checking misses (e.g., "first" without hedging, causal language, missing T6 caveats, Pareto qualification needed, pseudoreplication concerns, H-statistic comparison validity across different df).
 
-**False positive tracking (NEW in v5.0.0)**: Always verify agent claims before accepting them. In v5.0.0, Student 3 reported "7 critical undefined references" that were all false positives because the labels existed in `\input{}` table files that Haiku did not check. False positive rates by task type:
-- Haiku on mechanical number verification: 0% false positive (excellent)
-- Haiku on structural analysis (cross-references, labels): ~50% false positive (check `\input{}` files)
-- Sonnet on higher-level methodology: low false positive (1 debatable of 8 in v5.0.0)
+**False positive tracking (NEW in v5.0.0, UPDATED in v6.0.0)**: Always verify agent claims before accepting them. In v5.0.0, Student 3 reported "7 critical undefined references" that were all false positives because the labels existed in `\input{}` table files that Haiku did not check. In v6.0.0, all 5 agents achieved 0% false positive rate due to: (1) explicit instructions to check `\input{}` files for labels, (2) providing EXACT formulas to Haiku students. False positive rates by task type:
+- Haiku on mechanical number verification: 0% false positive (excellent, consistent across v5.0.0 and v6.0.0)
+- Haiku on structural analysis (cross-references, labels): ~50% false positive in v5.0.0, improved to 0% in v6.0.0 after adding `\input{}` check instructions
+- Sonnet on higher-level methodology: low false positive (1 debatable of 8 in v5.0.0, 0 of 18 in v6.0.0)
+- **Column name mismatch resilience**: Haiku students adapted correctly even when given wrong CSV column names in the prompt (consensus_score/total_cost instead of score/cost_usd) -- but this should be fixed in the prompt to avoid unnecessary adaptation overhead
 
 ### Step 3: Prioritize fixes
 
@@ -161,7 +167,7 @@ Conventional commit with full list of issues fixed in the message body.
 
 ```bash
 # Key source files to verify against
-runs.csv              # Ground truth: individual run data (scores, costs, durations)
+runs.csv              # Ground truth: individual run data (columns: score, cost_usd, duration_seconds, passed, etc.)
 summary.json          # Aggregated experiment statistics
 statistical_results.json  # omnibus_tests (KW), pairwise_comparisons, effect_sizes
 srh_tier_experiment.json  # SRH interaction tests (tier/experiment factors)
@@ -368,6 +374,41 @@ print(f'Mismatches: {mismatches}')
 **Detection:** Compare the Abstract and Conclusions side by side; flag any sentences that share >80% of their words
 **Fix:** The Abstract should state results concisely for readers deciding whether to read the paper. The Conclusions should synthesize findings, discuss implications, and add interpretive insight. Conclusions should use interpretive language referencing findings (e.g., "These results suggest...") rather than restating raw statistics verbatim.
 
+### Pattern 31: Duration direction claim factually wrong (NEW in v6.0.0)
+**Symptom:** Paper said "Delegation-based tiers tend to run longer" but data shows T2 mean=362.7s vs T3 mean=247.8s (T3 runs SHORTER)
+**Root cause:** Cliff's delta=-0.154 for T2->T3 means T3 is stochastically shorter, not longer. T4-T6 on test-001 complete in ~17s (immediate orchestration failures) vs T0-T2 taking 430-505s. The negative delta reflects the fast-failure mode pulling delegation tier durations down.
+**Detection:** Always verify the direction interpretation of Cliff's delta -- a negative delta for group1->group2 means group2 has stochastically LOWER values, not higher
+**Fix:** Correct to "T3 runs are stochastically shorter than T2, driven partly by rapid failures"
+**Category:** Prose-data direction alignment -- the prose draws the OPPOSITE conclusion from what the data shows, not because the numbers are wrong, but because the interpretation is backwards
+
+### Pattern 32: "Consistently" contradicts "task-contingent" in same paragraph (NEW in v6.0.0)
+**Symptom:** Abstract said "simpler architectures consistently outperform" then immediately "task-contingent rather than universally applied"
+**Root cause:** "Consistently" implies universality; "task-contingent" denies universality -- logical contradiction. test-002 shows monotonic POSITIVE trend (T0=0.903 -> T6=1.000), directly contradicting "consistently"
+**Detection:** Search for universality words ("consistently", "always", "invariably") near hedging words ("task-dependent", "contingent") -- they create logical contradictions
+**Fix:** Changed to "outperform in aggregate, though task-dependent effects are strong"
+**Category:** Prose-data direction alignment -- adjacent sentences make logically incompatible claims
+
+### Pattern 33: "Monotonic degradation" from non-monotonic data (NEW in v6.0.0)
+**Symptom:** Paper claimed "monotonic degradation across the full tier spectrum" for T0->T6 aggregate
+**Root cause:** test-002 shows monotonic IMPROVEMENT, and test-003 shows near-flat performance. The aggregate is monotonic only because test-001's catastrophic T3-T6 failures dominate.
+**Detection:** When a paper claims "monotonic" for aggregate data, check per-experiment trends. An aggregate monotonic trend can mask non-monotonic per-experiment behavior.
+**Fix:** Changed to "negative in aggregate, though not monotonic across all tasks"
+**Category:** Prose-data direction alignment -- aggregate trend does not represent individual experiment behavior
+
+### Pattern 34: "Spends computational budget" vs fast-failure evidence (NEW in v6.0.0)
+**Symptom:** Paper said agent "spends its computational budget managing delegation" for T4-T6 on test-001
+**Root cause:** T4-T6 complete in mean ~17s with zero evaluable output, while T0-T2 take 430-505s. 17s is consistent with immediate orchestration setup error, NOT with spending computational budget.
+**Detection:** Cross-check prose claims about resource consumption against duration data. If a tier completes in <30s with zero output, it did not "spend" anything -- it failed immediately.
+**Fix:** Changed to "encounters a fatal orchestration error immediately rather than exhausting its computational budget"
+**Category:** Prose-data direction alignment -- prose describes slow resource consumption when data shows instant failure
+
+### Pattern 35: Pareto-dominance asserted from non-significant cost difference (NEW in v6.0.0)
+**Symptom:** Paper asserted "strictly Pareto-dominant" and "Pareto-dominated" at 3 locations
+**Root cause:** Cost invariance is p=0.676 (non-significant under limited power). Cannot claim Pareto dominance on a dimension where the null hypothesis is not rejected. Additionally, T2 is NOT Pareto-optimal for test-002 (T5 dominates with same pass rate, lower CoP).
+**Detection:** When "Pareto" language appears, verify both dimensions are established (one significant, one at least equal). If either dimension has a non-significant test, Pareto dominance is not established.
+**Fix:** Added "$p=0.676$, non-significant" caveats and per-task exceptions at all 3 locations
+**Category:** Prose-data direction alignment -- claiming dominance from a non-significant statistical test
+
 ## Key Source Files for ProjectScylla Papers
 
 | Claim type | Source file |
@@ -395,6 +436,29 @@ print(f'Mismatches: {mismatches}')
 | Table generation (column specs) | `scylla/reporting/` (check tabular specifier generation for off-by-one) |
 
 ## Results & Parameters
+
+### Session outcome v6.0.0 (2026-04-07)
+- Paper: `docs/arxiv/haiku/paper.tex` (seventh review pass -- 1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
+- Model: Opus 4.6 (1M context)
+- Review approach: Consulted prior review skills (v5.0.0), 3 parallel Explore agents, then full myrmidon swarm (2 Sonnet professors + 3 Haiku students) with systematic false positive tracking
+- New pattern category: **prose-data direction alignment** -- where the prose draws the OPPOSITE conclusion from what the data shows, not because the numbers are wrong, but because the interpretation is backwards
+- New patterns discovered: 5
+  - Pattern 31: Duration direction claim factually wrong (Cliff's delta sign misinterpreted -- T3 runs SHORTER, not longer)
+  - Pattern 32: "Consistently" contradicts "task-contingent" in same paragraph (logical contradiction in Abstract)
+  - Pattern 33: "Monotonic degradation" from non-monotonic per-task data (aggregate masks individual behavior)
+  - Pattern 34: "Spends computational budget" vs 17s fast-failure evidence (instant failure, not slow consumption)
+  - Pattern 35: Pareto-dominance asserted from non-significant cost difference (p=0.676, not established)
+- Myrmidon swarm results (all 5 agents achieved 0% false positive rate):
+  - Professor 1 (Sonnet, statistical methodology): H-stat rounding 91.34/91.3, CI/p tension, KW on binary, Pareto from n.s., "simpler is better" overgeneralization; 0/7 (0% FP)
+  - Professor 2 (Sonnet, logical consistency): Duration direction WRONG, "consistently" contradiction, test-002 underexplained, 17s fast failures, T0-ST00 anomaly, task classifier unsupported, alpha implications; 0/11 (0% FP)
+  - Student 1 (Haiku, inline table verification): 104/105 match, 1 CoP rounding (test-003 T5: 0.106->0.105); 0% FP
+  - Student 2 (Haiku, summary/stats verification): 61/61 match, all KW/SRH/pairwise values correct; 0% FP
+  - Student 3 (Haiku, LaTeX quality): 120/120 structural elements clean; 0% FP
+- Key improvements over v5.0.0: (1) explicit `\input{}` check instructions eliminated Haiku structural FPs, (2) EXACT formulas for Haiku students, (3) Professor 2's duration verification was most valuable finding
+- Edits applied: 14 edits across CRITICAL (3), IMPORTANT (7), MINOR (3) severity levels
+- Build: `pixi run --environment docs paper-build` (clean, 43,228 bytes, 14 files)
+- Verification level: verified-local
+- PR: HomericIntelligence/ProjectScylla (fix-paper-accuracy-v5 branch)
 
 ### Session outcome v5.0.0 (2026-04-07)
 - Paper: `docs/arxiv/haiku/paper.tex` (sixth review pass -- 1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
@@ -512,6 +576,7 @@ Minor:
 | ProjectScylla | Haiku analysis paper v3.1.0 (2026-04-06) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 | ProjectScylla | Haiku analysis paper v4.0.0 (2026-04-06) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 | ProjectScylla | Haiku analysis paper v5.0.0 (2026-04-07) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
+| ProjectScylla | Haiku analysis paper v6.0.0 (2026-04-07) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 
 ## Failed Attempts
 
@@ -526,3 +591,5 @@ Minor:
 | Haiku student computing consistency incorrectly | Student 1 computed consistency at run-level instead of subtest-level | Produced false positive discrepancies in consistency metrics | Same lesson: provide the exact formula and aggregation level |
 | Haiku student reporting false positive undefined references | Student 3 reported 7 "critical" undefined `\ref{}` targets | Labels existed in `\input{}` table files that Haiku did not check | When Haiku students check LaTeX cross-references, explicitly instruct them to also check `\input{}` files for `\label{}` definitions |
 | Using uncorrected CI to rehabilitate non-significant test | Tried to claim T3-T4 effect via "bootstrap CI excluding zero" after Holm correction showed p=0.058 (n.s.) | The bootstrap CI is uncorrected for multiple comparisons; a Holm-consistent CI would include zero | CI and hypothesis test must use the same multiple comparison correction level; cannot mix corrected test with uncorrected CI |
+| Initial prompt gave wrong CSV column names | Prompt specified `consensus_score` and `total_cost` as column names for runs.csv | Actual column names are `score` and `cost_usd`; Haiku students adapted but had to infer the mapping | Always verify CSV column names before writing myrmidon prompts; use `head -1 data/runs.csv` to get actual headers |
+| Phase 1 source data agent miscounted pass/score mismatches | Agent reported 12 passed-vs-score>0.5 mismatches | Correct count is 16 (already known from v3.1.0 calibration); agent used wrong threshold or subset | Always calibrate Phase 1 exploration results against known ground truth from prior review rounds before trusting them |
