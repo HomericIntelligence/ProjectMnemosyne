@@ -1,5 +1,45 @@
 # latex-paper-accuracy-review — History
 
+## v5.0.0 (2026-04-07)
+
+**Changed by:** Session — Sixth review pass with full myrmidon swarm + systematic false positive tracking (Opus 4.6, 1M context)
+**Verification:** verified-local (pixi run paper-build, clean, 43,228 bytes, 14 files)
+
+### What changed
+- Bumped version from 4.0.0 to 5.0.0
+- Added 5 new error patterns: Pattern 26 (causal language in observational study headings), Pattern 27 (H-statistic comparison across different df), Pattern 28 (non-significant result rehabilitated via uncorrected CI), Pattern 29 (undefined cross-reference from section rename), Pattern 30 (abstract/conclusions near-verbatim redundancy)
+- Added systematic false positive tracking to Step 2c (Myrmidon swarm)
+- Updated false positive rates by task type in Step 2c: Haiku structural analysis ~50% FP, Haiku mechanical verification 0%, Sonnet methodology low FP
+- Added "When to Use" triggers for causal language, H-statistic comparison, CI rehabilitation, section renames, abstract/conclusions redundancy
+- Added 1 new Failed Attempts row (using uncorrected CI to rehabilitate non-significant test)
+- Added v5.0.0 session outcome to Results & Parameters
+- Added v5.0.0 row to Verified On table
+- Added tags: causal-language, H-comparison, CI-rehabilitation, cross-reference-rename, abstract-conclusions-redundancy
+- Key shift: After 5 prior rounds, remaining issues shifted from data accuracy to interpretive framing
+
+### Why
+Sixth review pass of `docs/arxiv/haiku/paper.tex`. After 5 prior review rounds, deployed full myrmidon swarm (2 Sonnet professors + 3 Haiku students) with systematic false positive tracking. Found causal language in observational study headings (internal contradiction with threats section), H-statistic comparison across different df (not directly comparable), non-significant result rehabilitated via uncorrected CI (T3-T4 p=0.058 n.s. after Holm), undefined cross-reference from section rename, and abstract/conclusions near-verbatim redundancy.
+
+### Previous version (v4.0.0) snapshot
+
+Key v4.0.0 content before this amendment:
+
+```markdown
+date: 2026-04-06
+version: 4.0.0
+tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex, rounding, BCa-bootstrap, pass-classification, grading-scale, majority-vote, cliffs-delta, myrmidon-swarm]
+
+| Outcome | Five successful sessions -- v1.0.0, v2.0.0, v3.0.0, v3.1.0, v4.0.0 |
+
+## Common Error Patterns
+Patterns 1-25 (no Patterns 26-30)
+
+## Myrmidon swarm
+Step 2c existed but without systematic false positive tracking
+```
+
+---
+
 ## v4.0.0 (2026-04-06)
 
 **Changed by:** Session — Fifth review pass with myrmidon swarm (Opus 4.6, 1M context)

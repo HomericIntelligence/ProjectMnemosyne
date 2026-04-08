@@ -1,3 +1,97 @@
+## 2026-04-07: latex-paper-accuracy-review v6.0.0 — Seventh Review Pass: Prose-Data Direction Alignment
+
+Session: ProjectScylla v6.0 academic review of docs/arxiv/haiku/paper.tex (1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
+Model: Opus 4.6 (1M context)
+PR: HomericIntelligence/ProjectScylla (fix-paper-accuracy-v5 branch, uncommitted changes from v5 + v6 fixes)
+
+### Review methodology
+- Phase 1: Consulted prior review skills (v5.0.0) from ProjectMnemosyne
+- Phase 2: 3 parallel Explore agents (paper text, source data, LaTeX structure)
+- Phase 3: Full myrmidon swarm (2 Sonnet professors + 3 Haiku students) with systematic false positive tracking
+- Phase 4: Cross-verification of all agent findings before accepting
+- Phase 5: Incremental build verification after each fix batch
+
+### Myrmidon swarm composition and results (v6.0.0)
+
+| Agent | Model | Role | Key Findings | False Positive Rate |
+|-------|-------|------|-------------|---------------------|
+| Professor 1 | Sonnet | Statistical methodology | H-stat rounding 91.34/91.3, CI/p tension, KW on binary, Pareto from n.s., "simpler is better" overgen | 0/7 (0%) |
+| Professor 2 | Sonnet | Logical consistency | Duration direction WRONG, "consistently" contradiction, test-002 underexplained, 17s fast failures, T0-ST00 anomaly, task classifier unsupported, alpha implications | 0/11 (0%) |
+| Student 1 | Haiku | Inline table verification | 104/105 match, 1 CoP rounding (test-003 T5: 0.106->0.105) | 0% |
+| Student 2 | Haiku | Summary/stats verification | 61/61 match, all KW/SRH/pairwise values correct | 0% |
+| Student 3 | Haiku | LaTeX quality | 120/120 structural elements clean | 0% |
+
+### New patterns discovered (31-35) -- NEW CATEGORY: Prose-Data Direction Alignment
+
+**Pattern 31: Duration direction claim factually wrong**
+- Paper said "Delegation-based tiers tend to run longer" but data shows T2 mean=362.7s vs T3 mean=247.8s (T3 runs SHORTER)
+- Cliff's delta=-0.154 for T2->T3 means T3 is stochastically shorter, not longer
+- Root cause: T4-T6 on test-001 complete in ~17s (immediate orchestration failures) vs T0-T2 taking 430-505s
+- The negative delta reflects the fast-failure mode pulling delegation tier durations down
+- Detection: Always verify the direction interpretation of Cliff's delta
+- Fix: Corrected to "T3 runs are stochastically shorter than T2, driven partly by rapid failures"
+
+**Pattern 32: "Consistently" contradicts "task-contingent" in same paragraph**
+- Abstract said "simpler architectures consistently outperform" then immediately "task-contingent rather than universally applied"
+- "Consistently" implies universality; "task-contingent" denies universality -- logical contradiction
+- test-002 shows monotonic POSITIVE trend (T0=0.903 -> T6=1.000), directly contradicting "consistently"
+- Fix: Changed to "outperform in aggregate, though task-dependent effects are strong"
+
+**Pattern 33: "Monotonic degradation" from non-monotonic data**
+- Paper claimed "monotonic degradation across the full tier spectrum" for T0->T6 aggregate
+- But test-002 shows monotonic IMPROVEMENT, and test-003 shows near-flat performance
+- The aggregate is monotonic only because test-001's catastrophic T3-T6 failures dominate
+- Fix: Changed to "negative in aggregate, though not monotonic across all tasks"
+
+**Pattern 34: "Spends computational budget" vs fast-failure evidence**
+- Paper said agent "spends its computational budget managing delegation" for T4-T6 on test-001
+- But T4-T6 complete in mean ~17s with zero evaluable output, while T0-T2 take 430-505s
+- 17s is consistent with immediate orchestration setup error, NOT with spending computational budget
+- Fix: Changed to "encounters a fatal orchestration error immediately rather than exhausting its computational budget"
+
+**Pattern 35: Pareto-dominance asserted from non-significant cost difference**
+- Paper asserted "strictly Pareto-dominant" and "Pareto-dominated" at 3 locations
+- But cost invariance is p=0.676 (non-significant under limited power)
+- Cannot claim Pareto dominance on a dimension where the null hypothesis is not rejected
+- Additionally, T2 is NOT Pareto-optimal for test-002 (T5 dominates with same pass rate, lower CoP)
+- Fix: Added "$p=0.676$, non-significant" caveats and per-task exceptions at all 3 locations
+
+### Key shift at v6.0.0
+After 5 prior rounds focused on data accuracy -> methodology labeling -> interpretive framing, the 6th round found:
+- A factual direction error in duration prose (CRITICAL) that ALL prior rounds missed
+- Logical contradictions between adjacent sentences (Abstract "consistently" vs "task-contingent")
+- Prose claims unsupported by the data they reference (computational budget vs 17s failures)
+- Pareto-dominance assertions from non-significant statistical tests
+
+This represents a new category: **prose-data direction alignment** -- where the prose draws the OPPOSITE conclusion from what the data shows, not because the numbers are wrong, but because the interpretation is backwards.
+
+Review maturity curve updated:
+- Rounds 1-2: Factual errors, arithmetic mistakes, missing data
+- Rounds 3-4: Subtle rounding, methodology labeling, disclosure gaps
+- Round 5: Interpretive framing, causal language, statistical comparison validity
+- Round 6: Prose-data direction alignment, logical contradictions, unsupported claims
+
+### False positive tracking
+- All 5 agents had 0% false positive rate in this round
+- Improvement over v5.0.0 (where Student 3 had ~50% FP on structural analysis) is due to: (1) explicit instructions to check `\input{}` files for labels, (2) providing EXACT formulas to Haiku students
+- Professor agents: 0 false positives across 18 findings (cumulative v6.0.0)
+- Student agents: 0% FP on 286 verified items (104+105 table cells, 61 stats, 120 structural elements - note: 104/105 reflects one legitimate CoP rounding fix)
+
+### What worked well
+- Column name mismatch (runs.csv has `cost_usd` and `score`, not `total_cost` and `consensus_score`) -- Haiku students adapted correctly despite wrong names in prompt
+- Professor 2's duration verification was the most valuable finding of the entire review -- no mechanical check would have caught the direction error
+- Cross-verification of student findings before accepting (confirmed CoP 0.106->0.105 independently)
+
+### What failed
+- The initial prompt gave wrong CSV column names (consensus_score, total_cost) -- students adapted but this should be fixed in the skill
+- The "source data agent" in Phase 1 exploration reported 12 passed-vs-score>0.5 mismatches instead of the correct 16 -- this was caught by the calibration check
+
+### Files changed
+- `docs/arxiv/haiku/paper.tex` -- 14 edits across CRITICAL (3), IMPORTANT (7), MINOR (3) severity levels
+- Build: `pixi run --environment docs paper-build` (clean, 43,228 bytes, 14 files)
+
+---
+
 ## 2026-04-07: latex-paper-accuracy-review v5.0.0 — Sixth Review Pass with Full Myrmidon Swarm + Systematic False Positive Tracking
 
 Session: ProjectScylla v6.0 academic review of docs/arxiv/haiku/paper.tex (1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
