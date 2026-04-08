@@ -4,9 +4,9 @@ description: Review a LaTeX research paper for factual accuracy against raw expe
   data, statistical outputs, and codebase constants before publication
 category: documentation
 date: 2026-04-08
-version: 7.0.0
+version: 8.0.0
 user-invocable: false
-tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex, rounding, BCa-bootstrap, pass-classification, grading-scale, majority-vote, cliffs-delta, myrmidon-swarm, causal-language, H-comparison, CI-rehabilitation, cross-reference-rename, abstract-conclusions-redundancy, prose-data-direction, duration-direction, pareto-dominance, consistently-contradiction, monotonic-degradation, eliminates-possibility, unobserved-mechanism, pareto-definite-article, BCa-binary-n9, alpha-aggregation, SRH-tie-correction, untracked-reproducibility-script, cross-section-regression]
+tags: [latex, paper, review, accuracy, statistics, data-verification, publication, confidence-intervals, iftex, rounding, BCa-bootstrap, pass-classification, grading-scale, majority-vote, cliffs-delta, myrmidon-swarm, causal-language, H-comparison, CI-rehabilitation, cross-reference-rename, abstract-conclusions-redundancy, prose-data-direction, duration-direction, pareto-dominance, consistently-contradiction, monotonic-degradation, eliminates-possibility, unobserved-mechanism, pareto-definite-article, BCa-binary-n9, alpha-aggregation, SRH-tie-correction, untracked-reproducibility-script, cross-section-regression, cost-invariance-overclaiming, build-script-format-mismatch, clopper-pearson-transcription]
 ---
 # Skill: latex-paper-accuracy-review
 
@@ -14,10 +14,10 @@ tags: [latex, paper, review, accuracy, statistics, data-verification, publicatio
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0), 2026-04-06 (v3.0.0, v3.1.0, v4.0.0), 2026-04-07 (v5.0.0, v6.0.0), 2026-04-08 (v7.0.0) |
+| Date | 2026-02-22 (v1.0.0), 2026-04-05 (v2.0.0), 2026-04-06 (v3.0.0, v3.1.0, v4.0.0), 2026-04-07 (v5.0.0, v6.0.0), 2026-04-08 (v7.0.0, v8.0.0) |
 | Category | documentation |
 | Objective | Review a LaTeX research paper for factual accuracy against raw experiment data, statistical outputs, and codebase source files |
-| Outcome | Seven successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs; v3.0.0 discovered bootstrap CIs mislabeled as Clopper-Pearson, 536 missing judge evaluations, and BH monotonicity comment errors; v3.1.0 found 2 cost rounding errors, 16 pass/score>0.5 mismatches, and unnamed bootstrap CI method; v4.0.0 found grading scale paper-vs-code mismatch (864/1080 rows), pass classification mechanism wrong (majority vote vs threshold), Cliff's delta FAIR vs journal convention, judge agreement N on pivoted data, and recurring column specifier off-by-one; v5.0.0 found causal language in observational study headings, H-statistic comparison across different df, non-significant result rehabilitated via uncorrected CI, undefined cross-reference from section rename, and abstract/conclusions near-verbatim redundancy; v6.0.0 found duration direction claim factually wrong (Cliff's delta sign misinterpreted), "consistently" contradicts "task-contingent" in same paragraph, "monotonic degradation" from non-monotonic per-task data, "spends computational budget" vs 17s fast-failure evidence, and Pareto-dominance asserted from non-significant cost difference. New pattern category: prose-data direction alignment. All 5 myrmidon agents achieved 0% false positive rate. |
+| Outcome | Eight successful sessions — v1.0.0 fixed 6 errors + 4 warnings in an 884-line first draft; v2.0.0 verified 30+ claims and fixed 6 critical + 3 important + 1 minor issue in a 2,020-line paper with 1,080 runs; v3.0.0 discovered bootstrap CIs mislabeled as Clopper-Pearson, 536 missing judge evaluations, and BH monotonicity comment errors; v3.1.0 found 2 cost rounding errors, 16 pass/score>0.5 mismatches, and unnamed bootstrap CI method; v4.0.0 found grading scale paper-vs-code mismatch (864/1080 rows), pass classification mechanism wrong (majority vote vs threshold), Cliff's delta FAIR vs journal convention, judge agreement N on pivoted data, and recurring column specifier off-by-one; v5.0.0 found causal language in observational study headings, H-statistic comparison across different df, non-significant result rehabilitated via uncorrected CI, undefined cross-reference from section rename, and abstract/conclusions near-verbatim redundancy; v6.0.0 found duration direction claim factually wrong (Cliff's delta sign misinterpreted), "consistently" contradicts "task-contingent" in same paragraph, "monotonic degradation" from non-monotonic per-task data, "spends computational budget" vs 17s fast-failure evidence, and Pareto-dominance asserted from non-significant cost difference. New pattern category: prose-data direction alignment. All 5 myrmidon agents achieved 0% false positive rate; v7.0.0 found cross-section regression (fixes not propagated across sections), "eliminates possibility" from non-significant result, unobserved mechanistic claim, BCa bootstrap for binary n=9, alpha on experiment-averaged data, and untracked reproducibility script; v8.0.0 found Clopper-Pearson upper bound wrong ([0.299, 0.901] should be [0.299, 0.925]), build script including wrong figure format (PDF vs PNG, submission blocker), cost invariance overclaiming in 4 summary sections, and H-statistic cross-df comparison reframed. All professors achieved 0% FP; Student 1 verified 126/126 correct (0% FP); Student 3 had ~7% FP from wrong aggregation method. |
 
 ## When to Use
 
@@ -45,6 +45,9 @@ tags: [latex, paper, review, accuracy, statistics, data-verification, publicatio
 - When paper claims "monotonic" trends from aggregate data that may not hold per-experiment
 - When paper describes resource consumption (e.g., "spends computational budget") but duration data suggests fast failures
 - When paper asserts Pareto-dominance but one of the dimensions has a non-significant statistical test
+- When summary sections (Abstract, Contributions, Further Work, Appendix) use stronger language than body sections for the same finding -- a sign of cross-section regression after prior hedging fixes
+- When a build/submission script includes figure files by extension (e.g., `*.pdf`) that may not match the actual figure format (e.g., PNG)
+- When Clopper-Pearson confidence intervals are reported and the upper bound may have been transcribed from a different confidence level (e.g., 90% CI upper bound used as 95%)
 
 ## Verified Workflow
 
@@ -130,10 +133,11 @@ For thorough academic review, deploy a myrmidon swarm with role-based specializa
 
 **What works well**: Sonnet professors catch higher-level framing and logic issues that mechanical checking misses (e.g., "first" without hedging, causal language, missing T6 caveats, Pareto qualification needed, pseudoreplication concerns, H-statistic comparison validity across different df).
 
-**False positive tracking (NEW in v5.0.0, UPDATED in v6.0.0)**: Always verify agent claims before accepting them. In v5.0.0, Student 3 reported "7 critical undefined references" that were all false positives because the labels existed in `\input{}` table files that Haiku did not check. In v6.0.0, all 5 agents achieved 0% false positive rate due to: (1) explicit instructions to check `\input{}` files for labels, (2) providing EXACT formulas to Haiku students. False positive rates by task type:
-- Haiku on mechanical number verification: 0% false positive (excellent, consistent across v5.0.0 and v6.0.0)
+**False positive tracking (NEW in v5.0.0, UPDATED in v6.0.0, v7.0.0, v8.0.0)**: Always verify agent claims before accepting them. In v5.0.0, Student 3 reported "7 critical undefined references" that were all false positives because the labels existed in `\input{}` table files that Haiku did not check. In v6.0.0, all 5 agents achieved 0% false positive rate due to: (1) explicit instructions to check `\input{}` files for labels, (2) providing EXACT formulas to Haiku students. In v7.0.0, Student 2 produced 15 FPs from wrong aggregation (ddof=0, raw vs pivoted). In v8.0.0, Student 3 produced ~7% FP on tab03 from computing Spearman/Pearson on raw judges.csv rows instead of pivoted/averaged data. False positive rates by task type:
+- Haiku on mechanical number verification: 0% false positive (excellent, consistent across v5.0.0-v8.0.0; v8.0.0 Student 1 verified 126/126 correct)
+- Haiku on computation-based verification (Spearman, Pearson, CoP): ~7-11% false positive when not given exact aggregation instructions (v7.0.0: 15/139 from ddof/pivot; v8.0.0: 9/132 from raw vs pivoted data)
 - Haiku on structural analysis (cross-references, labels): ~50% false positive in v5.0.0, improved to 0% in v6.0.0 after adding `\input{}` check instructions
-- Sonnet on higher-level methodology: low false positive (1 debatable of 8 in v5.0.0, 0 of 18 in v6.0.0)
+- Sonnet on higher-level methodology: 0% false positive (consistent across v6.0.0-v8.0.0; 0/7 and 0/10 in v7.0.0, maintained in v8.0.0)
 - **Column name mismatch resilience**: Haiku students adapted correctly even when given wrong CSV column names in the prompt (consensus_score/total_cost instead of score/cost_usd) -- but this should be fixed in the prompt to avoid unnecessary adaptation overhead
 
 ### Step 3: Prioritize fixes
@@ -452,6 +456,34 @@ print(f'Mismatches: {mismatches}')
 **Detection:** For every data file cited in the paper's reproducibility section, verify the generating script is tracked in version control
 **Fix:** Committed the script to the repository
 
+### Pattern 43: Cost invariance overclaiming persists in summary sections after body is fixed (NEW in v8.0.0)
+**Symptom:** Body sections properly hedge cost invariance with "non-significant under limited power" but 4 high-visibility summary locations (Abstract, Contributions, Appendix, Further Work) still use strong/unhedged language ("show", "establishing", "explains why invariant")
+**Root cause:** When body sections are fixed to add hedging during one review round, summary sections that reference the same finding are not updated. This is a specific instance of Pattern 36 (cross-section regression) that targets non-significant results where overclaiming is particularly problematic.
+**Detection:** After fixing hedging language for any non-significant result in body sections, grep for the finding's keywords across ALL sections. Summary sections (Abstract, Introduction contributions list, Appendix summaries, Further Work) are the most common locations for regression.
+**Fix:** Propagate identical hedging to all summary sections. Use the same qualifier ("non-significant under limited power") everywhere the finding is referenced.
+**Category:** Cross-section regression -- variant of Pattern 36 specifically for non-significant results
+
+### Pattern 44: Build script includes wrong figure file format (NEW in v8.0.0)
+**Symptom:** `build.sh` line 121 used `figures/*.pdf` glob but all 71 figures in the directory are PNG files, resulting in a submission tarball containing ZERO figure files
+**Root cause:** Build script was written assuming PDF figures (common for LaTeX workflows) but the actual figure generation pipeline produces PNG. The mismatch went undetected because the LaTeX compilation uses `\includegraphics` which finds the files regardless of what the build script packages.
+**Detection:** Verify the build/packaging script's file glob patterns against the actual file formats in the figures directory. Run `ls figures/ | head` to check actual extensions, then grep the build script for file extension patterns.
+**Fix:** Change the glob pattern in the build script to match the actual figure format (e.g., `figures/*.png` instead of `figures/*.pdf`)
+**Category:** Submission blocker -- paper compiles fine but the packaged tarball is incomplete
+
+### Pattern 45: Clopper-Pearson confidence interval transcription error (NEW in v8.0.0)
+**Symptom:** Paper reported Clopper-Pearson 95% CI as [0.299, 0.901] for 6/9 successes, but `scipy.stats.beta.ppf(0.975, 7, 3)` = 0.9251, giving correct interval [0.299, 0.925]. Error of 0.024 on the upper bound.
+**Root cause:** The value 0.901 corresponds approximately to a 90% CI upper bound (`beta.ppf(0.95, 7, 3)` ≈ 0.901), suggesting transcription from the wrong confidence level. The qualitative conclusion is unaffected but exact intervals must be exact.
+**Detection:** Always independently recompute Clopper-Pearson intervals using `scipy.stats.beta.ppf(alpha/2, k, n-k+1)` and `beta.ppf(1-alpha/2, k+1, n-k)`. Compare to 3 decimal places. Watch specifically for values that match a different confidence level (90% vs 95%).
+**Fix:** Replace with correctly computed values. For 6/9 at 95%: [0.299, 0.925].
+**Verification script:**
+```python
+from scipy.stats import beta as beta_dist
+k, n = 6, 9
+lo = beta_dist.ppf(0.025, k, n - k + 1)  # 0.2993
+hi = beta_dist.ppf(0.975, k + 1, n - k)   # 0.9251
+print(f'Clopper-Pearson 95% CI: [{lo:.3f}, {hi:.3f}]')
+```
+
 ## Key Source Files for ProjectScylla Papers
 
 | Claim type | Source file |
@@ -479,6 +511,31 @@ print(f'Mismatches: {mismatches}')
 | Table generation (column specs) | `scylla/reporting/` (check tabular specifier generation for off-by-one) |
 
 ## Results & Parameters
+
+### Session outcome v8.0.0 (2026-04-08)
+- Paper: `docs/arxiv/haiku/paper.tex` (ninth review pass -- 2,176 lines post-v7, 1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
+- Model: Opus 4.6 (1M context)
+- Review approach: Consulted prior review skills (v7.0.0), 3 parallel Explore agents, then full myrmidon swarm (2 Sonnet professors + 3 Haiku students + 1 Sonnet code reviewer + 1 Haiku health checker)
+- New pattern category: **cost invariance overclaiming** -- non-significant results described with unhedged language in summary sections after body sections were fixed
+- New patterns discovered: 3
+  - Pattern 43: Cost invariance overclaiming persists in summary sections (Abstract, Contributions, Appendix, Further Work used "show"/"establishing"/"explains why invariant" while body properly hedged)
+  - Pattern 44: Build script includes wrong figure format (PDF glob vs PNG files, submission blocker -- tarball had ZERO figures)
+  - Pattern 45: Clopper-Pearson transcription error ([0.299, 0.901] should be [0.299, 0.925] for 6/9 at 95% -- upper bound from wrong confidence level)
+- Myrmidon swarm results:
+  - Professor 1 (Sonnet): 0% FP (maintained)
+  - Professor 2 (Sonnet): 0% FP (maintained)
+  - Student 1 (Haiku, inline numbers): 126/126 verified correct; 0% FP
+  - Student 2 (Haiku, cross-references): all checks pass; 0% FP
+  - Student 3 (Haiku, tables): 123/132 match, ~7% FP on tab03 (computed Spearman/Pearson on raw judges.csv rows instead of pivoted/averaged data -- discrepancies of 0.29-0.39 on Spearman)
+  - Code Review (Sonnet): no bugs affecting paper correctness; SRH, bootstrap (BCa, 10k, seed=42), Cliff's delta (FAIR 0.11/0.28/0.43), grade scale all verified correct
+  - Health Check (Haiku): PASS
+- Independent verification: Holm correction confirmed p=0.01763 for T0-T6
+- H-statistic cross-df comparison reframed: removed ranking by raw H across different df, reframed to "all three effects significant at p<0.001"
+- Latent code bug noted: export_data.py SRH degenerates with single-model data (df_a=0) but paper uses separate script
+- Edits applied: 10 (3 critical, 5 important, 1 minor, 1 build script)
+- Build: verified clean diff (+35/-31 lines)
+- Verification level: verified-local (pre-commit infrastructure issues prevented full hook run)
+- Decision: Conditional Go -> Go after fixes
 
 ### Session outcome v7.0.0 (2026-04-08)
 - Paper: `docs/arxiv/haiku/paper.tex` (eighth review pass -- 1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
@@ -649,6 +706,7 @@ Minor:
 | ProjectScylla | Haiku analysis paper v5.0.0 (2026-04-07) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 | ProjectScylla | Haiku analysis paper v6.0.0 (2026-04-07) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 | ProjectScylla | Haiku analysis paper v7.0.0 (2026-04-08) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
+| ProjectScylla | Haiku analysis paper v8.0.0 (2026-04-08) | [notes.md](../skills/latex-paper-accuracy-review.notes.md) |
 
 ## Failed Attempts
 
@@ -665,3 +723,6 @@ Minor:
 | Using uncorrected CI to rehabilitate non-significant test | Tried to claim T3-T4 effect via "bootstrap CI excluding zero" after Holm correction showed p=0.058 (n.s.) | The bootstrap CI is uncorrected for multiple comparisons; a Holm-consistent CI would include zero | CI and hypothesis test must use the same multiple comparison correction level; cannot mix corrected test with uncorrected CI |
 | Initial prompt gave wrong CSV column names | Prompt specified `consensus_score` and `total_cost` as column names for runs.csv | Actual column names are `score` and `cost_usd`; Haiku students adapted but had to infer the mapping | Always verify CSV column names before writing myrmidon prompts; use `head -1 data/runs.csv` to get actual headers |
 | Phase 1 source data agent miscounted pass/score mismatches | Agent reported 12 passed-vs-score>0.5 mismatches | Correct count is 16 (already known from v3.1.0 calibration); agent used wrong threshold or subset | Always calibrate Phase 1 exploration results against known ground truth from prior review rounds before trusting them |
+| Student 3 tab03 false positives from wrong aggregation | Student 3 computed Spearman/Pearson on raw judges.csv rows | Should have pivoted/averaged data first; discrepancies of 0.29-0.39 on Spearman were all FPs | Consistent with v7 finding: Haiku students produce ~7-11% FP when not given exact computation instructions including aggregation method |
+| Clopper-Pearson upper bound transcribed from wrong CI level | Paper reported [0.299, 0.901] for 6/9 at 95% | 0.901 matches 90% CI upper bound; correct 95% is 0.925 | Always recompute CIs independently at the stated confidence level; watch for values matching a different alpha |
+| Build script packaging zero figures | build.sh used `figures/*.pdf` glob | All 71 figures are PNG; tarball contained zero figure files | Verify build script globs against actual file formats before submission |

@@ -1,3 +1,105 @@
+## 2026-04-08: latex-paper-accuracy-review v8.0.0 — Ninth Review Pass: Cost Invariance Overclaiming, Build Script Blocker & CI Transcription Error
+
+Session: ProjectScylla v8.0 academic review of docs/arxiv/haiku/paper.tex (2,176 lines post-v7, 1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
+Model: Opus 4.6 (1M context)
+
+### Review methodology
+- Phase 1: Consulted prior review skills (v7.0.0) from ProjectMnemosyne
+- Phase 2: 3 parallel Explore agents (paper text, source data, LaTeX structure)
+- Phase 3: Full myrmidon swarm (2 Sonnet professors + 3 Haiku students + 1 Sonnet code reviewer + 1 Haiku health checker)
+- Phase 4: Independent verification of all agent findings
+- Phase 5: Build verification after fixes
+
+### Myrmidon swarm composition and results (v8.0.0)
+
+| Agent | Model | Role | Key Findings | False Positive Rate |
+|-------|-------|------|-------------|---------------------|
+| Professor 1 | Sonnet | Statistical methodology | 0% FP maintained | 0% |
+| Professor 2 | Sonnet | Narrative consistency | 0% FP maintained | 0% |
+| Student 1 | Haiku | Inline numbers | 126/126 verified correct | 0/126 (0%) |
+| Student 2 | Haiku | Cross-references | All checks pass | 0% |
+| Student 3 | Haiku | Tables | 123/132 match, ~7% FP on tab03 (wrong aggregation) | 9/132 (6.8%) |
+| Code Review | Sonnet | Pipeline correctness | No bugs affecting paper; SRH, bootstrap, Cliff's delta, grade scale all correct | N/A |
+| Health Check | Haiku | Repo health | PASS | N/A |
+
+### Critical findings
+
+**1. Clopper-Pearson upper bound wrong (CRITICAL)**
+- Paper said [0.299, 0.901] for 6/9 successes
+- `scipy.stats.beta.ppf(0.975, 7, 3)` = 0.9251 -> correct is [0.299, 0.925]
+- Error of 0.024 on the upper bound
+- 0.901 matches approximately a 90% CI upper bound, suggesting transcription from wrong confidence level
+- Qualitative conclusion unaffected but exact interval must be exact
+
+**2. Build script submission blocker (CRITICAL)**
+- build.sh line 121 used `figures/*.pdf` but all 71 figures are PNG
+- Tarball included ZERO figure files
+- Fix: change to `figures/*.png`
+
+**3. Cost invariance language asymmetry (CRITICAL)**
+- 4 high-visibility locations (Abstract line 88, Contributions line 181, Appendix line 2078, Further Work line 1714) used strong/unhedged language ("show", "establishing", "explains why invariant")
+- Body sections properly hedged with "non-significant under limited power"
+- Pattern: fixes applied in body during prior rounds but NOT propagated to summary sections
+- This is a new instance of Pattern 36 (cross-section regression) specifically for non-significant results
+
+**4. H-statistic cross-df comparison (IMPORTANT)**
+- Paper said "largest H-statistic" then caveated "not directly comparable across different df"
+- Stating the caveat and drawing the comparison anyway is logically inconsistent
+- Fix: reframed to lead with "all three effects significant at p<0.001" without ranking by raw H
+
+**5. Student 3 tab03 false positives**
+- Haiku computed Spearman/Pearson on raw judges.csv rows instead of pivoted/averaged data
+- Discrepancies of 0.29-0.39 on Spearman -- all FPs from wrong aggregation method
+- Consistent with v7 finding that Haiku students produce ~7-11% FP when not given exact computation instructions
+
+**6. Implementation review found no code bugs affecting paper**
+- SRH (ranks, SS, H, df, p-value all correct)
+- Bootstrap (BCa, 10k resamples, seed=42)
+- Cliff's delta (FAIR 0.11/0.28/0.43)
+- Grade scale -- all verified correct
+- One latent bug: export_data.py SRH degenerates with single-model data (df_a=0) but paper uses separate script
+
+### Independent verification
+- Holm correction confirmed p=0.01763 for T0-T6
+
+### New patterns discovered (43-45)
+
+**Pattern 43: Cost invariance overclaiming in summary sections**
+- Abstract, Contributions, Appendix, Further Work used strong language for non-significant cost finding
+- Body sections properly hedged after prior review rounds
+- Variant of Pattern 36 (cross-section regression) specifically for non-significant results
+
+**Pattern 44: Build script includes wrong file format**
+- PDF glob vs PNG files -- submission blocker from format mismatch
+- LaTeX compiles fine (uses \includegraphics which finds files) but tarball is incomplete
+
+**Pattern 45: Clopper-Pearson computation error**
+- Transcription from wrong confidence level (0.901 approx 90% CI upper bound, not 95%)
+- For 6/9 at 95%: correct is [0.299, 0.925]
+
+### Key shifts at v8.0.0
+- After 7 prior rounds, mechanical numbers remain verified correct (confirmed by Student 1: 126/126)
+- New error class: summary-section overclaiming for non-significant results (body fixed, summaries not)
+- Build/packaging errors are a new category not previously checked (submission blocker)
+- Clopper-Pearson transcription errors can come from using wrong confidence level, not just wrong formula
+- Haiku students still produce systematic FPs on computation tasks when aggregation method is not specified (~7% FP)
+- Professor agents maintain 0% FP rate across 8 review rounds
+
+### Review maturity curve (updated)
+- Rounds 1-2: Factual errors, arithmetic mistakes, missing data
+- Rounds 3-4: Subtle rounding, methodology labeling, disclosure gaps
+- Round 5: Interpretive framing, causal language, statistical comparison validity
+- Round 6: Prose-data direction alignment, logical contradictions, unsupported claims
+- Round 7: Cross-section regression, implementation review, untracked scripts
+- Round 8: Summary-section overclaiming regression, build/packaging errors, CI transcription errors
+
+### Files changed
+- `docs/arxiv/haiku/paper.tex` -- 10 edits (3 critical, 5 important, 1 minor, 1 build script)
+- Build: verified clean diff (+35/-31 lines)
+- Decision: Conditional Go -> Go after fixes
+
+---
+
 ## 2026-04-08: latex-paper-accuracy-review v7.0.0 — Eighth Review Pass: Cross-Section Regression & Implementation Review
 
 Session: ProjectScylla v7.0 academic review of docs/arxiv/haiku/paper.tex (1,080 runs, 7 tiers, 3 experiments, $122.31 total cost)
