@@ -1,12 +1,11 @@
 ---
 name: mojo-jit-crash-diagnosis-and-retry
-description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) adding or refining retry logic in just test-group to distinguish JIT flakiness from real test failures, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all"
+description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) adding or refining retry logic in just test-group to distinguish JIT flakiness from real test failures"
 category: debugging
 date: 2026-03-29
-version: "2.1.0"
+version: "2.0.0"
 user-invocable: false
-verification: verified-precommit
-history: mojo-jit-crash-diagnosis-and-retry.history
+verification: unverified
 tags: []
 ---
 # Mojo JIT Crash Diagnosis and Retry
@@ -17,8 +16,8 @@ tags: []
 |-------|-------|
 | Date | 2026-03-29 |
 | Objective | Consolidated patterns for diagnosing Mojo JIT compiler crashes, distinguishing flaky infrastructure failures from real test bugs, implementing retry logic, splitting test files, and documenting workarounds |
-| Outcome | Merged from 5 source skills; amended 2026-04-07 with concrete root causes from ProjectOdyssey PR #5197-5204 |
-| Verification | verified-precommit |
+| Outcome | Merged from 5 source skills |
+| Verification | unverified |
 
 ## When to Use
 
@@ -31,116 +30,6 @@ tags: []
 - The test file has >10 test functions running deep-network-scale operations
 - The `just test-group` retry loop retries all failures indiscriminately (needs crash-aware refinement)
 - CI logs cannot distinguish retry-exhausted from normal test failures
-- **A `Copyable` struct with `UnsafePointer` fields and no explicit `__copyinit__` is stored in `List`** — synthesized shallow copy + reallocation = double-free
-- **Tests crash non-deterministically and the code changes don't touch those test files at all** — suspect double-free, broken lock, or bitcast UAF before assuming JIT flakiness
-
-## CRITICAL: Execution Crashes ARE Real Bugs — Investigate First
-
-> **Before assuming JIT flakiness, look for these three verified root causes.**
-> All three were found in ProjectOdyssey PR #5197–5204 and each manifested as
-> non-deterministic "execution crashed" output — indistinguishable from JIT flakiness
-> on the surface. The non-determinism was explained by timing/allocation-layout variation,
-> not compiler non-determinism.
-
-### Root Cause 1: Synthesized Shallow Copy + List Reallocation = Double-Free
-
-**Pattern**: A struct marked `Copyable` (or deriving it implicitly) has `UnsafePointer` fields
-but no explicit `__copyinit__`. When stored in a `List[T]` that reallocates, Mojo synthesizes
-a shallow `__copyinit__`, duplicating the pointer. Both copies call `__del__` → double-free →
-crash.
-
-**Diagnosis**:
-```bash
-# Find structs with UnsafePointer but no explicit __copyinit__
-grep -rn "UnsafePointer" shared/ --include="*.mojo" -l
-# Then for each file, check if __copyinit__ is defined
-grep -n "__copyinit__\|UnsafePointer\|Copyable" shared/core/spinlock.mojo
-```
-
-**Fix**: Implement an explicit `__copyinit__` that deep-copies the heap allocation, OR remove
-`Copyable` conformance if copying is not semantically meaningful.
-
-### Root Cause 2: Incorrect Lock Implementation (fetch_add/fetch_sub ≠ Mutex)
-
-**Pattern**: A `SpinLock.lock()` implemented using `fetch_add` to "claim" the lock and
-`fetch_sub` to release it. This is NOT a correct mutex — `fetch_add` returns the previous
-value and completes atomically, but two threads can both see `0` and both proceed into the
-critical section if the add and the conditional branch are not atomic together.
-
-**Diagnosis**: Read `lock()` implementation. A correct spinlock uses compare-exchange
-(CAS / `compare_exchange_weak`) to atomically check-and-set, not fetch-add.
-
-**Fix**:
-```mojo
-fn lock(mut self):
-    while True:
-        var expected: Int32 = 0
-        if self._state.compare_exchange_weak[memory_order.acquire, memory_order.relaxed](
-            expected, 1
-        ):
-            return
-        # Spin until unlocked
-        while self._state.load[memory_order.relaxed]() != 0:
-            pass
-
-fn unlock(mut self):
-    self._state.store[memory_order.release](0)
-```
-
-### Root Cause 3: Bitcast UAF — Alias Survives ASAP Destruction
-
-**Pattern**: Writing to tensor data via `tensor._data.bitcast[T]()[i] = val`. The `bitcast`
-creates a pointer alias. Mojo's ASAP (As Soon As Possible) destruction may destroy `tensor`
-before all writes through the bitcast pointer complete, leaving a dangling write.
-
-**Affected pattern** (seen in 1,062 locations across 50 test files):
-```mojo
-# UNSAFE — bitcast alias may dangle after ASAP destruction of tensor
-grad_output._data.bitcast[Float32]()[i] = val
-```
-
-**Safe replacement**:
-```mojo
-# SAFE — direct UnsafePointer with explicit lifetime
-var ptr = grad_output.data_ptr()  # or equivalent safe accessor
-ptr[i] = val
-```
-
-**Scale**: 1,062 bitcast writes fixed across 50 files in ProjectOdyssey using a
-5-agent Myrmidon swarm with non-overlapping file assignments in parallel PRs (#5200–#5204).
-
-## Mojo Language Semantics Reference
-
-> These facts are verified from docs.modular.com/mojo/manual — use them when diagnosing
-> suspected UAF or double-free in function parameters or struct lifecycle.
-
-| Fact | Details |
-|------|---------|
-| **Default argument convention is `read`** | `fn foo(x: AnyTensor)` does NOT copy `x`. The default is an immutable borrow (reference). Only `owned` convention causes a copy/move. |
-| **`deinit` in `__moveinit__` suppresses destructor on source** | `fn __moveinit__(out self, deinit existing: Self)` — Mojo does NOT call `__del__` on `existing` after the function. This is correct move semantics. Source is consumed, not destroyed separately. |
-| **ASAP destruction** | Mojo destroys values as soon as their last use is seen — potentially before end-of-scope. Pointer aliases (bitcast, raw UnsafePointer) may dangle if the owning value is destroyed early. |
-| **Synthesized `__copyinit__`** | If a struct is `Copyable` but defines no `__copyinit__`, Mojo synthesizes a field-by-field copy. For `UnsafePointer` fields this is a shallow copy — the pointer value is copied, not the heap data. |
-
-## Diagnosis Methodology (What Worked)
-
-1. **Compare same tests on previous successful `main` runs vs failing run** — if pass/fail is
-   non-deterministic across runs with no code change, the non-determinism has a cause.
-   It is NOT safe to assume "JIT flake" without investigating.
-
-2. **Look for ALL possible causes, not just the most recent change** — the bitcast UAF existed
-   long before the PR that exposed it; the PR changed allocation layout, making the race
-   observable.
-
-3. **Read struct declarations**: `Copyable` + `UnsafePointer` + no explicit `__copyinit__` =
-   double-free risk under any `List` reallocation.
-
-4. **Check for `_data.bitcast[T]()[i] = val` pattern** in test files → known UAF pattern.
-
-5. **Check for incorrect lock implementations**: `fetch_add`/`fetch_sub` in `lock()`/`unlock()`
-   is not a mutex — look for compare-exchange instead.
-
-6. **Verify semantics from official docs** before concluding a bug: check if argument
-   convention, destructor behavior, or copy semantics match expectations.
 
 ## Verified Workflow
 
@@ -167,7 +56,7 @@ grep -c "^fn test_" tests/models/test_my_model_e2e.mojo
 
 | Symptom | Cause |
 |---------|-------|
-| `execution crashed` before any test output | Possibly compiler flake — but first check root causes above |
+| `execution crashed` before any test output | Compiler flake — retry |
 | `execution crashed` after test output | Likely a real test bug |
 | Specific assertion failure message | Real test bug — investigate |
 
@@ -361,7 +250,6 @@ pixi run pre-commit run markdownlint-cli2 --files docs/dev/mojo-jit-crash-workar
 | Separate crash-check run | Run mojo twice: once to capture, once to check exit code | Doubles execution time unnecessarily | Capture once with `$()`, check exit code and output from same run |
 | Direct `pixi run npx markdownlint-cli2` | Ran markdownlint via npx through pixi | `npx: command not found` — npx not in pixi environment | Use `pixi run pre-commit run markdownlint-cli2 --files <files>` |
 | Edit CLAUDE.md without Read | Tried to Edit before reading | Tool rejected: "File has not been read yet" | Always Read before Edit |
-| **Assume crash = JIT flake** | Closed/retried without investigating root cause | 16 test files crashing had 3 concrete source-code bugs: double-free, broken lock, bitcast UAF | **Check for double-free, broken locks, and bitcast UAF first before concluding JIT instability** |
 
 ## Results & Parameters
 
