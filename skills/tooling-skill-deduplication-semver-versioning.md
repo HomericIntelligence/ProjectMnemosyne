@@ -1,9 +1,9 @@
 ---
 name: tooling-skill-deduplication-semver-versioning
-description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes."
+description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes, (4) need algorithmic duplicate detection via marketplace.json without reading all files, (5) running at-scale deduplication across 900+ skills with parallel agents."
 category: tooling
 date: 2026-03-28
-version: "1.5.0"
+version: "1.6.0"
 user-invocable: false
 verification: verified-ci
 history: tooling-skill-deduplication-semver-versioning.history
@@ -26,7 +26,9 @@ tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 
 - Multiple skills share a common prefix (e.g., `adr009-*`, `pr-review-*`, `mojo-test-*`)
 - `/advise` returns redundant or contradictory advice for the same topic
-- Need to identify duplicate clusters in a large skills registry (1000+ skills)
+- Need to identify duplicate clusters in a large skills registry (900+ skills)
+- Need algorithmic detection of semantic duplicates (not just prefix matching)
+- Running a full registry cleanup pass across 975+ skills with parallel agents
 - Updating `/learn` versioning rules to use semantic versioning
 - A skill covers a topic that is now OBSOLETE and needs a prominent deprecation notice before all other content
 
@@ -106,7 +108,70 @@ python3 scripts/validate_plugins.py
 
 **Phase 4: Use parallel agents for large merges**
 
-For multiple clusters, launch parallel agents (one per group) in the same worktree. Each agent reads its group's skills and writes the merged output.
+For multiple clusters, launch parallel agents (one per group) in the same worktree. Each agent reads its group's skills and writes the merged output. For 975+ skills, launch 3 agents at a time (each handling 2 merge groups) — agents must touch non-overlapping files to avoid conflicts.
+
+### At-Scale Algorithmic Detection (975+ skills)
+
+When prefix grouping is insufficient, use algorithmic semantic detection:
+
+**Step 1: Load names + descriptions from marketplace.json (no need to read 975 files)**
+
+```python
+import json, difflib
+from collections import defaultdict
+
+with open('marketplace.json') as f:
+    skills = json.load(f)  # list of {name, description, ...}
+
+# Group by 2-token and 3-token name prefixes
+prefix2 = defaultdict(list)
+prefix3 = defaultdict(list)
+for s in skills:
+    parts = s['name'].split('-')
+    if len(parts) >= 2: prefix2['-'.join(parts[:2])].append(s)
+    if len(parts) >= 3: prefix3['-'.join(parts[:3])].append(s)
+
+clusters2 = {k: v for k, v in prefix2.items() if len(v) >= 3}
+clusters3 = {k: v for k, v in prefix3.items() if len(v) >= 3}
+```
+
+**Step 2: SequenceMatcher for semantic duplicates (catches different-named skills)**
+
+```python
+def normalize(text):
+    return text.lower().strip()
+
+threshold = 0.80  # >80% similarity = near-duplicate
+
+near_dupes = []
+for i, a in enumerate(skills):
+    for b in skills[i+1:]:
+        ratio = difflib.SequenceMatcher(
+            None, normalize(a['description']), normalize(b['description'])
+        ).ratio()
+        if ratio > threshold:
+            near_dupes.append((ratio, a['name'], b['name']))
+
+near_dupes.sort(reverse=True)
+```
+
+**Step 3: Manual topic grouping for semantic clusters**
+
+For clusters that differ by name structure but cover the same concept:
+- Keyword matching: scan all descriptions for shared topic keywords
+- Manual review: group by intent (e.g., all "fix import" skills regardless of prefix)
+- Expected output: 20-25 merge groups for a 975-skill registry
+
+**Step 4: Always verify file existence before merging**
+
+```bash
+# Many "duplicates" from analysis may already be merged in a prior session
+for skill_name in <list>; do
+  [ -f "skills/${skill_name}.md" ] && echo "EXISTS: $skill_name" || echo "MISSING: $skill_name"
+done
+```
+
+**Key insight**: Plan agents often underestimate duplicate count (exact name match finds ~10, semantic grouping finds ~42+). Always run the full algorithmic pass.
 
 ## Failed Attempts
 
@@ -121,6 +186,11 @@ For multiple clusters, launch parallel agents (one per group) in the same worktr
 | Over-splitting subtopics | Planned 9 conv2d skills into more than 3 groups | Content analysis showed clear 3-way split: finite-difference checks, depthwise-specific quirks, analytical-value tests | Group by actual usage scenario (how the tests are written), not by file naming pattern |
 | Depthwise mixed with standard conv2d | Considered merging depthwise into the standard conv2d finite-differences skill | Depthwise has critical API differences (kernel shape, field names, tolerance API) that warrant a dedicated skill | Even when topics are adjacent, separate skills when the API contract differs significantly |
 | Assuming one-time merges are durable | Merged adr009-* cluster in Round 1 (16->3), assumed stable | /learn calls after the merge created 9 new duplicate skills covering the same adr009 split topic | Deduplication is not permanent; re-duplication occurs organically — schedule periodic re-consolidation passes |
+| Plan agent underestimating duplicates | Asked plan agent to identify duplicates before executing | Plan agent only checked exact name matches (~10 found), actual semantic grouping found ~42 | Always run algorithmic pass (prefix grouping + SequenceMatcher) — plan agents miss semantic duplicates |
+| Reading all 975 skill files | Tried to read every skill .md file to find duplicates | Extremely slow; 975 file reads times out and wastes context | Use marketplace.json which has names + descriptions — no need to read individual files for detection phase |
+| Committing directly to main | Made dedup commits directly on main branch | Bypasses PR review process; user corrected immediately | Always use a feature branch (`skill/<name>`) via git worktree, even for registry cleanup work |
+| Planning merges without checking file existence | Identified 42 duplicate groups from analysis, started merging | Many skills existed only in git history (prior sessions already merged them on main) | Always `ls skills/<name>.md` before attempting to read or merge — skip gracefully if missing |
+| Sequential agent execution for large batches | Ran merge agents one-at-a-time for 22 groups | Very slow for 42 absorptions across 22 groups | Run 3 agents in parallel, each handling 2 groups — 6x faster, no conflicts when touching different files |
 | Stopping at 3 when topic is OBSOLETE | Round 5 consolidated 12 adr009 skills to 3 sub-skills | When the underlying topic (ADR-009 workaround) was declared OBSOLETE, the 3-file structure fragmented the OBSOLETE notice | When a topic is OBSOLETE, consolidate further to 1 file — the obsolescence notice is the dominant content |
 
 ## Results & Parameters
@@ -213,6 +283,23 @@ key_insight: topic-adjacent skills with different APIs warrant separate skills e
 | Minor (0.X.0) | `1.0.0` → `1.1.0` | Add findings, failed attempts, extend workflow |
 | Patch (0.0.X) | `1.0.0` → `1.0.1` | Fix typos, formatting, metadata |
 
+**Round 7: Large-scale algorithmic deduplication (2026-04-07)**
+
+```yaml
+skills_before: 975
+skills_after: 933
+net_reduction: 42 skills (-4.3%)
+merge_groups: 22
+method: marketplace.json analysis + difflib.SequenceMatcher (>80% threshold) + manual topic grouping
+parallel_agents: 3 agents at a time, each handling 2 groups
+files_deleted: 42+ (absorbed .md files; some already merged in prior sessions)
+key_insights:
+  - marketplace.json enables full-registry analysis without reading 975 files
+  - Semantic grouping finds 4x more duplicates than prefix-only matching
+  - Many "planned" merges were no-ops (files already gone from prior sessions)
+  - Conflict during rebase: same file renamed+modified on both branches → combine trigger conditions from both sides
+```
+
 ### Top Duplicate Clusters Remaining (for future merges)
 
 ```
@@ -240,3 +327,4 @@ Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-fi
 | ProjectMnemosyne | PR #1080, merged 9 conv2d-gradient-* skills into 3 | 2026-03-28 session |
 | ProjectMnemosyne | PR #1086, re-consolidated 12 adr009-test-splitting-* skills into 3 (cluster re-duplicated after prior merge) | 2026-03-28 session |
 | ProjectMnemosyne | PR #1097, consolidated 4 adr009-* skills to 1 with prominent OBSOLETE notice (ADR-009 fixed at compiler level) | 2026-03-28 session |
+| ProjectMnemosyne | PR pending, algorithmic dedup of 975 skills → 933 (-42 net) via marketplace.json + SequenceMatcher + 22 merge groups | 2026-04-07 session |
