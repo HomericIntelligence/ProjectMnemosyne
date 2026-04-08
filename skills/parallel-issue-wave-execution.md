@@ -3,8 +3,8 @@ name: parallel-issue-wave-execution
 description: Pattern for implementing 30+ GitHub issues in parallel waves using isolated
   git worktrees
 category: ci-cd
-date: 2026-03-01
-version: 1.0.0
+date: 2026-04-07
+version: 1.1.0
 user-invocable: false
 ---
 # Parallel Issue Wave Execution
@@ -24,6 +24,8 @@ user-invocable: false
 - Need 8-10x speedup over sequential implementation
 - After a major config change (e.g. coverage threshold fix) makes all older PRs fail CI
 - Need to rebase a PR that is 50+ commits behind main
+- Multiple issues have detailed implementation plans in comments
+- Each issue touches different files (minimal conflicts)
 
 ## Verified Workflow
 
@@ -32,6 +34,9 @@ user-invocable: false
 ```bash
 # Get all open issues
 gh issue list --state open --limit 100 --json number,title,body
+
+# Read issue with implementation plan (plans are often in comments!)
+gh issue view <number> --comments
 
 # Classify into LOW/MEDIUM/HIGH by:
 # - LOW: single-file or config-only, < 20 LOC
@@ -43,7 +48,21 @@ Group LOW issues into waves of 4-5, ensuring issues that **touch the same file**
 
 **Contended files to watch**: `pyproject.toml`, `pixi.toml`, `docker/Dockerfile`, `retry.py`, `loader.py`, CI workflow files.
 
-### Phase 2: Launch Parallel Agents Per Wave
+### Phase 2: Create Worktrees (for small batches of 2-4 issues)
+
+For smaller parallel batches (2 at a time recommended for direct worktree use):
+
+```bash
+# Create worktrees for first batch
+git worktree add ../<ProjectName>-<issue1> -b <issue1>-<description> main
+git worktree add ../<ProjectName>-<issue2> -b <issue2>-<description> main
+```
+
+**Worktree naming convention**: `../<ProjectName>-<issue-number>` (e.g. `../ProjectScylla-90`)
+
+**Branch naming convention**: `<issue-number>-<kebab-case-description>` (e.g. `90-standardize-runs-per-tier`)
+
+### Phase 3: Launch Parallel Agents Per Wave (for large batches)
 
 Send a **single message** with 4-5 `Agent(isolation="worktree")` calls to run truly in parallel:
 
@@ -74,7 +93,54 @@ Send a **single message** with 4-5 `Agent(isolation="worktree")` calls to run tr
 ignore rule) change the scylla package SHA in `pixi.lock`. Always run `pixi install` and
 commit the updated `pixi.lock` if `pyproject.toml` was modified.
 
-### Phase 3: Wait and Verify Each Wave
+### Phase 4: Parallel Implementation (for worktree batches)
+
+1. Read all files needed for BOTH issues simultaneously
+2. Make edits in parallel (use Edit tool on different worktree paths)
+3. Run tests in parallel for both worktrees
+
+```bash
+# Tests in parallel (different terminals or background)
+cd /path/to/worktree-1 && pixi run pytest tests/ -v
+cd /path/to/worktree-2 && pixi run pytest tests/ -v
+```
+
+**Optimal batch size for direct worktrees**: 2 issues at a time — best balance of parallelism vs context.
+
+### Phase 5: Commit, PR Creation, and Cleanup
+
+```bash
+# Commit in each worktree
+cd /path/to/worktree-1 && git add -A && git commit -m "type(scope): description
+
+Closes #<issue>"
+
+# Push and create PR
+git push -u origin <branch>
+gh pr create --title "Title" --body "$(cat <<'EOF'
+## Summary
+...
+
+Closes #<issue>
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
+
+# Merge PRs
+gh pr merge <pr-number> --rebase --delete-branch
+
+# After all merged, cleanup worktrees
+git worktree remove /path/to/worktree-1
+git worktree remove /path/to/worktree-2
+git branch -D <branch1> <branch2>
+
+# Update main
+git fetch --prune origin
+git pull --rebase
+```
+
+### Phase 6: Wait and Verify Each Wave
 
 After each wave completes:
 ```bash
@@ -83,7 +149,7 @@ gh pr list --state open --author "@me" --json number,title,statusCheckRollup
 
 Only proceed to next wave when all PRs in the current wave are pushed (CI pending or passing).
 
-### Phase 4: Fix CI Failures on Completed PRs
+### Phase 7: Fix CI Failures on Completed PRs
 
 After all waves, check for failures:
 
@@ -101,7 +167,7 @@ for pr in sorted(prs, key=lambda x: x['number']):
 
 **For each failing PR**: create a fresh branch from current `origin/main`, cherry-pick the commits, resolve conflicts, push, create new PR, close old PR with supersession comment.
 
-### Phase 5: Rebase Stale Pre-existing PRs
+### Phase 8: Rebase Stale Pre-existing PRs
 
 For PRs 50+ commits behind main with no CI checks:
 
@@ -239,6 +305,7 @@ git switch main
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | N/A | Direct approach worked | N/A | Solution was straightforward |
+
 ## Results & Parameters
 
 ### Wave Sizing
@@ -247,6 +314,15 @@ git switch main
 |------|--------|--------------|--------|
 | 1-8 | 35 total | pyproject.toml (7), Dockerfile (4), retry.py (2), loader.py (2), test.yml (3) | 35 PRs created |
 | Fix pass | 4 failing + 1 stale | Same files, rebased onto post-fix main | All resolved |
+
+### Optimal Batch Size for Direct Worktrees
+
+| Metric | Value |
+|--------|-------|
+| Issues per batch | 2 (best balance of parallelism vs context) |
+| Issues implemented (session example) | 4 |
+| PRs created | 4 |
+| PRs merged | 4 |
 
 ### PR Creation Template
 

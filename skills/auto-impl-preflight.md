@@ -1,14 +1,15 @@
 ---
-name: auto-impl-partial-completion-check
-description: 'Verify auto-impl issue completion when commit and PR already exist.
-  Use when: prior session committed work and created a PR, but implementation plan
-  may have had additional items not captured in the commit.'
+name: auto-impl-preflight
+description: 'Verify auto-impl issue completion and detect already-done work before
+  starting. Use when: (1) prior session committed work and created a PR but implementation
+  plan may have additional items not captured in the commit, (2) starting an auto-impl
+  session and need to check if work was already done in a previous session.'
 category: documentation
-date: 2026-03-05
-version: 1.0.0
+date: 2026-04-07
+version: 1.1.0
 user-invocable: false
 ---
-# Auto-Impl Partial Completion Check
+# Auto-Impl Preflight Check
 
 ## Overview
 
