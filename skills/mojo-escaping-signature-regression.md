@@ -1,12 +1,17 @@
 ---
 name: mojo-escaping-signature-regression
-description: "Fix Mojo escaping fn type parameter regressions in shared libraries. Use when: (1) build fails after removing escaping from shared function signatures, (2) layer_testers.mojo or gradient_checker.mojo callers break with type mismatch errors, (3) closures passed to check_gradients fail to compile."
+description: "OBSOLETE IN 0.26.3. Fix Mojo escaping fn type parameter regressions (0.26.1 only). In 0.26.3 escaping is removed entirely; use capturing compile-time params instead (see mojo-026-breaking-changes)."
 category: ci-cd
 date: 2026-03-20
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
-tags: [mojo, escaping, gradient-checker, function-signatures, type-mismatch, build-failure]
+tags: [mojo, escaping, gradient-checker, function-signatures, type-mismatch, build-failure, obsolete-026-3]
 ---
+
+> **⚠️ OBSOLETE IN MOJO 0.26.3**: The `escaping` keyword is completely removed in 0.26.3.
+> This skill applies to Mojo 0.26.1 only. For 0.26.3, see
+> [mojo-026-breaking-changes](./mojo-026-breaking-changes.md) — use compile-time
+> `capturing` parameters instead of `escaping` runtime parameters.
 
 ## Overview
 

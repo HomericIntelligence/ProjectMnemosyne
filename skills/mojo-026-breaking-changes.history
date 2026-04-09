@@ -1,0 +1,43 @@
+# mojo-026-breaking-changes — History
+
+## v2.0.0 (2026-04-08)
+
+**Changed by:** Session: fix-ci-root-causes branch, PR #5207 — full 0.26.3 migration confirmed working
+**Verification:** verified-local (PR #5207 pushed to CI, zero compile errors confirmed locally)
+
+### What changed
+- Added 5 new confirmed breaking changes: `escaping` keyword removed, `capturing` closures, `ImplicitlyDestructible` cascade, `UnsafePointer` origin parameter, `__moveinit__` with `deinit other`, `String.substr()` removed
+- Updated verification from `unverified` to `verified-local`
+- Marked `fn` → `def` as NOT a hard error (still works in 0.26.3 — only a deprecation warning)
+- Updated the capturing/escaping section completely — the old `escaping` approach is dead
+- Added `ImplicitlyDestructible` cascade pattern (traits used in generic contexts)
+- Added `String.substr()` → `String(x[byte=start:end])` fix
+- Added `__moveinit__` with `deinit other` breakage fix
+
+### Why
+v1.0.0 was written during early migration before CI confirmation. The capturing closure pattern, ImplicitlyDestructible cascade, and substr removal were not yet discovered. The `escaping` keyword entry was also incorrect (it was removed, not just the `@escaping` decorator). PR #5207 confirmed zero compile errors locally.
+
+### Previous version (v1.0.0) snapshot
+
+```
+---
+name: mojo-026-breaking-changes
+description: "Catalog of Mojo 0.26.3 breaking changes and fixes. Use when: (1) migrating a Mojo codebase from 0.26.1 to 0.26.3, (2) encountering unfamiliar compile errors after a Mojo version bump, (3) auditing code for deprecated APIs."
+category: tooling
+date: 2026-04-08
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: [mojo, breaking-changes, migration, 0.26.3, deprecation]
+---
+
+[... full v1.0.0 content as filed 2026-04-08 ...]
+The breaking change table had entries 1-14 but was missing:
+- escaping keyword fully removed (not just @escaping)
+- ImplicitlyDestructible cascade for traits in generic contexts
+- String.substr() removed entirely
+- __moveinit__ with deinit other broken
+- capturing closure syntax for higher-order functions
+```
+
+---
