@@ -1,13 +1,13 @@
 ---
 name: mojo-026-breaking-changes
-description: "Catalog of Mojo 0.26.3 breaking changes and fixes. Use when: (1) migrating a Mojo codebase from 0.26.1 to 0.26.3, (2) encountering unfamiliar compile errors after a Mojo version bump, (3) auditing code for deprecated APIs."
+description: "Catalog of Mojo 0.26.3 breaking changes, fixes, and authoritative current syntax reference. Use when: (1) migrating a Mojo codebase from 0.26.1 to 0.26.3, (2) encountering unfamiliar compile errors after a Mojo version bump, (3) auditing code for deprecated APIs, (4) writing new Mojo code and need current syntax corrections."
 category: tooling
-date: 2026-04-08
-version: "2.0.0"
+date: 2026-04-09
+version: "3.0.0"
 user-invocable: false
 verification: verified-local
 history: mojo-026-breaking-changes.history
-tags: [mojo, breaking-changes, migration, 0.26.3, deprecation, capturing, ImplicitlyDestructible, substr]
+tags: [mojo, breaking-changes, migration, 0.26.3, deprecation, capturing, ImplicitlyDestructible, substr, syntax, modular-upstream]
 ---
 
 # Mojo 0.26.3 Breaking Changes Catalog
@@ -169,8 +169,226 @@ struct NamedTensor(Movable):
     # No __moveinit__ needed
 ```
 
+## Authoritative Syntax Reference (Modular)
+
+The following is Modular's canonical current Mojo syntax guide, merged from their
+[official skills repo](https://github.com/modular/skills). Use this section when
+writing **new** Mojo code (not just migrating). See also the Breaking Change Reference
+Table above for migration-specific fixes.
+
+### Removed Syntax — Complete Table
+
+| Removed                                          | Replacement                                                          |
+|--------------------------------------------------|----------------------------------------------------------------------|
+| `alias X = ...`                                  | `comptime X = ...`                                                   |
+| `@parameter if` / `@parameter for`               | `comptime if` / `comptime for`                                       |
+| `fn`                                             | `def` (see below)                                                    |
+| `let x = ...`                                    | `var x = ...` (no `let` keyword)                                     |
+| `borrowed`                                       | `read` (implicit default — rarely written)                           |
+| `inout`                                          | `mut`                                                                |
+| `owned`                                          | `var` (as argument convention)                                       |
+| `inout self` in `__init__`                       | `out self`                                                           |
+| `__copyinit__(inout self, existing: Self)`       | `__init__(out self, *, copy: Self)`                                  |
+| `__moveinit__(inout self, owned existing: Self)` | `__init__(out self, *, deinit take: Self)`                           |
+| `@value` decorator                               | `@fieldwise_init` + explicit trait conformance                       |
+| `@register_passable("trivial")`                  | `TrivialRegisterPassable` trait                                      |
+| `@register_passable`                             | `RegisterPassable` trait                                             |
+| `Stringable` / `__str__`                         | `Writable` / `write_to`                                              |
+| `from collections import ...`                    | `from std.collections import ...`                                    |
+| `from memory import ...`                         | `from std.memory import ...`                                         |
+| `from sys import ...`                            | `from std.sys import ...`                                            |
+| `from os import ...`                             | `from std.os import ...`                                             |
+| `from pathlib import ...`                        | `from std.pathlib import ...`                                        |
+| `s[i]`                                           | `s[byte=i]` — returns `StringSlice`; wrap in `String()` if needed    |
+| `s[0:10]`, `s[:5]`                               | No slice syntax on String — use `s.codepoint_slices()` or Python FFI |
+| `constrained(cond, msg)`                         | `comptime assert cond, msg`                                          |
+| `DynamicVector[T]`                               | `List[T]`                                                            |
+| `InlinedFixedVector[T, N]`                       | `InlineArray[T, N]`                                                  |
+| `Tensor[T]`                                      | Not in stdlib (use SIMD, List, UnsafePointer)                        |
+
+### `def` Is the Only Function Keyword
+
+`fn` is deprecated. `def` does **not** imply `raises`. Always add `raises` explicitly:
+
+```mojo
+def compute(x: Int) -> Int:              # non-raising
+    return x * 2
+
+def load(path: String) raises -> String: # explicitly raising
+    return open(path).read()
+```
+
+### `comptime` Replaces `alias` and `@parameter`
+
+```mojo
+comptime N = 1024                            # compile-time constant
+comptime MyType = Int                        # type alias
+comptime if condition:                       # compile-time branch
+    ...
+comptime for i in range(10):                 # compile-time loop
+    ...
+comptime assert N > 0, "N must be positive"  # must be inside function body
+```
+
+### Argument Conventions
+
+Default is `read` (immutable borrow, never written explicitly):
+
+```mojo
+def __init__(out self, var value: String):   # out = uninitialized output; var = owned
+def modify(mut self):                         # mut = mutable reference
+def consume(deinit self):                     # deinit = consuming/destroying
+def view(ref self) -> ref[self] Self.T:       # ref = reference with origin
+```
+
+### Lifecycle Methods
+
+```mojo
+def __init__(out self, x: Int):                    # constructor
+    self.x = x
+def __init__(out self, *, copy: Self):             # copy constructor
+    self.data = copy.data
+def __init__(out self, *, deinit take: Self):      # move constructor
+    self.data = take.data^
+def __del__(deinit self):                          # destructor
+    self.ptr.free()
+```
+
+To copy: `var b = a.copy()` (provided by `Copyable` trait).
+
+### Struct Patterns
+
+```mojo
+@fieldwise_init
+struct Point(Copyable, Movable, Writable):
+    var x: Float64
+    var y: Float64
+
+# Self-qualify struct parameters — bare names are errors
+struct Container[T: Writable]:
+    var data: Self.T                   # NOT T
+    def size(self) -> Self.T: ...      # NOT T
+```
+
+Explicit `.copy()` or `^` required for non-`ImplicitlyCopyable` types (`Dict`, `List`).
+
+### Imports Use `std.` Prefix
+
+```mojo
+from std.testing import assert_equal, TestSuite
+from std.algorithm import vectorize
+from std.python import PythonObject
+```
+
+Prelude auto-imports (no import needed): `Int`, `String`, `Bool`, `List`, `Dict`,
+`Optional`, `SIMD`, `Float32`, `Float64`, `UInt8`, `Pointer`, `UnsafePointer`,
+`Span`, `Error`, `DType`, `Writable`, `Writer`, `Copyable`, `Movable`, `Equatable`,
+`Hashable`, `rebind`, `print`, `range`, `len`, and more.
+
+### `Writable` / `Writer` (Replaces `Stringable`)
+
+```mojo
+struct MyType(Writable):
+    var x: Int
+    def write_to(self, mut writer: Some[Writer]):
+        writer.write("MyType(", self.x, ")")
+```
+
+- `Some[Writer]` — builtin existential type
+- Default implementations via reflection if all fields are `Writable`
+- Convert to `String` with `String.write(value)`, not `str(value)`
+
+### Collection Literals
+
+```mojo
+# WRONG — no List[T](elem1, elem2, ...) constructor
+var nums = List[Int](1, 2, 3)
+
+# CORRECT — bracket literals
+var nums = [1, 2, 3]                              # List[Int]
+var scores = {"alice": 95, "bob": 87}              # Dict[String, Int]
+```
+
+### Iterator Protocol
+
+Iterators use `raises StopIteration` (not `Optional`):
+
+```mojo
+struct MyCollection(Iterable):
+    comptime IteratorType[
+        iterable_mut: Bool, //, iterable_origin: Origin[mut=iterable_mut]
+    ]: Iterator = MyIter[origin=iterable_origin]
+    def __iter__(ref self) -> Self.IteratorType[origin_of(self)]: ...
+```
+
+### Memory and Pointer Types
+
+| Type                            | Use                                                                    |
+|---------------------------------|------------------------------------------------------------------------|
+| `Pointer[T, mut=M, origin=O]`   | Safe, non-nullable. Deref with `p[]`.                                  |
+| `alloc[T](n)` / `UnsafePointer` | Free function `alloc[T](count)` → `UnsafePointer`. `.free()` required. |
+| `Span(list)`                    | Non-owning contiguous view.                                            |
+| `OwnedPointer[T]`               | Unique ownership (like Rust `Box`).                                    |
+| `ArcPointer[T]`                 | Reference-counted shared ownership.                                    |
+
+### Origin System (Not "Lifetime")
+
+Mojo tracks reference provenance with **origins**, not "lifetimes":
+
+```mojo
+struct Span[mut: Bool, //, T: AnyType, origin: Origin[mut=mut]]: ...
+```
+
+Key types: `Origin`, `MutOrigin`, `ImmutOrigin`, `MutAnyOrigin`, `MutExternalOrigin`,
+`StaticConstantOrigin`. Use `origin_of(value)` to get a value's origin.
+
+### Numeric Conversions — Must Be Explicit
+
+```mojo
+var x = Float32(my_int) * scale    # Int → Float32
+var y = Int(my_uint)               # UInt → Int
+# Literals are polymorphic — auto-adapt to context
+var a: Float32 = 0.5
+```
+
+### Error Handling
+
+```mojo
+def might_fail() raises -> Int:          # raises Error (default)
+    raise Error("something went wrong")
+
+def parse(s: String) raises Int -> Int:  # raises specific type
+    raise 42
+```
+
+No `match` statement. No `async`/`await` — use `Coroutine`/`Task` from `std.runtime`.
+
+### Function Types and Closures
+
+No lambda syntax. Closures use `capturing[origins]`:
+
+```mojo
+comptime MyFunc = fn(Int) capturing[_] -> None
+```
+
+### Type Hierarchy
+
+```text
+AnyType
+  ImplicitlyDestructible          — auto __del__; most types
+  Movable                         — __init__(out self, *, deinit take: Self)
+    Copyable                      — __init__(out self, *, copy: Self)
+      ImplicitlyCopyable(Copyable, ImplicitlyDestructible)
+    RegisterPassable(Movable)
+      TrivialRegisterPassable(ImplicitlyCopyable, ImplicitlyDestructible, Movable, RegisterPassable)
+```
+
+---
+*Authoritative Syntax Reference section adapted from [modular/skills](https://github.com/modular/skills) under Apache License 2.0. Copyright (c) Modular Inc.*
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | Mojo 0.26.1 → 0.26.3 migration, ~525 .mojo files, PR #5207 | Zero compile errors confirmed locally on branch fix-ci-root-causes |
+| (upstream) | Modular official skills repo | Authoritative syntax reference merged in v3.0.0 |
