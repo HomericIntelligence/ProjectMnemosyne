@@ -24,7 +24,12 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+        run: |
+          pip install -r requirements-dev.txt
+          pip install ruff
+
+      - name: Lint with ruff
+        run: ruff check scripts/ tests/
 
       - name: Validate flat-format skill files
         run: python3 scripts/validate_plugins.py

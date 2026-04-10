@@ -17,7 +17,6 @@ import re
 from pathlib import Path
 from typing import Sequence
 
-
 WRAPPABLE_SECTIONS = ("Quick Reference", "Analysis Workflow", "Usage")
 
 
@@ -134,7 +133,8 @@ def _normalize_failed_attempts_table(content: str) -> str:
     table = (
         "| Attempt | What Was Tried | Why It Failed | Lesson Learned |\n"
         "|---------|----------------|---------------|----------------|\n"
-        f"| 1 | {summary} | Not specified | Replace this placeholder with a concrete failed attempt when one exists. |\n\n"
+        f"| 1 | {summary} | Not specified "
+        f"| Replace this placeholder with a concrete failed attempt when one exists. |\n\n"
     )
     return content[: match.start(2)] + table + content[match.end(2) :]
 

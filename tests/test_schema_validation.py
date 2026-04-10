@@ -17,12 +17,20 @@ SCHEMAS_DIR = ROOT / "schemas"
 MARKETPLACE_PATH = ROOT / ".claude-plugin" / "marketplace.json"
 
 VALID_CATEGORIES = {
-    "architecture", "ci-cd", "debugging", "documentation",
-    "evaluation", "optimization", "testing", "tooling", "training",
+    "architecture",
+    "ci-cd",
+    "debugging",
+    "documentation",
+    "evaluation",
+    "optimization",
+    "testing",
+    "tooling",
+    "training",
 }
 
 try:
-    from jsonschema import validate, ValidationError  # type: ignore[import-untyped]
+    from jsonschema import ValidationError, validate  # type: ignore[import-untyped]
+
     HAS_JSONSCHEMA = True
 except ImportError:
     HAS_JSONSCHEMA = False
@@ -32,6 +40,7 @@ except ImportError:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _load_json(path: Path) -> dict:
     return json.loads(path.read_text())
 
@@ -39,6 +48,7 @@ def _load_json(path: Path) -> dict:
 # ---------------------------------------------------------------------------
 # Marketplace schema tests
 # ---------------------------------------------------------------------------
+
 
 class TestMarketplaceSchema:
     """Validate marketplace.json against its JSON Schema."""
@@ -56,8 +66,16 @@ class TestMarketplaceSchema:
     # -- Manual structural checks (always run) --
 
     def test_top_level_required_fields(self):
-        for field in ("name", "owner", "description", "version",
-                      "total_plugins", "categories", "last_updated", "plugins"):
+        for field in (
+            "name",
+            "owner",
+            "description",
+            "version",
+            "total_plugins",
+            "categories",
+            "last_updated",
+            "plugins",
+        ):
             assert field in self.marketplace, f"Missing top-level field: {field}"
 
     def test_owner_structure(self):
@@ -95,6 +113,7 @@ class TestMarketplaceSchema:
 # ---------------------------------------------------------------------------
 # Skill frontmatter schema tests
 # ---------------------------------------------------------------------------
+
 
 class TestSkillFrontmatterSchema:
     """Validate the skill-frontmatter schema against sample data."""
@@ -139,9 +158,7 @@ class TestSkillFrontmatterSchema:
 
     def test_schema_has_required_fields(self):
         """Structural check: schema defines the expected required fields."""
-        assert set(self.schema["required"]) == {
-            "name", "description", "category", "date", "version"
-        }
+        assert set(self.schema["required"]) == {"name", "description", "category", "date", "version"}
 
     def test_schema_category_enum(self):
         """Structural check: category enum matches project categories."""

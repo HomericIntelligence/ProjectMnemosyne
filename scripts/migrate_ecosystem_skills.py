@@ -20,7 +20,6 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -35,18 +34,24 @@ TODAY = "2026-03-25"
 #   MNEMOSYNE_ODYSSEY_SKILLS_DIR, MNEMOSYNE_SCYLLA_SKILLS_DIR, MNEMOSYNE_KEYSTONE_SKILLS_DIR
 # Scylla uses <category>/<skill-name>/SKILL.md; others use <skill-name>/SKILL.md
 SOURCES = {
-    "odyssey": Path(os.environ.get(
-        "MNEMOSYNE_ODYSSEY_SKILLS_DIR",
-        str(Path.home() / "Agents/Aindrea/ProjectOdyssey/.claude/skills"),
-    )),
-    "scylla": Path(os.environ.get(
-        "MNEMOSYNE_SCYLLA_SKILLS_DIR",
-        str(Path.home() / "ProjectScylla/tests/claude-code/shared/skills"),
-    )),
-    "keystone": Path(os.environ.get(
-        "MNEMOSYNE_KEYSTONE_SKILLS_DIR",
-        str(Path.home() / "ProjectKeystone/.claude/skills"),
-    )),
+    "odyssey": Path(
+        os.environ.get(
+            "MNEMOSYNE_ODYSSEY_SKILLS_DIR",
+            str(Path.home() / "Agents/Aindrea/ProjectOdyssey/.claude/skills"),
+        )
+    ),
+    "scylla": Path(
+        os.environ.get(
+            "MNEMOSYNE_SCYLLA_SKILLS_DIR",
+            str(Path.home() / "ProjectScylla/tests/claude-code/shared/skills"),
+        )
+    ),
+    "keystone": Path(
+        os.environ.get(
+            "MNEMOSYNE_KEYSTONE_SKILLS_DIR",
+            str(Path.home() / "ProjectKeystone/.claude/skills"),
+        )
+    ),
 }
 
 # Fields to remove from frontmatter during migration
@@ -108,6 +113,7 @@ PATH_GENERALIZATIONS = [
 # Frontmatter parsing (manual, no yaml dependency)
 # ---------------------------------------------------------------------------
 
+
 def parse_frontmatter(content: str) -> tuple[dict, str]:
     """
     Parse YAML frontmatter from markdown content.
@@ -125,7 +131,7 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
         return {}, content
 
     fm_text = rest[:end_idx].strip()
-    body = rest[end_idx + 4:].lstrip("\n")
+    body = rest[end_idx + 4 :].lstrip("\n")
 
     frontmatter: dict[str, object] = {}
     for line in fm_text.splitlines():
@@ -155,8 +161,14 @@ def frontmatter_to_yaml(frontmatter: dict) -> str:
     lines = []
     # Emit in a defined order for readability
     ordered_keys = [
-        "name", "description", "category", "date", "version",
-        "user-invocable", "verification", "tags",
+        "name",
+        "description",
+        "category",
+        "date",
+        "version",
+        "user-invocable",
+        "verification",
+        "tags",
     ]
     emitted = set()
     for key in ordered_keys:
@@ -197,6 +209,7 @@ def _format_yaml_value(key: str, val) -> str:
 # Category mapping
 # ---------------------------------------------------------------------------
 
+
 def map_category(source_category: Optional[str], scylla_category: Optional[str]) -> str:
     """Map a source category to a Mnemosyne category."""
     # If this came from Scylla, the directory IS the category
@@ -214,6 +227,7 @@ def map_category(source_category: Optional[str], scylla_category: Optional[str])
 # ---------------------------------------------------------------------------
 # Content transformations
 # ---------------------------------------------------------------------------
+
 
 def generalize_paths(content: str) -> str:
     """Replace hardcoded project paths with generic placeholders."""
@@ -258,20 +272,13 @@ def add_missing_sections(body: str, skill_name: str) -> str:
 
     # When to Use stub
     if not has_section(body, r"^## When to Use"):
-        when_stub = (
-            "\n## When to Use\n\n"
-            "- (fill in trigger conditions)\n"
-        )
+        when_stub = "\n## When to Use\n\n- (fill in trigger conditions)\n"
         body = _insert_before_verified_workflow(body, when_stub)
 
     # Verified Workflow with Quick Reference sub-section
     if not has_section(body, r"^## Verified Workflow"):
         workflow_stub = (
-            "\n## Verified Workflow\n\n"
-            "### Quick Reference\n\n"
-            "```bash\n"
-            "# (fill in quick reference commands)\n"
-            "```\n"
+            "\n## Verified Workflow\n\n### Quick Reference\n\n```bash\n# (fill in quick reference commands)\n```\n"
         )
         body = _insert_before_failed_attempts(body, workflow_stub)
     else:
@@ -304,10 +311,7 @@ def add_missing_sections(body: str, skill_name: str) -> str:
 
     # Results & Parameters stub
     if not has_section(body, r"^## Results & Parameters"):
-        results_stub = (
-            "\n## Results & Parameters\n\n"
-            "- (fill in key parameters and outcomes)\n"
-        )
+        results_stub = "\n## Results & Parameters\n\n- (fill in key parameters and outcomes)\n"
         body = body.rstrip() + "\n" + results_stub + "\n"
 
     return body
@@ -318,7 +322,7 @@ def _insert_before_verified_workflow(body: str, stub: str) -> str:
     for pattern in [r"^## Verified Workflow", r"^## Failed Attempts", r"^## Results"]:
         m = re.search(pattern, body, re.MULTILINE)
         if m:
-            return body[:m.start()] + stub + "\n" + body[m.start():]
+            return body[: m.start()] + stub + "\n" + body[m.start() :]
     return body.rstrip() + "\n" + stub + "\n"
 
 
@@ -327,7 +331,7 @@ def _insert_before_failed_attempts(body: str, stub: str) -> str:
     for pattern in [r"^## Failed Attempts", r"^## Results"]:
         m = re.search(pattern, body, re.MULTILINE)
         if m:
-            return body[:m.start()] + stub + "\n" + body[m.start():]
+            return body[: m.start()] + stub + "\n" + body[m.start() :]
     return body.rstrip() + "\n" + stub + "\n"
 
 
@@ -335,7 +339,7 @@ def _insert_before_results(body: str, stub: str) -> str:
     """Insert stub before ## Results & Parameters, or at end."""
     m = re.search(r"^## Results", body, re.MULTILINE)
     if m:
-        return body[:m.start()] + stub + "\n" + body[m.start():]
+        return body[: m.start()] + stub + "\n" + body[m.start() :]
     return body.rstrip() + "\n" + stub + "\n"
 
 
@@ -400,6 +404,7 @@ def transform_skill(
 # ---------------------------------------------------------------------------
 # Skill discovery
 # ---------------------------------------------------------------------------
+
 
 def discover_odyssey_skills() -> list[tuple[str, Path, Optional[str]]]:
     """
@@ -508,6 +513,7 @@ def get_content_size(path: Path) -> int:
 # Deduplication
 # ---------------------------------------------------------------------------
 
+
 def build_skill_registry(
     source_filter: Optional[str] = None,
     skill_filter: Optional[str] = None,
@@ -565,6 +571,7 @@ def build_skill_registry(
 # Migration
 # ---------------------------------------------------------------------------
 
+
 def migrate_skill(
     skill_name: str,
     source: str,
@@ -616,6 +623,7 @@ def migrate_skill(
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
