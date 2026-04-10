@@ -11,7 +11,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   update:
@@ -29,10 +28,16 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install pyyaml
+        run: pip install -r requirements-dev.txt
 
       - name: Generate marketplace.json
         run: python3 scripts/generate_marketplace.py .claude-plugin/marketplace.json
+
+      - name: Validate skills
+        run: python3 scripts/validate_plugins.py
+
+      - name: Run tests
+        run: python3 -m pytest tests/ -v
 
       - name: Check for changes
         id: check
@@ -43,21 +48,11 @@ jobs:
             echo "changed=true" >> $GITHUB_OUTPUT
           fi
 
-      - name: Commit and open PR
+      - name: Commit and push to main
         if: steps.check.outputs.changed == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          BRANCH="chore/update-marketplace-$(date +%Y%m%d%H%M%S)"
-          git checkout -b "$BRANCH"
           git add .claude-plugin/marketplace.json
           git commit -m "chore: update marketplace.json [skip ci]"
-          git push origin "$BRANCH"
-          gh pr create \
-            --title "chore: update marketplace.json" \
-            --body "Auto-generated: regenerate marketplace.json after skills change." \
-            --base main \
-            --head "$BRANCH"
-          gh pr merge --auto --rebase
+          git push origin main
