@@ -1,5 +1,29 @@
 # port-reusable-scripts — History
 
+## v1.3.0 (2026-04-10)
+
+**Changed by:** Session context — porting `hephaestus/automation/` (15 source files) from Odysseus staging copy into ProjectHephaestus, making `plan_issues.py` and `implement_issues.py` from ProjectScylla work as standalone executables. PR #268 created with auto-merge enabled; 596 tests pass, 80.63% coverage.
+**Verification:** verified-local — all tests pass locally, CI pending (PR #268 auto-merge enabled but not yet merged).
+
+### What changed
+- Added When to Use #9: single-PR from staging copy pattern
+- Added Step 4f: mypy overrides for tests/ and scripts/ directories
+- Added Step 4g: fix markdownlint failures in skill/documentation files (HTML elements + MD025 bash comment conflict)
+- Added 3 new Failed Attempts rows: `git stash` + Safety Net conflict, markdownlint auto-fixer strips leading spaces, coverage threshold at boundary
+- Added Results & Parameters: entry points for automation CLI commands, mypy overrides template, version bump reference
+- Added fourth migration session to statistics table
+- Added ProjectHephaestus PR #268 row to Verified On table
+- Added 4 new Key Takeaways (#16–19): staging copies can be single-PR, never git checkout -- on hook-modified files, markdownlint disable > indentation tricks, coverage boundary needs tests not just omit
+- Updated date to 2026-04-10, version to 1.3.0
+
+### Why
+Previous versions documented multi-PR sequential/parallel migrations. This session demonstrated that when a complete module exists in a staging copy (never committed to actual repo), a single-PR approach is cleaner. Also surfaced three new gotchas not present in v1.2.0: Safety Net blocking `git checkout --`, markdownlint's auto-fixer loop, and coverage threshold boundary requiring both omit AND minimal tests.
+
+### Previous version (v1.2.0) snapshot
+[Full v1.2.0 content preserved in git history at commit prior to v1.3.0 amendment]
+
+---
+
 ## v1.2.0 (2026-03-30)
 
 **Changed by:** Session context — porting 7 validation/resilience scripts + 2 core library modules from ProjectScylla to ProjectHephaestus as installable library modules with CLI entry points (PRs #213–218), followed by ProjectScylla thin-wrapper PR #1743.
