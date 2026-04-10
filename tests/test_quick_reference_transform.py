@@ -11,6 +11,24 @@ Verifies that:
 
 from pathlib import Path
 
+from conftest import (
+    SAMPLE_FAILED_ATTEMPTS as FAILED_ATTEMPTS,
+)
+from conftest import (
+    SAMPLE_FRONTMATTER as FRONTMATTER,
+)
+from conftest import (
+    SAMPLE_OVERVIEW as OVERVIEW,
+)
+from conftest import (
+    SAMPLE_QUICK_REFERENCE as QUICK_REFERENCE_CONTENT,
+)
+from conftest import (
+    SAMPLE_RESULTS as RESULTS,
+)
+from conftest import (
+    SAMPLE_VERIFIED_WORKFLOW as VERIFIED_WORKFLOW_CONTENT,
+)
 from fix_remaining_warnings import (
     add_verified_workflow_wrapper,
     has_orphan_quick_reference,
@@ -18,15 +36,6 @@ from fix_remaining_warnings import (
     merge_quick_reference_into_verified_workflow,
 )
 from validate_plugins import validate_skill_md
-
-from conftest import (
-    SAMPLE_FAILED_ATTEMPTS as FAILED_ATTEMPTS,
-    SAMPLE_FRONTMATTER as FRONTMATTER,
-    SAMPLE_OVERVIEW as OVERVIEW,
-    SAMPLE_QUICK_REFERENCE as QUICK_REFERENCE_CONTENT,
-    SAMPLE_RESULTS as RESULTS,
-    SAMPLE_VERIFIED_WORKFLOW as VERIFIED_WORKFLOW_CONTENT,
-)
 
 
 def make_skill(
@@ -79,7 +88,12 @@ class TestHasOrphanQuickReference:
 
     def test_returns_false_when_quick_reference_only_as_subsection_marker(self) -> None:
         # Content where ### Quick Reference appears but not ## Quick Reference
-        content = FRONTMATTER + OVERVIEW + "## Verified Workflow\n\n### Quick Reference\n\n```bash\ngit x\n```\n\n" + FAILED_ATTEMPTS
+        content = (
+            FRONTMATTER
+            + OVERVIEW
+            + "## Verified Workflow\n\n### Quick Reference\n\n```bash\ngit x\n```\n\n"
+            + FAILED_ATTEMPTS
+        )
         assert has_orphan_quick_reference(content) is False
 
 
@@ -95,9 +109,10 @@ class TestMergeQuickReferenceIntoVerifiedWorkflow:
 
         # Top-level ## Quick Reference must be gone
         import re
-        assert not re.search(r'^## Quick Reference', result, re.MULTILINE)
+
+        assert not re.search(r"^## Quick Reference", result, re.MULTILINE)
         # Subsection ### Quick Reference must exist
-        assert re.search(r'^### Quick Reference', result, re.MULTILINE)
+        assert re.search(r"^### Quick Reference", result, re.MULTILINE)
         # ## Verified Workflow must still be there
         assert "## Verified Workflow" in result
         # ### Quick Reference must appear after ## Verified Workflow
@@ -110,8 +125,9 @@ class TestMergeQuickReferenceIntoVerifiedWorkflow:
         result = merge_quick_reference_into_verified_workflow(content)
 
         import re
-        assert not re.search(r'^## Quick Reference', result, re.MULTILINE)
-        assert re.search(r'^### Quick Reference', result, re.MULTILINE)
+
+        assert not re.search(r"^## Quick Reference", result, re.MULTILINE)
+        assert re.search(r"^### Quick Reference", result, re.MULTILINE)
         vw_pos = result.index("## Verified Workflow")
         qr_pos = result.index("### Quick Reference")
         assert qr_pos > vw_pos
@@ -162,8 +178,9 @@ class TestAddVerifiedWorkflowWrapperRegression:
 
 class TestFixSkillFileIntegration:
     def test_fix_skill_file_handles_orphan_qr(self, tmp_path: Path) -> None:
-        from fix_remaining_warnings import fix_skill_file
         import re
+
+        from fix_remaining_warnings import fix_skill_file
 
         content = make_skill(has_quick_reference=True, has_verified_workflow=True)
         skill_file = tmp_path / "SKILL.md"
@@ -174,8 +191,8 @@ class TestFixSkillFileIntegration:
         assert modified is True
         assert any("Quick Reference" in fix for fix in fixes)
         result = skill_file.read_text()
-        assert not re.search(r'^## Quick Reference', result, re.MULTILINE)
-        assert re.search(r'^### Quick Reference', result, re.MULTILINE)
+        assert not re.search(r"^## Quick Reference", result, re.MULTILINE)
+        assert re.search(r"^### Quick Reference", result, re.MULTILINE)
 
     def test_fix_skill_file_is_idempotent(self, tmp_path: Path) -> None:
         from fix_remaining_warnings import fix_skill_file
@@ -221,13 +238,18 @@ class TestValidatePluginsQuickReferenceWarning:
         plugin_json_dir = plugin_dir / ".claude-plugin"
         plugin_json_dir.mkdir()
         import json
-        (plugin_json_dir / "plugin.json").write_text(json.dumps({
-            "name": "test-plugin",
-            "version": "1.0.0",
-            "description": "A test plugin for unit testing purposes.",
-            "category": "tooling",
-            "date": "2026-01-01",
-        }))
+
+        (plugin_json_dir / "plugin.json").write_text(
+            json.dumps(
+                {
+                    "name": "test-plugin",
+                    "version": "1.0.0",
+                    "description": "A test plugin for unit testing purposes.",
+                    "category": "tooling",
+                    "date": "2026-01-01",
+                }
+            )
+        )
         return plugin_dir
 
     def test_warns_on_orphaned_top_level_quick_reference(self, tmp_path: Path) -> None:

@@ -12,14 +12,10 @@ Covers:
 - validate_plugin: integration tests with valid and invalid skill files
 """
 
-from pathlib import Path
 from unittest.mock import patch
 
-import pytest
-
+from conftest import CLEAN_SKILL_MD
 from validate_plugins import (
-    SKILLS_DIR,
-    find_plugins,
     parse_frontmatter,
     validate_failed_attempts_table,
     validate_frontmatter,
@@ -27,9 +23,6 @@ from validate_plugins import (
     validate_quick_reference_heading,
     validate_sections,
 )
-
-from conftest import CLEAN_SKILL_MD
-
 
 # ---------------------------------------------------------------------------
 # parse_frontmatter
@@ -180,12 +173,7 @@ class TestValidateSections:
         assert validate_sections(body) == []
 
     def test_missing_one_section(self):
-        body = (
-            "## Overview\nstuff\n"
-            "## When to Use\nstuff\n"
-            "## Verified Workflow\nstuff\n"
-            "## Failed Attempts\nstuff\n"
-        )
+        body = "## Overview\nstuff\n## When to Use\nstuff\n## Verified Workflow\nstuff\n## Failed Attempts\nstuff\n"
         errors = validate_sections(body)
         assert len(errors) == 1
         assert "Results & Parameters" in errors[0]
@@ -217,12 +205,7 @@ class TestValidateFailedAttemptsTable:
         assert any("empty" in e.lower() or "None" in e for e in errors)
 
     def test_missing_columns(self):
-        body = (
-            "## Failed Attempts\n\n"
-            "| Attempt | Details |\n"
-            "|---------|--------|\n"
-            "| 1 | Something |\n"
-        )
+        body = "## Failed Attempts\n\n| Attempt | Details |\n|---------|--------|\n| 1 | Something |\n"
         errors = validate_failed_attempts_table(body)
         assert any("missing required columns" in e for e in errors)
 
@@ -286,6 +269,7 @@ class TestFindPlugins:
         (skills / "alpha.md").write_text("skill a")
         (skills / "beta.md").write_text("skill b")
         from skill_utils import find_skill_files
+
         result = find_skill_files(skills_dir=skills)
         assert len(result) == 2
         names = [p.name for p in result]
@@ -299,6 +283,7 @@ class TestFindPlugins:
         (skills / "alpha.notes.md").write_text("notes")
         (skills / "alpha.notes-v2.md").write_text("notes v2")
         from skill_utils import find_skill_files
+
         result = find_skill_files(skills_dir=skills)
         assert len(result) == 1
         assert result[0].name == "alpha.md"
@@ -307,12 +292,14 @@ class TestFindPlugins:
         skills = tmp_path / "skills"
         skills.mkdir()
         from skill_utils import find_skill_files
+
         result = find_skill_files(skills_dir=skills)
         assert result == []
 
     def test_missing_directory(self, tmp_path):
         missing = tmp_path / "nonexistent"
         from skill_utils import find_skill_files
+
         result = find_skill_files(skills_dir=missing)
         assert result == []
 
@@ -331,9 +318,7 @@ class TestValidatePlugin:
             errors = validate_plugin("good-skill.md")
         # CLEAN_SKILL_MD from conftest uses short column names that won't
         # match the strict 4-column check, so filter to non-column errors.
-        non_column_errors = [
-            e for e in errors if "missing required columns" not in e
-        ]
+        non_column_errors = [e for e in errors if "missing required columns" not in e]
         assert non_column_errors == []
 
     def test_invalid_skill_file_no_frontmatter(self, tmp_path):

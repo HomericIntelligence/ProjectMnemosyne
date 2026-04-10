@@ -13,10 +13,8 @@ Verifies that:
 from pathlib import Path
 
 import pytest
-
-from fix_remaining_warnings import fix_skill_file, main
-
 from conftest import CLEAN_SKILL_MD, make_skill_file
+from fix_remaining_warnings import fix_skill_file, main
 
 NEEDS_WORKFLOW_FIX = """\
 ---
@@ -187,7 +185,7 @@ class TestMainDynamicDiscovery:
 
     def test_discovers_all_skill_files_dynamically(self, tmp_path: Path) -> None:
         """main() must process every SKILL.md in the tree without a hardcoded list."""
-        skill_files = self._build_skills_tree(tmp_path)
+        self._build_skills_tree(tmp_path)
 
         # Run without dry-run so files are actually written
         main(["--skills-dir", str(tmp_path)])
@@ -201,15 +199,11 @@ class TestMainDynamicDiscovery:
         self._build_skills_tree(tmp_path)
 
         # Snapshot all contents before dry run
-        before: dict[Path, str] = {
-            p: p.read_text() for p in tmp_path.rglob("SKILL.md")
-        }
+        before: dict[Path, str] = {p: p.read_text() for p in tmp_path.rglob("SKILL.md")}
 
         main(["--skills-dir", str(tmp_path), "--dry-run"])
 
-        after: dict[Path, str] = {
-            p: p.read_text() for p in tmp_path.rglob("SKILL.md")
-        }
+        after: dict[Path, str] = {p: p.read_text() for p in tmp_path.rglob("SKILL.md")}
 
         assert before == after, "No files should be modified during dry-run"
 
@@ -254,9 +248,7 @@ class TestMainDynamicDiscovery:
         main(["--skills-dir", str(tmp_path), "--dry-run"])
         # If main raised an exception for any file, the test would have failed above
 
-    def test_dry_run_flag_output_contains_would_fix(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture
-    ) -> None:
+    def test_dry_run_flag_output_contains_would_fix(self, tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
         """--dry-run output should indicate what would be fixed."""
         fix_dir = tmp_path / "cat" / "skill-a"
         fix_dir.mkdir(parents=True)
@@ -268,9 +260,7 @@ class TestMainDynamicDiscovery:
         assert "DRY RUN" in captured.out
         assert "Would fix" in captured.out or "would" in captured.out.lower()
 
-    def test_no_dry_run_output_shows_fixed(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture
-    ) -> None:
+    def test_no_dry_run_output_shows_fixed(self, tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
         """Normal run output should report files that were fixed."""
         fix_dir = tmp_path / "cat" / "skill-b"
         fix_dir.mkdir(parents=True)

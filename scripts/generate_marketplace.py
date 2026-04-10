@@ -16,9 +16,9 @@ import sys
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
-from skill_utils import find_skill_files, parse_frontmatter
+import yaml
 
 
 def load_skill_metadata(skill_file: Path) -> Optional[Dict[str, Any]]:
@@ -29,8 +29,17 @@ def load_skill_metadata(skill_file: Path) -> Optional[Dict[str, Any]]:
     except IOError:
         return None
 
-    frontmatter, _body, errors = parse_frontmatter(content)
-    if errors or not frontmatter:
+    # Extract YAML frontmatter
+    if not content.startswith("---"):
+        return None
+
+    parts = content.split("---", 2)
+    if len(parts) < 3:
+        return None
+
+    try:
+        frontmatter = yaml.safe_load(parts[1]) or {}
+    except yaml.YAMLError:
         return None
 
     # Add path relative to repo root
@@ -38,8 +47,15 @@ def load_skill_metadata(skill_file: Path) -> Optional[Dict[str, Any]]:
     return frontmatter
 
 
-# Backward-compatible alias
-find_skills = find_skill_files
+def find_skills() -> List[Path]:
+    """Find all flat skill files (skills/*.md, exclude *.notes.md)."""
+    skills_dir = Path("skills")
+
+    if not skills_dir.exists():
+        return []
+
+    files = sorted([f for f in skills_dir.glob("*.md") if not f.name.endswith(".notes.md") and f.is_file()])
+    return files
 
 
 def generate_marketplace() -> Dict[str, Any]:
@@ -76,17 +92,12 @@ def generate_marketplace() -> Dict[str, Any]:
     plugin_entries.sort(key=lambda x: (x["category"], x["name"]))
 
     # Compute category statistics
-    category_counts = dict(sorted(
-        Counter(entry["category"] for entry in plugin_entries).items()
-    ))
+    category_counts = dict(sorted(Counter(entry["category"] for entry in plugin_entries).items()))
 
     # Official marketplace format
     marketplace = {
         "name": "ProjectMnemosyne",
-        "owner": {
-            "name": "HomericIntelligence",
-            "url": "https://github.com/HomericIntelligence"
-        },
+        "owner": {"name": "HomericIntelligence", "url": "https://github.com/HomericIntelligence"},
         "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
         "version": "1.0.0",
         "total_plugins": len(plugin_entries),
@@ -119,7 +130,7 @@ def main() -> int:
     print(f"Generated {output_file}")
     print(f"  Total skills: {marketplace['total_plugins']}")
     print(f"  Last updated: {marketplace['last_updated']}")
-    print(f"  Categories:")
+    print("  Categories:")
     for category, count in marketplace["categories"].items():
         print(f"    {category}: {count}")
 

@@ -7,9 +7,10 @@ validate_plugins.py and generate_marketplace.py (see #914, #928, #1110).
 """
 
 import re
-import yaml
 from pathlib import Path
 from typing import Dict, List, Tuple
+
+import yaml
 
 SKILLS_DIR = Path("skills")
 
@@ -51,10 +52,11 @@ def find_skill_files(skills_dir: Path = SKILLS_DIR) -> List[Path]:
     if not skills_dir.exists():
         return []
 
-    files = sorted([
-        f for f in skills_dir.glob("*.md")
-        if not re.match(r".*\.notes(-\w+)?\.md$", f.name)
-        and not re.match(r".*\.history", f.name)
-        and f.is_file()
-    ])
+    files = sorted(
+        [
+            f
+            for f in skills_dir.glob("*.md")
+            if not re.match(r".*\.notes(-\w+)?\.md$", f.name) and not re.match(r".*\.history", f.name) and f.is_file()
+        ]
+    )
     return files
