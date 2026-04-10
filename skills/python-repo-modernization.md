@@ -310,7 +310,7 @@ branch = true
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectHephaestus | v0.3.0 modernization — 7 phases in one session | [notes.md](../../references/python-repo-modernization-notes.md) |
+| ProjectHephaestus | v0.3.0 modernization — 7 phases in one session | [notes.md](python-repo-modernization.notes.md) |
 
 ## References
 
