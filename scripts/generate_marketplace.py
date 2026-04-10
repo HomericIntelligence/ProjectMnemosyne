@@ -13,11 +13,12 @@ Usage:
 
 import json
 import sys
-import yaml
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+
+from skill_utils import find_skill_files, parse_frontmatter
 
 
 def load_skill_metadata(skill_file: Path) -> Optional[Dict[str, Any]]:
@@ -28,17 +29,8 @@ def load_skill_metadata(skill_file: Path) -> Optional[Dict[str, Any]]:
     except IOError:
         return None
 
-    # Extract YAML frontmatter
-    if not content.startswith("---"):
-        return None
-
-    parts = content.split("---", 2)
-    if len(parts) < 3:
-        return None
-
-    try:
-        frontmatter = yaml.safe_load(parts[1]) or {}
-    except yaml.YAMLError:
+    frontmatter, _body, errors = parse_frontmatter(content)
+    if errors or not frontmatter:
         return None
 
     # Add path relative to repo root
@@ -46,18 +38,8 @@ def load_skill_metadata(skill_file: Path) -> Optional[Dict[str, Any]]:
     return frontmatter
 
 
-def find_skills() -> List[Path]:
-    """Find all flat skill files (skills/*.md, exclude *.notes.md)."""
-    skills_dir = Path("skills")
-
-    if not skills_dir.exists():
-        return []
-
-    files = sorted([
-        f for f in skills_dir.glob("*.md")
-        if not f.name.endswith(".notes.md") and f.is_file()
-    ])
-    return files
+# Backward-compatible alias
+find_skills = find_skill_files
 
 
 def generate_marketplace() -> Dict[str, Any]:
