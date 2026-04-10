@@ -13,11 +13,14 @@ Checks:
 
 import re
 import sys
-import yaml
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-SKILLS_DIR = Path("skills")
+from skill_utils import find_skill_files, parse_frontmatter, SKILLS_DIR
+
+# Backward-compatible alias
+find_plugins = find_skill_files
+
 VALID_CATEGORIES = {
     "training", "evaluation", "optimization", "debugging",
     "architecture", "tooling", "ci-cd", "testing", "documentation"
@@ -28,44 +31,6 @@ RED = "\033[91m"
 YELLOW = "\033[93m"
 GREEN = "\033[92m"
 RESET = "\033[0m"
-
-
-def find_plugins() -> List[Path]:
-    """Find all flat skill files (skills/*.md, exclude *.notes*.md and *.history)."""
-    if not SKILLS_DIR.exists():
-        return []
-
-    files = sorted([
-        f for f in SKILLS_DIR.glob("*.md")
-        if not re.match(r".*\.notes(-\w+)?\.md$", f.name) and f.is_file()
-    ])
-    return files
-
-
-def parse_frontmatter(content: str) -> Tuple[Dict, str, List[str]]:
-    """
-    Parse YAML frontmatter from markdown.
-    Returns (frontmatter_dict, body, errors).
-    """
-    errors = []
-
-    if not content.startswith("---"):
-        errors.append("File does not start with YAML frontmatter delimiter (---)")
-        return {}, content, errors
-
-    parts = content.split("---", 2)
-    if len(parts) < 3:
-        errors.append("Invalid frontmatter: missing closing ---")
-        return {}, content, errors
-
-    try:
-        frontmatter = yaml.safe_load(parts[1]) or {}
-    except yaml.YAMLError as e:
-        errors.append(f"Invalid YAML frontmatter: {e}")
-        return {}, content, errors
-
-    body = parts[2].lstrip("\n")
-    return frontmatter, body, errors
 
 
 def validate_frontmatter(frontmatter: Dict, filename: str) -> List[str]:
