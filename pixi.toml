@@ -1,0 +1,22 @@
+[project]
+name = "project-mnemosyne"
+version = "0.1.0"
+description = "Skills marketplace for the HomericIntelligence agentic ecosystem"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64"]
+
+[dependencies]
+python = ">=3.9"
+pyyaml = ">=6.0"
+
+[feature.dev.dependencies]
+pytest = ">=8.3"
+
+[environments]
+default = { features = ["dev"] }
+
+[tasks]
+validate = "python3 scripts/validate_plugins.py"
+test = "python3 -m pytest tests/"
+check = { depends-on = ["validate", "test"] }
+generate-marketplace = "python3 scripts/generate_marketplace.py"
