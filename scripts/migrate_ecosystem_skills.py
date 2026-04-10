@@ -118,7 +118,7 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
     fm_text = rest[:end_idx].strip()
     body = rest[end_idx + 4:].lstrip("\n")
 
-    frontmatter = {}
+    frontmatter: dict[str, object] = {}
     for line in fm_text.splitlines():
         line = line.rstrip()
         if not line or line.startswith("#"):
@@ -134,7 +134,8 @@ def parse_frontmatter(content: str) -> tuple[dict, str]:
                 val = val[1:-1]
             # Handle empty values
             if val == "":
-                val = None
+                frontmatter[key] = None
+                continue
             frontmatter[key] = val
 
     return frontmatter, body
@@ -391,7 +392,7 @@ def transform_skill(
 # Skill discovery
 # ---------------------------------------------------------------------------
 
-def discover_odyssey_skills() -> list[tuple[str, Path, None]]:
+def discover_odyssey_skills() -> list[tuple[str, Path, Optional[str]]]:
     """
     Discover skills from ProjectOdyssey.
     Format: <skill-name>/SKILL.md
@@ -401,7 +402,7 @@ def discover_odyssey_skills() -> list[tuple[str, Path, None]]:
     if not base.exists():
         return []
 
-    skills = []
+    skills: list[tuple[str, Path, Optional[str]]] = []
     for item in sorted(base.iterdir()):
         if not item.is_dir():
             continue
@@ -413,7 +414,7 @@ def discover_odyssey_skills() -> list[tuple[str, Path, None]]:
     return skills
 
 
-def discover_scylla_skills() -> list[tuple[str, Path, str]]:
+def discover_scylla_skills() -> list[tuple[str, Path, Optional[str]]]:
     """
     Discover skills from ProjectScylla.
     Format: <category>/<skill-name>/SKILL.md
@@ -423,7 +424,7 @@ def discover_scylla_skills() -> list[tuple[str, Path, str]]:
     if not base.exists():
         return []
 
-    skills = []
+    skills: list[tuple[str, Path, Optional[str]]] = []
     for category_dir in sorted(base.iterdir()):
         if not category_dir.is_dir():
             continue
@@ -454,7 +455,7 @@ def discover_scylla_skills() -> list[tuple[str, Path, str]]:
     return skills
 
 
-def discover_keystone_skills() -> list[tuple[str, Path, None]]:
+def discover_keystone_skills() -> list[tuple[str, Path, Optional[str]]]:
     """
     Discover skills from ProjectKeystone.
     Format: <skill-name>/SKILL.md (or <skill-name>/<sub>/SKILL.md for nested)
@@ -464,7 +465,7 @@ def discover_keystone_skills() -> list[tuple[str, Path, None]]:
     if not base.exists():
         return []
 
-    skills = []
+    skills: list[tuple[str, Path, Optional[str]]] = []
     for item in sorted(base.iterdir()):
         if not item.is_dir():
             continue
@@ -519,6 +520,7 @@ def build_skill_registry(
         sources_to_scan = [source_filter]
 
     for source in sources_to_scan:
+        candidates: list[tuple[str, Path, Optional[str]]] = []
         if source == "scylla":
             candidates = discover_scylla_skills()
         elif source == "keystone":

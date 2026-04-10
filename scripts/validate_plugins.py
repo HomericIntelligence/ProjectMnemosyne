@@ -122,7 +122,7 @@ def validate_sections(body: str) -> List[str]:
 
 def validate_failed_attempts_table(body: str) -> List[str]:
     """Validate Failed Attempts table structure."""
-    errors = []
+    errors: List[str] = []
 
     # Find Failed Attempts section
     if "## Failed Attempts" not in body:

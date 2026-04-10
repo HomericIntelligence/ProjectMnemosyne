@@ -29,6 +29,9 @@ jobs:
       - name: Validate flat-format skill files
         run: python3 scripts/validate_plugins.py
 
+      - name: Type check
+        run: mypy scripts/ --ignore-missing-imports
+
       - name: Run test suite
         run: pytest tests/ -v
 
