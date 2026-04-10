@@ -1,0 +1,16 @@
+[project]
+name = "project-mnemosyne"
+version = "0.1.0"
+description = "Skills marketplace for the HomericIntelligence agentic ecosystem"
+requires-python = ">=3.9"
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
