@@ -203,7 +203,7 @@ Coverage: 79.27% (threshold: 75%)
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectScylla | Issue #1146, PR #1230 | [notes.md](../../references/collaborator-extraction-tdd-notes.md) |
+| ProjectScylla | Issue #1146, PR #1230 | [notes.md](collaborator-extraction-tdd.notes.md) |
 
 ## References
 

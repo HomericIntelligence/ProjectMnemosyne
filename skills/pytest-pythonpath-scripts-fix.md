@@ -105,7 +105,7 @@ Coverage: 78.31% (threshold 75%)
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectScylla | Issue #1137, PR #1190 | [notes.md](../../references/pytest-pythonpath-scripts-fix/notes.md) |
+| ProjectScylla | Issue #1137, PR #1190 | [notes.md](pytest-pythonpath-scripts-fix.notes.md) |
 
 ## References
 

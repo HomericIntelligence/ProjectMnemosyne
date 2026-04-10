@@ -133,4 +133,4 @@ class TestSchemaValidation:
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectScylla | PR #1424, issue #1380 | [notes.md](../../references/wire-schema-validation-notes.md) |
+| ProjectScylla | PR #1424, issue #1380 | [notes.md](wire-schema-validation.notes.md) |
