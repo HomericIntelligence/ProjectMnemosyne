@@ -14,6 +14,7 @@ Options:
 """
 
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -29,12 +30,23 @@ SKILLS_DIR = REPO_ROOT / "skills"
 
 TODAY = "2026-03-25"
 
-# Source definitions: name -> (base_path, skill_glob_pattern)
+# Source definitions: name -> base_path
+# Override via environment variables:
+#   MNEMOSYNE_ODYSSEY_SKILLS_DIR, MNEMOSYNE_SCYLLA_SKILLS_DIR, MNEMOSYNE_KEYSTONE_SKILLS_DIR
 # Scylla uses <category>/<skill-name>/SKILL.md; others use <skill-name>/SKILL.md
 SOURCES = {
-    "odyssey": Path("/home/mvillmow/Agents/Aindrea/ProjectOdyssey/.claude/skills"),
-    "scylla": Path("/home/mvillmow/ProjectScylla/tests/claude-code/shared/skills"),
-    "keystone": Path("/home/mvillmow/ProjectKeystone/.claude/skills"),
+    "odyssey": Path(os.environ.get(
+        "MNEMOSYNE_ODYSSEY_SKILLS_DIR",
+        str(Path.home() / "Agents/Aindrea/ProjectOdyssey/.claude/skills"),
+    )),
+    "scylla": Path(os.environ.get(
+        "MNEMOSYNE_SCYLLA_SKILLS_DIR",
+        str(Path.home() / "ProjectScylla/tests/claude-code/shared/skills"),
+    )),
+    "keystone": Path(os.environ.get(
+        "MNEMOSYNE_KEYSTONE_SKILLS_DIR",
+        str(Path.home() / "ProjectKeystone/.claude/skills"),
+    )),
 }
 
 # Fields to remove from frontmatter during migration
@@ -83,15 +95,12 @@ PATH_GENERALIZATIONS = [
     # pixi run mojo -> must come before pixi run
     (r"pixi run mojo", "<package-manager> run mojo"),
     (r"pixi run", "<package-manager> run"),
-    # ProjectOdyssey paths
-    (r"/home/mvillmow/[^\s\"'`]*/ProjectOdyssey/", "<project-root>/"),
-    (r"/home/mvillmow/Agents/Aindrea/ProjectOdyssey/", "<project-root>/"),
-    # ProjectScylla paths
-    (r"/home/mvillmow/[^\s\"'`]*/ProjectScylla/", "<project-root>/"),
-    (r"/home/mvillmow/ProjectScylla/", "<project-root>/"),
-    # ProjectKeystone paths
-    (r"/home/mvillmow/[^\s\"'`]*/ProjectKeystone/", "<project-root>/"),
-    (r"/home/mvillmow/ProjectKeystone/", "<project-root>/"),
+    # Absolute home-directory paths for known projects
+    (r"/home/[^/]+/[^\s\"'`]*/ProjectOdyssey/", "<project-root>/"),
+    (r"/home/[^/]+/[^\s\"'`]*/ProjectScylla/", "<project-root>/"),
+    (r"/home/[^/]+/[^\s\"'`]*/ProjectKeystone/", "<project-root>/"),
+    # Catch-all for any remaining absolute home-directory paths
+    (r"/home/[^/]+/", "<home>/"),
 ]
 
 
