@@ -1,5 +1,66 @@
 # gradient-checking-test-setup-fixes — History
 
+## v3.0.0 (2026-04-09)
+
+**Changed by:** PR #5210 — completed migration of `check_gradients()` to `check_gradient()` across all 5 remaining test files (59 calls)
+**Verification:** verified-local
+
+### What changed
+
+- Migrated ALL remaining test files from `check_gradients()` to `check_gradient()`:
+  - `test_gradient_validation.mojo`
+  - `test_gradient_validation_activations.mojo`
+  - `test_gradient_validation_layers.mojo`
+  - `test_gradient_checking_basic.mojo`
+  - `test_gradient_checking_dtype.mojo`
+- Total: 59 call sites migrated
+- Identified 2 files that MUST keep `check_gradients()`: `test_gradient_checker_meta.mojo` and `test_gradient_checker_noncont_tensors.mojo` — they test Bool-return semantics (intentional False for wrong gradients); `check_gradient()` raises on failure so can't be used for "verify the checker rejects wrong gradients" tests
+- Established `_ones_grad(output: AnyTensor)` helper pattern for creating grad_output from forward output shape
+- Documented tolerance mapping: old `tolerance=X` maps to `rtol=X, atol=1e-2` for normal cases; `tolerance=0.05` for large values maps to `rtol=5e-2, atol=1e-4`
+- Removed stale ADR-009 file-splitting workaround comments (root cause bitcast UAF was fixed)
+- Added Failed Attempts entry for trait-parameter helper function
+
+### Why
+
+v2.0.0 established that `check_gradient()` is the correct API but only migrated 3 test files
+(batch norm, conv2d, depthwise conv2d). The remaining 5 files still used `check_gradients()`
+with its broken absolute tolerance model. This version completes the migration across the entire
+test suite, making the codebase consistent. The 2 meta-test files that keep `check_gradients()`
+are now explicitly documented as intentional exceptions.
+
+### Previous version (v2.0.0) snapshot
+
+---
+name: gradient-checking-test-setup-fixes
+description: 'Fix gradient checking test failures caused by pathological test setup.
+  Use when: (1) gradient checks fail with analytical~0 vs numerical~nonzero for normalization
+  layers, (2) any gradient check exceeds tolerance due to large-magnitude gradients,
+  (3) tests use check_gradients() instead of check_gradient().'
+category: testing
+date: 2026-03-25
+version: 2.0.0
+user-invocable: false
+verification: verified-local
+history: gradient-checking-test-setup-fixes.history
+tags:
+  - gradient-checking
+  - batch-norm
+  - conv2d
+  - depthwise-conv2d
+  - float32-precision
+  - test-setup
+  - tolerance
+---
+
+Key differences from v3.0.0:
+- Only 3 test files migrated (batch norm, conv2d, depthwise conv2d)
+- Did not document which files must keep `check_gradients()` and why
+- Used `_make_ones_grad_output()` helper name (v3.0.0 uses simpler `_ones_grad()`)
+- Did not document tolerance mapping from old `tolerance=` to new `rtol=/atol=`
+- Still contained stale ADR-009 workaround comments
+
+---
+
 ## v2.0.0 (2026-03-25)
 
 **Changed by:** PR #5107 second commit — CI showed v1.0.0 approach still failed for conv2d/depthwise
