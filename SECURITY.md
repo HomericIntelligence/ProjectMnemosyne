@@ -10,7 +10,7 @@
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in ProjectMnemosyne, please report it
-responsibly using **GitHub Security Advisories**:
+responsibly using **GitHub Private Security Advisories**:
 
 1. Go to the [Security Advisories page](https://github.com/HomericIntelligence/ProjectMnemosyne/security/advisories)
 2. Click **"New draft security advisory"**
@@ -26,13 +26,25 @@ responsibly using **GitHub Security Advisories**:
 
 ## Scope
 
+ProjectMnemosyne is a **skills/knowledge marketplace** — it stores markdown
+documentation and skill files, not production application code. The repository
+does include Python scripts for validation and marketplace generation, but does
+not handle user data or run production services.
+
 This policy covers:
-- The ProjectMnemosyne skills marketplace code
-- CI/CD workflows and automation scripts
-- Skill validation and marketplace generation infrastructure
+- Python scripts (validation, marketplace generation, CI automation)
+- CI/CD workflows and GitHub Actions configurations
+- Pre-commit hook configurations
 
 Skill content (markdown files contributed by the community) is informational
 and does not execute code directly.
+
+## Security Scanning
+
+Pre-commit hooks are configured for basic file hygiene (YAML/JSON validation,
+large file checks). Bandit (Python security linter) is **not** currently
+configured in `.pre-commit-config.yaml`. Given the limited Python surface area,
+this is acceptable but can be added if the codebase grows.
 
 ## Contact
 
