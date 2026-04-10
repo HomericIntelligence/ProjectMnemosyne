@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/HomericIntelligence/ProjectMnemosyne/schemas/marketplace.schema.json",
+  "title": "ProjectMnemosyne Marketplace",
+  "description": "Schema for the ProjectMnemosyne skills marketplace registry.",
+  "type": "object",
+  "required": ["name", "owner", "description", "version", "total_plugins", "categories", "last_updated", "plugins"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the marketplace."
+    },
+    "owner": {
+      "type": "object",
+      "required": ["name", "url"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "url": { "type": "string", "format": "uri" }
+      }
+    },
+    "description": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version of the marketplace format."
+    },
+    "total_plugins": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "categories": {
+      "type": "object",
+      "description": "Map of category name to plugin count.",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "last_updated": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$",
+      "description": "ISO 8601 UTC timestamp of last update."
+    },
+    "plugins": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/plugin" }
+    }
+  },
+  "$defs": {
+    "plugin": {
+      "type": "object",
+      "required": ["name", "description", "version", "source", "category", "tags"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$",
+          "description": "Kebab-case plugin identifier."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "Semantic version."
+        },
+        "source": {
+          "type": "string",
+          "description": "Relative path to the skill file."
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "architecture",
+            "ci-cd",
+            "debugging",
+            "documentation",
+            "evaluation",
+            "optimization",
+            "testing",
+            "tooling",
+            "training"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
