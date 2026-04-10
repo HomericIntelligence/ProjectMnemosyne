@@ -6,19 +6,19 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "1.0.0",
-  "total_plugins": 933,
+  "total_plugins": 946,
   "categories": {
-    "architecture": 113,
-    "ci-cd": 182,
-    "debugging": 100,
-    "documentation": 102,
+    "architecture": 114,
+    "ci-cd": 183,
+    "debugging": 107,
+    "documentation": 103,
     "evaluation": 67,
     "optimization": 18,
     "testing": 150,
-    "tooling": 195,
+    "tooling": 198,
     "training": 6
   },
-  "last_updated": "2026-04-08T04:26:01Z",
+  "last_updated": "2026-04-10T02:43:22Z",
   "plugins": [
     {
       "name": "agent-coverage-check",
@@ -689,8 +689,8 @@
     },
     {
       "name": "mojo-deprecated-alias-removal",
-      "description": "Workflow for removing deprecated Mojo comptime type aliases and replacing usages with canonical types. Use when: removing DEPRECATED-marked comptime aliases from Mojo modules, cleaning up backward-compat test files, updating __init__.mojo exports after alias consolidation.",
-      "version": "1.0.0",
+      "description": "Workflow for removing deprecated Mojo comptime type aliases and replacing usages with canonical types. Use when: removing DEPRECATED-marked comptime aliases from Mojo modules, cleaning up backward-compat test files, updating __init__.mojo exports and layer imports after alias consolidation.",
+      "version": "1.1.0",
       "source": "./skills/mojo-deprecated-alias-removal.md",
       "category": "architecture",
       "tags": []
@@ -829,6 +829,20 @@
       "source": "./skills/mojo-tuple-return-types.md",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "mojo-version-migration-strategy",
+      "description": "Strategy for migrating a large Mojo codebase across versions. Use when: (1) planning a Mojo version upgrade across many files, (2) coordinating multi-agent migration work, (3) deciding fix order for cascading compile errors.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-version-migration-strategy.md",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "migration",
+        "version-upgrade",
+        "agent-coordination",
+        "strategy"
+      ]
     },
     {
       "name": "multi-domain-audit-remediation",
@@ -2195,6 +2209,22 @@
       "tags": []
     },
     {
+      "name": "mojo-0263-stdlib-import-migration",
+      "description": "Mojo 0.26.3 migration: stdlib modules require std. prefix and escaping keyword was removed. Use when: (1) upgrading from Mojo 0.26.1/0.26.2 to 0.26.3, (2) seeing 'module not found' errors for testing/sys/memory imports, (3) seeing 'unknown keyword escaping' errors.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-0263-stdlib-import-migration.md",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "0.26.3",
+        "stdlib",
+        "migration",
+        "imports",
+        "escaping",
+        "bulk-fix"
+      ]
+    },
+    {
       "name": "mojo-baseline-ci-compilation-fixes",
       "description": "Fix baseline Mojo compilation errors on main that block all open PRs. Use when: CI test groups fail with errors inherited from main branch (unused variable --Werror, full() type mismatch, alias deprecation, missing re-exports).",
       "version": "1.0.0",
@@ -2204,8 +2234,8 @@
     },
     {
       "name": "mojo-escaping-signature-regression",
-      "description": "Fix Mojo escaping fn type parameter regressions in shared libraries. Use when: (1) build fails after removing escaping from shared function signatures, (2) layer_testers.mojo or gradient_checker.mojo callers break with type mismatch errors, (3) closures passed to check_gradients fail to compile.",
-      "version": "1.0.0",
+      "description": "OBSOLETE IN 0.26.3. Fix Mojo escaping fn type parameter regressions (0.26.1 only). In 0.26.3 escaping is removed entirely; use capturing compile-time params instead (see mojo-026-breaking-changes).",
+      "version": "1.1.0",
       "source": "./skills/mojo-escaping-signature-regression.md",
       "category": "ci-cd",
       "tags": [
@@ -2214,7 +2244,8 @@
         "gradient-checker",
         "function-signatures",
         "type-mismatch",
-        "build-failure"
+        "build-failure",
+        "obsolete-026-3"
       ]
     },
     {
@@ -3013,6 +3044,19 @@
       "tags": []
     },
     {
+      "name": "debugging-blog-bug-validation-methodology",
+      "description": "Methodology for systematically validating that bugs documented in blog posts have been fixed in the codebase. Use when: (1) reviewing blog posts that document bugs, (2) verifying historical bug fixes are still in place, (3) auditing codebase against documented issues.",
+      "version": "1.0.0",
+      "source": "./skills/debugging-blog-bug-validation-methodology.md",
+      "category": "debugging",
+      "tags": [
+        "blog-posts",
+        "bug-validation",
+        "verification",
+        "codebase-audit"
+      ]
+    },
+    {
       "name": "debugging-list-oob-dynamicvector-migration",
       "description": "Fix out-of-bounds List access from DynamicVector\u2192List migration. Use when: (1) execution crashed on List index assignment, (2) DynamicVector(N) was migrated to List[T]() without changing index assignment to append, (3) shape[0]=size on empty list.",
       "version": "1.0.0",
@@ -3351,6 +3395,21 @@
       ]
     },
     {
+      "name": "liza-state-yaml-timestamp-normalization",
+      "description": "Repair a broken `.liza/state.yaml` after a YAML serializer rewrites RFC3339 timestamps into space-separated datetimes that the Liza CLI cannot parse. Use when: (1) `liza validate`, `liza status`, or `liza resume` fail with `cannot parse ... as \"T\"`, (2) `.liza/state.yaml` was rewritten by PyYAML or another generic YAML emitter, (3) the workspace is otherwise intact but all Liza commands fail on timestamp parsing.",
+      "version": "1.0.0",
+      "source": "./skills/liza-state-yaml-timestamp-normalization.md",
+      "category": "debugging",
+      "tags": [
+        "liza",
+        "yaml",
+        "timestamp",
+        "state",
+        "recovery",
+        "pyyaml"
+      ]
+    },
+    {
       "name": "logging-context-deduplication",
       "description": "Fix duplicated context prefixes in structured logging pipelines. Use when: log lines show the same context twice, or empty context renders as [//].",
       "version": "1.0.0",
@@ -3394,6 +3453,23 @@
       ]
     },
     {
+      "name": "mojo-anytensor-uint-set-float-bitcast",
+      "description": "AnyTensor.set(UInt32/UInt64) silently drops writes to float32/float64 tensors because _set_int64 has no float handler. Use when: (1) writing raw IEEE 754 bit patterns (NaN, Inf, denormals) into float tensors via set(UInt32/UInt64), (2) test assertions about NaN bit patterns in float tensors silently fail, (3) any UInt32/UInt64 write to a float-dtype AnyTensor appears to have no effect.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-anytensor-uint-set-float-bitcast.md",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "anytensor",
+        "bitcast",
+        "nan",
+        "float32",
+        "float64",
+        "silent-bug",
+        "set"
+      ]
+    },
+    {
       "name": "mojo-asap-destruction-perturbation-loop-fix",
       "description": "Fix Mojo ASAP-destruction crashes in finite-difference perturbation loops where _get_float64/_set_float64 per-element bitcasts on temporary tensors returned by forward_fn trigger heap-use-after-free. Use when: (1) gradient checking tests crash intermittently AFTER printing test output (not before), (2) loop reads temporary tensors element-by-element after a forward pass, (3) same libKGENCompilerRTShared crash signature but crash happens mid-execution.",
       "version": "1.0.0",
@@ -3431,6 +3507,30 @@
       "description": "Debug Mojo UnsafePointer.bitcast use-after-free, create blog PR on separate branch, fix CI from gitignore/test-coverage hooks. Use when: (1) Mojo crashes after allocation churn with bitcast writes, (2) creating doc PRs on separate branches, (3) test artifacts trigger CI hooks.",
       "version": "1.0.0",
       "source": "./skills/mojo-bitcast-uaf-blog-and-ci-fix.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "mojo-bitcast-write-swarm-elimination",
+      "description": "Systematically find and eliminate all tensor._data.bitcast[T]()[i] = val UAF write patterns across a Mojo codebase using parallel agent swarm. Use when: (1) widespread bitcast write patterns need replacing codebase-wide, (2) grep finds >50 files with the pattern, (3) each file can be fixed independently with same safe API replacement.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-bitcast-write-swarm-elimination.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "mojo-closures-capturing-numerical-forward-trait",
+      "description": "Workaround for Mojo 0.26.3: capturing closures cannot be passed to def(T) raises -> T parameters. Use when: (1) a nested def captures outer variables and must be passed to a higher-order function, (2) compiler gives 'capturing nested functions must be declared unified' or 'cannot pass unified closure to escaping parameter', (3) higher-order function takes BOTH forward AND backward function arguments (e.g., check_gradient(fwd, bwd, ...)), (4) need to migrate a large codebase (10+ files) of capturing closures in parallel.",
+      "version": "2.0.0",
+      "source": "./skills/mojo-closures-capturing-numerical-forward-trait.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "mojo-copyinit-double-free",
+      "description": "Fix double-free crashes when Mojo synthesizes shallow __copyinit__ for structs with UnsafePointer fields. Use when: (1) a Copyable struct with UnsafePointer has no explicit __copyinit__, (2) struct is stored in List and crashes on lock/use after append, (3) crash is non-deterministic and follows List reallocation.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-copyinit-double-free.md",
       "category": "debugging",
       "tags": []
     },
@@ -3484,8 +3584,8 @@
     },
     {
       "name": "mojo-jit-crash-retry",
-      "description": "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) adding or refining retry logic in just test-group to distinguish JIT flakiness from real test failures",
-      "version": "2.1.0",
+      "description": "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) adding or refining retry logic in just test-group to distinguish JIT flakiness from real test failures, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all",
+      "version": "2.2.0",
       "source": "./skills/mojo-jit-crash-retry.md",
       "category": "debugging",
       "tags": [
@@ -3558,6 +3658,14 @@
       "description": "Debug Mojo serialization CI crashes from dtype string conversion mismatches and Python interop crashes. Use when: (1) mojo test crashes during hex encoding or serialization roundtrip, (2) CI fails with libKGENCompilerRTShared crash in serialization tests, (3) dtype roundtrip produces wrong type after load, (4) load_named_tensors returns wrong ordering.",
       "version": "1.0.0",
       "source": "./skills/mojo-serialization-ci-crash.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "mojo-set-api-migration-syntax-patterns",
+      "description": "Three syntax error patterns introduced by Mojo bitcast\u2192set() API migration: inline comments inside call parens swallow closing delimiters (Pattern A), empty Float32(()) split across lines (Pattern B), garbled = in call args or orphaned declarations (Pattern C). Use when: (1) mojo compiler reports 'expected ) in call argument list' after a set() migration, (2) 'use of unknown declaration' errors appear after commenting out var declarations, (3) fixing ASAN JIT symbol errors in dtype tests.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-set-api-migration-syntax-patterns.md",
       "category": "debugging",
       "tags": []
     },
@@ -3880,6 +3988,22 @@
       "source": "./skills/vite-wasm-havok-fix.md",
       "category": "debugging",
       "tags": []
+    },
+    {
+      "name": "academic-paper-myrmidon-swarm-review",
+      "description": "Parallel myrmidon swarm review of academic papers using role-stratified agents (Opus=professor, Sonnet=expert, Haiku=student) for comprehensive, simultaneous coverage. Use when: (1) reviewing a large academic paper with statistical methodology, (2) need thorough parallel coverage faster than sequential review, (3) paper has figures generated from Vega-Lite specs that require caption verification.",
+      "version": "1.0.0",
+      "source": "./skills/academic-paper-myrmidon-swarm-review.md",
+      "category": "documentation",
+      "tags": [
+        "academic",
+        "paper-review",
+        "myrmidon",
+        "swarm",
+        "latex",
+        "statistics",
+        "vega-lite"
+      ]
     },
     {
       "name": "academic-paper-review-quality-improvement",
@@ -4301,7 +4425,7 @@
     {
       "name": "latex-paper-accuracy-review",
       "description": "Review a LaTeX research paper for factual accuracy against raw experiment data, statistical outputs, and codebase constants before publication",
-      "version": "5.0.0",
+      "version": "8.0.0",
       "source": "./skills/latex-paper-accuracy-review.md",
       "category": "documentation",
       "tags": [
@@ -4325,7 +4449,23 @@
         "H-comparison",
         "CI-rehabilitation",
         "cross-reference-rename",
-        "abstract-conclusions-redundancy"
+        "abstract-conclusions-redundancy",
+        "prose-data-direction",
+        "duration-direction",
+        "pareto-dominance",
+        "consistently-contradiction",
+        "monotonic-degradation",
+        "eliminates-possibility",
+        "unobserved-mechanism",
+        "pareto-definite-article",
+        "BCa-binary-n9",
+        "alpha-aggregation",
+        "SRH-tie-correction",
+        "untracked-reproducibility-script",
+        "cross-section-regression",
+        "cost-invariance-overclaiming",
+        "build-script-format-mismatch",
+        "clopper-pearson-transcription"
       ]
     },
     {
@@ -5946,8 +6086,8 @@
     },
     {
       "name": "gradient-checking-test-setup-fixes",
-      "description": "Fix gradient checking test failures caused by pathological test setup. Use when: (1) gradient checks fail with analytical~0 vs numerical~nonzero for normalization layers, (2) any gradient check exceeds tolerance due to large-magnitude gradients, (3) tests use check_gradients() instead of check_gradient().",
-      "version": "2.0.0",
+      "description": "Fix gradient checking test failures caused by pathological test setup. Use when: (1) gradient checks fail with analytical~0 vs numerical~nonzero for normalization layers, (2) any gradient check exceeds tolerance due to large-magnitude gradients, (3) migrating check_gradients() to check_gradient(). Migration is COMPLETE as of v3.0.0.",
+      "version": "3.0.0",
       "source": "./skills/gradient-checking-test-setup-fixes.md",
       "category": "testing",
       "tags": [
@@ -5957,7 +6097,8 @@
         "depthwise-conv2d",
         "float32-precision",
         "test-setup",
-        "tolerance"
+        "tolerance",
+        "migration-complete"
       ]
     },
     {
@@ -7717,6 +7858,21 @@
       ]
     },
     {
+      "name": "liza-agent-pool-reset-explicit-ids",
+      "description": "Reset a dirty Liza workspace and relaunch a clean agent pool with explicit agent IDs so ghost assignments do not reappear. Use when: (1) tasks retain stale `assigned_to` or `worktree` fields after agent failure, (2) `liza` reports invalid state because one agent is assigned to multiple active tasks, (3) leftover task worktrees and local agent processes keep the queue in a bad state, (4) you want to relaunch planners, reviewers, coders, and the orchestrator deterministically.",
+      "version": "1.0.0",
+      "source": "./skills/liza-agent-pool-reset-explicit-ids.md",
+      "category": "tooling",
+      "tags": [
+        "liza",
+        "agents",
+        "worktree",
+        "recovery",
+        "orchestration",
+        "queue"
+      ]
+    },
+    {
       "name": "logging-stdlib-json-formatter",
       "description": "Build a zero-dependency JSON log formatter using stdlib logging.Formatter. Use when: (1) adding structured JSON logging to a shared library, (2) integrating Python logs with Loki/Promtail/ELK without adding dependencies.",
       "version": "1.0.0",
@@ -7776,6 +7932,23 @@
       "source": "./skills/module-decomposition-with-reexports.md",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "mojo-026-breaking-changes",
+      "description": "Catalog of Mojo 0.26.3 breaking changes and fixes. Use when: (1) migrating a Mojo codebase from 0.26.1 to 0.26.3, (2) encountering unfamiliar compile errors after a Mojo version bump, (3) auditing code for deprecated APIs.",
+      "version": "2.0.0",
+      "source": "./skills/mojo-026-breaking-changes.md",
+      "category": "tooling",
+      "tags": [
+        "mojo",
+        "breaking-changes",
+        "migration",
+        "0.26.3",
+        "deprecation",
+        "capturing",
+        "ImplicitlyDestructible",
+        "substr"
+      ]
     },
     {
       "name": "mojo-glibc-env-awareness",
@@ -8497,6 +8670,23 @@
       ]
     },
     {
+      "name": "tooling-modular-upstream-skill-selective-porting",
+      "description": "Port skills from Modular's official skills repo (Agent Skills Standard format) into ProjectMnemosyne with Apache 2.0 attribution. Use when: (1) integrating skills from modular/skills or similar Agent Skills Standard repos, (2) adapting directory-per-skill format to Mnemosyne flat-file format, (3) merging upstream content with existing overlapping skills, (4) handling Apache 2.0 attribution requirements for ported skills.",
+      "version": "1.0.0",
+      "source": "./skills/tooling-modular-upstream-skill-selective-porting.md",
+      "category": "tooling",
+      "tags": [
+        "modular",
+        "mojo",
+        "skills",
+        "porting",
+        "apache-2.0",
+        "agent-skills-standard",
+        "modular-upstream",
+        "selective-port"
+      ]
+    },
+    {
       "name": "tooling-multi-repo-governance-file-rollout",
       "description": "Roll out governance files (LICENSE, CODE_OF_CONDUCT.md, SECURITY.md, CONTRIBUTING.md) across multiple GitHub repos in an organization. Use when: (1) onboarding an org's repos to open-source governance standards, (2) adding missing policy files to 10+ repos at once, (3) creating per-repo-customized CONTRIBUTING.md or SECURITY.md at scale.",
       "version": "1.0.0",
@@ -8571,8 +8761,8 @@
     },
     {
       "name": "tooling-skill-deduplication-semver-versioning",
-      "description": "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes.",
-      "version": "1.5.0",
+      "description": "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes, (4) need algorithmic duplicate detection via marketplace.json without reading all files, (5) running at-scale deduplication across 900+ skills with parallel agents.",
+      "version": "1.6.0",
       "source": "./skills/tooling-skill-deduplication-semver-versioning.md",
       "category": "tooling",
       "tags": [
