@@ -1,0 +1,81 @@
+# mojo-jit-crash-retry Skill History
+
+---
+
+## v3.0.0 — 2026-04-10 (MAJOR: retry workaround removed, root-cause investigation required)
+
+**Reason for major bump**: Prior recommendation (v2.2.0) to implement retry logic in
+`just test-group` was **completely reversed**. User's explicit instruction: "Create the
+minimal reproducers and remove test-with-retry.sh. I don't want workarounds, I want root
+causes." Retry logic hides real failures and prevents upstream bug reports.
+
+**Session context**: ProjectOdyssey CI fix PR #5212, branch `fix/ci-stability-and-quality`
+
+**What changed from v2.2.0**:
+
+- Core recommendation changed from "implement retry" to "create minimal reproducers and file
+  upstream issues against modular/modular"
+- Deleted `scripts/test-with-retry.sh` (88 lines) and `tests/smoke/test_retry_script.py`
+- Replaced retry wrapper with direct `pixi run mojo --Werror -I "$REPO_ROOT" -I . "$test_file"`
+  in justfile recipes `_test-group-inner` and `_test-mojo-inner`
+- ADR-014 marked SUPERSEDED
+- Created `repro/` infrastructure with minimal crash reproducers and GitHub issue templates
+
+**New crash categories documented**:
+
+- Category 1: ASAP Destruction + Bitcast UAF — `repro_crash_standalone.mojo`, filed as
+  modular/modular#6187
+- Category 2: JIT Compilation Volume Crash — `repro_jit_volume_crash.mojo`, issue template
+  at `repro/issues/jit-compilation-volume-crash.md`
+- Category 3: ASAN + Python FFI dlsym Conflict — issue template at
+  `repro/issues/asan-dlsym-abort.md`
+
+**Verification**: verified-precommit (all pre-commit hooks passed, CI pending)
+
+---
+
+## v2.2.0 Snapshot (archived 2026-04-10)
+
+Full content of the skill as it existed immediately before the v3.0.0 amendment:
+
+```yaml
+---
+name: mojo-jit-crash-retry
+description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) adding or refining retry logic in just test-group to distinguish JIT flakiness from real test failures, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all"
+category: debugging
+date: 2026-04-08
+version: "2.2.0"
+user-invocable: false
+verification: verified-precommit
+tags:
+  - mojo
+  - jit
+  - crash
+  - retry
+  - ci
+  - libKGENCompilerRTShared
+---
+```
+
+**Core workflow (v2.2.0)**: Step 3 recommended adding crash-aware retry logic to justfile:
+
+```bash
+MAX_RETRIES=1
+for test_file in $test_files; do
+    for attempt in $(seq 1 $((MAX_RETRIES + 1))); do
+        output=$(pixi run mojo -I "$REPO_ROOT" -I . "$test_file" 2>&1)
+        exit_code=$?
+        if [ $exit_code -eq 0 ]; then file_passed=true; break; fi
+        if echo "$output" | grep -q "execution crashed" && [ $attempt -le $MAX_RETRIES ]; then
+            echo "Execution crashed, retrying ($attempt/$MAX_RETRIES)..."
+        else
+            break
+        fi
+    done
+done
+```
+
+**Issue with v2.2.0 approach**: Retry logic masks real compiler bugs, preventing upstream
+reports. Non-reproducible crashes from a retry wrapper can never be filed as bug reports
+with confidence. The correct approach is minimal standalone reproducers filed against
+modular/modular.

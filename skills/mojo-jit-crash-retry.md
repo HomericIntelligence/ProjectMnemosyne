@@ -1,41 +1,28 @@
 ---
 name: mojo-jit-crash-retry
-description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) adding or refining retry logic in just test-group to distinguish JIT flakiness from real test failures, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all"
+description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular"
 category: debugging
-date: 2026-04-08
-version: "2.2.0"
+date: 2026-04-10
+version: "3.0.0"
 user-invocable: false
 verification: verified-precommit
 tags:
   - mojo
   - jit
   - crash
-  - retry
+  - repro
   - ci
   - libKGENCompilerRTShared
+  - upstream
 ---
-# Mojo JIT Crash Diagnosis and Retry
+# Mojo JIT Crash Diagnosis and Upstream Reporting
 
 ## Overview
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-04-07 |
-| Objective | Consolidated patterns for diagnosing Mojo JIT compiler crashes, distinguishing flaky infrastructure failures from real test bugs, implementing retry logic, splitting test files, and documenting workarounds |
-name: mojo-jit-crash-retry
-description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) adding or refining retry logic in just test-group to distinguish JIT flakiness from real test failures, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all"
-category: debugging
-date: 2026-04-08
-version: "2.2.0"
-user-invocable: false
-verification: verified-precommit
-tags:
-  - mojo
-  - jit
-  - crash
-  - retry
-  - ci
-  - libKGENCompilerRTShared
+| Date | 2026-04-10 |
+| Objective | Consolidated patterns for diagnosing Mojo JIT compiler crashes, investigating root causes (double-free, broken locks, bitcast UAF), creating minimal standalone reproducers, and filing upstream issues against modular/modular. **v3.0.0 note**: retry workaround approach from v2.2.0 has been reversed — do not add retry logic; create reproducers and file upstream bugs instead. |
 
 ## When to Use
 
@@ -46,8 +33,8 @@ tags:
 - The crash is non-deterministic: same test passes/fails randomly across runs
 - A Mojo test file crashes **deterministically** at the Nth sequential call (heap corruption, not JIT flake)
 - The test file has >10 test functions running deep-network-scale operations
-- The `just test-group` retry loop retries all failures indiscriminately (needs crash-aware refinement)
-- CI logs cannot distinguish retry-exhausted from normal test failures
+- **Removing retry logic** from `just test-group` or `scripts/test-with-retry.sh` to expose real failures
+- **Creating minimal standalone reproducers** to isolate a crash category for upstream filing
 - **A `Copyable` struct with `UnsafePointer` fields and no explicit `__copyinit__` is stored in `List`** — synthesized shallow copy + reallocation = double-free
 - **Tests crash non-deterministically and the code changes don't touch those test files at all** — suspect double-free, broken lock, or bitcast UAF before assuming JIT flakiness
 
@@ -164,18 +151,32 @@ ptr[i] = val
 ### Quick Reference
 
 **Identify JIT flake**:
+
 ```bash
 gh run view <run-id> --log-failed 2>&1 | grep -E "execution crashed|libKGENCompilerRTShared|#[0-9]"
 ```
 
 **Rebase to re-trigger CI** (flaky infrastructure fix):
+
 ```bash
 git fetch origin main && git rebase origin/main && git push origin <branch> --force
 ```
 
-**Count test functions** (to decide if file split is needed):
+**Remove retry wrapper and run direct**:
+
 ```bash
-grep -c "^fn test_" tests/models/test_my_model_e2e.mojo
+# In justfile _test-group-inner and _test-mojo-inner:
+pixi run mojo --Werror -I "$REPO_ROOT" -I . "$test_file"
+# Delete scripts/test-with-retry.sh and mark ADR-014 SUPERSEDED
+```
+
+**Create minimal reproducer** (see `repro/` workflow below):
+
+```bash
+mkdir -p repro/issues
+# Write repro_crash_standalone.mojo with minimal trigger
+pixi run mojo repro/repro_crash_standalone.mojo   # confirm crash
+# Fill out issue template following modular/modular#6187 format
 ```
 
 ### Step 1: Distinguish JIT Flake from Real Test Bug
@@ -236,68 +237,120 @@ gh pr view <pr-number> --json autoMergeRequest,mergeStateStatus
 gh run list --branch <branch> --limit 3
 ```
 
-### Step 3: Add Crash-Aware Retry Logic to justfile
+### Step 3: Remove Retry Logic — Direct Test Execution
 
-**Refined retry logic** (crash-aware with distinct failure messages):
+**Do not add retry logic.** Replace any retry wrapper with direct test execution:
 
 ```bash
-MAX_RETRIES=1
-
-for test_file in $test_files; do
-    if [ -f "$test_file" ]; then
-        echo ""
-        echo "Running: $test_file"
-        test_count=$((test_count + 1))
-
-        file_passed=false
-        retry_used=false
-        fail_reason=""
-
-        for attempt in $(seq 1 $((MAX_RETRIES + 1))); do
-            output=$(pixi run mojo -I "$REPO_ROOT" -I . "$test_file" 2>&1)
-            exit_code=$?
-            echo "$output"
-
-            if [ $exit_code -eq 0 ]; then
-                file_passed=true
-                break
-            fi
-
-            # Only retry on JIT/execution crash
-            if echo "$output" | grep -q "execution crashed" && [ $attempt -le $MAX_RETRIES ]; then
-                echo "Execution crashed, retrying ($attempt/$MAX_RETRIES)..."
-                retry_used=true
-            else
-                if [ "$retry_used" = true ]; then
-                    fail_reason="FAILED after retry"
-                else
-                    fail_reason="FAILED (no crash, no retry)"
-                fi
-                break
-            fi
-        done
-
-        if [ "$file_passed" = true ]; then
-            echo "PASSED: $test_file"
-            passed_count=$((passed_count + 1))
-        else
-            echo "$fail_reason: $test_file"
-            failed_count=$((failed_count + 1))
-            failed_tests="$failed_tests\n  - $test_file [$fail_reason]"
-        fi
-    fi
-done
+# In justfile _test-group-inner and _test-mojo-inner
+# BEFORE (v2.2.0 pattern — do not use):
+#   bash "$REPO_ROOT/scripts/test-with-retry.sh" "$test_file"
+# AFTER (v3.0.0 — correct approach):
+pixi run mojo --Werror -I "$REPO_ROOT" -I . "$test_file"
 ```
 
-**Output distinction**:
+**Why**: Retry logic masks real failures. A crash that is retried away cannot be reliably
+reproduced for an upstream bug report. Non-reproducible crashes cannot be filed with
+confidence against modular/modular. Prefer visible failures that drive investigation.
 
-| Scenario | Message |
-|----------|---------|
-| JIT crash → retry → fail | `FAILED after retry: test_file.mojo` |
-| Normal assertion failure | `FAILED (no crash, no retry): test_file.mojo` |
-| JIT crash → retry → pass | `PASSED: test_file.mojo` |
+**Cleanup checklist when removing retry**:
 
-### Step 4: Split Test Files for Deterministic Heap Corruption
+1. Delete `scripts/test-with-retry.sh`
+2. Delete `tests/smoke/test_retry_script.py`
+3. Update justfile recipes to use direct `pixi run mojo --Werror -I "$REPO_ROOT" -I . "$test_file"`
+4. Mark any retry-justifying ADR (e.g. ADR-014) as SUPERSEDED
+
+### Step 4: Create Minimal Reproducers and File Upstream
+
+When a crash category is confirmed, extract the minimal trigger into `repro/`:
+
+```bash
+mkdir -p repro/issues
+```
+
+**Reproducer file** (`repro/repro_crash_<category>.mojo`): smallest possible Mojo program
+that reproduces the crash — no test framework imports, no project imports, standalone.
+
+```mojo
+# repro_crash_standalone.mojo — Category 1: ASAP Destruction + Bitcast UAF
+# Mojo version: 0.26.1  OS: Ubuntu 22.04  CPU-only (no GPU)
+# Run: pixi run mojo repro_crash_standalone.mojo
+# Expected: crash with libKGENCompilerRTShared.so in stack
+# Filed: modular/modular#6187
+
+from memory import UnsafePointer
+
+struct Tensor:
+    var _data: UnsafePointer[Float32]
+    var _size: Int
+
+    fn __init__(out self, size: Int):
+        self._size = size
+        self._data = UnsafePointer[Float32].alloc(size)
+
+    fn __del__(owned self):
+        self._data.free()
+
+fn trigger_uaf() -> Float32:
+    var t = Tensor(4)
+    # bitcast alias — ASAP destruction of t may fire before write completes
+    t._data.bitcast[Float32]()[0] = 1.0
+    return t._data[0]
+
+fn main():
+    print(trigger_uaf())
+```
+
+**Issue template** (`repro/issues/<category>.md`) following modular/modular#6187 format:
+
+```markdown
+## Environment
+
+- Mojo version: 0.26.1
+- OS: Ubuntu 22.04 LTS
+- Hardware: CPU-only
+- Reproduced: [yes/no — always confirm before filing]
+
+## Description
+
+[One-paragraph plain-language description of the crash]
+
+## Crash Signature
+
+[Stack trace or `execution crashed` output — redact any project-specific paths]
+
+## Minimal Reproducer
+
+[Paste full content of repro_crash_<category>.mojo]
+
+## Steps to Reproduce
+
+1. Save above as `repro.mojo`
+2. Run: `mojo repro.mojo`
+3. Observe crash
+
+## Expected Behavior
+
+[What should happen]
+
+## Actual Behavior
+
+[What actually happens — crash, exit code, etc.]
+
+## Relationship to Known Issues
+
+[Cross-reference other filed issues if applicable]
+```
+
+**Known crash categories** (from ProjectOdyssey PR #5212):
+
+| Category | File | Issue |
+|----------|------|-------|
+| ASAP Destruction + Bitcast UAF | `repro/repro_crash_standalone.mojo` | modular/modular#6187 |
+| JIT Compilation Volume Crash | `repro/repro_jit_volume_crash.mojo` | `repro/issues/jit-compilation-volume-crash.md` |
+| ASAN + Python FFI dlsym Conflict | — | `repro/issues/asan-dlsym-abort.md` |
+
+### Step 5: Split Test Files for Deterministic Heap Corruption
 
 When crashes are deterministic (always at the same Nth call), the root cause is JIT heap corruption that accumulates across sequential test calls — not a code bug.
 
@@ -342,7 +395,7 @@ test_<model>_e2e_part1.mojo  → forward/training tests
 test_<model>_e2e_part2.mojo  → gradient/numerical/stability tests
 ```
 
-### Step 5: Document the Crash (when creating a dev doc)
+### Step 6: Document the Crash (when creating a dev doc)
 
 For `docs/dev/mojo-jit-crash-workaround.md`, include:
 - **Problem** — what `execution crashed` means and that it originates in `libKGENCompilerRTShared.so`
@@ -363,6 +416,31 @@ Run markdownlint via pre-commit (not npx — unavailable in pixi environment):
 pixi run pre-commit run markdownlint-cli2 --files docs/dev/mojo-jit-crash-workaround.md
 ```
 
+## When to Remove Retry Logic
+
+Remove retry wrappers from CI test runners when ANY of the following are true:
+
+1. **Crashes are being investigated** — retry masks the reproduction rate and makes
+   root cause investigation harder. Fail fast, then diagnose.
+2. **A retry script exists** (`scripts/test-with-retry.sh` or equivalent) — these are
+   workarounds, not solutions. Delete them.
+3. **An ADR exists that justifies retry** (e.g. ADR-014) — mark it SUPERSEDED and remove
+   the machinery it justified.
+4. **You want to file an upstream issue** — you cannot confidently file a bug report for a
+   crash that only manifests after a retry. Make it fail deterministically first.
+
+**Correct replacement**:
+
+```bash
+# Direct execution — fails visibly, enabling root cause investigation
+pixi run mojo --Werror -I "$REPO_ROOT" -I . "$test_file"
+```
+
+**Note on `SKIP=mojo-format`**: When `mblack` has a broken `click.core` dependency
+(ImportError at pre-commit time), use `SKIP=mojo-format` to skip only that hook — not
+`--no-verify`. Document the skip reason in the commit message. This follows the CONTRIBUTING.md
+pattern for hook exceptions. Never use `--no-verify`.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -379,6 +457,7 @@ pixi run pre-commit run markdownlint-cli2 --files docs/dev/mojo-jit-crash-workar
 | Direct `pixi run npx markdownlint-cli2` | Ran markdownlint via npx through pixi | `npx: command not found` — npx not in pixi environment | Use `pixi run pre-commit run markdownlint-cli2 --files <files>` |
 | Edit CLAUDE.md without Read | Tried to Edit before reading | Tool rejected: "File has not been read yet" | Always Read before Edit |
 | **Assume crash = JIT flake** | Closed/retried without investigating root cause | 16 test files crashing had 3 concrete source-code bugs: double-free, broken lock, bitcast UAF | **Check for double-free, broken locks, and bitcast UAF first before concluding JIT instability** |
+| **Add retry logic to CI** | Implemented `scripts/test-with-retry.sh` (88 lines) with `MAX_RETRIES=1` on `execution crashed` | Retry scripts hide real failures: a crash that is retried away cannot be filed upstream, prevents root cause investigation, masks reproducibility | **Delete retry scripts; use direct `pixi run mojo --Werror`; create minimal reproducers and file upstream** |
 
 ## Results & Parameters
 
@@ -401,6 +480,28 @@ gh run view <run-id> --log 2>&1 | grep -E "FAILED after retry|FAILED \(no crash"
 gh pr checks <pr-number>
 gh run list --branch <branch> --limit 3
 ```
+
+### Upstream Issue Template Format (modular/modular#6187 structure)
+
+When filing crash reports against modular/modular, use this structure:
+
+| Section | Content |
+|---------|---------|
+| **Environment** | Mojo version, OS, hardware (CPU-only/GPU), reproduction status |
+| **Description** | One-paragraph plain-language explanation |
+| **Crash Signature** | Stack trace with `libKGENCompilerRTShared.so` offsets (redact project paths) |
+| **Minimal Reproducer** | Full content of standalone `.mojo` file, no external imports |
+| **Steps to Reproduce** | Numbered steps: save file, run command, observe crash |
+| **Expected Behavior** | What should happen |
+| **Actual Behavior** | What actually happens (crash, exit code, signal) |
+| **Relationship** | Cross-reference other filed issues if applicable |
+
+**Key principles for reproducers**:
+
+- No project-specific imports — standalone, copy-paste-and-run
+- Minimal lines of code — strip everything that does not contribute to the crash
+- Include Mojo version and OS in a comment at the top of the file
+- Confirm the reproducer crashes before filing — run it 3 times
 
 ### Mojo Closure Capture Note
 
