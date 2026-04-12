@@ -1,5 +1,18 @@
 # batch-pr-ci-fix-workflow — Version History
 
+## v2.3.0 (2026-04-12)
+
+**Changed by:** ProjectScylla dependabot PR wave — PRs #1766-#1773
+**Verification:** verified-ci
+
+### What changed
+- Added 4 new Failed Attempts rows: Trivy `image-ref:` with Podman, Trivy secret scanner false positives on pre-commit cache, pinned base image without `apt-get upgrade`, missing `.trivyignore` wiring
+
+### Why
+Fixing 5 dependabot PRs revealed a Trivy+Podman incompatibility that had silently broken the CI image workflow since it was first introduced. Trivy cannot find Podman-built images via `image-ref:` — the fix is to save to tar and use `input:`. The pre-commit cache baked into the image also causes hundreds of false-positive secret findings from gitleaks test fixtures.
+
+---
+
 ## v2.2.0 (2026-03-31)
 
 **Changed by:** Ecosystem PR cleanup — Hephaestus#226, Agamemnon#3, Telemachy#64, Keystone#146

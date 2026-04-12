@@ -2,10 +2,11 @@
 name: batch-pr-rebase-workflow
 description: "Use when: (1) many PRs show DIRTY/CONFLICTING/BLOCKED merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files), (6) delegating mass rebase to a Myrmidon swarm of parallel agents, (7) orphaned branches need PRs created and CI fixed, (8) a PR expanded a pre-commit hook scope causing self-catch failures on pre-existing violations, (9) small batch (2-10) stale branches need rebase with subsume-vs-integrate conflict analysis, (10) GitHub issue backlog (20+ issues) needs triage, batched PRs, and stale worktree/branch cleanup"
 category: ci-cd
-date: 2026-04-07
-version: "2.0.0"
+date: 2026-04-12
+version: "2.1.0"
 user-invocable: false
 verification: verified-ci
+history: batch-pr-rebase-workflow.history
 tags: [git, rebase, pr, parallel, myrmidon, wave, batch, conflict, ci, pixi, mypy, ruff, cherry-pick]
 ---
 # Batch PR Rebase Workflow
@@ -634,6 +635,10 @@ git fetch origin main && git pull --ff-only origin main
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
+| `gh pr checkout` on previously-checked-out branch | Used `gh pr checkout <N>` to switch to a dependabot branch for rebase | `gh pr checkout` reuses an existing local branch if the name matches; that branch may have commits from a prior agent (e.g. scipy commits on a pyyaml branch) causing wrong-branch rebases | Always use `git worktree add /tmp/<name> origin/<branch>` to create a clean checkout directly from the remote ref; bypasses all local branch state |
+| `git reset --hard origin/<branch>` to fix stale local branch | Agent tried to align local branch to remote before rebase | Safety Net blocks `--hard` reset even on a clean worktree | Use `git worktree add` from the remote ref instead; avoids the need for reset entirely |
+| Parallel rebase agents sharing the main repo working tree | First-wave agents used `gh pr checkout` in the main worktree concurrently | Agents checkout different branches sequentially in the same tree; later agents see the previous agent's branch still checked out | Each parallel agent must work in its own isolated worktree (`git worktree add /tmp/<unique-name> origin/<branch>`) |
+| Sequential rebase without waiting for each PR to merge | Rebased PRs 1767-1770 all at once before any had merged | Later rebases conflict with earlier ones when they share files (pixi.lock, pyproject.toml); the second wave immediately goes DIRTY | Do one-at-a-time: rebase → CI passes → merge → then rebase the next; or use waves where each wave waits for the previous to land |
 | Wrong-target mass operation | Launched swarm with "rebase all branches" before confirming scope | User intended only one specific branch; swarm rebased 8 branches | For mass operations, present branch list for human confirmation before launching |
 | No-PR branch with deleted remote | `fix-ci-failures` had remote deleted from failed earlier push | Force-with-lease rejected; branch appeared gone | Detect via `git ls-remote --heads origin <branch>` — if empty, push as new branch (`git push -u origin`) |
 | `git add .` during rebase | Used `git add .` to stage resolved files | Accidentally committed untracked files (repro_crash, output.sanitize) | Always use `git add SPECIFIC_FILE` during rebase, never `git add .` |

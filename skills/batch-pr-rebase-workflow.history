@@ -1,0 +1,18 @@
+# batch-pr-rebase-workflow — Version History
+
+## v2.1.0 (2026-04-12)
+
+**Changed by:** ProjectScylla dependabot PR sequential rebase session
+**Verification:** verified-ci
+
+### What changed
+- Added 4 new Failed Attempts rows: `gh pr checkout` stale branch trap, `git reset --hard` Safety Net block, parallel agents in shared working tree, and parallel rebase without waiting for merges
+
+### Why
+Rebasing 5 dependabot PRs revealed that `gh pr checkout` reuses existing local branches — when prior agents had checked out different branches under the same name, later agents picked up the wrong commits. The fix is always to use `git worktree add /tmp/<name> origin/<branch>` for clean isolation. Also documented the sequential-rebase lesson: rebasing multiple PRs that touch shared files (pixi.lock, pyproject.toml) in parallel causes them to immediately go DIRTY again as each merge advances main.
+
+---
+
+## v2.0.0 (2026-04-07)
+
+**Initial consolidated version** — merged from 6 source skills.
