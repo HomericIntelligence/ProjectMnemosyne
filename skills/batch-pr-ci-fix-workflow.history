@@ -1,5 +1,29 @@
 # batch-pr-ci-fix-workflow — Version History
 
+## v2.4.0 (2026-04-12)
+
+**Changed by:** ProjectHephaestus open-PR cleanup — PRs #268 (feat/automation-module rebase) and #269 (dependabot setup-pixi bump) via fix PR #270
+**Verification:** verified-ci (PR #270 merged green; PR #268 rebased green locally + auto-merge enabled; PR #269 rebase triggered)
+
+### What changed
+- Added Phase 14: Unblock Dependabot PR via Main-Branch Workflow Fix
+  - New pattern: dependabot PR blocked by a pre-existing bug on main (e.g., duplicate `lint:` key in `test.yml`) — fix main first, then `@dependabot rebase`
+- Added Phase 15: Rebase-Then-Resolve in a Worktree (Small Conflict Batches)
+  - 6-file conflict heuristics table (pyproject.toml, pixi.lock, SKILL.md, .markdownlint.json, test files)
+  - Bulk resolve Python helper (regex to keep HEAD side of every conflict)
+  - Reminder: `git checkout -b <branch> --track origin/<branch>` inside worktree to exit detached HEAD before rebasing
+- Added triage-table row: `check-yaml` "found duplicate key" → Phase 14 fix
+- Added 4 new Failed Attempts rows: patching dependabot directly, hand-merging pixi.lock, worktree detached-HEAD rebase, assuming main-green == branch-green post-rebase
+- Extended description with triggers 11–13
+
+### Why
+ProjectHephaestus had a `check-yaml` failure on dependabot PR #269 that looked like dependabot's fault but was actually a pre-existing duplicate `lint:` job on main (lines 16 & 107 of `.github/workflows/test.yml`). The root cause had been lurking — any PR that triggered `check-yaml` would fail. Fixing on main once via PR #270 unblocks every future dependabot PR for that workflow. Simultaneously, PR #268 (41-file feature branch) needed a rebase-with-conflicts; a worktree-based approach kept the main repo clean and made pixi.lock regeneration trivial via `checkout --theirs && pixi install`.
+
+### Previous version (v2.3.0) snapshot
+v2.3.0 added Trivy/Podman and secret-scanner failed attempts (ProjectScylla PRs #1766-#1773). That entry remains below unchanged; v2.4.0 is additive.
+
+---
+
 ## v2.3.0 (2026-04-12)
 
 **Changed by:** ProjectScylla dependabot PR wave — PRs #1766-#1773
