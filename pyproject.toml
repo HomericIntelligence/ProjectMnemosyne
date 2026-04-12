@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Skills marketplace for the HomericIntelligence agentic ecosystem"
 requires-python = ">=3.9"
 dependencies = [
-    "pyyaml>=6.0",
+    "pyyaml>=6.0.3",
 ]
 
 [project.optional-dependencies]
