@@ -1,9 +1,9 @@
 ---
 name: batch-pr-ci-fix-workflow
-description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable."
+description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree."
 category: ci-cd
-date: 2026-03-31
-version: "2.2.0"
+date: 2026-04-12
+version: "2.4.0"
 user-invocable: false
 verification: verified-ci
 history: batch-pr-ci-fix-workflow.history
@@ -389,6 +389,89 @@ print(f'{rate:.1f}')
     python3 -c "import sys; cov=float('${LINE_COV}'); sys.exit(0 if cov >= 80 else 1)"
 ```
 
+### Phase 14: [NEW v2.4.0] Unblock Dependabot PR via Main-Branch Workflow Fix
+
+When a dependabot PR (trivial 1-line action bump) fails pre-commit with a message like
+`found duplicate key "<name>"` in a workflow file, the failure is almost never caused by
+dependabot's diff — it's a pre-existing bug on main that `check-yaml` surfaces whenever
+any PR triggers it.
+
+**Signal**: dependabot PR touches only `.github/workflows/*.yml` action pins, but
+`check-yaml` fails on a file dependabot didn't modify, or on a structural error (duplicate
+keys, malformed YAML) unrelated to the bump.
+
+**Procedure**:
+
+```bash
+# 1. Confirm the failure exists on main
+grep -n "^  <job-name>:" .github/workflows/<file>.yml
+# If >1 match, main is broken — dependabot is blameless
+
+# 2. Fix on main first (NEVER try to patch dependabot's branch)
+git checkout -b fix/<workflow-file>-<issue>
+# Edit the workflow to remove the stale duplicate block
+pre-commit run check-yaml --all-files   # Verify local green
+git commit -m "fix(ci): <description>" && git push -u origin HEAD
+gh pr create --title "fix(ci): ..." --body "..."
+gh pr merge <fix-pr> --auto --rebase
+
+# 3. Once main is fixed, rebase dependabot
+gh pr comment <dependabot-pr> --body "@dependabot rebase"
+# Dependabot picks up the rebased main; its re-pushed branch now passes check-yaml
+```
+
+**Why this works**: dependabot always rebases cleanly (its diff is a single-line action bump),
+so fixing the root cause on main once unblocks every subsequent dependabot PR for that workflow.
+
+**Choosing which duplicate job to keep**: inspect both blocks —
+
+- The newer/up-to-date block usually references newer action versions (e.g., `setup-pixi@v0.9.5` vs `v0.9.4`)
+- The stale one often has redundant setup (e.g., a `setup-python` step before pixi, which pixi replaces)
+- Keep the concise, pixi-centric one; delete the stale duplicate in its entirety
+
+### Phase 15: [NEW v2.4.0] Rebase-Then-Resolve in a Worktree (Small Conflict Batches)
+
+For a PR with 5–10 conflict files after main advances (not the mass-rebase case): use a
+worktree so main stays clean while you resolve conflicts in isolation.
+
+```bash
+# From the main repo checkout
+git fetch origin
+git worktree add build/pr-<N> feat/<branch>       # Keep worktree inside build/ (gitignored)
+cd build/pr-<N>
+git checkout -b <branch> --track origin/<branch>  # Needed — worktree defaults to detached HEAD
+git rebase origin/main                             # Surface all conflicts at once
+```
+
+**Conflict resolution heuristics (ProjectHephaestus PR #268, 6 files, 2026-04-12)**:
+
+| File class | Strategy |
+|-----------|----------|
+| `pyproject.toml` version field | Keep main's (higher) |
+| `pyproject.toml` scripts (additive) | Keep main's full list, drop PR's duplicates |
+| `pixi.lock` | `git checkout --theirs pixi.lock && pixi install` (regenerate, NEVER hand-merge) |
+| `skills/*/SKILL.md` (whitespace/step-number diffs) | Keep main's version (more up-to-date); the PR's copy is stale |
+| `.markdownlint.json` (allowed-elements list) | Union of both sides — main's list is usually a superset |
+| Test files with renamed/reworded assertions | Keep main's (newer test expectations) |
+
+**Bulk-resolve helper (keeps HEAD/"ours" side of every conflict in a list of files)**:
+
+```python
+import re
+pattern = re.compile(r'<<<<<<< HEAD\n(.*?)=======\n.*?>>>>>>> [^\n]+\n', re.DOTALL)
+for f in files:
+    content = open(f).read()
+    open(f, 'w').write(pattern.sub(r'\1', content))
+```
+
+After resolving: `pre-commit run --all-files` and `pytest tests/unit` in the worktree **before**
+force-pushing. If the worktree pre-commit catches issues not yet on main (e.g., the same
+duplicate workflow-key bug in the branch's copy of `test.yml`), apply the same fix in the
+worktree commit.
+
+**Cleanup**: `cd <main-repo> && git worktree remove build/pr-<N>`. Do NOT `rm -rf` the worktree
+dir — always use `git worktree remove` so metadata stays consistent.
+
 ### Phase 13: [NEW v2.2.0] Fix Ruff F841 Unused Variable (Not Auto-Fixable)
 
 `ruff check --fix` handles F401 (unused imports) automatically but **NOT F841** (unused variables). F841 is labeled as a "hidden fix" requiring `--unsafe-fixes`:
@@ -504,6 +587,10 @@ gh pr list --state open
 | gcovr 0% coverage in CI | Ran `gcovr --print-summary` in "Check threshold" CI step | No `.gcda` files in CWD — gcovr must be invoked with `--root`/`--filter` or from build dir | Parse `build/coverage-report/coverage.xml` (generated by `coverage.sh`) using Python xml.etree |
 | `gh pr merge --auto --rebase` fails on repo | Used standard auto-merge command | Repo has auto-merge disabled in settings | Fall back to `gh pr merge --admin --rebase`; error text: "Auto merge is not allowed for this repository" |
 | `ruff check --fix` leaves F841 error | Expected `--fix` to remove unused variable assignment | F841 is a "hidden fix" not applied by `--fix` alone | Add `--unsafe-fixes` for F841, or manually remove the `var = ` assignment prefix |
+| Trying to patch dependabot's PR directly to fix `check-yaml` failure | Considered editing dependabot's branch to work around `found duplicate key` | Dependabot's diff was a 1-line action bump; the workflow bug lived on main and any PR trigger surfaced it | Fix the root cause on main first (remove the stale duplicate job), then `@dependabot rebase` |
+| Hand-merging `pixi.lock` during rebase | Tried to manually resolve lockfile conflict markers | Lockfile format is too intricate — produces invalid lock that fails `pixi.lock` pre-commit check | `git checkout --theirs pixi.lock && pixi install` to regenerate atomically |
+| Worktree `git rebase` from default detached HEAD | `git worktree add` left a detached HEAD; rebase ran, but couldn't push without a branch ref | Worktrees default to detached HEAD for the target commit | Immediately `git checkout -b <branch> --track origin/<branch>` inside the worktree before rebasing |
+| Running `pre-commit` only on main before rebasing a PR | Assumed main-branch green meant branch would be green post-rebase | Branch's own copy of `test.yml` still contained the duplicate-key bug even though main was fixed | Re-run `pre-commit run --all-files` inside the rebased worktree and fix any branch-local regressions |
 
 ## Results & Parameters
 
@@ -601,3 +688,4 @@ fn __hash__[H: Hasher](self, mut hasher: H):
 | ProjectAgamemnon | PR #3 gcovr 0% coverage → XML parse fix, 2026-03-31 | v2.2.0 additions |
 | ProjectTelemachy | PR #64 ruff F401/F841 in test_executor.py, 2026-03-31 | v2.2.0 additions |
 | ProjectKeystone | PR #146 std::atomic POSIX ADL collision, 2026-03-31 | see cpp-atomic-posix-socket-adl-collision skill |
+| ProjectHephaestus | PR #269 dependabot setup-pixi bump unblocked via main-branch `check-yaml` fix (#270); PR #268 6-file rebase in worktree with pixi.lock regeneration, 2026-04-12 | v2.3.0 additions |
