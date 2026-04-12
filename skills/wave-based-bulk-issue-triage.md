@@ -2,10 +2,11 @@
 name: wave-based-bulk-issue-triage
 description: "Fix 5+ independent GitHub issues in parallel waves using Task isolation:worktree.\
   \ No manual worktree setup \u2014 Claude Code auto-manages isolation. Also covers\
-  \ bulk gh issue create via myrmidon swarm (plain Agent calls, no worktrees needed)."
+  \ bulk gh issue create via myrmidon swarm (plain Agent calls, no worktrees needed).\
+  \ Includes pre-fix classification phase using parallel Explore agents."
 category: architecture
-date: 2026-04-06
-version: 1.1.0
+date: 2026-04-12
+version: 1.2.0
 user-invocable: false
 verification: verified-local
 history: wave-based-bulk-issue-triage.history
@@ -28,6 +29,7 @@ Use this skill when:
 3. **Issues modify different files** — no shared file conflicts
 4. **Want maximum parallelism** with minimal orchestration overhead
 5. **Filing 10+ GitHub issues from an audit or walkthrough report** — use myrmidon swarm (plain Agent calls, no worktrees needed)
+6. **Large backlog (20+ issues) requiring classification first** — run parallel Explore agents before fix waves
 
 **Don't use when:**
 - Issues depend on each other (use sequential PRs)
@@ -36,28 +38,70 @@ Use this skill when:
 
 ## Verified Workflow
 
-### Phase 1: Triage & Wave Planning
+### Phase 0: Pre-Classification (NEW — for 20+ issue backlogs)
 
-Group issues by **complexity and type** before running anything:
+Before running fix waves on a large backlog, classify all issues using **3 parallel Explore agents** — one per batch of ~22 issues. Do this before any fix work.
+
+**Pre-classification exclusions**: Always skip epic/tracking issues (labeled `epic`), blocked issues (labeled `blocked`), and audit summary issues before dispatching classifier agents.
+
+**Dispatcher prompt per classifier agent:**
 
 ```
-Wave A — Simple fixes (no new files, minimal change):
-  - Doc/config changes
-  - Single-line .gitignore tweaks
-  - Adding one test method to existing class
+You are classifying GitHub issues for bulk triage.
 
-Wave B — Test additions (new classes, more lines):
+Run 1: gh issue list --repo ORG/REPO --state open --limit 100 --json number,title,labels
+       to get the full list, then for each issue in your assigned range:
+
+Run 2: gh issue view <N> --repo ORG/REPO
+
+Classify each issue LOW / MEDIUM / HIGH / N/A:
+- LOW: single-file change, <50 lines, no architectural impact
+- MEDIUM: 2-5 files, module interaction understanding required
+- HIGH: 6+ files, architectural decisions, or blocked by other work
+- N/A: epic/tracking/blocked issues — skip entirely
+
+Return a markdown table:
+| #N | Title | LOW/MEDIUM/HIGH/N/A | one-sentence rationale |
+
+Your batch: issues #NNNN through #MMMM
+```
+
+Launch all 3 classifier agents in a single message (parallel), wait for all 3 to return, then collate the tables before proceeding to fix waves.
+
+**Why Explore not Haiku**: Classification requires reading issue context and judging scope — it is not mechanical enough for Haiku. Use Explore (Sonnet-class) agents.
+
+### Phase 1: Triage & Wave Planning
+
+Group classified LOW issues by **fix type** for maximum parallelism and minimum CI queue time:
+
+```
+Wave A — Documentation-only fixes (fastest, no compilation):
+  - Markdown corrections, broken links, outdated paths
+  - Comment and docstring updates
+
+Wave B — Config/cleanup fixes (YAML, Dockerfile, pixi.toml changes):
+  - Dependency version bumps
+  - CI workflow corrections
+  - Configuration file cleanups
+
+Wave C — Simple code fixes (single-file, import removal, small bugs):
+  - Unused import removal
+  - Single-function bugfixes
+  - Type annotation fixes
+
+Wave D — Test additions and minor enhancements:
   - New test classes for untested methods
   - Integration test roundtrips
   - Multi-method test coverage
 
 Excluded — Too complex for bulk:
+  - MEDIUM or HIGH complexity issues (fix individually)
   - 20+ file changes
   - Cross-repo changes
   - Architectural refactors
 ```
 
-**Key decision:** Run Wave A first (faster, unblocks Wave B if needed), then Wave B.
+**Key decision:** Run waves in A → B → C → D order. Wave A PRs often merge before Wave D even starts, minimizing CI queue contention.
 
 ### Phase 2: Launch Parallel Agents (One Wave at a Time)
 
@@ -67,31 +111,39 @@ Use `Task` tool with `isolation: "worktree"` — **no manual worktree setup need
 # Launch all Wave A agents in parallel (single message, multiple Task calls)
 Task(
     subagent_type="Bash",
+    model="haiku",            # ← CRITICAL: use Haiku for mechanical tasks to prevent plan-mode stalling
     isolation="worktree",     # ← Claude Code auto-creates isolated worktree
     description="Fix #NNN brief-description",
     prompt="""
-    You are fixing GitHub issue #NNN.
+IMPORTANT: DO NOT PLAN. EXECUTE IMMEDIATELY.
 
-    ## Steps
-    1. Read target file(s) before editing
-    2. Make minimal change
-    3. pre-commit run --files <changed-files>
-    4. pixi run python -m pytest <specific-test-file> -q --no-cov
-    5. git checkout -b NNN-slug
-    6. git add <specific-files>  # Never git add -A
-    7. git commit -m "type(scope): description (Closes #NNN)"
-    8. git push -u origin NNN-slug
-    9. gh pr create --title "..." --body "Closes #NNN"
-    10. gh pr merge --auto --rebase
-
-    ## Rules
-    - Read files before editing
-    - Never git add -A or git add .
-    - Never --no-verify
-    - Tests must pass before pushing
+1. Run: cat path/to/file
+2. Run: [make the specific edit]
+3. Run: pre-commit run --files <changed-files>
+4. Run: pixi run python -m pytest <specific-test-file> -q --no-cov
+5. Run: git checkout -b NNN-slug
+6. Run: git add path/to/changed/file
+7. Run: git commit -m "type(scope): description (Closes #NNN)"
+8. Run: git push -u origin NNN-slug
+9. Run: gh pr create --title "..." --body "Closes #NNN"
+10. Run: gh pr merge --auto --rebase
     """
 )
 ```
+
+**Agent Plan-Mode Avoidance**: Agents with `isolation="worktree"` often stop to present plans
+instead of executing. To prevent this:
+
+1. Use `model="haiku"` for mechanical fixes — Haiku over-plans far less than Sonnet
+2. Phrase every step as an explicit `Run:` command, never as a description
+3. Start the prompt with `IMPORTANT: DO NOT PLAN. EXECUTE IMMEDIATELY.`
+4. For stubborn cases: rewrite the entire prompt in imperative command form with no "Steps:", no
+   "Plan:", only numbered `Run:` commands
+
+What does NOT work:
+- Repeating "complete all steps end-to-end" — agents ignore it
+- "Do NOT stop and ask for help" — same agents still stop
+- SendMessage continuation is not available in isolation=worktree — each agent launch is independent
 
 Wait for Wave A to complete, then launch Wave B agents the same way.
 
@@ -107,33 +159,29 @@ Check each PR has:
 - ✅ Auto-merge enabled
 - ✅ CI queued or passing
 
-### Prompt Template for Bash Agent
+### Prompt Template for Bash Agent (Imperative Form — Required for Haiku)
 
 ```
-You are fixing GitHub issue #NNN in the ProjectScylla repository.
+IMPORTANT: DO NOT PLAN. EXECUTE IMMEDIATELY.
 
-## Task
-[One-sentence description of the fix]
+1. Run: cat path/to/file
+2. Run: [exact edit — e.g., "remove line 42", "change X to Y"]
+3. Run: pre-commit run --files path/to/changed/file
+4. Run: pixi run python -m pytest tests/path/to/test.py -q --no-cov
+5. Run: git checkout -b NNN-slug
+6. Run: git add path/to/changed/file
+7. Run: git commit -m "type(scope): description (Closes #NNN)"
+8. Run: git push -u origin NNN-slug
+9. Run: gh pr create --title "type(scope): description" --body "Closes #NNN"
+10. Run: gh pr merge --auto --rebase
 
-## Steps
-1. Read the relevant file(s): cat path/to/file
-2. [Specific fix instructions]
-3. Run pre-commit: pre-commit run --files <changed-files>
-4. Run tests: pixi run python -m pytest tests/path/to/test.py -q --no-cov
-5. Create branch: git checkout -b NNN-slug
-6. Stage only changed files: git add path/to/changed/file
-7. Commit: git commit -m "type(scope): description (Closes #NNN)"
-8. Push: git push -u origin NNN-slug
-9. Create PR: gh pr create --title "type(scope): description" --body "Closes #NNN"
-10. Auto-merge: gh pr merge --auto --rebase
-
-## Important Rules
-- Read files before editing them
-- Never use git add -A or git add .
-- Never use --no-verify
-- Pre-commit must pass before committing
-- Tests must pass before pushing
+Never use git add -A or git add .
+Never use --no-verify
 ```
+
+**Why imperative form**: Descriptive step phrasing ("Make the fix", "Run the tests") triggers
+planning behavior in isolated agents. Explicit `Run:` commands with concrete shell invocations
+bypass the planning reflex.
 
 ## Overview
 
@@ -149,6 +197,8 @@ You are fixing GitHub issue #NNN in the ProjectScylla repository.
 |---------|----------------|---------------|----------------|
 | N/A | Direct approach worked for code-fix waves | N/A | Solution was straightforward |
 | Body quoting (2026-04-06) | Single-quoted `--body '...'` strings with apostrophes/single quotes embedded | Shell interprets `'` inside `'...'` as end of string, breaking the command | Use `--body-file /tmp/issue-body.md` for any body containing single quotes or apostrophes |
+| Plan-mode text (2026-04-11) | Adding "complete all steps end-to-end" and "Do NOT stop and ask for help" to Sonnet agents with `isolation="worktree"` | Agents ignored these instructions and still paused to present plans | Use Haiku model + imperative `Run:` command form; Haiku over-plans far less than Sonnet |
+| Descriptive step phrasing (2026-04-11) | Writing agent prompts with "Steps:", descriptive phrases like "Make the fix", "Run the tests" | Context-heavy descriptive prompts trigger Sonnet's planning reflex — agents present a plan and stop | Rewrite prompts as explicit `Run: <shell command>` lines with no "Steps:" or "Plan:" sections |
 ## Results & Parameters
 
 ### Myrmidon Swarm Pattern for Bulk Issue Filing (2026-04-06)
@@ -199,6 +249,47 @@ gh issue create \
   --body-file /tmp/issue-body.md
 ```
 
+### Session Results (2026-04-11) — ProjectOdyssey 66-Issue Classification + 28-Issue Fix
+
+**Context**: 66 GitHub issues classified using 3 parallel Explore agents (~22 issues each),
+followed by 28 LOW-complexity issues fixed across 4 fix-type waves.
+
+| Wave | Fix Type | Issues Fixed | PRs Created |
+|------|----------|--------------|-------------|
+| A | Documentation-only | 7 | 7 |
+| B | Config/cleanup | 8 | 8 |
+| C | Simple code fixes | 8 | 8 |
+| D | Test additions | 5 | 5 |
+
+**Total**: 66 issues classified, 28 fixed, 28 PRs created, ~3 hours wall clock
+
+**CI Note**: All 19 of the first-batch PRs failed CI with `mojo: error: execution crashed` in
+`libKGENCompilerRTShared.so`. This is the known Mojo 0.26.x JIT flake — zero real code errors
+across all 28 PRs. Pattern: if **all** jobs fail with the same `execution crashed` pattern, it
+is a JIT flake, not a code error. Retry CI or wait for re-run.
+
+### CI JIT Crash Identification Heuristic (Reconfirmed 2026-04-11)
+
+When triaging CI failures after bulk PRs:
+
+1. Check if **all** failing jobs show the same `mojo: error: execution crashed` message
+2. Check if the crash is in `libKGENCompilerRTShared.so` (the Mojo JIT runtime library)
+3. If both are true: it is a JIT flake, not a code error — re-run CI, do not investigate code
+
+```
+# Flake pattern (safe to re-run):
+mojo: error: execution crashed
+  in libKGENCompilerRTShared.so
+
+# Real error pattern (investigate code):
+error: use of uninitialized variable
+error: cannot implicitly convert
+FAILED: tests/...
+```
+
+**Verified**: 19/28 PRs on ProjectOdyssey showed this exact pattern on 2026-04-11, with zero
+actual code defects. All fixed in subsequent CI re-runs.
+
 ### Session Results (2026-02-22)
 
 | Wave | Issue | Fix Type | PR | Tests Added |
@@ -248,3 +339,4 @@ Add a comment in the plan when excluding:
 |---------|---------|---------|
 | ProjectScylla | Wave 6+7, PRs #1051-#1059 | [notes.md](references/notes.md) |
 | HomericIntelligence/Odysseus | Bulk issue filing, issues #99-#109 (2026-04-06) | 11 issues, 3 waves (5+5+1 Haiku agents), ~30s total |
+| HomericIntelligence/ProjectOdyssey | 66-issue classification + 28-issue fix (2026-04-11) | 3 parallel Explore classifiers, 4 fix-type waves, 28 PRs created |

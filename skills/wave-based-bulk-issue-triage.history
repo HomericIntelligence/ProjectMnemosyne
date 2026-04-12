@@ -1,5 +1,42 @@
 # History: wave-based-bulk-issue-triage
 
+## v1.2.0 — 2026-04-12
+
+**Amendment**: Add issue classification phase, wave-by-fix-type grouping, agent plan-mode
+avoidance pattern, and JIT crash identification heuristic.
+
+### Changes from v1.1.0
+
+- Bumped version to 1.2.0, updated date to 2026-04-12
+- Updated description to mention pre-fix classification phase
+- **When to Use**: Added item 6 — large backlogs (20+ issues) requiring classification first
+- **Phase 0 (NEW)**: Issue classification using 3 parallel Explore agents (~22 issues each)
+  - Explore (not Haiku) required — classification requires judgment, not just mechanics
+  - Classification levels: LOW / MEDIUM / HIGH / N/A with rationale
+  - Pre-classification exclusions: skip epic, blocked, and audit summary issues
+- **Phase 1 (REFINED)**: Wave grouping by fix type (A: docs → B: config → C: code → D: tests)
+  - Ordering minimizes CI queue time: Wave A PRs often merge before Wave D starts
+  - MEDIUM/HIGH issues excluded from waves, handled individually
+- **Phase 2 (AMENDED)**: Added `model="haiku"` to Task calls and imperative prompt form
+  - Root cause of plan-mode stalling: Sonnet agents with isolation=worktree over-plan
+  - Fix: Haiku model + `Run:` command form + `IMPORTANT: DO NOT PLAN. EXECUTE IMMEDIATELY.`
+- **Prompt Template**: Rewritten in imperative `Run:` form; explanation of why descriptive
+  phrasing triggers planning behavior
+- **Results**: New section for 2026-04-11 ProjectOdyssey session (66 classified, 28 fixed,
+  28 PRs)
+- **CI JIT Crash Heuristic (NEW)**: If all jobs fail with same `execution crashed` in
+  `libKGENCompilerRTShared.so`, it is a JIT flake — re-run CI, do not investigate code
+- **Failed Attempts**: Added two new rows for plan-mode stalling (descriptive prompts,
+  "complete all steps" text)
+- **Verified On**: Added ProjectOdyssey entry
+
+### Verification
+
+- verified-local: 66 issues classified, 28 fixed, 28 PRs created on
+  HomericIntelligence/ProjectOdyssey (2026-04-11); CI running
+
+---
+
 ## v1.1.0 — 2026-04-06
 
 **Amendment**: Add myrmidon swarm pattern for bulk `gh issue create` operations.
