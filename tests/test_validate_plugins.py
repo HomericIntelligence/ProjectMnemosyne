@@ -285,8 +285,8 @@ class TestFindPlugins:
         skills.mkdir()
         (skills / "alpha.md").write_text("skill a")
         (skills / "beta.md").write_text("skill b")
-        with patch("validate_plugins.SKILLS_DIR", skills):
-            result = find_plugins()
+        from skill_utils import find_skill_files
+        result = find_skill_files(skills_dir=skills)
         assert len(result) == 2
         names = [p.name for p in result]
         assert "alpha.md" in names
@@ -298,22 +298,22 @@ class TestFindPlugins:
         (skills / "alpha.md").write_text("skill a")
         (skills / "alpha.notes.md").write_text("notes")
         (skills / "alpha.notes-v2.md").write_text("notes v2")
-        with patch("validate_plugins.SKILLS_DIR", skills):
-            result = find_plugins()
+        from skill_utils import find_skill_files
+        result = find_skill_files(skills_dir=skills)
         assert len(result) == 1
         assert result[0].name == "alpha.md"
 
     def test_empty_directory(self, tmp_path):
         skills = tmp_path / "skills"
         skills.mkdir()
-        with patch("validate_plugins.SKILLS_DIR", skills):
-            result = find_plugins()
+        from skill_utils import find_skill_files
+        result = find_skill_files(skills_dir=skills)
         assert result == []
 
     def test_missing_directory(self, tmp_path):
         missing = tmp_path / "nonexistent"
-        with patch("validate_plugins.SKILLS_DIR", missing):
-            result = find_plugins()
+        from skill_utils import find_skill_files
+        result = find_skill_files(skills_dir=missing)
         assert result == []
 
 
