@@ -2,8 +2,8 @@
 name: myrmidon-swarm-end-to-end-orchestration-full-workflow
 description: "Full end-to-end L0 commander pattern for complex myrmidon orchestration sessions. Use when: (1) task spans 3+ phases (cleanup + rebase + merge + CI + knowledge), (2) 10+ sub-tasks with mixed agent tiers required, (3) cross-repo work requiring /advise and /learn coordination, (4) feedback loops and decision gates are needed before committing to destructive operations, (5) auto-merge assumption cannot be made (CI may fail)."
 category: architecture
-date: 2026-04-05
-version: "1.0.0"
+date: 2026-04-12
+version: "1.1.0"
 user-invocable: false
 verification: verified-ci
 tags: [myrmidon, orchestration, l0-commander, multi-phase, planning, wave, ci, auto-merge, feedback-loop, end-to-end, knowledge-capture]
@@ -14,7 +14,7 @@ tags: [myrmidon, orchestration, l0-commander, multi-phase, planning, wave, ci, a
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-05 |
+| **Date** | 2026-04-12 |
 | **Objective** | L0 commander pattern for complex multi-phase myrmidon sessions: cleanup → rebase → PR creation → CI fix → merge → knowledge capture |
 | **Outcome** | Successful — 32→1 worktrees, 6 PRs merged with CI passing, 3 skills created in ProjectMnemosyne |
 | **Verification** | verified-ci |
@@ -64,6 +64,12 @@ gh run view <run-id> --log-failed
 # Phase 6: Knowledge Capture (parallel sub-agents)
 # After all PRs merged, dispatch /learn sub-agents
 # One sub-agent per skill being captured
+
+# Phase 7: Session Record — create tracking issue on target repo
+TITLE="chore(triage): $(date +%Y-%m-%d) issue classification pass"
+gh issue create --repo <owner>/<repo> --title "$TITLE" \
+  --body "$(cat session-summary.md)"
+# Discoverable via: gh issue list --search "chore(triage)"
 ```
 
 ### Phase 1: Exploration (Sonnet Sub-Agent)
@@ -119,6 +125,11 @@ After exploration, the L0 orchestrator designs a structured multi-wave plan. The
 ### Phase 6 — Knowledge Capture
 - Skills to create: <list>
 - Sub-agents: 1 per skill
+
+### Phase 7 — Tracking Issue
+- Target repo: <owner>/<repo>
+- Title: chore(triage): YYYY-MM-DD issue classification pass
+- Body: metrics table + closures + PRs + remaining issues + artifact paths + skill PR links
 
 ### Go / No-Go Criteria
 - Wave 1 irreversible: branches deleted after worktree remove
@@ -248,6 +259,86 @@ python3 scripts/validate_plugins.py 2>&1 | tail -20
 # Must show: Valid: N/N  with no errors before committing
 ```
 
+### Phase 7: Session Record (Tracking Issue)
+
+After all skill PRs are merged in ProjectMnemosyne, create a permanent tracking issue on the
+**target repo** (the repo the session worked on). This makes the session discoverable in future
+work via `gh issue list --search "chore(triage)"`.
+
+**Why this matters**: Without a tracking issue, session results exist only in `results.md`
+artifact files and the agent's memory. A tracking issue is indexed by GitHub search, visible
+in the issue list, and provides a durable cross-reference from the repo to the session artifacts
+and ProjectMnemosyne skill PRs.
+
+**Tracking issue creation:**
+
+```bash
+# Title format: chore(triage): YYYY-MM-DD issue classification pass
+TITLE="chore(triage): $(date +%Y-%m-%d) issue classification pass"
+
+# Body must include:
+# - Session metrics table (issues processed, PRs merged, agents used, duration)
+# - Table of closures: ALREADY-DONE issues with numbers
+# - Table of batch-fix PRs: issue → PR mapping
+# - Lists of remaining MEDIUM and HIGH issues (not yet addressed)
+# - Artifact file paths (e.g. analysis/issue-triage/results.md)
+# - Links to ProjectMnemosyne skill PRs created this session
+
+gh issue create \
+  --repo <owner>/<repo> \
+  --title "$TITLE" \
+  --body "$(cat session-summary.md)"
+```
+
+**Tracking issue body template:**
+
+```markdown
+## Session: YYYY-MM-DD Issue Classification Pass
+
+### Metrics
+
+| Metric | Value |
+|--------|-------|
+| Issues classified | N |
+| PRs merged | N |
+| Agents used | ... |
+| Session duration | ~X hours |
+
+### Closures (ALREADY-DONE)
+
+| Issue | Title | Resolution |
+|-------|-------|------------|
+| #N | ... | Already implemented |
+
+### Batch Fix PRs
+
+| Issue | Title | PR |
+|-------|-------|----|
+| #N | ... | #M |
+
+### Remaining MEDIUM Issues
+
+- #N: description
+
+### Remaining HIGH Issues
+
+- #N: description
+
+### Artifacts
+
+- `analysis/issue-triage/results.md`
+
+### ProjectMnemosyne Skills
+
+- PR #N: skill/... (amended/created)
+```
+
+**Verification**: Confirm the issue was created by running:
+
+```bash
+gh issue list --repo <owner>/<repo> --search "chore(triage)" --limit 5
+```
+
 ### Full Session Timeline Reference
 
 ```
@@ -257,6 +348,7 @@ Phase 3 (Approval):       User review + approval                ~5 min
 Phase 4 (Wave Execution): 3 waves, parallel within waves         ~20-45 min
 Phase 5 (CI Fix Loop):    Monitor + dispatch fix agents          ~15-30 min
 Phase 6 (Learn):          N sub-agents for skill capture         ~20-30 min
+Phase 7 (Tracking Issue): gh issue create on target repo         ~2-5 min
 ─────────────────────────────────────────────────────────────────────────
 Total session (typical):                                         ~1.5-3 hours
 ```
@@ -271,6 +363,7 @@ Total session (typical):                                         ~1.5-3 hours
 | Skipping /advise before planning | Jumped from exploration to plan design without consulting ProjectMnemosyne | Re-discovered known failure modes (pixi.lock conflict strategy, caplog propagation issue) mid-execution | Always run /advise as a sub-agent call after exploration, before designing the plan |
 | Parallel skill capture in main conversation | Tried to create all 3 skills in the main L0 conversation thread | Each skill creation involves worktree creation, file writing, validation, commit, push — sequential in main thread takes 45+ minutes | Delegate skill capture to parallel sub-agents: one per skill, run concurrently |
 | Not re-enabling auto-merge after CI fix | Fix agent pushed commit to fix pre-commit failure, declared "done" | GitHub silently cleared auto-merge on the force-push; PR sat open indefinitely | After every push to a PR branch, explicitly re-run `gh pr merge --auto --rebase <N>` and verify the response |
+| Skipping tracking issue creation | Session ended after Phase 6 skill PRs merged; no tracking issue created on target repo | Session results were only in `results.md` artifact file and agent memory — not searchable via `gh issue list` in future sessions | Always create a `chore(triage): YYYY-MM-DD issue classification pass` tracking issue on the target repo as Phase 7 (final step) |
 
 ## Results & Parameters
 
@@ -311,6 +404,7 @@ Total session (typical):                                         ~1.5-3 hours
 | Wave 2a output | Some branches superseded | Do NOT create PRs for them; update PR count expectation |
 | CI post-creation | Any PR has failing required checks | Dispatch Haiku fix agent before proceeding to Phase 6 |
 | Pre-Phase 6 | All PRs in MERGED state | Proceed to knowledge capture |
+| Pre-Phase 7 | All skill PRs merged in ProjectMnemosyne | Create tracking issue on target repo |
 
 ### L0 Orchestration Checklist
 
@@ -328,6 +422,9 @@ Total session (typical):                                         ~1.5-3 hours
 [ ] Phase 5: All PRs confirmed MERGED
 [ ] Phase 6: /learn sub-agents dispatched (one per skill)
 [ ] Phase 6: All skill PRs merged in ProjectMnemosyne
+[ ] Phase 7: Tracking issue created on target repo (chore(triage): YYYY-MM-DD)
+[ ] Phase 7: Tracking issue body includes metrics, closures, PRs, remaining issues, artifacts, skill PR links
+[ ] Phase 7: Confirmed via gh issue list --search "chore(triage)"
 [ ] Complete: worktree count verified (git worktree list)
 ```
 
@@ -336,6 +433,7 @@ Total session (typical):                                         ~1.5-3 hours
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | 32 worktrees → 1, 6 PRs created and merged, 3 skills captured, 2026-04-05 | Full L0 session: exploration → plan → approval → 3 waves → 2 CI fixes → 3 parallel /learn agents |
+| ProjectScylla | 64 issues classified, 12 PRs merged, tracking issue #1786 created, 2026-04-12 | Myrmidon swarm triage: classification + batch-fix waves + Phase 7 tracking issue on target repo |
 
 ## References
 
