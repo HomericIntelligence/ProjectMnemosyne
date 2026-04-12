@@ -3,15 +3,28 @@ name: batch-low-difficulty-issue-impl
 description: 'Classify, deduplicate, and batch-implement 15-30 low-difficulty GitHub
   issues (doc edits, text fixes, trivial cleanup) in a single session. Use when: (1)
   a large backlog of open issues needs triage, (2) many issues are pure doc/text changes,
-  (3) duplicate issues need closing before implementation.'
+  (3) duplicate issues need closing before implementation. Includes worktree-safe grep
+  pattern for ALREADY-DONE verification and correct pre-filter order.'
 category: tooling
-date: 2026-03-06
-version: 1.0.0
+date: 2026-04-12
+version: 1.1.0
 user-invocable: false
+verification: verified-ci
+history: batch-low-difficulty-issue-impl.history
 ---
 # Batch Low-Difficulty Issue Implementation
 
 ## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-12 |
+| **Objective** | Classify, deduplicate, and batch-implement low-difficulty GitHub issues using worktree-isolated agents |
+| **Outcome** | Verified: worktree isolation works correctly; correct pre-filter order; ALREADY-DONE grep must exclude worktrees |
+| **Verification** | verified-ci |
+| **History** | [changelog](./batch-low-difficulty-issue-impl.history) |
+
+### Prior session (2026-03-06)
 
 | Date | Objective | Outcome |
 |------|-----------|---------|
@@ -39,15 +52,17 @@ gh issue list --state open --limit 200 --json number,title,labels,body | head -3
 gh issue list --state open --limit 30 --skip 0 --json number,title,labels
 ```
 
-**Classification tiers**:
+**Classification tiers** (apply pre-filters in this order: DUPLICATE → ALREADY-DONE → verify-before-fix → LOW):
 
 | Tier | Criteria | Action |
 |------|----------|--------|
 | DUPLICATE | Same change as another open issue | `gh issue close N --comment "Duplicate of #M"` |
-| ALREADY-DONE | Change already in codebase | Grep to verify, then close with comment |
+| ALREADY-DONE | Change already in codebase | Grep (with worktree exclusion) to verify, then close with comment |
 | LOW | Single-file doc/text/comment edit, no logic | Implement in batch |
 | MEDIUM | Test additions, audits, single-module refactor | Skip this phase |
 | HIGH | New features, backward passes, complex bugs | Skip this phase |
+
+**Pre-filter order matters**: Close DUPLICATEs and ALREADY-DONEs first to keep the final LOW count accurate. Run a verify-before-fix pass as a distinct phase — not as part of Haiku classification — before launching fix agents.
 
 **LOW difficulty signals**:
 - Title starts with "Update", "Fix typo", "Add note", "Document", "Remove stale"
@@ -126,26 +141,43 @@ gh pr merge --auto --rebase
 
 ### Phase 6: Verify Already-Done Issues
 
-For issues claiming a change is needed, grep first:
+For issues claiming a change is needed, grep first — and always exclude worktrees:
 
 ```bash
-grep -n "fn main" shared/core/loss_utils.mojo
-# If no matches → change already done → close with verification comment
-gh issue close NNNN --comment "Verified: already resolved in commit XXXXXXXX. Closing."
+# CORRECT: exclude worktrees and git internals
+grep -rn "pattern" /path/to/repo/ \
+  --include="*.py" --include="*.toml" --include="*.yml" \
+  --exclude-dir=".git" \
+  --exclude-dir=".worktrees" \
+  --exclude-dir=".claude"
+
+# WRONG: plain grep picks up stale worktree content — gives false "still present" signals
+grep -rn "pattern" /path/to/repo/
+```
+
+Stale worktrees contain old branch state from prior work. If you grep without excluding them:
+- An issue that claims "remove stale `--cov` flag" may appear as still present because the flag exists in a worktree from a prior branch — but is already gone from main.
+- A dependency pin done via direct curl (not in a config file) may not appear in `pixi.toml` but the worktree shows an old pinned version string.
+
+```bash
+# If no matches in main tree → change already done → close with verification comment
+gh issue close NNNN --comment "Verified: already resolved. [pattern] not found in main tree. Closing."
 ```
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Sub-agent isolation with `isolation="worktree"` parameter | Launched 5 parallel agents expecting each to work in its own worktree | Agents edited files in the main worktree, not isolated worktrees; all 5 changes landed in the main worktree | The `isolation="worktree"` parameter does not guarantee sub-agents work in separate git worktrees; they share the working directory. Use git stash to separate their changes post-facto. |
-| Sub-agents completing full git workflow | Asked sub-agents to create branches, commit, push, and create PRs | Agents completed the file edits but did not execute the git commands (output descriptions instead) | Sub-agents reliably edit files but frequently skip the git+PR workflow. Always execute git operations in the main agent after sub-agents return. |
+| Sub-agent isolation with `isolation="worktree"` parameter (2026-03-06) | Launched 5 parallel agents expecting each to work in its own worktree | Agents edited files in the main worktree, not isolated worktrees; all 5 changes landed in the main worktree | The `isolation="worktree"` parameter does not guarantee sub-agents work in separate git worktrees; they share the working directory. Use git stash to separate their changes post-facto. (Note: this failure did NOT occur in the 2026-04-12 session — may be environment-specific; see Results.) |
+| Sub-agents completing full git workflow (2026-03-06) | Asked sub-agents to create branches, commit, push, and create PRs | Agents completed the file edits but did not execute the git commands (output descriptions instead) | Sub-agents reliably edit files but frequently skip the git+PR workflow. Always execute git operations in the main agent after sub-agents return. (Note: NOT observed in 2026-04-12 session with worktree isolation — all 12 agents completed full git workflow.) |
 | Reading files after `git checkout -b` from stash | Assumed `git checkout stash -- file` would have the correct content immediately | The `git checkout stash` command works correctly but the branch check showed "branch already exists" because a previous stash attempt created it | Check for existing branches with `git branch --list` before creating; use `git checkout existing-branch` if it exists. |
 | Running `pixi run pre-commit run <specific-file>` | Tried to run hooks on only the changed file | Hook IDs don't match file paths — the command fails with "No hook with id path/to/file" | Always run `pixi run pre-commit run --all-files`, never by file path. |
+| Grepping for ALREADY-DONE without worktree exclusion (2026-04-12) | Plain `grep -rn pattern /repo/` to detect whether issue content still exists | Worktrees contain stale branch state — gave false "still present" for #1655 (nats-server) and #1671 (--cov refs) | Always pass `--exclude-dir=.worktrees --exclude-dir=.claude --exclude-dir=.git` when grepping for ALREADY-DONE verification |
+| Running verify-before-fix as part of Haiku classification (2026-04-12) | Expected Haiku to catch all ALREADY-DONE issues during the classification pass | Haiku missed 2 ALREADY-DONE issues (4.7% miss rate) where implementation was in a different location than the issue title implied | Always run verify-before-fix as a distinct separate phase after Haiku classification, not as part of it |
 
 ## Results & Parameters
 
-### Session Statistics (2026-03-06)
+### Session Statistics (2026-03-06) — ProjectOdyssey
 
 | Metric | Value |
 |--------|-------|
@@ -156,6 +188,21 @@ gh issue close NNNN --comment "Verified: already resolved in commit XXXXXXXX. Cl
 | PRs failing pre-commit | 0 |
 | Issues combined into single PR | 6 (two multi-issue PRs) |
 | Total wall-clock time | ~90 minutes |
+
+### Session Statistics (2026-04-12) — ProjectScylla 64-Issue Pass
+
+| Metric | Value |
+|--------|-------|
+| Issues classified by Haiku | 64 |
+| Haiku ALREADY-DONE miss rate | 4.7% (3 false negatives) |
+| ALREADY-DONE caught by verify-before-fix pass | 3 (including #1655, #1671 caught by worktree-excluded grep) |
+| Waves | 4 |
+| PRs created | 12 |
+| PRs merged CI-green | 11 |
+| Agent git-op failures | 0 — all 12 Sonnet agents completed full branch/commit/push/PR/auto-merge |
+| Worktree isolation failures | 0 — agents worked in isolated worktrees, not main tree |
+
+**Note on `isolation="worktree"` reliability**: In this session on ProjectScylla (Python/pixi repo), `Task(isolation="worktree")` worked correctly — agents created branches and PRs in isolated worktrees without polluting the main worktree. The failure mode documented in the 2026-03-06 session (agents editing main worktree) did NOT occur. Hypothesis: the failure may be environment-specific. Always verify that each PR was created from the correct branch, not from main.
 
 ### Branch Naming Convention
 
@@ -198,3 +245,4 @@ ALREADY-DONE if:
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | 165-issue backlog cleanup, March 2026 | [notes.md](../references/notes.md) |
+| ProjectScylla | 64-issue myrmidon swarm pass, 4 waves, 12 PRs (2026-04-12) | 11/12 PRs merged CI-green; worktree isolation worked correctly; verify-before-fix caught 3 ALREADY-DONE issues |

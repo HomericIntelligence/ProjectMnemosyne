@@ -1,0 +1,43 @@
+# History: batch-low-difficulty-issue-impl
+
+## v1.1.0 — 2026-04-12
+
+**Amendment**: Add worktree-safe grep pattern for ALREADY-DONE verification, correct pre-filter order (DUPLICATE → ALREADY-DONE → verify-before-fix → LOW), updated notes on `isolation="worktree"` reliability and agent git-op completion.
+
+### Changes from v1.0.0
+- Bumped version to 1.1.0, updated date to 2026-04-12
+- Added `verification: verified-ci` frontmatter field
+- Added `history: batch-low-difficulty-issue-impl.history` frontmatter field
+- Extended description to mention worktree-safe grep and correct pre-filter order
+- **Overview**: Restructured table to standard format; added history link; retained 2026-03-06 session as "Prior session" sub-table
+- **Phase 1 Classification**: Added pre-filter order note — DUPLICATE → ALREADY-DONE → verify-before-fix → LOW
+- **Phase 6 Verify Already-Done**: Replaced bare `grep -n` with full worktree-excluding grep pattern; added explanation of why stale worktrees give false signals; documented two concrete examples (#1655 nats-server, #1671 --cov refs)
+- **Failed Attempts**: Added 2 new rows:
+  - Grepping without worktree exclusion → false ALREADY-DONE signals
+  - Running verify-before-fix as part of Haiku classification → missed 2 issues
+  - Updated existing `isolation="worktree"` and git-op rows with 2026-04-12 context noting the failures did NOT recur
+- **Results**: Added 2026-04-12 session stats table (64 issues, 4 waves, 12 PRs, 11 merged CI-green); note on isolation="worktree" reliability
+- **Verified On**: Added ProjectScylla 2026-04-12 entry
+
+### Verification
+- verified-ci: 11/12 PRs merged CI-green on ProjectScylla (2026-04-12)
+
+### Previous version (v1.0.0) snapshot
+
+<details>
+<summary>v1.0.0 frontmatter</summary>
+
+```yaml
+name: batch-low-difficulty-issue-impl
+description: 'Classify, deduplicate, and batch-implement 15-30 low-difficulty GitHub
+  issues (doc edits, text fixes, trivial cleanup) in a single session. Use when: (1)
+  a large backlog of open issues needs triage, (2) many issues are pure doc/text changes,
+  (3) duplicate issues need closing before implementation.'
+category: tooling
+date: 2026-03-06
+version: 1.0.0
+user-invocable: false
+```
+</details>
+
+Key state at v1.0.0: Verified on ProjectOdyssey (165-issue backlog, March 2026). Stash-based multi-file workflow for non-isolated worktrees. No ALREADY-DONE worktree-exclusion grep pattern. No pre-filter order guidance. `isolation="worktree"` documented as failing (agents edit main worktree). No history file.
