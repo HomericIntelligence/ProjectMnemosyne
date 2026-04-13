@@ -1,5 +1,36 @@
 # mojo-jit-crash-retry Skill History
 
+## v3.1.0 (2026-04-12)
+
+**Changed by:** ProjectOdyssey 12-open-PR batch fix session
+**Verification:** verified-precommit
+
+### What changed
+
+- Added new top-level section: "When Required Checks Are Blocked by JIT Flakiness"
+  - 4-step workflow: confirm pre-existing on main → identify affected test files →
+    audit import styles → write RC/CA ADR
+  - Explicit guidance: do NOT increase TEST_WITH_RETRY_MAX; do NOT add retry logic
+  - RC/CA ADR content guidance cross-referencing docs/adr/template.md and ADR-014
+- Added new trigger to description: "(8) required CI checks are blocked by JIT
+  flakiness and PRs cannot auto-merge"
+- Added new Failed Attempts row: "Re-add retry when required checks block PRs" →
+  lesson: retry is always the wrong answer; do the import audit instead
+- Added `required-checks` tag
+
+### Why
+
+Session showed that when `Core Types & Fuzz` and `Integration Tests` failed on every
+consecutive main run (non-deterministic, different job sets each run), the initial plan
+proposed increasing TEST_WITH_RETRY_MAX. User corrected: "I want retry removed, not
+re-added." This is exactly the scenario the v3.0.0 → v3.1.0 amendment now documents
+explicitly, so future agents have a concrete decision rule rather than rediscovering
+that retry is the wrong answer.
+
+---
+
+# mojo-jit-crash-retry Skill History
+
 ---
 
 ## v3.0.0 — 2026-04-10 (MAJOR: retry workaround removed, root-cause investigation required)

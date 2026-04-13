@@ -1,5 +1,36 @@
 # batch-pr-ci-fix-workflow — Version History
 
+## v2.5.0 (2026-04-12)
+
+**Changed by:** ProjectOdyssey 12-open-PR batch fix session
+**Verification:** verified-ci (9 PRs rebased, 2 closed as subsumed, all with auto-merge armed)
+
+### What changed
+
+- Added Phase 0.6: Detect Subsumed PRs Before Rebasing
+  - Pattern: `git log --oneline origin/main..origin/<branch>` empty → subsumed; confirm
+    with `git diff origin/<branch> origin/main` before closing
+  - From PRs #5224 and #5221: identical patch content on branch and main (different SHA)
+    due to rebase; both auto-closed when rebased to empty
+- Added Phase 0.7: Required Checks Failing Non-Deterministically on Every Main Run
+  - Evidence command: loop over 5 recent main runs, collect failed job names — different
+    sets each run = JIT flakiness
+  - Corrective action: RC/CA ADR + import audit; explicitly NOT retry logic
+  - Cross-reference to `mojo-jit-crash-retry` skill
+- Added 2 new Failed Attempts rows:
+  - Assuming PR has unique content without checking → run git log first
+  - Responding to required-check JIT flakiness with retry → RC/CA ADR instead
+
+### Why
+
+Session exposed two new patterns not covered in v2.4.0: subsumed PRs that auto-close on
+empty rebase, and systemic JIT flakiness on required checks that looks like a code blocker
+but is a pre-existing infrastructure issue requiring root-cause investigation.
+
+---
+
+# batch-pr-ci-fix-workflow — Version History
+
 ## v2.4.0 (2026-04-12)
 
 **Changed by:** ProjectHephaestus open-PR cleanup — PRs #268 (feat/automation-module rebase) and #269 (dependabot setup-pixi bump) via fix PR #270

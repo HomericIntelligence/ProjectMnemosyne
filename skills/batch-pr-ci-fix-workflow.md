@@ -3,7 +3,7 @@ name: batch-pr-ci-fix-workflow
 description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree."
 category: ci-cd
 date: 2026-04-12
-version: "2.4.0"
+version: "2.5.0"
 user-invocable: false
 verification: verified-ci
 history: batch-pr-ci-fix-workflow.history
@@ -31,6 +31,8 @@ tags: []
 - **[NEW v2.0.0]** Auto-merge was cleared by a force-push and must be re-enabled
 - **[NEW v2.0.0]** A branch conflicts with a src-layout migration and standard rebase fails immediately
 - **[NEW v2.0.0]** Pre-existing failures look like blockers but are not required checks
+- **[NEW v2.5.0]** A PR branch's content may already be in main (subsumed by rebase) — detect before rebasing
+- **[NEW v2.5.0]** Required checks fail non-deterministically on every main run (JIT flakiness) blocking all PRs
 
 ## Verified Workflow
 
@@ -113,6 +115,55 @@ treat it as advisory-only. Never spend time fixing advisory failures when requir
 
 **When in doubt**: Enable auto-merge and let GitHub report whether it can proceed. If auto-merge
 reports "Waiting for required checks", those are the blocking ones.
+
+### Phase 0.6: [NEW v2.5.0] Detect Subsumed PRs Before Rebasing
+
+A PR branch may be fully or partially subsumed by main after a rebase-heavy history. Rebasing
+an empty branch closes the PR automatically — detect this before touching anything.
+
+```bash
+# Check unique commits on each PR branch not yet in main
+git fetch origin
+git log --oneline origin/main..origin/<branch>
+# Empty → all commits already in main; PR can be closed
+
+# Confirm content-level identity (same patch, different SHA after rebase)
+git diff origin/<branch> origin/main -- <key-file>
+# Empty diff → subsumed; close the PR with a comment explaining why
+```
+
+**Pattern from ProjectOdyssey 2026-04-12**: PRs #5224 and #5221 had 3 commits each that
+matched main 1:1 (identical patch content, rebased SHA). Both PRs were auto-closed when
+rebased to empty. The remaining unique content (`.devcontainer/`, `.editorconfig`) was still
+present, confirming the check is necessary — don't assume subsumption, verify with `git diff`.
+
+### Phase 0.7: [NEW v2.5.0] Required Checks Failing Non-Deterministically on Every Main Run
+
+When a required check fails on every consecutive `main` run but with **different job sets**
+each time, this is systemic JIT flakiness — not a code regression. The correct action is
+**RC/CA investigation**, not adding retry logic.
+
+```bash
+# Confirm non-deterministic pattern across multiple main runs
+for run in $(gh run list --branch main --workflow "Comprehensive Tests" \
+  --limit 5 --json databaseId --jq '.[].databaseId'); do
+  echo "=== run $run ==="; gh run view $run --json jobs \
+    --jq '.jobs[] | select(.conclusion=="failure") | .name'
+done
+# Different failed jobs each run → non-deterministic JIT crash
+```
+
+**Corrective action**: Write an RC/CA ADR (see `docs/adr/template.md`) and open a GitHub
+issue with the evidence table. Then audit import styles in the failing test groups:
+
+```bash
+# Find package-level imports in required-check test files (the crash trigger)
+grep -rn "^from shared\.core import\|^from shared import" \
+  tests/shared/core/test_dtype* tests/shared/integration/ --include="*.mojo"
+```
+
+**DO NOT** increase `TEST_WITH_RETRY_MAX` or add retry logic. See `mojo-jit-crash-retry`
+skill for the canonical corrective action workflow.
 
 ### Phase 1: Fix Root Cause on Main First (When a Common Pattern Exists)
 
@@ -591,6 +642,8 @@ gh pr list --state open
 | Hand-merging `pixi.lock` during rebase | Tried to manually resolve lockfile conflict markers | Lockfile format is too intricate — produces invalid lock that fails `pixi.lock` pre-commit check | `git checkout --theirs pixi.lock && pixi install` to regenerate atomically |
 | Worktree `git rebase` from default detached HEAD | `git worktree add` left a detached HEAD; rebase ran, but couldn't push without a branch ref | Worktrees default to detached HEAD for the target commit | Immediately `git checkout -b <branch> --track origin/<branch>` inside the worktree before rebasing |
 | Running `pre-commit` only on main before rebasing a PR | Assumed main-branch green meant branch would be green post-rebase | Branch's own copy of `test.yml` still contained the duplicate-key bug even though main was fixed | Re-run `pre-commit run --all-files` inside the rebased worktree and fix any branch-local regressions |
+| Assuming a PR has unique content without checking | Rebased 9 PRs; 2 turned out fully subsumed by main — content already merged with different SHAs | Wasted setup time creating worktrees for empty rebases | Run `git log --oneline origin/main..origin/<branch>` first; if empty or diff is empty, close the PR with explanation |
+| Responding to required-check JIT flakiness with retry | When `Core Types & Fuzz` and `Integration Tests` failed on every main run, proposed increasing `TEST_WITH_RETRY_MAX` from 1 to 2 | Retry hides failures, prevents upstream bug filing, and will recur after Mojo upgrade — same pattern that led to removing ADR-014 | Write an RC/CA ADR and do the import audit instead; see `mojo-jit-crash-retry` skill Phase 0 |
 
 ## Results & Parameters
 
@@ -689,3 +742,4 @@ fn __hash__[H: Hasher](self, mut hasher: H):
 | ProjectTelemachy | PR #64 ruff F401/F841 in test_executor.py, 2026-03-31 | v2.2.0 additions |
 | ProjectKeystone | PR #146 std::atomic POSIX ADL collision, 2026-03-31 | see cpp-atomic-posix-socket-adl-collision skill |
 | ProjectHephaestus | PR #269 dependabot setup-pixi bump unblocked via main-branch `check-yaml` fix (#270); PR #268 6-file rebase in worktree with pixi.lock regeneration, 2026-04-12 | v2.3.0 additions |
+| ProjectOdyssey | 12 open PRs: 9 rebased + auto-merge armed, 2 subsumed PRs closed (#5224, #5221), 1 compile fix (#5238 raises propagation), 1 pixi dep-sync fix (#5241 feature.dev scanning), 2026-04-12 | v2.5.0 additions |
