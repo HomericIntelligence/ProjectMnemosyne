@@ -1,11 +1,12 @@
 ---
 name: mojo-jit-crash-retry
-description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular"
+description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular, (8) required CI checks are blocked by JIT flakiness and PRs cannot auto-merge"
 category: debugging
-date: 2026-04-10
-version: "3.0.0"
+date: 2026-04-12
+version: "3.1.0"
 user-invocable: false
 verification: verified-precommit
+history: mojo-jit-crash-retry.history
 tags:
   - mojo
   - jit
@@ -14,6 +15,7 @@ tags:
   - ci
   - libKGENCompilerRTShared
   - upstream
+  - required-checks
 ---
 # Mojo JIT Crash Diagnosis and Upstream Reporting
 
@@ -37,6 +39,80 @@ tags:
 - **Creating minimal standalone reproducers** to isolate a crash category for upstream filing
 - **A `Copyable` struct with `UnsafePointer` fields and no explicit `__copyinit__` is stored in `List`** — synthesized shallow copy + reallocation = double-free
 - **Tests crash non-deterministically and the code changes don't touch those test files at all** — suspect double-free, broken lock, or bitcast UAF before assuming JIT flakiness
+
+## When Required Checks Are Blocked by JIT Flakiness
+
+> **[NEW v3.1.0]** The correct response to required CI checks failing non-deterministically
+> on every main run is **RC/CA investigation and an import audit — NOT adding retry logic.**
+
+If `Core Types & Fuzz`, `Integration Tests`, or any other required check fails
+non-deterministically across multiple consecutive `main` runs on different commits, the
+corrective action workflow is:
+
+### Step 0: Confirm It Is Pre-existing on Main (Not PR-Specific)
+
+```bash
+# Compare multiple recent main runs
+gh run list --branch main --workflow "Comprehensive Tests" --limit 5 \
+  --json databaseId,conclusion,headSha --jq '.[]'
+
+# For each run, check which jobs failed
+gh run view <run-id> --json jobs \
+  --jq '.jobs[] | select(.conclusion=="failure") | .name'
+```
+
+If different jobs fail on different runs → non-deterministic → JIT crash, not code bug.
+If the same PR-unrelated docs PR (#5219 type) fails the same jobs → confirmed pre-existing.
+
+### Step 1: Identify the Affected Test Files
+
+```bash
+# Find which test files are in the failing required-check groups
+grep -A20 '"Core Types & Fuzz"\|"Integration Tests"' \
+  .github/workflows/comprehensive-tests.yml | grep "path:\|pattern:"
+```
+
+### Step 2: Audit Import Styles in Those Files
+
+```bash
+# Find package-level imports (the crash trigger)
+grep -rn "^from shared\.core import\|^from shared import" \
+  tests/shared/core/test_dtype* tests/shared/integration/ --include="*.mojo"
+```
+
+Convert any `from shared.core import X, Y` → targeted submodule imports per
+`docs/dev/mojo-jit-crash-workaround.md`. This reduces JIT compilation footprint by ~95%
+per file and lowers crash probability without hiding failures via retry.
+
+### Step 3: Write the RC/CA ADR
+
+Write a root-cause / corrective-action ADR (`docs/adr/ADR-NNN-...md`) documenting:
+
+- **Evidence table**: which runs failed, which jobs, non-deterministic pattern
+- **Root cause**: JIT compilation volume overflow in `libKGENCompilerRTShared.so`
+- **Corrective actions** (ordered by impact, not ease):
+  1. `[HIGH]` Import audit on affected test groups (see Step 2)
+  2. `[MEDIUM]` File/update upstream issue against modular/modular with crash repro
+  3. `[LOW]` Temporarily move affected checks from required to advisory IF crash rate
+     does not improve after actions 1+2 (document the decision explicitly)
+- **What NOT to do**: Do not increase `TEST_WITH_RETRY_MAX`; do not add retry logic.
+  Retry hides failures and prevents meaningful upstream bug reports.
+
+See `docs/adr/template.md` for the ADR format. Follow ADR-014 style (which documents
+the retry approach — now marked SUPERSEDED — as a reference for what not to repeat).
+
+### Step 4: PR the Import Fixes, Not a Retry Wrapper
+
+```bash
+git checkout -b fix/audit-required-check-imports
+# Edit test files to use targeted imports
+git commit -m "fix(tests): convert package-level imports in required-check groups
+
+Addresses non-deterministic JIT crash in Core Types & Fuzz and Integration Tests.
+See docs/adr/ADR-015-flaky-required-checks-jit-crash.md"
+gh pr create --title "fix(tests): audit imports in required-check test groups" \
+  --body "Closes #<issue>"
+```
 
 ## CRITICAL: Execution Crashes ARE Real Bugs — Investigate First
 
@@ -458,6 +534,7 @@ pattern for hook exceptions. Never use `--no-verify`.
 | Edit CLAUDE.md without Read | Tried to Edit before reading | Tool rejected: "File has not been read yet" | Always Read before Edit |
 | **Assume crash = JIT flake** | Closed/retried without investigating root cause | 16 test files crashing had 3 concrete source-code bugs: double-free, broken lock, bitcast UAF | **Check for double-free, broken locks, and bitcast UAF first before concluding JIT instability** |
 | **Add retry logic to CI** | Implemented `scripts/test-with-retry.sh` (88 lines) with `MAX_RETRIES=1` on `execution crashed` | Retry scripts hide real failures: a crash that is retried away cannot be filed upstream, prevents root cause investigation, masks reproducibility | **Delete retry scripts; use direct `pixi run mojo --Werror`; create minimal reproducers and file upstream** |
+| **Re-add retry when required checks block PRs** | When required checks (`Core Types & Fuzz`, `Integration Tests`) fail non-deterministically on every main run, temptation is to increase `TEST_WITH_RETRY_MAX` from 1 to 2 to absorb double-crash scenarios | Retry absorbs symptoms, not the cause; same crash will recur post-Mojo-upgrade; upstream can't reproduce the issue; RC/CA ADR cannot be written for a masked failure | **Do the import audit (targeted submodule imports) and write the RC/CA ADR instead. Retry is always the wrong answer.** |
 
 ## Results & Parameters
 
