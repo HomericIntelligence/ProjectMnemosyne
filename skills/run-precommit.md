@@ -1,6 +1,6 @@
 ---
 name: run-precommit
-description: Run pre-commit hooks locally or in CI to validate code quality before committing. Use when: (1) before committing code, (2) testing if CI will pass, (3) after making code changes, (4) troubleshooting commit failures, (5) setting up CI pre-commit checks.
+description: "Run pre-commit hooks locally or in CI to validate code quality before committing. Use when: (1) before committing code, (2) testing if CI will pass, (3) after making code changes, (4) troubleshooting commit failures, (5) setting up CI pre-commit checks."
 category: ci-cd
 date: 2025-12-30
 version: 2.0.0
