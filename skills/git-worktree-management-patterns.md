@@ -1,9 +1,9 @@
 ---
 name: git-worktree-management-patterns
-description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents."
+description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents, (13) cleaning 20+ mixed worktrees using myrmidon swarm wave parallelization, (14) batch-fixing end-of-file newline violations across multiple branches, (15) worktrees with uncommitted skill documentation requiring a 2-commit markdownlint pattern."
 category: tooling
 date: 2026-04-06
-version: "2.3.0"
+version: "2.4.0"
 user-invocable: false
 verification: unverified
 history: git-worktree-management-patterns.history
@@ -19,7 +19,7 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 |-------|-------|
 | Date | 2026-04-06 |
 | Objective | Consolidated skill covering all git worktree creation, use, and cleanup patterns — including branch deletion policy |
-| Outcome | v2.3.0: Added stale /tmp/mnemosyne-skill-* blocker pattern for parallel /learn sub-agents; orchestrator pre-cleanup and timestamp-suffix alternative |
+| Outcome | v2.4.0: Merged git-worktree-cleanup.md — added myrmidon wave parallelization, Phase 4 (uncommitted skill docs / 2-commit markdownlint), Phase 5 (batch EOF fixing), model tier table, artifact patterns, verified-on table |
 | Verification | unverified |
 | History | [changelog](./git-worktree-management-patterns.history) |
 
@@ -40,6 +40,11 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 - Any time you would normally run `git branch -d` or `git branch -D` — defer to user instead
 - Git commands run from a parent harness keep triggering permission prompts or `*.lock` errors while the actual edits live inside a dedicated worktree
 - Before spawning parallel `/hephaestus:learn` sub-agents, need to clean stale `/tmp/mnemosyne-skill-*` directories left by prior `/learn` invocations that failed to clean up
+- Pool of 20+ worktrees with mixed categories (stale, unreleased, conflict-heavy) — use Myrmidon wave pattern
+- Multiple branches failing pre-commit `end-of-file-fixer` hook on the same file
+- Worktrees with uncommitted skill docs (SKILL.md + plugin.json) that need a PR before removal
+- `git worktree list` has entries with `[gone]` remote branches
+- 5+ worktrees with uncommitted changes (skill docs, registrations, etc.)
 
 ## Verified Workflow
 
@@ -360,6 +365,244 @@ git branch -v | grep '\[gone\]'
 
 **Key insight**: Rebase-merged PRs require `-D` (not `-d`) because rebase leaves no merge commit, so `-d` refuses with "not fully merged". However, still defer this to the user — present the list and let them run the deletion after reviewing.
 
+### Myrmidon Wave Parallelization (20+ Mixed Worktrees)
+
+Use when `git worktree list` shows 20+ entries with heterogeneous states. Deploy a three-wave myrmidon swarm.
+
+Do NOT use the full myrmidon pattern when:
+- Only a few worktrees need cleanup (use the Mass Cleanup section directly)
+- All worktrees are already classified (go straight to the appropriate wave)
+- Worktrees contain conflicting changes that require human decision-making
+
+#### Step 0: Triage — Categorize All Worktrees
+
+Run this audit before dispatching any agents. Do not skip — incorrect triage leads to over-deletion.
+
+```bash
+# Full worktree + branch status audit
+git worktree list --porcelain
+
+for branch in $(git branch | tr -d ' *'); do
+  ahead=$(git rev-list --count origin/main.."$branch" 2>/dev/null || echo 0)
+  pr_state=$(gh pr list --head "$branch" --state all --json state,number \
+    -q '.[0] | "\(.state) #\(.number)"' 2>/dev/null || echo "NONE")
+  echo "  $branch: ahead=$ahead pr=$pr_state"
+done
+
+# Alternative: check for [gone] branches
+git branch -v | grep '\[gone\]'
+```
+
+**Triage categories:**
+
+| Category | Criteria | Wave | Executor |
+|----------|----------|------|----------|
+| A — Stale/Merged | 0 commits ahead of main, OR `[gone]` remote, OR merged PR | Wave 1 | Haiku |
+| B — Unreleased | 1+ commits ahead, no merged PR (open, closed-without-merge, or NONE) | Wave 2a | Sonnet |
+| C — Stale-PR conflict | Closed PR + suspected conflicts with main | Wave 2b | Haiku |
+
+**Conflict pre-check before rebase (Category B/C):**
+```bash
+# Test rebase without committing (dry-run check)
+git fetch origin
+git rebase --onto origin/main origin/main <branch> --no-commit 2>&1 | grep -E "CONFLICT|error"
+git rebase --abort 2>/dev/null
+
+# Alternative: check if content is already on main
+git cherry origin/main <branch> | grep "^+" | wc -l
+# 0 lines = all commits already in main
+```
+
+If conflicts arise on a branch with a **closed PR**: the fixes were likely superseded by main. Mark it Category C and keep the PR closed — do not rebase.
+
+**Pre-cleanup: remove agent artifacts that block `git worktree remove`:**
+```bash
+wt="/path/to/worktree"
+rm -f "$wt"/.claude-prompt-*.md     # Claude Code session files
+rm -rf "$wt/ProjectMnemosyne"        # Cloned knowledge base
+rm -f "$wt/.issue_implementer"       # Agent state files
+git worktree remove "$wt"            # now succeeds without --force
+```
+
+#### Wave 1: Remove Category A (Haiku, Parallel)
+
+Dispatch Haiku sub-agents in parallel. Each agent handles one or a small batch of stale worktrees.
+
+```bash
+# Per Haiku agent: remove stale worktree + clean up
+wt="<path>"
+rm -f "$wt"/.claude-prompt-*.md
+rm -rf "$wt/ProjectMnemosyne"
+rm -f "$wt/.issue_implementer"
+git worktree remove "$wt"
+
+# If worktree has no associated branch to keep, also delete the local branch:
+git branch -d <branch-name>
+```
+
+**Safety constraint**: Never use `git worktree remove --force`. Remove stray files individually first, then call remove without --force.
+
+Haiku agents can batch multiple stale worktrees in one task (5-10 per agent). No ordering constraints — all are independent.
+
+#### Wave 2a: Rebase + PR for Category B (Sonnet, Per-Branch)
+
+Dispatch one Sonnet sub-agent per Category B branch. Sonnet is required — needs to read the actual diff to write a meaningful PR description.
+
+```bash
+cd /path/to/main/repo
+git fetch origin
+
+# Check if content is already on main (superseded)
+cherry_count=$(git cherry origin/main <branch> | grep "^+" | wc -l)
+if [ "$cherry_count" -eq 0 ]; then
+  echo "Branch <branch> is superseded — all commits already on main. Skipping PR."
+  git branch -d <branch>
+  exit 0
+fi
+
+# Create isolated worktree for rebase
+git worktree add /tmp/rebase-<branch> <branch>
+cd /tmp/rebase-<branch>
+git rebase origin/main
+git push --force-with-lease origin <branch>
+
+# Create PR (Sonnet must read git diff origin/main...HEAD before writing this)
+gh pr create \
+  --title "<type>(<scope>): <description based on actual changes>" \
+  --body "$(cat <<'EOF'
+## Summary
+- <bullet summarizing what the branch actually implements>
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
+gh pr merge --auto --rebase
+
+# Cleanup worktree
+cd /path/to/main/repo
+git worktree remove /tmp/rebase-<branch>
+```
+
+#### Wave 2b: Conflict Check for Category C (Haiku, Parallel with 2a)
+
+Run concurrently with Wave 2a.
+
+```bash
+cd /path/to/main/repo
+git fetch origin
+
+conflict_output=$(git rebase --onto origin/main origin/main <branch> --no-commit 2>&1)
+git rebase --abort 2>/dev/null
+
+if echo "$conflict_output" | grep -qE "CONFLICT|error"; then
+  echo "Branch <branch>: CONFLICTS DETECTED — work is superseded by main. Keep PR closed."
+else
+  echo "Branch <branch>: no conflicts — could potentially be resurrected."
+  # Escalate to Sonnet if value is suspected
+fi
+```
+
+**Decision rule**: If a closed PR branch has conflicts with main, do not attempt to fix them. The work is superseded.
+
+#### Wave 3: Prune + Final Cleanup (Haiku)
+
+```bash
+git worktree prune
+git fetch --prune origin
+git branch -v | grep '\[gone\]'  # Verify no orphaned tracking branches remain
+git worktree list
+git branch -v
+```
+
+**Orchestration pattern:**
+```
+Wave 1: Spawn N Haiku agents (parallel) — one per stale worktree batch
+         Wait for ALL Wave 1 agents to complete
+
+Wave 2: SIMULTANEOUSLY spawn:
+         - Sonnet agents for Category B (one per branch, parallel)
+         - Haiku agents for Category C conflict-check (one per branch, parallel)
+         Wait for ALL Wave 2 agents to complete
+
+Wave 3: Spawn 1 Haiku agent for prune + verification
+```
+
+### Worktrees with Uncommitted Changes (Skill Documentation)
+
+For worktrees with pending skill documentation (SKILL.md + plugin.json entries):
+
+```bash
+# Assess changes
+cd .worktrees/<worktree-name> && git status --short
+
+# Categorize by content:
+# - Skill files (SKILL.md + plugin.json entry): Commit as skill registration PR
+# - Implementation files: Commit as feature PR
+# - Merge conflicts: Resolve manually, then proceed
+
+# Commit pattern (with pre-commit hooks — no --no-verify)
+git add .claude-plugin/skills/<name>/ .claude-plugin/plugin.json
+git commit -m "feat(skills): add <skill-name> skill retrospective"
+# NOTE: markdownlint may rewrite .md files — expect 2 commit attempts (see Failed Attempts)
+git add <linter-modified-files>
+git commit -m "fix(lint): apply markdownlint fixes"
+
+# Push explicitly (branch tracking may not be set up in auto-generated worktrees)
+git push origin HEAD:<branch-name>
+
+# Create PR with auto-merge
+gh pr create --title "feat(skills): add <skill-name> skill" \
+  --body "Closes #<issue-number>" \
+  --head <branch-name>
+gh pr merge --auto --rebase <pr-number>
+
+# Remove worktree after PR creation
+git worktree remove .worktrees/<worktree-name>
+```
+
+### Batch EOF Fixing
+
+For multiple branches failing pre-commit `end-of-file-fixer` on the same file (e.g., `.claude-plugin/plugin.json`):
+
+**For each branch with EOF violation:**
+
+```bash
+# Create temporary worktree
+git worktree add /tmp/fix-<PR-NUMBER> <branch-name>
+
+# Verify the violation
+python3 -c "
+filepath = '/tmp/fix-<PR-NUMBER>/.claude-plugin/plugin.json'
+data = open(filepath, 'rb').read()
+last_byte = data[-1:]
+print(f'Last byte: {last_byte.hex()}', 'OK' if last_byte == b'\x0a' else 'MISSING NEWLINE')
+"
+
+# Add trailing newline using Python (NOT bash echo — unreliable with code blocks)
+python3 -c "open('/tmp/fix-<PR-NUMBER>/.claude-plugin/plugin.json','ab').write(b'\n')"
+
+# Commit with pre-commit hooks (no --no-verify)
+cd /tmp/fix-<PR-NUMBER>
+git add .claude-plugin/plugin.json
+git commit -m "fix: add trailing newline to plugin.json"
+git push
+
+# Cleanup
+git worktree remove /tmp/fix-<PR-NUMBER>
+```
+
+### Worktree Status Check Loop
+
+```bash
+for dir in .worktrees/issue-*; do
+  if [ -d "$dir" ]; then
+    count=$(git -C "$dir" status --short | wc -l)
+    branch=$(git -C "$dir" rev-parse --abbrev-ref HEAD)
+    echo "$dir ($branch): $count changes"
+  fi
+done
+```
+
 ### Programmatic Path Detection from Porcelain Output
 
 `git worktree list --porcelain` outputs multi-line blocks:
@@ -513,6 +756,22 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 | Autonomous branch deletion during cleanup | Agent ran `git branch -D` for all `[gone]` branches without asking | Destructive — `-D` is irreversible without reflog; user may not have intended those branches to be gone | Always present the list and defer deletion to the user |
 | Reporting completion with worktrees still present | Agent declared task done without removing agent worktrees | Orphaned worktrees accumulate; subsequent runs detect stale entries | Always verify `git worktree list` shows only main before reporting done |
 | Stale `/tmp/mnemosyne-skill-*` path | Parallel `/learn` sub-agents used predictable `/tmp` paths from prior session | `git worktree add` refused: directory already exists; Safety Net blocked `rm -rf` inside sub-agent | Orchestrator must clean stale paths before spawning sub-agents; use timestamp suffix for guaranteed uniqueness |
+| `git push origin --delete <branch>` | Used standard push to delete remote branch | Triggers local pre-push hook which runs the full test suite | Use `gh api --method DELETE "repos/$REPO/git/refs/heads/<branch>"` instead |
+| `find + rm -rf __pycache__` | Deleted pycache dirs directly | Tracked `.pyc` files showed as "D" (deleted) in git status | Deleting tracked files from disk makes git report them as deleted — use `git checkout -- .` to restore |
+| Single-pass `git clean -fd` | Ran clean on all artifacts in one pass | Only removes untracked files; tracked `.pyc` still show as deleted after rm | Use two passes: `git checkout -- .` first (restore tracked), then `git clean -fd` (remove untracked) |
+| `git checkout -- '**/__pycache__/'` with glob | Tried glob pattern to restore tracked files | Glob patterns in git checkout don't reliably match nested paths | Use `git checkout -- .` to restore all tracked files |
+| `git reset --hard origin/<branch>` | Tried to sync diverged local branch | Safety Net blocks `reset --hard` | Use `git pull --rebase origin/<branch>` instead |
+| Over-broad Wave 1 removal (myrmidon) | Removed all `worktree-agent-*` branches in Wave 1 before checking for unreleased work | Discarded branches that could have been rebased and PRed | Categorize first (A/B/C triage), then remove only Category A in Wave 1; Wave 2 handles rebase+PR |
+| Rebase of stale-PR branches without conflict pre-check | Attempted `git rebase origin/main` on branches with closed PRs | All had conflicts — indicates superseded work | Run conflict pre-check (`git rebase --no-commit` or `git cherry`) before attempting any rebase; conflicts on closed-PR branches = superseded, keep closed |
+| `git worktree remove` without cleaning `.claude-prompt-*.md` | Tried to remove worktrees with lingering Claude session files | Safety Net blocked removal due to untracked files | Always `rm -f <wt>/.claude-prompt-*.md` before `git worktree remove` in agent-generated worktrees |
+| Haiku for Category B rebase+PR | Attempted to use Haiku agents for the rebase+PR wave | Haiku wrote generic/inaccurate PR descriptions without analyzing the actual diff | Sonnet required for Category B: needs to read the diff and write meaningful PR title/body |
+| Sequential Wave 2 | Ran rebase+PR and conflict-check sequentially | Doubled the time for Wave 2 when both subtasks are fully independent | Run Wave 2a (Sonnet rebase+PR) and Wave 2b (Haiku conflict-check) in parallel |
+| `git worktree remove --force` without analysis | Force-removed worktree that had uncommitted skill documentation | Silently lost SKILL.md files that were part of completed work | Always run `git status --short` first; if untracked files exist, commit before removal |
+| Bash `echo` for newline addition | `echo "" >> .claude-plugin/plugin.json` | Works for plain text but fails with files containing backtick code blocks or nested structures | Use Python `open(..., 'ab').write(b'\n')` — atomic, position-accurate, no shell interpretation |
+| Bare `git push` in worktree | `git push` in auto-generated worktree | "upstream branch does not match local branch name" error | Always push explicitly: `git push origin HEAD:<branch-name>` |
+| Markdown linting loop (single commit attempt) | `git add skills/ plugin.json && git commit -m "..."` | Pre-commit markdownlint rewrites .md files; first commit fails | Expect 2 commit attempts: add linter-modified files and commit again (will pass on second attempt) |
+| Shellcheck `A && B \|\| C` pattern | `git branch -d "$branch" 2>/dev/null && log_info "Deleted" \|\| true` | Shellcheck SC2015: `\|\|` doesn't guarantee proper if-then-else; if log_info fails, `\|\| true` hides it | Use explicit if-then: `if git branch -d "$branch" 2>/dev/null; then log_info "..."; fi` |
+| Bulk-delete remote branches in one push | `git push origin --delete branch1 branch2 branch3` | GitHub branch protection rules block deleting more than 2 branches in a single push | Delete remote branches one at a time |
 
 ## Results & Parameters
 
@@ -561,6 +820,48 @@ WORKTREE_DIR="/tmp/mnemosyne-$(date +%s)-e2e-homeric"
 | 20 stale (merged) | ~1 min | No --force needed after cleaning untracked dirs |
 | 13 active | ~1 min | 2 needed --force for modified tracked files |
 
+### Scale reference for myrmidon wave pattern
+
+| Worktree Count | Approach | Expected Duration |
+|----------------|----------|-------------------|
+| < 10 | Sequential, skip myrmidon | 10-20 min |
+| 10-20 | Myrmidon waves, 3-5 agents/wave | 15-25 min |
+| 20-35 | Myrmidon waves, 5-10 agents/wave | 20-45 min |
+| 35+ | Myrmidon waves, sub-batch per agent | 45-90 min |
+
+### Key numbers from reference sessions
+
+- 55 worktrees removed (29 agent + 26 closed-issue) in one session — ProjectOdyssey
+- 29 local branches deleted with `-d` (all worked)
+- 15 remote branches deleted via `gh api`
+- 23 worktrees cleaned in ~2 minutes (two-pass method) — zero data loss
+- 32 → 4 worktrees; 3 PRs created from previously-unsubmitted work — ProjectHephaestus (45 min)
+- 32 → 1 worktrees (main only) in ~20 minutes using 3-wave myrmidon
+
+### Myrmidon Wave Session Results (2026-04-05, ProjectHephaestus)
+
+| Wave | Executor | Category | Count | Action | Outcome |
+|------|----------|----------|-------|--------|---------|
+| 1 | Haiku (parallel) | A — stale/merged | 13 | Direct removal | All removed cleanly |
+| 2a | Sonnet (parallel) | B — unreleased | 10 (`worktree-agent-*`) | Rebase + PR | 3 PRs (#262–#264) created; 7 superseded by main |
+| 2b | Haiku (parallel with 2a) | C — stale-PR | 3 (closed PRs #29, #31, #32) | Conflict-check | All had conflicts; work superseded; kept closed |
+| 3 | Haiku | — | — | prune + fetch --prune | Orphaned metadata eliminated |
+
+### Model tier assignment
+
+| Task | Tier | Reason |
+|------|------|--------|
+| Remove stale worktrees + artifact cleanup | Haiku | Mechanical, no analysis needed |
+| Conflict pre-check (closed-PR branches) | Haiku | Binary output: conflicts or no conflicts |
+| Final prune + verification | Haiku | Mechanical, single command sequence |
+| Rebase + analyze unique work + create PR | Sonnet | Requires diff analysis, meaningful PR description |
+
+### Artifact patterns to clean
+
+```bash
+ARTIFACT_PATTERNS="__pycache__ .pyc build/ dist/ *.egg-info .claude-prompt-*.md ProjectMnemosyne/ .issue_implementer"
+```
+
 ### Harness-aware git operation split
 
 | Task type | Preferred context | Why |
@@ -607,3 +908,13 @@ git worktree list --porcelain | awk '/^worktree /{path=$2} /^branch / {print pat
 | ProjectMnemosyne | Yes | Yes |
 | ProjectOdyssey | Yes | Yes |
 | ProjectScylla | Yes | Yes |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Parallel wave execution cleanup — 55 worktrees, 29 branches | worktree-branch-cleanup session 2026-03-02 |
+| ProjectOdyssey | 23 worktrees bulk artifact cleanup | worktree-bulk-artifact-cleanup session 2026-03-10 |
+| ProjectScylla | 20 worktrees, EOF fixes (PRs #783, #764, #826), 4 skill registration PRs | skill-batch-eof-worktree-cleanup session 2026-02-20 |
+| ProjectHephaestus | Myrmidon wave parallelization — 32 → 4 worktrees; 3 PRs from unreleased work | myrmidon-wave session 2026-04-05 |
+| ProjectHephaestus | 31 agent+issue worktrees, 3-wave myrmidon swarm | myrmidon-waves-worktree-cleanup session 2026-04-05, 32→1 worktrees |

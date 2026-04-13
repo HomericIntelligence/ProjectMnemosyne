@@ -7,7 +7,7 @@ description: 'Fixes unreliable Pixi caching caused by setup-pixi''s built-in cac
   composite action.'
 category: ci-cd
 date: 2026-03-08
-version: 1.0.0
+version: 2.0.0
 user-invocable: false
 ---
 # Pixi cache: true Is Unreliable — Use Explicit actions/cache
@@ -25,6 +25,7 @@ user-invocable: false
 ## When to Use
 
 - CI logs show `Saved cache with ID -1` after a `prefix-dev/setup-pixi` step with `cache: true`
+- CI logs show HTTP 400 errors during the `prefix-dev/setup-pixi` step with `cache: true`
 - Cache hits are inconsistent or never occur despite `cache: true` being set
 - Multiple workflows each independently set up Pixi (violating DRY)
 - Consolidating Pixi setup into a shared composite action (`.github/actions/setup-pixi/action.yml`)
@@ -57,7 +58,17 @@ grep -rn "cache: true" .github/workflows/
 grep -rn "\.github/actions/setup-pixi" .github/workflows/*.yml | wc -l
 ```
 
-### 2. Create (or update) the composite action
+### 2. Check Callers for `with:` Blocks Before Rewriting
+
+Before removing inputs from the composite action, verify no workflows pass `with:` inputs to it:
+
+```bash
+grep -rn -A3 "uses: ./.github/actions/setup-pixi" .github/workflows/ | grep -E "pixi-version|cache:"
+```
+
+If no output: safe to remove inputs entirely. If output: preserve the `inputs:` block and only fix the cache step.
+
+### 3. Create (or update) the composite action
 
 Create `.github/actions/setup-pixi/action.yml`:
 
@@ -96,7 +107,7 @@ Key decisions:
 - **Cache both paths** — `.pixi` (env) AND `~/.cache/rattler/cache` (downloads)
 - **Match `actions/cache` version** to what the repo already uses (check with `grep -r "actions/cache@" .github/workflows/`)
 
-### 3. Update all workflows to use the composite action
+### 4. Update all workflows to use the composite action
 
 Each inline block:
 
@@ -117,7 +128,7 @@ Becomes:
   uses: ./.github/actions/setup-pixi
 ```
 
-### 4. Verify consolidation
+### 5. Verify consolidation
 
 ```bash
 # Should return nothing (no inline calls remain)
@@ -130,7 +141,13 @@ grep -rn "cache: true" .github/actions/
 grep -rn "\.github/actions/setup-pixi" .github/workflows/*.yml | wc -l
 ```
 
-### 5. Commit and PR
+### 6. Validate YAML
+
+```bash
+python3 -c "import yaml; yaml.safe_load(open('.github/actions/setup-pixi/action.yml')); print('OK')"
+```
+
+### 7. Commit and PR
 
 ```bash
 git add .github/actions/setup-pixi/action.yml
@@ -157,3 +174,4 @@ gh pr merge --auto --rebase
 | Keep `cache: true` | Used `prefix-dev/setup-pixi@v0.9.4` with `cache: true` enabled | Internally fails silently; logs "Saved cache with ID -1"; no cache ever saved | Never use `cache: true` — always use explicit `actions/cache` |
 | Cache only `.pixi` | Cached `.pixi` path only, skipped `~/.cache/rattler/cache` | Pixi re-downloads packages on every run even when `.pixi` hits | Must cache both paths or cache is incomplete |
 | Hash `pixi.toml` | Used `hashFiles('pixi.toml')` as cache key | `pixi.toml` doesn't encode exact resolved versions; false positives on cache hits | Use `pixi.lock` for precise cache invalidation |
+| Keeping unused `inputs:` block | Preserved `pixi-version` and `cache` inputs when no callers use `with:` blocks | Dead code; caused confusion and allowed accidental re-introduction of `cache: true` via the `${{ inputs.cache }}` passthrough | Remove inputs when no callers pass `with:` blocks; verify first with `grep -rn -A3 "uses: ./.github/actions/setup-pixi" .github/workflows/` |

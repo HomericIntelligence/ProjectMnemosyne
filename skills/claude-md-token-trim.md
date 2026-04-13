@@ -6,7 +6,7 @@ description: 'Reduce CLAUDE.md token consumption by replacing verbose/duplicate 
   MD060 table errors need fixing alongside trimming.'
 category: documentation
 date: 2026-04-07
-version: 1.1.0
+version: 2.0.0
 user-invocable: false
 ---
 ## Overview
@@ -108,7 +108,18 @@ Read the full file and look for:
 ### Step 4 — Apply move+link for reference sections
 
 Create `.claude/shared/<section-name>.md` with full content, then replace
-the CLAUDE.md section with a 2-5 line summary + link:
+the CLAUDE.md section with a 2-5 line summary + link.
+
+**Note on pre-commit after edits**: If `mojo-format` fails due to GLIBC incompatibility on
+older Linux hosts (and no `.mojo` files were changed), skip it explicitly:
+
+```bash
+SKIP=mojo-format pre-commit run --all-files
+# or at commit time:
+SKIP=mojo-format git commit -m "docs(claude-md): trim <section> to summary + link"
+```
+
+All other hooks (markdownlint, trailing-whitespace, check-yaml, etc.) must pass.
 
 ```markdown
 ### Output Style Guidelines

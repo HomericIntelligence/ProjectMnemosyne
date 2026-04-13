@@ -1,10 +1,10 @@
 ---
 name: fix-ruff-linting-errors
 description: Fix all CI/CD failures by systematically resolving ruff linting errors
-  (F841, D401, D102, E741, D103, D413) with automation for repetitive fixes
+  (F841, D401, D102, E741, D103, D413, N806, E501, ruff-format) with automation for repetitive fixes
 category: ci-cd
 date: 2026-01-04
-version: 1.0.0
+version: 2.0.0
 ---
 # Fix Ruff Linting Errors
 
@@ -21,11 +21,13 @@ version: 1.0.0
 ## When to Use This Skill
 
 Use this skill when:
-- ✅ Pre-commit hooks are failing with ruff linting errors
+- ✅ Pre-commit hooks are failing with ruff linting errors (ruff check or ruff-format)
 - ✅ CI/CD pipeline shows ruff check failures
 - ✅ You have hundreds of linting errors to fix (especially D102 missing docstrings)
 - ✅ Ruff reports conflicting docstring rules (D203/D211, D212/D213)
 - ✅ You need to fix multiple error types systematically
+- ✅ Errors include N806 (uppercase variable in function body), E501 (line too long), or ruff-format failures
+- ✅ PR branch has style errors blocking CI (logic and tests are already correct)
 
 Do NOT use this skill when:
 - ❌ You have only 1-2 trivial linting errors (just fix them directly)
@@ -226,6 +228,78 @@ def main():
     """
 ```
 
+#### 2.7 Fix N806 (Uppercase Variable Inside Function Body)
+
+**Pattern**: `UPPER_CASE` variables defined inside a function body look like module-level constants but aren't.
+
+**Find offenders:**
+```bash
+grep -n "^    [A-Z_][A-Z_]* = " scripts/*.py
+```
+
+**Fix pattern** — rename to lowercase snake_case and update ALL references:
+
+```python
+# WRONG (triggers N806)
+def _reconcile_checkpoint_with_disk(...):
+    _STATE_ORDER = ["pending", "dir_structure_created", ...]
+    _STATE_RANK = {s: i for i, s in enumerate(_STATE_ORDER)}
+    current_rank = _STATE_RANK.get(current_state, 0)
+
+# RIGHT (N806 resolved)
+def _reconcile_checkpoint_with_disk(...):
+    state_order = ["pending", "dir_structure_created", ...]
+    state_rank = {s: i for i, s in enumerate(state_order)}
+    current_rank = state_rank.get(current_state, 0)
+```
+
+**Important**: Update ALL references — definition + every usage site.
+
+#### 2.8 Fix E501 (Line Too Long in Docstrings)
+
+**Pattern**: Lines exceeding the configured limit (commonly 100 chars). Docstrings are the most
+common offender because they aren't auto-collapsed by ruff-format.
+
+**Find offenders:**
+```bash
+grep -n ".\{101\}" tests/**/*.py | head -30
+```
+
+**Fix pattern** — wrap docstring to multiple lines:
+
+```python
+# WRONG (106 chars — triggers E501)
+"""_checkpoint_has_retryable_runs returns True for judge-failed runs (worktree_cleaned+failed)."""
+
+# RIGHT (wrapped)
+"""_checkpoint_has_retryable_runs returns True for judge-failed runs.
+
+worktree_cleaned state with completed_runs status == "failed".
+"""
+```
+
+#### 2.9 Fix ruff-format (Un-Formatted Code)
+
+**Pattern**: ruff-format auto-collapses multi-line expressions that fit within the line limit.
+The CI diff shows exactly what collapsed form is expected.
+
+**Common pattern** — multi-line `logger.info(...)` collapsed to one line:
+
+```python
+# WRONG (un-formatted — triggers ruff-format)
+if reconcile_count > 0:
+    logger.info(
+        f"--retry-errors: reconciled {reconcile_count} run state(s) with disk"
+    )
+
+# RIGHT (ruff-format collapses since it fits in 100 chars)
+if reconcile_count > 0:
+    logger.info(f"--retry-errors: reconciled {reconcile_count} run state(s) with disk")
+```
+
+**How to identify**: Run `pixi run --environment lint pre-commit run ruff-format --all-files`
+and read the diff output — it shows exactly what reformatting is needed.
+
 ### Phase 3: Handle Conflicting Docstring Rules
 
 **Problem**: Ruff has conflicting rule pairs that cannot both be enabled
@@ -260,8 +334,18 @@ ignore = [
 # 1. Run ruff check
 pixi run ruff check .
 
-# 2. Run pre-commit on all files
+# 2a. Run pre-commit on all files (standard)
 pre-commit run --all-files
+
+# 2b. Alternative — via pixi lint environment (for projects with lint feature in pixi.toml)
+pixi run --environment lint pre-commit run --all-files
+
+# Filter output to see only ruff-related results:
+pixi run --environment lint pre-commit run --all-files 2>&1 | grep -E "^(Ruff|Failed|Passed)"
+
+# Run only specific hooks (fast iteration):
+pixi run --environment lint pre-commit run ruff --all-files
+pixi run --environment lint pre-commit run ruff-format --all-files
 
 # 3. Only if BOTH pass, commit and push
 git add -A
@@ -273,6 +357,11 @@ git push origin <branch>
 - Avoids wasting CI minutes on known failures
 - Prevents commit spam from iterative fixes
 - Shows professionalism and respect for team resources
+
+**Note on filtering pre-commit output**: When working in a monorepo or workspace that includes
+unrelated subprojects (e.g., ProjectMnemosyne subdirectory), filter output with
+`grep -E "^(Ruff|Failed|Passed)"` to see only relevant ruff checks and ignore pre-existing failures
+in unrelated parts of the repo.
 
 ### Phase 5: Commit and Push
 
@@ -346,6 +435,30 @@ git push origin <branch>
 
 **Lesson**: Understand which rule in the conflicting pair you want to KEEP before ignoring
 
+### ❌ Attempt 5: Push without checking for branch divergence
+
+**What happened**: Ran `git push origin <branch>` after committing fixes; push rejected with
+non-fast-forward error because the remote branch had 1 commit not in local.
+
+**Why it failed**: Branch had diverged — remote had commits the local clone lacked.
+
+**Solution**: Always check `git status` for "have diverged" before pushing; use
+`git pull --rebase origin <branch>` to reconcile before pushing.
+
+**Lesson**: `git status` (or `git fetch && git status`) before every push to catch divergence early.
+
+### ❌ Attempt 6: Reading all pre-commit output without filtering
+
+**What happened**: Pre-commit output included many tier-label check failures from a
+`ProjectMnemosyne/` subdirectory in a monorepo, making it hard to see whether ruff itself passed.
+
+**Why it failed**: Pre-existing unrelated failures obscured ruff results.
+
+**Solution**: Filter pre-commit output with `grep -E "^(Ruff|Failed|Passed)"` to see only
+ruff-relevant lines.
+
+**Lesson**: In monorepos, filter pre-commit output to the hooks you care about.
+
 ## Results & Parameters
 
 ### Final Stats
@@ -393,12 +506,28 @@ repos:
 # Check all errors are fixed
 pixi run ruff check .
 
-# Verify pre-commit passes
+# Verify pre-commit passes (standard)
 pre-commit run --all-files
+
+# Via pixi lint environment (for projects with lint feature in pixi.toml)
+pixi run --environment lint pre-commit run --all-files
+
+# Run only specific ruff hooks (fast)
+pixi run --environment lint pre-commit run ruff --all-files
+pixi run --environment lint pre-commit run ruff-format --all-files
+
+# Filter output to ruff-relevant results only
+pixi run --environment lint pre-commit run --all-files 2>&1 | grep -E "^(Ruff|Failed|Passed)"
 
 # Check specific error type
 pixi run ruff check . --select D102
 pixi run ruff check . --select F841
+
+# Find N806 candidates
+grep -n "^    [A-Z_][A-Z_]* = " scripts/*.py
+
+# Find E501 candidates
+grep -n ".\{101\}" tests/**/*.py | head -30
 ```
 
 ## Key Takeaways

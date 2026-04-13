@@ -6,7 +6,7 @@ description: 'Add convenience top-level re-exports to a Mojo package __init__.mo
   or extending an existing re-export group with new symbols.'
 category: architecture
 date: 2026-03-07
-version: 1.0.0
+version: 2.0.0
 user-invocable: false
 ---
 # Skill: Mojo Package-Level Re-exports and New Optimizer Structs
@@ -37,6 +37,7 @@ commented-out blocks don't point to the wrong submodule.
 3. You want `from shared import X` to work at the top level, sourcing from a submodule
 4. A follow-up issue asks to extend an existing optimizer re-export with additional symbols
 5. You need to trace where a symbol actually lives before exposing it at the package level
+6. An import audit (e.g. Issue #49) identifies symbols only accessible via full path like `from shared.data.transforms import Normalize`
 
 ## Verified Workflow
 
@@ -162,6 +163,50 @@ var decay_val = self.learning_rate * self.weight_decay * param_val
 new_data._set_float64(j, param_val - update_val - decay_val)
 ```
 
+## Variation: Non-Optimizer Re-exports (Data Transforms Pattern)
+
+The same workflow applies to any symbol group, not just optimizers. Example: exposing `Normalize`
+and `Compose` from `shared/data/transforms.mojo` at both `shared.data` and `shared`:
+
+```mojo
+# shared/data/__init__.mojo — add to relevant section
+from shared.data.transforms import (
+    Normalize,  # Normalize tensor values: (x - mean) / std
+    Compose,    # Chain multiple transforms into a single transform
+)
+
+# shared/__init__.mojo — add after data transforms block
+from shared.data import Normalize, Compose
+```
+
+Integration test pattern (two tests, one per import level):
+
+```mojo
+fn test_normalize_compose_from_shared_data() raises:
+    from shared.data import Normalize, Compose
+    var normalizer = Normalize(Float64(0.5), Float64(0.5))
+    print("✓ Normalize and Compose importable from shared.data")
+
+fn test_normalize_compose_from_shared() raises:
+    from shared import Normalize, Compose
+    var normalizer = Normalize(Float64(0.1307), Float64(0.3081))
+    print("✓ Normalize and Compose importable from shared")
+```
+
+**Always verify the constructor signature** before writing test code:
+
+```bash
+grep -A 5 "fn __init__" shared/data/transforms.mojo | head -10
+```
+
+Minimal change set for a two-level re-export:
+
+```text
+shared/data/__init__.mojo                              — add leaf import
+shared/__init__.mojo                                   — add package import
+tests/shared/integration/test_packaging.mojo           — add 2 tests + register in main()
+```
+
 ## Mojo v0.26.1 Re-Export Chain Limitation
 
 This is the critical constraint driving this entire pattern:
@@ -193,6 +238,8 @@ This limitation is documented in `shared/__init__.mojo` under "Re-export Chain L
 | Importing via intermediate `__init__.mojo` | `from shared.autograd import AdaGrad` in `shared/__init__.mojo` | Triggers re-export chain limitation — Mojo v0.26.1 cannot chain re-exports through multiple `__init__.mojo` layers | Always import from the canonical defining module (`shared.autograd.optimizers`), not via an intermediate package |
 | Extending the commented-out training import | Adding AdaGrad to `# from .training.optimizers import SGD, Adam, AdamW` | This references `training.optimizers` (wrong module for AdaGrad/RMSprop); also uses relative path syntax | Check which submodule actually defines the symbol with `grep -rn "^struct AdaGrad" shared/`; commented blocks may point to stale/wrong modules |
 | Assuming commented-out block was the prior active import | Treating `# from .training.optimizers import SGD, Adam, AdamW` as the source of SGD/Adam/AdamW | That line was never active; the actual active import was `from shared.autograd.optimizers import SGD, Adam, AdamW` added in PR #3738 | Always audit with `grep -n "^from" shared/__init__.mojo` to find ACTIVE imports; commented lines are aspirational/stale |
+| Using `Float32` in test instantiation | `var normalizer = Normalize(Float32(0.5), Float32(0.5))` | `Normalize.__init__` takes `Float64`, not `Float32` — compile error | Always grep the leaf module's `__init__` signature before writing test code: `grep -A 5 "fn __init__" shared/data/transforms.mojo` |
+| Checking `just --list` for build recipes | Ran `just --list` to find build targets | `just` not installed in PATH | Use `pixi run mojo` directly or rely on CI |
 
 ## Results & Parameters
 

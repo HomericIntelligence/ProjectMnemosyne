@@ -1,14 +1,14 @@
 ---
 name: module-decomposition-pattern
 description: 'Decompose large Python modules (1000+ lines) into focused sub-modules
-  while preserving backward compatibility, updating all import sites, and fixing mock
-  patch targets in tests. Use when a single file has 4+ logical clusters of functions
-  with distinct responsibilities.
+  while preserving backward compatibility, updating all import sites or re-exporting
+  from the original, and fixing mock patch targets in tests. Use when a single file
+  has 4+ logical clusters of functions with distinct responsibilities.
 
   '
 category: architecture
 date: 2026-03-10
-version: 1.0.0
+version: 2.0.0
 user-invocable: false
 ---
 # Skill: Module Decomposition Pattern
@@ -44,6 +44,25 @@ Use this skill when:
 **Choose "re-export from original"** (Option 1) when:
 - The module is a public API with many external consumers
 - You cannot enumerate all import sites (e.g., third-party packages)
+- `mypy` uses `implicit_reexport=false` (requires explicit `import X as X` syntax — see below)
+
+#### The `import X as X` re-export pattern (required for mypy)
+
+When `mypy` runs with `implicit_reexport=false`, a bare `from module import X` does NOT
+re-export `X` — external consumers get `Module has no attribute 'X'` errors.
+
+Use the explicit re-export syntax:
+
+```python
+# In the original file (e.g., stages.py)
+from scylla.e2e.stage_finalization import (
+    stage_cleanup_worktree as stage_cleanup_worktree,  # re-exported
+    stage_finalize_run as stage_finalize_run,           # re-exported
+    stage_write_report as stage_write_report,           # re-exported
+)
+```
+
+This satisfies mypy AND keeps all existing consumer imports working.
 
 ### 2. Handle circular imports with TYPE_CHECKING
 
@@ -64,6 +83,26 @@ def my_function() -> MyModel:  # String annotation via __future__
 ### 3. Keep public API exports in the original module
 
 Models and orchestrator functions that are part of the public API (`__init__.py` exports) stay in the original module. Only move private implementation functions.
+
+### 4. Identify cohesive function groups first
+
+Before writing any code, map all top-level functions to logical groups. Good decomposition boundaries:
+
+| Pattern | Signal |
+|---------|--------|
+| Functions share a common prefix (e.g., `_build_*`, `_finalize_*`) | Extract to one module |
+| Functions share a common type they operate on (`ProgressStep`, `ChangeResult`) | Extract together |
+| Functions only called from one stage of a pipeline | Extract to that stage's module |
+| Functions are pure helpers (no side effects) vs. I/O-heavy functions | Split on this boundary |
+
+### 5. New module naming conventions
+
+| Content | Module name pattern |
+|---------|---------------------|
+| Private helpers for `foo.py` | `foo_sections.py` or `foo_helpers.py` |
+| Stage-specific logic extracted from `stages.py` | `stage_<topic>.py` |
+| Hierarchical save functions | `foo_hierarchy.py` |
+| Process metrics helpers | `stage_process_metrics.py` |
 
 ## Verified Workflow
 
@@ -118,9 +157,103 @@ pytest tests/ -x -q
 wc -l original_module.py new_module_*.py
 ```
 
+---
+
+### Re-export Approach (Alternative Workflow)
+
+Use this when preserving all existing import paths (Option 1 from Key Decision #1).
+
+#### Step 1 — Measure and map
+
+```bash
+wc -l scylla/e2e/stages.py scylla/e2e/run_report.py
+grep -n "^def \|^class " scylla/e2e/stages.py
+```
+
+List all functions. Group them logically. Estimate line ranges.
+
+#### Step 2 — Create the new module(s) first
+
+Write the new module as a standalone file with:
+- Its own module docstring explaining what it contains
+- All required imports (NOT inherited from the original module)
+- Verbatim copies of the extracted functions
+
+**Critical**: The new module is self-contained. It cannot import from the original module
+(circular import risk). If it needs a type defined in the original, use `TYPE_CHECKING`.
+
+```python
+# stage_process_metrics.py
+"""Process metrics helpers extracted from stages.py."""
+
+from __future__ import annotations
+import json
+import subprocess
+from pathlib import Path
+from scylla.metrics.process import ChangeResult, ProgressStep  # direct imports
+
+def _get_diff_stat(workspace: Path) -> dict[str, tuple[int, int]]:
+    ...
+```
+
+#### Step 3 — Update the original file with re-exports
+
+In the original file:
+1. Add re-export imports at the top (after existing imports)
+2. Delete the function bodies (use editor's exact text match)
+3. Remove unused imports that the deleted functions relied on
+
+```python
+# stages.py — add re-exports
+from scylla.e2e.stage_process_metrics import (
+    _get_diff_stat as _get_diff_stat,
+    _build_change_results as _build_change_results,
+    ...
+)
+
+# stages.py — remove these (now unused by remaining code)
+# import subprocess  ← still used by stage_generate_replay, keep it
+# import dataclasses ← only used by extracted stage_finalize_run, remove it
+```
+
+**Tip**: After deleting function bodies, run `grep -n "ProcessMetrics\|dataclasses\." stages.py`
+to verify which removed imports are still referenced.
+
+**Danger**: Forgetting to remove now-unused top-level imports will cause ruff `F401` (unused import) errors.
+
+#### Step 4 — Verify imports before running tests
+
+```bash
+pixi run python -c "from scylla.e2e.stages import stage_finalize_run, RunContext; print('OK')"
+pixi run python -c "from scylla.e2e.run_report import save_subtest_report; print('OK')"
+```
+
+#### Step 5 — Run tests
+
+```bash
+pixi run python -m pytest tests/unit/ -x -q
+```
+
+#### Step 6 — Run pre-commit (expect auto-fixes on first run)
+
+```bash
+SKIP=audit-doc-policy pre-commit run --files <all modified/new files>
+# Ruff will auto-fix import order and unused imports — run again to confirm clean
+SKIP=audit-doc-policy pre-commit run --files <all modified/new files>
+```
+
+**Expect 2 rounds**: ruff reformats on round 1, passes on round 2. Normal behavior.
+
+#### Step 7 — Verify final line counts
+
+```bash
+wc -l scylla/e2e/stages.py scylla/e2e/run_report.py
+# Both must be < 1,000
+```
+
 ## Results & Parameters
 
-### Files created/modified
+### Files created/modified (Issue #1446 — update import sites approach)
 
 | File | Lines | Role |
 |------|-------|------|
@@ -130,7 +263,7 @@ wc -l original_module.py new_module_*.py
 | `judge_execution.py` (new) | 259 | 3 judge execution/parsing functions |
 | `judge_artifacts.py` (new) | 295 | 10 log/script saving functions |
 
-### Import sites updated
+### Import sites updated (Issue #1446)
 
 | File | Import changed |
 |------|---------------|
@@ -143,7 +276,7 @@ wc -l original_module.py new_module_*.py
 | `subtest_executor.py` | 2 imports |
 | `__init__.py` | 0 (JudgeResult/run_llm_judge stayed) |
 
-### Test files updated
+### Test files updated (Issue #1446)
 
 | File | Changes |
 |------|---------|
@@ -154,13 +287,38 @@ wc -l original_module.py new_module_*.py
 | `test_baseline_regression.py` | 1 import updated |
 | `test_subtest_executor.py` | 1 import updated |
 
+### Files created in Issue #1359 / PR #1392 — re-export approach
+
+| New File | Lines | Extracted Content |
+|----------|-------|-------------------|
+| `scylla/e2e/stage_process_metrics.py` | 309 | `_get_diff_stat`, `_parse_diff_numstat_output`, `_load_process_metrics_from_run_result`, `_build_change_results`, `_build_progress_steps`, `_finalize_change_results`, `_finalize_progress_steps` |
+| `scylla/e2e/stage_finalization.py` | 438 | `stage_execute_judge`, `stage_finalize_run`, `stage_write_report`, `stage_cleanup_worktree` |
+| `scylla/e2e/run_report_sections.py` | 600 | All `_generate_*` and `_format_*` private helpers + `_get_workspace_files` |
+| `scylla/e2e/run_report_hierarchy.py` | 599 | `save_run_report_json`, `save_subtest_report`, `save_tier_report`, `save_experiment_report`, `generate_tier_summary_table`, `generate_experiment_summary_table` |
+
+### Before / After (Issue #1359 / PR #1392)
+
+| File | Before | After | Reduction |
+|------|--------|-------|-----------|
+| `stages.py` | 1,534 | 855 | −44% |
+| `run_report.py` | 1,385 | 289 | −79% |
+
+### Ruff rules triggered
+
+| Rule | Context | Fix |
+|------|---------|-----|
+| `F401` | Unused imports left after body deletion when using re-export approach | Remove the import |
+| `I001` | Import order changed by adding new re-exports | Ruff auto-fixes |
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | N/A | Direct approach worked | N/A | Solution was straightforward |
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectScylla | Issue #1446 - llm_judge.py decomposition | [notes.md](../references/notes.md) |
+| ProjectScylla | Issue #1446 - llm_judge.py decomposition (update import sites) | [notes.md](../references/notes.md) |
+| ProjectScylla | Issue #1359, PR #1392 - stages.py/run_report.py decomposition (re-export) | [notes.md](../references/notes.md) |
