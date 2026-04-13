@@ -7,8 +7,10 @@ description: "Pattern for implementing 20-35 GitHub issues in parallel waves usi
   \ on main before launching waves."
 category: tooling
 date: 2026-04-10
-version: 2.0.0
+version: 2.1.0
 user-invocable: false
+verification: verified-local
+history: parallel-issue-wave-execution.history
 tags:
   - myrmidon
   - swarm
@@ -367,6 +369,51 @@ cp /tmp/<file>_head.bak <file>
 git switch main
 ```
 
+### Pre-commit Environment Mismatch (System Python 3.9 / Go Version)
+
+When the host system uses Debian/Ubuntu Python 3.9 and an older Go version, two pre-commit hooks fail locally:
+
+- **`yamllint`**: Requires Python 3.10+ to install its virtualenv — fails on 3.9
+- **`gitleaks`**: Compiled with Go 1.22 format that mismatches the system Go version
+
+**Symptom**: `pre-commit run --all-files` errors on `yamllint` or `gitleaks` with install failures.
+
+**Fix**: Skip only those two hooks — CI runs them via its own correct environment:
+
+```bash
+SKIP=gitleaks,yamllint pixi run pre-commit run --all-files
+```
+
+**Why this is safe**: CI installs correct Go and uses pixi's Python 3.14+ to run these hooks, so they are enforced in the merge gate. Skipping locally does not bypass the check — it defers it to CI.
+
+### Audit Doc Policy Violations Hook Is Very Slow
+
+The `audit-doc-policy-violations` pre-commit hook can take 5+ minutes to run. Agents waiting for `pre-commit run --all-files` will appear frozen with no output.
+
+**Symptom**: Agent output stops after "Running audit-doc-policy-violations..." with no further progress.
+
+**Fix**: Skip it locally and let CI run it:
+
+```bash
+SKIP=audit-doc-policy-violations pixi run pre-commit run --all-files
+# Or skip both slow/broken hooks at once:
+SKIP=gitleaks,yamllint,audit-doc-policy-violations pixi run pre-commit run --all-files
+```
+
+**Note**: If an agent says "Still waiting on Audit Doc Policy Violations", it has stalled. The safest resolution is to cancel the agent and re-run with the SKIP env var.
+
+### Auto-merge Cleared on Force-Push
+
+GitHub silently clears auto-merge when any `git push --force-with-lease` (or `--force`) is made to the PR branch.
+
+**Symptom**: PR shows "Auto-merge disabled" after a force-push that was needed to update pixi.lock or fix a commit.
+
+**Fix**: Always re-enable after any force-push:
+
+```bash
+gh pr merge <pr-number> --auto --rebase
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -377,6 +424,8 @@ git switch main
 | Stale background agent contamination | A background agent from a previous task was still running and modifying files on main | Agents outlived their task context and left the working tree dirty | Always verify `git status` is clean before starting a new task; kill stale agents |
 | Marketplace CI with GITHUB_TOKEN | CI workflow tried to create PRs using GITHUB_TOKEN | GitHub Actions GITHUB_TOKEN cannot create PRs (insufficient permissions) | Switch to direct commit to main with a validation gate, or use a PAT/GitHub App token |
 | Merging duplicate issues into one PR | Issues #1110, #928, #914 all covered DRY violations; tried separate PRs | Overlapping file changes would cause merge conflicts | Identify duplicate/subset issues early and merge into a single PR |
+| Waiting on Audit Doc Policy Violations hook | Agent ran `pre-commit run --all-files` and stalled for 5+ minutes — appeared to hang | The "Audit Doc Policy Violations" hook is extremely slow (can exceed 5 min) causing agents to stall and appear frozen | Use `SKIP=audit-doc-policy-violations pixi run pre-commit run --all-files` to skip only this hook; CI runs it in its own environment correctly |
+| Pre-commit hooks fail on system Python 3.9 / Go mismatch | Ran `pre-commit run --all-files` directly on a Debian 3.9 system; yamllint and gitleaks hooks failed | yamllint requires Python 3.10+ virtualenv; gitleaks hook requires Go 1.22 format which mismatches local Go version | Use `SKIP=gitleaks,yamllint pixi run pre-commit run --all-files` — CI runs these via its own correct environment |
 
 ## Results & Parameters
 
@@ -389,6 +438,9 @@ git switch main
 | ProjectMnemosyne (Apr 2026) | Wave 1 | 7 agents (independent files) | 7 PRs, all CI passing |
 | ProjectMnemosyne (Apr 2026) | Wave 2 | 7 agents (DRY refactors, CI, packaging) | 7 PRs, all CI passing |
 | ProjectMnemosyne (Apr 2026) | Pre-close | 6 issues closed (already resolved) | No PRs needed |
+| ProjectScylla (Apr 2026) | Wave 0 | 20 issues closed (already-done/duplicates) | No PRs, direct gh issue close |
+| ProjectScylla (Apr 2026) | Wave 1 | ~4-5 Haiku doc-only agents | ~5 PRs, auto-merged via rebase |
+| ProjectScylla (Apr 2026) | Wave 2a+2b | ~8-10 Sonnet MEDIUM agents | ~13 PRs, auto-merged; PR #1792 needed pixi.lock after pyproject.toml change |
 
 ### Optimal Batch Sizes
 
@@ -463,3 +515,4 @@ gh pr close <old-pr> --comment "Superseded by #<new-pr>"
 | ProjectScylla | 35 LOW issues, 8 parallel waves, March 2026 | [notes.md](parallel-issue-wave-execution.notes.md) |
 | ProjectScylla | 14 LOW issues, 4 parallel waves, March 2026 (second run) | pyproject.toml change required pixi.lock SHA update; nested worktree carried stale commits |
 | ProjectMnemosyne | 27 open issues triaged, 14 PRs in 2 waves, 6 closed directly, April 2026 | CI gate: pytest + validate_plugins.py (39 tests, 953 skills) |
+| ProjectScylla | 80-issue triage: 20 closed already-done/dup, ~18 PRs in 3 waves, April 2026 | Haiku for LOW, Sonnet for MEDIUM; SKIP=gitleaks,yamllint needed on Debian 3.9 system; Audit Doc Policy hook stalls agents |
