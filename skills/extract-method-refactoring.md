@@ -1,10 +1,13 @@
 ---
 name: extract-method-refactoring
-description: 'Skill: extract-method-refactoring. Use when working with extract method
-  refactoring.'
+description: 'Decompose large methods and inline closures into focused helper methods.
+  Use when: (1) methods exceed 50-100 LOC or have high cyclomatic complexity, (2) code
+  review requests decomposition, (3) a method defines multiple closures over 3+ variables
+  from the enclosing scope, (4) closures use nonlocal rebinding signaling they should be
+  private methods, or (5) inline closures prevent direct unit testing of guards.'
 category: architecture
 date: 2026-01-01
-version: 1.0.0
+version: 2.0.0
 user-invocable: false
 ---
 # Extract Method Refactoring
@@ -29,6 +32,10 @@ Use this workflow when you encounter:
 - **Methods with multiple responsibilities** (violating Single Responsibility Principle)
 - **Code review feedback** requesting decomposition
 - **Unclear control flow** making code hard to understand
+- **A method defines multiple closures** over 3+ variables from the enclosing scope
+- **Closures contain `if x is None: raise RuntimeError(...)` guards** that cannot be tested in isolation
+- **A closure uses `nonlocal`** to rebind a captured variable (a sign the closure should be a method)
+- **Tests rely on indirect patching** (e.g., `patch.object(StateMachine, ...)`) instead of calling closures directly
 
 **Trigger phrases:**
 
@@ -37,6 +44,8 @@ Use this workflow when you encounter:
 - "Extract helper methods"
 - "Refactor for readability"
 - "Reduce complexity"
+- "Cannot test these closures directly"
+- "Guards are only reachable through the state machine"
 
 ## Verified Workflow
 
@@ -109,6 +118,98 @@ Use this workflow when you encounter:
    - Simplify control flow (if/else becomes clearer)
    - Update docstring if needed
    - Remove now-redundant inline comments
+
+### Variation: Closure to Private Method
+
+Use this variation when a method body is 40+ lines due to inline closure definitions, or
+when closures capture 3+ variables and their guards cannot be tested in isolation.
+
+#### Naming Convention
+
+Each closure becomes exactly one private method. Use `_action_<scope>_<state>` naming:
+- `_action_exp_<state>` for experiment-level actions (e.g., `_action_exp_tiers_complete`)
+- `_action_tier_<state>` for tier-level actions (mirrors `TierActionBuilder` convention)
+
+#### Mutable-Box for `nonlocal` Variables
+
+When a closure uses `nonlocal x` to rebind a captured variable, the extracted method cannot
+use `nonlocal` (it has no enclosing scope). Use a **single-element list as a mutable box**:
+
+```python
+# Before (closure with nonlocal)
+def action_dir_created() -> None:
+    nonlocal scheduler
+    scheduler = self._setup_workspace_and_scheduler()
+
+# After (extracted method)
+def _action_exp_dir_created(self, scheduler_ref: list[ParallelismScheduler | None]) -> None:
+    scheduler_ref[0] = self._setup_workspace_and_scheduler()
+
+# Builder: initialise box before the return dict
+scheduler_ref: list[ParallelismScheduler | None] = [scheduler]
+# TIERS_RUNNING lambda reads scheduler_ref[0] to get the updated value
+```
+
+**Why not return the value?** The caller is a `Callable[[], None]` (zero-arg). Returning would
+require wrapper lambdas — more complex. The mutable box matches how dicts are already mutated
+in-place and is the standard Python idiom.
+
+#### Thin Builder Pattern
+
+After extraction, the builder method contains only:
+1. One line initializing the mutable box: `scheduler_ref: list[...] = [scheduler]`
+2. A `return {...}` dict with entries — direct method refs or lambdas forwarding captured args
+
+```python
+return {
+    ExperimentState.INITIALIZING: self._action_exp_initializing,
+    ExperimentState.DIR_CREATED: lambda: self._action_exp_dir_created(scheduler_ref),
+    ExperimentState.TIERS_RUNNING: lambda: self._action_exp_tiers_running(
+        tier_groups, scheduler_ref[0], tier_results
+    ),
+}
+```
+
+**No-arg actions**: use `self._method` directly (no lambda needed).
+**Actions with captured args**: wrap with a lambda that forwards them.
+
+#### TDD: Write Tests Alongside Extraction
+
+Write the test file for extracted methods first (or in parallel). This validates each
+extraction immediately and catches parameter-passing bugs before they accumulate.
+
+#### Critical Gotcha: Assert Mock INSIDE `with` Block
+
+A common mistake: calling `mock.assert_called_once_with(...)` **outside** the `with patch.object(...)` block. Outside the block, the attribute has been restored to the original function (which has no `.assert_*` methods):
+
+```python
+# WRONG — mock is gone outside the with block
+with patch.object(runner, "_execute_tier_groups", return_value={}) as mock_exec:
+    runner._action_exp_tiers_running(...)
+mock_exec.assert_called_once_with(...)  # AttributeError: 'function' has no attr
+
+# CORRECT — assert inside the with block
+with patch.object(runner, "_execute_tier_groups", return_value={}) as mock_exec:
+    runner._action_exp_tiers_running(...)
+    mock_exec.assert_called_once_with(...)  # OK
+```
+
+This applies whenever `patch.object` targets an instance method that was not originally a Mock.
+
+#### Ruff D401 During Extraction
+
+If ruff D401 fires on an extracted method's docstring, reword to imperative mood:
+
+```python
+# BAD
+"""INITIALIZING -> DIR_CREATED: No-op; setup done in ..."""
+
+# GOOD
+"""Handle INITIALIZING -> DIR_CREATED transition.
+
+No-op: ...
+"""
+```
 
 ### Phase 3: Verification (Critical - Do Not Skip)
 
@@ -205,6 +306,12 @@ Use this workflow when you encounter:
 **Why it fails:** You might break state dependencies or error handling flow.
 
 **✅ Do:** Read the entire method first, map out what modifies `self.x`, what raises exceptions, what depends on what.
+
+### ❌ Don't: Assert mocks outside the `with patch.object(...)` block
+
+**Why it fails:** Once the `with` block exits, `patch.object` restores the original function. The local `mock_exec` variable still refers to the Mock object, but calling `.assert_called_once_with()` on a restored non-Mock function raises `AttributeError`.
+
+**✅ Do:** Place all `mock.assert_*` calls inside the `with` block, before it exits.
 
 ## Results & Parameters
 

@@ -3,7 +3,7 @@ name: pr-review-no-action-ci-diagnosis
 description: "Use when: (1) a PR review-fix plan concludes no code changes are required, (2) CI failures appear on a PR but changes are unrelated to the failing jobs, (3) CI flakes need to be distinguished from PR-introduced regressions, (4) a fix commit may be local-only and not yet pushed to remote, (5) a stale branch was force-pushed dropping a fix commit, (6) verifying a PR is ready to merge despite red CI"
 category: ci-cd
 date: 2026-03-29
-version: "2.0.0"
+version: "2.1.0"
 user-invocable: false
 verification: unverified
 tags: []
@@ -237,6 +237,9 @@ Conclusion: PR is ready to merge as-is. No commit needed.
 | Treating all red CI as blocking | Assumed every CI failure required a code fix | Autograd test crashes are Mojo runtime instability unrelated to agent config changes | Scope discipline: only fix regressions introduced by the PR |
 | Manufacturing a commit | Creating an empty or trivial commit to satisfy task instructions | Pollutes history; the plan explicitly said no action needed | When the fix plan says "no action needed", do not create commits |
 | Committing the plan file | Staged `.claude-review-fix-*.md` as a deliverable | The plan file is a temporary artifact, not an implementation file | Never commit review plan files — they are transient inputs, not outputs |
+| Blindly following "implement all fixes" wrapper | Started looking for code to change despite the plan saying no fixes needed | The task wrapper says "implement all fixes" even when the plan says there are none — the wrapper is a generic template | Always read the plan body first; the wrapper instruction is not a guarantee of work |
+| Inventing changes to justify a commit | Created changes with no real purpose just to satisfy the "commit" instruction | Adds noise to git history, violates minimal-change principle | Read the plan fully first; if no fixes, don't manufacture them |
+| Running tests before enabling merge | Running `pixi run python -m pytest` before enabling auto-merge | Unnecessary work when CI already confirmed passing | Trust CI results — don't re-run passing tests locally for no-op fixes |
 
 ## Results & Parameters
 
@@ -293,3 +296,32 @@ The review-fix file is dropped into the worktree for the parent tracking issue (
 ### The "Gradient Checking Tests" workflow vs "Core Gradient" group
 
 The separately-named "Gradient Checking Tests" workflow can pass even when the "Core Gradient" test group in Comprehensive Tests fails. These are different CI targets — one passing does not imply the other will.
+
+### Plan File Pattern (No-Op)
+
+```
+## Problems Found
+None. The PR:
+- <reason 1 why it's already correct>
+- <reason 2>
+
+## Fix Order
+No fixes required.
+```
+
+When this pattern is present, skip all implementation steps and go directly to verifying
+worktree state and enabling auto-merge. The wrapper task instructions always say "Implement
+all fixes from the plan above" — this is a generic template; the actual plan body determines
+whether any work is needed.
+
+### Verified No-Op Sessions
+
+**Session 1 — PR #3386 (Issue #3166)**
+- Plan: `.claude-review-fix-3166.md` — all CI passing, 3 tests already implemented, no human review comments
+- Action: `gh pr merge --auto --rebase 3386` — no code changes, no commit, no test run
+- File already correct: `tests/shared/core/test_utility.mojo`
+
+**Session 2 — PR #3182 (Issue #3083)**
+- Plan: `.claude-review-fix-3083.md` — "No problems found. The PR is ready to merge."
+- Action: confirmed HEAD was `3fea321a cleanup(logging): remove unimplemented RotatingFileHandler placeholder`
+- Reported no action needed; script handled push

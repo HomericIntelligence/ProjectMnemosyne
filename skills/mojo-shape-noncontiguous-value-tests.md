@@ -1,12 +1,14 @@
 ---
 name: mojo-shape-noncontiguous-value-tests
 description: 'TDD regression pattern for verifying element-value correctness of shape
-  ops on non-contiguous Mojo tensors. Use when: adding value-correctness tests for
-  shape ops (reshape, flatten, permute, concatenate, tile, repeat, broadcast_to) on
-  non-contiguous inputs, surfacing flat-index bugs where _get_float64(i) ignores _strides.'
+  ops on Mojo tensors. Use when: (1) adding value-correctness tests for shape ops
+  (reshape, flatten, permute, concatenate, tile, repeat, broadcast_to) on non-contiguous
+  inputs, surfacing flat-index bugs where _get_float64(i) ignores _strides; (2) shape
+  tests use assert_numel/assert_dim only and need actual value assertions added; (3)
+  code review flags tests that pass even if operations produce wrong output.'
 category: testing
 date: 2026-03-15
-version: 1.0.0
+version: 2.0.0
 user-invocable: false
 ---
 ## Overview
@@ -35,6 +37,19 @@ silently return wrong values when the input has non-C-order strides.
 - Verifying a non-contiguous tensor (transposed via `transpose_view()`) is
   correctly read by a shape transformation operation
 - Covering a new shape op added to `shape.mojo` for non-contiguous correctness
+- Shape tests use `assert_numel` and `assert_dim` only — element counts and dimensions are
+  checked but the actual stored values are never verified
+- Code review flags tests that pass even if operations produce wrong output — the operation
+  could silently corrupt values and tests would still pass
+- Newly-enabled tests are stubs — the tests were written to unblock CI but lack content assertions
+- Follow-up issues reference "verify actual element values"
+
+**Trigger phrases (contiguous value assertion):**
+
+- "only asserts element counts (assert_numel) and dimensions (assert_dim)"
+- "verify actual element values"
+- "test_tile_1d verifies 9 elements but not that the values are [0,1,2,0,1,2,0,1,2]"
+- "add assert_value_at() calls to verify correctness"
 
 ## Verified Workflow
 
@@ -111,9 +126,10 @@ from tests.shared.conftest import (
 )
 ```
 
-### assert_value_at Signature
+### Assertion Helper Signatures
 
 ```mojo
+# assert_value_at: checks single element at flat index
 fn assert_value_at(
     tensor: ExTensor,
     index: Int,
@@ -121,9 +137,17 @@ fn assert_value_at(
     tolerance: Float64 = TOLERANCE_DEFAULT,
     message: String = "",
 ) raises
+
+# assert_all_values: checks all elements equal a constant
+fn assert_all_values(
+    tensor: ExTensor,
+    expected: Float64,
+    tolerance: Float64 = TOLERANCE_DEFAULT,
+    message: String = "",
+) raises
 ```
 
-**Critical**: Pass a `String` as the 3rd positional arg causes a type error
+**Critical**: Passing a `String` as the 3rd positional arg to `assert_value_at` causes a type error
 (3rd param is `tolerance: Float64`). Use keyword `message=` or pass only 3 args.
 
 ### Expected Values Per Op
@@ -159,6 +183,61 @@ fn test_foo() raises:
 fn test_foo() raises:
     """Verify reshape() on non-contiguous input..."""
 ```
+
+## For Contiguous Tensors: Adding Value Assertions
+
+Use this subsection when adding value assertions to existing contiguous shape tests (e.g., `test_shape.mojo`).
+
+### Categorize each test by input type
+
+| Input type | Assertion strategy |
+|------------|--------------------|
+| `arange(0..N)` input | Loop `assert_value_at(b, i, Float64(i))` for all N elements |
+| `ones(shape)` input | `assert_all_values(b, 1.0)` |
+| `full(shape, V)` fill | `assert_all_values(b, V)` or spot-check boundary indices |
+| Mix of `ones` + `full(2.0)` | Range loop for first block (1.0), range loop for second block (2.0) |
+
+### Add assertions after existing shape checks
+
+```mojo
+# BEFORE — shape only
+assert_dim(b, 2, "Reshaped tensor should be 2D")
+assert_numel(b, 12, "Reshaped tensor should have same number of elements")
+
+# AFTER — shape + values
+assert_dim(b, 2, "Reshaped tensor should be 2D")
+assert_numel(b, 12, "Reshaped tensor should have same number of elements")
+for i in range(12):
+    assert_value_at(b, i, Float64(i), message="reshape value at index " + String(i))
+```
+
+### Concatenate/stack require split-range assertions
+
+```mojo
+# Concatenate axis=0: a=ones(2x3), b=full(3x3, 2.0) → c is 5x3 (15 elements)
+# First 6 elements from a, last 9 from b
+for i in range(6):
+    assert_value_at(c, i, 1.0, message="concat first half at " + String(i))
+for i in range(6, 15):
+    assert_value_at(c, i, 2.0, message="concat second half at " + String(i))
+```
+
+### For axis=1 concatenation, spot-check at row boundaries
+
+```mojo
+# Concatenate axis=1: a=ones(3x2), b=full(3x4, 2.0) → c is 3x6
+# Row 0: cols 0-1 from a (1.0), cols 2-5 from b (2.0)
+assert_value_at(c, 0, 1.0, message="row0 col0 should be 1.0")
+assert_value_at(c, 1, 1.0, message="row0 col1 should be 1.0")
+assert_value_at(c, 2, 2.0, message="row0 col2 should be 2.0")
+assert_value_at(c, 5, 2.0, message="row0 col5 should be 2.0")
+```
+
+### Do NOT add value assertions to tests for unimplemented operations
+
+Tests for `tile`, `repeat`, `broadcast_to`, `permute`, and dtype-only checks are left
+without value assertions if the operations are not yet implemented — adding assertions
+there would produce opaque failures.
 
 ### Running the Tests
 
@@ -199,6 +278,15 @@ var t2d = flat.reshape([3, 4])
 var t_nc = transpose_view(t2d)  # (4,3), strides [1,4]
 ```
 
+**Contiguous value assertion results** (Issue #3242, PR #3793):
+
+| Parameter | Value |
+|-----------|-------|
+| File changed | `tests/shared/core/test_shape.mojo` |
+| Lines added | 31 insertions |
+| Test functions with new assertions | 14 |
+| Assertion helpers used | `assert_value_at`, `assert_all_values` |
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -206,3 +294,5 @@ var t_nc = transpose_view(t2d)  # (4,3), strides [1,4]
 | Pass message as 3rd positional arg to `assert_value_at` | `assert_value_at(result, i, expected[i], "message")` | 3rd param is `tolerance: Float64`, not `String` — type error | Always check assertion function signatures; use `message=` keyword or 3-arg form |
 | Start docstring with lowercase function name | `"""reshape() on ...` | Mojo compiler requires docstring to start with capital letter or non-alpha | Capitalize first word: `"""Verify reshape()...` or `"""Test reshape()...` |
 | Use `assert_shape` helper | Called `assert_shape(result, expected_shape)` | `assert_shape` takes `(tensor, shape_list)` but validation errors arose | Use explicit shape checks with `result.shape()[0] != N` instead for clarity |
+| Running `pixi run mojo test` locally | Executed mojo test command directly | `GLIBC_2.32/2.33/2.34` not found — host system too old | Mojo tests must run in Docker/CI; local environment is incompatible due to glibc version mismatch |
+| Adding value assertions to `test_tile_1d` | Attempted `assert_value_at` for tile output on contiguous tests | Operation not yet implemented — would cause opaque CI failures | Only add value assertions for operations known to be implemented |
