@@ -1,12 +1,11 @@
 ---
 name: ci-package-workflow
 description: Create GitHub Actions workflows for automated package building and distribution. Use in package phase to automate .mojopkg building and release creation.
-category: tooling
+category: ci-cd
 date: 2026-03-25
-version: 1.0.0
+version: 2.0.0
 user-invocable: "false"
-verification: unverified
-tags: []
+tags: [ci-cd, github-actions, packaging, release]
 ---
 
 ## Overview
@@ -14,12 +13,8 @@ tags: []
 | Attribute | Value |
 |-----------|-------|
 | **Date** | 2026-03-25 |
-| **Objective** | (fill in objective) |
-| **Outcome** | (fill in outcome) |
-
-# CI Package Workflow Skill
-
-Create CI workflows for automated packaging.
+| **Objective** | Create GitHub Actions workflows for automated packaging |
+| **Outcome** | Operational |
 
 ## When to Use
 
@@ -28,18 +23,12 @@ Create CI workflows for automated packaging.
 - Building distributable packages
 - Creating GitHub releases
 
-## Verified Workflow Structure
+## Verified Workflow
 
 ### Quick Reference
 
-```bash
-# (fill in quick reference commands)
-```
-
-
 ```yaml
 name: Build Packages
-
 on:
   push:
     tags:
@@ -51,36 +40,57 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Mojo
-        run: |
-          # Install Mojo
-
       - name: Build Packages
         run: ./scripts/build_all_packages.sh
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+      - uses: softprops/action-gh-release@v1
         with:
           files: packages/*.mojopkg
 ```
 
-## Common Workflows
+## Workflow Structure
 
-### 1. Build on Tag
-
-Trigger on version tags:
+### Triggers
 
 ```yaml
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*.*.*'  # Semantic versioning
+  workflow_dispatch:    # Manual trigger
+```
+
+### Jobs
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Mojo
+        run: # Install Mojo environment
+      - name: Build Packages
+        run: ./scripts/build_all_packages.sh
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+```
+
+## Workflow Types
+
+### 1. Build on Tag Release
+
+Automatically build when version tag created:
+
+```yaml
+on:
+  push:
+    tags:
+      - 'v*'
 ```
 
 ### 2. Build on PR
 
-Validate packaging on PR:
+Validate packaging on pull requests:
 
 ```yaml
 on:
@@ -92,7 +102,7 @@ on:
 
 ### 3. Manual Trigger
 
-Allow manual workflow runs:
+Allow on-demand builds with parameters:
 
 ```yaml
 on:
@@ -105,13 +115,12 @@ on:
 
 ## Best Practices
 
-- Cache dependencies
-- Upload artifacts
-- Create GitHub releases
-- Tag with version
-- Test installation
-
-See `.github/workflows/` for examples.
+- Cache dependencies between runs
+- Upload artifacts for inspection
+- Create GitHub releases with notes
+- Test installation in clean environment
+- Tag releases with semantic versioning
+- Document build requirements
 
 ## Failed Attempts
 
@@ -121,5 +130,19 @@ See `.github/workflows/` for examples.
 
 ## Results & Parameters
 
-- (fill in key parameters and outcomes)
+N/A — this skill describes a workflow pattern.
 
+## Error Handling
+
+| Error | Fix |
+|-------|-----|
+| Action version invalid | Use latest stable version (v4, not @main) |
+| Missing environment | Add setup step before build |
+| Build script not found | Verify script path and permissions |
+| Artifact not uploaded | Check build produces expected files |
+
+## References
+
+- Related skill: `validate-workflow` for syntax validation
+- Workflow examples: `.github/workflows/`
+- GitHub Actions docs: <https://docs.github.com/en/actions>

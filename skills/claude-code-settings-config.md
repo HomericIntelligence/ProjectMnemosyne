@@ -5,7 +5,7 @@ description: Configure Claude Code settings.json per test workspace to control t
   configuration for E2E tests.
 category: architecture
 date: 2026-01-16
-version: 1.0.0
+version: 2.0.0
 user-invocable: false
 ---
 # Skill: Claude Code Settings Configuration for E2E Tests

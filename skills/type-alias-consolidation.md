@@ -1,10 +1,11 @@
 ---
 name: type-alias-consolidation
-description: 'Skill: type-alias-consolidation. Use when working with type alias consolidation.'
+description: Systematic workflow for removing redundant type aliases that shadow domain-specific variant names. Use when multiple modules define TypeName = DomainVariant aliases causing naming confusion.
 category: architecture
-date: 2026-01-01
-version: 1.0.0
+date: 2026-02-15
+version: 2.0.0
 user-invocable: false
+tags: [refactoring, type-consolidation, python, architecture]
 ---
 # Type Alias Consolidation
 
@@ -14,8 +15,8 @@ user-invocable: false
 | **Category** | architecture |
 | **Objective** | Consolidate multiple type definitions by removing shadowing type aliases |
 | **Outcome** | ✅ Successfully removed 4 type aliases, updated all imports, all tests pass |
-| **Issue** | #679 |
-| **PR** | #699 |
+| **Issue** | #679 - Consolidate RunResult Types |
+| **PRs** | #699, #703 |
 
 ## Overview
 
@@ -157,6 +158,18 @@ def process(result: DomainRunResult) -> None:
     pass
 
 results: list[DomainRunResult] = []
+```
+
+**6. Update docstrings** to use specific variant names:
+
+```python
+# BEFORE
+Returns:
+    RunResult with execution details.
+
+# AFTER
+Returns:
+    MetricsRunResult with execution details.
 ```
 
 ### Phase 3: Update Imports (Dependent Modules)
@@ -477,6 +490,13 @@ pre-commit run --all-files
 - `dry-consolidation-workflow` - General DRY principle consolidation
 - `codebase-consolidation` - Finding and consolidating duplicate types
 - `pydantic-model-dump` - Pydantic v2 migration patterns
+
+## References
+
+- Issue: <https://github.com/HomericIntelligence/ProjectScylla/issues/679>
+- PR #699: Initial consolidation
+- PR #703: <https://github.com/HomericIntelligence/ProjectScylla/pull/703>
+- Related commit: 38a3df1 (Pydantic v2 migration)
 
 ## Tags
 

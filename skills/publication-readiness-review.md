@@ -3,7 +3,7 @@ name: publication-readiness-review
 description: Comprehensive 10-category GO/NO-GO assessment framework for academic paper publication readiness
 category: documentation
 date: 2026-02-07
-version: 1.0.0
+version: 2.0.0
 user-invocable: false
 ---
 # Publication Readiness Review
@@ -216,9 +216,55 @@ done < configs_cited.txt
 
 ## Failed Attempts
 
-| Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
-| N/A | Direct approach worked | N/A | Solution was straightforward |
+### ❌ Failed: Trusting Paper Claims Without Verification
+
+**What was tried**: Accepted paper's claim that "judges run in parallel" at face value.
+
+**Why it failed**: Would have shipped with architectural contradiction (3 places say "parallel", 1 says "sequential", source code confirms sequential).
+
+**Lesson**: Always verify architectural claims against source code. Don't trust paper text, especially after multiple revision rounds where copy-paste errors accumulate.
+
+**Fix**: `grep -r "judge_num" scylla/` → found `for judge_num, model in enumerate(...)` → confirmed sequential.
+
+---
+
+### ❌ Failed: Spot-Checking Numerical Claims
+
+**What was tried**: Planned to verify only "suspicious" numbers (outliers, round numbers).
+
+**Why it failed**: Would have missed valid value with wrong precision (T4: 0.9595 instead of 0.960).
+
+**Lesson**: Verify ALL numbers, not just suspicious ones. Precision errors, rounding inconsistencies, and copy-paste mistakes appear in "normal-looking" values.
+
+---
+
+### ❌ Failed: Assuming Bibliography Tools Auto-Validate
+
+**What was tried**: Assumed that if BibTeX compiles, all references are valid.
+
+**Why it failed**: Would have shipped with `polo2024efficient` pointing to arXiv paper about paradise fish instead of LLM evaluation.
+
+**Lesson**: BibTeX only checks syntax, not semantic correctness. A fabricated URL that returns HTTP 200 will compile fine but destroy paper credibility. Manual verification of all URLs required.
+
+---
+
+### ❌ Failed: Fixing Everything in One Pass
+
+**What was tried**: Tried to implement all 10 fixes simultaneously in a single edit.
+
+**Why it failed**: Risk of introducing new errors; hard to verify which fixes applied successfully.
+
+**Lesson**: Fix critical issues first, then polish. Allows early verification that blocking issues are resolved and easier rollback.
+
+---
+
+### ❌ Failed: Trusting "Already Reviewed 4 Times"
+
+**What was tried**: Assumed that after 4+ prior review passes, only minor issues remained.
+
+**Why it failed**: Found 2 publication-blocking critical issues (fabricated URL, architectural contradiction) that survived 4 reviews.
+
+**Lesson**: Review fatigue is real. Use systematic checklists, not intuition. The 10-category framework catches issues that manual reviews miss.
 ## Results & Parameters
 
 ### Session Parameters
