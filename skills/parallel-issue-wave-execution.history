@@ -1,0 +1,59 @@
+# parallel-issue-wave-execution — History
+
+## v2.1.0 (2026-04-10)
+
+**Changed by:** ProjectScylla batch triage session — 80-issue triage pass (20 already-done closures + ~18 PRs)
+**Verification:** verified-local
+
+### What changed
+
+- Added "Pre-commit Environment Mismatch (System Python 3.9 / Go Version)" Critical Pitfall section
+- Added "Audit Doc Policy Violations Hook Is Very Slow" Critical Pitfall section
+- Added "Auto-merge Cleared on Force-Push" Critical Pitfall section
+- Added 2 new Failed Attempts rows: "Audit Doc Policy Violations hook stall" and "Pre-commit hooks fail on system Python 3.9 / Go mismatch"
+- Added 3 new Wave Sizing rows for ProjectScylla April 2026 session (Wave 0 close-only, Wave 1 Haiku, Wave 2a+2b Sonnet)
+- Added new Verified On row for ProjectScylla 80-issue triage
+- Added `verification` and `history` frontmatter fields
+- Bumped version from 2.0.0 to 2.1.0
+
+### Why
+
+Previous v2.0.0 documented most wave execution patterns but lacked:
+1. The pre-commit environment mismatch when system Python is 3.9 (Debian) — yamllint/gitleaks both fail locally
+2. The "Audit Doc Policy Violations" hook slowness that freezes agents for 5+ minutes
+3. The auto-merge cleared on force-push pattern (already partially covered in batch-pr-ci-fix-workflow but not here)
+4. Session stats from the April 2026 batch triage that confirmed the wave pattern works for MEDIUM issues with Sonnet agents
+
+### Previous version (v2.0.0) snapshot
+
+```
+---
+name: parallel-issue-wave-execution
+description: "Pattern for implementing 20-35 GitHub issues in parallel waves using
+  isolated git worktrees. Use when: (1) backlog of 20+ issues classified as LOW/MEDIUM,
+  (2) issues are independent and touch different files per wave, (3) need 8-10x
+  speedup via myrmidon swarm Agent(isolation:'worktree') calls, (4) CI must be green
+  on main before launching waves."
+category: tooling
+date: 2026-04-10
+version: 2.0.0
+user-invocable: false
+tags:
+  - myrmidon
+  - swarm
+  - parallel-agents
+  - issue-triage
+  - wave-execution
+  - worktree
+  - bulk-pr
+---
+```
+
+Full v2.0.0 content archived — see git history at commit 45c00306.
+
+---
+
+## v2.0.0 (2026-04-10)
+
+**Initial consolidated version** — created from multi-session ProjectScylla and ProjectMnemosyne learnings.
+See git history for full content.
