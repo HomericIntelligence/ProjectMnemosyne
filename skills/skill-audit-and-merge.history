@@ -1,0 +1,25 @@
+# skill-audit-and-merge -- History
+
+## v1.0.0 (2026-03-19)
+
+**Changed by:** Initial skill capture — plugin consolidation session on ProjectMnemosyne
+**Verification:** (none recorded)
+
+### What this version contained
+
+- Overview: 43 → 37 plugins, 100% tag coverage, 3 new workflow plugins, ~1 hour
+- When to Use: marketplace grown organically with overlapping plugins; missing tags; wrong categories; workflow sequences
+- Verified Workflow:
+  - Phase 1: 3 parallel Explore agents (inventory / quality / overlap)
+  - Phase 2: User decisions (merge style, category, scope)
+  - Phase 3: Execute merges (create new plugin directories, copy SKILL.md files, delete old dirs)
+  - Phase 4: Regenerate marketplace.json, verify count, commit
+- Failed Attempts: N/A — direct approach worked
+- Results: merge patterns table (sequential workflow / orchestrator+primitives / analysis+action); directory structure template; plugin.json template; bash commands
+- Key Insights: parallel exploration faster; cross-references reveal clusters; merged plugins need clear descriptions
+- Prevention Checklist before creating new plugins
+- References: PR #22
+
+### Why superseded
+
+v2.0.0 adds a concrete phased deduplication approach validated at scale (1,667 → 1,625 files, 41 removed), parallel sub-agent execution pattern, cluster detection commands, and four new failure modes learned from the 2026-04-12 session.
