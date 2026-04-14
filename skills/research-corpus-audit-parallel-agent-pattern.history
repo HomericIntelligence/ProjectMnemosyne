@@ -1,0 +1,65 @@
+# research-corpus-audit-parallel-agent-pattern — History
+
+## v1.1.0 (2026-04-13)
+
+**Changed by:** TurboQuant (Idea 5.1) per-idea Myrmidon swarm review session
+**Verification:** verified-local
+
+### What changed
+- Extended "When to Use" to include per-idea KV cache quantization review
+- Added 2 new Failed Attempts: "Trust 32K ctx label" and "Trust FlashInfer 4× for total TPOT"
+- Added "KV Cache Quantization Numerical Checklist" to Results & Parameters
+- Added "Realistic TPOT Improvement Table" with pre-computed values for A1/A2/B
+- Added second "Verified On" row for TurboQuant review session
+- Updated description to mention KV cache / quantization numerical correctness
+- Added history frontmatter field
+- Bumped version 1.0.0 → 1.1.0
+
+### Why
+Corpus-level audit (v1.0.0) catches structural compliance but misses per-idea numerical
+errors. The TurboQuant review found two critical inherited errors that pass corpus audit
+but are wrong: (1) context length mislabeling (68.7 GB labeled "32K ctx" but computed
+with 262K tokens), (2) TPOT overstatement (claiming "2×-3×" when correct accounting of
+weight bandwidth gives ~1.6×). These error patterns will recur across all KV-related ideas
+(5.1, 5.2, 5.5, 5.6, etc.). The checklist prevents re-discovering them in future reviews.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: research-corpus-audit-parallel-agent-pattern
+description: "Strict 10-dimension quality audit of AI architecture research corpora using parallel agent delegation. Use when: (1) auditing a large set of research/summary docs for structural compliance, (2) enforcing citation standards and TPOT framing conventions across a corpus, (3) grading research output with file:line evidence."
+category: architecture
+date: 2026-04-13
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon]
+---
+
+# Research Corpus Audit — Parallel Agent Pattern
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-13 |
+| **Objective** | Strict evidence-based quality audit of 68-file AI architecture research corpus across 10 dimensions |
+| **Outcome** | Successful — all 10 dimensions graded with file:line evidence; 3 structural issues identified and fixed; overall grade raised from B to A |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Auditing a set of research summary files for structural compliance (TTFT/TPOT rows, section headers, baseline splits)
+- Enforcing citation standards (`[Author et al., Year] — p.N, §X.Y` or `[derived from first principles]`) across a large corpus
+- Grading research output where every claim above F must cite a specific file:line
+- Running parallel quality checks across 30+ files without bloating main context
+
+[... remainder of v1.0.0 content as shown in the live skill file before amendment ...]
+```
+
+---
+
+## v1.0.0 (2026-04-13)
+
+**Initial version.**
