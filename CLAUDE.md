@@ -10,8 +10,7 @@ organizes, and shares learnings from experiments, debugging sessions, and develo
 **Purpose**: Capture team knowledge so Claude can `/advise` before starting work and prevent
 repeated mistakes.
 
-**Ecosystem**: Works with ProjectOdyssey (training), ProjectKeystone (coordination), and
-ProjectScylla (testing).
+**Ecosystem**: Works with ProjectOdyssey (training), ProjectKeystone (DAG execution), ProjectScylla (testing), Myrmidons (agent provisioning), AchaeanFleet (agent images), and ProjectHephaestus (shared utilities).
 
 ## Commands
 
@@ -208,5 +207,5 @@ command infrastructure.
 ## References
 
 - [ProjectOdyssey](https://github.com/HomericIntelligence/ProjectOdyssey) - Training platform
-- [ProjectKeystone](https://github.com/HomericIntelligence/ProjectKeystone) - Coordination
+- [ProjectKeystone](https://github.com/HomericIntelligence/ProjectKeystone) - DAG execution and task coordination
 - [ProjectScylla](https://github.com/HomericIntelligence/ProjectScylla) - Testing
