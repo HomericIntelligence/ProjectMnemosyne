@@ -6,8 +6,8 @@ description: "Pattern for implementing 20-35 GitHub issues in parallel waves usi
   \ speedup via myrmidon swarm Agent(isolation:'worktree') calls, (4) CI must be green\
   \ on main before launching waves."
 category: tooling
-date: 2026-04-10
-version: 2.1.0
+date: 2026-04-13
+version: 2.2.0
 user-invocable: false
 verification: verified-local
 history: parallel-issue-wave-execution.history
@@ -26,7 +26,8 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-04-10 |
+| Date | 2026-04-13 |
+| Version | 2.2.0 |
 | Objective | Implement 20-35 issues per repo in parallel waves using myrmidon swarm agents, with pre-verification and CI-first strategy |
 | Outcome | SUCCESS — verified across 2 repos: 35 PRs (ProjectScylla), 14 PRs (ProjectMnemosyne); 22/27 issues addressed in latest run |
 
@@ -217,6 +218,21 @@ git push -u origin <old-branch>-v2
 gh pr create ...
 gh pr close <old-pr> --comment "Superseded by #<new-pr>"
 gh pr merge --auto --rebase <new-pr>
+```
+
+### Merge Conflict Resolution (when a PR becomes DIRTY)
+
+When a PR's `mergeStateStatus` is `DIRTY` after another PR merged into the same file:
+
+```bash
+git fetch origin
+git checkout <branch>
+git rebase origin/main           # surfaces conflict markers
+# Edit file: keep BOTH sets of additions, remove all <<<<<<<, =======, >>>>>>> markers
+git add <conflicted-file>
+GIT_EDITOR=true git rebase --continue   # NOTE: --no-edit does NOT exist for git rebase
+git push --force-with-lease origin <branch>
+gh pr merge <PR-number> --auto --rebase  # MUST re-enable — force-push clears it silently
 ```
 
 ## Critical Pitfalls
@@ -426,6 +442,10 @@ gh pr merge <pr-number> --auto --rebase
 | Merging duplicate issues into one PR | Issues #1110, #928, #914 all covered DRY violations; tried separate PRs | Overlapping file changes would cause merge conflicts | Identify duplicate/subset issues early and merge into a single PR |
 | Waiting on Audit Doc Policy Violations hook | Agent ran `pre-commit run --all-files` and stalled for 5+ minutes — appeared to hang | The "Audit Doc Policy Violations" hook is extremely slow (can exceed 5 min) causing agents to stall and appear frozen | Use `SKIP=audit-doc-policy-violations pixi run pre-commit run --all-files` to skip only this hook; CI runs it in its own environment correctly |
 | Pre-commit hooks fail on system Python 3.9 / Go mismatch | Ran `pre-commit run --all-files` directly on a Debian 3.9 system; yamllint and gitleaks hooks failed | yamllint requires Python 3.10+ virtualenv; gitleaks hook requires Go 1.22 format which mismatches local Go version | Use `SKIP=gitleaks,yamllint pixi run pre-commit run --all-files` — CI runs these via its own correct environment |
+| Ran `git rebase --continue --no-edit` | Used `--no-edit` flag on git rebase | Flag doesn't exist on this git version (it's for `git commit`/`git merge`) | Use `GIT_EDITOR=true git rebase --continue` for non-interactive rebase continuation |
+| Assumed parallel PRs on different issues wouldn't conflict | Two agents independently added tests to `test_cli_report.py` (PRs #1801 and #1803) | Both PRs extended the same test file; #1801 merged first, making #1803 DIRTY | Group agents by file ownership even for test files; when PRs add to shared test helpers/fixtures, they can conflict |
+| Force-pushed rebase resolution and assumed auto-merge persisted | Ran `git push --force-with-lease` after resolving merge conflict, didn't re-enable auto-merge | GitHub silently clears auto-merge on every force-push | Always run `gh pr merge <N> --auto --rebase` immediately after any force-push |
+| Spawned duplicate agent while background agent was still running | Tried to take over branch without checking background agent state | Would have created conflicting commits and wasted work | Read `/tmp/claude-*/tasks/<id>.output`, check `git log origin/<branch>`, and `gh pr list --head <branch>` before touching a branch |
 
 ## Results & Parameters
 
@@ -490,6 +510,36 @@ for pr in sorted(prs, key=lambda x: x['number']):
 "
 ```
 
+### Background Agent Coordination Checklist
+
+Before taking over a branch that a background agent was working on:
+
+```bash
+# 1. Check the agent output file
+cat /tmp/claude-*/tasks/<agent-id>.output | tail -100
+
+# 2. Check if commits already exist on the remote branch
+git fetch origin
+git log --oneline origin/<branch> | head -5
+
+# 3. Check if a PR already exists
+gh pr list --head <branch> --json number,title,state
+
+# 4. Only take over if remote branch has no useful commits AND no PR exists
+```
+
+### Wave Completion Verification
+
+```bash
+# After all waves complete — empty result means all PRs merged
+gh pr list --state open --json number,title,mergeStateStatus,statusCheckRollup
+
+# If any remain, check mergeStateStatus:
+# DIRTY    → merge conflict, needs rebase resolution
+# BLOCKED  → CI failing or review required
+# UNKNOWN  → CI still running, wait
+```
+
 ### Cherry-pick Rebase for Stale PR
 
 ```bash
@@ -516,3 +566,4 @@ gh pr close <old-pr> --comment "Superseded by #<new-pr>"
 | ProjectScylla | 14 LOW issues, 4 parallel waves, March 2026 (second run) | pyproject.toml change required pixi.lock SHA update; nested worktree carried stale commits |
 | ProjectMnemosyne | 27 open issues triaged, 14 PRs in 2 waves, 6 closed directly, April 2026 | CI gate: pytest + validate_plugins.py (39 tests, 953 skills) |
 | ProjectScylla | 80-issue triage: 20 closed already-done/dup, ~18 PRs in 3 waves, April 2026 | Haiku for LOW, Sonnet for MEDIUM; SKIP=gitleaks,yamllint needed on Debian 3.9 system; Audit Doc Policy hook stalls agents |
+| ProjectScylla | Wave 2b/2c continuation, 6 PRs (#1799-#1804), conflict resolution for PR #1803 | 2026-04-13 |
