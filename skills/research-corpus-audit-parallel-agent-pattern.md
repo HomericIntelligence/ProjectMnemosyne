@@ -1,12 +1,13 @@
 ---
 name: research-corpus-audit-parallel-agent-pattern
-description: "Strict 10-dimension quality audit of AI architecture research corpora using parallel agent delegation. Use when: (1) auditing a large set of research/summary docs for structural compliance, (2) enforcing citation standards and TPOT framing conventions across a corpus, (3) grading research output with file:line evidence."
+description: "Strict 10-dimension quality audit of AI architecture research corpora using parallel agent delegation. Use when: (1) auditing a large set of research/summary docs for structural compliance, (2) enforcing citation standards and TPOT framing conventions across a corpus, (3) grading research output with file:line evidence, (4) reviewing individual idea research docs for KV cache / quantization numerical correctness."
 category: architecture
 date: 2026-04-13
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
-tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon]
+history: research-corpus-audit-parallel-agent-pattern.history
+tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon, kv-cache, quantization]
 ---
 
 # Research Corpus Audit — Parallel Agent Pattern
@@ -16,9 +17,10 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon]
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-04-13 |
-| **Objective** | Strict evidence-based quality audit of 68-file AI architecture research corpus across 10 dimensions |
-| **Outcome** | Successful — all 10 dimensions graded with file:line evidence; 3 structural issues identified and fixed; overall grade raised from B to A |
+| **Objective** | Strict evidence-based quality audit of 68-file AI architecture research corpus across 10 dimensions; extended to per-idea numerical correctness review for KV cache quantization papers |
+| **Outcome** | Successful — all 10 dimensions graded with file:line evidence; 3 structural issues identified and fixed; overall grade raised from B to A. Per-idea review of TurboQuant (5.1) found 2 critical inherited errors and 3 moderate issues. |
 | **Verification** | verified-local |
+| **History** | [changelog](./research-corpus-audit-parallel-agent-pattern.history) |
 
 ## When to Use
 
@@ -26,6 +28,7 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon]
 - Enforcing citation standards (`[Author et al., Year] — p.N, §X.Y` or `[derived from first principles]`) across a large corpus
 - Grading research output where every claim above F must cite a specific file:line
 - Running parallel quality checks across 30+ files without bloating main context
+- Deep per-idea review of KV cache quantization research docs (context length mislabeling, head_dim errors, TPOT overstatement)
 
 ## Verified Workflow
 
@@ -70,6 +73,8 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon]
 | Narrative TPOT section | Using `## TPOT Impact Analysis` prose section instead of standard table rows | Invisible to corpus-wide grep; fails D4 audit automatically | TTFT and TPOT MUST appear as explicit `| TTFT (8K prompt) |` and `| TPOT (batch=1) |` rows in each comparison table |
 | `↑ negligible` for zero-overhead ideas | Using `↑ negligible` in TPOT cells for ideas with < 0.1% overhead | Corpus convention requires `≈ ref` for true no-overhead ideas; `↑` implies a real compute addition | TPOT direction: `↑` = real overhead, `≈ ref` = negligible/zero, `↓` = improvement |
 | Wrong section header | Using `## Quality Tradeoff Evidence` instead of `## Accuracy / Quality Tradeoff` | D7 grep for "Accuracy" missed the section entirely | Section header must match corpus standard exactly: `## Accuracy / Quality Tradeoff` |
+| Trust "32K ctx" label for A2 KV cache | Accepting the "32K ctx" label on KV cache figures without verifying the formula arithmetic | The 68.7 GB figure requires 262,144 tokens, not 32,768 — the label was wrong while the arithmetic used the full max context | Always re-derive: `64×2×8×128×32768×2 = 8 GB` (actual 32K), not 68.7 GB; the inherited error is context 32,768→262,144 |
+| Trust FlashInfer "4x speedup" for total TPOT | Using the attention-kernel 4× figure to claim "4× TPOT improvement" for INT4 KV | FlashInfer's speedup is for the attention kernel only; TPOT also includes weight loading (~64 GB for 32B model) which is unchanged | Always compute realistic TPOT: `total_BW_before / total_BW_after = (weight_BW + KV_BW) / (weight_BW + KV_BW/4)`; for A2 at 262K: ~1.6× not 4× |
 
 ## Results & Parameters
 
@@ -122,8 +127,57 @@ Each agent prompt must include:
 3. Return format: `[file:line] → [finding] → [PASS/FAIL]`
 4. Response length cap (~300 words per dimension)
 
+### KV Cache Quantization Numerical Checklist (for per-idea review)
+
+When reviewing a research doc about KV cache quantization (ideas referencing KIVI, KVQuant, TurboQuant, RotateKV, FireQ, etc.):
+
+```python
+# 1. ALWAYS re-derive KV cache sizes from scratch
+# Formula: num_KV_layers × 2 × n_KV_heads × head_dim × seq_len × bytes_per_element
+#
+# Canonical baselines (from SHARED_PRELUDE.md + canonical corrections):
+#   A1: 16 layers, 4 KV heads, head_dim=256 → 16×2×4×256×seq×2 bytes (BF16)
+#   A2: 64 layers, 8 KV heads, head_dim=128 → 64×2×8×128×seq×2 bytes (BF16)
+#   B:  15 layers, 2 KV heads, head_dim=256 → 15×2×2×256×seq×2 bytes (BF16)
+#
+# Common error: doc says "32K ctx" but formula uses 262144 tokens
+# Check: 64×2×8×128×32768×2 = 8 GB (NOT 68.7 GB)
+#        64×2×8×128×262144×2 = 68.7 GB ← this is what produces 68.7
+
+# 2. ALWAYS compute realistic TPOT (batch=1), not just attention kernel speedup
+# weight_BW = num_active_params × bytes_per_param  (BF16 = 2 bytes)
+# KV_BW_before = KV_cache_bytes_at_seq_len
+# KV_BW_after  = KV_cache_bytes_at_seq_len / compression_ratio
+# TPOT_improvement = (weight_BW + KV_BW_before) / (weight_BW + KV_BW_after)
+#
+# Example — A2 at 262K context, INT4 KV:
+# weight_BW  = 32B × 2 = 64 GB
+# KV_BW_before = 68.7 GB
+# KV_BW_after  = 17.2 GB
+# Realistic TPOT = (64+68.7)/(64+17.2) = 132.7/81.2 ≈ 1.63× (NOT 4×)
+
+# 3. Check canonical head_dim corrections
+# A1 full-attention layers: canonical head_dim=256 (not 128 from older SHARED_PRELUDE)
+# B GatedAttn layers: canonical 2 KV heads × head_dim=256 (product = 512, same as 4×128)
+# → A1 KV cache is 2× what old-prelude says; B is unchanged (product invariant)
+
+# 4. Check citation for "4× bandwidth reduction"
+# BF16→INT4 is 4× by definition (2 bytes → 0.5 bytes); needs no experimental citation
+# Do NOT cite an INT8 paper (4× vs FP32) for an INT4 vs BF16 claim
+```
+
+### Realistic TPOT Improvement Table (for reference)
+
+| Model | Seq len | KV BW before | Weight BW | Realistic INT4 KV TPOT | Attention kernel only |
+|-------|---------|-------------|----------|------------------------|----------------------|
+| A1 (27B Hybrid) | 32K | ~2.0 GB | ~54 GB | ~1.03× | ~4× (kernel only) |
+| A2 (32B Dense) | 32K | ~8.0 GB | ~64 GB | ~1.13× | ~4× (kernel only) |
+| A2 (32B Dense) | 262K | ~68.7 GB | ~64 GB | ~1.63× | ~4× (kernel only) |
+| B (397B MoE) | 32K | ~1.0 GB | ~34 GB (active) | ~1.02× | ~4× (kernel only) |
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ArchIdeas corpus | 34 ideas, 68 files, 5 artifacts | Audit Apr 2026 — found D4/D5/D7 issues in summary_5_3 and summary_3_8; all fixed |
+| ArchIdeas idea 5.1 (TurboQuant) | Per-idea review with 5-agent swarm | Apr 2026 — found context length mislabel (68.7 GB at 262K labeled "32K"), A1 head_dim error, TPOT overstatement |
