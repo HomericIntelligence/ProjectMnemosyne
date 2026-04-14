@@ -19,27 +19,12 @@ Covers:
 - migrate_skill: skip existing, dry-run, write, force overwrite, read error
 """
 
-import sys
 from pathlib import Path
-from unittest.mock import patch
-
-import pytest
-
-# ---------------------------------------------------------------------------
-# Path setup (matches conftest.py pattern)
-# ---------------------------------------------------------------------------
-
-_SCRIPTS_DIR = str(Path(__file__).resolve().parent.parent / "scripts")
-if _SCRIPTS_DIR not in sys.path:
-    sys.path.insert(0, _SCRIPTS_DIR)
 
 from migrate_ecosystem_skills import (
     FIELDS_TO_REMOVE,
     TODAY,
     _format_yaml_value,
-    _insert_before_failed_attempts,
-    _insert_before_results,
-    _insert_before_verified_workflow,
     add_missing_sections,
     build_skill_registry,
     build_target_frontmatter,
@@ -363,23 +348,35 @@ class TestAddMissingSections:
         assert TODAY in result
 
     def test_when_to_use_stub_added_when_missing(self):
-        body = "## Overview\n\n| x | y |\n\n## Verified Workflow\n\n### Quick Reference\n```bash\n```\n\n## Failed Attempts\n\n| A | B | C | D |\n\n## Results & Parameters\n\n- x\n"
+        body = (
+            "## Overview\n\n| x | y |\n\n## Verified Workflow\n\n### Quick Reference\n"
+            "```bash\n```\n\n## Failed Attempts\n\n| A | B | C | D |\n\n## Results & Parameters\n\n- x\n"
+        )
         result = add_missing_sections(body, "my-skill")
         assert "## When to Use" in result
 
     def test_failed_attempts_stub_added_when_missing(self):
-        body = "## Overview\n\n## When to Use\n\n## Verified Workflow\n\n### Quick Reference\n```bash\n```\n\n## Results & Parameters\n\n"
+        body = (
+            "## Overview\n\n## When to Use\n\n## Verified Workflow\n\n"
+            "### Quick Reference\n```bash\n```\n\n## Results & Parameters\n\n"
+        )
         result = add_missing_sections(body, "my-skill")
         assert "## Failed Attempts" in result
         assert "Attempt" in result
 
     def test_results_stub_added_when_missing(self):
-        body = "## Overview\n\n## When to Use\n\n## Verified Workflow\n\n### Quick Reference\n```bash\n```\n\n## Failed Attempts\n\n| A | B | C | D |\n"
+        body = (
+            "## Overview\n\n## When to Use\n\n## Verified Workflow\n\n"
+            "### Quick Reference\n```bash\n```\n\n## Failed Attempts\n\n| A | B | C | D |\n"
+        )
         result = add_missing_sections(body, "my-skill")
         assert "## Results & Parameters" in result
 
     def test_quick_reference_added_to_existing_verified_workflow(self):
-        body = "## Verified Workflow\n\nsome steps\n\n## Failed Attempts\n\n| x | y | z | w |\n\n## Results & Parameters\n\n- x\n"
+        body = (
+            "## Verified Workflow\n\nsome steps\n\n## Failed Attempts\n\n"
+            "| x | y | z | w |\n\n## Results & Parameters\n\n- x\n"
+        )
         result = add_missing_sections(body, "my-skill")
         assert "### Quick Reference" in result
 
@@ -480,7 +477,8 @@ class TestTransformSkill:
     def test_missing_sections_injected(self):
         content = "---\nname: my-skill\ndescription: desc\n---\nJust some text.\n"
         result = transform_skill(content, "my-skill", None)
-        for section in ["## Overview", "## When to Use", "## Verified Workflow", "## Failed Attempts", "## Results & Parameters"]:
+        for section in ["## Overview", "## When to Use", "## Verified Workflow",
+                         "## Failed Attempts", "## Results & Parameters"]:
             assert section in result, f"Missing section: {section}"
 
     def test_no_frontmatter_still_produces_valid_output(self):
