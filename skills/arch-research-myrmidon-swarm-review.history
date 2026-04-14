@@ -1,0 +1,25 @@
+# arch-research-myrmidon-swarm-review — History
+
+## v1.1.0 (2026-04-14)
+
+**Changed by:** ArchIdeas session — adding 4 new architectural ideas to existing 31-idea corpus
+**Verification:** verified-local
+
+### What changed
+- Added Phase A: Research New Ideas workflow for ideas with no prior research docs
+- Added new "When to Use" trigger for new-idea research
+- Added 2 new Failed Attempts rows (N4-before-siblings; trust-author-complexity-claim)
+- Added New Idea Research Parameters section with 8 verified arXiv IDs and N1–N4 verdicts
+- Extended Verified On table with new-idea research row
+
+### Why
+The existing skill only covered reviewing an existing corpus (Phase 1–3). The ArchIdeas session needed to generate brand-new research docs for 4 previously-undocumented ideas (N1–N4) and include them in the paper alongside the existing 31 reviewed ideas. The same 5-role Myrmidon pattern applies, but the trigger condition and prior-art search terms are different.
+
+### Previous version (v1.0.0) snapshot
+Commit reference: initial v1.0.0 (2026-04-13). See `skills/arch-research-myrmidon-swarm-review.md` git history.
+
+---
+
+## v1.0.0 (2026-04-13)
+
+**Initial version.**
