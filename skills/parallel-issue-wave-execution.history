@@ -1,5 +1,59 @@
 # parallel-issue-wave-execution — History
 
+## v2.2.0 (2026-04-13)
+
+**Changed by:** ProjectScylla batch-PR session Wave 2b/2c continuation
+**Verification:** verified-ci
+
+### What changed
+- Added 4 new Failed Attempts rows (git rebase --no-edit, parallel PR conflict, auto-merge clearing, duplicate agent)
+- Added Merge Conflict Resolution subsection to Verified Workflow
+- Added Background Agent Coordination and Wave Completion Verification patterns to Results & Parameters
+- Updated date, version, Verified On table
+
+### Why
+Continuation session surfaced non-obvious failure modes: `git rebase --no-edit` doesn't exist on this git version; auto-merge silently clears on force-push including rebase resolutions; parallel PRs on "different" issues can conflict when both add tests to a shared test file; background agents need checklist coordination to avoid duplicate work and wasted PRs.
+
+### Previous version (v2.1.0) snapshot
+
+```
+---
+name: parallel-issue-wave-execution
+description: "Pattern for implementing 20-35 GitHub issues in parallel waves using\
+  \ isolated git worktrees. Use when: (1) backlog of 20+ issues classified as LOW/MEDIUM,\
+  \ (2) issues are independent and touch different files per wave, (3) need 8-10x\
+  \ speedup via myrmidon swarm Agent(isolation:'worktree') calls, (4) CI must be green\
+  \ on main before launching waves."
+category: tooling
+date: 2026-04-10
+version: 2.1.0
+user-invocable: false
+verification: verified-local
+history: parallel-issue-wave-execution.history
+tags:
+  - myrmidon
+  - swarm
+  - parallel-agents
+  - issue-triage
+  - wave-execution
+  - worktree
+  - bulk-pr
+---
+# Parallel Issue Wave Execution
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-04-10 |
+| Objective | Implement 20-35 issues per repo in parallel waves using myrmidon swarm agents, with pre-verification and CI-first strategy |
+| Outcome | SUCCESS — verified across 2 repos: 35 PRs (ProjectScylla), 14 PRs (ProjectMnemosyne); 22/27 issues addressed in latest run |
+```
+
+Full v2.1.0 content archived — see git history.
+
+---
+
 ## v2.1.0 (2026-04-10)
 
 **Changed by:** ProjectScylla batch triage session — 80-issue triage pass (20 already-done closures + ~18 PRs)
