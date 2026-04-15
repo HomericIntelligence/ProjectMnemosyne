@@ -3,7 +3,7 @@ name: arch-research-myrmidon-swarm-review
 description: "Parallel AI architecture research review using Myrmidon Swarm pattern: 1 lead agent per idea + 5 parallel sub-agents (citation verifier, complexity auditor, literature gap finder, comparison validator, feasibility checker) + coordinator. Use when: (1) reviewing a corpus of 10+ research documents for correctness, (2) verifying citations, Big-O claims, and baseline comparisons at scale, (3) producing independent review documents that can be cross-checked."
 category: architecture
 date: 2026-04-14
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 tags: []
@@ -29,6 +29,7 @@ history: arch-research-myrmidon-swarm-review.history
 - Finding missing literature that changes novelty classifications
 - Producing independent review documents for a research corpus
 - Generating research docs for new ideas that have no prior `research_*.md`/`summary_*.md` files, where each new idea needs full 5-role Myrmidon treatment alongside (or after) the existing corpus review
+- Merging a reviewed corpus (review_*.md + summary_*.md + 5× verification_*.md per idea) into single-source research docs while simultaneously adding a new baseline and re-validating all merged docs
 
 ## Verified Workflow
 
@@ -94,6 +95,42 @@ When adding N new ideas to an existing corpus that already has Phase 1–3 compl
 
 5. **After Phase A completes**: new `research_6_N_*.md` files are equivalent to existing `research_1_*`–`research_5_*` files and can be included in the LaTeX paper on equal footing.
 
+### Phase B: Per-Idea Merge + Myrmidon Re-Validation of Merged Docs
+
+When the corpus has accumulated separate review_*.md, summary_*.md, and verification_*.md files per idea and you want to collapse them into a single authoritative research_*.md per idea (with optional new baseline addition):
+
+**Pre-conditions:**
+- All `review_X_Y.md` + `summary_X_Y.md` + `verification_X_Y_*.md` exist for each idea
+- `SHARED_PRELUDE.md` extended with new baseline (e.g., Baseline C) before starting
+- Outlier files identified (e.g., `scope_X_Y_*.md` to absorb into `research_X_Y.md`)
+
+**Step B1: Extend SHARED_PRELUDE.md with new baseline**
+- Web-fetch authoritative config.json for new baseline
+- Add full spec block + per-token complexity + KV cache formulas at all reference contexts
+- Add to KV cache comparison table
+- Update Changelog section
+
+**Step B2: One lead agent per idea (39 × parallel launch in 2 waves to avoid message size limits)**
+- Each lead reads: `research_X_Y.md` + `summary_X_Y.md` + `review_X_Y.md` + all `verification_X_Y_*.md`
+- Integrates review findings SILENTLY into prose (no "Review Findings" subsection)
+- Integrates summary doc: Executive Summary subsection + Key Comparison Tables for ALL baselines (including new one)
+- Absorbs any outlier scope files (e.g., `scope_4_7_*.md`) for its idea
+- Converts all inline citations to `<Title>[N]: <description>` format
+- Collects `<!-- CITATION MANIFEST -->` block at bottom of merged doc
+- Applies systemic corrections silently (wrong KV formula, wrong vocab, wrong context)
+- Spawns 5 sub-agents in parallel for validation of the merged doc
+- Produces final merged `research_X_Y.md` (overwrite in-place)
+- Produces `verification_merged_X_Y_{citations,complexity,literature,comparison,feasibility}.md`
+
+**Step B3: Delete legacy docs (after all merges complete)**
+- `rm summary_*.md review_*.md scope_*.md`
+- `rm verification_*.md` (original, non-merged ones)
+- Keep `verification_merged_*.md` as audit trail
+- Delete audit trail after synthesis regen if desired
+
+**Step B4: Regenerate synthesis docs from merged corpus**
+- `cross_reference_matrix.md`, `priority_ranking.md`, `architecture_synthesis.md`, `implementation_spec_phase1.md`
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -104,8 +141,25 @@ When adding N new ideas to an existing corpus that already has Phase 1–3 compl
 | Trusting "68 GB KV at 32K" for A2 | SHARED_PRELUDE stated A2 (Qwen3-32B) KV cache = ~68 GB at 32K context | Wrong: used 64 Q-heads instead of 8 KV-heads in formula; ~8× overestimate. Correct: 64L × 2 × 8KV × 128hd × 32768tok × 2B = ~8.59 GB | Always verify KV cache formulas use KV head count not Q head count |
 | N4 before N1/N2/N3 | Tried to research the combined idea before the three component ideas had research docs | N4 requires cross-references to N1, N2, N3 prior art and Big-O analysis; without them the N4 agent fabricates component details | Always research component ideas N1, N2, N3 fully before launching N4 agent |
 | Trusting author complexity claims for new ideas | Accepted "O(n) per token" claim from a new idea's mechanism description without re-deriving | Author was counting attention heads as O(1); when DeltaNet state per head is O(d²), full per-token cost is O(d²) not O(n·d) | Complexity Auditor sub-agent must re-derive every Big-O for new ideas, same as for existing corpus |
+| Processing all 39 ideas in a single agent message | One giant Agent call listing all 39 ideas | Context exhaustion before half the ideas complete | Split into waves of ~7 ideas per group; parallel agents per group are fine |
+| Verification file role-name drift ignored | Assumed all ideas use the same verification file suffix pattern | Ideas 1.x–5.x use `{citations,comparison,complexity,feasibility,literature}`; ideas 6.x use `{citation_verifier,comparison_validator,complexity_auditor,feasibility_checker,literature_gap}` — glob-only approach missed 6.x files | Each lead agent must explicitly glob BOTH naming patterns before reading |
+| All 39 leads in one message | Launched all in a single message with 39 Agent tool calls | Message too large for runtime | Wave approach: launch groups 1–3 first, then 4–6 after confirmation |
+| Scope outlier handled by wrong agent | Tried to absorb `scope_4_7_*.md` in a general cleanup step | The scope file's content was context-dependent on idea 4.7 — only the 4.7 lead agent knew the right place to fold it in | Always assign outlier files to the lead agent for their idea |
 
 ## Results & Parameters
+
+### Corpus Merge Parallelization — Verified Grouping (39 Ideas, 6 Groups)
+
+| Wave | Groups | Ideas | Lead agents | Sub-agents |
+|------|--------|-------|-------------|------------|
+| 1 | 1, 2, 3 | 1.1–1.7, 2.1–2.2, 3.1–3.8 | 17 | 85 |
+| 2 | 4, 5, 6 | 4.1–4.7, 5.1–5.10, 6.1–6.5 | 22 | 110 |
+
+**Outlier file handling**: `scope_X_Y_*.md` → assigned to idea X.Y lead agent; absorbed into merged `research_X_Y.md`.
+
+**Verification file naming drift** (two conventions — must handle both):
+- Ideas 1.x–5.x: `verification_{id}_{citations|comparison|complexity|feasibility|literature}.md`
+- Ideas 6.x: `verification_{id}_{citation_verifier|comparison_validator|complexity_auditor|feasibility_checker|literature_gap[_finder]}.md`
 
 ### Systemic Error Patterns Found (apply to any similar review)
 
@@ -166,3 +220,4 @@ These IDs were WebFetch-verified during the N1–N4 research pass:
 |---------|---------|---------|
 | ArchIdeas | 31 AI architecture ideas (sections 1–5 plus 4.7) | Qwen3.5-27B Hybrid, Qwen3-32B Dense, Qwen3.5-397B-A17B MoE baselines |
 | ArchIdeas | 4 new ideas (N1–N4) added to existing 31-idea corpus | research_6_1 through research_6_4 produced by parallel Myrmidon swarms; all 4 included in final LaTeX paper |
+| ArchIdeas | 39-idea corpus merge (Phase B) | review_*.md + summary_*.md + 5× verification_*.md merged into 39 unified research_*.md files; 195 merged verification files produced; synthesis docs regenerated |

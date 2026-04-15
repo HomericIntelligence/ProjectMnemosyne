@@ -1,5 +1,26 @@
 # arch-research-myrmidon-swarm-review — History
 
+## v1.2.0 (2026-04-14)
+
+**Changed by:** ArchIdeas session — 39-idea corpus overhaul: parallel per-idea merge of legacy review/summary/verification docs into unified research docs
+**Verification:** verified-local
+
+### What changed
+- Added new "When to Use" trigger for corpus merge workflow (review_*.md + summary_*.md + 5× verification_*.md → single research_*.md)
+- Added Phase B: Per-Idea Merge + Myrmidon Re-Validation of Merged Docs (Steps B1–B4)
+- Added 4 new Failed Attempts rows: all-39-in-one-message context exhaustion, verification file role-name drift (1.x–5.x vs 6.x suffix conventions), 39-leads-in-one-message runtime size limit, scope outlier assigned to wrong agent
+- Added Corpus Merge Parallelization results table (39 ideas, 2 waves, 6 groups, 39 lead agents, 195 sub-agents)
+- Added outlier file handling note and verification file naming drift documentation
+- Extended Verified On table with 39-idea Phase B corpus merge row
+
+### Why
+The ArchIdeas corpus grew to 39 ideas with separate review_*.md, summary_*.md, and verification_*.md files per idea. A major overhaul was needed to merge all legacy docs into single-source research_*.md files while simultaneously adding a new baseline (Baseline C) and re-validating. The wave-based launch strategy and dual verification file naming conventions were not captured anywhere and are critical for future runs.
+
+### Previous version (v1.1.0) snapshot
+See history entry below.
+
+---
+
 ## v1.1.0 (2026-04-14)
 
 **Changed by:** ArchIdeas session — adding 4 new architectural ideas to existing 31-idea corpus
