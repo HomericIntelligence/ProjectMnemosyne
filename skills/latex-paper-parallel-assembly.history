@@ -1,0 +1,55 @@
+# latex-paper-parallel-assembly — History
+
+## v1.1.0 (2026-04-14)
+
+**Changed by:** Session — Post-assembly citation and verdict cleanup pass (ArchIdeas paper)
+**Verification:** verified-local (all four cleanup steps executed end-to-end; paper built cleanly with 0 LaTeX errors after cleanup)
+
+### What changed
+- Bumped version from 1.0.0 to 1.1.0
+- Added 3 new "When to Use" triggers: removing inline arXiv hrefs, consolidating verdict codes, deduplicating parallel-agent bib stubs
+- Added Optional Phase: Post-Assembly Citation and Verdict Cleanup (Steps C1–C4)
+  - C1: Remove inline arXiv hrefs (3 patterns: mixed `\href{arxiv}{text\cite{key}}`, bare arXiv ID list items, domain-only links)
+  - C2: Consolidate PURSUE/INVESTIGATE/DEPRIORITIZE verdict codes into a single Future Work section; longtable + booktabs package requirements noted
+  - C3: Fix `\texttt{}` underscore escaping in research doc pointer lines; `\verb|...|` inside `\textit{}` documented as invalid
+  - C4: Deduplicate bib entries from parallel agents; clean rebuild sequence (rm paper.aux paper.bbl paper.blg → pdflatex → bibtex → pdflatex → pdflatex)
+- Added 4 new Failed Attempts rows: `\verb` inside `\textit{}`, Python str.replace double-escape, fixing bib duplicates without clearing .aux, replacing verdict codes globally
+- Added Verified Citation and Verdict Cleanup (2026-04-14) table to Results & Parameters
+- Added Clean Bib Rebuild Sequence (copy-paste) to Results & Parameters
+- Added ArchIdeas post-assembly cleanup row to Verified On table
+- Updated tags: added cleanup, citations, verdicts
+- Updated description to include the 3 new post-assembly cleanup use cases
+
+### Why
+After assembling the ArchIdeas 38-idea LaTeX paper from 4 parallel agents, a major post-assembly cleanup pass revealed four distinct recurring issues: (1) parallel agents added inline `\href{https://arxiv.org/abs/...}{...}` wrappers around citation text that needed stripping, (2) verdict codes PURSUE/INVESTIGATE/DEPRIORITIZE were scattered across body paragraphs and table rows rather than consolidated in a dedicated Future Work section, (3) agents writing research doc pointers used `\texttt{research_X_Y_*.md}` with unescaped underscores causing "Missing $ inserted" LaTeX errors, and (4) parallel merge agents introduced uppercase cite key duplicates (e.g., `Banino2021PonderNet`) clashing with lowercase originals (`banino2021pondernet`) — bibtex reported "Case mismatch" and "Repeated entry" errors that persisted until the .aux file was cleared.
+
+### Previous version (v1.0.0) snapshot
+
+Key v1.0.0 content before this amendment:
+
+```markdown
+date: 2026-04-14
+version: 1.0.0
+tags: [latex, parallel, assembly, pdflatex, bibtex]
+
+## When to Use
+- A single agent cannot write the full paper without hitting context limits (>50 ideas, >40 pages)
+- You have independent parallel-writable sections
+- You need a reproducible farm-and-assemble pattern with explicit error-remediation steps
+- Post-assembly compilation fails due to Unicode, missing bib keys, \citeauthor, or tabular column drift
+
+## Verified Workflow
+Steps 1-10 (assembly + compile + stub-bib generation)
+(no Optional Phase: Post-Assembly Citation and Verdict Cleanup)
+
+## Failed Attempts
+8 rows (assembly-related failures only)
+
+## Results & Parameters
+Verified Assembly (2026-04-14) table only
+(no Verified Citation and Verdict Cleanup table)
+(no Clean Bib Rebuild Sequence)
+
+## Verified On
+| ArchIdeas | 38-idea AI architecture research paper | 4 parallel agents, head+awk assembly, 342 stubs, 3 compile passes, 102 pages final |
+```
