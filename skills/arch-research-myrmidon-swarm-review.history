@@ -1,5 +1,71 @@
 # arch-research-myrmidon-swarm-review — History
 
+## v1.3.0 (2026-04-14)
+
+**Changed by:** ArchIdeas session — first accuracy review-and-fix pass on the 39-idea corpus (Phase C)
+**Verification:** verified-local
+
+### What changed
+- Added Phase C: Accuracy Review-and-Fix Pass (in-place, marker-free) section covering when to use Phase C vs Phase B, the 7-priority fix order, two-wave structure (17+22), three citation manifest formats, fix discipline rules, LoRA case taxonomy, and SwiGLU ×3 factor
+- Added Baseline C (K2 Family / LLM360) specs to Verified On table entry
+- Added 5 new Failed Attempts rows: marker-free discipline (no `[corrected: ...]` markers), pre-existing `## Corrections applied:` not being banned content, 39-lead Phase C wave limit, H_q misuse in attention FLOPs formula, SwiGLU FLOPs = 3×d×d_ff not 2×d×d_ff
+- Bumped version to 1.3.0
+
+### Why
+The ArchIdeas corpus completed its first accuracy review-and-fix pass (Phase C). This phase is distinct from Phase B (merge): it is an in-place surgical fix pass with no output files, no inline correction markers, and verdicts explicitly out of scope. The two-wave limit (17+22), three citation manifest formats, and SwiGLU/LoRA FLOPs corrections were all new learnings not captured in v1.2.0.
+
+### Previous version (v1.2.0) snapshot
+
+---
+version: "1.2.0"
+date: 2026-04-14
+---
+
+# Myrmidon Swarm: Parallel Architecture Research Review
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-13 |
+| **Objective** | Review and validate 31 AI architecture research documents (research + summary pairs) for citation accuracy, Big-O correctness, baseline comparison validity, and implementation feasibility |
+| **Outcome** | Successful — 31 review docs, 155 verification files, 2 synthesis reports, 1 final summary produced |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Reviewing a corpus of 10+ existing research documents for factual correctness
+- Verifying that cited papers exist, summaries are faithful, and arXiv IDs are not fabricated
+- Cross-checking Big-O complexity tables and Nx improvement claims against canonical baseline specs
+- Finding missing literature that changes novelty classifications
+- Producing independent review documents for a research corpus
+- Generating research docs for new ideas that have no prior `research_*.md`/`summary_*.md` files, where each new idea needs full 5-role Myrmidon treatment alongside (or after) the existing corpus review
+- Merging a reviewed corpus (review_*.md + summary_*.md + 5× verification_*.md per idea) into single-source research docs while simultaneously adding a new baseline and re-validating all merged docs
+
+## Verified Workflow
+
+### Phase B: Per-Idea Merge + Myrmidon Re-Validation of Merged Docs
+
+(full Phase B content — see skill file git history for complete v1.2.0 text)
+
+## Failed Attempts
+
+(see skill file git history for complete v1.2.0 Failed Attempts table)
+
+## Results & Parameters
+
+(see skill file git history for complete v1.2.0 Results section)
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ArchIdeas | 31 AI architecture ideas (sections 1–5 plus 4.7) | Qwen3.5-27B Hybrid, Qwen3-32B Dense, Qwen3.5-397B-A17B MoE baselines |
+| ArchIdeas | 4 new ideas (N1–N4) added to existing 31-idea corpus | research_6_1 through research_6_4 produced by parallel Myrmidon swarms |
+| ArchIdeas | 39-idea corpus merge (Phase B) | review_*.md + summary_*.md + 5× verification_*.md merged into 39 unified research_*.md files |
+
+---
+
 ## v1.2.0 (2026-04-14)
 
 **Changed by:** ArchIdeas session — 39-idea corpus overhaul: parallel per-idea merge of legacy review/summary/verification docs into unified research docs
