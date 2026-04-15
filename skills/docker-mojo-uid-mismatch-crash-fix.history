@@ -1,0 +1,65 @@
+# docker-mojo-uid-mismatch-crash-fix — History
+
+## v1.1.0 (2026-04-14)
+
+**Changed by:** Session context — PR #5252 CI investigation, container UID cache key fix
+**Verification:** verified-precommit (PR #5252 open, CI not yet confirmed passing)
+
+### What changed
+
+- Added CI cache key UID isolation as Fix 4 (include runner UID in image cache key so
+  UID-1000 and UID-1001 builds are cached separately)
+- Added justfile HOME-fixup fragment as Fix 5 (runtime fallback for any `podman compose exec`
+  invocation in the justfile)
+- Added new Failed Attempts row: GitHub Actions env var vs step output evaluation timing
+- Extended "When to Use" with two new trigger conditions
+- Added GitHub Actions step output pattern to Results & Parameters
+- Updated verification to verified-precommit (was verified-local)
+
+### Why
+
+v1.0.0 fixed the crash for a known-UID build but did not address the upstream scenario where
+the CI image cache is keyed only by Dockerfile+pixi content hash. If a prior CI run cached
+the image at UID-1000 and the current run executes at UID-1001, the *cached* image is reused
+with the wrong UID baked in. Fix 4 adds the runner UID to the cache key so this can't happen.
+Fix 5 adds belt-and-suspenders HOME-fixup in the justfile for any exec path that bypasses the
+entrypoint.
+
+Also documents the GitHub Actions `${{ env.VAR }}` vs `${{ steps.id.outputs.name }}` timing
+difference — use step outputs to be safe when the value is set in the same action's earlier step.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: docker-mojo-uid-mismatch-crash-fix
+description: "Fix deterministic Mojo runtime crash (exit 134) when container image UID
+  differs from host runner UID. Use when: (1) mojo run crashes before executing any
+  user code with 'filesystem error: status: Permission denied [/home/.../.modular]',
+  (2) CI passes locally (UID 1000) but fails in CI runner (UID 1001+), (3) crash is
+  100% reproducible — not a flaky JIT issue."
+category: ci-cd
+date: 2026-04-11
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - docker
+  - mojo
+  - uid
+  - permissions
+  - container
+  - crash
+  - modular
+---
+
+# Docker Mojo UID Mismatch Crash Fix
+
+[... full v1.0.0 content as committed to main branch ...]
+```
+
+---
+
+## v1.0.0 (2026-04-11)
+
+**Initial version.**
