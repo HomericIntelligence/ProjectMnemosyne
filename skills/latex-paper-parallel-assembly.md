@@ -1,12 +1,12 @@
 ---
 name: latex-paper-parallel-assembly
-description: "Assemble a large LaTeX research paper from parallel-agent-written parts. Use when: (1) a single agent cannot hold the full paper in context, (2) you have 20+ ideas/sections to write and want parallel speedup, (3) you need to merge N part files into one compilable .tex, (4) you need post-assembly error remediation (unicode, missing bib entries, tabular column drift, undefined commands)."
+description: "Assemble a large LaTeX research paper from parallel-agent-written parts. Use when: (1) a single agent cannot hold the full paper in context, (2) you have 20+ ideas/sections to write and want parallel speedup, (3) you need to merge N part files into one compilable .tex, (4) you need post-assembly error remediation (unicode, missing bib entries, tabular column drift, undefined commands), (5) removing inline arXiv hrefs from assembled paper body, (6) consolidating scattered verdict codes into a single Future Work section, (7) deduplicating bib entries introduced by parallel agents writing their own citation stubs."
 category: documentation
 date: 2026-04-14
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
-tags: [latex, parallel, assembly, pdflatex, bibtex]
+tags: [latex, parallel, assembly, pdflatex, bibtex, cleanup, citations, verdicts]
 ---
 
 # LaTeX Paper Assembly from Parallel Agent Parts
@@ -26,6 +26,9 @@ tags: [latex, parallel, assembly, pdflatex, bibtex]
 - You have independent parallel-writable sections (e.g., one idea per subsection, each self-contained)
 - You need a reproducible farm-and-assemble pattern with explicit error-remediation steps
 - Post-assembly compilation fails due to Unicode, missing bib keys, `\citeauthor`, or tabular column drift
+- Removing all inline arXiv hrefs from a LaTeX paper body after a parallel assembly pass
+- Consolidating scattered verdict codes (PURSUE/INVESTIGATE/DEPRIORITIZE) into a single Future Work section
+- Deduplicating bib entries introduced by parallel agents writing their own citation stubs
 
 ## Verified Workflow
 
@@ -120,6 +123,111 @@ pdfinfo paper.pdf | grep Pages
 
 10. **Build script** — use the Scylla pattern: `pdflatex + bibtex + pdflatex + pdflatex` (4 runs total). Copy `~/ProjectScylla/docs/arxiv/haiku/build.sh` verbatim; it handles the exact sequencing. Required preamble directive: `\pdfoutput=1` for arXiv compatibility.
 
+### Optional Phase: Post-Assembly Citation and Verdict Cleanup
+
+Run after the assembly phase when the assembled paper contains inline arXiv hrefs, scattered verdict codes, unescaped underscores in `\texttt{}`, or duplicate bib entries from parallel agents.
+
+**Step C1: Remove inline arXiv hrefs from paper body**
+
+```python
+import pathlib, re
+
+tex = pathlib.Path("paper.tex").read_text(encoding="utf-8")
+
+# Pattern 1 — Mixed \href{arxiv}{text\cite{key}}: strip \href wrapper, keep inner content
+tex = re.sub(
+    r'\\href\{https://arxiv\.org/abs/[^}]+\}\{([^}]*(?:\\cite\{[^}]+\}[^}]*)?)\}',
+    r'\1',
+    tex
+)
+
+# Pattern 2 — Bare arXiv ID list items: \href{https://arxiv.org/abs/NNNN.NNNNN}{arXiv:NNNN.NNNNN}
+tex = re.sub(
+    r'\\href\{https://arxiv\.org/abs/(\d{4}\.\d+)\}\{arXiv:\d{4}\.\d+\}',
+    r'arXiv:\\texttt{\1}',
+    tex
+)
+
+# Pattern 3 — Domain-only link: \href{https://arxiv.org}{arXiv} → arXiv
+tex = tex.replace(r'\href{https://arxiv.org}{arXiv}', 'arXiv')
+
+pathlib.Path("paper.tex").write_text(tex, encoding="utf-8")
+print("arXiv href cleanup done")
+```
+
+Verification: `grep -c 'arxiv.org' paper.tex` → 0
+
+**Step C2: Consolidate verdict codes into Future Work section**
+
+- Grep for PURSUE/INVESTIGATE/DEPRIORITIZE in body text (not table cells):
+  ```bash
+  grep -n 'PURSUE\|INVESTIGATE\|DEPRIORITIZE' paper.tex
+  ```
+- In body paragraphs: replace with neutral prose (high-priority, candidate for investigation, lower-priority)
+- In table rows: replace with `\textbf{P}`/`\textbf{I}`/`\textbf{D}` + footnote pointing to Future Work section
+- Create new `\section{Future Work and Implementation Verdicts}` with:
+  - `\description` list defining P/I/D
+  - `longtable` per tier (PURSUE / INVESTIGATE / DEPRIORITIZE)
+  - Recommended Implementation Sequence as `\enumerate`
+- Remaining PURSUE/INVESTIGATE/DEPRIORITIZE count after cleanup = only Future Work section headings (intentional)
+- **Package requirement:** Check `\usepackage{longtable}` and `\usepackage{booktabs}` in preamble before adding the Future Work section — `longtable` for the environment, `booktabs` for `\toprule`/`\midrule`/`\bottomrule`
+
+**Step C3: Fix `\texttt{}` underscore escaping in research doc pointer lines**
+
+Agents adding `\textit{Full analysis: \texttt{research_X_Y_*.md}}` produce unescaped `_` inside `\texttt{}`. LaTeX interprets `_` as subscript → "Missing $ inserted" errors.
+
+```python
+import pathlib, re
+
+tex = pathlib.Path("paper.tex").read_text(encoding="utf-8")
+
+# First, fix any double-escaping from previous agent passes (\\_  →  \_)
+# Check: cat -A paper.tex | grep 'texttt' to see actual bytes
+tex = tex.replace('\\\\_', '\\_')
+
+# Then escape remaining bare underscores inside \texttt{} on research doc pointer lines
+def escape_texttt_underscores(m):
+    inner = m.group(1)
+    # Only escape if not already escaped
+    inner = re.sub(r'(?<!\\)_', r'\\_', inner)
+    return r'\texttt{' + inner + '}'
+
+tex = re.sub(r'\\texttt\{([^}]*research[^}]*)\}', escape_texttt_underscores, tex)
+pathlib.Path("paper.tex").write_text(tex, encoding="utf-8")
+print("texttt underscore escaping done")
+```
+
+**Critical:** `\verb|...|` does NOT work inside `\textit{}` — causes "\\verb ended by end of line" errors. Always use `\texttt{research\_X\_Y\_slug.md}` with explicitly escaped underscores.
+
+**Step C4: Deduplicate bib entries introduced by parallel agents**
+
+Parallel merge agents each add their own stubs with uppercase cite keys (e.g., `Banino2021PonderNet`). Original bib has lowercase versions (`banino2021pondernet`) — bibtex reports "Case mismatch" and "Repeated entry".
+
+```bash
+# Find duplicate keys (case-insensitive)
+grep -i '^@' references.bib | grep -oP '(?<=\{)[^,]+' | sort -fi | uniq -di
+
+# Remove uppercase duplicate entries from .bib (keep original lowercase entries)
+# Also remove bare % comment lines at top of .bib that bibtex tries to parse as entries
+
+# After editing .bib, ALWAYS clear intermediate files before rebuild:
+rm -f paper.aux paper.bbl paper.blg
+pdflatex -interaction=nonstopmode paper.tex
+bibtex paper
+pdflatex -interaction=nonstopmode paper.tex
+pdflatex -interaction=nonstopmode paper.tex
+# Target: "Output written on paper.pdf (N pages, ...)" with zero ! errors
+```
+
+**Verification sequence after all cleanup steps:**
+
+```bash
+grep -c 'arxiv.org' paper.tex          # → 0 after href cleanup
+grep -c '\\cite{' paper.tex            # should be unchanged (all cite keys preserved)
+grep -c 'PURSUE\|INVESTIGATE\|DEPRIORITIZE' paper.tex  # → N (only Future Work section labels)
+grep -n 'PURSUE\|INVESTIGATE\|DEPRIORITIZE' paper.tex  # verify all are in \section{Future Work}
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -132,6 +240,10 @@ pdfinfo paper.pdf | grep Pages
 | Trusting column spec across agents | Let each agent write its own table column spec | Agents independently chose `{llp{7cm}}` vs `{lll}` vs `{l l p{6.5cm}}` for equivalent tables; assembled paper had mismatched specs at row boundaries | Provide agents with a standard table macro or template column spec; add a post-assembly tabular audit step |
 | Not anchoring awk at `\subsection` | Used `NR > 1` to skip the first line of each part file | Part files had multiple preamble lines before the first `\subsection` — all were included | Use `awk '/^\\subsection/{found=1} found{print}'` to skip everything before the first section marker |
 | Trying to fix bib collisions by hand | Two agents independently invented the same cite key for different papers | Merged bib file had duplicate `@article{foo2024,...}` entries; BibTeX silently used first and dropped second | Each agent should use a namespaced cite-key prefix (e.g., part1_foo2024, part2_foo2024) or agree on cite keys from a shared reference list before writing |
+| Using `\verb\|...\|` for research doc pointers | Replaced `\texttt{research_X_Y.md}` with `\verb\|research_X_Y.md\|` to avoid underscore escaping | `\verb` cannot be used inside `\textit{}` — "\\verb ended by end of line" error | Use `\texttt{research\_X\_Y.md}` with explicitly escaped underscores; Python `str.replace('_', '\\_')` works |
+| Python str.replace with raw string double-escape | Used `r'\_'` in replace call to escape underscores, but multiple agent passes can double-escape to `\\_` | `\\_` renders as a literal backslash followed by underscore in LaTeX, not an escaped underscore | Check actual file bytes (`cat -A`) to distinguish `\_` from `\\_`; fix with `content.replace('\\\\_', '\\_')` |
+| Fixing bib duplicates without clearing .aux | Removed duplicate uppercase entries from .bib then ran bibtex | .aux still referenced uppercase keys from previous pdflatex run → same "Case mismatch" errors | Always `rm paper.aux paper.bbl paper.blg` before the clean rebuild cycle after bib changes |
+| Replacing verdict codes globally | Used sed to replace all `PURSUE` → `high-priority` across entire paper | Replaced the Future Work section headings too, making the section incoherent | Restrict verdict replacement to body text only; Future Work section headings/definition list must keep PURSUE/INVESTIGATE/DEPRIORITIZE as defined terms |
 
 ## Results & Parameters
 
@@ -148,6 +260,17 @@ pdfinfo paper.pdf | grep Pages
 | Unresolved references | 0 |
 | Unicode chars replaced | ~40 distinct characters |
 | Compile runs | 3 (pdflatex×1 + bibtex + pdflatex×2) |
+
+### Verified Citation and Verdict Cleanup (2026-04-14)
+
+| Parameter | Value |
+|-----------|-------|
+| arXiv hrefs removed | All (grep -c 'arxiv.org' paper.tex → 0) |
+| Cite keys preserved | Unchanged count |
+| Verdict codes consolidated | All body occurrences → Future Work section only |
+| Bib duplicates removed | Uppercase agent-generated stubs removed; lowercase originals kept |
+| Clean rebuild | rm paper.aux paper.bbl paper.blg → pdflatex → bibtex → pdflatex → pdflatex |
+| Final LaTeX errors | 0 |
 
 ### Assembly Command (copy-paste)
 
@@ -180,8 +303,20 @@ with open("references.bib", "a") as f:
 print(f"Added {len(stubs)} stub entries (total keys now {len(existing_keys)+len(stubs)})")
 ```
 
+### Clean Bib Rebuild Sequence (copy-paste)
+
+```bash
+rm -f paper.aux paper.bbl paper.blg
+pdflatex -interaction=nonstopmode paper.tex
+bibtex paper
+pdflatex -interaction=nonstopmode paper.tex
+pdflatex -interaction=nonstopmode paper.tex
+# Target: "Output written on paper.pdf (N pages, ...)" with zero ! errors
+```
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ArchIdeas | 38-idea AI architecture research paper | 4 parallel agents, head+awk assembly, 342 stubs, 3 compile passes, 102 pages final |
+| ArchIdeas (post-assembly cleanup) | Same paper, post-assembly citation and verdict cleanup pass | Removed all arXiv hrefs, consolidated PURSUE/INVESTIGATE/DEPRIORITIZE into Future Work section, fixed \texttt{} underscore escaping, deduplicated bib entries — paper built cleanly with 0 errors after cleanup |
