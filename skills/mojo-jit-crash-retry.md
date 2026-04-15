@@ -1,9 +1,9 @@
 ---
 name: mojo-jit-crash-retry
-description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular, (8) required CI checks are blocked by JIT flakiness and PRs cannot auto-merge"
+description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular, (8) required CI checks are blocked by JIT flakiness and PRs cannot auto-merge, (9) diagnosing which of THREE distinct crash types a CI failure is: bitcast UAF (resolved), fortify_fail HOME permission (CI-only UID mismatch), or JIT volume overflow (intermittent, targeted imports fix)"
 category: debugging
-date: 2026-04-12
-version: "3.1.0"
+date: 2026-04-14
+version: "3.2.0"
 user-invocable: false
 verification: verified-precommit
 history: mojo-jit-crash-retry.history
@@ -25,6 +25,59 @@ tags:
 |-------|-------|
 | Date | 2026-04-10 |
 | Objective | Consolidated patterns for diagnosing Mojo JIT compiler crashes, investigating root causes (double-free, broken locks, bitcast UAF), creating minimal standalone reproducers, and filing upstream issues against modular/modular. **v3.0.0 note**: retry workaround approach from v2.2.0 has been reversed — do not add retry logic; create reproducers and file upstream bugs instead. |
+
+## Three Distinct Crash Types in Mojo 0.26.x CI
+
+> **[v3.2.0]** Verified 2026-04-14. There are exactly THREE crash signatures in Mojo 0.26.x CI,
+> each requiring a completely different fix. Misidentifying the type leads to wasted investigation.
+
+### Crash 1 — Bitcast UAF / Heap Corruption (RESOLVED — ADR-013)
+
+- **Stack**: `libKGENCompilerRTShared.so+0x3cb78b / +0x3c93c6 / +0x3cc397` +
+  `libAsyncRTRuntimeGlobals.so+0x416ba`
+- **Determinism**: 100% deterministic — same offsets every run, crashes after ~15 cumulative tests in one file
+- **Trigger**: `List[Int]` struct churn + bitcast write to tensor data
+- **Fix**: ADR-013 bitcast UAF fix (2026-03-20) — **fully resolved**
+- **INVALID workaround** (do not apply): splitting test files to ≤10 functions (ADR-009)
+  — ADR-009 was written for Crash 1, which is now resolved
+
+### Crash 2 — `__fortify_fail_abort` / HOME Directory Permission (CI-ONLY)
+
+- **Stack**: `libKGENCompilerRTShared.so+0x6d4ab / +0x6a686 / +0x6e157` + `libc.so.6+0x45330`
+- **Determinism**: Appears non-deterministic but is actually deterministic given the same UID
+  mismatch conditions
+- **Trigger**: Cold pixi volumes + container UID 1001 ≠ image owner UID 1000 + no TTY (`-T` flag)
+- **Deceptive symptom**: Crash appears **BEFORE any test output** — looks identical to Crash 3 on surface
+- **Root cause**: Cached image built with `USER_ID=1000`; CI runs as UID 1001; `/home/dev` is mode 750
+  (unwritable by UID 1001); Mojo JIT cannot write `$HOME/.modular` →
+  `libAsyncRTMojoBindings.so` throws `filesystem_error` → `std::terminate` → `__fortify_fail_abort`
+- **Fix**: Include UID in image cache key + HOME-fixup in `entrypoint.sh`
+  (see `docker-mojo-uid-mismatch-crash-fix` skill for complete Dockerfile fix)
+
+### Crash 3 — JIT Compilation Volume Overflow (Intermittent)
+
+- **Stack**: Variable `libKGENCompilerRTShared.so` offsets (addresses change per run due to ASLR)
+- **Determinism**: Non-deterministic — ASLR, memory layout, JIT caching vary per run
+- **Trigger**: Test file has >20 functions OR uses package-level `from shared.core import` instead of
+  targeted submodule imports
+- **Fix**: Convert package-level imports to targeted submodule imports (reduces JIT compilation
+  footprint ~95%); keep test files to ~20 or fewer functions
+
+### Crash Diagnostic Quick-Reference Table
+
+| Symptom | Crash Type | Action |
+|---------|-----------|--------|
+| `execution crashed` BEFORE any test output + fixed stack offsets `+0x6d4ab` | Crash 2 — UID mismatch | Fix UID in Docker cache key + entrypoint HOME-fixup |
+| `execution crashed` BEFORE any test output + variable stack offsets | Crash 3 — volume overflow | Audit imports; convert to targeted submodule imports |
+| `execution crashed` AFTER test output at ~15th test, fixed offsets `+0x3cb78b` | Crash 1 — bitcast UAF | Already resolved by ADR-013; verify bitcast fix was applied |
+| Crash after test output with assertion message | Real test bug | Debug the assertion |
+
+### ADR-009 Status: INVALID
+
+The ADR-009 constraint ("≤10 test functions per file") was written as a workaround for Crash 1
+(bitcast UAF). Crash 1 is resolved by ADR-013. Applying ADR-009 file splits to Crashes 2 or 3
+does nothing — the crash triggers before the test runner even starts. Removing stale
+`# ADR-009:` annotations from test files is correct cleanup, not regression.
 
 ## When to Use
 
