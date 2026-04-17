@@ -1,5 +1,30 @@
 # arch-research-myrmidon-swarm-review — History
 
+## v1.4.0 (2026-04-17)
+
+**Changed by:** ArchIdeas session — verdict removal pass on the 39-idea corpus (Phase D)
+**Verification:** verified-local
+
+### What changed
+- Added Phase D: Verdict Removal Pass section covering when to use, 5 removal targets, 5 preservation rules, structural variation by group (groups 1–4 inline Executive Summary tokens, groups 5.x Status lines or full section blocks, group 6 inline prose and mixed Assessment sections), and two-wave execution (17+22)
+- Added 2 new Failed Attempts rows: treating pre-existing `## Corrections applied:` as banned content, removing whole `## Assessment` sections in group 6 docs
+- Added Phase D verdict removal pass row to Verified On table
+- Bumped version to 1.4.0
+
+### Why
+The ArchIdeas corpus completed its verdict removal pass (Phase D) after Phase C accuracy fixes. This phase is distinct from Phase C: it targets verdict tokens, classification status lines, and verdict-adjacent metadata bullets — not factual errors. The structural variation across groups (inline Executive Summary sentences vs. Status lines vs. full section blocks vs. mixed Assessment sections) required group-by-group treatment strategies not captured in prior skill versions.
+
+### Previous version (v1.3.0) snapshot
+
+---
+version: "1.3.0"
+date: 2026-04-14
+---
+
+(see history entry below for v1.3.0 full content)
+
+---
+
 ## v1.3.0 (2026-04-14)
 
 **Changed by:** ArchIdeas session — first accuracy review-and-fix pass on the 39-idea corpus (Phase C)
