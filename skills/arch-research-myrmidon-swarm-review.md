@@ -2,8 +2,8 @@
 name: arch-research-myrmidon-swarm-review
 description: "Parallel AI architecture research review using Myrmidon Swarm pattern: 1 lead agent per idea + 5 parallel sub-agents (citation verifier, complexity auditor, literature gap finder, comparison validator, feasibility checker) + coordinator. Use when: (1) reviewing a corpus of 10+ research documents for correctness, (2) verifying citations, Big-O claims, and baseline comparisons at scale, (3) producing independent review documents that can be cross-checked."
 category: architecture
-date: 2026-04-14
-version: "1.3.0"
+date: 2026-04-17
+version: "1.4.0"
 user-invocable: false
 verification: verified-local
 tags: []
@@ -174,6 +174,35 @@ When the corpus has accumulated separate review_*.md, summary_*.md, and verifica
 - Always apply this factor when computing MoE active-expert FLOPs or total router + expert cost.
 - Missing ×3 causes ~1.5× undercount; found in research_1_3 and others during Phase C.
 
+### Phase D: Verdict Removal Pass
+
+**When to use:** After Phase C (accuracy review-and-fix pass) is complete and before corpus publication. Phase D removes all verdict-related content from every `research_X_Y.md` file while preserving all technical content.
+
+**What to remove (5 targets):**
+
+1. `## Verdict` / `## Final Verdict` / `## Recommendation` section blocks — remove the header and all body text until the next `##` heading or EOF.
+2. `**Prior Art Classification:** EXISTS/PARTIAL/NOVEL` lines — remove the entire line.
+3. Standalone verdict-token lines — lines whose entire content is `**PURSUE**`, `**INVESTIGATE**`, `**DEPRIORITIZE**` (bold or bare) and nothing else. Do NOT remove mid-sentence uses of these words in technical argument.
+4. Verdict-adjacent `- **Potential impact**: ...` and `- **Implementation effort**: ...` bullets — only when immediately adjacent (within the same block) to a verdict header or standalone token; not when appearing in independent implementation analysis.
+5. Verdict-adjacent `**Confidence:** X/10` and `**Priority rank:** N` lines — only within verdict blocks; preserve any identical-looking lines that appear in independent scoring sections.
+
+**What NOT to remove (5 preservation rules):**
+
+1. Technical analysis, comparison tables, FLOPs/KV calculations — always preserve.
+2. Literature review prose around a `**Prior Art Classification:**` line — only the status line itself is removed; surrounding analysis stays.
+3. Mid-sentence uses of pursue / investigate / deprioritize embedded in technical argument — do not remove.
+4. Citation manifest blocks (`<!-- CITATION MANIFEST -->` or `## Citation Manifest`).
+5. `## Accuracy / Quality Tradeoff` sections and pre-existing `## Corrections applied:` metadata headers from Phase B merge — these are not verdict content; do not touch.
+
+**Structural variation by group:**
+
+- **Groups 1–4**: Verdict tokens appear as inline `**Verdict: PURSUE/INVESTIGATE/DEPRIORITIZE**` sentences embedded in the Executive Summary section — not as dedicated section headers. Use sentence-level extraction: find and remove only the verdict sentence, leaving surrounding Executive Summary prose intact.
+- **Groups 5.1–5.8**: Verdict appears as `**Status: PURSUE/INVESTIGATE/PARTIAL** — ...` lines in the Executive Summary section. Remove the entire line.
+- **Groups 5.9–5.10 and 4.x outliers**: Full `## 8–10. Verdict` or `## Verdict` section blocks running to EOF. Remove header + entire body.
+- **Group 6**: Verdict tokens are embedded inline within `## Executive Summary` prose paragraphs (same treatment as groups 1–4). Some 6.x docs have `### Prior Art Classification` subsections that are verdict tables — remove the entire subsection including its table. Some 6.x docs have `## Assessment` sections with mixed technical content and verdict tokens: strip only the verdict tokens and classification status lines; preserve the surrounding technical prose (do not remove the whole section).
+
+**Two-wave execution:** Same 17+22 wave structure as Phase C — launch 17 leads for groups 1–3, wait for completion, then 22 leads for groups 4–6. Confirmed: attempting all 39 in one message causes timeout.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -193,6 +222,8 @@ When the corpus has accumulated separate review_*.md, summary_*.md, and verifica
 | Launching all 39 Phase C leads in one message | Single Agent call listing all 39 Phase C leads | 39 is too many for one message (same limit as Phase B) | Two-wave approach: launch 17 leads for groups 1–3, wait for completion, then launch 22 leads for groups 4–6 |
 | Using H_q in attention FLOPs formula | Attention FLOPs computed as 4×d×H_q×s per layer | The formula is 4×d×s per layer total (not per head); H_q does not appear as a multiplier — prefill attention FLOPs = 2×s×d (QKV projection) + 2×s×d (attention matmul) = 4×s×d per layer | Complexity Auditor must re-derive attention FLOPs from first principles; H_kv applies only to KV cache size, not to total attention FLOPs |
 | Using SwiGLU FLOPs = 2×d×d_ff | Treated SwiGLU the same as a standard two-matrix FFN (gate + down) | SwiGLU has 3 weight matrices per expert (gate, up, down): correct FLOPs = 3×d×d_ff not 2×d×d_ff; missing ×3 causes ~1.5× undercount | SwiGLU FLOPs = 3×d×d_ff per token per layer; apply to all MoE and expert-routing ideas that count per-expert FLOPs |
+| Treating `## Corrections applied:` as banned content during Phase D | Agent flagged `## Corrections applied: See verification_merged_*.md files` as agent-added banned content and attempted removal | It was a pre-existing Phase B merge metadata header, not added by the Phase C or Phase D agent | Before flagging a section as "agent-added banned content", check file context or git history — it may be a legitimate pre-existing artifact |
+| Removing whole `## Assessment` sections in group 6 docs during Phase D | Removed entire `## Assessment` section because it contained a verdict token | Group 6 `## Assessment` sections sometimes contain mixed technical content alongside verdict tokens; removing the whole section destroys technical analysis | For sections with mixed content: strip only verdict tokens and classification status lines; preserve surrounding technical prose |
 
 ## Results & Parameters
 
@@ -270,3 +301,4 @@ These IDs were WebFetch-verified during the N1–N4 research pass:
 | ArchIdeas | 4 new ideas (N1–N4) added to existing 31-idea corpus | research_6_1 through research_6_4 produced by parallel Myrmidon swarms; all 4 included in final LaTeX paper |
 | ArchIdeas | 39-idea corpus merge (Phase B) | review_*.md + summary_*.md + 5× verification_*.md merged into 39 unified research_*.md files; 195 merged verification files produced; synthesis docs regenerated |
 | ArchIdeas | 39-idea corpus accuracy review-and-fix pass (Phase C) | In-place surgical fix pass on all 39 research_X_Y.md; no output files; verdicts out of scope. Baseline C (K2 Family / LLM360): L=80, d=8192, d_ff=28672, H_q=64, H_kv=8, head_dim=128, vocab=250112; K2-V2 ctx=524288, K2-Think-V2 ctx=262144; KV @ 32K≈10.0 GiB, @ 262K≈80.0 GiB, @ 524K≈160.0 GiB |
+| ArchIdeas | 39-idea corpus verdict removal pass (Phase D) | Removed all verdict-related content (PURSUE/INVESTIGATE/DEPRIORITIZE tokens, Final Verdict sections, Prior Art Classification status lines, verdict-adjacent impact/effort/confidence bullets) from all 39 research_X_Y.md files; all technical content preserved; two-wave execution (17+22) |
