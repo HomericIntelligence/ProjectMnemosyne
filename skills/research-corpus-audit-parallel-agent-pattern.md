@@ -2,8 +2,8 @@
 name: research-corpus-audit-parallel-agent-pattern
 description: "Strict 10-dimension quality audit of AI architecture research corpora using parallel agent delegation. Use when: (1) auditing a large set of research/summary docs for structural compliance, (2) enforcing citation standards and TPOT framing conventions across a corpus, (3) grading research output with file:line evidence, (4) reviewing individual idea research docs for KV cache / quantization numerical correctness."
 category: architecture
-date: 2026-04-13
-version: "1.1.0"
+date: 2026-04-17
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 history: research-corpus-audit-parallel-agent-pattern.history
@@ -16,7 +16,7 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon, kv-ca
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-13 |
+| **Date** | 2026-04-17 |
 | **Objective** | Strict evidence-based quality audit of 68-file AI architecture research corpus across 10 dimensions; extended to per-idea numerical correctness review for KV cache quantization papers |
 | **Outcome** | Successful — all 10 dimensions graded with file:line evidence; 3 structural issues identified and fixed; overall grade raised from B to A. Per-idea review of TurboQuant (5.1) found 2 critical inherited errors and 3 moderate issues. |
 | **Verification** | verified-local |
@@ -54,7 +54,7 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon, kv-ca
 
    | Agent | Dimensions | Strategy |
    |-------|-----------|----------|
-   | A (Haiku OK) | D1, D3, D4, D7 | Grep entire corpus for presence strings: `Baseline A1`, `Baseline A2`, `Baseline B`, `TTFT`, `TPOT`, `Accuracy`. Return per-file miss list. |
+   | A (Haiku OK) | D1, D3, D4, D7 | Grep entire corpus for presence strings: `Baseline A1`, `Baseline A2`, `Baseline B`, `Baseline C`, `TTFT`, `TPOT`, `Accuracy`. Return per-file miss list. |
    | B (Sonnet) | D2 | Read 5 seeded summary files. For each, find first 3 numeric values in comparison tables; verify citation block or first-principles marker. Report 15/15 tally. |
    | C (Sonnet) | D5, D6 | Read 5 targeted summaries for TPOT direction. Read priority_ranking.md; pick 5 EXISTS/NOVEL verdicts; verify Prior Art Gap names papers. |
    | D (Sonnet) | D8, D9, D10 | Read cross_reference_matrix.md (count IDs, synergies, conflicts), priority_ranking.md (count ranked ideas, verify rank-1), implementation_spec_phase1.md (4 numeric cross-checks vs source summaries). |
@@ -75,6 +75,9 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon, kv-ca
 | Wrong section header | Using `## Quality Tradeoff Evidence` instead of `## Accuracy / Quality Tradeoff` | D7 grep for "Accuracy" missed the section entirely | Section header must match corpus standard exactly: `## Accuracy / Quality Tradeoff` |
 | Trust "32K ctx" label for A2 KV cache | Accepting the "32K ctx" label on KV cache figures without verifying the formula arithmetic | The 68.7 GB figure requires 262,144 tokens, not 32,768 — the label was wrong while the arithmetic used the full max context | Always re-derive: `64×2×8×128×32768×2 = 8 GB` (actual 32K), not 68.7 GB; the inherited error is context 32,768→262,144 |
 | Trust FlashInfer "4x speedup" for total TPOT | Using the attention-kernel 4× figure to claim "4× TPOT improvement" for INT4 KV | FlashInfer's speedup is for the attention kernel only; TPOT also includes weight loading (~64 GB for 32B model) which is unchanged | Always compute realistic TPOT: `total_BW_before / total_BW_after = (weight_BW + KV_BW) / (weight_BW + KV_BW/4)`; for A2 at 262K: ~1.6× not 4× |
+| Using `[derived from first principles]` tags for numeric claims | Added the tag to numeric table cells with no further detail | User prefers the actual arithmetic shown inline in the Notes cell | Show the full derivation chain in the Notes cell (e.g., `A×B×C×D = X bytes; TPOT = before/after = N×`) — the tag alone is not sufficient |
+| Treating D7 (Accuracy section) as uniformly required | Graded D7=F because 29/39 files lacked `## Accuracy / Quality Tradeoff` | Groups 1–4 and 6.x use different section naming conventions — some use `## Quality` or embed accuracy tradeoff discussion in `## Technical Analysis` subsections | When auditing D7 on a heterogeneous corpus, also grep for `## Quality`, `## Tradeoff`, and `## Accuracy` as acceptable alternatives; strict `## Accuracy / Quality Tradeoff` header is only enforced for corpus-standard docs (groups 1–5, excluding Phase A docs) |
+| Auditing group 6 docs with group 1–5 structural expectations | Counted group 6 thematic docs as missing TTFT/TPOT rows | Group 6 docs (Phase A research) use a thematic section template, not the standard 7-section numbered template | Pre-flight the audit by checking which docs follow the standard template vs thematic template; apply structural checks only to standard-template docs (see Structural Deficit Remediation Pattern above) |
 
 ## Results & Parameters
 
@@ -87,10 +90,11 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon, kv-ca
 | TTFT (8K prompt) | ref | ... | ... | [citation or first-principles] |
 | TPOT (batch=1) | ref | ... | ↑/↓/≈ ref | [citation or first-principles] |
 
-# Required section headers:
+# Required section headers (corpus-standard docs, groups 1–5):
 ## Benefits vs Baseline A1 (Qwen3.5-27B Hybrid)
 ## Benefits vs Baseline A2 (Qwen3-32B Dense)
 ## Benefits vs Baseline B (Qwen3.5-397B-A17B MoE)
+## Benefits vs Baseline C (<Baseline C model name>)
 ## Accuracy / Quality Tradeoff
 
 # TPOT direction conventions:
@@ -100,15 +104,17 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon, kv-ca
 
 # Citation standard:
 [Author et al., Year] — p.N, §X.Y "Section Heading"
-[derived from first principles — no direct experimental citation]
+# PREFERRED for derived numeric claims — show full arithmetic inline in Notes cell:
+# e.g. "total_BW_before=54+2.15=56.15 GB; after=53.71 GB; TPOT=53.71/56.15=0.956≈0.955×"
+# DO NOT use bare [derived from first principles] tags without the supporting arithmetic
 ```
 
 ### Grading thresholds
 
 ```
 D2 Citation: A=15/15, B=12-14/15, C=9-11/15, F<9/15
-D3 Baseline: A=all 34 have A1+A2+B, F=any file missing BOTH A1 AND A2, C=1-3 missing one
-D4 TTFT/TPOT: A=all 34 have both, C=1-3 missing one, F=any missing both
+D3 Baseline: A=all docs have A1+A2+B+C, F=any file missing BOTH A1 AND A2, C=1-3 missing one; grep pattern `## Benefits vs Baseline A[^12]` catches A1/A2 headers — now 4 baselines expected
+D4 TTFT/TPOT: A=all docs have both rows (N_docs×4 expected hits), C=1-3 missing one, F=any missing both; expected counts scale as N_docs×4 (not ×3)
 D5 Overhead: A=all 5 pass, F=any of 3.4/4.6/5.6 shows TPOT decreasing
 D6 Novelty: A=5/5 paper-specific, C=3/5
 D7 Accuracy section: A=all 34 have section, C=1-3 missing
@@ -118,6 +124,20 @@ D10 Spec: A=all 4 cross-checks pass, C=3/4, F=any fabricated number
 
 Structural cap: D3=F OR D10=F → overall capped at C
 ```
+
+### Structural Deficit Remediation Pattern
+
+Some docs (e.g., Phase A thematic research docs — groups 6.x and late-Phase-A additions like 5.9/5.10) are produced with a thematic section template and never received the standard `## Benefits vs Baseline X` + TTFT/TPOT table structure. This is a known schema variance — the content is correct but the structural layer is missing.
+
+**Pre-flight check:** Before auditing, determine which docs use the standard 7-section numbered template vs the thematic template. Apply structural checks (D1/D3/D4/D7) only to standard-template docs. Mark thematic-template docs as `[schema-variant: Phase A thematic]` and exclude from those dimensions.
+
+**Remediation approach (when adding structure to thematic docs):**
+
+1. Read the existing complexity analysis sections in the doc (typically titled `## Technical Analysis`, `## Complexity`, or `## Implementation Notes`).
+2. From those sections, derive the TTFT/TPOT/KV/Weight values using the canonical formula (see KV Cache Quantization Numerical Checklist above). Show full arithmetic inline in the Notes cell.
+3. Insert `## Benefits vs Baseline A1`, `## Benefits vs Baseline A2`, `## Benefits vs Baseline B`, `## Benefits vs Baseline C` sections with standard tables (TTFT/TPOT/KV/Weight rows) immediately **before** the `<!-- CITATION MANIFEST -->` block.
+4. Do NOT rewrite or remove existing sections — only insert the new structural sections.
+5. Verify insertion with `grep -n "Benefits vs Baseline" <file>` to confirm all 4 are present.
 
 ### Audit agent prompts (key instructions)
 
@@ -181,3 +201,4 @@ When reviewing a research doc about KV cache quantization (ideas referencing KIV
 |---------|---------|---------|
 | ArchIdeas corpus | 34 ideas, 68 files, 5 artifacts | Audit Apr 2026 — found D4/D5/D7 issues in summary_5_3 and summary_3_8; all fixed |
 | ArchIdeas idea 5.1 (TurboQuant) | Per-idea review with 5-agent swarm | Apr 2026 — found context length mislabel (68.7 GB at 262K labeled "32K"), A1 head_dim error, TPOT overstatement |
+| ArchIdeas corpus (post Phase C/D) | 39 ideas, 4-baseline grading | Apr 2026 — D1=F (7 Phase A thematic docs missing all 4 baseline sections), D4=F (94/156 TTFT, 125/156 TPOT), D5=F (research_6_4 no TPOT rows), D7=F (10/39 have strict Accuracy header), D3/D6/D8/D9/D10=A; overall grade D; synthesis artifacts excellent, per-file structural compliance poor |

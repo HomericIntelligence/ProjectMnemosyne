@@ -1,5 +1,30 @@
 # research-corpus-audit-parallel-agent-pattern — History
 
+## v1.2.0 (2026-04-17)
+
+**Changed by:** ArchIdeas 39-idea corpus audit (post Phase C + Phase D)
+**Verification:** verified-local
+
+### What changed
+- Bumped version 1.1.0 → 1.2.0
+- Updated D1/D3/D4 grading thresholds to reflect 4 baselines (A1/A2/B/C); D4 expected count is now N_docs×4
+- Added `### Structural Deficit Remediation Pattern` subsection covering Phase A thematic doc normalization (read complexity sections, derive TTFT/TPOT/KV values, insert Benefits vs Baseline sections before citation manifest)
+- Updated corpus conventions: inline arithmetic preferred over bare `[derived from first principles]` tags
+- Added 3 new Failed Attempts: derivation tags without arithmetic, D7 strict header on heterogeneous corpus, auditing group 6 with group 1–5 structural expectations
+- Added Verified On row for 39-idea ArchIdeas post-Phase-C/D audit (overall grade D)
+- Added Baseline C to required section headers list
+
+### Why
+The 39-idea corpus audit revealed that 7 Phase A thematic docs (groups 6.x, 5.9, 5.10) were
+never normalized to the standard 4-baseline comparison template. This is a structural schema
+variance, not a content error. The remediation pattern (derive values from existing complexity
+sections, insert standard tables before citation manifest) worked successfully. The audit also
+exposed that D7 grading is only meaningful when the corpus is homogeneous — heterogeneous corpora
+require fuzzy header matching. Updated thresholds and new Failed Attempts document these findings
+to prevent re-discovering them in future audits.
+
+---
+
 ## v1.1.0 (2026-04-13)
 
 **Changed by:** TurboQuant (Idea 5.1) per-idea Myrmidon swarm review session
