@@ -1,12 +1,28 @@
+# research-corpus-inline-derivation-standard — History
+
+## v1.1.0 (2026-04-18)
+
+**Changed by:** Quality remediation pass on 39-file ArchIdeas research corpus (session 2026-04-18)
+**Verification:** verified-local
+
+### What changed
+- Added new "Verified On" entry for the Apr 2026 remediation session
+- Added a new Failed Attempts row: bare `[derived from first principles]` block-comment at top of table (as opposed to inline tag on individual cells) — a second form of the same antipattern
+- Added corpus-specific example: KV cache derivation across multiple baselines (A1/A2/A3/A4) from `research_5_4_linked_attention.md` showing per-baseline substitution
+
+### Why
+During a follow-up quality remediation pass (commit 0be5268 and subsequent fixes), the corpus audit C-06 revealed a second instance of the antipattern: a block-level note saying "All calculations derived from first principles using canonical head dimensions from SHARED_PRELUDE.md" at the top of a table, with no per-row derivations. This is functionally identical to the banned inline tag but at block scope. Fixing it required per-baseline substitution (L × 2 × H_kv × head_dim × s × 2 bytes, applied for each of A1/A2/A3/A4 with their actual parameter values). The pattern and example were added to help future agents handle the multi-baseline case.
+
+### Previous version (v1.0.0) snapshot
+
 ---
 name: research-corpus-inline-derivation-standard
 description: "Standard for tagging analytically-derived numeric claims in research corpus documents. Use when: (1) writing or reviewing research docs with numeric claims not backed by a paper, (2) auditing derivation tags for completeness, (3) deciding how to format a first-principles calculation in a table cell or prose."
 category: documentation
-date: 2026-04-18
-version: "1.1.0"
+date: 2026-04-17
+version: "1.0.0"
 user-invocable: false
 verification: verified-local
-history: research-corpus-inline-derivation-standard.history
 tags: [research, corpus, derivation, citation, inline, numeric, documentation, annotation]
 ---
 
@@ -16,11 +32,10 @@ tags: [research, corpus, derivation, citation, inline, numeric, documentation, a
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-18 (v1.1.0), 2026-04-17 (v1.0.0) |
+| **Date** | 2026-04-17 |
 | **Objective** | Define the required format for tagging analytically-derived numeric claims in AI architecture research corpus documents |
-| **Outcome** | Standard established during 39-file corpus audit; user explicitly rejected bare labels and confirmed inline computation format. Confirmed again in follow-up remediation pass. |
+| **Outcome** | Standard established during 39-file corpus audit; user explicitly rejected bare labels and confirmed inline computation format |
 | **Verification** | verified-local |
-| **History** | [changelog](./research-corpus-inline-derivation-standard.history) |
 
 ## When to Use
 
@@ -28,7 +43,6 @@ tags: [research, corpus, derivation, citation, inline, numeric, documentation, a
 - Reviewing existing research docs for derivation tag completeness
 - Adding a Notes cell to a comparison table where the value is analytically computed
 - Any time you would write `[derived from first principles]` — instead, show the computation
-- A table has a block-level note like "All calculations derived from first principles using canonical head dimensions from SHARED_PRELUDE.md" with no per-row derivations — this is also the antipattern
 
 ## Verified Workflow
 
@@ -44,11 +58,6 @@ tags: [research, corpus, derivation, citation, inline, numeric, documentation, a
 # Multi-step derivation — chain the arithmetic:
 ~4.10 GB [derived: W_out = V × d × 2 bytes = 250,112 × 8,192 × 2 = 4,097,835,008 bytes ≈ 4.10 GB;
            LM head fraction = 4.10/145.1 ≈ 2.83% of total model weights]
-
-# Multi-baseline derivation (show per-baseline substitution):
-**Derivation:** KV cache = L × 2 × H_kv × head_dim × s × 2 bytes (BF16).
-A1: 32×2×8×128×32768×2 = 4.29 GB. A2: 64×2×8×128×32768×2 = 8.59 GB.
-A3: 64×2×4×128×32768×2 = 4.29 GB. A4: 64×2×16×128×32768×2 = 17.18 GB.
 ```
 
 ### Detailed Steps
@@ -77,9 +86,7 @@ A3: 64×2×4×128×32768×2 = 4.29 GB. A4: 64×2×16×128×32768×2 = 17.18 GB.
              note: INT4 compresses KV by 4×, weight BW unchanged]
    ```
 
-6. **For multi-baseline tables**, show each baseline's substitution explicitly (not just the formula). Use a `**Derivation:**` block before or after the table listing each baseline's parameter values and result.
-
-7. **Placement.** In table cells, put the derivation inline after the value. In prose, put it immediately after the value in brackets. Never defer it to a footnote or endnote — the goal is on-the-spot verifiability.
+6. **Placement.** In table cells, put the derivation inline after the value. In prose, put it immediately after the value in brackets. Never defer it to a footnote or endnote — the goal is on-the-spot verifiability.
 
 ## Failed Attempts
 
@@ -89,7 +96,6 @@ A3: 64×2×4×128×32768×2 = 4.29 GB. A4: 64×2×16×128×32768×2 = 17.18 GB.
 | `[derived from first principles — no direct experimental citation]` | Extended label explaining why there's no citation | Still no verifiable arithmetic; just a longer "trust me" | The explanation of why there's no citation is irrelevant — what matters is showing the derivation |
 | Deferring arithmetic to a notes.md file | Wrote `[derived — see notes.md §3.2]` | Reader must switch files to verify; breaks the audit flow | Inline derivations must be self-contained; the reader should never have to leave the file |
 | Using variable names without substitution | Wrote `n_layers × n_heads × head_dim × seq × bytes` | Reader can't verify without looking up each variable | Substitute actual values in the formula so the arithmetic is checkable on the spot |
-| Block-level derivation disclaimer at table top | Wrote "All calculations derived from first principles using canonical head dimensions from SHARED_PRELUDE.md" above the table | Reader still must redo the math for each row; the block note is a collective "trust me" at table scope rather than row scope | Same rule applies at block scope: every derived value needs its own inline computation, not a shared disclaimer |
 
 ## Results & Parameters
 
@@ -106,11 +112,6 @@ A3: 64×2×4×128×32768×2 = 4.29 GB. A4: 64×2×16×128×32768×2 = 17.18 GB.
 <value> [derived: <step 1 formula> = <step 1 result>;
                   <step 2 formula using step 1 result> = <step 2 result>;
                   <optional note>]
-
-# Multi-baseline (use a Derivation: block before or after the table):
-**Derivation:** <formula in symbolic form (BF16)>.
-<Baseline A>: <substitution> = <result>.
-<Baseline B>: <substitution> = <result>.
 ```
 
 ### Real examples from the ArchIdeas corpus
@@ -127,13 +128,6 @@ A3: 64×2×4×128×32768×2 = 4.29 GB. A4: 64×2×16×128×32768×2 = 17.18 GB.
 
 # LM head fraction:
 ~2.83% [derived: W_out = 250,112 vocab × 8,192 dims × 2 bytes = 4,097,835,008 bytes ≈ 4.10 GB; fraction = 4.10/145.1 ≈ 2.83% of total model weights]
-
-# KV cache — multi-baseline (research_5_4_linked_attention.md):
-**Derivation:** KV cache = L × 2 × H_kv × head_dim × s × 2 bytes (BF16).
-A1 (7B MQA, s=32K): 32×2×1×128×32768×2 = 0.54 GB.
-A2 (32B GQA-8, s=32K): 64×2×8×128×32768×2 = 8.59 GB.
-A3 (32B MQA, s=32K): 64×2×1×128×32768×2 = 1.07 GB.
-A4 (32B GQA-16, s=32K): 64×2×16×128×32768×2 = 17.18 GB.
 ```
 
 ### When to cite a paper instead
@@ -153,4 +147,9 @@ Use `[derived: ...]` when:
 | Project | Context | Details |
 |---------|---------|---------|
 | ArchIdeas corpus | 39-file audit, Phase C + D | Apr 2026 — user rejected bare tags mid-session, standard applied to multiple files during the audit |
-| ArchIdeas corpus | Follow-up quality remediation pass | Apr 2026 — found and fixed block-level disclaimer antipattern in research_5_4_linked_attention.md; added per-baseline KV cache derivation |
+
+---
+
+## v1.0.0 (2026-04-17)
+
+**Initial version.**
