@@ -3,11 +3,11 @@ name: research-corpus-audit-parallel-agent-pattern
 description: "Strict 10-dimension quality audit of AI architecture research corpora using parallel agent delegation. Use when: (1) auditing a large set of research/summary docs for structural compliance, (2) enforcing citation standards and TPOT framing conventions across a corpus, (3) grading research output with file:line evidence, (4) reviewing individual idea research docs for KV cache / quantization numerical correctness."
 category: architecture
 date: 2026-04-17
-version: "1.2.0"
+version: "1.3.0"
 user-invocable: false
 verification: verified-local
 history: research-corpus-audit-parallel-agent-pattern.history
-tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon, kv-cache, quantization]
+tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon, kv-cache, quantization, remediation, wave-based, terminology-drift]
 ---
 
 # Research Corpus Audit — Parallel Agent Pattern
@@ -29,6 +29,8 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon, kv-ca
 - Grading research output where every claim above F must cite a specific file:line
 - Running parallel quality checks across 30+ files without bloating main context
 - Deep per-idea review of KV cache quantization research docs (context length mislabeling, head_dim errors, TPOT overstatement)
+- Running a remediation pass after audit — fixing arithmetic errors, terminology drift, or missing structural sections across many files in parallel
+- Capturing what failed during an in-flight remediation so future sessions don't repeat the same mistakes
 
 ## Verified Workflow
 
@@ -65,6 +67,52 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon, kv-ca
 
 5. **Verify fixes** with targeted greps confirming old patterns gone and new patterns present.
 
+## Remediation Workflow (Post-Audit)
+
+### Quick Reference — Parallel Fix Agents
+
+```bash
+# Two-pass remediation (run passes sequentially — not simultaneously):
+# Pass 1: arithmetic + framing fixes (Critical + Major issues)
+# Pass 2: structural + systemic fixes (section additions, terminology, citation format)
+
+# Split file list explicitly between parallel agents — never assign same file to two agents
+# Use isolation: "worktree" per agent so edits land in a clean copy
+```
+
+### Wave-Based Parallel Fix Agents
+
+After an audit identifies issues, dispatch fix agents in waves. Key rules:
+
+1. **Group fixes by file overlap.** Never assign the same file to two parallel agents — merge conflicts are guaranteed. When fixing systemic issues across many files (e.g., terminology drift across 29 files), split the file list explicitly between agents.
+
+2. **Two-pass fix pattern.** First pass: arithmetic and framing fixes (Critical + Major severity issues). Second pass: structural and systemic fixes (section additions, terminology normalization, citation format). Running both passes simultaneously causes conflicts — run passes sequentially.
+
+3. **Isolation per agent.** Use `isolation: "worktree"` on each fix agent so edits land in a clean copy. Each agent reads its assigned files, makes targeted edits, and returns. The main context merges results.
+
+4. **Background agents for long batches — prefer foreground.** Background agents (`run_in_background: true`) have a higher failure rate on long-running tasks (~2M tokens / 77 tool uses observed failure point with "API Error: ConnectionRefused"). Prefer foreground agents with a clear scope, or split large batches into smaller foreground agents.
+
+### Terminology Drift Fix (S-03 pattern)
+
+When fixing a term that refers to a baseline layer in some contexts but appears in paper titles in others:
+
+- **Replace** when the term refers to the A1/B architecture component (a model name being used as a label)
+- **Preserve** when the term appears in a paper title, citation, verbatim quote from another paper's search space enumeration, or the paper's own abstract
+- Use `replace_all: false` in Edit calls — review each occurrence individually
+
+### Structural Section Addition (D5 pattern)
+
+When appending new sections to files:
+
+- Append after the last numbered section body
+- Place **before** a `## Citations` section if one exists (not after it)
+- For files using the numbered section template (G1), the new appended section gets no number
+- Do NOT renumber existing sections
+
+### Exec-Summary vs Body Inconsistency
+
+When an executive summary value conflicts with a detailed body derivation, the body derivation is almost always correct. The summary was written first (or copied) and wasn't updated when the detailed calculation was refined. Fix the summary to match the body — not the reverse.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -78,6 +126,10 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon, kv-ca
 | Using `[derived from first principles]` tags for numeric claims | Added the tag to numeric table cells with no further detail | User prefers the actual arithmetic shown inline in the Notes cell | Show the full derivation chain in the Notes cell (e.g., `A×B×C×D = X bytes; TPOT = before/after = N×`) — the tag alone is not sufficient |
 | Treating D7 (Accuracy section) as uniformly required | Graded D7=F because 29/39 files lacked `## Accuracy / Quality Tradeoff` | Groups 1–4 and 6.x use different section naming conventions — some use `## Quality` or embed accuracy tradeoff discussion in `## Technical Analysis` subsections | When auditing D7 on a heterogeneous corpus, also grep for `## Quality`, `## Tradeoff`, and `## Accuracy` as acceptable alternatives; strict `## Accuracy / Quality Tradeoff` header is only enforced for corpus-standard docs (groups 1–5, excluding Phase A docs) |
 | Auditing group 6 docs with group 1–5 structural expectations | Counted group 6 thematic docs as missing TTFT/TPOT rows | Group 6 docs (Phase A research) use a thematic section template, not the standard 7-section numbered template | Pre-flight the audit by checking which docs follow the standard template vs thematic template; apply structural checks only to standard-template docs (see Structural Deficit Remediation Pattern above) |
+| SendMessage to in-flight background agent | Tried to send a mid-flight instruction change to an already-launched background agent via SendMessage | Tool not available in this context; background agents are fire-and-forget | Cannot change instructions for an in-flight background agent. Only option: wait for completion, assess damage, launch a corrective agent afterward |
+| Background agents for S-04 derivation tag addition (large batch) | Launched two `run_in_background: true` agents to add inline derivation tags across 29 files | Both failed with "API Error: Unable to connect to API (ConnectionRefused)" after ~2M tokens / 77 tool uses — background agents have higher failure rate on long-running tasks | Prefer foreground agents with clear scopes; split large batches into smaller foreground agents; avoid background agents for tasks that run >50 tool calls |
+| Broadcasting wrong tag standard to background agents | Launched background agents with `[derived from first principles]` bare tag instruction; user corrected the standard mid-session to require inline arithmetic | Could not propagate correction to in-flight background agents; correction only reached agents not yet started | Finalize all standards and formats before launching agents. If user corrects a standard mid-session, abort/ignore in-flight agents and re-launch with correct instructions |
+| Parallel fix agents on overlapping file sets | Dispatched two remediation agents whose file lists were not explicitly partitioned | Both agents edited some of the same files; merge produced conflicts | Always partition the file list explicitly between parallel agents — never rely on agents to "avoid" the same file organically |
 
 ## Results & Parameters
 
@@ -202,3 +254,4 @@ When reviewing a research doc about KV cache quantization (ideas referencing KIV
 | ArchIdeas corpus | 34 ideas, 68 files, 5 artifacts | Audit Apr 2026 — found D4/D5/D7 issues in summary_5_3 and summary_3_8; all fixed |
 | ArchIdeas idea 5.1 (TurboQuant) | Per-idea review with 5-agent swarm | Apr 2026 — found context length mislabel (68.7 GB at 262K labeled "32K"), A1 head_dim error, TPOT overstatement |
 | ArchIdeas corpus (post Phase C/D) | 39 ideas, 4-baseline grading | Apr 2026 — D1=F (7 Phase A thematic docs missing all 4 baseline sections), D4=F (94/156 TTFT, 125/156 TPOT), D5=F (research_6_4 no TPOT rows), D7=F (10/39 have strict Accuracy header), D3/D6/D8/D9/D10=A; overall grade D; synthesis artifacts excellent, per-file structural compliance poor |
+| ArchIdeas corpus remediation (post-audit) | Wave-based parallel fix agents across 39-file corpus | Apr 2026 — two-pass remediation: Pass 1 fixed arithmetic/framing (Critical + Major); Pass 2 fixed terminology drift (S-03) and section additions (D5); background agents failed at ~2M tokens; foreground agents succeeded; all fixes confirmed, no remaining bare tags |

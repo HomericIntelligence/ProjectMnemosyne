@@ -1,5 +1,28 @@
 # research-corpus-audit-parallel-agent-pattern — History
 
+## v1.3.0 (2026-04-17)
+
+**Changed by:** ArchIdeas corpus remediation session (post-audit wave-based parallel fix agents)
+**Verification:** verified-local
+
+### What changed
+- Added `## Remediation Workflow (Post-Audit)` section covering wave-based parallel fix agents, terminology drift (S-03) fix rules, structural section addition (D5) placement, and exec-summary vs body inconsistency triage
+- Added 4 new Failed Attempts: SendMessage to in-flight background agent, background agents for large batch failing at ~2M tokens, broadcasting wrong standard to background agents, parallel fix agents on overlapping file sets
+- Updated "When to Use" with two new triggers for post-audit remediation work
+- Added tags: remediation, wave-based, terminology-drift
+- Added Verified On row for remediation session
+- Bumped version 1.2.0 → 1.3.0
+
+### Why
+The remediation phase after a corpus audit introduces a distinct failure surface not covered by
+the existing audit-focused skill. Key new learnings: (1) background agents fail silently on
+long-running batches — foreground agents are safer; (2) mid-flight instruction changes cannot be
+propagated to background agents; (3) file overlap between parallel agents causes merge conflicts —
+always partition explicitly; (4) exec-summary vs body conflicts should always be resolved in favor
+of the body. These patterns will recur in any future multi-file remediation session.
+
+---
+
 ## v1.2.0 (2026-04-17)
 
 **Changed by:** ArchIdeas 39-idea corpus audit (post Phase C + Phase D)
