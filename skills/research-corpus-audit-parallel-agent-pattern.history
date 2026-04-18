@@ -1,5 +1,36 @@
 # research-corpus-audit-parallel-agent-pattern — History
 
+## v1.4.0 (2026-04-18)
+
+**Changed by:** ArchIdeas corpus final remediation pass (39-file strict quality audit, 4 remaining issues fixed)
+**Verification:** verified-local
+
+### What changed
+- Added 3 new Failed Attempts: 5.9/5.10 treated as standard-template docs, bibliography entries without paper-internal locators, impl_spec numeric drift from source doc
+- Added Schema Variants declaration pattern to Results & Parameters (SHARED_PRELUDE.md template when corpus has multiple templates)
+- Added 4-fix remediation order (numeric corrections → table row insertions → schema declarations → bibliography PDF fetches)
+- Added TTFT ≈ ref row template for KV-cache-only quantization files
+- Added Verified On row for 4-fix final remediation pass (Apr 2026)
+- Bumped version 1.3.0 → 1.4.0
+
+### Why
+The final audit pass surfaced three new failure patterns not previously documented: (1) 5.9/5.10
+were treated as standard-template docs despite using the thematic template — pre-flight must now
+explicitly list which 7 files use thematic template; (2) numbered bibliography format `[N]: Author...
+arXiv:XXXX` requires per-entry `§X.Y` or `Table N` locators (not just in-text prose citations) for
+D2 to pass; (3) impl_spec range claims (0.74–0.79×) can drift from source point estimates (0.68×)
+when the source formula is not cross-checked. The 4-fix remediation order prevents wasted time on
+slow PDF fetches before fixing fast numeric corrections.
+
+### Previous version (v1.3.0) snapshot
+
+The v1.3.0 skill content is preserved in git history at the commit prior to the v1.4.0 amendment.
+Key additions in v1.3.0 were: Remediation Workflow section, wave-based parallel fix agent rules,
+terminology drift fix pattern (S-03), structural section addition placement rules (D5), and 4 new
+Failed Attempts covering background agent failure modes and overlapping file sets.
+
+---
+
 ## v1.3.0 (2026-04-17)
 
 **Changed by:** ArchIdeas corpus remediation session (post-audit wave-based parallel fix agents)
