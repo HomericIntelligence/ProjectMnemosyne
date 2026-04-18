@@ -2,8 +2,8 @@
 name: research-corpus-audit-parallel-agent-pattern
 description: "Strict 10-dimension quality audit of AI architecture research corpora using parallel agent delegation. Use when: (1) auditing a large set of research/summary docs for structural compliance, (2) enforcing citation standards and TPOT framing conventions across a corpus, (3) grading research output with file:line evidence, (4) reviewing individual idea research docs for KV cache / quantization numerical correctness."
 category: architecture
-date: 2026-04-17
-version: "1.3.0"
+date: 2026-04-18
+version: "1.4.0"
 user-invocable: false
 verification: verified-local
 history: research-corpus-audit-parallel-agent-pattern.history
@@ -130,6 +130,9 @@ When an executive summary value conflicts with a detailed body derivation, the b
 | Background agents for S-04 derivation tag addition (large batch) | Launched two `run_in_background: true` agents to add inline derivation tags across 29 files | Both failed with "API Error: Unable to connect to API (ConnectionRefused)" after ~2M tokens / 77 tool uses — background agents have higher failure rate on long-running tasks | Prefer foreground agents with clear scopes; split large batches into smaller foreground agents; avoid background agents for tasks that run >50 tool calls |
 | Broadcasting wrong tag standard to background agents | Launched background agents with `[derived from first principles]` bare tag instruction; user corrected the standard mid-session to require inline arithmetic | Could not propagate correction to in-flight background agents; correction only reached agents not yet started | Finalize all standards and formats before launching agents. If user corrects a standard mid-session, abort/ignore in-flight agents and re-launch with correct instructions |
 | Parallel fix agents on overlapping file sets | Dispatched two remediation agents whose file lists were not explicitly partitioned | Both agents edited some of the same files; merge produced conflicts | Always partition the file list explicitly between parallel agents — never rely on agents to "avoid" the same file organically |
+| Treating 5.9/5.10 as standard-template docs | Audited research_5_9 and research_5_10 with standard-template expectations (numbered sections 1–8) | They use the thematic template (like Group 6); structural checks D1/D3/D4/D7 failed spuriously | Pre-flight must identify which docs are thematic-template; 7 files total use thematic template (Group 6 + 5.9/5.10). Declare schema variants in SHARED_PRELUDE.md |
+| Bibliography entries without paper-internal locators | Group 5 and Group 6 files used numbered bibliography format `[N]: Author... arXiv:XXXX` with no `§X.Y` or `Table N` locators | D2 citation audit requires locators at the bibliography entry level, not just in-text prose | When a file uses numbered bibliography format, locators must be added to each entry — fetch arXiv abstract page and add the most relevant section/table locator |
+| impl_spec numeric drift from source doc | `implementation_spec_phase1.md` claimed k̄_l=7 TPOT as `0.74–0.79×`; source doc `research_1_3.md` derives `0.68×` via `(k̄_l/11) × 0.88 + 0.12` | Range claims (0.74–0.79×) were not cross-checked against the exact formula in the source research doc | Always cross-check spec numeric claims against source research docs using the exact formula — range claims are especially prone to drifting from point estimates |
 
 ## Results & Parameters
 
@@ -176,6 +179,50 @@ D10 Spec: A=all 4 cross-checks pass, C=3/4, F=any fabricated number
 
 Structural cap: D3=F OR D10=F → overall capped at C
 ```
+
+### Schema Variant Declaration Pattern (for SHARED_PRELUDE.md)
+
+When a corpus contains documents that follow different templates, declare the schema variants
+explicitly in SHARED_PRELUDE.md so auditors know which structural checks apply to which files:
+
+```markdown
+## Schema Variants
+
+This corpus uses two document templates:
+
+**Standard template** (Groups 1–5, excluding 5.9/5.10):
+- Numbered sections 1-8 under Executive Summary
+
+**Thematic template** (Group 6 + research_5_9, research_5_10 — 7 files total):
+- Unnumbered sections + per-baseline ## Benefits vs Baseline X sections
+
+Audit dimensions D1/D3/D4/D7 apply only to standard-template docs.
+Thematic-template docs verified against their own structural checklist.
+```
+
+### 4-Fix Remediation Order (for post-audit fix sessions)
+
+When a final audit finds a small set of remaining issues (4–10 fixes), apply in this order
+to minimize time and avoid blocking dependencies:
+
+1. **Single-line numeric corrections** (fastest, no dependencies) — Fix immediately in main context
+2. **Table row insertions** (fast, targeted) — Fix in main context
+3. **Schema/documentation declarations** (e.g., SHARED_PRELUDE.md Schema Variants) — Fix in main context
+4. **Bibliography PDF fetches** (~76+ papers) — Dispatch 4 parallel worktree agents last (one per file, never overlap file sets)
+
+Rationale: Steps 1–3 are fast (seconds each) and unblocking. Step 4 (arXiv abstract fetches) is
+the slowest and should always be parallelized and deferred until after fast fixes are confirmed.
+
+### TTFT Row Template for KV-Cache-Only Quantization
+
+For ideas where quantization applies only to KV cache (not weights), TTFT is always `≈ ref`
+because prefill is compute-bound and KV quantization only affects decode-time KV reads:
+
+```
+| TTFT (8K prompt) | ref | ≈ ref | ≈ ref | Prefill is compute-bound at 8K; KV quantization affects decode-time KV reads only, not prefill FLOPs; attention-kernel dequant overhead <2% (§4.2) |
+```
+
+This row is baseline-independent — use `≈ ref` for all baselines (A1/A2/B/C) for these ideas.
 
 ### Structural Deficit Remediation Pattern
 
@@ -255,3 +302,4 @@ When reviewing a research doc about KV cache quantization (ideas referencing KIV
 | ArchIdeas idea 5.1 (TurboQuant) | Per-idea review with 5-agent swarm | Apr 2026 — found context length mislabel (68.7 GB at 262K labeled "32K"), A1 head_dim error, TPOT overstatement |
 | ArchIdeas corpus (post Phase C/D) | 39 ideas, 4-baseline grading | Apr 2026 — D1=F (7 Phase A thematic docs missing all 4 baseline sections), D4=F (94/156 TTFT, 125/156 TPOT), D5=F (research_6_4 no TPOT rows), D7=F (10/39 have strict Accuracy header), D3/D6/D8/D9/D10=A; overall grade D; synthesis artifacts excellent, per-file structural compliance poor |
 | ArchIdeas corpus remediation (post-audit) | Wave-based parallel fix agents across 39-file corpus | Apr 2026 — two-pass remediation: Pass 1 fixed arithmetic/framing (Critical + Major); Pass 2 fixed terminology drift (S-03) and section additions (D5); background agents failed at ~2M tokens; foreground agents succeeded; all fixes confirmed, no remaining bare tags |
+| ArchIdeas corpus | 4-fix final remediation pass | Apr 2026 — impl_spec numeric corrected (0.68× per research_1_3 formula); 4 TTFT rows added to research_5_1; 77 bibliography locators added across 4 files via arXiv fetch; SHARED_PRELUDE.md Schema Variants section added for 5.9/5.10 thematic-template declaration; all fixes verified via grep |
