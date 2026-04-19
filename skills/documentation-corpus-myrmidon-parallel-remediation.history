@@ -1,12 +1,42 @@
+# documentation-corpus-myrmidon-parallel-remediation — History
+
+## v1.1.0 — 2026-04-19
+
+- Changed by: ArchIdeas corpus audit+remediation rerun, 2026-04-19
+- Verification: verified-local
+
+### What changed
+
+- Added three new rows to the Failed Attempts table:
+  - Full cherry-pick when worktrees diverged from main → replaced with narrow-patch `git diff HEAD~1 HEAD -- <owned files> | git apply --3way`, preferring `--theirs` on remaining conflicts.
+  - Wave B verifier confirmed "verdict present" without checking uniqueness → duplicate `**Novelty verdict:**` lines slipped through; Wave B rubric now mandates a per-section uniqueness check.
+  - `git checkout -- <path>` / `git worktree remove --force` / `git stash drop` blocked by Safety Net → use `git stash push` and `git worktree remove` without `--force`.
+- Added new subsection under Results & Parameters: `### Wave C merge: narrow-patch cherry-pick (when worktree base diverged from main)` with exact diff+apply commands.
+- Added new subsection under Results & Parameters: `### Wave B rubric addition: verdict uniqueness check` with the per-section grep snippet.
+- Added new Verified On row for the 2026-04-19 rerun.
+- Bumped frontmatter `version` from `1.0.0` to `1.1.0`, `date` from `2026-04-18` to `2026-04-19`, added `history:` frontmatter field.
+
+### Why
+
+On 2026-04-19 the same Wave A/B/C pattern was re-applied to the same 39-file ArchIdeas corpus one day after the v1.0.0 session. Two gaps surfaced that weren't present (or weren't hit) in the original run:
+
+1. **Base divergence.** Between Wave A worktree creation and Wave C merge, commit `31ad85e` landed on `main`. Each worktree's HEAD was based on the pre-divergence commit, so a naive `git cherry-pick <worktree-HEAD>` tried to replay the full commit and conflicted on cells where `31ad85e` had already introduced valid (but differently worded) content. The fix — narrow diff limited to the agent's owned files applied with `git apply --3way`, falling back to `--theirs` on conflicts — isolates the intentional edit from ancestor-state drift. This is a generic hazard for any wave-based worktree pattern whose wall-clock crosses unrelated commits on main.
+
+2. **Presence vs uniqueness.** Wave B's rubric told the verifier to confirm the canonical novelty verdict was *present*. It was — but in 2 files an older verdict line from a prior cleanup pass also remained, so both files ended up with two `**Novelty verdict:**` lines. The verifier's presence check passed duplicates. A per-section uniqueness grep (`at most one verdict line per '## <section>' block`) catches this, and must now run as an explicit Wave B step.
+
+A third, smaller observation: the Claude Code Safety Net blocks several destructive git commands (`git checkout --`, `git worktree remove --force`, `git stash drop`). The skill's Wave C cleanup guidance now prefers `git stash push` and plain `git worktree remove` so the documented flow runs without tripping the hook.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
 ---
 name: documentation-corpus-myrmidon-parallel-remediation
 description: "Myrmidon swarm pattern for remediating a large document corpus in parallel using isolated git worktree agents. Use when: (1) an unpublished research corpus contains change-note prose, correction-history blocks, or backward-compatibility text that must be deleted (not annotated), (2) defects span many files and must be fixed in parallel without file ownership collisions, (3) you need wave-based execution: parallel fixers → read-only verifier → merge."
 category: documentation
-date: 2026-04-19
-version: "1.1.0"
+date: 2026-04-18
+version: "1.0.0"
 user-invocable: false
 verification: verified-local
-history: documentation-corpus-myrmidon-parallel-remediation.history
 tags: [myrmidon, swarm, parallel, corpus, remediation, worktree, wave-based, change-notes, unpublished, conflict-partitioning]
 ---
 
@@ -154,9 +184,6 @@ These become orphaned and must also be deleted or rewritten.
 | Assigning same file to two parallel agents | Trusted agents to "avoid" touching the same file organically | Both agents edited the file; merge conflict | Explicit file lists per agent, no overlaps. The partition must be stated in the prompt: "Your file list is exhaustive — do not touch any file not on this list." |
 | R6 scrub as separate agent from WATCH-file agents | Ran corpus-wide scrub as a standalone 7th agent after WATCH-file agents | WATCH-file agents had already opened files that R6 also needed; R6 re-opened and re-read them unnecessarily | Fold R6 patterns into WATCH-file agent prompts. Since those agents have the file open anyway, they perform the scrub in the same pass. Reduces agent count and total tool calls. |
 | Annotating change-notes instead of deleting | Added `<!-- removed per audit -->` comments instead of deleting the change-note blocks | Annotation preserves the change-history narrative in a different form — still visible in rendered Markdown as whitespace or broken prose | Unpublished corpora require hard deletion. No annotation, no changelog, no comment. The file must read as if it was always in its final state. |
-| Full cherry-pick when worktrees diverged from main | Ran `git cherry-pick <worktree-HEAD>` after main advanced past worktree base commit | Cherry-pick replayed the full commit including file regions where the worktree lacked main's subsequent improvements; conflicted on ancestor-state drift that had nothing to do with the intended fix | Use narrow diff `git diff HEAD~1 HEAD -- <owned files>` piped to `git apply --3way`; on remaining conflicts prefer `--theirs` (the Wave A fixer output). |
-| Wave B verifier confirmed "verdict present" without checking uniqueness | Asked verifier to confirm the canonical novelty verdict appears; it did — but an older verdict line from a prior cleanup also remained | Presence check passes with duplicates; verifier missed 2 files with two `**Novelty verdict:**` lines each | Wave B rubric must include a uniqueness check: at most one verdict line per `## <section>` block. Grep pattern: `grep -c '^\*\*Novelty verdict:' <file>`. |
-| Attempted `git checkout -- <path>` to reset wholesale copy | Safety Net blocked the command | Safety Net refuses `git checkout --` (discards data) and `git worktree remove --force` (can delete uncommitted changes) and `git stash drop` (permanent deletion) | Use `git stash push -m` to park unwanted changes; use `git worktree remove` without `--force` (accept that locked worktrees stay until parent process ends). |
 
 ## Results & Parameters
 
@@ -196,45 +223,6 @@ previously missing.*added\|not.*as previously stated" \
 | 20–40 | 5–6 (one per primary repair class) |
 | 40–80 | 6–8 (split high-density classes by file range) |
 
-### Wave C merge: narrow-patch cherry-pick (when worktree base diverged from main)
-
-When `main` has advanced past the commit each worktree was created from, a full `git cherry-pick <worktree-HEAD>` replays the entire commit and conflicts on ancestor-state drift unrelated to the Wave A fix. Extract a narrow diff restricted to each agent's owned files and apply with 3-way merge:
-
-```bash
-# For each worktree, produce a narrow patch limited to assigned files:
-git -C "$WORKTREE_DIR" diff HEAD~1 HEAD -- ArchIdeas/research/<file1> ArchIdeas/research/<file2> > /tmp/rX.patch
-
-# Apply with 3-way merge (falls back to conflict markers only where genuinely needed):
-cd $MAIN_REPO
-git apply --3way /tmp/rX.patch
-
-# Resolve remaining conflicts — prefer the Wave A fixer's version (it was purpose-designed
-# and Wave B already verified it end-to-end):
-git checkout --theirs <conflicted-file>
-git add <file>
-git commit
-```
-
-**Why 3-way apply beats cherry-pick**: cherry-pick replays the full commit (all file hunks) and must reconcile everything including unintended ancestor-state drift. A 3-way diff limited to the agent's owned files only reconciles the intentional edits.
-
-**Why `--theirs` for conflict resolution**: "Theirs" is the Wave A fixer agent's output — designed with the full canonical rubric in mind and already validated by Wave B. "Ours" is typically incidental prior-draft phrasing from an earlier cleanup pass.
-
-### Wave B rubric addition: verdict uniqueness check
-
-Presence checks pass duplicates. After Wave B's rubric and residual-pattern greps, run a per-section uniqueness check:
-
-```bash
-# After Wave B rubric, run a uniqueness check:
-for f in <fixed files>; do
-  count=$(grep -c "^\*\*Novelty verdict:" "$f")
-  if [ "$count" -gt 1 ]; then
-    echo "FAIL: $f has $count novelty verdicts (expected 1)"
-  fi
-done
-```
-
-**Exception — per-section, not per-file**: Some templates legitimately place the verdict in BOTH the Executive Summary and the Prior Art Classification section. Treat that as two distinct *contexts*. The real invariant is: **at most one `**Novelty verdict:**` line per `## <section>` block**, not per file. If your verdict-in-both-sections template is in use, refine the check to count per-section (scan `## ` boundaries, count verdict lines within each).
-
 ### Worktree cleanup after merge
 
 ```bash
@@ -249,4 +237,4 @@ git -C "$MNEMOSYNE_DIR" worktree prune
 | Project | Context | Details |
 |---------|---------|---------|
 | ArchIdeas corpus | 39-file research corpus, 6 repair classes | Apr 2026 — Wave A: 6 parallel worktree agents. Wave B: Explore verifier. All change-note prose deleted. Zero residual matches confirmed. |
-| ArchIdeas corpus | 39-file audit + remediation rerun | Apr 2026-04-19 — Wave A: 5 parallel worktree agents (R1/R2/R3/R5/R6 across 13 files). Narrow-patch cherry-pick handled 3 of 5 conflicts via --theirs resolution. Post-merge grep caught 2 duplicate-verdict files missed by Wave B presence check. |
+```
