@@ -1,0 +1,208 @@
+---
+name: documentation-corpus-myrmidon-parallel-remediation
+description: "Myrmidon swarm pattern for remediating a large document corpus in parallel using isolated git worktree agents. Use when: (1) an unpublished research corpus contains change-note prose, correction-history blocks, or backward-compatibility text that must be deleted (not annotated), (2) defects span many files and must be fixed in parallel without file ownership collisions, (3) you need wave-based execution: parallel fixers → read-only verifier → merge."
+category: documentation
+date: 2026-04-18
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [myrmidon, swarm, parallel, corpus, remediation, worktree, wave-based, change-notes, unpublished, conflict-partitioning]
+---
+
+# Documentation Corpus: Myrmidon Parallel Remediation
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-18 |
+| **Objective** | Remediate a large unpublished research corpus by running parallel worktree fixer agents that delete change-note prose, correct arithmetic errors, and normalize terminology — without file ownership collisions |
+| **Outcome** | Successful — pre-flight conflict partitioning eliminated all merge conflicts; "no change-logging" constraint in fixer prompts prevented meta-commentary residue; Wave B verifier confirmed zero residual matches |
+| **Verification** | verified-local (workflow executed end-to-end; agents ran, committed successfully; no external CI) |
+
+## When to Use
+
+- Research corpus is **unpublished** and contains change-note / correction-history / backward-compatibility prose that must be deleted (not annotated or moved to changelogs)
+- Defects span 20+ files and multiple repair classes (arithmetic, terminology, structure, citations)
+- File-level collision risk is high because some files appear in multiple repair classes (WATCH files)
+- You want parallel execution (Wave A) followed by a read-only audit (Wave B) before merging
+- Prior session used `[corrected: ...]` inline markers and those markers now need stripping
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Step 1: Pre-flight — enumerate all defects
+grep -rn "Critical correction|corrected from|previously stated|earlier draft|updated after review|flagged in review|per audit|Changelog|Revision history|Change notes|was missing|now reflects|this replaces|originally claimed|In the original version|for backward compat|legacy (docs|behavior|wording)|Critical corrections applied|CERTAIN \(in legacy|CERTAIN \(in original|CERTAIN \(if uncorrected|CORRECTED:|corrected\)|Year corrected|previously missing.*added|not.*as previously stated" research/*.md
+
+# Step 2: Identify WATCH files (appear in 2+ repair classes)
+# Step 3: Assign WATCH files to their primary repair-class agents
+#          Assign GO files (appear in only 1 class) to that class or a scrub agent
+# Step 4: Launch Wave A — 6 parallel fixer agents (worktree, general-purpose)
+# Step 5: Wave B — 1 verifier (Explore, read-only, re-runs audit rubric + residual grep)
+# Step 6: Wave C — merge confirmed worktree diffs to main checkout
+```
+
+### Detailed Steps
+
+#### Phase 0: Pre-Flight Audit-Grep (main context, read-only)
+
+Run the full defect-enumeration grep across the corpus before launching any fixer. Record:
+- Which files matched
+- Which repair class owns each match (see Repair Class taxonomy below)
+- Which files matched in 2+ classes (**WATCH files**)
+
+Do **not** start editing until the full match set is known.
+
+#### Phase 1: Conflict Partitioning
+
+Classify every file as WATCH or GO:
+
+- **WATCH file**: appears in 2+ repair class match sets. Assign to exactly one agent — the agent whose repair class has the most matches in that file (or the most critical match). That agent also folds corpus-wide scrub patterns into its pass.
+- **GO file**: appears in exactly 1 repair class match set. Assign to that class's agent.
+
+**Result**: every file is owned by exactly one agent. Zero collision risk regardless of parallel execution order.
+
+#### Phase 2: Wave A — Parallel Fixer Agents
+
+Launch 6 fixer agents simultaneously in a single message (one `Agent` tool call each):
+
+| Agent | Repair Class | Files |
+|-------|-------------|-------|
+| R1 | Arithmetic / numeric corrections | GO arithmetic files + WATCH files assigned here |
+| R2 | Terminology normalization | GO terminology files + WATCH files assigned here |
+| R3 | Structural insertions (missing sections) | GO structure files |
+| R4 | Citation format / locator additions | GO citation files |
+| R5 | Inline correction-marker stripping | GO marker files |
+| R6 | Corpus-wide scrub (change-note prose) | All remaining GO files not assigned above |
+
+**Agent configuration**: `isolation: "worktree"`, `subagent_type: general-purpose`
+
+**Required constraints in every fixer agent prompt**:
+
+1. "Read-before-edit discipline: Read each target region before editing. Preserve exact existing arithmetic — do NOT recompute numbers."
+2. "No change-logging of the fix itself. Do NOT add 'updated per remediation', 'fixed in this revision', or any meta-commentary. The repaired file must read as if it was always in its repaired state."
+3. "Do NOT reorder sections. Do NOT add new sections beyond the specific insertions specified. Do NOT touch files outside your assigned list."
+4. "Return format: for each file — (path, lines_deleted, lines_added, hunks_modified) + diff summary ≤ 20 lines + list any change-note left in place with reason."
+
+**Folding R6 into WATCH-file agents**: Since WATCH-file agents already have the file open, include the R6 (corpus-wide scrub) patterns in their prompts. This reduces total agent count and avoids a second pass over those files.
+
+#### Phase 3: Wave B — Verifier
+
+Launch a single verifier agent after all Wave A agents complete:
+
+- `subagent_type: Explore` (read-only by default)
+- Reads each fixed file in the Wave A worktrees
+- Re-runs the audit rubric (every dimension must score ≥ B)
+- Re-runs the residual-pattern grep (must return zero matches)
+- **Note**: Bash may not be available for shell grep in Explore agents. Structure checks as file-read patterns instead of shell commands.
+- Pass criteria: every dimension ≥ B AND zero residual matches
+
+#### Phase 4: Wave C — Merge
+
+After Wave B confirms pass:
+
+```bash
+# Review diffs from each worktree
+git diff --stat  # per worktree
+
+# Apply to main checkout — most critical repair class first (R1 arithmetic, then R2, etc.)
+git add <specific files>
+git commit -m "fix: <description>"
+```
+
+Merge order: R1 (arithmetic) → R2 (terminology) → R3 (structure) → R4 (citations) → R5 (markers) → R6 (scrub).
+
+## Unpublished Corpus Change-Note Deletion Philosophy
+
+When a research corpus is **unpublished**, all change-note / correction-history / backward-compatibility prose must be **DELETED** — not annotated, not moved to changelogs, not summarized. The document must read as if it was always correct.
+
+### Patterns to grep and delete
+
+```bash
+# All patterns that indicate change-history prose in an unpublished doc:
+grep -n "Critical corrections applied:" file.md           # delete entire block
+grep -n "(corrected from " file.md                        # delete parenthetical, keep final value only
+grep -n "previously stated\|not.*as previously stated" file.md  # delete qualifier phrase
+grep -n "CERTAIN (in legacy docs)\|CERTAIN (in original doc)" file.md  # delete row or rewrite cell
+grep -n "\*\*Weight memory (corrected):\*\*" file.md      # rewrite as "**Weight memory:**"
+grep -n "Previously missing citations now added:" file.md # delete sentence
+grep -n "^## Corrections Applied" file.md                 # delete entire section
+grep -n "\[corrected:" file.md                            # delete inline marker, keep corrected value
+grep -n "earlier draft\|updated after review\|flagged in review" file.md
+```
+
+### Post-deletion check
+
+After each deletion, re-read ±5 lines for dangling forward/backward references:
+- "as noted above"
+- "per the correction"
+- "see the correction to"
+- "as corrected in"
+
+These become orphaned and must also be deleted or rewritten.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Background agents for long corpus passes | Launched fixer agents with `run_in_background=true` across 39 files | Stream idle timeout after ~28 minutes; agent connection dropped with "API Error: ConnectionRefused" at ~2M tokens / 77 tool uses | Use foreground agents (default) for long-running tasks. Split large batches into smaller foreground agents rather than one large background agent. |
+| Wave B verifier with general-purpose subagent | Used `subagent_type: general-purpose` for verifier without specifying Bash access | Explore agents have Bash tool, but general-purpose agents without explicit shell prompts may not run grep commands reliably | Use `subagent_type: Explore` for verifiers. Note explicitly in the prompt that Bash may not be available — structure verification as file-read pattern checks instead of shell greps. |
+| Skipping pre-flight grep | Launched fixer agents without first enumerating all defects | Two agents were assigned overlapping files; merge produced conflicts on 3 files | Always run pre-flight grep first. Never launch fixers until the full match set and WATCH/GO partitioning is complete. |
+| Assigning same file to two parallel agents | Trusted agents to "avoid" touching the same file organically | Both agents edited the file; merge conflict | Explicit file lists per agent, no overlaps. The partition must be stated in the prompt: "Your file list is exhaustive — do not touch any file not on this list." |
+| R6 scrub as separate agent from WATCH-file agents | Ran corpus-wide scrub as a standalone 7th agent after WATCH-file agents | WATCH-file agents had already opened files that R6 also needed; R6 re-opened and re-read them unnecessarily | Fold R6 patterns into WATCH-file agent prompts. Since those agents have the file open anyway, they perform the scrub in the same pass. Reduces agent count and total tool calls. |
+| Annotating change-notes instead of deleting | Added `<!-- removed per audit -->` comments instead of deleting the change-note blocks | Annotation preserves the change-history narrative in a different form — still visible in rendered Markdown as whitespace or broken prose | Unpublished corpora require hard deletion. No annotation, no changelog, no comment. The file must read as if it was always in its final state. |
+
+## Results & Parameters
+
+### Pre-flight grep union pattern
+
+```bash
+# Full union — run this exactly before partitioning
+grep -rn \
+  "Critical correction\|corrected from\|previously stated\|earlier draft\|\
+updated after review\|flagged in review\|per audit\|Changelog\|\
+Revision history\|Change notes\|was missing\|now reflects\|\
+this replaces\|originally claimed\|In the original version\|\
+for backward compat\|legacy (docs\|behavior\|wording)\|\
+Critical corrections applied\|CERTAIN \\(in legacy\|\
+CERTAIN \\(in original\|CERTAIN \\(if uncorrected\|\
+CORRECTED:\|corrected)\|Year corrected\|\
+previously missing.*added\|not.*as previously stated" \
+  research/*.md
+```
+
+### Repair class taxonomy
+
+| Class | Description | Typical patterns |
+|-------|-------------|-----------------|
+| R1 | Arithmetic / numeric corrections | Wrong constants, recomputed formulas, mislabeled context lengths |
+| R2 | Terminology normalization | Model name used as architectural label, TPOT direction symbols |
+| R3 | Structural insertions | Missing `## Benefits vs Baseline X` sections, missing TTFT/TPOT rows |
+| R4 | Citation format | Missing `§X.Y` locators, wrong citation style |
+| R5 | Inline marker stripping | `[corrected: ...]` markers, `(corrected from X)` parentheticals |
+| R6 | Corpus-wide scrub | "Critical corrections applied" blocks, "previously stated" qualifiers, risk-table rows with legacy labels, `**Weight memory (corrected):**` headers |
+
+### Agent count by corpus size
+
+| Files | Recommended Wave A agents |
+|-------|--------------------------|
+| 10–20 | 3–4 (combine low-density repair classes) |
+| 20–40 | 5–6 (one per primary repair class) |
+| 40–80 | 6–8 (split high-density classes by file range) |
+
+### Worktree cleanup after merge
+
+```bash
+MNEMOSYNE_DIR="$HOME/.agent-brain/ProjectMnemosyne"
+# After all merges confirmed:
+git -C "$MNEMOSYNE_DIR" worktree remove /tmp/mnemosyne-skill-doc-corpus-remediation 2>/dev/null || true
+git -C "$MNEMOSYNE_DIR" worktree prune
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ArchIdeas corpus | 39-file research corpus, 6 repair classes | Apr 2026 — Wave A: 6 parallel worktree agents. Wave B: Explore verifier. All change-note prose deleted. Zero residual matches confirmed. |
