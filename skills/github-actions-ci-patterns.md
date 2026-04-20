@@ -1,22 +1,29 @@
 ---
 name: github-actions-ci-patterns
-description: "Use when: (1) setting up GitHub Actions CI for Mojo or Python/pytest projects with pixi, (2) CI pipeline is slow due to broken pixi caching, (3) artifact upload/download fails due to empty directories or special characters in names, (4) migrating manual binary downloads to official actions, (5) adding a build-only gate workflow, (6) securing workflows against command injection via user-controlled inputs"
+description: "Use when: (1) setting up GitHub Actions CI for Mojo or Python/pytest projects with pixi, (2) CI pipeline is slow due to broken pixi caching, (3) artifact upload/download fails due to empty directories or special characters in names, (4) migrating manual binary downloads to official actions, (5) adding a build-only gate workflow, (6) securing workflows against command injection via user-controlled inputs, (7) CI Summary job fails with 'HttpError: Resource not accessible by integration' when posting PR comments — missing pull-requests:write permission"
 category: ci-cd
-date: 2026-03-29
-version: 2.0.0
+date: 2026-04-18
+version: 2.1.0
 user-invocable: false
-verification: unverified
-tags: []
+verification: verified-ci
+history: github-actions-ci-patterns.history
+tags:
+  - github-actions
+  - permissions
+  - github-token
+  - pull-requests
+  - pr-comments
 ---
 
 ## Overview
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-03-29 |
-| Objective | Consolidated GitHub Actions CI patterns: setup, caching, artifact handling, security, action migration, and build gates |
-| Outcome | Merged from 7 source skills |
-| Verification | unverified |
+| Date | 2026-04-18 |
+| Objective | Consolidated GitHub Actions CI patterns: setup, caching, artifact handling, security, action migration, build gates, and GITHUB_TOKEN permissions |
+| Outcome | Merged from 7 source skills; v2.1.0 adds GITHUB_TOKEN pull-requests:write permission pattern |
+| Verification | verified-ci |
+| **History** | [changelog](./github-actions-ci-patterns.history) |
 
 ## When to Use
 
@@ -31,6 +38,8 @@ tags: []
 - A build-only gate workflow is missing or referenced in docs but absent on disk
 - Creating or reviewing workflows that use `github.event.*` context in `run:` commands
 - Any workflow accepting external/user-controlled data
+- A CI Summary or reporting job fails with `HttpError: Resource not accessible by integration` when calling `github.rest.issues.createComment()` or any PR comment API
+- Workflow has no `permissions` block and needs to post PR comments, update PR status, or write to issues
 
 ## Verified Workflow
 
@@ -46,6 +55,7 @@ tags: []
 | Manual binary download in CI | Migrate to official action; pin to commit SHA |
 | Missing build-only gate | Create `build-validation.yml` with path filters |
 | User input in `run:` command | Wrap in `env:` block, reference as `$ENV_VAR` |
+| CI Summary fails `HttpError: Resource not accessible` | Add `permissions: pull-requests: write` at workflow level |
 
 ### Step 1: Basic Mojo + Pixi Workflow
 
@@ -347,6 +357,64 @@ Risky inputs that must always use the `env:` pattern:
 python3 -c "import yaml; yaml.safe_load(open('.github/workflows/<file>.yml')); print('YAML valid')"
 ```
 
+### Step 11: Fix CI Summary Job Failing with `HttpError: Resource not accessible by integration`
+
+**Symptom**: A job that uses `github.rest.issues.createComment()` or `octokit.rest.pulls.createReview()` fails with:
+
+```
+HttpError: Resource not accessible by integration
+```
+
+**Root cause**: Without an explicit `permissions` block, the GITHUB_TOKEN gets read-only defaults. It can read repository contents but cannot write to pull requests or issues.
+
+**Fix**: Add a `permissions` block at the **workflow level** (applies to all jobs) or at the **job level** (scoped to that job only):
+
+```yaml
+# Workflow-level permissions (applies to all jobs)
+permissions:
+  contents: read
+  pull-requests: write   # Required for createComment, createReview, etc.
+
+# OR job-level (more restrictive — preferred for least-privilege)
+jobs:
+  ci-summary:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Post PR comment
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: 'CI Summary comment here'
+            });
+```
+
+**Permission values**:
+| Value | Meaning |
+|-------|---------|
+| `read` | Can read the resource |
+| `write` | Can read and write |
+| `none` | No access |
+
+**Common permissions needed**:
+| Operation | Permission Required |
+|-----------|-------------------|
+| Post PR comment | `pull-requests: write` |
+| Create/update PR review | `pull-requests: write` |
+| Create issue comment | `issues: write` |
+| Push to branch | `contents: write` |
+| Create release | `contents: write` |
+| Read repo | `contents: read` (default) |
+
+**Important**: Always use `contents: read` as the baseline even when adding write permissions, to be explicit about what the token can access.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -359,6 +427,8 @@ python3 -c "import yaml; yaml.safe_load(open('.github/workflows/<file>.yml')); p
 | `setup-pixi` built-in `cache: true` | Used the native cache option | Always fails with HTTP 400 / `Saved cache with ID -1` in some environments | Remove `cache: true` and use `actions/cache@v4` explicitly |
 | Check if `--no-git` mode is needed for gitleaks-action | Checked if `gitleaks-action` supports `--no-git` like the CLI | `gitleaks-action` v2 always operates in git mode | Always keep `fetch-depth: 0` on checkout for gitleaks; `--no-git` is not available via the action |
 | Inline `${{ github.base_ref }}` in `run:` | Used template expression directly in shell command | Injection risk — user-controlled content can escape shell context | Always route `github.base_ref` through `env:` block |
+| No `permissions` block on workflow with PR comment job | CI Summary job used `github.rest.issues.createComment()` without explicit permissions | GITHUB_TOKEN defaults to read-only; `HttpError: Resource not accessible by integration` | Add `permissions: pull-requests: write` at workflow or job level |
+| Adding permissions only to the step's `github-token` | Passed a PAT instead of GITHUB_TOKEN, thinking PAT would have more permissions | PATs bypass the workflow permission model but introduce token management overhead and security risk | Use GITHUB_TOKEN with explicit `permissions` block — no PAT needed |
 
 ## Results & Parameters
 

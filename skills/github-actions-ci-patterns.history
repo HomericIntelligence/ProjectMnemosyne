@@ -1,0 +1,27 @@
+# github-actions-ci-patterns — History
+
+## v2.1.0 (2026-04-18)
+
+**Changed by:** ProjectMnemosyne TSan session — CI Summary job failing with GITHUB_TOKEN permission error
+**Verification:** verified-ci
+
+### What changed
+- Added Step 11: GITHUB_TOKEN `pull-requests: write` permission pattern — fixes `HttpError: Resource not accessible by integration` when posting PR comments
+- Added permission table (read/write/none values) and common operations table
+- Added 2 new Failed Attempts rows (no permissions block, using PAT instead of GITHUB_TOKEN)
+- Updated When to Use with CI Summary failure trigger condition
+- Updated Quick Reference table with permission fix row
+- Updated description, date, version (2.0.0 → 2.1.0), verification (unverified → verified-ci), added tags and history field
+
+### Why
+CI Summary job failed with `HttpError: Resource not accessible by integration` when calling `github.rest.issues.createComment()`. Root cause: no `permissions` block → GITHUB_TOKEN defaults to read-only. Fix is explicit `permissions: pull-requests: write` at workflow or job level. Pattern applies to any workflow that needs to write to PRs, issues, or releases.
+
+### Previous version (v2.0.0) snapshot
+
+The v2.0.0 content (merged from 7 source skills) is preserved in git history at the commit immediately preceding this amendment.
+
+---
+
+## v2.0.0 (2026-03-29)
+
+**Initial consolidated version.** Merged from 7 source skills covering: pixi caching, artifact handling, pre-commit diff mode, matrix sanitization, action migration, build gates, and injection security.
