@@ -1,13 +1,13 @@
 ---
 name: pixi-lock-rebase-regenerate
-description: "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts."
+description: "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts, (4) Dependabot PRs fail CI fast (6-12 seconds) because Dependabot only bumps pyproject.toml not pixi.lock, (5) a second rebase of the same branch produces a pixi.lock commit conflict — skip the stale commit and re-run pixi install."
 category: ci-cd
-date: 2026-03-30
-version: "1.1.0"
+date: 2026-04-13
+version: "1.2.0"
 user-invocable: true
-verification: verified-local
+verification: verified-ci
 history: pixi-lock-rebase-regenerate.history
-tags: []
+tags: [dependabot, pixi, rebase, pixi-lock, ci-cd]
 ---
 # Pixi Lock Rebase Regenerate
 
@@ -28,6 +28,8 @@ tags: []
 - Running `git rebase` on a branch that includes `pixi.lock` and a conflict occurs
 - The branch modifies `pixi.toml` (adds/removes dependencies or tasks)
 - All test matrix jobs pass but infrastructure jobs (lock-check, pre-commit, dep-scan) uniformly fail
+- **Dependabot PRs fail CI very fast (6–12 seconds)**: Dependabot bumps `pyproject.toml` version bounds but does NOT regenerate `pixi.lock`. CI runs `pixi install --locked` which rejects the stale lock immediately — hence the fast failure. Fix is the same: rebase + `pixi install` + commit pixi.lock.
+- A branch that previously had a pixi.lock-fix commit is rebased a second time and the old pixi.lock commit conflicts with the freshly-rebased state. Resolution: `git rebase --skip` the conflicting commit, then re-run `pixi install` fresh.
 
 **Do NOT use `--ours` or `--theirs`** to resolve a `pixi.lock` conflict — either side will be stale
 relative to the rebased branch's actual `pixi.toml`.
@@ -166,6 +168,54 @@ git -C "$REPO_DIR" worktree prune
 
 **Observed timing**: 5 branches in parallel → ~1 minute total (vs ~10 minutes sequential).
 
+### Phase 3b: Dependabot PR pixi.lock Fix
+
+Dependabot PRs fail CI fast (6–12 seconds) because `pixi install --locked` rejects a stale lock
+immediately as a pre-flight check — not a test failure. The pattern is the same as the single-branch
+fix but must be run sequentially (parallel pixi install across worktrees can conflict on shared state):
+
+```bash
+# For each Dependabot PR (sequential, not parallel):
+BRANCH="$(gh pr view <pr-number> --json headRefName --jq '.headRefName')"
+WORKTREE="/tmp/dep-$(echo $BRANCH | tr '/' '-')"
+git -C "$REPO_DIR" worktree add "$WORKTREE" "origin/$BRANCH"
+cd "$WORKTREE"
+git rebase origin/main
+pixi install                    # regenerates pixi.lock for updated pyproject.toml bounds
+git add pixi.lock
+git commit -m "chore: regenerate pixi.lock for updated dependencies"
+git push --force-with-lease origin "HEAD:$BRANCH"
+gh pr merge <pr-number> --auto --rebase
+git -C "$REPO_DIR" worktree remove "$WORKTREE"
+```
+
+**Diagnosis signal**: CI job duration of 6–12 seconds on a Dependabot PR = stale pixi.lock
+(not a test failure, not a merge conflict).
+
+### Phase 3c: Double-Rebase pixi.lock Commit Conflict
+
+When a branch already has a pixi.lock-fix commit (from a prior rebase) and is rebased again:
+
+```
+CONFLICT (content): Merge conflict in pixi.lock
+error: could not apply <sha>... fix(deps): regenerate pixi.lock after rebase
+```
+
+The prior pixi.lock-fix commit conflicts with the newly-rebased state. Resolution:
+
+```bash
+git rebase --skip      # skip the now-stale pixi.lock commit entirely
+# After rebase completes:
+pixi install           # regenerate fresh from the current state
+git add pixi.lock
+git commit -m "fix(deps): regenerate pixi.lock after rebase on main"
+git push --force-with-lease origin <branch>
+```
+
+**Why `--skip` and not `--continue`**: The pixi.lock-fix commit's entire purpose was to
+regenerate pixi.lock. After the new rebase, the lock needs to be regenerated fresh anyway —
+the old regeneration commit is entirely superseded. Skipping it is semantically correct.
+
 ### Phase 4: Verify
 
 ```bash
@@ -183,6 +233,9 @@ done
 | `git checkout --ours pixi.lock` | Accept branch's lock during rebase | Branch's lock is pre-rebase; doesn't reflect rebased state | Always regenerate with `pixi install` after rebase |
 | `--no-verify` to skip pre-commit | Attempted to bypass lock-file check | Critical violation of repo policy; hook exists to protect CI | Always fix the root cause — the lock file IS wrong, fix it |
 | Sequential per-branch fixes | Fixed branches one at a time | 5x longer than parallel; each pixi install takes ~15s | Use git worktrees for parallel execution when 3+ branches share the same fix |
+| Parallel pixi install for Dependabot PRs | Ran pixi install across multiple worktrees simultaneously | Shared lock file state caused conflicts during resolution | Run Dependabot pixi.lock fixes sequentially per PR, not in parallel |
+| `git rebase --continue` on double-rebase pixi.lock conflict | Tried to resolve conflict and continue | The prior pixi.lock-fix commit is entirely stale; continuing produces a broken lock | Use `git rebase --skip` to discard the stale commit, then `pixi install` fresh |
+| Assumed Dependabot CI failure was a test failure | 6-12s CI duration seemed too fast; investigated test logs | Pre-flight `pixi install --locked` rejection happens before tests run | Fast CI failure (< 30s) on Dependabot PRs = stale pixi.lock, not a code issue |
 
 ## Results & Parameters
 
@@ -226,3 +279,4 @@ gh pr view <pr-number> --json autoMergeRequest  # verify: should NOT be null
 |---------|---------|---------|
 | ProjectScylla | Multiple PRs on 2026-02-22 with pixi.lock conflicts and CI failures | v1.0.0 |
 | ProjectHephaestus | 5 PRs failed after version bump 0.5.0 to 0.6.0 + resilience subpackage; all fixed via parallel worktrees, 2026-03-30 | v1.1.0 |
+| ProjectScylla | Multiple Dependabot PRs failing CI in 6-12s; fixed sequentially via worktrees; double-rebase pixi.lock skip pattern used on 2 PRs, 2026-04-13 | v1.2.0 |

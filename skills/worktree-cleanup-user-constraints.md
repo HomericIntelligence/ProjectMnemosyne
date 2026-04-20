@@ -4,13 +4,14 @@ description: "Use when cleaning up worktrees under user-specified constraints: (
   deletion allowed, (2) all destructive ops must go into a reviewable script, (3) uncommitted
   work in merged-branch worktrees must be analyzed and committed if useful. Covers classification
   of dirty worktrees (artifact noise vs real work), generating a section-annotated cleanup script,
-  and handling files left orphaned in merged-branch working trees."
+  handling files left orphaned in merged-branch working trees, and the staged-file two-step
+  (reset HEAD then checkout --) required when worktrees contain staged-only new files (status A)."
 category: tooling
-date: 2026-04-12
+date: 2026-04-13
 version: "1.2.0"
 user-invocable: false
-verification: verified-local
-tags: [worktree, cleanup, script, branches, artifacts, safety, merged-branch, circuit-breaker]
+verification: verified-ci
+tags: [worktree, cleanup, script, branches, artifacts, safety, merged-branch, circuit-breaker, staged-files]
 ---
 
 # Worktree Cleanup Under User Constraints
@@ -32,11 +33,6 @@ tags: [worktree, cleanup, script, branches, artifacts, safety, merged-branch, ci
 - Worktrees from merged branches have uncommitted files that might be real work
 - 20+ worktrees need cleanup and some have dirty working trees
 - Agent-generated worktrees (`.claude/worktrees/agent-*`) accumulated from parallel runs
-
-**Direct execution (no script) is valid when:**
-- User does NOT require a reviewable script first
-- All dirty files are confirmed artifact-only (e.g., `.coverage` only)
-- All PRs verified MERGED before removing; 41 branches preserved post-cleanup
 
 **Red flags that trigger this pattern:**
 - `git worktree list | wc -l` > 15
@@ -132,6 +128,30 @@ done
 
 Files NOT on main in a merged-branch worktree = **orphaned work** that was never committed before the PR closed. Note them for the user — they cannot be committed to the merged branch (dead branch); user needs a new branch/issue.
 
+### Phase 2.5 — Cleaning Worktrees with Staged-Only Additions
+
+**Critical**: `git checkout -- .` alone does NOT clean worktrees that have staged new files
+(status `A` in `git status --short`). The two-step sequence is required:
+
+```bash
+# Worktree has staged additions (status A lines in git status --short):
+git -C <worktree> reset HEAD -- .    # Step 1: unstage all staged additions
+git -C <worktree> checkout -- .      # Step 2: restore tracked modified files
+git -C <worktree> clean -fd          # Step 3: remove untracked files
+git worktree remove <worktree>       # Now succeeds without --force
+```
+
+**Why**: `git checkout -- .` only restores tracked files that were modified. Files with
+status `A` (staged new) were never tracked — they bypass `checkout --` entirely and remain
+after it runs. `reset HEAD -- .` unstages them, making them untracked; then `clean -fd`
+removes them.
+
+**Detection**:
+
+```bash
+git -C <worktree> status --short | grep '^A'  # non-empty = staged additions present
+```
+
 ### Phase 3 — Generate the Reviewable Script
 
 Structure of `/tmp/<repo>-worktree-cleanup.sh`:
@@ -156,6 +176,9 @@ echo "Branch count: $(git branch | wc -l)"
 # NOTE on merged branches: list orphaned files the user must copy manually
 
 # SECTION 3: TWO-PASS ARTIFACT CLEAN (artifact-only worktrees)
+# NOTE: if git status shows 'A' lines (staged additions), use the three-step:
+#   git -C "$wt" reset HEAD -- . && git -C "$wt" checkout -- . && git -C "$wt" clean -fd
+# Otherwise the two-pass below is sufficient for untracked/modified-only worktrees:
 for wt in <artifact-only-worktrees>; do
   git -C "$wt" checkout -- .    # Pass 1: restore tracked files
   git -C "$wt" clean -fd --quiet  # Pass 2: remove untracked
@@ -214,6 +237,7 @@ bash -n /tmp/<repo>-worktree-cleanup.sh && echo "Syntax OK"
 | Assume all dirty files in merged-branch worktree are noise | issue-1529 (PR MERGED): treated 188 dirty files as abandoned | Two files (`circuit_breaker.py`, `test_circuit_breaker.py`) were genuinely new work not on main | Check every potentially-real file vs main even on merged branches |
 | Trust `[gone]` status as sole triage signal | Tried to use `ahead=0` + `[gone]` to classify all worktrees | Doesn't reveal uncommitted working-tree changes; must still inspect `git status` | `[gone]` = branch tracking gone, NOT = working tree clean; always check dirty count |
 | `git worktree remove --force` | Planned to use `--force` for stubborn cases | Safety Net blocks `--force` | Clean stray files individually first, then `git worktree remove` without `--force` |
+| `git checkout -- .` alone on staged-addition worktree | Ran `checkout -- .` then `git worktree remove` | `fatal: '<path>' contains modified or untracked files` — staged new files (status `A`) survived `checkout --` unchanged | Must run `reset HEAD -- .` first to unstage, then `checkout -- .`, then `clean -fd` |
 
 ## Results & Parameters
 
@@ -232,12 +256,11 @@ def is_artifact(path: str) -> bool:
 
 ### Scale reference
 
-| Worktrees | Dirty | Approach | Time | Notes |
-|-----------|-------|----------|------|-------|
-| 14 | 4 dirty (`.coverage` only) | Direct execution (no script) | ~2 min | All PRs #1221–#1255 merged; 41 branches preserved; `git remote prune origin` cleaned 28+ stale remote refs |
-| 14 | 4 dirty (`.coverage` only) | Sequential script (generate-only) | N/A | Script syntax-checked (`bash -n`); user in review-first mode |
-| 36 | 6 dirty | Sequential script | N/A | 7 sections, ~120 lines |
-| 20-35 | Mixed | Same pattern | N/A | Adjust WORKTREES array |
+| Worktrees | Dirty | Approach | Script size |
+|-----------|-------|----------|-------------|
+| 14 | 4 dirty (`.coverage` only) | Sequential script | 7 sections, ~80 lines |
+| 36 | 6 dirty | Sequential script | 7 sections, ~120 lines |
+| 20-35 | Mixed | Same pattern | Adjust WORKTREES array |
 
 ### Real work found in merged-branch worktrees (this session)
 
@@ -248,5 +271,5 @@ def is_artifact(path: str) -> bool:
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectScylla | 36 worktrees, 6 dirty, 26 `[gone]` branches | Script at `/tmp/scylla-worktree-cleanup.sh`; execution pending |
-| ProjectMnemosyne | 14 agent worktrees (`.claude/worktrees/agent-*`), all PRs #1221–1255 merged, 4 with `.coverage` only — generate-only | Script at `/tmp/mnemosyne-worktree-cleanup.sh`; syntax-checked (`bash -n`); user in review-first mode; branches preserved |
-| ProjectMnemosyne | 14 agent worktrees (`.claude/worktrees/agent-*`), all PRs #1221–1255 merged, 4 dirty (`.coverage` only) — direct execution | Removed `.coverage` from 4 dirty worktrees; `git worktree remove` on all 14 (no `--force` needed); `git worktree prune` + `git remote prune origin` (28+ stale remote refs cleaned); 41 branches preserved; completed in ~2 min |
+| ProjectMnemosyne | 14 agent worktrees (`.claude/worktrees/agent-*`), all PRs #1221–1255 merged, 4 with `.coverage` only | Script at `/tmp/mnemosyne-worktree-cleanup.sh`; syntax-checked (bash -n); user kept branches, generate-only mode |
+| ProjectScylla | 11 stale myrmidon swarm worktrees, staged-addition failures caught on cleanup, all 11 removed cleanly | 2026-04-13; `reset HEAD -- .` + `checkout -- .` + `clean -fd` sequence verified effective |
