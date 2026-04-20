@@ -3,7 +3,7 @@ name: documentation-corpus-myrmidon-parallel-remediation
 description: "Myrmidon swarm pattern for remediating a large document corpus in parallel using isolated git worktree agents. Use when: (1) an unpublished research corpus contains change-note prose, correction-history blocks, or backward-compatibility text that must be deleted (not annotated), (2) defects span many files and must be fixed in parallel without file ownership collisions, (3) you need wave-based execution: parallel fixers → read-only verifier → merge."
 category: documentation
 date: 2026-04-19
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 history: documentation-corpus-myrmidon-parallel-remediation.history
@@ -157,6 +157,11 @@ These become orphaned and must also be deleted or rewritten.
 | Full cherry-pick when worktrees diverged from main | Ran `git cherry-pick <worktree-HEAD>` after main advanced past worktree base commit | Cherry-pick replayed the full commit including file regions where the worktree lacked main's subsequent improvements; conflicted on ancestor-state drift that had nothing to do with the intended fix | Use narrow diff `git diff HEAD~1 HEAD -- <owned files>` piped to `git apply --3way`; on remaining conflicts prefer `--theirs` (the Wave A fixer output). |
 | Wave B verifier confirmed "verdict present" without checking uniqueness | Asked verifier to confirm the canonical novelty verdict appears; it did — but an older verdict line from a prior cleanup also remained | Presence check passes with duplicates; verifier missed 2 files with two `**Novelty verdict:**` lines each | Wave B rubric must include a uniqueness check: at most one verdict line per `## <section>` block. Grep pattern: `grep -c '^\*\*Novelty verdict:' <file>`. |
 | Attempted `git checkout -- <path>` to reset wholesale copy | Safety Net blocked the command | Safety Net refuses `git checkout --` (discards data) and `git worktree remove --force` (can delete uncommitted changes) and `git stash drop` (permanent deletion) | Use `git stash push -m` to park unwanted changes; use `git worktree remove` without `--force` (accept that locked worktrees stay until parent process ends). |
+| Worktree commits land on main unexpectedly for some agent variants | Launched 5 Wave 2 fixer agents with `isolation: "worktree"` and `subagent_type: general-purpose` | 2 of the 5 agents (Agents B and C) committed directly to main rather than their worktree branch; `git worktree list` showed no worktree for them. Partition assumed every agent would land on its own branch; merge order discipline broke (R3b content hit main before R3a structural inserts could be verified independently). Latent risk if partition had been imperfect — one main-landing agent could silently overwrite another | Verify after each Wave 2 agent completes: `git -C "$WORKTREE_PATH" log --oneline -1` AND `git log main..HEAD --oneline` on the main checkout. If the agent's commit already appears on main (use `git merge-base --is-ancestor`), skip its narrow-patch step; otherwise apply the patch normally. Do NOT assume worktree isolation is respected by all agent returns. |
+| Phase 2a pre-flight greps used corpus-wide glob for §8 check | Initial pre-flight grep for "missing §8" used `research_*.md` glob including 7 Thematic-template files that legitimately use `## Accuracy / Quality Tradeoff` (non-numbered) instead of `## 8.` | False-positive detection flagged Thematic files (5.9, 5.10, 6.1–6.5) as "missing §8" when they weren't. Agent assignment nearly sent Thematic files to the R3 §8-insertion class, which would have introduced an extraneous numbered §8 to files that should only have the unnumbered thematic section | For dual-template corpora, run SEPARATE greps per template. For §8 check: `grep -L "^## 8\." $(ls STANDARD_files_only)` — explicitly enumerate the Standard-template glob. Verification scripts at the end must conditionally check `^## 8\.` for Standard and `^## Accuracy / Quality Tradeoff` for Thematic. |
+| WebFetch sub-agents populating §X/Table-N locators from arXiv abstracts | User-requested per-file Citation Verifier sub-agents with WebFetch to populate missing §8 fields (arch-research-myrmidon-swarm-review v1.4.0 Phase 1 sub-agent role) | WebFetch on arXiv abstract pages returns abstract-only data — no paper-internal section numbers (§4.2, Table 3) and no figure/table captions. The "quality_delta with §X.Y locator" field could not be populated from arXiv metadata alone. Sub-agents returned `NO_PUBLIC_ABLATION` or fell back to in-file citation manifests | Before launching Citation Verifier sub-agents, know whether paper-internal locators are required. If yes and you only have arXiv abstracts, either (a) switch source to HuggingFace Papers, OpenReview, or ACL Anthology (which expose full paper structure), (b) fall back to extracting locators from the file's OWN citation manifest (where Wave 1 already resolved them), or (c) write "no public ablation" and accept the D2 downgrade. Do NOT let sub-agents invent or approximate locators. |
+| `git apply --3way` leaves conflict markers in files but exits 0 | Wave 3 narrow-patch merge ran `git apply --3way /tmp/wave2-agent-X.patch` followed immediately by `git add <file>` and `git commit` | `git apply --3way` writes conflict markers to the file when it can't auto-merge, BUT it exits 0 (success) as long as at least one file applied. The subsequent `git add` staged the file with unresolved `<<<<<<<` / `=======` / `>>>>>>>` markers baked in; the commit landed with broken markdown | After EVERY `git apply --3way`, run `grep -rnE "^<<<<<<<\|^>>>>>>>\|^=======" <files>` as a gate before `git add`. If any markers exist, resolve them MANUALLY (using `git diff --check` or the file list from the apply output) BEFORE staging. The v1.1.0 `--theirs` advice applies AFTER marker resolution, not instead of it. |
+| `git commit --amend` without HEAD verification amends the wrong commit | After resolving a conflict in a file from a previously-committed patch, ran `git commit --amend --no-edit` to fold the conflict resolution into the just-created commit | HEAD had already advanced past the target commit (a subsequent `git apply` + `git commit` had landed). `--amend` modified the WRONG commit (the later one), bundling the fix-up into an unrelated change's diff; attribution got muddled | Before `--amend`, ALWAYS verify HEAD: `git log -1 --pretty=%s` to confirm the commit message matches the commit you intend to amend. Better still, avoid `--amend` in narrow-patch sequences entirely — create a follow-up `fix: resolve <file> conflict from <original-commit>` commit instead. `--amend` assumes HEAD stability; wave-based merges do not provide that stability. |
 
 ## Results & Parameters
 
@@ -235,6 +240,55 @@ done
 
 **Exception — per-section, not per-file**: Some templates legitimately place the verdict in BOTH the Executive Summary and the Prior Art Classification section. Treat that as two distinct *contexts*. The real invariant is: **at most one `**Novelty verdict:**` line per `## <section>` block**, not per file. If your verdict-in-both-sections template is in use, refine the check to count per-section (scan `## ` boundaries, count verdict lines within each).
 
+### Wave 2 agent landing verification
+
+Some Wave 2 agents commit directly to `main` rather than to their worktree branch. Before each Wave 3 narrow-patch step, verify where the agent's commit actually landed:
+
+```bash
+# After EACH Wave 2 agent returns (before Wave 3), verify where its commit landed:
+AGENT_COMMIT=$(git -C "$WORKTREE_PATH" rev-parse HEAD)
+ALREADY_ON_MAIN=$(git -C "$MAIN_REPO" merge-base --is-ancestor "$AGENT_COMMIT" main && echo yes || echo no)
+
+if [ "$ALREADY_ON_MAIN" = "yes" ]; then
+  echo "Agent $X commit $AGENT_COMMIT already on main — skip narrow-patch step"
+else
+  # Standard Wave 3 flow: extract narrow diff + git apply --3way
+  git -C "$WORKTREE_PATH" diff HEAD~1 HEAD -- <owned files> > /tmp/rX.patch
+  git -C "$MAIN_REPO" apply --3way /tmp/rX.patch
+  # MANDATORY: check for conflict markers before staging
+  grep -rnE "^<<<<<<<|^>>>>>>>|^=======" <owned files> && echo "RESOLVE FIRST" && exit 1
+  git add <owned files>
+  git commit -m "fix: ..."
+fi
+```
+
+**Why**: `isolation: "worktree"` is not uniformly respected by every agent variant. Without this check the same intentional edit can land twice (once from the agent directly on main, once from the narrow-patch replay), or — in the worst case — a main-landing agent can silently overwrite another's work if the partition is imperfect.
+
+### Dual-template corpus verification gates
+
+For corpora with two templates (Standard `## 1.`–`## 8.` vs Thematic unnumbered `## Accuracy / Quality Tradeoff`), each template's required structure must be verified separately. A corpus-wide `research_*.md` wildcard will false-positive on the template it doesn't apply to.
+
+```bash
+# Standard files (require ## 8.)
+STANDARD_FILES=$(ls research/research_{1_*,2_*,3_*,4_*,5_{1,2,3,4,5,6,7,8}}*.md 2>/dev/null)
+for f in $STANDARD_FILES; do
+  grep -q "^## 8\." "$f" || echo "MISSING §8 (Standard): $f"
+done
+
+# Thematic files (require ## Accuracy / Quality Tradeoff as unnumbered)
+THEMATIC_FILES=$(ls research/research_{5_9,5_10,6_*}*.md 2>/dev/null)
+for f in $THEMATIC_FILES; do
+  grep -q "^## Accuracy / Quality Tradeoff" "$f" || echo "MISSING Accuracy section (Thematic): $f"
+done
+
+# Novelty verdict per-section uniqueness (v1.1.0 rule, extended)
+for f in research/research_*.md; do
+  awk '/^## /{sec=$0} /^\*\*Novelty verdict:/{count[sec]++} END{
+    for(s in count) if(count[s]>1) print FILENAME ":" s ":" count[s]
+  }' "$f"
+done
+```
+
 ### Worktree cleanup after merge
 
 ```bash
@@ -250,3 +304,4 @@ git -C "$MNEMOSYNE_DIR" worktree prune
 |---------|---------|---------|
 | ArchIdeas corpus | 39-file research corpus, 6 repair classes | Apr 2026 — Wave A: 6 parallel worktree agents. Wave B: Explore verifier. All change-note prose deleted. Zero residual matches confirmed. |
 | ArchIdeas corpus | 39-file audit + remediation rerun | Apr 2026-04-19 — Wave A: 5 parallel worktree agents (R1/R2/R3/R5/R6 across 13 files). Narrow-patch cherry-pick handled 3 of 5 conflicts via --theirs resolution. Post-merge grep caught 2 duplicate-verdict files missed by Wave B presence check. |
+| ArchIdeas corpus | 39-file fresh audit + full remediation run | Apr 2026-04-19 (evening) — Wave 1: 6 parallel Explore audit agents (39 files graded on 6 dimensions). Wave 2: 5 parallel worktree fixer agents (§8 insert + canonical verdict markers + 3_8/5_3/5_10 scrub + 6_3 D6 retighten). Wave 3: narrow-patch merge with 2 conflicts resolved. Two unexpected behaviors: (1) some agents committed directly to main bypassing worktree, (2) `git apply --3way` left conflict markers that required manual resolution gates. |

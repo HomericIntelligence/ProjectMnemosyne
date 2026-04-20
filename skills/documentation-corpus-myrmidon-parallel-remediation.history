@@ -1,5 +1,81 @@
 # documentation-corpus-myrmidon-parallel-remediation — History
 
+## v1.2.0 — 2026-04-19
+
+- Changed by: ArchIdeas corpus fresh audit + full remediation run, 2026-04-19 evening
+- Verification: verified-local
+
+### What changed
+
+- Added five new rows to the Failed Attempts table:
+  - Worktree commits landing on main unexpectedly for some agent variants → require explicit `git merge-base --is-ancestor` check before each Wave 3 narrow-patch step.
+  - Phase 2a pre-flight greps must count Standard-only for §8 → always enumerate template-specific globs; never use `research_*.md` wildcard for template-specific checks.
+  - WebFetch sub-agents can't populate §X.Y / Table N locators from arXiv abstracts alone → fall back to in-file citation manifest or write "no public ablation"; do not fabricate locators.
+  - `git apply --3way` leaves conflict markers in files but exits 0 → mandatory `grep -rnE '^<<<<<<<|^>>>>>>>|^======='` gate before `git add`.
+  - `git commit --amend` without HEAD verification amends the wrong commit → prefer follow-up fix commits over `--amend` in wave-based merge sequences.
+- Added two new Results & Parameters subsections:
+  - "Wave 2 agent landing verification" — explicit ancestor check before Wave 3 narrow-patch.
+  - "Dual-template corpus verification gates" — per-template grep scripts for §8-vs-Accuracy-section distinction.
+- Added new Verified On row for 2026-04-19 evening rerun.
+- Bumped `version` 1.1.0 → 1.2.0; `date` 2026-04-19 (evening session).
+
+### Why
+
+The 2026-04-19 evening rerun started with a fresh Wave 1 audit (not present in v1.0.0 or v1.1.0 runs) and then ran Wave 2/3 full remediation. Two operational surprises surfaced: (1) some Wave 2 agents landed directly on main instead of on their worktree branch, which broke the assumption that Wave 3 always has to cherry-pick from worktrees; (2) `git apply --3way` silently succeeded while leaving conflict markers in files, causing one commit to land with broken markdown that required a follow-up cleanup. Both are generic hazards for the pattern, not session-specific. Additionally, the user requested Citation Verifier WebFetch sub-agents for §8 inserts — this hit a content-layer issue (arXiv abstracts lack paper-internal locators) worth capturing separately from the execution-layer issues.
+
+### Previous version (v1.1.0) snapshot
+
+```markdown
+---
+name: documentation-corpus-myrmidon-parallel-remediation
+description: "Myrmidon swarm pattern for remediating a large document corpus in parallel using isolated git worktree agents. Use when: (1) an unpublished research corpus contains change-note prose, correction-history blocks, or backward-compatibility text that must be deleted (not annotated), (2) defects span many files and must be fixed in parallel without file ownership collisions, (3) you need wave-based execution: parallel fixers → read-only verifier → merge."
+category: documentation
+date: 2026-04-19
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: documentation-corpus-myrmidon-parallel-remediation.history
+tags: [myrmidon, swarm, parallel, corpus, remediation, worktree, wave-based, change-notes, unpublished, conflict-partitioning]
+---
+
+# Documentation Corpus: Myrmidon Parallel Remediation
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-18 |
+| **Objective** | Remediate a large unpublished research corpus by running parallel worktree fixer agents that delete change-note prose, correct arithmetic errors, and normalize terminology — without file ownership collisions |
+| **Outcome** | Successful — pre-flight conflict partitioning eliminated all merge conflicts; "no change-logging" constraint in fixer prompts prevented meta-commentary residue; Wave B verifier confirmed zero residual matches |
+| **Verification** | verified-local (workflow executed end-to-end; agents ran, committed successfully; no external CI) |
+
+## When to Use
+
+- Research corpus is **unpublished** and contains change-note / correction-history / backward-compatibility prose that must be deleted (not annotated or moved to changelogs)
+- Defects span 20+ files and multiple repair classes (arithmetic, terminology, structure, citations)
+- File-level collision risk is high because some files appear in multiple repair classes (WATCH files)
+- You want parallel execution (Wave A) followed by a read-only audit (Wave B) before merging
+- Prior session used `[corrected: ...]` inline markers and those markers now need stripping
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Step 1: Pre-flight — enumerate all defects
+grep -rn "Critical correction|corrected from|previously stated|earlier draft|updated after review|flagged in review|per audit|Changelog|Revision history|Change notes|was missing|now reflects|this replaces|originally claimed|In the original version|for backward compat|legacy (docs|behavior|wording)|Critical corrections applied|CERTAIN \(in legacy|CERTAIN \(in original|CERTAIN \(if uncorrected|CORRECTED:|corrected\)|Year corrected|previously missing.*added|not.*as previously stated" research/*.md
+
+# Step 2: Identify WATCH files (appear in 2+ repair classes)
+# Step 3: Assign WATCH files to their primary repair-class agents
+#          Assign GO files (appear in only 1 class) to that class or a scrub agent
+# Step 4: Launch Wave A — 6 parallel fixer agents (worktree, general-purpose)
+# Step 5: Wave B — 1 verifier (Explore, read-only, re-runs audit rubric + residual grep)
+# Step 6: Wave C — merge confirmed worktree diffs to main checkout
+```
+
+(Full v1.1.0 body included the Detailed Steps phases, Unpublished Corpus Change-Note Deletion Philosophy, 9-row Failed Attempts table, Results & Parameters subsections — Pre-flight grep union pattern, Repair class taxonomy, Agent count by corpus size, Wave C merge: narrow-patch cherry-pick, Wave B rubric addition: verdict uniqueness check, Worktree cleanup after merge — and the Verified On table with two rows. See git history at commit prior to v1.2.0 amendment for verbatim content.)
+```
+
 ## v1.1.0 — 2026-04-19
 
 - Changed by: ArchIdeas corpus audit+remediation rerun, 2026-04-19
