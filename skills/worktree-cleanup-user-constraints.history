@@ -1,0 +1,27 @@
+# worktree-cleanup-user-constraints — Change History
+
+## v1.2.0 — 2026-04-19
+
+**Amendment**: Added ProjectMnemosyne direct-execution verification data.
+
+- Added "Direct execution (no script) is valid when" guidance block to When to Use
+- Expanded Scale reference table with Time column and direct-execution row:
+  - 14 worktrees, 4 dirty (`.coverage` only), ~2 min, 41 branches preserved
+  - `git remote prune origin` cleaned 28+ stale remote tracking refs in the same pass
+- Expanded Verified On table: added second ProjectMnemosyne row for direct-execution session
+  (PRs #1221–#1255 all merged, no `--force` needed after removing `.coverage` artifacts)
+
+## v1.1.0 — 2026-04-12
+
+**Amendment**: Added ProjectMnemosyne generate-only verification row.
+
+- Added Verified On row: 14 worktrees, generate-only mode, bash -n syntax checked
+- Expanded Scale reference table with 14-worktree entry
+
+## v1.0.0 — 2026-04-12
+
+**Initial creation**: Worktree cleanup under user constraints (no branch deletion, script-first).
+
+- Documented classify → script → hand-off → verify workflow
+- 36 ProjectScylla worktrees; identified circuit-breaker real work in merged-branch worktree
+- Established 4-phase workflow with 7-section reviewable script pattern

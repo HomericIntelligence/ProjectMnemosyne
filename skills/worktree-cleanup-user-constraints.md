@@ -7,7 +7,7 @@ description: "Use when cleaning up worktrees under user-specified constraints: (
   and handling files left orphaned in merged-branch working trees."
 category: tooling
 date: 2026-04-12
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 tags: [worktree, cleanup, script, branches, artifacts, safety, merged-branch, circuit-breaker]
@@ -32,6 +32,11 @@ tags: [worktree, cleanup, script, branches, artifacts, safety, merged-branch, ci
 - Worktrees from merged branches have uncommitted files that might be real work
 - 20+ worktrees need cleanup and some have dirty working trees
 - Agent-generated worktrees (`.claude/worktrees/agent-*`) accumulated from parallel runs
+
+**Direct execution (no script) is valid when:**
+- User does NOT require a reviewable script first
+- All dirty files are confirmed artifact-only (e.g., `.coverage` only)
+- All PRs verified MERGED before removing; 41 branches preserved post-cleanup
 
 **Red flags that trigger this pattern:**
 - `git worktree list | wc -l` > 15
@@ -227,11 +232,12 @@ def is_artifact(path: str) -> bool:
 
 ### Scale reference
 
-| Worktrees | Dirty | Approach | Script size |
-|-----------|-------|----------|-------------|
-| 14 | 4 dirty (`.coverage` only) | Sequential script | 7 sections, ~80 lines |
-| 36 | 6 dirty | Sequential script | 7 sections, ~120 lines |
-| 20-35 | Mixed | Same pattern | Adjust WORKTREES array |
+| Worktrees | Dirty | Approach | Time | Notes |
+|-----------|-------|----------|------|-------|
+| 14 | 4 dirty (`.coverage` only) | Direct execution (no script) | ~2 min | All PRs #1221–#1255 merged; 41 branches preserved; `git remote prune origin` cleaned 28+ stale remote refs |
+| 14 | 4 dirty (`.coverage` only) | Sequential script (generate-only) | N/A | Script syntax-checked (`bash -n`); user in review-first mode |
+| 36 | 6 dirty | Sequential script | N/A | 7 sections, ~120 lines |
+| 20-35 | Mixed | Same pattern | N/A | Adjust WORKTREES array |
 
 ### Real work found in merged-branch worktrees (this session)
 
@@ -242,4 +248,5 @@ def is_artifact(path: str) -> bool:
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectScylla | 36 worktrees, 6 dirty, 26 `[gone]` branches | Script at `/tmp/scylla-worktree-cleanup.sh`; execution pending |
-| ProjectMnemosyne | 14 agent worktrees (`.claude/worktrees/agent-*`), all PRs #1221–1255 merged, 4 with `.coverage` only | Script at `/tmp/mnemosyne-worktree-cleanup.sh`; syntax-checked (bash -n); user kept branches, generate-only mode |
+| ProjectMnemosyne | 14 agent worktrees (`.claude/worktrees/agent-*`), all PRs #1221–1255 merged, 4 with `.coverage` only — generate-only | Script at `/tmp/mnemosyne-worktree-cleanup.sh`; syntax-checked (`bash -n`); user in review-first mode; branches preserved |
+| ProjectMnemosyne | 14 agent worktrees (`.claude/worktrees/agent-*`), all PRs #1221–1255 merged, 4 dirty (`.coverage` only) — direct execution | Removed `.coverage` from 4 dirty worktrees; `git worktree remove` on all 14 (no `--force` needed); `git worktree prune` + `git remote prune origin` (28+ stale remote refs cleaned); 41 branches preserved; completed in ~2 min |
