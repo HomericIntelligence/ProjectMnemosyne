@@ -1,5 +1,28 @@
 # documentation-corpus-myrmidon-parallel-remediation — History
 
+## v1.3.0 — 2026-04-20
+
+- Changed by: ArchIdeas corpus fresh audit + full remediation run, 2026-04-20
+- Verification: verified-local
+
+### What changed
+
+- Added four new rows to the Failed Attempts table:
+  - Fixer agents with strict scope boundaries can leave pre-existing scrub residues in place even when those residues are in their assigned files; always fold R6 scrub into every fixer prompt and always run corpus-wide post-merge grep.
+  - Verifier structural check for Executive Summary must accept both numbered (`## N. Executive Summary`) and unnumbered (`## Executive Summary`) template variants — strict unnumbered regex produced 5 false-positive failures.
+  - Standard §8 check must enforce BOTH the numbered §8 slot AND its canonical title — files with `## 8. Risk Assessment` + separate unnumbered Accuracy slip through naive presence checks.
+  - Thematic `## Citations` verification must enforce literal Markdown heading, not HTML-comment manifest. Add `## Citations` heading above `<!-- CITATION MANIFEST -->` where corpus uses both.
+- Added a new Verified On row for the 2026-04-20 ArchIdeas corpus rerun (39 files; 6 R-class agents launched in parallel; 7 Wave-C conflicts resolved via --theirs; 4 follow-up structural fixes after Wave B).
+- Bumped `version` 1.2.0 → 1.3.0; `date` → 2026-04-20.
+
+### Why
+
+The 2026-04-20 run exposed four gaps in the Wave-B verifier rubric and fixer-agent prompts that weren't triggered in the 2026-04-18/19 runs. Specifically: (1) the 6.x Thematic files' HTML-comment citation manifests masked the missing `## Citations` heading; (2) the 3.1–3.5 family used numbered Executive Summary and a §8=Risk + unnumbered Accuracy split that the v1.2.0 structural gates didn't catch; (3) fixer agents R4 and R5 honored their scope boundaries too strictly and left pre-existing scrub residues in place. All four are generic hazards for the pattern, not session-specific — the skill update codifies them so the next rerun catches these classes before merge, not after.
+
+### Previous version (v1.2.0) snapshot
+
+See `v1.2.0 — 2026-04-19` entry below for the full v1.2.0 text (already preserved in this history file on the prior amendment).
+
 ## v1.2.0 — 2026-04-19
 
 - Changed by: ArchIdeas corpus fresh audit + full remediation run, 2026-04-19 evening
