@@ -1,5 +1,31 @@
 # cpp-ci-sanitizer-tsan-data-race-fixes — History
 
+## v1.2.0 (2026-04-18)
+
+**Changed by:** ProjectMnemosyne TSan session — three distinct TSan failure modes in a C++ project
+**Verification:** verified-ci
+
+### What changed
+- Added Step 1b: nested class race pattern — `SimulatedNUMANode::local_agents_` needs its own `agents_mutex_`; parent mutex does not protect child class members even when call is routed through parent
+- Added Step 1c: `moodycamel::ConcurrentQueue` TSan false positives — create `tsan.supp` and pass via `TSAN_OPTIONS` in CI; includes suppression template for `WorkItem` moves
+- Extended Step 2 (hung test): added `CTEST_TIMEOUT ?= 120` variable + `CTEST_TIMEOUT=600` in `%.tsan` Makefile rule; added `ThreadPool::CreateAndDestroy` `DISABLED_` pattern with explanation of TSan thread-lifecycle overhead
+- Added 3 new Failed Attempts rows for new patterns
+- Added 5 new Results & Parameters sections (nested class pattern, tsan.supp, CI TSAN_OPTIONS, Makefile CTEST_TIMEOUT, GTest DISABLED_ pattern)
+- Updated description, date, verification (precommit → verified-ci), and tags
+- Updated Verified On table
+
+### Why
+Three new TSan failure modes encountered in a C++ agent mesh project. Most importantly:
+1. The nested-mutex pattern (parent lock != child lock) is a subtle and common mistake
+2. ConcurrentQueue false positives require suppression rather than code changes
+3. TSan instrumentation overhead causing test timeouts is distinct from a real race — the fix is `DISABLED_` not timeout increase
+
+### Previous version (v1.1.0) snapshot
+
+See git history for the full v1.1.0 content — captured inline in v1.1.0 entry below.
+
+---
+
 ## v1.1.0 (2026-03-28)
 
 **Changed by:** Repo audit session on ProjectKeystone
