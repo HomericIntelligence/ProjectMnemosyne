@@ -7,7 +7,7 @@ description: "Use when cleaning up worktrees under user-specified constraints: (
   and handling files left orphaned in merged-branch working trees."
 category: tooling
 date: 2026-04-12
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
 tags: [worktree, cleanup, script, branches, artifacts, safety, merged-branch, circuit-breaker]
@@ -229,6 +229,7 @@ def is_artifact(path: str) -> bool:
 
 | Worktrees | Dirty | Approach | Script size |
 |-----------|-------|----------|-------------|
+| 14 | 4 dirty (`.coverage` only) | Sequential script | 7 sections, ~80 lines |
 | 36 | 6 dirty | Sequential script | 7 sections, ~120 lines |
 | 20-35 | Mixed | Same pattern | Adjust WORKTREES array |
 
@@ -241,3 +242,4 @@ def is_artifact(path: str) -> bool:
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectScylla | 36 worktrees, 6 dirty, 26 `[gone]` branches | Script at `/tmp/scylla-worktree-cleanup.sh`; execution pending |
+| ProjectMnemosyne | 14 agent worktrees (`.claude/worktrees/agent-*`), all PRs #1221–1255 merged, 4 with `.coverage` only | Script at `/tmp/mnemosyne-worktree-cleanup.sh`; syntax-checked (bash -n); user kept branches, generate-only mode |
