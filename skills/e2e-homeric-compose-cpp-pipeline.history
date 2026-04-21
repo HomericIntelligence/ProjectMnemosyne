@@ -1,5 +1,62 @@
 # e2e-homeric-compose-cpp-pipeline — History
 
+## v1.6.0 (2026-04-21)
+
+**Changed by:** Docker Compose v5 healthcheck array-splitting regression, BusyBox wget flag fix, Prometheus IP patch for podman run --replace services, idempotency guards, teardown orphan cleanup. Full E2E pass on Docker Compose v5.0.2 + podman 4.9.3, WSL2. PR #117.
+**Verification:** verified-local (Odysseus PR #117, Docker Compose v5.0.2 + podman 4.9.3, WSL2)
+
+### What changed
+- Added Failed Attempt: `["CMD","sh","-c","full cmd"]` JSON array healthcheck splits 4th element on spaces in Docker Compose v5 — wget runs without `-c` argument
+- Added Failed Attempt: `["CMD-SHELL","full cmd"]` array form also splits on spaces in Docker Compose v5 — confirmed via `podman inspect`
+- Added Failed Attempt: `wget -qO-` combined flag rejected by BusyBox wget in nats:alpine — use `-q -O /dev/stdout` instead
+- Added Failed Attempt: Prometheus scraping argus-exporter by hostname fails when argus-exporter is started via `podman run --replace` (not compose-managed DNS)
+- Added Failed Attempt: `podman cp` to overwrite read-only bind-mounted Prometheus config fails with "device or resource busy"
+- Added Failed Attempt: `just e2e-test` calling `start-stack.sh` while stack already up causes compose name conflicts from `podman run --replace` containers
+- Added `healthcheck_string_form` Results block: YAML string (no array) works on both Docker Compose v2 and v5
+- Added `busybox_wget_healthcheck` Results block: BusyBox-compatible wget flags for nats:alpine
+- Added `prometheus_ip_patch` Results block: resolve argus-exporter IP and hot-reload Prometheus after podman run --replace
+- Added `idempotency_guard` Results block: curl health-check guard at top of start-stack.sh and run-hello-world.sh Phase 1
+- Added `teardown_orphan_cleanup` Results block: explicit podman rm for containers started outside compose
+- Updated description frontmatter to note YAML string healthcheck requirement for Docker Compose v5
+- Bumped version 1.5.0 → 1.6.0, updated date to 2026-04-21
+- Added Odysseus PR #117 Docker Compose v5.0.2 / podman 4.9.3 / WSL2 row to Verified On table
+
+### Why
+Docker Compose v5 (snap package, v5.0.2) introduced a regression where healthcheck `test:` arrays are tokenized on spaces before passing to the container runtime — the 4th element of `["CMD","sh","-c","wget ..."]` is split, so `sh -c wget` receives no command string. The fix is to use plain YAML string form (`test: "cmd"`), which both v2 and v5 treat as CMD-SHELL without splitting. Additional failures surfaced around BusyBox wget flag differences in nats:alpine and Prometheus DNS resolution for containers managed outside compose.
+
+### Previous version (v1.5.0) snapshot
+
+```
+---
+name: e2e-homeric-compose-cpp-pipeline
+description: "Wire HomericIntelligence C++20 services into a podman/docker compose E2E stack with NATS JetStream, Prometheus, Grafana. Use when: (1) setting up the full E2E pipeline, (2) adding new C++20 services to the compose stack, (3) debugging multi-container C++ service orchestration, (4) troubleshooting podman vs docker runtime differences, (5) running on hosts without rootlessport or external internet access, (6) debugging Hermes webhook event type mapping (only task.updated/completed/failed/agent.* supported), (7) writing healthchecks compatible with both podman-compose 1.5.0 and Docker Compose (use CMD+sh+-c not CMD-SHELL array)."
+category: architecture
+date: 2026-04-06
+version: "1.5.0"
+history: e2e-homeric-compose-cpp-pipeline.history
+user-invocable: false
+verification: verified-local
+tags:
+  - e2e
+  - compose
+  - podman
+  - docker
+  - cpp20
+  - nats
+  - prometheus
+  - grafana
+  - homeric-intelligence
+  - dual-runtime
+  - wsl2
+  - host-network
+  - grafana-analytics
+---
+
+[... full v1.5.0 content — see git history for complete snapshot ...]
+```
+
+---
+
 ## v1.5.0 (2026-04-06)
 
 **Changed by:** Three new failure modes from 2026-04-06 Odysseus E2E walkthrough

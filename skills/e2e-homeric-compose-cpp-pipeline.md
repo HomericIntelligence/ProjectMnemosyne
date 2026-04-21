@@ -1,9 +1,9 @@
 ---
 name: e2e-homeric-compose-cpp-pipeline
-description: "Wire HomericIntelligence C++20 services into a podman/docker compose E2E stack with NATS JetStream, Prometheus, Grafana. Use when: (1) setting up the full E2E pipeline, (2) adding new C++20 services to the compose stack, (3) debugging multi-container C++ service orchestration, (4) troubleshooting podman vs docker runtime differences, (5) running on hosts without rootlessport or external internet access, (6) debugging Hermes webhook event type mapping (only task.updated/completed/failed/agent.* supported), (7) writing healthchecks compatible with both podman-compose 1.5.0 and Docker Compose (use CMD+sh+-c not CMD-SHELL array)."
+description: "Wire HomericIntelligence C++20 services into a podman/docker compose E2E stack with NATS JetStream, Prometheus, Grafana. Use when: (1) setting up the full E2E pipeline, (2) adding new C++20 services to the compose stack, (3) debugging multi-container C++ service orchestration, (4) troubleshooting podman vs docker runtime differences, (5) running on hosts without rootlessport or external internet access, (6) debugging Hermes webhook event type mapping (only task.updated/completed/failed/agent.* supported), (7) writing healthchecks compatible with podman-compose 1.5.0 and Docker Compose v2+v5 (use YAML string form — no array; Docker Compose v5 splits array elements on spaces)."
 category: architecture
-date: 2026-04-06
-version: "1.5.0"
+date: 2026-04-21
+version: "1.6.0"
 history: e2e-homeric-compose-cpp-pipeline.history
 user-invocable: false
 verification: verified-local
@@ -29,7 +29,7 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-06 |
+| **Date** | 2026-04-21 |
 | **Objective** | Wire all HomericIntelligence services into a dual-runtime (podman + docker) compose E2E stack for testing |
 | **Outcome** | 10-container stack running on both podman compose and docker compose: NATS, Agamemnon (C++), Nestor (C++), Hermes (Python), hello-myrmidon (C++), Prometheus, Loki, Promtail, Grafana, argus-exporter. All 7 E2E phases passing on both runtimes. Host-network workaround documented for rootlessport-absent hosts. |
 | **Verification** | verified-local |
@@ -198,6 +198,12 @@ CMD ["ProjectFoo_server"]
 | `task.created` event to Hermes (v1.5) | Sent `task.created` webhook event to Hermes for Phase 3 test validation | Hermes `_TASK_EVENTS` only maps `task.updated`, `task.completed`, `task.failed`, `agent.*` — `task.created` is silently dropped with zero error and zero NATS message published | Always use `task.updated` for test webhook validation calls |
 | `worker.py` in `start-myrmidon` recipe (v1.5) | Referenced `provisioning/Myrmidons/hello-world/worker.py` in justfile `start-myrmidon` recipe | File does not exist — the Python NATS JetStream subscriber worker is `main.py` | Use `main.py`; it subscribes to `hi.myrmidon.hello.>` via JetStream push consumer and publishes completion to `hi.tasks.{team_id}.{task_id}.completed` via core NATS |
 | CMD-SHELL array in healthcheck (podman-compose 1.5.0) (v1.5) | Used `["CMD-SHELL", "wget ..."]` in `docker-compose.yml` healthcheck definitions | podman-compose 1.5.0 rejects the CMD-SHELL array format (Docker Compose accepts it) with a parse error | Use `["CMD", "sh", "-c", "wget ..."]` for dual-runtime compatibility |
+| `["CMD","sh","-c","full cmd"]` healthcheck on Docker Compose v5 (v1.6) | Used JSON array form `["CMD", "sh", "-c", "wget -qO- http://localhost:8080/v1/health 2>/dev/null || exit 1"]` for all service healthchecks | Docker Compose v5.x splits the 4th array element on spaces into separate exec args — `sh -c wget` runs wget binary alone (prints help, exit 1); does not pass the full string to `-c` | Switch all healthcheck `test:` values to YAML string form (no array); string form is treated as CMD-SHELL and passed verbatim to `sh -c`. Works on both v2 and v5. |
+| `["CMD-SHELL","full cmd"]` array form on Docker Compose v5 (v1.6) | Tried CMD-SHELL array form as alternative to CMD array | Docker Compose v5 also splits CMD-SHELL array elements on spaces — confirmed via `podman inspect .Config.Healthcheck` showing tokenized args | Use plain string `test: "cmd"` (no array at all); Docker Compose treats it as CMD-SHELL without splitting |
+| `wget -qO-` in nats:alpine healthcheck (v1.6) | Used combined short flag `-qO-` (stdout redirect) with BusyBox wget in nats:alpine | BusyBox wget does not support combined `-qO-`; prints usage text and exits 1 | Use `-q -O /dev/stdout` (space-separated, explicit path) for BusyBox wget |
+| Prometheus scraping argus-exporter by hostname (v1.6) | `prometheus.yml` static config used `argus-exporter:9100` as scrape target | `start-stack.sh` restarts argus-exporter via `podman run --replace` (not compose), giving it a dynamic IP not registered in compose-managed DNS; Prometheus gets "no such host" | Generate `prometheus.runtime.yml` with resolved argus-exporter IP before compose up; after exporter starts, update runtime config with actual IP and reload Prometheus via `/-/reload` (requires `--web.enable-lifecycle` flag on Prometheus) |
+| `podman cp` to overwrite read-only bind-mounted Prometheus config (v1.6) | Tried `podman cp prometheus.runtime.yml odysseus-prometheus-1:/etc/prometheus/prometheus.yml` | Volume is mounted `:ro` — copy fails with "device or resource busy"; also the bind source file on the host is authoritative anyway | Write the resolved-IP config to the host bind-mount source file (`prometheus.runtime.yml`), then trigger `/-/reload`; Prometheus re-reads from the host path |
+| `just e2e-test` calling `start-stack.sh` while stack already up (v1.6) | Added `bash e2e/start-stack.sh` as first step of `e2e-test` recipe for DNS workaround; `start-stack.sh` ran `compose up -d` which tried to recreate containers already started by `podman run --replace` in a prior `e2e-up` | Docker Compose sees name conflicts on containers it no longer tracks (they were replaced by `podman run --replace`); `compose up` fails with "container name already in use" | Add idempotency guard at top of both `start-stack.sh` and Phase 1 of `run-hello-world.sh`: `if curl -sf http://localhost:8080/v1/health; then exit 0; fi` — skip bring-up if Agamemnon already healthy |
 
 ## Results & Parameters
 
@@ -339,6 +345,71 @@ ipc_topology_ports: |
     AGAMEMNON_PORT=8080
     NATS_MONITOR_PORT=8222
   fi
+
+# Healthcheck string form — Docker Compose v2 + v5 compatible (v1.6.0)
+healthcheck_string_form: |
+  # Use YAML string (no array) — Docker Compose treats it as CMD-SHELL, passes verbatim to sh -c
+  # Works on Docker Compose v2.x AND v5.x (v5 array splitting regression workaround)
+  #
+  # BROKEN on Docker Compose v5 (splits on spaces):
+  #   test: ["CMD", "sh", "-c", "wget -qO- http://localhost:8080/v1/health || exit 1"]
+  #   test: ["CMD-SHELL", "wget -qO- http://localhost:8080/v1/health || exit 1"]
+  #
+  # CORRECT (both versions):
+  healthcheck:
+    test: "wget -qO- http://localhost:8080/v1/health 2>/dev/null || exit 1"
+    interval: 5s
+    timeout: 3s
+    retries: 10
+    start_period: 10s
+
+# BusyBox wget for nats:alpine (v1.6.0)
+busybox_wget_healthcheck: |
+  # BusyBox wget (nats:alpine) rejects combined -qO- flag
+  # Use -q -O /dev/stdout (space-separated, explicit path)
+  healthcheck:
+    test: "wget -q -O /dev/stdout http://localhost:8222/healthz 2>/dev/null | grep -q ok"
+    interval: 5s
+    timeout: 3s
+    retries: 10
+    start_period: 5s
+
+# Prometheus IP patch for podman run --replace services (v1.6.0)
+prometheus_ip_patch: |
+  # start-stack.sh generates prometheus.runtime.yml before compose up,
+  # then after argus-exporter starts via podman run --replace, resolves its IP
+  # and hot-reloads Prometheus (requires --web.enable-lifecycle in compose)
+  #
+  # In docker-compose.e2e.yml:
+  #   prometheus:
+  #     command: ["--config.file=/etc/prometheus/prometheus.yml", "--web.enable-lifecycle"]
+  #     volumes:
+  #       - ${PROJECT_ROOT}/e2e/prometheus.runtime.yml:/etc/prometheus/prometheus.yml:ro
+  #
+  # In start-stack.sh (after podman run argus-exporter):
+  cp "$ODYSSEUS_ROOT/e2e/prometheus.yml" "$ODYSSEUS_ROOT/e2e/prometheus.runtime.yml"
+  # ... (compose up) ...
+  ARGUS_IP=$(get_ip odysseus-argus-exporter-1)
+  sed "s/argus-exporter:9100/${ARGUS_IP}:9100/g" \
+    "$ODYSSEUS_ROOT/e2e/prometheus.yml" > "$ODYSSEUS_ROOT/e2e/prometheus.runtime.yml"
+  curl -sf -X POST http://localhost:9090/-/reload
+
+# Idempotency guard (v1.6.0)
+idempotency_guard: |
+  # Add to top of start-stack.sh and Phase 1 of run-hello-world.sh to prevent
+  # double bring-up when e2e-test calls start-stack.sh while stack is already up
+  if curl -sf http://localhost:8080/v1/health >/dev/null 2>&1; then
+    echo "Stack already running — skipping bring-up."
+    exit 0
+  fi
+
+# teardown orphan cleanup (v1.6.0)
+teardown_orphan_cleanup: |
+  # compose down does not track containers started by podman run --replace
+  # teardown.sh must explicitly remove them:
+  podman ps -a --filter name=odysseus --format '{{.Names}}' 2>/dev/null \
+    | xargs -r podman rm -f 2>/dev/null || true
+  podman network rm odysseus_homeric-mesh 2>/dev/null || true
 ```
 
 ## Verified On
@@ -348,3 +419,4 @@ ipc_topology_ports: |
 | Odysseus | Full E2E pipeline on feat/cpp-skeleton branch | 9-container stack with C++20 Agamemnon, Nestor, hello-myrmidon |
 | Odysseus | Dual-runtime E2E on fix/governance-compliance-files branch | 10-container stack passing all 7 phases on both podman compose and docker compose. WSL2 aardvark-dns workaround verified. |
 | Odysseus | Host-network validation on epimetheus (SSH) | Validated host-network workaround on rootlessport-absent host. Grafana analytics hang, Hermes task.created drop, IPC T4 port override, and datasource hostname issues all confirmed and resolved. |
+| Odysseus | 2026-04-21 | Full 8-phase E2E pass on Docker Compose v5.0.2 (snap) + podman 4.9.3, WSL2. PR #117. Healthcheck string form, BusyBox wget, Prometheus IP patch, and idempotency guards all verified. |
