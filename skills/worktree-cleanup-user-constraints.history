@@ -1,5 +1,45 @@
 # worktree-cleanup-user-constraints — Change History
 
+## v1.3.0 — 2026-04-21
+
+**Amendment**: Added all-clean direct execution, cherry=1 rebase-merge artifact handling,
+and remove-worktree-keep-branch pattern for closed-not-merged PRs.
+
+- Added "All-clean worktrees allow direct execution" block to When to Use with detection
+  command to check all dirty counts in one pass
+- Added Phase 0 full decision-matrix inventory command (worktree + branch + ahead + dirty +
+  staged + cherry + PR state) — complete triage in a single loop, no back-and-forth
+- Added "cherry=1 rebase-merge artifact" note in Phase 1 with classification shell snippet:
+  cherry=1 on MERGED PR = rebase artifact (safe to remove); cherry=1 on CLOSED/NO_PR = real
+  unreleased work
+- Added Phase 1.5 "Classify Closed-Not-Merged PRs" with remove-worktree-keep-branch as the
+  correct default when a branch has unique commits but its PR was CLOSED without merging
+- Added cherry=1 rebase-merge row to Failed Attempts table
+- Added 17-worktree direct-execution row to Scale reference table
+- Added ProjectOdyssey verification row to Verified On table
+
+---
+
+### Snapshot of v1.2.0 content (for reference)
+
+**date**: 2026-04-13 | **version**: 1.2.0
+
+Key sections at v1.2.0:
+
+- When to Use: no-branch-deletion, script-first, 20+ dirty worktrees, agent-* accumulated
+- Verified Workflow: Phase 0 inventory (4 fields: branch, ahead, dirty per worktree)
+- Phase 1: artifact vs real classification, cherry=0 check
+- Phase 2: merged-branch orphaned files
+- Phase 2.5: staged-addition two-step (reset HEAD + checkout + clean -fd)
+- Phase 3: 7-section reviewable script structure
+- Phase 4: hand-off to user
+- Failed Attempts: 7 rows (large dirty count, branch deletion, direct exec, merged noise,
+  gone status, force remove, staged-addition checkout)
+- Scale reference: 14-worktree and 36-worktree rows (no Time column, no direct-exec row)
+- Verified On: 3 rows (ProjectScylla x2, ProjectMnemosyne x1)
+
+---
+
 ## v1.2.0 — 2026-04-19
 
 **Amendment**: Added ProjectMnemosyne direct-execution verification data.

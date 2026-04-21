@@ -4,14 +4,16 @@ description: "Use when cleaning up worktrees under user-specified constraints: (
   deletion allowed, (2) all destructive ops must go into a reviewable script, (3) uncommitted
   work in merged-branch worktrees must be analyzed and committed if useful. Covers classification
   of dirty worktrees (artifact noise vs real work), generating a section-annotated cleanup script,
-  handling files left orphaned in merged-branch working trees, and the staged-file two-step
-  (reset HEAD then checkout --) required when worktrees contain staged-only new files (status A)."
+  handling files left orphaned in merged-branch working trees, the staged-file two-step
+  (reset HEAD then checkout --) required when worktrees contain staged-only new files (status A),
+  all-clean direct execution, cherry=1 rebase-merge artifact handling, and the remove-worktree-keep-branch
+  pattern for closed-not-merged PRs."
 category: tooling
-date: 2026-04-13
-version: "1.2.0"
+date: 2026-04-21
+version: "1.3.0"
 user-invocable: false
 verification: verified-ci
-tags: [worktree, cleanup, script, branches, artifacts, safety, merged-branch, circuit-breaker, staged-files]
+tags: [worktree, cleanup, script, branches, artifacts, safety, merged-branch, circuit-breaker, staged-files, rebase-merge, closed-pr]
 ---
 
 # Worktree Cleanup Under User Constraints
@@ -34,6 +36,22 @@ tags: [worktree, cleanup, script, branches, artifacts, safety, merged-branch, ci
 - 20+ worktrees need cleanup and some have dirty working trees
 - Agent-generated worktrees (`.claude/worktrees/agent-*`) accumulated from parallel runs
 
+**All-clean worktrees allow direct execution (no script required):**
+
+When `git status --short` is empty for every worktree (0 dirty files across all worktrees),
+you can execute removal directly rather than generating a script for user review. The
+generate-first constraint exists to prevent accidental discard of real work — when there is
+nothing dirty, there is nothing to accidentally discard.
+
+```bash
+# Check if all worktrees are clean before deciding generate-only vs direct-execute:
+git worktree list --porcelain | awk '/^worktree /{print $2}' | tail -n +2 | while read wt; do
+  dirty=$(git -C "$wt" status --short 2>/dev/null | wc -l)
+  echo "$wt | dirty=$dirty"
+done
+# If ALL lines show dirty=0 → direct execution is safe
+```
+
 **Red flags that trigger this pattern:**
 - `git worktree list | wc -l` > 15
 - `git branch -v | grep '\[gone\]' | wc -l` > 10
@@ -54,16 +72,17 @@ git -C "$wt" diff HEAD -- "$f" | head -20
 git show main:"$f" 2>&1 | head -3        # path as-is
 git show main:"src/$f" 2>&1 | head -3    # src-layout alternate
 
-# 3. For merged branches: check cherry
+# 3. For merged branches: check cherry (always check PR state first — see cherry=1 note)
 git cherry origin/main <branch> | grep "^+" | wc -l   # 0 = superseded
 
-# 4. Generate script, hand to user — do not execute
+# 4. Generate script, hand to user — do not execute (unless all worktrees are clean)
 # 5. User runs: bash -x /tmp/cleanup.sh 2>&1 | tee /tmp/cleanup.log
 ```
 
 ### Phase 0 — Read-Only Inventory
 
-Run before touching anything:
+Run before touching anything. The full decision matrix — worktree path, branch, ahead count,
+dirty count, staged count, cherry count, and PR state — can be obtained in one pass:
 
 ```bash
 git fetch --prune origin
@@ -72,9 +91,15 @@ git worktree list --porcelain | awk '/^worktree /{print $2}' | tail -n +2 | whil
   br=$(git -C "$wt" branch --show-current 2>/dev/null || echo "(detached)")
   ahead=$(git rev-list --count origin/main.."$br" 2>/dev/null || echo "?")
   dirty=$(git -C "$wt" status --short 2>/dev/null | wc -l)
-  echo "$wt | branch=$br | ahead=$ahead | dirty=$dirty"
+  staged=$(git -C "$wt" status --short 2>/dev/null | grep -c '^[MADRC]' || echo 0)
+  cherry=$(git cherry origin/main "$br" 2>/dev/null | grep -c '^+' || echo "?")
+  pr=$(gh pr list --head "$br" --state all --json state,number --jq '.[0] | "\(.state) #\(.number)"' 2>/dev/null || echo "NO_PR")
+  echo "$wt | branch=$br | ahead=$ahead | dirty=$dirty | staged=$staged | cherry=$cherry | pr=$pr"
 done | tee /tmp/wt-inventory.txt
 ```
+
+This single-pass inventory gives everything needed to classify all worktrees without any
+back-and-forth. No additional queries required in most cases.
 
 ### Phase 1 — Classify Dirty Worktrees
 
@@ -110,6 +135,44 @@ Decision rules:
 - File exists on main at either path → check if content differs meaningfully
 - File NOT on main at any path → **potentially real, commit it**
 - File on merged branch (`git cherry` returns 0) → work is superseded → artifact
+- **cherry=1 on a MERGED PR → rebase-merge artifact, not real work** (see note below)
+
+**cherry=1 rebase-merge artifact — do not confuse with unreleased work:**
+
+When a PR was merged via rebase, the rebase rewrites commit hashes. The original branch
+commit and the rebased-onto-main commit have different SHAs, so `git cherry` reports `+1`
+(one unreleased commit) even though the work is already in main. Always verify PR state
+before treating cherry count as evidence of unreleased work:
+
+```bash
+# Correct classification for cherry=1:
+pr_state=$(gh pr list --head "$br" --state all --json state --jq '.[0].state')
+if [ "$pr_state" = "MERGED" ]; then
+  echo "cherry=1 is rebase-merge artifact — work IS in main, safe to remove"
+elif [ "$pr_state" = "CLOSED" ]; then
+  echo "cherry=1 on CLOSED PR — work NOT in main, treat as unreleased"
+elif [ "$pr_state" = "" ]; then
+  echo "cherry=1 with NO PR — work NOT in main, treat as unreleased"
+fi
+```
+
+### Phase 1.5 — Classify Closed-Not-Merged PRs
+
+When a branch has a PR that was CLOSED without merging and the branch has unique commits
+(`cherry >= 1`), use "remove worktree, keep branch":
+
+- **Remove worktree**: frees disk space and git metadata
+- **Keep branch**: preserves the commits — the branch is the only copy of that work
+
+Only suggest full branch deletion if the user explicitly says they want to discard the work.
+Default is always to keep branches when in doubt.
+
+```bash
+# Classification for CLOSED (not MERGED) PR:
+if [ "$cherry" -ge 1 ] && [ "$pr_state" = "CLOSED" ]; then
+  echo "CLOSED PR with $cherry unique commit(s) — remove worktree, KEEP branch"
+fi
+```
 
 ### Phase 2 — Handle Merged-Branch Worktrees
 
@@ -238,6 +301,7 @@ bash -n /tmp/<repo>-worktree-cleanup.sh && echo "Syntax OK"
 | Trust `[gone]` status as sole triage signal | Tried to use `ahead=0` + `[gone]` to classify all worktrees | Doesn't reveal uncommitted working-tree changes; must still inspect `git status` | `[gone]` = branch tracking gone, NOT = working tree clean; always check dirty count |
 | `git worktree remove --force` | Planned to use `--force` for stubborn cases | Safety Net blocks `--force` | Clean stray files individually first, then `git worktree remove` without `--force` |
 | `git checkout -- .` alone on staged-addition worktree | Ran `checkout -- .` then `git worktree remove` | `fatal: '<path>' contains modified or untracked files` — staged new files (status `A`) survived `checkout --` unchanged | Must run `reset HEAD -- .` first to unstage, then `checkout -- .`, then `clean -fd` |
+| Assuming cherry=1 means unreleased work | Three branches showed cherry=1 despite MERGED PRs | Rebase-merge rewrites commit hashes, so cherry count is 1 even though work is in main | Always check PR state first; cherry count is only meaningful when combined with PR=NONE or PR=CLOSED |
 
 ## Results & Parameters
 
@@ -256,11 +320,12 @@ def is_artifact(path: str) -> bool:
 
 ### Scale reference
 
-| Worktrees | Dirty | Approach | Script size |
-|-----------|-------|----------|-------------|
-| 14 | 4 dirty (`.coverage` only) | Sequential script | 7 sections, ~80 lines |
-| 36 | 6 dirty | Sequential script | 7 sections, ~120 lines |
-| 20-35 | Mixed | Same pattern | Adjust WORKTREES array |
+| Worktrees | Dirty | Approach | Script size | Time |
+|-----------|-------|----------|-------------|------|
+| 14 | 4 dirty (`.coverage` only) | Sequential script | 7 sections, ~80 lines | ~2 min |
+| 17 | 0 dirty (all clean) | Direct execution | No script needed | ~1 min |
+| 36 | 6 dirty | Sequential script | 7 sections, ~120 lines | ~5 min |
+| 20-35 | Mixed | Same pattern | Adjust WORKTREES array | varies |
 
 ### Real work found in merged-branch worktrees (this session)
 
@@ -273,3 +338,4 @@ def is_artifact(path: str) -> bool:
 | ProjectScylla | 36 worktrees, 6 dirty, 26 `[gone]` branches | Script at `/tmp/scylla-worktree-cleanup.sh`; execution pending |
 | ProjectMnemosyne | 14 agent worktrees (`.claude/worktrees/agent-*`), all PRs #1221–1255 merged, 4 with `.coverage` only | Script at `/tmp/mnemosyne-worktree-cleanup.sh`; syntax-checked (bash -n); user kept branches, generate-only mode |
 | ProjectScylla | 11 stale myrmidon swarm worktrees, staged-addition failures caught on cleanup, all 11 removed cleanly | 2026-04-13; `reset HEAD -- .` + `checkout -- .` + `clean -fd` sequence verified effective |
+| ProjectOdyssey | 17 worktrees (1 main + 16 feature), all clean (0 dirty), 15 agent-* in `.claude/worktrees/`, cherry=1 on MERGED PRs = rebase artifacts | 2026-04-21; direct execution (no script); 1 CLOSED PR branch kept; all 17 worktrees removed, 0 `--force` needed |
