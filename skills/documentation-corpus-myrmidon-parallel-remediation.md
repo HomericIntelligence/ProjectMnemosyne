@@ -3,7 +3,7 @@ name: documentation-corpus-myrmidon-parallel-remediation
 description: "Myrmidon swarm pattern for remediating a large document corpus in parallel using isolated git worktree agents. Use when: (1) an unpublished research corpus contains change-note prose, correction-history blocks, or backward-compatibility text that must be deleted (not annotated), (2) defects span many files and must be fixed in parallel without file ownership collisions, (3) you need wave-based execution: parallel fixers → read-only verifier → merge."
 category: documentation
 date: 2026-04-20
-version: "1.3.0"
+version: "1.4.0"
 user-invocable: false
 verification: verified-local
 history: documentation-corpus-myrmidon-parallel-remediation.history
@@ -166,6 +166,10 @@ These become orphaned and must also be deleted or rewritten.
 | Wave-B verifier flagged false-positive "missing Executive Summary" because some standard files use numbered §2 Executive Summary | Verifier prompt said "verify `^## Executive Summary` heading exists" and the awk grep treated `^## 2. Executive Summary` as a miss | 5 files (3.1–3.5) were wrongly flagged as structural failures when they were legitimately numbered Exec Summary variants | Verifier structural checks for Exec Summary must accept both `^## Executive Summary` (unnumbered) AND `^## N. Executive Summary` (numbered) template variants. Write the check as `grep -E "^## ([0-9]+\. )?Executive Summary"` not a strict unnumbered match |
 | Post-Wave-B discovery: several files had `## 8. Risk Assessment` + separate unnumbered `## Accuracy / Quality Tradeoff` instead of `## 8. Accuracy / Quality Tradeoff` | Original corpus template had both sections present but numbered Risk as §8; the rubric requires §8 = Accuracy/Quality | Standard §8 check failed on 3.1–3.5 and 4.4 even though the Accuracy content was fully present under a different heading | When Standard template requires §8 = a specific title, enforce that BOTH (a) the numbered §8 heading exists AND (b) its title matches the canonical name. Don't conflate presence of an Accuracy section anywhere with the §8 numbered slot. Fix pattern: renumber the "wrong" §8 to unnumbered `## Risk Assessment` and promote the unnumbered Accuracy section to `## 8. Accuracy / Quality Tradeoff` |
 | Thematic template required `## Citations` heading but 6.x corpus used bare `<!-- CITATION MANIFEST -->` HTML comment | All 5 Thematic files in group 6 had a fully-populated citation manifest as an HTML comment block with no Markdown heading, so the Thematic `^## Citations` presence check failed | Verifier missed this on first pass (comment presence looked close enough); only caught by strict post-merge awk scan | Thematic template verification must enforce literal Markdown headings (`^## Citations`), not look for HTML comments or other soft equivalents. If corpus conventions use HTML comment manifests, add a Markdown `## Citations` heading immediately above the `<!-- CITATION MANIFEST -->` marker so both conventions are satisfied |
+| Bibliography-entry change-note stubs survive corpus-wide scrub grep | Ran corpus-wide scrub grep for patterns like `Critical corrections applied`, `corrected from`, `previously stated`, `[corrected:`, `CORRECTED:`, `Weight memory (corrected)`, `not.*as previously stated`. Gate returned zero matches. Committed. | Bibliography entries carried a separate sub-class of residue the gate did not cover: trailing tokens like `ADDED — missing from original 5.10 research document`, `Second missing citation from original 5.9 summary`, `Not cited in original 5.9 summary`, `Critical addition.` appended to a citation line, `Added during merge.` appended as a sentence, and inline bibliographic meta-notes like `Note: citation key collision — use [X-Y] to disambiguate`. Because the fixer agents' scrub prompt was built from the R6 pattern list and none of those patterns were in the list, the fixer passes and the Wave B verifier both reported clean. | The R6 pattern list must include bibliography-entry suffixes and disambiguation-note patterns. Append these to every fixer prompt and Wave B verifier: `\bADDED\b` (word-boundary), `ADDED —`, `\. ADDED`, `missing from original`, `second missing citation`, `not cited in original`, `critical addition\.`, `added during merge\.`, `citation key collision`, `\. Note: citation key`, `— use \[.*\] to disambiguate`. Run the scrub pass TWICE after the first clean gate: residue often hides in structured content (tables, bibliography lists) where parser heuristics make it look like data rather than prose. |
+| "Understated in the original" / "material gap in the original doc" / "[Original doc: X — WRONG]" pattern class | Initial R6 pattern list covered "critical correction", "corrected from", "previously stated". Wave A fixer agents scrubbed all matches and committed. | A parallel class of prose exists that marks the current text as having *superseded* a prior claim — phrased as editorial judgment rather than direct correction. Examples found after commit: `This risk is UNDERSTATED in the original doc`, `A material gap in the original doc`, `Absence from original doc was a gap`, `Missing from original doc's training stability discussion`, `[Original doc: ~2% — WRONG; error from using V=151,936 for A1]`. These read as authorial commentary to the scrub regex but are semantically change-notes. | Extend the R6 pattern list with semantic-judgment phrases: `understated in the original`, `material gap in the original`, `absence from original`, `missing from original doc`, `— WRONG;`, `[Original doc:`. Run these as a separate second pass focused on semantic scrub, distinct from the first pass's literal-phrase scrub. |
+| Fixer agents land on main instead of their worktree (recovery protocol) | Launched three parallel Wave A fixer agents (R3, R4, R2) all with `isolation: "worktree"` and `subagent_type: "general-purpose"`. Each agent's prompt included explicit instructions to commit on its worktree branch. After completion, 2 of 3 agents (R4 and R2) reported worktree paths but their commits had landed on `main` in the shared repo directly — `git worktree list` showed no worktree branch for them. Only R3 correctly landed on its worktree branch (`worktree-agent-a1babe44`). | The `isolation: "worktree"` parameter is advisory to the agent runtime — some agent variants or runtime versions interpret it as "operate on an isolated copy" but still write commits to the parent repo's `main` when the agent path-resolves to the canonical directory. The prompt cannot force worktree discipline unilaterally. | ALWAYS verify after every Wave A agent completes, before proceeding to Wave C: `AGENT_COMMIT=$(git -C "$WORKTREE" rev-parse HEAD); if git merge-base --is-ancestor "$AGENT_COMMIT" main; then echo "Agent already landed on main → skip narrow patch for this agent"; else echo "Agent on worktree → proceed with narrow patch"; fi`. When some agents land on main and others land on worktrees, the Wave C merge order must interleave: on-main agents need nothing (they're already merged); worktree agents need narrow-patch. The `git diff HEAD~N HEAD -- <files>` depth N must reach the correct pre-agent base commit — use `HEAD~2` if the agent's worktree has two follow-up commits on top of the shared base (e.g., an initial fix commit plus a second-batch commit), not `HEAD~1`. Verify with `git -C "$WORKTREE" log --oneline -5` before extracting the patch. The mandatory conflict-marker gate `grep -rnE '^<<<<<<<\|^>>>>>>>\|^=======' <files>` is still required after `git apply --3way` even when the worktree and main touch disjoint files — `--3way` can emit markers when line endings, whitespace, or nearby context differ even if the patch hunks don't literally overlap. |
+| Three-commit progression: scrub-clean gate passes do NOT mean corpus-clean | After committing Wave A fixer output and a first R6 scrub follow-up, the gate `grep -rnEi "<R6 pattern union>" research_*.md` returned zero matches. Declared corpus clean. User requested another pass anyway. | Second pass surfaced 8+ more residue patterns: trailing `Critical addition.` / `Added during merge.` in bibliographies, `ADDED — missing from original` stubs in 6 bibliography entries, `UNDERSTATED in the original doc` in a §5 implementation bullet, `[Original doc: ~2% — WRONG]` labels under TPOT arithmetic breakdowns. Third pass (the one after that) surfaced zero additional patterns. The first-pass grep was clean ONLY because the pattern list didn't cover the new sub-classes. | "Clean under current gate" ≠ "clean under all gates the next reader will apply." After Wave C merge, schedule at least TWO post-merge audit passes with intentionally-expanded pattern lists — the first pass catches the patterns the scrub agent knew about; the second pass uses looser/semantic patterns (e.g., `original doc`, `pre-merge`, `during merge`, `missing from`, `added in this revision`, `WRONG`, `— corrected`, `\bADDED\b`). Treat Wave B clean as a local optimum, not a global one. |
 
 ## Results & Parameters
 
@@ -197,6 +201,43 @@ previously missing.*added\|not.*as previously stated" \
 | R5 | Inline marker stripping | `[corrected: ...]` markers, `(corrected from X)` parentheticals |
 | R6 | Corpus-wide scrub | "Critical corrections applied" blocks, "previously stated" qualifiers, risk-table rows with legacy labels, `**Weight memory (corrected):**` headers |
 
+### Expanded R6 pattern list (bibliography + semantic variants)
+
+The v1.3.0 scrub grep covered literal-phrase change-note patterns. The 2026-04-20 evening session surfaced two additional sub-classes that a single-pass literal grep misses: bibliography-entry suffixes (trailing tokens appended to citation lines) and semantic-judgment prose (editorial commentary about a prior claim being superseded). Run THREE passes — all must return zero matches before declaring the corpus clean.
+
+```bash
+# Pass 1: literal-phrase scrub (original v1.3.0 pattern list)
+grep -rnE \
+  "Critical correction|corrected from|previously stated|\[corrected:|\
+CORRECTED:\*\*|\*\*CORRECTED|Weight memory \(corrected\)|Year corrected|\
+In the original version|not as previously stated|Key corrections|\
+originally claimed|this replaces|previously missing|\
+Changelog|Revision history|Change notes" \
+  research_*.md
+
+# Pass 2: bibliography-suffix scrub (NEW in v1.4.0)
+grep -rnE \
+  "\bADDED\b|ADDED —|\. ADDED[^:]|missing from original|\
+second missing citation|not cited in original|\
+critical addition\.|added during merge\.|\
+citation key collision|— use \[.*\] to disambiguate" \
+  research_*.md
+
+# Pass 3: semantic-judgment scrub (NEW in v1.4.0)
+grep -rnEi \
+  "understated in the original|material gap in the original|\
+absence from original|missing from original doc|\
+— WRONG;|\[Original doc:|original document('s)? (error|claim|figure|stated)|\
+original research doc|pre-merge doc" \
+  research_*.md
+
+# Gate: ALL three passes must return zero matches.
+# If pass 1 is clean but pass 2 or pass 3 surfaces hits, that is the expected
+# first-iteration result — fix and re-run all three until all return zero.
+```
+
+**Why three passes, not one giant union**: pass 1 and pass 2 are literal text scrubs; pass 3 is case-insensitive because editorial phrases vary in capitalization (`UNDERSTATED`, `Understated`, `understated`). Folding them into a single grep loses the case distinction or explodes the alternation list. Keeping them as three separate invocations also makes the failure mode legible — a fail on pass 2 tells you instantly that the bibliography-suffix class is the problem, not the semantic class.
+
 ### Agent count by corpus size
 
 | Files | Recommended Wave A agents |
@@ -227,6 +268,31 @@ git commit
 **Why 3-way apply beats cherry-pick**: cherry-pick replays the full commit (all file hunks) and must reconcile everything including unintended ancestor-state drift. A 3-way diff limited to the agent's owned files only reconciles the intentional edits.
 
 **Why `--theirs` for conflict resolution**: "Theirs" is the Wave A fixer agent's output — designed with the full canonical rubric in mind and already validated by Wave B. "Ours" is typically incidental prior-draft phrasing from an earlier cleanup pass.
+
+#### MANDATORY Wave-A post-completion verification
+
+Run this for EVERY Wave A agent before touching Wave B or C. Two classes of agent-runtime (described in the v1.4.0 "Fixer agents land on main" Failed Attempt row) respect `isolation: "worktree"` differently; without this check some agents silently land on main while others land on worktrees, and the narrow-patch step replays already-merged work or — worse — overwrites a main-landing agent's commit with stale content.
+
+```bash
+# MANDATORY Wave-A post-completion verification (NEW in v1.4.0)
+# Run this for EVERY Wave A agent before touching Wave B or C.
+
+for WT in "$WT_R1" "$WT_R2" "$WT_R3" "$WT_R4" "$WT_R5"; do
+  [ -d "$WT" ] || continue
+  AGENT_COMMIT=$(git -C "$WT" rev-parse HEAD)
+  WT_BRANCH=$(git -C "$WT" branch --show-current)
+
+  if git -C "$MAIN_REPO" merge-base --is-ancestor "$AGENT_COMMIT" main; then
+    echo "[$WT_BRANCH → $AGENT_COMMIT] already on main — skip Wave C patch"
+  else
+    echo "[$WT_BRANCH → $AGENT_COMMIT] on worktree — Wave C narrow-patch required"
+    # Verify patch depth before extraction:
+    git -C "$WT" log --oneline -5   # count commits since shared base
+  fi
+done
+```
+
+**Patch-depth caveat**: when an agent commits twice on its worktree (e.g., initial fix + a follow-up second-batch commit), `HEAD~1` extracts only the second commit. Use `git log --oneline -5` to count commits since the shared base and use the correct `HEAD~N` depth. The mandatory conflict-marker gate (`grep -rnE '^<<<<<<<|^>>>>>>>|^======='`) still applies after `git apply --3way` even when the worktree and main touch disjoint files — `--3way` can emit markers when line endings, whitespace, or nearby context differ even if the patch hunks don't literally overlap.
 
 ### Wave B rubric addition: verdict uniqueness check
 
@@ -310,3 +376,4 @@ git -C "$MNEMOSYNE_DIR" worktree prune
 | ArchIdeas corpus | 39-file audit + remediation rerun | Apr 2026-04-19 — Wave A: 5 parallel worktree agents (R1/R2/R3/R5/R6 across 13 files). Narrow-patch cherry-pick handled 3 of 5 conflicts via --theirs resolution. Post-merge grep caught 2 duplicate-verdict files missed by Wave B presence check. |
 | ArchIdeas corpus | 39-file fresh audit + full remediation run | Apr 2026-04-19 (evening) — Wave 1: 6 parallel Explore audit agents (39 files graded on 6 dimensions). Wave 2: 5 parallel worktree fixer agents (§8 insert + canonical verdict markers + 3_8/5_3/5_10 scrub + 6_3 D6 retighten). Wave 3: narrow-patch merge with 2 conflicts resolved. Two unexpected behaviors: (1) some agents committed directly to main bypassing worktree, (2) `git apply --3way` left conflict markers that required manual resolution gates. |
 | ArchIdeas corpus | 39-file fresh audit + remediation + follow-up structural-fix pass | 2026-04-20 — Wave 1: 6 parallel Explore audit agents (graded 39 files on 6 dimensions). All files scored ≥B+; 21 files had one or more sub-B dimensions. Wave A: 4 parallel worktree fixer agents (R1 arith ×2, R3 struct ×13, R4 cite ×3/4 — agent skipped 6.4 legitimately, R5 marker ×2). Wave C: narrow-patch merges with 7 conflicts resolved via --theirs. Wave B verifier caught 4 unresolved issues: 3.1–3.5 had §8=Risk with separate unnumbered Accuracy; 6.1–6.5 had bare `<!-- CITATION MANIFEST -->` without `## Citations` heading; 4.2/4.6/5.4 needed §8 renumbering; 1.7 had a pre-existing `CORRECTED from original` residue. All fixed in two follow-up commits. Final state: zero residual scrub patterns, zero duplicate per-section verdicts, all Standard §8 = Accuracy/Quality, all Thematic have ## Citations + ## Accuracy + 4× Benefits. |
+| ArchIdeas | 2026-04-20 evening session — full re-audit + 3-wave fixer + 3-pass scrub | Surfaced bibliography-suffix and semantic-judgment scrub classes; 2 of 3 Wave A agents landed on main (not worktree); 6 commits total on main |
