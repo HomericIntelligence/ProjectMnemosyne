@@ -1,11 +1,11 @@
 ---
 name: pixi-lock-rebase-regenerate
-description: "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts, (4) Dependabot PRs fail CI fast (6-12 seconds) because Dependabot only bumps pyproject.toml not pixi.lock, (5) a second rebase of the same branch produces a pixi.lock commit conflict — skip the stale commit and re-run pixi install."
+description: "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts, (4) Dependabot PRs fail CI fast (6-12 seconds) because Dependabot only bumps pyproject.toml not pixi.lock, (5) a second rebase of the same branch produces a pixi.lock commit conflict — skip the stale commit and re-run pixi install, (6) a second commit in the rebase chain patches code that was migrated to an external package — accept HEAD's version and use git rebase --skip."
 category: ci-cd
-date: 2026-04-13
-version: "1.2.0"
+date: 2026-04-21
+version: "1.3.0"
 user-invocable: true
-verification: verified-ci
+verification: verified-local
 history: pixi-lock-rebase-regenerate.history
 tags: [dependabot, pixi, rebase, pixi-lock, ci-cd]
 ---
@@ -15,10 +15,10 @@ tags: [dependabot, pixi, rebase, pixi-lock, ci-cd]
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-03-30 |
+| **Date** | 2026-04-21 |
 | **Objective** | Correctly resolve `pixi.lock` staleness after `git rebase` or main-branch advancement without producing an invalid lock file |
 | **Outcome** | Eliminates `lock-file not up-to-date` CI failures; multi-branch parallel fix completes 5 PRs in ~1 minute |
-| **Verification** | verified-local |
+| **Verification** | verified-local (v1.3.0) |
 | **History** | [changelog](./pixi-lock-rebase-regenerate.history) |
 
 ## When to Use
@@ -30,6 +30,7 @@ tags: [dependabot, pixi, rebase, pixi-lock, ci-cd]
 - All test matrix jobs pass but infrastructure jobs (lock-check, pre-commit, dep-scan) uniformly fail
 - **Dependabot PRs fail CI very fast (6–12 seconds)**: Dependabot bumps `pyproject.toml` version bounds but does NOT regenerate `pixi.lock`. CI runs `pixi install --locked` which rejects the stale lock immediately — hence the fast failure. Fix is the same: rebase + `pixi install` + commit pixi.lock.
 - A branch that previously had a pixi.lock-fix commit is rebased a second time and the old pixi.lock commit conflicts with the freshly-rebased state. Resolution: `git rebase --skip` the conflicting commit, then re-run `pixi install` fresh.
+- **Second commit in the rebase chain patches code migrated to an external package**: A branch has Commit A (structural change, e.g., pixi.toml restructure) and Commit B (follow-on fix to local scripts that have since been rewritten as thin wrapper stubs delegating to an external package). Commit A applies cleanly; Commit B conflicts because the functions it patches no longer exist. Accept `HEAD`'s version of all conflicted files and use `git rebase --skip` (not `--continue`) to drop the now-empty commit.
 
 **Do NOT use `--ours` or `--theirs`** to resolve a `pixi.lock` conflict — either side will be stale
 relative to the rebased branch's actual `pixi.toml`.
@@ -216,6 +217,56 @@ git push --force-with-lease origin <branch>
 regenerate pixi.lock. After the new rebase, the lock needs to be regenerated fresh anyway —
 the old regeneration commit is entirely superseded. Skipping it is semantically correct.
 
+### Phase 3d: Multi-Commit Rebase Where Second Commit Is Superseded
+
+When a branch has two commits — a structural change (Commit A) followed by a follow-on fix (Commit B)
+to local scripts that have since been migrated to an external package as thin wrapper stubs:
+
+```
+Commit A: chore(deps): separate dev from production dependencies in pixi.toml
+Commit B: fix(deps): fix pixi.lock and version-drift checkers for dev/prod split
+```
+
+Between branch creation and rebase, `main` rewrote the scripts Commit B patches (e.g.,
+`scripts/check_dep_sync.py`, `scripts/check_precommit_versions.py`) as one-line wrappers:
+
+```python
+# New form on main — the functions Commit B patched no longer exist
+from hephaestus.config.dep_sync import *  # noqa: F401,F403
+```
+
+**Rebase flow:**
+
+```bash
+git fetch origin
+git rebase origin/main
+# Commit A applies cleanly → git rebase --continue automatically or manually
+
+# Commit B conflicts — the files it patches are now thin wrappers on main
+# Accept main's version of ALL conflicted files:
+git checkout HEAD -- scripts/check_dep_sync.py scripts/check_precommit_versions.py
+git checkout HEAD -- pixi.lock   # if pixi.lock is also conflicted
+
+# The commit is now empty — skip it entirely:
+git rebase --skip       # NOT --continue (which would create an empty commit)
+
+# After rebase completes: re-run pixi install for any new environments from Commit A
+pixi install
+git add pixi.lock
+git commit -m "fix(deps): regenerate pixi.lock after rebase on main"
+git push --force-with-lease origin <branch>
+gh pr merge <pr-number> --auto --rebase
+```
+
+**Key distinction**: Use `--skip` (not `--continue`) when ALL conflicts in a commit are resolved
+by accepting `HEAD`'s version — the commit becomes empty and must be dropped to avoid polluting
+history with a no-op commit.
+
+**Signal that this pattern applies:**
+- Commit B patches functions or logic that simply does not exist in the current files on main
+- After `git checkout HEAD -- <files>`, running `git diff --cached` shows zero staged changes
+- The commit message of Commit B references "fixing" or "patching" scripts that main now delegates to an external package
+
 ### Phase 4: Verify
 
 ```bash
@@ -236,6 +287,7 @@ done
 | Parallel pixi install for Dependabot PRs | Ran pixi install across multiple worktrees simultaneously | Shared lock file state caused conflicts during resolution | Run Dependabot pixi.lock fixes sequentially per PR, not in parallel |
 | `git rebase --continue` on double-rebase pixi.lock conflict | Tried to resolve conflict and continue | The prior pixi.lock-fix commit is entirely stale; continuing produces a broken lock | Use `git rebase --skip` to discard the stale commit, then `pixi install` fresh |
 | Assumed Dependabot CI failure was a test failure | 6-12s CI duration seemed too fast; investigated test logs | Pre-flight `pixi install --locked` rejection happens before tests run | Fast CI failure (< 30s) on Dependabot PRs = stale pixi.lock, not a code issue |
+| `git rebase --continue` after resolving empty commit (migrated-code scenario) | After accepting `HEAD` for all conflicted files in Commit B, tried `git rebase --continue` | Creates an empty commit that pollutes history with a no-op; also may trigger pre-commit failure on zero-change commit | When all conflicts are resolved by accepting `HEAD`'s version entirely — the commit adds nothing — use `git rebase --skip` to drop it |
 
 ## Results & Parameters
 
@@ -280,3 +332,4 @@ gh pr view <pr-number> --json autoMergeRequest  # verify: should NOT be null
 | ProjectScylla | Multiple PRs on 2026-02-22 with pixi.lock conflicts and CI failures | v1.0.0 |
 | ProjectHephaestus | 5 PRs failed after version bump 0.5.0 to 0.6.0 + resilience subpackage; all fixed via parallel worktrees, 2026-03-30 | v1.1.0 |
 | ProjectScylla | Multiple Dependabot PRs failing CI in 6-12s; fixed sequentially via worktrees; double-rebase pixi.lock skip pattern used on 2 PRs, 2026-04-13 | v1.2.0 |
+| ProjectOdyssey | Rebased `5047-separate-dev-production-deps` branch onto main after PR #5241 closed without merging; Commit B (script fixes) conflicted because scripts were rewritten as hephaestus wrapper stubs; accepted HEAD for all conflicted files, used `git rebase --skip` to drop empty commit, re-ran `pixi install` for new environments; PR #5266, 2026-04-21 | v1.3.0 |

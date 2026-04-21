@@ -1,5 +1,67 @@
 # pixi-lock-rebase-regenerate — History
 
+## v1.3.0 — 2026-04-21
+
+**Amendment**: Added multi-commit rebase pattern where the second commit patches code migrated to an external repo (hephaestus wrapper migration), requiring `git rebase --skip` for the empty resolved commit.
+
+**Changed by:** Session — Rebasing `5047-separate-dev-production-deps` branch (pixi.toml dev/prod split) onto main in ProjectOdyssey; PR #5266
+**Verification:** verified-local
+
+### What changed
+
+- Bumped version 1.2.0 → 1.3.0; updated date to 2026-04-21
+- Added new "When to Use" trigger: second commit in rebase chain patches code migrated to an external package
+- Added new `### Phase 3d: Multi-Commit Rebase Where Second Commit Is Superseded` subsection with step-by-step rebase flow, example commit messages, and detection signals
+- Added new Failed Attempts row: `git rebase --continue` after resolving empty commit (migrated-code scenario)
+- Added ProjectOdyssey PR #5266 entry to Verified On table
+
+### Why
+
+The v1.2.0 skill covered double-rebase pixi.lock conflicts (where the previous pixi.lock-fix commit itself conflicts). This session surfaced a distinct pattern: a branch with two commits where Commit B patches standalone scripts that main has since rewritten as thin wrapper stubs (delegating to an external package). Commit A applies cleanly; Commit B's changes are entirely superseded. After accepting `HEAD` for all conflicted files, the commit is empty — `--skip` is required, not `--continue`. This distinction (empty commit due to external migration vs. stale lock) was not captured before.
+
+### Previous version (v1.2.0) snapshot
+
+```
+---
+name: pixi-lock-rebase-regenerate
+description: "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts, (4) Dependabot PRs fail CI fast (6-12 seconds) because Dependabot only bumps pyproject.toml not pixi.lock, (5) a second rebase of the same branch produces a pixi.lock commit conflict — skip the stale commit and re-run pixi install."
+category: ci-cd
+date: 2026-04-13
+version: "1.2.0"
+user-invocable: true
+verification: verified-ci
+history: pixi-lock-rebase-regenerate.history
+tags: [dependabot, pixi, rebase, pixi-lock, ci-cd]
+---
+```
+
+See git log for full v1.2.0 file content.
+
+---
+
+## v1.2.0 — 2026-04-13
+
+**Amendment**: Added Dependabot PR fast-failure pattern (6–12s CI duration = stale pixi.lock) and double-rebase pixi.lock commit conflict pattern (git rebase --skip the stale pixi.lock-fix commit).
+
+**Changed by:** Session — Fixing multiple Dependabot PRs failing CI in ProjectScylla; double-rebase pixi.lock skip pattern used on 2 PRs
+**Verification:** verified-ci
+
+### What changed
+
+- Bumped version 1.1.0 → 1.2.0; updated date to 2026-04-13
+- Added "When to Use" trigger: Dependabot PRs fail CI very fast (6–12 seconds)
+- Added "When to Use" trigger: double-rebase pixi.lock commit conflict requiring `--skip`
+- Added `### Phase 3b: Dependabot PR pixi.lock Fix` subsection
+- Added `### Phase 3c: Double-Rebase pixi.lock Commit Conflict` subsection
+- Added 2 new Failed Attempts rows (double-rebase `--continue` and Dependabot CI misdiagnosis)
+- Added ProjectScylla Dependabot entry to Verified On table
+
+### Why
+
+Dependabot PRs show a distinct fast-failure signature (6–12s) that is easy to misdiagnose as a test failure. Once identified, the fix is the same rebase + pixi install pattern, but must be run sequentially rather than in parallel. The double-rebase pattern (where a branch already has a pixi.lock-fix commit) also emerged — `--skip` is correct because the old regeneration commit is entirely superseded.
+
+---
+
 ## v1.1.0 (2026-03-30)
 
 **Changed by:** Session — Fixing stale pixi.lock CI failures across 5 feature branches in ProjectHephaestus (version bump 0.5.0 → 0.6.0 + resilience subpackage)
