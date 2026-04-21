@@ -1,5 +1,49 @@
 # documentation-corpus-myrmidon-parallel-remediation — History
 
+## v1.6.0 — 2026-04-20 (hunt-the-next-class audit)
+
+- Changed by: ArchIdeas hunt-the-next-class pre-release audit, 2026-04-20
+- Verification: verified-local
+
+### What changed
+
+- Added **four new Failed Attempts rows** covering residue sub-classes that evaded v1.5.0:
+  1. Frontmatter process-metadata (`## Status: MERGED`, `## Merged: DATE`, `## Sources:`, `## Date: ... (merged)`): 9 hits across 5 of 39 files, all in YAML-like heading form between `## ID` and `## Executive Summary`. v1.3–1.5 passes only matched body prose, never frontmatter.
+  2. Support-doc changelog sections surviving because prior scrubs were scoped to `research_*.md`: `SHARED_PRELUDE.md:131–144` carried a `## Changelog: Corrections Applied to Prior Prelude` section with a 7-row correction-history table referencing a phantom `.bak` file.
+  3. Cross-file numeric drift: the prelude's own arithmetic (A2 @ 40K = "10.49 GB") was arithmetically wrong (formula `64×2×8×128×40960×2 = 10.74 GB`); two research files had re-derived correctly, two had inherited the wrong prelude value. No text pattern catches this — requires re-derivation + cross-file grep.
+  4. Unit-label drift (GB vs GiB for the same byte count in different sections of the same prelude): prelude §Baseline-C-complexity used GiB; prelude §KV-cache-table used GB for identical `10,737,418,240`-byte values.
+- Added a **fifth new Failed Attempts row** for the v1.6.0 citation-verification insight: citations to real papers with misquoted numeric claims (fabricated ranges like "2.9–4.1×" when abstract says "~3×"; reversed polarity; paper-body figures presented as abstract quotes; wrong author lists; truncated titles). This class is invisible to pattern-based scrubs and requires direct WebFetch of arXiv abstracts.
+- Added **four new grep passes (5–8)** to the R6 pattern list:
+  - Pass 5: frontmatter process-metadata (`^## (Status|Merged|Sources):`, `^## Date:.*\(merged\)`)
+  - Pass 6: support-doc changelog sections (`^## (Changelog|Corrections Applied|Revision history|Change notes|Prior Prelude)`) with full-corpus glob
+  - Pass 7: citation verification via arXiv WebFetch — dispatches 6 parallel verification agents (one per file group) with up to 30 WebFetch calls each
+  - Pass 8: cross-file numeric drift + unit-label drift — re-derive canonical numbers from prelude formulas, grep for divergent renderings, check unit-label consistency within each table
+- Renamed the pattern-list subsection: "Expanded R6 pattern list (bibliography + semantic + authorial-review + frontmatter + support-doc + cross-file + citation-verification)".
+- Updated trailing pattern-list commentary to reference all eight passes.
+- Updated description to mention citation verification explicitly.
+- Added `citation-verification` and `arxiv-abstract-check` tags.
+- Bumped version 1.5.0 → 1.6.0; date stays 2026-04-20.
+
+### Why
+
+v1.5.0 was released and validated clean on the same ArchIdeas corpus it was evolved on. User dispatched a hunt-the-next-class audit to find the next residue sub-class before committing to a post-merge release. Audit surfaced four new sub-classes plus a prelude-level arithmetic error plus one isolated single-file table bug. The follow-up citation-verification sweep (6 parallel agents web-fetching 60+ unique arXiv IDs) surfaced 6 HIGH-severity fabricated numeric claims (including I-DLM "2.9–4.1×", Quest swap, LoopFormer "8–15% PPL", GateSkip "25% compute", Nemotron-Flash headline, STUN "20× GSM8K") and ~17 MEDIUM over-specifications of paper-body figures as abstract quotes. Critical realization: **every prior pass (v1.3 → v1.4 → v1.5) caught a vocabulary class the previous one missed, but none of them caught numeric fabrication or cross-file disagreement; those require arithmetic and direct source verification, not regex**. This is a structural category difference — not another vocabulary pass — so v1.6.0 introduces two structurally new check types (web-verification and arithmetic re-derivation) alongside two new vocabulary passes.
+
+### Previous version (v1.5.0) snapshot
+
+```markdown
+---
+name: documentation-corpus-myrmidon-parallel-remediation
+description: "Myrmidon swarm pattern for remediating a large document corpus in parallel using isolated git worktree agents. Use when: (1) an unpublished research corpus contains change-note prose, correction-history blocks, or backward-compatibility text that must be deleted (not annotated), (2) defects span many files and must be fixed in parallel without file ownership collisions, (3) you need wave-based execution: parallel fixers → read-only verifier → merge."
+category: documentation
+date: 2026-04-20
+version: "1.5.0"
+user-invocable: false
+verification: verified-local
+history: documentation-corpus-myrmidon-parallel-remediation.history
+tags: [myrmidon, swarm, parallel, corpus, remediation, worktree, wave-based, change-notes, unpublished, conflict-partitioning]
+---
+```
+
 ## v1.5.0 — 2026-04-20 (late evening)
 
 - Changed by: ArchIdeas re-audit immediately post-v1.4.0 release, 2026-04-20 late evening
