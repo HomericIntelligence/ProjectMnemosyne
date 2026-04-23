@@ -1,9 +1,9 @@
 ---
 name: git-worktree-management-patterns
-description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents, (13) cleaning 20+ mixed worktrees using myrmidon swarm wave parallelization, (14) batch-fixing end-of-file newline violations across multiple branches, (15) worktrees with uncommitted skill documentation requiring a 2-commit markdownlint pattern."
+description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents, (13) cleaning 20+ mixed worktrees using myrmidon swarm wave parallelization, (14) batch-fixing end-of-file newline violations across multiple branches, (15) worktrees with uncommitted skill documentation requiring a 2-commit markdownlint pattern, (16) removing locked worktrees whose lock holder PID is dead (stale agent lock cleanup)."
 category: tooling
-date: 2026-04-06
-version: "2.4.0"
+date: 2026-04-22
+version: "2.5.0"
 user-invocable: false
 verification: unverified
 history: git-worktree-management-patterns.history
@@ -19,7 +19,7 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 |-------|-------|
 | Date | 2026-04-06 |
 | Objective | Consolidated skill covering all git worktree creation, use, and cleanup patterns — including branch deletion policy |
-| Outcome | v2.4.0: Merged git-worktree-cleanup.md — added myrmidon wave parallelization, Phase 4 (uncommitted skill docs / 2-commit markdownlint), Phase 5 (batch EOF fixing), model tier table, artifact patterns, verified-on table |
+| Outcome | v2.5.0: Added stale-lock cleanup pattern for dead agent PIDs — unlock + remove + prune sequence, with PID liveness check and user-delegated `--force` workaround |
 | Verification | unverified |
 | History | [changelog](./git-worktree-management-patterns.history) |
 
@@ -45,6 +45,9 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 - Worktrees with uncommitted skill docs (SKILL.md + plugin.json) that need a PR before removal
 - `git worktree list` has entries with `[gone]` remote branches
 - 5+ worktrees with uncommitted changes (skill docs, registrations, etc.)
+- `git worktree list` shows locked entries (`locked` reason mentions a PID) from agent processes that have since exited
+- `git worktree remove <path>` fails with "is locked, use 'git worktree unlock' to unlock it first"
+- After ~N parallel agent waves, repo has 10+ locked worktrees from completed (now dead) agent PIDs
 
 ## Verified Workflow
 
@@ -560,6 +563,85 @@ gh pr merge --auto --rebase <pr-number>
 git worktree remove .worktrees/<worktree-name>
 ```
 
+### Stale Lock Cleanup (Dead Agent PIDs)
+
+Use when `git worktree list` shows locked entries and the lock holder PID is from a dead agent process.
+
+**Step 1: Identify locked worktrees and verify PIDs are dead**
+
+```bash
+# List all worktrees with lock reason
+git worktree list --porcelain | grep -A2 "^locked"
+
+# For each locked worktree, check if the PID is alive
+# The lock reason typically contains the PID of the process that acquired it
+for wt in .claude/worktrees/agent-*; do
+  lock_file="$(git rev-parse --git-dir)/worktrees/$(basename "$wt")/locked"
+  if [ -f "$lock_file" ]; then
+    lock_reason=$(cat "$lock_file")
+    echo "=== $wt ==="
+    echo "  Lock reason: $lock_reason"
+    # Extract PID from reason if present and check liveness
+    pid=$(echo "$lock_reason" | grep -oP '\d+' | head -1)
+    if [ -n "$pid" ]; then
+      if ps aux | grep "^.\{,20\}$pid " | grep -v grep > /dev/null 2>&1; then
+        echo "  PID $pid is ALIVE — do NOT unlock"
+      else
+        echo "  PID $pid is DEAD — stale lock, safe to unlock"
+      fi
+    fi
+  fi
+done
+```
+
+**Step 2: Audit worktree cleanliness before unlocking**
+
+```bash
+# Verify all targeted worktrees are clean (no uncommitted changes)
+for wt in .claude/worktrees/agent-*; do
+  dirty=$(git -C "$wt" status --short 2>/dev/null | wc -l)
+  branch=$(git -C "$wt" branch --show-current 2>/dev/null)
+  pr=$(gh pr list --state all --head "$branch" --json number,state --jq '.[0] | "\(.number) \(.state)"' 2>/dev/null || echo "NO_PR")
+  echo "$wt: branch=$branch dirty=$dirty pr=$pr"
+done
+```
+
+**Step 3: Unlock and remove clean worktrees**
+
+```bash
+# For each worktree with dead PID lock and clean working tree:
+for wt in .claude/worktrees/agent-*; do
+  git worktree unlock "$wt" 2>/dev/null && git worktree remove "$wt"
+done
+git worktree prune
+```
+
+**Step 4: User delegation for `--force` (Safety Net constraint)**
+
+If any worktrees have merged PRs and dirty working trees (e.g., artifact files from the agent run), `git worktree remove --force` is blocked by Safety Net. Ask the user to run:
+
+```bash
+# For dirty worktrees where the PR is confirmed merged and work is not needed:
+for wt in .claude/worktrees/agent-*; do
+  git worktree unlock "$wt" 2>/dev/null
+  git worktree remove "$wt" --force
+done
+git worktree prune
+```
+
+**Full audit script (copy-paste ready)**
+
+```bash
+# Audit all agent worktrees before cleanup
+for wt in .claude/worktrees/agent-*; do
+  branch=$(git -C "$wt" branch --show-current 2>/dev/null)
+  dirty=$(git -C "$wt" status --short 2>/dev/null | wc -l)
+  pr=$(gh pr list --state all --head "$branch" --json number,state \
+    --jq '.[0] | "\(.number) \(.state)"' 2>/dev/null || echo "NO_PR")
+  echo "$wt: branch=$branch dirty=$dirty pr=$pr"
+done
+```
+
 ### Batch EOF Fixing
 
 For multiple branches failing pre-commit `end-of-file-fixer` on the same file (e.g., `.claude-plugin/plugin.json`):
@@ -772,6 +854,9 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 | Markdown linting loop (single commit attempt) | `git add skills/ plugin.json && git commit -m "..."` | Pre-commit markdownlint rewrites .md files; first commit fails | Expect 2 commit attempts: add linter-modified files and commit again (will pass on second attempt) |
 | Shellcheck `A && B \|\| C` pattern | `git branch -d "$branch" 2>/dev/null && log_info "Deleted" \|\| true` | Shellcheck SC2015: `\|\|` doesn't guarantee proper if-then-else; if log_info fails, `\|\| true` hides it | Use explicit if-then: `if git branch -d "$branch" 2>/dev/null; then log_info "..."; fi` |
 | Bulk-delete remote branches in one push | `git push origin --delete branch1 branch2 branch3` | GitHub branch protection rules block deleting more than 2 branches in a single push | Delete remote branches one at a time |
+| `git worktree remove` on locked worktree directly | Ran `git worktree remove .claude/worktrees/agent-X` without unlocking first | Fails with "is locked, use 'git worktree unlock' to unlock it first" even for clean worktrees | Always run `git worktree unlock <path>` before `git worktree remove <path>` |
+| Assuming all locks are from live processes | Skipped PID liveness check before unlocking | Risked unlocking a worktree still held by a live agent process | Always check `ps aux | grep <pid> | grep -v grep` before treating a lock as stale |
+| `git worktree remove --force` on dirty merged-PR worktrees | Attempted force removal of worktrees with artifact files (even though PR was merged) | Safety Net blocks `--force` flag | Unlock first (`git worktree unlock <path>`), then ask the user to run `git worktree remove --force <path>` |
 
 ## Results & Parameters
 
@@ -788,6 +873,7 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 | Operation | Blocked? | Workaround |
 |-----------|----------|------------|
 | `git worktree remove --force` (untracked files) | Yes | Delete untracked files first, then remove without `--force` |
+| `git worktree remove --force` (merged-PR dirty worktrees) | Yes | Unlock first with `git worktree unlock`, then ask user to run `--force` manually |
 | `git branch -D` | No | Allowed |
 | `git reset --hard` | Yes | N/A — use `pull --rebase` instead |
 | `rm -rf /tmp/mnemosyne-skill-*` inside sub-agent | Yes | Run from orchestrator (main conversation) before spawning sub-agents |

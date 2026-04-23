@@ -1,5 +1,37 @@
 # git-worktree-management-patterns — History
 
+## v2.5.0 (2026-04-22)
+
+**Changed by:** Session — stale locked worktree cleanup after ~15 parallel agent waves left 13 locked worktrees from dead PIDs
+**Verification:** verified-local
+
+### What changed
+
+- Bumped version from 2.4.0 to 2.5.0, updated date to 2026-04-22
+- Extended `description` with item (16): "removing locked worktrees whose lock holder PID is dead (stale agent lock cleanup)"
+- Added 3 new "When to Use" bullets for the stale-lock-from-dead-PID scenario
+- Added new "Stale Lock Cleanup (Dead Agent PIDs)" subsection in Verified Workflow with full audit + cleanup commands
+- Added 3 new Failed Attempts rows: `git worktree remove` without unlocking first, skipping PID liveness check, and `--force` on dirty merged-PR worktrees
+- Added new Safety Net interaction row for `git worktree remove --force` on merged-PR dirty worktrees
+
+### Why
+
+After ~15 parallel agent waves, a repo accumulated 13 locked worktrees from agent processes that had already exited. The lock files still referenced the old PIDs. `git worktree remove` failed for all 13 with "is locked" errors. The correct sequence is: (1) verify PID is dead, (2) `git worktree unlock`, (3) `git worktree remove` for clean worktrees. For dirty merged-PR worktrees, Safety Net blocks `--force`, so the user must run the final removal manually.
+
+### Previous version (v2.4.0) snapshot
+
+Key v2.4.0 metadata:
+
+```
+version: "2.4.0"
+date: 2026-04-06
+description: "... (15) worktrees with uncommitted skill documentation requiring a 2-commit markdownlint pattern."
+```
+
+No stale-lock-from-dead-PID section existed. Safety Net table had 4 rows (no merged-PR dirty worktree entry).
+
+---
+
 ## v2.3.0 (2026-04-06)
 
 **Changed by:** Session — stale /tmp/mnemosyne-skill-* blocker pattern for parallel /learn sub-agents
