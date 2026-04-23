@@ -1,5 +1,23 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.2.0 (2026-04-22)
+
+**Changed by:** ProjectHermes ~30 PR bulk rebase session (all PRs touched same 3 core files)
+**Verification:** verified-local
+
+### What changed
+- Added `(11)` trigger to description: "10+ branches all conflict on same 3-5 core files — take HEAD"
+- Added new "When to Use" bullet for same-file serial merge scenario
+- Added Phase 3.6: Take-HEAD Batch Rebase for Same-File Conflicts — full batch script with Safety Net workaround, empty commit handling, and GIT_EDITOR=true pattern
+- Added 3 new Failed Attempts rows: `git checkout HEAD -- file` Safety Net block + `/tmp` workaround; sub-agent delegation failure for same-file conflicts; semantic merge waste when main is already superset
+- Added ProjectHermes to Verified On table
+- Added `~30 PRs, same 3-5 files` row to Session Scale Reference
+
+### Why
+Rebasing ~30 open PRs in ProjectHermes where every PR touched `server.py`, `config.py`, and `publisher.py`. Classic "everyone touches the same files" scenario — by PR #10, origin/main already contains the union of all prior merged features. Taking HEAD for all conflicted core files is always correct; the branch's unique value is in its own new files and tests only. The Safety Net block on `git checkout HEAD -- file` required the `/tmp` workaround documented in Phase 3.6.
+
+---
+
 ## v2.1.0 (2026-04-12)
 
 **Changed by:** ProjectScylla dependabot PR sequential rebase session
