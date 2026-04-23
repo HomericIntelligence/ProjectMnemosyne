@@ -1,5 +1,19 @@
 # History: batch-low-difficulty-issue-impl
 
+## v1.2.0 (2026-04-23)
+
+**Changed by:** ProjectArgus issue triage session (23 issues triaged, 3 PRs merged)
+**Verification:** verified-ci
+
+### What changed
+- Added new Failed Attempts entry: worktree agents inheriting wrong git base from L0 non-main branch
+- Extended Verified Workflow Phase 3 with mandatory branch-base check before dispatching agents
+
+### Why
+During ProjectArgus batch triage, 3 Haiku agents were dispatched with `isolation: "worktree"` while L0 was on branch `15-exporter-port-9101`. Worktrees inherited that as base, adding 4-5 unrelated commits to each PR branch. GitHub refused rebase merge ("This branch can't be rebased"). Fix required cherry-pick + force-push per branch. Prevention: explicit `git checkout -B <branch> origin/main` in agent prompts.
+
+---
+
 ## v1.1.0 — 2026-04-12
 
 **Amendment**: Add worktree-safe grep pattern for ALREADY-DONE verification, correct pre-filter order (DUPLICATE → ALREADY-DONE → verify-before-fix → LOW), updated notes on `isolation="worktree"` reliability and agent git-op completion.

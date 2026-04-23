@@ -6,8 +6,8 @@ description: 'Classify, deduplicate, and batch-implement 15-30 low-difficulty Gi
   (3) duplicate issues need closing before implementation. Includes worktree-safe grep
   pattern for ALREADY-DONE verification and correct pre-filter order.'
 category: tooling
-date: 2026-04-12
-version: 1.1.0
+date: 2026-04-23
+version: 1.2.0
 user-invocable: false
 verification: verified-ci
 history: batch-low-difficulty-issue-impl.history
@@ -18,7 +18,7 @@ history: batch-low-difficulty-issue-impl.history
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-12 |
+| **Date** | 2026-04-23 |
 | **Objective** | Classify, deduplicate, and batch-implement low-difficulty GitHub issues using worktree-isolated agents |
 | **Outcome** | Verified: worktree isolation works correctly; correct pre-filter order; ALREADY-DONE grep must exclude worktrees |
 | **Verification** | verified-ci |
@@ -86,6 +86,21 @@ gh issue close 3256 --comment "Duplicate of #3273 (both add __hash__ tests)"
 Group by target file — issues touching the same file with similar descriptions are usually duplicates.
 
 ### Phase 3: Group by Target File
+
+**CRITICAL — Branch base check before dispatching agents:**
+
+Before spawning any worktree-isolated agents, verify the main conversation is on `main`:
+```bash
+git branch --show-current  # Must be 'main'; if not, worktrees will inherit wrong base
+```
+
+If L0 is on a feature branch, include this as **step 1** in every Haiku agent prompt:
+```bash
+git fetch origin
+git checkout -B <issue-number>-<slug> origin/main  # Explicit base, not inherited
+```
+
+This prevents "This branch can't be rebased" errors caused by unrelated commits from the L0's current branch silently appearing in agent branches.
 
 Before branching, group LOW issues by which file they edit. Issues sharing a file
 **must go in the same PR** (to avoid merge conflicts):
@@ -174,6 +189,7 @@ gh issue close NNNN --comment "Verified: already resolved. [pattern] not found i
 | Running `pixi run pre-commit run <specific-file>` | Tried to run hooks on only the changed file | Hook IDs don't match file paths — the command fails with "No hook with id path/to/file" | Always run `pixi run pre-commit run --all-files`, never by file path. |
 | Grepping for ALREADY-DONE without worktree exclusion (2026-04-12) | Plain `grep -rn pattern /repo/` to detect whether issue content still exists | Worktrees contain stale branch state — gave false "still present" for #1655 (nats-server) and #1671 (--cov refs) | Always pass `--exclude-dir=.worktrees --exclude-dir=.claude --exclude-dir=.git` when grepping for ALREADY-DONE verification |
 | Running verify-before-fix as part of Haiku classification (2026-04-12) | Expected Haiku to catch all ALREADY-DONE issues during the classification pass | Haiku missed 2 ALREADY-DONE issues (4.7% miss rate) where implementation was in a different location than the issue title implied | Always run verify-before-fix as a distinct separate phase after Haiku classification, not as part of it |
+| Haiku agents with `isolation: "worktree"` dispatched while L0 was on a non-main branch (`15-exporter-port-9101`) | Agents created worktrees and checked out branches, which inherited the L0's current branch as base | Worktrees start from the current HEAD of the base repo — not from `origin/main` — so each branch silently included 4-5 unrelated commits. GitHub refused rebase merge: "This branch can't be rebased." | Always verify L0 is on `main` before dispatching worktree agents, OR explicitly include `git fetch origin && git checkout -B <branch> origin/main` as step 1 in every agent prompt instead of relying on worktree inheritance |
 
 ## Results & Parameters
 
