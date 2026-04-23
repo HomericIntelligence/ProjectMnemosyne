@@ -1,0 +1,128 @@
+---
+name: already-done-issue-detection
+description: "Detect GitHub issues that are already fixed before starting implementation. Use when: (1) starting a batch triage of 10+ open issues, (2) assigned an issue in a repo with active prior automation, (3) audit issues filed weeks/months ago, (4) issue title contains 'missing', 'add', 'fix' for a file or config value."
+category: tooling
+date: 2026-04-23
+version: 1.1.0
+user-invocable: false
+verification: verified-ci
+tags: [triage, already-done, issue-classification, batch, audit]
+---
+
+# Already-Done Issue Detection
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-23 |
+| **Objective** | Detect GitHub issues that are already fixed before spending time implementing them |
+| **Outcome** | Verified: 11/23 open issues (48%) were ALREADY-DONE in ProjectArgus — closed with evidence, no code written |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- Starting a batch triage of 10+ open issues on any HomericIntelligence repo
+- Assigned an issue about a "missing" file (LICENSE, SECURITY.md, CONTRIBUTING.md, pixi.lock, .dockerignore)
+- Issue was filed by an automated audit (repo-analyze, repo-analyze-strict) — these go stale within weeks
+- Issue title contains: "missing", "add", "fix", "pin", "rename", "update", "change X to Y"
+- A prior automation pass (`auto-impl` branches, batch PRs) may have already addressed the issue
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Governance files (covers ~5 common audit issues at once)
+ls LICENSE SECURITY.md CONTRIBUTING.md CHANGELOG.md CODE_OF_CONDUCT.md 2>&1
+
+# 2. Lockfile / dependency issues
+ls pixi.lock poetry.lock package-lock.json Cargo.lock 2>&1
+
+# 3. Docker / config issues
+grep "image:" docker-compose.yml | head -20          # check for :latest
+grep "allowUiUpdates\|allowUi" configs/grafana/*.yml  # provisioning flags
+ls .dockerignore .gitignore 2>&1                       # existence checks
+
+# 4. Code quality issues (mutable defaults, specific patterns)
+grep -n "def <function>" <file> | head -5              # check current signature
+
+# 5. Port / URL mismatches
+grep -n "<port>" docker-compose.yml configs/prometheus.yml exporter/*.py 2>&1 | head -20
+
+# 6. Default branch check
+gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
+
+# Close ALREADY-DONE issue with evidence
+gh issue close <N> --repo <owner>/<repo> --comment "Already fixed: <file>:<line> shows <evidence>."
+```
+
+### Detailed Steps
+
+1. **Run the batch signal check first** — before reading any issue body in depth, run the Quick Reference commands. Results often resolve 30-50% of audit issues immediately.
+
+2. **For each issue title containing "missing [file]"**: run `ls <file>` — if it exists, the issue is done.
+
+3. **For each issue about a config value** (e.g., "set X to false"): grep the config file for the current value. If it already matches, the issue is done.
+
+4. **For each issue about a code pattern** (e.g., "mutable default argument"): grep the function signature. If it's already fixed, the issue is done.
+
+5. **Close with specific evidence** — always include the file path and the current value in the closing comment so the reporter understands what was fixed and when.
+
+6. **For partial fixes** (e.g., CONTRIBUTING.md exists but CHANGELOG.md does not): leave the issue open with a comment explaining which part is done and which remains.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Reading all issue bodies before checking current state | Opened each issue body to understand the fix needed before checking if it was already done | Wasted time reading detailed issue descriptions for changes already in the codebase | Run batch file-existence + grep checks BEFORE reading issue bodies |
+| Assuming audit issues are current | Treated all open audit issues as valid action items | Audit tools file issues against a snapshot — the codebase moves on while issues sit open | Audit issues have a half-life of ~2-4 weeks; always verify current state |
+
+## Results & Parameters
+
+### ProjectArgus Session (2026-04-23)
+
+| Metric | Value |
+|--------|-------|
+| Total open issues | 23 |
+| ALREADY-DONE | 11 (48%) |
+| SIMPLE (implemented) | 3 |
+| COMPLEX (deferred) | 9 |
+| Time to close ALREADY-DONE issues | ~5 minutes (batch gh issue close) |
+| Code written for ALREADY-DONE | 0 lines |
+
+### Signal-to-Issue mapping (ProjectArgus)
+
+| Issue | Signal checked | File/command |
+|-------|---------------|-------------|
+| #5 Grafana port mismatch | `grep "3000:3000" docker-compose.yml` | docker-compose.yml |
+| #10 :latest image pins | `grep "image:" docker-compose.yml` — all show pinned versions | docker-compose.yml |
+| #12 Mutable default arg | `grep "def gauge" exporter/exporter.py` | exporter/exporter.py |
+| #15 Exporter port conflict | `grep "9101" exporter/exporter.py` | exporter/exporter.py + prometheus.yml |
+| #18 Incomplete .gitignore | `cat .gitignore` — all missing entries present | .gitignore |
+| #23 Missing LICENSE | `ls LICENSE` | repo root |
+| #27 Missing SECURITY.md | `ls SECURITY.md` | repo root |
+| #31 Missing CONTRIBUTING.md | `ls CONTRIBUTING.md` | repo root (partial — CHANGELOG still missing) |
+| #24 No pixi.lock | `ls pixi.lock` | repo root |
+| #37 Wrong default branch | `gh repo view --json defaultBranchRef` | GitHub API |
+| #41 allowUiUpdates: true | `grep "allowUiUpdates" configs/grafana/dashboards.yml` | configs/grafana/dashboards.yml |
+
+### Common ALREADY-DONE signals by issue type
+
+| Issue type | Detection command | Time |
+|------------|------------------|------|
+| Missing governance file | `ls LICENSE SECURITY.md CONTRIBUTING.md` | 2s |
+| No lockfile | `ls pixi.lock` | 1s |
+| :latest image tags | `grep "image:" docker-compose.yml` | 2s |
+| Wrong default branch | `gh repo view --json defaultBranchRef` | 3s |
+| Config flag wrong value | `grep "flagName" configs/file.yml` | 2s |
+| Code anti-pattern fixed | `grep -n "def funcName" file.py` | 2s |
+| Port mismatch | `grep "PORT" docker-compose.yml justfile README.md` | 3s |
+
+## Prior Sessions
+
+### ProjectOdyssey Session (2026-03-15)
+
+Issue #3847 asked for `assert_value_at` and `assert_all_values` calls to be added to shape operation tests. When the file was read, all required assertions were already present. PR #3845 (merged 2026-03-10) had already done the work. Resolution: found two `assert_numel` gaps in sibling tests and filled those instead — opened PR #4813.
+
+**Key signal**: `git log main..HEAD` returns empty + `git diff main -- <file>` returns nothing → issue is already done.
