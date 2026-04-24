@@ -1,9 +1,9 @@
 ---
 name: batch-pr-ci-fix-workflow
-description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern."
+description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern, (19) just v1.14+ import keyword reservation breaks inline Python heredocs causing all CI Code Quality fails, (20) gitleaks asset URL 404 because uname -s/-m produces wrong case/arch string for download URL, (21) GHA workflow uses manual pixi install instead of composite setup-pixi action causing pixi command not found, (22) bats PATH test for missing tool includes /bin or /usr/bin which pixi activation already polluted, (23) shell script calls companion script via SCRIPT_DIR but unit tests copy only the main script to a temp dir."
 category: ci-cd
-date: 2026-04-23
-version: "2.7.0"
+date: 2026-04-24
+version: "2.9.0"
 user-invocable: false
 verification: verified-ci
 history: batch-pr-ci-fix-workflow.history
@@ -38,6 +38,11 @@ tags: []
 - **[NEW v2.7.0]** Coverage script (`generate_coverage.sh`) fails with missing GTest because Conan toolchain was not passed to cmake
 - **[NEW v2.7.0]** clang-format version mismatch (local v22 vs CI v18) causes formatting failures on multi-line lambda expressions in `emplace_back`
 - **[NEW v2.7.0]** Diagnosing "all 5 required checks FAILED" vs "Benchmarks + Coverage SKIPPED" pattern to find root cause quickly
+- **[NEW v2.8.0]** `just` v1.14+ treats `import` as a reserved keyword — any justfile recipe with inline `python3 -c "\ import json..."` breaks `just --list` itself, causing all Code Quality CI to fail with `Unknown start of token ';'`
+- **[NEW v2.8.0]** `gitleaks-action@v2` requires a paid org license — HomericIntelligence org accounts see "unauthorized" exit 1 even on public repos; fix: use curl-based install with correct asset URL (lowercase OS, `x64` arch mapping)
+- **[NEW v2.9.0]** A GHA workflow was written before a `.github/actions/setup-pixi` composite action existed and uses manual `pixi install --locked` + curl-based yq/jq installs, failing with `pixi: command not found` because pixi itself is never installed on the runner
+- **[NEW v2.9.0]** A bats test uses `PATH="$TOOLS_BIN:/bin:/usr/bin"` to simulate missing tools, but pixi activation hooks add conda-forge paths at shell startup so the tool is still found — making the "tool missing" assertion fail
+- **[NEW v2.9.0]** A shell script calls a companion script via `${SCRIPT_DIR}/<companion>.sh` but unit tests copy only the main script to a temp dir — causing the exec to fail and breaking tests that expect exit 0 for valid input
 
 ## Verified Workflow
 
@@ -742,6 +747,214 @@ though your local `clang-format` accepts it.
 2. If version differs from local, use the safe multi-line form for all `emplace_back` lambdas
 3. Test locally with the CI version: `docker run --rm -v .:/src silkeh/clang:18 clang-format --dry-run -Werror /src/file.cpp`
 
+### Phase 20: [NEW v2.8.0] Fix `just` Import Keyword Breaking All Code Quality CI
+
+Starting with `just` v1.14+, `import` became a reserved keyword at the justfile parser level.
+Any recipe that contains an inline Python heredoc using `import` as a bare word causes `just`
+itself to fail — including `just --list` — with a cryptic parse error.
+
+**Symptoms**:
+- All PRs show Code Quality FAIL simultaneously
+- CI log from the Code Quality job shows: `error: Unknown start of token ';'` emitted by `just`
+- The justfile has a recipe like:
+  ```
+  python3 -c "\
+    import json, pathlib; \
+    ..."
+  ```
+- `just --list` fails locally (the justfile is broken, not just the one recipe)
+
+**Fix option 1 — Extract to a script file** (preferred for complex logic):
+```bash
+# Create scripts/remove-preset-include.py (or similar) with the Python logic
+# Then call from the just recipe:
+python3 scripts/remove-preset-include.py
+```
+
+**Fix option 2 — Use just's shebang recipe form**:
+```just
+my-recipe:
+    #!/usr/bin/env python3
+    import json, pathlib
+    # ... rest of logic
+```
+
+**Fix option 3 — Alias the import statement** (workaround, not recommended):
+```bash
+# Won't work — 'import' at the start of a shell line within a just recipe
+# is now parsed by just before being passed to the shell
+```
+
+**Workflow**:
+```bash
+# 1. Confirm: just --list fails with "Unknown start of token"
+just --list 2>&1 | head -5
+
+# 2. Find the offending recipe
+grep -n "import" justfile
+
+# 3. Move Python logic to scripts/ and update the recipe to call the script
+# 4. Verify: just --list succeeds; just format-check passes locally
+just --list
+just format-check
+
+# 5. Fix must land on main first; then rebase all blocked PRs
+git checkout -b fix/just-import-keyword main
+# ... edit justfile and create scripts/
+git commit -m "fix(build): extract Python import logic from justfile to scripts/"
+git push -u origin HEAD
+gh pr create --title "fix(build): ..." --body "..."
+gh pr merge <fix-pr> --auto --rebase
+```
+
+### Phase 21: [NEW v2.8.0] Fix gitleaks Asset URL 404 (Lowercase OS + Arch Mapping)
+
+The official gitleaks GitHub release assets use **lowercase** OS names and a **non-standard** arch
+string: `x64` (not `x86_64`) and `arm64` (not `aarch64`). Using `$(uname -s)` and `$(uname -m)`
+directly produces `Linux_x86_64`, which 404s.
+
+**Symptoms**:
+- `secret-scanning` check fails across all PRs
+- CI log: `curl: (22) The requested URL returned error: 404`
+- The download URL contains `Linux_x86_64` (capital L, full arch string)
+- Asset does not exist at that URL on GitHub Releases
+
+**Correct URL construction**:
+```bash
+GITLEAKS_VERSION="8.30.1"   # Pin a specific version — do not use "latest"
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')          # "linux" (lowercase)
+ARCH=$(uname -m | sed 's/x86_64/x64/' | sed 's/aarch64/arm64/')  # "x64" or "arm64"
+# Resulting filename: gitleaks_8.30.1_linux_x64.tar.gz
+
+curl -sSfL \
+  "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_${OS}_${ARCH}.tar.gz" \
+  -o /tmp/gitleaks.tar.gz
+tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+/tmp/gitleaks detect --source . --no-git --redact
+```
+
+**Why `gitleaks-action@v2` is not an alternative**:
+- `gitleaks-action@v2` requires a paid Gitleaks license key for org accounts
+- HomericIntelligence org accounts see exit 1 with "unauthorized" even on public repos under an org that lacks the license
+- The curl-based approach works without any license key
+
+**Workflow**:
+```bash
+# 1. Check if the workflow uses gitleaks-action@v2 or a manual curl step
+grep -rn "gitleaks" .github/workflows/
+
+# 2. If using gitleaks-action@v2, replace with curl-based install
+# 3. Normalize OS and arch in the download URL (see above)
+# 4. Pin to a specific version (e.g., 8.30.1) — "latest" redirects may fail
+# 5. Test the URL manually before committing:
+curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz" -o /tmp/test.tar.gz && echo OK
+```
+
+### Phase 20: [NEW v2.9.0] Fix GHA Workflow Using Manual pixi Install Instead of Composite Action
+
+**Problem**: A workflow was authored before the repo had a `.github/actions/setup-pixi` composite action.
+It tries to cache + install pixi and separately download yq/jq, but fails because pixi itself is never
+installed on the runner — `pixi: command not found` on every step after checkout.
+
+**Detection signal**: All CI steps after checkout fail with `pixi: command not found`; other workflows
+in the same repo succeed with the same tools.
+
+**Fix**: Replace the manual setup block with the composite action already used by other workflows:
+
+```yaml
+# WRONG — pixi not installed on runner; all steps after checkout fail
+- name: Cache pixi environment
+  uses: actions/cache@v4
+  with:
+    path: |
+      .pixi
+      ~/.cache/rattler/cache
+    key: pixi-${{ runner.os }}-${{ hashFiles('pixi.lock') }}
+- name: Install dependencies (locked)
+  run: pixi install --locked
+- name: Install yq
+  run: curl -fsSL "https://github.com/mikefarah/yq/releases/download/..." -o /usr/local/bin/yq && chmod +x /usr/local/bin/yq
+- name: Install jq
+  run: sudo apt-get install -y jq
+
+# CORRECT — composite action handles pixi install + caching; yq and jq come from conda-forge
+- uses: actions/checkout@v4
+- name: Set up pixi
+  uses: ./.github/actions/setup-pixi
+# yq and jq are provided by pixi via conda-forge — no separate install step needed
+```
+
+**Root cause pattern**: Repo had a composite action wrapping `prefix-dev/setup-pixi` + `actions/cache`.
+The failing workflow was written before the composite action existed and was never updated. Always
+check for `.github/actions/setup-pixi` before writing any new workflow that installs pixi.
+
+**Checklist for migrating a legacy workflow:**
+1. `ls .github/actions/` — if `setup-pixi/` exists, use it
+2. Remove all manual pixi cache/install steps
+3. Remove all curl-based yq/jq installs — confirm those tools are in `pixi.toml` under conda-forge
+4. Replace with `uses: ./.github/actions/setup-pixi`
+5. Verify other workflows use the same pattern as reference
+
+### Phase 21: [NEW v2.9.0] Fix bats PATH Isolation for pixi-Managed Tools
+
+**Problem**: A bats test for "tool X missing → function fails" sets `PATH="$TOOLS_BIN:/bin:/usr/bin"`.
+On pixi CI runners, `setup-pixi` has already added conda-forge paths to PATH at shell startup — BEFORE
+the test runs. So even though the test excludes those paths in its `PATH=` assignment, the tool is
+still found because bats inherits the already-mutated shell environment.
+
+**Root cause**: `setup-pixi` runs `eval "$(pixi shell-hook)"` in the runner's `.bashrc` or pre-step
+hook, permanently adding `/home/runner/.pixi/envs/default/bin` (or similar) to PATH. A later
+`PATH="$TOOLS_BIN:/bin:/usr/bin"` assignment in a test only affects that subshell — but if yq/jq
+are in PATH before the test, the tool-missing condition never fires.
+
+**Fix**: Use `/usr/sbin:/sbin` as the fallback dirs (not `/bin:/usr/bin`) when testing for missing tools:
+
+```bash
+# WRONG — /bin and /usr/bin may not have pixi tools, but pixi activation hooks
+# may have already added conda paths to PATH before the test runs
+PATH="$TOOLS_BIN:/bin:/usr/bin"
+
+# CORRECT — /usr/sbin and /sbin have system tools (sudo, ip, route)
+# but NOT conda-forge yq/jq/curl — safe for "tool missing" tests
+PATH="$TOOLS_BIN:/usr/sbin:/sbin"
+```
+
+**Lesson**: In bats tests that simulate "tool X missing", always exclude `/bin` and `/usr/bin` in
+addition to conda paths. Use `PATH="$TOOLS_BIN:/usr/sbin:/sbin"`. This works regardless of whether
+pixi has already activated.
+
+### Phase 22: [NEW v2.9.0] Guard Companion Script Calls for Unit Test Temp-Dir Isolation
+
+**Problem**: A shell script (`validate-schemas.sh`) calls a companion script in the same dir at the end
+(`"${SCRIPT_DIR}/validate-fleet-refs.sh"`). Unit tests that copy only the main script to a temp dir
+and run it there fail with a non-zero exit because the companion script doesn't exist.
+
+**Pattern that breaks**:
+```bash
+# validate-schemas.sh — end of file:
+"${SCRIPT_DIR}/validate-fleet-refs.sh"   # Hard exec — fails when run from a copy in a temp dir
+```
+
+Tests that expected exit 0 for valid YAML now exit non-zero (companion not found), producing false failures.
+
+**Fix**: Guard each companion script call with an existence check:
+
+```bash
+# CORRECT — skip companion if not present (e.g., unit test temp dirs)
+if [[ -x "${SCRIPT_DIR}/validate-fleet-refs.sh" ]]; then
+    echo ""
+    "${SCRIPT_DIR}/validate-fleet-refs.sh"
+fi
+```
+
+**Lesson**: Whenever a shell script calls a companion script via `${SCRIPT_DIR}/<companion>.sh`,
+guard the call with `[[ -x "${SCRIPT_DIR}/<companion>.sh" ]]`. This allows the main script to
+function standalone (in temp dirs, CI isolation, or manual invocation) without failing when
+companion scripts are absent.
+
+**Scope**: Apply this guard to every companion exec in the script, not just the last one. Partial
+guarding still fails if an earlier unguarded companion is missing.
+
 ### Phase 10: Verify
 
 ```bash
@@ -856,6 +1069,9 @@ GIT_EDITOR=true git rebase --continue
 | Diagnosing all-5-failing as test failures | When all 5 required checks failed (asan/lsan/ubsan + Benchmarks + Coverage), assumed tests were broken | Code Quality passed, indicating the failure was a build error (C library `-Werror`), not a test failure | If Code Quality passes but all build-based checks fail, read the build log for compiler errors first |
 | `generate_coverage.sh` cmake without Conan toolchain | Coverage script ran `cmake -DENABLE_COVERAGE=ON ...` without `-DCMAKE_TOOLCHAIN_FILE` | GTest (Conan-provided) not found — `Could NOT find GTest` error | Pass `-DCMAKE_TOOLCHAIN_FILE=build/conan-deps/conan_toolchain.cmake` when toolchain exists |
 | Writing lambdas for clang-format v22 locally when CI uses v18 | `threads.emplace_back([this, i]() { state_.recordFailure(...); });` formatted for v22 | clang-format v18 (CI) formats long `emplace_back` lambdas differently — Code Quality check fails | Use multi-line form: `threads.emplace_back(\n    [this, i]() { ... });` accepted by both versions |
+| Manual pixi install in workflow without pixi installed | GHA workflow used `actions/cache` + `pixi install --locked` + curl for yq/jq; all steps after checkout failed with `pixi: command not found` | pixi was never installed on the runner — the cache step only caches the environment, not the pixi binary itself | Use `.github/actions/setup-pixi` composite action (wraps `prefix-dev/setup-pixi`); yq/jq come from conda-forge via pixi |
+| bats PATH isolation using `/bin:/usr/bin` on pixi runner | Set `PATH="$TOOLS_BIN:/bin:/usr/bin"` to simulate missing yq; test expected yq to be absent | pixi `setup-pixi` action ran shell-hook in runner init, adding conda-forge paths before the test ran — yq was findable despite the restricted PATH | Use `PATH="$TOOLS_BIN:/usr/sbin:/sbin"` — /usr/sbin and /sbin have system tools but NOT conda-forge binaries |
+| Hard exec of companion script from main script copy in temp dir | `validate-schemas.sh` copied to temp dir; at end it exec'd `"${SCRIPT_DIR}/validate-fleet-refs.sh"` which didn't exist there | 3 tests expecting exit 0 for valid YAML got non-zero exit — the companion script exec failed, not the YAML validation | Guard every companion script exec: `if [[ -x "${SCRIPT_DIR}/companion.sh" ]]; then "${SCRIPT_DIR}/companion.sh"; fi` |
 
 ## Results & Parameters
 
@@ -957,3 +1173,4 @@ fn __hash__[H: Hasher](self, mut hasher: H):
 | ProjectOdyssey | 12 open PRs: 9 rebased + auto-merge armed, 2 subsumed PRs closed (#5224, #5221), 1 compile fix (#5238 raises propagation), 1 pixi dep-sync fix (#5241 feature.dev scanning), 2026-04-12 | v2.5.0 additions |
 | HomericIntelligence ecosystem | 87 PRs across 8 repos: AchaeanFleet (50), Myrmidons (45), 6 others. Python conflict resolution used throughout. 2026-04-19 | v2.6.0 |
 | ProjectKeystone | Multiple PRs: nats.c FetchContent -Werror fix (restrict to CXX), coverage script Conan toolchain fix, clang-format v18 vs v22 lambda formatting fix. All 5 required checks restored to PASS, PRs set to auto-merge. 2026-04-23 | v2.7.0 |
+| HomericIntelligence/Myrmidons | PR #307: apply.yml pixi composite action migration, bats PATH isolation fix (/usr/sbin:/sbin), validate-schemas.sh companion guard. CI green. 2026-04-24 | v2.9.0 |

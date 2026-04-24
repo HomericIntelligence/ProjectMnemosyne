@@ -1,5 +1,67 @@
 # batch-pr-ci-fix-workflow — Version History
 
+## v2.9.0 (2026-04-24)
+
+**Changed by:** HomericIntelligence/Myrmidons CI fix session — apply.yml pixi migration, bats PATH isolation, companion script guard (PR #307)
+**Verification:** verified-ci
+
+### What changed
+- Added Phase 20: Fix GHA workflow using manual pixi install instead of composite setup-pixi action
+- Added Phase 21: Fix bats PATH isolation for pixi-managed tools (use /usr/sbin:/sbin not /bin:/usr/bin)
+- Added Phase 22: Guard companion script calls for unit test temp-dir isolation
+- Added 3 new Failed Attempts rows covering the above patterns
+- Added 3 new When to Use triggers (items 21–23)
+- Updated description to include triggers (21)–(23)
+- Updated date to 2026-04-24
+
+### Why
+Myrmidons CI fix session (2026-04-24) uncovered three independent CI failure patterns:
+1. apply.yml was written before the .github/actions/setup-pixi composite action existed and
+   used manual pixi install that failed because pixi itself was never installed on the runner.
+2. bats tests for "tool missing" used PATH="/usr/bin:/bin" which pixi activation had already
+   extended with conda-forge paths — the tool was findable, making the assertion fail.
+3. validate-schemas.sh was updated to call validate-fleet-refs.sh at the end, but unit tests
+   copy only the main script to a temp dir — the companion exec failed, breaking 3 tests.
+
+### Previous version snapshot (v2.8.0)
+
+version: "2.8.0", date: 2026-04-23
+
+v2.8.0 added: just v1.14+ import keyword reservation breaking inline Python heredocs in justfile
+recipes (all Code Quality CI fails with "Unknown start of token ';'"); gitleaks-action@v2 requiring
+paid org license with wrong asset URL from uname -s/-m. Adds triggers (19)-(20) to description.
+
+---
+
+## v2.8.0 (2026-04-23)
+
+**Changed by:** HomericIntelligence ecosystem CI fix — just v1.14+ keyword conflict, gitleaks asset URL fix
+**Verification:** verified-ci
+
+### What changed
+- Added just v1.14+ `import` keyword reservation pattern — inline Python heredocs in justfile recipes break `just --list`, causing all Code Quality CI to fail
+- Added gitleaks-action@v2 unauthorized exit — HomericIntelligence org requires curl-based install with correct asset URL (lowercase OS, x64 arch mapping)
+- Updated description triggers (19) and (20)
+- Bumped version from 2.7.0 to 2.8.0
+
+### Why
+just v1.14+ treats `import` as a reserved keyword for justfile module imports. Any inline
+`python3 -c "\ import json..."` in a justfile recipe causes `just --list` to fail with
+"Unknown start of token ';'", breaking all Code Quality CI jobs that call `just --list`.
+gitleaks-action@v2 requires a paid GitHub org license — HomericIntelligence free-tier org
+accounts see "unauthorized" exit 1; the fix uses curl-based gitleaks install with the
+correct asset URL (uname -s → lowercase; uname -m x86_64 → x64).
+
+### Previous version snapshot (v2.7.0)
+
+version: "2.7.0", date: 2026-04-23
+
+v2.7.0 added Phase 0.8 (diagnose all-5-failing pattern), Phase 17 (C library FetchContent -Werror),
+Phase 18 (coverage Conan toolchain), Phase 19 (clang-format v18 vs v22 lambda). Verified on
+ProjectKeystone.
+
+---
+
 ## v2.7.0 (2026-04-23)
 
 **Changed by:** ProjectKeystone PR CI fix session — nats.c FetchContent -Werror, Conan toolchain coverage, clang-format v18 vs v22 lambda formatting
