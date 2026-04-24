@@ -1,5 +1,30 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.6.0 (2026-04-24)
+
+**Changed by:** ProjectKeystone batch PR rebase session (2026-04-24) — stale worktree diff auditing, CI top-level vs. per-job conclusion, mypy ConanFile annotations, Dependabot+fix circular dependency
+**Verification:** verified-ci
+
+### What changed
+- Added triggers (16)–(19) to description and "When to Use" bullets: (16) stale worktree pre-flight audit with diff check, (17) CI overall conclusion vs. per-job required checks, (18) mypy ConanFile `-> None` annotations, (19) Dependabot + fix PR same-file conflict resolution
+- Added 2 new Failed Attempts rows: (a) discarding stale worktree because commit message matched main (but diff introduced a regression); (b) reading top-level CI conclusion instead of per-job conclusions
+- Added 3 new Results & Parameters subsections: mypy+Conan2 ConanFile annotation pattern with code example; required vs. non-required CI checks with `gh api` query; pre-flight stale worktree audit decision matrix
+- Added 3 new entries to Parameter Findings table
+- Added ProjectKeystone second session row to Verified On table
+
+### Why
+During a ProjectKeystone session rebasing 11 open PRs, four new patterns emerged:
+(1) A stale worktree `/tmp/rebase-245` had a commit message identical to a commit on main but a DIFFERENT diff — it would have regressed main by removing the pip upgrade step and mypy job. Pure log inspection would have missed this. Rule: always `git -C <wt> diff origin/main -- .`, never trust message matching.
+(2) The CI overall run had `conclusion: failure` due to non-required `Pre-commit Checks` and `Python Quality (mypy)` jobs, but all 5 required branch-protection checks (`Benchmarks`, `Code Coverage`, `Test (asan)`, `Test (lsan)`, `Test (ubsan)`) passed. The PR queue could proceed. Rule: use `gh run view --json jobs` and cross-reference `required_status_checks.contexts`.
+(3) `conanfile.py` methods `requirements()`, `build_requirements()`, `generate()` all lacked `-> None` annotations, causing mypy `[no-untyped-def]`. Simple fix that recurs in any Conan 2 + mypy repo.
+(4) PR #381 (Dependabot conan bump) also needed the mypy fix from PR #384. Adding `-> None` directly to the Dependabot branch during rebase avoided a dependency chain.
+
+### Previous version (v2.5.0) snapshot
+
+(see v2.5.0 entry below)
+
+---
+
 ## v2.5.0 (2026-04-24)
 
 **Changed by:** ProjectHermes batch PR rebase session (2026-04-23/24) — branch-in-worktree blocks gh pr checkout, slowapi import-time rate limit capture, PR commit message vs. actual diff mismatch
