@@ -7,7 +7,7 @@ description: 'Classify, deduplicate, and batch-implement 15-30 low-difficulty Gi
   pattern for ALREADY-DONE verification and correct pre-filter order.'
 category: tooling
 date: 2026-04-23
-version: 1.2.0
+version: 1.3.0
 user-invocable: false
 verification: verified-ci
 history: batch-low-difficulty-issue-impl.history
@@ -23,6 +23,12 @@ history: batch-low-difficulty-issue-impl.history
 | **Outcome** | Verified: worktree isolation works correctly; correct pre-filter order; ALREADY-DONE grep must exclude worktrees |
 | **Verification** | verified-ci |
 | **History** | [changelog](./batch-low-difficulty-issue-impl.history) |
+
+### Session (2026-04-23) — HomericIntelligence/Odysseus 35-Issue Triage
+
+| Date | Objective | Outcome |
+|------|-----------|---------|
+| 2026-04-23 | Classify 35 open Odysseus issues, implement all SIMPLE ones as 1-issue-per-PR using Myrmidon swarm (Haiku agents with isolation=worktree) | 19 issues resolved (17 PRs + 2 ALREADY-DONE closures), 13 merged; remaining auto-merging. Meta-repo with 12 submodule symlinks. |
 
 ### Prior session (2026-03-06)
 
@@ -190,6 +196,10 @@ gh issue close NNNN --comment "Verified: already resolved. [pattern] not found i
 | Grepping for ALREADY-DONE without worktree exclusion (2026-04-12) | Plain `grep -rn pattern /repo/` to detect whether issue content still exists | Worktrees contain stale branch state — gave false "still present" for #1655 (nats-server) and #1671 (--cov refs) | Always pass `--exclude-dir=.worktrees --exclude-dir=.claude --exclude-dir=.git` when grepping for ALREADY-DONE verification |
 | Running verify-before-fix as part of Haiku classification (2026-04-12) | Expected Haiku to catch all ALREADY-DONE issues during the classification pass | Haiku missed 2 ALREADY-DONE issues (4.7% miss rate) where implementation was in a different location than the issue title implied | Always run verify-before-fix as a distinct separate phase after Haiku classification, not as part of it |
 | Haiku agents with `isolation: "worktree"` dispatched while L0 was on a non-main branch (`15-exporter-port-9101`) | Agents created worktrees and checked out branches, which inherited the L0's current branch as base | Worktrees start from the current HEAD of the base repo — not from `origin/main` — so each branch silently included 4-5 unrelated commits. GitHub refused rebase merge: "This branch can't be rebased." | Always verify L0 is on `main` before dispatching worktree agents, OR explicitly include `git fetch origin && git checkout -B <branch> origin/main` as step 1 in every agent prompt instead of relying on worktree inheritance |
+| PR number collision from parallel agents (2026-04-23) | Two parallel agents working in HomericIntelligence/Odysseus simultaneously both reported "PR #120" in their output | Agents report their own in-flight view of PR numbers, which can be stale when two agents race to create PRs in the same repo; both PRs existed but with different numbers | Always run `gh pr list --author "@me" --state all` after each wave to get ground-truth PR numbers — never trust agent-reported PR numbers |
+| Worktree creation failure on symlink-heavy repo (2026-04-23) | Agent for issue #58 failed during worktree creation with "Updating files: X%" timeout error | HomericIntelligence/Odysseus has 12 submodule symlinks; worktree checkout can time out on repos with many symlinks when many files must be resolved | Fallback: `git checkout -b <branch> origin/main` in main worktree directly, push the branch, then `git checkout <original-branch>` to return afterward |
+| Agent branch naming drift (2026-04-23) | Agent for issue #18 used branch `18-fix-runbook` instead of the specified `18-auto-impl` convention | Haiku agents sometimes derive branch names from the issue title rather than following the `<N>-auto-impl` convention when the convention is only mentioned as a note rather than an explicit command | Explicitly spell out the exact branch name in every agent prompt as an imperative: "Run: git checkout -b 18-auto-impl origin/main" — never rely on the agent interpreting a naming convention |
+| Two agents merging into same PR branch (2026-04-23) | Agents for #50 and #53 (both in Wave A1 parallel) both committed to branch `50-auto-impl` | Parallel worktree agents targeting similar branch names in the same repo; the worktrees may have been assigned the same directory, causing both agents to commit to the same branch | Use distinct, non-overlapping branch names per agent; verify each agent's branch with `gh pr list` after the wave; both issues still closed correctly but PR was messy |
 
 ## Results & Parameters
 
@@ -262,3 +272,4 @@ ALREADY-DONE if:
 |---------|---------|---------|
 | ProjectOdyssey | 165-issue backlog cleanup, March 2026 | [notes.md](../references/notes.md) |
 | ProjectScylla | 64-issue myrmidon swarm pass, 4 waves, 12 PRs (2026-04-12) | 11/12 PRs merged CI-green; worktree isolation worked correctly; verify-before-fix caught 3 ALREADY-DONE issues |
+| HomericIntelligence/Odysseus | 35-issue triage, 19 resolved (17 PRs + 2 ALREADY-DONE), meta-repo with 12 submodule symlinks (2026-04-23) | 0 git-op failures; worktree creation timeout on symlink-heavy repo (fallback to main worktree); parallel agents reported colliding PR numbers; Haiku branch naming drift to title-slug form |

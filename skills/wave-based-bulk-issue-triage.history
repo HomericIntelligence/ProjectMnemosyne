@@ -1,5 +1,20 @@
 # History: wave-based-bulk-issue-triage
 
+## v1.3.0 — 2026-04-23
+
+**Amendment**: Add PR-number-collision finding from HomericIntelligence/Odysseus 35-issue triage session.
+
+### Changes from v1.2.0
+- Bumped version to 1.3.0, updated date to 2026-04-23
+- **Phase 3 (Verify)**: Added CRITICAL callout — always verify PR numbers with `gh pr list --author "@me"` after each wave; never trust agent-reported PR numbers (two parallel agents both reported "PR #120")
+- **Failed Attempts**: Added PR number collision row (2026-04-23)
+- **Verified On**: Added HomericIntelligence/Odysseus 35-issue triage entry (2026-04-23)
+
+### Verification
+- verified-ci: 17 PRs created and auto-merging on HomericIntelligence/Odysseus (2026-04-23)
+
+---
+
 ## v1.2.0 — 2026-04-12
 
 **Amendment**: Add issue classification phase, wave-by-fix-type grouping, agent plan-mode
