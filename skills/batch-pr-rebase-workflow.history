@@ -1,5 +1,22 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.5.0 (2026-04-24)
+
+**Changed by:** ProjectHermes batch PR rebase session (2026-04-23/24) — branch-in-worktree blocks gh pr checkout, slowapi import-time rate limit capture, PR commit message vs. actual diff mismatch
+**Verification:** verified-ci
+
+### What changed
+- Added trigger (13) to "When to Use": a rebased PR's tests fail because the PR's own implementation was incomplete (commit message describes a feature but diff doesn't include a critical file)
+- Added 3 new Failed Attempts rows: `gh pr checkout` blocked by branch-in-worktree; `@limiter.limit()` evaluated at import time; PR commit message claimed feature but server route was never added to server.py
+- Added note to Phase 3.6 (Take-HEAD): check `git worktree list` before `gh pr checkout` to detect branch already checked out in an active worktree
+- Added `git checkout -B` parameter finding to Results section
+- Added ProjectHermes to Verified On table (second entry, CI-gated, 146-160 tests passing)
+
+### Why
+During ProjectHermes batch PR rebase session, three new failure patterns emerged. (1) `gh pr checkout` fails with "fatal: '<branch>' is already used by worktree" when the branch is checked out in a `.worktrees/<name>` worktree — fix is `git checkout -B <branch> origin/<branch>` or detect via `git worktree list` first. (2) slowapi's `@limiter.limit()` captures the rate limit string at import time, so test overrides of `settings.webhook_rate_limit` after import have no effect — fix is `@limiter.limit(lambda: get_settings().webhook_rate_limit)`. (3) PR 120 had commit message "Add a GET /events endpoint" and tests for it, but the server.py route was never in the diff — always verify `git show HEAD -- <key_file>` matches commit message claims.
+
+---
+
 ## v2.4.0 (2026-04-23)
 
 **Changed by:** ProjectKeystone 14-PR rebase wave — ADR-disabled targets, gitleaks curl pattern, PR #329 empty-commit recovery
