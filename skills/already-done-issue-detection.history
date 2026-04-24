@@ -1,12 +1,28 @@
+# already-done-issue-detection — History
+
+## v1.2.0 (2026-04-23)
+
+**Changed by:** ProjectArgus branch triage session (~20 branches analysed)
+**Verification:** verified-local
+
+### What changed
+- Added new Failed Attempts entry: SHA count misleads ALREADY-DONE detection when content was cherry-picked onto main with different SHAs
+- Added warning to Verified Workflow: content-level checks (grep/ls) are authoritative; commit count and even three-dot diffs can mislead when branches predate main's forward movement
+
+### Why
+During ProjectArgus cleanup, `git rev-list --count origin/main..<branch>` showed 1-5 "unique" commits on ~15 branches. An Explore agent classified them as needing PRs. In reality all content had been cherry-picked onto main (with different SHAs due to rebasing). Direct `grep`/`ls` checks confirmed all content was present on main. The correct check is always content-level, not SHA-level.
+
+### Previous version (v1.1.0) snapshot
+
+```markdown
 ---
 name: already-done-issue-detection
 description: "Detect GitHub issues that are already fixed before starting implementation. Use when: (1) starting a batch triage of 10+ open issues, (2) assigned an issue in a repo with active prior automation, (3) audit issues filed weeks/months ago, (4) issue title contains 'missing', 'add', 'fix' for a file or config value."
 category: tooling
 date: 2026-04-23
-version: 1.2.0
+version: 1.1.0
 user-invocable: false
 verification: verified-ci
-history: already-done-issue-detection.history
 tags: [triage, already-done, issue-classification, batch, audit]
 ---
 
@@ -20,7 +36,6 @@ tags: [triage, already-done, issue-classification, batch, audit]
 | **Objective** | Detect GitHub issues that are already fixed before spending time implementing them |
 | **Outcome** | Verified: 11/23 open issues (48%) were ALREADY-DONE in ProjectArgus — closed with evidence, no code written |
 | **Verification** | verified-ci |
-| **History** | [changelog](./already-done-issue-detection.history) |
 
 ## When to Use
 
@@ -59,25 +74,6 @@ gh repo view --json defaultBranchRef --jq .defaultBranchRef.name
 gh issue close <N> --repo <owner>/<repo> --comment "Already fixed: <file>:<line> shows <evidence>."
 ```
 
-**WARNING — SHA count is not reliable for ALREADY-DONE detection:**
-
-`git rev-list --count origin/main..<branch>` shows divergent commits even when content is identical, because cherry-pick/rebase creates new SHAs. Do NOT use commit count to determine if a branch is already merged.
-
-Instead, verify content directly:
-
-```bash
-# Check if the feature/file exists on current main
-ls <expected-file>                                    # file existence
-grep -n "<key-pattern>" <file>                        # specific value
-git log --oneline origin/main | grep -i "<keyword>"  # keyword in commit messages (approximate only)
-
-# Three-dot diff shows branch-only changes — but inspect carefully:
-# An empty three-dot diff = truly no new content
-# A non-empty three-dot diff = may still be already-done if the branch predates main
-git diff --name-only origin/main...<branch>
-# For each changed file: check if main already has the equivalent content
-```
-
 ### Detailed Steps
 
 1. **Run the batch signal check first** — before reading any issue body in depth, run the Quick Reference commands. Results often resolve 30-50% of audit issues immediately.
@@ -98,7 +94,6 @@ git diff --name-only origin/main...<branch>
 |---------|----------------|---------------|----------------|
 | Reading all issue bodies before checking current state | Opened each issue body to understand the fix needed before checking if it was already done | Wasted time reading detailed issue descriptions for changes already in the codebase | Run batch file-existence + grep checks BEFORE reading issue bodies |
 | Assuming audit issues are current | Treated all open audit issues as valid action items | Audit tools file issues against a snapshot — the codebase moves on while issues sit open | Audit issues have a half-life of ~2-4 weeks; always verify current state |
-| Using `git rev-list --count origin/main..<branch>` to confirm branches were ALREADY-DONE | Branches showed 1-5 "unique" commits by SHA count, so an Explore sub-agent classified them as needing PRs | The branches were created before main moved forward. Their content was cherry-picked onto main with different SHAs (different parent commits). SHA comparison shows divergence even when content is identical. | Use content-level checks (grep/ls on current main files, or `git diff origin/main...<branch>` three-dot diff + manual inspection) rather than SHA counts to confirm ALREADY-DONE status. Even three-dot diffs can mislead — the definitive check is: does the file/feature currently exist on main? |
 
 ## Results & Parameters
 
@@ -148,3 +143,10 @@ git diff --name-only origin/main...<branch>
 Issue #3847 asked for `assert_value_at` and `assert_all_values` calls to be added to shape operation tests. When the file was read, all required assertions were already present. PR #3845 (merged 2026-03-10) had already done the work. Resolution: found two `assert_numel` gaps in sibling tests and filled those instead — opened PR #4813.
 
 **Key signal**: `git log main..HEAD` returns empty + `git diff main -- <file>` returns nothing → issue is already done.
+```
+
+---
+
+## v1.1.0 (2026-04-23)
+
+**Initial version.**
