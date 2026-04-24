@@ -1,5 +1,42 @@
 # History: batch-low-difficulty-issue-impl
 
+## v1.4.0 (2026-04-23)
+
+**Changed by:** HomericIntelligence/AchaeanFleet 235-issue myrmidon swarm session (91 PRs merged, 202 issues closed, 24+ waves)
+**Verification:** verified-ci
+
+### What changed
+- Added AchaeanFleet 235-issue session summary row (largest session to date: 91 PRs, 202 issues, 24+ waves)
+- Added Phase 0: fix-test-failures branch pattern for pre-existing CI failures blocking swarm
+- Renamed LOW→EASY tier to match AchaeanFleet naming convention; added MEDIUM/HARD signals section
+- Added EASY queue exhaustion pattern (~76% of infra-only repo issues)
+- Extended Phase 3 with ci.yml conflict avoidance: batch ALL ci.yml issues into ONE agent per wave; use Sonnet
+- Extended Phase 6 worktree-safe grep to also exclude `.issue_implementer` directory
+- Added Phase 7: Wave Ground-Truth Reconciliation
+- Added Quick Reference subsection with wave sizing, model routing, and escape hatch reminders
+- Added 4 new Failed Attempts entries:
+  - Docker inline comment inside multi-line RUN block causes parse error
+  - Two agents dispatched to same ci.yml file in same wave → guaranteed merge conflict
+  - Trivy action SHA pinning with unverified/fabricated SHAs
+  - pixi.lock not committed after pixi.toml change
+- Added AchaeanFleet 235-issue session statistics table
+- Added Deferred MEDIUM/HARD Categories table (infra-repo pattern)
+- Added Haiku Prompt Template section (validated at scale in AchaeanFleet)
+- Added AchaeanFleet to Verified On table
+- Updated description to reference 200+ issue scale and Docker/ci.yml learnings
+
+### Why
+AchaeanFleet session (235 issues, 24+ waves, 91 PRs merged) revealed several new failure patterns and operational patterns not documented in prior sessions:
+1. Docker inline RUN comment parse error: `curl \ # comment` causes "unknown instruction" — move comment before RUN block
+2. ci.yml conflict: two agents touching same file in same wave always conflict — batch into one Sonnet agent
+3. Trivy SHA fabrication: agents generate plausible non-existent SHAs — verify before accepting
+4. pixi.lock staleness: any pixi.toml change requires `pixi install` + commit of both files
+5. EASY queue exhaustion at ~76%: remaining 24% are all MEDIUM/HARD (evaluate/investigate/arm64/Phase 6)
+6. fix-test-failures branch pattern: accumulate pre-existing CI fixes on one branch before swarm proceeds
+7. Haiku prompt requirements validated at scale: must include exact branch name as `git checkout -B` imperative + STOP escape hatches
+
+---
+
 ## v1.3.0 (2026-04-23)
 
 **Changed by:** HomericIntelligence/Odysseus 35-issue triage session (19 resolved: 17 PRs + 2 ALREADY-DONE closures)
