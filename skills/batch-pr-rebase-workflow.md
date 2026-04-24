@@ -1,9 +1,9 @@
 ---
 name: batch-pr-rebase-workflow
-description: "Use when: (1) many PRs show DIRTY/CONFLICTING/BLOCKED merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files), (6) delegating mass rebase to a Myrmidon swarm of parallel agents, (7) orphaned branches need PRs created and CI fixed, (8) a PR expanded a pre-commit hook scope causing self-catch failures on pre-existing violations, (9) small batch (2-10) stale branches need rebase with subsume-vs-integrate conflict analysis, (10) GitHub issue backlog (20+ issues) needs triage, batched PRs, and stale worktree/branch cleanup, (11) 10+ branches all conflict on the same 3-5 core files and are being merged serially — take HEAD (origin/main) for all conflicted core files since main already contains the union of all prior merged features, (12) main is advancing rapidly via auto-merge during the rebase session and PRs keep going DIRTY again — repeat rebase in waves until stable, (13) stale worktrees from a previous session are listed in `git worktree list` as unlinked — check before removing, they may already be detached with no git state to clean up, (14) a rebase 'succeeds' but the branch tip equals main HEAD — the commit was silently dropped as empty, recover the original SHA and rebase again keeping the PR's file additions"
+description: "Use when: (1) many PRs show DIRTY/CONFLICTING/BLOCKED merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files), (6) delegating mass rebase to a Myrmidon swarm of parallel agents, (7) orphaned branches need PRs created and CI fixed, (8) a PR expanded a pre-commit hook scope causing self-catch failures on pre-existing violations, (9) small batch (2-10) stale branches need rebase with subsume-vs-integrate conflict analysis, (10) GitHub issue backlog (20+ issues) needs triage, batched PRs, and stale worktree/branch cleanup, (11) 10+ branches all conflict on the same 3-5 core files and are being merged serially — take HEAD (origin/main) for all conflicted core files since main already contains the union of all prior merged features, (12) main is advancing rapidly via auto-merge during the rebase session and PRs keep going DIRTY again — repeat rebase in waves until stable, (13) stale worktrees from a previous session are listed in `git worktree list` as unlinked — check before removing, they may already be detached with no git state to clean up, (14) a rebase 'succeeds' but the branch tip equals main HEAD — the commit was silently dropped as empty, recover the original SHA and rebase again keeping the PR's file additions, (15) a rebased PR's tests fail because the PR's own implementation was incomplete — the commit message described a feature but the actual diff didn't include a critical file (e.g., server route for an endpoint the tests expect)"
 category: ci-cd
-date: 2026-04-23
-version: "2.4.0"
+date: 2026-04-24
+version: "2.5.0"
 user-invocable: false
 verification: verified-ci
 history: batch-pr-rebase-workflow.history
@@ -43,6 +43,7 @@ tags: [git, rebase, pr, parallel, myrmidon, wave, batch, conflict, ci, pixi, myp
 - Main is advancing rapidly via auto-merge during the rebase session — rebased PRs go DIRTY again; repeat in multiple rebase waves until stable
 - Stale worktrees from a previous session appear in `git worktree list` as unlinked — these are already detached and need no `git worktree remove` call; directories can be rm'd or ignored
 - A rebase "succeeds" but `git log --oneline origin/main..HEAD` shows nothing — commit was silently dropped as empty; recover original SHA and rebase again
+- A rebased PR's tests fail because the PR's own implementation was incomplete — the commit message described a feature (e.g., "Add GET /events endpoint") but the actual diff didn't include the key file (e.g., server.py route); verify with `git show HEAD -- <key_file>` before debugging tests
 
 **Common trigger phrases:**
 - "Fix these failing PRs", "Multiple PRs with DIRTY state"
@@ -333,6 +334,8 @@ done
 ```
 
 **Why `/tmp` workaround**: `git checkout HEAD -- <file>` is blocked by Safety Net ("overwrites uncommitted changes"). `git show HEAD:file > /tmp/f && cp /tmp/f file` achieves the same result without triggering the Safety Net hook.
+
+**Branch-in-worktree detection**: Before running `gh pr checkout <N>`, check `git worktree list` to detect if the target branch is already checked out in an active worktree (e.g., `.worktrees/<name>`). If so, `gh pr checkout` will fail with "fatal: '<branch>' is already used by worktree". Fix: use `git checkout -B <branch> origin/<branch>` in the main worktree instead — this force-resets the local branch to the remote ref and is safe even when a local tracking branch already exists (`-B` unlike `-b` doesn't fail if the branch exists).
 
 **Empty commits**: When a branch's commit is already fully incorporated in origin/main, `git rebase --continue` fails with "nothing to commit." Use `git rebase --skip` to drop that empty commit cleanly.
 
@@ -839,6 +842,9 @@ git fetch origin main && git pull --ff-only origin main
 | `git worktree remove --force` blocked by Safety Net hook | `for d in /tmp/pr-*; do git worktree remove --force "$d"; done` across stale /tmp worktrees from a previous session | Safety Net hook blocks `--force` flag on worktree remove as it could delete uncommitted changes | Run `git worktree list` first — stale /tmp worktrees from a prior session may already be unlinked (git dropped them); unlinked worktrees need no `git worktree remove` at all, just `rm -rf` the directory |
 | Rebase --continue drops commit as "empty" when conflict resolution matches HEAD | Resolved a CMakeLists.txt conflict by taking HEAD for the conflicted section, then `git rebase --continue` | When the resolution makes the file identical to HEAD (because the PR's only change was in a section already updated on main), git silently drops the commit as empty; rebase "succeeds" but branch tip equals main HEAD | After rebase, verify with `git log --oneline origin/main..HEAD`; if empty, the commit was dropped — recover the original SHA with `git checkout -b recover-<pr> <original-sha>` and rebase again, this time keeping the PR's unique non-conflicted additions |
 | `git push --force-with-lease origin "rebase-N:branch"` from detached HEAD in worktree | After rebase in detached HEAD mode (worktree created from `origin/branch` without checking out a named branch) | `--force-with-lease` compares against a local tracking ref that doesn't exist in detached HEAD mode | Use `git push origin "+HEAD:branch"` (the `+` prefix forces without lease check) — or better, run `git checkout -b rebase-N` before rebasing so the local branch exists |
+| `gh pr checkout <N>` when branch already checked out in another worktree | Used `gh pr checkout <N>` to switch to a branch for rebase, but the branch was checked out in `.worktrees/<name>` | Fails with "fatal: '<branch>' is already used by worktree" — git refuses to check out the same branch in two places simultaneously | Run `git worktree list` first to detect the conflict; if found, use `git checkout -B <branch> origin/<branch>` in the main worktree instead |
+| `@limiter.limit(get_settings().webhook_rate_limit)` evaluated at import time | Used slowapi's `@limiter.limit()` with a string value from settings for rate limiting; tests overrode `settings.webhook_rate_limit` after import | The rate limit string is captured at module import time (decorator evaluation), not at request time; test overrides after import have no effect — tests always see the original value (e.g., "60/minute") | Use `@limiter.limit(lambda: get_settings().webhook_rate_limit)` — slowapi accepts callables and evaluates them per-request, making the limit test-overridable |
+| PR commit message says feature was added but diff doesn't show it | PR 120 had commit message "Add a GET /events endpoint" and `tests/test_events_endpoint.py`, but the server.py route was never committed | `git show HEAD --stat` showed only publisher.py, registrar.py, and tests/* changed — not server.py; the test passed only after we added the route ourselves | Always verify `git show HEAD -- <key_file>` matches the commit message's claims before debugging test failures; incomplete implementations must be completed before the PR can merge |
 
 ## Results & Parameters
 
@@ -890,6 +896,12 @@ gh pr merge PR_NUM --auto --rebase
 | `shared/core/extensor.mojo` | Core struct modified by many PRs | Semantic merge: keep HEAD infra + branch new methods |
 | `CHANGELOG.md` | Sequential PRs add entries | Strict sequential ordering required |
 | `tests/**/__pycache__/*.pyc` | Binary file conflicts | Always `--theirs` |
+
+### Parameter Findings
+
+| Command / Pattern | Finding |
+|-------------------|---------|
+| `git checkout -B <branch> origin/<branch>` | Loop-safe and works even when a local tracking branch exists; `-B` force-resets the branch to the target ref, unlike `-b` which fails if the branch already exists. Preferred over `gh pr checkout` when the branch may be checked out in another worktree. |
 
 ### Branch Protection Gotchas
 
@@ -968,5 +980,6 @@ Branch conflicts with main on file X:
 | ProjectScylla | 21 PRs (17 conflicting), semantic + parallel agents | 16 MERGEABLE |
 | ProjectScylla | 9 PRs in 4 waves, sequential waves + Sonnet for src-layout | 6 merged, 2 superseded, 1 recreated |
 | ProjectHermes | ~30 open PRs, all touching server.py + config.py + publisher.py, batch take-HEAD script, 2026-04-22 | verified-local; all 30 branches pushed successfully, CI triggered |
+| ProjectHermes | Batch PR rebase session, 2026-04-23/24 — branch-in-worktree `gh pr checkout` failure, slowapi import-time rate limit, PR 120 incomplete implementation (missing server route) | verified-ci; 146-160 tests passing after each rebase |
 | AchaeanFleet | ~20 open PRs, rapidly advancing main via auto-merge, 2–3 rebase waves needed, 2026-04-23 | verified-ci; all PRs rebased and many auto-merged |
 | ProjectKeystone | 14 open PRs rebased onto fixed main, 5 CMakeLists.txt + security-scan.yml conflict resolutions, PR #329 recovered from silent empty-commit drop, 2026-04-23 | verified-ci |
