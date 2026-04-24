@@ -1,0 +1,176 @@
+# docker-buildx-multiarch-local-image — History
+
+## v1.1.0 (2026-04-24)
+
+**Changed by:** AchaeanFleet session — build-goose-multiarch CI job investigation
+**Verification:** verified-ci
+
+### What changed
+- CRITICAL CORRECTION: `oci-layout://` path must point to a directory, NOT a `.tar` tarball. Previous examples used `dest=/tmp/base.tar` + `oci-layout:///tmp/base.tar` which fails with "not a directory" error.
+- Updated Quick Reference, Detailed Steps, and template to use `dest=/tmp/base-<name>` (no extension) so buildx saves as OCI layout directory.
+- Updated all `build-contexts` references to `oci-layout:///tmp/base-<name>` (no `.tar`).
+- Added QEMU ordering requirement: `docker/setup-qemu-action` MUST precede `docker/setup-buildx-action`.
+- Added 3 new Failed Attempts rows documenting the directory/tarball distinction, QEMU ordering failure, and `|| true` masking pitfall.
+- Added "OCI Layout: Directory vs Tarball" section under Results & Parameters.
+- Extended "When to Use" with two new trigger conditions.
+- Extended Key Notes with directory/QEMU rules.
+
+### Why
+CI investigation on AchaeanFleet build-goose-multiarch job revealed that the previous v1.0.0 skill contained incorrect examples: using `type=oci,dest=/tmp/foo.tar` produces a tarball, and `oci-layout:///tmp/foo.tar` then fails at vessel build time with `not a directory`. The fix is to omit `.tar` so buildx writes an OCI layout directory. Additionally, QEMU must be set up before buildx for cross-arch emulation to be registered. The `|| true` on `RUN goose --version` masked arm64 binary failures when QEMU was absent — removing it once QEMU is confirmed present catches real failures.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: docker-buildx-multiarch-local-image
+description: "Use when: (1) a multi-arch Docker buildx job fails with 'pull access denied' for a locally-built base image, (2) chaining two buildx multi-arch builds where the second depends on the first's image, (3) using docker-container buildx driver and needing to pass a base image to a downstream build."
+category: ci-cd
+date: 2026-04-23
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [docker, buildx, multi-arch, oci, local-image, base-image, github-actions, ci]
+---
+
+# Docker Buildx Multi-Arch Local Image Chaining
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-23 |
+| **Objective** | Chain two multi-arch buildx builds without a registry when the second depends on the first |
+| **Outcome** | OCI tarball export + build-contexts reference pattern resolves pull access denied; CI passed |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- A GitHub Actions CI job builds a base image with buildx, then builds a vessel/child image that uses it
+- The vessel build fails with `pull access denied for <base-image>` or `not found`
+- You are using the default `docker-container` buildx driver (which does NOT share the Docker daemon image store)
+- You cannot or do not want to push the base image to a registry just to use it in the same CI job
+
+## Verified Workflow
+
+### Quick Reference
+
+```yaml
+# Step 1: Build base image and export as OCI tarball
+- name: Build base image
+  uses: docker/build-push-action@v6
+  with:
+    file: bases/Dockerfile.minimal
+    platforms: linux/amd64,linux/arm64
+    outputs: type=oci,dest=/tmp/base-minimal.tar
+    tags: achaean-base-minimal:latest
+
+# Step 2: Build vessel using build-contexts to reference the OCI tarball
+- name: Build vessel image
+  uses: docker/build-push-action@v6
+  with:
+    file: vessels/goose/Dockerfile
+    platforms: linux/amd64,linux/arm64
+    build-contexts: achaean-base-minimal:latest=oci-layout:///tmp/base-minimal.tar
+    build-args: BASE_IMAGE=achaean-base-minimal:latest
+    push: true
+    tags: ghcr.io/org/achaean-goose:latest
+```
+
+### Detailed Steps
+
+1. **Diagnose**: Confirm you are using the docker-container buildx driver:
+   ```yaml
+   - uses: docker/setup-buildx-action@v3
+     # No 'driver: docker' → defaults to docker-container driver
+   ```
+
+2. **Export base image as OCI tarball** instead of loading into daemon:
+   ```yaml
+   outputs: type=oci,dest=/tmp/base-<name>.tar
+   ```
+   The `docker` output type (`outputs: type=docker`) does not work with multi-arch builds.
+   Use `type=oci` for multi-arch OCI archives.
+
+3. **Reference the OCI tarball in the downstream build** using `build-contexts`:
+   ```yaml
+   build-contexts: <image-name>=oci-layout:///tmp/<tarball>.tar
+   ```
+   The image name in `build-contexts` must exactly match the `FROM` line in the Dockerfile
+   (or the `BASE_IMAGE` build-arg value).
+
+4. **Verify the vessel Dockerfile uses the build-arg**:
+   ```dockerfile
+   ARG BASE_IMAGE=achaean-base-minimal:latest
+   FROM ${BASE_IMAGE}
+   ```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Build base with `outputs: type=docker,dest=/tmp/base.tar` then load | Used docker output type thinking it would work like OCI | `type=docker` does not support multi-platform builds — build fails with "multiple platforms not supported" | Use `type=oci` for multi-arch OCI archives; `type=docker` is single-platform only |
+| Build base with `load: true`, reference by image name in vessel | Used `load: true` to push into daemon, then let vessel FROM pull from daemon | `docker-container` driver builds in an isolated container that does NOT share the host Docker daemon image store; vessel build cannot resolve the image | Either switch to `driver: docker` (loses multi-arch) or export via OCI tarball |
+| Switch buildx driver to `driver: docker` | Set `driver: docker` in setup-buildx-action | Works for single-arch, but `driver: docker` does NOT support multi-platform builds — `--platform linux/amd64,linux/arm64` fails | Only use `driver: docker` when multi-arch is not needed; for multi-arch you must use the tarball pattern |
+| Push base to registry, reference by registry URL | Built and pushed base to GHCR, then referenced in vessel FROM | Adds registry round-trip latency and requires push permissions for intermediate images; overly complex | OCI tarball via `/tmp` is simpler and faster for same-job chaining |
+
+## Results & Parameters
+
+### Driver Comparison
+
+| Driver | Multi-Arch | Shares Daemon Store | Best For |
+|--------|-----------|---------------------|----------|
+| `docker-container` (default) | Yes | No | Multi-arch builds, caching, push to registry |
+| `docker` | No | Yes | Single-arch builds, load into local daemon |
+
+### OCI Tarball Pattern Template
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+
+      - uses: docker/setup-buildx-action@v3
+        # Default docker-container driver
+
+      - name: Build base image (OCI tarball)
+        uses: docker/build-push-action@v6
+        with:
+          file: bases/Dockerfile.node
+          platforms: linux/amd64,linux/arm64
+          outputs: type=oci,dest=/tmp/base-node.tar
+          tags: achaean-base-node:latest
+
+      - name: Build vessel image
+        uses: docker/build-push-action@v6
+        with:
+          file: vessels/claude/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          build-contexts: achaean-base-node:latest=oci-layout:///tmp/base-node.tar
+          build-args: BASE_IMAGE=achaean-base-node:latest
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/achaean-claude:latest
+```
+
+### Key Notes
+
+- `oci-layout://` prefix is required in `build-contexts` value
+- The path after `oci-layout://` must be an absolute path (use `/tmp/` not `./tmp/`)
+- The image name key in `build-contexts` must exactly match what the Dockerfile's `FROM` resolves to
+- This works without any registry — base image stays local to the runner
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| AchaeanFleet | CI repair — goose multi-arch vessel build failing with pull access denied | 2026-04-23; OCI tarball pattern resolved the issue, CI passed |
+```
+
+---
+
+## v1.0.0 (2026-04-23)
+
+**Initial version.**
