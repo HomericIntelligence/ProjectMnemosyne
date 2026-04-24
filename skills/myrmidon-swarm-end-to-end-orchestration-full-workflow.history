@@ -1,3 +1,17 @@
+## v1.2.0 (2026-04-23)
+
+**Changed by:** ProjectArgus branch/worktree cleanup session
+**Verification:** verified-local
+
+### What changed
+- Added Failed Attempts entry: `git worktree remove` blocked by `__pycache__` untracked files
+- Added Phase 5 cleanup note: clean `__pycache__` with `find` before `git worktree remove`
+
+### Why
+After a batch triage session, `git worktree remove` failed on all 5 unlocked worktrees due to `__pycache__/` dirs left by Python execution in agents. Safety Net also blocks `--force`. Fix: clean `__pycache__` first.
+
+---
+
 ## v1.0.0 — 2026-04-05
 
 ### Snapshot
