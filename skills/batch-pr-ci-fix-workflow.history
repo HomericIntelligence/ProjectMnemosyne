@@ -1,5 +1,28 @@
 # batch-pr-ci-fix-workflow — Version History
 
+## v2.7.0 (2026-04-23)
+
+**Changed by:** ProjectKeystone PR CI fix session — nats.c FetchContent -Werror, Conan toolchain coverage, clang-format v18 vs v22 lambda formatting
+**Verification:** verified-ci
+
+### What changed
+- Added Phase 0.8: Diagnose "all 5 required checks FAILED" vs "Benchmarks/Coverage SKIPPED" pattern table
+- Added Phase 17: Fix C library via FetchContent failing with global -Werror (restrict to CXX using generator expressions)
+- Added Phase 18: Fix coverage script missing Conan toolchain (pass `-DCMAKE_TOOLCHAIN_FILE` when present)
+- Added Phase 19: Fix clang-format version mismatch (v18 vs v22) for multi-line lambda expressions in emplace_back
+- Added 4 new Failed Attempts rows covering the above failure patterns
+- Added 5 new When to Use trigger conditions
+- Updated description to include triggers (15)–(18)
+
+### Why
+ProjectKeystone PRs with nats.c (C library) via FetchContent caused all 5 required build-based
+CI checks to fail via global `-Werror` applying to C code. Code Quality passed because
+clang-format/clang-tidy only run on project C++ files. The diagnostic pattern (Quality PASS +
+all builds FAIL = build error, not test error) is now documented. Additionally: coverage script
+missing Conan toolchain and clang-format v18/v22 mismatch were discovered and fixed in the same session.
+
+---
+
 ## v2.6.0 (2026-04-19)
 
 **Changed by:** 2026-04-19 HomericIntelligence ecosystem PR fix pass (87 PRs, 8 repos)

@@ -1,9 +1,9 @@
 ---
 name: batch-pr-ci-fix-workflow
-description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves."
+description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern."
 category: ci-cd
-date: 2026-04-19
-version: "2.6.0"
+date: 2026-04-23
+version: "2.7.0"
 user-invocable: false
 verification: verified-ci
 history: batch-pr-ci-fix-workflow.history
@@ -34,6 +34,10 @@ tags: []
 - **[NEW v2.5.0]** A PR branch's content may already be in main (subsumed by rebase) — detect before rebasing
 - **[NEW v2.5.0]** Required checks fail non-deterministically on every main run (JIT flakiness) blocking all PRs
 - **[NEW v2.6.0]** `git restore --theirs` or `git checkout --theirs` is blocked by Safety Net during automated rebase waves (use Python subprocess)
+- **[NEW v2.7.0]** A C library added via FetchContent (e.g., nats.c) causes all sanitizer CI jobs to fail via global `-Werror` flag (`unused parameter` in C code)
+- **[NEW v2.7.0]** Coverage script (`generate_coverage.sh`) fails with missing GTest because Conan toolchain was not passed to cmake
+- **[NEW v2.7.0]** clang-format version mismatch (local v22 vs CI v18) causes formatting failures on multi-line lambda expressions in `emplace_back`
+- **[NEW v2.7.0]** Diagnosing "all 5 required checks FAILED" vs "Benchmarks + Coverage SKIPPED" pattern to find root cause quickly
 
 ## Verified Workflow
 
@@ -598,6 +602,146 @@ not the patch. Old paths must be rewritten to match the new layout.
 main, `git rebase` silently drops them (detects identical patch content even with different message).
 This is expected — don't worry about "missing" commits that were already upstream.
 
+### Phase 0.8: [NEW v2.7.0] Diagnose "All 5 Required Checks FAILED" vs Skipped Pattern
+
+When all required checks fail simultaneously in a C++ project using Conan + sanitizer builds,
+the failure cause determines the fix path:
+
+| Pattern | Diagnosis | Fix Path |
+|---------|-----------|----------|
+| Code Quality = PASS, all 5 build-based checks = FAIL | **Build failure** (compiler error, not test failure) | Read build log for compiler errors |
+| Benchmarks + Code Coverage = SKIPPED, others = FAIL | **Code Quality failing** | Fix clang-format / clang-tidy first |
+| All 5 = FAIL, Code Quality = FAIL | **Code Quality + build failures** | Fix Code Quality first, reassess |
+
+```bash
+# Check which checks passed vs failed vs skipped
+gh pr checks <pr-number>
+
+# If Code Quality passes but build checks fail — read the build log for compiler errors
+gh run view <run-id> --log-failed | head -100
+# Look for: "error: unused parameter" or "error: ..." in _deps/ or src/
+```
+
+**Key insight**: If Code Quality (clang-format/clang-tidy) passes but ALL build-based jobs fail
+(Test asan, lsan, ubsan, Benchmarks, Coverage), the root cause is a **build failure**, not a
+test failure. The build error is usually in a dependency (e.g., `_deps/natsc-src/`) that inherits
+the project's global `-Werror` flags.
+
+### Phase 17: [NEW v2.7.0] Fix C Library via FetchContent Failing with -Werror
+
+When a C library (e.g., nats.c) is added via CMake `FetchContent_Declare`, it inherits the project's
+global warning flags including `-Werror`. This causes CI failures even in code the PR never touched.
+
+**Symptoms**:
+- Code Quality (clang-format) passes
+- All 5 build-based checks fail with errors like:
+  ```
+  _deps/natsc-src/src/asynccb.c:32:38: error: unused parameter 'scPtr' [-Werror,-Wunused-parameter]
+  ```
+- The error is in a `_deps/` path, not in project source
+
+**Fix**: Restrict C++ warning flags to C++ compilation units only (do NOT apply to C code):
+
+```cmake
+# WRONG — applies to all languages including C (fetched C libraries inherit this)
+add_compile_options(-Wall -Wextra -Werror -Wpedantic)
+
+# CORRECT — C++ only; C libraries via FetchContent are unaffected
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wall>
+                    $<$<COMPILE_LANGUAGE:CXX>:-Wextra>
+                    $<$<COMPILE_LANGUAGE:CXX>:-Werror>
+                    $<$<COMPILE_LANGUAGE:CXX>:-Wpedantic>)
+```
+
+**Workflow**: Fix must land on `main` first (root cause fix), then rebase all PR branches:
+
+```bash
+# 1. Create fix branch from main
+git checkout -b fix/restrict-warning-flags-to-cxx main
+
+# 2. Edit CMakeLists.txt to use $<$<COMPILE_LANGUAGE:CXX>:...> generator expressions
+# 3. Verify locally with one sanitizer preset
+cmake --preset asan && cmake --build --preset asan
+
+# 4. Push and create PR
+git push -u origin HEAD
+gh pr create --title "fix(build): restrict -Werror flags to C++ only" ...
+gh pr merge <fix-pr> --auto --rebase
+
+# 5. Wait for fix to merge to main, then rebase all affected PR branches
+git fetch origin main
+for branch in <affected-branches>; do
+  git checkout $branch
+  git rebase origin/main
+  git push --force-with-lease origin $branch
+  gh pr merge <pr-number> --auto --rebase
+done
+```
+
+### Phase 18: [NEW v2.7.0] Fix Coverage Script Missing Conan Toolchain
+
+When `scripts/generate_coverage.sh` runs cmake fresh without the Conan toolchain, dependencies
+like GTest (provided by Conan) are not found, causing:
+```
+Could NOT find GTest (missing: GTEST_LIBRARY GTEST_INCLUDE_DIR)
+```
+
+**Root cause**: The coverage script calls cmake directly without `-DCMAKE_TOOLCHAIN_FILE`, so
+Conan-provided packages are invisible to cmake.
+
+**Fix**: Check for the Conan toolchain at its standard location and pass it if found:
+
+```bash
+# In scripts/generate_coverage.sh — BEFORE:
+cmake -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug -G Ninja "$PROJECT_ROOT"
+
+# AFTER:
+CONAN_TOOLCHAIN="$PROJECT_ROOT/build/conan-deps/conan_toolchain.cmake"
+CMAKE_ARGS=(-DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug -G Ninja)
+if [[ -f "$CONAN_TOOLCHAIN" ]]; then
+    CMAKE_ARGS+=(-DCMAKE_TOOLCHAIN_FILE="$CONAN_TOOLCHAIN")
+fi
+cmake "${CMAKE_ARGS[@]}" "$PROJECT_ROOT"
+```
+
+**Prerequisite**: The Conan toolchain must be generated before running coverage:
+```bash
+# Ensure Conan deps are installed first
+cd "$PROJECT_ROOT"
+conan install . --output-folder=build/conan-deps --build=missing -s build_type=Debug
+```
+
+### Phase 19: [NEW v2.7.0] Fix clang-format Version Mismatch (v18 vs v22) in Lambda Expressions
+
+When a project uses clang-format locally (v22+) but CI uses an older version (v18), multi-line
+lambda expressions inside function calls like `emplace_back` can format differently:
+
+**v22 accepts** (single line — fits within column limit):
+```cpp
+threads.emplace_back([this, i]() { state_.recordFailure("error_" + std::to_string(i)); });
+```
+
+**v18 (CI) requires** (lambda body on a new line when expression is long):
+```cpp
+threads.emplace_back([this, i]() {
+    state_.recordFailure("error_" + std::to_string(i));
+});
+```
+
+**Safe pattern that BOTH versions accept**:
+```cpp
+threads.emplace_back(
+    [this, i]() { state_.recordFailure("error_" + std::to_string(i)); });
+```
+
+**Detection**: Code Quality check fails with a diff showing the lambda was reformatted, even
+though your local `clang-format` accepts it.
+
+**Fix strategy**:
+1. Check CI's clang-format version: `grep -r "clang-format" .github/workflows/ | grep -i version`
+2. If version differs from local, use the safe multi-line form for all `emplace_back` lambdas
+3. Test locally with the CI version: `docker run --rm -v .:/src silkeh/clang:18 clang-format --dry-run -Werror /src/file.cpp`
+
 ### Phase 10: Verify
 
 ```bash
@@ -708,6 +852,10 @@ GIT_EDITOR=true git rebase --continue
 | `git restore --theirs <files>` during rebase | Used to resolve shell-script conflicts in Myrmidons rebase wave | Safety Net blocks `git restore` when it discards uncommitted changes (built-in rule cannot be whitelisted via custom config) | Use Python subprocess instead: `subprocess.run(['git', 'show', 'MERGE_HEAD:<path>'], capture_output=True)` + write to file |
 | `git checkout --theirs <file1> <file2>` during rebase | Multi-file form to resolve conflicts in AchaeanFleet rebase | Safety Net blocks multi-positional-arg `git checkout` (suggests using `git switch` or `git restore`) | Single-file form may work; multi-file form blocked. Use Python for all conflict resolution in automated rebase agents |
 | Adding Safety Net custom allow-rule for `git restore --theirs` | Tried to create `.safety-net.json` to whitelist the rebase conflict commands | Safety Net custom rules can only ADD restrictions, not bypass built-in protections. Built-in `git restore` and `git checkout --theirs` blocks cannot be overridden | Workaround: Python subprocess to write MERGE_HEAD content directly |
+| Global `add_compile_options(-Werror)` with C library FetchContent | Added nats.c via FetchContent without restricting `-Werror` to C++ | C source files in `_deps/natsc-src/` inherit the project's global `-Werror` flag, causing `unused parameter` errors in third-party code | Use `$<$<COMPILE_LANGUAGE:CXX>:-Werror>` generator expressions to restrict warning flags to C++ only |
+| Diagnosing all-5-failing as test failures | When all 5 required checks failed (asan/lsan/ubsan + Benchmarks + Coverage), assumed tests were broken | Code Quality passed, indicating the failure was a build error (C library `-Werror`), not a test failure | If Code Quality passes but all build-based checks fail, read the build log for compiler errors first |
+| `generate_coverage.sh` cmake without Conan toolchain | Coverage script ran `cmake -DENABLE_COVERAGE=ON ...` without `-DCMAKE_TOOLCHAIN_FILE` | GTest (Conan-provided) not found — `Could NOT find GTest` error | Pass `-DCMAKE_TOOLCHAIN_FILE=build/conan-deps/conan_toolchain.cmake` when toolchain exists |
+| Writing lambdas for clang-format v22 locally when CI uses v18 | `threads.emplace_back([this, i]() { state_.recordFailure(...); });` formatted for v22 | clang-format v18 (CI) formats long `emplace_back` lambdas differently — Code Quality check fails | Use multi-line form: `threads.emplace_back(\n    [this, i]() { ... });` accepted by both versions |
 
 ## Results & Parameters
 
@@ -808,3 +956,4 @@ fn __hash__[H: Hasher](self, mut hasher: H):
 | ProjectHephaestus | PR #269 dependabot setup-pixi bump unblocked via main-branch `check-yaml` fix (#270); PR #268 6-file rebase in worktree with pixi.lock regeneration, 2026-04-12 | v2.3.0 additions |
 | ProjectOdyssey | 12 open PRs: 9 rebased + auto-merge armed, 2 subsumed PRs closed (#5224, #5221), 1 compile fix (#5238 raises propagation), 1 pixi dep-sync fix (#5241 feature.dev scanning), 2026-04-12 | v2.5.0 additions |
 | HomericIntelligence ecosystem | 87 PRs across 8 repos: AchaeanFleet (50), Myrmidons (45), 6 others. Python conflict resolution used throughout. 2026-04-19 | v2.6.0 |
+| ProjectKeystone | Multiple PRs: nats.c FetchContent -Werror fix (restrict to CXX), coverage script Conan toolchain fix, clang-format v18 vs v22 lambda formatting fix. All 5 required checks restored to PASS, PRs set to auto-merge. 2026-04-23 | v2.7.0 |
