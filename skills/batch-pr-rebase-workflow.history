@@ -1,5 +1,24 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.3.0 (2026-04-23)
+
+**Changed by:** AchaeanFleet CI repair session — ~20 open PRs, rapidly advancing main via auto-merge
+**Verification:** verified-ci
+
+### What changed
+- Added `(12)` trigger to description: "main is advancing rapidly via auto-merge during rebase session"
+- Added new "When to Use" bullet for continuously-advancing main scenario
+- Added Phase 14: Continuously-Advancing Main (Rebase Loop Until Stable) — full loop script with `git checkout -B` pattern, subsumption detection, and `git show origin/main:path > path` technique
+- Renamed old Phase 14 to Phase 15 (Post-Rebase Verification)
+- Added 2 new Failed Attempts rows: single-wave assumption failure; `git checkout -b` vs `-B` in loops
+- Added AchaeanFleet to Verified On table
+- Added `~20 PRs, main advancing rapidly` row to Session Scale Reference
+
+### Why
+Rebasing ~20 open PRs in AchaeanFleet where PRs kept auto-merging during the rebase session, advancing main faster than individual rebases completed. PRs that were just successfully rebased went DIRTY again minutes later. The fix was a loop: rebase all DIRTY, wait 60s for auto-merges to land, re-fetch, repeat until stable. Also documented the `git checkout -B` (capital B) pattern which is safe to call in a loop without "branch already exists" failures.
+
+---
+
 ## v2.2.0 (2026-04-22)
 
 **Changed by:** ProjectHermes ~30 PR bulk rebase session (all PRs touched same 3 core files)
