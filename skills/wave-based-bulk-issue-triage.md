@@ -5,8 +5,8 @@ description: "Fix 5+ independent GitHub issues in parallel waves using Task isol
   \ bulk gh issue create via myrmidon swarm (plain Agent calls, no worktrees needed).\
   \ Includes pre-fix classification phase using parallel Explore agents."
 category: architecture
-date: 2026-04-12
-version: 1.2.0
+date: 2026-04-23
+version: 1.3.0
 user-invocable: false
 verification: verified-local
 history: wave-based-bulk-issue-triage.history
@@ -155,6 +155,8 @@ After all agents return:
 gh pr list --author "@me" --state open
 ```
 
+**CRITICAL — Always verify PR numbers from `gh pr list`, never from agent output**: Two parallel agents working in the same repo can both report creating "PR #120" when they actually created different PRs. The agent-reported number is stale. Use `gh pr list` as the ground truth after every wave.
+
 Check each PR has:
 - ✅ Auto-merge enabled
 - ✅ CI queued or passing
@@ -199,6 +201,7 @@ bypass the planning reflex.
 | Body quoting (2026-04-06) | Single-quoted `--body '...'` strings with apostrophes/single quotes embedded | Shell interprets `'` inside `'...'` as end of string, breaking the command | Use `--body-file /tmp/issue-body.md` for any body containing single quotes or apostrophes |
 | Plan-mode text (2026-04-11) | Adding "complete all steps end-to-end" and "Do NOT stop and ask for help" to Sonnet agents with `isolation="worktree"` | Agents ignored these instructions and still paused to present plans | Use Haiku model + imperative `Run:` command form; Haiku over-plans far less than Sonnet |
 | Descriptive step phrasing (2026-04-11) | Writing agent prompts with "Steps:", descriptive phrases like "Make the fix", "Run the tests" | Context-heavy descriptive prompts trigger Sonnet's planning reflex — agents present a plan and stop | Rewrite prompts as explicit `Run: <shell command>` lines with no "Steps:" or "Plan:" sections |
+| PR number collision from parallel agents (2026-04-23) | Two parallel agents working in HomericIntelligence/Odysseus both reported creating "PR #120" — treated as the ground-truth PR number | Agents report their own in-flight view of PR creation results; when two agents race to create PRs in the same repo the numbers can collide or be stale in the agent's output | Always run `gh pr list --author "@me" --state all` after each wave to get ground-truth PR numbers — never trust agent-reported PR numbers |
 ## Results & Parameters
 
 ### Myrmidon Swarm Pattern for Bulk Issue Filing (2026-04-06)
@@ -340,3 +343,4 @@ Add a comment in the plan when excluding:
 | ProjectScylla | Wave 6+7, PRs #1051-#1059 | [notes.md](references/notes.md) |
 | HomericIntelligence/Odysseus | Bulk issue filing, issues #99-#109 (2026-04-06) | 11 issues, 3 waves (5+5+1 Haiku agents), ~30s total |
 | HomericIntelligence/ProjectOdyssey | 66-issue classification + 28-issue fix (2026-04-11) | 3 parallel Explore classifiers, 4 fix-type waves, 28 PRs created |
+| HomericIntelligence/Odysseus | 35-issue triage, 19 resolved (2026-04-23) | Meta-repo with 12 submodule symlinks; parallel agents reported colliding PR numbers — verified with `gh pr list` after each wave |

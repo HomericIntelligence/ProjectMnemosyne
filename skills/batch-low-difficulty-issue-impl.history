@@ -1,5 +1,28 @@
 # History: batch-low-difficulty-issue-impl
 
+## v1.3.0 (2026-04-23)
+
+**Changed by:** HomericIntelligence/Odysseus 35-issue triage session (19 resolved: 17 PRs + 2 ALREADY-DONE closures)
+**Verification:** verified-ci
+
+### What changed
+- Added session summary row for HomericIntelligence/Odysseus 35-issue triage (2026-04-23)
+- Added 4 new Failed Attempts entries:
+  - PR number collision from parallel agents (stale agent-reported PR numbers)
+  - Worktree creation failure on symlink-heavy repo (12 submodules timeout)
+  - Agent branch naming drift (Haiku using title-slug instead of `<N>-auto-impl`)
+  - Two agents merging into same PR branch (parallel worktree race condition)
+- Added HomericIntelligence/Odysseus to Verified On table
+
+### Why
+Odysseus 35-issue myrmidon swarm session revealed three new failure patterns not documented in prior sessions:
+1. Parallel agents in the same repo both reported "PR #120" — stale numbers in agent output. `gh pr list` is ground truth.
+2. Worktree creation timed out on Odysseus (12 submodule symlinks) — fallback to main worktree + manual branch return worked.
+3. Haiku agent for #18 used `18-fix-runbook` instead of `18-auto-impl` — must spell out exact branch name in Run: step.
+4. Agents for #50 and #53 both committed to `50-auto-impl` in parallel — both issues closed but PR was messy.
+
+---
+
 ## v1.2.0 (2026-04-23)
 
 **Changed by:** ProjectArgus issue triage session (23 issues triaged, 3 PRs merged)
