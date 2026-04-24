@@ -2,10 +2,11 @@
 name: myrmidon-swarm-end-to-end-orchestration-full-workflow
 description: "Full end-to-end L0 commander pattern for complex myrmidon orchestration sessions. Use when: (1) task spans 3+ phases (cleanup + rebase + merge + CI + knowledge), (2) 10+ sub-tasks with mixed agent tiers required, (3) cross-repo work requiring /advise and /learn coordination, (4) feedback loops and decision gates are needed before committing to destructive operations, (5) auto-merge assumption cannot be made (CI may fail)."
 category: architecture
-date: 2026-04-12
-version: "1.1.0"
+date: 2026-04-23
+version: "1.2.0"
 user-invocable: false
 verification: verified-ci
+history: myrmidon-swarm-end-to-end-orchestration-full-workflow.history
 tags: [myrmidon, orchestration, l0-commander, multi-phase, planning, wave, ci, auto-merge, feedback-loop, end-to-end, knowledge-capture]
 ---
 # Myrmidon Swarm: End-to-End Orchestration Full Workflow
@@ -219,6 +220,17 @@ for i in $(seq 1 30); do
 done
 ```
 
+**Worktree removal — handle __pycache__:**
+
+Agent worktrees that executed Python accumulate `__pycache__/` dirs that block `git worktree remove`:
+
+```bash
+# Clean __pycache__ first, then remove normally (no --force needed)
+find .claude/worktrees/ -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+git worktree remove .claude/worktrees/agent-<id>
+git worktree prune
+```
+
 **Common CI failure patterns in ProjectHephaestus:**
 
 | Failure | Symptom | Fix |
@@ -364,6 +376,7 @@ Total session (typical):                                         ~1.5-3 hours
 | Parallel skill capture in main conversation | Tried to create all 3 skills in the main L0 conversation thread | Each skill creation involves worktree creation, file writing, validation, commit, push — sequential in main thread takes 45+ minutes | Delegate skill capture to parallel sub-agents: one per skill, run concurrently |
 | Not re-enabling auto-merge after CI fix | Fix agent pushed commit to fix pre-commit failure, declared "done" | GitHub silently cleared auto-merge on the force-push; PR sat open indefinitely | After every push to a PR branch, explicitly re-run `gh pr merge --auto --rebase <N>` and verify the response |
 | Skipping tracking issue creation | Session ended after Phase 6 skill PRs merged; no tracking issue created on target repo | Session results were only in `results.md` artifact file and agent memory — not searchable via `gh issue list` in future sessions | Always create a `chore(triage): YYYY-MM-DD issue classification pass` tracking issue on the target repo as Phase 7 (final step) |
+| `git worktree remove <path>` on agent worktrees after session | Ran `git worktree remove` on 5 unlocked worktrees containing only `__pycache__/` as untracked content | Fails with "contains modified or untracked files" — git treats `__pycache__/` as untracked even though it is irrelevant | Clean `__pycache__` first: `find .claude/worktrees/agent-* -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null` then `git worktree remove`. Alternatively ask user to approve `--force` (Safety Net blocks it without explicit permission). |
 
 ## Results & Parameters
 
