@@ -1,9 +1,9 @@
 ---
 name: batch-pr-rebase-workflow
-description: "Use when: (1) many PRs show DIRTY/CONFLICTING/BLOCKED merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files), (6) delegating mass rebase to a Myrmidon swarm of parallel agents, (7) orphaned branches need PRs created and CI fixed, (8) a PR expanded a pre-commit hook scope causing self-catch failures on pre-existing violations, (9) small batch (2-10) stale branches need rebase with subsume-vs-integrate conflict analysis, (10) GitHub issue backlog (20+ issues) needs triage, batched PRs, and stale worktree/branch cleanup, (11) 10+ branches all conflict on the same 3-5 core files and are being merged serially — take HEAD (origin/main) for all conflicted core files since main already contains the union of all prior merged features"
+description: "Use when: (1) many PRs show DIRTY/CONFLICTING/BLOCKED merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files), (6) delegating mass rebase to a Myrmidon swarm of parallel agents, (7) orphaned branches need PRs created and CI fixed, (8) a PR expanded a pre-commit hook scope causing self-catch failures on pre-existing violations, (9) small batch (2-10) stale branches need rebase with subsume-vs-integrate conflict analysis, (10) GitHub issue backlog (20+ issues) needs triage, batched PRs, and stale worktree/branch cleanup, (11) 10+ branches all conflict on the same 3-5 core files and are being merged serially — take HEAD (origin/main) for all conflicted core files since main already contains the union of all prior merged features, (12) main is advancing rapidly via auto-merge during the rebase session and PRs keep going DIRTY again — repeat rebase in waves until stable"
 category: ci-cd
-date: 2026-04-22
-version: "2.2.0"
+date: 2026-04-23
+version: "2.3.0"
 user-invocable: false
 verification: verified-ci
 history: batch-pr-rebase-workflow.history
@@ -40,6 +40,7 @@ tags: [git, rebase, pr, parallel, myrmidon, wave, batch, conflict, ci, pixi, myp
 - ruff S101 flag on `assert x is not None` guards
 - pytest `caplog` fixture failing to capture logs from loggers with `propagate = False`
 - 10+ open PRs all modify the same 3–5 core source files and are being merged sequentially (take HEAD for those files — main already has the union)
+- Main is advancing rapidly via auto-merge during the rebase session — rebased PRs go DIRTY again; repeat in multiple rebase waves until stable
 
 **Common trigger phrases:**
 - "Fix these failing PRs", "Multiple PRs with DIRTY state"
@@ -658,7 +659,71 @@ git log --oneline main | head -20
 gh issue close <number> --comment "Already resolved on main: <evidence>"
 ```
 
-### Phase 14: Post-Rebase Verification
+### Phase 14: Continuously-Advancing Main (Rebase Loop Until Stable)
+
+**Trigger**: PRs auto-merge rapidly during the rebase session, advancing main faster than individual rebases complete. PRs that were just rebased go DIRTY again minutes later.
+
+**Pattern that works**:
+
+```bash
+# Rebase all DIRTY PRs in batch
+# Some auto-merge immediately, advancing main
+# New PRs become DIRTY — rebase again
+# Repeat until no more DIRTY PRs remain
+
+while true; do
+  git fetch origin main
+
+  # Check for DIRTY PRs
+  DIRTY=$(gh pr list --state open --json number,mergeStateStatus --limit 200 \
+    | python3 -c "
+import json,sys
+prs=json.load(sys.stdin)
+dirty=[str(p['number']) for p in prs if p['mergeStateStatus'] in ('DIRTY','CONFLICTING')]
+print(' '.join(dirty))
+")
+
+  if [ -z "$DIRTY" ]; then
+    echo "All PRs clean — done."
+    break
+  fi
+
+  echo "DIRTY PRs: $DIRTY — rebasing..."
+
+  for pr in $DIRTY; do
+    branch=$(gh pr view "$pr" --json headRefName --jq '.headRefName')
+    tmp="tmp-rebase-$pr"
+    git checkout -B "$tmp" "origin/$branch" 2>/dev/null || { echo "SKIP $pr"; continue; }
+    if git rebase origin/main; then
+      git push --force-with-lease origin "$tmp:$branch"
+      gh pr merge "$pr" --auto --rebase 2>/dev/null || true
+    else
+      git rebase --abort
+      echo "CONFLICT #$pr — needs manual resolution"
+    fi
+    git switch main 2>/dev/null || true
+    git branch -d "$tmp" 2>/dev/null || true
+  done
+
+  echo "Waiting 60s for auto-merges to land before re-checking..."
+  sleep 60
+done
+```
+
+**Key technique — `git checkout -B`**: Creates the branch if it doesn't exist, OR resets it to the target if it does. Safe to call repeatedly across loop iterations without branch accumulation.
+
+**Key technique — subsumption detection**: When a PR's content is already on main (fully subsumed by prior merges), force-push still works. GitHub shows the PR as "0 commits ahead of main" and closes it automatically via auto-merge.
+
+**Key technique — taking main's version in subsumption conflicts**:
+```bash
+# When the PR's file is already superseded by main:
+git show origin/main:path/to/file > path/to/file
+git add path/to/file
+```
+
+**Expected convergence**: With 20 PRs and rapid auto-merge, typically 2–3 rebase waves are needed before all PRs are clean.
+
+### Phase 15: Post-Rebase Verification
 
 ```bash
 git remote prune origin
@@ -742,6 +807,8 @@ git fetch origin main && git pull --ff-only origin main
 | `git checkout HEAD -- <file>` in batch rebase loop | Used to take HEAD version of conflicted file in an automated rebase script | Safety Net hook blocks it: "overwrites uncommitted changes in working tree" | Use `git show HEAD:"$f" > /tmp/_f && cp /tmp/_f "$f" && git add "$f"` instead — same result, avoids Safety Net |
 | Delegating conflict resolution to sub-agents (same-file conflicts) | Launched Myrmidon sub-agents to resolve conflicts when 30 PRs all touched the same 3 files | Sub-agents hit the same Safety Net blocks on `git checkout HEAD --` and couldn't complete; manual resolution via Edit tool was slower for many identical conflicts | Use the batch take-HEAD script (Phase 3.6) directly — no delegation needed when all conflicts are "stale copy vs. main's evolved copy" |
 | Trying to merge branch's shared-file changes when main is a superset | Attempted semantic merge of `server.py` conflict when branch added a feature | origin/main already had the feature from a prior serial merge; manual merge wasted time and risked introducing stale code | Check `git diff origin/main...origin/BRANCH -- <shared-file>` first; if the diff is empty, take HEAD and move on |
+| Assuming one rebase wave is sufficient when main advances rapidly | Rebased all 20 PRs in one pass, declared done | Other PRs auto-merged during the rebase wave, advancing main and making just-rebased PRs DIRTY again | Use a loop: rebase all DIRTY, wait ~60s for auto-merges, re-fetch, check again; repeat until zero DIRTY PRs remain |
+| Using `git checkout -b` in rebase loop | Created new temp branch per PR in each loop iteration | `git checkout -b` fails with "branch already exists" on the 2nd loop iteration | Use `git checkout -B` (capital B) — creates the branch if absent, resets to target if it exists; safe for repeated calls |
 
 ## Results & Parameters
 
@@ -821,6 +888,7 @@ gh pr merge PR_NUM --auto --rebase
 | 15-30 PRs | Myrmidon 2-3 waves, 5 agents/wave | ~45-90 min |
 | 10-30 PRs | Batch rebase script + semantic conflict resolution | 1-2 hours |
 | ~30 PRs, all touching same 3-5 files | Take-HEAD batch script (Phase 3.6) | ~30-60 min |
+| ~20 PRs, main advancing rapidly | Rebase loop until stable (Phase 14) | 2–3 waves, ~30-45 min total |
 | 30-160 PRs | Mass rebase script + wave execution | 2-4 hours |
 | 130+ PRs with 800+ CI jobs | Cancel CI + cherry-pick consolidation | Eliminates ~$2000+ compute |
 
@@ -868,3 +936,4 @@ Branch conflicts with main on file X:
 | ProjectScylla | 21 PRs (17 conflicting), semantic + parallel agents | 16 MERGEABLE |
 | ProjectScylla | 9 PRs in 4 waves, sequential waves + Sonnet for src-layout | 6 merged, 2 superseded, 1 recreated |
 | ProjectHermes | ~30 open PRs, all touching server.py + config.py + publisher.py, batch take-HEAD script, 2026-04-22 | verified-local; all 30 branches pushed successfully, CI triggered |
+| AchaeanFleet | ~20 open PRs, rapidly advancing main via auto-merge, 2–3 rebase waves needed, 2026-04-23 | verified-ci; all PRs rebased and many auto-merged |
