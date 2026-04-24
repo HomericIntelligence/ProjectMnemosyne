@@ -1,5 +1,25 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.4.0 (2026-04-23)
+
+**Changed by:** ProjectKeystone 14-PR rebase wave — ADR-disabled targets, gitleaks curl pattern, PR #329 empty-commit recovery
+**Verification:** verified-ci
+
+### What changed
+- Added `(13)` and `(14)` trigger conditions to description: stale unlinked worktrees from a previous session; rebase "succeeds" but branch tip equals main HEAD (silent empty-commit drop)
+- Added 2 new "When to Use" bullets for both trigger conditions
+- Added 3 new Failed Attempts rows: `git worktree remove --force` blocked by Safety Net; rebase --continue silently dropping commit as empty when resolution matches HEAD; `--force-with-lease` failing from detached HEAD in worktree
+- Added 2 new conflict resolution patterns to Phase 5: CMakeLists.txt ADR conflicts (PR adds source files, main disables test sources); security-scan.yml gitleaks conflict (PR wants action, main uses curl)
+- Added both patterns to the Phase 5 conflict resolution table
+- Added Safety Net workaround entry for `git worktree remove --force`
+- Added ProjectKeystone to Verified On table
+- Added 14-PR scale reference to Session Scale Reference table
+
+### Why
+Rebasing 14 open PRs in ProjectKeystone after a major ADR (library extraction) disabled many CMakeLists.txt test targets. Key discoveries: (1) stale /tmp worktrees from a prior session may already be unlinked in git — no `git worktree remove` needed; (2) a successful rebase can silently drop a commit as empty when the conflict resolution makes the file identical to HEAD — always verify with `git log --oneline origin/main..HEAD`; (3) `--force-with-lease` doesn't work from detached HEAD — use `git push origin "+HEAD:branch"` instead. The empty-commit drop was caught on PR #329, recovered by checking out the original SHA and rebasing again.
+
+---
+
 ## v2.3.0 (2026-04-23)
 
 **Changed by:** AchaeanFleet CI repair session — ~20 open PRs, rapidly advancing main via auto-merge
