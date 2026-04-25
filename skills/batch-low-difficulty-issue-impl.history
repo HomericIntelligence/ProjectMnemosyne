@@ -1,5 +1,56 @@
 # History: batch-low-difficulty-issue-impl
 
+## v1.6.0 (2026-04-25)
+
+**Changed by:** ProjectProteus 43-issue myrmidon swarm session (2026-04-25)
+**Verification:** verified-local
+
+### What changed
+- Added ProjectProteus 43-issue swarm session summary row
+- Added 3 new Failed Attempts entries:
+  - `npm ci` without lockfile: CI fails immediately if `package-lock.json` absent; use `npm install` until lockfile committed
+  - Auto-merge disabled: `gh pr merge --auto` silently fails on repos with `autoMergeAllowed: false`; check before launch
+  - Pre-commit hooks absent: including pre-commit steps in agent prompts for repos without `.pre-commit-config.yaml` errors or no-ops; check before generating prompts
+- Added ProjectProteus 43-issue session statistics table
+- Added new "When to Use" condition: pre-launch repo-capability checks (autoMergeAllowed, lockfile, pre-commit config)
+- Added HomericIntelligence/ProjectProteus to Verified On table
+- Updated description to mention pre-launch repo-capability checks
+- Bumped version 1.5.0 → 1.6.0, updated date to 2026-04-25
+- Bumped verification from verified-ci to verified-local (patterns confirmed in live session; CI for skill PR pending)
+
+### Why
+ProjectProteus 43-issue swarm (2026-04-25) revealed three repo-capability failure modes that weren't covered:
+1. `npm ci` without lockfile: agents added `npm ci` to CI jobs, but the repo had no `package-lock.json`. CI failed instantly. Fix: check for lockfile before using `npm ci`; fall back to `npm install` with a TODO comment.
+2. Auto-merge disabled: all agent prompts included `gh pr merge --auto --rebase`. ProjectProteus had auto-merge disabled at the repo settings level, leaving PRs open. Fix: check `gh repo view --json autoMergeAllowed` before launch; remove `--auto` from prompts if false.
+3. Pre-commit hooks absent: agent prompts ran `pre-commit run --files ...` but `.pre-commit-config.yaml` didn't exist. Fix: check for file existence before generating prompts; skip pre-commit steps if absent.
+
+### Previous version (v1.5.0) snapshot
+
+<details>
+<summary>v1.5.0 frontmatter + overview</summary>
+
+```yaml
+name: batch-low-difficulty-issue-impl
+description: 'Classify, deduplicate, and batch-implement GitHub issues in a large swarm
+  session (24+ waves, 200+ issues). Use when: (1) a large backlog of open issues needs
+  triage, (2) many issues are pure doc/text or infra-only changes, (3) duplicate issues
+  need closing before implementation. Includes worktree-safe grep pattern for ALREADY-DONE
+  verification, correct pre-filter order, ci.yml conflict avoidance, EASY queue exhaustion
+  detection, Docker inline comment parse error pattern, and parallel-agent add/add rebase
+  conflict resolution when multiple agents create the same package independently.'
+category: tooling
+date: 2026-04-23
+version: 1.5.0
+user-invocable: false
+verification: verified-ci
+history: batch-low-difficulty-issue-impl.history
+```
+
+Key state at v1.5.0: Added validate_model dead-parameter pattern and parallel package add/add rebase conflict resolution. Verified on ProjectScylla 15-issue medium/high swarm (5 waves, 12 PRs merged). No pre-launch repo-capability checks documented.
+</details>
+
+---
+
 ## v1.5.0 (2026-04-23)
 
 **Changed by:** ProjectScylla 15-issue medium/high myrmidon swarm session (5 waves, 12 PRs merged)
