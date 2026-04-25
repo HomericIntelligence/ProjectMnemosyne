@@ -1,5 +1,25 @@
 # History: wave-based-bulk-issue-triage
 
+## v1.4.0 (2026-04-25)
+**Changed by:** ProjectTelemachy myrmidon-swarm pass (2026-04-25)
+**Verification:** verified-local
+
+### What changed
+- Added simultaneous Wave 0+A+B dispatch pattern
+- Added multi-issue file bundle guidance for same-file conflicts
+- Added note on silent already-done absorption being acceptable
+- Added Verified On row: 9 Haiku agents, 0 plan-mode stalls
+
+### Why
+Prior versions implied Wave 0 must complete before A+B. ProjectTelemachy showed
+they can all dispatch simultaneously (zero file overlap). Also clarified that
+bundling conflicting same-file issues is better than splitting across waves.
+
+### Previous version (v1.3.0) snapshot
+[see git history]
+
+---
+
 ## v1.3.0 — 2026-04-23
 
 **Amendment**: Add PR-number-collision finding from HomericIntelligence/Odysseus 35-issue triage session.

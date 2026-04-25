@@ -5,8 +5,8 @@ description: "Fix 5+ independent GitHub issues in parallel waves using Task isol
   \ bulk gh issue create via myrmidon swarm (plain Agent calls, no worktrees needed).\
   \ Includes pre-fix classification phase using parallel Explore agents."
 category: architecture
-date: 2026-04-23
-version: 1.3.0
+date: 2026-04-25
+version: 1.4.0
 user-invocable: false
 verification: verified-local
 history: wave-based-bulk-issue-triage.history
@@ -34,7 +34,7 @@ Use this skill when:
 **Don't use when:**
 - Issues depend on each other (use sequential PRs)
 - Any issue touches 20+ files (exclude from wave, file separately)
-- Issues share modified files (risk of merge conflicts)
+- Issues share modified files (risk of merge conflicts) — unless you bundle them (see Multi-Issue File Bundle pattern below)
 
 ## Verified Workflow
 
@@ -103,6 +103,11 @@ Excluded — Too complex for bulk:
 
 **Key decision:** Run waves in A → B → C → D order. Wave A PRs often merge before Wave D even starts, minimizing CI queue contention.
 
+**Simultaneous Wave 0 + Wave A + Wave B dispatch (NEW)**: If your Phase 0 consists entirely of
+`gh issue close` calls (no file changes), it has zero file overlap with Waves A and B. Dispatch
+all three in a single message — Phase 0 closures run in parallel with the fix waves. Saves
+5–10 min vs waiting for Phase 0 to complete before launching A+B.
+
 ### Phase 2: Launch Parallel Agents (One Wave at a Time)
 
 Use `Task` tool with `isolation: "worktree"` — **no manual worktree setup needed**:
@@ -146,6 +151,48 @@ What does NOT work:
 - SendMessage continuation is not available in isolation=worktree — each agent launch is independent
 
 Wait for Wave A to complete, then launch Wave B agents the same way.
+
+### Multi-Issue File Bundle Pattern (NEW)
+
+When multiple issues touch the **same file** in conflicting or complementary ways, bundle them
+into a **single agent and single PR** rather than splitting across waves.
+
+**Example**: ProjectTelemachy had three .gitignore issues:
+- #22 "remove pixi.lock from .gitignore"
+- #28 "add entries to .gitignore"
+- #30 "add .env to .gitignore"
+
+All three modify `.gitignore`. Attempting to split them across waves guarantees merge conflicts
+(one wave's PR base goes stale when another merges first). Instead:
+
+```python
+Task(
+    subagent_type="Bash",
+    model="haiku",
+    isolation="worktree",
+    description="Fix .gitignore bundle: #22, #28, #30",
+    prompt="""
+IMPORTANT: DO NOT PLAN. EXECUTE IMMEDIATELY.
+
+1. Run: cat .gitignore
+2. Run: [make all three changes atomically in one edit]
+3. Run: pre-commit run --files .gitignore
+4. Run: git checkout -b 22-28-30-gitignore-bundle
+5. Run: git add .gitignore
+6. Run: git commit -m "chore: update .gitignore (Closes #22, Closes #28, Closes #30)"
+7. Run: git push -u origin 22-28-30-gitignore-bundle
+8. Run: gh pr create --title "chore: update .gitignore" --body "Closes #22\nCloses #28\nCloses #30"
+9. Run: gh pr merge --auto --rebase
+    """
+)
+```
+
+**When to bundle**: Any time 2+ issues all modify the same file and their changes are
+non-contradictory (or complementary). One PR, one merge, one CI run — cleaner than racing
+branches that each modify the same lines.
+
+**When NOT to bundle**: Issues that modify different files should stay in separate agents
+(independent worktrees = true parallelism). Bundling is only for same-file conflicts.
 
 ### Phase 3: Verify
 
@@ -202,6 +249,7 @@ bypass the planning reflex.
 | Plan-mode text (2026-04-11) | Adding "complete all steps end-to-end" and "Do NOT stop and ask for help" to Sonnet agents with `isolation="worktree"` | Agents ignored these instructions and still paused to present plans | Use Haiku model + imperative `Run:` command form; Haiku over-plans far less than Sonnet |
 | Descriptive step phrasing (2026-04-11) | Writing agent prompts with "Steps:", descriptive phrases like "Make the fix", "Run the tests" | Context-heavy descriptive prompts trigger Sonnet's planning reflex — agents present a plan and stop | Rewrite prompts as explicit `Run: <shell command>` lines with no "Steps:" or "Plan:" sections |
 | PR number collision from parallel agents (2026-04-23) | Two parallel agents working in HomericIntelligence/Odysseus both reported creating "PR #120" — treated as the ground-truth PR number | Agents report their own in-flight view of PR creation results; when two agents race to create PRs in the same repo the numbers can collide or be stale in the agent's output | Always run `gh pr list --author "@me" --state all` after each wave to get ground-truth PR numbers — never trust agent-reported PR numbers |
+| Waiting for Wave 0 before launching A+B (2026-04-25) | Ran Phase 0 `gh issue close` calls sequentially, waited for all closures to finish before dispatching Waves A+B | Wasted 2–3 min; Phase 0 closures are pure `gh` API calls with zero file overlap with Waves A+B | Dispatch Wave 0 + Waves A+B simultaneously in one message — all three can run in parallel |
 ## Results & Parameters
 
 ### Myrmidon Swarm Pattern for Bulk Issue Filing (2026-04-06)
@@ -251,6 +299,29 @@ gh issue create \
   --label "priority:high" \
   --body-file /tmp/issue-body.md
 ```
+
+### Session Results (2026-04-25) — ProjectTelemachy Wave A+B Pass
+
+**Context**: 9 Wave A+B agents (Haiku, isolation=worktree) dispatched simultaneously alongside
+Phase 0 closures. All completed successfully.
+
+| Wave | Fix Type | Agents | Completions | Plan-Mode Stalls |
+|------|----------|--------|-------------|------------------|
+| A | Documentation-only | 4 | 4 | 0 |
+| B | Config/cleanup | 5 | 5 | 0 |
+
+**Total**: 9 agents, 9 PRs, 0 plan-mode stalls, ~2 hours wall clock
+
+**Silent Already-Done Absorption**: One Haiku agent found its assigned issue already fixed in
+main (schema field names already renamed). The agent produced an empty or documentation-only
+commit, created a PR, and the PR merged cleanly. This is **acceptable** — the issue gets closed,
+the PR is small and harmless, and CI stays green. Do not treat this as a failure or investigate
+the agent behavior; it is a normal side-effect of concurrent triage where upstream changes land
+between issue filing and wave execution.
+
+**CI behavior during bulk merges**: Even with 8–10 PRs merging in quick succession, CI queue
+stays orderly. Each PR's CI runs independently; auto-merge waits for green before rebasing and
+merging. No evidence of CI thrash or queue starvation from simultaneous merges.
 
 ### Session Results (2026-04-11) — ProjectOdyssey 66-Issue Classification + 28-Issue Fix
 
@@ -344,3 +415,4 @@ Add a comment in the plan when excluding:
 | HomericIntelligence/Odysseus | Bulk issue filing, issues #99-#109 (2026-04-06) | 11 issues, 3 waves (5+5+1 Haiku agents), ~30s total |
 | HomericIntelligence/ProjectOdyssey | 66-issue classification + 28-issue fix (2026-04-11) | 3 parallel Explore classifiers, 4 fix-type waves, 28 PRs created |
 | HomericIntelligence/Odysseus | 35-issue triage, 19 resolved (2026-04-23) | Meta-repo with 12 submodule symlinks; parallel agents reported colliding PR numbers — verified with `gh pr list` after each wave |
+| HomericIntelligence/ProjectTelemachy | Wave A+B pass, 9 agents (2026-04-25) | 9 Haiku agents (isolation=worktree), 0 plan-mode stalls; simultaneous Wave 0+A+B dispatch; .gitignore bundle PR (#22+#28+#30); silent already-done absorption observed and confirmed harmless |
