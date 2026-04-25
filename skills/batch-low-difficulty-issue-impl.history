@@ -1,5 +1,47 @@
 # History: batch-low-difficulty-issue-impl
 
+## v1.7.0 (2026-04-24)
+
+**Changed by:** Myrmidons shellcheck-warnings myrmidon swarm session (2026-04-24)
+**Verification:** verified-ci
+
+### What changed
+- Added Myrmidons 2026-04-24 session summary row (shellcheck-warnings swarm)
+- Added Phase 0.5: Pre-Swarm Existing-PR Audit section with close-before-delegate pattern
+- Added hot-file serialization note to Phase 3 (Group by Target File)
+- Added 2 new "When to Use" conditions: hot-file serialization (#8) and pre-swarm PR audit (#9)
+- Added 3 new Failed Attempts entries:
+  - Launching without checking existing PRs: 8 existing PRs discovered after dispatch
+  - Two agents touching apply.sh in same sub-wave: merge conflict guaranteed
+  - Delegating to agent when issue already had a PR: duplicate agent noise
+- Added Myrmidons session statistics table
+- Added HomericIntelligence/Myrmidons to Verified On table
+- Updated description to mention hot-file serialization and pre-swarm PR audit
+- Bumped version 1.6.0 → 1.7.0, updated date to 2026-04-24
+
+### Why
+Myrmidons shellcheck-warnings swarm (2026-04-24) revealed two new failure modes:
+1. Launching without checking existing PRs: 8 open PRs already existed; agents duplicated work. Fix: always audit `gh pr list --state open` before any dispatch.
+2. Hot-file conflicts: `scripts/apply.sh` and `scripts/lib/reconcile.sh` are touched by many issues. Two agents in the same sub-wave caused a merge conflict. Fix: hot-file serialization — at most 1 agent per hot file per sub-wave.
+
+### Previous version (v1.6.0) snapshot
+
+<details>
+<summary>v1.6.0 frontmatter</summary>
+
+```yaml
+name: batch-low-difficulty-issue-impl
+description: '...(pre-launch repo-capability checks)...'
+version: 1.6.0
+date: 2026-04-25
+verification: verified-local
+```
+
+Key state at v1.6.0: Added pre-launch repo-capability checks (autoMergeAllowed, lockfile, pre-commit config). No hot-file serialization or pre-swarm PR audit documented.
+</details>
+
+---
+
 ## v1.6.0 (2026-04-25)
 
 **Changed by:** ProjectProteus 43-issue myrmidon swarm session (2026-04-25)
