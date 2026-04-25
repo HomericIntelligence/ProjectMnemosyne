@@ -63,7 +63,7 @@ jobs:
           echo "Declared: $declared, Actual: $actual"
           [ "$declared" -eq "$actual" ] || { echo "Plugin count mismatch"; exit 1; }
 
-  security/dependency-scan:
+  security-dependency-scan:
     name: security/dependency-scan
     runs-on: ubuntu-latest
     steps:
@@ -80,7 +80,7 @@ jobs:
             pip-audit
           fi
 
-  security/secrets-scan:
+  security-secrets-scan:
     name: security/secrets-scan
     runs-on: ubuntu-latest
     steps:
@@ -149,7 +149,7 @@ jobs:
             --schemafile https://json.schemastore.org/github-workflow \
             .github/workflows/*.yml
 
-  deps/version-sync:
+  deps-version-sync:
     name: deps/version-sync
     runs-on: ubuntu-latest
     steps:
