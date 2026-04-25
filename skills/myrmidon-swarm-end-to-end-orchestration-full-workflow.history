@@ -1,3 +1,31 @@
+## v1.4.0 (2026-04-25)
+
+**Changed by:** ProjectTelemachy myrmidon-swarm pass (2026-04-25)
+**Verification:** verified-local
+
+### What changed
+- Added deterministic classification rule (skip classifier swarm when inventory has file evidence)
+- Added per-file mega-agent rule in Phase 2 plan design
+- Added parallel Plan agent + Explore agents optimization note to Phase 2
+- Added HARD issues enumeration note and PR title length note to Phase 7
+- Added session stats: 57→6 issues, 17 PRs, ~2.5h wall clock (ProjectTelemachy table)
+- Added Verified On row: ProjectTelemachy 2026-04-25
+- Added Failed Attempts entry: running Phase 4 classifier swarm when inventory already has file evidence
+- Added mega-agent candidate bash commands to Quick Reference
+- Bumped version 1.3.0 → 1.4.0
+
+### Why
+Running 3 classifier agents after 3 inventory agents had already returned file paths was redundant.
+Classification from file-contention counts is deterministic and faster. Per-file mega-agents
+collapsed 12 planned waves to 2 (Wave D: 3 parallel + Wave E: 1 solo), saving ~90 min. Simultaneous
+Phase 0 + Wave A + Wave B dispatch (12 agents in one message) also saved a full phase of serial
+execution.
+
+### Previous version (v1.3.0) snapshot
+[see git history]
+
+---
+
 ## v1.3.0 (2026-04-25)
 
 **Changed by:** ProjectProteus 43-issue myrmidon swarm session
