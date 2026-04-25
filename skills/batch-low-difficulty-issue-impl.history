@@ -1,5 +1,78 @@
 # History: batch-low-difficulty-issue-impl
 
+## v1.8.0 (2026-04-25)
+
+**Changed by:** ProjectKeystone 180-issue C++20 myrmidon swarm (7 EASY waves + 9 MEDIUM waves, 2026-04-25)
+**Verification:** verified-local
+
+### What changed
+- Added ProjectKeystone 2026-04-25 session summary row (C++20 swarm, 180 issues)
+- Added 7 new Failed Attempts entries:
+  - Conan + cnats: missing libssl-dev in Dockerfile builder stage blocks CMake build
+  - TSan + concurrentqueue: fundamental incompatibility (false positives) — classify as HARD
+  - enable_shared_from_this diamond inheritance when base class already inherits it
+  - Two agents both modifying CMakeLists.txt in the same wave despite grouping rules
+  - Adding @pytest.mark.asyncio decorators when asyncio_mode='auto' in pyproject.toml
+  - Trusting agent-reported PR numbers (wrong in 3/16 waves)
+  - pixi.lock commit requirement confirmed again (pre-existing entry, reconfirmed)
+- Added new "C++20/Conan/pixi Project-Specific Guards" subsection in Results & Parameters with 6-item checklist and ready-to-run bash commands
+- Added "When to Use" condition #10: C++20/CMake/Conan projects trigger C++20 guard checks
+- Added ProjectKeystone session statistics table
+- Added HomericIntelligence/ProjectKeystone to Verified On table
+- Updated description to mention C++20/Conan/pixi-specific guards
+- Updated Overview outcome to mention C++20 guards
+- Bumped version 1.7.0 → 1.8.0, updated date to 2026-04-25
+
+### Why
+ProjectKeystone 180-issue swarm (2026-04-25) revealed 7 C++20/Conan/pixi-specific failure
+modes not previously captured:
+1. libssl-dev missing in Dockerfile builder stage: Conan resolves transitive OpenSSL deps
+   silently; system headers still needed by compiler. Non-obvious from conanfile.py.
+2. TSan + concurrentqueue: lock-free atomics trigger TSan false positives by design.
+   Issues requiring TSan + concurrentqueue must be HARD — no agent fix possible without
+   replacing the dependency.
+3. enable_shared_from_this diamond inheritance: derived class added it when base already
+   had it; caused "ambiguous base class" compile error. Must grep hierarchy first.
+4. CMakeLists.txt double-agent: despite same-file grouping rule, two agents both modified
+   CMakeLists.txt (SPDX + spdlog looked unrelated). Rule extended: CMakeLists.txt is a
+   hard anchor like ci.yml — one agent per wave, always.
+5. asyncio_mode='auto' + @pytest.mark.asyncio: redundant decorator when auto mode active
+   causes deprecation warnings. Must check pyproject.toml before writing tests.
+6. Agent PR number unreliability: 3/16 waves had wrong reported numbers. gh pr list is
+   the only reliable ground truth after each wave.
+
+### Previous version (v1.7.0) snapshot
+
+<details>
+<summary>v1.7.0 frontmatter</summary>
+
+```yaml
+name: batch-low-difficulty-issue-impl
+description: 'Classify, deduplicate, and batch-implement GitHub issues in a large swarm
+  session (24+ waves, 200+ issues). Use when: (1) a large backlog of open issues needs
+  triage, (2) many issues are pure doc/text or infra-only changes, (3) duplicate issues
+  need closing before implementation. Includes worktree-safe grep pattern for ALREADY-DONE
+  verification, correct pre-filter order, ci.yml conflict avoidance, EASY queue exhaustion
+  detection, Docker inline comment parse error pattern, parallel-agent add/add rebase
+  conflict resolution when multiple agents create the same package independently,
+  pre-launch repo-capability checks (autoMergeAllowed, lockfile, pre-commit config),
+  hot-file serialization for shared scripts (apply.sh/reconcile.sh), pre-swarm
+  existing-PR audit, and close-before-delegate pattern.'
+category: tooling
+date: 2026-04-24
+version: 1.7.0
+user-invocable: false
+verification: verified-local
+history: batch-low-difficulty-issue-impl.history
+```
+
+Key state at v1.7.0: Added Myrmidons shellcheck-warnings session; hot-file serialization
+for apply.sh/reconcile.sh; pre-swarm existing-PR audit (Phase 0.5); close-before-delegate
+pattern. No C++20/Conan/pixi-specific guards documented.
+</details>
+
+---
+
 ## v1.7.0 (2026-04-24)
 
 **Changed by:** Myrmidons shellcheck-warnings myrmidon swarm session (2026-04-24)
