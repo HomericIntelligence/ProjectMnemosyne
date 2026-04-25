@@ -1,5 +1,31 @@
 # parallel-issue-wave-execution — History
 
+## v2.4.0 (2026-04-25)
+**Changed by:** ProjectTelemachy myrmidon-swarm pass (2026-04-25)
+**Verification:** verified-local
+
+### What changed
+- Added "Per-File Mega-Agent Pattern" subsection to Verified Workflow
+- Added contention threshold rule (1-2 / 3-5 / 6+ issues per file)
+- Added cross-file ordering rule for dependent mega-agents
+- Added "File Contention Analysis Script" to Results & Parameters Quick Reference
+- Added Failed Attempts entry for strict-per-wave on high-contention repos
+- Added 2 new Wave Sizing rows for ProjectTelemachy (Wave D + Wave E mega-agents)
+- Added ProjectTelemachy Verified On row
+- Updated Overview outcome to include ProjectTelemachy results
+- Bumped version from 2.3.0 to 2.4.0
+
+### Why
+ProjectTelemachy had executor.py (11 issues), models.py (8), cli.py (9), agamemnon_client.py (6).
+The strict "1 issue per wave" approach would have required 12+ waves. Per-file mega-agents
+collapsed this to Wave D (3 parallel Sonnet agents) + Wave E (1 solo executor agent).
+17 PRs merged. Pattern is worth preserving explicitly.
+
+### Previous version (v2.3.0) snapshot
+[see git history]
+
+---
+
 ## v2.3.0 (2026-04-25)
 
 **Changed by:** ProjectKeystone myrmidon swarm run (180 issues, 7 EASY waves + 9 MEDIUM waves)

@@ -7,7 +7,7 @@ description: "Pattern for implementing 20-35 GitHub issues in parallel waves usi
   \ on main before launching waves."
 category: tooling
 date: 2026-04-25
-version: 2.3.0
+version: 2.4.0
 user-invocable: false
 verification: verified-local
 history: parallel-issue-wave-execution.history
@@ -27,9 +27,9 @@ tags:
 | Field | Value |
 |-------|-------|
 | Date | 2026-04-25 |
-| Version | 2.3.0 |
+| Version | 2.4.0 |
 | Objective | Implement 20-35 issues per repo in parallel waves using myrmidon swarm agents, with pre-verification and CI-first strategy |
-| Outcome | SUCCESS — verified across 3 repos and 180 issues: 35 PRs (ProjectScylla), 14 PRs (ProjectMnemosyne), ~34 PRs + 12 closures (ProjectKeystone 180-issue swarm) |
+| Outcome | SUCCESS — verified across 4 repos and 237 issues: 35 PRs (ProjectScylla), 14 PRs (ProjectMnemosyne), ~34 PRs + 12 closures (ProjectKeystone 180-issue swarm), 17 PRs (ProjectTelemachy per-file mega-agents) |
 
 ## When to Use
 
@@ -234,6 +234,41 @@ GIT_EDITOR=true git rebase --continue   # NOTE: --no-edit does NOT exist for git
 git push --force-with-lease origin <branch>
 gh pr merge <PR-number> --auto --rebase  # MUST re-enable — force-push clears it silently
 ```
+
+### Per-File Mega-Agent Pattern (for 6+ issues per file)
+
+When file contention analysis shows a single source file touched by 6+ issues,
+strict per-wave single-issue agents waste waves — use a Sonnet mega-agent per file:
+
+**Threshold:**
+- 1-2 issues per file → single-issue agents (normal)
+- 3-5 issues per file → mini-bundle (2 issues per agent)
+- 6+ issues per file → per-file mega-agent (Sonnet, all issues in one PR)
+
+**Agent assignment (example from ProjectTelemachy):**
+- models.py (8 issues) → 1 Sonnet agent, branch `bundle-models-14-19-20-21-51`
+- agamemnon_client.py (6 issues) → 1 Sonnet agent, branch `bundle-client-11-12-23-24-34`
+- cli.py (3 issues) → 1 Sonnet agent, branch `bundle-cli-15-18-43`
+- executor.py (11 issues, also touches cli.py + config.py) → runs ALONE in next wave after others merge
+
+**Result:** 12 planned waves collapsed to Wave D (3 parallel) + Wave E (1 solo) = 2 waves.
+
+**Cross-file ordering rule:**
+If mega-agent X touches files also owned by mega-agents Y and Z, run Y+Z first (parallel),
+then X alone after Y+Z merge. X rebases onto merged Y+Z before starting.
+
+**Branch naming for mega-agents:** `bundle-<file>-<issue1>-<issue2>-...`
+e.g. `bundle-models-14-19-20-21-51`
+
+**PR body for mega-agents:** one `Closes #N` per issue in the set.
+
+**Waves A+B can launch simultaneously with Wave 0:**
+Phase 0 (`gh issue close` for already-done issues) and Waves A+B (docs/config) have zero
+file overlap and can all be dispatched in a single message. Saves ~5 min wall clock.
+
+**Issue bundles for shared config files:**
+Multiple issues touching the same config file (e.g. #22 remove pixi.lock, #28 add entries,
+#30 add .env) should be bundled into ONE agent/PR — the file-level conflict is unavoidable anyway.
 
 ## Critical Pitfalls
 
@@ -447,6 +482,7 @@ gh pr merge <pr-number> --auto --rebase
 | Force-pushed rebase resolution and assumed auto-merge persisted | Ran `git push --force-with-lease` after resolving merge conflict, didn't re-enable auto-merge | GitHub silently clears auto-merge on every force-push | Always run `gh pr merge <N> --auto --rebase` immediately after any force-push |
 | Spawned duplicate agent while background agent was still running | Tried to take over branch without checking background agent state | Would have created conflicting commits and wasted work | Read `/tmp/claude-*/tasks/<id>.output`, check `git log origin/<branch>`, and `gh pr list --head <branch>` before touching a branch |
 | Retried agent after BLOCKED report | Agent correctly reported BLOCKED (e.g. coverage threshold below target, cannot implement without breaking changes); orchestrator re-ran with a different prompt | The BLOCKED signal is accurate — the issue requires human architectural review. Re-runs produce the same BLOCKED result or introduce incorrect changes to force past the blocker | When an agent reports BLOCKED with a clear reason, treat it as a signal for human review, not a failure to retry. Label the issue `needs:human-review` and move on. |
+| Strict per-wave for high-contention repos | Applied "≤5 agents, 1 file per wave" to a repo where executor.py had 11 open issues | Required 12+ waves; the contended file serialized everything anyway — no real parallelism | Switch to per-file mega-agent when a file has 6+ issues |
 
 ## Results & Parameters
 
@@ -465,6 +501,8 @@ gh pr merge <pr-number> --auto --rebase
 | ProjectKeystone (Apr 2026) | 7 EASY waves | 67 EASY issues, ~9-10 per wave | ~34 PRs created, ~12 ALREADY-DONE closures |
 | ProjectKeystone (Apr 2026) | 9 MEDIUM waves | 78 MEDIUM issues, ≤3 Sonnet agents each | All 9 waves at ≤3 agents (C++ compile-time constraint confirmed) |
 | ProjectKeystone (Apr 2026) | HARD deferred | 25 HARD issues | Labeled tier:hard — NATS/JetStream (8), TSan/lock-free (6), circular CMake (5), 4-layer E2E (6) |
+| ProjectTelemachy (Apr 2026) | Wave D (mega-agents) | 3 parallel Sonnet mega-agents (models, client, cli) | 3 PRs, auto-merged; executor.py mega-agent ran solo in Wave E after D merged |
+| ProjectTelemachy (Apr 2026) | Wave E (mega-agent solo) | 1 Sonnet agent for executor.py (11 issues) | 1 PR; rebased onto merged Wave D before starting; 17 total PRs merged |
 
 ### HARD Classification Patterns
 
@@ -529,6 +567,26 @@ for pr in sorted(prs, key=lambda x: x['number']):
 "
 ```
 
+### File Contention Analysis Script
+
+Run before wave planning to identify mega-agent candidates:
+
+```bash
+# Identify contended files before wave planning
+gh issue list --state open --json number,body | python3 -c "
+import json,sys,re
+issues=json.load(sys.stdin)
+from collections import Counter
+files=[]
+for i in issues:
+    files += re.findall(r'src/\S+\.py|\.\w+/\S+\.yml', i.get('body',''))
+for f,c in Counter(files).most_common(10): print(c, f)
+"
+# Files with 6+ hits → per-file mega-agent candidates
+# Files with 3-5 hits → consider mini-bundle (2 issues per agent)
+# Files with 1-2 hits → normal single-issue agents
+```
+
 ### Background Agent Coordination Checklist
 
 Before taking over a branch that a background agent was working on:
@@ -587,3 +645,4 @@ gh pr close <old-pr> --comment "Superseded by #<new-pr>"
 | ProjectScylla | 80-issue triage: 20 closed already-done/dup, ~18 PRs in 3 waves, April 2026 | Haiku for LOW, Sonnet for MEDIUM; SKIP=gitleaks,yamllint needed on Debian 3.9 system; Audit Doc Policy hook stalls agents |
 | ProjectScylla | Wave 2b/2c continuation, 6 PRs (#1799-#1804), conflict resolution for PR #1803 | 2026-04-13 |
 | ProjectKeystone | 180-issue C++20/NATS swarm: 7 EASY waves (67 issues) + 9 MEDIUM waves (78 issues) + 25 HARD deferred; confirmed MEDIUM cap at 3 for C++ | 2026-04-25 |
+| ProjectTelemachy | 57 issues, per-file mega-agents collapsed 12 waves → 2; 17 PRs merged | 2026-04-25 |
