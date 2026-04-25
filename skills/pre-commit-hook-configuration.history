@@ -1,0 +1,55 @@
+# pre-commit-hook-configuration — History
+
+## v2.1.0 (2026-04-24)
+
+**Changed by:** Myrmidons shellcheck-warnings session — pre-commit hook REPO_ROOT resolution in test repos (2026-04-24)
+**Verification:** verified-ci (332 unit tests pass, CI green)
+
+### What changed
+- Bumped version 2.0.0 → 2.1.0; updated date to 2026-04-24; updated verification from unverified to verified-ci
+- Added 3 new "When to Use" conditions: REPO_ROOT resolves to .git/ in test repos; just finds Justfile in parent dir; SKIP_TESTS guard needed for bats tests
+- Added `### Step 7: Fix REPO_ROOT Resolution in Hooks Installed in Test Repos` with:
+  - Root cause explanation (SCRIPT_DIR/../ resolves to .git/ when hook is in .git/hooks/)
+  - `REPO_ROOT_HOOK` pattern using `git rev-parse --show-toplevel`
+  - Test-suite step guard with `[[ -f "${REPO_ROOT_HOOK}/Justfile" ]]`
+  - `SKIP_TESTS=1` pattern for bats tests
+  - `|| true` fix for short-circuit conditionals under `set -euo pipefail`
+  - Diagnosis checklist
+- Added 4 new Failed Attempts rows:
+  - Using `${REPO_ROOT}` for find paths when hook is in .git/hooks/
+  - Removed `$# -eq 0` guard from wrong function (report_unmanaged vs get_unmanaged_names)
+  - `just test` without Justfile guard finds parent repo's Justfile
+  - `[[ -n "$n" ]] && printf` without `|| true` aborts under set -e
+- Added `REPO_ROOT_HOOK Pattern for Hooks Installed in .git/hooks/` to Results & Parameters
+- Updated Quick Reference table to include REPO_ROOT/just/SKIP_TESTS fixes
+- Added Verified On table with Myrmidons entry
+- Added `history` frontmatter field referencing this history file
+- Added tags and updated verification
+
+### Why
+Myrmidons shellcheck-warnings session (2026-04-24) involved fixing pre-commit hooks that were
+tested with bats. The hook was installed as `.git/hooks/pre-commit` in temporary test repos,
+causing `REPO_ROOT` to resolve to `.git/` instead of the repo root. Three specific fix patterns
+emerged:
+1. `REPO_ROOT_HOOK` via `git rev-parse --show-toplevel` — immune to install location
+2. Justfile guard — prevents `just` from finding Justfile in parent directories
+3. `SKIP_TESTS=1` — lets bats tests invoke the hook without triggering the test suite
+
+### Previous version (v2.0.0) snapshot
+
+<details>
+<summary>v2.0.0 frontmatter</summary>
+
+```yaml
+name: pre-commit-hook-configuration
+description: "Use when: ... (6) writing pytest tests to verify pre-commit hook YAML configuration"
+category: ci-cd
+date: 2026-03-29
+version: 2.0.0
+user-invocable: false
+verification: unverified
+tags: []
+```
+
+Key state at v2.0.0: Consolidated from 7 source skills. No REPO_ROOT resolution pattern. No bats test isolation patterns. Verification was unverified.
+</details>
