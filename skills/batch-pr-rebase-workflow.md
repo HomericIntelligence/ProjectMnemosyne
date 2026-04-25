@@ -3,7 +3,7 @@ name: batch-pr-rebase-workflow
 description: "Use when: (1) many PRs show DIRTY/CONFLICTING/BLOCKED merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files), (6) delegating mass rebase to a Myrmidon swarm of parallel agents, (7) orphaned branches need PRs created and CI fixed, (8) a PR expanded a pre-commit hook scope causing self-catch failures on pre-existing violations, (9) small batch (2-10) stale branches need rebase with subsume-vs-integrate conflict analysis, (10) GitHub issue backlog (20+ issues) needs triage, batched PRs, and stale worktree/branch cleanup, (11) 10+ branches all conflict on the same 3-5 core files and are being merged serially — take HEAD (origin/main) for all conflicted core files since main already contains the union of all prior merged features, (12) main is advancing rapidly via auto-merge during the rebase session and PRs keep going DIRTY again — repeat rebase in waves until stable, (13) stale worktrees from a previous session are listed in `git worktree list` as unlinked — check before removing, they may already be detached with no git state to clean up, (14) a rebase 'succeeds' but the branch tip equals main HEAD — the commit was silently dropped as empty, recover the original SHA and rebase again keeping the PR's file additions, (15) a rebased PR's tests fail because the PR's own implementation was incomplete — the commit message described a feature but the actual diff didn't include a critical file (e.g., server route for an endpoint the tests expect), (16) stale worktrees from a prior session need auditing — always diff each one against origin/main before deciding to discard or push, (17) CI overall conclusion shows 'failure' but all required branch-protection checks passed — use per-job inspection not top-level conclusion, (18) a conanfile.py lacks return annotations on ConanFile subclass methods causing mypy failures, (19) a Dependabot PR and a fix PR both target the same file — apply the fix directly in the Dependabot branch to avoid a circular dependency chain"
 category: ci-cd
 date: 2026-04-24
-version: "2.6.0"
+version: "2.7.0"
 user-invocable: false
 verification: verified-ci
 history: batch-pr-rebase-workflow.history
@@ -61,7 +61,11 @@ tags: [git, rebase, pr, parallel, myrmidon, wave, batch, conflict, ci, pixi, myp
 ### Quick Reference
 
 ```bash
-# Classify PRs by merge state
+# Classify PRs by merge state (one-liner)
+gh pr list --state open --json number,mergeStateStatus \
+  --jq '.[] | "#\(.number) [\(.mergeStateStatus)]"'
+
+# Full PR triage (verbose)
 gh pr list --state open --json number,headRefName,mergeStateStatus --limit 200
 
 # Per-PR rebase (sequential)
@@ -70,7 +74,14 @@ git switch -c temp-PRNUM origin/BRANCH
 git rebase origin/main
 # Resolve conflicts semantically
 git add RESOLVED_FILES && GIT_EDITOR=true git rebase --continue
+
+# CRITICAL: Check for silent-drop after every rebase
+git log origin/main..HEAD --oneline
+# Empty output = branch was silently subsumed (every commit already cherry-picked to main)
+# If empty: close PR as "already landed" — do NOT force-push an empty branch
+
 git push --force-with-lease origin temp-PRNUM:BRANCH
+# CRITICAL: Force-push clears GitHub auto-merge — always re-arm immediately after
 gh pr merge PRNUM --auto --rebase
 git switch main && git branch -d temp-PRNUM
 
@@ -166,10 +177,21 @@ for pr in sorted(prs, key=lambda x: x['number']):
 "
 ```
 
-Categories:
-- `DIRTY` / `CONFLICTING` → needs rebase
-- `BLOCKED` → CI failing (check which checks, may be format-only)
-- `UNKNOWN` / `MERGEABLE` → CI pending or passing, let auto-merge handle it
+**mergeStateStatus quick scan:**
+```bash
+gh pr list --state open --json number,mergeStateStatus \
+  --jq '.[] | "#\(.number) [\(.mergeStateStatus)]"'
+```
+
+**mergeStateStatus reference:**
+
+| Value | Meaning | Action |
+|-------|---------|--------|
+| `CLEAN` | No conflicts, CI passing — ready to merge | Let auto-merge handle; if stuck for hours check `statusCheckRollup` |
+| `DIRTY` | Merge conflict with main | Rebase onto `origin/main`, force-push-with-lease, re-arm auto-merge |
+| `CONFLICTING` | Same as DIRTY in some API responses | Same as DIRTY |
+| `BLOCKED` | CI failing or review pending | Check which checks fail; fix or wait for CI |
+| `UNKNOWN` | GitHub hasn't computed it yet | Re-check in 30–60 seconds; usually resolves on its own |
 
 **Subsume vs. Integrate Decision (for small batches of 2–10 stale branches):**
 
@@ -288,11 +310,16 @@ Implementation branches (touch source code):
 ```
 
 **Model tier selection:**
-- Haiku: sufficient for mechanical rebase (fetch, rebase, push)
-- Sonnet: escalate for conflict resolution that requires understanding domain-specific logic; required for rebase+PR with diff analysis
+- Haiku: sufficient for mechanical rebase (fetch, rebase, push) with no conflicts
+- Sonnet: **required** for conflict resolution that requires understanding domain-specific logic; required for rebase+PR with diff analysis; required when PRs touch source code with semantic conflicts
 - Opus: not needed for rebase work
 
-**Expected results**: ~75% clean rebase, ~25% simple workflow file conflicts. Total wall-clock: ~5 min for 8 branches with Haiku agents.
+**When to spawn Sonnet agents instead of Haiku:**
+- Multiple PRs need rebasing simultaneously with likely conflicts → spawn parallel Sonnet agents (one per PR)
+- Each Sonnet agent: `git fetch`, checkout branch, `git rebase origin/main`, resolve conflicts (keep both sides for new test code), verify `git log origin/main..HEAD --oneline` is not empty, force-push-with-lease, re-arm auto-merge
+- Haiku agents are appropriate only for skill-only branches (add SKILL.md + update plugin.json) with predictable non-semantic conflicts
+
+**Expected results**: ~75% clean rebase, ~25% simple workflow file conflicts. Total wall-clock: ~5 min for 8 branches with Haiku agents; ~10-15 min for Sonnet agents handling source conflicts.
 
 ### Phase 3.6: Take-HEAD Batch Rebase for Same-File Conflicts (10+ PRs, Same Core Files)
 
@@ -692,6 +719,51 @@ git log --oneline main | head -20
 # Close with explanation
 gh issue close <number> --comment "Already resolved on main: <evidence>"
 ```
+
+**At-scale issue triage (closing ~100 already-implemented issues):**
+
+```bash
+# Step 1: Fetch all open issues in bulk
+gh issue list --state open --limit 200 --json number,title,body > /tmp/open_issues.json
+
+# Step 2: For each issue, check if already implemented
+python3 - <<'EOF'
+import json, subprocess, re
+
+with open('/tmp/open_issues.json') as f:
+    issues = json.load(f)
+
+for issue in issues:
+    n = issue['number']
+    title = issue['title']
+    # Extract key symbol/topic from title
+    topic = re.sub(r'[^a-zA-Z0-9_]', ' ', title).strip().split()[0] if title else ''
+    if not topic:
+        continue
+    # Grep src/ for symbol mentions
+    src_grep = subprocess.run(['grep', '-rl', topic, 'src/'],
+        capture_output=True, text=True).stdout.strip()
+    # Check git log for topic commits
+    git_log = subprocess.run(
+        ['git', 'log', '--oneline', '--all', '--grep', topic],
+        capture_output=True, text=True).stdout.strip()
+    if src_grep or git_log:
+        print(f"IMPLEMENTED  #{n}: {title[:60]}")
+        if git_log:
+            sha = git_log.split()[0]
+            print(f"  via commit: {sha}")
+    else:
+        print(f"OPEN         #{n}: {title[:60]}")
+EOF
+
+# Step 3: Close confirmed-implemented issues
+gh issue close <N> --comment "Already implemented in commit <SHA>. Verified: grep src/ shows <symbol>, git log shows commit <SHA>."
+```
+
+**Key signals that an issue is already implemented:**
+- `grep -rl <topic> src/` returns files containing the feature
+- `git log --oneline --all | grep -i <topic>` shows a relevant commit
+- `gh issue view <N>` shows a linked PR that was merged
 
 ### Phase 14: Continuously-Advancing Main (Rebase Loop Until Stable)
 

@@ -1,5 +1,33 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.7.0 (2026-04-24)
+
+**Changed by:** ProjectHermes /learn session — mergeStateStatus reference table, silent-drop check in Quick Reference, at-scale issue triage commands, Sonnet vs Haiku agent guidance
+**Verification:** verified-ci (confirmed on HomericIntelligence/ProjectHermes with ~30 PRs)
+
+### What changed
+- Added `mergeStateStatus` reference table in Phase 1 (CLEAN/DIRTY/CONFLICTING/BLOCKED/UNKNOWN values, meanings, and actions)
+- Added one-liner `--jq` command for quick PR state scan
+- Added silent-drop rebase check to Quick Reference with explicit CRITICAL annotation
+- Added force-push clears auto-merge CRITICAL note to Quick Reference
+- Expanded Phase 3.5 model tier selection: Sonnet is **required** for source-code conflicts (not just "escalate"); added explicit guidance on when to spawn parallel Sonnet agents instead of Haiku
+- Expanded Phase 13 with at-scale issue triage: bulk fetch via `gh issue list --json`, grep src/ + git log pattern, `gh issue close` with SHA evidence
+
+### Why
+The /learn workflow captured six core learnings from a ProjectHermes session with ~30 PRs:
+(1) Silent-drop rebase check (`git log origin/main..HEAD --oneline`) belongs in Quick Reference as a required post-rebase step — empty output means the branch was subsumed and the PR should be closed, not force-pushed.
+(2) Force-push clears GitHub auto-merge is a critical pattern that causes PRs to stall indefinitely; it was buried in Phase 2 but belongs in the Quick Reference for discoverability.
+(3) PRs go DIRTY again after each wave was already documented in Phase 14 but the Quick Reference didn't include the one-liner scan command.
+(4) mergeStateStatus values (CLEAN/DIRTY/BLOCKED/UNKNOWN) were documented inline in Phase 1 bullets but lacked a quick-reference table for scanning during a session.
+(5) Sonnet agents are preferred over Haiku when PRs have source-code conflicts — Haiku blindly takes --ours; Sonnet understands context. Phase 3.5 now makes this distinction explicit.
+(6) Issue triage at scale (~100 issues) benefits from bulk fetch + grep src/ + git log pattern rather than per-issue manual inspection.
+
+### Previous version (v2.6.0) snapshot
+
+(see v2.6.0 entry below)
+
+---
+
 ## v2.6.0 (2026-04-24)
 
 **Changed by:** ProjectKeystone batch PR rebase session (2026-04-24) — stale worktree diff auditing, CI top-level vs. per-job conclusion, mypy ConanFile annotations, Dependabot+fix circular dependency
