@@ -1,5 +1,29 @@
 # already-done-issue-detection — History
 
+## v1.3.0 (2026-04-25)
+
+**Changed by:** ProjectTelemachy myrmidon-swarm pass (2026-04-25)
+**Verification:** verified-ci
+
+### What changed
+- Added 3 new Quick Reference checks: `.issue_implementer/` cache, defaultBranchRef check (with stronger note), governance commit scan
+- Added 3 new "When to Use" triggers: parent-framing duplicate tracker issues, branch-trigger issues, meta/grade tracker issues
+- Added 2 new Failed Attempts entries: not checking defaultBranchRef before branch-trigger fixes; ignoring .issue_implementer/ cache
+- Added ProjectTelemachy session data to Results & Parameters (6/57 = 10.5% already-done rate)
+- Added Signal-to-Issue mapping table for ProjectTelemachy
+- Added governance commit and prior automation cache rows to Common ALREADY-DONE signals table
+- Added "Verified On" section with both ProjectArgus and ProjectTelemachy data points
+- Updated verification to verified-ci
+- Bumped version to 1.3.0, updated date to 2026-04-25
+
+### Why
+ProjectTelemachy pass showed three new reliable detection patterns: (1) `.issue_implementer/` cache from prior automation passes may contain triage decisions — check before re-reading; (2) branch-trigger issues like "fix CI targeting master" can be already-done if the default branch was always `main`; (3) meta/grade tracker issues (`[Audit] Overall Grade: D+`) and parent-framing trackers (`No tests for X or Y`) are never directly implementable. Also confirmed: a single governance commit can close 4+ audit issues — scan `git log` before reading issue bodies. Lower already-done rate (10.5% vs 48%) because this repo had fewer stale audit issues and more genuine new work.
+
+### Previous version (v1.2.0) snapshot
+[see git history]
+
+---
+
 ## v1.2.0 (2026-04-23)
 
 **Changed by:** ProjectArgus branch triage session (~20 branches analysed)
