@@ -1,0 +1,74 @@
+# close-issue-via-minimal-pr — History
+
+## v1.1.0 (2026-04-23)
+
+**Changed by:** Odysseus issue closeout session (Issues #102, #76, #136)
+**Verification:** verified-ci
+
+### What changed
+- Added "Closes part of #N does NOT auto-close" failure pattern to Failed Attempts table
+- Added GitHub auto-close keyword rules table to Results & Parameters
+- Added Step 5: Fallback — `gh issue close <N> --reason completed` for missed auto-close
+- Added new "When to Use" trigger: PR already merged but issue still open due to bad keyword
+- Updated PR body closing keyword warning (CRITICAL callout in Step 4)
+- Added `verification` and `history` frontmatter fields
+- Bumped date to 2026-04-23
+
+### Why
+During Odysseus issue #102 closeout, the PR body contained `"Closes part of #102"`. GitHub's
+auto-close parser does not recognize this phrase — it requires exact verb + `#N` with no
+intervening words. The issue remained open after merge and had to be closed manually with
+`gh issue close 102 --reason completed`. Added this pattern to prevent future confusion.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: close-issue-via-minimal-pr
+description: 'Close a GitHub issue when all code already exists on main but the issue
+  is still open. Use when: (1) a verification/CI-check issue has no outstanding code
+  changes, (2) the feature branch has zero diff from main, (3) you need a minimal
+  commit to create a PR that triggers CI and closes the issue.'
+category: ci-cd
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Problem** | Issue is still open but all code changes already landed on main; branch has no diff from main |
+| **Pattern** | Minimal docstring update in the primary file to create a substantive commit |
+| **Trigger** | `git diff main..HEAD` is empty; issue asks for "CI verification" of existing code |
+| **PR outcome** | CI runs against existing code; `Closes #N` in commit or PR body closes the issue |
+
+## When to Use
+
+- Issue title contains "verify", "run in CI", "confirm passes", "check CI"
+- Branch was created with `git checkout -b <N>-auto-impl` but has no code to add — all work was done in a previous PR
+- `git status` shows only untracked files (e.g., `.claude-prompt-N.md`), no modified tracked files
+- `git diff origin/main` is empty
+- The issue is a follow-up from a prior issue ("Follow-up from #XXXX")
+- CI glob pattern already covers the relevant test files (confirmed via `grep` on workflow YAML)
+
+## Verified Workflow
+
+### Quick Reference
+
+[...original content truncated for brevity — full content in git history at commit eb33b69d...]
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Create empty commit | `git commit --allow-empty` | GitHub still creates a PR but it's harder to justify; pre-commit hooks may reject it | A real docstring improvement is cleaner and more reviewable than an empty commit |
+| Use `.claude-prompt-N.md` as the commit file | Stage and commit the prompt file | Prompt files are ephemeral implementation details, not project files — staging them pollutes history | Only commit actual project files; leave prompt files untracked |
+| Look for missing implementation | Read test files expecting to find TODOs or stubs | Tests were fully implemented; the only missing piece was the PR | Always check `git diff origin/main` first before assuming code is missing |
+```
+
+---
+
+## v1.0.0 (2026-03-15)
+
+**Initial version.**
