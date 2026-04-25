@@ -5,13 +5,14 @@ description: 'Classify, deduplicate, and batch-implement GitHub issues in a larg
   triage, (2) many issues are pure doc/text or infra-only changes, (3) duplicate issues
   need closing before implementation. Includes worktree-safe grep pattern for ALREADY-DONE
   verification, correct pre-filter order, ci.yml conflict avoidance, EASY queue exhaustion
-  detection, Docker inline comment parse error pattern, and parallel-agent add/add rebase
-  conflict resolution when multiple agents create the same package independently.'
+  detection, Docker inline comment parse error pattern, parallel-agent add/add rebase
+  conflict resolution when multiple agents create the same package independently, and
+  pre-launch repo-capability checks (autoMergeAllowed, lockfile, pre-commit config).'
 category: tooling
-date: 2026-04-23
-version: 1.5.0
+date: 2026-04-25
+version: 1.6.0
 user-invocable: false
-verification: verified-ci
+verification: verified-local
 history: batch-low-difficulty-issue-impl.history
 ---
 # Batch Low-Difficulty Issue Implementation
@@ -20,11 +21,17 @@ history: batch-low-difficulty-issue-impl.history
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-23 |
+| **Date** | 2026-04-25 |
 | **Objective** | Classify, deduplicate, and batch-implement low-difficulty GitHub issues using worktree-isolated agents |
-| **Outcome** | Verified: worktree isolation works correctly; correct pre-filter order; ALREADY-DONE grep must exclude worktrees |
-| **Verification** | verified-ci |
+| **Outcome** | Verified: worktree isolation works correctly; correct pre-filter order; ALREADY-DONE grep must exclude worktrees; pre-launch repo-capability checks required |
+| **Verification** | verified-local |
 | **History** | [changelog](./batch-low-difficulty-issue-impl.history) |
+
+### Session (2026-04-25) — ProjectProteus 43-Issue Swarm
+
+| Date | Objective | Outcome |
+|------|-----------|---------|
+| 2026-04-25 | Implement 43 open HomericIntelligence/ProjectProteus issues (CI/CD pipeline hub repo) using myrmidon swarm | ~20 EASY issues implemented, 14 PRs created, ~8 merged; auto-merge disabled (branch protection requires reviews); no lockfile committed (used npm install not npm ci); pre-commit hooks absent (skipped in all agent prompts) |
 
 ### Session (2026-04-23) — ProjectScylla 15-Issue Medium/High Myrmidon Swarm
 
@@ -58,6 +65,7 @@ history: batch-low-difficulty-issue-impl.history
 - (4) Issues span many different files with minimal cross-file dependencies
 - (5) CI pre-commit hooks are stable (no known broken hooks)
 - (6) Pre-existing CI failures are blocking merges — create a `fix-test-failures` fix branch first
+- (7) Before launch: check `gh repo view --json autoMergeAllowed`, `.pre-commit-config.yaml` existence, and `package-lock.json` / `pixi.lock` existence — these affect agent prompt templates (auto-merge flag, pre-commit steps, npm ci vs npm install)
 
 ## Verified Workflow
 
@@ -285,8 +293,27 @@ gh pr list --author "@me" --state all --limit 50
 | pixi.lock not committed after pixi.toml change (AchaeanFleet 2026-04-23) | Agent updated `pixi.toml` (added/changed dependency) without also committing updated `pixi.lock` | CI fails with "lock-file not up-to-date with workspace" — pixi enforces lock-file consistency in CI | After any `pixi.toml` change, run `pixi install` to regenerate `pixi.lock`, then commit both files together |
 | Two parallel agents creating the same new package independently (ProjectScylla 2026-04-23) | Wave 1 agents for separate issues both needed a new `src/scylla/agamemnon/` package; each agent created `__init__.py` and package files independently in their worktrees | On rebase, both PRs added the same files — second PR rebase produced add/add conflicts on `scylla/agamemnon/__init__.py` and other package files | When multiple Wave 1 agents may create a shared package, batch them into one agent OR use the superset-of-both-sides strategy: accept all files from both sides, keeping the union. The second PR author should cherry-pick non-conflicting changes on top of the first merged PR. |
 | validate_model decorator dead-parameter pattern (ProjectScylla 2026-04-23) | Used `@retry_with_backoff(max_retries=3, initial_delay=60)` at the decorator call site, then callers passed `(max_retries=1, base_delay=5)` as function arguments expecting them to control retry behavior | The decorator captured `max_retries=3, initial_delay=60` at decoration time and ignored the function's own `max_retries`/`base_delay` parameters entirely; callers got 3 retries at 60/120/240s (7+ min stall) instead of the intended 1 retry at 5s | When a function accepts retry parameters that callers must be able to control, build the decorator dynamically inside the function body using the caller's parameter values instead of hardcoding at decoration time. Pattern: `decorator = retry_with_backoff(max_retries=max_retries, base_delay=base_delay); return decorator(fn)(*args, **kwargs)` |
+| `npm ci` in typecheck job without lockfile (ProjectProteus 2026-04-25) | Added a `typecheck` CI job using `npm ci` as the install step, then dispatched implementation PRs that included this job definition | `npm ci` requires a `package-lock.json` (or npm-shrinkwrap.json with lockfileVersion >= 1). The repo had no lockfile committed (issue #21 was open). CI failed immediately on the install step with "The `npm ci` command can only install with an existing package-lock.json" | When adding CI jobs that install npm deps, check whether a lockfile exists first: `ls package-lock.json`. If absent, use `npm install` instead of `npm ci` until the lockfile issue is resolved. Add a comment in the workflow: `# TODO: switch to npm ci once package-lock.json is committed (issue #NN)` |
+| Auto-merge disabled on target repo (ProjectProteus 2026-04-25) | All agent prompts included `gh pr merge <NUMBER> --auto --rebase` as the final step | The repository had `enablePullRequestAutoMerge` disabled at the repo settings level. The command either silently failed or returned an error, leaving PRs open | Before launching waves, check if auto-merge is enabled: `gh repo view --json autoMergeAllowed --jq '.autoMergeAllowed'`. If `false`, remove `--auto` from all agent prompts and note that PRs require manual merge or reviewer approval. Do not assume auto-merge works across all repos. |
+| Pre-commit hooks absent in target repo (ProjectProteus 2026-04-25) | Standard agent prompt template included `pre-commit run --files <changed-files>` steps | ProjectProteus had no `.pre-commit-config.yaml` (issue #25 was requesting it). Running pre-commit in agents is a no-op or errors out | Before generating agent prompts, check `ls .pre-commit-config.yaml`. If absent, remove pre-commit steps from all agent prompts entirely. Reinstate them after the hooks issue is resolved. |
 
 ## Results & Parameters
+
+### Session Statistics (2026-04-25) — ProjectProteus 43-Issue Swarm
+
+| Metric | Value |
+|--------|-------|
+| Starting open issues | 43 |
+| ALREADY-DONE closed | 4 (#16, #18, #22, #26) |
+| DUPLICATE closed | 1 (#13 → #6) |
+| EASY implemented | ~20 issues |
+| PRs created | 14 |
+| PRs merged | ~8 (rest pending review — auto-merge disabled) |
+| MEDIUM deferred | 12 |
+| HARD deferred | 6 |
+| Auto-merge enabled | NO — branch protection requires reviews |
+| Pre-commit hooks | Absent — skipped in all agent prompts |
+| Lockfile present | NO — used `npm install` not `npm ci` in CI jobs |
 
 ### Session Statistics (2026-04-23) — ProjectScylla 15-Issue Medium/High Swarm
 
@@ -421,6 +448,7 @@ STOP and report BLOCKED if the spec is unclear or requires a design decision.
 
 | Project | Context | Details |
 |---------|---------|---------|
+| HomericIntelligence/ProjectProteus | 43-issue swarm, 14 PRs created, ~8 merged (2026-04-25) | Auto-merge disabled; no lockfile (npm install); no pre-commit config; 4 ALREADY-DONE; 1 DUPLICATE |
 | ProjectOdyssey | 165-issue backlog cleanup, March 2026 | [notes.md](../references/notes.md) |
 | ProjectScylla | 64-issue myrmidon swarm pass, 4 waves, 12 PRs (2026-04-12) | 11/12 PRs merged CI-green; worktree isolation worked correctly; verify-before-fix caught 3 ALREADY-DONE issues |
 | HomericIntelligence/Odysseus | 35-issue triage, 19 resolved (17 PRs + 2 ALREADY-DONE), meta-repo with 12 submodule symlinks (2026-04-23) | 0 git-op failures; worktree creation timeout on symlink-heavy repo (fallback to main worktree); parallel agents reported colliding PR numbers; Haiku branch naming drift to title-slug form |
