@@ -1,0 +1,35 @@
+# ci-cd-broken-main-parallel-fix-wave — History
+
+## v1.1.0 (2026-04-23)
+
+**Changed by:** Odysseus issue closeout session (Issues #76, #136) — NATS publishing feature + triage follow-ups
+**Verification:** verified-ci
+
+### What changed
+- Added Pattern 6: clang-format version mismatch — podman reformat fix using exact CI image (ubuntu:24.04, clang-format-18)
+- Added Monitor Noise Reduction Pattern — 60s interval for release builds, filter must include failure
+- Added 3 new Failed Attempts rows: local clang-format version, monitor filter success-only, 30s poll for release builds
+- Added `clang-format` to Agent Tier Selection Table
+- Updated description to mention clang-format violations
+- Updated verification from `verified-local` to `verified-ci` (PRs merged with CI passing)
+- Added `history` frontmatter field
+
+### Why
+During Odysseus issue #76 (hi.logs.* NATS publishing), parallel agents implementing the feature in
+ProjectAgamemnon and ProjectNestor both had clang-format violations detected by CI after
+build/test/tidy all passed. The agents used local clang-format-14 (Debian 11 dev host) instead
+of clang-format-18 (CI ubuntu-24.04). Fixed by using `podman run ubuntu:24.04` with the exact
+CI version. Monitor noise reduction learned from polling CI during the fix — 30s interval on a
+30-minute release build generated 60+ notifications.
+
+### Previous version (v1.0.0) snapshot
+
+See git history at commit 48c51481 — initial version dated 2026-04-24 with verification: verified-local.
+Key content: 5 CI failure patterns (conan, persist-credentials, dependabot-docker, BATS exit 127,
+Python import failures), 5-repo ecosystem fix wave, Haiku/Sonnet tier selection table.
+
+---
+
+## v1.0.0 (2026-04-24)
+
+**Initial version.**

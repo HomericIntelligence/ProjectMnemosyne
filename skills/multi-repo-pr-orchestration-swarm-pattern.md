@@ -1,12 +1,12 @@
 ---
 name: multi-repo-pr-orchestration-swarm-pattern
-description: "Orchestrate PR management across all HomericIntelligence repos using myrmidon swarm. Use when: (1) multiple repos have open PRs that need merging, conflict resolution, or CI fixes, (2) Odysseus submodule pins need updating after cross-repo PR merges, (3) coordinating parallel waves of agents across 5+ repos with sequential-within-repo merge ordering."
+description: "Orchestrate PR management across all HomericIntelligence repos using myrmidon swarm. Use when: (1) multiple repos have open PRs that need merging, conflict resolution, or CI fixes, (2) Odysseus submodule pins need updating after cross-repo PR merges, (3) coordinating parallel waves of agents across 5+ repos with sequential-within-repo merge ordering, (4) a PR branch has a duplicate commit that's already on main and needs rebase, (5) mergeStateStatus is BLOCKED but statusCheckRollup is empty — CI may not have started yet."
 category: ci-cd
-date: 2026-04-19
-version: "1.1.0"
+date: 2026-04-23
+version: "1.2.0"
 user-invocable: false
 verification: verified-ci
-tags: [multi-repo, PR, merge, submodule, myrmidon-swarm, cross-repo, orchestration, odysseus]
+tags: [multi-repo, PR, merge, submodule, myrmidon-swarm, cross-repo, orchestration, odysseus, duplicate-commit, pin-audit]
 history: multi-repo-pr-orchestration-swarm-pattern.history
 ---
 
@@ -142,6 +142,30 @@ git push --force-with-lease
 
 **Key pattern**: Always `git fetch origin` before rebasing to get the latest main after Wave 1 merges.
 
+**Duplicate-commit auto-drop**: When a branch contains a commit whose patch is already applied
+upstream (e.g., the same commit was cherry-picked or landed via another PR), `git rebase origin/main`
+silently drops it via git's patch-id detection. This is correct behavior — the PR branch will have
+fewer commits after rebase than before, but the diff will be clean. Always verify after rebase:
+
+```bash
+git log --oneline origin/main..HEAD  # Should show only the PR's unique commits
+git diff origin/main                  # Should show only the PR's intended changes
+```
+
+If the log is empty and diff is also empty, the PR is fully subsumed — close it.
+
+**mergeStateStatus: BLOCKED with empty statusCheckRollup**: This is a transient state that means
+CI hasn't started yet, NOT that the PR is permanently blocked. After a force-push (e.g., rebase),
+GitHub takes 10-30 seconds to queue CI. Always re-check after a minute before concluding a PR is blocked:
+
+```bash
+# Confirm CI queued (wait 60s after force-push before checking)
+gh pr view <PR> --json mergeStateStatus,statusCheckRollup
+# statusCheckRollup: [] → CI not started yet (transient)
+# statusCheckRollup: [{conclusion: null}] → CI queued/running
+# statusCheckRollup: [{conclusion: "success"}] → CI passed
+```
+
 **Subsumption check at scale**: At 87 PRs, ~15-20% of DIRTY PRs turn out to be fully subsumed by the merge cascade (their changes already landed via another PR). Always check before rebasing:
 ```bash
 # A PR is subsumed if its diff is empty against origin/main
@@ -195,7 +219,26 @@ gh pr merge $PR_NUM --repo HomericIntelligence/$REPO --rebase
 
 ### Phase 5: Wave 2 -- Update Odysseus Submodule Pins
 
-After all PRs are merged across repos, update the Odysseus meta-repo submodule pins:
+After all PRs are merged across repos, update the Odysseus meta-repo submodule pins.
+
+**Pre-pin audit** (CRITICAL — do this before bumping any pin):
+
+```bash
+# Step 1: Verify all open PRs are merged before bumping pin
+# If PRs are still open, the pin will become stale again immediately after they merge
+gh pr list --repo HomericIntelligence/<repo> --state open --json number,title
+# → Should be empty before bumping
+
+# Step 2: Check local pin vs origin/main
+git -C <submodule-path> rev-parse HEAD           # current pin
+git -C <submodule-path> rev-parse origin/main    # what main is at
+
+# Step 3: Check for stale branch pins
+# If current pin is on a feature branch (not origin/main), audit carefully
+git -C <submodule-path> branch -r --contains HEAD
+# If output shows "origin/<feature-branch>" not "origin/main", the pin is stale
+# Pin to origin/main if the feature branch changes are already in main
+```
 
 ```bash
 cd /home/mvillmow/Odysseus
@@ -213,10 +256,23 @@ git submodule foreach --quiet '
 
 # Stage and commit updated pins
 git add -A  # Only submodule refs change, safe here
-git commit -m "chore: update submodule pins after cross-repo PR merges"
+git commit -m "chore: update submodule pins after cross-repo PR merges
+
+Closes #N"   # Include Closes #N if this commit closes a tracking issue
 ```
 
-**Warning**: Only pin submodules whose `main` branch moved forward. Never pin to feature branch commits from unmerged PRs.
+**Warning**: Only pin submodules whose `main` branch moved forward. Never pin to feature branch commits
+from unmerged PRs. If the current pin points to a stale feature branch (e.g., `fix/spdlog-link-visibility`)
+and that branch's changes are already on `main`, pin to `origin/main` instead.
+
+**Non-required CI checks**: Submodule repos may have non-required checks (pre-commit, docker scanning,
+security-report) showing FAILURE in CI. Only required checks block merge — verify with:
+
+```bash
+gh api repos/HomericIntelligence/<repo>/branches/main --jq '.protection.required_status_checks.contexts'
+```
+
+A non-required check failing does NOT prevent pinning to that commit.
 
 ### Phase 6: Verification
 
@@ -244,6 +300,9 @@ git status
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Parallel PR merges within same repo | Merged PRs #4, #5, #6 in parallel targeting the same branch | PR #6 got conflicts because its base changed when #4 and #5 merged | Must merge sequentially within a repo (oldest-first); parallelize only across repos |
+| Treating BLOCKED+empty statusCheckRollup as permanent block | Saw `mergeStateStatus: BLOCKED` + `statusCheckRollup: []` and concluded PR was stuck | This is a transient state: CI hadn't started yet (10-30s after force-push). PR merged normally after CI queued | Wait 60s after force-push before concluding a PR is permanently blocked; re-check with `gh pr view --json statusCheckRollup` |
+| Bumping submodule pin before all open PRs merged | Updated pin to latest main immediately after one PR merged | A second PR merged 10 minutes later, making the pin stale again instantly | Always verify `gh pr list --state open` is empty for a repo before bumping its Odysseus pin |
+| Pinning to stale feature branch commit | Left submodule pinned to `fix/spdlog-link-visibility` branch SHA | main had moved 10+ commits ahead of the branch tip with additional coverage/CI fixes | Check `git branch -r --contains HEAD` on the submodule — if not on `origin/main`, audit and pin to main |
 | Using `--admin` flag to bypass CI | `gh pr merge --admin` to force-merge when branch protection blocks | User explicitly requested not using `--admin`, preferring proper CI flow | Respect CI gates; fix failures rather than bypassing them |
 | First attempt at Charybdis merge | Attempted merge with failing CI | clang-format, clang-tidy, and coverage checks were failing | Must spawn a Sonnet agent to investigate and fix CI before merge is possible |
 | Nestor PR rebase after other PRs merged | PR #3 in Nestor conflicted after other Nestor PRs merged to main | Base branch moved forward, invalidating the PR's diff | Always rebase onto fresh origin/main after each merge within the same repo |

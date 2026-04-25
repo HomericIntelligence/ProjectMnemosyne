@@ -3,6 +3,31 @@
 # Each entry records what changed and why; full snapshots for major versions only.
 ---
 
+## v1.2.0 — 2026-04-23
+
+**Changed by**: Odysseus issue closeout session (Issues #102, #76, #136)
+**Session context**: Submodule pin bump, NATS publishing feature, Keystone pin audit — 2026-04-23
+
+### What Changed
+
+- Bumped version 1.1.0 → 1.2.0; date updated to 2026-04-23
+- Phase 3 (Wave 1b): added duplicate-commit auto-drop explanation (git patch-id detection)
+- Phase 3 (Wave 1b): added `mergeStateStatus: BLOCKED + empty statusCheckRollup` = transient state note with re-check commands
+- Phase 5 (Wave 2): expanded submodule pin section with pre-pin audit steps (verify open PRs first, check for stale branch pins, non-required CI checks explanation)
+- Failed Attempts: 3 new rows (BLOCKED transient state misinterpretation, pin before PRs merged, stale branch pin)
+- Updated description to mention duplicate-commit rebase and mergeStateStatus BLOCKED transient state
+- Added `pin-audit` and `duplicate-commit` tags
+
+### Key New Learnings
+
+1. **Duplicate-commit auto-drop**: `git rebase origin/main` uses git's patch-id detection to automatically drop commits whose patch is already applied upstream. After rebase, always verify with `git log --oneline origin/main..HEAD` and `git diff origin/main`. Empty diff + empty log = subsumed, close the PR.
+2. **BLOCKED + empty statusCheckRollup = transient**: Not a permanent block. CI takes 10-30s to queue after a force-push. Wait 60s, re-check with `gh pr view --json statusCheckRollup` before acting.
+3. **Pin audit order**: Verify `gh pr list --state open` is empty before bumping any submodule pin. Bumping too early makes the pin stale again immediately.
+4. **Stale branch pin detection**: Use `git branch -r --contains HEAD` on the submodule. If the current pin is on a feature branch (not `origin/main`), audit whether main has those changes and pin to main instead.
+5. **Non-required checks don't block**: Only required branch protection checks matter for merge and pinning. Non-required checks (pre-commit, docker scanning, security-report) can show FAILURE without blocking.
+
+---
+
 ## v1.1.0 — 2026-04-19
 
 **Changed by**: Claude Sonnet 4.6 (skill amendment session)

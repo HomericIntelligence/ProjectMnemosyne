@@ -1,12 +1,13 @@
 ---
 name: ci-cd-broken-main-parallel-fix-wave
-description: "Triage and fix broken CI/main across multiple repos simultaneously using Agamemnon task registry + parallel myrmidon fix agents. Use when: (1) 3+ repos have broken main branch CI, (2) need to register tasks in Agamemnon before dispatching agents, (3) CI failures are diverse (conan profile, dependabot config, GitHub Actions auth, BATS helper, Python imports)."
+description: "Triage and fix broken CI/main across multiple repos simultaneously using Agamemnon task registry + parallel myrmidon fix agents. Use when: (1) 3+ repos have broken main branch CI, (2) need to register tasks in Agamemnon before dispatching agents, (3) CI failures are diverse (conan profile, dependabot config, GitHub Actions auth, BATS helper, Python imports, clang-format violations)."
 category: ci-cd
-date: 2026-04-24
-version: "1.0.0"
+date: 2026-04-23
+version: "1.1.0"
 user-invocable: false
-verification: verified-local
-tags: [ci, broken-main, agamemnon, parallel-agents, myrmidon, conan, dependabot, bats, github-actions, fix-wave]
+verification: verified-ci
+history: ci-cd-broken-main-parallel-fix-wave.history
+tags: [ci, broken-main, agamemnon, parallel-agents, myrmidon, conan, dependabot, bats, github-actions, fix-wave, clang-format, monitor]
 ---
 
 # CI Broken-Main Parallel Fix Wave
@@ -15,10 +16,11 @@ tags: [ci, broken-main, agamemnon, parallel-agents, myrmidon, conan, dependabot,
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-24 |
+| **Date** | 2026-04-23 |
 | **Objective** | Use the HomericIntelligence agent mesh to fix broken CI/main across multiple repositories simultaneously — NATS + Agamemnon task registry + parallel Claude Code sub-agents as myrmidon workers |
-| **Outcome** | Successful — 5 repos triaged, tasks registered in Agamemnon, 5 parallel fix agents dispatched (mix of Haiku and Sonnet tiers) |
-| **Verification** | verified-local — tasks dispatched and agents running; PRs not yet merged at capture time |
+| **Outcome** | Successful — 5 repos triaged, tasks registered in Agamemnon, 5 parallel fix agents dispatched (mix of Haiku and Sonnet tiers); clang-format violations fixed via podman container |
+| **Verification** | verified-ci — PRs merged with CI passing |
+| **History** | [changelog](./ci-cd-broken-main-parallel-fix-wave.history) |
 
 ## When to Use
 
@@ -133,6 +135,9 @@ curl -s -X PATCH $AGAMEMNON/v1/teams/$TEAM_ID/tasks/fix-odysseus-conan-profile \
 | Dispatching all agents as Haiku | Used Haiku for BATS exit 127 and Python type error investigation | Haiku lacks the reasoning depth to investigate unknown root causes from log output alone | Escalate to Sonnet for failures where root cause is not already known before dispatch |
 | Running `conan` directly after `setup-pixi` | Assumed `setup-pixi` initialized conan profiles | Conan 2.x requires explicit `conan profile detect` — profiles don't auto-initialize | Always add `pixi run conan profile detect` as an explicit step after `setup-pixi`, before build scripts |
 | Dependabot docker block with no Dockerfiles | Kept `package-ecosystem: docker` in dependabot.yml despite no Dockerfiles | Dependabot fails hard with "dependency_file_not_found /Dockerfile" — no graceful skip | Remove `package-ecosystem: docker` blocks unless the repo actually contains Dockerfiles |
+| Running local clang-format on C++ PRs | Used system clang-format-14 on Debian 11 dev host to reformat before push | CI uses clang-format-18 on ubuntu-24.04; version differences produce divergent formatting decisions | Always use `podman run ubuntu:24.04` with the exact CI clang-format version — never the local system version |
+| Monitor filter emitting only on success | Set monitor `filter="conclusion == 'success'"` for CI polling | If the run fails, filter never emits — silence is indistinguishable from "still running" | Monitor filter MUST include failure: `conclusion == 'failure' OR conclusion == 'success'` |
+| 30s monitor poll for release builds | Used 30s poll interval for long-running C++ release CI | Generates 60+ noisy notifications during a 30-minute build; distracts from other work | Use 60s interval for release builds; 30s only for fast checks (lint, pre-commit) |
 
 ## Results & Parameters
 
@@ -222,6 +227,69 @@ curl -s -X PATCH $AGAMEMNON/v1/teams/$TEAM_ID/tasks/fix-odysseus-conan-profile \
 
 **Root cause**: Likely package structure issue — missing `__init__.py`, wrong module path, or stale pixi cache key causing 400 on cache fetch.
 
+---
+
+#### Pattern 6: clang-format Version Mismatch (C++ PRs after CI run)
+
+**Error**: CI reports `clang-format: would reformat <file>` after otherwise passing build/test/tidy steps.
+
+**Root cause**: Developer ran `clang-format` locally using a different version (e.g., clang-format-14 on Debian
+11) than CI (clang-format-18 on ubuntu-24.04). Version differences produce divergent formatting decisions.
+
+**Fix**: Use `podman run` with the exact CI base image to reformat:
+
+```bash
+# Install exact CI clang-format version via ubuntu-24.04 container
+podman run --rm -v $(pwd):/src ubuntu:24.04 bash -c "
+  apt-get update -qq && apt-get install -y clang-format-18 2>/dev/null
+  cd /src
+  clang-format-18 -i \$(git diff --name-only origin/main..HEAD | grep -E '\.(cpp|cc|h|hpp)$')
+"
+
+# Or shorter: from inside the repo
+podman run --rm -v $(pwd):/src -w /src ubuntu:24.04 \
+  bash -c 'apt-get update -qq && apt-get install -y clang-format-18 -qq && \
+           clang-format-18 -i $(git diff --name-only origin/main..HEAD)'
+
+# Commit the style fix and push to the existing branch
+git add -u
+git commit -m "style: apply clang-format to <feature-name>"
+git push  # No new PR needed — existing PR picks up the new commit
+```
+
+**Key rules:**
+- Identify the CI clang-format version from the workflow YAML (look for `ubuntu-24.04` → clang-format-18)
+- Run on all files changed in the PR (`git diff --name-only origin/main..HEAD`), not all files
+- Commit as a separate `style:` commit — do not squash into the feature commit (keeps blame clean)
+- Push to the existing branch — no new PR needed; auto-merge picks up the fix commit
+
+**Agent tier**: Haiku — once pattern is identified from CI logs, the fix is mechanical.
+
+---
+
+### Monitor Noise Reduction Pattern
+
+When polling CI status for long-running release builds, 30-second poll intervals cause excessive
+notifications. Recommended approach:
+
+```bash
+# Stop a noisy monitor
+TaskStop <monitor-id>
+
+# Re-arm with tighter filter (emit on FAILURE too, not just success)
+# and longer poll interval for release builds
+Monitor(
+    filter="conclusion == 'failure' OR conclusion == 'success'",
+    interval_seconds=60
+)
+```
+
+**Rules:**
+- Use 30s poll for fast checks (lint, pre-commit). Use 60s for release/build CI runs.
+- Monitor filter MUST emit on FAILURE too — `conclusion == 'success'` only causes silent misses
+  if the run fails. Silence does NOT mean "still running".
+- If a monitor produces too much noise: `TaskStop` the old one, re-arm with longer interval.
+
 ### Agent Tier Selection Table
 
 | Failure Type | Agent Tier | Why |
@@ -229,6 +297,7 @@ curl -s -X PATCH $AGAMEMNON/v1/teams/$TEAM_ID/tasks/fix-odysseus-conan-profile \
 | conan profile detect missing | Haiku | Exact fix known: add 1-line step to workflow YAML |
 | dependabot.yml docker block cleanup | Haiku | Exact fix known: remove block from YAML |
 | persist-credentials: false missing | Haiku | Exact fix known: add 1 attribute to checkout step |
+| clang-format violations | Haiku | Once CI version identified, fix is mechanical: podman reformat + `style:` commit |
 | BATS exit 127 (run_validate not found) | Sonnet | Root cause unknown — requires reading test file + load directives |
 | Python type errors + import failures | Sonnet | Root cause unknown — requires package structure investigation |
 | Pixi cache 400 errors | Sonnet | Environment-dependent, requires cache invalidation + diagnosis |
@@ -246,7 +315,7 @@ curl -s -X POST http://localhost:8080/v1/teams/$TEAM_ID/tasks \
     "priority": "high",
     "metadata": {
       "repo": "HomericIntelligence/<repo>",
-      "failure_type": "<conan-profile|persist-credentials|dependabot-docker|bats-exit-127|python-import>",
+      "failure_type": "<conan-profile|persist-credentials|dependabot-docker|bats-exit-127|python-import|clang-format>",
       "agent_tier": "<haiku|sonnet>"
     }
   }'
