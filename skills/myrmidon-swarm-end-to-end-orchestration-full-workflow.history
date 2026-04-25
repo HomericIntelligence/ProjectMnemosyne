@@ -1,3 +1,42 @@
+## v1.3.0 (2026-04-25)
+
+**Changed by:** ProjectProteus 43-issue myrmidon swarm session
+**Verification:** verified-local
+
+### What changed
+- Added 3 new Failed Attempts entries from ProjectProteus swarm (2026-04-25):
+  - Agent-added CI job (`typecheck`) breaks subsequent PRs when lockfile is missing (`npm ci` → `npm install` fix required)
+  - Auto-merge disabled at repo level blocks wave completion signal; PRs stay open indefinitely
+  - Two agents on same file (`dagger/src/index.ts`) cause merge conflicts even when editing different functions
+- Added pre-launch bash checks to Phase 3 (User Approval Gate): `autoMergeAllowed`, `.pre-commit-config.yaml`, lockfile presence
+- Added 4 new items to L0 Orchestration Checklist (pre-launch group + post-CI-job-add check)
+- Added ProjectProteus row to Verified On table
+- Bumped version 1.2.0 → 1.3.0; updated date to 2026-04-25
+
+### Why
+Live swarm session on ProjectProteus revealed three new failure modes not previously captured:
+auto-merge being disabled changed the completion signal pattern, a mid-session CI job addition
+with a missing lockfile dependency cascaded failures to all subsequent PRs, and same-file parallel
+agents conflicted despite touching different functions.
+
+### Previous frontmatter (v1.2.0)
+
+```
+---
+name: myrmidon-swarm-end-to-end-orchestration-full-workflow
+description: "Full end-to-end L0 commander pattern for complex myrmidon orchestration sessions. Use when: (1) task spans 3+ phases (cleanup + rebase + merge + CI + knowledge), (2) 10+ sub-tasks with mixed agent tiers required, (3) cross-repo work requiring /advise and /learn coordination, (4) feedback loops and decision gates are needed before committing to destructive operations, (5) auto-merge assumption cannot be made (CI may fail)."
+category: architecture
+date: 2026-04-23
+version: "1.2.0"
+user-invocable: false
+verification: verified-ci
+history: myrmidon-swarm-end-to-end-orchestration-full-workflow.history
+tags: [myrmidon, orchestration, l0-commander, multi-phase, planning, wave, ci, auto-merge, feedback-loop, end-to-end, knowledge-capture]
+---
+```
+
+---
+
 ## v1.2.0 (2026-04-23)
 
 **Changed by:** ProjectArgus branch/worktree cleanup session
