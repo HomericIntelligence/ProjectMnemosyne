@@ -6,8 +6,8 @@ description: "Pattern for implementing 20-35 GitHub issues in parallel waves usi
   \ speedup via myrmidon swarm Agent(isolation:'worktree') calls, (4) CI must be green\
   \ on main before launching waves."
 category: tooling
-date: 2026-04-13
-version: 2.2.0
+date: 2026-04-25
+version: 2.3.0
 user-invocable: false
 verification: verified-local
 history: parallel-issue-wave-execution.history
@@ -26,10 +26,10 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-04-13 |
-| Version | 2.2.0 |
+| Date | 2026-04-25 |
+| Version | 2.3.0 |
 | Objective | Implement 20-35 issues per repo in parallel waves using myrmidon swarm agents, with pre-verification and CI-first strategy |
-| Outcome | SUCCESS — verified across 2 repos: 35 PRs (ProjectScylla), 14 PRs (ProjectMnemosyne); 22/27 issues addressed in latest run |
+| Outcome | SUCCESS — verified across 3 repos and 180 issues: 35 PRs (ProjectScylla), 14 PRs (ProjectMnemosyne), ~34 PRs + 12 closures (ProjectKeystone 180-issue swarm) |
 
 ## When to Use
 
@@ -446,6 +446,7 @@ gh pr merge <pr-number> --auto --rebase
 | Assumed parallel PRs on different issues wouldn't conflict | Two agents independently added tests to `test_cli_report.py` (PRs #1801 and #1803) | Both PRs extended the same test file; #1801 merged first, making #1803 DIRTY | Group agents by file ownership even for test files; when PRs add to shared test helpers/fixtures, they can conflict |
 | Force-pushed rebase resolution and assumed auto-merge persisted | Ran `git push --force-with-lease` after resolving merge conflict, didn't re-enable auto-merge | GitHub silently clears auto-merge on every force-push | Always run `gh pr merge <N> --auto --rebase` immediately after any force-push |
 | Spawned duplicate agent while background agent was still running | Tried to take over branch without checking background agent state | Would have created conflicting commits and wasted work | Read `/tmp/claude-*/tasks/<id>.output`, check `git log origin/<branch>`, and `gh pr list --head <branch>` before touching a branch |
+| Retried agent after BLOCKED report | Agent correctly reported BLOCKED (e.g. coverage threshold below target, cannot implement without breaking changes); orchestrator re-ran with a different prompt | The BLOCKED signal is accurate — the issue requires human architectural review. Re-runs produce the same BLOCKED result or introduce incorrect changes to force past the blocker | When an agent reports BLOCKED with a clear reason, treat it as a signal for human review, not a failure to retry. Label the issue `needs:human-review` and move on. |
 
 ## Results & Parameters
 
@@ -461,13 +462,31 @@ gh pr merge <pr-number> --auto --rebase
 | ProjectScylla (Apr 2026) | Wave 0 | 20 issues closed (already-done/duplicates) | No PRs, direct gh issue close |
 | ProjectScylla (Apr 2026) | Wave 1 | ~4-5 Haiku doc-only agents | ~5 PRs, auto-merged via rebase |
 | ProjectScylla (Apr 2026) | Wave 2a+2b | ~8-10 Sonnet MEDIUM agents | ~13 PRs, auto-merged; PR #1792 needed pixi.lock after pyproject.toml change |
+| ProjectKeystone (Apr 2026) | 7 EASY waves | 67 EASY issues, ~9-10 per wave | ~34 PRs created, ~12 ALREADY-DONE closures |
+| ProjectKeystone (Apr 2026) | 9 MEDIUM waves | 78 MEDIUM issues, ≤3 Sonnet agents each | All 9 waves at ≤3 agents (C++ compile-time constraint confirmed) |
+| ProjectKeystone (Apr 2026) | HARD deferred | 25 HARD issues | Labeled tier:hard — NATS/JetStream (8), TSan/lock-free (6), circular CMake (5), 4-layer E2E (6) |
+
+### HARD Classification Patterns
+
+Use these patterns to immediately classify an issue as HARD (defer to human review, do not send to wave agent):
+
+| Pattern | Trigger Keywords | Why It's HARD |
+|---------|-----------------|---------------|
+| **NATS/JetStream integration** | "JetStream", "real NATS server", "service container", "NATS integration test", "TransparentBridge wiring" | Requires a live NATS server via service containers in CI; nats.c JetStream subscription loops are complex; embedded NATS server in C++ tests is non-trivial. An agent cannot implement this without the full NATS infrastructure present. |
+| **TSan + lock-free queue libraries** | "TSan", "ThreadSanitizer", "concurrentqueue", "moodycamel", "lock-free" (combined with TSan) | Lock-free data structures like `concurrentqueue` use relaxed atomics by design and trigger TSan false positives. These cannot be silenced without replacing the library. Issues like "Add TSan test run for X" where X uses these libraries are fundamentally blocked. |
+| **Circular CMake dependency refactors** | "circular dependency", "CMake target graph", "link dependency cycle" (e.g., `keystone_core ↔ keystone_concurrency`) | Breaking circular link dependencies between CMake targets requires architectural changes to the entire target graph. An agent without full build system understanding can easily break other targets or create new cycles. |
+| **4-layer async hierarchy integration tests** | "L0→L3", "end-to-end hierarchy", "all 4 agent layers", "ChiefArchitect to TaskAgent" | E2E tests spanning all 4 agent layers require each layer to be correctly wired together. Often blocked by prior architectural issues in lower layers that must be resolved first. |
+
+**Rule**: Classify HARD immediately on sight of these keywords — do not attempt to implement in a wave. Label `tier:hard` and defer.
 
 ### Optimal Batch Sizes
 
 | Method | Batch Size | Notes |
 |--------|-----------|-------|
 | Direct worktrees | 2 issues | Best balance of parallelism vs context |
-| Agent(isolation="worktree") | 7 issues per wave | Fully parallel, tested successfully |
+| Agent(isolation="worktree") EASY | 7 issues per wave | Fully parallel, tested successfully |
+| Agent(isolation="worktree") MEDIUM (C++) | 3 issues per wave | C++ compile times mean agents may time out if forced to rebuild from scratch at 5+ agents; confirmed across 9 MEDIUM waves in ProjectKeystone |
+| Agent(isolation="worktree") MEDIUM (Python) | 5 issues per wave | Python rebuild is fast; 5 is safe |
 | Bulk issue filing (Haiku) | 5 agents per wave | GitHub API rate limit safe |
 
 ### PR Creation Template
@@ -567,3 +586,4 @@ gh pr close <old-pr> --comment "Superseded by #<new-pr>"
 | ProjectMnemosyne | 27 open issues triaged, 14 PRs in 2 waves, 6 closed directly, April 2026 | CI gate: pytest + validate_plugins.py (39 tests, 953 skills) |
 | ProjectScylla | 80-issue triage: 20 closed already-done/dup, ~18 PRs in 3 waves, April 2026 | Haiku for LOW, Sonnet for MEDIUM; SKIP=gitleaks,yamllint needed on Debian 3.9 system; Audit Doc Policy hook stalls agents |
 | ProjectScylla | Wave 2b/2c continuation, 6 PRs (#1799-#1804), conflict resolution for PR #1803 | 2026-04-13 |
+| ProjectKeystone | 180-issue C++20/NATS swarm: 7 EASY waves (67 issues) + 9 MEDIUM waves (78 issues) + 25 HARD deferred; confirmed MEDIUM cap at 3 for C++ | 2026-04-25 |

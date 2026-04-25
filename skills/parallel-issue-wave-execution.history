@@ -1,5 +1,34 @@
 # parallel-issue-wave-execution — History
 
+## v2.3.0 (2026-04-25)
+
+**Changed by:** ProjectKeystone myrmidon swarm run (180 issues, 7 EASY waves + 9 MEDIUM waves)
+**Verification:** verified-local
+
+### What changed
+- Added "HARD Classification Patterns" table in Results & Parameters with 4 reliable HARD patterns (NATS/JetStream, TSan+lock-free, circular CMake deps, 4-layer E2E tests)
+- Updated "Optimal Batch Sizes" table: split MEDIUM into C++ (cap 3) and Python (cap 5)
+- Added 3 new Wave Sizing rows for ProjectKeystone (7 EASY waves, 9 MEDIUM waves, 25 HARD deferred)
+- Added 1 new Failed Attempts row: "Retried agent after BLOCKED report"
+- Added ProjectKeystone row to Verified On table
+- Updated date from 2026-04-13 to 2026-04-25, bumped version from 2.2.0 to 2.3.0
+- Updated Overview outcome to include ProjectKeystone results
+
+### Why
+ProjectKeystone swarm (C++20 + NATS/JetStream) surfaced reliable HARD classification signals that were previously undocumented: NATS/JetStream integration always requires a live server (cannot be mocked by agent); TSan + concurrentqueue/moodycamel produces fundamental false positives (not fixable by agent); circular CMake target refactors need architectural context. Also confirmed that MEDIUM wave cap for C++ projects is 3 (not 5) due to compile-time constraints. BLOCKED reports from agents are accurate signals for human review, not errors to retry.
+
+### Previous version (v2.2.0) snapshot
+
+```
+name: parallel-issue-wave-execution
+version: 2.2.0
+date: 2026-04-13
+```
+
+Full v2.2.0 content archived — see git history.
+
+---
+
 ## v2.2.0 (2026-04-13)
 
 **Changed by:** ProjectScylla batch-PR session Wave 2b/2c continuation
