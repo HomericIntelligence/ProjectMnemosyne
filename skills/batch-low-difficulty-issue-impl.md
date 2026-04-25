@@ -5,10 +5,11 @@ description: 'Classify, deduplicate, and batch-implement GitHub issues in a larg
   triage, (2) many issues are pure doc/text or infra-only changes, (3) duplicate issues
   need closing before implementation. Includes worktree-safe grep pattern for ALREADY-DONE
   verification, correct pre-filter order, ci.yml conflict avoidance, EASY queue exhaustion
-  detection, and Docker inline comment parse error pattern.'
+  detection, Docker inline comment parse error pattern, and parallel-agent add/add rebase
+  conflict resolution when multiple agents create the same package independently.'
 category: tooling
 date: 2026-04-23
-version: 1.4.0
+version: 1.5.0
 user-invocable: false
 verification: verified-ci
 history: batch-low-difficulty-issue-impl.history
@@ -24,6 +25,12 @@ history: batch-low-difficulty-issue-impl.history
 | **Outcome** | Verified: worktree isolation works correctly; correct pre-filter order; ALREADY-DONE grep must exclude worktrees |
 | **Verification** | verified-ci |
 | **History** | [changelog](./batch-low-difficulty-issue-impl.history) |
+
+### Session (2026-04-23) — ProjectScylla 15-Issue Medium/High Myrmidon Swarm
+
+| Date | Objective | Outcome |
+|------|-----------|---------|
+| 2026-04-23 | Fix 15 GitHub issues (LOW to HIGH difficulty) across 5 parallel waves (max 5 agents/wave) using `isolation: "worktree"` | 12 PRs merged; 3 issues were ALREADY-DONE; add/add rebase conflicts on `scylla/agamemnon/` package from two agents creating it independently in Wave 1 |
 
 ### Session (2026-04-23) — AchaeanFleet 235-Issue Myrmidon Swarm (Waves 1-24+)
 
@@ -276,8 +283,23 @@ gh pr list --author "@me" --state all --limit 50
 | Two agents dispatched to the same ci.yml file in the same wave (AchaeanFleet 2026-04-23) | Multiple issues touched `.github/workflows/ci.yml`; separate Haiku agents dispatched per issue | Guaranteed merge conflict — both agents produce PRs touching ci.yml in overlapping locations; only one can merge automatically | Batch ALL ci.yml issues within a wave into ONE agent. Use Sonnet for this agent due to multi-issue interdependencies |
 | Trivy action SHA pinning with unverified SHAs (AchaeanFleet 2026-04-23) | Agents generated plausible-looking SHAs for `aquasecurity/trivy-action` version pins | Some agent-generated SHAs were non-existent (fabricated). CI failed on `uses: aquasecurity/trivy-action@<bad-sha>` | Always verify pinned SHAs exist on GitHub before accepting. Correct SHA for aquasecurity/trivy-action v0.35.0: `57a97c7e7821a5776cebc9bb87c984fa69cba8f1` |
 | pixi.lock not committed after pixi.toml change (AchaeanFleet 2026-04-23) | Agent updated `pixi.toml` (added/changed dependency) without also committing updated `pixi.lock` | CI fails with "lock-file not up-to-date with workspace" — pixi enforces lock-file consistency in CI | After any `pixi.toml` change, run `pixi install` to regenerate `pixi.lock`, then commit both files together |
+| Two parallel agents creating the same new package independently (ProjectScylla 2026-04-23) | Wave 1 agents for separate issues both needed a new `src/scylla/agamemnon/` package; each agent created `__init__.py` and package files independently in their worktrees | On rebase, both PRs added the same files — second PR rebase produced add/add conflicts on `scylla/agamemnon/__init__.py` and other package files | When multiple Wave 1 agents may create a shared package, batch them into one agent OR use the superset-of-both-sides strategy: accept all files from both sides, keeping the union. The second PR author should cherry-pick non-conflicting changes on top of the first merged PR. |
+| validate_model decorator dead-parameter pattern (ProjectScylla 2026-04-23) | Used `@retry_with_backoff(max_retries=3, initial_delay=60)` at the decorator call site, then callers passed `(max_retries=1, base_delay=5)` as function arguments expecting them to control retry behavior | The decorator captured `max_retries=3, initial_delay=60` at decoration time and ignored the function's own `max_retries`/`base_delay` parameters entirely; callers got 3 retries at 60/120/240s (7+ min stall) instead of the intended 1 retry at 5s | When a function accepts retry parameters that callers must be able to control, build the decorator dynamically inside the function body using the caller's parameter values instead of hardcoding at decoration time. Pattern: `decorator = retry_with_backoff(max_retries=max_retries, base_delay=base_delay); return decorator(fn)(*args, **kwargs)` |
 
 ## Results & Parameters
+
+### Session Statistics (2026-04-23) — ProjectScylla 15-Issue Medium/High Swarm
+
+| Metric | Value |
+|--------|-------|
+| Starting issues | 15 (LOW to HIGH difficulty) |
+| ALREADY-DONE detections | 3 |
+| PRs merged (verified-ci) | 12 |
+| Waves | 5 (max 5 agents/wave) |
+| Wave size | ≤5 agents |
+| Worktree isolation | isolation="worktree" — worked correctly |
+| add/add conflict rate | 1 package (scylla/agamemnon/) from 2 independent creators |
+| Resolution | superset of both sides |
 
 ### Session Statistics (2026-04-23) — AchaeanFleet 235-Issue Swarm
 
@@ -403,3 +425,4 @@ STOP and report BLOCKED if the spec is unclear or requires a design decision.
 | ProjectScylla | 64-issue myrmidon swarm pass, 4 waves, 12 PRs (2026-04-12) | 11/12 PRs merged CI-green; worktree isolation worked correctly; verify-before-fix caught 3 ALREADY-DONE issues |
 | HomericIntelligence/Odysseus | 35-issue triage, 19 resolved (17 PRs + 2 ALREADY-DONE), meta-repo with 12 submodule symlinks (2026-04-23) | 0 git-op failures; worktree creation timeout on symlink-heavy repo (fallback to main worktree); parallel agents reported colliding PR numbers; Haiku branch naming drift to title-slug form |
 | HomericIntelligence/AchaeanFleet | 235-issue myrmidon swarm, 24+ waves, 91 PRs merged verified-ci (2026-04-23) | 202/235 issues closed; EASY queue exhausted at 76%; Docker inline comment parse error; ci.yml conflict avoidance; trivy SHA pinning; pixi.lock sync |
+| ProjectScylla | 15-issue medium/high swarm, 5 waves, 12 PRs merged (2026-04-23) | 3 ALREADY-DONE; add/add conflicts from parallel package creation; validate_model dead-parameter pattern |

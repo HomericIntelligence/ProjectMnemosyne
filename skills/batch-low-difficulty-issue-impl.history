@@ -1,5 +1,26 @@
 # History: batch-low-difficulty-issue-impl
 
+## v1.5.0 (2026-04-23)
+
+**Changed by:** ProjectScylla 15-issue medium/high myrmidon swarm session (5 waves, 12 PRs merged)
+**Verification:** verified-ci
+
+### What changed
+- Added ProjectScylla 15-issue medium/high swarm session summary row
+- Added 2 new Failed Attempts entries:
+  - Two parallel agents creating the same new package independently (add/add rebase conflicts on scylla/agamemnon/)
+  - validate_model dead-parameter pattern (decorator captures params at decoration time, ignores caller function params)
+- Added ProjectScylla 15-issue session statistics table
+- Added ProjectScylla medium/high swarm to Verified On table
+- Updated description to mention parallel-agent add/add rebase conflict resolution
+
+### Why
+ProjectScylla medium/high difficulty swarm (15 issues, 5 waves) revealed two new failure patterns:
+1. Parallel agents creating the same new package: when two Wave 1 agents independently need to create `scylla/agamemnon/`, both do so in isolation — on rebase the second PR gets add/add conflicts. Resolution: keep superset of both sides.
+2. validate_model dead-parameter pattern: `@retry_with_backoff(max_retries=3, initial_delay=60)` is applied at class definition time; the `max_retries`/`base_delay` parameters the function accepts are never passed to the decorator. Fix: build decorator dynamically from caller's parameter values inside the function body.
+
+---
+
 ## v1.4.0 (2026-04-23)
 
 **Changed by:** HomericIntelligence/AchaeanFleet 235-issue myrmidon swarm session (91 PRs merged, 202 issues closed, 24+ waves)
