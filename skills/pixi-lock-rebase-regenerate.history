@@ -1,5 +1,47 @@
 # pixi-lock-rebase-regenerate — History
 
+## v1.4.0 — 2026-04-24
+
+**Amendment**: Added dependency version-pin lock drift pattern and origin/main base requirement for fix branches.
+
+**Changed by:** Myrmidons shellcheck-warnings session — pixi.lock drift from shellcheck version pin (2026-04-24)
+**Verification:** verified-ci
+
+### What changed
+
+- Bumped version 1.3.0 → 1.4.0; updated date to 2026-04-24
+- Added 2 new "When to Use" triggers: (7) version-pin lock drift, (8) fix branch off origin/main requirement
+- Added `### Phase 3e: Dependency Version-Pin Lock Drift` subsection covering the specific CI error message, `git show` workaround for Safety Net, and `origin/main` branch base requirement
+- Added 3 new Failed Attempts rows:
+  - `git checkout <branch> -- pixi.lock` blocked by Safety Net; use `git show` instead
+  - Creating fix branch off stale local main (33 commits behind) causes push conflicts
+  - Committing only pixi.toml without regenerating pixi.lock causes immediate CI failure
+
+### Why
+
+Myrmidons shellcheck-warnings session (2026-04-24) revealed a new lock-drift pattern:
+- `pixi.toml` pinned `shellcheck = "0.10.0.*"` but `pixi.lock` still referenced an older version
+- CI error was `"Environment is not consistent with the lockfile"` (different from the `"lock-file not up-to-date"` phrasing seen in other scenarios)
+- Fix branch based on stale local main failed push; had to recreate off `origin/main`
+- `git checkout <branch> -- pixi.lock` was blocked by Safety Net; `git show <branch>:pixi.lock > pixi.lock` worked
+
+### Previous version (v1.3.0) snapshot
+
+<details>
+<summary>v1.3.0 frontmatter</summary>
+
+```yaml
+name: pixi-lock-rebase-regenerate
+version: "1.3.0"
+date: 2026-04-21
+verification: verified-local
+```
+
+Key state at v1.3.0: Phase 3d (multi-commit rebase with migrated code) added. No version-pin drift scenario or origin/main base requirement documented.
+</details>
+
+---
+
 ## v1.3.0 — 2026-04-21
 
 **Amendment**: Added multi-commit rebase pattern where the second commit patches code migrated to an external repo (hephaestus wrapper migration), requiring `git rebase --skip` for the empty resolved commit.
