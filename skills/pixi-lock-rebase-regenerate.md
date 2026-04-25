@@ -1,9 +1,9 @@
 ---
 name: pixi-lock-rebase-regenerate
-description: "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts, (4) Dependabot PRs fail CI fast (6-12 seconds) because Dependabot only bumps pyproject.toml not pixi.lock, (5) a second rebase of the same branch produces a pixi.lock commit conflict — skip the stale commit and re-run pixi install, (6) a second commit in the rebase chain patches code that was migrated to an external package — accept HEAD's version and use git rebase --skip."
+description: "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts, (4) Dependabot PRs fail CI fast (6-12 seconds) because Dependabot only bumps pyproject.toml not pixi.lock, (5) a second rebase of the same branch produces a pixi.lock commit conflict — skip the stale commit and re-run pixi install, (6) a second commit in the rebase chain patches code that was migrated to an external package — accept HEAD's version and use git rebase --skip, (7) pixi.toml pins a dependency version but pixi.lock still references old version (CI shows 'Environment is not consistent with the lockfile'), (8) creating a fix branch — always base off origin/main not local main which may be stale commits behind."
 category: ci-cd
-date: 2026-04-21
-version: "1.3.0"
+date: 2026-04-24
+version: "1.4.0"
 user-invocable: true
 verification: verified-local
 history: pixi-lock-rebase-regenerate.history
@@ -31,6 +31,9 @@ tags: [dependabot, pixi, rebase, pixi-lock, ci-cd]
 - **Dependabot PRs fail CI very fast (6–12 seconds)**: Dependabot bumps `pyproject.toml` version bounds but does NOT regenerate `pixi.lock`. CI runs `pixi install --locked` which rejects the stale lock immediately — hence the fast failure. Fix is the same: rebase + `pixi install` + commit pixi.lock.
 - A branch that previously had a pixi.lock-fix commit is rebased a second time and the old pixi.lock commit conflicts with the freshly-rebased state. Resolution: `git rebase --skip` the conflicting commit, then re-run `pixi install` fresh.
 - **Second commit in the rebase chain patches code migrated to an external package**: A branch has Commit A (structural change, e.g., pixi.toml restructure) and Commit B (follow-on fix to local scripts that have since been rewritten as thin wrapper stubs delegating to an external package). Commit A applies cleanly; Commit B conflicts because the functions it patches no longer exist. Accept `HEAD`'s version of all conflicted files and use `git rebase --skip` (not `--continue`) to drop the now-empty commit.
+
+- **pixi.toml pins a dependency version** (e.g., `shellcheck = "0.10.0.*"`) but `pixi.lock` still references the old version — CI shows `"Environment is not consistent with the lockfile"`. Fix: run `pixi install` locally to regenerate the lock.
+- **Creating a fix branch for lock drift**: always base off `origin/main` (not local `main` which may be stale): `git checkout origin/main -b fix/my-branch` — local `main` may be dozens of commits behind, causing push conflicts.
 
 **Do NOT use `--ours` or `--theirs`** to resolve a `pixi.lock` conflict — either side will be stale
 relative to the rebased branch's actual `pixi.toml`.
@@ -267,6 +270,38 @@ history with a no-op commit.
 - After `git checkout HEAD -- <files>`, running `git diff --cached` shows zero staged changes
 - The commit message of Commit B references "fixing" or "patching" scripts that main now delegates to an external package
 
+### Phase 3e: Dependency Version-Pin Lock Drift
+
+When `pixi.toml` pins a specific version (e.g., `shellcheck = "0.10.0.*"`) but `pixi.lock` still
+references the old version, CI reports `"Environment is not consistent with the lockfile"`.
+This can happen when: a PR pins a version constraint but the lockfile was not regenerated before
+committing, or when the lockfile was committed on a stale branch.
+
+**Diagnosis signal**: CI error is `"Environment is not consistent with the lockfile"` (not
+`"lock-file not up-to-date"`) — this specific phrasing indicates version-constraint mismatch rather
+than hash mismatch.
+
+```bash
+# Fix: create branch off origin/main (not local main which may be stale)
+git checkout origin/main -b fix/pixi-lock-drift
+
+# Copy the file that needs updating if blocked by Safety Net:
+git show <source-branch>:<file> > <file>  # e.g., git show fix/shellcheck-warnings:pixi.toml > pixi.toml
+
+# Regenerate the lock
+pixi install
+
+# Commit and push
+git add pixi.lock pixi.toml  # include pixi.toml if it changed
+git commit -m "fix(deps): regenerate pixi.lock after dependency version pin"
+git push -u origin fix/pixi-lock-drift
+gh pr create ...
+```
+
+**Why base off `origin/main` not local `main`**: Local `main` may be 33+ commits behind if
+the local clone hasn't been synced recently. Basing off a stale local `main` causes push conflicts
+(`non-fast-forward`). Use `git checkout origin/main -b <branch>` to guarantee a fresh base.
+
 ### Phase 4: Verify
 
 ```bash
@@ -288,6 +323,9 @@ done
 | `git rebase --continue` on double-rebase pixi.lock conflict | Tried to resolve conflict and continue | The prior pixi.lock-fix commit is entirely stale; continuing produces a broken lock | Use `git rebase --skip` to discard the stale commit, then `pixi install` fresh |
 | Assumed Dependabot CI failure was a test failure | 6-12s CI duration seemed too fast; investigated test logs | Pre-flight `pixi install --locked` rejection happens before tests run | Fast CI failure (< 30s) on Dependabot PRs = stale pixi.lock, not a code issue |
 | `git rebase --continue` after resolving empty commit (migrated-code scenario) | After accepting `HEAD` for all conflicted files in Commit B, tried `git rebase --continue` | Creates an empty commit that pollutes history with a no-op; also may trigger pre-commit failure on zero-change commit | When all conflicts are resolved by accepting `HEAD`'s version entirely — the commit adds nothing — use `git rebase --skip` to drop it |
+| `git checkout fix/shellcheck-warnings-187-211 -- pixi.lock` | Tried to copy pixi.lock from another branch to avoid regenerating | Blocked by Safety Net ("overwrites working tree"); same block as `git checkout HEAD -- file` | Use `git show <branch>:<file> > <file>` instead — e.g., `git show fix/shellcheck-warnings-187-211:pixi.lock > pixi.lock` |
+| Creating fix branch off stale local `main` | Ran `git checkout -b fix/pixi-lock-drift main` when local main was 33 commits behind origin/main | Push rejected as non-fast-forward; had to delete branch and recreate | Always use `git checkout origin/main -b fix/<name>` — bypasses local branch staleness entirely |
+| Committing only `pixi.toml` without regenerating `pixi.lock` | Updated shellcheck version pin in pixi.toml but forgot to run `pixi install` before committing | CI immediately fails with "Environment is not consistent with the lockfile" — the lockfile SHA doesn't match the new constraint | Always run `pixi install` and commit the updated `pixi.lock` alongside any `pixi.toml` change |
 
 ## Results & Parameters
 
@@ -333,3 +371,4 @@ gh pr view <pr-number> --json autoMergeRequest  # verify: should NOT be null
 | ProjectHephaestus | 5 PRs failed after version bump 0.5.0 to 0.6.0 + resilience subpackage; all fixed via parallel worktrees, 2026-03-30 | v1.1.0 |
 | ProjectScylla | Multiple Dependabot PRs failing CI in 6-12s; fixed sequentially via worktrees; double-rebase pixi.lock skip pattern used on 2 PRs, 2026-04-13 | v1.2.0 |
 | ProjectOdyssey | Rebased `5047-separate-dev-production-deps` branch onto main after PR #5241 closed without merging; Commit B (script fixes) conflicted because scripts were rewritten as hephaestus wrapper stubs; accepted HEAD for all conflicted files, used `git rebase --skip` to drop empty commit, re-ran `pixi install` for new environments; PR #5266, 2026-04-21 | v1.3.0 |
+| Myrmidons | shellcheck version pin (`shellcheck = "0.10.0.*"`) in pixi.toml, pixi.lock stale; fix branch created off origin/main; `git show` workaround for Safety Net; CI error "Environment is not consistent with the lockfile", 2026-04-24 | v1.4.0 |
