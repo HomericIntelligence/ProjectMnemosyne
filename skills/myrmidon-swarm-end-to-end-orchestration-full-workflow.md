@@ -3,7 +3,7 @@ name: myrmidon-swarm-end-to-end-orchestration-full-workflow
 description: "Full end-to-end L0 commander pattern for complex myrmidon orchestration sessions. Use when: (1) task spans 3+ phases (cleanup + rebase + merge + CI + knowledge), (2) 10+ sub-tasks with mixed agent tiers required, (3) cross-repo work requiring /advise and /learn coordination, (4) feedback loops and decision gates are needed before committing to destructive operations, (5) auto-merge assumption cannot be made (CI may fail)."
 category: architecture
 date: 2026-04-25
-version: "1.3.0"
+version: "1.4.0"
 user-invocable: false
 verification: verified-ci
 history: myrmidon-swarm-end-to-end-orchestration-full-workflow.history
@@ -71,6 +71,10 @@ TITLE="chore(triage): $(date +%Y-%m-%d) issue classification pass"
 gh issue create --repo <owner>/<repo> --title "$TITLE" \
   --body "$(cat session-summary.md)"
 # Discoverable via: gh issue list --search "chore(triage)"
+
+# Identify mega-agent candidates (files with 6+ issues)
+# Count file mentions across issue bodies to find contended files
+# Files with 6+ → per-file Sonnet mega-agent; branch: bundle-<file>-<issues>
 ```
 
 ### Phase 1: Exploration (Sonnet Sub-Agent)
@@ -94,6 +98,9 @@ Also run `/advise` as a sub-agent call at this phase to pull relevant prior lear
 - Each branch: commits ahead of main, PR state (open/closed/merged/NONE), CI state
 - Any existing open PRs: CI status, merge readiness
 - Relevant ProjectMnemosyne skills found via /advise
+- Per-issue file paths (if the issue inventory includes "files-likely-touched")
+
+**Classifier swarm decision rule**: If Explore agents return file-path evidence per issue (e.g. from an issue inventory that includes "files-likely-touched"), skip the Phase 4 classifier swarm — classify LOW/MEDIUM/HIGH deterministically from contention counts instead. Dispatch classifier agents only when issues lack file-mapping evidence.
 
 ### Phase 2: Plan Design (L0 Orchestrator)
 
@@ -136,6 +143,19 @@ After exploration, the L0 orchestrator designs a structured multi-wave plan. The
 - Wave 1 irreversible: branches deleted after worktree remove
 - Decision gates: present before destructive operations
 ```
+
+**Per-file mega-agent rule** — when the issue inventory has file-path evidence, apply this during plan design:
+
+```
+For each source file touched by 6+ issues → assign one Sonnet mega-agent
+  - Branch name: bundle-<file-stem>-<issue-numbers>
+  - One PR per mega-agent; PR title may be long (do not abbreviate)
+For cross-file mega-agents → run the one touching most files LAST (Wave E), others first (Wave D)
+```
+
+This typically collapses many planned waves into 2 (Wave D: parallel per-file agents, Wave E: solo cross-file agent).
+
+**Parallel Plan agent + Explore agents** — the Plan agent (wave design) can run simultaneously with the Explore agents (inventory/already-done/CI checks) if the Plan agent is given the issue list up front and asked to produce a *conditional* plan ("if file X has 6+ issues, use mega-agent"). This saves one full phase compared to running them sequentially.
 
 ### Phase 3: User Approval Gate
 
@@ -360,6 +380,10 @@ gh issue create \
 - PR #N: skill/... (amended/created)
 ```
 
+**HARD issues — enumerate even if leaving them open**: Even when the user says "leave HARD issues alone", the tracking issue body should still enumerate them with rationale (e.g. "requires architectural decision", "cross-cutting concern"). This gives future sessions a quick reference without reading all open issues.
+
+**PR title length**: Mega-agent PR titles can be long (e.g. `feat(executor): 11 improvements — timeout, teardown, retry, logging, dry-run, hooks, rich progress`). This is fine — do not abbreviate. The PR body's `Closes #N` lines are what matter for issue auto-close; the title is secondary.
+
 **Verification**: Confirm the issue was created by running:
 
 ```bash
@@ -395,6 +419,7 @@ Total session (typical):                                         ~1.5-3 hours
 | Agent-added CI job breaks subsequent PRs | Added a `typecheck` CI job to `ci.yml` in Wave E (issue #31). This job used `npm ci`. All subsequent PRs picked up this new required check. | The new CI job required `package-lock.json` which didn't exist. PRs #60 and #61 (created in later waves) both failed CI on the new typecheck job. Required dispatch of two fix agents to change `npm ci` → `npm install`. | When a wave adds a new CI job, verify it passes on `origin/main` before launching subsequent waves. New required CI checks affect ALL open PRs. If the new job has a dependency (e.g., lockfile), ensure that dependency is met or the job is non-blocking before continuing. |
 | Auto-merge disabled blocks wave completion signal | Used `gh pr merge <N> --auto --rebase` as the final step in all agent prompts, per standard pattern | ProjectProteus had `enablePullRequestAutoMerge: false` at the repository level. Agents reported "auto-merge is not enabled" and PRs stayed open. Wave completion was harder to assess — could not use "all PRs MERGED" as the done signal. | Before starting a swarm session, check `gh repo view --json autoMergeAllowed --jq '.autoMergeAllowed'`. If `false`, the completion signal for each wave must be "all PRs pushed with CI passing" rather than "all PRs MERGED". Adjust monitoring accordingly. |
 | Two index.ts agents racing to same file (Wave C) | Dispatched C1 (#10), C2 (#14), C3 (#36) as parallel agents since they touched different functions in `dagger/src/index.ts` | Even though they touched different functions, parallel agents on the same file create merge conflicts. Had to run them sequentially (one per wave-step, each rebasing on origin/main after the previous merged). | Same-file edits must always be sequential even if the edits are to different functions/sections. The "no two agents per wave touching the same file" rule applies even to non-overlapping edits within a file. |
+| Running Phase 4 classifier swarm when inventory already has file evidence | Dispatching 3 Explore classifier agents after 3 Explore inventory agents already returned file paths per issue | Duplicate work — inventory agents already provided enough signal for deterministic classification from contention counts | Skip classifier swarm if inventory agents returned file-path evidence; classify LOW/MEDIUM/HIGH directly from contention counts |
 
 ## Results & Parameters
 
@@ -411,6 +436,22 @@ Total session (typical):                                         ~1.5-3 hours
 | Agents used | 1 Sonnet (exploration), 2 Haiku (Wave 1 + Wave 3), 1 Sonnet (conflict resolution), 1 Haiku (CI fix), 3 Sonnet (skill capture) |
 | Data loss incidents | 0 |
 | Force-push disasters | 0 |
+
+### Session Scale Reference (ProjectTelemachy 2026-04-25)
+
+| Metric | Value |
+|--------|-------|
+| Issues at start | 57 |
+| Issues remaining at end | 6 (89% closure rate) |
+| PRs created | 17 |
+| PRs auto-merged | 17 |
+| Issues closed with evidence, no PR | 6 |
+| Wave A+B+0 dispatch | Simultaneous — 12 agents in one message |
+| Wave D | 3 parallel Sonnet mega-agents (per-file) |
+| Wave E | 1 solo Sonnet executor mega-agent (11 issues, 38 tests passing) |
+| Waves F+G | 4 agents |
+| Total wall clock | ~2.5 hours |
+| Classifier swarm dispatched | No — deterministic from file-contention counts |
 
 ### Agent Tier Assignment
 
@@ -470,6 +511,7 @@ Total session (typical):                                         ~1.5-3 hours
 | ProjectHephaestus | 32 worktrees → 1, 6 PRs created and merged, 3 skills captured, 2026-04-05 | Full L0 session: exploration → plan → approval → 3 waves → 2 CI fixes → 3 parallel /learn agents |
 | ProjectScylla | 64 issues classified, 12 PRs merged, tracking issue #1786 created, 2026-04-12 | Myrmidon swarm triage: classification + batch-fix waves + Phase 7 tracking issue on target repo |
 | ProjectProteus | 43-issue classification + 20 EASY implementations, 2026-04-25 | TypeScript/Bash/YAML repo; auto-merge disabled; no pre-commit hooks; no lockfiles; npm install fix required after typecheck job added |
+| ProjectTelemachy | 57 issues → 6 remaining (89% closure), 17 PRs, ~2.5h wall clock, 2026-04-25 | Python/pixi repo; deterministic classification from file-contention counts; per-file Sonnet mega-agents (Wave D+E); Waves 0+A+B dispatched simultaneously (12 agents in one message) |
 
 ## References
 
