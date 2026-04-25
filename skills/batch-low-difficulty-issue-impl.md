@@ -9,10 +9,12 @@ description: 'Classify, deduplicate, and batch-implement GitHub issues in a larg
   conflict resolution when multiple agents create the same package independently,
   pre-launch repo-capability checks (autoMergeAllowed, lockfile, pre-commit config),
   hot-file serialization for shared scripts (apply.sh/reconcile.sh), pre-swarm
-  existing-PR audit, and close-before-delegate pattern.'
+  existing-PR audit, close-before-delegate pattern, and C++20/Conan/pixi-specific
+  guards (libssl-dev, TSan+concurrentqueue blocker, enable_shared_from_this diamond
+  inheritance, CMakeLists.txt single-agent anchor, asyncio_mode auto decorator check).'
 category: tooling
-date: 2026-04-24
-version: 1.7.0
+date: 2026-04-25
+version: 1.8.0
 user-invocable: false
 verification: verified-local
 history: batch-low-difficulty-issue-impl.history
@@ -25,9 +27,15 @@ history: batch-low-difficulty-issue-impl.history
 |-------|-------|
 | **Date** | 2026-04-25 |
 | **Objective** | Classify, deduplicate, and batch-implement low-difficulty GitHub issues using worktree-isolated agents |
-| **Outcome** | Verified: worktree isolation works correctly; correct pre-filter order; ALREADY-DONE grep must exclude worktrees; pre-launch repo-capability checks required |
+| **Outcome** | Verified: worktree isolation works correctly; correct pre-filter order; ALREADY-DONE grep must exclude worktrees; pre-launch repo-capability checks required; C++20/Conan/pixi-specific guards required for C++ projects |
 | **Verification** | verified-local |
 | **History** | [changelog](./batch-low-difficulty-issue-impl.history) |
+
+### Session (2026-04-25) — ProjectKeystone 180-Issue C++20 Swarm
+
+| Date | Objective | Outcome |
+|------|-----------|---------|
+| 2026-04-25 | Implement 180 open ProjectKeystone issues (C++20 transport library) using 7 EASY waves + 9 MEDIUM waves | 7 new C++20/Conan/pixi-specific failure modes discovered; libssl-dev missing in Dockerfile blocked builds; TSan+concurrentqueue classified as hard blocker; CMakeLists.txt double-agent conflict despite grouping rules; enable_shared_from_this diamond inheritance trap |
 
 ### Session (2026-04-24) — Myrmidons shellcheck-warnings Swarm
 
@@ -76,6 +84,7 @@ history: batch-low-difficulty-issue-impl.history
 - (7) Before launch: check `gh repo view --json autoMergeAllowed`, `.pre-commit-config.yaml` existence, and `package-lock.json` / `pixi.lock` existence — these affect agent prompt templates (auto-merge flag, pre-commit steps, npm ci vs npm install)
 - (8) When multiple agents may touch the same "hot file" (e.g., `scripts/apply.sh`, `scripts/lib/reconcile.sh`): at most one agent per sub-wave may touch each hot file — serialize hot-file issues across sub-waves
 - (9) Before classifying issues: run `gh pr list --state open` first — many issues may have PRs already open from prior swarm runs; close issues already covered before delegating
+- (10) For C++20/CMake/Conan projects: run C++20/Conan/pixi-specific guard checks before dispatching agents (see "C++20/Conan/pixi Project-Specific Guards" in Results & Parameters)
 
 ## Verified Workflow
 
@@ -345,8 +354,63 @@ gh pr list --author "@me" --state all --limit 50
 | Launching ≤5 agents without checking for existing PRs (Myrmidons 2026-04-24) | Dispatched first wave of swarm agents without running `gh pr list --state open` first | Discovered 8 existing open PRs from a prior run covering most target issues; wasted context in initial wave analysis | Always run `gh pr list --state open` before any wave dispatch; audit PR titles against issue list; close issues covered by existing PRs before delegating |
 | Two agents touching `scripts/apply.sh` in the same sub-wave (Myrmidons 2026-04-24) | Dispatched parallel agents for issues #187 and #195 in the same sub-wave; both touched `scripts/apply.sh` | Guaranteed merge conflict — both PRs modified the same function block; second PR rebase required manual resolution | Apply hot-file serialization: identify all "hot files" before wave planning; at most one agent per hot file per sub-wave; issues touching the same hot file must be in different sub-waves |
 | Delegating an issue to an agent when it was already covered by an open PR (Myrmidons 2026-04-24) | Issue #211 had an open PR from a prior run; dispatched a new agent without checking | Two PRs covering the same issue; one was abandoned creating noise in the PR list | Use close-before-delegate: close the issue with a reference to the existing PR, then skip dispatching a new agent |
+| Conan + cnats (nats.c) build failure: missing libssl-dev in Dockerfile builder stage (ProjectKeystone 2026-04-25) | Conan resolved nats.c and its transitive OpenSSL dependency; Dockerfile builder stage lacked `libssl-dev` | Conan downloads sources and compiles them, but the compiler still needs system OpenSSL headers. CMake build failed with `openssl/ssl.h: No such file or directory` even though Conan install succeeded | Add `libssl-dev` to the apt-get install block in every Dockerfile builder stage when any Conan dependency (direct or transitive) uses OpenSSL. This is non-obvious from `conanfile.py` since Conan resolves transitive deps silently |
+| TSan build added to project using concurrentqueue (ProjectKeystone 2026-04-25) | Attempted to add `-fsanitize=thread` build to verify thread safety; concurrentqueue (moodycamel) lock-free atomics were in use | concurrentqueue triggers TSan false positives by design — the library uses intentional relaxed-ordering patterns that TSan cannot distinguish from real races. Tests fail spuriously under TSan | TSan + concurrentqueue (or any similar lock-free lib using intentional relaxed ordering) is a hard blocker. Classify any issue requiring TSan + concurrentqueue as HARD — cannot be resolved without replacing the dependency. Never attempt to add TSan builds to projects with concurrentqueue |
+| enable_shared_from_this diamond inheritance on derived class (ProjectKeystone 2026-04-25) | When fixing use-after-free via `weak_ptr` capture, added `std::enable_shared_from_this<T>` to a derived class (e.g., `TaskAgent`) to call `weak_from_this()` | Base class `AgentCore` already inherited `enable_shared_from_this<AgentCore>`. Derived class inheriting it again caused diamond inheritance compile error: "ambiguous base class 'enable_shared_from_this'" | Before adding `enable_shared_from_this<T>` to any class, run `grep -rn enable_shared_from_this` across all base classes in the hierarchy. If base already has it, the derived class can call `weak_from_this()` directly without re-inheriting |
+| Two agents both modifying CMakeLists.txt in the same wave (ProjectKeystone 2026-04-25) | Despite same-file grouping rules, two different agents both modified `CMakeLists.txt` for separate SPDX/spdlog fixes (PRs #392 and #395) in the same wave because the changes appeared unrelated | Second PR could not auto-merge cleanly; one became a duplicate requiring manual resolution | Treat `CMakeLists.txt` as a hard file-grouping anchor: any issue touching it must be batched into ONE agent per wave, regardless of how different the individual changes appear. Apply the same rule as ci.yml: batch all CMakeLists.txt issues into a single Sonnet agent per wave |
+| Adding @pytest.mark.asyncio when asyncio_mode='auto' set in pyproject.toml (ProjectKeystone 2026-04-25) | Agent wrote new Python test files and added `@pytest.mark.asyncio` decorators to async test functions | `pyproject.toml` already had `asyncio_mode = "auto"` in `[tool.pytest.ini_options]`. With auto mode, pytest-asyncio automatically treats all async test functions as async tests — the decorator is redundant and produces deprecation warnings or errors | Before writing Python test files, check: `grep -A5 "pytest.ini_options" pyproject.toml | grep asyncio_mode`. If `asyncio_mode = "auto"` is present, omit all `@pytest.mark.asyncio` decorators |
+| Trusting agent-reported PR numbers without verification (ProjectKeystone 2026-04-25) | In 3 out of 16 waves, accepted agent's final output ("PR #403") as the authoritative PR number for wave reconciliation | Agents report their in-flight view of PR numbers, which can be stale or incorrect when races occur or the agent mistakes a draft PR number. 3/16 waves had wrong agent-reported PR numbers | After every wave, always verify PR numbers with `gh pr list --author "@me" --state all --limit 50`. Never trust agent-reported PR numbers as ground truth |
 
 ## Results & Parameters
+
+### C++20/Conan/pixi Project-Specific Guards
+
+Run these checks **before dispatching any agents** to a C++20/CMake/Conan project:
+
+| # | Guard Check | Command | Action if Fails |
+|---|-------------|---------|-----------------|
+| 1 | Dockerfile has `libssl-dev` if any Conan dep uses OpenSSL | `grep libssl-dev Dockerfile* docker/*/Dockerfile 2>/dev/null` | Add `libssl-dev` to the apt-get install block in every builder stage |
+| 2 | No concurrentqueue (or similar lock-free lib) if TSan build planned | `grep -rn "concurrentqueue\|moodycamel" CMakeLists.txt conanfile.py pixi.toml 2>/dev/null` | Classify any TSan-requiring issues as HARD; skip TSan build addition |
+| 3 | Check base class hierarchy for `enable_shared_from_this` before adding to derived | `grep -rn "enable_shared_from_this" src/ include/ 2>/dev/null` | If base has it, derived must call `weak_from_this()` directly, not re-inherit |
+| 4 | CMakeLists.txt is treated as hard file-grouping anchor | Manual wave planning check | Batch ALL CMakeLists.txt issues into ONE agent per wave (like ci.yml rule) |
+| 5 | Check pyproject.toml for `asyncio_mode` before writing Python tests | `grep -A5 "pytest.ini_options" pyproject.toml 2>/dev/null \| grep asyncio_mode` | If `asyncio_mode = "auto"`, omit all `@pytest.mark.asyncio` decorators |
+| 6 | Verify PR numbers after each wave | `gh pr list --author "@me" --state all --limit 50` | Never trust agent-reported PR numbers; always verify with this command |
+
+```bash
+# C++20 pre-swarm checklist (run once before any wave dispatch):
+
+# 1. Dockerfile libssl-dev check
+grep -rn "libssl-dev" Dockerfile* docker/ 2>/dev/null || echo "WARN: libssl-dev not found — check if Conan deps use OpenSSL"
+
+# 2. TSan + concurrentqueue blocker check
+grep -rn "concurrentqueue\|moodycamel" CMakeLists.txt conanfile.py pixi.toml 2>/dev/null && echo "WARN: concurrentqueue in use — do NOT add TSan builds"
+
+# 3. enable_shared_from_this hierarchy check (run before any weak_ptr fix)
+grep -rn "enable_shared_from_this" src/ include/ 2>/dev/null
+
+# 4. CMakeLists.txt — enforce single-agent-per-wave in wave planning (manual)
+
+# 5. asyncio_mode auto check
+grep -A5 "pytest.ini_options" pyproject.toml 2>/dev/null | grep asyncio_mode
+
+# 6. Post-wave PR verification (after each wave)
+gh pr list --author "@me" --state all --limit 50
+```
+
+### Session Statistics (2026-04-25) — ProjectKeystone 180-Issue C++20 Swarm
+
+| Metric | Value |
+|--------|-------|
+| Starting open issues | 180 |
+| Wave architecture | 7 EASY waves + 9 MEDIUM waves |
+| C++20-specific failure modes discovered | 7 |
+| Dockerfile libssl-dev failures | Yes — blocked builds until fix applied |
+| TSan+concurrentqueue issues classified HARD | Yes — classified as hard blockers |
+| CMakeLists.txt double-agent conflicts | 1 (PRs #392 and #395 — one duplicate) |
+| enable_shared_from_this diamond inheritance | 1 compile error caught during implementation |
+| asyncio_mode decorator noise | Yes — decorators omitted after pyproject.toml check |
+| Agent-reported wrong PR numbers | 3 out of 16 waves |
+| Verification | verified-local |
 
 ### Session Statistics (2026-04-24) — Myrmidons shellcheck-warnings Swarm
 
@@ -510,6 +574,7 @@ STOP and report BLOCKED if the spec is unclear or requires a design decision.
 
 | Project | Context | Details |
 |---------|---------|---------|
+| HomericIntelligence/ProjectKeystone | 180-issue C++20 swarm, 7 EASY + 9 MEDIUM waves (2026-04-25) | 7 C++20/Conan/pixi-specific failure modes discovered; libssl-dev Dockerfile gap; TSan+concurrentqueue hard blocker; CMakeLists.txt double-agent; enable_shared_from_this diamond inheritance; asyncio_mode='auto' decorator check; agent PR number unreliability |
 | HomericIntelligence/Myrmidons | shellcheck-warnings swarm (~25 issues #187-#211), all PRs merged CI-green (2026-04-24) | Wave-based with hot-file serialization; 8 existing PRs discovered pre-swarm; CHANGELOG consolidation in Wave 6 |
 | HomericIntelligence/ProjectProteus | 43-issue swarm, 14 PRs created, ~8 merged (2026-04-25) | Auto-merge disabled; no lockfile (npm install); no pre-commit config; 4 ALREADY-DONE; 1 DUPLICATE |
 | ProjectOdyssey | 165-issue backlog cleanup, March 2026 | [notes.md](../references/notes.md) |
