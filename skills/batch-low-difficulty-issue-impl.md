@@ -6,11 +6,13 @@ description: 'Classify, deduplicate, and batch-implement GitHub issues in a larg
   need closing before implementation. Includes worktree-safe grep pattern for ALREADY-DONE
   verification, correct pre-filter order, ci.yml conflict avoidance, EASY queue exhaustion
   detection, Docker inline comment parse error pattern, parallel-agent add/add rebase
-  conflict resolution when multiple agents create the same package independently, and
-  pre-launch repo-capability checks (autoMergeAllowed, lockfile, pre-commit config).'
+  conflict resolution when multiple agents create the same package independently,
+  pre-launch repo-capability checks (autoMergeAllowed, lockfile, pre-commit config),
+  hot-file serialization for shared scripts (apply.sh/reconcile.sh), pre-swarm
+  existing-PR audit, and close-before-delegate pattern.'
 category: tooling
-date: 2026-04-25
-version: 1.6.0
+date: 2026-04-24
+version: 1.7.0
 user-invocable: false
 verification: verified-local
 history: batch-low-difficulty-issue-impl.history
@@ -26,6 +28,12 @@ history: batch-low-difficulty-issue-impl.history
 | **Outcome** | Verified: worktree isolation works correctly; correct pre-filter order; ALREADY-DONE grep must exclude worktrees; pre-launch repo-capability checks required |
 | **Verification** | verified-local |
 | **History** | [changelog](./batch-low-difficulty-issue-impl.history) |
+
+### Session (2026-04-24) — Myrmidons shellcheck-warnings Swarm
+
+| Date | Objective | Outcome |
+|------|-----------|---------|
+| 2026-04-24 | Implement shellcheck warning fixes across Myrmidons repo using wave-based myrmidon swarm with hot-file serialization | All PRs merged, main CI green at 333b40d; Wave 1 = verification sweep; hot-file serialization prevented apply.sh/reconcile.sh conflicts |
 
 ### Session (2026-04-25) — ProjectProteus 43-Issue Swarm
 
@@ -66,6 +74,8 @@ history: batch-low-difficulty-issue-impl.history
 - (5) CI pre-commit hooks are stable (no known broken hooks)
 - (6) Pre-existing CI failures are blocking merges — create a `fix-test-failures` fix branch first
 - (7) Before launch: check `gh repo view --json autoMergeAllowed`, `.pre-commit-config.yaml` existence, and `package-lock.json` / `pixi.lock` existence — these affect agent prompt templates (auto-merge flag, pre-commit steps, npm ci vs npm install)
+- (8) When multiple agents may touch the same "hot file" (e.g., `scripts/apply.sh`, `scripts/lib/reconcile.sh`): at most one agent per sub-wave may touch each hot file — serialize hot-file issues across sub-waves
+- (9) Before classifying issues: run `gh pr list --state open` first — many issues may have PRs already open from prior swarm runs; close issues already covered before delegating
 
 ## Verified Workflow
 
@@ -91,6 +101,30 @@ gh pr create --title "fix(ci): repair pre-existing CI failures blocking swarm" -
 - Nomad vault-policy.hcl guard conditions
 - npm CVE suppressions
 - Trivy action SHA corrections
+
+### Phase 0.5: Pre-Swarm Existing-PR Audit
+
+Before classifying issues or dispatching any agents, audit the repo for existing open PRs.
+Prior swarm runs may have already created PRs covering many issues — launching duplicate agents
+wastes time and creates conflicts.
+
+```bash
+# Check for existing open PRs before any work
+gh pr list --state open --json number,title,headRefName,mergeStateStatus
+
+# Also check recently merged PRs to confirm ALREADY-DONE candidates
+gh pr list --state merged --limit 20 --json number,title,mergeStateStatus
+```
+
+**Pattern (Myrmidons 2026-04-24)**: Launched swarm without auditing first. Discovered 8 existing
+open PRs covering most of the target issues. Avoided most duplicate work only because prior run
+was checked mid-session. Always audit first.
+
+**Close-before-delegate**: When an issue already has an open PR that covers it, close the issue
+with a reference to the PR before delegating any agent to that issue:
+```bash
+gh issue close <N> --comment "Covered by PR #<M> — closing to avoid duplicate delegation."
+```
 
 ### Phase 1: Classify Issues (30-60 min)
 
@@ -172,6 +206,18 @@ PR 3: .github/workflows/ci.yml → closes #all-ci-issues-in-this-wave
 ```
 
 **CRITICAL — ci.yml conflict avoidance**: Multiple issues often touch `.github/workflows/ci.yml` per wave. Batch ALL ci.yml-touching issues into ONE agent per wave. Never dispatch two agents with the same target file in the same wave — guaranteed merge conflict. Use Sonnet (not Haiku) for ci.yml batches due to multi-issue interdependencies.
+
+**CRITICAL — Hot-file serialization**: Some scripts are "hot files" that many issues touch simultaneously (e.g., `scripts/apply.sh`, `scripts/lib/reconcile.sh` in Myrmidons-style repos). Apply the same one-agent-per-wave rule:
+- At most one agent per sub-wave touches each hot file
+- Issues that both require a hot file must be put in different sub-waves
+- Use Sonnet (not Haiku) for hot-file issues due to structural complexity
+- Document the hot-file serialization order in the wave plan so reviewers understand the dependency chain
+
+```
+# Example hot-file wave split:
+Sub-wave A1: Agent 1 (apply.sh change for issue #X), Agent 2 (reconcile.sh change for #Y)
+Sub-wave A2: Agent 3 (apply.sh change for issue #Z) — must wait for A1 to merge first
+```
 
 Issues touching different files can be implemented in parallel.
 
@@ -296,8 +342,24 @@ gh pr list --author "@me" --state all --limit 50
 | `npm ci` in typecheck job without lockfile (ProjectProteus 2026-04-25) | Added a `typecheck` CI job using `npm ci` as the install step, then dispatched implementation PRs that included this job definition | `npm ci` requires a `package-lock.json` (or npm-shrinkwrap.json with lockfileVersion >= 1). The repo had no lockfile committed (issue #21 was open). CI failed immediately on the install step with "The `npm ci` command can only install with an existing package-lock.json" | When adding CI jobs that install npm deps, check whether a lockfile exists first: `ls package-lock.json`. If absent, use `npm install` instead of `npm ci` until the lockfile issue is resolved. Add a comment in the workflow: `# TODO: switch to npm ci once package-lock.json is committed (issue #NN)` |
 | Auto-merge disabled on target repo (ProjectProteus 2026-04-25) | All agent prompts included `gh pr merge <NUMBER> --auto --rebase` as the final step | The repository had `enablePullRequestAutoMerge` disabled at the repo settings level. The command either silently failed or returned an error, leaving PRs open | Before launching waves, check if auto-merge is enabled: `gh repo view --json autoMergeAllowed --jq '.autoMergeAllowed'`. If `false`, remove `--auto` from all agent prompts and note that PRs require manual merge or reviewer approval. Do not assume auto-merge works across all repos. |
 | Pre-commit hooks absent in target repo (ProjectProteus 2026-04-25) | Standard agent prompt template included `pre-commit run --files <changed-files>` steps | ProjectProteus had no `.pre-commit-config.yaml` (issue #25 was requesting it). Running pre-commit in agents is a no-op or errors out | Before generating agent prompts, check `ls .pre-commit-config.yaml`. If absent, remove pre-commit steps from all agent prompts entirely. Reinstate them after the hooks issue is resolved. |
+| Launching ≤5 agents without checking for existing PRs (Myrmidons 2026-04-24) | Dispatched first wave of swarm agents without running `gh pr list --state open` first | Discovered 8 existing open PRs from a prior run covering most target issues; wasted context in initial wave analysis | Always run `gh pr list --state open` before any wave dispatch; audit PR titles against issue list; close issues covered by existing PRs before delegating |
+| Two agents touching `scripts/apply.sh` in the same sub-wave (Myrmidons 2026-04-24) | Dispatched parallel agents for issues #187 and #195 in the same sub-wave; both touched `scripts/apply.sh` | Guaranteed merge conflict — both PRs modified the same function block; second PR rebase required manual resolution | Apply hot-file serialization: identify all "hot files" before wave planning; at most one agent per hot file per sub-wave; issues touching the same hot file must be in different sub-waves |
+| Delegating an issue to an agent when it was already covered by an open PR (Myrmidons 2026-04-24) | Issue #211 had an open PR from a prior run; dispatched a new agent without checking | Two PRs covering the same issue; one was abandoned creating noise in the PR list | Use close-before-delegate: close the issue with a reference to the existing PR, then skip dispatching a new agent |
 
 ## Results & Parameters
+
+### Session Statistics (2026-04-24) — Myrmidons shellcheck-warnings Swarm
+
+| Metric | Value |
+|--------|-------|
+| Target issues | ~25 shellcheck warnings (issues #187-#211) |
+| Wave architecture | EASY(Haiku) → MEDIUM(Sonnet) → HARD(Opus) |
+| Hot files serialized | scripts/apply.sh, scripts/lib/reconcile.sh (1 agent per sub-wave each) |
+| Wave 1 | Verification sweep — closed ALREADY-DONE issues before implementation |
+| Pre-swarm PR discovery | 8 existing open PRs found; most issues already covered |
+| CHANGELOG tracking | Each agent commented their entry; Wave 6 consolidated |
+| CI result | All PRs merged, main CI green at 333b40d |
+| Verification | verified-ci |
 
 ### Session Statistics (2026-04-25) — ProjectProteus 43-Issue Swarm
 
@@ -448,6 +510,7 @@ STOP and report BLOCKED if the spec is unclear or requires a design decision.
 
 | Project | Context | Details |
 |---------|---------|---------|
+| HomericIntelligence/Myrmidons | shellcheck-warnings swarm (~25 issues #187-#211), all PRs merged CI-green (2026-04-24) | Wave-based with hot-file serialization; 8 existing PRs discovered pre-swarm; CHANGELOG consolidation in Wave 6 |
 | HomericIntelligence/ProjectProteus | 43-issue swarm, 14 PRs created, ~8 merged (2026-04-25) | Auto-merge disabled; no lockfile (npm install); no pre-commit config; 4 ALREADY-DONE; 1 DUPLICATE |
 | ProjectOdyssey | 165-issue backlog cleanup, March 2026 | [notes.md](../references/notes.md) |
 | ProjectScylla | 64-issue myrmidon swarm pass, 4 waves, 12 PRs (2026-04-12) | 11/12 PRs merged CI-green; worktree isolation worked correctly; verify-before-fix caught 3 ALREADY-DONE issues |
