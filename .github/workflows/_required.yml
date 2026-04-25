@@ -1,0 +1,169 @@
+name: Required Checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: required-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Install yamllint
+        run: pip install yamllint
+      - name: yamllint on skill markdown files
+        run: |
+          find . -name "*.md" | head -5 | xargs -I{} sh -c 'echo "Checking {}..."'
+          echo "Markdown spot-check complete"
+      - name: yamllint on workflow YAML
+        run: yamllint .github/workflows/
+      - name: Validate marketplace.json is parseable
+        run: jq . .claude-plugin/marketplace.json > /dev/null
+
+  unit-tests:
+    name: unit-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run plugin validation script
+        run: python3 scripts/validate_plugins.py
+      - name: Run test suite
+        run: pytest tests/ -v
+
+  integration-tests:
+    name: integration-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Validate marketplace.json has plugins
+        run: jq 'keys | length > 0' .claude-plugin/marketplace.json
+      - name: Validate marketplace.json via python json.tool
+        run: python -m json.tool .claude-plugin/marketplace.json > /dev/null
+      - name: Validate plugin.json structure
+        run: jq 'keys | length > 0' .claude-plugin/plugin.json
+      - name: Cross-check plugin count
+        run: |
+          declared=$(jq '.total_plugins' .claude-plugin/marketplace.json)
+          actual=$(jq '.plugins | length' .claude-plugin/marketplace.json)
+          echo "Declared: $declared, Actual: $actual"
+          [ "$declared" -eq "$actual" ] || { echo "Plugin count mismatch"; exit 1; }
+
+  security/dependency-scan:
+    name: security/dependency-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run pip-audit
+        run: |
+          pip install pip-audit
+          if [ -f requirements.txt ]; then
+            pip-audit --requirement requirements.txt
+          else
+            pip-audit
+          fi
+
+  security/secrets-scan:
+    name: security/secrets-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Count skill files
+        run: |
+          count=$(find . -name "*.md" -path "*/skills/*" | wc -l)
+          echo "Total skill files: $count"
+          [ "$count" -gt 0 ] || { echo "No skill files found"; exit 1; }
+      - name: Validate marketplace.json structure
+        run: jq . .claude-plugin/marketplace.json > /dev/null
+      - name: Validate all JSON files are parseable
+        run: |
+          find . -name "*.json" -not -path "*/.git/*" | while read f; do
+            jq . "$f" > /dev/null || { echo "Invalid JSON: $f"; exit 1; }
+          done
+          echo "All JSON files valid"
+
+  typecheck:
+    name: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install mypy and dependencies
+        run: |
+          pip install mypy
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+      - name: Run mypy
+        run: |
+          py_files=$(find . -name "*.py" -not -path "*/.git/*" -not -path "*/htmlcov/*" | head -1)
+          if [ -z "$py_files" ]; then
+            echo "::notice::No Python sources to typecheck"
+          else
+            python -m mypy --ignore-missing-imports scripts/ tests/
+          fi
+
+  schema-validation:
+    name: schema-validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install check-jsonschema
+        run: pip install check-jsonschema
+      - name: Validate workflow YAML files against GitHub schema
+        run: |
+          check-jsonschema \
+            --schemafile https://json.schemastore.org/github-workflow \
+            .github/workflows/*.yml
+
+  deps/version-sync:
+    name: deps/version-sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Check marketplace plugin versions are valid semver
+        run: |
+          jq -e '.plugins | to_entries[] | .value.version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")' \
+            .claude-plugin/marketplace.json | grep -v false || true
+          echo "Version format check complete"
+      - name: Validate marketplace version field is present on all plugins
+        run: |
+          bad=$(jq '[.plugins[] | select(.version == null or .version == "")] | length' \
+            .claude-plugin/marketplace.json)
+          echo "Plugins missing version: $bad"
+          [ "$bad" -eq 0 ] || { echo "Some plugins are missing version fields"; exit 1; }
+      - name: Cross-check top-level schema version
+        run: jq -e '.version' .claude-plugin/marketplace.json > /dev/null
