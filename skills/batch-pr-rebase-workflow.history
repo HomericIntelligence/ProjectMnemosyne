@@ -1,5 +1,51 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.8.0 (2026-04-24)
+
+**Changed by:** Myrmidons shellcheck-warnings myrmidon swarm rebase session (2026-04-24)
+**Verification:** verified-ci (all PRs merged, main CI green at 333b40d)
+
+### What changed
+- Added 3 new "When to Use" conditions: .claude/worktrees agent rebase, detached HEAD → branch -f fix, CHANGELOG take-HEAD strategy
+- Added `### Phase 3.5a: Rebase Branches in .claude/worktrees/agent-* Paths` subsection with:
+  - `git -C <worktree>` rebase pattern
+  - `git branch -f <branch> HEAD` for detached HEAD recovery
+  - Dependency ordering for hot-file overlapping PRs
+  - CHANGELOG.md conflict strategy (always take HEAD/main)
+  - Conflict resolution: take HEAD as base, add only genuinely new items
+- Added 4 new Failed Attempts rows:
+  - Running rebase from repo root for .claude/worktrees agent branch
+  - `git checkout <ref> -- <path>` during rebase blocked by Safety Net inside worktrees
+  - `git push --force` blocked; use force-with-lease with explicit refspec
+  - Merging CHANGELOG conflicts during individual PR rebase causes spiraling conflicts
+- Added Myrmidons to Verified On table
+- Updated description to add conditions 20-22
+- Bumped version 2.7.0 → 2.8.0
+
+### Why
+Myrmidons shellcheck-warnings swarm (2026-04-24) used myrmidon sub-agents that created branches
+inside `.claude/worktrees/agent-<id>/` paths. Rebasing these required `git -C <path>` pattern.
+After rebase, worktrees ended in detached HEAD because they were created from remote refs without
+a local branch — `git branch -f <branch> HEAD` reattaches cleanly. CHANGELOG conflicts are
+ubiquitous in swarm sessions; the take-HEAD strategy prevents spiraling conflicts in subsequent PRs.
+
+### Previous version (v2.7.0) snapshot
+
+<details>
+<summary>v2.7.0 frontmatter</summary>
+
+```yaml
+name: batch-pr-rebase-workflow
+version: "2.7.0"
+date: 2026-04-24
+verification: verified-ci
+```
+
+Key state at v2.7.0: Added mergeStateStatus reference table, silent-drop check, Sonnet vs Haiku guidance. No .claude/worktrees specific patterns or CHANGELOG conflict strategy.
+</details>
+
+---
+
 ## v2.7.0 (2026-04-24)
 
 **Changed by:** ProjectHermes /learn session — mergeStateStatus reference table, silent-drop check in Quick Reference, at-scale issue triage commands, Sonnet vs Haiku agent guidance
