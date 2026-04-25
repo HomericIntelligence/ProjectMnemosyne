@@ -2,8 +2,8 @@
 name: myrmidon-swarm-end-to-end-orchestration-full-workflow
 description: "Full end-to-end L0 commander pattern for complex myrmidon orchestration sessions. Use when: (1) task spans 3+ phases (cleanup + rebase + merge + CI + knowledge), (2) 10+ sub-tasks with mixed agent tiers required, (3) cross-repo work requiring /advise and /learn coordination, (4) feedback loops and decision gates are needed before committing to destructive operations, (5) auto-merge assumption cannot be made (CI may fail)."
 category: architecture
-date: 2026-04-23
-version: "1.2.0"
+date: 2026-04-25
+version: "1.3.0"
 user-invocable: false
 verification: verified-ci
 history: myrmidon-swarm-end-to-end-orchestration-full-workflow.history
@@ -140,6 +140,21 @@ After exploration, the L0 orchestrator designs a structured multi-wave plan. The
 ### Phase 3: User Approval Gate
 
 **Critical**: Present the full plan before dispatching ANY agents. Wait for explicit user approval.
+
+**Pre-launch checks** — run these before presenting the plan and adjust accordingly:
+
+```bash
+# Check auto-merge capability
+gh repo view --json autoMergeAllowed --jq '.autoMergeAllowed'
+# If false: note in plan that PRs require manual merge; remove --auto from agent prompts
+
+# Check pre-commit hooks
+ls .pre-commit-config.yaml 2>/dev/null && echo "hooks present" || echo "NO HOOKS — remove pre-commit steps from agent prompts"
+
+# Check lockfiles (affects CI job templates)
+ls package-lock.json dagger/package-lock.json pixi.lock 2>/dev/null
+# If missing: use npm install not npm ci in any CI jobs added this session
+```
 
 Approval request format:
 ```
@@ -377,6 +392,9 @@ Total session (typical):                                         ~1.5-3 hours
 | Not re-enabling auto-merge after CI fix | Fix agent pushed commit to fix pre-commit failure, declared "done" | GitHub silently cleared auto-merge on the force-push; PR sat open indefinitely | After every push to a PR branch, explicitly re-run `gh pr merge --auto --rebase <N>` and verify the response |
 | Skipping tracking issue creation | Session ended after Phase 6 skill PRs merged; no tracking issue created on target repo | Session results were only in `results.md` artifact file and agent memory — not searchable via `gh issue list` in future sessions | Always create a `chore(triage): YYYY-MM-DD issue classification pass` tracking issue on the target repo as Phase 7 (final step) |
 | `git worktree remove <path>` on agent worktrees after session | Ran `git worktree remove` on 5 unlocked worktrees containing only `__pycache__/` as untracked content | Fails with "contains modified or untracked files" — git treats `__pycache__/` as untracked even though it is irrelevant | Clean `__pycache__` first: `find .claude/worktrees/agent-* -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null` then `git worktree remove`. Alternatively ask user to approve `--force` (Safety Net blocks it without explicit permission). |
+| Agent-added CI job breaks subsequent PRs | Added a `typecheck` CI job to `ci.yml` in Wave E (issue #31). This job used `npm ci`. All subsequent PRs picked up this new required check. | The new CI job required `package-lock.json` which didn't exist. PRs #60 and #61 (created in later waves) both failed CI on the new typecheck job. Required dispatch of two fix agents to change `npm ci` → `npm install`. | When a wave adds a new CI job, verify it passes on `origin/main` before launching subsequent waves. New required CI checks affect ALL open PRs. If the new job has a dependency (e.g., lockfile), ensure that dependency is met or the job is non-blocking before continuing. |
+| Auto-merge disabled blocks wave completion signal | Used `gh pr merge <N> --auto --rebase` as the final step in all agent prompts, per standard pattern | ProjectProteus had `enablePullRequestAutoMerge: false` at the repository level. Agents reported "auto-merge is not enabled" and PRs stayed open. Wave completion was harder to assess — could not use "all PRs MERGED" as the done signal. | Before starting a swarm session, check `gh repo view --json autoMergeAllowed --jq '.autoMergeAllowed'`. If `false`, the completion signal for each wave must be "all PRs pushed with CI passing" rather than "all PRs MERGED". Adjust monitoring accordingly. |
+| Two index.ts agents racing to same file (Wave C) | Dispatched C1 (#10), C2 (#14), C3 (#36) as parallel agents since they touched different functions in `dagger/src/index.ts` | Even though they touched different functions, parallel agents on the same file create merge conflicts. Had to run them sequentially (one per wave-step, each rebasing on origin/main after the previous merged). | Same-file edits must always be sequential even if the edits are to different functions/sections. The "no two agents per wave touching the same file" rule applies even to non-overlapping edits within a file. |
 
 ## Results & Parameters
 
@@ -422,6 +440,10 @@ Total session (typical):                                         ~1.5-3 hours
 ### L0 Orchestration Checklist
 
 ```
+[ ] Pre-launch: autoMergeAllowed checked — if false, completion signal is "CI passing" not "MERGED"
+[ ] Pre-launch: .pre-commit-config.yaml checked — if absent, pre-commit steps removed from all agent prompts
+[ ] Pre-launch: lockfiles checked — if absent, npm install used instead of npm ci in CI job templates
+[ ] After any wave that adds new CI jobs: verify new job passes on main before launching next wave
 [ ] Phase 1: Exploration sub-agent dispatched and completed
 [ ] Phase 1: /advise called and prior learnings reviewed
 [ ] Phase 2: Plan drafted with explicit wave assignments, agent tiers, time estimates
@@ -447,6 +469,7 @@ Total session (typical):                                         ~1.5-3 hours
 |---------|---------|---------|
 | ProjectHephaestus | 32 worktrees → 1, 6 PRs created and merged, 3 skills captured, 2026-04-05 | Full L0 session: exploration → plan → approval → 3 waves → 2 CI fixes → 3 parallel /learn agents |
 | ProjectScylla | 64 issues classified, 12 PRs merged, tracking issue #1786 created, 2026-04-12 | Myrmidon swarm triage: classification + batch-fix waves + Phase 7 tracking issue on target repo |
+| ProjectProteus | 43-issue classification + 20 EASY implementations, 2026-04-25 | TypeScript/Bash/YAML repo; auto-merge disabled; no pre-commit hooks; no lockfiles; npm install fix required after typecheck job added |
 
 ## References
 
