@@ -6,8 +6,8 @@ description: "Pattern for implementing 20-35 GitHub issues in parallel waves usi
   \ speedup via myrmidon swarm Agent(isolation:'worktree') calls, (4) CI must be green\
   \ on main before launching waves."
 category: tooling
-date: 2026-04-25
-version: 2.4.0
+date: 2026-04-26
+version: 2.5.0
 user-invocable: false
 verification: verified-local
 history: parallel-issue-wave-execution.history
@@ -26,8 +26,8 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-04-25 |
-| Version | 2.4.0 |
+| Date | 2026-04-26 |
+| Version | 2.5.0 |
 | Objective | Implement 20-35 issues per repo in parallel waves using myrmidon swarm agents, with pre-verification and CI-first strategy |
 | Outcome | SUCCESS — verified across 4 repos and 237 issues: 35 PRs (ProjectScylla), 14 PRs (ProjectMnemosyne), ~34 PRs + 12 closures (ProjectKeystone 180-issue swarm), 17 PRs (ProjectTelemachy per-file mega-agents) |
 
@@ -465,6 +465,38 @@ GitHub silently clears auto-merge when any `git push --force-with-lease` (or `--
 gh pr merge <pr-number> --auto --rebase
 ```
 
+### GitHub Actions Runner Queue Saturation
+
+Opening too many PRs in a short window causes the GitHub Actions runner pool to fill beyond the org's concurrency limit, stalling all CI for 25+ minutes.
+
+**What happened**: A myrmidon swarm dispatched 10 waves (EASY + MEDIUM) against ProjectKeystone, opening 28 PRs in ~20 minutes. Each PR triggered ~3 workflows (CI, Security Scanning, Dependency Audit) = ~84+ workflow runs queued simultaneously. No runs started for 25+ minutes. The oldest queued run was created at 01:12 UTC; by 01:36 UTC zero had started.
+
+**Mitigation attempts that failed**:
+- `gh run cancel <old-run-id>` — cancel request accepted but runs stayed queued
+- `gh run rerun <run-id>` — failed: "This workflow is already running"
+- `gh workflow run "Security Scanning" --ref <branch>` — new run also immediately queued
+
+**Confirmed ceiling**: ~8 concurrent open PRs is the safe limit for a free-tier GitHub org with 3 workflows per PR.
+
+**Fix**: Rate-limit PR creation across waves:
+
+```bash
+# Open at most 8 PRs per wave window (≤8 PRs × 3 workflows = ≤24 queued runs)
+# After each wave, wait ~2 minutes before the next wave to let runners drain:
+gh pr list --state open --json number,statusCheckRollup | python3 -c "
+import json, sys
+prs = json.load(sys.stdin)
+pending = [p for p in prs if any(
+    c.get('state', c.get('conclusion', '')) in ('PENDING', 'IN_PROGRESS', 'QUEUED')
+    for c in p.get('statusCheckRollup', [])
+)]
+print(f'{len(pending)} PRs with pending/in-progress checks')
+"
+# Only launch next wave when the above count is dropping toward 0
+```
+
+**Prevention rule**: Cap swarm waves to ≤8 PRs per window. Add 120-second pause between waves when total open PRs exceed 8. For repos with 3+ workflows per PR, cap to ≤5 PRs per wave.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -483,6 +515,7 @@ gh pr merge <pr-number> --auto --rebase
 | Spawned duplicate agent while background agent was still running | Tried to take over branch without checking background agent state | Would have created conflicting commits and wasted work | Read `/tmp/claude-*/tasks/<id>.output`, check `git log origin/<branch>`, and `gh pr list --head <branch>` before touching a branch |
 | Retried agent after BLOCKED report | Agent correctly reported BLOCKED (e.g. coverage threshold below target, cannot implement without breaking changes); orchestrator re-ran with a different prompt | The BLOCKED signal is accurate — the issue requires human architectural review. Re-runs produce the same BLOCKED result or introduce incorrect changes to force past the blocker | When an agent reports BLOCKED with a clear reason, treat it as a signal for human review, not a failure to retry. Label the issue `needs:human-review` and move on. |
 | Strict per-wave for high-contention repos | Applied "≤5 agents, 1 file per wave" to a repo where executor.py had 11 open issues | Required 12+ waves; the contended file serialized everything anyway — no real parallelism | Switch to per-file mega-agent when a file has 6+ issues |
+| Runner queue saturation | Opened 28 PRs across 10 waves in ~20 min, each triggering 3 workflows (CI, Security Scanning, Dependency Audit) = ~84+ workflow runs queued simultaneously on a free-tier GitHub org | GitHub free-tier runner pool exhausted; no runs started for 25+ min. Attempted `gh run cancel` (accepted but runs stayed queued) and `gh run rerun` (failed: "This workflow is already running"); manual `gh workflow run` dispatch also immediately queued | Cap total concurrent PRs to ≤8 per wave window; add 2-min inter-wave delay to let runners drain before opening the next batch |
 
 ## Results & Parameters
 
