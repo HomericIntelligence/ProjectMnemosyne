@@ -1,9 +1,9 @@
 ---
 name: git-worktree-management-patterns
-description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents, (13) cleaning 20+ mixed worktrees using myrmidon swarm wave parallelization, (14) batch-fixing end-of-file newline violations across multiple branches, (15) worktrees with uncommitted skill documentation requiring a 2-commit markdownlint pattern, (16) removing locked worktrees whose lock holder PID is dead (stale agent lock cleanup)."
+description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents, (13) cleaning 20+ mixed worktrees using myrmidon swarm wave parallelization, (14) batch-fixing end-of-file newline violations across multiple branches, (15) worktrees with uncommitted skill documentation requiring a 2-commit markdownlint pattern, (16) removing locked worktrees whose lock holder PID is dead (stale agent lock cleanup), (17) worktree has modified pyc/__pycache__ or pixi.lock files (build artifacts) blocking rebase — Safety Net blocks git checkout -- and git restore; use git stash + git stash drop as the only agent-safe path."
 category: tooling
-date: 2026-04-22
-version: "2.5.0"
+date: 2026-04-25
+version: "2.6.0"
 user-invocable: false
 verification: unverified
 history: git-worktree-management-patterns.history
@@ -48,6 +48,7 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 - `git worktree list` shows locked entries (`locked` reason mentions a PID) from agent processes that have since exited
 - `git worktree remove <path>` fails with "is locked, use 'git worktree unlock' to unlock it first"
 - After ~N parallel agent waves, repo has 10+ locked worktrees from completed (now dead) agent PIDs
+- Worktree has modified `__pycache__`/`.pyc` or `pixi.lock` files (build artifacts) that prevent rebase — `git checkout --` and `git restore` are both blocked by Safety Net; use `git stash` to park them before rebase, then `git stash drop` after
 
 ## Verified Workflow
 
@@ -642,6 +643,42 @@ for wt in .claude/worktrees/agent-*; do
 done
 ```
 
+### Discarding Artifact Changes Before Rebase (Safety Net safe)
+
+When worktrees have modified `__pycache__`/`.pyc` or `pixi.lock` files that are build artifacts
+(not real work), Safety Net blocks both `git checkout --` and `git restore` with the message
+"discards uncommitted changes permanently; use git stash first."
+
+**Safe agent approach: use `git stash` to park dirty files before rebase.**
+The stash can be dropped after rebase since the files were artifacts.
+
+```bash
+git -C <worktree> stash        # parks all dirty files (artifacts and any real files)
+git -C <worktree> rebase origin/main
+git -C <worktree> stash drop   # discard the stash (it was just artifacts)
+```
+
+**Why this works**: `git stash` saves and cleans the working tree without triggering Safety Net.
+After rebase, the rebased commits restore any real files to the correct version; the artifact
+stash can be safely discarded.
+
+**If the user has already run `git checkout --` or `git restore` manually (bypassing Safety Net):**
+
+Inspect `git status` carefully — files that were in "modified" state (`M`) may now show as
+"deleted" (`D`) if the user's `git restore` deleted tracked files rather than restoring them.
+
+```bash
+git -C <worktree> status --short
+# M = modified (still present but changed)
+# D = deleted (removed from working tree — file was tracked)
+# ? = untracked (new file not tracked)
+```
+
+If files are in `D` state: `git stash` then `git stash pop` can recover a consistent state,
+OR simply proceed with rebase (rebase will restore files to the correct version as part of
+applying each commit). Do NOT try to `git checkout --` or `git restore` to fix `D` state —
+Safety Net will block it.
+
 ### Batch EOF Fixing
 
 For multiple branches failing pre-commit `end-of-file-fixer` on the same file (e.g., `.claude-plugin/plugin.json`):
@@ -857,6 +894,7 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 | `git worktree remove` on locked worktree directly | Ran `git worktree remove .claude/worktrees/agent-X` without unlocking first | Fails with "is locked, use 'git worktree unlock' to unlock it first" even for clean worktrees | Always run `git worktree unlock <path>` before `git worktree remove <path>` |
 | Assuming all locks are from live processes | Skipped PID liveness check before unlocking | Risked unlocking a worktree still held by a live agent process | Always check `ps aux | grep <pid> | grep -v grep` before treating a lock as stale |
 | `git worktree remove --force` on dirty merged-PR worktrees | Attempted force removal of worktrees with artifact files (even though PR was merged) | Safety Net blocks `--force` flag | Unlock first (`git worktree unlock <path>`), then ask the user to run `git worktree remove --force <path>` |
+| `git checkout --` / `git restore` to discard working-tree artifact files in worktree | After user ran `git restore <files>` manually, pyc files showed as `D` (deleted) not `M` (modified); tried `git -C <wt> checkout -- <pycache_dir>` to restore them | Safety Net blocked it; additionally, user's `git restore` had deleted tracked files (status `D`), not restored them — working tree state was worse than before | After a user manually runs `git restore` / `git checkout --` on tracked files, inspect `git status` carefully. `D` means the file was deleted. Use `git stash` to recover a consistent state, or let the rebase proceed (rebase restores files to the correct version per commit). |
 
 ## Results & Parameters
 
