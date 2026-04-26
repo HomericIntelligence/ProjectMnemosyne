@@ -1,5 +1,64 @@
 # History: batch-low-difficulty-issue-impl
 
+## v1.9.0 (2026-04-25)
+
+**Changed by:** ProjectKeystone 2026-04-25 evening swarm (75 issues) — `security-report` required-check blocker
+**Verification:** verified-local
+
+### What changed
+- Added new Failed Attempts entry: `security-report` required check failing on main due to gitleaks SARIF grep regex bug (`\s` treated literally by POSIX grep) — blocked ALL swarm PR auto-merges
+- Added new pre-launch guard #7 to C++20/Conan/pixi Project-Specific Guards table: verify ALL required status checks pass on main before launching waves
+- Added corresponding bash command for guard #7: `gh run list --branch main` failure check
+- Added note to ProjectKeystone 2026-04-25 session row documenting the `security-report` blocker
+- Updated description to mention required-status-check pre-launch verification
+- Bumped version 1.8.0 → 1.9.0, date remains 2026-04-25
+
+### Why
+ProjectKeystone 2026-04-25 evening swarm (75 issues) discovered a new pre-launch failure mode:
+the `security-report` CI job used `grep -q '"results":\s*\[\]'` to parse gitleaks SARIF output.
+POSIX grep treats `\s` literally (not as whitespace class) — the pattern never matched, so
+`security-report` always wrote `❌ Secret Scanning: Potential secrets found`. Since
+`security-report` was a required status check, all auto-merge PRs were permanently blocked.
+Fix: `grep -E` or `jq`-based SARIF parsing + `.gitleaks.toml` allowlist. The session wasted
+significant time before the root cause was identified.
+
+Lesson: before launching any swarm wave, verify ALL required status checks are passing on main
+— not just the CI build. A fragile required check that always fails silently blocks every PR.
+
+### Previous version (v1.8.0) snapshot
+
+<details>
+<summary>v1.8.0 frontmatter</summary>
+
+```yaml
+name: batch-low-difficulty-issue-impl
+description: 'Classify, deduplicate, and batch-implement GitHub issues in a large swarm
+  session (24+ waves, 200+ issues). Use when: (1) a large backlog of open issues needs
+  triage, (2) many issues are pure doc/text or infra-only changes, (3) duplicate issues
+  need closing before implementation. Includes worktree-safe grep pattern for ALREADY-DONE
+  verification, correct pre-filter order, ci.yml conflict avoidance, EASY queue exhaustion
+  detection, Docker inline comment parse error pattern, parallel-agent add/add rebase
+  conflict resolution when multiple agents create the same package independently,
+  pre-launch repo-capability checks (autoMergeAllowed, lockfile, pre-commit config),
+  hot-file serialization for shared scripts (apply.sh/reconcile.sh), pre-swarm
+  existing-PR audit, close-before-delegate pattern, and C++20/Conan/pixi-specific
+  guards (libssl-dev, TSan+concurrentqueue blocker, enable_shared_from_this diamond
+  inheritance, CMakeLists.txt single-agent anchor, asyncio_mode auto decorator check).'
+category: tooling
+date: 2026-04-25
+version: 1.8.0
+user-invocable: false
+verification: verified-local
+history: batch-low-difficulty-issue-impl.history
+```
+
+Key state at v1.8.0: Added 7 C++20/Conan/pixi-specific failure modes from ProjectKeystone
+180-issue swarm. Introduced C++20/Conan/pixi Project-Specific Guards subsection with 6-item
+checklist. No required-status-check pre-launch verification documented.
+</details>
+
+---
+
 ## v1.8.0 (2026-04-25)
 
 **Changed by:** ProjectKeystone 180-issue C++20 myrmidon swarm (7 EASY waves + 9 MEDIUM waves, 2026-04-25)

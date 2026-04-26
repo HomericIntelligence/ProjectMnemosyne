@@ -9,12 +9,13 @@ description: 'Classify, deduplicate, and batch-implement GitHub issues in a larg
   conflict resolution when multiple agents create the same package independently,
   pre-launch repo-capability checks (autoMergeAllowed, lockfile, pre-commit config),
   hot-file serialization for shared scripts (apply.sh/reconcile.sh), pre-swarm
-  existing-PR audit, close-before-delegate pattern, and C++20/Conan/pixi-specific
+  existing-PR audit, close-before-delegate pattern, C++20/Conan/pixi-specific
   guards (libssl-dev, TSan+concurrentqueue blocker, enable_shared_from_this diamond
-  inheritance, CMakeLists.txt single-agent anchor, asyncio_mode auto decorator check).'
+  inheritance, CMakeLists.txt single-agent anchor, asyncio_mode auto decorator check),
+  and required-status-check pre-launch verification (gitleaks SARIF regex pitfall).'
 category: tooling
 date: 2026-04-25
-version: 1.8.0
+version: 1.9.0
 user-invocable: false
 verification: verified-local
 history: batch-low-difficulty-issue-impl.history
@@ -35,7 +36,7 @@ history: batch-low-difficulty-issue-impl.history
 
 | Date | Objective | Outcome |
 |------|-----------|---------|
-| 2026-04-25 | Implement 180 open ProjectKeystone issues (C++20 transport library) using 7 EASY waves + 9 MEDIUM waves | 7 new C++20/Conan/pixi-specific failure modes discovered; libssl-dev missing in Dockerfile blocked builds; TSan+concurrentqueue classified as hard blocker; CMakeLists.txt double-agent conflict despite grouping rules; enable_shared_from_this diamond inheritance trap |
+| 2026-04-25 | Implement 180 open ProjectKeystone issues (C++20 transport library) using 7 EASY waves + 9 MEDIUM waves | 7 new C++20/Conan/pixi-specific failure modes discovered; libssl-dev missing in Dockerfile blocked builds; TSan+concurrentqueue classified as hard blocker; CMakeLists.txt double-agent conflict despite grouping rules; enable_shared_from_this diamond inheritance trap. **Evening swarm (75 issues)**: `security-report` required check always failing on main (gitleaks SARIF grep regex bug — `\s` treated literally by POSIX grep) blocked ALL auto-merge PRs until root cause identified and fixed with jq-based SARIF parsing. |
 
 ### Session (2026-04-24) — Myrmidons shellcheck-warnings Swarm
 
@@ -89,6 +90,22 @@ history: batch-low-difficulty-issue-impl.history
 ## Verified Workflow
 
 ### Phase 0: Pre-existing CI Failures — fix-test-failures Branch
+
+**Pre-launch: verify ALL required status checks are passing on main.** A fragile required
+check that always fails on main silently blocks every auto-merge PR, wasting an entire swarm
+session. Check before dispatching wave 1:
+
+```bash
+# Get required status check contexts from branch protection
+REQUIRED=$(gh api graphql -f query='query{repository(owner:"<owner>",name:"<repo>"){branchProtectionRules(first:5){nodes{requiredStatusCheckContexts}}}}' --jq '.data.repository.branchProtectionRules.nodes[0].requiredStatusCheckContexts[]' 2>/dev/null)
+echo "Required checks: $REQUIRED"
+
+# Check for any failing workflows on the latest main runs
+gh run list --branch main --limit 10 --json status,conclusion,name --jq '.[] | select(.conclusion == "failure") | "\(.name): FAILING"'
+# If any required check is failing → fix it before launching. Especially:
+# - security-report (gitleaks SARIF parsing bug — see Failed Attempts)
+# - Any CI Summary aggregator job
+```
 
 If CI is already broken on main before the swarm starts, swarm PRs will auto-close but
 never merge. Create a dedicated fix branch first and accumulate all CI fixes there:
@@ -360,6 +377,7 @@ gh pr list --author "@me" --state all --limit 50
 | Two agents both modifying CMakeLists.txt in the same wave (ProjectKeystone 2026-04-25) | Despite same-file grouping rules, two different agents both modified `CMakeLists.txt` for separate SPDX/spdlog fixes (PRs #392 and #395) in the same wave because the changes appeared unrelated | Second PR could not auto-merge cleanly; one became a duplicate requiring manual resolution | Treat `CMakeLists.txt` as a hard file-grouping anchor: any issue touching it must be batched into ONE agent per wave, regardless of how different the individual changes appear. Apply the same rule as ci.yml: batch all CMakeLists.txt issues into a single Sonnet agent per wave |
 | Adding @pytest.mark.asyncio when asyncio_mode='auto' set in pyproject.toml (ProjectKeystone 2026-04-25) | Agent wrote new Python test files and added `@pytest.mark.asyncio` decorators to async test functions | `pyproject.toml` already had `asyncio_mode = "auto"` in `[tool.pytest.ini_options]`. With auto mode, pytest-asyncio automatically treats all async test functions as async tests — the decorator is redundant and produces deprecation warnings or errors | Before writing Python test files, check: `grep -A5 "pytest.ini_options" pyproject.toml | grep asyncio_mode`. If `asyncio_mode = "auto"` is present, omit all `@pytest.mark.asyncio` decorators |
 | Trusting agent-reported PR numbers without verification (ProjectKeystone 2026-04-25) | In 3 out of 16 waves, accepted agent's final output ("PR #403") as the authoritative PR number for wave reconciliation | Agents report their in-flight view of PR numbers, which can be stale or incorrect when races occur or the agent mistakes a draft PR number. 3/16 waves had wrong agent-reported PR numbers | After every wave, always verify PR numbers with `gh pr list --author "@me" --state all --limit 50`. Never trust agent-reported PR numbers as ground truth |
+| `security-report` required check failing on main (gitleaks SARIF regex bug) (ProjectKeystone 2026-04-25 evening) | Launched 75-issue swarm wave with `security-report` as a required status check; the job used `grep -q '"results":\s*\[\]'` to parse gitleaks SARIF output | POSIX grep treats `\s` literally (not as `[[:space:]]`), so the regex never matched — `security-report` always wrote `❌ Secret Scanning: Potential secrets found`; the final `grep -q "❌" report.md` gate exited 1 on every run; since `security-report` was a required status check, all auto-merge PRs were permanently blocked | Always verify ALL required status checks are passing on main before launching wave 1. `grep` with `\s` requires `-E` flag; use `jq` for structured JSON/SARIF parsing. Run: `gh run list --branch main --limit 10 --json status,conclusion,name --jq '.[] | select(.conclusion == "failure") | .name'` before any swarm. |
 
 ## Results & Parameters
 
@@ -375,6 +393,7 @@ Run these checks **before dispatching any agents** to a C++20/CMake/Conan projec
 | 4 | CMakeLists.txt is treated as hard file-grouping anchor | Manual wave planning check | Batch ALL CMakeLists.txt issues into ONE agent per wave (like ci.yml rule) |
 | 5 | Check pyproject.toml for `asyncio_mode` before writing Python tests | `grep -A5 "pytest.ini_options" pyproject.toml 2>/dev/null \| grep asyncio_mode` | If `asyncio_mode = "auto"`, omit all `@pytest.mark.asyncio` decorators |
 | 6 | Verify PR numbers after each wave | `gh pr list --author "@me" --state all --limit 50` | Never trust agent-reported PR numbers; always verify with this command |
+| 7 | Verify ALL required status checks pass on main before launching wave 1 | `gh run list --branch main --limit 10 --json status,conclusion,name --jq '.[] \| select(.conclusion == "failure") \| .name'` | Fix any failing required check before dispatching agents; a permanently-failing required check blocks every auto-merge PR (see `security-report` SARIF regex bug in Failed Attempts) |
 
 ```bash
 # C++20 pre-swarm checklist (run once before any wave dispatch):
@@ -395,6 +414,11 @@ grep -A5 "pytest.ini_options" pyproject.toml 2>/dev/null | grep asyncio_mode
 
 # 6. Post-wave PR verification (after each wave)
 gh pr list --author "@me" --state all --limit 50
+
+# 7. Required status checks — verify ALL pass on main before launching ANY wave
+gh run list --branch main --limit 10 --json status,conclusion,name --jq '.[] | select(.conclusion == "failure") | "\(.name): FAILING"'
+# If output is non-empty → fix before swarm launch
+# Note: grep with \s requires -E; use jq for SARIF/JSON parsing (see security-report bug)
 ```
 
 ### Session Statistics (2026-04-25) — ProjectKeystone 180-Issue C++20 Swarm
