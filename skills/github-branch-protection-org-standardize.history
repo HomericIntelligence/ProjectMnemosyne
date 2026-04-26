@@ -1,0 +1,197 @@
+# github-branch-protection-org-standardize — History
+
+## v2.0.0 (2026-04-26)
+
+**Changed by:** Session context — org-wide GitHub repository ruleset rollout to all 15 HomericIntelligence repos
+**Verification:** verified-ci (all 15 rulesets applied live, PRs opened successfully)
+
+### What changed
+- Core recommendation changed from legacy `branches/main/protection` API to **repository rulesets** (`repos/<ORG>/<REPO>/rulesets`)
+- Added critical finding: org-level rulesets require GitHub Team plan (HTTP 403 on free plan); use repo-level endpoint instead
+- Added dynamic repo discovery pattern using `gh repo list` + `mapfile` (replaces hardcoded REPOS arrays)
+- Added `_required.yml` workflow pattern: 8 canonical job names as required contexts
+- Documented `integration_id: 15368` requirement for GitHub Actions status checks in rulesets
+- Added bare job name requirement for context strings (not workflow-prefixed form)
+- Added `typecheck` consolidation: belongs inside `lint` job, not as standalone required context (reduces 9 → 8 contexts)
+- Added `--silent` flag footgun: suppresses JSON output when collecting into variables
+- Added auto-merge method variation: use `--squash` not `--rebase` for repos that only allow squash merge
+- Preserved legacy `branches/main/protection` workflow in "Deprecated Approach" section for reference
+- Bumped verification from `verified-local` to `verified-ci`
+
+### Why
+Previous v1.0.0 documented the legacy branch protection API (`PUT branches/main/protection`).
+That approach has known limitations: it doesn't support rulesets, required_linear_history causes
+merge-commit failures, and it's not compatible with the newer ruleset model. The current session
+rolled out `homeric-main-baseline` rulesets to all 15 repos using the repo-level rulesets API,
+which works on the free GitHub plan and supports richer required_status_checks with integration_id.
+
+### Previous version (v1.0.0) snapshot
+
+---
+name: github-branch-protection-org-standardize
+description: "Standardize GitHub branch protection rules across all repositories in an org using gh api. Use when: (1) onboarding new repos to a policy baseline, (2) auditing protection drift across an org, (3) applying a gold-standard config from reference repos to the full fleet."
+category: ci-cd
+date: 2026-04-22
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - github
+  - branch-protection
+  - gh-api
+  - org-admin
+  - policy-standardization
+---
+
+# GitHub Branch Protection Org Standardization
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-22 |
+| **Objective** | Standardize branch protection rules across all 15 HomericIntelligence repositories using a single shell loop via `gh api` |
+| **Outcome** | Successful — all 15 repos updated in one pass, verification loop confirmed `linear=true conversation=true` on every repo |
+| **Verification** | verified-local (all 15 `gh api PUT` calls returned 200; no CI involved) |
+
+## When to Use
+
+- Applying an org-wide branch protection policy baseline to multiple repos at once
+- Auditing current protection state before a policy rollout
+- Onboarding new repos to an existing gold-standard configuration
+- After detecting protection drift (some repos missing `required_linear_history`, `required_conversation_resolution`, etc.)
+- Preserving per-repo CI status checks while normalizing everything else
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+ORG="HomericIntelligence"
+REPOS=(Repo1 Repo2 Repo3)  # list all target repos
+
+# 1. Audit first (read-only)
+for repo in "${REPOS[@]}"; do
+  gh api "repos/$ORG/$repo/branches/main/protection" \
+    --jq "{repo: \"$repo\", linear: .required_linear_history.enabled, conversation: .required_conversation_resolution.enabled, checks: (.required_status_checks.checks | length)}"
+done
+
+# 2. Apply standardized policy (preserving per-repo status checks)
+for repo in "${REPOS[@]}"; do
+  contexts=$(gh api "repos/$ORG/$repo/branches/main/protection" \
+    --jq '.required_status_checks.contexts // []')
+  echo "{
+    \"required_status_checks\": { \"strict\": false, \"contexts\": $contexts },
+    \"enforce_admins\": false,
+    \"required_pull_request_reviews\": {
+      \"dismiss_stale_reviews\": false,
+      \"require_code_owner_reviews\": false,
+      \"require_last_push_approval\": false,
+      \"required_approving_review_count\": 0
+    },
+    \"restrictions\": null,
+    \"required_linear_history\": true,
+    \"allow_force_pushes\": false,
+    \"allow_deletions\": false,
+    \"block_creations\": false,
+    \"required_conversation_resolution\": true,
+    \"lock_branch\": false,
+    \"allow_fork_syncing\": false
+  }" | gh api -X PUT "repos/$ORG/$repo/branches/main/protection" --input -
+  echo "Updated: $repo"
+done
+
+# 3. Verify results
+for repo in "${REPOS[@]}"; do
+  gh api "repos/$ORG/$repo/branches/main/protection" \
+    --jq "\"$repo\" + \": linear=\" + (.required_linear_history.enabled | tostring) + \" conversation=\" + (.required_conversation_resolution.enabled | tostring)"
+done
+```
+
+### Detailed Steps
+
+1. **Identify reference repos** — Pick 1-2 repos already at the desired policy state (e.g., ProjectScylla, ProjectMnemosyne). Use them as the gold standard. Read their protection config with `gh api repos/ORG/REPO/branches/main/protection` to confirm they match the target policy.
+
+2. **Run audit loop first** — Before touching anything, audit all repos to document current state. Record which fields are already correct vs. need updating. This also gives you a diff to confirm the rollout worked.
+
+3. **Build the standard JSON body** — Use `jq -n --argjson ctx "$contexts" {...}` to inject per-repo status check contexts into an otherwise fixed policy body. Never hardcode contexts — they are legitimately different per repo (C++ tests vs. Python tests vs. config validators).
+
+4. **Apply with `PUT` (replace-all semantics)** — `PUT` on the branch protection endpoint replaces the entire config. Include ALL fields you want set — omitting a field resets it to the API default (usually `false` or `null`). Pipe the JSON body via `--input -`.
+
+5. **Verify after applying** — Run a second read loop to confirm the key fields (`required_linear_history.enabled`, `required_conversation_resolution.enabled`) are `true` on every repo.
+
+6. **Identify idempotent no-ops** — Repos already at target policy will receive an identical `PUT` and remain correct. The operation is safe to re-run.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Attempt 1 | Omitting `required_pull_request_reviews` from the PUT body | The field was reset to the API default (no review requirements at all), unintentionally weakening governance | `PUT` replaces the entire object — every field must be explicitly set or it defaults to null/false |
+| Attempt 2 | Hardcoding a fixed list of `required_status_checks.contexts` for all repos | Some repos had unique CI check names (conan build, Python lint, etc.) that were wiped, breaking their pipelines | Always read and re-inject per-repo contexts; never overwrite with a uniform list |
+| Attempt 3 | Applying directly without an audit loop | No baseline record meant no way to confirm what changed or roll back | Always run a read-only audit loop first to document pre-change state per repo |
+
+## Results & Parameters
+
+**Standard policy (Scylla-style — verified against all 15 HomericIntelligence repos)**:
+
+```json
+{
+  "required_status_checks": { "strict": false, "contexts": ["<preserved-per-repo>"] },
+  "enforce_admins": false,
+  "required_pull_request_reviews": {
+    "dismiss_stale_reviews": false,
+    "require_code_owner_reviews": false,
+    "require_last_push_approval": false,
+    "required_approving_review_count": 0
+  },
+  "restrictions": null,
+  "required_linear_history": true,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "block_creations": false,
+  "required_conversation_resolution": true,
+  "lock_branch": false,
+  "allow_fork_syncing": false
+}
+```
+
+**Repos that were already correct (no-ops)**:
+- ProjectScylla, ProjectArgus, ProjectMnemosyne — already at target policy
+
+**Verification output format** (expected after a successful pass):
+```text
+ProjectAgamemnon: linear=true conversation=true
+ProjectNestor: linear=true conversation=true
+AchaeanFleet: linear=true conversation=true
+... (all 15 repos)
+```
+
+**Safety note — `required_linear_history: true` side effects**:
+- Forbids merge commits retroactively. Any existing PRs using `--merge` auto-merge strategy will fail after this change.
+- The standard `gh pr merge --auto --rebase` workflow is unaffected.
+- Warn team before rollout if any PRs are in-flight with `--merge` strategy.
+
+**API endpoint reference**:
+```bash
+# Read current protection
+gh api repos/<ORG>/<REPO>/branches/main/protection
+
+# Apply (replace-all)
+gh api -X PUT repos/<ORG>/<REPO>/branches/main/protection --input -
+
+# Extract just the contexts list for re-injection
+gh api "repos/<ORG>/<REPO>/branches/main/protection" \
+  --jq '.required_status_checks.contexts // []'
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| HomericIntelligence (all 15 repos) | Branch protection standardization session 2026-04-22 | Applied Scylla-style policy, verification loop confirmed linear=true conversation=true on every repo |
+
+---
+
+## v1.0.0 (2026-04-22)
+
+**Initial version.**
