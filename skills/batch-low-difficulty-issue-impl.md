@@ -13,8 +13,8 @@ description: 'Classify, deduplicate, and batch-implement GitHub issues in a larg
   guards (libssl-dev, TSan+concurrentqueue blocker, enable_shared_from_this diamond
   inheritance, CMakeLists.txt single-agent anchor, asyncio_mode auto decorator check).'
 category: tooling
-date: 2026-04-25
-version: 1.8.0
+date: 2026-04-26
+version: "1.10.0"
 user-invocable: false
 verification: verified-local
 history: batch-low-difficulty-issue-impl.history
@@ -327,6 +327,31 @@ Never trust agent-reported PR numbers — agents report stale in-flight views. T
 gh pr list --author "@me" --state all --limit 50
 ```
 
+### Diagnosing CI Failures
+
+When `gh pr checks` shows failures, check the underlying job conclusion before touching code:
+
+```bash
+# Distinguish cancelled (runner exhaustion) from failure (real bug)
+gh run view <run-id> --json jobs --jq '.jobs[] | {name, conclusion}'
+```
+
+- `conclusion: "cancelled"` → runner exhaustion; fix is retrigger, not code change
+- `conclusion: "failure"` → real failure; read the logs
+
+**Retrigger recipe** (when conclusion is cancelled):
+```bash
+git fetch origin
+git rebase origin/main          # preserves GPG signatures when no conflict
+git push --force-with-lease     # triggers fresh CI on available runners
+```
+
+**`pending` vs `queued`** in `gh pr checks` output:
+- `pending` = runner accepted the job (healthy)
+- `queued` = waiting for an available runner (pool exhausted)
+
+After a retrigger, seeing `pending` instead of `queued` confirms runners have recovered.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -360,6 +385,7 @@ gh pr list --author "@me" --state all --limit 50
 | Two agents both modifying CMakeLists.txt in the same wave (ProjectKeystone 2026-04-25) | Despite same-file grouping rules, two different agents both modified `CMakeLists.txt` for separate SPDX/spdlog fixes (PRs #392 and #395) in the same wave because the changes appeared unrelated | Second PR could not auto-merge cleanly; one became a duplicate requiring manual resolution | Treat `CMakeLists.txt` as a hard file-grouping anchor: any issue touching it must be batched into ONE agent per wave, regardless of how different the individual changes appear. Apply the same rule as ci.yml: batch all CMakeLists.txt issues into a single Sonnet agent per wave |
 | Adding @pytest.mark.asyncio when asyncio_mode='auto' set in pyproject.toml (ProjectKeystone 2026-04-25) | Agent wrote new Python test files and added `@pytest.mark.asyncio` decorators to async test functions | `pyproject.toml` already had `asyncio_mode = "auto"` in `[tool.pytest.ini_options]`. With auto mode, pytest-asyncio automatically treats all async test functions as async tests — the decorator is redundant and produces deprecation warnings or errors | Before writing Python test files, check: `grep -A5 "pytest.ini_options" pyproject.toml | grep asyncio_mode`. If `asyncio_mode = "auto"` is present, omit all `@pytest.mark.asyncio` decorators |
 | Trusting agent-reported PR numbers without verification (ProjectKeystone 2026-04-25) | In 3 out of 16 waves, accepted agent's final output ("PR #403") as the authoritative PR number for wave reconciliation | Agents report their in-flight view of PR numbers, which can be stale or incorrect when races occur or the agent mistakes a draft PR number. 3/16 waves had wrong agent-reported PR numbers | After every wave, always verify PR numbers with `gh pr list --author "@me" --state all --limit 50`. Never trust agent-reported PR numbers as ground truth |
+| CI cancelled mistaken for failure | Diagnosed PR checks showing 'fail' for Python Tests and codeql-analysis after rebase+push | Job conclusion was `cancelled` (runner exhaustion from 28-PR swarm), not `failure` — CI Summary gate treats `cancelled != "success"` and exits 1 | Run `gh run view <id> --json jobs --jq '.jobs[] | {name, conclusion}'` before assuming code is broken; if all are `cancelled`, rebase+force-push to retrigger — do not change code |
 
 ## Results & Parameters
 

@@ -1,5 +1,48 @@
 # History: batch-low-difficulty-issue-impl
 
+## v1.10.0 (2026-04-26)
+
+**Changed by:** ProjectKeystone PR #451 cleanup — CI cancelled-vs-failure diagnosis
+**Verification:** verified-local
+
+### What changed
+- Added Failed Attempts row: CI `cancelled` conclusion mistaken for real failure
+- Added `### Diagnosing CI Failures` subsection with `gh run view --json jobs` triage command and rebase retrigger recipe
+- Note: v1.9.0 was authored in this session but exists only in unmerged Mnemosyne PR #1406; this v1.10.0 is based on the v1.8.0 on-disk baseline and will be rebased by maintainers when both PRs land
+
+### Why
+After a 28-PR myrmidon swarm exhausted GitHub's runner pool, PR #451 showed CI Summary / Python Tests / codeql-analysis as "fail". All three had job conclusion `cancelled`, not `failure`. Future swarm sessions need this triage pattern to avoid wasting time debugging non-existent code bugs.
+
+### Previous version (v1.8.0) snapshot
+
+---
+name: batch-low-difficulty-issue-impl
+description: 'Classify, deduplicate, and batch-implement GitHub issues in a large swarm
+  session (24+ waves, 200+ issues). Use when: (1) a large backlog of open issues needs
+  triage, (2) many issues are pure doc/text or infra-only changes, (3) duplicate issues
+  need closing before implementation. Includes worktree-safe grep pattern for ALREADY-DONE
+  verification, correct pre-filter order, ci.yml conflict avoidance, EASY queue exhaustion
+  detection, Docker inline comment parse error pattern, parallel-agent add/add rebase
+  conflict resolution when multiple agents create the same package independently,
+  pre-launch repo-capability checks (autoMergeAllowed, lockfile, pre-commit config),
+  hot-file serialization for shared scripts (apply.sh/reconcile.sh), pre-swarm
+  existing-PR audit, close-before-delegate pattern, and C++20/Conan/pixi-specific
+  guards (libssl-dev, TSan+concurrentqueue blocker, enable_shared_from_this diamond
+  inheritance, CMakeLists.txt single-agent anchor, asyncio_mode auto decorator check).'
+category: tooling
+date: 2026-04-25
+version: 1.8.0
+user-invocable: false
+verification: verified-local
+history: batch-low-difficulty-issue-impl.history
+
+Key state at v1.8.0: Added 7 C++20/Conan/pixi-specific failure modes from ProjectKeystone
+180-issue swarm. Added C++20/Conan/pixi Project-Specific Guards checklist (6 items).
+Added CMakeLists.txt single-agent anchor rule. Added asyncio_mode auto decorator check.
+Added agent PR number unreliability pattern. No CI cancelled-vs-failure diagnosis documented.
+
+---
+
 ## v1.8.0 (2026-04-25)
 
 **Changed by:** ProjectKeystone 180-issue C++20 myrmidon swarm (7 EASY waves + 9 MEDIUM waves, 2026-04-25)
