@@ -1,0 +1,22 @@
+# documentation-latex-paper-audit-methodology -- Version History
+
+## v1.0.0 (2026-04-26)
+
+- **Initial version**: First review pass covering data consistency, cross-references, figure/table audit
+- Parallel 3-agent audit strategy (Data Consistency, Figure/Table, Cross-References)
+- 5-phase workflow: Parallel Agent Strategy, Data Consistency, Figure/Table Audit, Cross-Reference Chain, Compile and Verify
+- Checklist covering hardcoded numbers, \ref/\label/\input chains, \cite/.bib entries, placeholder text
+- Verified on ProjectScylla Haiku ablation study paper
+
+### Archived Frontmatter
+
+```yaml
+name: documentation-latex-paper-audit-methodology
+description: "Perform a strict audit of a LaTeX academic paper for data consistency, cross-references, citations, and correctness. Use when: (1) a LaTeX paper needs pre-submission quality verification, (2) you need to verify every hardcoded number against source data, (3) you need to check all \\ref/\\cite/\\input chains for broken references, (4) you need to find orphaned or unincluded table/figure files, (5) you want parallel agent-based audit for speed on large papers."
+category: documentation
+date: 2026-04-26
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [latex, audit, paper, academic, cross-reference, citation, data-consistency, parallel-agents]
+```

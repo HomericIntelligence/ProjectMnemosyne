@@ -1,12 +1,12 @@
 ---
 name: documentation-latex-paper-audit-methodology
-description: "Perform a strict audit of a LaTeX academic paper for data consistency, cross-references, citations, and correctness. Use when: (1) a LaTeX paper needs pre-submission quality verification, (2) you need to verify every hardcoded number against source data, (3) you need to check all \\ref/\\cite/\\input chains for broken references, (4) you need to find orphaned or unincluded table/figure files, (5) you want parallel agent-based audit for speed on large papers."
+description: "Perform a multi-pass audit of a LaTeX academic paper covering data consistency, cross-references, scientific rigor, and writing quality. Use when: (1) a LaTeX paper needs pre-submission quality verification, (2) you need to verify every hardcoded number against source data, (3) you need to check all \\ref/\\cite/\\input chains for broken references, (4) you need to find orphaned or unincluded table/figure files, (5) you want parallel agent-based audit for speed on large papers, (6) you need to verify scientific claims match the statistical evidence, (7) you need to catch ceiling effects, power analysis gaps, or unreliable score interpretations."
 category: documentation
 date: 2026-04-26
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
-tags: [latex, audit, paper, academic, cross-reference, citation, data-consistency, parallel-agents]
+tags: [latex, audit, paper, academic, cross-reference, citation, data-consistency, parallel-agents, scientific-rigor, writing-quality]
 ---
 
 # LaTeX Paper Strict Audit Methodology
@@ -16,8 +16,8 @@ tags: [latex, audit, paper, academic, cross-reference, citation, data-consistenc
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-04-26 |
-| **Objective** | Perform a thorough strict review of a LaTeX academic paper to verify data consistency, cross-references, citations, and correctness using parallel agent exploration |
-| **Outcome** | Successful -- caught a dangling `\ref{tab:criteria_performance}` pointing to a table file that was never `\input`-ed (renders as "??" in PDF), two unsupported claims in Related Work lacking citations, and hardcoded token distribution numbers without table references |
+| **Objective** | Perform a multi-pass audit of a LaTeX academic paper covering data consistency, cross-references, scientific rigor, and writing quality using parallel agent exploration |
+| **Outcome** | Successful -- Pass 1 caught a dangling `\ref{tab:criteria_performance}`, two missing Related Work citations, and hardcoded numbers without table refs. Pass 2 identified ceiling effect confounds, missing power analysis for null results, SRH test validity caveats, figure caption inaccuracies, logical tensions between Results and Conclusions, and score reliability paradoxes. Pass 3 flagged unusual citations, redundant sections, undefined terminology, and confusing qualifiers. |
 | **Verification** | verified-local |
 
 ## When to Use
@@ -28,8 +28,11 @@ tags: [latex, audit, paper, academic, cross-reference, citation, data-consistenc
 - You suspect orphaned files (tables or figures that exist on disk but are never referenced)
 - You want to run the audit quickly using parallel exploration agents
 - A previous round of `academic-paper-validation` has been completed and you need a final cross-reference and data consistency pass
+- The paper reports null results and you need to check for adequate power analysis caveats
+- Metrics cluster near ceiling/floor and the paper needs to acknowledge restricted range
+- Inter-rater reliability is poor and subsequent sections interpret scores without caveats
 
-**Trigger phrases**: "strict paper audit", "verify paper references", "check paper data consistency", "audit LaTeX cross-references", "pre-submission paper check"
+**Trigger phrases**: "strict paper audit", "verify paper references", "check paper data consistency", "audit LaTeX cross-references", "pre-submission paper check", "deep scientific review", "check paper rigor", "writing quality audit"
 
 **Complementary skills**:
 - `academic-paper-validation` -- covers statistical methodology, hedging language, and pipeline-first fixes
@@ -228,6 +231,91 @@ When possible, read the compiled PDF and compare rendered output against LaTeX s
 - Citations render as author-year or numbered (not "[?]")
 - No obviously broken formatting
 
+### Phase 6: Deep Scientific Review (Pass 2)
+
+**Objective**: Verify that scientific claims, statistical methodology, and interpretations are sound.
+
+This phase requires reading the paper holistically -- not just checking references, but evaluating whether the conclusions follow from the evidence.
+
+#### 6a. Ceiling/Floor Effect Detection
+
+When all metrics cluster near their maximum or minimum (e.g., pass rates 0.903--1.000), explicitly name "ceiling effect" as a confound in the Limitations section. Null results (non-significant differences between conditions) may reflect restricted range rather than true equivalence.
+
+**What to check**:
+- Read the Results section and note the range of key metrics
+- If the range is < 10% of the scale, flag as potential ceiling/floor effect
+- Verify the Limitations section acknowledges this if present
+
+#### 6b. Power Analysis for Null Results
+
+Studies whose central finding is a null result (no significant difference between tiers/conditions) MUST acknowledge the absence of formal power analysis or include one. Reviewers will flag this omission.
+
+**What to check**:
+- Identify all non-significant statistical tests in the Results
+- If non-significance is interpreted as "equivalence" or "no difference" in Discussion/Conclusions, flag it
+- Verify Limitations mentions sample size adequacy or power analysis
+
+#### 6c. Statistical Test Validity Caveats
+
+Certain statistical tests have known limitations that must be acknowledged:
+- **Scheirer-Ray-Hare (SRH) interaction test**: Has debated validity (Sawilowsky 1990). Always add a caveat when reporting SRH results.
+- **Multiple comparisons**: Check if p-value corrections (Bonferroni, Holm, etc.) are applied when many tests are run.
+
+#### 6d. Figure Caption vs. Content Accuracy
+
+Check that figure captions accurately describe the figure content:
+- "Faceted by X" claims must match the actual figure structure (e.g., a single-model study cannot meaningfully "facet by model" -- it produces one panel)
+- Axis labels in captions must match actual axis labels in the figure
+- When possible, cross-check Vega-Lite `.vl.json` specs against caption descriptions
+
+#### 6e. Logical Tension Detection
+
+Check whether the Discussion/Conclusions make claims stronger than the Results support:
+- If pass rate is non-significant but score IS significant, claiming "tiers are equivalent" is an overstatement
+- If some metrics show significant differences and others do not, the Discussion must acknowledge this nuance
+- Flag any instance where "no significant difference" in one metric is generalized to a blanket equivalence claim
+
+#### 6f. Score Reliability Paradox
+
+If inter-rater reliability is poor (e.g., Krippendorff's alpha < 0.667), flag any subsequent sections that analyze or interpret those scores without adequate caveats. Poor reliability means score-based analyses may not be meaningful.
+
+**What to check**:
+- Find the inter-rater reliability section and note the alpha/kappa values
+- If reliability is below standard thresholds, trace forward to every section that uses those scores
+- Verify each such section includes a reliability caveat
+
+### Phase 7: Writing Quality Audit (Pass 3)
+
+**Objective**: Catch writing issues that weaken the paper's clarity and credibility.
+
+#### 7a. Citation Quality Check
+
+Flag non-academic or unusual citations in a scientific paper:
+- Negotiation books, self-help references, blog posts in formal methodology sections
+- Replace with standard measurement theory, statistics, or domain-specific references
+- Verify that all citations are appropriate for the context in which they appear
+
+#### 7b. Redundancy Detection
+
+Look for sections that repeat the same idea in different words:
+- Compare the Abstract, Introduction summary, Results summary, and Conclusions
+- Each should add new information, not just rephrase the same finding
+- Condense repeated statements to a single clear formulation
+
+#### 7c. Terminology Consistency
+
+Check that coined or specialized terms are defined on first use:
+- Scan for terms in quotes or italics that lack parenthetical definitions
+- Terms like "budget frontier model", "cost-of-pass", or study-specific terminology must be defined before use
+- Verify consistent usage throughout (no switching between synonyms)
+
+#### 7d. Qualifier Clarity
+
+Simplify sentences with unclear parenthetical qualifiers:
+- Flag sentences where parenthetical asides add ambiguity rather than precision
+- Check that qualifiers like "broadly", "generally", "in most cases" are supported by the data
+- Remove or clarify hedging language that weakens otherwise supported claims
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -236,6 +324,8 @@ When possible, read the compiled PDF and compare rendered output against LaTeX s
 | Single-agent sequential audit | One agent reading paper.tex top-to-bottom checking everything | Too slow for large papers (100+ pages); missed cross-cutting issues | Use 3 parallel agents with distinct responsibilities: data, files, cross-references |
 | Check claims by reading paper only | Assumed Related Work citations were complete because the text read well | Two claims ("studies have shown coordination overhead" and "multi-agent system surveys") had no `\cite` | Systematically grep for claim patterns without adjacent `\cite` commands |
 | Trust hardcoded numbers | Accepted token distribution numbers in the text without checking | Numbers were correct but had no table reference for readers to verify | Every hardcoded number should either reference a table/figure or be trivially derivable |
+| Single-pass review | Tried to catch everything (data, references, scientific rigor, writing) in one pass | First pass caught data/reference issues but missed scientific rigor problems entirely | Use at least 2 passes: structural (refs, data) then content (logic, methodology). A third pass for writing quality is recommended. |
+| Trusting "monotonic" claims | Initially simplified a sentence about capability-gap monotonicity without checking the data | The simplification could mask a data interpretation issue (e.g., Sonnet-Haiku disagrees more than Opus-Haiku despite smaller capability gap) | Always verify mathematical/statistical claims against the actual numbers before editing |
 
 ## Results & Parameters
 
@@ -250,8 +340,11 @@ data_dir: data/
 tables_dir: tables/
 figures_dir: figures/
 
-# Parallel agent count
+# Parallel agent count (per pass)
 audit_agents: 3
+
+# Number of review passes
+review_passes: 3  # Pass 1: structural, Pass 2: scientific, Pass 3: writing
 
 # Severity levels for findings
 severity_levels:
@@ -264,15 +357,16 @@ severity_levels:
 
 A findings report organized by severity:
 
-- **CRITICAL**: Broken `\ref` chains, numbers that disagree with data sources, missing `\input` for labeled files
-- **IMPORTANT**: Claims without citations, hardcoded numbers without table references, `.tex`/`.md` pair mismatches
-- **MINOR**: Orphaned files on disk, TODO/FIXME remnants, environment pair mismatches
+- **CRITICAL**: Broken `\ref` chains, numbers that disagree with data sources, missing `\input` for labeled files, conclusions contradicting results
+- **IMPORTANT**: Claims without citations, hardcoded numbers without table references, `.tex`/`.md` pair mismatches, ceiling effects unacknowledged, null results without power analysis caveat, unreliable scores analyzed without caveats
+- **MINOR**: Orphaned files on disk, TODO/FIXME remnants, environment pair mismatches, unusual citations, redundant sections, undefined terminology, unclear qualifiers
 
 ### Checklist Summary
 
 ```markdown
 ## Strict Audit Checklist
 
+### Pass 1: Structural (Data, References, Files)
 - [ ] Every hardcoded number in text traced to a data source
 - [ ] Data-to-paper direction checked (important results not omitted)
 - [ ] Every \ref has a \label in a file that is \input-ed
@@ -284,13 +378,29 @@ A findings report organized by severity:
 - [ ] No orphaned \input files (exist on disk, never included)
 - [ ] Compiled PDF has 0 "??" references
 - [ ] Compiled PDF has 0 "[?]" citations
+
+### Pass 2: Scientific Rigor
+- [ ] Ceiling/floor effects acknowledged in Limitations if metrics cluster near bounds
+- [ ] Null results accompanied by power analysis caveat
+- [ ] SRH test results include validity caveat (Sawilowsky 1990)
+- [ ] Figure captions match actual figure content (no misleading "faceted by X")
+- [ ] Discussion/Conclusions claims do not overstate Results
+- [ ] Score-based analyses caveat poor inter-rater reliability if alpha < 0.667
+
+### Pass 3: Writing Quality
+- [ ] All citations are academically appropriate for context
+- [ ] No redundant sections repeating the same finding
+- [ ] All coined/specialized terms defined on first use
+- [ ] No confusing parenthetical qualifiers that add ambiguity
 ```
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectScylla | Haiku ablation study paper (`docs/arxiv/haiku/`) | Caught dangling `\ref{tab:criteria_performance}`, two missing Related Work citations, hardcoded token numbers without table refs |
+| ProjectScylla | Haiku ablation study paper (`docs/arxiv/haiku/`) -- Pass 1 | Caught dangling `\ref{tab:criteria_performance}`, two missing Related Work citations, hardcoded token numbers without table refs |
+| ProjectScylla | Haiku ablation study paper (`docs/arxiv/haiku/`) -- Pass 2 | Identified ceiling effect in pass rates (0.903--1.000), missing power analysis for null tier-equivalence claim, SRH validity caveat needed, misleading "faceted by model" caption for single-model study, logical tension between non-significant pass rate and significant score difference |
+| ProjectScylla | Haiku ablation study paper (`docs/arxiv/haiku/`) -- Pass 3 | Flagged negotiation book citation in methodology section, redundant restatements of tier equivalence across Discussion/Conclusions, undefined "budget frontier model" term, confusing parenthetical qualifiers in statistical interpretation sentences |
 
 ## References
 
