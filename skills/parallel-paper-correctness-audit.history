@@ -1,0 +1,23 @@
+# parallel-paper-correctness-audit — History
+
+## v1.0.0 (2026-04-26)
+
+**Created by:** ProjectScylla correctness audit session (Opus 4.6, 1M context)
+
+Initial version capturing learnings from two-pass parallel audit of docs/arxiv/haiku/paper.tex.
+
+**Error patterns documented (8):**
+1. Stale Inline Tables
+2. Aggregation Method Mismatch
+3. False Universality Claims
+4. pandas None-to-NaN Conversion
+5. Over-Scoring Judges
+6. Variable Criteria Counts
+7. Wrong Count from Misread Data
+8. p-Value Precision Inconsistency
+
+**Issues found (8):**
+- Critical: False universality (normality), Stale inline T6 cost
+- Major: Consistency mismatch, impl_rate > 1.0, Variable criteria undisclosed, LaTeX rendering bugs
+- Moderate: Wrong missing count
+- Minor: p-value precision
