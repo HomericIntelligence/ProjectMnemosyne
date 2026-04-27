@@ -1,5 +1,51 @@
 # batch-pr-ci-fix-workflow — Version History
 
+## v2.10.0 (2026-04-27)
+
+**Changed by:** HomericIntelligence ecosystem — fleet-wide gitleaks-action@v2 replacement across 11 repos (chore/merge-typecheck-into-lint wave)
+**Verification:** verified-ci
+
+### What changed
+- Added Phase 8.1: Fix gitleaks-action@v2 in ALL workflow files per repo (not just _required.yml)
+- Added Phase 8.2: Fix yamllint failing on long lines (use -d relaxed)
+- Added Phase 8.3: Fix mypy traversing pytest internals (--no-namespace-packages --python-version 3.11)
+- Added Phase 8.4: Fix multi-line python3 -c breaking YAML parsing at column 1
+- Added Phase 8.5: Verify CI after force-push via workflow run head_sha (not mergeStateStatus)
+- Added Swarm Agent Prompt Template Hygiene section
+- Added 8 new Failed Attempts rows covering the above patterns
+- Added 5 new When to Use triggers (items 24–28)
+- Updated description to include triggers (24)–(28)
+- Updated date to 2026-04-27
+- Bumped version from 2.9.0 to 2.10.0
+
+### Why
+Fleet-wide gitleaks-action@v2 → curl binary install across 11 HomericIntelligence repos
+(chore/merge-typecheck-into-lint wave, 2026-04-26) uncovered 5 additional CI failure patterns:
+
+1. **Legacy ci.yml** (ProjectTelemachy): `_required.yml` was fixed but `ci.yml` still had the
+   action. Must grep ALL workflow files per repo, not just `_required.yml`.
+2. **yamllint line-length** (ProjectMnemosyne): default config treats lines >80 chars as errors;
+   URL-heavy workflow files fail immediately. Fix: `yamllint -d relaxed`.
+3. **mypy pytest internals** (ProjectMnemosyne): `mypy scripts/ tests/` traversed into pytest,
+   hitting Python 3.10 pattern matching. Fix: `--no-namespace-packages --python-version 3.11`.
+4. **YAML column-1 python3 -c** (ProjectAgamemnon): Multi-line Python in `run: |` with lines
+   at column 1 broke YAML parsing. Fix: collapse to single line.
+5. **mergeStateStatus lag** (general): After force-push, `mergeStateStatus` shows BLOCKED even
+   when new CI run passed. Fix: verify via `gh api .../actions/runs?branch=...` head_sha.
+
+Additionally documented swarm prompt template hygiene after a `tr '[:lower']'` typo (missing `:`)
+in the orchestrator prompt was copied verbatim by Haiku into ProjectHermes workflow files.
+
+### Previous version snapshot (v2.9.0)
+
+version: "2.9.0", date: 2026-04-24
+
+v2.9.0 added: GHA workflow using manual pixi install without pixi binary installed on runner
+(pixi: command not found); bats PATH isolation using /bin:/usr/bin on pixi runners; companion
+script exec from temp-dir copy failing unit tests. Adds triggers (21)-(23) to description.
+
+---
+
 ## v2.9.0 (2026-04-24)
 
 **Changed by:** HomericIntelligence/Myrmidons CI fix session — apply.yml pixi migration, bats PATH isolation, companion script guard (PR #307)
