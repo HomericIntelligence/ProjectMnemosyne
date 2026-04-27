@@ -11,10 +11,11 @@ description: 'Classify, deduplicate, and batch-implement GitHub issues in a larg
   hot-file serialization for shared scripts (apply.sh/reconcile.sh), pre-swarm
   existing-PR audit, close-before-delegate pattern, and C++20/Conan/pixi-specific
   guards (libssl-dev, TSan+concurrentqueue blocker, enable_shared_from_this diamond
-  inheritance, CMakeLists.txt single-agent anchor, asyncio_mode auto decorator check).'
+  inheritance, CMakeLists.txt single-agent anchor, asyncio_mode auto decorator check,
+  cross-branch CMakeLists contamination from parallel agents starting from same base).'
 category: tooling
-date: 2026-04-25
-version: 1.8.0
+date: 2026-04-26
+version: 1.9.0
 user-invocable: false
 verification: verified-local
 history: batch-low-difficulty-issue-impl.history
@@ -25,7 +26,7 @@ history: batch-low-difficulty-issue-impl.history
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-25 |
+| **Date** | 2026-04-26 |
 | **Objective** | Classify, deduplicate, and batch-implement low-difficulty GitHub issues using worktree-isolated agents |
 | **Outcome** | Verified: worktree isolation works correctly; correct pre-filter order; ALREADY-DONE grep must exclude worktrees; pre-launch repo-capability checks required; C++20/Conan/pixi-specific guards required for C++ projects |
 | **Verification** | verified-local |
@@ -358,6 +359,7 @@ gh pr list --author "@me" --state all --limit 50
 | TSan build added to project using concurrentqueue (ProjectKeystone 2026-04-25) | Attempted to add `-fsanitize=thread` build to verify thread safety; concurrentqueue (moodycamel) lock-free atomics were in use | concurrentqueue triggers TSan false positives by design — the library uses intentional relaxed-ordering patterns that TSan cannot distinguish from real races. Tests fail spuriously under TSan | TSan + concurrentqueue (or any similar lock-free lib using intentional relaxed ordering) is a hard blocker. Classify any issue requiring TSan + concurrentqueue as HARD — cannot be resolved without replacing the dependency. Never attempt to add TSan builds to projects with concurrentqueue |
 | enable_shared_from_this diamond inheritance on derived class (ProjectKeystone 2026-04-25) | When fixing use-after-free via `weak_ptr` capture, added `std::enable_shared_from_this<T>` to a derived class (e.g., `TaskAgent`) to call `weak_from_this()` | Base class `AgentCore` already inherited `enable_shared_from_this<AgentCore>`. Derived class inheriting it again caused diamond inheritance compile error: "ambiguous base class 'enable_shared_from_this'" | Before adding `enable_shared_from_this<T>` to any class, run `grep -rn enable_shared_from_this` across all base classes in the hierarchy. If base already has it, the derived class can call `weak_from_this()` directly without re-inheriting |
 | Two agents both modifying CMakeLists.txt in the same wave (ProjectKeystone 2026-04-25) | Despite same-file grouping rules, two different agents both modified `CMakeLists.txt` for separate SPDX/spdlog fixes (PRs #392 and #395) in the same wave because the changes appeared unrelated | Second PR could not auto-merge cleanly; one became a duplicate requiring manual resolution | Treat `CMakeLists.txt` as a hard file-grouping anchor: any issue touching it must be batched into ONE agent per wave, regardless of how different the individual changes appear. Apply the same rule as ci.yml: batch all CMakeLists.txt issues into a single Sonnet agent per wave |
+| Two parallel agents modifying CMakeLists.txt in same wave — cross-branch source contamination (2026-04-26) | Launched agents for issues #275 (TLS test) and #303 (SIGTERM test) in parallel from `origin/main`; both added their CMakeLists.txt blocks. The #275 agent's CMakeLists included the `scheduler_sigterm_tests` `add_executable()` target (referencing `test_scheduler_sigterm.cpp`) even though that file only exists on the #303 branch. Build failed: `CMake Error: Cannot find source file: tests/integration/test_scheduler_sigterm.cpp` | Two agents running in parallel, both starting from `origin/main`, independently added their blocks to `CMakeLists.txt`. The agents appear to have written to the same working copy before diverging into their branches, so the #275 agent captured #303's in-progress CMakeLists edits. This is a subtler version of the single-anchor rule: not just "don't both touch the same file" but "if two agents touch the same file in the same wave, one will pick up the other's partial edits even when launched from the same base commit." | CMakeLists.txt is a hard anchor — strictly serialize agents that modify it. Never place two agents in the same wave if both touch CMakeLists.txt, even for purely additive changes. Fix: rebase the contaminated branch, manually remove the stray block, force-push. |
 | Adding @pytest.mark.asyncio when asyncio_mode='auto' set in pyproject.toml (ProjectKeystone 2026-04-25) | Agent wrote new Python test files and added `@pytest.mark.asyncio` decorators to async test functions | `pyproject.toml` already had `asyncio_mode = "auto"` in `[tool.pytest.ini_options]`. With auto mode, pytest-asyncio automatically treats all async test functions as async tests — the decorator is redundant and produces deprecation warnings or errors | Before writing Python test files, check: `grep -A5 "pytest.ini_options" pyproject.toml | grep asyncio_mode`. If `asyncio_mode = "auto"` is present, omit all `@pytest.mark.asyncio` decorators |
 | Trusting agent-reported PR numbers without verification (ProjectKeystone 2026-04-25) | In 3 out of 16 waves, accepted agent's final output ("PR #403") as the authoritative PR number for wave reconciliation | Agents report their in-flight view of PR numbers, which can be stale or incorrect when races occur or the agent mistakes a draft PR number. 3/16 waves had wrong agent-reported PR numbers | After every wave, always verify PR numbers with `gh pr list --author "@me" --state all --limit 50`. Never trust agent-reported PR numbers as ground truth |
 

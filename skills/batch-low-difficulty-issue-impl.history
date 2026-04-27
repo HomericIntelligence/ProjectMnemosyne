@@ -1,5 +1,61 @@
 # History: batch-low-difficulty-issue-impl
 
+## v1.9.0 (2026-04-26)
+
+**Changed by:** ProjectKeystone parallel-agent CMakeLists contamination incident (2026-04-26)
+**Verification:** verified-local (build failure confirmed in CI; fix confirmed locally)
+
+### What changed
+- Added 1 new Failed Attempts row about CMakeLists cross-branch contamination from two parallel agents
+
+### Why
+Prior v1.8.0 single-anchor rule said "only one agent per wave may touch CMakeLists.txt" but
+didn't document the cross-branch contamination mechanism or the specific error message. In this
+incident, agents for issues #275 (TLS test) and #303 (SIGTERM test) were launched in parallel
+from `origin/main`. The #275 agent's CMakeLists ended up including the `scheduler_sigterm_tests`
+`add_executable()` target from the #303 agent's in-progress edits, causing:
+  `CMake Error: Cannot find source file: tests/integration/test_scheduler_sigterm.cpp`
+The key subtlety: the contamination occurs even when both agents start from the same base commit —
+they appear to share a working copy during the editing phase before diverging into separate branches.
+Fix procedure: rebase contaminated branch, manually remove stray block, force-push.
+
+### Previous version (v1.8.0) snapshot
+
+<details>
+<summary>v1.8.0 frontmatter</summary>
+
+```yaml
+name: batch-low-difficulty-issue-impl
+description: 'Classify, deduplicate, and batch-implement GitHub issues in a large swarm
+  session (24+ waves, 200+ issues). Use when: (1) a large backlog of open issues needs
+  triage, (2) many issues are pure doc/text or infra-only changes, (3) duplicate issues
+  need closing before implementation. Includes worktree-safe grep pattern for ALREADY-DONE
+  verification, correct pre-filter order, ci.yml conflict avoidance, EASY queue exhaustion
+  detection, Docker inline comment parse error pattern, parallel-agent add/add rebase
+  conflict resolution when multiple agents create the same package independently,
+  pre-launch repo-capability checks (autoMergeAllowed, lockfile, pre-commit config),
+  hot-file serialization for shared scripts (apply.sh/reconcile.sh), pre-swarm
+  existing-PR audit, close-before-delegate pattern, and C++20/Conan/pixi-specific
+  guards (libssl-dev, TSan+concurrentqueue blocker, enable_shared_from_this diamond
+  inheritance, CMakeLists.txt single-agent anchor, asyncio_mode auto decorator check).'
+category: tooling
+date: 2026-04-25
+version: 1.8.0
+user-invocable: false
+verification: verified-local
+history: batch-low-difficulty-issue-impl.history
+```
+
+Key state at v1.8.0: Added 7 C++20/Conan/pixi-specific failure modes (libssl-dev Dockerfile
+gap, TSan+concurrentqueue hard blocker, enable_shared_from_this diamond inheritance,
+CMakeLists.txt double-agent anchor rule, asyncio_mode='auto' decorator check, agent PR number
+unreliability). Also added C++20/Conan/pixi Project-Specific Guards checklist in Results &
+Parameters. Single-anchor rule for CMakeLists.txt stated but cross-branch contamination
+mechanism not yet documented.
+</details>
+
+---
+
 ## v1.8.0 (2026-04-25)
 
 **Changed by:** ProjectKeystone 180-issue C++20 myrmidon swarm (7 EASY waves + 9 MEDIUM waves, 2026-04-25)
