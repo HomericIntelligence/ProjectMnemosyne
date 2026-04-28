@@ -1,5 +1,41 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.10.0 (2026-04-28)
+
+**Changed by:** Mnemosyne 38-PR rebase session — CI fix rollout and conflict resolution patterns
+**Verification:** verified-ci
+
+### What changed
+- Added trigger #25 (renumbered from old #25 in description): new CI job blocking all open PRs
+  due to pre-existing violations (markdownlint/pixi-check on .claude/plugins/)
+- Added trigger #26: two PRs independently amend same skill to same version with different
+  content — treat as additive conflict, merge both sets of learnings, close redundant PR
+- Added trigger #27: stale CI results requiring push to trigger fresh run
+- Added 3 new "When to Use" bullets for all 3 patterns
+- Added 3 new Failed Attempts rows:
+  - Rebasing skill PRs when new CI job has pre-existing violations
+  - Using git rebase --skip for superseded skill amendments without pushing
+  - Auto-merge --rebase when repo only allows squash
+- Added Quick Reference commands for all 3 patterns:
+  - Check repo merge settings before auto-merge
+  - Fix new CI job on main first, then rebase all PRs
+  - Resolve two PRs with same version/different content via merge + close redundant
+
+### Why
+During the bulk rebase of 38 Mnemosyne skill PRs:
+1. After PR #1441 landed markdownlint/pixi-check jobs, 11 skill PRs immediately failed CI due to
+   pre-existing violations in .claude/plugins/ (not the PRs themselves). Pattern: fix root cause
+   on main first, then rebase PRs.
+2. PRs 1438 and 1440 both proposed v2.9.0 of batch-pr-rebase-workflow.md with different content.
+   Neither could rebase cleanly. Resolved by merging both sets of learnings into one PR, closing
+   the other as superseded.
+3. PRs 1406 and 1432 both had v1.9.0 content superseded by v1.10.0 on main. Running
+   git rebase --skip locally without pushing left the remote in a stale state.
+4. gh pr merge --auto --rebase failed for all PRs — repo only allows squash merges.
+   Should check merge settings before batch auto-merge.
+
+---
+
 ## v2.9.0 (2026-04-25) — Amendment 2 (ProjectTelemachy git hygiene session)
 
 **Changed by:** ProjectTelemachy git hygiene pass — rebase branches, clean worktrees, fix PRs (2026-04-25)
