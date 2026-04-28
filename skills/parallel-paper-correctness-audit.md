@@ -1,11 +1,11 @@
 ---
 name: parallel-paper-correctness-audit
-description: Multi-agent parallel workflow for verifying every numerical claim in a research paper against underlying data files (CSV, JSON), fixing errors, and ensuring internal consistency across inline tables, generated tables, and figure data
+description: Multi-agent parallel workflow for verifying every numerical claim in a research paper against underlying data files (CSV, JSON), fixing errors, ensuring internal consistency across inline tables, generated tables, figure data, and post-correction narrative audit
 category: documentation
-date: 2026-04-26
-version: 1.1.0
+date: 2026-04-27
+version: 1.2.0
 user-invocable: false
-tags: [latex, paper, audit, verification, cross-reference, numerical-accuracy, parallel-agents, inline-tables, aggregation-mismatch, pandas, data-pipeline]
+tags: [latex, paper, audit, verification, cross-reference, numerical-accuracy, parallel-agents, inline-tables, aggregation-mismatch, pandas, data-pipeline, post-correction, figure-caption, narrative-consistency, vl-json]
 ---
 # Parallel Paper Correctness Audit
 
@@ -13,9 +13,9 @@ tags: [latex, paper, audit, verification, cross-reference, numerical-accuracy, p
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-26 |
+| **Date** | 2026-04-27 |
 | **Objective** | Verify every numerical claim in a LaTeX research paper against its underlying data files, fix errors, and ensure internal consistency using parallel agent teams |
-| **Outcome** | Found and fixed 12 issues across 3 audit passes: 1 false universality claim (13/14 not 14/14), stale inline table values (34% cost error), consistency metric aggregation mismatch (0.23 delta), pandas None-to-NaN bug (systematic: 12 instances in 3 files), impl_rate > 1.0 from over-scoring judge, variable criteria counts undisclosed, wrong missing-judges count, p-value precision inconsistency, best-CoP tier mislabel (T1->T2), tab03 nan values, p-value precision inconsistency across sections |
+| **Outcome** | Found and fixed 12 issues across 3 audit passes + 7 issues in post-correction audit (v1.2.0): original passes found false universality claim, stale inline tables, aggregation mismatch, pandas NaN bug, over-scoring judge, variable criteria; post-correction pass found 1 CRITICAL figure/caption mismatch, 4 MODERATE (caption error, scale inconsistency, causal language, overclaim), 2 MINOR (precision standardization) |
 | **Models Used** | Opus 4.6 (1M context) |
 | **Scale** | ~2,400-line LaTeX paper, 3 experiments, 7 tiers, 1,080 runs, 120 subtests |
 
@@ -29,8 +29,10 @@ Use this workflow when:
 - The paper has undergone prior review rounds and you suspect stale values from earlier data versions
 - You need to verify statistical claims (normality tests, effect sizes, test statistics) against raw data
 - The paper contains universality claims ("all X", "every Y", "no Z") that could be falsified by a single exception
+- The paper has undergone major narrative corrections (e.g., changing conclusions from "significant degradation" to "no significant effect") and you need to verify no residual old-narrative language remains
+- Figure captions may have been written for a prior version of the analysis and not updated after corrections
 
-**Trigger phrases**: "verify all numbers", "correctness audit", "cross-reference paper against data", "check inline tables", "second-pass audit", "third-pass audit", "grep for nan"
+**Trigger phrases**: "verify all numbers", "correctness audit", "cross-reference paper against data", "check inline tables", "second-pass audit", "third-pass audit", "grep for nan", "post-correction audit", "verify narrative consistency"
 
 **Distinguishing from related skills**:
 - `academic-paper-validation` covers the full paper lifecycle (tone, cross-refs, LaTeX, statistics, arXiv build). Use that for initial review.
@@ -136,6 +138,31 @@ Deploy after first and second passes are complete. Third-pass targets systematic
 - Grep for ALL occurrences of each reported statistic (p-values, test statistics)
 - Verify uniform precision across all sections (body, appendix, tables)
 - After fixing any number, search for all other occurrences to update them consistently
+
+### Phase 6: Post-Correction Narrative Audit (3 Agents)
+
+Deploy after major narrative corrections (e.g., changing conclusions from "significant effect" to "no significant effect"). This phase catches residual old-narrative artifacts.
+
+**Agent A — Paper Structure + Claims**:
+1. Read full `paper.tex` — catalog every factual claim, figure reference, and conclusion
+2. Search for residual old-narrative language (grep for the old framing words: "degradation", "harm", "counterproductive", etc.)
+3. Verify causal language matches the corrected conclusions (null results should not use causal framing)
+
+**Agent B — All Data Files**:
+1. Read ALL data files: `runs.csv`, `summary.json`, `statistical_results.json`, all table `.tex` files
+2. Independently recompute pass rates, costs, and CoP per tier per experiment from `runs.csv` (do NOT trust `summary.json`)
+3. Check for multiple statistical output files — a separate file (e.g., `srh_tier_experiment.json`) may contain the correct results while the main file uses the wrong grouping factor
+
+**Agent C — All Figure Specs**:
+1. Read every `.vl.json` file — compare title, encoding, mark type, and data transforms against paper captions
+2. Verify figure content matches what the caption claims (e.g., caption says "CoP" but spec shows raw cost)
+3. Check data cardinality (caption says "21 tier-experiment combinations" but spec aggregates to 7 tier-level values)
+
+**Post-Correction Checklist** (apply after agents report):
+1. Search for residual old-narrative language — grep for the old framing to ensure no orphaned claims remain
+2. Check figure/caption alignment — figures may have been created for the old narrative and not updated
+3. Verify causal language matches new conclusions — old conclusions may have used causal framing inappropriate for corrected null results
+4. Cross-check body text H-values against updated tables — body prose may reference rounded values that no longer match updated table precision
 
 ## Common Error Patterns
 
@@ -248,6 +275,57 @@ The `is not None` bug (Pattern 4) is rarely isolated. If one table generation fi
 # Then verify each hit touches DataFrame data
 ```
 
+### Pattern 11: Figure/Caption Mismatch After Corrections
+
+After major data corrections, figures may have been regenerated but captions not updated (or vice versa). The figure spec (e.g., VL JSON) shows one metric while the caption describes another.
+
+**Detection**: Read every `.vl.json` spec and compare its `title`, `encoding.y.field`, and `mark` against the corresponding `\caption{}` in the paper. Common mismatches:
+- Caption says "Cost-of-Pass" but spec plots raw cost
+- Caption says "21 tier-experiment combinations" but spec aggregates to 7 tier-level values
+- Caption describes a trend that matched the old narrative but contradicts the corrected data
+
+**Fix**: Update either the caption or the figure spec to match, depending on which reflects the intended analysis.
+
+### Pattern 12: Residual Old-Narrative Language
+
+After changing conclusions (e.g., from "significant effect" to "no significant effect"), orphaned phrases from the old narrative may remain scattered throughout the paper.
+
+**Detection**: Grep for characteristic words from the old framing. If the old conclusion was "harmful degradation", search for: "degradation", "harm", "counterproductive", "detrimental", "penalty". Check abstract, introduction, discussion, and conclusion sections.
+
+**Fix**: Replace with language consistent with the corrected conclusions. For null results, use neutral framing: "no significant difference", "comparable performance", "within expected variation".
+
+### Pattern 13: Causal Language for Non-Significant Results
+
+Papers originally written around significant findings often use causal framing ("X caused Y", "X led to degradation") that becomes inappropriate when the analysis is corrected to show null results.
+
+**Detection**: Search for causal verbs near the corrected metrics: "caused", "led to", "resulted in", "produced", "drove". Null or non-significant results should use associative or descriptive language only.
+
+**Fix**: Replace causal framing with descriptive framing: "X was associated with" or "X showed no significant difference in Y".
+
+### Pattern 14: Rounding Precision Inconsistency Between Body and Appendix
+
+Summary tables in the body may use fewer decimal places than appendix tables for the same statistic (e.g., body: H=4.0, appendix: H=4.00). Both are valid roundings but the inconsistency looks sloppy and can cause confusion.
+
+**Detection**: For every statistic that appears in both body and appendix, compare precision. Common cases: H-statistics, p-values, effect sizes.
+
+**Fix**: Standardize to the same precision throughout. Typically 2 decimal places for test statistics, 3-4 for p-values.
+
+### Pattern 15: Consensus vs Per-Judge Metric Levels
+
+A claim like "only one value exceeding 1.0 in the dataset" may be true at the consensus (median across judges) level but false at the per-judge level. When auditing such claims, determine which level the paper is referring to.
+
+**Detection**: Check the surrounding context for "consensus", "median", "per-judge", or "individual". If ambiguous, check both levels against the data.
+
+**Fix**: Add explicit qualification: "at the consensus level" or "across individual judge scores".
+
+### Pattern 16: Multiple Statistical Output Files
+
+Statistical analysis may produce results in multiple files with different grouping factors. The main `statistical_results.json` might use `agent_model` as the factor (wrong for a single-model study), while the correct results are in a separate file like `srh_tier_experiment.json` using `tier` as the factor.
+
+**Detection**: List all statistical output files in the data directory. Compare the factor/grouping variable in each against what the paper claims to be testing.
+
+**Fix**: Ensure the paper cites results from the correct file. Add a note documenting which file contains which analysis.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -258,6 +336,8 @@ The `is not None` bug (Pattern 4) is rarely isolated. If one table generation fi
 | Compare best-CoP at rounded precision | Checked T1 best CoP ($0.037) against rounded table values | T2 was actually $0.0366 vs T1 $0.0373; both round to $0.037 but T2 wins | Always compare at full precision, not rounded values |
 | Fix `is not None` in one file only | Fixed the NaN leak in summary.py only | Same bug existed in detail.py and comparison.py (12 instances total) | When finding a systematic bug pattern, grep ALL related files before declaring done |
 | Check only paper-referenced tables for nan | Grepped for "nan" only in tables mentioned in paper narrative | tab03 (judge agreement) also had nan values but paper text never quotes those specific cells | Grep for "nan" across ALL generated files, not just the ones the paper references |
+| Trusting exploration agent claim about line 472 | Exploration agent said line 472 had "[0,1] scale" | Initially flagged as potentially not existing without verification | Always verify agent claims by reading the actual file; do not trust agent summaries without cross-checking |
+| vl2png with default npx invocation | Used `npx vl2png` to render VL JSON specs | Missing explicit packages; default dimensions too small (207x369) | Requires `npx -p vega-lite -p vega-cli -p canvas vl2png` with explicit width/height in spec + scale factor of 3 |
 
 ## Results & Parameters
 
@@ -270,10 +350,13 @@ The `is not None` bug (Pattern 4) is rarely isolated. If one table generation fi
 | Tiers | 7 (T0-T6) |
 | Total runs | 1,080 |
 | Subtests | 120 |
-| Data files | runs.csv (1,080 rows), judges.csv (3,210 rows), criteria.csv (12,140 rows), subtests.csv, summary.json, statistical_results.json |
+| Data files | runs.csv (1,080 rows), judges.csv (3,210 rows), criteria.csv (12,140 rows), subtests.csv, summary.json, statistical_results.json, srh_tier_experiment.json |
+| Figure specs | 72 Vega-Lite JSON specs (.vl.json) |
 | Tools | pandas for independent aggregation, grep for cross-referencing, direct file reads |
 
 ### Issues Found
+
+#### Passes 1-3 (v1.0.0-v1.1.0)
 
 | Severity | Issue | Paper Claim | Data Value | Error Magnitude |
 |----------|-------|-------------|------------|-----------------|
@@ -290,6 +373,18 @@ The `is not None` bug (Pattern 4) is rarely isolated. If one table generation fi
 | Major | tab03 nan values | Judge agreement table | "All Judges" row had nan for pairwise metrics | Display bug |
 | Minor | p=0.442 vs p=0.4423 (impl_rate KW) | Results section vs appendix | Same statistic, different precision | Precision |
 
+#### Post-Correction Audit (v1.2.0)
+
+| Severity | Issue | Paper Claim | Data Value | Error Magnitude |
+|----------|-------|-------------|------------|-----------------|
+| Critical | Figure/caption mismatch (fig06) | Caption: "CoP" | Spec plots raw cost | Metric identity wrong |
+| Moderate | Caption error (fig08) | "21 tier-experiment combos" | Spec aggregates to 7 tier-level values | Cardinality wrong |
+| Moderate | Scale inconsistency | Body: H=4.0 (1dp) | Appendix: H=4.00 (2dp) | Precision inconsistency |
+| Moderate | Causal language for null results (x4) | "caused", "led to" | Non-significant SRH results | Inappropriate framing |
+| Moderate | Overclaim from old narrative | Strong conclusion | Null result | Narrative mismatch |
+| Minor | SRH precision standardization | H=4.0, 5.5, 3.7 | H=4.00, 5.47, 3.66 | Standardized to 2dp |
+| Minor | Consensus vs per-judge ambiguity | "only value >1.0" | 1 at consensus, 3 at per-judge | Level unspecified |
+
 ### Verification Level
 
 verified-local (all fixes verified against data files; paper not recompiled to PDF in this session)
@@ -302,11 +397,16 @@ verified-local (all fixes verified against data files; paper not recompiled to P
 4. **"All X" claims are fragile** — A single exception invalidates universality; use "N of M" instead
 5. **Judge-generated rubrics vary wildly** — LLM judges do not follow rubric structure for unfamiliar tasks
 6. **Missing data compounds with over-scoring** — A missing judge + an over-scoring judge created the only impl_rate > 1.0
-7. **Each audit pass finds DIFFERENT bugs** — First pass catches methodology/computation/LaTeX bugs; second pass catches stale inline tables and wrong counts; third pass catches best-tier mislabels, systematic `is not None` bug patterns, and p-value precision inconsistency
+7. **Each audit pass finds DIFFERENT bugs** — First pass catches methodology/computation/LaTeX bugs; second pass catches stale inline tables and wrong counts; third pass catches best-tier mislabels, systematic `is not None` bug patterns, and p-value precision inconsistency; post-correction pass catches figure/caption mismatches, residual narrative language, and causal framing errors
 8. **Deploy parallel agents with different data sources** — Agent reading paper+data, agent reading figures, agent reading source code find complementary issues
 9. **Grep for "nan" across ALL generated files** — Not just the ones the paper references. The tab03 nan was invisible because the paper narrative does not quote those specific table values.
 10. **`is not None` is NEVER safe for pandas DataFrame values** — This is a systematic bug pattern. When auditing code that generates tables from DataFrames, search for ALL instances of `is not None` and replace with `pd.notna()`. If one file has it, check every related file.
 11. **Always compare "best X" claims at full precision** — Rounded values can tie when full-precision values have a clear winner. Table generation code may pick alphabetically among ties.
+12. **Recompute from raw data, not summary files** — summary.json may be stale or use wrong aggregation. Always recompute key metrics from runs.csv independently for verification.
+13. **Read every VL JSON spec, not just a sample** — Figure/caption mismatches are invisible without reading the actual spec. The title/encoding/mark in the spec may contradict the caption.
+14. **After major narrative corrections, run the post-correction checklist** — Search for residual old-narrative language, check figure/caption alignment, verify causal language matches new conclusions, cross-check body H-values against updated tables.
+15. **Check for multiple statistical output files** — The main statistical results file may use the wrong grouping factor. Always list all statistical output files and verify which one matches the paper's analysis.
+16. **Distinguish consensus vs per-judge levels in claims** — "Only one value exceeding X" may be true at one level but false at another. Always specify which level.
 
 ## Related Skills
 
@@ -314,6 +414,7 @@ verified-local (all fixes verified against data files; paper not recompiled to P
 - `paper-iterative-accuracy-review` — Second-pass review after targeted fixes
 - `statistical-claim-verification` — Statistical methodology correctness (test selection, effect sizes)
 - `latex-paper-accuracy-review` (history only) — Prior review sessions with error pattern catalog
+- `evaluation-paper-rewrite-after-data-fix` — Post-data-correction paper rewrite workflow
 
 ## Verified On
 
@@ -321,3 +422,4 @@ verified-local (all fixes verified against data files; paper not recompiled to P
 |---------|---------|---------|
 | ProjectScylla | Branch fix-validate-model-retry-config, correctness audit of docs/arxiv/haiku/paper.tex (passes 1-2) | 2026-04-26, Opus 4.6 (1M context), 1,080 runs across 7 tiers |
 | ProjectScylla | Branch fix-validate-model-retry-config, third-pass audit of docs/arxiv/haiku/paper.tex | 2026-04-26, Opus 4.6 (1M context), found 4 additional issues (best-CoP mislabel, systematic is-not-None, tab03 nan, p-value precision) |
+| ProjectScylla | Branch fix-validate-model-retry-config, post-correction paragraph-level audit of docs/arxiv/haiku/paper.tex (2428 lines) | 2026-04-27, Opus 4.6 (1M context), 3 parallel Explore agents + 1 Plan agent, found 7 issues (1 CRITICAL figure/caption, 4 MODERATE, 2 MINOR), 72 VL JSON specs cross-checked |

@@ -1,5 +1,52 @@
 # parallel-paper-correctness-audit — History
 
+## v1.2.0 (2026-04-27)
+
+**Updated by:** ProjectScylla post-correction audit session (Opus 4.6, 1M context)
+
+Added Phase 6 (Post-Correction Narrative Audit) and 6 new error patterns (11-16) from paragraph-level
+correctness audit of docs/arxiv/haiku/paper.tex after major narrative corrections.
+
+**New error patterns documented (6):**
+11. Figure/Caption Mismatch After Corrections
+12. Residual Old-Narrative Language
+13. Causal Language for Non-Significant Results
+14. Rounding Precision Inconsistency Between Body and Appendix
+15. Consensus vs Per-Judge Metric Levels
+16. Multiple Statistical Output Files
+
+**New issues found (7):**
+- Critical: Figure/caption mismatch (fig06 showed raw cost, caption said CoP)
+- Moderate: Caption cardinality error (fig08), scale inconsistency, causal language (x4), overclaim
+- Minor: SRH precision standardization, consensus vs per-judge ambiguity
+
+**New failed attempts (2):**
+- Trusting exploration agent claims without verification
+- vl2png default npx invocation (missing packages, wrong dimensions)
+
+**New key takeaways (5):**
+12. Recompute from raw data, not summary files
+13. Read every VL JSON spec, not just a sample
+14. After major narrative corrections, run the post-correction checklist
+15. Check for multiple statistical output files
+16. Distinguish consensus vs per-judge levels in claims
+
+**Workflow enhancement:** Added post-correction checklist (4-step) for use after major narrative changes.
+
+## v1.1.0 (2026-04-26)
+
+**Updated by:** ProjectScylla third-pass audit session (Opus 4.6, 1M context)
+
+Added Phase 5 (Third-Pass Audit) and patterns 9-10 from systematic pattern audit.
+
+**New error patterns documented (2):**
+9. Best-Tier Mislabel at Rounded Precision
+10. Systematic `is not None` Across Multiple Files
+
+**New issues found (4):**
+- Major: Best CoP tier mislabel (T1->T2), 12x `is not None` bug, tab03 nan values
+- Minor: p-value precision inconsistency across sections
+
 ## v1.0.0 (2026-04-26)
 
 **Created by:** ProjectScylla correctness audit session (Opus 4.6, 1M context)
