@@ -9,11 +9,11 @@ description: "Use when cleaning up worktrees under user-specified constraints: (
   all-clean direct execution, cherry=1 rebase-merge artifact handling, and the remove-worktree-keep-branch
   pattern for closed-not-merged PRs."
 category: tooling
-date: 2026-04-21
-version: "1.3.0"
+date: 2026-04-25
+version: "1.4.0"
 user-invocable: false
 verification: verified-ci
-tags: [worktree, cleanup, script, branches, artifacts, safety, merged-branch, circuit-breaker, staged-files, rebase-merge, closed-pr]
+tags: [worktree, cleanup, script, branches, artifacts, safety, merged-branch, circuit-breaker, staged-files, rebase-merge, closed-pr, gitignore]
 ---
 
 # Worktree Cleanup Under User Constraints
@@ -35,6 +35,7 @@ tags: [worktree, cleanup, script, branches, artifacts, safety, merged-branch, ci
 - Worktrees from merged branches have uncommitted files that might be real work
 - 20+ worktrees need cleanup and some have dirty working trees
 - Agent-generated worktrees (`.claude/worktrees/agent-*`) accumulated from parallel runs
+- Worktree directories (`.worktrees/`, `.claude/worktrees/`) appear as untracked directories in `git status --short` of the main workspace
 
 **All-clean worktrees allow direct execution (no script required):**
 
@@ -100,6 +101,50 @@ done | tee /tmp/wt-inventory.txt
 
 This single-pass inventory gives everything needed to classify all worktrees without any
 back-and-forth. No additional queries required in most cases.
+
+### Phase 0.5 — Gitignore Hygiene
+
+**Run before any cleanup operations.** Gitignore the worktree directories and common
+agent-session artifacts so they do not reappear as untracked noise in `git status` after
+the next batch of agent runs creates new worktrees.
+
+Without this step, cleanup is incomplete: even after all worktrees are removed, the
+*directory* (`.worktrees/`, `.claude/worktrees/`) will reappear as untracked in the next
+session because it was never gitignored.
+
+```bash
+# Check whether these paths are already gitignored:
+git check-ignore -v .worktrees .claude/worktrees .coverage .claude/scheduled_tasks.lock 2>/dev/null
+
+# If any are NOT ignored, add them to .gitignore:
+cat >> .gitignore << 'EOF'
+
+# Coverage reports
+.coverage
+.coverage.*
+
+# Claude worktree and session artifacts
+.worktrees/
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+EOF
+
+git add .gitignore
+git commit -m "chore: gitignore worktree dirs and agent session artifacts"
+```
+
+**Entries to add** (add only those not already present):
+
+| Pattern | What it ignores |
+|---------|----------------|
+| `.coverage` | pytest-cov coverage data file |
+| `.coverage.*` | coverage data with worker suffixes |
+| `.worktrees/` | top-level worktree checkout directory |
+| `.claude/worktrees/` | Claude Code agent worktree directory |
+| `.claude/scheduled_tasks.lock` | Claude Code scheduled-tasks lock file |
+
+**Verification**: after the commit, `git status --short` in the main worktree should show
+no untracked lines for these paths.
 
 ### Phase 1 — Classify Dirty Worktrees
 
@@ -302,6 +347,7 @@ bash -n /tmp/<repo>-worktree-cleanup.sh && echo "Syntax OK"
 | `git worktree remove --force` | Planned to use `--force` for stubborn cases | Safety Net blocks `--force` | Clean stray files individually first, then `git worktree remove` without `--force` |
 | `git checkout -- .` alone on staged-addition worktree | Ran `checkout -- .` then `git worktree remove` | `fatal: '<path>' contains modified or untracked files` — staged new files (status `A`) survived `checkout --` unchanged | Must run `reset HEAD -- .` first to unstage, then `checkout -- .`, then `clean -fd` |
 | Assuming cherry=1 means unreleased work | Three branches showed cherry=1 despite MERGED PRs | Rebase-merge rewrites commit hashes, so cherry count is 1 even though work is in main | Always check PR state first; cherry count is only meaningful when combined with PR=NONE or PR=CLOSED |
+| Skipping .gitignore hygiene | Cleaned up all worktrees but did not add worktree dirs to `.gitignore` | `.worktrees/` directory still appeared as untracked in `git status` after the next agent session because the directory itself was never gitignored | Run Phase 0.5 gitignore hygiene before cleanup — the cleanup removes the content but the directory must be gitignored to prevent re-accumulation |
 
 ## Results & Parameters
 
@@ -339,3 +385,4 @@ def is_artifact(path: str) -> bool:
 | ProjectMnemosyne | 14 agent worktrees (`.claude/worktrees/agent-*`), all PRs #1221–1255 merged, 4 with `.coverage` only | Script at `/tmp/mnemosyne-worktree-cleanup.sh`; syntax-checked (bash -n); user kept branches, generate-only mode |
 | ProjectScylla | 11 stale myrmidon swarm worktrees, staged-addition failures caught on cleanup, all 11 removed cleanly | 2026-04-13; `reset HEAD -- .` + `checkout -- .` + `clean -fd` sequence verified effective |
 | ProjectOdyssey | 17 worktrees (1 main + 16 feature), all clean (0 dirty), 15 agent-* in `.claude/worktrees/`, cherry=1 on MERGED PRs = rebase artifacts | 2026-04-21; direct execution (no script); 1 CLOSED PR branch kept; all 17 worktrees removed, 0 `--force` needed |
+| AchaeanFleet | 13 worktrees accumulated, `.worktrees/`, `.claude/worktrees/`, `.coverage`, `.claude/scheduled_tasks.lock` untracked in main | 2026-04-25; Phase 0.5 gitignore hygiene added first (commit dcf3d43); `git status --short` clean after cleanup; verified-ci |
