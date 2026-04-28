@@ -1,5 +1,45 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.9.0 (2026-04-27)
+
+**Changed by:** ProjectKeystone session — concurrent `gh pr merge` "Base branch was modified" GraphQL error recovery pattern (2026-04-27)
+**Verification:** verified-ci
+
+### What changed
+- Added 2 new "When to Use" conditions:
+  - (23) two PRs fired concurrently with `gh pr merge` → one fails with "Base branch was modified" GraphQL error
+  - (24) CMakeLists.txt additive conflict where both PRs add different add_executable/gtest_discover_tests blocks
+- Added recovery sequence to Quick Reference: check-which-merged → rebase onto new main → `--auto` re-arm (don't retry immediate merge)
+- Added 2 new Failed Attempts rows:
+  - Retrying `gh pr merge` immediately after "Base branch was modified" without rebasing → fails again
+  - `git checkout --theirs CMakeLists.txt` on additive test-target conflicts → drops first PR's new test targets
+- Updated description to add conditions 23 and 24
+- Bumped version 2.8.0 → 2.9.0
+
+### Why
+When two PRs are merged concurrently via `gh pr merge`, the first merge advances main's base SHA.
+The second merge API call was validated against the pre-merge SHA and fails with "Base branch was modified."
+Recovery requires rebasing onto the new main (not retrying the merge), re-arming --auto, and letting CI
+run before merging. The CMakeLists additive conflict sub-learning prevents data loss when both PRs added
+distinct test targets — using --theirs drops one side's additions.
+
+### Previous version (v2.8.0) snapshot
+
+<details>
+<summary>v2.8.0 frontmatter</summary>
+
+```yaml
+name: batch-pr-rebase-workflow
+version: "2.8.0"
+date: 2026-04-24
+verification: verified-ci
+```
+
+Key state at v2.8.0: Added .claude/worktrees agent rebase patterns, detached HEAD → branch -f fix, CHANGELOG take-HEAD strategy, myrmidon swarm conflict resolution. No concurrent gh pr merge failure pattern or CMakeLists additive conflict recovery.
+</details>
+
+---
+
 ## v2.8.0 (2026-04-24)
 
 **Changed by:** Myrmidons shellcheck-warnings myrmidon swarm rebase session (2026-04-24)
