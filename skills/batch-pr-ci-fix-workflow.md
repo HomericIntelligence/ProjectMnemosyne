@@ -1,9 +1,9 @@
 ---
 name: batch-pr-ci-fix-workflow
-description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern, (19) just v1.14+ import keyword reservation breaks inline Python heredocs causing all CI Code Quality fails, (20) gitleaks asset URL 404 because uname -s/-m produces wrong case/arch string for download URL, (21) GHA workflow uses manual pixi install instead of composite setup-pixi action causing pixi command not found, (22) bats PATH test for missing tool includes /bin or /usr/bin which pixi activation already polluted, (23) shell script calls companion script via SCRIPT_DIR but unit tests copy only the main script to a temp dir."
+description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern, (19) just v1.14+ import keyword reservation breaks inline Python heredocs causing all CI Code Quality fails, (20) gitleaks asset URL 404 because uname -s/-m produces wrong case/arch string for download URL, (21) GHA workflow uses manual pixi install instead of composite setup-pixi action causing pixi command not found, (22) bats PATH test for missing tool includes /bin or /usr/bin which pixi activation already polluted, (23) shell script calls companion script via SCRIPT_DIR but unit tests copy only the main script to a temp dir, (24) a repo has legacy ci.yml or security.yml alongside _required.yml each with their own secrets-scan job using gitleaks-action@v2 — must grep ALL workflow files per repo, (25) yamllint default config fails on workflow files with lines >80 chars — fix with -d relaxed flag, (26) mypy run on scripts/ tests/ traverses pytest internals causing Python 3.10 pattern matching errors — fix with --no-namespace-packages --python-version 3.11, (27) multi-line python3 -c in run: | blocks breaks YAML parsing when Python code starts at column 1, (28) PR mergeStateStatus lags after force-push — verify via workflow run head_sha directly."
 category: ci-cd
-date: 2026-04-24
-version: "2.9.0"
+date: 2026-04-27
+version: "2.10.0"
 user-invocable: false
 verification: verified-ci
 history: batch-pr-ci-fix-workflow.history
@@ -43,6 +43,11 @@ tags: []
 - **[NEW v2.9.0]** A GHA workflow was written before a `.github/actions/setup-pixi` composite action existed and uses manual `pixi install --locked` + curl-based yq/jq installs, failing with `pixi: command not found` because pixi itself is never installed on the runner
 - **[NEW v2.9.0]** A bats test uses `PATH="$TOOLS_BIN:/bin:/usr/bin"` to simulate missing tools, but pixi activation hooks add conda-forge paths at shell startup so the tool is still found — making the "tool missing" assertion fail
 - **[NEW v2.9.0]** A shell script calls a companion script via `${SCRIPT_DIR}/<companion>.sh` but unit tests copy only the main script to a temp dir — causing the exec to fail and breaking tests that expect exit 0 for valid input
+- **[NEW v2.10.0]** A repo has legacy `ci.yml` or `security.yml` alongside `_required.yml`, each with their own `secrets-scan` job using `gitleaks/gitleaks-action@v2` — must grep ALL workflow files per repo, not just `_required.yml`
+- **[NEW v2.10.0]** `yamllint` default config treats lines >80 chars as errors, failing on URL-heavy workflow files; fix with `yamllint -d relaxed .github/workflows/` or add a `.yamllint` config
+- **[NEW v2.10.0]** `mypy` run on `scripts/ tests/` directories traverses pytest internals, hitting "Pattern matching only supported in Python 3.10+" error; fix with `--no-namespace-packages --python-version 3.11`
+- **[NEW v2.10.0]** Multi-line `python3 -c "..."` blocks in `run: |` steps break YAML parsing when the Python code has lines at column 1 (YAML sees them as mapping keys); fix by collapsing to one line or using a heredoc at proper indentation
+- **[NEW v2.10.0]** After force-push to a branch, PR `mergeStateStatus` lags — verify CI passed by checking the workflow run's `head_sha` directly via `gh api repos/.../actions/runs?branch=...` rather than relying on `gh pr checks`
 
 ## Verified Workflow
 
@@ -395,6 +400,168 @@ gh pr merge <pr-number> --admin --rebase
 # Error message: "GraphQL: Pull request Auto merge is not allowed for this repository"
 # or: "the base branch policy prohibits the merge" → try --auto first, fallback to --admin
 ```
+
+### Phase 8.1: [NEW v2.10.0] Fix gitleaks-action@v2 in ALL Workflow Files (Not Just _required.yml)
+
+**Problem**: A repo has multiple workflow files and you only patched `_required.yml`. A legacy
+`ci.yml`, `security.yml`, or similar file has its own `secrets-scan` job still using
+`gitleaks/gitleaks-action@v2`.
+
+**Detection**:
+```bash
+# Check ALL workflow files per repo, not just _required.yml
+grep -rn "gitleaks/gitleaks-action" .github/workflows/
+```
+
+**Fix**: Apply the same 3-step curl binary install to every file that references the action:
+```bash
+# Find all occurrences across all repos in a monorepo/submodule setup
+for repo_path in control/* infrastructure/* provisioning/* shared/* research/* testing/* ci-cd/*; do
+  found=$(grep -rl "gitleaks/gitleaks-action" "$repo_path/.github/workflows/" 2>/dev/null)
+  [ -n "$found" ] && echo "NEEDS FIX: $found"
+done
+```
+
+**Lesson (ProjectTelemachy)**: `_required.yml` was fixed, but a separate `ci.yml` still had the
+action. CI on `ci.yml` continued to fail. Post-hoc grep across ALL workflow files per repo is
+required before declaring a repo done.
+
+### Phase 8.2: [NEW v2.10.0] Fix yamllint Failing on Long Lines in Workflow Files
+
+**Problem**: `yamllint .github/workflows/` uses the default config which treats lines >80 characters
+as errors. Workflow files commonly have URLs and long `run:` commands that exceed 80 chars. Every
+file fails immediately on line-length.
+
+**Fix**: Use the relaxed ruleset or add a `.yamllint` config:
+
+```bash
+# Quick fix — relaxed preset disables line-length and a few other strict defaults
+yamllint -d relaxed .github/workflows/
+
+# OR add a project .yamllint config
+cat > .yamllint << 'EOF'
+extends: default
+rules:
+  line-length:
+    max: 200
+    level: warning
+EOF
+yamllint .github/workflows/
+```
+
+**Workflow file CI step pattern** (what a `ci.yml` job step should look like):
+```yaml
+- name: Lint workflow YAML
+  run: yamllint -d relaxed .github/workflows/
+```
+
+### Phase 8.3: [NEW v2.10.0] Fix mypy Traversing pytest Internals
+
+**Problem**: Running `mypy scripts/ tests/` causes mypy to traverse into `pytest` internals
+(e.g., `_pytest/`) and encounter Python 3.10+ pattern matching syntax (`match`/`case` statements),
+producing: `error: Pattern matching is only supported in Python 3.10 and later`.
+
+**Fix**: Add `--no-namespace-packages` (prevents mypy from following package imports into installed
+packages) and pin `--python-version 3.11` (ensures syntax compatibility):
+
+```bash
+# WRONG — traverses pytest internals
+mypy scripts/ tests/
+
+# CORRECT — stays within project files, interprets syntax for Python 3.11
+mypy --no-namespace-packages --python-version 3.11 scripts/ tests/
+```
+
+**In a GHA workflow step**:
+```yaml
+- name: Type check
+  run: mypy --no-namespace-packages --python-version 3.11 scripts/ tests/
+```
+
+### Phase 8.4: [NEW v2.10.0] Fix Multi-line python3 -c Breaking YAML Parsing
+
+**Problem**: A `run: |` block contains a multi-line `python3 -c "..."` invocation where the
+Python code lines start at column 1. The YAML scanner interprets lines at column 1 as mapping
+keys, causing a parse error or silently mangling the script.
+
+**Example of broken pattern**:
+```yaml
+- name: Check coverage
+  run: |
+    python3 -c "
+import xml.etree.ElementTree as ET
+root = ET.parse('coverage.xml').getroot()
+print(float(root.attrib['line-rate']) * 100)
+"
+```
+The `import` line at column 1 trips the YAML scanner (and also trips `just` v1.14+ if in a justfile).
+
+**Fix**: Collapse to a single line, or use proper indentation:
+```yaml
+# CORRECT — single line
+- name: Check coverage
+  run: |
+    python3 -c "import xml.etree.ElementTree as ET; root = ET.parse('coverage.xml').getroot(); print(float(root.attrib['line-rate']) * 100)"
+
+# CORRECT — properly indented multi-line (each line indented inside the run: | block)
+- name: Check coverage
+  run: |
+    python3 - <<'PYEOF'
+      import xml.etree.ElementTree as ET
+      root = ET.parse('coverage.xml').getroot()
+      print(float(root.attrib['line-rate']) * 100)
+    PYEOF
+```
+
+### Phase 8.5: [NEW v2.10.0] Verify CI After Force-Push via Workflow Run head_sha
+
+**Problem**: After `git push --force-with-lease` to a branch, `gh pr view <N> --json mergeStateStatus`
+reports `BLOCKED` even though a new CI run is passing. The GraphQL `mergeStateStatus` field lags
+behind the actual CI state by several minutes post-force-push.
+
+**Fix**: Check the actual workflow run SHA directly, not `mergeStateStatus`:
+
+```bash
+# WRONG — lags after force-push, may show BLOCKED when CI is actually green
+gh pr view <pr-number> --json mergeStateStatus
+
+# CORRECT — verify the latest workflow run was triggered by the new commit SHA
+NEW_SHA=$(git rev-parse HEAD)
+gh api "repos/{owner}/{repo}/actions/runs?branch=<branch-name>" \
+  --jq ".workflow_runs[] | select(.head_sha == \"$NEW_SHA\") | {status, conclusion, name}"
+# Look for: "status": "completed", "conclusion": "success"
+
+# Also useful: check all runs for a branch to find the latest
+gh run list --branch <branch-name> --limit 5
+gh run view <run-id>   # Shows status of each job
+```
+
+**Pattern**: After force-push, always wait for at least one new workflow run to appear (poll with
+`gh run list --branch <branch>`), then check its `head_sha` matches your commit, and its
+`conclusion` is `success` — before declaring CI green.
+
+### Swarm Agent Prompt Template Hygiene [NEW v2.10.0]
+
+When constructing prompts for swarm agents that contain YAML/shell code snippets, verify the
+code in the prompt itself is correct before dispatching — Haiku agents copy templates verbatim.
+A typo in the orchestrator's prompt will appear in every repo the swarm touches.
+
+**Example failure (ProjectHermes)**: Swarm prompt contained `'[:lower']'` (missing `:` before
+the closing `]`) instead of `'[:lower:]'`. The Haiku agent copied this typo into the
+`tr '[:upper:]' '[:lower']'` shell command in every workflow file it touched. The resulting
+workflow step failed at runtime with `tr: invalid option`.
+
+**Post-hoc verification** (run after swarm completes):
+```bash
+# Check for the specific typo pattern from this session
+grep -rn "lower'\)" .github/workflows/*.yml
+
+# General pattern: grep for any malformed character class in tr commands
+grep -rn "tr '.*\[" .github/workflows/*.yml | grep -v "\[:.*:\]"
+```
+
+**Rule**: Before dispatching any swarm prompt that includes shell/YAML code, paste the exact
+snippet into a local shell to test it. If it errors locally, fix the prompt before dispatching.
 
 ### Phase 11: [NEW v2.2.0] Fix pytest caplog Assertion Failures
 
@@ -1077,6 +1244,12 @@ GIT_EDITOR=true git rebase --continue
 | `python3 -c "\ import json, pathlib; ..."` inline in just recipe | Used a just recipe inline Python heredoc to manipulate JSON/path data | `import` became a reserved keyword in just v1.14+; `just --list` itself fails with `Unknown start of token ';' `, breaking all CI Code Quality checks | Move Python logic to `scripts/remove-preset-include.py` and call it from the recipe, OR use just's `#!/usr/bin/env python3` shebang form as the recipe body |
 | `pip install --upgrade pip setuptools` then `pip install -e ".[dev]"` | Tried to fix `setuptools.backends.legacy` not-found error by upgrading setuptools before install | pip uses a vendored copy of `pyproject_hooks` resolved before the upgrade takes effect; `setuptools.backends.legacy` is non-standard and not recognized by the vendored resolver | Change `build-backend = "setuptools.backends.legacy:build"` to `build-backend = "setuptools.build_meta"` in pyproject.toml; `setuptools.backends.legacy` is not a valid PEP 517 backend identifier |
 | Removing `keystone_agents` only from main `install(TARGETS ...)` | Tried to clean up ADR-006 extraction by removing `keystone_agents` from one CMake install block | There were 4+ separate references: main install(), test install(), unit_tests source list (files with `#include "agents/"` headers), run_tests custom target, benchmark targets, fuzz targets — removal cascaded through multiple rounds | Grep the entire CMakeLists.txt for ALL references to the extracted library (`grep -n keystone_agents`), then grep each disabled test source file for `#include "agents/` to find transitive header dependencies before declaring done |
+| Checked only `_required.yml` per repo for gitleaks-action | Patched only `_required.yml` in ProjectTelemachy — legacy `ci.yml` still had `gitleaks/gitleaks-action@v2` | CI on `ci.yml` continued to fail; the fix was incomplete | Grep ALL `.github/workflows/*.yml` files per repo for the action name before declaring a repo done |
+| Used `yamllint .github/workflows/` without a config | Default config treats lines >80 chars as errors; URL-heavy workflow files fail immediately on line-length | All workflow files fail lint, blocking CI even when there are no real issues | Use `yamllint -d relaxed .github/workflows/` or add a `.yamllint` config with a higher line-length limit |
+| Ran `mypy scripts/ tests/` without namespace flag | mypy traversed into pytest internals, hitting Python 3.10 pattern matching syntax (`match`/`case`) in `_pytest/` | Error: "Pattern matching is only supported in Python 3.10 and later" — blocks type check CI | Add `--no-namespace-packages --python-version 3.11` flags to keep mypy within project files |
+| Multi-line `python3 -c "..."` in `run: |` with Python lines at column 1 | Python `import` and other lines started at column 1 inside a YAML `run: |` block | YAML scanner interpreted column-1 lines as mapping keys, corrupting the script | Collapse to a single line or use proper YAML indentation; never start Python code at column 1 within a `run: |` block |
+| Used `mergeStateStatus` to verify CI passed after force-push | Ran `gh pr view --json mergeStateStatus` immediately after force-push and saw `BLOCKED` | `mergeStateStatus` lags 5+ minutes after force-push; showed BLOCKED even when the new CI run had already succeeded | Check the workflow run's `head_sha` via `gh api repos/.../actions/runs?branch=...` directly to confirm CI ran on the new commit |
+| Swarm prompt contained `tr '[:lower']'` typo (missing `:`) | Haiku agent copied the prompt template verbatim into ProjectHermes workflow file | `tr` command failed at runtime: `tr: invalid option` | Verify all YAML/shell snippets in swarm prompts are syntactically correct before dispatching; post-hoc grep: `grep -rn "lower'\)" .github/workflows/*.yml` |
 
 ## Results & Parameters
 
@@ -1180,3 +1353,4 @@ fn __hash__[H: Hasher](self, mut hasher: H):
 | ProjectKeystone | Multiple PRs: nats.c FetchContent -Werror fix (restrict to CXX), coverage script Conan toolchain fix, clang-format v18 vs v22 lambda formatting fix. All 5 required checks restored to PASS, PRs set to auto-merge. 2026-04-23 | v2.7.0 |
 | HomericIntelligence/ProjectKeystone | 14 open PRs all blocked: gitleaks-action@v2 org license fix (curl-based install, v8.30.1), just v1.14+ import keyword fix (extract to scripts/remove-preset-include.py), setuptools.backends.legacy→setuptools.build_meta fix, CMakeLists.txt ADR-006 cascade cleanup (systematic grep for all references). PR #380 merged; all PRs unblocked. 2026-04-23 | v2.8.0 |
 | HomericIntelligence/Myrmidons | PR #307: apply.yml pixi composite action migration, bats PATH isolation fix (/usr/sbin:/sbin), validate-schemas.sh companion guard. CI green. 2026-04-24 | v2.9.0 |
+| HomericIntelligence ecosystem (11 repos) | Fleet-wide gitleaks-action@v2 → curl binary install (v8.30.1) across Mnemosyne, Nestor, AchaeanFleet, Argus, Myrmidons, Hermes, Telemachy, Proteus, Agamemnon, Hephaestus, Scylla. Fixed Mnemosyne yamllint -d relaxed and mypy --no-namespace-packages, Agamemnon multi-line python3 -c collapse, Hermes tr typo, Telemachy ci.yml second secrets-scan. ProjectProteus PR merged; all 11 PRs auto-merge enabled. 2026-04-26 | v2.10.0 |
