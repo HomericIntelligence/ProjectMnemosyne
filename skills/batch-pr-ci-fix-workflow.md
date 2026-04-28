@@ -1,6 +1,6 @@
 ---
 name: batch-pr-ci-fix-workflow
-description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern, (19) just v1.14+ import keyword reservation breaks inline Python heredocs causing all CI Code Quality fails, (20) gitleaks asset URL 404 because uname -s/-m produces wrong case/arch string for download URL, (21) GHA workflow uses manual pixi install instead of composite setup-pixi action causing pixi command not found, (22) bats PATH test for missing tool includes /bin or /usr/bin which pixi activation already polluted, (23) shell script calls companion script via SCRIPT_DIR but unit tests copy only the main script to a temp dir, (24) a repo has legacy ci.yml or security.yml alongside _required.yml each with their own secrets-scan job using gitleaks-action@v2 — must grep ALL workflow files per repo, (25) yamllint default config fails on workflow files with lines >80 chars — fix with -d relaxed flag, (26) mypy run on scripts/ tests/ traverses pytest internals causing Python 3.10 pattern matching errors — fix with --no-namespace-packages --python-version 3.11, (27) multi-line python3 -c in run: | blocks breaks YAML parsing when Python code starts at column 1, (28) PR mergeStateStatus lags after force-push — verify via workflow run head_sha directly."
+description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern, (19) just v1.14+ import keyword reservation breaks inline Python heredocs causing all CI Code Quality fails, (20) gitleaks asset URL 404 because uname -s/-m produces wrong case/arch string for download URL, (21) GHA workflow uses manual pixi install instead of composite setup-pixi action causing pixi command not found, (22) bats PATH test for missing tool includes /bin or /usr/bin which pixi activation already polluted, (23) shell script calls companion script via SCRIPT_DIR but unit tests copy only the main script to a temp dir, (24) a repo has legacy ci.yml or security.yml alongside _required.yml each with their own secrets-scan job using gitleaks-action@v2 — must grep ALL workflow files per repo, (25) yamllint default config fails on workflow files with lines >80 chars — fix with -d relaxed flag, (26) mypy run on scripts/ tests/ traverses pytest internals causing Python 3.10 pattern matching errors — fix with --no-namespace-packages --python-version 3.11, (27) multi-line python3 -c in run: | blocks breaks YAML parsing when Python code starts at column 1, (28) PR mergeStateStatus lags after force-push — verify via workflow run head_sha directly, (29) cppcheck danglingLifetime error on a global raw pointer that is assigned but never read (dead scaffolding leftover in signal-handler test), (30) coverage job is advisory-only (extras.yml) but failing every PR because threshold is too high — needs threshold lowering and promotion to required (_required.yml)."
 category: ci-cd
 date: 2026-04-27
 version: "2.10.0"
@@ -48,6 +48,8 @@ tags: []
 - **[NEW v2.10.0]** `mypy` run on `scripts/ tests/` directories traverses pytest internals, hitting "Pattern matching only supported in Python 3.10+" error; fix with `--no-namespace-packages --python-version 3.11`
 - **[NEW v2.10.0]** Multi-line `python3 -c "..."` blocks in `run: |` steps break YAML parsing when the Python code has lines at column 1 (YAML sees them as mapping keys); fix by collapsing to one line or using a heredoc at proper indentation
 - **[NEW v2.10.0]** After force-push to a branch, PR `mergeStateStatus` lags — verify CI passed by checking the workflow run's `head_sha` directly via `gh api repos/.../actions/runs?branch=...` rather than relying on `gh pr checks`
+- **[NEW v2.10.0]** cppcheck reports `danglingLifetime` (severity=error) on a global raw pointer assigned the address of a local variable inside a test fixture — root cause is dead scaffolding (global never read) left over from an earlier signal-handler design; fix is to remove the unused global entirely
+- **[NEW v2.10.0]** A coverage CI job lives in `extras.yml` (advisory/non-required) but is failing every PR — including main — because the threshold is set too high (e.g., 80% but actual coverage is 77.7%); fix: lower threshold to passing level AND promote the job to `_required.yml` so failures become visible and blocking
 
 ## Verified Workflow
 
@@ -1122,6 +1124,114 @@ companion scripts are absent.
 **Scope**: Apply this guard to every companion exec in the script, not just the last one. Partial
 guarding still fails if an earlier unguarded companion is missing.
 
+### Phase 23: [NEW v2.10.0] Fix cppcheck danglingLifetime on Unused Signal-Handler Global
+
+**Problem**: cppcheck reports `danglingLifetime` (severity=error) on every assignment to a global
+raw pointer that stores the address of a local variable. The error is technically correct — the
+local will go out of scope — but cppcheck cannot see that `TearDown()` resets the pointer to
+`nullptr` before the local is destroyed.
+
+**Root cause in practice**: The global is dead scaffolding. An earlier design stored the scheduler
+pointer so the signal handler could call `scheduler.shutdown()` directly. The final design switched
+to an atomic flag (`g_sigterm_received`) — the signal handler no longer uses the pointer, and no
+test reads it. The global was never removed.
+
+**cppcheck error pattern:**
+```
+CPPCHECK ERROR: danglingLifetime at tests/integration/test_scheduler_sigterm.cpp:125
+— Non-local variable 'g_scheduler_under_test' will use pointer to local variable 'scheduler'.
+```
+
+**Fix**: Remove the unused global declaration and all assignments. Do NOT try to suppress the
+warning or use `CPPCHECK_SUPPRESS` — if the global is unused, deleting it is the correct fix
+and also eliminates dead code.
+
+```bash
+# 1. Confirm the global is never read (only assigned)
+grep -n "g_scheduler_under_test" tests/integration/test_scheduler_sigterm.cpp
+# Expected: only assignments (=), zero reads or dereferences
+
+# 2. Remove the global declaration (typically near the top of the file)
+# static SchedulerType* g_scheduler_under_test = nullptr;  ← DELETE
+
+# 3. Remove all assignments in SetUp/TearDown
+# g_scheduler_under_test = &scheduler_;  ← DELETE
+# g_scheduler_under_test = nullptr;      ← DELETE
+
+# 4. Rerun cppcheck to verify clean
+cppcheck --enable=all --error-exitcode=1 tests/integration/test_scheduler_sigterm.cpp
+```
+
+**Why tests are unaffected**: The signal handler already uses only the atomic flag. Removing the
+pointer global changes no runtime behavior. Tests pass identically before and after.
+
+**Lesson**: When cppcheck flags `danglingLifetime` on a global that you "think" is used, grep for
+actual reads. If the global is only assigned — never dereferenced or passed anywhere — it is dead
+code. Remove it entirely rather than fighting the static analysis tool.
+
+### Phase 24: [NEW v2.10.0] Promote Coverage Job from Advisory to Required and Lower Threshold
+
+**Problem**: A coverage CI job in `extras.yml` (non-required, advisory-only) has a threshold
+(e.g., 80%) that exceeds actual project coverage (e.g., 77.7%). The job fails on every PR
+including `main`, but because it is non-required, the failure is invisible and non-blocking.
+Teams never notice the threshold is broken until they want to enforce coverage gates.
+
+**Fix procedure** (verified-ci in PR #500, ProjectKeystone):
+
+**Step 1 — Lower threshold to current passing level:**
+
+```bash
+# In scripts/generate_coverage.sh
+# BEFORE:
+THRESHOLD=80.0
+
+# AFTER (set to just below current actual coverage — e.g., 77.7% → 75%):
+THRESHOLD=75.0
+```
+
+**Step 2 — Move coverage job from extras.yml to _required.yml:**
+
+```bash
+# Copy the job block verbatim from extras.yml to _required.yml
+# The job block starts at "coverage:" and ends before the next top-level job key
+
+# In extras.yml — update the header comment:
+# BEFORE: "# coverage: informational only, not required for merge"
+# AFTER: "# coverage: moved to _required.yml — this block can be removed"
+# (Or remove the block from extras.yml entirely after confirming _required.yml is correct)
+```
+
+**Step 3 — Add coverage to branch ruleset after merge:**
+
+```bash
+# Get the ruleset ID
+gh api repos/{owner}/{repo}/rulesets --jq '.[] | {id, name}'
+
+# Add coverage to required_status_checks
+gh api -X PUT repos/{owner}/{repo}/rulesets/{ruleset-id} \
+  --input ruleset.json
+# ruleset.json must include {"context":"coverage"} in the required_status_checks array
+```
+
+**Threshold calibration guidance:**
+
+| Scenario | Recommended threshold |
+|----------|-----------------------|
+| New C++ project, growing test suite | 60–70% |
+| Mature project with integration tests | 75–80% |
+| Safety-critical / financial | 85–90% |
+| Never set above current actual coverage | — |
+
+**Key principle**: Set the threshold at current actual coverage rounded down to the nearest 5%.
+Never set it above what main currently achieves — that makes the gate permanently broken and
+trains the team to ignore it.
+
+**Detection**: `extras.yml` has a coverage job that fails on every `main` run:
+```bash
+gh run list --branch main --workflow extras.yml --limit 5 --json conclusion --jq '.[].conclusion'
+# All "failure" → threshold is broken; lower it before promoting to required
+```
+
 ### Phase 10: Verify
 
 ```bash
@@ -1250,6 +1360,10 @@ GIT_EDITOR=true git rebase --continue
 | Multi-line `python3 -c "..."` in `run: |` with Python lines at column 1 | Python `import` and other lines started at column 1 inside a YAML `run: |` block | YAML scanner interpreted column-1 lines as mapping keys, corrupting the script | Collapse to a single line or use proper YAML indentation; never start Python code at column 1 within a `run: |` block |
 | Used `mergeStateStatus` to verify CI passed after force-push | Ran `gh pr view --json mergeStateStatus` immediately after force-push and saw `BLOCKED` | `mergeStateStatus` lags 5+ minutes after force-push; showed BLOCKED even when the new CI run had already succeeded | Check the workflow run's `head_sha` via `gh api repos/.../actions/runs?branch=...` directly to confirm CI ran on the new commit |
 | Swarm prompt contained `tr '[:lower']'` typo (missing `:`) | Haiku agent copied the prompt template verbatim into ProjectHermes workflow file | `tr` command failed at runtime: `tr: invalid option` | Verify all YAML/shell snippets in swarm prompts are syntactically correct before dispatching; post-hoc grep: `grep -rn "lower'\)" .github/workflows/*.yml` |
+| Suppressing cppcheck danglingLifetime with CPPCHECK_SUPPRESS | Tried to add a suppression comment near the assignment `g_scheduler_under_test = &scheduler_` | cppcheck still sees the assignment expression and fires — suppression only silences the specific line, not the underlying dead-global smell; also leaves dead code in the codebase | If the global is never read, remove it entirely — suppression is wrong; deletion fixes the root cause and eliminates the dead code |
+| Assigning g_scheduler_under_test in TearDown to nullptr before the local goes out of scope | Already had `g_scheduler_under_test = nullptr` in TearDown(); expected cppcheck to recognize the pointer was cleared | cppcheck's danglingLifetime analysis does not track inter-method lifetime reset; it sees the assignment `= &scheduler_` in SetUp() and the local scope ends there — it does not cross TearDown() | cppcheck cannot see cross-method lifetime reset; if the pointer has no readers, remove the global entirely instead of relying on teardown reset to satisfy the analyzer |
+| Setting coverage threshold above current actual coverage | Left THRESHOLD=80.0 in generate_coverage.sh while actual coverage was 77.7% | Coverage job fails every run including main — since the job was in extras.yml (non-required), failures were silent and non-blocking; teams assumed coverage was fine | Set threshold at or below current actual coverage (rounded down to nearest 5%); never set threshold above what main currently achieves |
+| Moving coverage job to _required.yml without lowering threshold first | Promoted coverage to required checks before calibrating threshold | First PR after promotion blocked all merges because threshold still exceeded actual coverage | Always lower threshold to passing level first, verify it passes on main, then promote to required |
 
 ## Results & Parameters
 
@@ -1354,3 +1468,4 @@ fn __hash__[H: Hasher](self, mut hasher: H):
 | HomericIntelligence/ProjectKeystone | 14 open PRs all blocked: gitleaks-action@v2 org license fix (curl-based install, v8.30.1), just v1.14+ import keyword fix (extract to scripts/remove-preset-include.py), setuptools.backends.legacy→setuptools.build_meta fix, CMakeLists.txt ADR-006 cascade cleanup (systematic grep for all references). PR #380 merged; all PRs unblocked. 2026-04-23 | v2.8.0 |
 | HomericIntelligence/Myrmidons | PR #307: apply.yml pixi composite action migration, bats PATH isolation fix (/usr/sbin:/sbin), validate-schemas.sh companion guard. CI green. 2026-04-24 | v2.9.0 |
 | HomericIntelligence ecosystem (11 repos) | Fleet-wide gitleaks-action@v2 → curl binary install (v8.30.1) across Mnemosyne, Nestor, AchaeanFleet, Argus, Myrmidons, Hermes, Telemachy, Proteus, Agamemnon, Hephaestus, Scylla. Fixed Mnemosyne yamllint -d relaxed and mypy --no-namespace-packages, Agamemnon multi-line python3 -c collapse, Hermes tr typo, Telemachy ci.yml second secrets-scan. ProjectProteus PR merged; all 11 PRs auto-merge enabled. 2026-04-26 | v2.10.0 |
+| ProjectKeystone | cppcheck danglingLifetime false positive on g_scheduler_under_test (unused signal-handler global) — removed unused global, tests unchanged; coverage threshold lowered 80%→75% and moved from extras.yml to _required.yml (PR #500). CI green. 2026-04-27 | v2.10.0 |

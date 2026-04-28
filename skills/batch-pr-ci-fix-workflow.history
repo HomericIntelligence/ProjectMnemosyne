@@ -2,7 +2,8 @@
 
 ## v2.10.0 (2026-04-27)
 
-**Changed by:** HomericIntelligence ecosystem — fleet-wide gitleaks-action@v2 replacement across 11 repos (chore/merge-typecheck-into-lint wave)
+**Changed by:** HomericIntelligence ecosystem — fleet-wide gitleaks-action@v2 replacement across
+11 repos (chore/merge-typecheck-into-lint wave) + ProjectKeystone cppcheck/coverage gate fixes
 **Verification:** verified-ci
 
 ### What changed
@@ -12,15 +13,21 @@
 - Added Phase 8.4: Fix multi-line python3 -c breaking YAML parsing at column 1
 - Added Phase 8.5: Verify CI after force-push via workflow run head_sha (not mergeStateStatus)
 - Added Swarm Agent Prompt Template Hygiene section
-- Added 8 new Failed Attempts rows covering the above patterns
-- Added 5 new When to Use triggers (items 24–28)
-- Updated description to include triggers (24)–(28)
+- Added Phase 23: Fix cppcheck danglingLifetime on unused signal-handler global pointer
+- Added Phase 24: Promote coverage job from advisory extras.yml to required _required.yml
+- Added 14 new Failed Attempts rows covering all the above patterns
+- Added 7 new When to Use triggers (items 24–30)
+- Updated description to include triggers (24)–(30)
+- Updated Verified On table with ProjectKeystone v2.10.0 entry
 - Updated date to 2026-04-27
 - Bumped version from 2.9.0 to 2.10.0
 
 ### Why
-Fleet-wide gitleaks-action@v2 → curl binary install across 11 HomericIntelligence repos
-(chore/merge-typecheck-into-lint wave, 2026-04-26) uncovered 5 additional CI failure patterns:
+Two independent sources contributed to this version:
+
+**Source 1 — Fleet-wide gitleaks-action@v2 wave (2026-04-26)**: Replacing `gitleaks-action@v2`
+with curl binary install across 11 HomericIntelligence repos uncovered 5 additional CI failure
+patterns:
 
 1. **Legacy ci.yml** (ProjectTelemachy): `_required.yml` was fixed but `ci.yml` still had the
    action. Must grep ALL workflow files per repo, not just `_required.yml`.
@@ -35,6 +42,15 @@ Fleet-wide gitleaks-action@v2 → curl binary install across 11 HomericIntellige
 
 Additionally documented swarm prompt template hygiene after a `tr '[:lower']'` typo (missing `:`)
 in the orchestrator prompt was copied verbatim by Haiku into ProjectHermes workflow files.
+
+**Source 2 — ProjectKeystone CI fix session (2026-04-27, PR #500)**: Two independent patterns:
+
+1. **cppcheck danglingLifetime** on `g_scheduler_under_test` — dead scaffolding (global never
+   read) from an earlier signal-handler design. Fix: remove the unused global entirely rather
+   than suppressing or relying on TearDown() reset (cppcheck cannot track cross-method lifetime).
+2. **Coverage threshold above actual coverage** (80% threshold, 77.7% actual): job in extras.yml
+   failed silently on every PR. Fix: lower threshold to 75%, move job to _required.yml so
+   failures become visible and blocking.
 
 ### Previous version snapshot (v2.9.0)
 
