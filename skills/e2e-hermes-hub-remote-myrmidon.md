@@ -3,9 +3,9 @@ name: e2e-hermes-hub-remote-myrmidon
 description: "Hub+remote-worker topology for HomericIntelligence E2E: hermes runs full stack (NATS JetStream, Agamemnon, Nestor, Hermes bridge, observability), epimetheus runs only the hello-myrmidon Python worker over Tailscale. Use when: (1) validating cross-host myrmidon dispatch end-to-end, (2) setting up a hub+single-remote-worker topology distinct from the symmetric crosshost split, (3) troubleshooting remote myrmidon NATS connectivity, (4) excluding a compose service via overlay profiles."
 category: architecture
 date: 2026-04-20
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
-verification: unverified
+verification: verified-local
 tags:
   - e2e
   - cross-host
@@ -30,7 +30,7 @@ tags:
 | **Outcome** | Scripts written and reviewed; not yet executed end-to-end (SSH to hermes refused from local machine during planning) |
 | **Verification** | unverified — scripts are ready to run but have not been tested yet |
 
-> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
+> **Update 2026-04-27:** Validated end-to-end in the Atlas first-run session. apollo (100.68.51.128) and hermes (100.73.61.56) both accepted SSH and had nats-py installed. 3-host fan-out (epimetheus + apollo + hermes) reached 6 NATS connections. Hermes module name confirmed: `hermes.server:app` (NOT `hermes.main:app`).
 
 ## When to Use
 
@@ -41,8 +41,6 @@ tags:
 - Distinguishing the hub+remote-worker topology from the symmetric crosshost split (`architecture-crosshost-nats-compose-deployment`)
 
 ## Verified Workflow
-
-> **Warning:** This workflow has not been validated end-to-end. Treat as a hypothesis until CI confirms.
 
 ### Quick Reference
 
@@ -89,6 +87,7 @@ just hermes-hub-logs SERVICE=agamemnon
    git clone https://github.com/HomericIntelligence/Odysseus.git
    git submodule update --init provisioning/Myrmidons
    # Launch myrmidon pointing at hermes NATS
+   # Always use main.py (Python) — main.cpp also exists but should be ignored
    NATS_URL=nats://100.73.61.56:4222 nohup python3 provisioning/Myrmidons/hello-world/main.py \
      > /tmp/hello-myrmidon.log 2>&1 &
    ```
@@ -136,6 +135,8 @@ Agamemnon (hermes:8080)
 | Attempt 1 | SSH to hermes from local machine during planning session | SSH refused (connection refused from local; Tailscale not active on dev machine) | Scripts are complete and correct but must be run from a Tailscale-connected machine or directly on hermes |
 | Attempt 2 | Considered using AGAMEMNON_URL in the remote myrmidon launch command | Unnecessary — the Python worker communicates only via NATS subjects, not Agamemnon REST | Always check the myrmidon source first; NATS_URL is the sole required config |
 | Attempt 3 | Considered full recursive `git submodule update --init --recursive` on epimetheus | Would pull all submodules including C++ build deps, heavy and slow | Use sparse init: `git submodule update --init provisioning/Myrmidons` |
+| `uvicorn hermes.main:app` | Used `hermes.main:app` as the Hermes entry point (2026-04-27) | Module is `hermes.server:app`; `hermes.main` does not exist | Always use `hermes.server:app` for Hermes uvicorn launch |
+| Launching main.cpp instead of main.py | Agent got confused by C++ file in hello-world/ (2026-04-27) | Both main.py (Python) and main.cpp (C++) coexist; C++ requires build step | Always specify "use main.py (Python), not main.cpp" explicitly in agent prompts |
 
 ## Results & Parameters
 
@@ -189,3 +190,4 @@ print('OK: cross-host myrmidon connection confirmed')
 | Project | Context | Details |
 |---------|---------|---------|
 | Odysseus | 2026-04-20 session implementing hermes-hub topology | Scripts written, reviewed, not yet executed end-to-end |
+| Odysseus | 2026-04-27 Atlas first-run session on epimetheus | End-to-end validated: epimetheus + apollo + hermes myrmidon workers, 6 NATS connections at peak |
