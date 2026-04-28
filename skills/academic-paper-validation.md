@@ -2,8 +2,8 @@
 name: academic-paper-validation
 description: Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical methodology verification, LaTeX compilation fixes, and arXiv build preparation
 category: documentation
-date: 2026-04-07
-version: 3.0.0
+date: 2026-04-27
+version: 3.1.0
 user-invocable: false
 ---
 # Academic Paper Validation
@@ -12,9 +12,9 @@ user-invocable: false
 
 | Attribute | Value |
 |-----------|-------|
-| **Date** | 2026-02-05 (v1.0.0), 2026-02-06 (v2.0.0), 2026-02-22 (v2.1.0), 2026-04-06–08 (v3.0.0) |
+| **Date** | 2026-02-05 (v1.0.0), 2026-02-06 (v2.0.0), 2026-02-22 (v2.1.0), 2026-04-06–08 (v3.0.0), 2026-04-27 (v3.1.0) |
 | **Objective** | Validate and improve academic paper quality through systematic data accuracy checks, statistical rigor improvements, LaTeX fixes, and noise reduction |
-| **Outcome** | v1.0.0: Fixed contractions, colloquialisms, broken paths, statistical language (N=1 dryrun). v2.0.0: Fixed 2 data errors, 2 typos, 12+ statistical claims, 11 cross-references, removed 3 degenerate figures. v2.1.0: Fix pipeline → regenerate data → fix paper text pattern, Holm-Bonferroni family size, SRH degenerate framing, Cliff's delta citation. v3.0.0: Verified 60+ quantitative claims, caught statistical method naming error (Dunn's vs Mann-Whitney U), caught incorrect pairwise comparison count (21 vs 7), fixed Unicode/table/path issues, built arXiv submission |
+| **Outcome** | v1.0.0: Fixed contractions, colloquialisms, broken paths, statistical language (N=1 dryrun). v2.0.0: Fixed 2 data errors, 2 typos, 12+ statistical claims, 11 cross-references, removed 3 degenerate figures. v2.1.0: Fix pipeline → regenerate data → fix paper text pattern, Holm-Bonferroni family size, SRH degenerate framing, Cliff's delta citation. v3.0.0: Verified 60+ quantitative claims, caught statistical method naming error (Dunn's vs Mann-Whitney U), caught incorrect pairwise comparison count (21 vs 7), fixed Unicode/table/path issues, built arXiv submission. v3.1.0: Added pipeline-side underscore escaping pattern for Python table generators that emit LaTeX |
 | **Models Used** | Sonnet 4.5 (v1.0.0), Opus 4.6 (v2.0.0–v3.0.0) |
 
 ## When to Use This Skill
@@ -331,12 +331,26 @@ Tier & Agent Time (s) & Judge Time (s) & Total Time (s) & Judge \% of Total \\
 **Escape Underscores in Auto-Generated Tables**:
 
 ```latex
-% FAILS: unescaped underscore
+% FAILS: unescaped underscore — tectonic error "Missing $ inserted"
 code_quality & 0.20 & 1.000 $\pm$ 0.000 \\
 
 % WORKS:
 code\_quality & 0.20 & 1.000 $\pm$ 0.000 \\
 ```
+
+**Pipeline-side fix (preferred)**: Fix the Python table generator so ALL future builds produce escaped output. Never rely on manual post-processing of generated `.tex` files:
+
+```python
+# In the Python code that writes LaTeX table rows (e.g., comparison.py):
+# BEFORE (broken):
+f.write(f"{criterion} & {weight:.2f} & ...")
+
+# AFTER (fixed — escape before writing):
+criterion_escaped = criterion.replace("_", r"\_")
+f.write(f"{criterion_escaped} & {weight:.2f} & ...")
+```
+
+**Both fixes are needed**: fix the pipeline so regenerated tables are correct, AND fix the existing static `.tex` file so the current build works immediately. The tectonic error message points directly to the offending line number in the `.tex` file, making diagnosis straightforward.
 
 **Fix Appendix Structure**:
 - Move `\appendix` command BEFORE appendix content
@@ -497,7 +511,7 @@ grep "figures/\*\." build.sh  # Verify glob matches actual format
 | Using `replace_all=true` for statistical language | Replaced all instances of "confirms" at once | Some uses of "confirms" are appropriate (methodology context) — blanket replacement broke them | Manually review each instance in context; use `replace_all=false` with enough surrounding context |
 | Removing "validates" from all contexts | Initial plan was to replace "validates" along with "confirms/proves/demonstrates" | "Validates" is appropriate when discussing methodology validation (not results generalization) | Keep "validates" for pipeline/methodology/design validation; only hedge causal claims about results |
 | Compile LaTeX before fixing Unicode | Attempted to compile with Unicode characters directly in source | `! LaTeX Error: Unicode character (U+03C1) not set up for use with LaTeX.` | Search for Unicode first (`grep -P "[\x80-\xFF]" paper.tex`), replace with math mode before compiling |
-| Assume auto-generated tables are LaTeX-safe | Used table files generated from CSV with underscores | `! Missing $ inserted.` on `code_quality & 0.20` | Run `scripts/fix_table_underscores.py` on all auto-generated tables |
+| Assume auto-generated tables are LaTeX-safe | Used table files generated from CSV with underscores | `! Missing $ inserted.` on `code_quality & 0.20` | Fix the Python table generator to escape underscores at write time (`criterion.replace("_", r"\_")`); also fix the static `.tex` file for the immediate build |
 | Incomplete path transformation | Added transformation for `docs/paper-dryrun/` but missed bare `paper-dryrun/` prefix | `! LaTeX Error: File 'paper-dryrun/tables/...' not found.` | Search for ALL path prefix variations: `grep -r "paper-dryrun" docs/paper.tex` |
 | Keep all generated figures | Included all 26 generated figures in appendix | With N=1 dryrun, 5 figures showed all zeros or flat lines — dilutes message | Review each figure for information content; remove if "no variance" |
 | Trust automated contraction detection | An exploration agent reported "5 contractions found" | Zero contractions existed — confirmed with `grep -nP` regex; the automated finding was a false positive | ALWAYS verify automated findings independently with your own regex search |
@@ -617,6 +631,13 @@ Key insight: T0–T4 null results reflect genuinely small effects (power 0.95–
 - `latex-compilation` - Compiling LaTeX documents with proper error checking
 - `statistical-rigor` - Applying appropriate statistical language for sample sizes
 - `code-review` - Systematic review patterns applicable to paper review
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectScylla | Haiku analysis paper LaTeX build (2026-04-06–08) | v3.0.0: Verified 60+ quantitative claims, caught statistical method naming error, fixed Unicode/table/path issues, built arXiv submission |
+| ProjectScylla | Haiku paper paragraph-level data validation (2026-04-27) | v3.1.0: Fixed tectonic "Missing $ inserted" error in tab04_criteria_performance.tex by escaping underscores in static table AND fixing Python pipeline (`src/scylla/analysis/tables/comparison.py:587`); `pixi run paper-build` succeeds (57 pages, 1,003 KiB), all 3 table04 pytest tests pass |
 
 ## References
 
