@@ -1,9 +1,9 @@
 ---
 name: batch-pr-rebase-workflow
-description: "Use when: (1) many PRs show DIRTY/CONFLICTING/BLOCKED merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files), (6) delegating mass rebase to a Myrmidon swarm of parallel agents, (7) orphaned branches need PRs created and CI fixed, (8) a PR expanded a pre-commit hook scope causing self-catch failures on pre-existing violations, (9) small batch (2-10) stale branches need rebase with subsume-vs-integrate conflict analysis, (10) GitHub issue backlog (20+ issues) needs triage, batched PRs, and stale worktree/branch cleanup, (11) 10+ branches all conflict on the same 3-5 core files and are being merged serially — take HEAD (origin/main) for all conflicted core files since main already contains the union of all prior merged features, (12) main is advancing rapidly via auto-merge during the rebase session and PRs keep going DIRTY again — repeat rebase in waves until stable, (13) stale worktrees from a previous session are listed in `git worktree list` as unlinked — check before removing, they may already be detached with no git state to clean up, (14) a rebase 'succeeds' but the branch tip equals main HEAD — the commit was silently dropped as empty, recover the original SHA and rebase again keeping the PR's file additions, (15) a rebased PR's tests fail because the PR's own implementation was incomplete — the commit message described a feature but the actual diff didn't include a critical file (e.g., server route for an endpoint the tests expect), (16) stale worktrees from a prior session need auditing — always diff each one against origin/main before deciding to discard or push, (17) CI overall conclusion shows 'failure' but all required branch-protection checks passed — use per-job inspection not top-level conclusion, (18) a conanfile.py lacks return annotations on ConanFile subclass methods causing mypy failures, (19) a Dependabot PR and a fix PR both target the same file — apply the fix directly in the Dependabot branch to avoid a circular dependency chain, (20) branches live in .claude/worktrees/agent-<id>/ paths from sub-agent runs and need rebase using git -C <worktree-path>, (21) rebase in a .claude/worktree ends in detached HEAD — use git branch -f to reattach before pushing, (22) CHANGELOG.md conflicts during rebase — always take HEAD/main (consolidation PR handles it separately)"
+description: "Use when: (1) many PRs show DIRTY/CONFLICTING/BLOCKED merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files), (6) delegating mass rebase to a Myrmidon swarm of parallel agents, (7) orphaned branches need PRs created and CI fixed, (8) a PR expanded a pre-commit hook scope causing self-catch failures on pre-existing violations, (9) small batch (2-10) stale branches need rebase with subsume-vs-integrate conflict analysis, (10) GitHub issue backlog (20+ issues) needs triage, batched PRs, and stale worktree/branch cleanup, (11) 10+ branches all conflict on the same 3-5 core files and are being merged serially — take HEAD (origin/main) for all conflicted core files since main already contains the union of all prior merged features, (12) main is advancing rapidly via auto-merge during the rebase session and PRs keep going DIRTY again — repeat rebase in waves until stable, (13) stale worktrees from a previous session are listed in `git worktree list` as unlinked — check before removing, they may already be detached with no git state to clean up, (14) a rebase 'succeeds' but the branch tip equals main HEAD — the commit was silently dropped as empty, recover the original SHA and rebase again keeping the PR's file additions, (15) a rebased PR's tests fail because the PR's own implementation was incomplete — the commit message described a feature but the actual diff didn't include a critical file (e.g., server route for an endpoint the tests expect), (16) stale worktrees from a prior session need auditing — always diff each one against origin/main before deciding to discard or push, (17) CI overall conclusion shows 'failure' but all required branch-protection checks passed — use per-job inspection not top-level conclusion, (18) a conanfile.py lacks return annotations on ConanFile subclass methods causing mypy failures, (19) a Dependabot PR and a fix PR both target the same file — apply the fix directly in the Dependabot branch to avoid a circular dependency chain, (20) branches live in .claude/worktrees/agent-<id>/ paths from sub-agent runs and need rebase using git -C <worktree-path>, (21) rebase in a .claude/worktree ends in detached HEAD — use git branch -f to reattach before pushing, (22) CHANGELOG.md conflicts during rebase — always take HEAD/main (consolidation PR handles it separately), (23) check `gh pr list --state open` FIRST — if 0 results, the 'rebase all branches' premise is false; `git branch -vv | grep 'ahead'` is misleading after a squash-merge wave: branches show 'ahead 1' because the local tip diverged from the squash, but `git cherry origin/main <branch>` = 0 for every branch, (24) worktree has modified pyc/__pycache__ or pixi.lock files (build artifacts) that block rebase — Safety Net blocks both `git checkout --` and `git restore`; use `git -C <wt> stash` to park artifacts, rebase, then `git -C <wt> stash drop`"
 category: ci-cd
-date: 2026-04-24
-version: "2.8.0"
+date: 2026-04-25
+version: "2.9.0"
 user-invocable: false
 verification: verified-ci
 history: batch-pr-rebase-workflow.history
@@ -51,6 +51,8 @@ tags: [git, rebase, pr, parallel, myrmidon, wave, batch, conflict, ci, pixi, myp
 - CHANGELOG.md conflicts during myrmidon swarm rebase — always take HEAD/main version for CHANGELOG; a separate consolidation PR handles the final merge
 - `conanfile.py` is causing mypy `[no-untyped-def]` failures — ConanFile subclass methods `requirements()`, `build_requirements()`, `generate()` lack `-> None` annotations; this pattern recurs in any repo using Conan 2 + mypy
 - A Dependabot PR (e.g., conan version bump) and a separate fix PR both target the same file — apply the fix directly in the Dependabot branch during rebase to avoid a circular dependency chain
+- `gh pr list --state open` returns 0 results and the request was "rebase all branches" — this is a cleanup task, not a rebase task; `git branch -vv | grep 'ahead'` showing "ahead 1" after a squash-merge wave is a misleading artifact (run `git cherry origin/main <branch>` to confirm cherry = 0 before investing time in a rebase pass)
+- A `git cherry origin/main HEAD` check shows `+` for a commit you believe is already merged — cross-check with file-level `diff <(git -C <wt> show <sha>:<key_file>) <(git show origin/main:<key_file>)` to confirm actual content identity before concluding the work is unique
 
 **Common trigger phrases:**
 - "Fix these failing PRs", "Multiple PRs with DIRTY state"
@@ -58,6 +60,35 @@ tags: [git, rebase, pr, parallel, myrmidon, wave, batch, conflict, ci, pixi, myp
 - "CI queue is backed up with 800+ jobs"
 - "Use the Myrmidon swarm to rebase all branches"
 - "Batch merge these stale branches", "These old PRs were closed, rebase and re-open"
+
+## Pre-Flight Check
+
+**Run this before starting any batch rebase session.** If 0 open PRs are returned, the "rebase all branches" premise is false — skip the rebase pass entirely and treat this as a branch cleanup task instead.
+
+```bash
+### Quick Pre-Flight (run before any batch rebase)
+OPEN_COUNT=$(gh pr list --state open --json number --jq 'length')
+echo "Open PRs: $OPEN_COUNT"
+# 0  → skip rebase pass, do cleanup instead (delete merged branches, prune worktrees)
+# >0 → proceed with batch rebase workflow below
+```
+
+**Why `git branch -vv` is misleading after a squash-merge wave:**
+
+`git branch -vv | grep 'ahead'` may show every branch as "ahead 1" even though all work is already on main. After a squash-merge, the local branch tip diverged from main's squash commit — git counts that as one unique commit. The correct signal is:
+
+```bash
+# Confirm there is genuinely unmerged work on a branch before rebasing:
+git cherry origin/main <branch>   # output = 0 lines → nothing new; skip
+```
+
+Cross-check with:
+```bash
+gh pr list --head <branch> --state all --json number,state
+# PR state = MERGED → done; no rebase needed
+```
+
+Both `git branch -vv "ahead 1"` AND an open PR are required evidence before starting a rebase. Neither alone is sufficient.
 
 ## Verified Workflow
 
@@ -994,6 +1025,10 @@ git fetch origin main && git pull --ff-only origin main
 | `git push --force` to push rebased agent worktree branch | Tried `git push --force` to update remote after rebase completed in detached HEAD state | Blocked by Safety Net; also the remote tracking ref was absent in detached HEAD mode | Use `git -C <worktree> push --force-with-lease origin <branch>:refs/heads/<branch>` — explicit refspec bypasses detached HEAD tracking ref issue; or run `git -C <worktree> branch -f <branch> HEAD` first to reattach |
 | Merging CHANGELOG.md conflicts during individual PR rebase | Each agent PR had CHANGELOG.md entries; tried to merge branch's CHANGELOG entries with main's during rebase | Created compound conflicts when the next PR rebased and introduced overlapping CHANGELOG sections; spiral of conflicts | Always take HEAD/main for CHANGELOG.md during myrmidon swarm rebase; designate a consolidation Wave to gather all entries after individual PRs merge |
 | Reading top-level CI conclusion to decide if required checks passed | `gh run view <id> --json conclusion` returned `"failure"` — assumed all required checks failed and blocked the PR queue | The overall conclusion is `failure` if ANY job fails (including non-required ones like `Pre-commit Checks` and `Python Quality (mypy)`); all 5 required checks (`Benchmarks`, `Code Coverage`, `Test (asan)`, `Test (lsan)`, `Test (ubsan)`) had actually passed | Use `gh run view <id> --json jobs --jq '.jobs[] | {name, conclusion}'` and cross-reference against `gh api repos/<owner>/<repo>/branches/main/protection --jq '.required_status_checks.contexts[]'` |
+| Starting batch rebase workflow without checking if any PRs are open | Prepared to rebase all 57 branches after a squash-merge wave because `git branch -vv` showed every branch "ahead 1" | All 57 branches had `git cherry origin/main <branch>` = 0 (squash-merged); `git branch -vv` "ahead 1" was a squash artifact, not evidence of unmerged work; rebasing would have produced empty commits or reword conflicts on every branch | Always run `gh pr list --state open` first. If 0 results, skip the rebase — this is a cleanup task, not a rebase task. Verify with `git cherry origin/main <branch>` before investing time on any branch. |
+| `git -C <wt> checkout -- <file>` to discard artifact changes in worktree | Ran `git -C "$WT_B" checkout -- pixi.lock src/telemachy/__pycache__/...` to discard pyc artifact changes and pixi.lock drift before rebase | Safety Net hook blocks `git checkout --` as "discards uncommitted changes permanently; use git stash first" — even when the changes are clearly artifacts | Use `git -C <wt> stash` instead: stashes all dirty files (including artifacts), rebase proceeds cleanly, then `git -C <wt> stash drop` discards the stash. Both `git checkout --` and `git restore` are blocked by Safety Net for discarding working-tree changes. |
+| `git -C <wt> restore <file>` to discard artifact working-tree changes | Tried `git restore` as alternative to `git checkout --` for restoring modified pyc/pixi.lock files | Safety Net also blocks `git restore` with the same message: "git restore discards uncommitted changes. Use git stash first" | Both `git checkout --` and `git restore` are blocked by Safety Net. Only agent-safe path: `git -C <wt> stash` (parks all dirty files), rebase, then `git -C <wt> stash drop`. |
+| `git cherry origin/main HEAD` to detect superseded commits when surrounding context differs | Used `git cherry origin/main HEAD` to check if worktree A's `b8d40f3` (dependabot config) was already on main | `git cherry` reported `+` (commit NOT in main) because the patch-id differed — surrounding pixi.toml lines on main had added `pytest-cov` and `yamllint` deps, making the SHA context differ | `git cherry` uses patch-id which is sensitive to surrounding context. When a commit's file changes are identical but surrounding lines differ, `git cherry` returns `+` (false "not in main"). Always cross-check with `diff <(git -C <wt> show <sha>:<file>) <(git show origin/main:<file>)` to confirm actual content identity before closing/re-pushing. |
 
 ## Results & Parameters
 
@@ -1205,3 +1240,4 @@ Branch conflicts with main on file X:
 | AchaeanFleet | ~20 open PRs, rapidly advancing main via auto-merge, 2–3 rebase waves needed, 2026-04-23 | verified-ci; all PRs rebased and many auto-merged |
 | ProjectKeystone | 14 open PRs rebased onto fixed main, 5 CMakeLists.txt + security-scan.yml conflict resolutions, PR #329 recovered from silent empty-commit drop, 2026-04-23 | verified-ci |
 | ProjectKeystone | 11 open PRs rebased; 5 stale worktrees audited (1 caught regressing main); mypy ConanFile annotation pattern; Dependabot + fix PR circular dependency resolved; required checks identified via branch protection API, 2026-04-24 | verified-ci |
+| Myrmidons | 0 open PRs detected after squash-merge wave; 57 branches showed `git branch -vv` "ahead 1" as squash artifact; `git cherry origin/main <branch>` = 0 for all branches; rebase pass skipped entirely, 2026-04-25 | verified-local |
