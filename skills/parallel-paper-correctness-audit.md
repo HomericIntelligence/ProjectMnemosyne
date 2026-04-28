@@ -3,7 +3,7 @@ name: parallel-paper-correctness-audit
 description: Multi-agent parallel workflow for verifying every numerical claim in a research paper against underlying data files (CSV, JSON), fixing errors, and ensuring internal consistency across inline tables, generated tables, and figure data
 category: documentation
 date: 2026-04-26
-version: 1.0.0
+version: 1.1.0
 user-invocable: false
 tags: [latex, paper, audit, verification, cross-reference, numerical-accuracy, parallel-agents, inline-tables, aggregation-mismatch, pandas, data-pipeline]
 ---
@@ -15,7 +15,7 @@ tags: [latex, paper, audit, verification, cross-reference, numerical-accuracy, p
 |-------|-------|
 | **Date** | 2026-04-26 |
 | **Objective** | Verify every numerical claim in a LaTeX research paper against its underlying data files, fix errors, and ensure internal consistency using parallel agent teams |
-| **Outcome** | Found and fixed 8 issues: 1 false universality claim (13/14 not 14/14), stale inline table values (34% cost error), consistency metric aggregation mismatch (0.23 delta), pandas None-to-NaN bug, impl_rate > 1.0 from over-scoring judge, variable criteria counts undisclosed, wrong missing-judges count, p-value precision inconsistency |
+| **Outcome** | Found and fixed 12 issues across 3 audit passes: 1 false universality claim (13/14 not 14/14), stale inline table values (34% cost error), consistency metric aggregation mismatch (0.23 delta), pandas None-to-NaN bug (systematic: 12 instances in 3 files), impl_rate > 1.0 from over-scoring judge, variable criteria counts undisclosed, wrong missing-judges count, p-value precision inconsistency, best-CoP tier mislabel (T1->T2), tab03 nan values, p-value precision inconsistency across sections |
 | **Models Used** | Opus 4.6 (1M context) |
 | **Scale** | ~2,400-line LaTeX paper, 3 experiments, 7 tiers, 1,080 runs, 120 subtests |
 
@@ -30,7 +30,7 @@ Use this workflow when:
 - You need to verify statistical claims (normality tests, effect sizes, test statistics) against raw data
 - The paper contains universality claims ("all X", "every Y", "no Z") that could be falsified by a single exception
 
-**Trigger phrases**: "verify all numbers", "correctness audit", "cross-reference paper against data", "check inline tables", "second-pass audit"
+**Trigger phrases**: "verify all numbers", "correctness audit", "cross-reference paper against data", "check inline tables", "second-pass audit", "third-pass audit", "grep for nan"
 
 **Distinguishing from related skills**:
 - `academic-paper-validation` covers the full paper lifecycle (tone, cross-refs, LaTeX, statistics, arXiv build). Use that for initial review.
@@ -117,6 +117,25 @@ Deploy a fresh set of agents to catch issues the first pass missed:
 **Agent 3 — Deep Statistical Claims**:
 - Verify degrees of freedom, missing data counts, criteria variability descriptions
 - Check universality claims ("all X reject Y") against every individual case
+
+### Phase 5: Third-Pass Audit (Systematic Patterns)
+
+Deploy after first and second passes are complete. Third-pass targets systematic code bugs and precision issues that earlier passes miss:
+
+**Agent 1 — Best-Value Verification**:
+- For every "best tier" claim, compare ALL tiers at full precision (not rounded)
+- When tiers tie at rounded precision, verify which actually wins at full precision
+- Check that table generation code does not pick alphabetically when values round equally
+
+**Agent 2 — Systematic Code Bug Scan**:
+- Grep ALL table generation files for `is not None` — replace with `pd.notna()`
+- Grep ALL generated output files for literal "nan" (not just files referenced in paper)
+- Check every file that reads DataFrame rows, not just the ones that produced visible bugs
+
+**Agent 3 — Precision Consistency**:
+- Grep for ALL occurrences of each reported statistic (p-values, test statistics)
+- Verify uniform precision across all sections (body, appendix, tables)
+- After fixing any number, search for all other occurrences to update them consistently
 
 ## Common Error Patterns
 
@@ -207,6 +226,28 @@ The same test result reported as "p=0.202" in one location and "p=0.2015" in ano
 
 **Fix**: Use consistent precision throughout. Round to 3 decimal places in body text, provide full precision in appendix.
 
+### Pattern 9: Best-Tier Mislabel at Rounded Precision
+
+When reporting "best tier by metric X", the table generation code may compare rounded values. If two tiers round to the same value (e.g., $0.037), the code may pick the first alphabetically (T1) when the actual winner at full precision is different (T2: $0.0366 vs T1: $0.0373).
+
+**Detection**: For every "best tier" claim, compute the metric for all tiers at full precision and compare.
+
+**Fix**: Always compare at full precision before rounding for display. Update narrative text to reflect the true winner.
+
+### Pattern 10: Systematic `is not None` Across Multiple Files
+
+The `is not None` bug (Pattern 4) is rarely isolated. If one table generation file has it, others likely do too. In the observed case, 3 files (summary.py, detail.py, comparison.py) contained 12 total instances.
+
+**Detection**: After finding one instance, grep ALL Python files in the reporting/table-generation directory for `is not None`. Check every hit against whether it operates on DataFrame values.
+
+**Fix**: Replace all instances with `pd.notna()`. This is a batch operation — do not fix one file and leave the others.
+
+```python
+# Search command to find all instances
+# grep -rn "is not None" src/scylla/reporting/
+# Then verify each hit touches DataFrame data
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -214,6 +255,9 @@ The same test result reported as "p=0.202" in one location and "p=0.2015" in ano
 | Verify 16 divergent pass classifications | Tried to reconstruct majority-vote logic from raw judge data | Would require full replay of judge aggregation pipeline; too complex for manual verification | Accept qualitative documentation for complex derived classifications; verify a sample, not all |
 | Glob on large figures directory | Used glob tool to list all figure files | Timeout on directory with 100+ files | Use `ls` via Bash for large directories instead of glob |
 | pre-commit gitleaks hook | Ran pre-commit to validate changes | Go version mismatch broke gitleaks | Run individual linters directly (`pixi run python -m ruff`, `pixi run python -m mypy`) when pre-commit hooks have environment issues |
+| Compare best-CoP at rounded precision | Checked T1 best CoP ($0.037) against rounded table values | T2 was actually $0.0366 vs T1 $0.0373; both round to $0.037 but T2 wins | Always compare at full precision, not rounded values |
+| Fix `is not None` in one file only | Fixed the NaN leak in summary.py only | Same bug existed in detail.py and comparison.py (12 instances total) | When finding a systematic bug pattern, grep ALL related files before declaring done |
+| Check only paper-referenced tables for nan | Grepped for "nan" only in tables mentioned in paper narrative | tab03 (judge agreement) also had nan values but paper text never quotes those specific cells | Grep for "nan" across ALL generated files, not just the ones the paper references |
 
 ## Results & Parameters
 
@@ -241,6 +285,10 @@ The same test result reported as "p=0.202" in one location and "p=0.2015" in ano
 | Major | LaTeX rendering bugs | `**Total**`, `nan` | Markdown in LaTeX, NaN leak | Visual |
 | Moderate | Wrong missing count | "30 across 10 runs" | "30 runs" | Mischaracterization |
 | Minor | p-value precision | 0.202 vs 0.2015 | Both correct, inconsistent | Precision |
+| Major | Best CoP tier mislabel (test-001) | T1 best ($0.037) | T2 best ($0.0366 vs T1 $0.0373) | $0.0007/run |
+| Major | 12x `is not None` bug in 3 files | N/A | summary.py, detail.py, comparison.py | Systematic |
+| Major | tab03 nan values | Judge agreement table | "All Judges" row had nan for pairwise metrics | Display bug |
+| Minor | p=0.442 vs p=0.4423 (impl_rate KW) | Results section vs appendix | Same statistic, different precision | Precision |
 
 ### Verification Level
 
@@ -254,8 +302,11 @@ verified-local (all fixes verified against data files; paper not recompiled to P
 4. **"All X" claims are fragile** — A single exception invalidates universality; use "N of M" instead
 5. **Judge-generated rubrics vary wildly** — LLM judges do not follow rubric structure for unfamiliar tasks
 6. **Missing data compounds with over-scoring** — A missing judge + an over-scoring judge created the only impl_rate > 1.0
-7. **Second-pass audits find different bugs** — First pass catches methodology/computation bugs; second pass catches stale data and wrong counts
+7. **Each audit pass finds DIFFERENT bugs** — First pass catches methodology/computation/LaTeX bugs; second pass catches stale inline tables and wrong counts; third pass catches best-tier mislabels, systematic `is not None` bug patterns, and p-value precision inconsistency
 8. **Deploy parallel agents with different data sources** — Agent reading paper+data, agent reading figures, agent reading source code find complementary issues
+9. **Grep for "nan" across ALL generated files** — Not just the ones the paper references. The tab03 nan was invisible because the paper narrative does not quote those specific table values.
+10. **`is not None` is NEVER safe for pandas DataFrame values** — This is a systematic bug pattern. When auditing code that generates tables from DataFrames, search for ALL instances of `is not None` and replace with `pd.notna()`. If one file has it, check every related file.
+11. **Always compare "best X" claims at full precision** — Rounded values can tie when full-precision values have a clear winner. Table generation code may pick alphabetically among ties.
 
 ## Related Skills
 
@@ -268,4 +319,5 @@ verified-local (all fixes verified against data files; paper not recompiled to P
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectScylla | Branch fix-validate-model-retry-config, correctness audit of docs/arxiv/haiku/paper.tex | 2026-04-26, Opus 4.6 (1M context), 1,080 runs across 7 tiers |
+| ProjectScylla | Branch fix-validate-model-retry-config, correctness audit of docs/arxiv/haiku/paper.tex (passes 1-2) | 2026-04-26, Opus 4.6 (1M context), 1,080 runs across 7 tiers |
+| ProjectScylla | Branch fix-validate-model-retry-config, third-pass audit of docs/arxiv/haiku/paper.tex | 2026-04-26, Opus 4.6 (1M context), found 4 additional issues (best-CoP mislabel, systematic is-not-None, tab03 nan, p-value precision) |
