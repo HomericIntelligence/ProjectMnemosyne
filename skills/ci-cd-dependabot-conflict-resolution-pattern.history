@@ -1,3 +1,28 @@
+# ci-cd-dependabot-conflict-resolution-pattern — History
+
+## v1.1.0 (2026-04-25)
+
+**Changed by:** AchaeanFleet branch cleanup session (2026-04-25)
+**Verification:** verified-local
+
+### What changed
+- Added "When to Use" trigger for add/add dependabot.yml conflicts where branch is a subset
+- Added "Dependabot add/add Conflict: Subset Skip" workflow subsection
+- Added "dependabot.yml add/add Conflict Decision Tree" to Results & Parameters
+- Added scale reference row for dependabot.yml add/add subset conflict
+- Added AchaeanFleet verification row to "Verified On" table
+- Added Failed Attempts row for manual merge of subset config
+- Added `history` frontmatter field pointing to this file
+- Bumped version 1.0.0 → 1.1.0; updated date to 2026-04-25
+
+### Why
+Branch 100-auto-impl had a minimal dependabot.yml (github-actions only) that conflicted
+with main's comprehensive config. Manual merge would have introduced duplicate stanzas;
+rebase --skip correctly subsumed the branch. Silent-drop check was essential — the empty
+`git log origin/main..HEAD` confirmed no PR was needed.
+
+### Previous version (v1.0.0) snapshot
+
 ---
 name: ci-cd-dependabot-conflict-resolution-pattern
 description: "Use when: (1) Dependabot PRs conflict after other Dependabot PRs merge to main,
@@ -5,16 +30,13 @@ description: "Use when: (1) Dependabot PRs conflict after other Dependabot PRs m
   Dependabot dependency bumps are open and landing sequentially causes stale PRs, (4) a GitHub
   issue audit turns up items that may already be resolved, (5) test file ruff E402/E401 import
   order failures after using conftest.py for sys.path, (6) closing a stale aggregate-audit
-  issue after its sub-issues are resolved, (7) a feature branch added a minimal dependabot.yml
-  (e.g., just github-actions) but main now has a comprehensive config that is a strict superset
-  — add/add conflict during rebase."
+  issue after its sub-issues are resolved."
 category: ci-cd
-date: 2026-04-25
-version: "1.1.0"
+date: 2026-04-14
+version: "1.0.0"
 user-invocable: false
 verification: verified-ci
-history: ci-cd-dependabot-conflict-resolution-pattern.history
-tags: [dependabot, conflict, rebase, merge-policy, issue-audit, stale, ruff, E402, conftest, pytest, add-add-conflict, subset-skip]
+tags: [dependabot, conflict, rebase, merge-policy, issue-audit, stale, ruff, E402, conftest, pytest]
 ---
 
 # CI/CD Dependabot Conflict Resolution Pattern
@@ -23,7 +45,7 @@ tags: [dependabot, conflict, rebase, merge-policy, issue-audit, stale, ruff, E40
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-14 (amended 2026-04-25) |
+| **Date** | 2026-04-14 |
 | **Objective** | Merge 6 Dependabot PRs, resolve 3 GitHub issues (including an aggregate audit), fix ruff lint failures in a test PR |
 | **Outcome** | All 6 Dependabot PRs resolved (5 merged via `--rebase`, 1 applied directly to main + closed); all 3 issues closed; CI green throughout |
 | **Verification** | verified-ci — PRs #1278, #1279 merged with passing CI; all Dependabot PRs fully merged |
@@ -37,7 +59,6 @@ tags: [dependabot, conflict, rebase, merge-policy, issue-audit, stale, ruff, E40
 - Test file has ruff E402 (module-level import not at top of file) and conftest.py already sets `sys.path`
 - Multiple issues from a previous audit are partially or fully resolved on main already
 - A Dependabot `rebase` comment was posted but the rebased PR hasn't landed before your merge window
-- A feature branch added a minimal `dependabot.yml` (e.g., just github-actions), but main now has a comprehensive config that is a strict superset — add/add conflict during rebase
 
 ## Verified Workflow
 
@@ -235,56 +256,6 @@ EOF
 )"
 ```
 
-### Dependabot add/add Conflict: Subset Skip
-
-When rebasing a feature branch onto main and encountering an **add/add conflict** in `.github/dependabot.yml` — where both the branch and main added the file independently:
-
-**a. Inspect the conflict during rebase:**
-
-```bash
-# During git rebase, after conflict is reported:
-git diff
-# The conflict markers show what the branch added vs. what main has
-```
-
-**b. Compare branch content to main's version:**
-
-If main's `dependabot.yml` contains ALL entries that the branch's version has (plus additional stanzas), the branch config is a **strict subset** of main's comprehensive config. Common pattern: branch added only a `github-actions` entry; main has 10+ Docker package-ecosystem entries plus npm and github-actions.
-
-```bash
-# To confirm: view main's version of the file
-git show origin/main:.github/dependabot.yml
-```
-
-**c. Resolution — use `git rebase --skip`:**
-
-Do NOT resolve manually. Do NOT use `git checkout --ours` or `--theirs`. Skip the entire commit:
-
-```bash
-git rebase --skip
-```
-
-This drops the branch's commit entirely, keeping main's comprehensive config.
-
-**d. MANDATORY silent-drop check:**
-
-After `--skip`, the rebase may complete with zero commits remaining:
-
-```bash
-git log origin/main..HEAD --oneline
-```
-
-If this output is **empty**, the branch's only commit was the dropped one. The branch is **fully superseded** — no PR is needed. Document the branch as superseded and do not open a PR.
-
-**e. Cleanup:**
-
-```bash
-git worktree remove <worktree-path>
-# Document outcome: "Branch <name> superseded — dependabot.yml commit subsumed by main's comprehensive config (2026-04-25)"
-```
-
-**Why `--skip` and not manual merge**: The branch added a minimal subset (e.g., github-actions only). Main's config is already a strict superset. Manually merging both sides would either produce duplicate stanzas or simply reproduce main's config — `--skip` is the correct semantic operation here.
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -295,7 +266,6 @@ git worktree remove <worktree-path>
 | Implementing all items from an audit issue | Started implementing items from Issue #924 (aggregate audit) without checking current state | SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, pytest CI, and validate scripts all already existed on main | Always check current state of repo before acting on audit items; audits go stale quickly |
 | Duplicate `sys.path` block in test files | Sub-agent added `sys.path.insert()` in every test file because conftest.py pattern wasn't checked | Caused ruff E402 on all imports below the `sys.path` block | Check for conftest.py `sys.path` handling before generating test files; never duplicate in test files |
 | Keeping unused `patch` import from `unittest.mock` | Generated tests imported `patch` for anticipated use | `patch` was never used directly (used `mock.patch()` context manager instead) | After generating test files, run `ruff check --select F401` to catch unused imports before pushing |
-| Manually resolving add/add dependabot.yml conflict by merging both sides | Branch added minimal github-actions entry; main had comprehensive 10-stanza config; attempted manual merge of both conflict sides | Unnecessary when branch entries are a strict subset of main's config — produces duplicate stanzas or just reproduces main's version | When branch dependabot.yml is a strict subset of main's, use `git rebase --skip`; then run mandatory silent-drop check (`git log origin/main..HEAD --oneline`) |
 
 ## Results & Parameters
 
@@ -320,20 +290,6 @@ Dependabot PR open?
 └── BLOCKED (CI failing) →
     ├── Check required checks: gh api repos/owner/repo/branches/main --jq '.protection.required_status_checks.contexts[]'
     └── Fix the actual failure before merging
-```
-
-### dependabot.yml add/add Conflict Decision Tree
-
-```
-add/add conflict in .github/dependabot.yml during rebase?
-├── Branch entries are a STRICT SUBSET of main's config →
-│   └── git rebase --skip
-│       ├── git log origin/main..HEAD --oneline is EMPTY →
-│       │   └── Branch fully superseded — no PR needed; document and clean up
-│       └── git log origin/main..HEAD --oneline has commits →
-│           └── Remaining commits are non-dependabot changes; open PR normally
-└── Branch entries are NOT a strict subset (branch has unique entries) →
-    └── Manual merge: keep all unique entries from both sides; git add .github/dependabot.yml; git rebase --continue
 ```
 
 ### Issue Audit Checklist
@@ -363,11 +319,15 @@ Before acting on any audit/batch issue:
 | Stale issue audit (3 issues) | Check current state, close with evidence | ~10 min |
 | Sub-agent test PR with ruff lint failures | Fix on branch directly, push | ~15 min |
 | Myrmidon sub-agent for text-change task | Delegate via swarm | ~90 sec wall-clock, 7 tool calls |
-| dependabot.yml add/add subset conflict (rebase) | `git rebase --skip` + silent-drop check | ~5 min |
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectMnemosyne | 6 Dependabot PRs (pytest, PyYAML, certifi, etc.), Issues #909/#916/#924, 2026-04-14 | PRs #1278/#1279 merged with CI passing; PR #1238 (pytest 9.0.3) applied to main directly |
-| AchaeanFleet | Branch 100-auto-impl rebase onto origin/main, 2026-04-25 | add/add conflict in .github/dependabot.yml; branch config was strict subset; `git rebase --skip` resolved; empty log confirmed branch fully superseded — no PR opened |
+
+---
+
+## v1.0.0 (original)
+
+**Initial version.**
