@@ -1,5 +1,50 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.11.0 (2026-04-27)
+
+**Changed by:** ProjectMnemosyne + 10 HomericIntelligence repos — 34+ PRs rebased (2026-04-27)
+**Verification:** verified-ci
+
+### What changed
+- Bumped version 2.10.0 → 2.11.0
+- Added trigger #29: before rebasing Mnemosyne skill PRs, confirm main CI is green first
+  (`gh run list --branch main --limit 3`); rebasing onto broken main cannot unblock PRs
+- Added trigger #30: dependabot branches require `git push --force` (not `--force-with-lease`)
+  because GitHub auto-rebases between fetch and push, making the lease ref stale
+- Added trigger #31: repo only allows squash merge (Charybdis) — `gh pr merge --auto --rebase`
+  fails; check with `gh api repos/OWNER/REPO --jq '.allow_squash_merge,.allow_rebase_merge,.allow_merge_commit'`
+- Added trigger #32: pixi.lock SHA changes after pyproject.toml conflict resolution — always
+  run `pixi lock` before pushing if pixi.lock exists in the repo
+- Added trigger #33: Mnemosyne markdownlint `globs: "**/*.md"` in workflow overrides
+  `.markdownlintignore`; fix workflow on main first, then rebase all skill PRs
+- Added 5 new "When to Use" bullets matching the 5 new triggers
+- Added 3 new Failed Attempts rows:
+  - `git push --force-with-lease` on dependabot branch → lease stale; use `--force`
+  - Rebasing Mnemosyne skill PRs when main CI was failing → PRs remain BLOCKED;
+    check main CI first
+  - Not regenerating pixi.lock after pixi.lock rebase → `pixi install --locked` fails
+- Added Quick Reference commands: check main CI before rebase, dependabot --force push,
+  pixi lock regeneration
+- Added Verified On row: ProjectMnemosyne + 10 HomericIntelligence repos, 34+ PRs,
+  PRs #1447/#1448/#1449 blocked by main markdownlint CI issue
+
+### Why
+During a 34+ PR rebase session across ProjectMnemosyne and 10 other HomericIntelligence repos:
+1. PRs #1447/#1448/#1449 were blocked not due to rebase staleness but because main's markdownlint
+   workflow used `globs: "**/*.md"` which overrides `.markdownlintignore`. Pattern: always check
+   main CI before starting a rebase session.
+2. A dependabot branch (conan/pyproject version bump) rejected `--force-with-lease` because
+   GitHub auto-rebases dependabot branches between our fetch and push. User pre-authorized
+   `git push --force` for dependabot branches specifically.
+3. Charybdis repo only allows squash merge — discovered when `gh pr merge --auto --rebase`
+   returned GraphQL "Merge method rebase merging is not allowed". Must check merge method
+   settings before batch auto-merge.
+4. After rebasing a PR that touched pixi.lock, `pyproject.toml` conflict resolution changed
+   the dependency graph. The pixi.lock SHA no longer matched. `pixi install --locked` failed
+   in CI. Always run `pixi lock` (not `pixi install`) after any pixi.lock rebase.
+
+---
+
 ## v2.10.0 (2026-04-28)
 
 **Changed by:** Mnemosyne 38-PR rebase session — CI fix rollout and conflict resolution patterns
