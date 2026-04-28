@@ -1,0 +1,88 @@
+# docker-to-podman-migration — History
+
+## v1.1.0 (2026-04-26)
+
+**Changed by:** ProjectKeystone session — PR #499 Docker→Podman migration, NATIVE=1 removal from C++/CMake Makefile/justfile
+**Verification:** verified-local
+
+### What changed
+- Extended "When to Use" with C++/CMake-specific triggers: Containerfile adoption, Makefile variable replacement pattern
+- Added Step 7 (C++/CMake Makefile migration): replacing `DOCKER_CHECK`/`DOCKER_PREFIX` with `CONTAINER_CHECK`/`CONTAINER_PREFIX`, removing `ifeq ($(NATIVE),1)` block, removing `%.native` pattern rule, renaming `docker.*` → `container.*` targets
+- Added Step 8 (justfile for C++/CMake): removing `NATIVE=1` from make calls, renaming `make docker.up` → `make container.up`
+- Added Step 9 (Containerfile): rename Dockerfile → Containerfile + .containerignore
+- Added 3 new Failed Attempts rows for C++/CMake context
+- Added "C++/CMake Makefile Variables" section to Results & Parameters
+- Added `verification` frontmatter field
+- Added `history` frontmatter field
+- Updated description to include C++/CMake/Makefile/justfile trigger
+- Added ProjectKeystone PR #499 to Verified On table
+- Bumped version 1.0.0 → 1.1.0, date 2026-03-19 → 2026-04-26
+
+### Why
+The original skill (v1.0.0) documented CI/CD migration for a Mojo/Python project (ProjectOdyssey). The 2026-04-26 session showed a distinct migration pattern for C++/CMake projects (ProjectKeystone) that uses a Makefile+justfile build system with `NATIVE=1` escape hatches rather than GitHub Actions composite actions. The Makefile variable replacement pattern (`DOCKER_CHECK`/`DOCKER_PREFIX` → `CONTAINER_CHECK`/`CONTAINER_PREFIX`) and `Containerfile` adoption are reusable across any C++ project doing this migration.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: docker-to-podman-migration
+description: 'Migrate CI/CD from Docker to Podman for container builds, test execution,
+  and GHCR publishing. Use when: replacing Docker with Podman in GitHub Actions, eliminating
+  NATIVE=1 workarounds, rewriting GHCR publish workflows.'
+category: ci-cd
+date: 2026-03-19
+version: 1.0.0
+user-invocable: false
+---
+# Docker to Podman CI/CD Migration
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-03-19 |
+| **Objective** | Replace Docker with Podman as the sole container engine for local dev, CI test execution, and GHCR publishing |
+| **Outcome** | Successfully migrated 17 CI jobs across 10 workflow files, eliminated all NATIVE=1 workarounds |
+| **Scope** | GitHub Actions workflows, justfile recipes, docker-compose.yml, GHCR publishing, documentation |
+
+## When to Use
+
+Invoke this skill when:
+
+1. **Migrating from Docker to Podman** in a project's CI/CD infrastructure
+2. **Eliminating `NATIVE=1` workarounds** that bypass container-based test execution
+3. **Rewriting GHCR publish workflows** from `docker/*` GitHub Actions to raw `podman` commands
+4. **Creating a `setup-container` composite action** for Podman compose in CI
+5. **Ubuntu-latest runners** already have Podman pre-installed and you want to leverage it
+
+## Verified Workflow
+
+### Quick Reference
+
+```yaml
+# Composite action: .github/actions/setup-container/action.yml
+# 1. touch $HOME/.gitconfig (prevents bind-mount failure on CI)
+# 2. Export USER_ID/GROUP_ID to GITHUB_ENV
+# 3. actions/cache on ~/.local/share/containers
+# 4. podman compose build <service>
+# 5. podman compose up -d <service>
+# 6. Wait + verify with podman compose exec -T <service> pixi run mojo --version
+```
+
+### Step 1: Create setup-container composite action
+...
+[full content in v1.0.0 file]
+...
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | PR #4991 | Full Docker→Podman migration, 17 CI jobs, GHCR publishing |
+```
+
+---
+
+## v1.0.0 (2026-03-19)
+
+**Initial version.** Documented Docker→Podman migration for ProjectOdyssey (Mojo/Python project), covering GitHub Actions composite action, GHCR publishing, docker-compose.yml volume mounts, and justfile `_run` helper.
