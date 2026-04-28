@@ -1,0 +1,22 @@
+# Markdownlint configuration
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+default: true
+
+MD013:
+  line_length: 120
+  heading_line_length: 120
+  code_block_line_length: 120
+  tables: false
+  headings: true
+  code_blocks: true
+
+MD033:
+  allowed_elements: [T, img, br, details, summary]
+
+MD036: false
+MD040: false
+MD041: false
+
+MD046:
+  style: fenced

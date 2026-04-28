@@ -9,6 +9,7 @@ dependency.
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -41,8 +42,8 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 
-def _load_json(path: Path) -> dict:
-    return json.loads(path.read_text())
+def _load_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text())  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

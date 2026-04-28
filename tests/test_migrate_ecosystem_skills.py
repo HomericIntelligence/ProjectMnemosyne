@@ -20,6 +20,7 @@ Covers:
 """
 
 from pathlib import Path
+from typing import Any
 
 from migrate_ecosystem_skills import (
     FIELDS_TO_REMOVE,
@@ -439,7 +440,7 @@ class TestBuildTargetFrontmatter:
         assert "phase" not in result
 
     def test_name_defaults_to_skill_name_arg(self):
-        fm = {}
+        fm: dict[str, Any] = {}
         result = build_target_frontmatter(fm, "derived-name", None)
         assert result["name"] == "derived-name"
 
