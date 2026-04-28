@@ -12,6 +12,7 @@ Covers:
 - validate_plugin: integration tests with valid and invalid skill files
 """
 
+from typing import Any
 from unittest.mock import patch
 
 from conftest import CLEAN_SKILL_MD
@@ -151,7 +152,7 @@ class TestValidateFrontmatter:
         assert any("Invalid name format" in e for e in errors)
 
     def test_multiple_missing_fields(self):
-        fm = {}
+        fm: dict[str, Any] = {}
         errors = validate_frontmatter(fm, "empty.md")
         missing = [e for e in errors if "Missing required field" in e]
         assert len(missing) == 5

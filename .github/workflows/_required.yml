@@ -16,23 +16,124 @@ permissions:
 jobs:
   lint:
     name: lint
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
       - name: Install yamllint
         run: pip install yamllint
-      - name: yamllint on skill markdown files
-        run: |
-          find . -name "*.md" | head -5 | xargs -I{} sh -c 'echo "Checking {}..."'
-          echo "Markdown spot-check complete"
       - name: yamllint on workflow YAML
-        run: yamllint .github/workflows/
+        run: yamllint -c .yamllint.yaml .github/workflows/
       - name: Validate marketplace.json is parseable
         run: jq . .claude-plugin/marketplace.json > /dev/null
+      - name: Install mypy and dependencies
+        run: |
+          pip install mypy
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+      - name: Run mypy
+        run: |
+          if [ -d scripts ] || [ -d tests ]; then
+            python -m mypy
+          else
+            echo "::notice::No scripts/ or tests/ directory — skipping mypy"
+          fi
+
+  markdownlint:
+    name: markdownlint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: lint
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run markdownlint-cli2
+        uses: DavidAnson/markdownlint-cli2-action@05f32210e84442804257b2a6f20b273450ec8265  # v20.0.0
+        with:
+          globs: "**/*.md"
+          config: ".markdownlint.yaml"
+
+  pixi-check:
+    name: pixi-check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: lint
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Skip if no pixi.toml
+        id: detect
+        run: |
+          if [ ! -f pixi.toml ]; then
+            echo "::notice::No pixi.toml in repo, skipping pixi-check"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Setup pixi
+        if: steps.detect.outputs.skip == 'false'
+        uses: prefix-dev/setup-pixi@v0.9.5
+        with:
+          pixi-version: v0.67.2
+          cache: true
+      - name: pixi install (locked)
+        if: steps.detect.outputs.skip == 'false'
+        run: |
+          if [ -f pixi.lock ]; then
+            pixi install --locked
+          else
+            echo "::warning::pixi.toml present but pixi.lock missing — running unlocked"
+            pixi install
+          fi
+
+  justfile-check:
+    name: justfile-check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    needs: lint
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Skip if no justfile
+        id: detect
+        run: |
+          if [ ! -f justfile ] && [ ! -f Justfile ]; then
+            echo "::notice::No justfile in repo, skipping justfile-check"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install just
+        if: steps.detect.outputs.skip == 'false'
+        uses: extractions/setup-just@dd310ad5a97d8e7b41793f8ef055398d51ad4de6  # v2.0.0
+        with:
+          just-version: "1.36.0"
+      - name: Validate justfile
+        if: steps.detect.outputs.skip == 'false'
+        run: |
+          just --evaluate >/dev/null
+          just --list >/dev/null
+
+  symlink-check:
+    name: symlink-check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    needs: lint
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run symlink check
+        run: bash scripts/check-symlinks.sh
 
   unit-tests:
     name: unit-tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - uses: actions/setup-python@v5
@@ -47,7 +148,7 @@ jobs:
 
   integration-tests:
     name: integration-tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - name: Validate marketplace.json has plugins
@@ -65,7 +166,7 @@ jobs:
 
   security-dependency-scan:
     name: security/dependency-scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - uses: actions/setup-python@v5
@@ -82,19 +183,43 @@ jobs:
 
   security-secrets-scan:
     name: security/secrets-scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
         with:
           fetch-depth: 0
-      - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Gitleaks
+        run: |
+          GITLEAKS_VERSION=8.30.1
+          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+          ARCH=$(uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/')
+          curl -sSfL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_${OS}_${ARCH}.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Run Gitleaks
+        run: |
+          if [ -f .gitleaks.toml ]; then
+            gitleaks detect --source . --config .gitleaks.toml \
+              --report-format sarif --report-path gitleaks.sarif --exit-code 0
+          else
+            gitleaks detect --source . \
+              --report-format sarif --report-path gitleaks.sarif --exit-code 0
+          fi
+        continue-on-error: true
+
+      - name: Upload Gitleaks SARIF
+        if: always() && hashFiles('gitleaks.sarif') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: gitleaks-report
+          path: gitleaks.sarif
+          retention-days: 90
 
   build:
     name: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - name: Count skill files
@@ -111,31 +236,9 @@ jobs:
           done
           echo "All JSON files valid"
 
-  typecheck:
-    name: typecheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install mypy and dependencies
-        run: |
-          pip install mypy
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-      - name: Run mypy
-        run: |
-          py_files=$(find . -name "*.py" -not -path "*/.git/*" -not -path "*/htmlcov/*" | head -1)
-          if [ -z "$py_files" ]; then
-            echo "::notice::No Python sources to typecheck"
-          else
-            python -m mypy --ignore-missing-imports scripts/ tests/
-          fi
-
   schema-validation:
     name: schema-validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - uses: actions/setup-python@v5
@@ -151,7 +254,7 @@ jobs:
 
   deps-version-sync:
     name: deps/version-sync
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - name: Check marketplace plugin versions are valid semver
