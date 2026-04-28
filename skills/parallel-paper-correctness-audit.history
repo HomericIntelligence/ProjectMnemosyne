@@ -1,5 +1,36 @@
 # parallel-paper-correctness-audit — History
 
+## v1.3.0 (2026-04-28)
+
+**Updated by:** ProjectScylla 5-agent myrmidon swarm audit session (Opus/Sonnet/Haiku model tiering)
+
+Added 2 new error patterns (17-18) and 4 new key takeaways (17-20) from paragraph-level data validation
+audit of docs/arxiv/haiku/paper.tex using a 5-agent swarm with pre-flight centralized recomputation.
+
+**New error patterns documented (2):**
+17. `idxmax()` Silently Picks Alphabetical First Among Ties
+18. SRH vs KW Recomputation Produces Different H-Statistics
+
+**New issues found (1):**
+- Major: Best-tier mislabel (test-001 pass rate) — 6 tiers tied at pass_rate=1.0, idxmax() picked T1 alphabetically, actual best by score was T5 (0.930 vs 0.908)
+
+**New failed attempts (2):**
+- Independent SRH recomputation was actually KW (wrong test, produced false alarm)
+- idxmax() tiebreaker not caught in 4 prior audit passes despite being a known pattern
+
+**New key takeaways (4):**
+17. `idxmax()` is NEVER safe for "best X" selection without tiebreaker
+18. Pre-flight centralized recomputation prevents agent divergence
+19. Verify which statistical test was used before flagging discrepancies
+20. 5-agent swarm with model tiering works well for paper audits
+
+**Workflow notes:**
+- Pre-flight pandas recomputation embedded in agent prompts ensures all agents compare against same ground truth
+- Model tiering: Opus for abstract/conclusions, Sonnet for results/statistics, Haiku for cross-refs/appendices
+- This is the SECOND time the idxmax() tiebreaker bug was found (v1.1.0: CoP, v1.3.0: pass rate best tier)
+
+**Verification level:** verified-local (63 tests pass, ruff clean, mypy clean, table regeneration confirmed)
+
 ## v1.2.0 (2026-04-27)
 
 **Updated by:** ProjectScylla post-correction audit session (Opus 4.6, 1M context)
