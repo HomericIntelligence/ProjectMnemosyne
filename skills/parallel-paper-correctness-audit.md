@@ -2,10 +2,10 @@
 name: parallel-paper-correctness-audit
 description: Multi-agent parallel workflow for verifying every numerical claim in a research paper against underlying data files (CSV, JSON), fixing errors, ensuring internal consistency across inline tables, generated tables, figure data, and post-correction narrative audit
 category: documentation
-date: 2026-04-27
-version: 1.2.0
+date: 2026-04-28
+version: 1.3.0
 user-invocable: false
-tags: [latex, paper, audit, verification, cross-reference, numerical-accuracy, parallel-agents, inline-tables, aggregation-mismatch, pandas, data-pipeline, post-correction, figure-caption, narrative-consistency, vl-json]
+tags: [latex, paper, audit, verification, cross-reference, numerical-accuracy, parallel-agents, inline-tables, aggregation-mismatch, pandas, data-pipeline, post-correction, figure-caption, narrative-consistency, vl-json, idxmax, tiebreaker, myrmidon-swarm, pre-flight-recomputation, srh, kruskal-wallis]
 ---
 # Parallel Paper Correctness Audit
 
@@ -13,10 +13,10 @@ tags: [latex, paper, audit, verification, cross-reference, numerical-accuracy, p
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-27 |
+| **Date** | 2026-04-28 |
 | **Objective** | Verify every numerical claim in a LaTeX research paper against its underlying data files, fix errors, and ensure internal consistency using parallel agent teams |
-| **Outcome** | Found and fixed 12 issues across 3 audit passes + 7 issues in post-correction audit (v1.2.0): original passes found false universality claim, stale inline tables, aggregation mismatch, pandas NaN bug, over-scoring judge, variable criteria; post-correction pass found 1 CRITICAL figure/caption mismatch, 4 MODERATE (caption error, scale inconsistency, causal language, overclaim), 2 MINOR (precision standardization) |
-| **Models Used** | Opus 4.6 (1M context) |
+| **Outcome** | Found and fixed 12 issues across 3 audit passes + 7 issues in post-correction audit (v1.2.0) + 1 critical best-tier mislabeling bug via 5-agent swarm (v1.3.0): original passes found false universality claim, stale inline tables, aggregation mismatch, pandas NaN bug, over-scoring judge, variable criteria; post-correction pass found 1 CRITICAL figure/caption mismatch, 4 MODERATE, 2 MINOR; swarm audit found idxmax() tie-breaking bug producing wrong "Best Tier" labels |
+| **Models Used** | Opus 4.6 (1M context), Sonnet (data-dense sections), Haiku (structural checks) |
 | **Scale** | ~2,400-line LaTeX paper, 3 experiments, 7 tiers, 1,080 runs, 120 subtests |
 
 ## When to Use This Skill
@@ -32,7 +32,7 @@ Use this workflow when:
 - The paper has undergone major narrative corrections (e.g., changing conclusions from "significant degradation" to "no significant effect") and you need to verify no residual old-narrative language remains
 - Figure captions may have been written for a prior version of the analysis and not updated after corrections
 
-**Trigger phrases**: "verify all numbers", "correctness audit", "cross-reference paper against data", "check inline tables", "second-pass audit", "third-pass audit", "grep for nan", "post-correction audit", "verify narrative consistency"
+**Trigger phrases**: "verify all numbers", "correctness audit", "cross-reference paper against data", "check inline tables", "second-pass audit", "third-pass audit", "grep for nan", "post-correction audit", "verify narrative consistency", "swarm audit", "myrmidon swarm", "best tier verification", "idxmax tiebreaker"
 
 **Distinguishing from related skills**:
 - `academic-paper-validation` covers the full paper lifecycle (tone, cross-refs, LaTeX, statistics, arXiv build). Use that for initial review.
@@ -326,6 +326,37 @@ Statistical analysis may produce results in multiple files with different groupi
 
 **Fix**: Ensure the paper cites results from the correct file. Add a note documenting which file contains which analysis.
 
+### Pattern 17: `idxmax()` Silently Picks Alphabetical First Among Ties
+
+When multiple pandas Series values are tied, `idxmax()` returns the first index alphabetically. For test-001, 6 tiers (T1-T6) tied at pass_rate=1.0, and `idxmax()` returned T1 (first alphabetically). The actual "best" tier by secondary metric (mean score) was T5 (0.930 vs T1=0.908).
+
+**Detection**: For every "best tier by X" claim, check whether multiple tiers tie on the primary metric. If they do, verify that the selected tier also wins on a meaningful secondary metric.
+
+**Fix**: When ties exist on the primary metric, add a tiebreaker using a secondary metric (e.g., mean score for pass rate ties, or score for cost ties):
+
+```python
+# WRONG — idxmax() picks alphabetically among ties
+best_tier = tier_stats['pass_rate'].idxmax()
+
+# CORRECT — tiebreak with secondary metric
+max_val = tier_stats['pass_rate'].max()
+tied = tier_stats[tier_stats['pass_rate'] == max_val]
+if len(tied) > 1:
+    best_tier = tied['mean_score'].idxmax()
+else:
+    best_tier = tied.index[0]
+```
+
+**Recurrence note**: This is the SECOND time this exact bug pattern was found in the Haiku paper (v1.1.0 found T2 mislabeled as T1 for CoP, v1.3.0 found T5 mislabeled as T1 for best tier by pass rate). The root cause is the same: `idxmax()` tie-breaking behavior in pandas.
+
+### Pattern 18: SRH vs KW Recomputation Produces Different H-Statistics
+
+An agent that independently recomputes statistics from runs.csv using standard Kruskal-Wallis will get different H-values than the paper's Scheirer-Ray-Hare analysis. SRH uses ranked data with a two-way design; KW is a one-way test.
+
+**Detection**: When auditing statistical claims, first identify which test was actually used (check the authoritative data file, e.g., `srh_tier_experiment.json`). Do not assume a standard KW recomputation will match SRH results.
+
+**Fix**: Verify paper values against their authoritative data file, not against independent recomputation with a different test. If recomputing, use the same statistical test the paper used.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -338,6 +369,8 @@ Statistical analysis may produce results in multiple files with different groupi
 | Check only paper-referenced tables for nan | Grepped for "nan" only in tables mentioned in paper narrative | tab03 (judge agreement) also had nan values but paper text never quotes those specific cells | Grep for "nan" across ALL generated files, not just the ones the paper references |
 | Trusting exploration agent claim about line 472 | Exploration agent said line 472 had "[0,1] scale" | Initially flagged as potentially not existing without verification | Always verify agent claims by reading the actual file; do not trust agent summaries without cross-checking |
 | vl2png with default npx invocation | Used `npx vl2png` to render VL JSON specs | Missing explicit packages; default dimensions too small (207x369) | Requires `npx -p vega-lite -p vega-cli -p canvas vl2png` with explicit width/height in spec + scale factor of 3 |
+| Independent SRH recomputation was actually KW | Agent D ran scipy kruskal() to verify paper's SRH H-statistics | KW is a one-way test; SRH is a two-way ranked test. Produced H_tier=8.46 vs paper's H_tier=4.00, flagged as discrepancy | When auditing statistical claims, verify which test was used before recomputing. SRH and KW produce different H-values by design |
+| idxmax() tiebreaker not caught in 4 prior audit passes | Four previous audit passes examined "best tier" claims | Prior passes compared at full precision but did not check for ties on the primary metric where idxmax() picks alphabetically | After finding a "best X" mislabel once, add the tiebreaker pattern to ALL table generation code, not just the one instance found |
 
 ## Results & Parameters
 
@@ -373,6 +406,12 @@ Statistical analysis may produce results in multiple files with different groupi
 | Major | tab03 nan values | Judge agreement table | "All Judges" row had nan for pairwise metrics | Display bug |
 | Minor | p=0.442 vs p=0.4423 (impl_rate KW) | Results section vs appendix | Same statistic, different precision | Precision |
 
+#### 5-Agent Swarm Audit (v1.3.0)
+
+| Severity | Issue | Paper Claim | Data Value | Error Magnitude |
+|----------|-------|-------------|------------|-----------------|
+| Major | Best-tier mislabel (test-001 pass rate) | T1 best tier | T5 best tier (score 0.930 vs T1 0.908) | Wrong tier (6 tied at pass_rate=1.0, idxmax picked T1 alphabetically) |
+
 #### Post-Correction Audit (v1.2.0)
 
 | Severity | Issue | Paper Claim | Data Value | Error Magnitude |
@@ -407,6 +446,10 @@ verified-local (all fixes verified against data files; paper not recompiled to P
 14. **After major narrative corrections, run the post-correction checklist** — Search for residual old-narrative language, check figure/caption alignment, verify causal language matches new conclusions, cross-check body H-values against updated tables.
 15. **Check for multiple statistical output files** — The main statistical results file may use the wrong grouping factor. Always list all statistical output files and verify which one matches the paper's analysis.
 16. **Distinguish consensus vs per-judge levels in claims** — "Only one value exceeding X" may be true at one level but false at another. Always specify which level.
+17. **`idxmax()` is NEVER safe for "best X" selection without tiebreaker** — When multiple values tie, `idxmax()` returns alphabetically first. Always check for ties and use a meaningful secondary metric as tiebreaker. This is a recurring bug pattern (found twice in the same paper).
+18. **Pre-flight centralized recomputation prevents agent divergence** — Run a single pandas script BEFORE spawning parallel agents, embed the JSON output in each agent's prompt. Without this, each agent running independent pandas can use different aggregation logic and produce contradictory findings.
+19. **Verify which statistical test was used before flagging discrepancies** — SRH and KW produce different H-statistics by design (two-way ranked vs one-way). An agent that recomputes with the wrong test will produce false alarms.
+20. **5-agent swarm with model tiering works well for paper audits** — Opus for high-value sections (abstract, conclusions), Sonnet for data-dense sections (results, statistics), Haiku for structural checks (cross-references, appendices). All 5 agents completed within ~8 minutes.
 
 ## Related Skills
 
@@ -423,3 +466,4 @@ verified-local (all fixes verified against data files; paper not recompiled to P
 | ProjectScylla | Branch fix-validate-model-retry-config, correctness audit of docs/arxiv/haiku/paper.tex (passes 1-2) | 2026-04-26, Opus 4.6 (1M context), 1,080 runs across 7 tiers |
 | ProjectScylla | Branch fix-validate-model-retry-config, third-pass audit of docs/arxiv/haiku/paper.tex | 2026-04-26, Opus 4.6 (1M context), found 4 additional issues (best-CoP mislabel, systematic is-not-None, tab03 nan, p-value precision) |
 | ProjectScylla | Branch fix-validate-model-retry-config, post-correction paragraph-level audit of docs/arxiv/haiku/paper.tex (2428 lines) | 2026-04-27, Opus 4.6 (1M context), 3 parallel Explore agents + 1 Plan agent, found 7 issues (1 CRITICAL figure/caption, 4 MODERATE, 2 MINOR), 72 VL JSON specs cross-checked |
+| ProjectScylla | Branch fix-validate-model-retry-config, 5-agent myrmidon swarm audit of docs/arxiv/haiku/paper.tex (2432 lines) | 2026-04-28, Opus/Sonnet/Haiku model tiering, 5 parallel agents with pre-flight recomputation, found idxmax() tie-breaking bug in table generation pipeline, fixed comparison.py tiebreaker logic |
