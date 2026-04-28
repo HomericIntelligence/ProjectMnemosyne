@@ -1,5 +1,28 @@
 # batch-pr-ci-fix-workflow — Version History
 
+## v2.11.0 (2026-04-28)
+
+**Changed by:** CI rollout session — markdownlint + pixi-check new job failures across 11 Mnemosyne skill PRs
+**Verification:** verified-ci
+
+### What changed
+- Added trigger #29: markdownlint false-positives on .claude/plugins/ XML-like prompt files
+- Added trigger #30: setup-pixi cache: true crashes when pixi.lock absent
+- Added 2 new Failed Attempts rows documenting both failure modes
+- Added Quick Reference commands for both fixes
+
+### Why
+After adding markdownlint and pixi-check CI jobs to ProjectMnemosyne via the CI extension rollout,
+11 open skill PRs immediately failed CI. Root causes:
+1. markdownlint-cli2 scanned .claude/plugins/ which contains Claude CLAUDE.md-style command files
+   using XML-like tags (<system>, <task>, <section>). These are not standard markdown — they
+   produce ~12000 false-positive MD013/MD033 violations.
+2. setup-pixi with cache: true generates a cache key from pixi.lock. When pixi.lock is absent,
+   this step fails before our conditional `if [ -f pixi.lock ]` install logic ever runs.
+Fix: .markdownlintignore + cache: false. PR #1441.
+
+---
+
 ## v2.10.0 (2026-04-27)
 
 **Changed by:** HomericIntelligence ecosystem — fleet-wide gitleaks-action@v2 replacement across
