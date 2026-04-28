@@ -1,5 +1,30 @@
 # parallel-issue-wave-execution — History
 
+## v2.5.0 (2026-04-26)
+
+**Changed by:** ProjectKeystone myrmidon swarm — runner queue saturation incident (2026-04-26)
+**Verification:** verified-local
+
+### What changed
+- Added 1 new Failed Attempts row: "Runner queue saturation" — 28 PRs across 10 waves in ~20 min, 84+ workflow runs queued simultaneously, GitHub free-tier runner pool exhausted for 25+ min
+- Added "GitHub Actions Runner Queue Saturation" subsection to Critical Pitfalls with mitigation guidance (≤8 PRs per wave window, 2-min inter-wave delay, cancel-stale-runs pattern)
+- Added note on failed mitigation attempts (cancel/rerun commands)
+- Updated date from 2026-04-25 to 2026-04-26
+- Bumped version from 2.4.0 to 2.5.0
+
+### Why
+A myrmidon swarm dispatched 10 waves (EASY + MEDIUM) against ProjectKeystone, opening 28 PRs in ~20 minutes.
+Each PR triggered ~3 workflows (CI, Security Scanning, Dependency Audit) = ~84+ workflow runs queued simultaneously.
+GitHub's free-tier runner pool was completely saturated — no runs started for 25+ minutes.
+Cancel and rerun commands failed: cancel requests were accepted but runs stayed queued; rerun failed with
+"This workflow is already running". The saturation ceiling needs to be encoded explicitly in the skill so
+future orchestrators cap total concurrent PRs and add inter-wave delays.
+
+### Previous version (v2.4.0) snapshot
+[see git history]
+
+---
+
 ## v2.4.0 (2026-04-25)
 **Changed by:** ProjectTelemachy myrmidon-swarm pass (2026-04-25)
 **Verification:** verified-local
