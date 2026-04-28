@@ -1,5 +1,29 @@
 # worktree-cleanup-user-constraints — Change History
 
+## v1.5.0 — 2026-04-25
+
+**Amendment**: ProjectTelemachy git hygiene session — `[gone]` branch re-push without checking if work already on main.
+**Verification:** unverified (observed behavior; documented from session)
+
+### What changed
+- Added new "When to Use" bullet: worktree branch has `[gone]` remote and no open PR — check `gh pr list --head <branch> --state all` before re-pushing; work may already be on main via a different PR or SHA
+- Added new Failed Attempts row: recommending re-push of `[gone]` branch `54-add-dependabot-config` before verifying work delivery — both commits were already on main (one via identical patch-id, one via identical file content despite different patch-id due to surrounding context changes); lesson: always run `git cherry origin/main HEAD`, check file-level `diff`, and inspect PR history before any re-push
+- Bumped version 1.4.0 → 1.5.0
+
+### Why
+During the ProjectTelemachy git hygiene pass, branch `54-add-dependabot-config` showed `[gone]` remote with no open PR. The initial recommendation was to re-push and create a new PR. Investigation revealed that both commits were already on main: one was confirmed by `git cherry origin/main HEAD` returning `-` (identical patch-id), and another that `git cherry` returned `+` for was actually identical in file content — the `+` was a false positive caused by surrounding pixi.toml context changes. The linked issue was already closed. This illustrates that `[gone]` + no open PR does NOT mean the work was never delivered — always check actual file content and issue state.
+
+### Snapshot of v1.4.0 key state
+
+```yaml
+version: "1.4.0"
+date: 2026-04-25
+```
+
+Key additions in v1.4.0: bulk removal of 30+ locked agent worktrees from myrmidon swarm sessions; pixi.lock and CHANGELOG.md dirty-artifact handling; issue worktree non-lock pattern; duplicate-section script bug fix.
+
+---
+
 ## v1.4.0 — 2026-04-25
 
 **Amendment**: Added .gitignore hygiene step (Phase 0.5) to prevent worktree directory
