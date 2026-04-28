@@ -1,0 +1,2 @@
+# Claude plugin command files use XML-like tags for prompt templating — not standard markdown
+.claude/
