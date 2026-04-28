@@ -1,11 +1,11 @@
 ---
 name: github-actions-ci-patterns
-description: "Use when: (1) setting up GitHub Actions CI for Mojo or Python/pytest projects with pixi, (2) CI pipeline is slow due to broken pixi caching, (3) artifact upload/download fails due to empty directories or special characters in names, (4) migrating manual binary downloads to official actions, (5) adding a build-only gate workflow, (6) securing workflows against command injection via user-controlled inputs, (7) CI Summary job fails with 'HttpError: Resource not accessible by integration' when posting PR comments — missing pull-requests:write permission"
+description: "Use when: (1) setting up GitHub Actions CI for Mojo or Python/pytest projects with pixi, (2) CI pipeline is slow due to broken pixi caching, (3) artifact upload/download fails due to empty directories or special characters in names, (4) migrating manual binary downloads to official actions, (5) adding a build-only gate workflow, (6) securing workflows against command injection via user-controlled inputs, (7) CI Summary job fails with 'HttpError: Resource not accessible by integration' when posting PR comments — missing pull-requests:write permission, (8) aligning workflow job names to branch protection required status check contexts, deleting orphan workflows, removing duplicate CI jobs"
 category: ci-cd
-date: 2026-04-18
-version: 2.1.0
+date: 2026-04-25
+version: 2.2.0
 user-invocable: false
-verification: verified-ci
+verification: verified-local
 history: github-actions-ci-patterns.history
 tags:
   - github-actions
@@ -13,16 +13,19 @@ tags:
   - github-token
   - pull-requests
   - pr-comments
+  - branch-protection
+  - required-checks
+  - status-checks
 ---
 
 ## Overview
 
 | Field | Value |
 |-------|-------|
-| Date | 2026-04-18 |
-| Objective | Consolidated GitHub Actions CI patterns: setup, caching, artifact handling, security, action migration, build gates, and GITHUB_TOKEN permissions |
-| Outcome | Merged from 7 source skills; v2.1.0 adds GITHUB_TOKEN pull-requests:write permission pattern |
-| Verification | verified-ci |
+| Date | 2026-04-25 |
+| Objective | Consolidated GitHub Actions CI patterns: setup, caching, artifact handling, security, action migration, build gates, GITHUB_TOKEN permissions, and required check alignment |
+| Outcome | Merged from 7 source skills; v2.2.0 adds required status check alignment, orphan workflow cleanup, and duplicate job removal patterns |
+| Verification | verified-local |
 | **History** | [changelog](./github-actions-ci-patterns.history) |
 
 ## When to Use
@@ -40,6 +43,10 @@ tags:
 - Any workflow accepting external/user-controlled data
 - A CI Summary or reporting job fails with `HttpError: Resource not accessible by integration` when calling `github.rest.issues.createComment()` or any PR comment API
 - Workflow has no `permissions` block and needs to post PR comments, update PR status, or write to issues
+- Branch protection required status checks don't match workflow job names — PRs are permanently blocked
+- A workflow runs on every push/PR but none of its jobs appear in the required checks list — burning runner minutes for nothing
+- Two workflows produce the same check context name (e.g., two CodeQL jobs) — duplicate analysis waste
+- Adding a new workflow before the required checks list is updated — must land together or not at all
 
 ## Verified Workflow
 
@@ -56,6 +63,9 @@ tags:
 | Missing build-only gate | Create `build-validation.yml` with path filters |
 | User input in `run:` command | Wrap in `env:` block, reference as `$ENV_VAR` |
 | CI Summary fails `HttpError: Resource not accessible` | Add `permissions: pull-requests: write` at workflow level |
+| PRs permanently blocked — required check never emitted | Add explicit `name:` field to job matching branch protection context |
+| Workflow runs on every event but checks aren't required | Delete or defer workflow until required checks list is updated to match |
+| Two workflows emit the same check (duplicate) | Remove the job from the secondary workflow; keep only canonical source |
 
 ### Step 1: Basic Mojo + Pixi Workflow
 
@@ -415,6 +425,76 @@ jobs:
 
 **Important**: Always use `contents: read` as the baseline even when adding write permissions, to be explicit about what the token can access.
 
+### Step 12: Align Workflow Job Names to Branch Protection Required Checks
+
+**Rule**: GitHub uses `jobs.<id>.name:` as the status check context string. If no `name:` is present, the job ID is used instead. Job IDs and check context names that match by coincidence are fragile — always add explicit `name:` fields.
+
+#### Audit Command
+
+```bash
+# List all required check contexts from branch protection
+gh api repos/<OWNER>/<REPO>/branches/main/protection \
+  --jq '.required_status_checks.contexts[]' | sort > /tmp/required.txt
+
+# List all job names emitted by workflows
+grep -rh "name:" .github/workflows/*.yml \
+  | grep -v "^name:" | sed 's/.*name: //' | sort -u > /tmp/emitted.txt
+
+# Gaps = required but not emitted (PRs will be permanently blocked)
+comm -23 /tmp/required.txt /tmp/emitted.txt
+
+# Orphans = emitted but not required (burns runner minutes for nothing)
+comm -13 /tmp/required.txt /tmp/emitted.txt
+```
+
+#### Add Explicit `name:` Fields to Jobs
+
+```yaml
+# Before — implicit: check context = job ID "secret-scanning"
+jobs:
+  secret-scanning:
+    runs-on: ubuntu-latest
+    steps: [...]
+
+# After — explicit: check context = name field value
+jobs:
+  secret-scanning:
+    name: secret-scanning   # Matches branch protection context exactly
+    runs-on: ubuntu-latest
+    steps: [...]
+```
+
+#### Delete Orphan Workflows
+
+A workflow is an **orphan** if none of its job names appear in `required_status_checks.contexts`. Orphan workflows run on every push/PR and consume runner minutes without providing any required gate. Delete them (or defer until the required checks list is updated simultaneously).
+
+```bash
+# Verify a workflow has no required-check jobs before deleting
+for job_name in $(grep "^\s\+name:" .github/workflows/_required.yml | sed 's/.*name: //'); do
+  if grep -qx "$job_name" /tmp/required.txt; then
+    echo "REQUIRED: $job_name — do NOT delete"
+  else
+    echo "orphan: $job_name"
+  fi
+done
+```
+
+#### Remove Duplicate Jobs
+
+If two workflows emit the same check context, one is redundant. The canonical source is whichever job is in the required checks list. Remove the duplicate from the secondary workflow.
+
+```bash
+# Find duplicate check names across workflow files
+grep -rh "^\s\+name:" .github/workflows/*.yml \
+  | sed 's/.*name: //' | sort | uniq -d
+```
+
+#### Landing Order Rule
+
+When a future workflow is planned but the required checks list has not been updated yet, do NOT commit the workflow file. The workflow will run on every event and its checks will never block PRs (orphan state), burning runner minutes. Either:
+- Land the workflow AND the branch protection update in the same PR, or
+- Defer the workflow file until the branch protection PR merges
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -429,6 +509,9 @@ jobs:
 | Inline `${{ github.base_ref }}` in `run:` | Used template expression directly in shell command | Injection risk — user-controlled content can escape shell context | Always route `github.base_ref` through `env:` block |
 | No `permissions` block on workflow with PR comment job | CI Summary job used `github.rest.issues.createComment()` without explicit permissions | GITHUB_TOKEN defaults to read-only; `HttpError: Resource not accessible by integration` | Add `permissions: pull-requests: write` at workflow or job level |
 | Adding permissions only to the step's `github-token` | Passed a PAT instead of GITHUB_TOKEN, thinking PAT would have more permissions | PATs bypass the workflow permission model but introduce token management overhead and security risk | Use GITHUB_TOKEN with explicit `permissions` block — no PAT needed |
+| Assuming job ID = check name without verification | Five jobs in `security-scan.yml` had no `name:` field; their IDs happened to match branch protection contexts | Implicit match is fragile — any job rename breaks the required check silently | Always add explicit `name:` fields; don't rely on job ID matching by coincidence |
+| Keeping orphan workflow "just in case" | `_required.yml` was committed anticipating a future PR (#450) that would update required checks | Until the required-checks update landed, the workflow ran on every push/PR with no effect — pure runner waste | Never commit a workflow whose jobs aren't in the required checks list yet; land both changes together |
+| Keeping duplicate CodeQL job in security-scan.yml | `security-scan.yml` contained `codeql-analysis` job alongside `codeql-analysis.yml` | Duplicate: 20-minute C++ build + CodeQL twice per PR; the `security-scan.yml` job was not in required checks | Remove the duplicate job from the non-canonical workflow; the canonical source is the one in required checks |
 
 ## Results & Parameters
 

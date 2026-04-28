@@ -1,5 +1,28 @@
 # github-actions-ci-patterns — History
 
+## v2.2.0 (2026-04-25)
+
+**Changed by:** ProjectKeystone PR #451 — aligning GitHub Actions workflow job names to branch protection required status check contexts
+**Verification:** verified-local
+
+### What changed
+- Added Step 12: Required Check Alignment — audit command, explicit `name:` field pattern, orphan workflow deletion, duplicate job removal, landing order rule
+- Added 3 new Failed Attempts rows (implicit job ID match, orphan workflow kept "just in case", duplicate CodeQL job)
+- Added 4 new When to Use trigger conditions (required checks mismatch, orphan workflows, duplicate checks, uncoordinated workflow landing)
+- Added 3 new Quick Reference table rows (permanently blocked PRs, orphan workflow fix, duplicate job fix)
+- Updated description to include required check alignment use case
+- Updated tags to include branch-protection, required-checks, status-checks
+- Bumped version 2.1.0 → 2.2.0, updated date to 2026-04-25
+
+### Why
+PR #451 on HomericIntelligence/ProjectKeystone revealed three related CI hygiene problems: (1) five security-scan.yml jobs had no explicit `name:` field — their IDs matched required check contexts only by coincidence; (2) `_required.yml` ran on every push/PR but none of its jobs were in the required checks list — pure runner waste; (3) `security-scan.yml` duplicated the CodeQL job from `codeql-analysis.yml`, burning 20 runner minutes per PR for a check that wasn't even required.
+
+### Previous version (v2.1.0) snapshot
+
+The v2.1.0 content is preserved in git history at the commit immediately preceding this amendment.
+
+---
+
 ## v2.1.0 (2026-04-18)
 
 **Changed by:** ProjectMnemosyne TSan session — CI Summary job failing with GITHUB_TOKEN permission error
