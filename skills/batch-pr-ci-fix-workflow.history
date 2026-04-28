@@ -1,5 +1,42 @@
 # batch-pr-ci-fix-workflow — Version History
 
+## v2.12.0 (2026-04-28)
+
+**Changed by:** HomericIntelligence ecosystem — ~34 open PRs fixed across 11 repos (trivy-action v prefix, gitleaks license, setup-pixi tag, cmake preset, justfile backtick, dependabot pixi.lock, docker-compose .env, deps/version-sync self-match, Charybdis auto-merge)
+**Verification:** verified-ci
+
+### What changed
+- Added trigger #31: `aquasecurity/trivy-action` without `v` prefix (e.g., `@0.28.0`) — tags require `v`; use `@v0.36.0`
+- Added trigger #32: `gitleaks/gitleaks-action@v2` on HomericIntelligence org requires paid license — replace with direct binary download
+- Added trigger #33: `prefix-dev/setup-pixi@v0.9.5` does not exist — actual latest was v0.9.4; fails immediately on tag resolution
+- Added trigger #34: bare `cmake -B build` bypasses Conan-generated toolchain; use `cmake --preset release`
+- Added trigger #35: justfile backtick `which tool` exits 1 when tool not found, breaking `just --evaluate`/`just --list`; use `` `command -v tool 2>/dev/null || true` ``
+- Added trigger #36: dependabot pip PRs update `pyproject.toml` without regenerating `pixi.lock`; fix by running `pixi lock`
+- Added trigger #37: docker-compose `.env` variable interpolation in CI fails when `GF_ADMIN_PASSWORD` not set; fix with `cp .env.example .env`
+- Added trigger #38: `deps/version-sync` script self-matches `:latest` in its own grep; fix with `--exclude-dir=".github"`
+- Added trigger #39: Charybdis-style C++ repos can auto-merge via `gh pr merge --auto --rebase` once required checks pass
+- Added 3 new Failed Attempts rows (trivy-action no-v-prefix, gitleaks free org, git push --force-with-lease on dependabot branches)
+- Updated description field to include triggers (31)–(39)
+- Updated When to Use with [NEW v2.12.0] bullets for all 9 new triggers
+- Updated Verified On table with new session entry
+- Updated date to 2026-04-28
+- Bumped version from 2.11.0 to 2.12.0
+
+### Why
+During a session fixing ~34 open PRs across 11 HomericIntelligence repos, 9 new CI failure patterns
+were encountered and resolved:
+1. trivy-action used without `v` prefix in tag (e.g., `@0.28.0`) causes "Unable to resolve action" — must be `@v0.36.0`
+2. gitleaks-action@v2 fails with "unauthorized" on HomericIntelligence org (no paid license) — curl binary install is the only working approach
+3. setup-pixi@v0.9.5 tag does not exist on GitHub — correct latest was v0.9.4; the action exits 1 immediately
+4. bare `cmake -B build` in CI bypasses the Conan toolchain preset — dependencies not found; use `cmake --preset release`
+5. justfile backtick using `which tool` exits 1 when the tool isn't installed, breaking `just --list` globally
+6. dependabot pip PRs update pyproject.toml but not pixi.lock, causing `pixi install --locked` to fail
+7. docker-compose CI jobs abort when `.env` is absent and required variables are not set; `cp .env.example .env` fixes it
+8. version-sync grep for `:latest` matches its own grep expression — add `--exclude-dir=".github"` to avoid self-match
+9. Charybdis C++ repos with only 3 required checks can use standard `gh pr merge --auto --rebase`
+
+---
+
 ## v2.11.0 (2026-04-28)
 
 **Changed by:** CI rollout session — markdownlint + pixi-check new job failures across 11 Mnemosyne skill PRs
