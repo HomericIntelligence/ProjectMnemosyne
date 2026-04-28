@@ -1,0 +1,71 @@
+# bash-upstream-pr-review-traps — History
+
+## v2.0.0 (2026-04-27)
+
+**Changed by:** Second-half session — filing separate bug issues (#64/#65/#66) after PR #63
+review, implementing each as its own branch+PR against `HaywardMorihara/gh-tidy`
+
+**Verification:** verified-local — all fixes tested with `GH_TIDY_DEV_MODE=1` in throwaway
+git repos; upstream CI pending maintainer review
+
+### What changed
+
+- Added 3 new Failed Attempts rows covering `for` loop word-splitting, missing `exit 1`,
+  and `[[ ! -z ]]` antipattern
+- Added new "When to Use" triggers for multi-PR filing and branch dependency management
+- Extended Verified Workflow with Steps 10–14 covering the entire separate-bug-issue workflow
+- Added new Results & Parameters sections: `while IFS= read -r` pattern, parallel issue
+  filing template, branch dependency decision tree, and issue body quality checklist
+- Updated frontmatter: version 2.0.0, description expanded, history field added
+- Renamed "Source" table row to follow standard template (added History row)
+
+### Why
+
+v1.0.0 documented one feature PR and its two-round review. The second half of the session
+added a complementary workflow: after reviewing an upstream PR, you find N out-of-scope bugs
+— file each as a separate issue and open a separate PR per bug. Key new learnings:
+
+1. `for branch in $(git branch ...)` word-splits and glob-expands; must use
+   `while IFS= read -r branch; do ... done < <(git branch ...)`. The `< <(...)` form
+   is critical when a bash array is mutated inside the loop body (pipe subshell loses mutations).
+2. Branch dependency: when a bug touches code already modified by an in-flight PR, base the
+   fix branch on that in-flight branch (not main), and note this in the PR body.
+3. `gh issue create` calls can be parallelized; `gh pr create` must be sequential.
+
+### Previous version (v1.0.0) snapshot
+
+```
+---
+name: bash-upstream-pr-review-traps
+description: "Implement a feature in a forked bash project and navigate maintainer review rounds. Use when: (1) contributing a new flag/env-var to an upstream bash CLI extension, (2) performing two-round review of bash scripts for logic and safety bugs, (3) debugging git branch --list exit-code trap or bash function-before-definition execution hazard."
+category: tooling
+date: 2026-04-27
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [bash, git-branch, function-definition, arg-parsing, ansi-color, env-var, upstream-pr, fork, open-source, review, gh-tidy]
+---
+
+# Bash Upstream PR Review: Traps and Patterns
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-27 |
+| **Objective** | Implement `--auto-delete-merged` / `GH_TIDY_AUTO_DELETE_MERGED` flag in forked bash CLI extension (`HaywardMorihara/gh-tidy`), address maintainer feedback across two review rounds, and submit a clean PR |
+| **Outcome** | PR #63 created at https://github.com/HaywardMorihara/gh-tidy/pull/63; all maintainer feedback addressed; two logic/safety bugs found and fixed in round 2 |
+| **Verification** | verified-local — tested with `GH_TIDY_DEV_MODE=1` in throwaway git repos; CI validation pending maintainer review |
+| **Source** | Session implementing gh-tidy issue #62 |
+
+[... full v1.0.0 content — see git history for complete snapshot ...]
+```
+
+---
+
+## v1.0.0 (2026-04-27)
+
+**Initial version.** Created from session implementing gh-tidy issue #62 (`--auto-delete-merged`
+flag) and navigating two rounds of maintainer review. Documented: `git branch --list` exit-code
+trap, function-before-definition hazard, value-flag guard, ANSI reset in prompts, env-var
+notice placement.
