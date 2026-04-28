@@ -1,12 +1,16 @@
+# History: rebasing-stale-agent-worktree-branches
+
+## v1.0.0 — 2026-04-21
+
 ---
 name: rebasing-stale-agent-worktree-branches
-description: "Use when: (1) multiple locked `.claude/worktrees/agent-*` worktrees from sub-agent runs need reconciling against main, (2) agent-generated `worktree-agent-*` branches have commits whose work has already been re-done on main with polished wording, (3) `git cherry main <branch>` reports commits as missing even though content is semantically equivalent, (4) plain `git rebase main` produces hundreds of semantic-reword conflict hunks across many branches, (5) you need to determine which agent branches still carry unique content vs. which are redundant duplicates, (6) many agent branches share identical residual diffs and can be collapsed, (7) rebase artifacts (duplicated paragraphs, misplaced sections) need to be distinguished from legitimate unique content, (8) user says 'rebase all branches' but `gh pr list --state open` returns 0 results — full batch is actually cleanup not rebase, (9) `git branch -vv` shows many branches 'ahead 1, behind N' after a myrmidon swarm session — squash-merge artifact pattern not stale branches needing rebase, (10) all branches with open PRs show the same MERGED PR ID in `gh pr list --head <branch> --state all` — squash-merge wave completed, nothing to rebase"
+description: "Use when: (1) multiple locked `.claude/worktrees/agent-*` worktrees from sub-agent runs need reconciling against main, (2) agent-generated `worktree-agent-*` branches have commits whose work has already been re-done on main with polished wording, (3) `git cherry main <branch>` reports commits as missing even though content is semantically equivalent, (4) plain `git rebase main` produces hundreds of semantic-reword conflict hunks across many branches, (5) you need to determine which agent branches still carry unique content vs. which are redundant duplicates, (6) many agent branches share identical residual diffs and can be collapsed, (7) rebase artifacts (duplicated paragraphs, misplaced sections) need to be distinguished from legitimate unique content"
 category: tooling
-date: 2026-04-25
-version: "1.1.0"
+date: 2026-04-21
+version: "1.0.0"
 user-invocable: false
 verification: verified-local
-tags: [git, rebase, worktree, agent, stale, cleanup, -X-ours, residual-diff, sub-agent, squash-merge, cherry, pre-flight]
+tags: [git, rebase, worktree, agent, stale, cleanup, -X-ours, residual-diff, sub-agent]
 ---
 # Rebasing Stale Agent Worktree Branches
 
@@ -14,7 +18,7 @@ tags: [git, rebase, worktree, agent, stale, cleanup, -X-ours, residual-diff, sub
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-25 |
+| **Date** | 2026-04-21 |
 | **Objective** | Reconcile agent-generated worktree branches whose commits have been re-done on main with slightly different wording, without grinding through 1000+ semantic-reword conflicts |
 | **Outcome** | Use `git rebase -X ours` to auto-collapse reword conflicts, then hash-compare residual diffs to cluster duplicates and isolate branches with genuine unique content |
 
@@ -27,17 +31,12 @@ tags: [git, rebase, worktree, agent, stale, cleanup, -X-ours, residual-diff, sub
 - Plain `git rebase main` produces 30+ conflicted files / 100+ hunks on the FIRST commit of the FIRST branch
 - Conflicts are uniformly minor rewords of the same paragraph (e.g., "Net TPOT speedup estimate" vs "Corrected TPOT speedup estimate")
 - Manual per-hunk resolution would degrade into pattern-matching "keep main" across hundreds of hunks
-- **User says "rebase all branches"** but `gh pr list --state open` returns 0 results — full batch is actually cleanup, not rebase
-- **`git branch -vv` shows many branches "ahead 1, behind N"** after a myrmidon swarm session — this is the squash-merge artifact pattern, not stale branches needing rebase
-- **All branches with open PRs show the same MERGED PR ID** in `gh pr list --head <branch> --state all` — implies squash-merge wave completed, nothing to rebase
 
 **Common trigger phrases:**
 - "I have a bunch of locked agent worktrees left over"
 - "These agent branches look like they duplicate what's already on main"
 - "Rebase is producing conflicts on every file"
 - "Which of these worktree-agent branches still has unique work?"
-- "Rebase all branches against main"
-- "These branches show ahead 1, behind N — are they stale?"
 
 ## Key Pattern Recognition
 
@@ -52,41 +51,7 @@ Signals that the branch's work has been re-done on main with edits (so plain reb
 
 When all four signals are present, **do not** attempt a plain rebase or manual per-hunk review.
 
-### "Squash-merge artifact" — ahead-1 branches
-
-When a repo uses squash merges for PRs, every branch that was merged will appear as "ahead 1, behind N" in `git branch -vv`. This is **not** evidence of unmerged work. The branch's original commit SHA was never reused — only the squashed commit on main carries the content. `git cherry origin/main <branch>` will return 0 for every such branch.
-
 ## Verified Workflow
-
-### Step 0: Pre-flight rebase gate
-
-Before doing any rebase work, confirm there is actually something to rebase.
-
-```bash
-# Are there even open PRs to rebase?
-gh pr list --state open --json number,headRefName,mergeStateStatus
-# If 0 results → nothing to rebase; pivot to branch cleanup, not rebase
-```
-
-If open PRs exist, classify every "ahead" branch before touching it:
-
-```bash
-for b in $(git for-each-ref --format='%(refname:short)' refs/heads/ | grep -v '^main$'); do
-  cherry=$(git cherry origin/main "$b" 2>/dev/null | grep -c '^+')
-  pr_info=$(gh pr list --head "$b" --state all --json number,state --jq '.[0] | "\(.number)|\(.state)"' 2>/dev/null)
-  pr_num=$(echo "$pr_info" | cut -d'|' -f1)
-  pr_state=$(echo "$pr_info" | cut -d'|' -f2)
-  if [ "$cherry" = "0" ] && [ "$pr_state" = "MERGED" ]; then verdict="DONE-squash-merged"
-  elif [ "$cherry" = "0" ] && [ "$pr_state" = "CLOSED" ]; then verdict="DONE-closed-superseded"
-  elif [ "$pr_state" = "OPEN" ]; then verdict="REBASE_NEEDED"
-  elif [ "$cherry" = "0" ]; then verdict="DONE-ancestor-of-main"
-  else verdict="INVESTIGATE"
-  fi
-  echo "$b | cherry=$cherry | PR#${pr_num:-none} $pr_state | $verdict"
-done
-```
-
-**Only proceed to Steps 1–8 for branches classified as `REBASE_NEEDED` or `INVESTIGATE`.** All `DONE-*` branches should be deleted locally (after confirming no uncommitted changes), not rebased.
 
 ### 1. Inventory
 
@@ -172,21 +137,17 @@ Once clusters are collapsed and outliers classified, cherry-pick or commit only 
 | 1 | Plain `git rebase main` on first branch | 39 files x ~107 conflict hunks in the first commit alone; projected ~1000+ hunks across 13 branches | Plain rebase is impractical when main has re-done the same audit with polished rewording |
 | 2 | Manually resolve each conflict hunk by "understanding intent" | Every hunk was a trivial reword of the same sentence; real resolution devolves into pattern-matching "keep main" across hundreds of hunks | Manual per-hunk review isn't "doing the work properly" when the work is 95% identical rewording — it's just slow Option-C |
 | 3 | `git cherry main <branch>` to detect redundancy | Patch-id matching missed most branch commits because main's re-done versions had slightly different content | `git cherry` works for clean cherry-picks, not for "re-done from scratch with edits" |
-| 4 | Mass rebase of all "ahead" branches without cherry check | All 57 branches were squash-merged; `git cherry origin/main` = 0 for every single branch; rebasing would have produced empty commits or reword conflicts with no useful output | Always run `git cherry origin/main <branch>` before rebasing; "ahead N" in `git branch -vv` is a squash-merge artifact, not evidence of unmerged work |
 
 ## Results & Parameters
 
-- 13 branches reduced to analyzable small diffs (from the original rebase scenario)
+- 13 branches reduced to analyzable small diffs
 - 7 branches collapsed to byte-identical residual diffs (keep 1, drop 6)
 - 4 branches had real unique content worth cherry-picking
 - 2 branches produced pure garbage (duplicate paragraphs from `-X ours` artifacts)
 - 1 branch had a broken structural placement (discard)
-- Session 2026-04-25: 57 branches all showing "ahead 1" — 0 open PRs, cherry=0 for every branch → entire batch was cleanup, not rebase
 
 ## Gotchas
 
 - **`ours` vs `theirs` in rebase is inverted from merge.** In a merge, `ours` = your current branch. In a rebase, the current branch is detached onto the target, so `ours` = the target (main). If you confuse them, you'll silently keep the stale agent wording and lose main's polish.
 - **Diff stats are necessary but not sufficient.** 7 branches had identical stats (4 files, 68 insertions) and were true duplicates, but 1 branch also had clean-looking stats yet contained a broken structural placement. Always read outlier diffs.
 - **Locked worktrees must be unlocked or force-removed** before cleanup: `git worktree unlock <path>` then `git worktree remove <path>`, or `git worktree remove --force <path>`.
-- **"ahead 1, behind N" is the squash-merge artifact.** After a squash-merge wave, every merged branch will show this pattern. It does not mean those branches need rebasing — it means they've been absorbed into main and should be deleted.
-- **Always check open PRs first.** If `gh pr list --state open` returns 0 results, there is nothing to rebase. Pivot immediately to branch cleanup.
