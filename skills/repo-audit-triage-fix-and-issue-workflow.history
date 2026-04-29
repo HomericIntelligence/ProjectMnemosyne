@@ -1,12 +1,33 @@
+# repo-audit-triage-fix-and-issue-workflow — History
+
+## v1.1.0 (2026-04-29)
+
+**Changed by:** Radiance strict audit issue-backlog reconciliation and focused issue creation
+**Verification:** verified-local
+
+### What changed
+
+- Added the backlog-search-before-create pattern for strict audit findings.
+- Added guidance for commenting on existing open issues, commenting on closed regression issues, and opening only focused gap issues.
+- Added label normalization and readback checks after issue updates.
+- Added failed-attempt rows for duplicate issue creation and broad closed-issue reopening.
+- Added Radiance issue mapping results for #167, #168, #171, #172, #173, #175, #181, #182, #183, and #184.
+- Added `verification` and `history` frontmatter fields.
+
+### Why
+
+The original workflow handled audit triage into direct fixes versus newly filed issues, but did not stress deduplicating against an existing issue backlog. In the Radiance audit follow-up, most audit findings were already represented by open issues. The reliable pattern was to inspect open/all issues first, add evidence comments and labels where coverage already existed, and create only narrow new issues for uncovered gaps or regressions.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
 ---
 name: repo-audit-triage-fix-and-issue-workflow
 description: "Full workflow for strict repo audit triage: run audit, classify findings by complexity, batch-fix simple items in one PR, file GitHub issues for complex work. Use when: (1) running a comprehensive repository quality audit and acting on all findings, (2) needing to triage audit results into immediate fixes vs tracked issues, (3) remediating dead code, stale docs, broken CI, or missing requirements files."
 category: tooling
-date: 2026-04-29
-version: "1.1.0"
+date: 2026-03-28
+version: "1.0.0"
 user-invocable: false
-verification: verified-local
-history: repo-audit-triage-fix-and-issue-workflow.history
 tags: [audit, triage, remediation, github-issues, dead-code, ci, requirements, parallel-execution]
 ---
 
@@ -15,19 +36,15 @@ tags: [audit, triage, remediation, github-issues, dead-code, ci, requirements, p
 ## Overview
 
 | Field | Value |
-| ------- | ------- |
-| **Date** | 2026-04-29 |
-| **Objective** | Run a strict repo audit, triage findings by complexity, batch-fix scoped items, and reconcile complex work against the existing GitHub issue backlog before creating focused gaps. |
-| **Outcome** | Successful across ProjectMnemosyne and Radiance: one audit cleanup PR pattern, existing issues updated/commented/labeled first, and only missing focused gaps filed as new issues. |
-| **Verification** | verified-local |
-| **History** | [changelog](./repo-audit-triage-fix-and-issue-workflow.history) |
+|-------|-------|
+| **Date** | 2026-03-28 |
+| **Objective** | Run a strict repo audit on ProjectMnemosyne, triage all findings by complexity, fix simple/medium items directly, and file GitHub issues for complex work |
+| **Outcome** | Successful. Audit scored C+ (77%). 10 simple fixes applied in one PR (14 files changed, -1,280 net lines). 6 GitHub issues filed (#1105–#1110). 9/9 tests passing after fixes. |
 
 ## When to Use
 
 - You have just run `/repo-analyze-strict` and have a list of graded findings
 - You want to separate work that fits in one PR from work that needs its own branch/epic
-- You need to map audit findings onto an existing GitHub backlog without creating duplicates
-- You want to update/comment/label existing issues before filing only the missing gaps
 - You need to clear dead migration scripts, duplicate files, or stale changelog entries
 - CI tests are partially broken and you need to scope the test runner to the working subset
 - You suspect some test failures are pre-existing (not caused by your changes) and need to verify
@@ -51,24 +68,16 @@ git stash
 python3 -m pytest tests/ -v 2>&1 | grep -E "PASSED|FAILED|ERROR"
 git stash pop
 
-# Step 5: Search/update existing issues before filing gaps
-gh issue list --state open --limit 200 --json number,title,labels,url,updatedAt
-gh issue list --state all --limit 200 \
-  --search "runtime OR healthcheck OR auth OR security OR upload OR dependencies" \
-  --json number,title,state,labels,url,updatedAt
-gh issue comment 167 --body "Audit update (...): ..."
-gh issue edit 167 --add-label bug --add-label priority:P0 --add-label phase:release
-
-# Step 6: Scope CI to working test files only (if needed)
+# Step 5: Scope CI to working test files only (if needed)
 # In workflow YAML, change:
 #   run: pytest tests/
 # to:
 #   run: pytest tests/test_generate_marketplace.py -v
 
-# Step 7: Validate skill files
+# Step 6: Validate skill files
 python3 scripts/validate_plugins.py
 
-# Step 8: Commit, push, open PR with auto-merge
+# Step 7: Commit, push, open PR with auto-merge
 ```
 
 ### Detailed Steps
@@ -85,7 +94,7 @@ Run `/repo-analyze-strict`. This produces a graded report across 15 dimensions. 
 Use these criteria to decide between **fix-now** and **file-as-issue**:
 
 | Criteria | Fix Now | File as Issue |
-| ---------- | --------- | --------------- |
+|----------|---------|---------------|
 | Time estimate | < 1 hour | > 1 hour |
 | Design decisions required | None | Yes |
 | Cross-repo or multi-file refactor | No | Yes |
@@ -161,30 +170,7 @@ File a GitHub issue for the broken test files rather than deleting them (they ma
 
 #### Phase 5: File GitHub Issues for Complex Items
 
-Before creating issues, search the backlog. Strict audits often rediscover known work.
-Use both title lists and broader full-text searches:
-
-```bash
-gh issue list --state open --limit 200 \
-  --json number,title,labels,url,updatedAt \
-  --jq '.[] | "#\(.number)\t\(.title)\t[\([.labels[].name] | join(","))]"'
-
-gh issue list --state all --limit 200 \
-  --search "runtime OR healthcheck OR auth OR security OR upload OR dependencies" \
-  --json number,title,state,labels,url,updatedAt \
-  --jq '.[] | "#\(.number)\t\(.state)\t\(.title)"'
-```
-
-Classify each audit finding:
-
-| Audit finding state | Action |
-| --------------------- | -------- |
-| Existing open issue covers it | Add an audit comment with concrete evidence and any new acceptance detail |
-| Existing closed issue regressed | Comment on the closed issue with regression evidence, then open a narrow follow-up |
-| Existing issue covers adjacent but not exact scope | Comment to clarify boundary, then open a focused gap issue |
-| No issue found | Create a new issue with orchestrator kickoff, evidence, and acceptance criteria |
-
-For each new file-as-issue item, create a GitHub issue with:
+For each file-as-issue item, create a GitHub issue with:
 - Clear title stating the problem
 - Background: what the audit found
 - Acceptance criteria: what "done" looks like
@@ -210,24 +196,6 @@ EOF
   --label "technical-debt,testing"
 ```
 
-After creating or updating issues, normalize labels so the backlog is filterable:
-
-```bash
-gh issue edit 181 \
-  --add-label bug \
-  --add-label type:validation \
-  --add-label area:runtime \
-  --add-label priority:P0 \
-  --add-label phase:core
-```
-
-Read back the final issue list and comment counts:
-
-```bash
-gh issue list --state open --limit 50 --json number,title,labels,url \
-  --jq '.[] | "#\(.number)\t\(.title)\t[\([.labels[].name] | join(","))]\t\(.url)"'
-```
-
 #### Phase 6: Validate and Commit
 
 ```bash
@@ -248,19 +216,17 @@ git commit -m "fix: apply audit remediation (dead code, CI, docs, requirements)"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-| --------- | ---------------- | --------------- | ---------------- |
+|---------|----------------|---------------|----------------|
 | Run `pytest tests/` in CI | Pointed the CI workflow test step at the full `tests/` directory | Two test files import a non-existent module (`fix_remaining_warnings`), causing `ImportError` collection failure | Always verify full test suite runs clean before setting CI to `tests/`; scope to working subset and file issues for broken files |
 | Attribute test failures to own changes | Assumed `ImportError` failures in `test_fix_remaining_warnings.py` were caused by the deletion of migration scripts | Git stash + re-run proved the failures pre-existed | Always stash and re-run before concluding test failures are your fault |
 | Fix broken test files in same PR | Tried to fix the broken test imports as part of the cleanup PR | The missing module `fix_remaining_warnings` doesn't exist and creating it is a design decision requiring its own scope | Keep the cleanup PR focused; file a dedicated issue for the broken tests |
-| Create a new issue for every audit finding | Treating each strict audit finding as new work without checking the backlog first | Existing issues may already cover the work, and duplicate issues fragment implementation context | Search open and closed issues first; update existing issues and create only focused gap issues |
-| Reopen broad closed work for a narrow regression | A closed implementation issue may be related to a new failing behavior | Reopening the broad issue can obscure the exact regression and old acceptance criteria | Comment on the closed issue for traceability, then open a narrow regression follow-up |
 
 ## Results & Parameters
 
 ### Audit Score Baseline (ProjectMnemosyne, 2026-03-28)
 
 | Section | Grade | Key Findings |
-| --------- | ------- | -------------- |
+|---------|-------|--------------|
 | Documentation | B+ | Good README/CHANGELOG, missing ADRs |
 | AI Agent Tooling | B+ | Skills marketplace functional |
 | Planning/Compliance | B | Issues filed but no roadmap doc |
@@ -271,7 +237,7 @@ git commit -m "fix: apply audit remediation (dead code, CI, docs, requirements)"
 ### Changes Applied (10 fix-now items)
 
 | Change | Type | Net Lines |
-| -------- | ------ | ----------- |
+|--------|------|-----------|
 | Fix `.claude-plugin/plugin.json` metadata | Edit | +10 / -10 |
 | Create `requirements.txt` | New file | +2 |
 | Create `requirements-dev.txt` | New file | +3 |
@@ -289,7 +255,7 @@ git commit -m "fix: apply audit remediation (dead code, CI, docs, requirements)"
 ### GitHub Issues Filed (Complex Work)
 
 | Issue | Title | Label |
-| ------- | ------- | ------- |
+|-------|-------|-------|
 | #1105 | Fix broken test files (`fix_remaining_warnings`) | testing, technical-debt |
 | #1106 | Add type annotations throughout codebase | code-quality |
 | #1107 | Security hardening: input validation + sandboxing | security |
@@ -297,31 +263,11 @@ git commit -m "fix: apply audit remediation (dead code, CI, docs, requirements)"
 | #1109 | Add ADR directory and document key decisions | documentation |
 | #1110 | Enforce test coverage threshold in CI | testing, ci-cd |
 
-### Existing Backlog Mapping Example (Radiance, 2026-04-28)
-
-After a strict Radiance audit, most findings already had issue coverage:
-
-| Audit finding | Existing or New Issue | Action |
-| --------------- | ----------------------- | -------- |
-| Mutating API endpoints exposed before non-local deployment | #167 | Commented with updated evidence and labels |
-| Archive extraction hardening | #168 | Commented to keep archive scope separate from upload boundary |
-| Oversized run orchestration module | #171 | Commented that runtime execution wiring should be sequenced with the refactor |
-| Dependency lock/constraints strategy | #172 | Commented with container build dependency-resolution evidence |
-| Browser/container smoke usability | #173 | Commented with stale container/port diagnostic evidence |
-| Coverage gaps | #175 | Commented with new high-value regression targets |
-| Healthcheck regression in previously closed hardening issue | #114 and #182 | Commented on closed #114, opened focused #182 |
-| Runtime execution not wired into runtime mode | #181 | Opened new focused P0 blocker |
-| Upload size enforcement independent of `Content-Length` | #183 | Opened new focused issue |
-| User-provided model code execution policy | #184 | Opened new focused issue |
-
-This produced four new focused issues instead of duplicating the entire audit as new tickets.
-
 ## Verified On
 
 | Project | Context | Details |
-| --------- | --------- | --------- |
+|---------|---------|---------|
 | ProjectMnemosyne | Strict audit + triage + 10-item cleanup PR (March 2026) | 9/9 tests passing, 6 issues filed (#1105–#1110) |
-| Radiance | Strict audit issue-backlog reconciliation (April 2026) | Existing open issues were updated/commented/labeled first; only four missing focused issues were created (#181–#184) |
 
 ## References
 
@@ -329,3 +275,10 @@ This produced four new focused issues instead of duplicating the entire audit as
 - Related skill: [issue-triage-wave-parallel-execution](./issue-triage-wave-parallel-execution.md) — parallel batching of independent fixes
 - Related skill: [pre-existing-ci-failure-triage](./pre-existing-ci-failure-triage.md) — diagnosing failures that existed before your changes
 - Related skill: [preexisting-ci-failure-triage](./preexisting-ci-failure-triage.md) — alternate entry for same pattern
+```
+
+---
+
+## v1.0.0 (2026-03-28)
+
+**Initial version.**
