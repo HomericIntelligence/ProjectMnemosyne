@@ -3,7 +3,7 @@ name: architecture-homeric-ecosystem-ground-truth
 description: "Map the actual implementation state of every HomericIntelligence component against documentation claims. Use when: (1) verifying what's real code vs aspirational docs, (2) planning deployment of the agent mesh, (3) assessing component readiness, (4) checking submodule pin freshness, (5) onboarding to the ecosystem."
 category: architecture
 date: 2026-04-03
-version: 1.0.0
+version: 1.1.0
 user-invocable: false
 tags:
   - architecture
@@ -41,6 +41,8 @@ tags:
 - **Tech stack**: cpp-httplib, nats.c v3.9.1, nlohmann_json
 - **Storage**: In-memory only (no persistence yet — issue #71)
 - **NATS**: Creates 6 JetStream streams on startup: `homeric-agents`, `homeric-tasks`, `homeric-myrmidon`, `homeric-research`, `homeric-pipeline`, `homeric-logs`
+- **Binary path**: `control/ProjectAgamemnon/build/debug/agamemnon` — NOT `build/agamemnon`
+- **NATS reconnect**: Does NOT auto-reconnect after NATS restart — kill and restart Agamemnon
 - **Status**: Production ready
 
 ### Nestor — Real C++20 Service
@@ -48,6 +50,8 @@ tags:
 - **Type**: REST API server on port 8081
 - **Endpoints**: `/v1/health`, `/v1/research/stats`, `POST /v1/research`
 - **Tech stack**: Same as Agamemnon (cpp-httplib, nats.c, nlohmann_json)
+- **Binary path**: `control/ProjectNestor/build/debug/nestor` — NOT `build/nestor`
+- **NATS reconnect**: Does NOT auto-reconnect after NATS restart — kill and restart Nestor
 - **Status**: Production ready
 
 ### Hermes — Production Python FastAPI
@@ -56,6 +60,7 @@ tags:
 - **Endpoints**: `/health`, `POST /webhook`, `GET /subjects`
 - **Security**: HMAC-SHA256 webhook validation
 - **NATS**: Auto-creates JetStream streams
+- **uvicorn entry point**: `hermes.server:app` — NOT `hermes.main:app` (that module does not exist)
 - **Status**: Production ready
 
 ### Keystone — Library, NOT a Service
@@ -118,6 +123,11 @@ curl -s http://localhost:8085/health     # Hermes
 
 # Check NATS streams
 nats stream ls  # Should show homeric-agents, homeric-tasks, etc.
+
+# Check NATS monitoring (port 8222, NOT 4222)
+# 4222 = client pub/sub port; 8222 = HTTP monitoring port
+curl -s http://localhost:8222/varz | jq '{connections, routes, num_subscriptions}'
+curl -s http://localhost:8222/jsz   # JetStream stats
 ```
 
 ## Failed Attempts
@@ -127,6 +137,10 @@ nats stream ls  # Should show homeric-agents, homeric-tasks, etc.
 | Assumed Myrmidons scripts target ai-maestro | Read submodule version of api.sh | Submodule was stale; standalone checkout was already migrated | Always check both submodule pin AND standalone checkout |
 | Planned Keystone as transport daemon | Architecture docs describe Keystone as invisible transport | Keystone is a library with MessageBus, not a deployable service | Read actual source, not just architecture docs |
 | Expected Odyssey to integrate with mesh | Architecture calls it "research sandbox graduates to AchaeanFleet" | It's a pure ML framework with zero NATS/REST code | ProjectOdyssey has nothing to do with the agent mesh |
+| `uvicorn hermes.main:app` | Used `hermes.main:app` as Hermes entry point (2026-04-27) | Module is `hermes.server:app`; `hermes.main` does not exist | Always use `hermes.server:app` for Hermes uvicorn launch |
+| Binary at `build/agamemnon` | Looked for Agamemnon at `build/agamemnon` (2026-04-27) | Debug build lands in `build/debug/agamemnon` | C++ debug builds are in `build/debug/`, not `build/` root |
+| NATS monitoring on port 4222 | `curl localhost:4222/varz` (2026-04-27) | Port 4222 is client port; monitoring is on 8222 | NATS monitoring: 8222. Client: 4222 |
+| Agamemnon survives NATS restart | Expected Agamemnon to reconnect after NATS restart (2026-04-27) | Agamemnon and Nestor do not auto-reconnect reliably | After NATS restart, kill and restart Agamemnon + Nestor |
 
 ## Results & Parameters
 

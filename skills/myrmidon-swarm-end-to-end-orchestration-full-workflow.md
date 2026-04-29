@@ -3,7 +3,7 @@ name: myrmidon-swarm-end-to-end-orchestration-full-workflow
 description: "Full end-to-end L0 commander pattern for complex myrmidon orchestration sessions. Use when: (1) task spans 3+ phases (cleanup + rebase + merge + CI + knowledge), (2) 10+ sub-tasks with mixed agent tiers required, (3) cross-repo work requiring /advise and /learn coordination, (4) feedback loops and decision gates are needed before committing to destructive operations, (5) auto-merge assumption cannot be made (CI may fail)."
 category: architecture
 date: 2026-04-25
-version: "1.4.0"
+version: "1.5.0"
 user-invocable: false
 verification: verified-ci
 history: myrmidon-swarm-end-to-end-orchestration-full-workflow.history
@@ -420,6 +420,7 @@ Total session (typical):                                         ~1.5-3 hours
 | Auto-merge disabled blocks wave completion signal | Used `gh pr merge <N> --auto --rebase` as the final step in all agent prompts, per standard pattern | ProjectProteus had `enablePullRequestAutoMerge: false` at the repository level. Agents reported "auto-merge is not enabled" and PRs stayed open. Wave completion was harder to assess — could not use "all PRs MERGED" as the done signal. | Before starting a swarm session, check `gh repo view --json autoMergeAllowed --jq '.autoMergeAllowed'`. If `false`, the completion signal for each wave must be "all PRs pushed with CI passing" rather than "all PRs MERGED". Adjust monitoring accordingly. |
 | Two index.ts agents racing to same file (Wave C) | Dispatched C1 (#10), C2 (#14), C3 (#36) as parallel agents since they touched different functions in `dagger/src/index.ts` | Even though they touched different functions, parallel agents on the same file create merge conflicts. Had to run them sequentially (one per wave-step, each rebasing on origin/main after the previous merged). | Same-file edits must always be sequential even if the edits are to different functions/sections. The "no two agents per wave touching the same file" rule applies even to non-overlapping edits within a file. |
 | Running Phase 4 classifier swarm when inventory already has file evidence | Dispatching 3 Explore classifier agents after 3 Explore inventory agents already returned file paths per issue | Duplicate work — inventory agents already provided enough signal for deterministic classification from contention counts | Skip classifier swarm if inventory agents returned file-path evidence; classify LOW/MEDIUM/HIGH directly from contention counts |
+| Forking implementation branch from wrong base | Created Atlas branch from `feat/issue-22-ci-hardening` instead of `main` (2026-04-27) | Picked up 12 extra CI commits unrelated to Atlas; PR was not rebased to main; MERGEABLE state was wrong | Always verify branch base: `git log --oneline main..HEAD` before creating PR. If wrong base was used, cherry-pick the work onto a clean `main` fork: `git checkout -b <branch> main && git cherry-pick <sha>` |
 
 ## Results & Parameters
 
@@ -512,6 +513,7 @@ Total session (typical):                                         ~1.5-3 hours
 | ProjectScylla | 64 issues classified, 12 PRs merged, tracking issue #1786 created, 2026-04-12 | Myrmidon swarm triage: classification + batch-fix waves + Phase 7 tracking issue on target repo |
 | ProjectProteus | 43-issue classification + 20 EASY implementations, 2026-04-25 | TypeScript/Bash/YAML repo; auto-merge disabled; no pre-commit hooks; no lockfiles; npm install fix required after typecheck job added |
 | ProjectTelemachy | 57 issues → 6 remaining (89% closure), 17 PRs, ~2.5h wall clock, 2026-04-25 | Python/pixi repo; deterministic classification from file-contention counts; per-file Sonnet mega-agents (Wave D+E); Waves 0+A+B dispatched simultaneously (12 agents in one message) |
+| HomericIntelligence/Odysseus | Atlas Epic issue #152 scaffold, PR #173, 2026-04-27 | Direct worktree approach (not myrmidon-multi) for precision scaffold; branch forked from wrong base; cherry-pick fix onto clean main fork |
 
 ## References
 
