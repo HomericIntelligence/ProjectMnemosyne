@@ -2,10 +2,11 @@
 name: ci-cd-pipeline-maintenance-patterns
 description: "Use when: (1) adding or auditing lint/format enforcement jobs to GitHub Actions workflows, (2) cross-repo conflict resolution on rename/refactor PRs, (3) CI-only crashes caused by debug_assert or JIT compilation overhead in Mojo, (4) enforcing required status checks across a GitHub organization, (5) triaging flaky CI failures to separate infrastructure issues from deterministic bugs, (6) fixing justfile build recipes that silently skip library validation, (7) standardizing default branches and fixing broken CI across multiple repos, (8) fixing pre-commit failures from mypy/ruff/coverage issues on cross-Python-version packages, (9) promoting monolithic CI matrix groups to per-subdirectory auto-discovery entries, (10) fixing CI workflows with missing pip dependency installs, (11) optimizing CI wall-clock time via runner pinning, changed-files-only pre-commit, and Dockerfile pixi copy"
 category: ci-cd
-date: 2026-03-29
-version: "2.0.0"
+date: 2026-04-28
+version: "2.1.0"
 user-invocable: false
 verification: unverified
+history: ci-cd-pipeline-maintenance-patterns.history
 tags: []
 ---
 
@@ -15,10 +16,11 @@ tags: []
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-03-29 |
+| **Date** | 2026-04-28 |
 | **Objective** | Consolidated reference for common CI/CD maintenance patterns across the HomericIntelligence ecosystem |
 | **Outcome** | Merged from 11 source skills covering linting, org-wide governance, Mojo JIT debugging, flaky test triage, build validation, and optimization |
 | **Verification** | unverified |
+| **History** | [changelog](./ci-cd-pipeline-maintenance-patterns.history) |
 
 ## When to Use
 
@@ -438,6 +440,8 @@ COPY pixi.toml pixi.lock ./
 | Inline `${{ github.event_name }}` in `run:` | Used expression directly in shell | Pre-commit security hook blocked the edit (workflow injection risk) | Always use `env:` block even for non-sensitive context values |
 | Glob tool for .github/workflows files | Used Glob with `.github/workflows/*.yml` | Glob doesn't match hidden directories | Use Bash or full paths instead |
 | `workflow_dispatch` to trigger CI on Keystone | Triggered CI via `gh workflow run` to get fresh failure logs | Job cancelled during provisioning | Workflow dispatch may be cancelled by concurrency settings; use push-triggered runs |
+| pre-commit actionlint rev set to commit SHA | Set `rev: 5408c5b...` (a full commit SHA) in `.pre-commit-config.yaml` for the `rhysd/actionlint` pre-commit hook | pre-commit `rev` field must be a **git tag** (or branch), not a bare commit SHA. `git checkout <SHA>` on the hook repo fails with `fatal: unable to read tree` because pre-commit uses the rev to fetch the repo at that ref and a SHA alone is not a fetchable ref in all git server configurations. | Always use a tag (e.g. `v1.7.7`) in the `rev:` field of `.pre-commit-config.yaml`. If a hook repo doesn't publish tags, use the tag-annotated format or pin to a branch. Never use a bare commit SHA. |
+| aquasecurity/trivy-action@0.30.0 in GitHub Actions | Used `uses: aquasecurity/trivy-action@0.30.0` for filesystem vulnerability scanning | The action fails at "Set up job" — the action appears withdrawn or broken at this tag (GitHub runner can't download/initialize the action). Error appears before any user code runs. | Replace with direct trivy binary install: `curl -sSfL "${base}/v${TV_VER}/trivy_${TV_VER}_Linux-64bit.tar.gz" \| tar -xz -C /usr/local/bin trivy && trivy fs --severity HIGH,CRITICAL --exit-code 0 .`. Keep the scan non-blocking (`--exit-code 0 \|\| true`) for informational posture. Put the version in an env var to keep the URL under 80 chars for yamllint. |
 
 ## Results & Parameters
 
