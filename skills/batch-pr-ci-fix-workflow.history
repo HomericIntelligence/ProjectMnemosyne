@@ -1,5 +1,48 @@
 # batch-pr-ci-fix-workflow — Version History
 
+## v2.13.0 (2026-04-28)
+
+**Changed by:** ProjectKeystone session — check-jsonschema HTTP 503, required-check-on-main auto-merge deadlock, yamllint indent-sequences fixture blast radius
+**Verification:** verified-ci
+
+### What changed
+- Added trigger #40: `check-jsonschema` downloads GitHub Actions schema from schemastore.org which returns HTTP 503 intermittently — use `--builtin-schema vendor.github-workflows`
+- Added trigger #41: required check failing on `main` itself blocks all PRs from auto-merging — auto-merge deadlock until main is fixed
+- Added trigger #42: `yamllint indent-sequences: true` breaks all existing YAML fixtures with sequences at parent-key indent level — use `indent-sequences: consistent` instead
+- Added Phase 25: Fix check-jsonschema HTTP 503 (--builtin-schema vendor.github-workflows)
+- Added Phase 26: Diagnose auto-merge deadlock when required check fails on main
+- Added Phase 27: Fix yamllint indent-sequences: true breaking YAML fixtures
+- Added 3 new Failed Attempts rows
+- Updated description field to include triggers (40)–(42)
+- Updated When to Use with [NEW v2.13.0] bullets for all 3 new triggers
+- Updated Verified On table with new session entry
+- Updated date to 2026-04-28
+- Bumped version from 2.12.0 to 2.13.0
+
+### Why
+During a ProjectKeystone session, 3 new CI failure patterns were encountered:
+1. check-jsonschema schema-validation step downloads the GitHub Actions schema from schemastore.org
+   at CI runtime. schemastore.org returns HTTP 503 intermittently. The fix is to use the bundled
+   schema: `--builtin-schema vendor.github-workflows`, which requires no network access.
+2. A required check (e.g., `Core Tensors`) was failing on `main` itself. Auto-merge was enabled on
+   PRs but never fired because no PR can satisfy a required check that fails on the base branch.
+   The correct response is to fix main first — rebasing PRs is futile until main is green.
+3. A `.yamllint.yaml` change adding `indent-sequences: true` caused a large blast radius on
+   existing YAML test fixtures. The fix is to use `indent-sequences: consistent` (allows either
+   style as long as it is consistent per file) or to bulk-fix all fixtures before enabling strict mode.
+
+### Previous version snapshot (v2.12.0)
+
+version: "2.12.0", date: 2026-04-28
+
+v2.12.0 added: aquasecurity/trivy-action tag without v prefix; gitleaks/gitleaks-action@v2 free
+org license; prefix-dev/setup-pixi@v0.9.5 nonexistent tag; markdownlint-cli2-action globs override;
+git push --force-with-lease on dependabot branches; yamllint braces rule; pixi.lock after
+pyproject.toml rebase; check-jsonschema boolean default string; Charybdis squash-only auto-merge.
+Adds triggers (31)–(39) to description.
+
+---
+
 ## v2.12.0 (2026-04-28)
 
 **Changed by:** HomericIntelligence ecosystem — ~34 open PRs fixed across 11 repos (trivy-action v prefix, gitleaks license, setup-pixi tag, cmake preset, justfile backtick, dependabot pixi.lock, docker-compose .env, deps/version-sync self-match, Charybdis auto-merge)

@@ -1,9 +1,9 @@
 ---
 name: batch-pr-ci-fix-workflow
-description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern, (19) just v1.14+ import keyword reservation breaks inline Python heredocs causing all CI Code Quality fails, (20) gitleaks asset URL 404 because uname -s/-m produces wrong case/arch string for download URL, (21) GHA workflow uses manual pixi install instead of composite setup-pixi action causing pixi command not found, (22) bats PATH test for missing tool includes /bin or /usr/bin which pixi activation already polluted, (23) shell script calls companion script via SCRIPT_DIR but unit tests copy only the main script to a temp dir, (24) a repo has legacy ci.yml or security.yml alongside _required.yml each with their own secrets-scan job using gitleaks-action@v2 — must grep ALL workflow files per repo, (25) yamllint default config fails on workflow files with lines >80 chars — fix with -d relaxed flag, (26) mypy run on scripts/ tests/ traverses pytest internals causing Python 3.10 pattern matching errors — fix with --no-namespace-packages --python-version 3.11, (27) multi-line python3 -c in run: | blocks breaks YAML parsing when Python code starts at column 1, (28) PR mergeStateStatus lags after force-push — verify via workflow run head_sha directly, (29) cppcheck danglingLifetime error on a global raw pointer that is assigned but never read (dead scaffolding leftover in signal-handler test), (30) coverage job is advisory-only (extras.yml) but failing every PR because threshold is too high — needs threshold lowering and promotion to required (_required.yml), (29) markdownlint-cli2 CI job scans .claude/plugins/ directory which contains XML-like Claude prompt files using <system>, <task>, <section> tags — produces ~12000 false-positive MD013/MD033 violations; fix by adding .markdownlintignore to exclude .claude/, (30) prefix-dev/setup-pixi with cache: true fails with \"Failed to generate cache key\" when pixi.lock is absent, crashing the job before any conditional install step runs; fix by setting cache: false, (31) aquasecurity/trivy-action tag without v prefix (e.g. @0.36.0) causes action not found — always use @v0.36.0, (32) gitleaks/gitleaks-action@v2 on org repos requires paid license — replace with direct binary curl download, (33) prefix-dev/setup-pixi@v0.9.5 does not exist — correct latest is v0.9.4; rolling forward to nonexistent tag breaks pixi setup immediately, (34) markdownlint-cli2-action globs: \"**/*.md\" bypasses .markdownlintignore — explicit glob overrides the ignore file; remove globs: or add explicit exclusion, (35) git push --force-with-lease fails on dependabot branches because GitHub rebases them automatically between fetch and push making the lease stale — use git push --force, (36) yamllint braces rule: {name: \"unit\" path: \"tests/unit\"} must not have space before closing brace — depends on braces forbid-flow-sequences config, (37) pixi.lock must be regenerated after pyproject.toml changes from rebase — pixi lock regenerates it; pixi install --locked fails if SHA changed, (38) schema-validation check-jsonschema fails on boolean default: 'false' (string) — must be default: false (unquoted boolean), (39) some repos allow only squash merge — auto-merge --rebase will fail; always use --squash for Charybdis-style repos"
+description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern, (19) just v1.14+ import keyword reservation breaks inline Python heredocs causing all CI Code Quality fails, (20) gitleaks asset URL 404 because uname -s/-m produces wrong case/arch string for download URL, (21) GHA workflow uses manual pixi install instead of composite setup-pixi action causing pixi command not found, (22) bats PATH test for missing tool includes /bin or /usr/bin which pixi activation already polluted, (23) shell script calls companion script via SCRIPT_DIR but unit tests copy only the main script to a temp dir, (24) a repo has legacy ci.yml or security.yml alongside _required.yml each with their own secrets-scan job using gitleaks-action@v2 — must grep ALL workflow files per repo, (25) yamllint default config fails on workflow files with lines >80 chars — fix with -d relaxed flag, (26) mypy run on scripts/ tests/ traverses pytest internals causing Python 3.10 pattern matching errors — fix with --no-namespace-packages --python-version 3.11, (27) multi-line python3 -c in run: | blocks breaks YAML parsing when Python code starts at column 1, (28) PR mergeStateStatus lags after force-push — verify via workflow run head_sha directly, (29) cppcheck danglingLifetime error on a global raw pointer that is assigned but never read (dead scaffolding leftover in signal-handler test), (30) coverage job is advisory-only (extras.yml) but failing every PR because threshold is too high — needs threshold lowering and promotion to required (_required.yml), (29) markdownlint-cli2 CI job scans .claude/plugins/ directory which contains XML-like Claude prompt files using <system>, <task>, <section> tags — produces ~12000 false-positive MD013/MD033 violations; fix by adding .markdownlintignore to exclude .claude/, (30) prefix-dev/setup-pixi with cache: true fails with \"Failed to generate cache key\" when pixi.lock is absent, crashing the job before any conditional install step runs; fix by setting cache: false, (31) aquasecurity/trivy-action tag without v prefix (e.g. @0.36.0) causes action not found — always use @v0.36.0, (32) gitleaks/gitleaks-action@v2 on org repos requires paid license — replace with direct binary curl download, (33) prefix-dev/setup-pixi@v0.9.5 does not exist — correct latest is v0.9.4; rolling forward to nonexistent tag breaks pixi setup immediately, (34) markdownlint-cli2-action globs: \"**/*.md\" bypasses .markdownlintignore — explicit glob overrides the ignore file; remove globs: or add explicit exclusion, (35) git push --force-with-lease fails on dependabot branches because GitHub rebases them automatically between fetch and push making the lease stale — use git push --force, (36) yamllint braces rule: {name: \"unit\" path: \"tests/unit\"} must not have space before closing brace — depends on braces forbid-flow-sequences config, (37) pixi.lock must be regenerated after pyproject.toml changes from rebase — pixi lock regenerates it; pixi install --locked fails if SHA changed, (38) schema-validation check-jsonschema fails on boolean default: 'false' (string) — must be default: false (unquoted boolean), (39) some repos allow only squash merge — auto-merge --rebase will fail; always use --squash for Charybdis-style repos, (40) check-jsonschema downloads github-workflow schema from schemastore.org which returns HTTP 503 intermittently — use --builtin-schema vendor.github-workflows instead, (41) required check failing on main itself blocks all PRs from ever satisfying that check — auto-merge deadlock until main is fixed, (42) yamllint indent-sequences: true causes all existing YAML fixtures with sequences at parent-key indent level to fail — use indent-sequences: consistent instead"
 category: ci-cd
-date: 2026-04-27
-version: "2.12.0"
+date: 2026-04-28
+version: "2.13.0"
 user-invocable: false
 verification: verified-ci
 history: batch-pr-ci-fix-workflow.history
@@ -61,6 +61,9 @@ tags: []
 - **[NEW v2.12.0]** `pixi.lock` must be regenerated after `pyproject.toml` changes from rebase — `pixi lock` regenerates it; `pixi install --locked` fails if SHA changed
 - **[NEW v2.12.0]** `check-jsonschema` (schema-validation) fails on boolean `default: 'false'` (string) — must be `default: false` (unquoted boolean)
 - **[NEW v2.12.0]** Some repos (e.g., Charybdis-style C++ repos) allow only squash merge — `gh pr merge --auto --rebase` will fail; always use `--squash` for these repos
+- **[NEW v2.13.0]** `check-jsonschema` schema-validation step downloads the GitHub Actions schema from `https://json.schemastore.org/github-workflow` which returns HTTP 503 intermittently; fix by switching to the bundled schema: `check-jsonschema --builtin-schema vendor.github-workflows .github/workflows/*.yml`
+- **[NEW v2.13.0]** A required check is failing on `main` itself (not just on the PR), meaning auto-merge can never fire — no PR can satisfy a check that fails on the base branch; the deadlock is total until main is fixed
+- **[NEW v2.13.0]** `.yamllint.yaml` changed from `indent-sequences: whatever` (or `consistent`) to `indent-sequences: true`, causing all existing YAML fixtures whose sequence items are at the parent-key indent level to fail; fix by using `indent-sequences: consistent` instead, or bulk-reformat all fixtures
 
 ## Verified Workflow
 
@@ -1311,6 +1314,129 @@ GIT_EDITOR=true git rebase --continue
 | .github/workflows/*.yml | `strip_conflicts_keep_theirs(path)` then remove duplicate keys | Workflow changes are additive; deduplicate job keys manually |
 | pyproject.toml version | `take_ours(path)` | Keep main's (higher) version |
 
+### Phase 25: [NEW v2.13.0] Fix check-jsonschema HTTP 503 from schemastore.org
+
+**Problem**: The `schema-validation` CI step downloads the GitHub Actions workflow schema from
+`https://json.schemastore.org/github-workflow` at job runtime. schemastore.org intermittently
+returns HTTP 503, causing the step to fail with a network error rather than a validation error.
+The failure is transient and infrastructure-related, not a defect in any PR's YAML.
+
+**Symptoms**:
+- `schema-validation` step fails with HTTP 503 or connection error
+- Failure is not reproducible locally
+- Retrying the CI job sometimes passes (indicates transient network issue)
+
+**Fix (preferred)**: Use the bundled schema that ships with `check-jsonschema`:
+
+```yaml
+# WRONG — downloads schema from schemastore.org at runtime, subject to HTTP 503
+- name: Schema validation
+  run: check-jsonschema --schemafile https://json.schemastore.org/github-workflow .github/workflows/*.yml
+
+# CORRECT — uses the schema bundled with check-jsonschema, no network dependency
+- name: Schema validation
+  run: check-jsonschema --builtin-schema vendor.github-workflows .github/workflows/*.yml
+```
+
+**Alternative (weaker)**: Add `continue-on-error: true` to the step — this prevents the job
+from failing, but the step still shows as failed in the UI, which trains teams to ignore it.
+Use the `--builtin-schema` fix instead.
+
+**Why bundled schema**: `check-jsonschema` ships with a copy of the GitHub Actions workflow
+schema (`vendor.github-workflows`) that is updated at release time. It validates the same
+structural rules without requiring a network call.
+
+### Phase 26: [NEW v2.13.0] Diagnose Auto-Merge Deadlock: Required Check Failing on Main
+
+**Problem**: A required check (e.g., `Core Tensors` in ProjectOdyssey) fails on `main` itself.
+Because branch protection requires the check to pass before merge, and the check fails on the
+base branch, no PR can ever satisfy the requirement. Auto-merge is enabled on PRs but never
+fires — the merge is permanently blocked regardless of PR content.
+
+**Detection**:
+```bash
+# Check if main itself is failing required checks
+REPO="HomericIntelligence/ProjectOdyssey"
+gh run list --repo $REPO --branch main --limit 5 --json databaseId,conclusion,name \
+  --jq '.[] | select(.conclusion == "failure") | .name'
+
+# If required check names appear here, all PRs are blocked until main is fixed
+
+# Cross-reference against required checks list
+gh api repos/$REPO/branches/main --jq '.protection.required_status_checks.contexts[]'
+# If any name from the run list appears here → deadlock confirmed
+```
+
+**Distinction from v2.11.0 pattern**: The `batch-pr-rebase-workflow` v2.11.0 pattern covers
+"check PR CI before rebasing" to avoid wasted rebases. This pattern specifically documents the
+**auto-merge deadlock consequence**: when a required check fails on main, no PR can EVER merge
+until main is fixed, regardless of how many times the PR is rebased or how green its own CI is.
+
+**Resolution**:
+1. Identify the root cause of the required check failure on `main` (not the PR)
+2. Fix `main` directly via a dedicated PR that targets and fixes only that check
+3. Once `main` is green, existing PRs with auto-merge enabled will unblock automatically
+4. Do NOT rebase PRs until main is green — rebasing onto a broken main just moves the failure
+
+```bash
+# Confirm the fix worked: main should now pass the required check
+gh run list --repo $REPO --branch main --limit 3 --json conclusion,name \
+  --jq '.[] | select(.name == "<required-check-name>") | .conclusion'
+# Expected: "success"
+```
+
+### Phase 27: [NEW v2.13.0] Fix yamllint indent-sequences: true Breaking YAML Fixtures
+
+**Problem**: A PR changes `.yamllint.yaml` from no `indent-sequences` setting (or `consistent`)
+to `indent-sequences: true`. This strict setting requires sequence items (`- item`) to be
+indented one additional level beyond the parent key. Existing YAML test fixtures that have
+sequence items at the same indent level as the parent key now fail yamllint.
+
+**Example of breaking pattern**:
+```yaml
+# .yamllint.yaml with indent-sequences: true → this fixture FAILS:
+my_list:
+- item1      # ← sequence item at column 0 (same as parent key "my_list:")
+- item2
+```
+
+**Expected with indent-sequences: true**:
+```yaml
+my_list:
+  - item1    # ← sequence item indented 2 spaces beyond parent key
+  - item2
+```
+
+**Fix option 1 — Use `indent-sequences: consistent`** (recommended when fixtures are numerous):
+```yaml
+# .yamllint.yaml
+extends: default
+rules:
+  indentation:
+    spaces: 2
+    indent-sequences: consistent   # allows either style as long as it's consistent per file
+    check-multi-line-strings: false
+```
+
+**Fix option 2 — Bulk-fix all fixtures** (required if `indent-sequences: true` is mandatory):
+```bash
+# Find all YAML fixtures failing the new rule
+yamllint -d '{extends: default, rules: {indentation: {indent-sequences: true}}}' tests/fixtures/ 2>&1 | grep -v "^\s*$"
+
+# Count affected files
+yamllint -d '{extends: default, rules: {indentation: {indent-sequences: true}}}' tests/fixtures/ 2>&1 | grep -c "wrong indentation"
+
+# For large fixture sets, a Python script to auto-reindent sequences is safer than manual edits
+```
+
+**Decision heuristic**:
+- < 10 fixture files affected → bulk-fix is feasible; use `indent-sequences: true`
+- >= 10 fixture files affected → use `indent-sequences: consistent` to avoid a large diff
+
+**Lesson**: Always run yamllint against the existing test fixture corpus before committing
+any change to `.yamllint.yaml`. A config change that passes all workflow files may still fail
+hundreds of test fixtures.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -1380,6 +1506,9 @@ GIT_EDITOR=true git rebase --continue
 | `aquasecurity/trivy-action` without `v` prefix | Used `@0.36.0` (no `v`) in the action tag | Action tag lookup fails silently — "Unable to resolve action" — the tag is not found on GitHub without the `v` prefix | Always use `@v` prefix: `@v0.36.0` not `@0.36.0` |
 | `gitleaks/gitleaks-action@v2` on free org | Used the GitHub Action to run gitleaks secret scanning on HomericIntelligence org | Requires paid Gitleaks license; job fails with license/unauthorized error on org repos without a license key | Replace with direct binary download via curl: `curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz \| tar xz && ./gitleaks detect --source . --redact --no-git \|\| true` |
 | `git push --force-with-lease` on dependabot branch | Used `--force-with-lease` after rebasing a dependabot branch | GitHub rebases dependabot branches automatically between fetch and push, making the lease stale and causing the push to fail | Use `git push --force` for dependabot branches (with user pre-authorization); `--force-with-lease` is not safe when GitHub auto-rebases the branch |
+| check-jsonschema with external URL | Used `--schemafile https://json.schemastore.org/github-workflow` in CI schema-validation step | schemastore.org returns HTTP 503 intermittently; step fails with network error, not a validation error | Use `--builtin-schema vendor.github-workflows` to avoid runtime network dependency on schemastore.org |
+| auto-merge when required check fails on main | Enabled auto-merge on PRs; PRs were green but never merged | Required check (e.g., `Core Tensors`) was failing on `main` itself — no PR can ever satisfy a check that fails on the base branch; auto-merge deadlock is total | Fix `main` first; detect via `gh run list --branch main --json conclusion,name --jq '.[] \| select(.conclusion=="failure") \| .name'`; do NOT rebase PRs until main is green |
+| yamllint `indent-sequences: true` | Changed `.yamllint.yaml` to `indent-sequences: true` | All existing YAML test fixtures with sequence items at parent-key indent level failed yamllint; large blast radius | Use `indent-sequences: consistent` instead, or bulk-fix all fixtures first; always run yamllint against fixture corpus before committing config changes |
 
 ## Results & Parameters
 
@@ -1497,3 +1626,4 @@ fn __hash__[H: Hasher](self, mut hasher: H):
 | ProjectKeystone | cppcheck danglingLifetime false positive on g_scheduler_under_test (unused signal-handler global) — removed unused global, tests unchanged; coverage threshold lowered 80%→75% and moved from extras.yml to _required.yml (PR #500). CI green. 2026-04-27 | v2.10.0 |
 | ProjectMnemosyne | PR #1441: markdownlint-cli2 false-positives on .claude/plugins/ XML-like prompt files fixed with .markdownlintignore; setup-pixi cache: true crash with absent pixi.lock fixed with cache: false. Unblocked 11 open skill PRs. 2026-04-28 | v2.11.0 |
 | HomericIntelligence org (~11 repos, ~34 PRs) | Batch CI fix session: trivy-action v prefix, gitleaks free-org license, setup-pixi nonexistent tag, markdownlint-cli2-action globs override, dependabot --force-with-lease, yamllint braces, pixi.lock after pyproject.toml rebase, check-jsonschema boolean default, Charybdis squash-only auto-merge. 2026-04-27 | v2.12.0 |
+| ProjectKeystone / HomericIntelligence | check-jsonschema HTTP 503 on schemastore.org fixed with --builtin-schema vendor.github-workflows; required check failing on main causing auto-merge deadlock detected and documented; yamllint indent-sequences: true blast radius on YAML fixtures documented. 2026-04-28 | v2.13.0 |
