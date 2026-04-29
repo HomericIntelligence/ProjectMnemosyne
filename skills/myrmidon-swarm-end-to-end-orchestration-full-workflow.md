@@ -2,8 +2,8 @@
 name: myrmidon-swarm-end-to-end-orchestration-full-workflow
 description: "Full end-to-end L0 commander pattern for complex myrmidon orchestration sessions. Use when: (1) task spans 3+ phases (cleanup + rebase + merge + CI + knowledge), (2) 10+ sub-tasks with mixed agent tiers required, (3) cross-repo work requiring /advise and /learn coordination, (4) feedback loops and decision gates are needed before committing to destructive operations, (5) auto-merge assumption cannot be made (CI may fail)."
 category: architecture
-date: 2026-04-25
-version: "1.5.0"
+date: 2026-04-28
+version: "1.6.0"
 user-invocable: false
 verification: verified-ci
 history: myrmidon-swarm-end-to-end-orchestration-full-workflow.history
@@ -30,6 +30,9 @@ Covers the **orchestration meta-pattern** — how the L0 orchestrator structures
 - CI failures are plausible and require a fix workflow, not just auto-merge and hope
 - Session involves cross-repo work (e.g., learn → ProjectMnemosyne skill creation)
 - Risk of mid-execution pivots if plan is not explicitly approved before agent deployment
+- Running a `repo-analyze-strict` audit across all repos in an ecosystem (meta-repo + all submodules)
+- Filing a per-repo Epic + per-finding child issues across 10+ repos simultaneously
+- Recovering from GitHub org monthly API usage limit mid-session
 
 Do NOT use when:
 - Task is a single well-defined wave (use `myrmidon-waves-worktree-cleanup-rebase-pr-merge`)
@@ -421,6 +424,13 @@ Total session (typical):                                         ~1.5-3 hours
 | Two index.ts agents racing to same file (Wave C) | Dispatched C1 (#10), C2 (#14), C3 (#36) as parallel agents since they touched different functions in `dagger/src/index.ts` | Even though they touched different functions, parallel agents on the same file create merge conflicts. Had to run them sequentially (one per wave-step, each rebasing on origin/main after the previous merged). | Same-file edits must always be sequential even if the edits are to different functions/sections. The "no two agents per wave touching the same file" rule applies even to non-overlapping edits within a file. |
 | Running Phase 4 classifier swarm when inventory already has file evidence | Dispatching 3 Explore classifier agents after 3 Explore inventory agents already returned file paths per issue | Duplicate work — inventory agents already provided enough signal for deterministic classification from contention counts | Skip classifier swarm if inventory agents returned file-path evidence; classify LOW/MEDIUM/HIGH directly from contention counts |
 | Forking implementation branch from wrong base | Created Atlas branch from `feat/issue-22-ci-hardening` instead of `main` (2026-04-27) | Picked up 12 extra CI commits unrelated to Atlas; PR was not rebased to main; MERGEABLE state was wrong | Always verify branch base: `git log --oneline main..HEAD` before creating PR. If wrong base was used, cherry-pick the work onto a clean `main` fork: `git checkout -b <branch> main && git cherry-pick <sha>` |
+| Haiku filers for large issue batches | Used Haiku agents to file 40+ issues per repo | Hit GitHub secondary rate limits (403 BCE2) causing incomplete filing across multiple repos | Use Sonnet agents for issue-filing tasks with 40+ issues; add `sleep 3` between creations and `sleep 60` on 403 |
+| Concurrent filer agents during org limit | Dispatched retry agents after secondary rate-limit errors | All agents returned "You've hit your org's monthly usage limit" — hard blocker | Test with a single `gh api` POST before dispatching batch; the limit resets daily and the test issue confirms availability |
+| `--label "audit-finding"` without `--limit` | Verified child issue counts via `gh issue list --label audit-finding` without specifying `--limit` | GitHub defaults to 30 results, masking true count and causing false MISMATCH alarms | Always pass `--limit 200` when counting issues with `gh issue list` |
+| findings.json as nested object | Audit agent returned JSON with top-level keys (`project`, `findings`, `summary`) instead of a flat array | Filer agents expected a flat JSON array, causing KeyError on iteration | Enforce flat array format in agent prompt: "findings.json MUST be a flat JSON array where each element is one finding object"; add a Python extraction fallback if needed |
+| Write tool blocked in worktree agents | Audit agents couldn't write `report.md` to their worktree ("Subagents should return findings as text") | L0 received inline content but no file was written; subsequent filer agents had no input file | Instruct audit agents to print the full report as their final message; L0 orchestrator uses Write tool to save it to the scratch dir |
+| Parallel filer agents on same repo | Multiple filer agent retries filed against the same repo concurrently | Created exact-title duplicate issues; required a cleanup pass to close ~119 duplicates | Run exactly one filer agent per repo; use idempotency check (label search) before any filing; never retry by spawning a parallel agent |
+| Closing duplicate Epics (lower number first) | Assumed the lower-numbered Epic was the canonical one | Child issues referenced the higher-numbered Epic via "Part of #N"; closing lower Epic was correct but required verifying which number the child bodies referenced | Before closing a duplicate Epic, check which issue number the child bodies contain in "Part of #N" — that is the canonical one to keep |
 
 ## Results & Parameters
 
@@ -453,6 +463,23 @@ Total session (typical):                                         ~1.5-3 hours
 | Waves F+G | 4 agents |
 | Total wall clock | ~2.5 hours |
 | Classifier swarm dispatched | No — deterministic from file-contention counts |
+
+### Ecosystem-Wide Strict Audit Parameters
+
+| Parameter | Value |
+|-----------|-------|
+| Repos per batch | 5 (cap from myrmidon-swarm skill) |
+| Batches | 3 (for 15 repos) |
+| Auditor tier | Sonnet (synthesis + evidence-based grading required) |
+| Filer tier | Sonnet preferred over Haiku for 40+ issues (rate-limit resilience) |
+| File coverage | Every .py .cpp .h .go .rs .sh .bash .ts source file; every test file; every config (.toml .yaml .yml .json .hcl Dockerfile* justfile) |
+| Large corpus sampling | 1-in-10 (every 10th file alphabetically) for doc/data dirs > 100 files |
+| findings.json schema | Flat JSON array; fields: section (int), severity (CRITICAL\|MAJOR\|MINOR\|NITPICK), title (<=70 chars), evidence (str), description (str), principle (str\|null) |
+| Issue creation sleep | sleep 3 between issues; sleep 60 on 403 |
+| Issue count verification | `gh issue list --label audit-finding --state open --limit 200 --jq length` |
+| Duplicate detection | `group_by(.title) \| map(select(length > 1))` via jq on full issue list |
+| Org limit test | Single `gh api repos/$REPO/issues --method POST` before dispatching batch |
+| Scratch dir | ~/.agent-brain/strict-audit-YYYY-MM-DD/ (outside Odysseus working tree) |
 
 ### Agent Tier Assignment
 
@@ -514,6 +541,7 @@ Total session (typical):                                         ~1.5-3 hours
 | ProjectProteus | 43-issue classification + 20 EASY implementations, 2026-04-25 | TypeScript/Bash/YAML repo; auto-merge disabled; no pre-commit hooks; no lockfiles; npm install fix required after typecheck job added |
 | ProjectTelemachy | 57 issues → 6 remaining (89% closure), 17 PRs, ~2.5h wall clock, 2026-04-25 | Python/pixi repo; deterministic classification from file-contention counts; per-file Sonnet mega-agents (Wave D+E); Waves 0+A+B dispatched simultaneously (12 agents in one message) |
 | HomericIntelligence/Odysseus | Atlas Epic issue #152 scaffold, PR #173, 2026-04-27 | Direct worktree approach (not myrmidon-multi) for precision scaffold; branch forked from wrong base; cherry-pick fix onto clean main fork |
+| HomericIntelligence/Odysseus | 2026-04-28 ecosystem-wide strict audit (15 repos, 680 findings, 15 Epics + child issues) | verified-local |
 
 ## References
 
