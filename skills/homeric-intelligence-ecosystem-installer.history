@@ -1,0 +1,89 @@
+# homeric-intelligence-ecosystem-installer — History
+
+## v1.1.0 (2026-04-28)
+
+**Changed by:** Tailnet parallel SSH fan-out deployment session (7-host myrmidon swarm)
+**Verification:** verified-local — executed on 5 of 7 Tailnet hosts; athena/titan blocked by missing git + sudo password requirement
+
+### What changed
+
+- Added `## Remote SSH Fan-Out Deployment (Parallel)` section to Verified Workflow with the full probe → keyscan → fan-out → manual-escalation pattern
+- Added `### Pre-Flight Checklist for SSH Fan-Out` to Results & Parameters
+- Added Tailnet Host Inventory table to Results & Parameters with per-host status
+- Added 5 new Failed Attempts rows:
+  - SSH without ssh-keyscan first (host key verification failure on new hosts)
+  - sudo apt-get in BatchMode SSH (terminal required for password — silently fails)
+  - Cloning main before install.sh PR merged (agents find no script)
+  - Python 3.7 on apollo (below 3.10 minimum)
+  - git not pre-installed on athena/titan (clone fails in BatchMode)
+- Updated `description` frontmatter to include remote SSH fan-out trigger
+- Added tags: `ssh-fanout`, `parallel-deploy`, `tailnet`
+- Added `history` frontmatter field
+- Updated `Verified On` table with fan-out session results
+- Bumped version `1.0.0` → `1.1.0`
+
+### Why
+
+v1.0.0 covered how to write and run the installer locally. This session deployed it across
+all 7 reachable Tailnet hosts via parallel SSH agents. Several new failure modes emerged
+that are not obvious from the installer itself: host key verification on new hosts, sudo
+password requirements in non-interactive SSH, missing git on minimal installs, stale main
+branch before PR merges, and Python version floor requirements. These are recurring pitfalls
+for any future "install the ecosystem across the fleet" operation.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: homeric-intelligence-ecosystem-installer
+description: "Add a portable ecosystem installer script (scripts/shell/install.sh) to ProjectHephaestus that installs all HomericIntelligence dependencies on any Tailnet host. Use when: (1) onboarding a new host to the HomericIntelligence mesh, (2) diagnosing missing dependencies (Go, nats-py, cmake, templ) on worker/control/apollo hosts, (3) extending the shared installer with new dependency sections, (4) troubleshooting nats-server install, Go version, or pip system-packages restrictions on Debian 12."
+category: tooling
+date: 2026-04-28
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - ecosystem
+  - installer
+  - homeric-intelligence
+  - nats-server
+  - go
+  - python
+  - cmake
+  - tailscale
+  - podman
+  - hephaestus
+  - debian
+  - mesh-bringup
+  - dependencies
+---
+
+# HomericIntelligence Ecosystem Installer
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-28 |
+| **Objective** | Create a portable ecosystem installer (`scripts/shell/install.sh`) in ProjectHephaestus that installs all HomericIntelligence dependencies on any Tailnet host — independent of Odysseus |
+| **Outcome** | 300+ line bash script with `--role worker|control|all` filtering, justfile recipes (`install-check`, `install ROLE`), PR #309 on HomericIntelligence/ProjectHephaestus |
+| **Verification** | verified-local — bash -n syntax check passed; script runs clean on epimetheus; CI pending |
+
+## When to Use
+
+- Bringing up a new host (epimetheus, apollo, hephaestus, or any Tailnet node) for the HomericIntelligence mesh
+- Diagnosing which dependencies are missing on a host before mesh bringup
+- Installing Go 1.23+, templ, nats-py, nats-server, cmake 3.20+, pixi, or gh CLI on Debian stable
+- Adding new dependency sections to the shared installer in ProjectHephaestus
+- Explaining why `pip3 install nats-py` fails on Debian 12 without `--break-system-packages`
+- Explaining why apt cmake on Debian stable is too old (3.18.x) and how to get 3.20+
+- Explaining why NATS server must be installed as a native binary (not podman) for cross-host connectivity
+
+[... full content in git history ...]
+```
+
+---
+
+## v1.0.0 (2026-04-28)
+
+**Initial version.**
