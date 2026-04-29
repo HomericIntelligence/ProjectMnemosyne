@@ -1,12 +1,12 @@
 ---
 name: pre-commit-hook-configuration
-description: "Use when: (1) ruff or other linter hooks run on hardcoded directories instead of staged files, (2) aligning pre-commit hook versions with pixi-resolved tool versions, (3) updating hook versions with autoupdate, (4) adding a language: pygrep regex hook to catch forbidden patterns, (5) evaluating whether a hook should use pass_filenames: true or false, (6) writing pytest tests to verify pre-commit hook YAML configuration, (7) pre-commit hook uses SCRIPT_DIR/../ to find REPO_ROOT but is installed as .git/hooks/pre-commit in a test repo — resolves to .git/ not repo root, (8) SKIP_TESTS env var needed to prevent test-suite step from running in temporary test repos, (9) just command finds Justfile in a parent directory instead of the test repo"
+description: "Use when: (1) ruff or other linter hooks run on hardcoded directories instead of staged files, (2) aligning pre-commit hook versions with pixi-resolved tool versions, (3) updating hook versions with autoupdate, (4) adding a language: pygrep regex hook to catch forbidden patterns, (5) evaluating whether a hook should use pass_filenames: true or false, (6) writing pytest tests to verify pre-commit hook YAML configuration, (7) pre-commit hook uses SCRIPT_DIR/../ to find REPO_ROOT but is installed as .git/hooks/pre-commit in a test repo — resolves to .git/ not repo root, (8) SKIP_TESTS env var needed to prevent test-suite step from running in temporary test repos, (9) just command finds Justfile in a parent directory instead of the test repo, (10) a Go-based hook (e.g. gitleaks) fails to build from source because the system Go version is too old"
 category: ci-cd
-date: 2026-04-24
-version: 2.1.0
+date: 2026-04-27
+version: 2.2.0
 user-invocable: false
 verification: verified-ci
-tags: [pre-commit, hooks, bats, shell-testing, repo-root, test-isolation]
+tags: [pre-commit, hooks, bats, shell-testing, repo-root, test-isolation, gitleaks, golang, prebuilt-binary]
 history: pre-commit-hook-configuration.history
 ---
 
@@ -16,7 +16,7 @@ history: pre-commit-hook-configuration.history
 |-------|-------|
 | Date | 2026-03-29 |
 | Objective | Consolidated pre-commit hook configuration patterns: pass_filenames, version alignment, pygrep hooks, maintenance, config testing, and REPO_ROOT resolution in test repos |
-| Outcome | v2.1.0: Added REPO_ROOT resolution fix for hooks installed in .git/hooks/ of test repos; all 332 unit tests pass, CI green |
+| Outcome | v2.1.0: Added REPO_ROOT resolution fix for hooks installed in .git/hooks/ of test repos; all 332 unit tests pass, CI green. v2.2.0: Added Go-based hook build failure workaround using pre-built binary downloads |
 | Verification | verified-ci |
 | History | [changelog](./pre-commit-hook-configuration.history) |
 
@@ -36,6 +36,8 @@ history: pre-commit-hook-configuration.history
 - Pre-commit hook uses `SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"` and `REPO_ROOT="${SCRIPT_DIR}/.."` — but when the hook is installed as `.git/hooks/pre-commit` in a test repo, `SCRIPT_DIR` resolves to `.git/hooks/` and `REPO_ROOT` resolves to `.git/` (not the repo root)
 - bats test suite step inside the hook finds `Justfile` in a parent directory instead of the test repo — hook runs unrelated test suites from parent directories
 - `SKIP_TESTS=1` env var pattern needed to allow bats tests to invoke the hook without triggering the test-suite step inside the hook
+- A Go-based pre-commit hook (e.g., gitleaks) fails to build from source because the system Go version is too old for the hook's `go.mod` requirement
+- `pre-commit` with `language: golang` reports "invalid go version" or Go compilation errors for a hook that worked previously
 
 ## Verified Workflow
 
@@ -52,6 +54,7 @@ history: pre-commit-hook-configuration.history
 | Hook REPO_ROOT resolves to .git/ in test repos | Use `git rev-parse --show-toplevel` to find repo root; use dedicated variable `REPO_ROOT_HOOK` |
 | `just` finds Justfile in parent dir during hook test | Guard with `command -v just && [[ -f "${REPO_ROOT_HOOK}/Justfile" ]]` |
 | bats tests trigger hook's test-suite step | Set `SKIP_TESTS=1` in bats test before invoking hook |
+| Go-based hook fails to build from source (old Go) | Convert to `repo: local` hook that downloads pre-built binary |
 
 ### Step 1: Fix pass_filenames for Ruff (and Other Linters)
 
@@ -388,6 +391,52 @@ The `|| true` prevents the shell from aborting when the `&&` condition is false.
 - `just` finds unrelated Justfile from parent directory → add `[[ -f "${REPO_ROOT_HOOK}/Justfile" ]]` guard
 - Hook works on real commits but fails in bats tests → `SKIP_TESTS=1` pattern needed
 
+### Step 8: Convert Go-Based Hooks from Source Build to Pre-Built Binary
+
+**Root cause**: pre-commit's `language: golang` support builds hooks from source using the system Go compiler. When a hook's `go.mod` requires a newer Go version than what's installed (e.g., gitleaks v8.30.1 requires Go 1.24.11 but system has Go 1.15.15), the build fails with:
+
+```
+invalid go version '1.24.11': must match format 1.23
+```
+
+**Diagnosis checklist**:
+1. `go version` shows the system Go version
+2. Check the hook's `go.mod` for the required Go version
+3. Check if conda-forge/pixi provides a newer Go: `pixi search go` (often only old versions available)
+
+**Fix**: Convert from `language: golang` (builds from source) to a `repo: local` hook that downloads the pre-built binary release:
+
+```yaml
+# BEFORE (broken — requires Go 1.24+ but system has Go 1.15):
+- repo: https://github.com/gitleaks/gitleaks
+  rev: v8.30.1
+  hooks:
+    - id: gitleaks
+
+# AFTER (downloads pre-built binary):
+- repo: local
+  hooks:
+    - id: gitleaks
+      name: Gitleaks Secret Scan
+      entry: bash -c 'GITLEAKS_VERSION="8.30.1"; GITLEAKS_BIN="$HOME/.local/bin/gitleaks"; if [ ! -x "$GITLEAKS_BIN" ]; then mkdir -p "$HOME/.local/bin" && curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | tar -xz -C "$HOME/.local/bin" gitleaks; fi && "$GITLEAKS_BIN" protect --staged'
+      language: system
+      pass_filenames: false
+```
+
+**Key design decisions**:
+- Binary is cached at `$HOME/.local/bin/gitleaks` — only downloaded once
+- `curl -sSfL` fails fast on HTTP errors (`-f`) and follows redirects (`-L`)
+- `pass_filenames: false` because gitleaks scans the git diff, not individual files
+- Version is pinned inline — update the `GITLEAKS_VERSION` string when upgrading
+
+**Verification**:
+
+```bash
+pre-commit run gitleaks --all-files
+```
+
+**This pattern applies to any Go-based hook** where the system Go is too old and upgrading Go is not feasible (e.g., constrained CI environments, conda-forge only providing old Go versions).
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -409,6 +458,9 @@ The `|| true` prevents the shell from aborting when the `&&` condition is false.
 | Removed `[[ $# -eq 0 ]] && return 0` guard from `report_unmanaged()` | Cleaned up what appeared to be a redundant guard in `report_unmanaged()` | Broke bats test 299 — the guard is needed in `report_unmanaged()` specifically (different from `get_unmanaged_names()` where the check was correctly replaced with array-length check) | Only remove the `$# -eq 0` guard from `get_unmanaged_names()`; keep it in `report_unmanaged()` |
 | `just test` inside hook without Justfile guard | Hook ran `if command -v just; then just test; fi` | When hook runs in a temporary test repo (bats test), `just` searches upward and finds the real repo's Justfile, running the full test suite inside the temp repo context | Add `[[ -f "${REPO_ROOT_HOOK}/Justfile" ]]` guard before calling `just`; also set `SKIP_TESTS=1` in bats tests that invoke the hook |
 | `[[ -n "$n" ]] && printf '%s\n' "$n"` without `|| true` | Short-circuit conditional in hook body under `set -euo pipefail` | When the `&&` condition is false (empty `$n`), bash treats the command as having failed (exit 1), which triggers `set -e` to abort the script | Add `|| true`: `[[ -n "$n" ]] && printf '%s\n' "$n" || true` |
+| `pixi search gitleaks` for pre-built binary | Tried to install gitleaks via conda-forge | Not available on conda-forge | Go-based security tools are rarely packaged for conda; use pre-built GitHub release binaries |
+| Checking if pixi provides newer Go | Ran `pixi search go` | Only Go 1.15 available via system/conda | Cannot rely on conda-forge for up-to-date Go; use pre-built binaries for Go-based hooks |
+| Pinning to older gitleaks version | Considered downgrading gitleaks to a version with lower Go requirement | All recent gitleaks versions (v8.18+) require Go 1.22+ which is still newer than system Go 1.15 | The Go version gap is too large to bridge by downgrading the hook; pre-built binary is the only viable path |
 
 ## Results & Parameters
 
@@ -511,3 +563,4 @@ gh run view <run-id> --log-failed
 | Project | Context | Details |
 |---------|---------|---------|
 | Myrmidons | shellcheck-warnings swarm; 332 unit tests pass, CI green; REPO_ROOT_HOOK pattern, SKIP_TESTS guard, Justfile guard, || true fix (2026-04-24) | verified-ci |
+| ProjectScylla | gitleaks v8.30.1 Go build failure; converted from `language: golang` to pre-built binary download in `.pre-commit-config.yaml` (2026-04-27) | verified-local |
