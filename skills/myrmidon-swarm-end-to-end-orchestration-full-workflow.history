@@ -1,3 +1,22 @@
+## v1.6.0 (2026-04-28)
+
+**Changed by:** Ecosystem-wide strict audit session (15 HomericIntelligence repos)
+**Verification:** verified-local
+
+### What changed
+- Added 7 new Failed Attempts entries documenting rate-limit and duplicate issues from large-scale audit
+- Added "Ecosystem-Wide Strict Audit Parameters" to Results & Parameters
+- Added new "When to Use" trigger conditions for ecosystem-wide audits
+- Updated Verified On table
+
+### Why
+First time the swarm pattern was applied to a full 15-repo ecosystem audit + mass issue filing. The session surfaced several new failure modes (org monthly limit, findings.json format enforcement, Write-tool blocking in worktrees, parallel filer duplicates) not covered by prior sessions which handled smaller task sets.
+
+### Previous version (v1.5.0) snapshot
+[archived — see git history for full snapshot]
+
+---
+
 ## v1.4.0 (2026-04-25)
 
 **Changed by:** ProjectTelemachy myrmidon-swarm pass (2026-04-25)
