@@ -1,13 +1,13 @@
 ---
 name: academic-paper-myrmidon-swarm-review
-description: "Parallel myrmidon swarm review of academic papers and AI architecture research docs using role-stratified agents for comprehensive, simultaneous coverage. Use when: (1) reviewing a large academic paper with statistical methodology or Vega-Lite figures, (2) reviewing an AI architecture research doc for citation accuracy / complexity / literature gaps / comparison validity / feasibility, (3) need thorough parallel coverage faster than sequential review."
+description: "Parallel myrmidon swarm review of academic papers and AI architecture research docs using role-stratified agents for comprehensive, simultaneous coverage. Use when: (1) reviewing a large academic paper with statistical methodology or Vega-Lite figures, (2) reviewing an AI architecture research doc for citation accuracy / complexity / literature gaps / comparison validity / feasibility, (3) need thorough parallel coverage faster than sequential review, (4) performing Go/NoGo audit with 100+ quantitative claims to verify against raw data."
 category: documentation
-date: 2026-04-13
-version: "1.1.0"
+date: 2026-04-28
+version: "1.2.0"
 user-invocable: false
 verification: verified-local
 history: academic-paper-myrmidon-swarm-review.history
-tags: [academic, paper-review, myrmidon, swarm, latex, statistics, vega-lite, architecture-research, kv-cache, quantization-review]
+tags: [academic, paper-review, myrmidon, swarm, latex, statistics, vega-lite, architecture-research, kv-cache, quantization-review, false-alarm-risk, go-nogo-audit, srh-statistics]
 ---
 
 # Academic Paper Myrmidon Swarm Review
@@ -16,9 +16,9 @@ tags: [academic, paper-review, myrmidon, swarm, latex, statistics, vega-lite, ar
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-04-13 |
-| **Objective** | Comprehensive parallel review of academic papers OR AI architecture research docs using role-stratified swarm agents. For LaTeX papers: statistical methodology, data accuracy, writing quality, figure/caption verification. For arch research docs: citation verification, complexity audit, literature gap finding, comparison validation, feasibility checking. |
-| **Outcome** | Operational — LaTeX paper: caught 4 CRITICAL figure/caption mismatches, 8 missing citations (ProjectScylla#1758). Arch research doc (TurboQuant 5.1): caught context length mislabel (68.7 GB labeled "32K"), head_dim error, TPOT overstatement, 3 missing literature citations. |
+| **Date** | 2026-04-28 |
+| **Objective** | Comprehensive parallel review of academic papers OR AI architecture research docs using role-stratified swarm agents. For LaTeX papers: statistical methodology, data accuracy, writing quality, figure/caption verification, Go/NoGo quantitative claim audits. For arch research docs: citation verification, complexity audit, literature gap finding, comparison validation, feasibility checking. |
+| **Outcome** | Operational — LaTeX paper v1: caught 4 CRITICAL figure/caption mismatches, 8 missing citations (ProjectScylla#1758). Arch research doc (TurboQuant 5.1): caught context length mislabel (68.7 GB labeled "32K"), head_dim error, TPOT overstatement, 3 missing literature citations. LaTeX paper v2 Go/NoGo audit: 5-agent swarm verified 100+ numeric claims with 0 data mismatches; caught false "monotonic relationship" claim; coordinator caught and overrode 1 agent false alarm on cost p-value. |
 | **Verification** | verified-local |
 | **History** | [changelog](./academic-paper-myrmidon-swarm-review.history) |
 
@@ -69,12 +69,21 @@ pixi run --environment docs bash build.sh
 
 1. **Advisement phase**: Run `/advise` to search ProjectMnemosyne for existing skills (`academic-paper-validation`, `academic-paper-review-quality-improvement`, `latex-paper-peer-review`, `pixi-tectonic-latex-build`). Read any relevant ones before starting.
 
-2. **Launch swarm coordinator (Opus)**: Coordinator subdivides the paper into domains and delegates to 5 specialist agents in parallel:
+2. **Launch swarm coordinator (Opus)**: Coordinator subdivides the paper into domains and delegates to 5 specialist agents in parallel. Two proven configurations:
+
+   **Configuration A — Initial review (discovery):**
    - **Opus professor**: Statistical methodology — test selection, effect size reporting, confidence intervals, inter-rater reliability
    - **Sonnet expert A**: Data accuracy — every number in the paper verified against source data/tables
    - **Sonnet expert B**: Writing quality — framing, hedging language, academic tone, effect size rhetoric
-   - **Haiku student A**: Line-by-line pass over paper lines 1–1090 (odd sections)
-   - **Haiku student B**: Line-by-line pass over paper lines 1091–2180 (even sections)
+   - **Haiku student A**: Line-by-line pass over paper lines 1–N/2 (odd sections)
+   - **Haiku student B**: Line-by-line pass over paper lines N/2+1–N (even sections)
+
+   **Configuration B — Go/NoGo audit (verification of corrected paper):**
+   - **Opus Agent A**: Abstract, Introduction, Conclusions, Further Work — interpretive judgment sections
+   - **Sonnet Agent B**: Inter-Rater Reliability, Cost Analysis — statistical claim verification
+   - **Sonnet Agent C**: Results section — cell-by-cell table verification against runs.csv/summary.json
+   - **Sonnet Agent D**: IRR methodology, Capability-Gap Hypothesis — subtle interpretive claims
+   - **Sonnet Agent E**: Cross-references (\ref targets) and bibliography (\cite keys) — structural integrity
 
 3. **Figure caption verification**: For every figure, read its `.vl.json` spec to determine what it actually shows. Do NOT assume the caption is correct. Cross-check:
    - Which variable is on x-axis, y-axis, color channel
@@ -101,6 +110,9 @@ pixi run --environment docs bash build.sh
 | Accept BCa bootstrap at n=9 | Reported BCa bootstrap confidence intervals for binary pass-rate data with n=9 per cell | BCa bootstrap is unreliable at very small sample sizes for binary data | Prefer Clopper-Pearson exact intervals for binary data at n<=15; report BCa as secondary |
 | Trust "32K ctx" label in arch research docs | Accepted KV cache figures labeled "32K ctx" without re-deriving from the formula | The 68.7 GB figure (A2 KV cache) was labeled "32K ctx" but computed with 262,144 tokens; the label was wrong | Always re-derive KV cache from scratch: `num_layers × 2 × n_KV_heads × head_dim × seq_len × 2`; check that the result matches the seq_len in the label |
 | Use attention-kernel speedup as TPOT speedup | Cited FlashInfer "4× speedup for 4-bit KV" as evidence of "4× TPOT improvement" | Attention kernel speedup is for the KV-attention portion only; TPOT also includes weight loading (unchanged); for a 32B model at 262K context, realistic TPOT gain is ~1.6×, not 4× | Compute realistic TPOT: `(weight_BW + KV_BW) / (weight_BW + KV_BW/4)` — weight_BW dominates at shorter contexts |
+| Agent searched wrong JSON file for cost statistics | Agent B (Sonnet) searched statistical_results.json for cost_usd p-value and raised a "CRITICAL unverifiable" alarm grading the section D | cost_usd statistics live in srh_tier_experiment.json (tier factor), not statistical_results.json (which only stores pass_rate, impl_rate, duration omnibus tests). The p=0.676 value was correct. | SRH statistics by factor live in srh_tier_experiment.json; omnibus KW results live in statistical_results.json. Coordinator MUST independently verify any agent "CRITICAL" finding before acting on it. |
+| Applied fixes to dirty working copy instead of main | Tried to apply paper fixes to the working copy which had uncommitted changes from prior sessions | Some issues found in the working copy did not exist on main; 2 of 4 fixes were inapplicable when targeting main | Always create a fresh branch from main for fixes. Check `git diff main` to confirm which issues actually exist on the target branch before applying. |
+| Agent claimed "monotonic" without checking ordering | Paper stated "monotonic relationship" between capability gap and judge agreement divergence | J2-J3 MAD (0.270) > J1-J3 MAD (0.210) despite smaller capability gap — violates monotonicity | When a paper claims "monotonic relationship," verify the actual data ordering. Monotonicity means strictly non-decreasing or non-increasing; a single inversion disproves the claim. |
 
 ## Results & Parameters
 
@@ -114,6 +126,38 @@ pixi run --environment docs bash build.sh
 | Expert B | Sonnet | Writing/framing | Rhetoric, hedging, academic tone, overstatement |
 | Student A | Haiku | Line verification | Lines 1–N/2 (look for typos, wrong numbers, broken refs) |
 | Student B | Haiku | Line verification | Lines N/2+1–N (look for typos, wrong numbers, broken refs) |
+
+### Go/NoGo Audit Swarm Role Mapping (Configuration B)
+
+| Role | Model | Domain | Focus |
+|------|-------|--------|-------|
+| Coordinator | Opus | Orchestration | Subdivide, delegate, aggregate, **independently verify any CRITICAL finding** |
+| Agent A | Opus | Abstract/Intro/Conclusions | Interpretive judgment, claim framing, hedging language |
+| Agent B | Sonnet | IRR/Cost Analysis | Statistical claim verification against JSON data files |
+| Agent C | Sonnet | Results tables | Cell-by-cell verification of every table cell against runs.csv |
+| Agent D | Sonnet | IRR methodology/Hypotheses | Subtle interpretive claims, monotonicity checks |
+| Agent E | Sonnet | Cross-references/Bibliography | Verify all \ref targets resolve, all \cite keys exist in .bib |
+
+### SRH vs KW Statistical Source Files
+
+A recurring source of confusion in paper audits with Scheirer-Ray-Hare and Kruskal-Wallis tests:
+
+| Statistic Type | Source File | Contents |
+|----------------|-------------|----------|
+| Omnibus KW (pass_rate, impl_rate, duration) | `statistical_results.json` | Kruskal-Wallis H-statistic and p-value per metric |
+| SRH by factor (tier, experiment, interaction) | `srh_tier_experiment.json` | SRH H-statistic and p-value for each factor, including cost_usd |
+| Per-metric SRH | `srh_tier_experiment.json` | All metrics including cost_usd that are NOT in statistical_results.json |
+
+**Key rule**: If an agent reports a statistical value as "unverifiable," the coordinator must check ALL JSON files before accepting the finding. cost_usd is only in srh_tier_experiment.json.
+
+### False Alarm Mitigation Protocol
+
+When any sub-agent raises a CRITICAL finding during a Go/NoGo audit:
+
+1. **Do not act immediately** — the coordinator must independently verify
+2. **Check the actual source file** — agents may search the wrong JSON/CSV
+3. **Cross-reference with the paper's methodology section** — which test was used? which file stores those results?
+4. **Only escalate after independent verification** — false alarms can block publication unnecessarily
 
 ### Statistical Citation Checklist
 
@@ -144,6 +188,10 @@ Add these to `references.bib` if the paper uses these methods:
 5. **Krippendorff's alpha confidence interval**: If alpha is near zero (e.g., -0.030 to 0.100), always report a bootstrap CI. Negative alpha = systematic disagreement (worse than chance), not just low reliability.
 
 6. **BCa bootstrap vs. Clopper-Pearson**: For binary outcome data (pass/fail) with n<=15, Clopper-Pearson exact interval is preferred. BCa bootstrap is secondary and should be labeled as such.
+
+7. **Monotonicity claims**: If the paper claims a "monotonic relationship" (e.g., capability gap vs. divergence), verify the actual data ordering. A single inversion disproves the claim. Example: J2-J3 MAD (0.270) > J1-J3 MAD (0.210) despite smaller capability gap — this violates monotonicity and requires rewording to "positive association" or "general trend."
+
+8. **Agent model effectiveness by section type**: Opus excels at interpretive judgment sections (Abstract, Conclusions, Further Work). Sonnet agents are excellent at systematic cell-by-cell table verification. The most subtle interpretive errors (e.g., false monotonicity claims) are best caught by a Sonnet agent specifically assigned to hypothesis sections.
 
 ### LaTeX Build Path (No System LaTeX)
 
@@ -210,3 +258,4 @@ Wave 2 — Lead reviewer synthesizes into: review_{id}_{name}.md
 |---------|---------|---------|
 | ProjectScylla | docs/arxiv/haiku/paper.tex — 2,180-line ablation study, 1,080 runs, 7 tiers, Claude Haiku 4.5 | PR HomericIntelligence/ProjectScylla#1758 |
 | ArchIdeas research | review of idea 5.1 TurboQuant (KV cache QAT) — 5 Sonnet specialists + synthesis | Apr 2026 — found context mislabel, head_dim error, TPOT overstatement, 3 missing papers |
+| ProjectScylla | docs/arxiv/haiku/paper.tex — 2,427-line Go/NoGo audit, 1,080 runs, 7 tiers, 3 experiments, 120 subtests. 1 Opus + 4 Sonnet agents verified 100+ claims, 0 data mismatches, caught 1 false monotonicity claim, coordinator overrode 1 false alarm. CONDITIONAL GO. | Apr 2026 — 5-agent parallel audit, ~5-9 min per agent |
