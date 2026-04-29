@@ -3,9 +3,9 @@ name: parallel-paper-correctness-audit
 description: Multi-agent parallel workflow for verifying every numerical claim in a research paper against underlying data files (CSV, JSON), fixing errors, ensuring internal consistency across inline tables, generated tables, figure data, and post-correction narrative audit
 category: documentation
 date: 2026-04-28
-version: 1.3.0
+version: 1.4.0
 user-invocable: false
-tags: [latex, paper, audit, verification, cross-reference, numerical-accuracy, parallel-agents, inline-tables, aggregation-mismatch, pandas, data-pipeline, post-correction, figure-caption, narrative-consistency, vl-json, idxmax, tiebreaker, myrmidon-swarm, pre-flight-recomputation, srh, kruskal-wallis]
+tags: [latex, paper, audit, verification, cross-reference, numerical-accuracy, parallel-agents, inline-tables, aggregation-mismatch, pandas, data-pipeline, post-correction, figure-caption, narrative-consistency, vl-json, idxmax, tiebreaker, myrmidon-swarm, pre-flight-recomputation, srh, kruskal-wallis, pivot-table, cross-experiment-averaging, spearman, krippendorff, inter-rater, silent-aggregation]
 ---
 # Parallel Paper Correctness Audit
 
@@ -15,7 +15,7 @@ tags: [latex, paper, audit, verification, cross-reference, numerical-accuracy, p
 |-------|-------|
 | **Date** | 2026-04-28 |
 | **Objective** | Verify every numerical claim in a LaTeX research paper against its underlying data files, fix errors, and ensure internal consistency using parallel agent teams |
-| **Outcome** | Found and fixed 12 issues across 3 audit passes + 7 issues in post-correction audit (v1.2.0) + 1 critical best-tier mislabeling bug via 5-agent swarm (v1.3.0): original passes found false universality claim, stale inline tables, aggregation mismatch, pandas NaN bug, over-scoring judge, variable criteria; post-correction pass found 1 CRITICAL figure/caption mismatch, 4 MODERATE, 2 MINOR; swarm audit found idxmax() tie-breaking bug producing wrong "Best Tier" labels |
+| **Outcome** | Found and fixed 12 issues across 3 audit passes + 7 issues in post-correction audit (v1.2.0) + 1 best-tier mislabeling bug via 5-agent swarm (v1.3.0) + 1 CRITICAL pivot_table cross-experiment averaging bug (v1.4.0): original passes found false universality claim, stale inline tables, aggregation mismatch, pandas NaN bug, over-scoring judge, variable criteria; post-correction pass found 1 CRITICAL figure/caption mismatch, 4 MODERATE, 2 MINOR; v1.3.0 swarm found idxmax() tie-breaking bug; v1.4.0 swarm found pivot_table silently averaging across experiments, deflating Spearman correlations from ~0.5 to ~0.1 and Krippendorff's alpha from 0.135 to 0.034 |
 | **Models Used** | Opus 4.6 (1M context), Sonnet (data-dense sections), Haiku (structural checks) |
 | **Scale** | ~2,400-line LaTeX paper, 3 experiments, 7 tiers, 1,080 runs, 120 subtests |
 
@@ -32,7 +32,7 @@ Use this workflow when:
 - The paper has undergone major narrative corrections (e.g., changing conclusions from "significant degradation" to "no significant effect") and you need to verify no residual old-narrative language remains
 - Figure captions may have been written for a prior version of the analysis and not updated after corrections
 
-**Trigger phrases**: "verify all numbers", "correctness audit", "cross-reference paper against data", "check inline tables", "second-pass audit", "third-pass audit", "grep for nan", "post-correction audit", "verify narrative consistency", "swarm audit", "myrmidon swarm", "best tier verification", "idxmax tiebreaker"
+**Trigger phrases**: "verify all numbers", "correctness audit", "cross-reference paper against data", "check inline tables", "second-pass audit", "third-pass audit", "grep for nan", "post-correction audit", "verify narrative consistency", "swarm audit", "myrmidon swarm", "best tier verification", "idxmax tiebreaker", "pivot_table averaging", "inter-rater recomputation", "cross-experiment averaging"
 
 **Distinguishing from related skills**:
 - `academic-paper-validation` covers the full paper lifecycle (tone, cross-refs, LaTeX, statistics, arXiv build). Use that for initial review.
@@ -357,6 +357,37 @@ An agent that independently recomputes statistics from runs.csv using standard K
 
 **Fix**: Verify paper values against their authoritative data file, not against independent recomputation with a different test. If recomputing, use the same statistical test the paper used.
 
+### Pattern 19: Silent Cross-Experiment Averaging in pivot_table
+
+When `pivot_table` index columns don't uniquely identify rows across a grouping dimension (like experiment), pandas silently averages instead of raising an error. This is particularly insidious because the output has the expected shape (correct number of tiers x subtests x runs) but wrong values.
+
+In the observed case, `detail.py:39-43` omitted `experiment` from the pivot index. Since all 3 experiments share the same subtest names, pivot_table silently averaged scores across experiments, producing N=360 cross-experiment-averaged items instead of ~1,050 per-run items. This deflated:
+- Spearman correlations from ~0.5 (moderate) to ~0.1 (near-zero)
+- Krippendorff's alpha from 0.135 to 0.034
+- The paper's entire narrative about "nearly uncorrelated evaluations" was driven by this bug
+
+**Detection**: When auditing inter-rater statistics, independently recompute correlations from raw per-run data (e.g., `judges.csv`) rather than trusting the output of the analysis pipeline. If your recomputed values differ dramatically (not just rounding), suspect a pivot/aggregation bug.
+
+**Prevention**: Always include ALL grouping dimensions in `pivot_table` index. If the data has experiment, tier, subtest, run_number -- include all four:
+
+```python
+# WRONG — omits experiment, silently averages across experiments
+pivot = df.pivot_table(
+    index=['tier', 'subtest', 'run_number'],
+    columns='judge',
+    values='score'
+)
+
+# CORRECT — includes all grouping dimensions
+pivot = df.pivot_table(
+    index=['experiment', 'tier', 'subtest', 'run_number'],
+    columns='judge',
+    values='score'
+)
+```
+
+**Recurrence note**: This bug survived 4 prior audit passes (v1.0.0 through v1.3.0) because prior passes verified paper values against tab03 output -- which was itself wrong. The bug was only caught when Agent D independently recomputed Spearman correlations from judges.csv and got dramatically different values.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -371,6 +402,8 @@ An agent that independently recomputes statistics from runs.csv using standard K
 | vl2png with default npx invocation | Used `npx vl2png` to render VL JSON specs | Missing explicit packages; default dimensions too small (207x369) | Requires `npx -p vega-lite -p vega-cli -p canvas vl2png` with explicit width/height in spec + scale factor of 3 |
 | Independent SRH recomputation was actually KW | Agent D ran scipy kruskal() to verify paper's SRH H-statistics | KW is a one-way test; SRH is a two-way ranked test. Produced H_tier=8.46 vs paper's H_tier=4.00, flagged as discrepancy | When auditing statistical claims, verify which test was used before recomputing. SRH and KW produce different H-values by design |
 | idxmax() tiebreaker not caught in 4 prior audit passes | Four previous audit passes examined "best tier" claims | Prior passes compared at full precision but did not check for ties on the primary metric where idxmax() picks alphabetically | After finding a "best X" mislabel once, add the tiebreaker pattern to ALL table generation code, not just the one instance found |
+| Verifying paper values against pipeline output only | 4 prior audit passes verified paper's inter-rater statistics against tab03 output | tab03 was itself wrong due to the pivot_table bug in detail.py -- verifying paper against pipeline confirmed the wrong values | At least one agent must recompute from raw data using independent code, not just verify paper against pipeline output |
+| `run_in_background` bash commands producing empty output | Used `run_in_background` for parallel agent tasks | Some background commands produced empty output files | Fall back to foreground execution when output reliability is critical |
 
 ## Results & Parameters
 
@@ -412,6 +445,13 @@ An agent that independently recomputes statistics from runs.csv using standard K
 |----------|-------|-------------|------------|-----------------|
 | Major | Best-tier mislabel (test-001 pass rate) | T1 best tier | T5 best tier (score 0.930 vs T1 0.908) | Wrong tier (6 tied at pass_rate=1.0, idxmax picked T1 alphabetically) |
 
+#### 5-Agent Swarm Audit with Pre-Flight Recomputation (v1.4.0)
+
+| Severity | Issue | Paper Claim | Data Value | Error Magnitude |
+|----------|-------|-------------|------------|-----------------|
+| Critical | pivot_table cross-experiment averaging (detail.py:39-43) | Spearman ~0.1, Krippendorff 0.034 | Spearman ~0.5, Krippendorff 0.135 | 5x deflation (entire inter-rater narrative wrong) |
+| Critical | 20+ paper references to wrong statistics | "nearly uncorrelated", "poor agreement" | "low-to-moderate rank agreement" | Narrative reversal across 20 sections |
+
 #### Post-Correction Audit (v1.2.0)
 
 | Severity | Issue | Paper Claim | Data Value | Error Magnitude |
@@ -426,7 +466,7 @@ An agent that independently recomputes statistics from runs.csv using standard K
 
 ### Verification Level
 
-verified-local (all fixes verified against data files; paper not recompiled to PDF in this session)
+verified-local (4,950 tests pass, ruff clean, mypy clean, corrected tab03 regenerated and verified)
 
 ## Key Takeaways
 
@@ -448,8 +488,12 @@ verified-local (all fixes verified against data files; paper not recompiled to P
 16. **Distinguish consensus vs per-judge levels in claims** — "Only one value exceeding X" may be true at one level but false at another. Always specify which level.
 17. **`idxmax()` is NEVER safe for "best X" selection without tiebreaker** — When multiple values tie, `idxmax()` returns alphabetically first. Always check for ties and use a meaningful secondary metric as tiebreaker. This is a recurring bug pattern (found twice in the same paper).
 18. **Pre-flight centralized recomputation prevents agent divergence** — Run a single pandas script BEFORE spawning parallel agents, embed the JSON output in each agent's prompt. Without this, each agent running independent pandas can use different aggregation logic and produce contradictory findings.
-19. **Verify which statistical test was used before flagging discrepancies** — SRH and KW produce different H-statistics by design (two-way ranked vs one-way). An agent that recomputes with the wrong test will produce false alarms.
-20. **5-agent swarm with model tiering works well for paper audits** — Opus for high-value sections (abstract, conclusions), Sonnet for data-dense sections (results, statistics), Haiku for structural checks (cross-references, appendices). All 5 agents completed within ~8 minutes.
+19. **pivot_table silently averages when index columns don't uniquely identify rows** — This produced systematically wrong inter-rater statistics that survived 4 prior audit passes. The bug was only caught by independently recomputing from raw data.
+20. **Verifying paper values against pipeline output is NOT sufficient** — If the pipeline itself has a bug, verifying paper against pipeline confirms the wrong values. At least one agent must recompute from raw data using independent code.
+21. **Section-level Go/NoGo grading accelerates review decisions** — Grading each of 20 sections independently (GO/CONDITIONAL/NO-GO) makes it immediately clear where issues are and whether the paper can proceed.
+22. **Agent D finding what 4 prior passes missed validates the swarm approach** — The statistics-focused agent with independent recomputation capability found a bug that 4 sequential audit sessions did not.
+23. **Verify which statistical test was used before flagging discrepancies** — SRH and KW produce different H-statistics by design (two-way ranked vs one-way). An agent that recomputes with the wrong test will produce false alarms.
+24. **5-agent swarm with model tiering works well for paper audits** — Opus for high-value sections (abstract, conclusions), Sonnet for data-dense sections (results, statistics), Haiku for structural checks (cross-references, appendices). All 5 agents completed within ~16 minutes.
 
 ## Related Skills
 
@@ -467,3 +511,4 @@ verified-local (all fixes verified against data files; paper not recompiled to P
 | ProjectScylla | Branch fix-validate-model-retry-config, third-pass audit of docs/arxiv/haiku/paper.tex | 2026-04-26, Opus 4.6 (1M context), found 4 additional issues (best-CoP mislabel, systematic is-not-None, tab03 nan, p-value precision) |
 | ProjectScylla | Branch fix-validate-model-retry-config, post-correction paragraph-level audit of docs/arxiv/haiku/paper.tex (2428 lines) | 2026-04-27, Opus 4.6 (1M context), 3 parallel Explore agents + 1 Plan agent, found 7 issues (1 CRITICAL figure/caption, 4 MODERATE, 2 MINOR), 72 VL JSON specs cross-checked |
 | ProjectScylla | Branch fix-validate-model-retry-config, 5-agent myrmidon swarm audit of docs/arxiv/haiku/paper.tex (2432 lines) | 2026-04-28, Opus/Sonnet/Haiku model tiering, 5 parallel agents with pre-flight recomputation, found idxmax() tie-breaking bug in table generation pipeline, fixed comparison.py tiebreaker logic |
+| ProjectScylla | Branch fix-validate-model-retry-config, 5-agent myrmidon swarm with pre-flight recomputation, paragraph-level data validation of docs/arxiv/haiku/paper.tex | 2026-04-28, Opus/Sonnet model tiering, 280+ claims verified across 20 sections, found CRITICAL pivot_table cross-experiment averaging bug in detail.py, fixed pivot index + regenerated tab03 + updated 20+ paper references |

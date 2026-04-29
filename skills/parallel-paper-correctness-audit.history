@@ -1,5 +1,43 @@
 # parallel-paper-correctness-audit — History
 
+## v1.4.0 (2026-04-28)
+
+**Updated by:** ProjectScylla 5-agent myrmidon swarm with pre-flight centralized pandas recomputation
+
+Added 1 new error pattern (19), 1 new failed attempt, and 4 new key takeaways (19-22) from
+paragraph-level data validation audit of docs/arxiv/haiku/paper.tex using a 5-agent swarm.
+280+ quantitative claims verified across 20 paper sections with section-level Go/NoGo grading.
+
+**CRITICAL bug found:**
+- `detail.py:39-43` pivot_table call omits `experiment` from the index. Since all 3 experiments share
+  the same subtest names, pivot_table silently averages scores across experiments, producing N=360
+  cross-experiment-averaged items instead of ~1,050 per-run items. This deflated Spearman correlations
+  from ~0.5 to ~0.1 and Krippendorff's alpha from 0.135 to 0.034. The paper's entire "nearly
+  uncorrelated evaluations" narrative was driven by this bug.
+
+**New error pattern documented (1):**
+19. Silent Cross-Experiment Averaging in pivot_table
+
+**New issues found (2):**
+- Critical: pivot_table cross-experiment averaging in detail.py (deflated all inter-rater statistics)
+- Critical: 20+ paper references to wrong statistics required narrative correction
+
+**New failed attempts (2):**
+- Verifying paper values against pipeline output only (pipeline itself was wrong)
+- `run_in_background` bash commands producing empty output files
+
+**New key takeaways (4):**
+19. pivot_table silently averages when index columns don't uniquely identify rows
+20. Verifying paper values against pipeline output is NOT sufficient
+21. Section-level Go/NoGo grading accelerates review decisions
+22. Agent D finding what 4 prior passes missed validates the swarm approach
+
+**Key insight:** This bug survived 4 prior audit passes (v1.0.0 through v1.3.0) because all prior
+passes verified paper values against tab03 output -- which was itself wrong. Agent D caught it by
+independently recomputing Spearman correlations from judges.csv.
+
+**Verification level:** verified-local (4,950 tests pass, ruff clean, mypy clean, corrected tab03 regenerated)
+
 ## v1.3.0 (2026-04-28)
 
 **Updated by:** ProjectScylla 5-agent myrmidon swarm audit session (Opus/Sonnet/Haiku model tiering)
