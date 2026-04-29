@@ -1,0 +1,39 @@
+# ci-cd-pipeline-maintenance-patterns — History
+
+## v2.1.0 (2026-04-28)
+
+**Changed by:** Myrmidons fix/ci-precommit-parity session
+**Verification:** unverified
+
+### What changed
+- Added 2 new Failed Attempts rows to the table:
+  - `pre-commit actionlint rev set to commit SHA` — rev must be a git tag, not a bare SHA
+  - `aquasecurity/trivy-action@0.30.0 in GitHub Actions` — broken action; replace with direct trivy binary install
+- Bumped version from 2.0.0 to 2.1.0
+- Updated date from 2026-03-29 to 2026-04-28
+- Added `history` frontmatter field pointing to this file
+- Added History row to Overview table
+
+### Why
+Discovered during Myrmidons fix/ci-precommit-parity session: actionlint pre-commit hook failed when
+rev was set to a commit SHA instead of a tag, and aquasecurity/trivy-action@0.30.0 was found broken
+at the "Set up job" stage. Both patterns are now documented to prevent recurrence.
+
+---
+
+## v2.0.0 (2026-03-29)
+
+**Initial consolidated version.**
+
+Merged from 11 source skills covering:
+- Ruff lint job additions to CI
+- Cross-repo rename PR conflict resolution
+- Mojo debug_assert JIT compilation overhead diagnosis
+- Org-wide required status checks enforcement
+- Flaky CI root cause triage
+- Justfile build validation gaps
+- Org-wide branch rename and CI fix
+- Pre-commit mypy/ruff/coverage fixes (cross-Python-version)
+- Promoting CI matrix subgroups for auto-discovery
+- Missing dependency in CI workflow
+- CI optimization (runner pinning, changed-files pre-commit, Dockerfile)
