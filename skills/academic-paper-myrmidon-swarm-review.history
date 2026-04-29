@@ -1,5 +1,44 @@
 # academic-paper-myrmidon-swarm-review — History
 
+## v1.2.0 (2026-04-28)
+
+**Changed by:** Haiku paper Go/NoGo audit — 5-agent parallel myrmidon swarm (1 Opus + 4 Sonnet)
+**Verification:** verified-local
+
+### What changed
+- Added Configuration B (Go/NoGo audit) swarm role mapping: Opus for interpretive sections, Sonnet for systematic verification
+- Added 3 new Failed Attempts: wrong JSON file for cost statistics (false alarm), dirty working copy fix application, unchecked monotonicity claim
+- Added "SRH vs KW Statistical Source Files" reference table to prevent recurring source confusion
+- Added "False Alarm Mitigation Protocol" — coordinator must independently verify any CRITICAL finding
+- Added 2 new Statistical Pitfalls: monotonicity claim verification (#7), agent model effectiveness by section type (#8)
+- Added third "Verified On" row for Go/NoGo audit (2,427 lines, 100+ claims, 0 mismatches)
+- Updated description to mention Go/NoGo audits
+- Added tags: false-alarm-risk, go-nogo-audit, srh-statistics
+- Updated date 2026-04-13 -> 2026-04-28
+- Bumped version 1.1.0 -> 1.2.0
+
+### Why
+The Go/NoGo audit session revealed that sub-agents searching for statistical values across multiple
+JSON files can look in the wrong file and raise critical false alarms. Agent B searched
+statistical_results.json for cost_usd p-value (which only exists in srh_tier_experiment.json) and
+graded the section D as "CRITICAL unverifiable." The coordinator's independent verification was
+essential to catch this false alarm. This is the single most important learning: the coordinator
+MUST independently verify any agent-reported CRITICAL finding.
+
+Additionally, the session proved that Configuration B (1 Opus + 4 Sonnet with section-based
+stratification) is effective for Go/NoGo audits where the paper has already been reviewed once
+and the goal is comprehensive quantitative claim verification rather than discovery.
+
+### Key metrics from the session
+- Paper: 2,427 lines LaTeX, 1,080 runs, 7 tiers, 3 experiments, 120 subtests
+- Agents: 1 Opus (Agent A), 4 Sonnet (Agents B-E), ~5-9 minutes per agent
+- Verification: 100+ numeric claims, 0 data mismatches, all H-statistics and p-values exact
+- Issues found: 1 false monotonicity claim (required fix), 3 minor suggestions (2 applicable to main)
+- False alarms: 1 (Agent B cost p-value — caught and overridden by coordinator)
+- Result: CONDITIONAL GO
+
+---
+
 ## v1.1.0 (2026-04-13)
 
 **Changed by:** TurboQuant (Idea 5.1) per-idea Myrmidon swarm review session
