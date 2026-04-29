@@ -1,11 +1,12 @@
 ---
 name: homeric-intelligence-ecosystem-installer
-description: "Add a portable ecosystem installer script (scripts/shell/install.sh) to ProjectHephaestus that installs all HomericIntelligence dependencies on any Tailnet host. Use when: (1) onboarding a new host to the HomericIntelligence mesh, (2) diagnosing missing dependencies (Go, nats-py, cmake, templ) on worker/control/apollo hosts, (3) extending the shared installer with new dependency sections, (4) troubleshooting nats-server install, Go version, or pip system-packages restrictions on Debian 12."
+description: "Add a portable ecosystem installer script (scripts/shell/install.sh) to ProjectHephaestus that installs all HomericIntelligence dependencies on any Tailnet host; deploy it remotely via parallel SSH fan-out. Use when: (1) onboarding a new host to the HomericIntelligence mesh, (2) diagnosing missing dependencies (Go, nats-py, cmake, templ) on worker/control/apollo hosts, (3) extending the shared installer with new dependency sections, (4) troubleshooting nats-server install, Go version, or pip system-packages restrictions on Debian 12, (5) running a parallel SSH fan-out across all Tailnet hosts to install the ecosystem."
 category: tooling
 date: 2026-04-28
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
+history: homeric-intelligence-ecosystem-installer.history
 tags:
   - ecosystem
   - installer
@@ -20,6 +21,9 @@ tags:
   - debian
   - mesh-bringup
   - dependencies
+  - ssh-fanout
+  - parallel-deploy
+  - tailnet
 ---
 
 # HomericIntelligence Ecosystem Installer
@@ -29,16 +33,18 @@ tags:
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-04-28 |
-| **Objective** | Create a portable ecosystem installer (`scripts/shell/install.sh`) in ProjectHephaestus that installs all HomericIntelligence dependencies on any Tailnet host — independent of Odysseus |
-| **Outcome** | 300+ line bash script with `--role worker\|control\|all` filtering, justfile recipes (`install-check`, `install ROLE`), PR #309 on HomericIntelligence/ProjectHephaestus |
-| **Verification** | verified-local — bash -n syntax check passed; script runs clean on epimetheus; CI pending |
+| **Objective** | Create a portable ecosystem installer (`scripts/shell/install.sh`) in ProjectHephaestus that installs all HomericIntelligence dependencies on any Tailnet host — and deploy it across all reachable Tailnet hosts via parallel SSH fan-out |
+| **Outcome** | Installer runs on 5 of 7 hosts; 2 hosts (aeolus, hephaestus) fully complete; 3 partial (artemis, hermes, apollo); 2 failed (athena, titan) due to missing git + sudo password requirement |
+| **Verification** | verified-local — executed on 5 of 7 Tailnet hosts; athena/titan blocked by missing git + sudo password |
+| **History** | [changelog](./homeric-intelligence-ecosystem-installer.history) |
 
 ## When to Use
 
-- Bringing up a new host (epimetheus, apollo, hephaestus, or any Tailnet node) for the HomericIntelligence mesh
+- Bringing up a new host (epimetheus, apollo, hephaestus, aeolus, or any Tailnet node) for the HomericIntelligence mesh
 - Diagnosing which dependencies are missing on a host before mesh bringup
 - Installing Go 1.23+, templ, nats-py, nats-server, cmake 3.20+, pixi, or gh CLI on Debian stable
 - Adding new dependency sections to the shared installer in ProjectHephaestus
+- Running a parallel SSH fan-out to install the ecosystem across all reachable Tailnet hosts simultaneously
 - Explaining why `pip3 install nats-py` fails on Debian 12 without `--break-system-packages`
 - Explaining why apt cmake on Debian stable is too old (3.18.x) and how to get 3.20+
 - Explaining why NATS server must be installed as a native binary (not podman) for cross-host connectivity
@@ -65,6 +71,46 @@ bash scripts/shell/install.sh --role worker --install
 bash scripts/shell/install.sh --role control --install
 bash scripts/shell/install.sh --role all     # check-only by default
 bash scripts/shell/install.sh --install      # install all deps
+```
+
+### Remote SSH Fan-Out Deployment (Parallel)
+
+Deploy the installer to all Tailnet hosts simultaneously:
+
+```bash
+# Step 1: Add host keys for all targets (do this FIRST — prevents host key verification failure)
+ssh-keyscan -H aeolus apollo artemis athena hephaestus hermes titan >> ~/.ssh/known_hosts
+
+# Step 2: Probe all hosts in parallel — check reachability, arch, Python, git presence
+for host in aeolus apollo artemis athena hephaestus hermes titan; do
+  echo -n "$host: "
+  ssh -o ConnectTimeout=6 -o BatchMode=yes "$host" \
+    'echo OK && uname -m && python3 --version 2>/dev/null && which git 2>/dev/null || echo no-git' \
+    2>&1 | tr '\n' ' '
+  echo
+done
+
+# Step 3: Check sudo passwordless status per host
+for host in aeolus apollo artemis athena hephaestus hermes titan; do
+  echo -n "$host sudo: "
+  ssh -o BatchMode=yes "$host" 'sudo -n true 2>&1 && echo NOPASSWD-OK || echo NEEDS-PASSWORD'
+done
+
+# Step 4: For hosts with git + NOPASSWD sudo — dispatch parallel installer agents
+# (Fan out 7 Haiku sub-agents simultaneously, one per host)
+# Each agent runs:
+ssh -o BatchMode=yes <host> '
+  mkdir -p ~/Projects
+  git clone https://github.com/HomericIntelligence/ProjectHephaestus.git ~/Projects/ProjectHephaestus || \
+    git -C ~/Projects/ProjectHephaestus pull
+  bash ~/Projects/ProjectHephaestus/scripts/shell/install.sh --install
+'
+
+# Step 5: For hosts with sudo password required — provide interactive command to user
+# Use ! prefix convention so user runs it with password prompt:
+ssh <host> 'sudo apt-get install -y git && mkdir -p ~/Projects && \
+  git clone https://github.com/HomericIntelligence/ProjectHephaestus.git ~/Projects/ProjectHephaestus && \
+  bash ~/Projects/ProjectHephaestus/scripts/shell/install.sh --install'
 ```
 
 ### Detailed Steps
@@ -173,8 +219,25 @@ Tailnet host.
 | Agamemnon/Nestor auto-reconnect | Restarted NATS server, expected binaries to reconnect automatically | C++ NATS clients do not auto-reconnect after server restart | After any NATS restart, kill and restart Agamemnon and Nestor too |
 | NATS monitoring on :4222 | `curl http://localhost:4222/varz` | Port 4222 is the NATS protocol port; monitoring HTTP is on :8222 | NATS monitoring endpoint: `http://localhost:8222/varz` |
 | C++ binaries in build/ root | `./control/ProjectAgamemnon/build/agamemnon` | Binaries are in `build/debug/`, not `build/` root | Correct path: `./control/ProjectAgamemnon/build/debug/agamemnon` |
+| SSH without ssh-keyscan first | Probed new host `aeolus` over SSH without adding host key | Host key verification failed — SSH refused connection | Run `ssh-keyscan -H <host> >> ~/.ssh/known_hosts` before any batch SSH operation to new hosts |
+| sudo apt-get in BatchMode SSH | `ssh -o BatchMode=yes host 'sudo apt-get install -y git'` | `sudo` requires a terminal for password prompt; silently fails with "a terminal is required" | Check `sudo -n true` first; if NEEDS-PASSWORD, escalate to user with an interactive command |
+| Cloning main before PR merged | Dispatched agents to `git clone` main branch of ProjectHephaestus before install.sh PR merged | install.sh missing from main; agents found no script to run | Either merge the PR first, or clone the feature branch: `git clone -b feat/... <url>` |
+| Python 3.7 on apollo | Dispatched installer agent to apollo (Python 3.7.3) | Python 3.10+ required; 3.7 is EOL and below minimum | Check `python3 --version` before dispatching; apollo needs `sudo apt-get install -y python3.10` first |
+| git not pre-installed on athena/titan | Tried to clone ProjectHephaestus on athena and titan | Neither host had git installed; clone fails silently in BatchMode | Always check `which git` during probe step; if missing + sudo needs password, give user a manual command |
 
 ## Results & Parameters
+
+### Tailnet Host Inventory (2026-04-28)
+
+| Host | IP | Python | git | sudo | Result |
+|------|----|--------|-----|------|--------|
+| aeolus | 100.65.107.65 | 3.12.3 | yes | NOPASSWD | DONE |
+| apollo | 100.68.51.128 | 3.7.3 | yes | NOPASSWD | PARTIAL — Python 3.7 too old |
+| artemis | 100.74.100.3 | 3.12.3 | yes | NEEDS-PASSWORD | PARTIAL — 16/30 ✓, Go/podman/cmake need sudo |
+| athena | 100.124.17.101 | 3.12.3 | no | NEEDS-PASSWORD | FAIL — no git, sudo needs password |
+| hephaestus | 100.122.194.113 | 3.12.3 | yes | NOPASSWD | DONE |
+| hermes | 100.73.61.56 | 3.12.3 | yes | NOPASSWD | PARTIAL — 24/28 ✓, Go/templ need sudo |
+| titan | 100.115.74.124 | 3.12.3 | no | NEEDS-PASSWORD | FAIL — no git, sudo needs password |
 
 ### Dependency Version Matrix
 
@@ -224,8 +287,36 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="/usr/local/go/bin:$PATH"
 ```
 
+### Pre-Flight Checklist for SSH Fan-Out
+
+Before dispatching installer agents to all Tailnet hosts:
+
+```bash
+# 1. Add host keys (prevents host key verification failures)
+ssh-keyscan -H aeolus apollo artemis athena hephaestus hermes titan >> ~/.ssh/known_hosts
+
+# 2. Probe reachability + Python version + git presence
+for host in aeolus apollo artemis athena hephaestus hermes titan; do
+  echo -n "$host: "
+  ssh -o ConnectTimeout=6 -o BatchMode=yes "$host" \
+    'echo OK && uname -m && python3 --version 2>/dev/null && which git 2>/dev/null || echo no-git' \
+    2>&1 | tr '\n' ' '
+  echo
+done
+
+# 3. Check sudo passwordless
+for host in aeolus apollo artemis athena hephaestus hermes titan; do
+  echo -n "$host sudo: "
+  ssh -o ConnectTimeout=6 -o BatchMode=yes "$host" \
+    'sudo -n true 2>&1 && echo NOPASSWD-OK || echo NEEDS-PASSWORD' 2>&1
+done
+```
+
+Only dispatch agents to hosts where: Python >= 3.10, git is installed, and sudo is NOPASSWD-OK (or no sudo required). For the rest, provide interactive commands to the user.
+
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectHephaestus | PR #309 (2026-04-28) | install.sh bash -n syntax check passed; script ran clean on epimetheus; CI pending |
+| Tailnet fan-out (2026-04-28) | 7-host parallel SSH deployment | 2 fully done (aeolus, hephaestus); 3 partial (artemis, hermes, apollo); 2 failed (athena, titan) |
