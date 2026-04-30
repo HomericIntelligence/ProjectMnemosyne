@@ -1,0 +1,92 @@
+# python-circular-import-symbol-extraction — History
+
+## v1.1.0 (2026-04-29)
+
+**Changed by:** ProjectHephaestus PR #308 — eager `__init__.py` re-exports triggering circular import
+**Verification:** verified-local (pre-commit passed, `pixi run pytest tests/unit -v` passed; CI validation pending)
+
+### What changed
+- Added new "When to Use" trigger: `__init__.py` eagerly re-exports CLI entry-point modules that import back into a still-loading package
+- Added new Step 0 to the Verified Workflow: "Check `__init__.py` for eager CLI re-exports" — remove heavy CLI modules from `__all__` and top-level imports
+- Extended Quick Reference with the `__init__.py` pattern summary
+- Added 2 new Failed Attempts rows (delete-only without moving shared symbol; lazy import workaround)
+- Updated description to mention `__init__.py` eager re-export as a distinct trigger
+- Added ProjectHephaestus PR #308 to the "Verified On" table
+- Added `eager-init-exports` tag
+- Added history frontmatter field (first amendment)
+
+### Why
+The existing skill captured the *symbol-extraction* fix pattern but not the *eager `__init__.py` re-export* root cause that commonly produces the same `ImportError`. PR #308 in ProjectHephaestus showed that `github/__init__.py` eagerly importing CLI modules (`fleet_sync`, `tidy`) caused `ImportError: cannot import name '_gh_call' from partially initialized module 'hephaestus.github'` — same error class but with a distinct trigger that warrants an explicit detection step.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: python-circular-import-symbol-extraction
+description: "Fix Python circular import errors caused by partially-initialized modules by extracting the shared symbol into a new lightweight module. Use when: (1) Python raises ImportError or partially-initialized module error on startup, (2) module A imports module B which (lazily) imports module A, (3) the symbol being imported lives in A but A is only partially initialized when B tries to use it, (4) making imports lazy inside functions does not fix the error. After moving symbols, all mock patches must target the new module where the name is looked up at call time."
+category: architecture
+date: 2026-04-23
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - python
+  - circular-imports
+  - symbol-extraction
+  - mock-patch
+  - testing
+---
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-23 |
+| **Objective** | Break Python circular import chain `runner.py → tier_action_builder → subtest_executor.__getattr__ → parallel_executor → rate_limit → runner` that caused `ImportError` on startup |
+| **Outcome** | Extracted `ShutdownInterruptedError`, `is_shutdown_requested`, `request_shutdown` into new `scylla/e2e/shutdown.py`; all importers redirected; `runner.py` re-exports symbols for backward compat; 4 test mock patches updated |
+| **Verification** | verified-ci (ProjectScylla PR #1850) |
+
+## When to Use
+
+- Python raises `ImportError: cannot import name 'X' from partially initialized module 'A'` on startup
+- `A → B → A` import cycle where A is only partially initialized when B tries to import from it
+- Making imports lazy (moving `from X import Y` inside function bodies) does **not** fix the error — root cause is that Y is referenced during module init
+- Multiple modules need a shared symbol and the symbol currently lives in a "heavy" module that creates the cycle
+- After moving a symbol, test mock patches stop intercepting calls (patches targeting the old location no longer work)
+
+## Verified Workflow
+
+### Quick Reference
+
+```text
+Circular import diagnosis:
+  1. Read the full ImportError traceback — map the import chain A → B → C → A
+  2. Identify the shared symbol: which name is being imported across the cycle boundary?
+  3. Ask: is this symbol lightweight (no heavy deps of its own)?
+     YES → extract to new module C
+     NO  → consider lazy import OR restructure dependencies
+
+Fix pattern (symbol extraction):
+  A imports C (not B)
+  B imports C (not A)
+  A re-exports from C for backward compat
+  All mock patches updated to target C
+
+Mock patch rule:
+  Patch the module where the name is LOOKED UP at call time — not where it was originally defined.
+  After moving symbol X from module A to module C:
+    WRONG: patch("pkg.A.X", ...)    <- A no longer has X at call time
+    RIGHT: patch("pkg.C.X", ...)    <- callers resolve X from C
+```
+
+### Step 1: Map the full circular import chain
+
+Read the full traceback carefully...
+[... full content truncated for brevity — see git history for complete v1.0.0 content ...]
+```
+
+---
+
+## v1.0.0 (2026-04-23)
+
+**Initial version.** Created from ProjectScylla PR #1850 fix for circular import in `scylla.e2e` package. Covered: symbol extraction to leaf module, backward-compat re-exports, and mock patch retargeting.
