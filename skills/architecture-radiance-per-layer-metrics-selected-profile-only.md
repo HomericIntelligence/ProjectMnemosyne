@@ -15,7 +15,7 @@ tags: [radiance, metrics, hardware-profile, operator-kernels, layer-aggregation,
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| :--- | :--- |
 | **Date** | 2026-04-27 |
 | **Objective** | Extend Radiance's analytical metrics so every graph/operator node receives an explicit Speed-of-Light (SoL) row, unsupported coverage is visible, hardware projection is dtype-aware, and serving estimates are recomputed from user-provided inference inputs. |
 | **Outcome** | Successful local implementation: complete modeled/unmodeled SoL coverage, dtype-dependent peak compute and storage bytes, nullable SoL rows with diagnostics, backend TTFT/TPOT/ITL estimates, frontend Radiance Perf recompute panel, and unit scale helpers. |
@@ -85,7 +85,7 @@ python -m ruff check \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| :--- | :--- | :--- | :--- |
 | Start from layer-only graph extraction | Reuse the existing layer graph as the sole source of analytical truth | Layer nodes are the right user-facing scope, but they do not preserve the exact operator semantics needed for FLOPs and memory formulas | Keep operator truth internally and aggregate onto layers afterward |
 | Treat hardware as a fixed built-in catalog | Initial plan referenced preselected accelerator profiles for every run | Product direction changed: hardware must be configurable per request, and computing all profiles adds noise and cost | Make `hardwareProfile` required on run start and project only the selected profile |
 | Hide unsupported operations behind heuristic fallbacks | Could have estimated unknown ops from adjacent layer shape or layer type | That would silently inflate modeled coverage and weaken trust in analytical output | Unsupported ops must stay explicit in coverage and produce no fabricated metric values |
@@ -218,5 +218,5 @@ Full Ruff was not used as a gate for this session because the repository had man
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| :--- | :--- | :--- |
 | Radiance | Dtype-aware complete SoL coverage, serving performance estimates, and Model Explorer recompute panel | Verified locally with backend suite, targeted frontend tests, frontend build, diff check, and targeted Ruff on touched backend files |
