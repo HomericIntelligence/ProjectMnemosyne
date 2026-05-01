@@ -14,7 +14,7 @@ tags: [pre-commit, stash, pixi, lock-file, ruff, conflict, commit]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| :--- | :--- |
 | **Date** | 2026-04-29 |
 | **Objective** | Fix commit failure caused by pre-commit stash mechanism conflicting with ruff auto-fix staged changes when a lock file is unstaged |
 | **Outcome** | Success — staging `pixi.lock` before committing resolved the conflict |
@@ -88,7 +88,7 @@ The root cause: any file that is (a) auto-generated/updated by the build system 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| :--- | :--- | :--- | :--- |
 | Commit with unstaged pixi.lock | `git add <other files>; git commit` with `pixi.lock` modified but not staged | pre-commit stashed working tree, ruff auto-fixed files and staged them, stash pop conflicted → ruff fixes rolled back, commit failed | Always stage `pixi.lock` (or any large auto-generated lock file) when it has changes before committing |
 | `git stash drop` to clean up conflict | Attempted to drop the bad stash state after failed commit | Safety Net hook blocked destructive git commands (`git stash drop`) | Use Edit tool to manually restore files instead of relying on `git stash drop` |
 
@@ -99,7 +99,7 @@ The root cause: any file that is (a) auto-generated/updated by the build system 
 Any file that is frequently auto-modified by tooling and thus commonly left unstaged:
 
 | File | Tool That Modifies It | Project Type |
-|------|-----------------------|--------------|
+| :--- | :--- | :--- |
 | `pixi.lock` | pixi install / pixi add | Python (pixi) |
 | `poetry.lock` | poetry install / poetry add | Python (poetry) |
 | `package-lock.json` | npm install | Node.js |
@@ -135,5 +135,5 @@ $ git commit -m "feat(utils): add new helper"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| :--- | :--- | :--- |
 | ProjectHephaestus | PR #308 — commit with unstaged pixi.lock + ruff auto-fix | Resolved by staging pixi.lock before committing |
