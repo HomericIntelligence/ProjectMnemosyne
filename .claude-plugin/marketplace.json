@@ -6,19 +6,19 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "1.0.0",
-  "total_plugins": 981,
+  "total_plugins": 1042,
   "categories": {
-    "architecture": 122,
-    "ci-cd": 198,
-    "debugging": 115,
-    "documentation": 105,
-    "evaluation": 67,
+    "architecture": 129,
+    "ci-cd": 222,
+    "debugging": 116,
+    "documentation": 108,
+    "evaluation": 69,
     "optimization": 19,
-    "testing": 144,
-    "tooling": 205,
+    "testing": 154,
+    "tooling": 219,
     "training": 6
   },
-  "last_updated": "2026-05-02T06:10:51Z",
+  "last_updated": "2026-05-01T14:13:45Z",
   "plugins": [
     {
       "name": "agent-coverage-check",
@@ -167,7 +167,7 @@
     {
       "name": "architecture-homeric-ecosystem-ground-truth",
       "description": "Map the actual implementation state of every HomericIntelligence component against documentation claims. Use when: (1) verifying what's real code vs aspirational docs, (2) planning deployment of the agent mesh, (3) assessing component readiness, (4) checking submodule pin freshness, (5) onboarding to the ecosystem.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/architecture-homeric-ecosystem-ground-truth.md",
       "category": "architecture",
       "tags": [
@@ -258,6 +258,14 @@
       ]
     },
     {
+      "name": "architecture-pre-discovery-worker-guard-pattern",
+      "description": "Use when: (1) building parallel workers (ThreadPoolExecutor) that process GitHub issues and need a lookup before doing real work, (2) some subset of items in the work queue may not be actionable (no PR, no matching resource), (3) worker functions receive a resource identifier they need to look up before doing real work, (4) tests for worker methods have stale lookup patches that need updating after adding pre-discovery",
+      "version": "1.0.0",
+      "source": "./skills/architecture-pre-discovery-worker-guard-pattern.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
       "name": "architecture-python-src-layout-migration",
       "description": "Pattern for migrating a Python project from flat layout (package/ at repo root) to src-layout (src/package/). Use when: (1) moving a Python package into src/ for ecosystem compliance, (2) updating all filesystem path references after a directory restructure, (3) fixing Path(__file__) navigations after adding a directory level.",
       "version": "3.0.0",
@@ -274,8 +282,8 @@
     },
     {
       "name": "architecture-radiance-per-layer-metrics-selected-profile-only",
-      "description": "Use when adding analytical model metrics to a tracing pipeline: (1) exact operator kernels should roll up into per-layer outputs, (2) hardware projection must use a user-selected inline profile rather than a fixed built-in set.",
-      "version": "1.0.0",
+      "description": "Use when adding analytical model metrics to Radiance: (1) every operator/graph node needs explicit SoL coverage, (2) dtype-aware hardware projection and serving estimates must recompute from user-provided inference inputs.",
+      "version": "1.1.0",
       "source": "./skills/architecture-radiance-per-layer-metrics-selected-profile-only.md",
       "category": "architecture",
       "tags": [
@@ -285,7 +293,9 @@
         "operator-kernels",
         "layer-aggregation",
         "sol",
-        "roofline"
+        "roofline",
+        "dtype",
+        "serving-estimates"
       ]
     },
     {
@@ -311,12 +321,73 @@
       "tags": []
     },
     {
+      "name": "atlas-dashboard-epic-mesh-review-wave",
+      "description": "Design and file a GitHub Epic + child issues for a new service, then run a multi-dimension Myrmidon review wave (arch/code/security/ux/ops/docs) against the plan. Use when: (1) starting a new HomericIntelligence service from scratch and need a fully filed epic with milestones and labels, (2) running a parallel 6-agent review wave against an architecture plan before implementation begins, (3) tracking and resolving critical findings from a multi-dimension agent review.",
+      "version": "1.0.0",
+      "source": "./skills/atlas-dashboard-epic-mesh-review-wave.md",
+      "category": "architecture",
+      "tags": [
+        "atlas",
+        "dashboard",
+        "github-epic",
+        "mesh-review",
+        "nats",
+        "htmx",
+        "go",
+        "templ",
+        "sse",
+        "tailscale",
+        "grafana",
+        "mnemosyne"
+      ]
+    },
+    {
+      "name": "atlas-mesh-bringup-first-run",
+      "description": "Patterns for the first native (non-compose) bringup of the HomericIntelligence mesh on epimetheus, including correct binary paths, Hermes module name, multi-host myrmidon fan-out results per host, and Agamemnon task completion API findings. Use when: (1) bringing up Agamemnon/Nestor/Hermes natively on a new host, (2) launching hello-myrmidon workers on Tailnet hosts, (3) running the Atlas epic implementation session, (4) troubleshooting Agamemnon review wave task completion.",
+      "version": "1.0.0",
+      "source": "./skills/atlas-mesh-bringup-first-run.md",
+      "category": "architecture",
+      "tags": [
+        "atlas",
+        "mesh",
+        "bringup",
+        "nats",
+        "agamemnon",
+        "nestor",
+        "hermes",
+        "myrmidon",
+        "tailscale",
+        "multi-host",
+        "review-wave",
+        "binary-paths"
+      ]
+    },
+    {
       "name": "audit-driven-dry-cli-cleanup",
       "description": "Fix DRY violations and remove legacy CLI after strict repo audit. Use when: (1) audit identifies duplicate functions across modules, (2) legacy CLI needs removal with dependent module preservation, (3) doc consistency hooks need updating after content changes.",
       "version": "1.0.0",
       "source": "./skills/audit-driven-dry-cli-cleanup.md",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "automation-6phase-issue-pr-pipeline",
+      "description": "6-phase automation pipeline for GitHub issue processing across HomericIntelligence repos. Use when: (1) building a multi-phase GitHub issue automation loop (plan, review-plan, implement, review-PR, address-review, drive-green), (2) implementing inline PR review comments via GitHub GraphQL addPullRequestReview mutation, (3) resuming a Claude session from a prior implementer's session_id, (4) preventing Claude workers from launching for issues without open PRs (pre-discovery no-PR guard), (5) implementing dry-run discipline where side-effectful calls are gated but Claude analysis still runs.",
+      "version": "1.0.0",
+      "source": "./skills/automation-6phase-issue-pr-pipeline.md",
+      "category": "architecture",
+      "tags": [
+        "automation",
+        "github",
+        "pipeline",
+        "pr-review",
+        "address-review",
+        "ci-driver",
+        "graphql",
+        "session-reuse",
+        "dry-run",
+        "multi-repo"
+      ]
     },
     {
       "name": "backward-compat-removal",
@@ -545,7 +616,7 @@
     {
       "name": "e2e-hermes-hub-remote-myrmidon",
       "description": "Hub+remote-worker topology for HomericIntelligence E2E: hermes runs full stack (NATS JetStream, Agamemnon, Nestor, Hermes bridge, observability), epimetheus runs only the hello-myrmidon Python worker over Tailscale. Use when: (1) validating cross-host myrmidon dispatch end-to-end, (2) setting up a hub+single-remote-worker topology distinct from the symmetric crosshost split, (3) troubleshooting remote myrmidon NATS connectivity, (4) excluding a compose service via overlay profiles.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/e2e-hermes-hub-remote-myrmidon.md",
       "category": "architecture",
       "tags": [
@@ -1025,7 +1096,7 @@
     {
       "name": "myrmidon-swarm-end-to-end-orchestration-full-workflow",
       "description": "Full end-to-end L0 commander pattern for complex myrmidon orchestration sessions. Use when: (1) task spans 3+ phases (cleanup + rebase + merge + CI + knowledge), (2) 10+ sub-tasks with mixed agent tiers required, (3) cross-repo work requiring /advise and /learn coordination, (4) feedback loops and decision gates are needed before committing to destructive operations, (5) auto-merge assumption cannot be made (CI may fail).",
-      "version": "1.2.0",
+      "version": "1.6.0",
       "source": "./skills/myrmidon-swarm-end-to-end-orchestration-full-workflow.md",
       "category": "architecture",
       "tags": [
@@ -1040,6 +1111,26 @@
         "feedback-loop",
         "end-to-end",
         "knowledge-capture"
+      ]
+    },
+    {
+      "name": "nats-publish-retry-backoff",
+      "description": "Exponential backoff with jitter for NATS JetStream publish retries in Python. Use when: (1) building a NATS publisher that must survive transient broker outages, (2) implementing retry logic that distinguishes retryable from non-retryable NATS errors, (3) configuring publish retry parameters via Pydantic Settings, (4) designing envelope schema versioning for NATS messages.",
+      "version": "1.0.0",
+      "source": "./skills/nats-publish-retry-backoff.md",
+      "category": "architecture",
+      "tags": [
+        "nats",
+        "nats-py",
+        "jetstream",
+        "retry",
+        "backoff",
+        "jitter",
+        "asyncio",
+        "python",
+        "publisher",
+        "resilience",
+        "schema-versioning"
       ]
     },
     {
@@ -1096,6 +1187,37 @@
       "source": "./skills/pydantic-type-consolidation.md",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "python-circular-import-symbol-extraction",
+      "description": "Fix Python circular import errors caused by partially-initialized modules. Use when: (1) Python raises ImportError or partially-initialized module error on startup, (2) module A imports module B which imports back into A while A is still loading, (3) __init__.py eagerly re-exports heavyweight CLI modules that import back into the same package, (4) making imports lazy inside functions does not fix the error. Fix: remove eager re-exports from __init__.py, extract the shared symbol to a true leaf module, redirect all importers to the leaf. After moving symbols, all mock patches must target the new module where the name is looked up at call time.",
+      "version": "1.1.0",
+      "source": "./skills/python-circular-import-symbol-extraction.md",
+      "category": "architecture",
+      "tags": [
+        "python",
+        "circular-imports",
+        "symbol-extraction",
+        "mock-patch",
+        "testing",
+        "eager-init-exports"
+      ]
+    },
+    {
+      "name": "python-mypy-explicit-reexport-pattern",
+      "description": "mypy with implicit_reexport=false requires `from X import Y as Y` (explicit re-export) for symbols re-exported from a module. Use when: (1) moving a symbol to a leaf module and re-exporting for backward compatibility, (2) mypy raises 'does not explicitly export attribute X', (3) maintaining mock.patch-compatible namespace bindings after a module refactor.",
+      "version": "1.0.0",
+      "source": "./skills/python-mypy-explicit-reexport-pattern.md",
+      "category": "architecture",
+      "tags": [
+        "mypy",
+        "python",
+        "reexport",
+        "implicit_reexport",
+        "mock",
+        "patch",
+        "backward-compatibility"
+      ]
     },
     {
       "name": "quality-complexity-check",
@@ -1310,7 +1432,7 @@
     {
       "name": "wave-based-bulk-issue-triage",
       "description": "Fix 5+ independent GitHub issues in parallel waves using Task isolation:worktree. No manual worktree setup \u2014 Claude Code auto-manages isolation. Also covers bulk gh issue create via myrmidon swarm (plain Agent calls, no worktrees needed). Includes pre-fix classification phase using parallel Explore agents.",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "source": "./skills/wave-based-bulk-issue-triage.md",
       "category": "architecture",
       "tags": []
@@ -1330,6 +1452,22 @@
       "source": "./skills/yaml-long-line-refactor.md",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "adr009-ci-pattern-update",
+      "description": "Update CI workflow files when splitting ADR-009 test files. Use when: (1) a Mojo test file split requires updating comprehensive-tests.yml because the CI group uses an explicit filename list, (2) verifying whether a CI group uses glob auto-discovery or explicit filenames before editing the workflow, (3) updating validate_test_coverage.py after a split, (4) splitting files in groups like Core Activations & Types, Core Tensors, or Core Utilities that use explicit filename patterns.",
+      "version": "1.1.0",
+      "source": "./skills/adr009-ci-pattern-update.md",
+      "category": "ci-cd",
+      "tags": [
+        "adr-009",
+        "mojo",
+        "ci",
+        "workflow",
+        "glob",
+        "explicit-pattern",
+        "validate-test-coverage"
+      ]
     },
     {
       "name": "badge-count-drift-prevention",
@@ -1389,16 +1527,16 @@
     },
     {
       "name": "batch-pr-ci-fix-workflow",
-      "description": "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern, (19) just v1.14+ import keyword reservation breaks inline Python heredocs causing all CI Code Quality fails, (20) gitleaks asset URL 404 because uname -s/-m produces wrong case/arch string for download URL, (21) GHA workflow uses manual pixi install instead of composite setup-pixi action causing pixi command not found, (22) bats PATH test for missing tool includes /bin or /usr/bin which pixi activation already polluted, (23) shell script calls companion script via SCRIPT_DIR but unit tests copy only the main script to a temp dir.",
-      "version": "2.9.0",
+      "description": "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern, (19) just v1.14+ import keyword reservation breaks inline Python heredocs causing all CI Code Quality fails, (20) gitleaks asset URL 404 because uname -s/-m produces wrong case/arch string for download URL, (21) GHA workflow uses manual pixi install instead of composite setup-pixi action causing pixi command not found, (22) bats PATH test for missing tool includes /bin or /usr/bin which pixi activation already polluted, (23) shell script calls companion script via SCRIPT_DIR but unit tests copy only the main script to a temp dir, (24) a repo has legacy ci.yml or security.yml alongside _required.yml each with their own secrets-scan job using gitleaks-action@v2 \u2014 must grep ALL workflow files per repo, (25) yamllint default config fails on workflow files with lines >80 chars \u2014 fix with -d relaxed flag, (26) mypy run on scripts/ tests/ traverses pytest internals causing Python 3.10 pattern matching errors \u2014 fix with --no-namespace-packages --python-version 3.11, (27) multi-line python3 -c in run: | blocks breaks YAML parsing when Python code starts at column 1, (28) PR mergeStateStatus lags after force-push \u2014 verify via workflow run head_sha directly, (29) cppcheck danglingLifetime error on a global raw pointer that is assigned but never read (dead scaffolding leftover in signal-handler test), (30) coverage job is advisory-only (extras.yml) but failing every PR because threshold is too high \u2014 needs threshold lowering and promotion to required (_required.yml), (29) markdownlint-cli2 CI job scans .claude/plugins/ directory which contains XML-like Claude prompt files using <system>, <task>, <section> tags \u2014 produces ~12000 false-positive MD013/MD033 violations; fix by adding .markdownlintignore to exclude .claude/, (30) prefix-dev/setup-pixi with cache: true fails with \"Failed to generate cache key\" when pixi.lock is absent, crashing the job before any conditional install step runs; fix by setting cache: false, (31) aquasecurity/trivy-action tag without v prefix (e.g. @0.36.0) causes action not found \u2014 always use @v0.36.0, (32) gitleaks/gitleaks-action@v2 on org repos requires paid license \u2014 replace with direct binary curl download, (33) prefix-dev/setup-pixi@v0.9.5 does not exist \u2014 correct latest is v0.9.4; rolling forward to nonexistent tag breaks pixi setup immediately, (34) markdownlint-cli2-action globs: \"**/*.md\" bypasses .markdownlintignore \u2014 explicit glob overrides the ignore file; remove globs: or add explicit exclusion, (35) git push --force-with-lease fails on dependabot branches because GitHub rebases them automatically between fetch and push making the lease stale \u2014 use git push --force, (36) yamllint braces rule: {name: \"unit\" path: \"tests/unit\"} must not have space before closing brace \u2014 depends on braces forbid-flow-sequences config, (37) pixi.lock must be regenerated after pyproject.toml changes from rebase \u2014 pixi lock regenerates it; pixi install --locked fails if SHA changed, (38) schema-validation check-jsonschema fails on boolean default: 'false' (string) \u2014 must be default: false (unquoted boolean), (39) some repos allow only squash merge \u2014 auto-merge --rebase will fail; always use --squash for Charybdis-style repos, (40) check-jsonschema downloads github-workflow schema from schemastore.org which returns HTTP 503 intermittently \u2014 use --builtin-schema vendor.github-workflows instead, (41) required check failing on main itself blocks all PRs from ever satisfying that check \u2014 auto-merge deadlock until main is fixed, (42) yamllint indent-sequences: true causes all existing YAML fixtures with sequences at parent-key indent level to fail \u2014 use indent-sequences: consistent instead",
+      "version": "2.13.0",
       "source": "./skills/batch-pr-ci-fix-workflow.md",
       "category": "ci-cd",
       "tags": []
     },
     {
       "name": "batch-pr-rebase-workflow",
-      "description": "Use when: (1) many PRs show DIRTY/CONFLICTING/BLOCKED merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files), (6) delegating mass rebase to a Myrmidon swarm of parallel agents, (7) orphaned branches need PRs created and CI fixed, (8) a PR expanded a pre-commit hook scope causing self-catch failures on pre-existing violations, (9) small batch (2-10) stale branches need rebase with subsume-vs-integrate conflict analysis, (10) GitHub issue backlog (20+ issues) needs triage, batched PRs, and stale worktree/branch cleanup, (11) 10+ branches all conflict on the same 3-5 core files and are being merged serially \u2014 take HEAD (origin/main) for all conflicted core files since main already contains the union of all prior merged features, (12) main is advancing rapidly via auto-merge during the rebase session and PRs keep going DIRTY again \u2014 repeat rebase in waves until stable, (13) stale worktrees from a previous session are listed in `git worktree list` as unlinked \u2014 check before removing, they may already be detached with no git state to clean up, (14) a rebase 'succeeds' but the branch tip equals main HEAD \u2014 the commit was silently dropped as empty, recover the original SHA and rebase again keeping the PR's file additions, (15) a rebased PR's tests fail because the PR's own implementation was incomplete \u2014 the commit message described a feature but the actual diff didn't include a critical file (e.g., server route for an endpoint the tests expect)",
-      "version": "2.5.0",
+      "description": "Use when: (1) many PRs show DIRTY/CONFLICTING/BLOCKED merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files), (6) delegating mass rebase to a Myrmidon swarm of parallel agents, (7) orphaned branches need PRs created and CI fixed, (8) a PR expanded a pre-commit hook scope causing self-catch failures on pre-existing violations, (9) small batch (2-10) stale branches need rebase with subsume-vs-integrate conflict analysis, (10) GitHub issue backlog (20+ issues) needs triage, batched PRs, and stale worktree/branch cleanup, (11) 10+ branches all conflict on the same 3-5 core files and are being merged serially \u2014 take HEAD (origin/main) for all conflicted core files since main already contains the union of all prior merged features, (12) main is advancing rapidly via auto-merge during the rebase session and PRs keep going DIRTY again \u2014 repeat rebase in waves until stable, (13) stale worktrees from a previous session are listed in `git worktree list` as unlinked \u2014 check before removing, they may already be detached with no git state to clean up, (14) a rebase 'succeeds' but the branch tip equals main HEAD \u2014 the commit was silently dropped as empty, recover the original SHA and rebase again keeping the PR's file additions, (15) a rebased PR's tests fail because the PR's own implementation was incomplete \u2014 the commit message described a feature but the actual diff didn't include a critical file (e.g., server route for an endpoint the tests expect), (16) stale worktrees from a prior session need auditing \u2014 always diff each one against origin/main before deciding to discard or push, (17) CI overall conclusion shows 'failure' but all required branch-protection checks passed \u2014 use per-job inspection not top-level conclusion, (18) a conanfile.py lacks return annotations on ConanFile subclass methods causing mypy failures, (19) a Dependabot PR and a fix PR both target the same file \u2014 apply the fix directly in the Dependabot branch to avoid a circular dependency chain, (20) branches live in .claude/worktrees/agent-<id>/ paths from sub-agent runs and need rebase using git -C <worktree-path>, (21) rebase in a .claude/worktree ends in detached HEAD \u2014 use git branch -f to reattach before pushing, (22) CHANGELOG.md conflicts during rebase \u2014 always take HEAD/main (consolidation PR handles it separately), (23) two PRs fired with `gh pr merge` concurrently \u2014 one fails with GraphQL 'Base branch was modified' error because the first merge advanced main between API calls, (24) two PRs both add add_executable/gtest_discover_tests blocks at the same CMakeLists.txt location \u2014 additive conflict, keep both sides, (25) a PR removes the %.native: Makefile pattern rule \u2014 CI breaks with make deps.native exit 2, (26) a new CI job (markdownlint or pixi-check) was added to main via a rollout PR and immediately blocks all open skill PRs even though those PRs didn't touch CI config \u2014 root cause is pre-existing violations in shared files (.claude/plugins/) or missing pixi.lock; fix the root cause on main first, then rebase all PRs, (27) two PRs independently amend the same skill file to the same version number (e.g., both v2.9.0) with different content \u2014 treat as additive conflict: read both diffs, produce one merged version with all new learnings, close the redundant PR as superseded, (28) a batch of PRs all show stale CI results (old failing run) after a fix lands on main \u2014 they need a rebase push to trigger a fresh CI run even if their branch content didn't change, (29) before rebasing any Mnemosyne skill PRs, first confirm main itself is green \u2014 rebasing onto a broken main cannot unblock PRs (run `gh run list --branch main --limit 3` to verify main CI is passing before starting any rebase session), (30) a dependabot branch requires `git push --force` rather than `--force-with-lease` \u2014 GitHub auto-rebases dependabot branches between fetch and push, making the lease ref stale, (31) the repo only allows squash merge \u2014 `gh pr merge --auto --rebase` fails with GraphQL error; always check merge methods with `gh api repos/OWNER/REPO --jq '.allow_squash_merge,.allow_rebase_merge,.allow_merge_commit'` before enabling auto-merge, (32) a PR touches `pixi.lock` and was rebased after `pyproject.toml` conflict resolution \u2014 the lock SHA changes after any pyproject.toml edit; always run `pixi lock` before pushing if `pixi.lock` exists in the repo, (33) all open Mnemosyne skill PRs are BLOCKED with markdownlint failures not caused by the PRs themselves \u2014 main's markdownlint workflow uses `globs: \"**/*.md\"` which overrides `.markdownlintignore`; fix the workflow on main first, then rebase all skill PRs",
+      "version": "2.11.0",
       "source": "./skills/batch-pr-rebase-workflow.md",
       "category": "ci-cd",
       "tags": [
@@ -1467,8 +1605,8 @@
     },
     {
       "name": "ci-cd-achaean-fleet-ci-cascade-patterns",
-      "description": "AchaeanFleet Docker infrastructure CI cascade failure sequence and fixes. Use when: (1) running a myrmidon swarm on HomericIntelligence/AchaeanFleet, (2) diagnosing cascading CI failures in a Docker image build pipeline, (3) fixing base-image ENTRYPOINT, OCI multi-arch build, or vendor download URL issues in AchaeanFleet vessels.",
-      "version": "1.0.0",
+      "description": "AchaeanFleet Docker infrastructure CI cascade failure sequence and fixes. Use when: (1) running a myrmidon swarm on HomericIntelligence/AchaeanFleet, (2) diagnosing cascading CI failures in a Docker image build pipeline, (3) fixing base-image ENTRYPOINT, OCI multi-arch build, vendor download URL, YAML column-0, caddy overlay, or branch-protection push issues in AchaeanFleet vessels.",
+      "version": "2.0.0",
       "source": "./skills/ci-cd-achaean-fleet-ci-cascade-patterns.md",
       "category": "ci-cd",
       "tags": [
@@ -1480,13 +1618,16 @@
         "opencode",
         "goose",
         "entrypoint",
-        "qemu"
+        "qemu",
+        "caddy",
+        "yaml",
+        "branch-protection"
       ]
     },
     {
       "name": "ci-cd-broken-main-parallel-fix-wave",
-      "description": "Triage and fix broken CI/main across multiple repos simultaneously using Agamemnon task registry + parallel myrmidon fix agents. Use when: (1) 3+ repos have broken main branch CI, (2) need to register tasks in Agamemnon before dispatching agents, (3) CI failures are diverse (conan profile, dependabot config, GitHub Actions auth, BATS helper, Python imports).",
-      "version": "1.0.0",
+      "description": "Triage and fix broken CI/main across multiple repos simultaneously using Agamemnon task registry + parallel myrmidon fix agents. Use when: (1) 3+ repos have broken main branch CI, (2) need to register tasks in Agamemnon before dispatching agents, (3) CI failures are diverse (conan profile, dependabot config, GitHub Actions auth, BATS helper, Python imports, clang-format violations).",
+      "version": "1.1.0",
       "source": "./skills/ci-cd-broken-main-parallel-fix-wave.md",
       "category": "ci-cd",
       "tags": [
@@ -1499,7 +1640,9 @@
         "dependabot",
         "bats",
         "github-actions",
-        "fix-wave"
+        "fix-wave",
+        "clang-format",
+        "monitor"
       ]
     },
     {
@@ -1538,8 +1681,8 @@
     },
     {
       "name": "ci-cd-dependabot-conflict-resolution-pattern",
-      "description": "Use when: (1) Dependabot PRs conflict after other Dependabot PRs merge to main, (2) gh pr merge fails with squash or merge-commit (repo enforces rebase-only), (3) multiple Dependabot dependency bumps are open and landing sequentially causes stale PRs, (4) a GitHub issue audit turns up items that may already be resolved, (5) test file ruff E402/E401 import order failures after using conftest.py for sys.path, (6) closing a stale aggregate-audit issue after its sub-issues are resolved.",
-      "version": "1.0.0",
+      "description": "Use when: (1) Dependabot PRs conflict after other Dependabot PRs merge to main, (2) gh pr merge fails with squash or merge-commit (repo enforces rebase-only), (3) multiple Dependabot dependency bumps are open and landing sequentially causes stale PRs, (4) a GitHub issue audit turns up items that may already be resolved, (5) test file ruff E402/E401 import order failures after using conftest.py for sys.path, (6) closing a stale aggregate-audit issue after its sub-issues are resolved, (7) a feature branch added a minimal dependabot.yml (e.g., just github-actions) but main now has a comprehensive config that is a strict superset \u2014 add/add conflict during rebase.",
+      "version": "1.1.0",
       "source": "./skills/ci-cd-dependabot-conflict-resolution-pattern.md",
       "category": "ci-cd",
       "tags": [
@@ -1552,7 +1695,9 @@
         "ruff",
         "E402",
         "conftest",
-        "pytest"
+        "pytest",
+        "add-add-conflict",
+        "subset-skip"
       ]
     },
     {
@@ -1587,6 +1732,54 @@
       ]
     },
     {
+      "name": "ci-cd-github-actions-bot-protected-branch-push",
+      "description": "Use when: (1) a GitHub Actions workflow regenerates an artifact (marketplace.json, lockfile, generated code) and tries to push it directly to a protected branch, (2) you see GH006 Protected Branch Update Failed in CI logs, (3) an auto-commit workflow is failing because branch protection requires PRs and status checks, (4) you need loop-safe auto-update CI with no manual intervention",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-github-actions-bot-protected-branch-push.md",
+      "category": "ci-cd",
+      "tags": [
+        "github-actions",
+        "protected-branch",
+        "GH006",
+        "auto-commit",
+        "create-pull-request",
+        "loop-prevention",
+        "marketplace",
+        "auto-merge"
+      ]
+    },
+    {
+      "name": "ci-cd-github-actions-sha-pinning",
+      "description": "Use when: (1) pinning GitHub Actions to immutable commit SHAs for supply-chain security, (2) resolving annotated vs lightweight tags to find the underlying commit SHA, (3) auditing a workflow file for mutable @vN or @vN.N.N tags that should be SHA-pinned, (4) verifying that a newly added or updated action is using the correct commit SHA",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-github-actions-sha-pinning.md",
+      "category": "ci-cd",
+      "tags": [
+        "github-actions",
+        "sha-pinning",
+        "supply-chain",
+        "security",
+        "annotated-tags"
+      ]
+    },
+    {
+      "name": "ci-cd-github-actions-slash-job-id-parse-failure",
+      "description": "GitHub Actions silently rejects an entire workflow file when any job ID (the YAML key) contains a forward slash. Zero jobs run, no check contexts are reported, and branch rulesets requiring those checks see them as permanently 'never run' \u2192 BLOCKED. Use when: (1) a workflow appears syntactically valid but shows 0 jobs in the Actions UI, (2) PRs are BLOCKED with mergeStateStatus=BLOCKED and all statusCheckRollup entries for the affected workflow are absent, (3) you see job IDs containing '/' in workflow YAML.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-github-actions-slash-job-id-parse-failure.md",
+      "category": "ci-cd",
+      "tags": [
+        "github-actions",
+        "job-id",
+        "yaml",
+        "parse-failure",
+        "silent-failure",
+        "branch-protection",
+        "ruleset",
+        "check-context"
+      ]
+    },
+    {
       "name": "ci-cd-github-api-rate-limit-ci-monitoring",
       "description": "Avoid and recover from GitHub API rate limit exhaustion (5000/hr) during intensive CI diagnostic loops using gh CLI. Use when: (1) running batch PR investigation across many open PRs, (2) fetching CI job logs in a loop, (3) hitting HTTP 403 rate limit errors from gh CLI during CI monitoring sessions.",
       "version": "1.0.0",
@@ -1616,6 +1809,14 @@
       ]
     },
     {
+      "name": "ci-cd-opencode-asset-arch-naming",
+      "description": "Documents that opencode (sst/opencode) release assets use x64 (not amd64) in their filenames, requiring a TARGETARCH\u2192arch mapping case statement in Dockerfiles. Use when: building a vessel Dockerfile for opencode or downloading opencode release assets in CI, and getting 404 errors for asset downloads.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-opencode-asset-arch-naming.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
       "name": "ci-cd-packaged-frontend-functional-asset-validation",
       "description": "Validate packaged frontend outputs functionally instead of diffing generated bundle names. Use when: (1) CI checks packaged web assets after a rebuild, (2) hashed bundle filenames make git diff gates brittle.",
       "version": "1.0.0",
@@ -1632,10 +1833,46 @@
     {
       "name": "ci-cd-pipeline-maintenance-patterns",
       "description": "Use when: (1) adding or auditing lint/format enforcement jobs to GitHub Actions workflows, (2) cross-repo conflict resolution on rename/refactor PRs, (3) CI-only crashes caused by debug_assert or JIT compilation overhead in Mojo, (4) enforcing required status checks across a GitHub organization, (5) triaging flaky CI failures to separate infrastructure issues from deterministic bugs, (6) fixing justfile build recipes that silently skip library validation, (7) standardizing default branches and fixing broken CI across multiple repos, (8) fixing pre-commit failures from mypy/ruff/coverage issues on cross-Python-version packages, (9) promoting monolithic CI matrix groups to per-subdirectory auto-discovery entries, (10) fixing CI workflows with missing pip dependency installs, (11) optimizing CI wall-clock time via runner pinning, changed-files-only pre-commit, and Dockerfile pixi copy",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "source": "./skills/ci-cd-pipeline-maintenance-patterns.md",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "ci-cd-pixi-lock-stale-multi-pr-triage",
+      "description": "Use when: (1) multiple PR branches failing CI with 'lock-file not up-to-date' or pixi.lock stale errors, (2) CI runs show failures but on an old commit SHA (not current HEAD) \u2014 pixi.lock was pushed but CI ran on old commit, (3) need to re-trigger CI on a PR branch without making a real code change (gh run rerun --failed is the only reliable method), (4) pixi platform added (e.g. linux-aarch64) but a dependency (e.g. bats-core) isn't available for that platform in conda-forge, (5) Security Scan failing with 'missing gitleaks license' (infrastructure issue \u2014 GITLEAKS_LICENSE secret missing from org, skip these), (6) LRU-cached FastAPI settings mutation in tests causes wrong HTTP status codes, (7) Protocol method missing from async client implementation.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-pixi-lock-stale-multi-pr-triage.md",
+      "category": "ci-cd",
+      "tags": [
+        "pixi",
+        "pixi.lock",
+        "stale-lock",
+        "ci-triage",
+        "multi-pr",
+        "gh-run-rerun",
+        "sha-mismatch",
+        "bats-core",
+        "gitleaks",
+        "lru-cache",
+        "protocol",
+        "platform-dependency"
+      ]
+    },
+    {
+      "name": "ci-cd-ruleset-bootstrap-deadlock",
+      "description": "Detect and resolve a CI ruleset chicken-and-egg deadlock where a PR introducing a new workflow file is permanently blocked because the ruleset requires check names that only exist in the workflow being added. Use when: (1) a PR adding a new CI workflow shows mergeStateStatus=BLOCKED with zero failing checks, (2) re-triggering CI produces no new runs, (3) auto-merge is armed but never fires despite all existing checks passing.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-ruleset-bootstrap-deadlock.md",
+      "category": "ci-cd",
+      "tags": [
+        "github",
+        "rulesets",
+        "branch-protection",
+        "ci-bootstrap",
+        "deadlock",
+        "github-actions"
+      ]
     },
     {
       "name": "ci-complexity-extract-method-fix",
@@ -1698,8 +1935,94 @@
       ]
     },
     {
+      "name": "ci-doctor-script-hook-check-ci-guard",
+      "description": "Shell doctor/health-check scripts that verify local developer setup (git hooks, SSH keys, local config files) must guard against CI environments where that infrastructure doesn't exist. Use when: (1) a doctor.sh CI job fails because .git/hooks/ doesn't exist on GitHub Actions runners, (2) any check_*() function in a health-check script validates developer-local resources that are absent in CI, (3) writing new doctor script checks that should only run locally, (4) debugging CI failures where a health/preflight script exits 1 due to missing local setup artifacts.",
+      "version": "1.0.0",
+      "source": "./skills/ci-doctor-script-hook-check-ci-guard.md",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "doctor",
+        "shell",
+        "git-hooks",
+        "github-actions",
+        "health-check",
+        "ci-guard",
+        "environment-detection"
+      ]
+    },
+    {
+      "name": "ci-github-actions-pull-request-trigger",
+      "description": "GitHub Actions pull_request workflows not triggering after push. Use when: (1) commits pushed to a PR branch don't trigger on: pull_request workflows, (2) path-filtered CI is silently skipped after normal commits, (3) required status checks are missing after push and PR can't merge, (4) workflow_dispatch passed but the required check still shows missing.",
+      "version": "1.0.0",
+      "source": "./skills/ci-github-actions-pull-request-trigger.md",
+      "category": "ci-cd",
+      "tags": [
+        "github-actions",
+        "pull_request",
+        "force-push",
+        "rebase",
+        "status-checks",
+        "path-filter",
+        "branch-protection"
+      ]
+    },
+    {
+      "name": "ci-github-actions-secrets-context-unavailable-job-if",
+      "description": "Fix actionlint error: context 'secrets' is not allowed here \u2014 available contexts are github, inputs, needs, vars. Use when: (1) job-level if: condition references secrets.SOME_SECRET, (2) you want to skip a job when a secret is absent, (3) actionlint rejects the workflow with 'context secrets is not allowed here'.",
+      "version": "1.0.0",
+      "source": "./skills/ci-github-actions-secrets-context-unavailable-job-if.md",
+      "category": "ci-cd",
+      "tags": [
+        "github-actions",
+        "secrets",
+        "vars",
+        "actionlint",
+        "job-if",
+        "context"
+      ]
+    },
+    {
+      "name": "ci-github-ruleset-matrix-status-context",
+      "description": "GitHub matrix jobs emit expanded context names (job-id (matrix-value)) that must be registered verbatim in branch rulesets. Use when: (1) a required status check shows 'Expected \u2014 Waiting for status to be reported' forever even after all matrix jobs pass, (2) a ruleset uses the bare job ID for a matrix job and the PR merge box is permanently blocked, (3) debugging why classic branch protection returns 404 but the PR is still blocked.",
+      "version": "1.0.0",
+      "source": "./skills/ci-github-ruleset-matrix-status-context.md",
+      "category": "ci-cd",
+      "tags": [
+        "github",
+        "rulesets",
+        "matrix",
+        "status-checks",
+        "branch-protection",
+        "github-actions"
+      ]
+    },
+    {
+      "name": "ci-gitleaks-sarif-false-positive-fix",
+      "description": "Fix gitleaks SARIF false-positive detection causing security-report required check to always fail, blocking PR auto-merges. Use when: (1) security-report required check fails on every run even with no real secrets, (2) gitleaks SARIF check uses grep with \\s instead of jq, (3) swarm session is blocked because security-report is a required status check that never passes.",
+      "version": "1.0.0",
+      "source": "./skills/ci-gitleaks-sarif-false-positive-fix.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "ci-gitleaks-toml-allowlist-slice-vs-map",
+      "description": "Fix gitleaks config crash: 'Rules[0].AllowList expected a map, got slice'. Use when: (1) gitleaks fails with this error on startup, (2) .gitleaks.toml uses [[rules.allowlist]] (TOML array-of-tables syntax), (3) upgrading gitleaks from v7 to v8 and config suddenly breaks.",
+      "version": "1.0.0",
+      "source": "./skills/ci-gitleaks-toml-allowlist-slice-vs-map.md",
+      "category": "ci-cd",
+      "tags": [
+        "gitleaks",
+        "toml",
+        "allowlist",
+        "config",
+        "secrets-scan",
+        "pre-commit"
+      ]
+    },
+    {
       "name": "ci-glob-pattern-conversion",
-      "description": "Use when: (1) CI test groups have explicit filename lists that miss new split test files or silently exclude new test files, (2) a catch-all test_*.mojo pattern is causing timeouts by matching unintended files in a directory with multiple test groups, (3) needing to verify whether a CI pattern is already a wildcard (check before editing), (4) determining if CI needs updating after adding or splitting Mojo test files.",
+      "description": "Use when: (1) CI test groups have explicit filename lists that miss new ADR-009 split files or silently exclude new test files, (2) a catch-all test_*.mojo pattern is causing timeouts by matching unintended files in a directory with multiple test groups, (3) needing to verify whether a CI pattern is already a wildcard (check before editing), (4) determining if CI needs updating after adding or splitting Mojo test files.",
       "version": "1.0.0",
       "source": "./skills/ci-glob-pattern-conversion.md",
       "category": "ci-cd",
@@ -1707,6 +2030,7 @@
         "ci-cd",
         "github-actions",
         "glob-patterns",
+        "adr-009",
         "test-splitting",
         "comprehensive-tests",
         "wildcard",
@@ -1751,6 +2075,7 @@
         "test-matrix",
         "auto-discovery",
         "wildcard-patterns",
+        "adr-009",
         "test-splitting",
         "glob-patterns",
         "consolidation",
@@ -1790,6 +2115,23 @@
       ]
     },
     {
+      "name": "ci-pixi-lock-check-setup-order",
+      "description": "Fix GitHub Actions workflows that run pixi commands before pixi is installed, causing 'pixi: command not found'. Use when: (1) a workflow fails with 'pixi: command not found' on any pixi command, (2) adding a new workflow that uses pixi but forgot to install it first, (3) a lock-check or dependency-verification workflow runs pixi install --locked without a prior pixi setup step.",
+      "version": "1.0.0",
+      "source": "./skills/ci-pixi-lock-check-setup-order.md",
+      "category": "ci-cd",
+      "tags": [
+        "pixi",
+        "ci",
+        "github-actions",
+        "setup-order",
+        "lock-check",
+        "command-not-found",
+        "setup-pixi",
+        "composite-action"
+      ]
+    },
+    {
       "name": "ci-pixi-workspace-version-dedup",
       "description": "Remove duplicated project version from pixi.toml [workspace] and add drift detection to an existing version-consistency pre-commit script. Use when: (1) pixi.toml has a version field that duplicates pyproject.toml, (2) extending an existing check script to cover additional config files, (3) preventing accidental re-introduction of removed duplicate fields.",
       "version": "1.0.0",
@@ -1802,6 +2144,54 @@
         "pre-commit",
         "drift-detection",
         "pyproject"
+      ]
+    },
+    {
+      "name": "ci-precommit-lock-file-stash-conflict",
+      "description": "Use when: (1) a commit fails because pre-commit stash pop conflicts with ruff auto-fix staged changes, (2) pixi.lock or another lock file is modified but unstaged and pre-commit hooks auto-fix and stage files causing stash pop conflicts, (3) the repository is left in a dirty state after a failed commit with unstaged auto-generated files.",
+      "version": "1.0.0",
+      "source": "./skills/ci-precommit-lock-file-stash-conflict.md",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "stash",
+        "pixi",
+        "lock-file",
+        "ruff",
+        "conflict",
+        "commit"
+      ]
+    },
+    {
+      "name": "ci-precommit-parity-single-source-of-truth",
+      "description": "Architecture pattern: make .pre-commit-config.yaml the single source of truth for all linting; CI runs `pre-commit run --all-files` instead of duplicating lint steps. Use when: (1) CI and pre-commit run different linters or different file scopes causing silent divergence, (2) a new linter exists in CI but not locally (or vice versa), (3) shellcheck in CI covers .sh but not .bats while pre-commit covers both, (4) yamllint in CI covers agents/ but pre-commit covers all .yaml, (5) consolidating N separate CI lint jobs into one pre-commit parity job.",
+      "version": "1.0.0",
+      "source": "./skills/ci-precommit-parity-single-source-of-truth.md",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "shellcheck",
+        "yamllint",
+        "actionlint",
+        "gitleaks",
+        "parity",
+        "lint",
+        "ci-cd"
+      ]
+    },
+    {
+      "name": "ci-precommit-ruff-version-mismatch",
+      "description": "Diagnose and resolve CI failures where pre-commit ruff-format disagrees with pixi ruff. Use when: (1) pixi run ruff format --check passes locally but pre-commit ruff-format fails in CI with 'file would be reformatted', (2) ruff formatting results differ between pre-commit hooks and direct pixi invocations at the same version string.",
+      "version": "1.0.0",
+      "source": "./skills/ci-precommit-ruff-version-mismatch.md",
+      "category": "ci-cd",
+      "tags": [
+        "ruff",
+        "pre-commit",
+        "formatting",
+        "pixi",
+        "ci",
+        "version-isolation"
       ]
     },
     {
@@ -1845,6 +2235,7 @@
         "github-actions",
         "workflow-files",
         "consolidation",
+        "adr-009",
         "yaml"
       ]
     },
@@ -1874,8 +2265,8 @@
     },
     {
       "name": "close-issue-via-minimal-pr",
-      "description": "Close a GitHub issue when all code already exists on main but the issue is still open. Use when: (1) a verification/CI-check issue has no outstanding code changes, (2) the feature branch has zero diff from main, (3) you need a minimal commit to create a PR that triggers CI and closes the issue.",
-      "version": "1.0.0",
+      "description": "Close a GitHub issue when all code already exists on main but the issue is still open. Use when: (1) a verification/CI-check issue has no outstanding code changes, (2) the feature branch has zero diff from main, (3) you need a minimal commit to create a PR that triggers CI and closes the issue, (4) a merged PR did not auto-close the issue because the commit keyword was wrong.",
+      "version": "1.1.0",
       "source": "./skills/close-issue-via-minimal-pr.md",
       "category": "ci-cd",
       "tags": []
@@ -2056,6 +2447,24 @@
       ]
     },
     {
+      "name": "cpp-pr-stale-duplicate-commit-detection",
+      "description": "Detect and remove stale duplicate fix commits from a PR branch when the fix already landed on main via another PR. Use when: (1) all sanitizer CI jobs fail identically on a PR that looked correct, (2) a PR has extra commits not part of its stated payload, (3) a race/UB fix was authored in parallel with another branch.",
+      "version": "1.0.0",
+      "source": "./skills/cpp-pr-stale-duplicate-commit-detection.md",
+      "category": "ci-cd",
+      "tags": [
+        "cpp",
+        "pr",
+        "stale-commit",
+        "duplicate-fix",
+        "cherry-pick",
+        "force-with-lease",
+        "tsan",
+        "dangling-reference",
+        "return-by-value"
+      ]
+    },
+    {
       "name": "cross-repo-dep-pypi-publish-fix",
       "description": "Fix CI failures in consumer repos caused by a shared dependency not yet published to PyPI. Use when: (1) pixi install --locked fails because a new version of an internal package isn't on PyPI yet, (2) PRs import from a dependency at a path dep or unpublished version, (3) need to publish a shared library, then fix lock files and import paths across multiple dependent PRs, (4) concurrent PRs on a consumer repo all fail because the shared dep version bump wasn't released.",
       "version": "1.0.0",
@@ -2197,11 +2606,21 @@
     },
     {
       "name": "docker-to-podman-migration",
-      "description": "Migrate CI/CD from Docker to Podman for container builds, test execution, and GHCR publishing. Use when: replacing Docker with Podman in GitHub Actions, eliminating NATIVE=1 workarounds, rewriting GHCR publish workflows.",
-      "version": "1.0.0",
+      "description": "Migrate a project from Docker to Podman, removing NATIVE=1 escape hatches. Use when: (1) replacing Docker with Podman in GitHub Actions or Makefile/justfile ecosystems, (2) eliminating NATIVE=1 workarounds that bypass container-based builds, (3) rewriting GHCR publish workflows, (4) adopting Containerfile over Dockerfile in C++/CMake or Mojo/Python projects.",
+      "version": "1.1.0",
       "source": "./skills/docker-to-podman-migration.md",
       "category": "ci-cd",
-      "tags": []
+      "tags": [
+        "podman",
+        "docker",
+        "containerfile",
+        "makefile",
+        "justfile",
+        "native",
+        "migration",
+        "cmake",
+        "cpp"
+      ]
     },
     {
       "name": "dockerfile-cargo-to-prebuilt-binary",
@@ -2355,7 +2774,7 @@
     },
     {
       "name": "fix-ci-compilation-and-test-failures",
-      "description": "Use when: (1) CI fails with Mojo compilation error (unknown declaration, deprecated syntax), (2) markdownlint blocks pre-commit (MD051, MD037, MD031, MD040, MD026, MD013), (3) Mojo test assertion errors from edge cases, (4) CI segfaults from UnsafePointer access through copied structs, (5) all PR CI runs fail because of broken plugins on main (missing plugin.json or YAML frontmatter), (6) Dockerfile GID/UID collisions on Ubuntu 24.04, (7) pre-commit bash -c hooks silently lose filenames, (8) Mojo --Werror unused return value errors, (9) CI workflow references a renamed or missing test file, (10) tests pass locally but fail due to symlinks or mock bypass, (11) invalid pinned action SHAs in workflows, (12) need to identify required vs optional CI checks before fixing",
+      "description": "Use when: (1) CI fails with Mojo compilation error (unknown declaration, deprecated syntax), (2) markdownlint blocks pre-commit (MD051, MD037, MD031, MD040, MD026, MD013), (3) Mojo test assertion errors from edge cases, (4) CI segfaults from UnsafePointer access through copied structs, (5) all PR CI runs fail because of broken plugins on main (missing plugin.json or YAML frontmatter), (6) Dockerfile GID/UID collisions on Ubuntu 24.04, (7) pre-commit bash -c hooks silently lose filenames, (8) Mojo --Werror unused return value errors, (9) split test files referenced in CI workflows, (10) tests pass locally but fail due to symlinks or mock bypass, (11) invalid pinned action SHAs in workflows, (12) need to identify required vs optional CI checks before fixing",
       "version": "3.0.0",
       "source": "./skills/fix-ci-compilation-and-test-failures.md",
       "category": "ci-cd",
@@ -2504,8 +2923,8 @@
     },
     {
       "name": "github-actions-ci-patterns",
-      "description": "Use when: (1) setting up GitHub Actions CI for Mojo or Python/pytest projects with pixi, (2) CI pipeline is slow due to broken pixi caching, (3) artifact upload/download fails due to empty directories or special characters in names, (4) migrating manual binary downloads to official actions, (5) adding a build-only gate workflow, (6) securing workflows against command injection via user-controlled inputs, (7) CI Summary job fails with 'HttpError: Resource not accessible by integration' when posting PR comments \u2014 missing pull-requests:write permission",
-      "version": "2.1.0",
+      "description": "Use when: (1) setting up GitHub Actions CI for Mojo or Python/pytest projects with pixi, (2) CI pipeline is slow due to broken pixi caching, (3) artifact upload/download fails due to empty directories or special characters in names, (4) migrating manual binary downloads to official actions, (5) adding a build-only gate workflow, (6) securing workflows against command injection via user-controlled inputs, (7) CI Summary job fails with 'HttpError: Resource not accessible by integration' when posting PR comments \u2014 missing pull-requests:write permission, (8) aligning workflow job names to branch protection required status check contexts, deleting orphan workflows, removing duplicate CI jobs",
+      "version": "2.2.0",
       "source": "./skills/github-actions-ci-patterns.md",
       "category": "ci-cd",
       "tags": [
@@ -2513,7 +2932,10 @@
         "permissions",
         "github-token",
         "pull-requests",
-        "pr-comments"
+        "pr-comments",
+        "branch-protection",
+        "required-checks",
+        "status-checks"
       ]
     },
     {
@@ -2533,16 +2955,18 @@
     },
     {
       "name": "github-branch-protection-org-standardize",
-      "description": "Standardize GitHub branch protection rules across all repositories in an org using gh api. Use when: (1) onboarding new repos to a policy baseline, (2) auditing protection drift across an org, (3) applying a gold-standard config from reference repos to the full fleet.",
-      "version": "1.0.0",
+      "description": "Standardize GitHub branch protection across all repositories in an org using repository rulesets. Use when: (1) rolling out a required-checks baseline to all repos on the free GitHub plan, (2) onboarding new repos to a shared CI policy, (3) auditing ruleset drift across an org.",
+      "version": "2.0.0",
       "source": "./skills/github-branch-protection-org-standardize.md",
       "category": "ci-cd",
       "tags": [
         "github",
         "branch-protection",
+        "rulesets",
         "gh-api",
         "org-admin",
-        "policy-standardization"
+        "policy-standardization",
+        "required-status-checks"
       ]
     },
     {
@@ -2566,6 +2990,22 @@
       "source": "./skills/gitleaks-version-upgrade.md",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "hadolint-failure-threshold-config",
+      "description": "Use when: (1) hadolint-action CI job fails on warnings despite rules being in the ignore list, (2) configuring .hadolint.yaml for a project that explicitly ignores certain warning-level rules, (3) hadolint CI is too strict or too permissive.",
+      "version": "1.0.0",
+      "source": "./skills/hadolint-failure-threshold-config.md",
+      "category": "ci-cd",
+      "tags": [
+        "docker",
+        "hadolint",
+        "dockerfile",
+        "lint",
+        "failure-threshold",
+        "ci",
+        "github-actions"
+      ]
     },
     {
       "name": "haiku-batch-worktree-agents",
@@ -2624,12 +3064,52 @@
       "tags": []
     },
     {
+      "name": "lcov-coverage-script-ci-fixes",
+      "description": "Fix generate_coverage.sh scripts failing in CI with lcov/geninfo. Use when: (1) coverage script fails with wrong paths after BUILD_DIR is a relative path, (2) cmake source dir is wrong after cd into build dir, (3) lcov fails with gcov version mismatch error on Ubuntu 24.04 with Clang, (4) geninfo fails with 'unable to create link .gcda' when multiple test targets share source files.",
+      "version": "1.0.0",
+      "source": "./skills/lcov-coverage-script-ci-fixes.md",
+      "category": "ci-cd",
+      "tags": [
+        "lcov",
+        "gcov",
+        "geninfo",
+        "coverage",
+        "ci-cd",
+        "clang",
+        "ubuntu",
+        "bash",
+        "generate_coverage"
+      ]
+    },
+    {
       "name": "markdownlint-troubleshooting",
       "description": "Diagnose and fix markdownlint CI failures that block multiple PRs due to issues in main branch",
       "version": "1.0.0",
       "source": "./skills/markdownlint-troubleshooting.md",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "mesh-dispatch-pipeline-debugging",
+      "description": "Debug and fix the live HomericIntelligence agent mesh dispatch pipeline (Agamemnon \u2192 NATS \u2192 claude-myrmidon Python workers \u2192 GitHub PRs). Use when: (1) Agamemnon POST /v1/tasks returns 404, (2) Claude CLI in container produces zero API traffic, (3) container agent gets EACCES on .credentials.json, (4) --resume fails with 'No conversation found' across ephemeral containers, (5) IMPLEMENT stage gets permission denied writing to bind-mounted workspace, (6) pipeline loops on NOGO due to empty REVIEW output, (7) git push blocked by GitHub email privacy, (8) PR stuck in CONFLICTING state blocking CI auto-merge.",
+      "version": "1.0.0",
+      "source": "./skills/mesh-dispatch-pipeline-debugging.md",
+      "category": "ci-cd",
+      "tags": [
+        "agamemnon",
+        "nats",
+        "myrmidon",
+        "pipeline",
+        "podman",
+        "container",
+        "claude-cli",
+        "session-resume",
+        "github-actions",
+        "pr-conflict",
+        "markdownlint",
+        "git-push",
+        "auto-merge"
+      ]
     },
     {
       "name": "mkdocs-nav-cleanup",
@@ -2720,7 +3200,7 @@
     },
     {
       "name": "mojo-retry-pattern-ci-validator",
-      "description": "Detect bare pixi run mojo test/run/build/package calls in GitHub Actions workflows not wrapped in a retry loop. Use when: (1) adding a new mojo workflow file, (2) auditing existing workflows for retry-loop compliance, (3) CI enforcement after mojo-jit-crash-retry fix.",
+      "description": "Detect bare pixi run mojo test/run/build/package calls in GitHub Actions workflows not wrapped in a retry loop. Use when: (1) adding a new mojo workflow file, (2) auditing existing workflows for ADR-009 compliance, (3) CI enforcement after mojo-jit-crash-retry fix.",
       "version": "1.0.0",
       "source": "./skills/mojo-retry-pattern-ci-validator.md",
       "category": "ci-cd",
@@ -2760,8 +3240,8 @@
     },
     {
       "name": "multi-repo-pr-orchestration-swarm-pattern",
-      "description": "Orchestrate PR management across all HomericIntelligence repos using myrmidon swarm. Use when: (1) multiple repos have open PRs that need merging, conflict resolution, or CI fixes, (2) Odysseus submodule pins need updating after cross-repo PR merges, (3) coordinating parallel waves of agents across 5+ repos with sequential-within-repo merge ordering.",
-      "version": "1.1.0",
+      "description": "Orchestrate PR management across all HomericIntelligence repos using myrmidon swarm. Use when: (1) multiple repos have open PRs that need merging, conflict resolution, or CI fixes, (2) Odysseus submodule pins need updating after cross-repo PR merges, (3) coordinating parallel waves of agents across 5+ repos with sequential-within-repo merge ordering, (4) a PR branch has a duplicate commit that's already on main and needs rebase, (5) mergeStateStatus is BLOCKED but statusCheckRollup is empty \u2014 CI may not have started yet.",
+      "version": "1.2.0",
       "source": "./skills/multi-repo-pr-orchestration-swarm-pattern.md",
       "category": "ci-cd",
       "tags": [
@@ -2772,7 +3252,9 @@
         "myrmidon-swarm",
         "cross-repo",
         "orchestration",
-        "odysseus"
+        "odysseus",
+        "duplicate-commit",
+        "pin-audit"
       ]
     },
     {
@@ -2806,6 +3288,21 @@
       "source": "./skills/mypy-precommit-hook-pixi.md",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "nomad-hcl-variable-sensitive",
+      "description": "Use when: (1) Nomad HCL job spec fails to parse with 'An argument named sensitive is not expected here', (2) variable blocks in .nomad.hcl files contain sensitive = true, (3) migrating Terraform variable patterns to Nomad.",
+      "version": "1.0.0",
+      "source": "./skills/nomad-hcl-variable-sensitive.md",
+      "category": "ci-cd",
+      "tags": [
+        "nomad",
+        "hcl",
+        "variable",
+        "sensitive",
+        "terraform",
+        "job-spec"
+      ]
     },
     {
       "name": "parallel-pr-worktree-workflow",
@@ -2875,8 +3372,8 @@
     },
     {
       "name": "pixi-lock-rebase-regenerate",
-      "description": "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts, (4) Dependabot PRs fail CI fast (6-12 seconds) because Dependabot only bumps pyproject.toml not pixi.lock, (5) a second rebase of the same branch produces a pixi.lock commit conflict \u2014 skip the stale commit and re-run pixi install, (6) a second commit in the rebase chain patches code that was migrated to an external package \u2014 accept HEAD's version and use git rebase --skip.",
-      "version": "1.3.0",
+      "description": "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts, (4) Dependabot PRs fail CI fast (6-12 seconds) because Dependabot only bumps pyproject.toml not pixi.lock, (5) a second rebase of the same branch produces a pixi.lock commit conflict \u2014 skip the stale commit and re-run pixi install, (6) a second commit in the rebase chain patches code that was migrated to an external package \u2014 accept HEAD's version and use git rebase --skip, (7) pixi.toml pins a dependency version but pixi.lock still references old version (CI shows 'Environment is not consistent with the lockfile'), (8) creating a fix branch \u2014 always base off origin/main not local main which may be stale commits behind.",
+      "version": "1.4.0",
       "source": "./skills/pixi-lock-rebase-regenerate.md",
       "category": "ci-cd",
       "tags": [
@@ -2976,12 +3473,53 @@
       "tags": []
     },
     {
+      "name": "pre-commit-detect-private-key-fixture-exclusion",
+      "description": "Suppress detect-private-key pre-commit hook false positives on test fixtures, TLS unit tests, and Kubernetes secret manifests by adding an exclude regex. Use when: (1) CI fails on detect-private-key for files that contain fake/test credentials, (2) k8s secret manifests or C++ TLS test files trigger PEM header pattern matches.",
+      "version": "1.0.0",
+      "source": "./skills/pre-commit-detect-private-key-fixture-exclusion.md",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "detect-private-key",
+        "false-positive",
+        "tls",
+        "kubernetes",
+        "test-fixtures",
+        "ci"
+      ]
+    },
+    {
       "name": "pre-commit-hook-configuration",
-      "description": "Use when: (1) ruff or other linter hooks run on hardcoded directories instead of staged files, (2) aligning pre-commit hook versions with pixi-resolved tool versions, (3) updating hook versions with autoupdate, (4) adding a language: pygrep regex hook to catch forbidden patterns, (5) evaluating whether a hook should use pass_filenames: true or false, (6) writing pytest tests to verify pre-commit hook YAML configuration",
-      "version": "2.0.0",
+      "description": "Use when: (1) ruff or other linter hooks run on hardcoded directories instead of staged files, (2) aligning pre-commit hook versions with pixi-resolved tool versions, (3) updating hook versions with autoupdate, (4) adding a language: pygrep regex hook to catch forbidden patterns, (5) evaluating whether a hook should use pass_filenames: true or false, (6) writing pytest tests to verify pre-commit hook YAML configuration, (7) pre-commit hook uses SCRIPT_DIR/../ to find REPO_ROOT but is installed as .git/hooks/pre-commit in a test repo \u2014 resolves to .git/ not repo root, (8) SKIP_TESTS env var needed to prevent test-suite step from running in temporary test repos, (9) just command finds Justfile in a parent directory instead of the test repo, (10) a Go-based hook (e.g. gitleaks) fails to build from source because the system Go version is too old",
+      "version": "2.2.0",
       "source": "./skills/pre-commit-hook-configuration.md",
       "category": "ci-cd",
-      "tags": []
+      "tags": [
+        "pre-commit",
+        "hooks",
+        "bats",
+        "shell-testing",
+        "repo-root",
+        "test-isolation",
+        "gitleaks",
+        "golang",
+        "prebuilt-binary"
+      ]
+    },
+    {
+      "name": "precommit-linter-stale-branch-revert",
+      "description": "Pre-commit linter reverts files on branches created before an ecosystem migration. Use when: (1) a branch was created before a Makefile/justfile/config migration was merged to main, (2) CI lint job fails with unexpected file reversions, (3) files that were changed on main appear to regress on an older branch after rebase.",
+      "version": "1.0.0",
+      "source": "./skills/precommit-linter-stale-branch-revert.md",
+      "category": "ci-cd",
+      "tags": [
+        "pre-commit",
+        "linter",
+        "rebase",
+        "migration",
+        "branch",
+        "stale"
+      ]
     },
     {
       "name": "precommit-schema-validation",
@@ -3705,6 +4243,21 @@
       "tags": []
     },
     {
+      "name": "e2e-rate-limit-diagnosis-reset",
+      "description": "Diagnose experiment data quality issues caused by Anthropic API monthly usage limits (HTTP 429) and reset affected runs for retry. Use when: experiment results show unexplained failures in later tiers, runs have zero tokens/cost with exit_code=1, or checkpoint marks rate-limited runs as successfully completed with F grades.",
+      "version": "1.0.0",
+      "source": "./skills/e2e-rate-limit-diagnosis-reset.md",
+      "category": "debugging",
+      "tags": [
+        "rate-limit",
+        "429",
+        "experiment-diagnosis",
+        "checkpoint-reset",
+        "data-quality",
+        "e2e-testing"
+      ]
+    },
+    {
       "name": "e2e-resume-restore-run-context",
       "description": "Fix _restore_run_context() missing run_result and judgment loading on resume past RUN_FINALIZED/JUDGE_COMPLETE. Use when: (1) Phase 3 resume crashes with 'run_result must be set before write_report', (2) checkpoint shows runs at run_finalized/report_written but ctx fields are None on resume.",
       "version": "1.0.0",
@@ -4021,7 +4574,7 @@
     },
     {
       "name": "mojo-bitcast-always-inline-crash-fix",
-      "description": "Fix Mojo 0.26.1 UAF crashes from bitcast pointer writes. Use when: (1) libKGENCompilerRTShared.so crash in CI showing 3 fixed frames (0x3cb78b/0x3c93c6/0x3cc397), (2) heap corruption after bitcast writes in dtype conversion functions, (3) ASAP destruction invalidating pointers before write completes, (4) file-splitting workaround marked Resolved but source still has UAF writes.",
+      "description": "Fix Mojo 0.26.1 UAF crashes from bitcast pointer writes. Use when: (1) libKGENCompilerRTShared.so crash in CI showing 3 fixed frames (0x3cb78b/0x3c93c6/0x3cc397), (2) heap corruption after bitcast writes in dtype conversion functions, (3) ASAP destruction invalidating pointers before write completes, (4) ADR-009 workaround marked Resolved but source still has UAF writes.",
       "version": "1.1.0",
       "source": "./skills/mojo-bitcast-always-inline-crash-fix.md",
       "category": "debugging",
@@ -4606,8 +5159,8 @@
     },
     {
       "name": "academic-paper-myrmidon-swarm-review",
-      "description": "Parallel myrmidon swarm review of academic papers and AI architecture research docs using role-stratified agents for comprehensive, simultaneous coverage. Use when: (1) reviewing a large academic paper with statistical methodology or Vega-Lite figures, (2) reviewing an AI architecture research doc for citation accuracy / complexity / literature gaps / comparison validity / feasibility, (3) need thorough parallel coverage faster than sequential review.",
-      "version": "1.1.0",
+      "description": "Parallel myrmidon swarm review of academic papers and AI architecture research docs using role-stratified agents for comprehensive, simultaneous coverage. Use when: (1) reviewing a large academic paper with statistical methodology or Vega-Lite figures, (2) reviewing an AI architecture research doc for citation accuracy / complexity / literature gaps / comparison validity / feasibility, (3) need thorough parallel coverage faster than sequential review, (4) performing Go/NoGo audit with 100+ quantitative claims to verify against raw data.",
+      "version": "1.2.0",
       "source": "./skills/academic-paper-myrmidon-swarm-review.md",
       "category": "documentation",
       "tags": [
@@ -4620,13 +5173,16 @@
         "vega-lite",
         "architecture-research",
         "kv-cache",
-        "quantization-review"
+        "quantization-review",
+        "false-alarm-risk",
+        "go-nogo-audit",
+        "srh-statistics"
       ]
     },
     {
       "name": "academic-paper-validation",
       "description": "Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical methodology verification, LaTeX compilation fixes, and arXiv build preparation",
-      "version": "3.0.0",
+      "version": "3.1.0",
       "source": "./skills/academic-paper-validation.md",
       "category": "documentation",
       "tags": []
@@ -4893,6 +5449,23 @@
       ]
     },
     {
+      "name": "documentation-citation-gap-web-search-workflow",
+      "description": "Find academic citations for unsupported claims in LaTeX papers using parallel web searches. Use when: (1) a paper makes assertions without \\cite references, (2) you need to fill citation gaps with real, published papers, (3) you want to upgrade hedged language ('anecdotal evidence') to properly cited claims, (4) you need full BibTeX metadata (authors, venue, year, DOI, volume, pages) for discovered papers.",
+      "version": "1.0.0",
+      "source": "./skills/documentation-citation-gap-web-search-workflow.md",
+      "category": "documentation",
+      "tags": [
+        "citation",
+        "web-search",
+        "latex",
+        "bibtex",
+        "academic-writing",
+        "citation-gap",
+        "paper-discovery",
+        "parallel-search"
+      ]
+    },
+    {
       "name": "documentation-corpus-myrmidon-parallel-remediation",
       "description": "Myrmidon swarm pattern for remediating a large document corpus in parallel using isolated git worktree agents. Use when: (1) an unpublished research corpus contains change-note prose, correction-history blocks, or backward-compatibility text that must be deleted (not annotated), (2) defects span many files and must be fixed in parallel without file ownership collisions, (3) you need wave-based execution: parallel fixers \u2192 read-only verifier \u2192 merge. Includes citation-verification pass that web-fetches arXiv abstracts to catch fabricated numeric ranges, reversed-polarity claims, and paper-body figures misattributed as abstract-level.",
       "version": "1.6.0",
@@ -4925,6 +5498,25 @@
         "drift-detection",
         "ablation",
         "reconciliation"
+      ]
+    },
+    {
+      "name": "documentation-latex-paper-audit-methodology",
+      "description": "Perform a multi-pass audit of a LaTeX academic paper covering data consistency, cross-references, scientific rigor, and writing quality. Use when: (1) a LaTeX paper needs pre-submission quality verification, (2) you need to verify every hardcoded number against source data, (3) you need to check all \\ref/\\cite/\\input chains for broken references, (4) you need to find orphaned or unincluded table/figure files, (5) you want parallel agent-based audit for speed on large papers, (6) you need to verify scientific claims match the statistical evidence, (7) you need to catch ceiling effects, power analysis gaps, or unreliable score interpretations.",
+      "version": "1.1.0",
+      "source": "./skills/documentation-latex-paper-audit-methodology.md",
+      "category": "documentation",
+      "tags": [
+        "latex",
+        "audit",
+        "paper",
+        "academic",
+        "cross-reference",
+        "citation",
+        "data-consistency",
+        "parallel-agents",
+        "scientific-rigor",
+        "writing-quality"
       ]
     },
     {
@@ -5282,6 +5874,42 @@
       "source": "./skills/paper-validation-workflow.md",
       "category": "documentation",
       "tags": []
+    },
+    {
+      "name": "parallel-paper-correctness-audit",
+      "description": "Multi-agent parallel workflow for verifying every numerical claim in a research paper against underlying data files (CSV, JSON), fixing errors, ensuring internal consistency across inline tables, generated tables, figure data, and post-correction narrative audit",
+      "version": "1.4.0",
+      "source": "./skills/parallel-paper-correctness-audit.md",
+      "category": "documentation",
+      "tags": [
+        "latex",
+        "paper",
+        "audit",
+        "verification",
+        "cross-reference",
+        "numerical-accuracy",
+        "parallel-agents",
+        "inline-tables",
+        "aggregation-mismatch",
+        "pandas",
+        "data-pipeline",
+        "post-correction",
+        "figure-caption",
+        "narrative-consistency",
+        "vl-json",
+        "idxmax",
+        "tiebreaker",
+        "myrmidon-swarm",
+        "pre-flight-recomputation",
+        "srh",
+        "kruskal-wallis",
+        "pivot-table",
+        "cross-experiment-averaging",
+        "spearman",
+        "krippendorff",
+        "inter-rater",
+        "silent-aggregation"
+      ]
     },
     {
       "name": "phantom-dir-reference-fix",
@@ -5742,6 +6370,23 @@
       "tags": []
     },
     {
+      "name": "evaluation-paper-rewrite-after-data-fix",
+      "description": "Rewrite an arXiv LaTeX paper after discovering that underlying experimental data was wrong due to implementation bugs. Covers: (1) fixing data pipeline issues before rewriting, (2) parallel data verification against ground-truth sources, (3) systematic stale-value grep to ensure no remnants, (4) parallel agent rewrites of paper sections, (5) post-rewrite audit for numerical cross-referencing and structural issues, (6) common pitfalls like alphabetical-sort directory shadowing, pricing version confusion, and undefined citations from expanded sections.",
+      "version": "1.0.0",
+      "source": "./skills/evaluation-paper-rewrite-after-data-fix.md",
+      "category": "evaluation",
+      "tags": [
+        "latex",
+        "arxiv",
+        "paper-rewrite",
+        "data-fix",
+        "evaluation",
+        "parallel-agents",
+        "audit",
+        "cross-reference"
+      ]
+    },
+    {
       "name": "experiment-analysis-script-patterns",
       "description": "Patterns for fixing experiment analysis scripts: directory regex matching, run multiplier correctness, exit code semantics, and retry shell script error handling. Use when: analysis script discovers 0 experiments, run totals are wrong, or retry scripts abort on first failure.",
       "version": "1.0.0",
@@ -5916,6 +6561,22 @@
       "source": "./skills/plan-review-interview.md",
       "category": "evaluation",
       "tags": []
+    },
+    {
+      "name": "pre-implementation-plan-review-wave",
+      "description": "Run a multi-agent pre-implementation review wave (R0/R1) against an Epic plan file and its child GitHub issues, catching regressions before implementation begins. Use when: (1) a plan file and child issues must be kept consistent, (2) a prior review wave (R0) claims fixes but artifacts may not all be updated, (3) you need 6 parallel specialist reviews with structured output contracts and idempotent GitHub posting.",
+      "version": "1.0.0",
+      "source": "./skills/pre-implementation-plan-review-wave.md",
+      "category": "evaluation",
+      "tags": [
+        "review-wave",
+        "pre-impl",
+        "plan-review",
+        "second-opinion",
+        "r0",
+        "r1",
+        "multi-agent-review"
+      ]
     },
     {
       "name": "processpoolexecutor-rate-limit-recovery",
@@ -6329,6 +6990,39 @@
       "tags": []
     },
     {
+      "name": "adr009-split-audit",
+      "description": "Audit ADR-009 test file splits to verify no tests were silently dropped, create GitHub issues for violations, and validate coverage. Use when: (1) verifying that all tests from a deprecated/deleted file are present in successor split files, (2) auditing all test files in a family or CI group for ADR-009 compliance, (3) creating GitHub issues for ADR-009 violating files in bulk, (4) investigating whether a prior split omitted any test functions, (5) running a periodic health check on the split test inventory.",
+      "version": "1.1.0",
+      "source": "./skills/adr009-split-audit.md",
+      "category": "testing",
+      "tags": [
+        "adr-009",
+        "mojo",
+        "audit",
+        "testing",
+        "github-issues",
+        "coverage",
+        "dropped-tests"
+      ]
+    },
+    {
+      "name": "adr009-test-file-split-workflow",
+      "description": "OBSOLETE \u2014 ADR-009 has been fixed. Historical reference for Mojo test file splitting and de-splitting. Use when: (1) understanding existing _partN.mojo split files, (2) reversing splits by merging part files back, (3) investigating legacy heap corruption workarounds, (4) auditing for dropped tests, (5) recovering dropped test implementations from git history, (6) diagnosing compile hangs (>120s) from heavyweight backward-pass tests in existing split files, (7) enforcing the ADR-009 per-file test count limit via pre-commit hook on existing files",
+      "version": "2.1.0",
+      "source": "./skills/adr009-test-file-split-workflow.md",
+      "category": "testing",
+      "tags": [
+        "adr-009",
+        "mojo",
+        "test-splitting",
+        "obsolete",
+        "historical",
+        "ci-cd",
+        "pre-commit",
+        "compile-hang"
+      ]
+    },
+    {
       "name": "assert-to-runtime-error-migration",
       "description": "Skill: assert-to-runtime-error-migration. Use when replacing assert guards in production code with explicit RuntimeError raises to eliminate Ruff S101 suppressions.",
       "version": "1.0.0",
@@ -6341,6 +7035,14 @@
       "description": "TRIGGER CONDITIONS: A pytest.mark.parametrize list hardcodes fixture filenames that must be manually updated when new fixtures are added. Use when replacing a hardcoded list with glob-based auto-discovery so new fixtures are picked up automatically.",
       "version": "1.0.0",
       "source": "./skills/auto-discover-parametrize-fixtures.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "badge-drift-after-test-file-split",
+      "description": "Ensure test count badge stays accurate when a large test file is split into multiple parts. Use when: a test file has been split into part1/part2/etc. and the badge-check script must count all parts.",
+      "version": "1.0.0",
+      "source": "./skills/badge-drift-after-test-file-split.md",
       "category": "testing",
       "tags": []
     },
@@ -6466,7 +7168,7 @@
     },
     {
       "name": "conv2d-gradient-checking-finite-differences",
-      "description": "Use when: (1) conv2d_backward tests only validate shapes but not grad_input/grad_weights values numerically, (2) adding finite-difference gradient checks for standard conv2d across padding=0, padding>0, stride, and multi-channel configurations, (3) verifying transposed convolution correctness, (4) extending gradient checking coverage to all three backward outputs (grad_input, grad_weights, grad_bias), (5) keeping per-file test count under 10",
+      "description": "Use when: (1) conv2d_backward tests only validate shapes but not grad_input/grad_weights values numerically, (2) adding finite-difference gradient checks for standard conv2d across padding=0, padding>0, stride, and multi-channel configurations, (3) verifying transposed convolution correctness, (4) extending gradient checking coverage to all three backward outputs (grad_input, grad_weights, grad_bias), (5) working under ADR-009 Mojo heap-corruption constraint (\u226410 tests per file)",
       "version": "1.0.0",
       "source": "./skills/conv2d-gradient-checking-finite-differences.md",
       "category": "testing",
@@ -6477,6 +7179,7 @@
         "mojo",
         "backward-pass",
         "numerical-gradients",
+        "adr-009",
         "padding"
       ]
     },
@@ -6522,7 +7225,7 @@
     },
     {
       "name": "depthwise-conv2d-gradient-checking-tests",
-      "description": "Use when: (1) depthwise_conv2d_backward exists but lacks gradient-correctness tests, (2) adding per-channel finite-difference gradient checking for grad_input, grad_weights, and grad_bias, (3) the kernel shape is (channels,1,kH,kW) not (out_ch,in_ch,kH,kW), (4) keeping per-file test count \u22648",
+      "description": "Use when: (1) depthwise_conv2d_backward exists but lacks gradient-correctness tests, (2) adding per-channel finite-difference gradient checking for grad_input, grad_weights, and grad_bias, (3) the kernel shape is (channels,1,kH,kW) not (out_ch,in_ch,kH,kW), (4) working under ADR-009 Mojo heap-corruption constraint (\u22648 tests per file)",
       "version": "1.0.0",
       "source": "./skills/depthwise-conv2d-gradient-checking-tests.md",
       "category": "testing",
@@ -6531,7 +7234,8 @@
         "gradient-checking",
         "finite-differences",
         "mojo",
-        "backward-pass"
+        "backward-pass",
+        "adr-009"
       ]
     },
     {
@@ -6627,6 +7331,14 @@
       "description": "Extract and summarize test failures from logs",
       "version": "1.0.0",
       "source": "./skills/extract-test-failures.md",
+      "category": "testing",
+      "tags": []
+    },
+    {
+      "name": "fastapi-pydantic-settings-test-isolation",
+      "description": "Fix FastAPI test isolation failures caused by Depends() capturing function references at import time and pydantic-settings reading .env at instantiation. Use when: (1) patching get_settings returns mock but tests still use real settings, (2) tests pass in CI but fail locally due to .env, (3) rate limiting returns 202 instead of 429, (4) AsyncMock triggers unawaited coroutine warnings.",
+      "version": "1.0.0",
+      "source": "./skills/fastapi-pydantic-settings-test-isolation.md",
       "category": "testing",
       "tags": []
     },
@@ -6918,7 +7630,7 @@
     },
     {
       "name": "mojo-logical-xor-test-coverage",
-      "description": "Add logical_xor test coverage for Mojo elementwise operations. Use when: (1) a logical op is imported but untested, (2) the file is at the per-file test limit and a new file is needed, (3) binary logical truth-table coverage is missing.",
+      "description": "Add logical_xor test coverage for Mojo elementwise operations. Use when: (1) a logical op is imported but untested, (2) ADR-009 10-test file limit requires a new file, (3) binary logical truth-table coverage is missing.",
       "version": "1.0.0",
       "source": "./skills/mojo-logical-xor-test-coverage.md",
       "category": "testing",
@@ -6998,7 +7710,7 @@
     },
     {
       "name": "mojo-signed-int-bitwise-not",
-      "description": "Pattern for adding bitwise NOT (~) tests for Mojo signed integer types using two's complement semantics. Use when: adding ~ operator tests for Int8/Int16/Int32/Int64, extending unsigned NOT tests to signed types, or splitting test files when the per-file test limit is reached.",
+      "description": "Pattern for adding bitwise NOT (~) tests for Mojo signed integer types using two's complement semantics. Use when: adding ~ operator tests for Int8/Int16/Int32/Int64, extending unsigned NOT tests to signed types, or implementing ADR-009 compliant test splits.",
       "version": "1.0.0",
       "source": "./skills/mojo-signed-int-bitwise-not.md",
       "category": "testing",
@@ -7378,6 +8090,38 @@
       "tags": []
     },
     {
+      "name": "testing-ast-import-layer-enforcement",
+      "description": "Enforce import layer boundaries in Python packages using AST-level CI tests. Use when: (1) you've fixed a circular import and want to prevent regressions, (2) you have a strict layering rule (module A must never import from module B) and need it enforced in CI, (3) you want to catch both direct and lazy/function-local imports that violate architecture boundaries.",
+      "version": "1.0.0",
+      "source": "./skills/testing-ast-import-layer-enforcement.md",
+      "category": "testing",
+      "tags": [
+        "python",
+        "ast",
+        "import-boundary",
+        "circular-imports",
+        "layer-enforcement",
+        "ci",
+        "testing"
+      ]
+    },
+    {
+      "name": "testing-asyncio-await-task-bot-false-positive",
+      "description": "Identifies and dismisses the GitHub code-quality bot false positive where `await <task>` in asyncio test code is flagged as 'Statement has no effect'. Use when: (1) github-code-quality[bot] flags `await <task>` as a no-effect statement, (2) an asyncio.Task stored in a local variable is awaited as cleanup after test assertions, (3) a PR review contains bot comments about awaiting a Task variable.",
+      "version": "1.0.0",
+      "source": "./skills/testing-asyncio-await-task-bot-false-positive.md",
+      "category": "testing",
+      "tags": [
+        "asyncio",
+        "python",
+        "false-positive",
+        "github-code-quality-bot",
+        "await-task",
+        "pytest-asyncio",
+        "static-analysis"
+      ]
+    },
+    {
       "name": "testing-cli-entrypoint-help-smoke",
       "description": "Smoke-test Python CLI entry points with --help subprocess calls and import verification. Use when: (1) a package declares [project.scripts] entry points, (2) entry points need regression protection, (3) an issue asks for CLI importability tests.",
       "version": "1.0.0",
@@ -7404,6 +8148,49 @@
         "hephaestus",
         "package-module"
       ]
+    },
+    {
+      "name": "testing-pydantic-mock-field-type-mismatch",
+      "description": "Fix HTTP 500 errors in tests caused by Pydantic response model rejecting MagicMock attributes during response serialization. Use when: (1) an endpoint test expects 4xx/5xx but gets 500 unexpectedly, (2) a FastAPI/Starlette endpoint uses a Pydantic response model, (3) mock objects populate response model fields, (4) Pydantic ValidationError appears in server logs during testing.",
+      "version": "1.0.0",
+      "source": "./skills/testing-pydantic-mock-field-type-mismatch.md",
+      "category": "testing",
+      "tags": [
+        "pydantic",
+        "magicmock",
+        "fastapi",
+        "validation",
+        "http-status",
+        "response-model",
+        "serialization"
+      ]
+    },
+    {
+      "name": "testing-pytest-asyncio-daemon-coroutine-patch",
+      "description": "Fix pytest tests that hang indefinitely (CI timeout) when testing an async daemon by patching the coroutine function itself with AsyncMock instead of patching internal functions the coroutine calls. Use when: (1) pytest CI step times out (10-min limit) but individual tests do not fail, (2) daemon tests call main() which internally calls asyncio.run(coroutine()) that waits on a never-set Event, (3) patching run_routing_loop or other internal helpers is a no-op because main() does not call them directly.",
+      "version": "1.0.0",
+      "source": "./skills/testing-pytest-asyncio-daemon-coroutine-patch.md",
+      "category": "testing",
+      "tags": [
+        "asyncio",
+        "pytest",
+        "daemon",
+        "AsyncMock",
+        "coroutine",
+        "patch",
+        "hang",
+        "timeout",
+        "event-loop",
+        "python"
+      ]
+    },
+    {
+      "name": "testing-pytest-ini-shadows-pyproject",
+      "description": "TRIGGER CONDITIONS: (1) CI Python test job hangs until timeout with no visible failure, (2) pytest warns 'ignoring pytest config in pyproject.toml!', (3) tests fail with ModuleNotFoundError even though pythonpath is set in pyproject.toml, (4) asyncio tests hang indefinitely after import failure.",
+      "version": "1.0.0",
+      "source": "./skills/testing-pytest-ini-shadows-pyproject.md",
+      "category": "testing",
+      "tags": []
     },
     {
       "name": "testing-python-constants-module",
@@ -7501,6 +8288,14 @@
         "runner",
         "stages"
       ]
+    },
+    {
+      "name": "validate-test-coverage-split-naming",
+      "description": "Verify CI coverage scripts handle split file naming (part1/part2, suffix variants) correctly. Use when: confirming wildcard-based CI group matching covers ADR-009 split files without requiring script changes.",
+      "version": "1.0.0",
+      "source": "./skills/validate-test-coverage-split-naming.md",
+      "category": "testing",
+      "tags": []
     },
     {
       "name": "validate-tier-id-filename-consistency",
@@ -7608,7 +8403,7 @@
     {
       "name": "already-done-issue-detection",
       "description": "Detect GitHub issues that are already fixed before starting implementation. Use when: (1) starting a batch triage of 10+ open issues, (2) assigned an issue in a repo with active prior automation, (3) audit issues filed weeks/months ago, (4) issue title contains 'missing', 'add', 'fix' for a file or config value.",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "source": "./skills/already-done-issue-detection.md",
       "category": "tooling",
       "tags": [
@@ -7686,6 +8481,30 @@
       ]
     },
     {
+      "name": "bash-upstream-pr-review-traps",
+      "description": "Implement a feature or fix in a forked bash project and navigate maintainer review rounds. Use when: (1) contributing a new flag/env-var to an upstream bash CLI extension, (2) performing two-round review of bash scripts for logic and safety bugs, (3) debugging git branch --list exit-code trap or bash function-before-definition hazard, (4) filing separate bug issues found during code review and opening one PR per bug with correct branch dependencies.",
+      "version": "2.0.0",
+      "source": "./skills/bash-upstream-pr-review-traps.md",
+      "category": "tooling",
+      "tags": [
+        "bash",
+        "git-branch",
+        "function-definition",
+        "arg-parsing",
+        "ansi-color",
+        "env-var",
+        "upstream-pr",
+        "fork",
+        "open-source",
+        "review",
+        "gh-tidy",
+        "word-splitting",
+        "multi-pr",
+        "issue-filing",
+        "branch-dependency"
+      ]
+    },
+    {
       "name": "batch-image-to-idx-conversion",
       "description": "Extend a single-image IDX converter to batch mode with --batch flag accepting a directory or glob. Use when: (1) users need to pass a whole directory of images to a Mojo inference pipeline in one shot, (2) extending png-jpeg-to-idx-conversion to multi-image IDX format, (3) the IDX reader expects count>1.",
       "version": "1.0.0",
@@ -7695,8 +8514,8 @@
     },
     {
       "name": "batch-low-difficulty-issue-impl",
-      "description": "Classify, deduplicate, and batch-implement GitHub issues in a large swarm session (24+ waves, 200+ issues). Use when: (1) a large backlog of open issues needs triage, (2) many issues are pure doc/text or infra-only changes, (3) duplicate issues need closing before implementation. Includes worktree-safe grep pattern for ALREADY-DONE verification, correct pre-filter order, ci.yml conflict avoidance, EASY queue exhaustion detection, and Docker inline comment parse error pattern.",
-      "version": "1.4.0",
+      "description": "Classify, deduplicate, and batch-implement GitHub issues in a large swarm session (24+ waves, 200+ issues). Use when: (1) a large backlog of open issues needs triage, (2) many issues are pure doc/text or infra-only changes, (3) duplicate issues need closing before implementation. Includes worktree-safe grep pattern for ALREADY-DONE verification, correct pre-filter order, ci.yml conflict avoidance, EASY queue exhaustion detection, Docker inline comment parse error pattern, parallel-agent add/add rebase conflict resolution when multiple agents create the same package independently, pre-launch repo-capability checks (autoMergeAllowed, lockfile, pre-commit config), hot-file serialization for shared scripts (apply.sh/reconcile.sh), pre-swarm existing-PR audit, close-before-delegate pattern, and C++20/Conan/pixi-specific guards (libssl-dev, TSan+concurrentqueue blocker, enable_shared_from_this diamond inheritance, CMakeLists.txt single-agent anchor, asyncio_mode auto decorator check).",
+      "version": "1.10.0",
       "source": "./skills/batch-low-difficulty-issue-impl.md",
       "category": "tooling",
       "tags": []
@@ -8208,6 +9027,25 @@
       "tags": []
     },
     {
+      "name": "file-upstream-feature-request",
+      "description": "Use when filing a feature request or bug against a third-party OSS repo. Covers: duplicate check, label discovery, local patch proposal via secret gist, smoke testing, and clean cross-repo issue creation with gh CLI. Use when: (1) proposing a new flag/behavior to an upstream tool you don't maintain, (2) attaching a proposed patch as a gist to an external issue, (3) needing to verify no duplicate exists before filing.",
+      "version": "1.0.0",
+      "source": "./skills/file-upstream-feature-request.md",
+      "category": "tooling",
+      "tags": [
+        "gh",
+        "github",
+        "upstream",
+        "feature-request",
+        "gist",
+        "patch",
+        "oss",
+        "third-party",
+        "issue-filing",
+        "gh-extension"
+      ]
+    },
+    {
       "name": "fix-docker-image-case",
       "description": "Fix Docker SBOM and workflow failures caused by mixed-case image names in GitHub Actions",
       "version": "1.0.0",
@@ -8349,9 +9187,44 @@
       "tags": []
     },
     {
+      "name": "git-commits-on-local-main-recovery",
+      "description": "Recover when commits accidentally land on local main instead of a feature branch. Use when: (1) git branch --show-current shows 'main' but work was done there, (2) git log shows commits on local main ahead of origin/main, (3) main is protected and pushing directly will be rejected, (4) you need to salvage multiple commits without losing any work.",
+      "version": "1.0.0",
+      "source": "./skills/git-commits-on-local-main-recovery.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "git-stash-pop-conflict-semantic-merge",
+      "description": "Use when: (1) git stash pop produces merge conflicts and Safety Net blocks git checkout -- (discard) or git stash drop (delete), (2) a stash from an old branch conflicts with heavily refactored HEAD, (3) you need to evaluate which side of each conflict hunk is semantically correct rather than blindly choosing ours or theirs.",
+      "version": "1.0.0",
+      "source": "./skills/git-stash-pop-conflict-semantic-merge.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
+      "name": "git-worktree-cleanup-preservation-audit",
+      "description": "Systematic 3-method audit for cleaning up stale git worktrees, branches, and stashes with a strong preservation bias. Use when: (1) asked to clean up stale branches/worktrees/stashes and told to 'err on the side of keeping', (2) git cherry shows '+' for commits on a PR that was MERGED (squash-merge false positive), (3) a branch is far behind main but unclear if work is truly on main, (4) a stash exists but unclear if its content is already committed, (5) cleanup request comes with no explicit 'it is safe to destroy' confirmation.",
+      "version": "1.0.0",
+      "source": "./skills/git-worktree-cleanup-preservation-audit.md",
+      "category": "tooling",
+      "tags": [
+        "git",
+        "worktree",
+        "cleanup",
+        "stash",
+        "branch",
+        "preservation",
+        "audit",
+        "squash-merge",
+        "cherry",
+        "patch-id"
+      ]
+    },
+    {
       "name": "git-worktree-management-patterns",
-      "description": "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy \u2014 always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents, (13) cleaning 20+ mixed worktrees using myrmidon swarm wave parallelization, (14) batch-fixing end-of-file newline violations across multiple branches, (15) worktrees with uncommitted skill documentation requiring a 2-commit markdownlint pattern, (16) removing locked worktrees whose lock holder PID is dead (stale agent lock cleanup).",
-      "version": "2.5.0",
+      "description": "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy \u2014 always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents, (13) cleaning 20+ mixed worktrees using myrmidon swarm wave parallelization, (14) batch-fixing end-of-file newline violations across multiple branches, (15) worktrees with uncommitted skill documentation requiring a 2-commit markdownlint pattern, (16) removing locked worktrees whose lock holder PID is dead (stale agent lock cleanup), (17) worktree has modified pyc/__pycache__ or pixi.lock files (build artifacts) blocking rebase \u2014 Safety Net blocks git checkout -- and git restore; use git stash + git stash drop as the only agent-safe path.",
+      "version": "2.6.0",
       "source": "./skills/git-worktree-management-patterns.md",
       "category": "tooling",
       "tags": []
@@ -8363,6 +9236,22 @@
       "source": "./skills/gitattributes-setup.md",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "github-bulk-issue-filing-rate-limit-recovery",
+      "description": "Patterns for filing 40+ GitHub issues reliably across multiple repos: handling secondary rate limits (403 BCE2), org monthly API usage limits, duplicate detection/cleanup, and pagination truncation in verification. Use when: (1) filing 200+ issues across 10+ repos in a single session, (2) hitting GitHub 403 errors mid-batch, (3) verifying issue counts after multi-wave filing with retry runs.",
+      "version": "1.0.0",
+      "source": "./skills/github-bulk-issue-filing-rate-limit-recovery.md",
+      "category": "tooling",
+      "tags": [
+        "github",
+        "issues",
+        "rate-limit",
+        "bulk-filing",
+        "epic",
+        "deduplication",
+        "pagination"
+      ]
     },
     {
       "name": "github-comment-dedup-across-restarts",
@@ -8438,6 +9327,31 @@
         "hephaestus",
         "mnemosyne",
         "settings"
+      ]
+    },
+    {
+      "name": "homeric-intelligence-ecosystem-installer",
+      "description": "Add a portable ecosystem installer script (scripts/shell/install.sh) to ProjectHephaestus that installs all HomericIntelligence dependencies on any Tailnet host; deploy it remotely via parallel SSH fan-out. Use when: (1) onboarding a new host to the HomericIntelligence mesh, (2) diagnosing missing dependencies (Go, nats-py, cmake, templ) on worker/control/apollo hosts, (3) extending the shared installer with new dependency sections, (4) troubleshooting nats-server install, Go version, or pip system-packages restrictions on Debian 12, (5) running a parallel SSH fan-out across all Tailnet hosts to install the ecosystem.",
+      "version": "1.1.0",
+      "source": "./skills/homeric-intelligence-ecosystem-installer.md",
+      "category": "tooling",
+      "tags": [
+        "ecosystem",
+        "installer",
+        "homeric-intelligence",
+        "nats-server",
+        "go",
+        "python",
+        "cmake",
+        "tailscale",
+        "podman",
+        "hephaestus",
+        "debian",
+        "mesh-bringup",
+        "dependencies",
+        "ssh-fanout",
+        "parallel-deploy",
+        "tailnet"
       ]
     },
     {
@@ -8699,8 +9613,8 @@
     },
     {
       "name": "natsc-fetchcontent-cpp20-integration",
-      "description": "Integrate nats.c v3.9.1 into C++20 projects via CMake FetchContent. Use when: (1) adding NATS JetStream pub/sub to a C++20 service, (2) creating JetStream streams/consumers from C++, (3) debugging nats.c API signature mismatches in C++.",
-      "version": "1.0.0",
+      "description": "Integrate nats.c into C++20 projects via CMake FetchContent without polluting ctest or leaking -Werror. Use when: (1) adding NATS JetStream pub/sub to a C++20 service, (2) natsc FetchContent is registering 300+ ctest entries, (3) check_cpp.cpp fails with -Wunused-parameter, (4) debugging nats.c API signature mismatches in C++.",
+      "version": "2.0.0",
       "source": "./skills/natsc-fetchcontent-cpp20-integration.md",
       "category": "tooling",
       "tags": [
@@ -8708,7 +9622,10 @@
         "cmake",
         "fetchcontent",
         "cpp20",
-        "jetstream"
+        "jetstream",
+        "build-testing",
+        "werror",
+        "ctest"
       ]
     },
     {
@@ -8728,6 +9645,29 @@
       "tags": []
     },
     {
+      "name": "oss-contribution-issue-filing-pattern",
+      "description": "Strict OSS contribution workflow: audit an upstream repo, triage findings into critical bugs vs. quality improvements, check for duplicate issues, then file individual issues with embedded patches for each critical bug and a single omnibus issue for non-critical improvements. Use when: (1) performing a full repo audit before contributing to a project you don't maintain, (2) deciding which findings warrant individual issues vs. a bundled backlog issue, (3) filing bug reports with complete patches so the maintainer can accept without back-and-forth, (4) asking the maintainer which non-critical improvements they want before opening PRs.",
+      "version": "1.0.0",
+      "source": "./skills/oss-contribution-issue-filing-pattern.md",
+      "category": "tooling",
+      "tags": [
+        "oss",
+        "github",
+        "upstream",
+        "issue-filing",
+        "audit",
+        "deduplication",
+        "patch",
+        "bug-report",
+        "omnibus",
+        "triage",
+        "gh-tidy",
+        "shellcheck",
+        "bats",
+        "ci"
+      ]
+    },
+    {
       "name": "packaging-pep561-py-typed-marker",
       "description": "Add PEP 561 py.typed marker to Python packages using hatchling. Use when: (1) making a typed Python package discoverable by mypy/pyright, (2) configuring hatch build targets for type marker files.",
       "version": "1.0.0",
@@ -8745,7 +9685,7 @@
     {
       "name": "parallel-issue-wave-execution",
       "description": "Pattern for implementing 20-35 GitHub issues in parallel waves using isolated git worktrees. Use when: (1) backlog of 20+ issues classified as LOW/MEDIUM, (2) issues are independent and touch different files per wave, (3) need 8-10x speedup via myrmidon swarm Agent(isolation:'worktree') calls, (4) CI must be green on main before launching waves.",
-      "version": "2.2.0",
+      "version": "2.5.0",
       "source": "./skills/parallel-issue-wave-execution.md",
       "category": "tooling",
       "tags": [
@@ -9031,6 +9971,20 @@
       "tags": []
     },
     {
+      "name": "radiance-headless-graph-existing-pipeline-json-validation",
+      "description": "Build a headless Radiance graph export CLI by reusing the existing run/artifact pipeline. Use when: (1) validating model graph output without the web UI, (2) adding CLI coverage to a browser-first analysis app, (3) exporting Model Explorer graphCollections or raw source graph JSON for tests.",
+      "version": "1.0.0",
+      "source": "./skills/radiance-headless-graph-existing-pipeline-json-validation.md",
+      "category": "tooling",
+      "tags": [
+        "radiance",
+        "cli",
+        "headless",
+        "graph-export",
+        "testing"
+      ]
+    },
+    {
       "name": "rebase-conflict-resolution-and-hook-exclusions",
       "description": "Skill: Rebase Conflict Resolution and Pre-commit Hook Exclusions",
       "version": "1.0.0",
@@ -9040,8 +9994,8 @@
     },
     {
       "name": "rebasing-stale-agent-worktree-branches",
-      "description": "Use when: (1) multiple locked `.claude/worktrees/agent-*` worktrees from sub-agent runs need reconciling against main, (2) agent-generated `worktree-agent-*` branches have commits whose work has already been re-done on main with polished wording, (3) `git cherry main <branch>` reports commits as missing even though content is semantically equivalent, (4) plain `git rebase main` produces hundreds of semantic-reword conflict hunks across many branches, (5) you need to determine which agent branches still carry unique content vs. which are redundant duplicates, (6) many agent branches share identical residual diffs and can be collapsed, (7) rebase artifacts (duplicated paragraphs, misplaced sections) need to be distinguished from legitimate unique content",
-      "version": "1.0.0",
+      "description": "Use when: (1) multiple locked `.claude/worktrees/agent-*` worktrees from sub-agent runs need reconciling against main, (2) agent-generated `worktree-agent-*` branches have commits whose work has already been re-done on main with polished wording, (3) `git cherry main <branch>` reports commits as missing even though content is semantically equivalent, (4) plain `git rebase main` produces hundreds of semantic-reword conflict hunks across many branches, (5) you need to determine which agent branches still carry unique content vs. which are redundant duplicates, (6) many agent branches share identical residual diffs and can be collapsed, (7) rebase artifacts (duplicated paragraphs, misplaced sections) need to be distinguished from legitimate unique content, (8) user says 'rebase all branches' but `gh pr list --state open` returns 0 results \u2014 full batch is actually cleanup not rebase, (9) `git branch -vv` shows many branches 'ahead 1, behind N' after a myrmidon swarm session \u2014 squash-merge artifact pattern not stale branches needing rebase, (10) all branches with open PRs show the same MERGED PR ID in `gh pr list --head <branch> --state all` \u2014 squash-merge wave completed, nothing to rebase",
+      "version": "1.1.0",
       "source": "./skills/rebasing-stale-agent-worktree-branches.md",
       "category": "tooling",
       "tags": [
@@ -9053,7 +10007,10 @@
         "cleanup",
         "-X-ours",
         "residual-diff",
-        "sub-agent"
+        "sub-agent",
+        "squash-merge",
+        "cherry",
+        "pre-flight"
       ]
     },
     {
@@ -9075,7 +10032,7 @@
     {
       "name": "repo-audit-triage-fix-and-issue-workflow",
       "description": "Full workflow for strict repo audit triage: run audit, classify findings by complexity, batch-fix simple items in one PR, file GitHub issues for complex work. Use when: (1) running a comprehensive repository quality audit and acting on all findings, (2) needing to triage audit results into immediate fixes vs tracked issues, (3) remediating dead code, stale docs, broken CI, or missing requirements files.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/repo-audit-triage-fix-and-issue-workflow.md",
       "category": "tooling",
       "tags": [
@@ -9329,6 +10286,22 @@
       ]
     },
     {
+      "name": "tooling-cmake-version-grep-minimum-required-trap",
+      "description": "Fix empty VERSION string when extracting project version from CMakeLists.txt using grep -m1 'VERSION'. Use when: (1) CI job fails with 'ERROR: Could not parse VERSION from CMakeLists.txt' despite version being present, (2) grep -m1 'VERSION' returns cmake_minimum_required line instead of project() block, (3) three-part semver regex finds no match on a two-component string like '3.20'.",
+      "version": "1.0.0",
+      "source": "./skills/tooling-cmake-version-grep-minimum-required-trap.md",
+      "category": "tooling",
+      "tags": [
+        "cmake",
+        "grep",
+        "version-extraction",
+        "ci-cd",
+        "semver",
+        "cmake-minimum-required",
+        "regex"
+      ]
+    },
+    {
       "name": "tooling-codex-external-skill-installation",
       "description": "Install and adapt third-party skills into Codex from a GitHub repository. Use when: (1) importing open-source skills into ~/.codex/skills, (2) external skills lack agents/openai.yaml metadata, (3) imported skills assume Claude-specific slash-command behavior, (4) you want repo-local AGENTS.md instructions to advertise newly installed skills.",
       "version": "1.0.0",
@@ -9346,6 +10319,39 @@
       ]
     },
     {
+      "name": "tooling-csv-merchant-normalization-regex-rules",
+      "description": "Normalize raw bank/CC transaction descriptions in a CSV so variants of the same merchant collapse to a single canonical name, enabling clean per-merchant aggregation. Use when: (1) you have a CSV of transactions with messy raw descriptions, (2) you want SUMIF/pivot-table rollups by merchant in a spreadsheet, (3) multiple description variants (location suffixes, namespace prefixes like SQ*/SP*/TST*) represent one real merchant.",
+      "version": "1.0.0",
+      "source": "./skills/tooling-csv-merchant-normalization-regex-rules.md",
+      "category": "tooling",
+      "tags": [
+        "csv",
+        "python",
+        "regex",
+        "financial",
+        "transactions",
+        "merchant",
+        "normalization",
+        "libreoffice",
+        "spreadsheet"
+      ]
+    },
+    {
+      "name": "tooling-dagger-sdk-v020-breaking-changes",
+      "description": "Migrate Dagger SDK from v0.9.x to v0.20+. Use when: (1) CI TypeScript typecheck fails after a dagger SDK bump, (2) upgrading dagger from 0.9 to 0.20+, (3) seeing 'Container.build is not a function' or similar type errors after a dependabot dagger upgrade PR.",
+      "version": "1.0.0",
+      "source": "./skills/tooling-dagger-sdk-v020-breaking-changes.md",
+      "category": "tooling",
+      "tags": [
+        "dagger",
+        "ci-cd",
+        "typescript",
+        "breaking-changes",
+        "dependabot",
+        "migration"
+      ]
+    },
+    {
       "name": "tooling-editorconfig-cross-editor-consistency",
       "description": "Add .editorconfig for cross-editor formatting consistency. Use when: (1) repository lacks .editorconfig, (2) contributors use different editors with inconsistent indentation/whitespace, (3) non-Python files (YAML, JSON, Markdown, shell) need formatting standards beyond what ruff covers.",
       "version": "1.0.0",
@@ -9356,6 +10362,24 @@
         "developer-experience",
         "formatting",
         "cross-editor"
+      ]
+    },
+    {
+      "name": "tooling-gh-tidy-myrmidon-rebase-swarm",
+      "description": "Use when wrapping the gh-tidy CLI extension to add Myrmidon swarm rebase-conflict resolution. Triggers: (1) developer wants single-repo branch tidy with interactive delete prompts preserved, (2) gh-tidy aborts rebases due to conflicts and you want agents to fix them autonomously, (3) you need a branch-tidying CLI that dispatches per-branch swarm agents without ever deleting branches.",
+      "version": "1.0.0",
+      "source": "./skills/tooling-gh-tidy-myrmidon-rebase-swarm.md",
+      "category": "tooling",
+      "tags": [
+        "gh-tidy",
+        "myrmidon",
+        "rebase",
+        "swarm",
+        "git",
+        "worktree",
+        "branch",
+        "asyncio",
+        "claude-code-sdk"
       ]
     },
     {
@@ -9499,6 +10523,14 @@
       ]
     },
     {
+      "name": "tooling-safety-net-git-blocked-operations",
+      "description": "Use when: (1) a git or filesystem operation is blocked by the Safety Net hook (cc-safety-net.js) and you need to identify the correct fallback, (2) you need to know which git operations Safety Net blocks vs. allows, (3) a compound bash command fails mid-way due to a Safety Net block, (4) cleaning up locked worktrees in Safety Net-constrained environments.",
+      "version": "1.0.0",
+      "source": "./skills/tooling-safety-net-git-blocked-operations.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "tooling-shared-scripts-pypi-centralization",
       "description": "Workflow for auditing cross-repo script duplication and centralizing shared Python validation scripts into a PyPI package with CLI entry points. Use when: (1) multiple repos have duplicated scripts/check_*.py or scripts/validate_*.py files, (2) planning to consolidate shared tooling into a library package, (3) porting standalone scripts to library modules with testable APIs.",
       "version": "1.0.0",
@@ -9637,7 +10669,7 @@
     {
       "name": "worktree-cleanup-user-constraints",
       "description": "Use when cleaning up worktrees under user-specified constraints: (1) no branch deletion allowed, (2) all destructive ops must go into a reviewable script, (3) uncommitted work in merged-branch worktrees must be analyzed and committed if useful. Covers classification of dirty worktrees (artifact noise vs real work), generating a section-annotated cleanup script, handling files left orphaned in merged-branch working trees, the staged-file two-step (reset HEAD then checkout --) required when worktrees contain staged-only new files (status A), all-clean direct execution, cherry=1 rebase-merge artifact handling, and the remove-worktree-keep-branch pattern for closed-not-merged PRs.",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "source": "./skills/worktree-cleanup-user-constraints.md",
       "category": "tooling",
       "tags": [
@@ -9651,7 +10683,8 @@
         "circuit-breaker",
         "staged-files",
         "rebase-merge",
-        "closed-pr"
+        "closed-pr",
+        "gitignore"
       ]
     },
     {

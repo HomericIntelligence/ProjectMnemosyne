@@ -11,7 +11,7 @@ version: 1.0.0
 user-invocable: false
 tags:
 - rate-limit
-- 429
+- "429"
 - experiment-diagnosis
 - checkpoint-reset
 - data-quality
