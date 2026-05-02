@@ -16,7 +16,6 @@ version: 1.0.0
 | Objective | Complete workflow for implementing a GitHub issue from start to finish. - Starting work on a new issue |
 | Outcome | Operational |
 
-
 Complete workflow for implementing a GitHub issue from start to finish.
 
 ## When to Use

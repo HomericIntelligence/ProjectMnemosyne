@@ -18,7 +18,6 @@ tier: 2
 | Objective | Implement input validation to ensure functions receive correct data types, shapes, ranges, and formats. |
 | Outcome | Operational |
 
-
 Implement input validation to ensure functions receive correct data types, shapes, ranges, and formats.
 
 ## When to Use

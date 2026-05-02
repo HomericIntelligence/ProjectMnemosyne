@@ -16,7 +16,6 @@ user-invocable: false
 | Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-02-05 | | **Objective** | Verify two full experiment runs were complete and ready for... |
 | Outcome | Operational |
 
-
 ## Session Overview
 
 | Attribute | Value |

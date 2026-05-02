@@ -64,7 +64,7 @@ A previously-complete experiment would exit immediately even if new tiers were r
 
 ## Test Patterns
 
-### Testing `UntilHaltError` state after sentinel:
+### Testing `UntilHaltError` state after sentinel
 
 ```python
 def test_until_halt_error_leaves_subtest_in_runs_in_progress(ssm, checkpoint, checkpoint_path):
@@ -82,7 +82,7 @@ def test_until_halt_error_leaves_subtest_in_runs_in_progress(ssm, checkpoint, ch
     assert not ssm.is_complete(TIER_ID, SUBTEST_ID)
 ```
 
-### Testing non-sentinel exceptions still mark FAILED:
+### Testing non-sentinel exceptions still mark FAILED
 
 ```python
 def test_non_until_halt_exception_still_marks_failed(ssm, checkpoint, checkpoint_path):
@@ -95,7 +95,7 @@ def test_non_until_halt_exception_still_marks_failed(ssm, checkpoint, checkpoint
     assert ssm.get_state(TIER_ID, SUBTEST_ID) == SubtestState.FAILED
 ```
 
-### Testing `_derive_run_result` for `in_progress`:
+### Testing `_derive_run_result` for `in_progress`
 
 ```python
 def test_derive_run_result_returns_in_progress_for_mid_sequence_state():

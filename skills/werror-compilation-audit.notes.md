@@ -84,4 +84,4 @@ Each agent compiled with `timeout 60 pixi run mojo --Werror -I "$(pwd)" -I . "$f
 
 7. **Examples fail due to known issues** — Most `examples/` failures are the linker-lm issue (#4514). Check for known patterns before trying to fix.
 
-8. **Tuple destructure with unused vars** — In `var (a, b, c, d, ...) = func()`, unused variables must be replaced with `_`. There's no way to use `_ = ` on already-named vars in a destructure — you must edit the destructure pattern itself.
+8. **Tuple destructure with unused vars** — In `var (a, b, c, d, ...) = func()`, unused variables must be replaced with `_`. There's no way to use `_ =` on already-named vars in a destructure — you must edit the destructure pattern itself.

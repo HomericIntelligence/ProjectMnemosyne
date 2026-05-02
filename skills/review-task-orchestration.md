@@ -156,7 +156,6 @@ Use this workflow when:
 |---------|-------|------------|
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
-
 ### ❌ Exploration Agents Failed with "classifyHandoffIfNeeded" Error
 
 **What happened**:

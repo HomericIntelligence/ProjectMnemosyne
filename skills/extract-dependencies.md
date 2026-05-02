@@ -18,7 +18,6 @@ tier: 2
 | Objective | Analyze import statements and identify all external and internal module dependencies in codebase. - Understanding module coupling |
 | Outcome | Operational |
 
-
 Analyze import statements and identify all external and internal module dependencies in codebase.
 
 ## When to Use

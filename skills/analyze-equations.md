@@ -18,7 +18,6 @@ tier: 2
 | Objective | Extract and parse mathematical equations from research papers to understand computational requirements |
 | Outcome | Operational |
 
-
 Extract and parse mathematical equations from research papers to understand computational requirements
 and implementation details.
 

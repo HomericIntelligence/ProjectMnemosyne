@@ -39,10 +39,10 @@ Both already imported in the test file header.
 Two categories of tests:
 
 **1. Constant-fill tensors** (source is `ones()`): Use `assert_all_values`
-   - `test_tile_multidim`, `test_repeat_axis`, `test_permute_axes`
+- `test_tile_multidim`, `test_repeat_axis`, `test_permute_axes`
 
 **2. Sequential-value tensors** (source is `arange()`): Use `assert_value_at` in loops
-   - `test_split_equal`, `test_split_unequal`, `test_tile_1d`, `test_repeat_elements`, `test_broadcast_to_compatible`
+- `test_split_equal`, `test_split_unequal`, `test_tile_1d`, `test_repeat_elements`, `test_broadcast_to_compatible`
 
 ## Key Flat-Index Calculations
 

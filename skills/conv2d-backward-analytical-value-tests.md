@@ -43,7 +43,7 @@ tags: [conv2d, backward-pass, analytical-values, mojo, batch-accumulation, multi
 
 | Gradient | Expected value |
 |----------|---------------|
-| `grad_bias[oc]` | `2.0` (= batch * 1 * 1) |
+| `grad_bias[oc]` | `2.0` (= batch *1* 1) |
 | `grad_weights[oc,ic,kh,kw]` | `2.0` (= batch * 1.0) |
 | `grad_input[b,ic,ih,iw]` | `8.0` (= out_channels) |
 

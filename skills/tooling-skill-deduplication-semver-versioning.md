@@ -18,7 +18,7 @@ tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 |-------|-------|
 | **Date** | 2026-03-28 |
 | **Objective** | Merge duplicate skill clusters into consolidated skills, with semantic versioning for amendments |
-| **Outcome** | Six rounds: 16 test-splitting-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5); 9 conv2d-gradient-* merged to 3 (net -6); 12 test-splitting-* merged to 3 (net -9); 4 test-splitting-* merged to 1 with OBSOLETE notice (net -3) after heap corruption was fixed at compiler level. |
+| **Outcome** | Six rounds: 16 test-splitting-*merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-*merged to 1 (net -5); 9 conv2d-gradient-* merged to 3 (net -6); 12 test-splitting-*merged to 3 (net -9); 4 test-splitting-* merged to 1 with OBSOLETE notice (net -3) after heap corruption was fixed at compiler level. |
 | **Verification** | verified-ci |
 | **History** | [changelog](./tooling-skill-deduplication-semver-versioning.history) |
 

@@ -68,7 +68,7 @@ fn _get_float64(self, index: Int) -> Float64:
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| @always_inline on _get_float64 etc. | Added @always_inline to 7 runtime-dtype accessor methods to keep self alive during bitcast | Inlining large branching methods into every call site (hundreds of times in gradient checker) increases JIT compilation memory pressure, triggering MORE libKGENCompilerRTShared.so crashes | @always_inline is only safe for small, non-branching methods. Large methods with runtime if/elif should NOT be inlined. |
+| @always_inline on_get_float64 etc. | Added @always_inline to 7 runtime-dtype accessor methods to keep self alive during bitcast | Inlining large branching methods into every call site (hundreds of times in gradient checker) increases JIT compilation memory pressure, triggering MORE libKGENCompilerRTShared.so crashes | @always_inline is only safe for small, non-branching methods. Large methods with runtime if/elif should NOT be inlined. |
 | Hypothesis: ASAP destruction | Assumed self was destroyed before bitcast write completed without @always_inline | The method frame already keeps self alive — the crash is from JIT memory pressure, not object lifetime | Don't assume the crash mechanism without evidence. The same crash signature can have different root causes. |
 
 ## Results & Parameters

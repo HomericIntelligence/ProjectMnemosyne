@@ -24,8 +24,8 @@ Fix: restore_run_context() loads agent_result from disk
 
 ### test-031 Batch C attempt 2 (after restore_run_context added)
 Error: "judgment must be set before finalize_run"
-Cause: _has_valid_judge_result returns False for is_valid=False results
-Fix: check judge_dir/"result.json" exists directly, not via _has_valid_judge_result
+Cause:_has_valid_judge_result returns False for is_valid=False results
+Fix: check judge_dir/"result.json" exists directly, not via_has_valid_judge_result
 
 ## Linter reverts observed
 After committing, the linter reverted these changes:

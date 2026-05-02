@@ -21,7 +21,7 @@ patterns: `WARNING:`, `HACK:`, `XXX:`, and `Not implemented` inside `print()` ca
 2. Read `tests/scripts/test_check_note_format.py` to understand the expected test class structure.
 3. Grepped `examples/` for all four banned patterns — found one violation:
    `examples/lenet-emnist/run_train.mojo:302` (`print("WARNING: Gradient overflow...")`).
-4. Fixed the violation by removing only the `WARNING: ` prefix (message is legitimate).
+4. Fixed the violation by removing only the `WARNING:` prefix (message is legitimate).
 5. Created `scripts/check_runtime_output_patterns.py` following the same interface as the NOTE checker.
 6. Created `tests/scripts/test_check_runtime_output_patterns.py` with 44 unit tests covering all paths.
 7. Updated `.github/workflows/script-validation.yml`:

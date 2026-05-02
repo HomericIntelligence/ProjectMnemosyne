@@ -16,7 +16,6 @@ version: 1.0.0
 | Objective | Evaluate PR quality and provide structured feedback. - Reviewing a PR before merge - Evaluating code quality and standards |
 | Outcome | Operational |
 
-
 Evaluate PR quality and provide structured feedback.
 
 ## When to Use

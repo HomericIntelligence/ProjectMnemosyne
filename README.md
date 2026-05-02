@@ -216,5 +216,3 @@ If you use ProjectMnemosyne in your research or work, please cite:
   url={https://github.com/HomericIntelligence/ProjectMnemosyne}
 }
 ```
-
-

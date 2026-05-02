@@ -18,7 +18,6 @@ tier: 2
 | Objective | Systematically measure function execution time, memory usage, and performance characteristics to identify optimization opportunities. |
 | Outcome | Operational |
 
-
 Systematically measure function execution time, memory usage, and performance characteristics to identify optimization opportunities.
 
 ## When to Use

@@ -18,7 +18,6 @@ tier: 1
 | Objective | Examine code organization, module hierarchy, and structural patterns to understand how components are organized. |
 | Outcome | Operational |
 
-
 Examine code organization, module hierarchy, and structural patterns to understand how components are organized.
 
 ## When to Use

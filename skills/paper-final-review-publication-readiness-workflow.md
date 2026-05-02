@@ -133,7 +133,6 @@ Structure the plan document with:
 |---------|-------|------------|
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
-
 ### ❌ Don't assume file paths are correct without verification
 
 **What happened**: Paper listed model config paths as `claude-opus-4.5.yaml` (dots) but actual files use `claude-opus-4-5.yaml` (dashes). Also test path was `tests/001-hello-world` instead of `tests/fixtures/tests/test-001`.

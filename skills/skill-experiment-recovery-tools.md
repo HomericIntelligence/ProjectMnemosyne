@@ -16,7 +16,6 @@ user-invocable: false
 | Objective | | Property | Value | |----------|-------| | **Date** | 2026-01-29 | | **Objective** | Build scripts to selectively re-run failed/incomplete agents ... |
 | Outcome | Operational |
 
-
 | Property | Value |
 |----------|-------|
 | **Date** | 2026-01-29 |
@@ -166,7 +165,6 @@ regen_stats = regenerate_experiment(
 | Attempt | Issue | Resolution |
 |---------|-------|------------|
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
-
 
 ### ❌ Failed: Initial Classification Didn't Check agent/result.json
 

@@ -183,7 +183,7 @@ gh pr merge --auto --rebase <pr-number>
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| `set -e` with grep in script | Used `set -e` and ran `git log ... \| grep "$ISSUE" \| head -5` | `grep` returns exit code 1 when no matches found; script aborted silently, looking like a critical failure | Use `set -uo pipefail` and capture with `|| true`: `EXISTING_COMMITS=$(... || true)` |
+| `set -e` with grep in script | Used `set -e` and ran `git log ... \| grep "$ISSUE" \| head -5` | `grep` returns exit code 1 when no matches found; script aborted silently, looking like a critical failure | Use `set -uo pipefail` and capture with `|| true`:`EXISTING_COMMITS=$(... || true)` |
 | Treating open PRs as critical failures | Hard-stopped on any open PR | An open PR may be stale, abandoned, or collaborative — blocks legitimate handoff scenarios | Open PR → WARN (exit 0). Only MERGED PRs closing the issue are critical (exit 1) |
 | Script at repo root or top-level `scripts/` | Placed `preflight_check.sh` at `scripts/preflight_check.sh` | Breaks discoverability and portability; doesn't communicate skill ownership | Collocate scripts with their skill: `<test-path>/skills/<skill-name>/scripts/` |
 | Using `gh pr list --search "<issue-number>"` for ownership | Free-text PR search for issue number | Full-text search matches any PR mentioning the number in title or body — false positives on "Fix issue 735-related bug" for issue 735 | Use `closingIssuesReferences` via `gh pr view "$pr_num" --json closingIssuesReferences` |

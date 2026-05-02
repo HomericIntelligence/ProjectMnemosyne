@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Verify complete agent system coverage across all dimensions. - After adding new agents to system - Validating agent system completeness |
 | Outcome | Operational |
 
-
 Verify complete agent system coverage across all dimensions.
 
 ## When to Use

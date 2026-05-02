@@ -18,7 +18,6 @@ tier: 2
 | Objective | Identify, document, and translate algorithms from research papers into structured pseudocode for implementation planning. |
 | Outcome | Operational |
 
-
 Identify, document, and translate algorithms from research papers into structured pseudocode for implementation planning.
 
 ## When to Use

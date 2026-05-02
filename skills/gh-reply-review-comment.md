@@ -18,7 +18,6 @@ agent: test-engineer
 | Objective | Reply to PR review comments using the correct GitHub API. - Responding to inline code review feedback |
 | Outcome | Operational |
 
-
 Reply to PR review comments using the correct GitHub API.
 
 ## When to Use
@@ -105,7 +104,6 @@ gh api repos/OWNER/REPO/pulls/PR/comments \
 # Verify CI status
 gh pr checks PR
 ```
-
 
 ## Results & Parameters
 

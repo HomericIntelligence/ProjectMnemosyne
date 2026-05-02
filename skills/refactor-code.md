@@ -18,7 +18,6 @@ tier: 2
 | Objective | Apply systematic refactoring techniques to improve code clarity, maintainability, and performance without changing functionality. |
 | Outcome | Operational |
 
-
 Apply systematic refactoring techniques to improve code clarity, maintainability, and performance without changing functionality.
 
 ## When to Use

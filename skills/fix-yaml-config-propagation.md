@@ -16,7 +16,6 @@ user-invocable: false
 | Objective | | Field | Value | |-------|-------| | Date | 2026-02-05 | | Objective | Fix T0 subtest 00 missing `--system-prompt ""` flag due to YAML config not ... |
 | Outcome | Operational |
 
-
 ## Session Overview
 
 | Field | Value |

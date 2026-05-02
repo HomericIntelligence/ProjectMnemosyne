@@ -18,7 +18,6 @@ phase: Package
 | Objective | Create distributable packages including Mojo packages (.mojopkg), archives, and installation procedures. |
 | Outcome | Operational |
 
-
 Create distributable packages including Mojo packages (.mojopkg), archives, and installation procedures.
 
 ## When to Use

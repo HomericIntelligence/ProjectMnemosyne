@@ -42,6 +42,6 @@
 ### Key Code Paths
 - stages.py:stage_create_worktree -> workspace_setup.py:_setup_workspace -> git worktree add
 - stages.py:stage_execute_agent -> Popen(["bash", replay_script])
-- stage_finalization.py:stage_execute_judge -> _call_judge_with_retry -> llm_judge.py:_call_claude_judge -> subprocess.run(["claude", ...])
+- stage_finalization.py:stage_execute_judge ->_call_judge_with_retry -> llm_judge.py:_call_claude_judge -> subprocess.run(["claude", ...])
 - stage_finalization.py:stage_cleanup_worktree -> workspace_manager.cleanup_worktree (only for passing runs!)
 - stages.py:stage_run_judge_pipeline -> build_pipeline.py:_run_build_pipeline (under _pipeline_lock)

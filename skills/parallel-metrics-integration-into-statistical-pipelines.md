@@ -357,7 +357,6 @@ Copy-paste ready configurations and expected outputs.
 |---------|-------|------------|
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
-
 ### ❌ Attempt 1: Sequential Integration (Rejected)
 
 **What we tried**: Integrate one metric completely, commit, then move to next

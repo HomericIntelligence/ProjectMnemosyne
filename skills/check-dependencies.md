@@ -18,7 +18,6 @@ tier: 2
 | Objective | Verify that required dependencies are installed and compatible with the project requirements. - Setting up development environment |
 | Outcome | Operational |
 
-
 Verify that required dependencies are installed and compatible with the project requirements.
 
 ## When to Use

@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Parallelize tensor and array operations using SIMD. - Optimizing tensor operations - Vectorizing element-wise computations |
 | Outcome | Operational |
 
-
 Parallelize tensor and array operations using SIMD.
 
 ## When to Use

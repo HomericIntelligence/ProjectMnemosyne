@@ -16,7 +16,6 @@ user-invocable: false
 | Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-01-30 | | **Project** | ProjectScylla | |
 | Outcome | Operational |
 
-
 | Attribute | Value |
 |-----------|-------|
 | **Date** | 2026-01-30 |

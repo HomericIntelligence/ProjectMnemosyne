@@ -116,7 +116,6 @@ def add_verified_workflow_wrapper(content: str) -> str:
 
 Extracts attempt information from subsections and generates summary tables while preserving detailed content. Handles section name variations.
 
-
 ### 4. Run Scripts Sequentially
 
 ```bash

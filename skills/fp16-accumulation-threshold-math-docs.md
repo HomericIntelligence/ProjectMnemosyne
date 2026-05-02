@@ -90,7 +90,7 @@ user-invocable: false
 | Relative precision | ~0.1% |
 | Safe accumulations (tol=1e-1) | < ~100 |
 
-### Per-layer accumulation counts (n = K² × C_in):
+### Per-layer accumulation counts (n = K² × C_in)
 
 | Layer | Formula | n |
 |-------|---------|---|
@@ -112,7 +112,7 @@ Float16 error ≈ n × 9.77e-4. Exceeds tolerance 1e-1 when n > ~102.
 
 ## Results & Parameters
 
-### Insertion anchor (old_string for Edit tool):
+### Insertion anchor (old_string for Edit tool)
 
 ```text
 - **Method**: Central differences (more accurate than forward differences)
@@ -120,7 +120,7 @@ Float16 error ≈ n × 9.77e-4. Exceeds tolerance 1e-1 when n > ~102.
 ### Example
 ```
 
-### Commit message format:
+### Commit message format
 
 ```text
 docs(testing): add Float16 convolution limitations section to testing-strategy.md
@@ -134,7 +134,7 @@ and a reference to issue #<original> where the limitation was first identified.
 Closes #<follow-up-issue>
 ```
 
-### PR description format:
+### PR description format
 
 ```markdown
 ## Summary

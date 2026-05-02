@@ -145,7 +145,7 @@ Copy-paste ready configurations and expected outputs.
 
 ## Justification Comment Patterns
 
-Keep these comments short (< 60 chars after `# `) to avoid E501:
+Keep these comments short (< 60 chars after `#`) to avoid E501:
 
 ```python
 # broad catch: top-level worker boundary, must not crash thread pool

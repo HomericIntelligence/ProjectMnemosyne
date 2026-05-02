@@ -18,7 +18,6 @@ tier: 2
 | Objective | Implement and execute model training loops including forward/backward passes, gradient updates, and checkpoint management. |
 | Outcome | Operational |
 
-
 Implement and execute model training loops including forward/backward passes, gradient updates, and checkpoint management.
 
 ## When to Use

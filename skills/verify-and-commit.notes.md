@@ -37,7 +37,7 @@ Files modified (14 total, +1393 -345 lines):
 
 ### 2. Ruff E501 (lines 854, 856 in manage_experiment.py)
 - Both lines were in a CLI help text string (equivalence mapping comment block)
-- Fixed by inserting `\n          ` continuation at natural break point
+- Fixed by inserting `\n` continuation at natural break point
 - Original: `→ run --config <test-dir> --results-dir /exp/ --from replay_generated --filter-tier T0 --filter-status failed`
 - Fixed:
   ```

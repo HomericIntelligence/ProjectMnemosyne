@@ -18,7 +18,6 @@ tier: 1
 | Objective | Run linting tools to identify style issues, potential bugs, and code quality problems in source files. |
 | Outcome | Operational |
 
-
 Run linting tools to identify style issues, potential bugs, and code quality problems in source files.
 
 ## When to Use

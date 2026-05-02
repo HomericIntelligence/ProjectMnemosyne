@@ -50,7 +50,7 @@ Lines like:
 def my_func(arg: str) -> int:  # noqa: C901  # complex function with many branches
 ```
 
-After RUF100 removes `# noqa: C901  # `:
+After RUF100 removes `# noqa: C901  #`:
 ```python
 def my_func(arg: str) -> int:  # complex function with many branches
 ```

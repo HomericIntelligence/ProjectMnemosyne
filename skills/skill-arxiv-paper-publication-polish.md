@@ -16,7 +16,6 @@ user-invocable: false
 | Objective | | Field | Value | |-------|-------| | **Date** | 2026-02-07 | | **Objective** | Apply publication-ready polish to LaTeX papers based on comprehensi... |
 | Outcome | Operational |
 
-
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-02-07 |
@@ -166,7 +165,6 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 | Attempt | Issue | Resolution |
 |---------|-------|------------|
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
-
 
 ### ❌ Attempt: Apply fixes in line-number order
 

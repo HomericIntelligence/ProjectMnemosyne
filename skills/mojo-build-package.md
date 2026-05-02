@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Build compiled Mojo packages for distribution and reuse. - Creating distributable libraries - Packaging phase of development |
 | Outcome | Operational |
 
-
 Build compiled Mojo packages for distribution and reuse.
 
 ## When to Use

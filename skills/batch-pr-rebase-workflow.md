@@ -130,7 +130,7 @@ GIT_EDITOR=true git rebase --continue
 #   endif
 # 2. Pattern rule:
 #   %.native:
-#   	@$(MAKE) $* NATIVE=1
+#    @$(MAKE) $* NATIVE=1
 # Diagnosis: lint job shows "Cannot connect to the Docker daemon at unix:///run/user/1001/podman/podman.sock"
 #            AND make deps.native exits 2
 
@@ -698,7 +698,7 @@ endif
 
 # Pattern rule for native variants — matches any target with .native suffix.
 %.native:
-	@$(MAKE) $* NATIVE=1
+ @$(MAKE) $* NATIVE=1
 ```
 
 **Pattern: CMakeLists.txt ADR conflicts — PR adds source files, main disables test sources**

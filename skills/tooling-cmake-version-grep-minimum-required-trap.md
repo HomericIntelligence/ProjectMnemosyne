@@ -84,7 +84,7 @@ VERSION=$(sed -n '/^project(/,/^)/p' CMakeLists.txt | grep -oP 'VERSION\s+\K[\d.
    ```bash
    VERSION=$(sed -n '/^project(/,/^)/p' CMakeLists.txt | grep -oP 'VERSION\s+\K[\d.]+')
    ```
-   Prints only the lines between `project(` and the closing `)`, then extracts the version value after `VERSION `.
+   Prints only the lines between `project(` and the closing `)`, then extracts the version value after `VERSION`.
 
 4. **Validate before using:**
    ```bash

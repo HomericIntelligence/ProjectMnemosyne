@@ -18,7 +18,6 @@ tier: 2
 | Objective | Analyze and document machine learning model architectures including layers, connections, and information flow. |
 | Outcome | Operational |
 
-
 Analyze and document machine learning model architectures including layers, connections, and information flow.
 
 ## When to Use

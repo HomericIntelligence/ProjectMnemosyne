@@ -43,9 +43,9 @@ without any `sys.path` manipulation.
    formatting). Expected — ruff modifies files then reports "files modified". Run twice.
 
 ### Test Count Tracking
-- Baseline: 119 collected
-- parser: 35, cmd_run: 53, cmd_repair: 7, cmd_visualize: 24
-- Sum: 35+53+7+24 = 119 ✓ (exact match)
++ Baseline: 119 collected
++ parser: 35, cmd_run: 53, cmd_repair: 7, cmd_visualize: 24
++ Sum: 35+53+7+24 = 119 ✓ (exact match)
 
 ### Files Created
 ```

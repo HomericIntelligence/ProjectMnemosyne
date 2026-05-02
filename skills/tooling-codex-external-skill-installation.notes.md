@@ -55,4 +55,3 @@ This session was different:
 - explicit `agents/openai.yaml` generation for Codex
 - adapting imported skills from Claude assumptions to Codex behavior
 - repo-local `AGENTS.md` advertisement after install
-

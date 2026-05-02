@@ -18,7 +18,6 @@ tier: 2
 | Objective | Locate and document all hyperparameters mentioned in research papers including learning rates, batch sizes, and model configurations. |
 | Outcome | Operational |
 
-
 Locate and document all hyperparameters mentioned in research papers including learning rates, batch sizes, and model configurations.
 
 ## When to Use

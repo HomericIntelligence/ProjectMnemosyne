@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Validate Mojo code against v0.26.1+ syntax standards. - Writing new Mojo code before testing - Reviewing Mojo code for syntax issues |
 | Outcome | Operational |
 
-
 Validate Mojo code against v0.26.1+ syntax standards.
 
 ## When to Use

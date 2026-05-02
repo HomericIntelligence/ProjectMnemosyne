@@ -29,7 +29,7 @@ user-invocable: false
 
 | Layer | What to change | Pattern |
 |-------|---------------|---------|
-| Filter | Add composite `log_context_tag` field | Empty when no context, ` [T0/00/1]` when set |
+| Filter | Add composite `log_context_tag` field | Empty when no context, `[T0/00/1]` when set |
 | Format string | Use `%(log_context_tag)s` | Replaces `[%(tier_id)s/...]` |
 | Log messages | Remove manual `[tier/sub/run]` prefixes | Keep only the message content |
 | Thread field | `%(threadName)s` not `%(thread)d` | Human-readable names |

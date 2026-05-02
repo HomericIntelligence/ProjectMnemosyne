@@ -17,7 +17,7 @@ Address PR review feedback: `agents/hierarchy.md` had 3 fenced code blocks close
 
 1. Read `.claude-review-fix-3146.md` for fix plan
 2. Read `agents/hierarchy.md` around flagged lines to confirm the pattern
-3. Used `Edit` tool to fix all 3 closing fences (```text → ```)
+3. Used `Edit` tool to fix all 3 closing fences (```text →```)
 4. Ran `pixi run pre-commit run markdownlint-cli2 --all-files`
 5. Discovered additional violations NOT in the review plan:
    - MD013 on lines 96, 104, 106, 214, 215, 217 (>120 chars)

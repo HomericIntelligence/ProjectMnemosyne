@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Validate Mojo ownership and borrowing rules. - Reviewing code for memory safety - Debugging memory or segfault issues |
 | Outcome | Operational |
 
-
 Validate Mojo ownership and borrowing rules.
 
 ## When to Use

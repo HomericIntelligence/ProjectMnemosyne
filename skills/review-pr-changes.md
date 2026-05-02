@@ -16,7 +16,6 @@ version: 1.0.0
 | Objective | Perform structured review of PR changes against project quality standards. - Code review before approving PR |
 | Outcome | Operational |
 
-
 Perform structured review of PR changes against project quality standards.
 
 ## When to Use

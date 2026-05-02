@@ -7,7 +7,7 @@
 HomericIntelligence/ProjectOdyssey
 
 ## Issue
-#3076 — [Cleanup] Clean up Python interop blocker NOTEs
+# 3076 — [Cleanup] Clean up Python interop blocker NOTEs
 
 ## Objective
 Update 3 NOTE comments in `shared/training/` that document Python/Mojo data loader

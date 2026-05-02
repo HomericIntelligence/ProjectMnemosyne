@@ -20,7 +20,7 @@
 
 1. `build_pipeline.py` - No cross-cluster deps, leaf module
 2. `judge_artifacts.py` - Only TYPE_CHECKING dep on build_pipeline + llm_judge
-3. `judge_execution.py` - Depends on judge_artifacts (lazy import for _save_judge_logs)
+3. `judge_execution.py` - Depends on judge_artifacts (lazy import for_save_judge_logs)
 4. `judge_context.py` - Depends on build_pipeline + judge_artifacts (lazy imports)
 
 ### Full patch target diff

@@ -42,7 +42,8 @@ MD058: false
 MD047: false
 
 # Inline HTML: allow XML-like tags used in Claude prompt templates and skill
-# command files (system, task, section, step, principle, etc.)
+# command files, plus placeholder tokens like <number>, <branch>, <id> that
+# appear in code examples and are falsely detected as HTML elements.
 MD033:
   allowed_elements:
     - T
@@ -61,6 +62,34 @@ MD033:
     - output
     - context
     - instructions
+    - branch
+    - category
+    - changes
+    - date
+    - file
+    - id
+    - keyword
+    - name
+    - number
+    - other
+    - owner
+    - pid
+    - prefix
+    - project
+    - recipe
+    - repo
+    - script
+    - skill-name
+
+# Duplicate headings: allow same heading text at different nesting levels.
+# CHANGELOG files legitimately repeat "Added"/"Fixed" under each version.
+# Skill notes files repeat section names across multiple PR entries.
+MD024:
+  allow_different_nesting: true
+
+# Multiple top-level headings: disabled — skill .notes.md files use H1 for
+# each PR/issue entry as a natural document structure (not a title hierarchy).
+MD025: false
 
 MD036: false
 MD040: false

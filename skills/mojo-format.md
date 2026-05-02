@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Format Mojo code files to ensure consistent style. - Preparing code for commit - Pre-commit hook reports formatting issues |
 | Outcome | Operational |
 
-
 Format Mojo code files to ensure consistent style.
 
 ## When to Use

@@ -18,7 +18,6 @@ phase: Cleanup
 | Objective | Refactor and finalize code after all parallel phases (Test, Implementation, Package) are complete. - After Test, Implementation, and Package phases... |
 | Outcome | Operational |
 
-
 Refactor and finalize code after all parallel phases (Test, Implementation, Package) are complete.
 
 ## When to Use

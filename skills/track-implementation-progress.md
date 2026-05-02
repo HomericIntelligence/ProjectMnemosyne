@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Monitor completion of planned components and identify blockers. - Regular progress tracking during implementation |
 | Outcome | Operational |
 
-
 Monitor completion of planned components and identify blockers.
 
 ## When to Use
