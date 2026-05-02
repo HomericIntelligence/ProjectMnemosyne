@@ -14,7 +14,7 @@ tags: [mypy, python, reexport, implicit_reexport, mock, patch, backward-compatib
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-29 |
 | **Objective** | Re-export a symbol from a module for backward compatibility after moving it to a leaf module, while satisfying mypy's `implicit_reexport = false` strict setting |
 | **Outcome** | Success — `from X import Y as Y` satisfies mypy and keeps `mock.patch` bindings working |
@@ -81,7 +81,7 @@ implicit_reexport = false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Plain import | `from hephaestus.github.gh_subprocess import _gh_call` | mypy raises "Module does not explicitly export attribute '_gh_call'" when `implicit_reexport = false` | The plain `from X import Y` form is treated as an implementation detail by mypy, not a public re-export |
 | `__all__` workaround | Adding `"_gh_call"` to `__all__` in the re-exporting module without changing the import | `__all__` controls `from module import *` behavior; mypy still requires the `as Y` form for the import statement itself | `__all__` and explicit re-export are independent mechanisms — both may be needed for full correctness |
 
@@ -113,5 +113,5 @@ from package.new_location import MySymbol as MySymbol  # noqa: PLC0414
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | PR #308 — moved `_gh_call` to `hephaestus/github/gh_subprocess.py`, re-exported from `hephaestus/automation/github_api.py` for 30+ `@patch` backward compatibility | verified-local: mypy pass + all tests pass |

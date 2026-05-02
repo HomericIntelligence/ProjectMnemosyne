@@ -14,7 +14,7 @@ tags: [oss, github, upstream, issue-filing, audit, deduplication, patch, bug-rep
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-28 |
 | **Objective** | Audit `HaywardMorihara/gh-tidy`, triage findings into critical vs. non-critical, deduplicate against existing issues, then file individual issues for critical bugs (with patches) and one omnibus issue for non-critical improvements |
 | **Outcome** | Issues #70 (branch_exists_locally bug), #71 (bats-core tests), #72 (GitHub Actions CI — references maintainer's own #28), #73 (12-item omnibus quality backlog) filed successfully |
@@ -50,7 +50,7 @@ Note the existing issue numbers so you can reference them in your new filings (e
 ### 2. Triage: Critical vs. Non-Critical
 
 | Category | Characteristics | Filing Strategy |
-|----------|----------------|-----------------|
+| ---------- | ---------------- | ----------------- |
 | **Critical** | Affects safety/correctness; wrong answer, data loss, silent failure, dead code that blocks protection | One issue per bug, include the exact patch |
 | **Non-critical** | Docs, style, CI/CD, contributor experience, governance | Bundle all into one omnibus issue |
 
@@ -186,7 +186,7 @@ When the audit requires assigning grades:
 ### 15-Section Grading Checklist
 
 | Section | Auto-F condition | Evidence required for B |
-|---------|-----------------|------------------------|
+| --------- | ----------------- | ------------------------ |
 | README | Missing or placeholder | Installation + usage + examples present |
 | Testing | No test files | Bats/shunit2 tests for core functions |
 | CI/CD | No `.github/workflows/` | At least one workflow running shellcheck+tests |
@@ -279,7 +279,7 @@ rm -rf /tmp/<repo>-audit-$$
 ### Session Outcomes (gh-tidy audit, 2026-04-28)
 
 | Issue | Type | Title | Result |
-|-------|------|-------|--------|
+| ------- | ------ | ------- | -------- |
 | #70 | Critical bug | `branch_exists_locally()` always returns true | Filed with patch |
 | #71 | Critical gap | Add bats-core test suite | Filed with example tests |
 | #72 | Critical gap | Add GitHub Actions CI (addresses #28) | Filed with complete `.github/workflows/ci.yml` |
@@ -307,7 +307,7 @@ Group by area, then within each group order by effort (ascending). Suggested are
 ## Failed Attempts
 
 | Approach | Why It Failed | Correct Approach |
-|----------|---------------|-----------------|
+| ---------- | --------------- | ----------------- |
 | Filing a new CI issue without referencing the maintainer's existing #28 | Looks like you didn't read the issue tracker; duplicate question | File a concrete implementation issue that says "addresses #28" |
 | Filing 12 separate quality-improvement issues | Floods the issue tracker; maintainer has to triage 12 issues, most of which they may not want | Bundle into one omnibus issue and ask which ones they want |
 | Filing the audit results before checking existing issues | Discovered issues #64/#65/#66 already existed from the same session; would have created duplicates | Always run `gh issue list --state all` first |
