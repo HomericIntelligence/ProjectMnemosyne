@@ -1,5 +1,44 @@
 # ci-cd-broken-main-parallel-fix-wave — History
 
+## v1.2.0 (2026-05-01)
+
+**Changed by:** Odysseus main-branch CI audit — all 14 submodule repos triaged (2026-05-01)
+**Verification:** verified-ci — fix PRs opened and auto-merge armed; patterns verified by reproducing failures locally
+
+### What changed
+- Added Phase 0 (enumerate repos from .gitmodules) and Phase 1b (transient vs reproducible triage) to Detailed Steps
+- Added Pattern 7: Annotated Tag SHA Pinning Failure (HTTP 422) — two-step resolution for annotated tags
+- Added Pattern 8: markdownlint CHANGELOG.md exclusion — three-layer exclusion (ignore file + jsonc config + workflow glob)
+- Added Pattern 9: Stale pixi.lock after pixi.toml update — `pixi install` (no --locked) regenerates
+- Added "Transient vs Reproducible Decision Tree" section in Results & Parameters
+- Added "Ecosystem Health Check (All 14 Repos)" section with canonical repo list command
+- Added "git rebase --onto for Branches with Already-Merged Commits" section
+- Added "GitHub Issue Filing Template" section
+- Added 6 new Failed Attempts rows: annotated tag via commits endpoint, .markdownlintignore alone, ignorePatterns alone, direct rebase with merged commits, filing issues without re-running CI
+- Updated Agent Tier Selection Table with 3 new entries (annotated-tag SHA, pixi.lock stale, markdownlint CHANGELOG, external service 5xx)
+- Updated Session Scale Reference with 2026-05-01 session (14 repos, 4 broken)
+- Updated Verified On table with 2026-05-01 session details
+- Updated description and tags in frontmatter
+- Updated Quick Reference to use `gh run list` (more reliable than `commits/main/status`)
+
+### Why
+Full 14-repo ecosystem audit (2026-05-01) identified 4 repos red on main with 6 distinct root causes.
+New patterns not previously documented:
+1. `prefix-dev/setup-pixi@v0.8.1` was pinned to an annotated tag object SHA, causing HTTP 422 in GitHub Actions. The two-step annotation resolution was not in the skill.
+2. markdownlint failed on CHANGELOG.md (MD024/MD013) — three-layer exclusion required because `.markdownlintignore` and `ignorePatterns` both had version-specific gaps.
+3. pixi.lock staleness: several repos had pixi.toml updates with no corresponding lock regen.
+4. Transient vs reproducible: without the re-run gate, transient network failures (HTTP 503 from schemastore.org) would have generated unnecessary fix PRs.
+5. git rebase --onto: a PR branch with already-merged predecessor commits required --onto to avoid conflicts.
+
+### Previous version (v1.1.0) snapshot
+
+Key content: 6 CI failure patterns (conan, persist-credentials, dependabot-docker, BATS exit 127,
+Python import failures, clang-format), Monitor Noise Reduction Pattern, Agamemnon task registration,
+Haiku/Sonnet tier selection table, 5-repo session scale reference.
+See git history or v1.1.0 entry below for full content.
+
+---
+
 ## v1.1.0 (2026-04-23)
 
 **Changed by:** Odysseus issue closeout session (Issues #76, #136) — NATS publishing feature + triage follow-ups
