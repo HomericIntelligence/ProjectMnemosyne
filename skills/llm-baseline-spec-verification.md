@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-13 |
 | **Objective** | Establish ground-truth baseline specs before quantitative AI architecture analysis |
 | **Outcome** | Found 5 errors in SHARED_PRELUDE.md baseline specs; corrected specs cascaded into 31 research docs and 4 synthesis documents |
@@ -95,7 +95,7 @@ KV = 15 x 2 x H_kv x head_dim x S x 2 bytes
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Trusting SHARED_PRELUDE.md baseline specs | Used context document's model specs directly without verification | Prelude had 5 errors including vocab 151,936 instead of 248,320 for A1/B, context 32,768 instead of 262,144 for A1/B, GatedAttn head_dim 128 instead of 256, wrong global attention head counts for Baseline B | Always fetch config.json before trusting any secondary spec source |
 | Using Q heads for KV cache | Computed KV cache as `L x 2 x H_q x head_dim x S x 2` | GQA models have H_kv << H_q; Qwen3-32B has 64 Q heads but only 8 KV heads, producing 8x overestimate | Always use `num_key_value_heads` (H_kv) in KV cache formula, never `num_attention_heads` |
 | Using uniform context across a model family | Assumed all models in a family share the same context window | Qwen3-32B uses 40,960 native context; Qwen3.5-27B uses 262,144; the 397B MoE also uses 262,144 | Check max_position_embeddings per model even within the same family |
@@ -106,18 +106,18 @@ KV = 15 x 2 x H_kv x head_dim x S x 2 bytes
 ### Qwen3/Qwen3.5 Family Verified Specs (2026-04-13)
 
 | Model | L | d | d_ff | H_q | H_kv | head_dim | Vocab | Native ctx |
-|-------|---|---|------|-----|-------|----------|-------|------------|
+| ------- | --- | --- | ------ | ----- | ------- | ---------- | ------- | ------------ |
 | Qwen3.5-27B (Hybrid) | 64 | 5120 | 17408 | 24 (full-attn) | 4 (full-attn) | 256 | 248,320 | 262,144 |
-| -- DeltaNet layers | -- | -- | -- | 16 QK-heads | 48 V-heads | 128 | -- | -- |
+| -- DeltaNet layers | --- | --- | --- | 16 QK-heads | 48 V-heads | 128 | --- | --- |
 | Qwen3-32B (Dense) | 64 | 5120 | 25600 | 64 | 8 | 128 | 151,936 | 40,960 |
-| Qwen3.5-397B-A17B (MoE) | 60 | 4096 | -- | 32 (global) | 2 (global) | 256 | 248,320 | 262,144 |
-| -- DeltaNet layers | -- | -- | -- | 16 QK-heads | 64 V-heads | 128 | -- | -- |
-| -- MoE config | -- | -- | -- | 512 experts | k=11 active | -- | -- | -- |
+| Qwen3.5-397B-A17B (MoE) | 60 | 4096 | --- | 32 (global) | 2 (global) | 256 | 248,320 | 262,144 |
+| -- DeltaNet layers | --- | --- | --- | 16 QK-heads | 64 V-heads | 128 | --- | --- |
+| -- MoE config | --- | --- | --- | 512 experts | k=11 active | --- | --- | --- |
 
 ### KV Cache at Reference Context Lengths
 
 | Model | 32K ctx | 40K ctx | 262K ctx |
-|-------|---------|---------|---------|
+| ------- | --------- | --------- | --------- |
 | Qwen3-32B (full KV) | ~8.59 GB | ~10.49 GB | ~68.7 GB |
 | Qwen3.5-27B (16/64 full-attn layers) | ~2.15 GB | ~2.63 GB | ~17.2 GB |
 | Qwen3.5-397B (15/60 global-attn layers) | ~1.0 GB | ~1.22 GB | ~8.0 GB |
@@ -146,5 +146,5 @@ CORRECT: 32Q/2KV, head_dim=256
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ArchIdeas | Reviewing 31 AI architecture research documents | 3 baselines: Qwen3.5-27B Hybrid, Qwen3-32B Dense, Qwen3.5-397B-A17B MoE |

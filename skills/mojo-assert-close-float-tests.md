@@ -11,13 +11,13 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-15 |
 | Objective | Write comprehensive tests for `assert_close_float` covering all tolerance and edge-case scenarios |
 | Outcome | 9 test functions added covering atol/rtol boundaries, NaN, infinity; compiled and verified passing |
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | Language | Mojo 0.26.1 |
 | Test target | `assert_close_float(a: Float64, b: Float64, rtol: Float64 = 1e-5, atol: Float64 = 1e-8)` |
 | Tolerance formula | `\|a - b\| <= atol + rtol * \|b\|` |
@@ -71,7 +71,7 @@ fn test_assert_close_float_fails_one_nan() raises:
 ### Step 5: Cover all 9 case categories
 
 | Test Case | Description |
-|-----------|-------------|
+| ----------- | ------------- |
 | Basic pass | Values within default tolerance |
 | Basic fail | Values far apart (exceeds both atol and rtol) |
 | Within atol | `diff < atol` (e.g. diff=5e-9, atol=1e-8) |
@@ -102,7 +102,7 @@ Add a comment near the test count if the file is getting large:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Used Float32 in existing tests | Passed `Float32(1.0)` to function expecting `Float64` | Implicit conversion worked but was semantically wrong and masked type mismatch | Always check actual function signature before writing tests |
 | Assumed Python/pytest conventions | Issue prompt mentioned pytest and Python test patterns | Project is Mojo, not Python — pattern is `fn test_x() raises` not `def test_x()` | Verify language from actual codebase files, not issue template wording |
 
@@ -186,5 +186,5 @@ fn assert_close_float(
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #4096 / PR #4870 | [notes.md](../references/notes.md) |

@@ -18,7 +18,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Add structured JSON logging to a shared Python library without introducing new dependencies |
 | **Outcome** | Successful. `JsonFormatter` outputs single-line JSON records compatible with Loki/Promtail ingestion |
@@ -109,7 +109,7 @@ bound.info("Processing")
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Use `python-json-logger` package | Considered adding as a dependency | Unnecessary complexity for a shared library that only depends on pyyaml; stdlib `json` + `logging.Formatter` does everything needed | Before adding a dependency, check if stdlib can do the job -- for JSON formatting it absolutely can |
 | Access extra fields via `record.extra` attribute | LogRecord has no `.extra` attribute; extras are set as individual attributes on the record object | `logging.LoggerAdapter.process()` merges extras into `kwargs["extra"]`, but the framework then calls `setattr(record, key, value)` for each | Detect extras by diffing `record.__dict__` against a baseline snapshot of default LogRecord attributes |
 | Use `record.msg` instead of `record.getMessage()` | `record.msg` is the raw format string (e.g. `"hello %s"`); args are not applied | `getMessage()` calls `self.msg % self.args` to produce the final string | Always use `record.getMessage()` in custom formatters to resolve lazy formatting |
@@ -125,7 +125,7 @@ bound.info("Processing")
 ### Key Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| ---------- | ----------- |
 | Zero new dependencies | Shared library consumed by many repos; minimize dependency surface |
 | `default=str` in json.dumps | Gracefully handles non-serializable values instead of crashing |
 | `ctx_` prefix for collisions | Silent data loss (overwriting `level` field) is worse than a renamed key |
@@ -154,5 +154,5 @@ assert parsed["obj"] == str(CustomClass())  # falls back to str()
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #45 - Structured JSON logging audit finding | PR #78, 451 tests pass, all lint clean |

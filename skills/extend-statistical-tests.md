@@ -17,7 +17,7 @@ inside `scripts/export_data.py`, with correct NaN/missing-column guards and TDD 
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-02 |
 | Objective | Add `r_prog`, `cfp`, `pr_revert_rate` to normality, omnibus, pairwise, and effect-size sections of `statistical_results.json` |
 | Outcome | Success — 15 new tests, 3598 total passing, all pre-commit hooks pass |
@@ -231,7 +231,7 @@ pre-commit run --files scripts/export_data.py tests/unit/analysis/test_export_da
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Invariants
 
@@ -282,7 +282,7 @@ per tier-pair per model, causing tests to hang for 2+ minutes.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1186, PR #1300 | extend `compute_statistical_results()` with process metrics |
 
 ## References

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | README badges encoding counts (e.g. test file count) drift as files are added without automation |
 | **Solution** | Python script + pre-commit hook scoped to README changes |
 | **Trigger** | Badge value diverges from actual count by more than a configurable tolerance |
@@ -126,7 +126,7 @@ find . -name 'test_*.mojo' \
 ## Results & Parameters
 
 | Parameter | Value | Notes |
-|-----------|-------|-------|
+| ----------- | ------- | ------- |
 | Tolerance | 10% | ~1 sprint of test additions before alarm |
 | Find excludes | `.pixi/`, `build/`, `dist/`, `.git/`, `worktrees/` | Match `validate_test_coverage.py` |
 | Hook trigger | `^README\.md$` | Only on README changes |
@@ -137,7 +137,7 @@ find . -name 'test_*.mojo' \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Absolute-path exclusion | `if any(excl in path for excl in _EXCLUDE_DIRS)` where `path` is the full absolute path | Repo root was `.worktrees/issue-3307/`, so `worktrees/` appeared in every absolute path, zeroing out all results | Always compute relative path from `repo_root` before checking exclusions |
 | Staging then formatting | Stage files → commit → pre-commit runs ruff → stash conflict rolls back ruff's fixes | pre-commit stashes unstaged files; when ruff modifies staged content the stash restore undoes the ruff fix | Run `ruff format` on the files *before* `git add`, not after |
 | First commit attempt without ruff | Committed un-formatted files; pre-commit auto-formatted but the commit failed | Stash rollback mechanism | Format first, stage second, commit third |

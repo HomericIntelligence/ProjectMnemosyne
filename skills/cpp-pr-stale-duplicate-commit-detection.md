@@ -14,7 +14,7 @@ tags: [cpp, pr, stale-commit, duplicate-fix, cherry-pick, force-with-lease, tsan
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Remove a stale parallel-attempt fix commit from a PR branch when that fix already landed on `main` via a different PR, restoring CI to green |
 | **Outcome** | Success — CI re-armed after `git cherry-pick` of real payload only onto fresh `origin/main` base |
@@ -134,7 +134,7 @@ gh pr merge <pr-number> --auto --rebase --repo <org>/<repo>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assuming TSan-only failure | Treated all-sanitizer failure as a data race | Data races only show under TSan; identical failures across all sanitizers indicate logical UB or incorrect code | When all sanitizers fail identically, suspect logic error first |
 | Writing a new race fix without checking main | Started authoring a fresh synchronization fix | The fix already existed on main from a different PR; parallel authoring created a stale duplicate | Always `gh pr list --state all --search "<symbol>"` before writing a fix |
 | Amending the stale commit | Considered `git commit --amend` to correct the stale commit | Would modify the wrong commit (the stale one) rather than cleanly removing it; also rewrites history in a confusing way | Cherry-pick only the real payload onto fresh `origin/main` — cleaner and auditable |
@@ -146,7 +146,7 @@ gh pr merge <pr-number> --auto --rebase --repo <org>/<repo>
 ### Diagnosis Signals
 
 | Signal | Interpretation |
-|--------|---------------|
+| -------- | --------------- |
 | All 4 sanitizers (asan/tsan/ubsan/lsan) fail the **same test** | Logical error in the branch's code, not a data race |
 | `main` is green on the same tests | Regression is in the PR branch's commits, not upstream |
 | `git log origin/main..origin/<branch>` shows N > expected commits | Branch carries extra/stale commits |
@@ -186,5 +186,5 @@ std::vector<std::string> getLog() const {
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectKeystone | PR #436 (`chore/remove-maestro-client`), failing asan/tsan/ubsan/lsan on `E2E_PhaseB.AsyncAgentsConcurrentProcessing` | Stale commit `984fef0` duplicated fix already on main via PR #435 (`fix/tsan-command-log`); rebuilt branch with only `51e34dd`; CI re-armed |

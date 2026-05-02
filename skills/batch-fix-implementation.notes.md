@@ -272,7 +272,7 @@ SKIP=trailing-whitespace git commit -m "message"
 ## Results & Metrics
 
 | Metric | Result |
-|--------|--------|
+| -------- | -------- |
 | **Issues Fixed** | 8 |
 | **Files Modified** | 9 |
 | **Lines Changed** | ~50 net (many removals) |

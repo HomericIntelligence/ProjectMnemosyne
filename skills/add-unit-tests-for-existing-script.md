@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Name | add-unit-tests-for-existing-script |
 | Category | testing |
 | Description | Add comprehensive pytest unit tests for an existing Python script that has no tests |
@@ -49,7 +49,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running tests via `pixi run python -m pytest` | Used pixi for test execution during development | Command timed out (>2 min env activation) | Use `python3 -m pytest` directly for fast iteration; only use pixi for final validation |
 | Running background pytest task | Launched pytest as a background task to avoid blocking | Output file was empty for minutes | Background tasks don't stream output — run pytest synchronously in foreground |
 | Importing unused constant in tests | Imported `SKILL_CATEGORY_OVERRIDE` for documentation but never asserted on it | Ruff auto-removed it, causing first commit to fail | Only import symbols you actually use in assertions; ruff-check runs in pre-commit |

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Tests using a hardcoded `/tmp/<name>.txt` path leave stale files if the test aborts before cleanup, causing false failures on subsequent runs |
 | **Solution** | Generate a unique path per run using a timestamp or nanosecond counter suffix |
 | **Language** | Mojo (Mojo v0.26.1) |
@@ -100,7 +100,7 @@ var test_path = "/tmp/test_remove_safely_" + suffix + ".txt"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Use `uuid` module | Tried `from uuid import uuid4` | Mojo v0.26.1 stdlib has no `uuid` module — compile-time error | Check Mojo stdlib availability before choosing a uniqueness strategy |
 | Move import to module level | Considered adding `from time import perf_counter_ns` at the top of the file | Not needed — inline import works and minimises diff size | Prefer the smallest change that solves the problem |
 | Add a new helper function | Considered extracting `make_tmp_path()` utility | YAGNI — only one call site, a helper adds complexity for no gain | Don't abstract one-off patterns; inline is cleaner |

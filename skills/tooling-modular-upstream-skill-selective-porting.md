@@ -14,7 +14,7 @@ tags: [modular, mojo, skills, porting, apache-2.0, agent-skills-standard, modula
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-09 |
 | **Objective** | Port 4 skills from Modular's official skills repo (Agent Skills Standard format) into ProjectMnemosyne with Apache 2.0 attribution, adapting to flat-file format |
 | **Outcome** | Successful — 3 new skills created, 1 merged into existing skill (v2.0.0 to v3.0.0), all 948 skills pass validation, PR #1213 created |
@@ -58,7 +58,7 @@ python3 scripts/validate_plugins.py
 The `modular/skills` repo uses the [Agent Skills Standard](https://agentskills.io) format:
 
 | Feature | Agent Skills Standard | Mnemosyne Format |
-|---------|----------------------|------------------|
+| --------- | ---------------------- | ------------------ |
 | Structure | Directory per skill (`skill-name/SKILL.md`) | Flat file (`skills/skill-name.md`) |
 | Frontmatter | `name` and `description` only | `name`, `description`, `category`, `date`, `version`, `verification`, `tags` |
 | Sections | Free-form markdown (terse "correction layer" style) | Structured: Overview, When to Use, Verified Workflow, Failed Attempts, Results |
@@ -78,7 +78,7 @@ grep -rl "mojo.*syntax\|breaking.*change" <project-root>/skills/
 **Decision matrix for overlaps:**
 
 | Scenario | Action |
-|----------|--------|
+| ---------- | -------- |
 | Upstream covers same topic as existing skill | Merge into existing skill, bump version |
 | Upstream covers new topic | Create new skill |
 | Upstream content is subset of existing | Skip — existing skill is sufficient |
@@ -86,7 +86,7 @@ grep -rl "mojo.*syntax\|breaking.*change" <project-root>/skills/
 **modular/skills overlap analysis:**
 
 | Source Skill | Decision | Reason |
-|---|---|---|
+| --- | --- | --- |
 | `mojo-syntax` | MERGE into `mojo-026-breaking-changes.md` | Overlapping Mojo syntax content; added "Authoritative Syntax Reference" section, bumped v2.0.0 to v3.0.0 |
 | `mojo-gpu` | CREATE `mojo-gpu-fundamentals-programming-guide.md` | New topic — GPU programming patterns |
 | `mojo-python-interop` | CREATE `mojo-python-interop-patterns-guide.md` | New topic — Python/Mojo interop patterns |
@@ -137,7 +137,7 @@ When upstream content overlaps with an existing skill:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Placed THIRD_PARTY_LICENSES.md in skills/ directory | Centralized license file alongside skill files | Validator rejected it — all files in skills/ must have YAML frontmatter | Always place non-skill files (licenses, READMEs) at repo root, not in skills/ |
 | Considered `npx skills add modular/skills` automated install | Would save manual porting effort | Installs in Agent Skills Standard format (directory-per-skill), incompatible with Mnemosyne validator and flat-file convention | Always do manual selective port when target format differs from source |
 | Considered creating separate `mojo-syntax.md` skill | Would be a 1:1 port of upstream | Duplicates content already in `mojo-026-breaking-changes.md` | Merge overlapping upstream content into existing skills rather than creating duplicates |
@@ -158,7 +158,7 @@ install_command: npx skills add modular/skills  # NOT recommended — use manual
 ### Skills Ported
 
 | Ported/Updated Skill | Source Skill | Action | Category |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `mojo-026-breaking-changes.md` (v3.0.0) | `mojo-syntax` | Merged — added "Authoritative Syntax Reference" section | training |
 | `mojo-gpu-fundamentals-programming-guide.md` | `mojo-gpu` | Created new | optimization |
 | `mojo-python-interop-patterns-guide.md` | `mojo-python-interop` | Created new | architecture |
@@ -174,7 +174,7 @@ python3 scripts/validate_plugins.py
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | Modular skills integration, PR #1213 | 4 skills ported (3 new, 1 merged) from Apache 2.0 repo, all 948 pass validation |
 
 ## References

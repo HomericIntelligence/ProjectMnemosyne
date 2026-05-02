@@ -10,13 +10,13 @@ user-invocable: false
 
 ## Overview
 
-| Field     | Value                                                              |
-|-----------|--------------------------------------------------------------------|
-| Date      | 2026-02-20                                                         |
-| Issue     | #791                                                               |
-| PR        | #836                                                               |
-| Objective | Add `scylla audit models` CLI subcommand for config validation      |
-| Outcome   | Success — 8 new tests, all 2283 unit tests pass, pre-commit clean  |
+| Field | Value |
+| ----------- | -------------------------------------------------------------------- |
+| Date | 2026-02-20 |
+| Issue | #791 |
+| PR | #836 |
+| Objective | Add `scylla audit models` CLI subcommand for config validation |
+| Outcome | Success — 8 new tests, all 2283 unit tests pass, pre-commit clean |
 
 ## When to Use
 
@@ -183,19 +183,19 @@ The command exits non-zero on any mismatch, making it directly usable as a pre-c
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
-| Metric            | Value                                               |
-|-------------------|-----------------------------------------------------|
-| Files changed     | `scylla/cli/main.py`, `tests/unit/cli/test_cli.py`  |
-| Tests added       | 8 (TestAuditModelsCommand)                          |
-| Tests total       | 2283                                                |
-| Pre-commit        | All hooks pass (ruff, mypy, type-alias, security)   |
-| Exit code clean   | 0                                                   |
-| Exit code mismatch| 1                                                   |
-| Command           | `scylla audit models [--config-dir DIR]`            |
+| Metric | Value |
+| ------------------- | ----------------------------------------------------- |
+| Files changed | `scylla/cli/main.py`, `tests/unit/cli/test_cli.py` |
+| Tests added | 8 (TestAuditModelsCommand) |
+| Tests total | 2283 |
+| Pre-commit | All hooks pass (ruff, mypy, type-alias, security) |
+| Exit code clean | 0 |
+| Exit code mismatch | 1 |
+| Command | `scylla audit models [--config-dir DIR]` |
 
 ## Invocation
 

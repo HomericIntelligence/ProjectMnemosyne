@@ -148,7 +148,7 @@ def generate_table(df: pd.DataFrame) -> tuple[str, str]:
 ## Performance Metrics
 
 | Operation | Time | Files | Rows |
-|-----------|------|-------|------|
+| ----------- | ------ | ------- | ------ |
 | Load experiments | 30s | 13,560 JSON | 2,238 runs |
 | Build DataFrames | 5s | — | 4 DataFrames |
 | Generate figures | 60s | 30 files | 15 figures |
@@ -172,7 +172,7 @@ def generate_table(df: pd.DataFrame) -> tuple[str, str]:
 
 ### By Model
 | Model | Runs | Pass Rate | Mean Score | Cost/Run |
-|-------|------|-----------|------------|----------|
+| ------- | ------ | ----------- | ------------ | ---------- |
 | Sonnet 4.5 | 1,130 | 94.2% | 0.908 | $0.077 |
 | Haiku 4.5 | 1,108 | 73.4% | 0.662 | $0.043 |
 

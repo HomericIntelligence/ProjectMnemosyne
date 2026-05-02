@@ -50,7 +50,7 @@ Only create `.claude-plugin/plugin.json` and `skills/<name>/SKILL.md` (in the al
 ## Skills That Needed Manual Handling
 
 | Skill | Issue | Fix |
-|-------|-------|-----|
+| ------- | ------- | ----- |
 | `fix-implicitlycopyable-removal` | Had `.claude-plugin/plugin.json` but no `skills/<name>/SKILL.md` | Manual in-place migration |
 | `investigate-mojo-heap-corruption` | Same | Manual |
 | `multi-judge-consensus` | Same | Manual |

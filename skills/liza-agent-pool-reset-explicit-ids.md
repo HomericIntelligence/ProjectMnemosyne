@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-07 |
 | **Objective** | Clear stale task claims, worktrees, and local Liza processes, then relaunch a deterministic agent pool |
 | **Outcome** | Successful -- recovered leftover tasks, removed task worktrees/branches, killed orphaned local `liza` processes, validated state, and resumed the workspace cleanly |
@@ -129,7 +129,7 @@ Use explicit `--agent-id` values for every relaunched worker. Anonymous launches
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Relaunching bare planners | Started `liza agent code-planner` without `--agent-id` | Anonymous planner IDs were reused and the workspace later showed one planner assigned to multiple tasks | After a dirty recovery, always relaunch with fixed IDs |
 | Cleaning only OS processes | Killed local `liza` PIDs but left stale task claims in state | Liza still considered tasks assigned and their worktrees/branches remained on disk | Recover tasks first so Liza clears its own metadata and Git artifacts |
 | Ignoring leftover task worktrees | Resumed the queue before checking `git worktree list` and `task/github-issue-*` branches | Old task branches/worktrees kept the repo messy and made it harder to tell whether agents were actually fresh | Verify both Liza state and Git state before relaunch |
@@ -146,7 +146,7 @@ Use explicit `--agent-id` values for every relaunched worker. Anonymous launches
 ### Relaunch Pattern
 
 | Role | Recommended Count | Naming Pattern |
-|------|-------------------|----------------|
+| ------ | ------------------- | ---------------- |
 | Orchestrator | 1 | `orchestrator-1` |
 | Code Planner | N | `code-planner-1..N` |
 | Code Plan Reviewer | N | `code-plan-reviewer-1..N` |
@@ -156,5 +156,5 @@ Use explicit `--agent-id` values for every relaunched worker. Anonymous launches
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Radiance | Live Liza cleanup before worker relaunch | Recovered stale claims, deleted task worktrees/branches, killed lingering local Liza processes, and restored a clean queue before relaunch |

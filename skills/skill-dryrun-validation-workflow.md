@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Date Created** | 2026-02-05 |
 | **Category** | Evaluation |
 | **Objective** | Re-run dryrun experiments, generate analysis outputs, and validate results against baseline |
@@ -88,7 +88,7 @@ pixi run python scripts/run_e2e_experiment.py \
 **Parameter Mapping from Original Config:**
 
 | CLI Parameter | Config Key | Original Value | Notes |
-|---------------|------------|----------------|-------|
+| --------------- | ------------ | ---------------- | ------- |
 | `--model` | `models[0]` | `claude-sonnet-4-5-20250929` | Primary agent model |
 | `--judge-model` | `judge_models[0]` | `claude-opus-4-5-20251101` | First judge (highest quality) |
 | `--add-judge` (1st) | `judge_models[1]` | `claude-sonnet-4-5-20250929` | Second judge |
@@ -178,7 +178,7 @@ for tier in ['T0', 'T1', 'T2', 'T3', 'T4', 'T5', 'T6']:
 #### 3.3 Acceptance Criteria
 
 | Criterion | Threshold | Rationale |
-|-----------|-----------|-----------|
+| ----------- | ----------- | ----------- |
 | Same number of runs | Exactly 7 | Structural integrity |
 | Same number of judge evaluations | Exactly 21 | Complete evaluation coverage |
 | All tiers passed | 7/7 | No failures |
@@ -235,7 +235,7 @@ Copy-paste ready configurations and expected outputs.
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Attempt 1: Using Short Model Aliases
@@ -328,7 +328,7 @@ Original archive has 125 figures, regenerated has 126.
 ### Per-Tier Results
 
 | Tier | Score | Cost | Grade | Status |
-|------|-------|------|-------|--------|
+| ------ | ------- | ------ | ------- | -------- |
 | T0 | 1.000 | $0.2108 | A | ✅ PASS |
 | T1 | 0.970 | $0.2193 | A | ✅ PASS |
 | T2 | 0.970 | $0.1108 | A | ✅ PASS |
@@ -404,7 +404,7 @@ Defines:
 ## Related Files
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `scripts/run_e2e_experiment.py` | Main experiment runner |
 | `scripts/generate_all_results.py` | Analysis pipeline orchestrator |
 | `scylla/analysis/loader.py:244-277` | Model ID regex matching (requires full IDs) |

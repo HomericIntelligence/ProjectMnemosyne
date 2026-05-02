@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-15 |
 | **Issue** | #4038 - Apply `__repr__` truncation for consistency with `__str__` |
 | **Objective** | Make `repr()` on large `ExTensor` objects safe by applying the same threshold-based truncation already in `__str__` |
@@ -83,7 +83,7 @@ Create `test_<class>_repr.mojo` following the same test case structure as the ex
 file. Required coverage:
 
 | Test | What It Checks |
-|------|----------------|
+| ------ | ---------------- |
 | Empty tensor (numel=0) | No crash, correct format |
 | Single element | Full output, no truncation |
 | Small tensor (numel ≤ threshold) | All elements shown, no `...` |
@@ -116,7 +116,7 @@ Closes #<issue>"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using hardcoded `1000` and `3` in `__repr__` | Copied literals from `__str__` directly | Would diverge if constants are updated in `__str__` later | Always use `comptime` named constants, not literals |
 | Skipping tests for `__repr__` | Assumed `__str__` tests provided sufficient coverage | `__repr__` has different output format (includes shape/numel) so format assertions differ | Mirror the `__str__` test file but adjust expected strings for `__repr__` format |
 
@@ -140,5 +140,5 @@ Files modified: 1 source + 1 new test file
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4858, Issue #4038 | [notes.md](../references/notes.md) |

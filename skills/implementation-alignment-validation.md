@@ -11,7 +11,7 @@ version: 1.1.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2025-06-27 |
 | Objective | Validate ProjectScylla implementation against docs/theory/research documentation |
 | Outcome | SUCCESS - 14 items aligned, 5 gaps fixed, 892 tests passing |
@@ -73,7 +73,7 @@ glob config/**/*.yaml      # Configuration files
 Build a comparison table with:
 
 | Location | Theory/Docs | Implementation | Status |
-|----------|-------------|----------------|--------|
+| ---------- | ------------- | ---------------- | -------- |
 | `file.py:line` | Documented behavior | Actual behavior | ✓/⚠️/❌ |
 
 Status legend:
@@ -119,7 +119,7 @@ pixi run pytest tests/integration/ -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 
 ## Results & Parameters

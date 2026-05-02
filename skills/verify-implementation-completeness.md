@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Category** | documentation |
 | **Trigger** | Assigned to implement issue on existing branch |
 | **Outcome** | Avoid duplicate work; confirm PR exists if done |
@@ -58,7 +58,7 @@ user-invocable: false
 ### Key Signals That Work Is Done
 
 | Signal | Command |
-|--------|---------|
+| -------- | --------- |
 | Commit message matches issue title | `git log --oneline -5` |
 | PR exists on branch | `gh pr list --head <branch>` |
 | Target files contain expected changes | `Read` each file |
@@ -67,7 +67,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Skipping file verification | Trusting commit message alone | Commit could exist but be partial | Always read target files to confirm |
 | Re-running implementation | Starting changes without checking history | Would duplicate already-committed work | Check `git log` first on any existing branch |
 | Checking only `git status` | Looking at untracked/modified files | Clean status doesn't prove issue is done | Must check log AND files AND PR existence |

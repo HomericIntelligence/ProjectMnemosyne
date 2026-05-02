@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-24 |
 | Objective | Add `visualize` subcommand to `manage_experiment.py` that reads checkpoint.json and renders experiment state hierarchy |
 | Outcome | SUCCESS — merged to main (PR #1101), 16 tests, 78.19% coverage |
@@ -142,7 +142,7 @@ class TestCmdVisualize:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -183,5 +183,5 @@ pixi run python scripts/manage_experiment.py visualize ~/dryrun3/ -v
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1101, merged 2026-02-24 | [notes.md](../../references/notes.md) |

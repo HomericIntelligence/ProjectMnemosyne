@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | CI matrix pattern groups use space-separated multi-pattern strings. A group with `pattern: "test_foo.mojo test_gone.mojo"` would not be flagged as stale if `test_gone.mojo` was deleted but `test_foo.mojo` still existed — the surviving sibling silently masked the stale pattern. |
 | **Solution** | Per-sub-pattern breakdown in `check_stale_patterns()`: split on whitespace, expand each sub-pattern independently, distinguish fully-stale groups (all sub-patterns dead) from partially-stale groups (some dead). |
 | **Language** | Python 3.7+ |
@@ -170,7 +170,7 @@ pixi run python -m pytest tests/scripts/test_validate_test_coverage.py -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Single `expand_pattern` call per group | Called `expand_pattern(path, full_pattern, root)` where `full_pattern` is the entire space-separated string | `expand_pattern` splits internally and unions results — a live sibling masks the dead sub-pattern, returning non-empty set | Must call `expand_pattern` once per individual sub-pattern to detect partial staleness |
 | Reporting all stale sub-patterns as group-level | Returning `group_name` for both fully-stale and partially-stale groups | Caller cannot distinguish "group is entirely gone" from "one pattern in a healthy group was deleted" | Use `"GroupName (sub-pattern: pat)"` format for partial staleness, preserve plain group name for full staleness |
 

@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Run all configured linters to ensure code quality. - Before committing code - CI/CD quality checks - Pre-PR validation |
 | Outcome | Operational |
@@ -45,7 +45,7 @@ Run all configured linters to ensure code quality.
 ## Configured Linters
 
 | Linter | Purpose | Auto-Fix |
-|--------|---------|----------|
+| -------- | --------- | ---------- |
 | `mojo-format` | Format Mojo code | Yes |
 | `markdownlint` | Lint markdown files | Partial |
 | `pre-commit` | Multiple checks | Yes (most) |
@@ -80,7 +80,7 @@ git commit -m "fix: address linting issues"
 ## Common Issues
 
 | Error | Linter | Fix |
-|-------|--------|-----|
+| ------- | -------- | ----- |
 | "MD040" | markdownlint | Add language to code block |
 | "MD031" | markdownlint | Add blank lines around block |
 | "Trailing whitespace" | pre-commit | Auto-fixed, re-commit |
@@ -157,7 +157,7 @@ gh pr create --issue 42
 ## Error Handling
 
 | Error | Solution |
-|-------|----------|
+| ------- | ---------- |
 | "Linter not found" | Install tool or check PATH |
 | "Syntax error" | Fix code before running linter |
 | "False positive" | Check configuration files |
@@ -180,7 +180,7 @@ gh pr create --issue 42
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

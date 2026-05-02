@@ -31,7 +31,7 @@ scylla/analysis/figures/
 ## Figure-to-Issue Mapping (Complete)
 
 | Figure | Issue | Function | Source File | Output Filename |
-|--------|-------|----------|-------------|-----------------|
+| -------- | ------- | ---------- | ------------- | ----------------- |
 | fig01 | #441 | `fig01_score_variance_by_tier` | variance.py:18-52 | score-variance-by-tier.md |
 | fig02 | #447 | `fig02_judge_variance` | judge_analysis.py:18-61 | judge-variance.md |
 | fig03 | #442 | `fig03_failure_rate_by_tier` | variance.py:55-119 | failure-rate-by-tier.md |

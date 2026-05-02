@@ -14,7 +14,7 @@ outcome: success
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-27 |
 | **Objective** | Prevent pip dependency reinstall on source-only Docker builds |
 | **Outcome** | ✅ Success — source-only builds skip the expensive pip install layer |
@@ -110,14 +110,14 @@ RUN pip install --user --no-cache-dir --no-deps /opt/scylla/
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Cache behavior matrix
 
 | Change type | Layer 1 (hatchling) | Layer 2 (deps) | Layer 3 (package) |
-|-------------|---------------------|----------------|-------------------|
+| ------------- | --------------------- | ---------------- | ------------------- |
 | Source file changed | CACHED | CACHED | **RUN** |
 | `pyproject.toml` changed | CACHED | **RUN** | **RUN** |
 | Dockerfile FROM changed | **RUN** | **RUN** | **RUN** |

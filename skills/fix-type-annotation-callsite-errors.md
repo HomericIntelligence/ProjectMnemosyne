@@ -18,7 +18,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-24 |
 | **Objective** | Fix CI failures on a branch that bulk-replaced `Any` type annotations with specific types across 28+ test files |
 | **Outcome** | Success — 4782 tests passing, all pre-commit hooks green, PR updated |
@@ -156,7 +156,7 @@ grep -r "_run_subtest_in_process_safe" scylla/  # Empty = API gone, remove tests
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Automated script to add `Any` to unannotated params | Python script using regex to add `: Any` to all unannotated function parameters | Corrupted multi-line function signatures (stripped parameters from `def func(\n    param1,\n    param2\n)` patterns), inserted `from typing import Any` inside multi-line import statements | Never use simple regex on multi-line Python signatures; use AST-based tools or fix manually. Always syntax-check (`ast.parse()`) every file after automated edits |
 | `replace_all=true` to fix mock patch paths | Used Edit tool with `replace_all=true` to change `implementer.run` → `retrospective.run` | Changed ALL occurrences including ones in `TestRunClaudeCode` that correctly used `implementer.run`, and also changed `follow_up.*` patches to `retrospective.*` | Never use `replace_all` for mock path fixes — each test class patches a different module. Always compare against `origin/main` to verify correct paths |
 | Adding `from __future__ import annotations` | Considered adding future annotations to defer type evaluation | Decided against — could change runtime behavior and was inconsistent with codebase. Adding `import pandas as pd` at module level was simpler | Prefer the simplest fix that matches existing codebase patterns |
@@ -166,7 +166,7 @@ grep -r "_run_subtest_in_process_safe" scylla/  # Empty = API gone, remove tests
 ### Error Categories and Counts (This Session)
 
 | Error Category | Count | Fix |
-|----------------|-------|-----|
+| ---------------- | ------- | ----- |
 | Call-site type annotations (SyntaxError) | 93 | Remove `: Type` from function calls |
 | F821 undefined name (ruff) | 50 | Add module-level `import pandas as pd` |
 | `[no-untyped-def]` (mypy) | 220 | Add `: Any` back to unannotated params |
@@ -196,5 +196,5 @@ pixi run python -m pytest tests/unit/ -q --tb=line
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1517 — bulk type annotation refactor | Fixed 400+ errors across 28 test files, rebased twice onto main |

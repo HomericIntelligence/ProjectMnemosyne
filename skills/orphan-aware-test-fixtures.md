@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Adding `_reset_orphaned_subtest_states()` to the resume pipeline created a new invariant: subtest states in `aggregated`/`runs_complete` must have backing `run_states`, or they get reset to `pending`. Existing tests that set `subtest_states` without `run_states` broke silently — the orphan detector correctly reset them. |
 | **Solution** | Add `run_states` entries with `worktree_cleaned` for any test fixture subtest in `aggregated` or `runs_complete` state |
 | **Key Insight** | Integrity detectors create implicit invariants on test fixtures. When you add a detector that validates cross-field consistency (e.g., subtest_states must have backing run_states), ALL existing fixtures that set those fields must be updated. |
@@ -72,7 +72,7 @@ checkpoint = E2ECheckpoint(
 The orphan detector also calls `_reset_tier_to_config_loaded()` and `_reset_experiment_to_tiers_running()`, which can change tier and experiment states as side effects:
 
 | Orphan detected | Tier state changes to | Experiment state changes to |
-|---|---|---|
+| --- | --- | --- |
 | Any subtest orphaned | `config_loaded` (if was complete-family) | `tiers_running` (if was complete-family) |
 
 This means a test expecting `tier_states["T0"] == "pending"` might get `"config_loaded"` instead if the orphan detector fires first.
@@ -80,7 +80,7 @@ This means a test expecting `tier_states["T0"] == "pending"` might get `"config_
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | First push after rebase | Rebased onto main, resolved 3 merge conflicts, pushed | `test_resume_failed_experiment_resets_failed_subtest_states_to_pending` failed — `"aggregated"` subtest without `run_states` was orphan-detected | Adding integrity detectors creates implicit invariants on ALL fixtures that touch the validated fields |
 | Second push after fixing one test | Fixed the first failing test, pushed | `test_resume_detects_missing_subtests_and_resets_tier_to_pending` failed — same root cause in different test class | Must audit ALL test fixtures for the pattern, not just the first failure; use `grep '"aggregated"'` across the entire file |
 

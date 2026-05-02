@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | mojo-init-export-uncomment |
 | **Category** | tooling |
 | **Context** | Mojo v0.26.1 packages, `__init__.mojo` export management |
@@ -149,7 +149,7 @@ Register it in `main()`.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Import via intermediate `__init__.mojo` | `from shared.core import Linear` in `shared/__init__.mojo` | Mojo v0.26.1 re-export chain limitation: chained re-exports do not propagate | Always use absolute leaf-module paths in top-level `__init__.mojo` |
 | Activating `SGD`/`Adam` | Searched for `struct SGD` in `shared/training/optimizers/` | Only functional step-functions exist (`sgd_step`, `adam_step`), no struct classes | Verify struct names precisely — functions and structs have different activation requirements |
 | Activating `Sequential` | Expected single `Sequential` struct | Only parametric variants exist: `Sequential2`, `Sequential3`, `Sequential4`, `Sequential5` | Check for exact struct name match, not just module presence |

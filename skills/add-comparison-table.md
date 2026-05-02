@@ -16,7 +16,7 @@ How to add a new pairwise comparison table to `scylla/analysis/tables/comparison
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-02 |
 | Objective | Add `table_cfp_comparison()` for CFP and R_Prog across tiers (research.md §6.3) |
 | Outcome | Success — 4 new tests, 39 tables tests total, 3589 total passing, all pre-commit hooks pass |
@@ -182,7 +182,7 @@ Expected: all hooks pass; ruff may auto-fix minor style issues on first run — 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -213,7 +213,7 @@ The `autouse=True` fixture in `tests/unit/analysis/conftest.py` mocks `mann_whit
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1187, PR #1298 | Branch: `1187-auto-impl` |
 
 ## References

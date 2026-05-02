@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-07 |
 | **Category** | testing |
 | **Objective** | Verify that both parent-package re-exports and direct sub-package import paths work correctly in Mojo |
@@ -132,13 +132,13 @@ clearly in the test docstring so future readers understand this is intentional, 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3211, PR #3726 | [notes.md](../references/notes.md) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running tests locally | `pixi run mojo test tests/shared/test_imports.mojo` | GLIBC version too old on dev machine (requires GLIBC_2.32+, host has older) | Mojo tests can only run in Docker CI or on compatible systems; pre-commit hooks are the local verification |
 | Docker-based test run | `docker run ghcr.io/homericintelligence/projectodyssey:main ...` | Image not available locally (denied pull from GHCR) | Trust CI to run the full test suite; local verification uses pre-commit hooks only |
 | Writing negative import test | Attempted to test that wrong import path fails | Mojo compile-time errors cannot be caught at runtime — no pytest.raises() equivalent | Document limitation in test docstring; only positive tests are possible for Mojo imports |

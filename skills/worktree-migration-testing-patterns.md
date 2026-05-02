@@ -13,7 +13,7 @@ tags: [worktree, migration, clone-to-worktree, integration-tests, idempotency, a
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-03-28 | Consolidated migration and testing skills | Merged from tooling-pr-auto-merge-worktree-command-migration, worktree-integration-test-pattern |
 
 Covers two related patterns: (1) migrating clone-based workflows (setup + `rm -rf` teardown) to
@@ -121,7 +121,7 @@ git worktree prune
 **gh pr merge error codes:**
 
 | Error | Meaning | Action |
-|-------|---------|--------|
+| ------- | --------- | -------- |
 | "clean status" | PR already eligible for merge | Retry — may have merged immediately |
 | "unstable status" | CI still running | Wait and retry, or let auto-merge handle |
 | "Protected branch rules not configured" | PR targets non-main branch | `gh pr edit <pr> --base main` |
@@ -226,7 +226,7 @@ pixi run python -m pytest tests/test_quick_reference_transform.py -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `gh pr merge --auto --rebase` on "clean status" PRs | First attempt returned "Pull request is in clean status" error | PR was already eligible for immediate merge — GitHub attempted to merge | Retry once; the PR either merged or needs a second `gh pr merge --auto` call |
 | Enable auto-merge on "unstable" PR | `gh pr merge 987 --auto --rebase` returned "unstable status" | CI was still running after rebase push | Wait for CI to complete, then retry |
 | Single sequential rebase for 14 PRs | Considered sequential processing | Too slow for batch operations | Use 3 parallel worktree-isolated agents (batches of 4-5 PRs each) |
@@ -272,6 +272,6 @@ CLAUDE.md                                     # Update workflow description
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | 14 PRs auto-merged + worktree migration PR #991 | tooling-pr-auto-merge-worktree-command-migration 2026-03-25 |
 | ProjectMnemosyne | Integration tests for fix_remaining_warnings.py | worktree-integration-test-pattern 2026-03-15 |

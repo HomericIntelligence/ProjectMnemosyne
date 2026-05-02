@@ -11,7 +11,7 @@ After the import audit, many names are known to use different identifiers.
 ## Name Mappings Applied
 
 | Old (planned) | New (actual) | Struct/file location |
-|---|---|---|
+| --- | --- | --- |
 | `Conv2D` | `Conv2dLayer` | `shared/core/layers/conv2d.mojo` — `struct Conv2dLayer` |
 | `ReLU` | `ReLULayer` | `shared/core/layers/relu.mojo` — `struct ReLULayer` |
 | `Tensor` | `ExTensor` | `shared/core/extensor.mojo` |

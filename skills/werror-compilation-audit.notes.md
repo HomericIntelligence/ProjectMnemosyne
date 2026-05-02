@@ -19,7 +19,7 @@ Each agent compiled with `timeout 60 pixi run mojo --Werror -I "$(pwd)" -I . "$f
 ## Agent Results
 
 | Agent | Scope | PASS | ERROR | Time |
-|-------|-------|------|-------|------|
+| ------- | ------- | ------ | ------- | ------ |
 | 1 | tests/shared/core (1-80) | 76 | 4 | ~20 min |
 | 2 | tests/shared/core (81+) | 124 | 9 | ~22 min |
 | 3 | tests/shared/training+testing+utils | 106 | 17 | ~18 min |
@@ -58,7 +58,7 @@ Each agent compiled with `timeout 60 pixi run mojo --Werror -I "$(pwd)" -I . "$f
 ## Issues Filed
 
 | Issue | Title |
-|-------|-------|
+| ------- | ------- |
 | #4519 | GoogLeNet/MobileNetV1 non-copyable fieldwise init |
 | #4520 | Float32→Float64 in test_assertions_float |
 | #4521 | Missing `_check_bf16_platform_support` |

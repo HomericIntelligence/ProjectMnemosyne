@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-05 |
 | **Objective** | Enable C901 (McCabe complexity) rule in ruff with max-complexity=12, suppress inherently complex orchestration/pipeline functions |
 | **Outcome** | ✅ Success — C901 enabled, 43 functions suppressed with annotated noqa directives, 0 remaining violations |
@@ -49,7 +49,7 @@ pixi run ruff check --select C901 scylla/ scripts/
 ### Phase 2: Choose max-complexity Threshold
 
 | Threshold | Use when |
-|-----------|----------|
+| ----------- | ---------- |
 | **10** | Greenfield, small codebases, strict quality bar |
 | **12** | Mature codebases with orchestration/pipeline code; reduces noise from inherently complex functions |
 
@@ -71,7 +71,7 @@ max-complexity = 12
 For each remaining violation (complexity > 12), choose:
 
 | Function Type | Action |
-|--------------|--------|
+| -------------- | -------- |
 | Pipeline orchestration (`_run_*_pipeline`) | Suppress — sequential conditional stages are inherent |
 | LLM judge runners | Suppress — many retry/outcome paths |
 | CLI dispatch (`main()`) | Suppress — many command branches are inherent |
@@ -115,7 +115,7 @@ pixi run python -m pytest tests/ -v
 After enabling C901 with max-complexity=12 on ~18K line Python codebase:
 
 | Threshold | Violations |
-|-----------|-----------|
+| ----------- | ----------- |
 | CC > 10 | 65 |
 | CC > 12 | 43 |
 | CC > 12 (after suppressions) | **0** |
@@ -125,7 +125,7 @@ All 43 violations at CC > 12 were suppressed with annotated noqa directives. No 
 ### Affected Function Categories
 
 | Category | Count | Action |
-|----------|-------|--------|
+| ---------- | ------- | -------- |
 | Pipeline orchestration | ~8 | suppress |
 | LLM judge runners | ~3 | suppress |
 | CLI dispatch | ~10 | suppress |
@@ -147,10 +147,10 @@ max-complexity = 12
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1422, issue #1377 | [notes.md](../../references/notes.md) |

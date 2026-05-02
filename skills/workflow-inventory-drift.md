@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `.github/workflows/README.md` inventory table drifts from actual `.yml` files because there is no enforcement mechanism |
 | **Solution** | stdlib-only Python script + pre-commit hook + CI step scoped to workflow directory changes |
 | **Trigger** | A `.yml` file exists on disk but is absent from the README table, or a README row references a file that does not exist |
@@ -138,10 +138,10 @@ python3 scripts/check_workflow_inventory.py --repo-root .
 ## Results & Parameters
 
 | Parameter | Value | Notes |
-|-----------|-------|-------|
+| ----------- | ------- | ------- |
 | Glob pattern | `*.yml` in `.github/workflows/` | Excludes `*.md` and subdirs automatically |
 | Worktree exclusion | `any(part == "worktrees" for part in rel.parts)` | Checks path segments, not substring |
-| README regex | `\|\s*\[?([a-zA-Z0-9_.-]+\.yml)\]?[^|]*\|` | Handles plain and hyperlinked filenames |
+| README regex | `\|\s*\[?([a-zA-Z0-9_.-]+\.yml)\]?[^\|]*\|` | Handles plain and hyperlinked filenames |
 | Hook trigger | `^\.github/workflows/(README\.md\|.*\.yml)$` | Only on workflow directory changes |
 | Exit code | 0 = clean, 1 = drift detected | Compatible with pre-commit and CI |
 | Tests | 24 pytest unit tests | All functions + main() integration |
@@ -150,13 +150,13 @@ python3 scripts/check_workflow_inventory.py --repo-root .
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Substring worktree exclusion | `if "worktrees" in str(f)` on absolute path | When repo root path itself contains "worktrees" (e.g. `.worktrees/issue-3981/`), every file matched and was excluded | Use `any(part == "worktrees" for part in rel.parts)` on the relative path parts |
-| Regex matching header rows | Initial regex without anchoring on `[a-zA-Z0-9_.-]` | Matched `**Test**` tokens from bold category headers like `\| **Test Workflows** \| \| \|` | Character class `[a-zA-Z0-9_.-]` naturally excludes `*`, no extra anchoring needed |
+| Regex matching header rows | Initial regex without anchoring on `[a-zA-Z0-9_.-]` | Matched `**Test**` tokens from bold category headers | Character class `[a-zA-Z0-9_.-]` naturally excludes `*`, no extra anchoring needed |
 | Glob `**/*.yml` from repo root | Used recursive glob instead of direct `workflows_dir.glob("*.yml")` | Picked up workflow files nested under `.pixi/` and other vendor dirs | Glob directly from `workflows_dir` so only the immediate workflow directory is scanned |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3981, PR implementing drift detection | [notes.md](../../references/notes.md) |

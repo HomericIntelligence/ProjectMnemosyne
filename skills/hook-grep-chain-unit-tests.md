@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Skill** | hook-grep-chain-unit-tests |
 | **Category** | testing |
 | **Language** | Python / pytest |
@@ -35,7 +35,7 @@ no binary required. The predicate runs in milliseconds and makes positive/negati
 ### Quick Reference
 
 | Step | Action |
-|------|--------|
+| ------ | -------- |
 | 1 | Read exact hook `entry:` from `.pre-commit-config.yaml` |
 | 2 | Translate each grep step to a Python `re.search()` call |
 | 3 | Compose into an `is_violation(line: str) -> bool` predicate |
@@ -61,7 +61,7 @@ grep -rn "\.__matmul__(" . --include="*.mojo" |
 ### Step 2 — Map grep steps to Python re
 
 | Bash grep step | Python equivalent |
-|----------------|-------------------|
+| ---------------- | ------------------- |
 | `grep 'PATTERN'` | `re.search(r'PATTERN', line)` |
 | `grep -v 'EXCL'` | `not re.search(r'EXCL', line)` |
 
@@ -150,7 +150,7 @@ when quoting bash grep patterns to avoid these warnings:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Backslash escape in docstring | Used `"\.__matmul__("` in module docstring to show the bash grep command | Python 3.12+ `SyntaxWarning: "\." is an invalid escape sequence` (docstrings are regular strings) | Use single quotes `'.\__matmul__('` or a `.. code-block:: bash` RST block in docstrings; backslashes in re patterns belong in raw strings `r"..."`, not docstrings |
 | Treating string literal edge case as a negative | Initially expected `".__matmul__("` inside a string to NOT be a violation | Bash grep has no AST awareness — the pattern fires regardless of syntactic context | The test should assert `is_violation(...) == True` and add a comment documenting the known false-positive limitation |
 
@@ -200,5 +200,5 @@ def is_violation(line: str) -> bool:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4783 — `no-matmul-call-sites` hook | [notes.md](../references/notes.md) |

@@ -22,7 +22,7 @@ gh issue list --state open --limit 50
 Three pairs of issues were created as follow-ups from the same parent issue, resulting in identical duplicates:
 
 | Older (Keep) | Newer (Close) | Title | Created From |
-|--------------|---------------|-------|--------------|
+| -------------- | --------------- | ------- | -------------- |
 | #652 | #661 | Add HEALTHCHECK instruction to Dockerfile | #601 |
 | #651 | #662 | Pin base image to SHA256 digest for reproducibility | #601 |
 | #650 | #660 | Pin @anthropic-ai/claude-code npm package to specific version | #601 |
@@ -30,7 +30,7 @@ Three pairs of issues were created as follow-ups from the same parent issue, res
 **Pattern 2: Near-Duplicates (Scope Overlap)**
 
 | Keep | Close | Reasoning |
-|------|-------|-----------|
+| ------ | ------- | ----------- |
 | #664 (Refactor long lines in rubric YAML files) | #659 (Address long lines in test fixture rubric YAML files) | Both reference the same 2 files with the same 228-char lines. #664 has broader scope covering both files. |
 
 ### Step 2: Verify "Already Resolved" Claims

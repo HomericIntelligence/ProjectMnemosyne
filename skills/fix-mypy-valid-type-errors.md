@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-22 |
 | **Objective** | Fix `valid-type` mypy violations so the error code can be removed from `disable_error_code` |
 | **Outcome** | ✅ 2 violations fixed, `valid-type` re-enabled, baseline updated (157 errors, 19 codes disabled) |
@@ -41,7 +41,7 @@ Python built-in names like `callable`, `any`, `type`, and `list` are valid at ru
 (with `valid-type` enabled) requires the proper `typing` or `collections.abc` equivalents:
 
 | Wrong (runtime only) | Correct (mypy-compatible) |
-|----------------------|--------------------------|
+| ---------------------- | -------------------------- |
 | `callable` | `Callable[[ArgType], ReturnType]` from `collections.abc` |
 | `any` | `Any` from `typing` |
 | `dict[str, any]` | `dict[str, Any]` |
@@ -175,7 +175,7 @@ at implementation time. The discrepancy arose because:
 ## Results & Parameters
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Violations fixed | 2 |
 | Files modified | 6 (2 source + pyproject.toml + check_mypy_counts.py + MYPY_KNOWN_ISSUES.md + pixi.lock) |
 | Tests after fix | 2436 passed, 74.16% coverage |
@@ -186,7 +186,7 @@ at implementation time. The discrepancy arose because:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Related Skills
 

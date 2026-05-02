@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-04-23 |
 | Objective | Fix CI failure caused by `grep -q` assertion checking case-incorrect string against source file content |
 | Outcome | Success — workflow unblocked after changing grep string to match exact casing in source file |
@@ -74,14 +74,14 @@ grep -q 'HomericIntelligence' scripts/notify-proteus.sh
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|---------------|---------------|----------------|
+| --------- | --------------- | --------------- | ---------------- |
 | 1 | `grep -q 'homeric-intelligence' scripts/notify-proteus.sh` in `shell-tests.yml` | File uses `HomericIntelligence` (CapitalCase), not kebab-case; grep returned exit 1 | Never assume kebab-case for a proper noun — check the source file first |
 | 2 | Assuming the workflow would pass because "the org name is there" | The string form in the file did not match the grep pattern; CI is case-sensitive by default | Case sensitivity is the default; always verify with a local grep run |
 
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Shell script path | `scripts/notify-proteus.sh` |
 | Incorrect assertion | `grep -q 'homeric-intelligence'` |
 | Correct assertion | `grep -q 'HomericIntelligence'` |

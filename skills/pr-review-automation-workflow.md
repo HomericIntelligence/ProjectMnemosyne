@@ -15,7 +15,7 @@ Implements and operates the `--review` mode in `implement_issues.py` and the `PR
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-29 |
 | Objective | Consolidated skill covering PRReviewer class implementation and live integration test results |
 | Outcome | Success — two-phase review automation with CLAUDECODE env fix, 31 tests passing |
@@ -283,16 +283,16 @@ Best first target: unit tests failing, pre-commit passing → cleanest failure m
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running review inside Claude Code | Called `pixi run python scripts/implement_issues.py --review` from within a Claude Code session | `CLAUDECODE=1` causes nested claude subprocess to refuse launch | Always unset `CLAUDECODE` or strip it in the subprocess env |
-| Using `data.get("session_id")` without type annotation | Called `data.get("session_id")` and returned result directly | mypy `no-any-return` error because `.get()` returns `Any` | Declare `session_id: str | None = data.get("session_id")` explicitly |
+| Using `data.get("session_id")` without type annotation | Called `data.get("session_id")` and returned result directly | mypy `no-any-return` error because `.get()` returns `Any` | Declare `session_id: str \| None = data.get("session_id")` explicitly |
 
 ## Results & Parameters
 
 ### Claude invocation parameters
 
 | Session | Tools | Timeout | Output format |
-|---------|-------|---------|---------------|
+| --------- | ------- | --------- | --------------- |
 | Analysis | `Read,Glob,Grep,Bash` | 1200s (20 min) | `json` |
 | Fix | `Read,Write,Edit,Glob,Grep,Bash` | 1800s (30 min) | `json` |
 | Retrospective | `Read,Write,Edit,Glob,Grep,Bash` | 600s (10 min) | `--print` |
@@ -300,7 +300,7 @@ Best first target: unit tests failing, pre-commit passing → cleanest failure m
 ### Phase timings (observed, single PR)
 
 | Phase | Duration | Notes |
-|-------|----------|-------|
+| ------- | ---------- | ------- |
 | PR discovery | ~1s | Branch-name lookup fast path |
 | Worktree creation | ~1s | Branch reused if exists |
 | Analysis session | ~5.5 min | Claude reads code, CI logs, produces plan |

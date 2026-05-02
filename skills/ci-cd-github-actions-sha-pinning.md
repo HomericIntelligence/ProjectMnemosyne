@@ -17,7 +17,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-04-24 |
 | Objective | Document how to resolve immutable commit SHAs for GitHub Actions supply-chain hardening |
 | Outcome | Verified SHA pinning applied in AchaeanFleet PR #549; CI passed |
@@ -41,7 +41,7 @@ GitHub Actions that reference mutable version tags (`@v4`, `@v3.3.0`) can be sil
 GitHub supports two tag types, and you **must** handle both:
 
 | Tag type | `git/ref/tags/<tag>` returns | Resolution needed? |
-|----------|-----------------------------|--------------------|
+| ---------- | ----------------------------- | -------------------- |
 | Lightweight | Commit SHA directly | No — use it as-is |
 | Annotated | Tag-object SHA (not a commit) | Yes — one extra API call |
 
@@ -55,7 +55,7 @@ Specific version tags like `@v4.1.7` are **often lightweight** (already commit S
 ### Quick Reference
 
 | Action | Tag | Commit SHA (2026-04-24) | Tag type |
-|--------|-----|------------------------|----------|
+| -------- | ----- | ------------------------ | ---------- |
 | `actions/checkout` | `v4` (v4.1.7) | `34e114876b0b11c390a56381ad16ebd13914f8d5` | lightweight |
 | `hadolint/hadolint-action` | `v3.3.0` | `2332a7b74a6de0dda2e2221d575162eba76ba5e5` | lightweight |
 | `github/codeql-action/upload-sarif` | `v3` | `ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a` | annotated |
@@ -145,7 +145,7 @@ Renovate's `github-actions` manager does the same.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `gh api "repos/<owner>/<repo>/commits/<tag>"` | Used the `commits` endpoint with a tag name | Returns HTTP 422 for non-commit refs (annotated tags point to tag objects, not commits) | Always use `git/ref/tags/` endpoint, not `commits/` |
 | Trusting `git/ref/tags/<tag>.sha` for annotated tags | Used the SHA directly from the `git/ref/tags/` response without checking `.object.type` | The SHA is a tag-object SHA, not a commit SHA — using it in `uses:` causes workflow failure | Always check `.object.type`; if `"tag"`, dereference with `git/tags/<sha>` |
 | Pinning only major version aliases | Pinned `@v4` to a SHA but left `@v3.3.0` as a mutable tag | Named version tags can still be moved (rare but possible for yanked releases) | Pin all `uses:` lines regardless of whether they use major or patch versions |
@@ -157,7 +157,7 @@ Renovate's `github-actions` manager does the same.
 ### Resolution Summary (AchaeanFleet PR #549, 2026-04-24)
 
 | Action | Tag consulted | `.object.type` | Extra dereference? | Final commit SHA |
-|--------|--------------|---------------|--------------------|-----------------|
+| -------- | -------------- | --------------- | -------------------- | ----------------- |
 | `actions/checkout` | `v4` | `commit` | No | `34e114876b0b11c390a56381ad16ebd13914f8d5` |
 | `hadolint/hadolint-action` | `v3.3.0` | `commit` | No | `2332a7b74a6de0dda2e2221d575162eba76ba5e5` |
 | `github/codeql-action/upload-sarif` | `v3` | `tag` (annotated) | Yes (tag obj: `865f5f5c`) | `ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a` |

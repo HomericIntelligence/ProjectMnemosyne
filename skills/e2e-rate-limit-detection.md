@@ -11,13 +11,13 @@ version: 1.0.0
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-04 |
-| Objective | | Field | Value | |-------|-------| | **Date** | 2026-01-04 | | **Project** | ProjectScylla | | **Objective** | Fix rate limit detection failing to... |
+| Objective | Fix rate limit detection failing to catch errors in agent JSON output that were reaching the fallback judge |
 | Outcome | Operational |
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-01-04 |
 | **Project** | ProjectScylla |
 | **Objective** | Fix rate limit detection failing to catch errors in agent JSON output that were reaching the fallback judge |
@@ -129,7 +129,7 @@ pixi run pytest tests/unit/e2e/test_rate_limit.py -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -159,9 +159,9 @@ RATE_LIMIT_KEYWORDS = [
 ### Code Locations (ProjectScylla)
 
 | File | Line | Change |
-|------|------|--------|
+| ------ | ------ | -------- |
 | `src/scylla/e2e/rate_limit.py` | 177-178 | Parse error_msg before stderr |
-| `tests/unit/e2e/test_rate_limit.py` | - | Added 31 comprehensive tests |
+| `tests/unit/e2e/test_rate_limit.py` | --- | Added 31 comprehensive tests |
 
 ### Test Coverage
 
@@ -189,7 +189,7 @@ RATE_LIMIT_KEYWORDS = [
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #126 - E2E checkpoint/resume implementation | [Full session notes](../references/notes.md) |
 
 ## Related Skills

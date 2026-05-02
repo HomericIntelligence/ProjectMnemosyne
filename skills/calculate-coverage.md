@@ -13,7 +13,7 @@ tier: 2
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Measure code coverage percentage and identify which code paths are untested to ensure comprehensive testing. |
 | Outcome | Operational |
@@ -62,7 +62,7 @@ Coverage analysis:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

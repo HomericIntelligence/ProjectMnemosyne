@@ -13,7 +13,7 @@ tags: [mojo, simd, vectorization, numerical-safety, performance, nan-detection]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2025-03-25 |
 | **Objective** | Replace scalar element-by-element loops in hot-path NaN/Inf detection functions with SIMD-vectorized implementations for ~4-16x throughput improvement |
 | **Outcome** | Successful — all 4 functions vectorized, 9 new SIMD edge-case tests pass, zero regressions |
@@ -94,7 +94,7 @@ fn _count_nan_core[dtype: DType](tensor: Tensor[dtype]) -> Int:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `vectorize[]` for `has_nan` | Used `vectorize[]` closure with a `found` flag | Cannot `return True` from inside `vectorize[]` closure to exit the outer function — the closure is a separate function | Use manual SIMD loop (`while` + `ptr.load`) when early exit is needed |
 | `List[Int](2, 8)` constructor | Tried to construct List with positional args | Mojo 0.26.1 `List[Int]` has no multi-arg constructor; must use `append()` or list literals `[2, 8]` | Always use `var s = List[Int](); s.append(n)` pattern or `[n]` list literal syntax |
 | Lowercase docstring start | Used `"""has_nan returns...` | Mojo `--Werror` rejects docstrings not starting with capital letter or non-alpha | Always capitalize the first word of docstrings |
@@ -105,7 +105,7 @@ fn _count_nan_core[dtype: DType](tensor: Tensor[dtype]) -> Int:
 ### Performance Characteristics
 
 | Metric | Scalar (Before) | SIMD (After) | Improvement |
-|--------|-----------------|--------------|-------------|
+| -------- | ----------------- | -------------- | ------------- |
 | Iterations per 1M float32 | ~1,000,000 | ~125,000 (width=8) | ~8x fewer iterations |
 | Early exit (NaN at idx 0) | 1 iteration | 1 SIMD load | Same |
 | Worst case (no NaN) | N iterations | N/simd_w + tail | ~8-16x faster |
@@ -143,5 +143,5 @@ comptime simd_w = simd_width_of[dtype]()
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #4910 — SIMD-vectorize numerical safety hot path | [PR #5119](https://github.com/HomericIntelligence/ProjectOdyssey/pull/5119) |

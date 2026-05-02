@@ -94,7 +94,7 @@ mkdir -p plugins/{training,evaluation,optimization,debugging,architecture,toolin
 ## Components
 
 | Component | Purpose |
-|-----------|---------|
+| ----------- | --------- |
 | `/advise` | Search registry before starting work |
 | `/learn` | Capture learnings after sessions |
 | `documentation-patterns` | How to write discoverable skills |

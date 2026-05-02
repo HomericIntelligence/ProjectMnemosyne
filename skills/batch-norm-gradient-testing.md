@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-29 |
 | Objective | Consolidated patterns for correctly designing and fixing batch normalization backward gradient tests |
 | Outcome | Merged from 4 skills covering gradient analysis, test fix patterns, sum-squared loss approach, and inference-mode coverage |
@@ -121,7 +121,7 @@ fn forward_for_grad(inp: ExTensor) raises -> ExTensor:
 
 **Consistency requirement**: Both `grad_output` and `forward_for_grad` MUST derive from the same loss:
 | | Must use |
-|---|---|
+| --- | --- |
 | `grad_output` | `2 * output` (derivative of sum(output^2)) |
 | `forward_for_grad` return | `sum(out * out)` reduced to scalar |
 
@@ -210,7 +210,7 @@ SKIP=mojo-format git commit -m "fix(backward): enable backward pass tests"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `grad_output = ones_like(output)` | Uniform upstream gradient in normalization backward check | `sum(output)` loss is pathological for zero-mean normalized layers; analytical gradient is exactly zero | Never use uniform grad_output for normalization backward tests |
 | Change tolerance | Increase `atol` from 1e-5 to 1e-2 for the failing test | Hides the real issue without validating correctness | Masking float32 noise doesn't test the backward |
 | Fix backward formula | Modify grad_input formula to produce non-zero output for uniform grad | The formula IS correct; ~0 for uniform grad is mathematically right | Don't change correct code to pass a bad test |

@@ -22,7 +22,7 @@ How to auto-generate `__init__.py` files with proper `__all__` exports for Pytho
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-11 |
 | Objective | Generate `__init__.py` with `__all__` for all subpackages in `scylla/` |
 | Outcome | Success — 17 `__init__.py` files generated, all pre-commit hooks pass |
@@ -94,7 +94,7 @@ pixi run python -m pytest tests/ -x  # verify no import breakage
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

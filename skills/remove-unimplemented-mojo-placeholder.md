@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Category** | documentation |
 | **Mojo version** | v0.26.1+ |
 | **Trigger** | Cleanup issue with NOTE: ... not yet implemented in a test file |
@@ -66,7 +66,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Keeping the placeholder | Leaving `pass`-only test in place | Does not satisfy "Either implemented or test removed" success criterion | A no-op test with zero assertions provides no value and should be removed |
 | Implementing RotatingFileHandler | Considered full implementation | Mojo v0.26.1 lacks file-size stat (`os.stat`) and rename/rotation APIs in stdlib | Check stdlib availability before committing to implementation; removal is valid |
 

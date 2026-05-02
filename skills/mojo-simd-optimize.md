@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Parallelize tensor and array operations using SIMD. - Optimizing tensor operations - Vectorizing element-wise computations |
 | Outcome | Operational |
@@ -56,7 +56,7 @@ for i in range(0, size, width):
 ## Error Handling
 
 | Error | Cause | Solution |
-|-------|-------|----------|
+| ------- | ------- | ---------- |
 | `Out of bounds` | Remainder not handled | Add scalar remainder loop |
 | `No speedup` | Wrong SIMD width | Use `simdwidthof[dtype]()` |
 | `Compilation fails` | Type mismatch | Check load/store types match |
@@ -65,7 +65,7 @@ for i in range(0, size, width):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

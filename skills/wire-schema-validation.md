@@ -16,9 +16,9 @@ How to add automatic JSON schema validation to YAML config loaders in ProjectScy
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-04 |
-| Objective | Wire `schemas/defaults|tier|model.schema.json` into `load_defaults()`,`load_tier()`, and`load_model()` in `scylla/config/loader.py` |
+| Objective | Wire `schemas/defaults\|tier\|model.schema.json` into `load_defaults()`, `load_tier()`, and `load_model()` in `scylla/config/loader.py` |
 | Outcome | Success — PR HomericIntelligence/ProjectScylla#1424 merged |
 | Issue | HomericIntelligence/ProjectScylla#1380 |
 
@@ -120,7 +120,7 @@ class TestSchemaValidation:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -132,5 +132,5 @@ class TestSchemaValidation:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1424, issue #1380 | [notes.md](wire-schema-validation.notes.md) |

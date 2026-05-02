@@ -17,7 +17,7 @@ How to register a new figure function in the `generate_figures.py` report pipeli
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-02-27 |
 | Objective | Wire `fig_r_prog_by_tier`, `fig_cfp_by_tier`, `fig_pr_revert_by_tier` into `scripts/generate_figures.py` so they are produced automatically during analysis runs |
 | Outcome | Success — 2 new registry tests, 3259 total passing, all pre-commit hooks pass |
@@ -130,7 +130,7 @@ pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Conftest / test_figures.py: Known Import Quirk
 
@@ -180,7 +180,7 @@ from scylla.analysis.figures.process_metrics import (
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1136, PR #1194 | Follow-up from #997 |
 
 ## Note: figures wired here were later renamed

@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Add regression tests for a Python constants module containing frozenset and logging format string constants |
 | **Outcome** | 17 tests pass, 100% coverage on constants module |
@@ -105,7 +105,7 @@ pixi run python -m pytest tests/unit/test_constants.py -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked on first try | N/A | Constants testing requires no mocking — pure value assertions are straightforward |
 
 ## Results & Parameters
@@ -113,7 +113,7 @@ pixi run python -m pytest tests/unit/test_constants.py -v
 ### Test Categories for Constants Modules
 
 | Constant Type | Test Categories | Example Assertions |
-|---------------|----------------|-------------------|
+| --------------- | ---------------- | ------------------- |
 | `frozenset` | type, contents (parametrized), entry types, immutability | `isinstance()`, `in`, `pytest.raises(AttributeError)` |
 | `str` (format) | type, formatter validity, field presence | `logging.Formatter()`, `LogRecord.format()`, `"%(field)s" in` |
 | `int`/`float` | type, value range, relationships between constants | `isinstance()`, `>= 0`, `TIMEOUT > INTERVAL` |
@@ -129,5 +129,5 @@ New tests: 17 (11 parametrized entries + 3 frozenset checks + 3 format string ch
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #61, PR #122 — 17 tests for constants.py | Tests DEFAULT_EXCLUDE_DIRS and LOG_FORMAT |

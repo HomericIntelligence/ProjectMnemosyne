@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-03 |
 | **Objective** | Audit 33 `except Exception` clauses across 3 worst offenders in `scylla/` and replace with specific types where feasible |
 | **Outcome** | ✅ 17 clauses tightened, 23 annotated, net reduction 128 → 111 project-wide |
@@ -70,7 +70,7 @@ awk 'NR>=LINE-10 && NR<=LINE+5' scylla/path/to/file.py
 ### 3. Categorize: Keep vs Tighten
 
 | Category | Typical Pattern | Action |
-|----------|----------------|--------|
+| ---------- | ---------------- | -------- |
 | **Keep** | Thread pool catch-all, top-level `run()`, interrupt handler | Add `# broad catch: <reason>` inline comment |
 | **Tighten** | `subprocess.run()` call only | `(subprocess.CalledProcessError, FileNotFoundError, OSError)` |
 | **Tighten** | File read/write only | `OSError` |
@@ -128,12 +128,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Exception Type Reference for ProjectScylla
 
 | Operation | Specific Exception Types |
-|-----------|--------------------------|
+| ----------- | -------------------------- |
 | `subprocess.run()` / `run()` wrapper | `(subprocess.CalledProcessError, FileNotFoundError, OSError)` |
 | Any subprocess operation | `subprocess.SubprocessError` (base class) |
 | File read/write | `OSError` (covers `IOError`, `FileNotFoundError`, `PermissionError`) |
@@ -186,7 +186,7 @@ except Exception as e:  # broad catch: resume can fail from JSON/IO/state errors
 ## Results Summary (ProjectScylla Issue #1355)
 
 | File | Before | Tightened | Kept (annotated) | After |
-|------|--------|-----------|------------------|-------|
+| ------ | -------- | ----------- | ------------------ | ------- |
 | `automation/implementer.py` | 18 | 9 | 9 | 9 broad |
 | `e2e/llm_judge.py` | 8 | 8 | 0 | 0 broad |
 | `e2e/runner.py` | 7 | 0 | 7 | 7 broad |
@@ -195,5 +195,5 @@ except Exception as e:  # broad catch: resume can fail from JSON/IO/state errors
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1355 — March 2026 quality audit (10/14) | [notes.md](../../references/notes.md) |

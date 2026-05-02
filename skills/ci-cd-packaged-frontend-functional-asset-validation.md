@@ -14,7 +14,7 @@ tags: [ci-cd, github-actions, frontend, packaging, validation]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-22 |
 | **Objective** | Replace brittle packaged-asset drift checks with runtime validation of the shipped frontend surface. |
 | **Outcome** | Successful locally. Rebuild the packaged frontend, serve it from the packaged directory, and verify all discovered local assets return `200`. |
@@ -55,7 +55,7 @@ python3 scripts/checks/validate_packaged_frontend.py
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Hardcoded drift gate | Used `git diff --exit-code` after `npm run deploy` | Rebuilds legitimately changed hashed bundle names like `main-*.js`, which made CI fail even when the packaged app still worked | Generated filename drift is not a functional failure; validate runtime reachability instead |
 | Narrow `index.html` diff inspection | Looked only at `index.html` script-tag rewrites | That explains why CI failed, but it does not prove the packaged frontend is healthy or complete | Turn diagnosis into an executable validator that checks all discovered local assets |
 | Generic `urllib.request.urlopen` in validator | Used `urlopen()` for convenience in the functional validator | Bandit flagged it as `B310` because it accepts broader URL schemes than necessary | Keep the validator on an explicit trust boundary and fetch only loopback `http://127.0.0.1:<port>` assets |
@@ -91,5 +91,5 @@ bandit -q -r radiance scripts --severity-level medium --confidence-level medium
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Radiance | PR #110 CI remediation | Replaced the packaged frontend `git diff` gate with a runtime asset validator and confirmed it locally before pushing |

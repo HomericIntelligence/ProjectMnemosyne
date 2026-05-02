@@ -12,7 +12,7 @@ Structure ML experiments with TECHSPEC.md before running them.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2025-12-29 |
 | Objective | Define experiment goals and success criteria before training |
 | Outcome | Reduced wasted compute, clearer experiment interpretation |
@@ -113,7 +113,7 @@ After experiments, `/learn` saves findings with TECHSPEC reference:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -152,7 +152,7 @@ Complete reference from Sionic AI blog with verified results and configurations.
 ### Task Specification
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | Task | Integer addition (0-999 + 0-999) |
 | Tokenization | Base-100 (each digit 0-99 is one token) |
 | Sequence length | 32 tokens max |
@@ -188,7 +188,7 @@ Complete reference from Sionic AI blog with verified results and configurations.
 **Phase 1 Results:**
 
 | Model | d_model | depth | Params | Exact Match | Outcome |
-|-------|---------|-------|--------|-------------|---------|
+| ------- | --------- | ------- | -------- | ------------- | --------- |
 | Upper | 256 | 6 | 3.18M | **91.5%** | Best case achieved |
 | Middle | 192 | 4 | 1.4M | **79.31%** | Above minimum viable |
 | Lower | 64 | 3 | 253K | **37.6%** | Below threshold |
@@ -221,7 +221,7 @@ Wide-shallow > Balanced > Narrow-deep for positional ops
 **Phase 2 Results:**
 
 | Config | d_model | depth | Params | Exact Match | Hypothesis |
-|--------|---------|-------|--------|-------------|------------|
+| -------- | --------- | ------- | -------- | ------------- | ------------ |
 | Wide-shallow | 512 | 2 | 1.05M | **87.2%** | ✓ Confirmed |
 | Balanced | 256 | 4 | 1.31M | **79.31%** | ✓ Middle |
 | Narrow-deep | 128 | 8 | 1.02M | **71.8%** | ✓ Weakest |

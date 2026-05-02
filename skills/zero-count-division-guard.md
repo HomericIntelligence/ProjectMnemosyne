@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-02 |
 | Project | ProjectScylla |
 | Objective | Fix `ZeroDivisionError` in `check_readme_test_count()` when `collect_actual_test_count()` returns `0` in CI |
@@ -117,14 +117,14 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Why Fix at the Collection Layer (Not the Check Layer)
 
 Two options exist:
 
 | Option | Location | Change |
-|--------|----------|--------|
+| -------- | ---------- | -------- |
 | A (chosen) | `collect_actual_test_count()` | Return `None` when count == 0 |
 | B (rejected) | `check_readme_test_count()` | Add `if actual_count == 0: return [error]` |
 
@@ -146,6 +146,6 @@ Always test collection functions with `0` as a possible output, especially when 
 ## Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scripts/check_doc_config_consistency.py:273-275` | Return `None` when parsed count == 0 |
 | `tests/unit/scripts/test_check_doc_config_consistency.py` | +2 tests for zero-count inputs |

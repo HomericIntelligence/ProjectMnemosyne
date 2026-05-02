@@ -14,7 +14,7 @@ tags: [citation, verification, arxiv, webfetch, primary-source, fabrication-dete
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-20 |
 | **Objective** | Verify every numeric claim in a corpus citation (percentage, ratio, PPL, bytes, accuracy points, speedup multiplier) against the cited paper's actual arXiv abstract, using parallel WebFetch agents, so fabricated ranges, swapped numbers, reversed polarity, and paper-body-figures-quoted-as-abstract are detected before publication. |
 | **Outcome** | Successful on ArchIdeas research corpus (39 files, ~60 numeric citations checked by 6 parallel agents): surfaced 6 HIGH-severity fabrications (including fabricated range "2.9–4.1×" when abstract said "~3×"; swapped Quest self-attn vs end-to-end speedups; wrong compute-savings figure for GateSkip; headline understating a Nemotron-Flash qualifier; wrong PV-Tuning author list; truncated paper title) and ~17 MEDIUM over-specifications of paper-body figures as abstract quotes. All cited papers were real; the fabrications were in how the corpus quoted them. No text pattern catches this — only direct primary-source verification does. |
@@ -113,7 +113,7 @@ misattribution), Recommended fix (exact replacement text).
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Adding `[post-cutoff, unverified]` flags as a shortcut on every post-knowledge-cutoff arXiv ID | Before any WebFetch check, flagged 37 `arXiv:26XX.XXXXX` citations with blanket "contents unverified" markers, assuming post-knowledge-cutoff IDs might be hallucinated | Subsequent WebFetch verification showed all 37 IDs resolved to real papers with matching titles and authors. The blanket flag was the lazy answer; it obscured which citations actually had verification problems and which were simply "recent". | The flag is not a substitute for verification. Post-cutoff-ness tells you nothing about whether the paper exists or whether the corpus quoted it correctly. Fetch the abstract; then decide whether to flag a specific claim or not. Replace blanket flags with abstract-grounded specific language. |
 | Trusting existing blanket `UNVERIFIED` / `POST-CUTOFF` flags in the corpus | Several files in the corpus carried legacy flags from earlier sessions ("**POST-CUTOFF (March 2026) — UNVERIFIED. Use as directional pointer only.**"). Initial instinct was to leave them as-is since the legacy authors presumably knew something. | Verification showed the flagged papers were real and in many cases the specific numeric claims were in the abstract. The flags were over-cautious relics; leaving them reduced the corpus's credibility for no real safety gain. | Treat existing blanket flags as hypotheses requiring the same verification. If the paper resolves and the claim is supported by the abstract, the flag should be replaced with specific abstract-grounded language. If the claim is paper-body, annotate `[per Table X, §Y]`. Don't let legacy caution propagate unchallenged. |
 | Attempting to verify every bibliography entry | One agent tried to verify the full bibliography of an assigned file (30+ citations including foundational pre-2024 papers like Mamba, LoRA, Transformer) | Exhausted the 30-WebFetch-call budget before reaching the highest-risk body numeric claims. Bibliography completeness is a separate audit dimension and doesn't benefit from abstract-level checks for well-known foundational papers. | Focus verification on body numeric claims. Explicitly skip pre-2024 well-known foundational papers (Transformer, Mamba, LoRA, RoPE, MoE foundational papers) unless the corpus makes a surprising claim about them. Prioritize Executive Summary, §4 Technical Analysis, §8 Accuracy / Quality Tradeoff, and derivation-tag-adjacent citations. |
@@ -126,7 +126,7 @@ misattribution), Recommended fix (exact replacement text).
 All examples below are from the ArchIdeas corpus verification pass, 2026-04-20, on papers with real resolving arXiv IDs. The pattern in each case: the cited paper is real, the cited title/authors are approximately right, but the specific numeric claim the corpus makes is either absent from the abstract, fabricated in precision, reversed in direction, or attributed to the wrong source location.
 
 | # | Defect | Concrete example | Remedy |
-|---|--------|------------------|--------|
+| --- | -------- | ------------------ | -------- |
 | 1 | **Fabricated numeric range** — corpus specifies a range where the abstract only gives a single approximate value | `arXiv:2604.11035` (I-DLM): corpus said "2.9–4.1× throughput at high concurrency"; abstract says "about 3× higher throughput than prior state-of-the-art DLMs" | Replace fabricated range with abstract's exact phrasing; if corpus needs precision, sourcing must come from paper-body tables with explicit `[per Table X]` citation |
 | 2 | **Swapped numbers** — two legitimate numbers from the abstract assigned to each other's roles | `arXiv:2406.10774` (Quest): corpus said "Up to 7.03× self-attention speedup, 2.23× end-to-end speedup"; abstract says "up to 2.23× self-attention speedup... reduces inference latency by 7.03×" | Swap back to abstract's assignment; also grep for the bug propagating via copy-paste to other files (in ArchIdeas: same swap appeared in 2 files) |
 | 3 | **Wrong compute / accuracy figure with wrong model attribution** | `arXiv:2510.13876` (GateSkip): corpus said ">90% baseline accuracy at 25% compute savings on Llama-3.1-8B"; abstract says "up to 15% compute while retaining over 90% of baseline accuracy" on long-form reasoning, and "match baseline quality near 50% savings" on instruction-tuned models (neither 25% nor Llama-3.1-8B is in the abstract) | Replace with abstract's verified figures and task qualifiers; if corpus previously attributed the number to a specific model, verify whether that attribution is in the paper body or entirely invented |
@@ -169,7 +169,7 @@ Group 6 (agent F): files 5_8 .. 5_10, 6_1, 6_2, 6_4, 6_5
 ### Report tally from verified execution
 
 | Severity | Count | Example finding |
-|----------|-------|-----------------|
+| ---------- | ------- | ----------------- |
 | HIGH | 6 | Fabricated range (I-DLM 2.9-4.1×), swapped numbers (Quest), wrong model/percentage (GateSkip), understated headline (Nemotron-Flash), paper-body quoted as abstract, missing paper-body attribution for load-bearing claim |
 | MEDIUM | ~17 | Over-specification of paper-body figures as abstract quotes; specific model/task qualifiers not in abstract (SwitchHead, BASED, NSA, Looped Transformers, CoLA, FP6-LLM, Fast-dLLM v2, Nguyen & Lin, CSV-Decode, etc.) |
 | LOW | ~15 | Minor venue-label drift, author-list typos, title truncation, body-table numbers needing `[per Table X]` annotation |
@@ -177,5 +177,5 @@ Group 6 (agent F): files 5_8 .. 5_10, 6_1, 6_2, 6_4, 6_5
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ArchIdeas research corpus | Pre-release hunt-the-next-class audit, 2026-04-20; 39 research_*.md files + SHARED_PRELUDE.md; 6 parallel verification agents; ~60 body numeric citations checked | Surfaced all 8 defect sub-classes above; corpus remediated in a single commit. Lessons integrated into `documentation-corpus-myrmidon-parallel-remediation` v1.6.0 as Pass 7 (this skill is the deep-dive on that pass). |

@@ -7,7 +7,7 @@ Session: Fix open issues — Health Check, Preflight Check, pip-audit
 ## Issue triage decisions
 
 | Issue | Decision | Rationale |
-|-------|----------|-----------|
+| ------- | ---------- | ----------- |
 | #909 | Code (PR #1093) | Mock bug + missing BATS regression tests |
 | #913 | Code (PR #1096) | N+1 REST scalability problem |
 | #914 | Code (PR #1096) | --limit 100 silently misses older PRs |

@@ -13,7 +13,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-02 |
 | Project | ProjectScylla |
 | Objective | Add unit tests covering all `raise RuntimeError` guards in `workspace_manager.py` |
@@ -120,14 +120,14 @@ Then for each uncovered guard:
 ## Guards Covered in This Session (ProjectScylla #1215)
 
 | Line | Guard Message | Test Method | Pattern Used |
-|------|---------------|-------------|--------------|
+| ------ | --------------- | ------------- | -------------- |
 | 237 | `Failed to checkout commit {commit}` | `test_checkout_commit_raises_if_checkout_fails` | Sequential subprocess |
 | 283 | `Base repo not set up. Call setup_base_repo() first.` | `test_create_worktree_raises_if_not_setup` | State guard (no mock) |
 | 319 | `Failed to create worktree at {path}` | `test_create_worktree_raises_if_worktree_cmd_fails` | Bypass earlier guard |
 
 Pre-existing coverage (not added in this session):
 | Line | Guard Message | Covered By |
-|------|---------------|------------|
+| ------ | --------------- | ------------ |
 | 172 | `Failed to clone repository` | Pre-existing tests (lines 131, 152, 174 in test file) |
 | 199 | `commit must be set before calling _checkout_commit` | Pre-existing test (line 443–453) |
 | 246 | `commit must be set before calling _ensure_commit_available` | Pre-existing test (line 482–492) |
@@ -141,7 +141,7 @@ Steps that worked:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

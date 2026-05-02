@@ -12,7 +12,7 @@ Merge multiple PRs at once based on label matching.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Automate merging of multiple ready PRs | Reduced manual merge overhead |
 
 ## When to Use
@@ -60,7 +60,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Merge Options
 
@@ -92,7 +92,7 @@ Before batch merging:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | CI failing | Skip that PR, use analyze-ci-failure-logs |
 | Merge conflict | Resolve manually, cannot batch merge |
 | No permissions | Check gh auth status and repo access |

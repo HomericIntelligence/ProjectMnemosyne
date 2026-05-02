@@ -18,7 +18,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-24 |
 | **Issue** | Judge failures on experiment resume due to old model IDs in saved config |
 | **PR** | #1541 |
@@ -82,14 +82,14 @@ parser.add_argument("--judge-model", default=DEFAULT_JUDGE_MODEL)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Prior commit 8717d9ba | Updated model ID constants and YAML files to new naming convention | Old IDs baked into saved `experiment.json` survived — no normalization on load | Renaming constants is not enough when serialized configs persist on disk. Must add normalization at the deserialization boundary. |
 | Prior commit 079a9926 | Added model validation that calls Claude CLI to check model IDs | Short aliases like `"sonnet"` failed validation because no expansion function existed, and the error message *implied* aliases were supported | If error messages mention a feature (short aliases), the feature must actually be implemented. |
 
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Files changed | 8 |
 | Tests added | 15 (11 normalize + 4 ExperimentConfig) |
 | Tests updated | 7 assertions |
@@ -122,7 +122,7 @@ Experiment launched (March 18) with old model IDs
 ### Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/config/constants.py` | Added `MODEL_ID_ALIASES`, `normalize_model_id()` |
 | `scylla/config/__init__.py` | Exported `normalize_model_id` |
 | `scylla/e2e/models.py` | Added `field_validator` on `models`, `judge_models` |
@@ -135,5 +135,5 @@ Experiment launched (March 18) with old model IDs
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Model ID normalization for experiment resume | PR #1541 |

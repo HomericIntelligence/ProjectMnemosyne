@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-05 |
 | Project | ProjectScylla |
 | Objective | Fix T5 crash when parent tier's best subtest has no `config_manifest.json` |
@@ -93,12 +93,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Parameters
 
 | Item | Value |
-|------|-------|
+| ------ | ------- |
 | File modified | `scylla/e2e/tier_manager.py` — `build_merged_baseline()` |
 | Test file | `tests/unit/e2e/test_tier_manager.py` — `TestBuildMergedBaseline` |
 | New tests | 4 (3 fallback scenarios + pre-existing passing tests) |

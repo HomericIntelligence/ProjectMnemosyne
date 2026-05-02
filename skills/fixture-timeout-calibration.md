@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-21 |
 | PR | #884 |
 | Objective | Update `timeout_seconds` in all 47 test fixture YAML files with calibrated values derived from observed batch run durations |
@@ -43,7 +43,7 @@ timeout_seconds = max(180, ceil(actual_duration * 3 / 60) * 60)
 ### Example Calculations
 
 | Observed Duration | Raw (3x) | Rounded to 60s | Final |
-|-------------------|----------|----------------|-------|
+| ------------------- | ---------- | ---------------- | ------- |
 | 28s | 84s | 120s | 180s (floor) |
 | 45s | 135s | 180s | 180s |
 | 72s | 216s | 240s | 240s |
@@ -53,7 +53,7 @@ timeout_seconds = max(180, ceil(actual_duration * 3 / 60) * 60)
 ### Before / After
 
 | Metric | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | Files updated | 47 | 47 |
 | Total timeout sum | ~147,900s | ~29,820s |
 | Reduction | — | ~80% |
@@ -149,7 +149,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Related Skills
 

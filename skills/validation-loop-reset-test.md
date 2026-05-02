@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Category** | testing |
 | **Mojo version** | 0.26.1 |
 | **Issue** | #3688 (follow-up from #3186) |
@@ -126,7 +126,7 @@ gh pr create --title "..." --body "Closes #3688"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `run_in_background` for Skill tool | Called commit-commands:commit-push-pr skill | Skill tool denied (don't-ask mode) | Fall back to direct Bash git commands when Skill tool is unavailable |
 | Checking for pytest tests | Issue prompt said "use pytest" | Project uses Mojo test runner, not pytest | Always check test file extension and existing test patterns before writing tests |
 

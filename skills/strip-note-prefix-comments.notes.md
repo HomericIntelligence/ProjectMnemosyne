@@ -15,7 +15,7 @@ files to plain comments. Follow-up from #3072 which handled production source fi
 ## Files in Issue Scope
 
 | File | Lines (issue) | Actual state |
-|------|---------------|--------------|
+| ------ | --------------- | -------------- |
 | tests/models/test_alexnet_layers.mojo | 1101, 1114, 1128 | Had markers at 1119, 1132, 1146 (shifted) |
 | tests/shared/core/test_conv.mojo | 602 | No NOTE marker found |
 | examples/lenet-emnist/run_infer.mojo | 340 | Had `# NOTE (Mojo v0.26.1):` at 340 |

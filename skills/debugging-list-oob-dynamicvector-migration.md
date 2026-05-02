@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-27 |
 | **Objective** | Fix execution crash in bench_simd.mojo caused by out-of-bounds List access |
 | **Outcome** | Success — changed `shape[0] = size` to `shape.append(size)` in 2 locations |
@@ -64,8 +64,8 @@ shape.append(size)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
-| DynamicVector(N) → List[Int]() with index assignment | Migration script changed constructor but not access pattern | `List[Int]()` creates empty list; `shape[0] = size` is OOB on empty list | DynamicVector pre-allocates N slots for index access; List requires append() first |
+| --------- | ---------------- | --------------- | ---------------- |
+| DynamicVector(N) → List[Int] with index assignment | Migration script changed constructor but not access pattern | `List[Int]()` creates empty list; `shape[0] = size` is OOB on empty list | DynamicVector pre-allocates N slots for index access; List requires append() first |
 | Assuming "execution crashed" is a JIT bug | Dismissed bench_simd crash as Mojo JIT instability | The crash was a real OOB memory access in user code | Always investigate execution crashes as source code bugs first |
 
 ## Results & Parameters
@@ -83,5 +83,5 @@ migration_commit: "96bf14fdd refactor(tensor): move AnyTensor..."
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #5175, bench_simd.mojo | 2 OOB crashes fixed in benchmark |

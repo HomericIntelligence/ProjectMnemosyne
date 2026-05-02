@@ -14,7 +14,7 @@ tags: [github-actions, job-id, yaml, parse-failure, silent-failure, branch-prote
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-29 |
 | **Objective** | Run CI jobs whose IDs contained slashes (e.g. `security/dependency-scan`) |
 | **Outcome** | GitHub silently rejected the entire workflow at parse time — 0 jobs ever ran |
@@ -53,7 +53,7 @@ If this command returns any hits, those job IDs are invalid and will cause silen
 **Symptom checklist:**
 
 | Symptom | Notes |
-|---------|-------|
+| --------- | ------- |
 | 0 jobs in Actions UI for the workflow | GitHub UI shows no runs at all |
 | `mergeStateStatus=BLOCKED` on PRs | Branch ruleset sees required checks as "never run" |
 | `statusCheckRollup` entries absent for workflow | Not failed — missing entirely |
@@ -125,7 +125,7 @@ jobs:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Re-triggering CI runs | Pushed empty commits / re-ran workflows via UI | No new runs created — GitHub rejects the file before queuing | The problem is at parse time, not run time |
 | Armed auto-merge | `gh pr merge --auto --squash` | Auto-merge never fired — required check contexts are "never run", not "failed" | Auto-merge waits for checks to pass; checks that never run block forever |
 | Checking YAML validity locally | `yamllint`, `python -c "import yaml; yaml.safe_load(...)"` | Local YAML parsers accepted the file (slashes are valid YAML keys) | GitHub imposes additional constraints beyond YAML spec — job IDs have a stricter character set |
@@ -147,5 +147,5 @@ jobs:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/ProjectCharybdis | `_required.yml` had `security/dependency-scan`, `security/secrets-scan`, `deps/version-sync` as job IDs | File had been deployed for multiple weeks with 0 jobs ever running; fixed in PR #50 (2026-04-29) |

@@ -14,7 +14,7 @@ tags: [bash, exit-127, shell-function, test-harness, merge-regression, function-
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-23 |
 | **Objective** | Diagnose exit code 127 from a standalone bash test harness caused by a shell function removed in a prior merge |
 | **Outcome** | Successful — all 24 tests in test-api-retry.sh pass after restoring dropped function; 51/51 bats unit tests pass |
@@ -126,10 +126,10 @@ bash tests/foo.sh
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Reading stderr/stdout from test runner | Examined "Available tasks:" output in stdout to diagnose 127 | Output was pixi help text emitted when `yq` was called without args in a weird path — a red herring, not the 127 source | Trust `bash -x` trace over raw stdout when diagnosing 127 |
 | Assuming 127 = missing binary | Checked whether `yq`/`jq`/`curl` were installed | All binaries were present; the 127 came from a missing bash function in a sourced library, not a missing executable | Exit 127 in bash tests has two distinct causes: missing binary vs. missing function — the `-x` trace distinguishes them |
-| `jq '.[] | select(.name == $name) | .status // "unknown"'` | Used `//` fallback after `select` to return "unknown" when no element matches | `select` filters out the row entirely when no match; the `//` never sees empty string — it sees nothing | Use `first(.[] | select(...) | .status) // "unknown"` + shell `${result:-unknown}` fallback |
+| `jq '.[] \| select(.name == $name) \| .status // "unknown"'` | Used `//` fallback after `select` to return "unknown" when no element matches | `select` filters out the row entirely when no match; the `//` never sees empty string — it sees nothing | Use `first(.[] \| select(...) \| .status) // "unknown"` + shell `${result:-unknown}` fallback |
 
 ## Results & Parameters
 
@@ -177,5 +177,5 @@ result="${result:-unknown}"   # shell fallback in case jq returns empty
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Myrmidons | CI debug session — `tests/test-api-retry.sh` returning exit 127 after `_agamemnon_curl_retry` was dropped in merge that renamed it to `_agamemnon_curl` | 24/24 standalone tests + 51/51 bats tests pass after restoration |

@@ -466,7 +466,7 @@ If this modifies files, create a fix PR immediately.
 ## Metrics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Files modified | 2 |
 | Violations fixed | 23 (14 MD032 + 9 MD034) |
 | PRs unblocked | 3 |

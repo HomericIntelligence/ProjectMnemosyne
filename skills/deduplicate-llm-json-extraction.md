@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-12 |
 | **Objective** | Fix LLM judge parsing bug with Haiku model + deduplicate 3 identical JSON extraction implementations |
 | **Outcome** | ✅ SUCCESS - Bug fixed, code deduplicated, 16 tests added, all quality checks passed |
@@ -43,7 +43,7 @@ When running e2e experiments with `--judge-model haiku`, the LLM judge returned 
 **Root cause discovered**: The codebase had **3 separate implementations** of JSON extraction from LLM responses:
 
 | Location | Strategy | Handles XML? | Bug? |
-|----------|----------|--------------|------|
+| ---------- | ---------- | -------------- | ------ |
 | `scylla/e2e/llm_judge.py:1038-1084` | Markdown code blocks only | ❌ | **YES** |
 | `scylla/judge/parser.py:267-308` | Code blocks + brace-matching | ✅ | No |
 | `scylla/judge/evaluator.py:474-519` | Code blocks + brace-matching | ✅ | No |
@@ -372,14 +372,14 @@ git stash pop
 ### Files Created
 
 | File | Lines | Purpose |
-|------|-------|---------|
+| ------ | ------- | --------- |
 | `scylla/judge/utils.py` | 68 | Shared JSON extraction utility |
 | `tests/unit/judge/test_utils.py` | 149 | Comprehensive test suite |
 
 ### Files Modified
 
 | File | Lines Changed | Purpose |
-|------|---------------|---------|
+| ------ | --------------- | --------- |
 | `scylla/judge/__init__.py` | +2 | Export new utility |
 | `scylla/e2e/llm_judge.py` | -24, +11 | Use shared utility (fixes bug) |
 | `scylla/judge/parser.py` | -41, +1 | Delegate to shared utility |
@@ -401,7 +401,7 @@ git stash pop
 ### Deduplication Metrics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | **Duplicate implementations removed** | 2 |
 | **Lines of duplicate code removed** | ~87 lines |
 | **New shared utility** | 1 function |

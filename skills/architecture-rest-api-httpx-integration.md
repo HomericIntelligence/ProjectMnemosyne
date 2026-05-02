@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Add AI Maestro REST API integration to ProjectScylla - HTTP client, Pydantic models, error hierarchy, config wiring, and tests |
 | **Outcome** | Successful - 31 tests pass, 96.6% coverage on new module, all pre-commit hooks pass |
@@ -119,7 +119,7 @@ from scylla.maestro.client import MaestroClient as MaestroClient
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | \`type: ignore[arg-type]\` on Pydantic int fields | Added \`# type: ignore[arg-type]\` to test calls like \`MaestroConfig(timeout_seconds=0)\` | Mypy flagged them as \`unused-ignore\` because \`0\` and \`301\` are valid \`int\` types - Pydantic validates at runtime, not type level | Don't add \`type: ignore\` for Pydantic runtime validators on correctly-typed fields; the validation is runtime, not type-level |
 | Plain import for re-export | \`from scylla.maestro.models import MaestroConfig\` in \`config/models.py\` | Mypy \`implicit_reexport=false\` setting means plain imports are not re-exported from the module | Always use \`import X as X\` pattern when a symbol needs to be importable from the importing module |
 | \`# noqa: SLF001\` on private attribute access in tests | Added noqa comments on \`client._client = mock_http\` lines | A linter automatically removed these comments | The linter configuration allows private access in test files via per-file-ignores |
@@ -158,7 +158,7 @@ config_data["maestro"] = defaults.maestro
 ### Coverage Results
 
 | Module | Coverage |
-|--------|----------|
+| -------- | ---------- |
 | \`scylla/maestro/errors.py\` | 100% |
 | \`scylla/maestro/models.py\` | 100% |
 | \`scylla/maestro/client.py\` | 96.6% |
@@ -167,7 +167,7 @@ config_data["maestro"] = defaults.maestro
 ### Full Suite Verification
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Total tests | 4,921 passed, 2 skipped |
 | Total coverage | 77.49% |
 | CI checks | CodeQL + Analyze (actions, python) all pass |
@@ -175,5 +175,5 @@ config_data["maestro"] = defaults.maestro
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1504 - Add AI Maestro REST API integration | PR #1548, CI passed (CodeQL + unit/integration), 4921 tests pass, 77.49% total coverage |

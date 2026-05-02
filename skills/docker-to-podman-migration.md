@@ -18,7 +18,7 @@ tags: [podman, docker, containerfile, makefile, justfile, native, migration, cma
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-26 (amended; original 2026-03-19) |
 | **Objective** | Replace Docker with Podman as the sole container engine for local dev, CI test execution, GHCR publishing, and Makefile/justfile build systems |
 | **Outcome** | Successfully migrated ProjectOdyssey (17 CI jobs, GHCR publishing) and ProjectKeystone (Makefile+justfile, NATIVE=1 removal, Containerfile adoption) |
@@ -260,7 +260,7 @@ git add .containerignore
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Migrating only the 3 main test workflows | Assumed comprehensive-tests, build-validation, training-weekly were the only Mojo-executing workflows | 9 additional jobs across 6 other workflows also ran `pixi run mojo` (release, benchmark, paper-validation, etc.) | Always audit ALL workflows with `grep -r 'pixi run mojo'` before declaring migration complete |
 | Using `docker/login-action` with Podman | Docker-specific GitHub Actions don't work with Podman | These actions assume Docker daemon is running | Use raw `podman login` via shell `run:` steps instead |
 | Using `type=gha` Docker cache with Podman | Docker buildx cache strategies are Docker-specific | Podman doesn't support buildx or GHA cache type | Use `actions/cache` on `~/.local/share/containers` keyed by Dockerfile hash |
@@ -323,7 +323,7 @@ just format   # → make format → podman compose exec -T dev bash -c "find ...
 ### Files Typically Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `.github/actions/setup-container/action.yml` | **NEW** — Podman compose setup for CI |
 | `.github/workflows/*.yml` | `setup-pixi` → `setup-container` for Mojo jobs |
 | `justfile` | `docker-*` → `podman-*` / `container-*` recipes, remove `NATIVE=1` |
@@ -344,6 +344,6 @@ just format   # → make format → podman compose exec -T dev bash -c "find ...
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4991 | Full Docker→Podman migration, 17 CI jobs, GHCR publishing; verified-ci |
 | ProjectKeystone | PR #499 (2026-04-26) | Makefile+justfile migration, NATIVE=1 removal, Containerfile adoption; verified-local |

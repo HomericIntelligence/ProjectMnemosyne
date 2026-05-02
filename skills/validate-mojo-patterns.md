@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Check Mojo code for correct usage of language patterns and conventions. - Code review to catch pattern violations |
 | Outcome | Operational |
@@ -146,7 +146,7 @@ Report validation results with:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Can't parse Mojo | Check for syntax errors first (use mojo-lint-syntax) |
 | False positives | Verify context manually, may need refinement |
 | Mixed patterns | Process each pattern type separately |
@@ -156,7 +156,7 @@ Report validation results with:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

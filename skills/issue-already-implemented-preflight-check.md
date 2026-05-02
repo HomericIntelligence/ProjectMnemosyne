@@ -11,7 +11,7 @@ tags: [preflight, duplicate-work, git-log, pr-check, already-implemented, worktr
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Trigger** | Start of any issue implementation task on a pre-existing or auto-impl branch |
 | **Goal** | Avoid duplicating work already committed in a prior session |
 | **Outcome** | Either confirm PR exists and report status, or proceed with fresh implementation |
@@ -118,7 +118,7 @@ PR URL: <url>
 ## Decision Matrix
 
 | git log has issue commit | git status clean | PR exists | Action |
-|--------------------------|-----------------|-----------|--------|
+| -------------------------- | ----------------- | ----------- | -------- |
 | Yes | Yes | Yes | Verify PR state, confirm auto-merge, report done |
 | Yes | Yes | No | Create PR, enable auto-merge |
 | Yes | No | No | Commit uncommitted work, create PR |
@@ -128,7 +128,7 @@ PR URL: <url>
 Extended matrix with pattern search:
 
 | git log has "Closes #N" | Pattern search finds results | PR exists | Action |
-|-------------------------|------------------------------|-----------|--------|
+| ------------------------- | ------------------------------ | ----------- | -------- |
 | Yes | No | Yes | Report done, exit |
 | Yes | No | No | Create PR linking to issue |
 | Yes | Yes | Any | Investigate — partial implementation |
@@ -160,7 +160,7 @@ gh issue view $ISSUE_NUM --json state,title
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running tests locally before checking git | `pixi run mojo test tests/...` | GLIBC version too old; and work was already done | Check `git log` BEFORE reading issue description or running tests |
 | Reading source files before checking git history | Read `.mojo` files to find patterns | Files had no matches — already fixed | Check `git log` before reading any source files |
 | Assuming clean git status means fresh start | Relied on `git status` showing clean working tree | Clean status just means nothing unstaged — prior commits can have done all the work | `git status` clean != implementation not started |
@@ -186,7 +186,7 @@ In automated pipelines (e.g., ProjectOdyssey), worktrees are created by orchestr
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #2722, branch `2722-auto-impl`, PR #3161 | All ExTensor utility methods already in commit `20ddaee6` |
 | ProjectOdyssey | Issue #3065, worktree `3065-auto-impl`, PR #3262 | Deprecated type aliases already removed in prior session |
 | ProjectOdyssey | Issue #3076, branch `3076-auto-impl`, PR #3168 | Docs commit `af39dfda` already added all issue references |

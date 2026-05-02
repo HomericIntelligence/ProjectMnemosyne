@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-27 |
 | **Issue** | #1066 — fix(e2e): replace bare assert guards in runner.py and stages.py with proper RuntimeError raises |
 | **Objective** | Replace all `assert x is not None  # noqa: S101` precondition guards in production code with explicit `if x is None: raise RuntimeError(...)` patterns |
@@ -128,7 +128,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -144,7 +144,7 @@ Python: 3.14.3 (pixi env)
 ### Replacement Pattern Reference
 
 | Location | Variable | Error Message |
-|----------|----------|---------------|
+| ---------- | ---------- | --------------- |
 | `runner.py:_log_checkpoint_resume` | `self.checkpoint` | "checkpoint must be set before logging resume status" |
 | `runner.py:_get_checkpoint_path` | `self.experiment_dir` | "experiment_dir must be set before getting checkpoint path" |
 | `runner.py:_setup_workspace` | `self.experiment_dir` | "experiment_dir must be set before initializing workspace manager" |

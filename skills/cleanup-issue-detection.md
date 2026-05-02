@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Category** | tooling |
 | **Trigger** | Implementing a cleanup issue (removal of dead code, NOTE markers, unimplemented stubs) |
 | **Key insight** | Check `git log main..HEAD` before any exploration — prior automation may have already done the work |
@@ -67,7 +67,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Searching worktree for NOTE marker | Grepped `tests/shared/utils/test_logging.mojo` in the worktree for `RotatingFileHandler` | Worktree already had the fix applied; grep returned no results | Check `git log main..HEAD` FIRST — searching for removed code in an already-fixed worktree gives false "not found" |
 | Checking line 208 from issue description | Issue said "File: test_logging.mojo, Line: 208" — tried to read that line | Line numbers had shifted since issue was filed | Issue line numbers are approximate; search by pattern not line number |
 | Pushing to remote | Ran `git push -u origin 3083-auto-impl` | Remote branch had diverged (forced update from prior automation) | Always `git fetch` first; if remote is ahead, check if fix is already there |

@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-13 |
 | **Objective** | Fix Claude Code `/plan` mode rendering in browser-based xterm.js terminal (box-drawing characters, emojis, and TUI layout corruption) |
 | **Outcome** | Successful — 3-layer fix (Unicode11 addon + binary WebSocket + resize timing) resolves all rendering issues |
@@ -116,7 +116,7 @@ const effectiveLayout = isMobile ? 'phone' : (layoutOverride || deviceType)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -151,5 +151,5 @@ const effectiveLayout = isMobile ? 'phone' : (layoutOverride || deviceType)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | AI Maestro | Issue #279 (xterm fix), #280 (nav buttons), #281 (layout toggle) | [notes.md](../references/notes.md) |

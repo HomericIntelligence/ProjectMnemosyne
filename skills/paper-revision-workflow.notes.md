@@ -21,7 +21,7 @@ Implementation order: Data corrections → Structural cuts → Reference fixes �
 ### Step 1: Data Corrections (9 fixes)
 
 | # | Location | Issue | Fix |
-|---|----------|-------|-----|
+| --- | ---------- | ------- | ----- |
 | DC-1 | Line 203 | "In our dryrun" | "our" → "my" |
 | DC-2 | Lines 404, 500 | "Sonnet 4" should be "Sonnet 4.5" | Judge model is `claude-sonnet-4-5-20250929` |
 | DC-3 | Line 534 | "~550 seconds (~9.2 minutes)" is WRONG | Replace with: "~1289 seconds (~21.5 minutes)" |

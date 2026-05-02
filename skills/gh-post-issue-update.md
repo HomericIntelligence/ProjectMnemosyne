@@ -12,7 +12,7 @@ Post implementation notes, status updates, and findings to GitHub issues.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Structured progress reporting on issues | Clear audit trail of work done |
 
 ## When to Use
@@ -103,12 +103,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Issue locked | Contact maintainer or use PR comments |
 | Rate limited | Wait and retry |
 | Auth error | Run `gh auth status` |

@@ -13,7 +13,7 @@ tags: [claude-code, plugin, marketplace, migration, hephaestus, mnemosyne, setti
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-27 |
 | **Objective** | Replace ProjectMnemosyne plugin with ProjectHephaestus plugin in Claude Code global settings |
 | **Outcome** | Successful - plugins reloaded and all commands available |
@@ -68,7 +68,7 @@ cat ~/.claude/settings.json | python3 -m json.tool
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct settings.json edit worked first try | N/A | Solution was straightforward |
 
 ## Results & Parameters
@@ -110,7 +110,7 @@ When migrating plugins between marketplaces, the old marketplace may still serve
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence | Claude Code global settings migration | verified-local: settings applied and plugins reloaded successfully |
 
 ## References

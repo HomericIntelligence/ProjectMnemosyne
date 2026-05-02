@@ -13,7 +13,7 @@ tier: 1
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Create standard starter code templates for new modules, test files, and configuration files to accelerate development. |
 | Outcome | Operational |
@@ -71,7 +71,7 @@ Generated boilerplate:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

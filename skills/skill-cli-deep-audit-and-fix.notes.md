@@ -3,7 +3,7 @@
 ## Source Context
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Project** | ProjectScylla (`/home/mvillmow/Scylla2`) |
 | **Branch** | `consolidate-run-command` |
 | **File Audited** | `scripts/manage_experiment.py` |

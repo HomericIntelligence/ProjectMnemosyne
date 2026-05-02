@@ -12,7 +12,7 @@ Design comprehensive evaluation rubrics for LLM-as-Judge systems in agent testin
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-01-01 | Fix false positives in E2E judge and expand evaluation criteria | 10-criteria weighted rubric, validity tracking, PR #104 merged |
 
 ## When to Use
@@ -205,12 +205,12 @@ You are an expert evaluator for AI agent task completion.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Rate limit hit during judging | Return `is_valid=False` with reason, don't mark as pass/fail |
 | Judge timeout | Increase to 20 minutes; Opus needs time for thorough analysis |
 | Malformed JSON response | Parse with fallback; extract pass/fail from text if needed |

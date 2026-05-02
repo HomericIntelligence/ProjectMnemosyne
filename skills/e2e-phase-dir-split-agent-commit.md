@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Prevent agent crashes and interrupted runs from polluting pass_rate stats; isolate judging from in-flight work; enable clean restarts |
 | **Outcome** | ✅ Operational — PRs #1738, #1739, and #1748 merged |
@@ -172,7 +172,7 @@ PENDING → ... → AGENT_COMPLETE
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | 1 | Initial PR merged without auditing all path construction sites | 17 bypass violations found post-merge in tier_manager, parallel_tier_runner, regenerate, manage_experiment | Always grep `experiment_dir / tier_id` pattern before merging a directory structure change |
 | 2 | `tier_action_builder.py` had `elif` fallback loading `best_subtest.json` from `in_progress/` | `best_subtest.json` is written to `completed/` — fallback returned wrong/empty data for T5 | Remove stale fallbacks entirely; don't add fallback paths that point to the wrong phase |
 | 3 | `promote_run_to_completed` used `shutil.move` for `pipeline_baseline.json` | First run's baseline would be gone after promotion; sibling runs in the same subtest need it too | Use `shutil.copy2` for the baseline (copy not move) so siblings can also be promoted |
@@ -255,6 +255,6 @@ python scripts/manage_experiment.py run --config test-dir --from agent_complete
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PRs #1738/#1739 — haiku-2 production run prep | 5439 tests, 78.44% coverage |
 | ProjectScylla | PR #1748 — fix `_reset_non_completed_runs()` + idempotent promote guard | 89 tests pass locally, verified-local |

@@ -13,7 +13,7 @@ user-invocable: true
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-03 |
 | **Objective** | Remove stale `/agents/` entry from `.github/CODEOWNERS` pointing to a non-existent top-level directory |
 | **Outcome** | Single-line deletion; existing `/.claude/` entry already covers agent configurations |
@@ -98,7 +98,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -115,5 +115,5 @@ gh pr merge --auto --rebase
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | March 2026 (4th) quality audit, Issue 8 of 14 — PR #1369 | Stale `/agents/` entry persisted since Feb 2026 audit despite prior fix attempt in PR #1121 |

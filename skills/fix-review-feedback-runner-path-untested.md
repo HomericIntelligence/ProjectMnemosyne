@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | **Date** | 2026-03-02 |
 | **Objective** | Add a runner-level integration test that exercises `_initialize_or_resume_experiment()` to satisfy issue requirement #3, which tests called `ResumeManager.handle_zombie()` directly instead |
 | **Context** | PR #1312 review feedback for issue #1224 — zombie detection integration tests bypassed the full runner path |
@@ -145,12 +145,12 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | File changed | `tests/integration/e2e/test_zombie_resume.py` |
 | Lines changed | +66 insertions |
 | New imports | `import json`, `from scylla.e2e.runner import E2ERunner` |

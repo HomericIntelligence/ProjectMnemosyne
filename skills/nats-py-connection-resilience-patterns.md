@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-05 |
 | **Objective** | Make odysseus-console.py show clean [CONNECTED]/[DISCONNECTED]/[RECONNECTING] status instead of full stack traces when NATS is unreachable |
 | **Outcome** | Successful -- full lifecycle verified: NATS down -> clean retry -> NATS up -> events flowing -> NATS down -> clean disconnect -> retry |
@@ -126,7 +126,7 @@ This prints full stack traces to stderr on every failed connection attempt. The 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Non-async callbacks | `def disconnected_cb():` (regular function) | nats-py validates callbacks with `asyncio.iscoroutinefunction()` and raises "callbacks must be coroutine functions" | All nats-py callbacks (`disconnected_cb`, `reconnected_cb`, `closed_cb`, `error_cb`) must be `async def` coroutines |
 | `allow_reconnect=True` with `max_reconnect_attempts=-1` | Let nats-py handle reconnection internally with infinite retries | `connect()` never returns when NATS is down -- hangs in internal retry loop with no way to show status | Use `allow_reconnect=False` and manage retries externally for full control over status display |
 | `allow_reconnect=True` with `max_reconnect_attempts=30` + `reconnect_time_wait=2` | Bounded internal retries (30 attempts x 2s = 60s) | 60 seconds of internal retrying before `connect()` raises, during which no status output is possible | Even bounded internal retries are too slow for responsive UX; external retry loop is the only clean solution |
@@ -184,7 +184,7 @@ When Ctrl+C is pressed during retry:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | odysseus-console.py NATS event viewer | Full lifecycle: NATS down -> clean retry -> NATS up -> events flowing -> NATS down -> clean disconnect -> retry |
 
 ## References

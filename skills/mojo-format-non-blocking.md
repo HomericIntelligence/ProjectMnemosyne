@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-13 |
 | Project | ProjectOdyssey |
 | Objective | Fix 3 failing PRs blocked by mojo-format crashes and make formatter non-blocking in CI |
@@ -89,12 +89,12 @@ Each agent: checkout branch -> apply fix -> commit -> push. No branch conflicts.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Mojo version | 0.26.1 |
 | Crash trigger | `comptime_assert` in formatted files |
 | Wrapper script | `scripts/mojo-format-compat.sh` |

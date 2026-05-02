@@ -88,7 +88,7 @@ All 15 hooks passed:
 ## Test Count Verification
 
 | Phase | Count |
-|-------|-------|
+| ------- | ------- |
 | Baseline (before moves) | 2432 passed, 8 warnings |
 | After config move + path fix | 157 config tests pass |
 | After executor move | 169 executor tests pass |

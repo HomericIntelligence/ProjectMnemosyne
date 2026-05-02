@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-20 |
 | Issue | #780 |
 | PR | #825 |
@@ -135,12 +135,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Tools format required | `[Tool1, Tool2, ...]` (brackets + comma-separated) |
 | Malformed format handling | `⚠️` warning only, no error increment |
 | Invalid tool handling | `❌` error + hint, `ERRORS++` |
@@ -149,7 +149,7 @@ Copy-paste ready configurations and expected outputs.
 ## Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `tests/claude-code/shared/skills/agent/agent-validate-config/scripts/validate_agent.sh` | Expand `VALID_TOOLS`, add per-tool validation loop |
 | `tests/claude-code/shared/skills/agent/agent-validate-config/SKILL.md` | Add unknown tool name row to Error Handling table |
 

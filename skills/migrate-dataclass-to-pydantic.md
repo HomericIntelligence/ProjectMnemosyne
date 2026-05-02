@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-13 |
 | **Objective** | Migrate all Python dataclasses in scylla/e2e/ to Pydantic BaseModel |
 | **Outcome** | ✅ Successfully migrated 24 classes across 8 files, all tests passing |
@@ -211,14 +211,14 @@ pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Migration Statistics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | **Classes migrated** | 24 |
 | **Files modified** | 10 |
 | **Lines changed** | +94, -80 |

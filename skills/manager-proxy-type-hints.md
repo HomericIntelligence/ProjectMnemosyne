@@ -10,7 +10,7 @@ user-invocable: false
 # Manager Proxy Type Hints
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-15 |
 | **Category** | architecture |
 | **Objective** | Add explicit return type annotations to methods returning multiprocessing Manager proxy objects |
@@ -109,7 +109,7 @@ pixi run python -c "from scylla.e2e.runner import E2ERunner; import inspect; sig
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -117,7 +117,7 @@ pixi run python -c "from scylla.e2e.runner import E2ERunner; import inspect; sig
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

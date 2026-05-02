@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-06 |
 | **Objective** | Fix CMake `GTest::gmock` target not found in Docker builds that install only `libgtest-dev` |
 | **Outcome** | Successful — adding `libgmock-dev` resolved the missing CMake target |
@@ -83,7 +83,7 @@ RUN apt-get update && apt-get install -y \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Installing only libgtest-dev | Assumed libgtest-dev provides all GTest CMake targets (GTest::gtest, GTest::gtest_main, GTest::gmock) | Ubuntu 24.04 splits GMock into a separate package — GTest::gmock not found at CMake target_link_libraries line | Always install libgmock-dev alongside libgtest-dev on Ubuntu 24.04 |
 
 ## Results & Parameters
@@ -116,5 +116,5 @@ conan_note: "Conan installs GTest+GMock together — split only affects apt path
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectKeystone | Docker build — CMakeLists.txt:462 agent_unit_tests target | Added libgmock-dev to Dockerfile; fix pushed, CI running at capture time |

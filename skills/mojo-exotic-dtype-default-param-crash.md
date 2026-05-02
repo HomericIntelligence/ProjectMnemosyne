@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-27 |
 | **Objective** | Fix ASAN abort caused by using exotic float dtypes (E8M0, FP8) as default parameter values |
 | **Outcome** | Successful — replace default params with bitcast-safe construction helpers |
@@ -111,7 +111,7 @@ alias FP8_ONE = bitcast[FP8, 1](SIMD[DType.uint8, 1](0x3C))[0]
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Retrying CI | Rerunning the failed test group | ASAN abort is deterministic — not flaky infrastructure | This crash always reproduces; do not retry |
 | Treating as UAF | Assuming 3-frame ASAN signature always means bitcast write UAF | The same ASAN abort fires for module-load default-param crashes | Distinguish by crash timing: pre-test-body = module load; mid-test = bitcast write UAF |
 
@@ -141,7 +141,7 @@ FP8 = float8_e4m3fn:
 ### Diagnostic Pattern: Module-Load vs. Mid-Test Crash
 
 | Indicator | Module-Load Crash | Mid-Test UAF Crash |
-|-----------|------------------|--------------------|
+| ----------- | ------------------ | -------------------- |
 | When crash fires | Before first test body | During test execution |
 | Stack shows | Module init frames | Test function + write ops |
 | Root cause | Exotic dtype default param | `tensor._data.bitcast[T]()[i] = value` |
@@ -150,5 +150,5 @@ FP8 = float8_e4m3fn:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | shared/tensor/mxfp4.mojo, shared/tensor/nvfp4.mojo | PR #5177 (unverified) |

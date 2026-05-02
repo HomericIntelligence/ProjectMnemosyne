@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-28 |
 | **Objective** | Extract the project version from `CMakeLists.txt` reliably in CI |
 | **Outcome** | Successful — scoping grep to the `project()` block returns correct version |
@@ -100,7 +100,7 @@ VERSION=$(sed -n '/^project(/,/^)/p' CMakeLists.txt | grep -oP 'VERSION\s+\K[\d.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `grep -m1 'VERSION' CMakeLists.txt` | First match in file for the word VERSION | `cmake_minimum_required(VERSION 3.20)` appears on line 1 before `project()` block — match returns `3.20`, a two-component string | `grep -m1` is naive; it does not understand CMake block structure |
 | Three-part semver regex on `3.20` | `grep -oP '\d+\.\d+\.\d+'` applied to `3.20` | `3.20` has only two numeric components — the regex requires three separated by dots, so it produces no match | CMake minimum version strings are intentionally short (major.minor); always scope the search to the `project()` block |
 | Visual inspection of CMakeLists.txt | Checked the file manually and confirmed `VERSION 0.1.0` was present | Did not notice that the first line also contains `VERSION` in `cmake_minimum_required` | Tools see bytes top-to-bottom; visual inspection naturally jumps to the intended line |
@@ -133,5 +133,5 @@ ci_outcome: passing
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectCharybdis | `_required.yml` `deps/version-sync` job | Broken grep matched cmake_minimum_required line; fixed with `grep -A5 'project('` |

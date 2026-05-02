@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-31 |
 | **Objective** | Implement new metric (Impl-Rate) across entire analysis pipeline |
 | **Outcome** | ✅ Success - 119 tests passing, metric integrated end-to-end |
@@ -290,7 +290,7 @@ pixi run pytest tests/unit/analysis/ -q
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Attempt 1: Using 0.0 instead of NaN for edge cases

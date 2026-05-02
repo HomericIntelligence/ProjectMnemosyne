@@ -26,7 +26,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Design the Atlas unified operator dashboard (Go + Chi + templ + htmx + NATS, port 3002), file Epic #151 + 20 child issues across 6 milestones on HomericIntelligence/Odysseus, run 6-dimension Myrmidon review wave, resolve all 8 critical findings |
 | **Outcome** | Successful — Epic + 20 issues filed; 6/6 review dimensions ran; 8 critical findings resolved; corrections posted to relevant issues |
@@ -107,7 +107,7 @@ just atlas-review-aggregate M1 "$TEAM_ID"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Hermes port from memory | Used port 8082 as the Hermes default | Actual default is 8085 per `config.py`; context section was wrong | Always grep `config.py` in ProjectHermes before setting any port constant |
 | NATS_URL default as WSL2 gateway | Set `NATS_URL=nats://172.20.0.1:4222` in `.env.example` | WSL2 gateway IPs are host-specific and break in CI / other machines; compose service DNS is stable | Always use compose service DNS names (`nats://nats:4222`) as defaults in `.env.example` |
 | `goldmark.WithUnsafe(false)` | Called goldmark with `WithUnsafe(false)` to disable raw HTML | `goldmark.WithUnsafe()` (no args) ENABLES raw HTML; there is no `WithUnsafe(false)` overload; the safe default is to simply omit the option | Never call `goldmark.WithUnsafe()` — omitting it is already safe; calling it enables raw HTML |
@@ -124,7 +124,7 @@ just atlas-review-aggregate M1 "$TEAM_ID"
 ### Atlas Stack Specification
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Language | Go 1.22+ |
 | Router | Chi |
 | Templates | templ |
@@ -139,7 +139,7 @@ just atlas-review-aggregate M1 "$TEAM_ID"
 ### NATS Configuration (Verified)
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | NATS_URL default | `nats://nats:4222` (compose service DNS) |
 | Consumer type | Durable JetStream, one per stream |
 | Ack policy | `AckExplicit` |
@@ -152,7 +152,7 @@ just atlas-review-aggregate M1 "$TEAM_ID"
 ### Grafana Dashboard UIDs (Verified)
 
 | UID | Dashboard |
-|-----|-----------|
+| ----- | ----------- |
 | `agent-health` | Agent health overview |
 | `argus-health` | Argus stack health |
 | `loki-explorer` | Log explorer |
@@ -162,7 +162,7 @@ just atlas-review-aggregate M1 "$TEAM_ID"
 ### 6-Milestone Structure
 
 | Milestone | Scope | Key Issues |
-|-----------|-------|------------|
+| ----------- | ------- | ------------ |
 | M1: Scaffold | Repo structure, Chi server, templ layout, CI | #152–#156 |
 | M2: NATS | JetStream consumers, ring buffers, SSE | #157–#160 |
 | M3: REST Pollers | Agent/task/metric REST pollers, retry | #161–#163 |
@@ -173,7 +173,7 @@ just atlas-review-aggregate M1 "$TEAM_ID"
 ### 6-Agent Review Wave — Dimension Assignments
 
 | Dimension | Agent focus | Key findings from this session |
-|-----------|-------------|-------------------------------|
+| ----------- | ------------- | ------------------------------- |
 | `arch` | Package layout, NATS topology, stream verification | Verified 6 streams in nats_client.cpp:76-80; compose network verified |
 | `code` | Go patterns, generics, SSE fan-out, ring buffer safety | RingBuffer needs `sync.RWMutex`; SSE channels must be buffered(1000) |
 | `security` | iframe sandbox, CSP headers, auth env vars, goldmark | iframe sandbox escape; goldmark WithUnsafe() inversion; AUTH_ prefix conflict |
@@ -211,7 +211,7 @@ Add to repo ruleset: `atlas / review-wave (M*)` as a required status check. This
 ### Key ADR References
 
 | ADR | Relevance |
-|-----|-----------|
+| ----- | ----------- |
 | ADR-005 | NATS subject schema — `hi.agents.*` and `hi.tasks.*` patterns |
 | ADR-002 | NATS event bridge — JetStream consumer configuration |
 | ADR-003 | Nomad over k8s — compose topology for local development |
@@ -219,5 +219,5 @@ Add to repo ruleset: `atlas / review-wave (M*)` as a required status check. This
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/Odysseus | Atlas dashboard Epic #151, issues #152–#171, 6 milestones, 24 labels | Review wave ran; 8 critical findings resolved; implementation not started |

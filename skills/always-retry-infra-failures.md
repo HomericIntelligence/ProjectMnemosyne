@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `--retry-errors` flag incorrectly retried bad-grade runs (valid results) AND gated all retry behavior behind a flag |
 | **Root cause** | Three bugs: (1) second pass over `completed_runs` used `"failed"` ambiguously, (2) `worktree_cleaned` second-pass discarded valid judge results, (3) all retry logic was flag-gated |
 | **Fix** | Remove flag; make retry unconditional; distinguish `run_states="failed"` (infra crash) from `completed_runs="failed"` (bad grade) |
@@ -176,7 +176,7 @@ def test_batch_reruns_test_with_failed_run_state():
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Previous `--retry-errors` implementations | Added flag to make retry opt-in, with second pass over `completed_runs` to catch judge failures | `completed_runs="failed"` means bad grade (valid result), not an infra crash — the flag was retrying valid completed runs | Always distinguish state machine terminal states: `run_states` vs `completed_runs` encode different semantics |
 | Keeping `worktree_cleaned` second-pass | Tried to reset only some `worktree_cleaned` runs (those with bad grades) | Valid results were being discarded; also broke the invariant that `worktree_cleaned` = completed | Once a run reaches `worktree_cleaned`, it is done regardless of grade — never reset it |
 | Flag-gated unconditional behavior | Kept retry behind `--retry-errors` flag as default-off | Infrastructure failures were silently skipped when flag was absent, causing wasted runs and misleading "completed" status | Infra failures should always be retried — there is no valid reason to preserve a FAILED run state |
@@ -190,7 +190,7 @@ def test_batch_reruns_test_with_failed_run_state():
 ### Files changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scripts/manage_experiment.py` | Remove `--retry-errors` arg; fix `_checkpoint_has_retryable_runs`; fix `_reset_non_completed_runs`; make batch + single-test retry unconditional |
 | `tests/unit/e2e/test_manage_experiment_run.py` | Rename classes, remove flag from tests, fix bad-grade test expectations, add new unit tests |
 | `tests/unit/e2e/test_manage_experiment_cli.py` | Remove `test_run_accepts_retry_errors` and `retry_errors` default assertion |

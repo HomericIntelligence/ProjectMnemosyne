@@ -17,7 +17,7 @@ expected limitations in test file headers.
 ## Affected Files
 
 | File | Line | Description | Classification |
-|------|------|-------------|----------------|
+| ------ | ------ | ------------- | ---------------- |
 | tests/models/test_alexnet_layers.mojo | 1101 | Conv1 Float16 insufficient for 11x11 kernel | Expected limitation |
 | tests/models/test_alexnet_layers.mojo | 1114 | Conv2 Float16 insufficient for 5x5 kernel, 64ch | Expected limitation |
 | tests/models/test_alexnet_layers.mojo | 1128 | Conv3 Float16 insufficient for 3x3 kernel, 192ch | Expected limitation |

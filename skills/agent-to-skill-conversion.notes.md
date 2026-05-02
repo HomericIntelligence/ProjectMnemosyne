@@ -38,7 +38,7 @@
 ## Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `.claude/agents/blog-writer-specialist.md` | Deleted |
 | `.claude/agents/pr-cleanup-specialist.md` | Deleted |
 | `.claude/skills/blog-writer/SKILL.md` | Created |

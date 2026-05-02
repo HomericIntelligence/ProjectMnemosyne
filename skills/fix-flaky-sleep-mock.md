@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | **Date** | 2026-02-27 |
 | **Objective** | Fix `test_exponential_backoff_delay` flaky failure in `test_retry.py` — passes in isolation, fails in full-suite runs |
 | **Outcome** | ✅ SUCCESS — All 3257 tests pass, deterministic mock replaces wall-clock timing |
@@ -157,14 +157,14 @@ pixi run python -m pytest tests/unit/ --no-cov -q
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `tests/unit/automation/test_retry.py` | Replace wall-clock with mock; fix patch path; remove unused imports |
 
 ### Retry Module Parameters (for context)

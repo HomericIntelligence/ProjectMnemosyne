@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-15 |
 | Objective | Expose multiple RGB→grayscale strategies via a `--grayscale-method` CLI flag without adding dependencies |
 | Outcome | Success — 3 strategies implemented, 28/28 tests pass, PR #4777 created |
@@ -36,7 +36,7 @@ Trigger this skill when:
 ### Quick Reference
 
 | Strategy | PIL Implementation | Formula |
-|----------|--------------------|---------|
+| ---------- | -------------------- | --------- |
 | `luma` | `img.convert("L")` | 0.299R + 0.587G + 0.114B (ITU-R 601) |
 | `average` | `img.convert("RGB").convert("L", matrix=(1/3, 1/3, 1/3, 0))` | (R+G+B)/3 |
 | `max` | `ImageChops.lighter(ImageChops.lighter(r, g), b)` | max(R, G, B) |
@@ -163,7 +163,7 @@ def test_average_method_pixel_value(self) -> None:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `ImageChops.add` for average | `ImageChops.add(ImageChops.add(r, g, scale=1.0), b, scale=1.0)` then `point(lambda x: x/3)` | `add()` clips at 255 before the divide; for (150,90,60) → (240+60)/3=100 but intermediate (150+90)=240 clips to 255 → 255/3=85 | Never sum channels with `ImageChops.add` and divide later; use `convert("L", matrix=...)` for weighted sums |
 | `argparse default="luma"` | Set `default="luma"` directly on `add_argument` | Works but couples argparse default to function default; if function default changes, they diverge silently | Use `default=None` in argparse, then resolve to `"luma"` in main() separately |
 | `len(PIL_Image)` in tests | `self.assertEqual(len(result), 784)` | `PIL.Image.Image` is not a sequence; raises `TypeError: object of type 'Image' has no len()` | Always use `result.size` or `list(result.getdata())` to inspect PIL Image dimensions/pixels |
@@ -182,5 +182,5 @@ _convert_max = lambda img: ImageChops.lighter(ImageChops.lighter(*img.convert("R
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4777, issue #3707 | [notes.md](../references/notes.md) |

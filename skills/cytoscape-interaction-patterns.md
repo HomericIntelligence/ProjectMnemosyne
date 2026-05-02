@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-28 |
 | **Category** | architecture |
 | **Objective** | Fix 5 bugs in a Cytoscape.js tournament visualization: (1) node click hides nodes instead of dimming, (2) team dropdown doesn't compact layout, (3) day filter shows end ranking on wrong days, (4) HTML overlay cards persist after their node is hidden, (5) node click + day filter interaction corrupts state |
@@ -306,7 +306,7 @@ cy.elements().removeClass('team-win team-loss edge-highlight dimmed');
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -361,7 +361,7 @@ if (lastDate && _activeDates.has(lastDate)) {
 ### Files modified
 
 | File | Changes |
-|------|---------|
+| ------ | --------- |
 | `web/js/graph.js` | `_highlightState` global; `buildMatchCardHTML` styleParts; `buildRankingCardHTML` dimStyle; `node.dimmed`/`edge.dimmed` CSS; `node:hidden` template (last) |
 | `web/js/controls.js` | `_highlightedTeamIds`; `_applyHighlight`; `_clearHighlight`; rewritten `_initNodeClickHandler`; `_applyFilters` Step 1 (`dimmed`), Step 2 (maxPhase conditional), Step 5 (`hasTeam`); `_clearHighlight` before every `_applyFilters` |
 

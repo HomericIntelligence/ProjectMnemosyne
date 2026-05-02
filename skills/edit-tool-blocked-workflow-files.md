@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-06 |
 | Project | ProjectScylla |
 | Objective | Document workarounds for Edit tool blocked on `.github/workflows/*.yml` by `security_reminder_hook.py` |
@@ -91,7 +91,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Caveats
 

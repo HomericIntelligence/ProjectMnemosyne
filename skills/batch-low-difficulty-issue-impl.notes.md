@@ -15,7 +15,7 @@ low-difficulty issues in a single session, excluding 130 heap corruption split i
 After reading all 165 issue titles and bodies:
 
 | Tier | Count | Notes |
-|------|-------|-------|
+| ------ | ------- | ------- |
 | DUPLICATE | 9 pairs | Closed immediately |
 | ALREADY-DONE | 2 | #3227 (fn main already removed), #3195 (verify+comment only) |
 | LOW | 22 | All doc/text edits, no logic |
@@ -25,7 +25,7 @@ After reading all 165 issue titles and bodies:
 ## Duplicate Pairs Closed
 
 | Closed | Kept | Reason |
-|--------|------|--------|
+| -------- | ------ | -------- |
 | #3331 | #3321 | Both update hierarchy.md historical note |
 | #3256 | #3273 | Both add __hash__ tests |
 | #3258 | #3274 | Both add contiguous() tests |
@@ -39,7 +39,7 @@ After reading all 165 issue titles and bodies:
 ## PRs Created
 
 | PR | Issues | Files Changed |
-|----|--------|---------------|
+| ---- | -------- | --------------- |
 | #3641 | #3321, #3322 | agents/hierarchy.md |
 | #3642 | #3325, #3326, #3367 | CLAUDE.md |
 | #3643 | #3204 | tests/shared/testing/test_special_values.mojo |

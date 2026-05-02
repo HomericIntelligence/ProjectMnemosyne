@@ -14,7 +14,7 @@ tags: [latex, arxiv, paper-rewrite, data-fix, evaluation, parallel-agents, audit
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Rewrite an arXiv paper (LaTeX) after discovering underlying experimental data was wrong due to implementation bugs, and after re-running missing judge evaluations to complete the dataset |
 | **Outcome** | Success -- paper rewritten with all numerical claims verified against corrected data, zero stale values remaining |
@@ -77,7 +77,7 @@ Use this skill when:
 **Create a verification mapping** of every numerical claim category:
 
 | Metric | Data Source | Field Path |
-|--------|-------------|------------|
+| -------- | ------------- | ------------ |
 | Pass rates per tier | summary.json | `.tiers[].pass_rate` |
 | Cost-of-Pass per tier | summary.json | `.tiers[].cost_of_pass` |
 | Effect sizes | statistical_results.json | `.pairwise[].effect_size` |
@@ -110,7 +110,7 @@ grep -n "performance drop" paper.tex
 **Partition the paper into independent sections for parallel rewriting.** Recommended partitioning:
 
 | Agent | Sections | Content |
-|-------|----------|---------|
+| ------- | ---------- | --------- |
 | Agent 1 | Abstract + Introduction | High-level claims, key findings summary |
 | Agent 2 | Experimental Design + Methodology | Setup description, tier definitions |
 | Agent 3 | Results + Analysis | All numerical results, statistical tests, figures |
@@ -173,7 +173,7 @@ pixi run --environment docs paper-build
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Judge re-run without checking side effects | Ran `manage_experiment.py run` to re-run missing judges | Created `repos/` directory that shadowed the real experiment directory in data loader (alphabetical sort picked `repos/` over `2026-03-30T...`) | Always check for side-effect directories after running pipeline commands; rename to `.repos/` or similar hidden name |
 | Rewrite agents without explicit stale-narrative removal | Told agents to "update numbers" but not to remove old narrative | Two locations survived: Related Work still claimed "significant T2-T3 transition point" and TikZ figure still had red "Performance drop" arrow | Explicitly list OLD narrative claims that must be removed, not just old numbers |
 | New statistical glossary without citation check | Agent expanded Section 4.5 with 9 statistical test subsections | Cited 3 papers not in references.bib (`shapiro1965analysis`, `benjamini1995controlling`, `razali2011power`) and used wrong citation key (`romano2006exploring` vs `romano2006appropriate`) | Any agent adding new citations must verify keys exist in the .bib file or add the entries |
@@ -186,7 +186,7 @@ pixi run --environment docs paper-build
 ### Verified Rewrite (2026-04-25)
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Paper size | ~2300 lines LaTeX |
 | Data sources | summary.json, statistical_results.json, srh_tier_experiment.json |
 | Tables | 11 table files (tab01-tab11, .md and .tex) |
@@ -199,7 +199,7 @@ pixi run --environment docs paper-build
 ### Key Pricing Reference
 
 | Model | Input (per MTok) | Output (per MTok) |
-|-------|-------------------|---------------------|
+| ------- | ------------------- | --------------------- |
 | Haiku 3 | $0.25 | $1.25 |
 | Haiku 4.5 | $1.00 | $5.00 |
 | Sonnet 4.5 | $3.00 | $15.00 |
@@ -207,7 +207,7 @@ pixi run --environment docs paper-build
 ### Data Pipeline Fix
 
 | Before | After |
-|--------|-------|
+| -------- | ------- |
 | `repos/` directory shadowed experiment dir | Renamed to `.repos/` |
 | 720 runs loaded (incomplete) | 1080 runs loaded (complete) |
 | `sorted(exp_dir.iterdir())[-1]` picked `repos` | Now picks `2026-03-30T...` correctly |

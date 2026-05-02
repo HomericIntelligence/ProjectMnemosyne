@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-23 |
 | **Objective** | Diagnose why `test_cop_integration.py`, `test_duration_integration.py`, and `test_export_data.py` hung after ~7% of the test suite, then fix the hang without altering the test logic |
 | **Outcome** | ✅ Success — 11 tests now pass in 14.8s (was hanging indefinitely); autouse mock in conftest.py prevents all future hangs |
@@ -172,14 +172,14 @@ Ruff will reformat the `with` block to use parenthesized form — accept this an
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Before vs After
 
 | Metric | Before Fix | After Fix |
-|--------|-----------|-----------|
+| -------- | ----------- | ----------- |
 | `test_cop_integration.py` | Hang (>120s) | 1 passed, ~14s total |
 | `test_duration_integration.py` | Hang (>120s) | 1 passed, ~14s total |
 | `test_export_data.py` | Hang (>120s) | 9 passed, ~14s total |
@@ -188,7 +188,7 @@ Ruff will reformat the `with` block to use parenthesized form — accept this an
 ### Simulation Budget (Root Cause)
 
 | Function | Default n_simulations | Calls per invocation | Total simulations |
-|----------|----------------------|---------------------|-------------------|
+| ---------- | ---------------------- | --------------------- | ------------------- |
 | `mann_whitney_power` | 10,000 | 24 (2 models × 6 transitions × 2) | 240,000 |
 | `kruskal_wallis_power` | 10,000 | 2 (1 per model) | 20,000 |
 | **Total** | | | **260,000 iterations** |

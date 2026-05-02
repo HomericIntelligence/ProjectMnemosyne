@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|---|---|
+| --- | --- |
 | **Category** | documentation |
 | **Trigger** | README contains placeholder text or is significantly out of date |
 | **Output** | Accurate, structured README.md with verified links and real content |
@@ -86,7 +86,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Linking to `docs/getting-started/installation.md` content | Copying raw text from the file | The installation.md itself had placeholder content | Read the file before referencing it — don't assume docs are real |
 | Using `npx markdownlint-cli2` for linting | Ran directly via pixi | `npx` not found in pixi environment | Use `pixi run pre-commit run --files README.md` instead |
 | Running `just pre-commit-all` | Used `pixi run just` | `just` not found as a pixi command | Use `pixi run pre-commit run --files <file>` for single-file validation |

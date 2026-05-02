@@ -10,7 +10,7 @@ user-invocable: false
 # Skill: Retrospective Integration into Automation Pipeline
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-13 |
 | **Category** | Automation |
 | **Objective** | Integrate `/learn` skill into `implement_issues.py` to automatically capture learnings |
@@ -20,7 +20,7 @@ user-invocable: false
 ## When to Use This Skill
 
 - **Capture session context automatically** - Resume Claude Code sessions for post-implementation tasks
-- **Extract session IDs from Claude CLI** - Parse JSON output to get session identifiers  
+- **Extract session IDs from Claude CLI** - Parse JSON output to get session identifiers
 - **Add optional pipeline phases** - Integrate new phases into existing automation workflows
 - **Implement graceful degradation** - Add non-blocking features that enhance but don't break pipelines
 - **Design opt-in features** - Add capabilities disabled by default to avoid disrupting workflows
@@ -101,7 +101,7 @@ if self.options.enable_retrospective and state.session_id:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -109,12 +109,12 @@ if self.options.enable_retrospective and state.session_id:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Component | Value | Rationale |
-|-----------|-------|-----------|
+| ----------- | ------- | ----------- |
 | Session resume timeout | 600s | Retrospective involves cloning + PR creation |
 | Implementation timeout | 1800s | Complex implementations need generous timeout |
 | Phase ordering | After CREATING_PR, before COMPLETED | Work saved but state not finalized |

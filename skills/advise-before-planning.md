@@ -9,7 +9,7 @@ user-invocable: false
 # Skill: Advise Before Planning
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-13 |
 | **Objective** | Integrate team knowledge base search into automated planning workflows |
 | **Outcome** | ✅ Two-step workflow implemented with graceful degradation |
@@ -289,7 +289,7 @@ None found
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -332,7 +332,7 @@ plan-issues = "python scripts/plan_issues.py"
 ### Key Parameters
 
 | Parameter | Value | Purpose |
-|-----------|-------|---------|
+| ----------- | ------- | --------- |
 | `enable_advise` | `True` | Enable team knowledge search by default |
 | Advise timeout | `180s` | Shorter timeout for knowledge search |
 | Plan timeout | `300s` | Longer timeout for plan generation |

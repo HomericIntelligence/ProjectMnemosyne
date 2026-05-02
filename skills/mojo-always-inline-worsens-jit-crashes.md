@@ -18,7 +18,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Fix intermittent bitcast accessor crashes by adding @always_inline |
 | **Outcome** | FAILED — @always_inline caused dramatically MORE crashes across ALL test groups |
@@ -67,7 +67,7 @@ fn _get_float64(self, index: Int) -> Float64:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | @always_inline on_get_float64 etc. | Added @always_inline to 7 runtime-dtype accessor methods to keep self alive during bitcast | Inlining large branching methods into every call site (hundreds of times in gradient checker) increases JIT compilation memory pressure, triggering MORE libKGENCompilerRTShared.so crashes | @always_inline is only safe for small, non-branching methods. Large methods with runtime if/elif should NOT be inlined. |
 | Hypothesis: ASAP destruction | Assumed self was destroyed before bitcast write completed without @always_inline | The method frame already keeps self alive — the crash is from JIT memory pressure, not object lifetime | Don't assume the crash mechanism without evidence. The same crash signature can have different root causes. |
 
@@ -76,7 +76,7 @@ fn _get_float64(self, index: Int) -> Float64:
 ### Before @always_inline (main branch)
 
 | Test Group | Status |
-|------------|--------|
+| ------------ | -------- |
 | Models | PASSED |
 | Autograd | PASSED |
 | Core Utilities | PASSED |
@@ -87,7 +87,7 @@ fn _get_float64(self, index: Int) -> Float64:
 ### After @always_inline (PR #5099 first push)
 
 | Test Group | Status |
-|------------|--------|
+| ------------ | -------- |
 | Models | FAILED (ALL crash) |
 | Autograd | FAILED (4 crashes) |
 | Core Utilities | FAILED |
@@ -99,7 +99,7 @@ fn _get_float64(self, index: Int) -> Float64:
 ### Rule of thumb
 
 | Method Characteristics | @always_inline Safe? |
-|----------------------|---------------------|
+| ---------------------- | --------------------- |
 | Small body (1-3 lines), compile-time params | Yes |
 | Large body (10+ lines), runtime branching | NO |
 | Called in tight loops (100+ times) | Risky — test thoroughly |
@@ -108,5 +108,5 @@ fn _get_float64(self, index: Int) -> Float64:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | shared/tensor/any_tensor.mojo | PR #5099 regression and revert |

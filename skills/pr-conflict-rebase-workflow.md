@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Category** | ci-cd |
 | **Complexity** | Medium |
 | **Time** | 10–20 min per PR |
@@ -190,7 +190,7 @@ gh pr list --json number,mergeable,autoMergeRequest
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Edit tool for workflow conflict | Used `Edit` tool to replace conflict markers in `.github/workflows/pre-commit.yml` | Pre-commit hook blocked the Edit with a security reminder; file remained unchanged | Use `Write` tool (full file rewrite) for GitHub Actions files when `Edit` is blocked by security hooks |
 | Single-step conflict resolution for multi-commit rebase | Assumed the rebase would have one conflict round (add container) | Branch had 3 commits: add container, fix other things, *remove* container — second conflict had opposite intent | Always check `git log origin/<branch>` before rebasing to understand commit sequence and intent |
 | `--ours`/`--theirs` for pixi.lock | (Pattern to avoid, not attempted) | Would produce stale SHA256 hashes — CI fails with "lock-file not up-to-date" | Always `rm pixi.lock && git add pixi.lock`, then regenerate with `pixi lock` |
@@ -202,13 +202,13 @@ gh pr list --json number,mergeable,autoMergeRequest
 ### Session outcome (2026-03-27)
 
 | Branch | Conflict | Resolution | Orphaned lines |
-|--------|----------|------------|----------------|
+| -------- | ---------- | ------------ | ---------------- |
 | fix-ci-failures-asan-circular-benchmark | `benchmark.yml`: `/tmp/benchmark-results/` + `podman cp` vs `builds/benchmarks/` | Took main's `builds/benchmarks/` approach — simpler, no copy step, already established | Removed `mkdir -p /tmp/benchmark-results` (line 95) and `podman cp` (line 125) after conflict resolution |
 
 ### Session outcome (2026-03-15)
 
 | PR | Branch | Before | After |
-|----|--------|--------|-------|
+| ---- | -------- | -------- | ------- |
 | #1501 | fix-containerfile-readme | MERGEABLE | MERGEABLE + auto-merge ✓ |
 | #1497 | ci-container-workflows | CONFLICTING | MERGEABLE + auto-merge ✓ |
 | #1496 | ci-security-hardening | CONFLICTING | MERGEABLE + auto-merge ✓ |

@@ -13,7 +13,7 @@ tags: ['ruff', 'c901', 'mccabe', 'complexity', 'pre-commit', 'github-actions', '
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-06 |
 | Objective | Add C901 complexity enforcement to CI and pre-commit after rule was already in pyproject.toml |
 | Outcome | Success — named CI step + pre-commit hook added; PR #1456 merged |
@@ -79,7 +79,7 @@ pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -116,7 +116,7 @@ max-complexity = 12
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1432, PR #1456 | 0 existing violations; all 4563 tests pass |
 
 ## Related Skills

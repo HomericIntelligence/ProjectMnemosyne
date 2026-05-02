@@ -14,7 +14,7 @@ tags: [multi-repo, automation, shell, bash, pixi, pythonpath, gh-cli, rate-limit
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-10 |
 | **Objective** | Shell script to run hephaestus planner + implementer across all HomericIntelligence repos (excluding Odysseus) with auto-clone of missing repos |
 | **Outcome** | SUCCESS — `scripts/run_automation_loop.sh` validated via dry run across 14 repos; one implementer bug found and fixed during dry run |
@@ -91,7 +91,7 @@ export PYTHONWARNINGS=ignore::RuntimeWarning
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Use bare `python` command | Called `python -m hephaestus.automation.planner` directly | `python` not on system PATH — pixi only installs `python` inside its virtualenv, not globally | Always resolve Python via `pixi run which python` and cache as `$PYTHON` |
 | Use `python3` | Called `python3 -m ...` | `python3` exists on system but lacks the pixi-installed packages | Must use the pixi-managed Python binary, not system Python |
 | Run dry-run across 14 repos × 5 loops | Tested full dry-run end-to-end | Exhausted 5000/hour GraphQL quota from issue prefetch calls across 14 repos; took ~1 hour to reset | Dry runs still make real API calls in `prefetch_issue_states`. Rate-limit dry runs to fewer repos or fewer loops |
@@ -144,5 +144,5 @@ if plan_script.exists():
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | PR #271 — dry run across 14 HomericIntelligence repos | Planner dry run confirmed `[DRY RUN] Would plan issue #N` for all repos; implementer dry run blocked by rate limit during second run |

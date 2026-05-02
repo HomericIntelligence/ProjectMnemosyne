@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Document progress and technical learnings in blog format. - Completed major milestone - Finished implementation phase |
 | Outcome | Operational |
@@ -107,7 +107,7 @@ EOF
 ## Error Handling
 
 | Issue | Fix |
-|-------|-----|
+| ------- | ----- |
 | No metrics | Measure before/after with specific numbers |
 | Vague accomplishments | List specific implementations or fixes |
 | Missing learnings | Add what was discovered/surprised you |
@@ -116,7 +116,7 @@ EOF
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

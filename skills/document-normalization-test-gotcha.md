@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Skill Name** | document-normalization-test-gotcha |
 | **Category** | documentation |
 | **Language** | Markdown |
@@ -123,7 +123,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Duplicate content in testing-patterns.md | Wrote the full gotcha there as well | testing-patterns.md already had the per-layer warning | Always read ALL docs files first; testing-patterns.md has the canonical code pattern, testing-strategy.md gets the mathematical proof |
 | Used ` ```mojo ` for math derivation block | Typed the Kratzert formula as mojo code | markdownlint passed but the code block had no mojo syntax so it looked odd | Use ` ```text ` for mathematical formulas and pseudocode |
 | Added gotcha after References section | Placed the section at end of file | Disrupts reading flow — gotchas should be near gradient checking, not at the end | Insert between Gradient Checking and Layer Deduplication |
@@ -133,7 +133,7 @@ gh pr merge --auto --rebase
 ### Files Modified
 
 | File | Location | What Was Added |
-|------|----------|----------------|
+| ------ | ---------- | ---------------- |
 | `docs/dev/testing-strategy.md` | Between `## Gradient Checking` and `## Layer Deduplication` | `## Known Test Gotchas` section with full mathematical proof |
 | `docs/dev/backward-pass-catalog.md` | Inside TRAINING READINESS VERIFICATION, before Training Readiness Conclusion | `### Known Test Pathologies` with cross-reference |
 

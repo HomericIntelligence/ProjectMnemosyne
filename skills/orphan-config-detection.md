@@ -10,14 +10,14 @@ user-invocable: false
 
 ## Overview
 
-| Field      | Value                                                           |
-|------------|-----------------------------------------------------------------|
-| Date       | 2026-02-20                                                      |
-| Issue      | #777                                                            |
-| PR         | #824                                                            |
-| Objective  | Warn when a `config/models/*.yaml` file is not referenced by any experiment or test file |
-| Outcome    | Success — 2220 tests pass, 73.4% coverage, pre-commit clean     |
-| Category   | testing                                                         |
+| Field | Value |
+| ------------ | ----------------------------------------------------------------- |
+| Date | 2026-02-20 |
+| Issue | #777 |
+| PR | #824 |
+| Objective | Warn when a `config/models/*.yaml` file is not referenced by any experiment or test file |
+| Outcome | Success — 2220 tests pass, 73.4% coverage, pre-commit clean |
+| Category | testing |
 
 ---
 
@@ -123,19 +123,19 @@ pre-commit run --files scylla/config/validation.py scylla/config/loader.py tests
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
-| Metric            | Value                          |
-|-------------------|--------------------------------|
-| New functions     | 1 (`validate_model_config_referenced`) |
-| New test file     | `tests/unit/test_config_validation.py` (8 tests) |
-| Modified files    | `scylla/config/validation.py`, `scylla/config/loader.py`, `tests/unit/test_config_loader.py` |
-| Tests added       | 11 (8 unit + 3 integration)    |
-| Total tests pass  | 2220                           |
-| Coverage          | 73.4% (meets 73% threshold)    |
-| Pre-commit result | All hooks pass                 |
+| Metric | Value |
+| ------------------- | -------------------------------- |
+| New functions | 1 (`validate_model_config_referenced`) |
+| New test file | `tests/unit/test_config_validation.py` (8 tests) |
+| Modified files | `scylla/config/validation.py`, `scylla/config/loader.py`, `tests/unit/test_config_loader.py` |
+| Tests added | 11 (8 unit + 3 integration) |
+| Total tests pass | 2220 |
+| Coverage | 73.4% (meets 73% threshold) |
+| Pre-commit result | All hooks pass |
 
 ---
 

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Trigger** | Issue asks to add tests for a method or feature |
 | **Risk** | Low — read-only audit before any writes |
 | **Payoff** | Avoids wasted effort duplicating existing tests |
@@ -54,7 +54,7 @@ output_mode: files_with_matches
 For each requirement in the issue, find the corresponding test function:
 
 | Requirement | Search pattern |
-|-------------|---------------|
+| ------------- | --------------- |
 | "identical X produce equal Y" | `test_.*immutable\|test_.*equal\|assert_equal.*hash` |
 | "differing by shape" | `test_.*shape` |
 | "differing by dtype" | `test_.*dtype` |
@@ -68,7 +68,7 @@ Read the relevant lines around each match to verify the test actually covers the
 ### Step 4: Build a coverage matrix
 
 | Requirement | Covered? | Test function | File |
-|-------------|----------|---------------|------|
+| ------------- | ---------- | --------------- | ------ |
 | Identical → equal hash | ✅ | `test_hash_immutable` | `test_utility.mojo:672` |
 | Different shape → diff hash | ✅ | `test_hash_different_shapes_differ` | `test_utility.mojo:748` |
 | Different dtype → diff hash | ✅ | `test_hash_different_dtypes_differ` | `test_utility.mojo:728` |
@@ -98,7 +98,7 @@ Insert a comment block above the test section documenting the coverage mapping:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Writing tests immediately | Started drafting test functions before searching | Would have duplicated 8+ existing tests | Always grep first |
 | Single-file search | Only searched `test_utility.mojo` | Missed `test_hash.mojo` with 15 additional NaN-stability tests | Search all files in `tests/` |
 | Trusting issue title | Assumed "add tests" meant tests were missing | All 4 required cases already existed in main | Issue wording "add any missing cases" implies audit |

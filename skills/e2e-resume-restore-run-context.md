@@ -18,7 +18,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Fix Phase 3 (judging) resume crash where `stage_write_report()` fails with "run_result must be set before write_report" |
 | **Outcome** | Successful — added judgment + run_result loading to `_restore_run_context()`, plus cleanup script for stale experiment data |
@@ -78,7 +78,7 @@ def _load_run_result(run_result_path: Path) -> Any:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Direct `E2ERunResult.model_validate(data)` | Load run_result.json directly into Pydantic model | `ConfigDict(frozen=True)` without `extra="ignore"` rejects extra keys (`process_metrics`, `progress_tracking`, `changes`) | Always check Pydantic model config before deserialization; `stage_finalize_run()` adds extra keys beyond the model schema |
 
 ## Results & Parameters
@@ -86,7 +86,7 @@ def _load_run_result(run_result_path: Path) -> Any:
 ### Key Files
 
 | File | Role |
-|------|------|
+| ------ | ------ |
 | `scylla/e2e/subtest_executor.py:115-197` | `_restore_run_context()` — the only place RunContext fields are restored on resume |
 | `scylla/e2e/stage_finalization.py:447-483` | `stage_write_report()` — requires `ctx.run_result`, `ctx.agent_result`, `ctx.judgment` |
 | `scylla/e2e/stage_finalization.py:316-444` | `stage_finalize_run()` — creates `E2ERunResult`, writes `run_result.json` |
@@ -103,7 +103,7 @@ DIFF_CAPTURED → JUDGE_PIPELINE_RUN → JUDGE_PROMPT_BUILT → JUDGE_COMPLETE
 ### Restore Coverage Matrix
 
 | Field | Loaded By | For States Past |
-|-------|-----------|-----------------|
+| ------- | ----------- | ----------------- |
 | `ctx.agent_result` | `_restore_run_context()` | `AGENT_COMPLETE` |
 | `ctx.judge_prompt` | `_restore_run_context()` | `JUDGE_PROMPT_BUILT` |
 | `ctx.judgment` | `_restore_run_context()` (NEW) | `JUDGE_COMPLETE` |
@@ -133,7 +133,7 @@ cp["completed_runs"] = {}
 ### Haiku-2 Cleanup Stats
 
 | Metric | Count |
-|--------|-------|
+| -------- | ------- |
 | Judge dirs deleted | 46 |
 | Run files deleted | 1,469 |
 | Subtest files deleted | 959 |
@@ -145,5 +145,5 @@ cp["completed_runs"] = {}
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | haiku-2 experiment Phase 3 resume failure | PR #1546, 7 tests cleaned, 1597 unit tests pass |

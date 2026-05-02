@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-07 |
 | **Category** | testing |
 | **Objective** | Fix CI compile error where `Bool(t)` was called on an `ExTensor` whose `__bool__` has a `raises` signature |
@@ -99,7 +99,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Add `Boolable` to struct trait list | Tried conforming to `Boolable` to allow `Bool(t)` | `Boolable` requires non-raising `__bool__`; struct's `__bool__` has `raises` so it cannot conform | `Boolable` and raising `__bool__` are mutually exclusive in Mojo |
 | Change `__bool__` to non-raising | Remove `raises` from `__bool__` so `Boolable` is satisfied | Would break the multi-element error test — `__bool__` needs to raise for that case | Can't drop `raises` without changing test semantics |
 
@@ -115,7 +115,7 @@ var val = t.__bool__()  # replaces Bool(t)
 ### Key Mojo Trait Rules
 
 | Syntax | Requires | Works with `raises __bool__`? |
-|--------|----------|-------------------------------|
+| -------- | ---------- | ------------------------------- |
 | `Bool(t)` | `Boolable` trait (non-raising) | ❌ No |
 | `t.__bool__()` | Just the method | ✅ Yes |
 | `if t:` | Non-raising `__bool__` OR `raises __bool__` | ✅ Yes |

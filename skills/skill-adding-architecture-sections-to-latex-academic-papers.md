@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-07 |
 | **Project** | ProjectScylla |
 | **Objective** | Add comprehensive Architecture section to academic paper with TikZ diagrams and fix LaTeX formatting issues |
@@ -160,7 +160,7 @@ grep "??" paper.log
 
 ## Failed Attempts (Lessons Learned)
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Failed: TikZ Font Commands Without Braces

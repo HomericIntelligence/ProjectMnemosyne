@@ -13,7 +13,7 @@ tier: 2
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Locate and document all hyperparameters mentioned in research papers including learning rates, batch sizes, and model configurations. |
 | Outcome | Operational |
@@ -59,7 +59,7 @@ Hyperparameter documentation:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

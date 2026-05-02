@@ -11,7 +11,7 @@ version: 1.0.0
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Date** | 2025-12-29 |
 | **Objective** | Fix Docker SBOM generation failures caused by mixed-case image names |
 | **Outcome** | Successfully fixed by hardcoding lowercase image name |
@@ -104,7 +104,7 @@ gh pr create --title "fix(ci): use lowercase image name" --body "Fixes Docker SB
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

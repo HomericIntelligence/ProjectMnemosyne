@@ -16,7 +16,7 @@ tags: [mojo, python, interop, pythonobject, stdlib, migration, placeholder, data
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-07 |
 | **Category** | architecture |
 | **Objective** | Replace Python interop in Mojo with native stdlib, bridge stdlib gaps with Python interop, and migrate PythonObject placeholder parameters to native Mojo struct types |
@@ -216,7 +216,7 @@ When the native Mojo struct is ready, replace `PythonObject` placeholder paramet
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Direct Mojo execution for test verification | Ran `pixi run mojo test` to validate changes | GLIBC version mismatch (requires 2.32+, host has older) | Tests only runnable in CI via Docker; validate logic correctness by code review |
 | Using `Path.glob()` from Mojo pathlib | Looked for a Mojo equivalent of Python's `Path.glob("*.weights")` | Mojo's pathlib.Path does not expose a glob() method; only listdir() is available | Use `os.listdir()` + manual extension filtering instead of glob |
 | Importing `from pathlib import Path` for directory listing | Tried `Path(dirpath).listdir()` pattern | The method signature is `listdir(::Path)` — available but returns filenames, not full paths | Still works, but `import os; os.listdir(dirpath)` is simpler and equivalent |
@@ -343,7 +343,7 @@ assert_greater(Float64(avg_loss), Float64(-0.001))
 ### Method Signature Reference
 
 | Pattern | Parameter keyword | Use when |
-|---------|------------------|----------|
+| --------- | ------------------ | ---------- |
 | Stateful iteration | `mut data_loader: DataLoader` | Struct has `reset()`/`has_next()`/`next()` |
 | Python bridge | `Python.import_module("os")` | Stdlib gap; wrap in `try/except`; return `Bool` not `raises` |
 | Native stdlib | `import os; os.listdir()` | Stdlib covers the operation |
@@ -351,7 +351,7 @@ assert_greater(Float64(avg_loss), Float64(-0.001))
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3240, PR #3789 (stdlib replacement) | [notes.md](../references/notes.md) |
 | ProjectOdyssey | Issue #3283, PR #3874 (Python bridge for os.remove) | [notes.md](../references/notes.md) |
 | ProjectOdyssey | run_epoch() migration (PythonObject → DataLoader) | Pre-commit hooks pass; CI validates |

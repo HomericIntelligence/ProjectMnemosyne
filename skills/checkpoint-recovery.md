@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-12 |
 | **Objective** | Add resume/checkpoint and rate limit handling to batch runner for E2E tests |
 | **Outcome** | ✅ Success - PR #526 created with full implementation |
@@ -309,7 +309,7 @@ if args.fresh:
 ### Implementation Stats
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | **Lines of code** | 928 lines (new file) |
 | **Functions added** | 3 new (`load_existing_results`, `save_incremental_result`, `check_rate_limit`) |
 | **Functions modified** | 3 (`run_single_test`, `run_thread`, `main`) |
@@ -397,7 +397,7 @@ python scripts/run_e2e_batch.py
 ## Related Files & Context
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `scripts/run_e2e_batch.py` | Batch runner with checkpoint/resume (all changes) |
 | `scylla/e2e/rate_limit.py` | Rate limit detection module (imported by batch runner) |
 | `scylla/e2e/runner.py` | Single-test runner with per-test checkpoint (orthogonal system) |

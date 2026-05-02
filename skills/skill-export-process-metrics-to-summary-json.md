@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-27 |
 | **Objective** | Add `mean_r_prog`, `mean_cfp`, `mean_pr_revert_rate` to `summary.json` (overall_stats, by_model, by_tier) |
 | **Outcome** | ✅ Success — PR #1182, 3258 tests passing, coverage 78.43% |
@@ -188,7 +188,7 @@ pixi run python -m pytest tests/ -v --tb=short -q
 ## Failed Attempts & Lessons Learned
 
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | Bare `.mean()` without `dropna()` | Produces `np.nan` → not JSON-serializable | Always chain `dropna()` first |
 | Single pre-commit run | Ruff reformats long lines on first pass, then fails | Run twice: first pass reformats, second pass validates |
 | Checking if column all-NaN via `isnan` | `np.isnan` raises on non-float dtypes | Use `dropna().empty` check instead |
@@ -228,7 +228,7 @@ Do NOT interpret the first failure as a real error — check if only `ruff-forma
 ### Files Modified (Issue #1135)
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scripts/export_data.py` | +27 lines: 3 new keys in overall_stats, 3 in by_model, 3 in by_tier |
 | `tests/unit/analysis/conftest.py` | +10 lines: r_prog, cfp, pr_revert_rate columns in sample_runs_df |
 | `tests/unit/analysis/test_export_data.py` | +108 lines: test_process_metrics_in_summary() |

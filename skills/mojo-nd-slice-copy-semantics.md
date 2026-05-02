@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Multi-dimensional tensor slicing returns wrong values or is disabled with "needs debugging" comment |
 | **Root Cause** | `__getitem__(*slices)` uses `self.copy()` (shallow refcount copy) + `result._data = self._data.offset(offset_bytes)` — valid only for first-axis slicing (contiguous rows) |
 | **Fix** | Replace with explicit N-D element-wise copy using per-dimension starts + original strides |
@@ -206,7 +206,7 @@ This correctly maps output flat index → per-dim index → source flat index us
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Pointer-offset view approach | `self.copy()` + `result._data = self._data.offset(offset_bytes)` | Only handles first-axis slices; inner dimension gaps are invisible to pointer arithmetic | N-D slicing is inherently non-contiguous; a single pointer offset cannot represent arbitrary dimension selections |
 | Marking result as view | Setting `result._is_view = True` after shallow copy + pointer offset | View semantics imply shared memory, but test asserts `_is_view = False` for slice results; also doesn't fix the data correctness bug | Copy vs view semantics must be consistent across all `__getitem__` overloads |
 | Diagnosing via local mojo run | Running `pixi run mojo test` locally | GLIBC version mismatch (`GLIBC_2.32/2.33/2.34` not found) — Mojo binary requires newer libc than available | Must rely on CI or Docker for test execution; code analysis + pattern matching is the primary debugging tool |
@@ -216,7 +216,7 @@ This correctly maps output flat index → per-dim index → source flat index us
 ### Test Coverage After Fix
 
 | Test | Expected Result |
-|------|----------------|
+| ------ | ---------------- |
 | `test_slice_2d_single_dim` | `t2d[1:4, :]` → shape `[3, 4]`, correct values |
 | `test_slice_2d_both_dims` | `t2d[1:4, 1:3]` → shape `[3, 2]`, correct values |
 | `test_slice_3d_partial` | `t3d[1:3, :, :]` → shape `[2, 3, 2]`, correct values |
@@ -228,6 +228,6 @@ This correctly maps output flat index → per-dim index → source flat index us
 ### Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `shared/core/extensor.mojo` | Rewrote `__getitem__(self, *slices: Slice)` body |
 | `tests/shared/core/test_extensor_slicing.mojo` | Uncommented 7 skipped test calls in `main()` |

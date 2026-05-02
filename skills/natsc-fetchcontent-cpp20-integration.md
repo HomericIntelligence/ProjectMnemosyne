@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-24 |
 | **Objective** | Add NATS JetStream support to C++20 services via nats.c FetchContent without polluting ctest with 300+ natsc tests or leaking -Werror into natsc's own test code |
 | **Outcome** | Successful — CI green on ProjectKeystone PRs #272 and #198; nats_static links correctly, ctest clean |
@@ -141,7 +141,7 @@ if (s == NATS_OK && pa) jsPubAck_Destroy(pa);
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `#include <nats/nats.h>` | Standard angle-bracket include | nats.c installs headers flat, not in nats/ subdirectory | Use `#include "nats.h"` — the CMake target sets include dirs |
 | `js_AddStream(&si, js, &cfg, nullptr, nullptr)` | Passing nullptr for jsErrCode | Requires `jsErrCode*` parameter, nullptr causes segfault in some builds | Always pass `&jerr` with `jsErrCode jerr = static_cast<jsErrCode>(0)` |
 | `jsErrCode jerr = 0` | Direct int initialization | `jsErrCode` is a C enum — C++ doesn't allow implicit int→enum conversion | Use `static_cast<jsErrCode>(0)` in C++20 |
@@ -190,7 +190,7 @@ ci_result: all green (asan, tsan, ubsan presets)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectKeystone | CI builds with nats.c v3.12.0 FetchContent | PRs #272 and #198 — asan/tsan/ubsan all passed |
 | ProjectAgamemnon | E2E pipeline implementation (v1.0.0 approach, v3.9.1) | C++20 REST server with 20+ routes + NATS event publishing |
 | ProjectNestor | E2E pipeline implementation (v1.0.0 approach, v3.9.1) | C++20 research stats server with NATS research event publishing |

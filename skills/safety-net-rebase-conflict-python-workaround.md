@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-19 |
 | **Objective** | Resolve git rebase conflicts in Safety Net-constrained environments without triggering built-in blocks on `git restore` and `git checkout` |
 | **Outcome** | Successful — used throughout 87-PR/8-repo ecosystem pass; all conflicts resolved cleanly |
@@ -90,7 +90,7 @@ GIT_EDITOR=true git rebase --continue
 ### Decision Table: Per-File-Type Strategy
 
 | File Type | Function | Rationale |
-|-----------|----------|-----------|
+| ----------- | ---------- | ----------- |
 | Shell scripts (`.sh`) | `take_theirs(path)` | PR's feature content should win |
 | Dockerfiles | `take_theirs(path)` | PR adds new instructions atop main's base |
 | `.github/workflows/*.yml` | `strip_conflicts_keep_theirs(path)` then remove duplicate keys manually | Workflow changes are additive; dedup job keys |
@@ -109,7 +109,7 @@ So `take_theirs()` gives you the PR's version, which is usually what you want wh
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `git restore --theirs <file>` | Standard conflict resolution command | Safety Net built-in rule: "git restore discards uncommitted changes" | Not overridable via custom config — use Python subprocess instead |
 | `git checkout --theirs <file1> <file2>` | Multi-file form | Safety Net built-in: "git checkout with multiple positional args may overwrite files" | Both single and multi-file forms blocked during rebase |
 | Add `.safety-net.json` allow-rule | Created custom config to whitelist `git restore --theirs` | Safety Net custom rules can only ADD restrictions, not bypass built-in protections | The `block_args` schema only adds new blocks; there is no `allow` field |
@@ -141,7 +141,7 @@ import subprocess, re, os
 def resolve_conflicts_and_continue(repo_path):
     """Run inside a worktree after `git rebase origin/main` stops at a conflict."""
     os.chdir(repo_path)
-    
+
     # Get conflicted files
     result = subprocess.run(['git', 'status', '--short'], capture_output=True, text=True)
     conflicted = [
@@ -149,7 +149,7 @@ def resolve_conflicts_and_continue(repo_path):
         for line in result.stdout.splitlines()
         if line[:2] in ('UU', 'AA', 'DD', 'AU', 'UA')
     ]
-    
+
     for filepath in conflicted:
         if filepath.endswith('.sh') or 'Dockerfile' in filepath:
             take_theirs(filepath)
@@ -160,7 +160,7 @@ def resolve_conflicts_and_continue(repo_path):
             take_ours(filepath)
         else:
             strip_conflicts_keep_theirs(filepath)
-    
+
     subprocess.run(['git', 'add'] + conflicted)
     subprocess.run(['git', '-c', 'core.editor=true', 'rebase', '--continue'])
 ```
@@ -168,6 +168,6 @@ def resolve_conflicts_and_continue(repo_path):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/Myrmidons | Wave 2 rebase of 24 DIRTY PRs (shell scripts, pixi.lock), 2026-04-19 | Python take_theirs used for all .sh conflicts |
 | HomericIntelligence/AchaeanFleet | Wave 2+3 rebase of 21 DIRTY PRs (Dockerfiles, ci.yml, compose files), 2026-04-19 | Python strip_conflicts_keep_theirs for workflow files |

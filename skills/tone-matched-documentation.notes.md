@@ -49,7 +49,7 @@ Revised ALL sections with tone transformations:
 **Example transformations**:
 
 | Formal | Conversational |
-|--------|----------------|
+| -------- | ---------------- |
 | "practitioners lack rigorous methods" | "there's no rigorous way" |
 | "Our methodology employs" | "The methodology uses" |
 | "CoP approaches infinity as pass_rate approaches zero, signaling economic infeasibility" | "If pass_rate hits zero, CoP goes to infinity---that configuration is economically dead" |

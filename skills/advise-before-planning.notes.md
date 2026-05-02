@@ -31,7 +31,7 @@ The goal is a two-step planning workflow: Step 1 calls Claude to search the skil
 ## Files Modified
 
 | File | Changes |
-|------|---------|
+| ------ | --------- |
 | `pixi.toml` | Added `plan-issues` task |
 | `scylla/automation/models.py` | Added `enable_advise: bool = True` field |
 | `scylla/automation/prompts.py` | Added `ADVISE_PROMPT` template and `get_advise_prompt()` |
@@ -42,7 +42,7 @@ The goal is a two-step planning workflow: Step 1 calls Claude to search the skil
 ## Files Created
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `tests/unit/automation/test_planner.py` | 10 tests for planner methods |
 | `tests/unit/automation/test_prompts.py` | 4 tests for prompt generation |
 

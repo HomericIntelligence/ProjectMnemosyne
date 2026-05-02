@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-31 |
 | **Objective** | Multiple ProjectScylla PRs were failing CI because they depended on `homericintelligence-hephaestus>=0.6.0` which wasn't published to PyPI (only on Hephaestus `main`). Goal: publish, then fix all dependent PRs. |
 | **Outcome** | All 4 PRs (1741–1744) merged. Published Hephaestus v0.6.0 via OIDC tag push; fixed pixi.toml/pyproject.toml across 3 branches; resolved rebase conflicts; fixed ShellCheck issues. |
@@ -138,7 +138,7 @@ gh pr merge PRNUM --auto --rebase --repo ORG/REPO
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Use path dep in CI | `{ path = "../ProjectHephaestus", editable = true }` in pixi.toml | CI doesn't have the sibling repo checked out | Always use PyPI version constraint in pixi.toml; path deps are only for local development |
 | Keep max_delay in resilience.py | Retained `max_delay` param in `retry_with_backoff(...)` call | Published hephaestus v0.6.0 didn't include `max_delay` yet (was on branch) | Verify published API against actual PyPI package, not the branch source |
 | git checkout --theirs during rebase | Attempted to use `git checkout --theirs` to resolve conflicts | Safety Net blocked the command | Use Edit/Write tools to manually remove conflict markers instead |
@@ -187,6 +187,6 @@ The post-conflict-marker delegation call is always correct — keep it.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PRs 1741–1744 fixing hephaestus dependency | 4 PRs merged; v0.6.0 published; all required CI checks green |
 | ProjectHephaestus | v0.6.0 publish via OIDC tag push | PR 220 (max_delay feature) also merged same session |

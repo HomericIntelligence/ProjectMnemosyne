@@ -17,7 +17,7 @@ tags:
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-04 |
 | **Objective** | Prevent re-running expensive operations (API calls) when valid results already exist |
 | **Outcome** | ✅ Added validation checks before agent/judge launches, saving costs on resume |
@@ -126,7 +126,7 @@ def test_resume_skips_completed():
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -222,5 +222,5 @@ def execute_with_resume(run_dir: Path):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #138 - Skip completed agent/judge runs | [notes.md](../../references/notes.md) |

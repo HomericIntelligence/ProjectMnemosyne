@@ -14,7 +14,7 @@ tags: [multi-repo, governance, github-api, batch-operations, gh-cli]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-03 |
 | **Objective** | Roll out LICENSE, CODE_OF_CONDUCT.md, SECURITY.md, CONTRIBUTING.md to 15 HomericIntelligence repos |
 | **Outcome** | 11 PRs created, auto-merge enabled on all 12 including Odysseus |
@@ -90,7 +90,7 @@ gh pr merge "$PR_NUM" -R HomericIntelligence/repo1 --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | 11 parallel Sonnet subagents (one per repo) | Delegated CODE_OF_CONDUCT.md writing to 11 parallel sub-agents | All hit content filtering on the CoC text (policy enforcement) | Write governance policy files from the parent Opus conversation, not from Sonnet sub-agents |
 | `cd /tmp/{repo}` in bash loop | Used `cd repo && gh pr create` pattern inside a for loop | Shell cwd resets between Bash tool calls — cd doesn't persist across iterations | Always use `gh pr create -R <owner>/<repo> --head <branch>` and `git -C /tmp/{repo}` instead of cd |
 | Overwrite existing files without surveying | Attempted to write all 4 files to all repos unconditionally | Some repos already had LICENSE or CODE_OF_CONDUCT.md; overwrites would cause conflicts or duplicate PRs | Always survey `gh api repos/.../contents/` first; only add missing files |
@@ -115,7 +115,7 @@ Typical buckets across a new org:
 ### CONTRIBUTING.md customization matrix
 
 | Tech Stack | Build Command | Test Command | Notes |
-|------------|---------------|--------------|-------|
+| ------------ | --------------- | -------------- | ------- |
 | C++ + CMake + Conan | `just build` or `cmake --preset ...` | `ctest --preset ...` | Mention `conan install` as prereq |
 | Mojo | `pixi run mojo build` | `pixi run mojo test` | Mention `pixi install` as prereq |
 | Python (pixi) | `pixi run python -m build` | `pixi run pytest` | Mention `pixi install` |
@@ -140,5 +140,5 @@ gh api -X PATCH repos/HomericIntelligence/{repo} --field allow_auto_merge=true
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence org | 15 repos, 11 PRs created, auto-merge enabled on all | Verified-local — PRs pushed successfully |

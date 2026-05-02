@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Replace hardcoded plugin lists in `fix_remaining_warnings.py` with `Path.rglob("SKILL.md")` dynamic discovery |
 | **Outcome** | Script is now self-maintaining — new skills are fixed automatically without manual list updates |
@@ -73,7 +73,7 @@ python3 scripts/fix_remaining_warnings.py --skills-dir .claude/skills/
 ### Cross-Repo Convention Adaptation Checklist
 
 | Convention | ProjectMnemosyne | ProjectOdyssey |
-|------------|-----------------|----------------|
+| ------------ | ----------------- | ---------------- |
 | Default skills dir | `/home/user/ProjectMnemosyne/skills` | `.claude/skills` |
 | Test imports | `sys.path.insert(0, ...)` | `importlib.util.spec_from_file_location()` |
 | Test location | `tests/test_*.py` | `tests/scripts/test_*.py` |
@@ -82,7 +82,7 @@ python3 scripts/fix_remaining_warnings.py --skills-dir .claude/skills/
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Direct copy without adaptation | Copied script verbatim from ProjectMnemosyne | Default `--skills-dir` path pointed to wrong location; test import pattern didn't match repo conventions | Always check target repo's conventions for default paths, test imports, and directory structure before porting |
 | Ruff format on first commit | Pre-commit hooks reformatted files | Commit failed, had to re-stage and create new commit | Always run `just precommit` or formatters before first commit attempt to avoid the re-stage cycle |
 
@@ -116,5 +116,5 @@ def fix_skill_file(skill_path: Path, dry_run: bool = False) -> Tuple[bool, List[
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3779, PR #5113 | Ported `fix_remaining_warnings.py` with dynamic scan, 13 tests pass locally |

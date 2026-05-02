@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Verify agent hierarchy, delegation chains, and escalation paths. - After modifying agent hierarchy - Verifying escalation paths work correctly |
 | Outcome | Operational |
@@ -56,7 +56,7 @@ python3 tests/agents/test_delegation.py .claude/agents/
 ## Validation Rules
 
 | Rule | Example ✅ | Wrong ❌ |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | Delegate downward | L2 → L3 | L3 → L2 |
 | Escalate upward | L3 → L2 | L3 → L4 |
 | No circles | A → B, A → C | A → B → A |
@@ -79,7 +79,7 @@ python3 tests/agents/test_delegation.py .claude/agents/
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-05 |
 | Objective | Add a missing ADR entry to the ADR index table in `docs/adr/README.md` |
 | Outcome | Success — one-line table row added, pre-commit passed, PR #3338 created |
@@ -87,13 +87,13 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Task completed on first attempt | N/A | Read the ADR file first to get exact title/status/date — do not guess from the filename |
 
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | File changed | `docs/adr/README.md` |
 | Lines changed | 1 inserted |
 | Pre-commit hooks | All passed (Markdown Lint, ruff, yaml, trailing-whitespace) |

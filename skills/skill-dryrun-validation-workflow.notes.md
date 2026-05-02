@@ -59,7 +59,7 @@ pixi run python scripts/run_e2e_experiment.py \
 **Tier Results:**
 
 | Tier | Score | Cost | Judge Time | Total Time | Status |
-|------|-------|------|------------|------------|--------|
+| ------ | ------- | ------ | ------------ | ------------ | -------- |
 | T0 | 1.000 | $0.2108 | 131.4s | 151.6s | PASS/A |
 | T1 | 0.970 | $0.2193 | 195.2s | 218.5s | PASS/A |
 | T2 | 0.970 | $0.1108 | 145.9s | 171.7s | PASS/A |
@@ -112,7 +112,7 @@ pixi run python scripts/generate_all_results.py \
 **Per-Tier Score Comparison:**
 
 | Tier | Original | Dryrun2 | Delta | Status |
-|------|----------|---------|-------|--------|
+| ------ | ---------- | --------- | ------- | -------- |
 | T0 | 0.9733 | 1.0000 | 0.0267 | ✅ |
 | T1 | 0.9700 | 0.9704 | 0.0004 | ✅ |
 | T2 | 0.9833 | 0.9697 | 0.0137 | ✅ |
@@ -124,7 +124,7 @@ pixi run python scripts/generate_all_results.py \
 **Acceptance Criteria:**
 
 | Criterion | Threshold | Result | Status |
-|-----------|-----------|--------|--------|
+| ----------- | ----------- | -------- | -------- |
 | Same runs | 7 | 7 | ✅ PASS |
 | Same judges | 21 | 21 | ✅ PASS |
 | All passed | 7/7 | 7/7 | ✅ PASS |
@@ -144,7 +144,7 @@ pixi run python scripts/generate_all_results.py \
 **Results:**
 
 | Component | Archive | Regenerated | Match |
-|-----------|---------|-------------|-------|
+| ----------- | --------- | ------------- | ------- |
 | Total runs | 7 | 7 | ✅ |
 | Judge evals | 21 | 21 | ✅ |
 | Criteria | 105 | 105 | ✅ |
@@ -304,7 +304,7 @@ Returning point estimate only.
 ### Dryrun2 Cost Breakdown
 
 | Component | Cost | Percentage |
-|-----------|------|------------|
+| ----------- | ------ | ------------ |
 | Agent execution | ~$0.40 | 25% |
 | Judge evaluation | ~$1.21 | 75% |
 | **Total** | **$1.61** | **100%** |
@@ -319,7 +319,7 @@ Returning point estimate only.
 **Variance by tier:**
 
 | Tier | Original CoP | Dryrun2 CoP | Delta |
-|------|--------------|-------------|-------|
+| ------ | -------------- | ------------- | ------- |
 | T0 | $0.1351 | $0.2108 | +$0.0757 (+56%) |
 | T1 | $0.1274 | $0.2193 | +$0.0920 (+72%) |
 | T2 | $0.1380 | $0.1108 | -$0.0272 (-20%) |

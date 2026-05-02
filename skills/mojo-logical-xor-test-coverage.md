@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | mojo-logical-xor-test-coverage |
 | **Category** | testing |
 | **Origin** | Issue #4145 – logical_xor imported but untested |
@@ -88,7 +88,7 @@ from shared.core.elementwise import logical_xor
 ### Step 5 – Write the 5 Core Tests
 
 | Test | What It Verifies |
-|------|-----------------|
+| ------ | ----------------- |
 | `test_logical_xor_values` | Full truth table: (F,F)→F, (F,T)→T, (T,F)→T, (T,T)→F |
 | `test_logical_xor_shape_preserved` | Output shape matches input |
 | `test_logical_xor_all_false` | zeros XOR zeros → all zeros |
@@ -169,7 +169,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Add tests to part5 | Append `fn test_logical_xor_*` to existing `test_elementwise_part5.mojo` | File already at the 10-test per-file limit | Always count existing tests before editing; create new file if at limit |
 | Use `logical_xor` import from part5 without checking signature | Assumed same 2-tensor signature as logical_and | N/A (worked) — but skipping the grep would risk wrong args | Always verify function signature from source before writing tests |
 

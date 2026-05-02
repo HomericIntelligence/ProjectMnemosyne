@@ -26,7 +26,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-27 |
 | **Objective** | Bring up HomericIntelligence mesh natively on epimetheus (no compose), launch hello-myrmidon workers on 3 Tailnet hosts, implement Atlas Epic issue #152 scaffold, run 6-dimension review wave |
 | **Outcome** | Mesh reached 6 NATS connections at peak; Atlas PR #173 created and set to auto-merge (squash); 6/6 review dimensions approved |
@@ -120,7 +120,7 @@ NATS_URL=nats://<epimetheus-tailscale-ip>:4222 \
 #### Host Reachability Matrix (2026-04-27)
 
 | Host | Tailscale IP | SSH | nats-py | myrmidon result |
-|------|-------------|-----|---------|-----------------|
+| ------ | ------------- | ----- | --------- | ----------------- |
 | epimetheus (local) | 100.92.173.32 | N/A | yes | RUNNING (local) |
 | apollo | 100.68.51.128 | yes | yes | RUNNING |
 | hermes | 100.73.61.56 | yes | yes | RUNNING |
@@ -215,7 +215,7 @@ Verify via: `curl -s http://localhost:8222/varz | jq .connections`
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `uvicorn hermes.main:app` | Used `hermes.main:app` as the Hermes FastAPI entry point | Module is `hermes.server:app`; `hermes.main` does not exist | Always use `hermes.server:app` for Hermes uvicorn launch |
 | Binary at `build/agamemnon` | Looked for Agamemnon binary at `control/ProjectAgamemnon/build/agamemnon` | Binary is in `build/debug/` subdirectory: `build/debug/agamemnon` | Check `build/debug/` not `build/` root for C++ debug builds |
 | NATS monitoring on port 4222 | Tried `curl localhost:4222/varz` | Port 4222 is the client port; monitoring HTTP is on 8222 | NATS monitoring: port 8222. Client pub/sub: port 4222 |
@@ -237,7 +237,7 @@ toolchain go1.24.2 # matches the toolchain installed on the build host
 ### Session Metrics (2026-04-27)
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | NATS connections at peak | 6 |
 | Myrmidon workers launched | 3 (epimetheus local, apollo, hermes) |
 | Hosts SSH-failed | 4 (titan, athena, cleopatra, artemis — sshd disabled) |
@@ -251,5 +251,5 @@ toolchain go1.24.2 # matches the toolchain installed on the build host
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/Odysseus | Atlas epic implementation session 2026-04-27 | Native mesh bringup on epimetheus; 3-host myrmidon fan-out; PR #173 |

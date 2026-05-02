@@ -13,7 +13,7 @@ Run comprehensive tier ablation studies across 7 evaluation tiers (T0-T6) with ~
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-01-02 | Run comprehensive tier ablation study across T0-T6 with ~114 sub-tests | Successfully validated tier infrastructure, discovered and fixed CLI argument limit bug in T6 |
 
 ## When to Use
@@ -29,7 +29,7 @@ Run comprehensive tier ablation studies across 7 evaluation tiers (T0-T6) with ~
 ### 1. Tier Structure (T0-T6)
 
 | Tier | Name | Sub-tests | Description |
-|------|------|-----------|-------------|
+| ------ | ------ | ----------- | ------------- |
 | T0 | Prompts | 24 | System prompt ablation (empty -> full CLAUDE.md) |
 | T1 | Skills | 10 | Skill category ablation |
 | T2 | Tooling | 15 | Tool categories + MCP servers |
@@ -89,7 +89,7 @@ tests/fixtures/tests/test-001/t{N}/NN-name/
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -117,7 +117,7 @@ T6: PASS (score: 0.700, cost: $0.4037)
 ### CLI Parameters Reference
 
 | Parameter | Default | Description |
-|-----------|---------|-------------|
+| ----------- | --------- | ------------- |
 | `--tiers` | T0 T1 | Tiers to run |
 | `--runs` | 10 | Runs per sub-test |
 | `--timeout` | 3600 | Timeout per run (seconds) |

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-02 |
 | Objective | Add explicit test coverage for `--tier` filter combined with `--format` options in `cmd_visualize()` |
 | Outcome | SUCCESS — 6 new tests added, 22/22 `TestCmdVisualize` tests pass, 125/125 file-level tests pass |
@@ -57,7 +57,7 @@ Key insight: `--states-only` takes its **own rendering path** before `fmt` is re
 Draw a matrix of format × filter combinations and mark existing coverage:
 
 | Format | No filter | `--tier T0` | `--tier T99` (nonexistent) |
-|--------|-----------|-------------|---------------------------|
+| -------- | ----------- | ------------- | --------------------------- |
 | tree (default) | ✅ covered | ✅ covered | ❌ gap |
 | table | ✅ covered | ❌ gap | ❌ gap |
 | json | ✅ covered | ❌ gap | ❌ gap |
@@ -129,14 +129,14 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Tests Added (6)
 
 | Test Method | Scenario | Key Assertion |
-|-------------|----------|---------------|
+| ------------- | ---------- | --------------- |
 | `test_visualize_json_tier_filter` | `--format json --tier T0` with T0+T1 data | T1 absent from JSON `tier_states` + `run_states` |
 | `test_visualize_json_tier_filter_nonexistent` | `--format json --tier T99` | `tier_states == {}`, `run_states == {}` |
 | `test_visualize_table_tier_filter` | `--format table --tier T0` | "T0" in out, "T1" not in out |
@@ -147,7 +147,7 @@ gh pr merge --auto --rebase
 ### Test Count Change
 
 | Metric | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | `TestCmdVisualize` tests | 16 | 22 |
 | `test_manage_experiment.py` total | 119 | 125 |
 

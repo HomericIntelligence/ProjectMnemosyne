@@ -28,7 +28,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-22 |
 | **Objective** | Identify and reproduce a KGEN internal buffer overflow that causes a deterministic `Aborted (core dumped)` crash before any test output, distinguish it from other `__fortify_fail_abort` crash patterns, and file an upstream issue. |
 | **Outcome** | Upstream issue filed (modular/modular#6445). Workaround: requires removing the triggering code pattern. No fix yet from Modular. |
@@ -55,7 +55,7 @@ There are three different crashes that all appear as `__fortify_fail_abort` in `
 Getting the crash type wrong wastes investigation time.
 
 | Indicator | KGEN Buffer Overflow (this skill) | Crash 2: UID Mismatch | Crash 3: JIT Volume |
-|-----------|-----------------------------------|-----------------------|---------------------|
+| ----------- | ----------------------------------- | ----------------------- | --------------------- |
 | Crash address | Fixed: `+0x6d4ab` every run | Fixed: `+0x6d4ab` or `+0x6a686` | Variable (ASLR) |
 | Determinism | 100% — fails every run | Deterministic given same UID | Non-deterministic |
 | Trigger | Specific code pattern (see trigger combination) | Cold pixi volume + UID mismatch + no TTY | >20 functions OR package-level imports |
@@ -285,7 +285,7 @@ Temporary options pending Modular fix:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `ulimit -v unlimited` | Set virtual memory limit to unlimited in CI runner | No effect — KGEN internal buffer is not a virtual memory allocation | `ulimit` only affects process virtual address space limits, not KGEN's fixed-size internal codegen buffers |
 | `max-parallel: 1` in GitHub Actions | Set `max-parallel: 1` to reduce concurrent compilation load | Reduces concurrent load but a single-file overflow still crashes the single job | The overflow is triggered by one file's complexity, not aggregate CI parallelism |
 | Treat as random JIT noise and rerun | Assumed non-deterministic; re-triggered CI | Crash occurred 100% of the time, confirming it is NOT random flake | 100% determinism is the distinguishing signal — stop retrying and start bisecting |
@@ -298,7 +298,7 @@ Temporary options pending Modular fix:
 ### Trigger Combination — Required All Four
 
 | Component | Trigger | Safe Alternative |
-|-----------|---------|-----------------|
+| ----------- | --------- | ----------------- |
 | `from std.python import Python, PythonObject` | Module-level CPython interop | Move to separate compilation unit |
 | `var <name>: List[String]` in struct | Heap-allocated string list field | Single delimited `String` field |
 | 6+ `def __init__(out self, ...)` overloads | Large overload set on struct | Reduce overload count to <6 |
@@ -330,14 +330,14 @@ echo "Dict[String: $(grep -c 'Dict\[String,' $FILE)"
 ### Environment Where Crash Reproduces
 
 | Environment | Reproduces? | Notes |
-|-------------|------------|-------|
+| ------------- | ------------ | ------- |
 | GitHub Actions `ubuntu-latest` | YES, 100% | ~7 GB RAM, 2-core runner |
 | Developer machine (high RAM) | NO | Larger KGEN buffers on machine with more RAM (suspected) |
 
 ## Verified On
 
 | Project | Context | Outcome |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Branch `fix-ci-hephaestus-install`; CI crash on YAML-loading module | Upstream issue filed modular/modular#6445; workaround pending |
 
 ## References

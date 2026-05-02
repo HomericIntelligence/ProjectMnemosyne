@@ -11,7 +11,7 @@ version: 1.0.0
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Perform structured review of PR changes against project quality standards. - Code review before approving PR |
 | Outcome | Operational |
@@ -165,7 +165,7 @@ Report review results with sections:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Can't access PR | Check gh auth status |
 | Can't understand code | Ask clarifying question in comment |
 | Needs local testing | Use worktree-create skill to test |
@@ -198,7 +198,7 @@ Comment when:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

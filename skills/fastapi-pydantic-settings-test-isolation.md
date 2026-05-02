@@ -10,7 +10,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-24 |
 | **Category** | testing |
 | **Objective** | Reliably isolate FastAPI tests that depend on pydantic-settings and Depends() injection |
@@ -159,7 +159,7 @@ def _rate_limit_client(rate_limit: str = "5/minute"):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | `patch("hermes.server.get_settings", return_value=mock)` | `Depends()` captured the original function at import time; patching the module name has no effect on what DI calls | Never patch the name bound by `Depends` — manipulate env vars + clear the cache instead |
 | Attempt 2 | Assumed blank env state for tests that require HMAC disabled | `.env` at project root supplies `WEBHOOK_SECRET`; tests passed in CI (no file) but failed locally | Always explicitly set or unset every env var a test depends on; never assume a blank state |
 | Attempt 3 | Added `@limiter.limit()` decorator only, no middleware | Requests returned 202; rate limit was never enforced | `SlowAPIMiddleware` is mandatory — the decorator alone registers the limit but doesn't evaluate it |
@@ -200,7 +200,7 @@ get_settings.cache_clear()   # after test — don't leak cached values to next t
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/ProjectHermes | CI — webhook rate-limit and timeout tests | verified-ci — all five test patterns confirmed passing |
 
 ## References

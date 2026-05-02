@@ -62,7 +62,7 @@ they delegate entirely to the already-guarded functions.
 All pass locally with `just test-group tests/shared/core "test_*_noncontiguous_*.mojo"`.
 
 | File | Tests | Status |
-|------|-------|--------|
+| ------ | ------- | -------- |
 | `test_arithmetic_noncontiguous_part1.mojo` | 10 (add/sub/mul/div + contiguous result check) | ✅ |
 | `test_arithmetic_noncontiguous_part2.mojo` | 2 (broadcasting, baseline comparison) | ✅ |
 | `test_reduction_noncontiguous_part1.mojo` | 6 (sum/mean all/axis0/axis1) | ✅ |

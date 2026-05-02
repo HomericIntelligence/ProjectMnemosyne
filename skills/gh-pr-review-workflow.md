@@ -6,11 +6,6 @@ date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
 ---
----
-name: get-comments
-description: "Retrieve all review comments from a pull request using GitHub API"
-user-invocable: false
----
 
 # Get PR Review Comments
 
@@ -19,7 +14,7 @@ Retrieve and analyze all review comments from a pull request.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Fetch and parse PR review comments | Structured feedback for efficient fixes |
 
 ## When to Use
@@ -69,7 +64,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Output Format
 
@@ -85,7 +80,7 @@ Comments include:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | PR not found | Verify PR number |
 | Auth failure | Check `gh auth status` |
 | No comments | API returns empty array (not an error) |
@@ -100,12 +95,6 @@ Comments include:
 
 - GitHub API docs: https://docs.github.com/en/rest/pulls/comments
 
----
-name: fix-feedback
-description: "Address PR review feedback by making changes and replying to comments"
-user-invocable: false
----
-
 # Fix PR Review Feedback
 
 Address PR review comments by implementing fixes and responding to each comment.
@@ -113,7 +102,7 @@ Address PR review comments by implementing fixes and responding to each comment.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Efficiently address reviewer feedback | Faster PR approval cycles |
 
 ## When to Use
@@ -164,12 +153,12 @@ Reply format (keep SHORT):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Comment ID invalid | Verify ID using API |
 | Auth failure | Run `gh auth status` |
 | Reply not appearing | Check API endpoint syntax |
@@ -199,12 +188,6 @@ NEVER confuse these - use the correct API for review comments.
 
 - GitHub API docs: https://docs.github.com/en/rest/pulls/comments
 
----
-name: reply-comment
-description: "Reply to PR review comments using correct GitHub API endpoint"
-user-invocable: false
----
-
 # Reply to Review Comments
 
 Reply to PR review comments using the correct GitHub API.
@@ -212,7 +195,7 @@ Reply to PR review comments using the correct GitHub API.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Reply to inline review comments correctly | Proper threaded discussions in PR |
 
 ## When to Use
@@ -256,7 +239,7 @@ Reply format (keep SHORT and CONCISE):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Critical: Two Types of Comments
 
@@ -268,7 +251,7 @@ Reply format (keep SHORT and CONCISE):
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Comment ID invalid | Verify using API call |
 | Permission denied | Check `gh auth status` |
 | Reply fails | Verify PR and comment exist |

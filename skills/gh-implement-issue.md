@@ -11,7 +11,7 @@ version: 1.0.0
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Complete workflow for implementing a GitHub issue from start to finish. - Starting work on a new issue |
 | Outcome | Operational |
@@ -59,7 +59,7 @@ gh pr create --issue <issue>
 ## Pre-Flight Check Results
 
 | Result | Check | Behavior |
-|--------|-------|----------|
+| -------- | ------- | ---------- |
 | STOP (exit 1) | Issue is CLOSED | Halt immediately — work may be done |
 | STOP (exit 1) | PR is MERGED | Halt immediately — duplicate work risk |
 | STOP (exit 1) | Worktree conflict | Halt — branch already checked out |
@@ -121,7 +121,7 @@ Before creating PR:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Pre-flight: issue CLOSED | Stop work; issue already resolved |
 | Pre-flight: merged PR found | Stop work; check PR for implementation |
 | Pre-flight: worktree conflict | Navigate to existing worktree or remove it |
@@ -170,7 +170,7 @@ EOF
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

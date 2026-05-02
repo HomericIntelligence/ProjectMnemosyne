@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-07 |
 | **Objective** | Prevent `.__matmul__(` call sites from being reintroduced after codebase was standardized on `matmul(A, B)` |
 | **Outcome** | Hook + CI step implemented, zero violations on current codebase, all pre-commit hooks passed |
@@ -108,14 +108,14 @@ rm /tmp/test_call.mojo /tmp/test_def.mojo
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `language: pygrep` | Pattern `\.__matmul__\(` with `negate: false` | Cannot exclude lines matching `fn __matmul__(` — would false-positive on definition lines | Use `language: system` when exclusions are needed |
 | Separate script file | Considered writing a Python script for the hook | Unnecessary complexity for a single-pattern grep-based guard | `bash -c` inline entry keeps it zero-dependency |
 
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Hook language | `system` |
 | Entry style | `bash -c '...'` inline (no script file) |
 | `pass_filenames` | `false` (hook greps entire repo) |
@@ -135,5 +135,5 @@ rm /tmp/test_call.mojo /tmp/test_def.mojo
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3215, PR #3733 | [notes.md](../references/notes.md) |

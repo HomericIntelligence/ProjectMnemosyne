@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-20 |
 | Objective | Add unit tests for `_execute_single_tier` baseline fallback behavior (issue #772) |
 | Outcome | Success — 4 new tests, all passing, pre-commit clean |
@@ -86,7 +86,7 @@ Use `is` only when you want to verify the *exact same object* was returned (e.g.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

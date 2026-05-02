@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-06 |
 | Project | ProjectScylla |
 | Objective | Make `--retry-errors` in batch mode also retry failed/rate-limited runs inside checkpoints of batch-success tests |
@@ -171,7 +171,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Batch Mode Dispatch Decision Tree
 
@@ -238,5 +238,5 @@ assert saved.run_states["T0"]["00"]["1"] == "pending"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1451 — batch retry-errors per-run checkpoint reset | [notes.md](references/notes.md) |

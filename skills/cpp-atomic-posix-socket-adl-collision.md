@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-31 |
 | **Objective** | Fix build failures when `std::atomic<int>` members cause unqualified POSIX socket calls to resolve incorrectly via ADL |
 | **Outcome** | All sanitizer CI builds (asan/lsan/ubsan/tsan/msan) pass after applying `.load()` + `::` qualification fixes |
@@ -110,7 +110,7 @@ if (server_fd_.load() < 0) { ... }
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Just adding `.load()` without `::` on `bind()` | `bind(server_fd_.load(), ...)` | ADL still resolves `bind` as `std::bind` even with plain `int` argument | Must add `::` to explicitly select global namespace `bind` |
 | Only fixing `bind()` | Fixed bind but left setsockopt/getsockname/listen with atomic members | Other call sites still pass `std::atomic<int>` directly to POSIX APIs | Audit ALL socket call sites systematically with grep |
 | Treating as a simple type error | Thought it was just about passing int instead of atomic | The real issue is ADL + name lookup, not just type conversion | `std::bind` in scope from `<functional>` (via `<atomic>`) hijacks unqualified `bind()` |
@@ -152,5 +152,5 @@ After fixing, all sanitizer builds should pass:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectKeystone | PR #146 — `health_check_server.cpp` atomics | All sanitizer builds pass in CI 2026-03-31 |

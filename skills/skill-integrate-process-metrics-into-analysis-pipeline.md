@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-27 |
 | **Objective** | Integrate R_Prog, CFP, PR Revert Rate, Strategic Drift from `scylla/metrics/process.py` into the analysis pipeline |
 | **Outcome** | ✅ Success — 3199 tests passing, 78.44% coverage, PR #1127 merged |
@@ -279,7 +279,7 @@ pre-commit run --files scylla/analysis/loader.py scylla/analysis/dataframes.py \
 ## Failed Attempts & Lessons Learned
 
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | Putting process extraction in `dataframes.py` | Wrong layer — process.py imports are heavy | Keep in `loader.py` |
 | Importing `TokenStats` from `loader.py` in tests | Not in `__all__`, mypy error | Import from `scylla.e2e.models` directly |
 | Passing `total_tokens` to `TokenStats()` constructor | Field doesn't exist (it's a `@property`) | Only pass `input_tokens`, `output_tokens`, `cache_creation_tokens`, `cache_read_tokens` |
@@ -317,7 +317,7 @@ pre-commit run --files scylla/analysis/loader.py scylla/analysis/dataframes.py \
 ### Files Modified/Created
 
 | File | Change | Lines |
-|------|--------|-------|
+| ------ | -------- | ------- |
 | `scylla/analysis/schemas/run_result.schema.json` | Added 3 new property groups | +62 |
 | `scylla/analysis/loader.py` | RunData fields + load_run() extraction | +78 |
 | `scylla/analysis/dataframes.py` | 4 new columns in build_runs_df() | +5 |

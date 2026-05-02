@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Name** | stale-script-cleanup |
 | **Category** | tooling |
 | **Complexity** | S (Simple) |
@@ -95,7 +95,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `just pre-commit-all` | Used `just` command runner | `just` was not in PATH on this system | Fall back to `pixi run pre-commit run --all-files` when `just` is unavailable |
 | Using shell PID expansion for clone location | `MNEMOSYNE_DIR="build/$$/..."` pattern | `$$` expands unpredictably across different contexts; doesn't work across separate tool invocations | Use a fixed standardized path like `$HOME/.agent-brain/ProjectMnemosyne` instead |
 

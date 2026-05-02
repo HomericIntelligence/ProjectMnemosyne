@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Name | migrate-skill-aux-dirs |
 | Category | tooling |
 | Problem | Migration scripts that only copy SKILL.md silently drop scripts/, templates/, hooks/ subdirs |
@@ -54,7 +54,7 @@ for subdir in sorted(source_dir.iterdir()):
 ### 2. Routing Rules
 
 | Subdir | Destination in Mnemosyne |
-|--------|--------------------------|
+| -------- | -------------------------- |
 | `scripts/` | `skills/<category>/<name>/skills/<name>/scripts/` |
 | `templates/` | `skills/<category>/<name>/skills/<name>/templates/` |
 | `hooks/` | `skills/<category>/<name>/skills/<name>/hooks/` |
@@ -115,7 +115,7 @@ Add `import shutil` at the top of the script — the standard library module is 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Putting `references/` alongside SKILL.md | Placed `references/` inside `skills/<name>/` | Mnemosyne convention puts `references/` at plugin root, not alongside SKILL.md | Check the Mnemosyne plugin layout spec before routing subdirs |
 | Using `shutil.copytree` without `dirs_exist_ok` | Called `copytree(src, dest)` | Raises `FileExistsError` on second migration run if dest already exists | Always use `dirs_exist_ok=True` for idempotent behavior |
 | Skipping dry-run subdir reporting | Only dry-run printed the plugin_dir line | Users had no visibility into what subdirs would be copied | Dry-run branch should mirror the real branch's output with `[DRY RUN]` prefix |

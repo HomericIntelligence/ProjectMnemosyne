@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | mkdocs-nav-cleanup |
 | **Category** | ci-cd |
 | **Trigger** | CI Deploy Documentation failure after deleting placeholder doc stubs |
@@ -60,7 +60,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Removing entire section blocks at once | Used Edit to replace multi-line nav blocks covering Core + Advanced + Development | Initially included Release Process (a surviving file) in the removal | Always check which files in a nav section still exist before removing the whole block |
 | Treating link-check failures as in-scope | Considered fixing 20 root-relative path errors in CLAUDE.md, docs/adr/, notebooks/README.md | These were pre-existing on main, unrelated to the PR | Verify pre-existing CI failures with `gh run list --branch main --workflow "Check Markdown Links"` before scoping fixes |
 

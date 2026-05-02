@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Purpose** | Security PR review with parallel false-positive filtering |
 | **Primary trigger** | /security-review slash command on a PR diff |
 | **Key insight** | Two-phase: identify candidates then parallel validate exploitability per finding |
@@ -33,7 +33,7 @@ user-invocable: false
 ### Quick Reference
 
 | Phase | Agent | Task |
-|-------|-------|------|
+| ------- | ------- | ------ |
 | 1 — Identify | Single Explore agent | Read all changed files, identify candidate vulnerabilities with confidence scores |
 | 2 — Filter | Parallel Explore agents (one per finding) | Validate each candidate: is there a concrete untrusted-input path? |
 | 3 — Report | Orchestrator | Collect results, discard findings with confidence < 8, format report |
@@ -123,7 +123,7 @@ If zero findings survive: output `No security vulnerabilities identified above t
 These are common false positives in Mojo/Python ML platforms:
 
 | Pattern | Why It Is a False Positive |
-|---------|--------------------------|
+| --------- | -------------------------- |
 | Path concatenation in checkpoint save/load | `name` param is always hardcoded layer name like `"conv1_kernel"` |
 | `subprocess.run()` in training script | Arguments are hardcoded; no user-controlled input |
 | `open(filepath)` in data loader | Filepath comes from argparse, which is trusted CLI input |
@@ -135,7 +135,7 @@ The key question for every finding: **"Can an attacker realistically control the
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Single-agent identify + filter | Ask one agent to both find and filter | Agent anchors on initial findings; does not critically re-evaluate own output | Separate identification from validation with independent agents |
 | Reporting all findings >= 7 confidence | Include path traversal in file_io.mojo at confidence 9 | Pattern was technically unsafe but param is always hardcoded — false positive | Confidence from pattern matching != confidence from exploitability analysis; use dedicated filter agents |
 | Static analysis only without reading callers | Flag `path + "/" + name` as path traversal without reading call sites | Missed that `name` is exclusively hardcoded layer names in model_utils.mojo | Always read the full call chain, not just the vulnerable line in isolation |

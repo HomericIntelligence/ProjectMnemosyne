@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-08 |
 | **Objective** | Investigate and fix Mojo 0.26.1 heap corruption crash in `test_multi_precision_training.mojo` Test 9 |
 | **Outcome** | ✅ Success - Crash identified and fixed |
@@ -140,7 +140,7 @@ var roundtrip_val = back_to_fp32._get_float32(0)  # Native Float32
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

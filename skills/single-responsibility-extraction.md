@@ -14,7 +14,7 @@ tier: 2
 ## Overview
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Date** | 2026-02-27 |
 | **Objective** | Extract a 170-line multi-concern method (`_initialize_or_resume_experiment`) into a dedicated `ResumeManager` class with 4 focused methods |
 | **Outcome** | ✅ Success — runner.py reduced 1638→1509 lines, 26 new tests, all 3211 existing tests pass, 78.46% coverage |
@@ -166,7 +166,7 @@ def _initialize_or_resume_experiment(self) -> Path:
 Common issues after extraction:
 
 | Issue | Fix |
-|-------|-----|
+| ------- | ----- |
 | `E501` line too long | Split long logger strings into continuation strings |
 | `type-arg` missing dict type params | Use `dict[str, Any]` not `dict` in type annotations |
 | Ruff auto-fixes (applied automatically) | Re-run hooks until clean pass |
@@ -186,7 +186,7 @@ cli_ephemeral: dict[str, None] = {"max_subtests": None}
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | **Mutating self instead of returning** | Initial design considered modifying `self.config` and `self.checkpoint` directly, returning `None` | Hard to test — must inspect object internals; creates hidden coupling | Return `(config, checkpoint)` tuples instead for clean, testable API |
 | **Expecting C901 suppressions** | Assumed runner.py had `# noqa: C901` flags to remove | `grep` found none — the method never had explicit suppressions | Always verify the actual state; the issue description may describe the desired end state, not the current one |
 | **Re-creating `_save_config`** | Considered delegating to runner's `_save_config` via callback | Over-engineering — `ResumeManager._save_config` can write the JSON directly | Keep collaborator self-contained; don't inject callbacks for simple file writes |
@@ -194,7 +194,7 @@ cli_ephemeral: dict[str, None] = {"max_subtests": None}
 ## Key Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| ---------- | ----------- |
 | **Return tuples, not void** | Makes unit tests trivial — assert on returned values |
 | **Collaborator receives checkpoint+config at init** | Avoids passing them to every method; mirrors runner's own pattern |
 | **`_save_config` on ResumeManager** | Keeps the class self-contained; runner's `_save_config` is equivalent |

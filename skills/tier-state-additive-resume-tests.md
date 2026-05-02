@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-03 |
 | Project | ProjectScylla |
 | Objective | Add TierStateMachine-level tests verifying tier_states is additive across multi-invocation resumes |
@@ -35,7 +35,7 @@ testing patterns (SubtestStateMachine, StateMachine layers).
 The 4-level state machine hierarchy populates different checkpoint fields independently:
 
 | State Machine | Checkpoint field populated |
-|---|---|
+| --- | --- |
 | `StateMachine` | `run_states[tier_id][subtest_id][run_num]` |
 | `SubtestStateMachine` | `subtest_states[tier_id][subtest_id]` |
 | **`TierStateMachine`** | **`tier_states[tier_id]`** |
@@ -149,7 +149,7 @@ validate_checkpoint_states(
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -158,7 +158,7 @@ validate_checkpoint_states(
 `TestAdditiveResumeTierStates` in `tests/integration/e2e/test_additive_resume.py`:
 
 | Test | Scenario |
-|------|---------|
+| ------ | --------- |
 | `test_t0_complete_then_add_t1_preserves_t0_tier_state` | T0→COMPLETE, then T1 partial |
 | `test_two_tiers_complete_then_add_third_preserves_both` | T0+T1→COMPLETE, then T2 partial |
 | `test_complete_tier_tier_state_additive_across_three_invocations` | 3 sequential invocations |

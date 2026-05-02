@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Date** | 2026-03-02 |
 | **Objective** | Add a static test asserting that `ARG EXTRAS` is declared before the Layer 2 dependency-install `RUN` in `docker/Dockerfile`, so Docker cache is correctly invalidated when `--build-arg EXTRAS=...` changes |
 | **Outcome** | ✅ 1 new test added to existing `TestBuilderStageOrdering`; 17 tests pass (was 16); PR #1307 merged |
@@ -109,7 +109,7 @@ pixi run python -m pytest tests/unit/docker/test_dockerfile_layer_ordering.py -v
 All helpers are already present in `test_dockerfile_layer_ordering.py`:
 
 | Helper | Purpose |
-|--------|---------|
+| -------- | --------- |
 | `_first_line_containing(lines, *fragments)` | Returns 0-based index of first line matching all fragments |
 | `_assert_before(earlier, later, earlier_desc, later_desc)` | Asserts ordering with helpful failure messages |
 | `lines` fixture | Reads Dockerfile as list of lines (module-scoped) |
@@ -119,14 +119,14 @@ No new helpers needed — reuse existing infrastructure.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test Delta
 
 | Metric | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | Tests in `TestBuilderStageOrdering` | 6 | 7 |
 | Tests in `test_dockerfile_layer_ordering.py` | 16 | 17 |
 | Full suite (all tests) | 3585 | 3586 |
@@ -134,7 +134,7 @@ No new helpers needed — reuse existing infrastructure.
 ### PR
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Issue | #1206 |
 | PR | #1307 |
 | Files changed | `tests/unit/docker/test_dockerfile_layer_ordering.py` (+22 lines) |

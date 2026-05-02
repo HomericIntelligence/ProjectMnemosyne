@@ -17,7 +17,7 @@ optional report sections.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-15 |
 | Objective | Add `group_split_files()` and `check_stale_patterns()` to `validate_test_coverage.py` (issue #4109) |
 | Outcome | Success — 10 new unit tests added, all 23 tests passing, script exits 0 on live repo |
@@ -172,7 +172,7 @@ python scripts/validate_test_coverage.py  # should exit 0
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -197,5 +197,5 @@ python scripts/validate_test_coverage.py  # should exit 0
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #4109, PR #4871, branch `4109-auto-impl` | [notes.md](../references/notes.md) |

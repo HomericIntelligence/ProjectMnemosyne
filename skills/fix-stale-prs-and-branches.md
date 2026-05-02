@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-06 |
 | Category | tooling |
 | Objective | Rebase open PRs with no CI / failing CI, delete stale remote branches, commit orphaned local work as a new PR |
@@ -61,7 +61,7 @@ pre-commit run --all-files
 Common issues and fixes:
 
 | Error | Fix |
-|-------|-----|
+| ------- | ----- |
 | `RUF022 __all__ is not sorted` | Re-order the new entry alphabetically in `__all__` |
 | `SIM102 Use a single if statement` | Combine nested `if` conditions with `and`; extract long condition to a named variable if it exceeds 100 chars |
 | `E501 Line too long` | Extract part of the boolean condition to a named variable |
@@ -118,12 +118,12 @@ gh pr merge <pr-number> --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Context | Outcome |
-|---------|---------|
+| --------- | --------- |
 | 3 rebased PRs with CI conflicts | All CI triggered after rebase |
 | 2 stale remote branches | Deleted with `git push origin --delete` |
 | Orphaned local work | Committed as new PR |

@@ -13,7 +13,7 @@ tags: [github, issues, cleanup, batch-operations, gh-cli]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-24 |
 | **Objective** | Close multiple GitHub issues that were already resolved by prior work (file removals, config additions) without requiring new code changes. |
 | **Outcome** | Successfully closed 3 issues (#1524, #1531, #1533) with explanatory comments and rate-limited API calls. |
@@ -66,7 +66,7 @@ sleep 1
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | No failed attempts in this session | Process was straightforward | For simple closures, the comment+close pattern works reliably on first try |
 
 ## Results & Parameters
@@ -97,5 +97,5 @@ This file has already been removed from the repository. Closing as resolved.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Closing 3 audit issues (#1524, #1531, #1533) | Issues from codebase audit already resolved by prior work |

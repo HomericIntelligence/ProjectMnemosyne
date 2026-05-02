@@ -22,7 +22,7 @@ tags: [dependabot, conflict, rebase, merge-policy, issue-audit, stale, ruff, E40
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-14 (amended 2026-04-25) |
 | **Objective** | Merge 6 Dependabot PRs, resolve 3 GitHub issues (including an aggregate audit), fix ruff lint failures in a test PR |
 | **Outcome** | All 6 Dependabot PRs resolved (5 merged via `--rebase`, 1 applied directly to main + closed); all 3 issues closed; CI green throughout |
@@ -288,7 +288,7 @@ git worktree remove <worktree-path>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `gh pr merge --squash` on Dependabot PR | Used squash merge for a dependency bump | "Repository does not allow squash merging" | Check repo merge policy first; only `--rebase` works in rebase-only repos |
 | `gh pr merge --merge` on Dependabot PR | Used merge commit flag | "Repository does not allow merge commits" | Same lesson — always use `--rebase` in rebase-only repos |
 | Waiting for `@dependabot rebase` to land | Posted rebase comment on PR #1238; waited several minutes | Comment triggers async rebase; no guarantee it completes in time | If rebase comment doesn't land within ~10 min, apply directly to main and close the PR |
@@ -348,7 +348,7 @@ Before acting on any audit/batch issue:
 ### ruff Lint Quick Fix Reference
 
 | Error | Cause | Fix |
-|-------|-------|-----|
+| ------- | ------- | ----- |
 | `E402 Module level import not at top` | `sys.path` manipulation before imports | Remove duplicate `sys.path` block; conftest.py handles it |
 | `F401 imported but unused` | Generated test imports `patch` but never calls it standalone | Remove unused import |
 | `E501 Line too long` | Long test assertion strings | Break string across lines with `(` `)` |
@@ -357,7 +357,7 @@ Before acting on any audit/batch issue:
 ### Scale Reference
 
 | Task | Method | Time |
-|------|--------|------|
+| ------ | -------- | ------ |
 | 5 sequential Dependabot PRs (no conflicts) | `gh pr merge --rebase` per PR | ~2 min total |
 | 1 conflicting Dependabot PR | Apply directly to main + close | ~5 min |
 | Stale issue audit (3 issues) | Check current state, close with evidence | ~10 min |
@@ -368,6 +368,6 @@ Before acting on any audit/batch issue:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | 6 Dependabot PRs (pytest, PyYAML, certifi, etc.), Issues #909/#916/#924, 2026-04-14 | PRs #1278/#1279 merged with CI passing; PR #1238 (pytest 9.0.3) applied to main directly |
 | AchaeanFleet | Branch 100-auto-impl rebase onto origin/main, 2026-04-25 | add/add conflict in .github/dependabot.yml; branch config was strict subset; `git rebase --skip` resolved; empty log confirmed branch fully superseded — no PR opened |

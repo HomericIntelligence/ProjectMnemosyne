@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-07 |
 | **Objective** | Migrate C++20 CMake repos from pure FetchContent to hybrid Conan + FetchContent, then validate installed packages work end-to-end |
 | **Outcome** | Successful — 4 C++ repos (Agamemnon, Nestor, Charybdis, Keystone) build and test with hybrid deps; E2E install validation scripts created |
@@ -205,7 +205,7 @@ cmake --build build
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `cmake_layout(self)` in conanfile.py | Used Conan's cmake_layout for automatic output paths | Creates nested `build/Debug/generators/` that doesn't match CMakePresets `build/${presetName}` convention | Remove `cmake_layout()` — use explicit `--output-folder`. Generators land directly in the specified directory. |
 | Stale CMakeCache after migration | Configured CMake with FetchContent, then added Conan toolchain | Old CMakeCache.txt ignores `CMAKE_TOOLCHAIN_FILE` — CMake warns "Manually-specified variables were not used" | Always delete `build/` before first Conan build. Stale FetchContent cache silently ignores the Conan toolchain. |
 | Full Conan replacement for nats.c | Tried `cnats` Conan package for nats.c | cnats availability/version uncertain on ConanCenter — risk of mismatch | Hybrid approach: Conan for well-supported packages, FetchContent for niche ones |
@@ -293,7 +293,7 @@ grep -r "#include <nlohmann/"      include/   # → any hit means nlohmann_json 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectAgamemnon | Hybrid Conan migration | Conan (httplib, json, gtest) + FetchContent (nats.c), 2/2 tests pass |
 | ProjectNestor | Hybrid Conan migration | Same pattern, 26/26 tests pass |
 | ProjectCharybdis | Conan-only (gtest) | No FetchContent deps, build succeeds |

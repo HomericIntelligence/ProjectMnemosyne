@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-07 |
 | Project | ProjectOdyssey |
 | Objective | Expose `LossTracker` and `AccuracyMetric` at the `shared` package root via re-export chain |
@@ -98,7 +98,7 @@ gh pr merge --auto --rebase
 ### Files modified in ProjectOdyssey#3748
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `shared/training/__init__.mojo` | Added 10-line re-export block for metrics symbols |
 | `shared/__init__.mojo` | Replaced 1 commented line with 3 live lines (import + alias) |
 
@@ -118,7 +118,7 @@ This exposes BOTH names — existing callers using `AccuracyMetric` are unaffect
 ### Import depth decision
 
 | Approach | Works? | Notes |
-|----------|--------|-------|
+| ---------- | -------- | ------- |
 | `from shared.training.metrics import X` in root `__init__.mojo` | Yes | Direct — bypasses intermediate chain |
 | `from shared.training import X` in root `__init__.mojo` | Sometimes | May fail if Mojo re-export resolution is incomplete for that chain |
 
@@ -127,12 +127,12 @@ Prefer direct leaf imports at the root to avoid resolution surprises.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `mojo build shared/` locally | Executed `pixi run mojo build shared/` | GLIBC version mismatch on host (requires 2.32+, host has older) | Mojo compiler requires modern GLIBC; local build only works in Docker/CI environment |
 | Running `just build` | Executed `just build` | `just` not in PATH on this host | Always try `pixi run <cmd>` prefix; fall back to checking CI for compilation |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3221, PR #3748 | [notes.md](../references/notes.md) |

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Trigger** | Follow-up issue assumes a prior implementation is in main, but grep finds nothing |
 | **Outcome** | Port the implementation directly, unblock the test, close the follow-up |
 | **Risk** | Low — copying known-working code from an existing worktree |
@@ -93,10 +93,10 @@ Closes #3163
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Use `assert_equal_int` for hash comparison | Called `assert_equal_int(hash_a, hash_b, ...)` directly since that was the existing pattern in the file | `hash()` returns `UInt`, `assert_equal_int` only accepts `Int` — type mismatch | Always check the return type of `hash()` before choosing the assert helper; use `assert_equal[T: Comparable]` for `UInt` |
 | Assume `__hash__` was in main | Proceeded toward test activation without first grepping for the implementation | Implementation only existed on the `issue-2722` feature branch, never merged | grep for the function/method FIRST before touching the test file |
-| Wait for the blocked PR to merge | The issue description says "now that `__hash__` is implemented" — assumed it had landed | The PR existed only on a feature branch (`2722-auto-impl`) | Check `git log --oneline main | grep <keyword>` or grep in `shared/` to confirm before assuming |
+| Wait for the blocked PR to merge | The issue description says "now that `__hash__` is implemented" — assumed it had landed | The PR existed only on a feature branch (`2722-auto-impl`) | Check `git log --oneline main \| grep <keyword>` or grep in `shared/` to confirm before assuming |
 
 ## Results & Parameters
 

@@ -11,13 +11,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-29 |
-| Objective | | Field | Value | |-------|-------| | **Date** | 2026-01-29 | | **Category** | Debugging | | **Objective** | Fix SubTestExecutor constructor errors... |
+| Objective | Fix SubTestExecutor constructor errors, checkpoint status validation, and T5 inheritance crashes in rerun script |
 | Outcome | Operational |
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-01-29 |
 | **Category** | Debugging |
 | **Objective** | Fix SubTestExecutor constructor errors, checkpoint status validation, and T5 inheritance crashes in rerun script |
@@ -232,7 +232,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Verification
 

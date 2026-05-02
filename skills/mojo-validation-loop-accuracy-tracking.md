@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-07 (updated 2026-03-15) |
 | **Category** | testing |
 | **Objective** | Fix `ValidationLoop.run()` to pass real accuracy to `TrainingMetrics.val_accuracy` and add tests verifying it |
@@ -238,7 +238,7 @@ CI (Docker-based) is required for actual Mojo test execution. Pre-commit hooks s
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Fix location | `ValidationLoop.run()` in `<training>/loops/validation_loop.mojo` |
 | Fix approach | Second-pass `AccuracyMetric` loop after `validate()`, conditional on `self.compute_accuracy` |
 | Test assertion (exact) | `assert_almost_equal(metrics.val_accuracy, Float64(1.0), Float64(1e-5))` |
@@ -251,7 +251,7 @@ CI (Docker-based) is required for actual Mojo test execution. Pre-commit hooks s
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Tuple return `-> (Float64, Float64)` | Changed `validate()` to return `(avg_loss, accuracy)` and unpacked with `val_loss, val_accuracy = validate(...)` | Mojo guidelines say `-> (T1, T2)` is deprecated; no tuple-return patterns exist in this codebase | Avoid tuple returns when the codebase has zero precedent; use a second-pass accumulation instead |
 | `assert_equal(metrics.val_accuracy, 1.0)` (non-fuzzy) | Tried exact int equality | Mojo assert_equal is for integers; floating point needs assert_almost_equal | Use `assert_almost_equal(val, expected, tolerance)` for Float64 comparisons |
 | Run `pixi run mojo test` locally | Expected to verify test execution | GLIBC version mismatch (`GLIBC_2.32`, `2.33`, `2.34` not found) | Local Mojo requires newer GLIBC; use Docker/CI for actual Mojo test runs |
@@ -260,6 +260,6 @@ CI (Docker-based) is required for actual Mojo test execution. Pre-commit hooks s
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3678, Issue #3183 (implementation + initial test) | [notes.md](../references/notes.md) |
 | ProjectOdyssey | PR #4768, Issue #3685 (follow-up: test with exact assertion) | [notes.md](../references/notes.md) |

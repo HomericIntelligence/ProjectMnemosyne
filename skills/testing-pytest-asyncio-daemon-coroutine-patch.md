@@ -24,7 +24,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-26 |
 | **Objective** | Fix 9 daemon tests that caused CI to timeout (10 min) by hanging in a never-completing asyncio event loop |
 | **Outcome** | SUCCESS — 200 tests in 1.26 s locally; CI went from 10-min timeout failure to green |
@@ -102,7 +102,7 @@ mock_signal.assert_any_call(signal.SIGTERM, ANY)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Patch `run_routing_loop` | `@patch("keystone.daemon.run_routing_loop", return_value=None)` | `main()` never calls `run_routing_loop`; patch is a complete no-op; real coroutine still runs and hangs | Always trace the actual call chain from entry point before choosing a patch target |
 | Patch `asyncio.run` | `@patch("keystone.daemon.asyncio.run", return_value=0)` | Prevents hang, but coroutine body never runs; tests that assert log output emitted inside `run()` silently fail | Patching `asyncio.run` skips the entire coroutine — only safe if no assertions depend on coroutine-internal side effects |
 | `assert_called_once_with(signal.SIGTERM, ...)` | Exact-count assertion on `signal.signal` mock | `asyncio.runners.Runner` calls `signal.signal(SIGINT, ...)` internally during `asyncio.run()`, making total call count 2 | Use `assert_any_call` instead of `assert_called_once_with` for signal handlers when `asyncio.run()` is involved |
@@ -145,7 +145,7 @@ class TestMain:
 ### CI Behavior Before / After
 
 | Metric | Before Fix | After Fix |
-|--------|-----------|-----------|
+| -------- | ----------- | ----------- |
 | CI outcome | FAILURE (timeout at 10 min) | PASS |
 | Orphan process visible in logs | Yes — pytest process stuck | No |
 | Test duration | >10 min (killed) | ~1.26 s for 200 tests |
@@ -154,5 +154,5 @@ class TestMain:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectKeystone | PR #451 `fix/security-scan-gitleaks-jq` | 9 hanging daemon tests fixed; CI confirmed green |

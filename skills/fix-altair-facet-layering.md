@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Date | 2026-02-08 |
 | Objective | Fix analysis figure generation bugs: data clipping, invisible overlays, static domains, and enable PNG/PDF rendering |
 | Outcome | ✅ SUCCESS - All 27 figures generate correctly with dynamic domains and visible overlays |
@@ -156,7 +156,7 @@ for (model, tier), group_idx in kde_df.groupby(["agent_model", "tier"]).groups.i
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -178,7 +178,7 @@ def compute_dynamic_domain_with_ci(
 ### Critical Fixes Applied
 
 | Figure | Issue | Fix |
-|--------|-------|-----|
+| -------- | ------- | ----- |
 | fig11 | Hardcoded domain `[-0.1, 0.1]` | Dynamic domain with `floor=-1.0, ceiling=1.0` |
 | fig21 | Regression line clipped | Include regression Y-values in domain |
 | fig21 | Multi-model data override | Use `alt.layer()` with explicit data |
@@ -236,7 +236,7 @@ tests/unit/analysis/test_figures.py           # Remove CSV tests
 ### Changes Made
 
 | Figure | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | fig01 | Box plots faceted by model | Histogram per tier (0.05 bins) |
 | fig02 | Box plots per judge faceted by tier | Histogram per tier (0.05 bins) |
 | fig04 | Grouped bars with error bars | Histogram per tier + pass_threshold line |

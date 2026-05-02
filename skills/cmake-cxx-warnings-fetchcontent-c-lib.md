@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-23 |
 | **Objective** | Prevent global `-Wall -Wextra -Wpedantic -Werror` from breaking third-party C libraries pulled via FetchContent |
 | **Outcome** | Successful — CI builds (asan/lsan/ubsan) passed after scoping flags to C++ only |
@@ -85,7 +85,7 @@ The generator expression `$<$<COMPILE_LANGUAGE:CXX>:flag>` is evaluated per-tran
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Leave flags as-is | Keep `-Wall -Wextra -Wpedantic -Werror` globally | nats.c `asynccb.c:32` failed: `error: unused parameter 'scPtr' [-Werror,-Wunused-parameter]` | Global flags apply to all languages — never use without language guard when mixing C and C++ |
 | Add `-Wno-unused-parameter` globally | Suppress unused-parameter for all targets | Would silence useful warnings in the project's own C++ code, defeating the purpose of `-Wall` | Global suppression is too broad; scoping the error flags is the correct fix |
 | Use `target_compile_options` on FetchContent target | Try to remove flags from the nats.c target after `FetchContent_MakeAvailable` | FetchContent targets may not be easily addressable by name before MakeAvailable; fragile and order-dependent | Fix the source (global flags scope) rather than patching the downstream target |
@@ -121,7 +121,7 @@ ci_result: all passing after fix
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectKeystone | CI builds broken by nats.c v3.12.0 FetchContent integration | PR #379, asan/lsan/ubsan all passed after scoping warning flags to CXX |
 
 ## See Also

@@ -12,7 +12,7 @@ Systematic approach to finding duplicate code, unifying implementations, and doc
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-01-02 |
 | Objective | Consolidate duplicate code and align implementations to consistent patterns |
 | Outcome | 5 consolidation PRs merged; established patterns for backward compatibility |
@@ -49,7 +49,7 @@ grep -r "tokens_input.*tokens_output" src/
 Categorize duplicates into two types:
 
 | Type | Example | Action |
-|------|---------|--------|
+| ------ | --------- | -------- |
 | True duplicates | Same function in 3 files | Consolidate to single source |
 | Intentional variants | 4 RunResult types for different domains | Document with cross-references |
 
@@ -127,14 +127,14 @@ class RunResult:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Consolidation Statistics
 
 | Category | Before | After |
-|----------|--------|-------|
+| ---------- | -------- | ------- |
 | Statistics functions | 3 copies | 1 source + 2 imports |
 | Grade assignment functions | 5 implementations | 1 canonical + aliases |
 | Pricing implementations | 2 (different units) | 1 centralized (per-million) |

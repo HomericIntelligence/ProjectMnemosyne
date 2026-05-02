@@ -11,7 +11,7 @@
 ## Files Created / Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scripts/validate_config_schemas.py` | New script (160 lines) |
 | `tests/unit/scripts/test_validate_config_schemas.py` | New test file (26 tests) |
 | `.pre-commit-config.yaml` | Added `validate-config-schemas` hook |
@@ -19,7 +19,7 @@
 ## Schema Mappings
 
 | File pattern | Schema file |
-|---|---|
+| --- | --- |
 | `config/defaults.yaml` | `schemas/defaults.schema.json` |
 | `config/models/*.yaml` | `schemas/model.schema.json` |
 | `tests/fixtures/config/tiers/*.yaml` | `schemas/tier.schema.json` |

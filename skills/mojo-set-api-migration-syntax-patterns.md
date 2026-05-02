@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-07 |
 | **Objective** | Fix compiler errors introduced by mass bitcast→set() migration across 13+ test files |
 | **Outcome** | All 13 affected files fixed; CI green on push |
@@ -158,7 +158,7 @@ static dispatch instead of JIT-based dispatch).
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Automated sed replacement | Used `sed` to move inline comments out of parens | sed line-oriented; failed on multi-paren depth cases where comment position inside nested parens is ambiguous | Manual inspection per file; use `grep -n "set(.*#"` to locate candidates |
 | Leaving Pattern B as two-line expression | Left `Float32(())\n    actual_value\n)` intact expecting compiler to parse it | `Float32(())` is valid syntax (empty tuple argument) so no parse error; the wrong value is silently used | Always collapse split expressions to one line; check result correctness not just compilation |
 | Compiling ASAN tests with JIT features | Tried adding ASAN flags to make JIT tests pass | ASAN instruments load/store instructions; JIT-generated code lacks ASAN stubs at link time | Replace JIT-based tests with statically-dispatched equivalents for ASAN compatibility |
@@ -166,7 +166,7 @@ static dispatch instead of JIT-based dispatch).
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Files affected | 13 test files |
 | Pattern A instances | ~10 (inline comments in set() calls) |
 | Pattern B instances | ~5 (empty Float32(()) with split value) |
@@ -197,5 +197,5 @@ tests/shared/tensor/test_matmul.mojo
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Post-swarm bitcast→set() migration cleanup (PRs #5200–#5204) | 13 files fixed; compile errors resolved; CI triggered |

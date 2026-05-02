@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Run GRPO training using Miles RL framework with a Baseten-hosted Qwen3-4B (vLLM) as the external inference endpoint for rollout generation |
 | **Outcome** | Operational — Baseten endpoint deployed and verified, custom generate function written and validated against Miles type system, Slurm+Enroot training scripts ready |
@@ -77,7 +77,7 @@ sbatch train-grpo.sbatch
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using Miles' built-in OpenAI format path (`agentic_tool_call.generate` + `dapo_math.run_agent`) | Tried to swap the base_url to point at Baseten instead of local SGLang | The `OpenAIEndpointTracer` creates sessions via `POST /sessions` on the local Miles router, which doesn't exist on Baseten. The agent function sends requests through `router_url/sessions/{id}/v1/chat/completions` — a Miles-specific protocol, not standard OpenAI. | Must write a custom generate function that bypasses the router entirely when using external inference. |
 | Using `--rollout-external` with `--rollout-external-engine-addrs` | Tried Miles' native external engine support to point at Baseten | `--rollout-external` expects SGLang-native endpoints (with `/generate` and router worker registration via `POST /add_worker`), not OpenAI-compatible endpoints. Baseten serves `/v1/chat/completions` via vLLM. | `--rollout-external` is for external SGLang instances only, not arbitrary OpenAI endpoints. |
 | Using `miles.utils.http_utils.post` in agent function for Baseten | Tried using Miles' built-in async HTTP client to call Baseten | Miles' `_http_client` is a plain `httpx.AsyncClient` with no auth headers. Baseten requires `Api-Key` authentication in the `Authorization` header. | Use your own httpx client with custom headers for authenticated endpoints. |
@@ -152,5 +152,5 @@ Cost:          L4 ~$0.85/hr, B200 ~$9.98/hr (auto-scales to 0)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Baseten + Miles GRPO Pipeline | Qwen3-4B E2E training setup | [notes](./baseten-miles-grpo-external-inference.notes.md) |

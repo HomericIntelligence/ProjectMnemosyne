@@ -3,7 +3,7 @@
 ## Session Context
 
 - **Repository**: ProjectScylla
-- **Branch at start**: `skill/ci-cd/pr-rebase-pipeline`  
+- **Branch at start**: `skill/ci-cd/pr-rebase-pipeline`
 - **Issues open at start**: 55 open issues, 0 open PRs
 - **Issues resolved**: 8 (PRs #1051, #1052, #1053, #1055, #1056, #1057, #1058, #1059)
 
@@ -25,7 +25,7 @@ All 4 Wave 7 agents launched in a SINGLE message after Wave 6 completed.
 ## Agent Outcomes
 
 | Issue | Agent ID | PR | Tests | Duration |
-|-------|----------|----|-------|----------|
+| ------- | ---------- | ---- | ------- | ---------- |
 | #930 | aed21aa6 | #1051 | 1 added | ~2 min |
 | #959 | ac2f8db1 | #1052 | 0 | ~1.5 min |
 | #920 | aa3ad84a | #1053 | 0 | ~37s |

@@ -24,7 +24,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-20 |
 | **Objective** | Validate cross-host myrmidon dispatch with hermes as the hub (full stack) and epimetheus as a single remote Python worker |
 | **Outcome** | Scripts written and reviewed; not yet executed end-to-end (SSH to hermes refused from local machine during planning) |
@@ -131,7 +131,7 @@ Agamemnon (hermes:8080)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | SSH to hermes from local machine during planning session | SSH refused (connection refused from local; Tailscale not active on dev machine) | Scripts are complete and correct but must be run from a Tailscale-connected machine or directly on hermes |
 | Attempt 2 | Considered using AGAMEMNON_URL in the remote myrmidon launch command | Unnecessary — the Python worker communicates only via NATS subjects, not Agamemnon REST | Always check the myrmidon source first; NATS_URL is the sole required config |
 | Attempt 3 | Considered full recursive `git submodule update --init --recursive` on epimetheus | Would pull all submodules including C++ build deps, heavy and slow | Use sparse init: `git submodule update --init provisioning/Myrmidons` |
@@ -143,14 +143,14 @@ Agamemnon (hermes:8080)
 ### Host Assignments
 
 | Host | IP | Role | Services |
-|------|----|------|----------|
+| ------ | ---- | ------ | ---------- |
 | hermes | 100.73.61.56 | Hub | NATS JetStream, Agamemnon (C++), Nestor (C++), Hermes bridge (Python), Prometheus, Loki, Grafana, argus-exporter |
 | epimetheus | 100.92.173.32 | Remote worker | hello-myrmidon Python worker only |
 
 ### Topology Comparison
 
 | Dimension | Old crosshost (`docker-compose.crosshost.yml`) | New hub+worker (`docker-compose.hermes-hub.yml`) |
-|-----------|-----------------------------------------------|--------------------------------------------------|
+| ----------- | ----------------------------------------------- | -------------------------------------------------- |
 | epimetheus | Worker host (NATS, Agamemnon, most services) | Single remote worker (myrmidon only) |
 | hermes | Control host (Nestor native binary) | Hub host (ALL services in compose) |
 | NATS location | epimetheus | hermes |
@@ -188,6 +188,6 @@ print('OK: cross-host myrmidon connection confirmed')
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | 2026-04-20 session implementing hermes-hub topology | Scripts written, reviewed, not yet executed end-to-end |
 | Odysseus | 2026-04-27 Atlas first-run session on epimetheus | End-to-end validated: epimetheus + apollo + hermes myrmidon workers, 6 NATS connections at peak |

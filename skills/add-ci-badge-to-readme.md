@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | add-ci-badge-to-readme |
 | **Category** | documentation |
 | **Complexity** | Low |
@@ -69,7 +69,7 @@ user-invocable: false
 ## Results & Parameters
 
 | Parameter | Value Used | Notes |
-|-----------|-----------|-------|
+| ----------- | ----------- | ------- |
 | Workflow file | `comprehensive-tests.yml` | Confirmed present before editing |
 | Badge branch | `?branch=main` | Always pin to main for stability |
 | Badge placement | After last existing badge | Keeps badge block together |
@@ -84,6 +84,6 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Writing tests | Issue template requested pytest tests for "new functionality" | There is no Python code — the change is a one-line README edit with no testable logic | Skip test writing for pure documentation changes; do not follow issue template boilerplate blindly |
 | Running `just pre-commit-all` | Tried the justfile shortcut | `just` not on PATH in this environment | Fall back to `pixi run pre-commit run --files README.md` directly |

@@ -36,7 +36,7 @@ from shared.core.layers.linear import Linear  # works
 ### Activated
 
 | Symbol | Why Ready |
-|--------|-----------|
+| -------- | ----------- |
 | `Linear` | `struct Linear` in `shared/core/layers/linear.mojo` |
 | `Conv2dLayer` + `Conv2D` alias | `struct Conv2dLayer` in `shared/core/layers/conv2d.mojo` |
 | `ReLULayer` + `ReLU` alias | `struct ReLULayer` in `shared/core/layers/relu.mojo` |
@@ -54,7 +54,7 @@ from shared.core.layers.linear import Linear  # works
 ### Not Activated
 
 | Symbol | Reason |
-|--------|--------|
+| -------- | -------- |
 | `SGD, Adam, AdamW` | Only step-functions exist (`sgd_step`, `adam_step`), no struct classes |
 | `Sequential` | Only `Sequential2/3/4/5` (parametric), no single `Sequential` |
 | `TensorDataset, ImageDataset` | Only `ExTensorDataset` exists |

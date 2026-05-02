@@ -14,7 +14,7 @@ tags: [research, corpus, exec-summary, overhead, TPOT, FLOPs, latency, honesty, 
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-18 |
 | **Objective** | Prevent misleading executive summaries that bury the dominant cost metric in body sections while showing only a favorable metric up front |
 | **Outcome** | Rule established during remediation of research_6_1_inarch_ar_loop.md where FLOPs overhead was +0.18% but TPOT overhead was W x 1.5-2.5x — the exec summary only showed FLOPs |
@@ -66,7 +66,7 @@ tags: [research, corpus, exec-summary, overhead, TPOT, FLOPs, latency, honesty, 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Exec summary with FLOPs-only overhead row | Showed +0.18% FLOPs overhead in exec summary table; TPOT multiplier buried in section 6 | Creates misleading first impression that the idea is nearly free; reader who skims only the exec summary concludes overhead is negligible | The exec summary is the most-read section — it must contain the most important cost metric, even if unfavorable |
 | TPOT mentioned in prose below table but not in the table itself | Added a sentence after the table mentioning TPOT | Readers scan the table, not the prose; the table is the "contract" of the exec summary | The dominant overhead metric must be a row in the table, not prose commentary |
 
@@ -100,5 +100,5 @@ IF idea introduces sequential passes (W > 1) per output token:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ArchIdeas corpus | Quality remediation of research_6_1_inarch_ar_loop.md | Apr 2026 — exec summary was missing TPOT row; FLOPs showed +0.18% while TPOT was W x 1.5-2.5x; added TPOT row with warning callout |

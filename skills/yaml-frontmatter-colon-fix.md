@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Name | yaml-frontmatter-colon-fix |
 | Category | tooling |
 | Language | Python |
@@ -86,7 +86,7 @@ All tests should pass, including the new regression cases.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Keep `partition(':')` but strip quotes | Strip `"` and `'` after splitting on first colon | Still wrong: `"Create PR linked to issue: #123"` → `"Create PR linked to issue` (truncated before strip) | The colon is inside the value, not separating key from value — stripping quotes does not help |
 | Use `split(':', 1)` | Split at most once, take `[1]` as value | Same root cause: still splits at the first colon even when it is inside a quoted string | Only a real YAML parser understands quoting rules |
 | Regex to detect quoted values | Match `key: "value with: colons"` | Fragile; does not handle multi-line values, escape sequences, or other YAML syntax | Use the YAML spec instead of reimplementing it |
@@ -96,7 +96,7 @@ All tests should pass, including the new regression cases.
 ### Key parameters
 
 | Parameter | Value | Notes |
-|-----------|-------|-------|
+| ----------- | ------- | ------- |
 | PyYAML function | `yaml.safe_load()` | Use `safe_load`, never `load()` — avoids arbitrary code execution |
 | Fallback on parse error | `{}` | Catch `yaml.YAMLError`, return empty dict to avoid crashing |
 | Type check after parse | `isinstance(parsed, dict)` | `yaml.safe_load` on empty string returns `None`; guard against it |

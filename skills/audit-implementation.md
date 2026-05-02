@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Skill | audit-implementation |
 | Category | tooling |
 | Complexity | Medium |
@@ -47,7 +47,7 @@ Translates repository audit findings into concrete, shippable fixes via feature 
 Categorize each finding before touching any code:
 
 | Category | Action | Example |
-|----------|--------|---------|
+| ---------- | -------- | --------- |
 | Quick fix | Include in batch PR | Duplicate hook, stale badge count |
 | Pragmatic improvement | Include if safe | Add CI warning annotation |
 | Verify first | Check before acting | "Missing CODE_OF_CONDUCT.md" — may already exist |
@@ -86,7 +86,7 @@ List what was NOT implemented and why, so the audit trail is complete.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Remove Semgrep continue-on-error outright | Simply deleting `continue-on-error: true` from security.yml | Would break SARIF upload to GitHub Security tab — Semgrep exits non-zero when it finds issues | Add warning annotations downstream instead of removing safety mechanisms |
 | Trust audit finding about missing CODE_OF_CONDUCT.md | Planned to create new file | File already existed — audit was incorrect | Always verify findings with filesystem checks before implementing |
 | Update README test count to exact number (540) | Considered updating badge to exact file count | Badge script uses "N+" format and has 10% drift tolerance | Match existing convention (498+) rather than switching to exact counts |

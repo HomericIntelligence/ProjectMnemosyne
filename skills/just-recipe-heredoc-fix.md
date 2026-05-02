@@ -10,7 +10,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `just` parse error: "Recipe line has inconsistent leading whitespace" when a `#!/usr/bin/env bash` recipe contains a heredoc (`<<EOF`) whose body lines have different indentation than the recipe body |
 | **Root Cause** | `just` requires all lines in a recipe body to share the same leading whitespace prefix. Heredoc body lines (e.g., 2-space indent) conflict with the recipe's 4-space indent, and the heredoc terminator (e.g., `ENTRY`) at column 0 triggers the error |
 | **Fix** | Replace the heredoc with `printf` using format strings and argument lists |
@@ -74,7 +74,7 @@ just --list | grep <recipe-name>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Heredoc with `ENTRY` terminator at column 0 | `cat >> "$OUTPUT" <<ENTRY\n  {...}\nENTRY` | `just` "inconsistent leading whitespace" — terminator at column 0 doesn't match recipe's 4-space indent | `just` validates whitespace of ALL lines in recipe body, including heredoc terminators |
 | Indented heredoc terminator (`ENTRY`) | Tried indenting the `ENTRY` terminator to match recipe indent | bash heredoc terminators must be at column 0 (or use `<<-` with tab-only indent) — mixing bash and just constraints makes this impossible cleanly | bash and just have conflicting whitespace requirements for heredoc terminators |
 | `<<-ENTRY` with tabs | Considered using `<<-` (strip leading tabs) with tab-indented body | Recipe already uses spaces throughout; mixing tabs only for the heredoc body creates a maintenance hazard | `printf` is simpler and avoids the bash/just whitespace conflict entirely |

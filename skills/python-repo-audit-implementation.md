@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Repo** | HomericIntelligence/ProjectHephaestus |
 | **Audit score before** | B / 81% |
 | **Phases completed** | 9 (all Critical + Major findings) |
@@ -252,7 +252,7 @@ considerations (no hardcoded secrets, safe deserialization opt-in, HTTPS-only do
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Force single subprocess signature for all callers | Make `run_subprocess` return `(bool, str)` to match `run_command` API | `git/changelog.py` and `github/pr_merge.py` need different return types | Keep `run_subprocess` returning `CompletedProcess`; write thin adapter wrappers per-module |
 | Remove `log_context` without checking all barrel files | Deleted from `logging/utils.py` and updated `logging/__init__.py` | `hephaestus/__init__.py` and integration tests also imported `log_context` — missed on first pass | After removing any symbol, grep ALL `__init__.py` files AND test files for the removed name before running tests |
 | Catch `TimeoutExpired` inside `run_subprocess` | Swallow `subprocess.TimeoutExpired` inside the main wrapper | `system/info.py` tests assert `(False, "")` return — if timeout is swallowed at wrapper level, callers wanting to propagate it lose the exception | Keep `run_subprocess` transparent; handle `TimeoutExpired` in the thin adapter wrapper (`run_command` in `system/info.py`) |
@@ -270,7 +270,7 @@ Coverage: 76.22% (threshold: 75%)
 ### Estimated Audit Score Improvements
 
 | Section | Before | After (est.) |
-|---------|--------|--------------|
+| --------- | -------- | -------------- |
 | Security | C+ (72%) | B+ (87%) |
 | Safety & Reliability | C (70%) | B (82%) |
 | Source Code Quality | B- (78%) | B+ (85%) |

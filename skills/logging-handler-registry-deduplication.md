@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Fix `get_logger()` adding duplicate handlers when called multiple times for the same logger name, and allow incremental handler addition (e.g., file handler on second call) |
 | **Outcome** | Successful — two verified approaches: module-level registry (v1) and isinstance-based inspection (v2) |
@@ -118,7 +118,7 @@ def get_logger(name: str, log_file: str | None = None) -> logging.Logger:
 ### When to prefer each approach
 
 | Criterion | Approach A (isinstance) | Approach B (registry) |
-|-----------|------------------------|----------------------|
+| ----------- | ------------------------ | ---------------------- |
 | External state | None | Module-level dict |
 | Test cleanup | No cleanup needed | Must clear registry between tests |
 | Custom handler types | Requires isinstance checks for each type | Just add a string key |
@@ -127,7 +127,7 @@ def get_logger(name: str, log_file: str | None = None) -> logging.Logger:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `if not logger.handlers` guard | Check if logger already has any handlers before adding | All-or-nothing: blocks adding file handler on second call; doesn't prevent duplicates if handlers are removed and re-added | Track handler types individually, not just presence/absence |
 | Check `type(h)` without attribute inspection | Inspect `type(h)` for existing handlers | Doesn't distinguish between two different file paths; would need to inspect `baseFilename` attribute | Must compare `baseFilename` (absolute path) to deduplicate file handlers |
 | Rely on `propagate=True` (default) | Let parent loggers handle output | Parent + child both emit when both have handlers, causing duplicate lines | Set `propagate=False` on any logger that has its own handlers |
@@ -161,6 +161,6 @@ logger5 = get_logger("app", level=logging.DEBUG)  # Level changed to DEBUG
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #32 — PR #70 | Fixed duplicate console handlers with registry approach, 389 tests pass |
 | ProjectHephaestus | Issue #54 — PR #98 | Fixed file handler silently dropped on subsequent calls with isinstance approach, 438 tests pass |

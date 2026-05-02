@@ -106,9 +106,9 @@ class TestMarketplaceSchema:
 
     def test_all_plugin_categories_valid(self):
         for plugin in self.marketplace["plugins"]:
-            assert plugin["category"] in VALID_CATEGORIES, (
-                f"Plugin '{plugin.get('name')}' has invalid category: {plugin['category']}"
-            )
+            assert (
+                plugin["category"] in VALID_CATEGORIES
+            ), f"Plugin '{plugin.get('name')}' has invalid category: {plugin['category']}"
 
 
 # ---------------------------------------------------------------------------

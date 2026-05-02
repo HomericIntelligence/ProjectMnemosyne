@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Language | Mojo |
 | Domain | ML / Neural Network backward passes |
 | Issue Type | Naming inconsistency across gradient container types |
@@ -78,7 +78,7 @@ struct Conv2dNoBiasGradient(Copyable, Movable):
 ### Naming convention alignment
 
 | Struct | Used for | Fields |
-|--------|----------|--------|
+| -------- | ---------- | -------- |
 | `GradientPair` | Generic binary ops (add, matmul) | `grad_a`, `grad_b` |
 | `GradientTriple` | Ops with bias (conv2d, linear) | `grad_input`, `grad_weights`, `grad_bias` |
 | `Conv2dNoBiasGradient` | conv2d without bias | `grad_input`, `grad_weights` |
@@ -87,7 +87,7 @@ struct Conv2dNoBiasGradient(Copyable, Movable):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Add computed property aliases to GradientPair | Add `grad_input` as alias for `grad_a` | Mojo v0.26.1 doesn't support computed properties / property getters on structs | Create a new domain-specific struct instead |
 | Rename GradientPair fields globally | Change `grad_a`/`grad_b` to `grad_input`/`grad_weights` everywhere | Would break all non-conv callers (add_backward, etc.) that use generic names | Keep GradientPair generic; add new structs only for conv domain |
 | Add option 3 (just comments) from issue | Document ordering in gradient_types.mojo | Doesn't solve the type-safety problem — callers still need to know ordering | Semantic field names are the right fix |

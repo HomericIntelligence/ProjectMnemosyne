@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-03 |
 | Objective | Fix blue screen after clicking Start caused by Havok WASM 404 in Vite dev server |
 | Outcome | Success — game renders field, players, ball after fix |
@@ -110,7 +110,7 @@ npx vite build      # must succeed
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

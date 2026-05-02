@@ -20,10 +20,10 @@ Created a centralized shared subtests directory with runtime loading:
 ## Results
 
 | Metric | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | Fixture size | 47MB | 1.4MB |
 | config.yaml files | 5,361 | 160 |
-| Lines deleted | - | 120,735 |
+| Lines deleted | --- | 120,735 |
 
 ## Key Files Modified
 

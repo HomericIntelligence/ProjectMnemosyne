@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Fix test asserting specific HTTP status code (503) receiving 500 instead |
 | **Outcome** | Success — test passes after explicitly typing mock attributes; PR #300 merged to main |
@@ -105,7 +105,7 @@ def test_lifespan_degraded_health_returns_503(mock_publisher: MagicMock) -> None
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | Assumed 500 was from `connect.side_effect = OSError(...)` in application logic | The OSError was handled — the 500 came from Pydantic `ValidationError` at serialization time, not from the connect call | Always check where in the request lifecycle a 500 originates; application logic errors vs. response serialization errors are distinct failure points |
 
 ## Results & Parameters
@@ -145,5 +145,5 @@ populated from a mock object must be explicitly set to a value of the correct Py
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHermes | PR #300 — NATS publisher health endpoint test | `test_lifespan_degraded_health_returns_503` in `tests/test_server.py` |

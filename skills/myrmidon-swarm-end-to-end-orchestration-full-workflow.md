@@ -14,7 +14,7 @@ tags: [myrmidon, orchestration, l0-commander, multi-phase, planning, wave, ci, a
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-12 |
 | **Objective** | L0 commander pattern for complex multi-phase myrmidon sessions: cleanup → rebase → PR creation → CI fix → merge → knowledge capture |
 | **Outcome** | Successful — 32→1 worktrees, 6 PRs merged with CI passing, 3 skills created in ProjectMnemosyne |
@@ -272,7 +272,7 @@ git worktree prune
 **Common CI failure patterns in ProjectHephaestus:**
 
 | Failure | Symptom | Fix |
-|---------|---------|-----|
+| --------- | --------- | ----- |
 | pre-commit hook | "Files were modified by this hook" | Run `pre-commit run --all-files`, commit changes |
 | ruff S101 | "Use of assert detected" | Replace `assert x is not None` with `if x is None: raise` |
 | mypy union-attr | "Item of None has no attribute" | Use if/raise guard to narrow type before use |
@@ -410,7 +410,7 @@ Total session (typical):                                         ~1.5-3 hours
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Over-broad Wave 1 agent scope | Agent prompt said "remove stale worktrees" without explicit list | Agent removed too many worktrees before rebase analysis, discarding branches that had unreleased work | Be extremely specific in agent prompts: provide the exact list of worktree paths to remove, not a general instruction |
 | Auto-merge assumption | Enabled auto-merge on all 6 PRs and moved on to Phase 6 | 2 PRs failed pre-commit hooks; auto-merge was blocked and they stayed open | Always monitor CI after PR creation; never assume auto-merge will complete; have Phase 5 fix workflow ready |
 | Forcing PRs for superseded branches | When Wave 2a reported 7/10 branches superseded, considered creating "stub" PRs anyway to match the plan | Would create unnecessary noise PRs that add no value to main | When agents report superseded work, accept the decision and do NOT create PRs; update plan in real time |
@@ -437,7 +437,7 @@ Total session (typical):                                         ~1.5-3 hours
 ### Session Scale Reference (ProjectHephaestus 2026-04-05)
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Starting worktrees | 32 |
 | Ending worktrees | 1 (main only) |
 | PRs created | 6 (Wave 2a) |
@@ -451,7 +451,7 @@ Total session (typical):                                         ~1.5-3 hours
 ### Session Scale Reference (ProjectTelemachy 2026-04-25)
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Issues at start | 57 |
 | Issues remaining at end | 6 (89% closure rate) |
 | PRs created | 17 |
@@ -467,7 +467,7 @@ Total session (typical):                                         ~1.5-3 hours
 ### Ecosystem-Wide Strict Audit Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Repos per batch | 5 (cap from myrmidon-swarm skill) |
 | Batches | 3 (for 15 repos) |
 | Auditor tier | Sonnet (synthesis + evidence-based grading required) |
@@ -484,7 +484,7 @@ Total session (typical):                                         ~1.5-3 hours
 ### Agent Tier Assignment
 
 | Task | Tier | Reason |
-|------|------|--------|
+| ------ | ------ | -------- |
 | Exploration + state gathering | Sonnet | Requires structured output synthesis across many data sources |
 | /advise query | Sonnet | Knowledge retrieval requires semantic matching |
 | Remove stale worktrees | Haiku | Mechanical: rm artifacts + git worktree remove |
@@ -499,7 +499,7 @@ Total session (typical):                                         ~1.5-3 hours
 ### Decision Gates
 
 | Gate | Condition | Action |
-|------|-----------|--------|
+| ------ | ----------- | -------- |
 | Wave 1 pre-flight | Branch list confirmed by exploration | Proceed with exact list |
 | Wave 2a output | Some branches superseded | Do NOT create PRs for them; update PR count expectation |
 | CI post-creation | Any PR has failing required checks | Dispatch Haiku fix agent before proceeding to Phase 6 |
@@ -535,7 +535,7 @@ Total session (typical):                                         ~1.5-3 hours
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | 32 worktrees → 1, 6 PRs created and merged, 3 skills captured, 2026-04-05 | Full L0 session: exploration → plan → approval → 3 waves → 2 CI fixes → 3 parallel /learn agents |
 | ProjectScylla | 64 issues classified, 12 PRs merged, tracking issue #1786 created, 2026-04-12 | Myrmidon swarm triage: classification + batch-fix waves + Phase 7 tracking issue on target repo |
 | ProjectProteus | 43-issue classification + 20 EASY implementations, 2026-04-25 | TypeScript/Bash/YAML repo; auto-merge disabled; no pre-commit hooks; no lockfiles; npm install fix required after typecheck job added |

@@ -14,7 +14,7 @@ tags: [mojo, migration, version-upgrade, agent-coordination, strategy]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-08 |
 | **Objective** | Provide a repeatable strategy for migrating large Mojo codebases across major version boundaries |
 | **Outcome** | Strategy extracted from 0.26.1 → 0.26.3 migration attempt on ~525 .mojo files (ProjectOdyssey) |
@@ -93,7 +93,7 @@ Deprecation warnings don't block CI — address them in a separate PR after hard
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | API probing via test files | Created small test .mojo files to discover correct API behavior | Slow (each requires a full compile cycle); distracts from actual migration | Fetch official docs at `https://docs.modular.com/mojo/std/` instead — always authoritative |
 | Multiple agents on overlapping files | Ran several sub-agents fixing different files simultaneously without file locks | Caused merge conflicts when agents modified the same shared type | Assign agents to non-overlapping directories; one agent per directory subtree |
 | Removing `ImplicitlyCopyable` to fix `List` field | Dropped the trait from `AnyTensor` as the "easy" fix | Caused 62-file cascade of implicit copy errors across the entire codebase | Prefer `InlineArray` field replacement; map cascade depth before choosing approach |
@@ -145,7 +145,7 @@ pixi run mojo package -I . shared -o /tmp/shared.mojopkg 2>&1 | grep ": warning:
 ### When to Fetch Docs vs Probe
 
 | Situation | Action |
-|-----------|--------|
+| ----------- | -------- |
 | Unknown new API signature | Fetch from `https://docs.modular.com/mojo/std/<module>/` |
 | API behavior ambiguous from docs | Write a minimal test file (last resort) |
 | Error message is clear | Fix directly without probing |
@@ -154,5 +154,5 @@ pixi run mojo package -I . shared -o /tmp/shared.mojopkg 2>&1 | grep ": warning:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Mojo 0.26.1 → 0.26.3 migration, ~525 .mojo files, 7807 fn definitions | Migration in progress; strategy developed from first migration attempt |

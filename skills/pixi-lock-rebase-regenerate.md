@@ -14,7 +14,7 @@ tags: [dependabot, pixi, rebase, pixi-lock, ci-cd]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-21 |
 | **Objective** | Correctly resolve `pixi.lock` staleness after `git rebase` or main-branch advancement without producing an invalid lock file |
 | **Outcome** | Eliminates `lock-file not up-to-date` CI failures; multi-branch parallel fix completes 5 PRs in ~1 minute |
@@ -314,7 +314,7 @@ done
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `git checkout --theirs pixi.lock` | Accept main's lock during rebase | Main's lock hash is for main's source tree, not the branch | Always delete and regenerate — never accept either side |
 | `git checkout --ours pixi.lock` | Accept branch's lock during rebase | Branch's lock is pre-rebase; doesn't reflect rebased state | Always regenerate with `pixi install` after rebase |
 | `--no-verify` to skip pre-commit | Attempted to bypass lock-file check | Critical violation of repo policy; hook exists to protect CI | Always fix the root cause — the lock file IS wrong, fix it |
@@ -350,7 +350,7 @@ gh pr view <pr-number> --json autoMergeRequest  # verify: should NOT be null
 ### When to Expect Clean Rebase vs. Conflict
 
 | Scenario | What Happens | Action |
-|----------|-------------|--------|
+| ---------- | ------------- | -------- |
 | Branch cut before version bump on main; branch has no pixi.toml changes | Rebase is clean — no pixi.lock conflict | Run `pixi install` anyway; the hash is stale |
 | Branch has pixi.toml changes AND main has pixi.toml changes | Conflict in pixi.lock | Delete pixi.lock, stage, continue rebase, then `pixi install` |
 | Branch has no pixi.toml changes, main has no pixi.toml changes | Rebase clean; pixi.lock may still be stale if any source changed | Run `pixi install` to be safe |
@@ -358,7 +358,7 @@ gh pr view <pr-number> --json autoMergeRequest  # verify: should NOT be null
 ### Timing Reference
 
 | Approach | PRs | Time |
-|----------|-----|------|
+| ---------- | ----- | ------ |
 | Sequential single-branch | 5 | ~10 min |
 | Parallel worktrees | 5 | ~1 min |
 | Break-even point | 3 | Parallel wins at 3+ branches |
@@ -366,7 +366,7 @@ gh pr view <pr-number> --json autoMergeRequest  # verify: should NOT be null
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Multiple PRs on 2026-02-22 with pixi.lock conflicts and CI failures | v1.0.0 |
 | ProjectHephaestus | 5 PRs failed after version bump 0.5.0 to 0.6.0 + resilience subpackage; all fixed via parallel worktrees, 2026-03-30 | v1.1.0 |
 | ProjectScylla | Multiple Dependabot PRs failing CI in 6-12s; fixed sequentially via worktrees; double-rebase pixi.lock skip pattern used on 2 PRs, 2026-04-13 | v1.2.0 |

@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-07 |
 | **Objective** | Implement GitHub issue #3377 — clean up `issue-2722` worktree/branch after PR #3372 merged |
 | **Outcome** | All cleanup already complete; created verification comment + empty commit + PR to close issue |
@@ -145,7 +145,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Searching for code to change | Initially looked for source files related to `__hash__` | No code changes needed — pure git/GitHub cleanup task | Read issue category first; "clean up worktree/branch" = no code |
 | Trying to delete the branch locally | Ran `git branch -d issue-2722` | Branch didn't exist locally — already gone | Check `git branch -a` AND `git ls-remote` for both local + remote |
 
@@ -199,7 +199,7 @@ will skip all checks (no files to check = Skipped for all hooks).
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3377, branch `3377-auto-impl`, PR #4044 | Verifying cleanup of `issue-2722` worktree/branch after PR #3372 merged |
 
 ## Related Skills

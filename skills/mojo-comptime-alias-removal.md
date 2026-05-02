@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-05 |
 | **Objective** | Remove 6 deprecated `comptime` type aliases from `shared/core/conv.mojo` and update all usages to use `GradientTriple`, `GradientPair`, `GradientQuad` directly |
 | **Outcome** | All 6 aliases removed, 5 files updated, pre-commit hooks pass, PR #3264 created |
@@ -54,7 +54,7 @@ Use this workflow when you need to:
 3. **Map each alias to its replacement type**:
 
    | Deprecated Alias | Replacement Type |
-   |-----------------|-----------------|
+   | ----------------- | ----------------- |
    | `OldName` | `NewType` |
 
 ### Phase 2: Remove Alias Definitions
@@ -204,7 +204,7 @@ pixi run pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Adding `GradientTriple` import to `layers/conv2d.mojo` | Added `from shared.core.gradient_types import GradientTriple` because the old import included `Conv2dBackwardResult` | The type is only used in a comment, not in actual code | Check whether a type is used as an actual annotation before adding imports; comments don't need imports |
 | Leaving layer file comment unchanged | Left "The Conv2dBackwardResult struct is only movable" comment | Comment references deleted type, causing confusion | Update all comments that reference removed type names |
 
@@ -253,7 +253,7 @@ Closes #NNNN
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3064, PR #3264 | [notes.md](../references/notes.md) |
 
 ## Related Skills

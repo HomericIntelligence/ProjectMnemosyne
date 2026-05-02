@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-04 |
 | **Objective** | Replace inline `NOTE:` magic-number comments with named module-level constants that carry the full rationale |
 | **Outcome** | Three `NOTE:` comments in `shared/testing/layer_testers.mojo` replaced with `GRADIENT_CHECK_EPSILON_FLOAT32` / `GRADIENT_CHECK_EPSILON_OTHER` aliases; PR #3201 created |
@@ -147,7 +147,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Adding `alias` inside the struct body | Tried to put the constants as struct-level aliases | Mojo `alias` inside a struct is scoped to the struct; usage sites inside methods can still reference them, but they become struct members rather than module-level names | Place aliases at module scope before the struct for clearest discoverability |
 | Keeping long rationale at usage sites | Left the detailed "Using 1e-5 causes 56% loss..." comment at each usage | Creates duplication — if the constant's value ever changes, all three sites need updating | Move all rationale to the constant definition; keep usage-site comments brief |
 | Using `/commit-commands:commit-push-pr` skill | Attempted to invoke the skill tool | Skill tool may not be available in all execution modes | Fall back to direct `git add/commit/push` + `gh pr create` |
@@ -155,7 +155,7 @@ gh pr merge --auto --rebase
 ## Results & Parameters
 
 | Parameter | Value | Notes |
-|-----------|-------|-------|
+| ----------- | ------- | ------- |
 | Constant name | `GRADIENT_CHECK_EPSILON_FLOAT32` | Descriptive: includes dtype and use case |
 | Constant value | `3e-4` | Unchanged from original magic number |
 | Alias type | `Float64` | Match the type expected by `compute_numerical_gradient` |
@@ -166,5 +166,5 @@ gh pr merge --auto --rebase
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3090, PR #3201 | Branch `3090-auto-impl`; pre-commit passed |

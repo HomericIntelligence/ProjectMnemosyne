@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Skill** | installation-anchor-validator |
 | **Category** | documentation |
 | **Complexity** | Low |
@@ -33,7 +33,7 @@ user-invocable: false
 ### Quick Reference
 
 | Step | Command |
-|------|---------|
+| ------ | --------- |
 | Run script | `python3 scripts/validate_installation_anchors.py README.md docs/getting-started/installation.md` |
 | Run tests | `python3 -m pytest tests/test_validate_installation_anchors.py -v` |
 | Check CI step | see `.github/workflows/link-check.yml` |
@@ -206,7 +206,7 @@ Add the script to the directory listing AND add a full documentation section
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Modifying validate_links.py to check anchors | Considered extending the existing script | It intentionally strips anchors for file-existence checking; changing it would break existing callers | Create a focused additive script instead of modifying an existing one |
 | Using `--include-fragments` in lychee | Considered relying solely on lychee for anchor validation | lychee validates external URLs well but internal markdown anchor resolution is better handled with a Python script that implements GitHub's exact slug algorithm | Python gives full control over the slug algorithm and produces precise error messages |
 | Importing `common.py` in the new script | Considered reusing `get_repo_root()` from common.py | The script needed to be self-contained with `Path(__file__).resolve().parent.parent` for repo root detection; common.py import added complexity for a function not needed in tests | Only import shared modules when the benefit clearly outweighs the coupling |
@@ -230,7 +230,7 @@ slug = slug.strip("-")                     # remove leading/trailing hyphens
 ### Edge cases verified
 
 | Heading | Expected anchor |
-|---------|----------------|
+| --------- | ---------------- |
 | `Installation` | `installation` |
 | `Installing Pixi` | `installing-pixi` |
 | `` `pixi install` fails with channel errors `` | `pixi-install-fails-with-channel-errors` |

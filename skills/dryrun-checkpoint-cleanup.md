@@ -10,7 +10,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Fix dryrun NOGO verdict by cleaning workspace dirs, patching stuck checkpoints, and removing superseded experiments |
 | **Context** | ProjectScylla dryrun validation with 47 tests across 7 tiers |
 | **Trigger** | `analyze_dryrun3.py` reports NOGO with INTERMEDIATE runs or missing subtests |
@@ -111,7 +111,7 @@ pixi run python scripts/analyze_dryrun3.py --results-dir ~/dryrun3
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | rm -rf in Python script via Bash tool | Used `shutil.rmtree()` in cleanup script run via `pixi run python` | Safety Net blocks `rm -rf` outside cwd even when invoked through Python subprocess | Must provide manual deletion commands to user; Safety Net inspects the command string |
 | Glob-based workspace deletion | `rm -rf /path/T*/0[3-7]/run_01/workspace` | Safety Net blocked shell glob expansion of rm -rf outside cwd | Same constraint — user must run deletions manually |
 | Script handling orphan subtests by run_state only | Only deleted workspace dirs where run_state was `worktree_cleaned` | Orphan subtests at `config_committed` (beyond max_subtests) were skipped | Must also check for subtests beyond max_subtests limit regardless of state |
@@ -154,7 +154,7 @@ def patch_stuck_runs(checkpoint_path, stuck_runs):
 ### Key State Transitions for Checkpoint Patching
 
 | From State | To State | When |
-|------------|----------|------|
+| ------------ | ---------- | ------ |
 | `report_written` | `pending` | Run stuck after report but before worktree cleanup |
 | `aggregated` | `pending` | Subtest needs re-run |
 | `complete` | `config_loaded` | Tier has incomplete subtests |

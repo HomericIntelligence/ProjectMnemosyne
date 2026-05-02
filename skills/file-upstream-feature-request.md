@@ -14,7 +14,7 @@ tags: [gh, github, upstream, feature-request, gist, patch, oss, third-party, iss
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | File a well-formed feature request against an upstream OSS repo (`HaywardMorihara/gh-tidy`) with a proposed patch, secret gist link, local env metadata, and a smoke-tested change — without modifying any real repo state |
 | **Outcome** | Issue #62 filed successfully at https://github.com/HaywardMorihara/gh-tidy/issues/62; gist at https://gist.github.com/mvillmow/4b8eedf4e9cdf74760d78ada68fa1ed7 |
@@ -256,7 +256,7 @@ rm -f /tmp/proposed-patch.diff /tmp/issue-body.md
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `yes \| gh tidy` for smoke test | Piped `yes` to bypass interactive prompts in `gh tidy` | Fragile for non-interactive automation — output order is unpredictable, prompts may not align with `yes` responses | Use dev-mode env vars (e.g., `GH_TIDY_DEV_MODE=1`) instead of piping `yes` for smoke testing |
 | `cd "$TMPCLONE" && rm -rf "$TMPCLONE"` | Changed into tmp dir, then removed it in the same shell session | Shell issues `getcwd` error after CWD is deleted — benign but alarming and confusing | Always `cd /tmp` (or any persistent dir) before `rm -rf`-ing the directory you were in |
 | Assigning labels without checking | Assumed common labels like `feature` or `good-first-issue` existed | Labels vary per repo; assigning a non-existent label causes `gh issue create` to fail | Always run `gh label list --repo <owner>/<repo>` before any `--label` argument |
@@ -290,14 +290,14 @@ Apply instructions:
 curl -sL <raw gist URL> | git apply
 ```
 
-## Environment
+## Environment (Template)
 | Component | Value |
 |-----------|-------|
 | Installed version | `<SHA>` |
 | Upstream HEAD | `<SHA>` |
 | gh version | `<version>` |
 
-## Verification
+## Verification (Template)
 Syntax-checked with `bash -n`; smoke-tested with `<DEV_MODE>=1` in throwaway repo.
 ```
 
@@ -323,7 +323,7 @@ gh issue create --repo <owner>/<repo> --title "..." --label <label> --body-file 
 ### Gist Visibility Reference
 
 | Flag | Visibility |
-|------|-----------|
+| ------ | ----------- |
 | `gh gist create` (no flag) | Secret — URL-accessible, not listed on profile |
 | `gh gist create --public` | Public — appears on profile, indexed by search |
 
@@ -332,5 +332,5 @@ Use secret gists for proposed patches on third-party repos to keep your profile 
 ## Verified On
 
 | Project | Context | Outcome |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Filed `--auto-delete` feature request against `HaywardMorihara/gh-tidy` | Issue #62 filed successfully; gist created; /tmp clone cleaned up |

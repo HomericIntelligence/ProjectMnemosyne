@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Rename `retrospective` concept to `learn` across ProjectScylla's Python automation pipeline |
 | **Outcome** | All Python symbols renamed, files renamed with `git mv`, PR HomericIntelligence/ProjectScylla#1734 created |
@@ -107,7 +107,7 @@ on each distinct symbol pattern. Process symbols from most-specific to least-spe
 partial replacements:
 
 | Order | Pattern | Example |
-|-------|---------|---------|
+| ------- | --------- | --------- |
 | 1 | Private helper function | `_run_retrospective` → `_run_learn` |
 | 2 | Private check function | `_retrospective_needs_rerun` → `_learn_needs_rerun` |
 | 3 | Public function | `run_retrospective` → `run_learn` |
@@ -168,7 +168,7 @@ main context after any sub-agent returns.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Sub-agent with worktree isolation | Delegated all code changes + git workflow to a sub-agent | Agent made all file edits correctly but returned without committing, pushing, or creating a PR | Sub-agents may not complete git workflows — run add/commit/push/PR in main context after agent returns |
 | Renaming all occurrences of "retrospective" | Tried replacing every occurrence including prose | Over-replaced prose comments/docstrings ("run a retrospective") | Only rename symbol references, not natural language prose |
 
@@ -205,7 +205,7 @@ prose_left_unchanged: true  # natural language comments
 ### Symbol Categories Reference
 
 | Category | Python Pattern | Rename Strategy |
-|----------|---------------|----------------|
+| ---------- | --------------- | ---------------- |
 | Public function | `def run_retrospective(` | Rename definition + all call sites |
 | Private function | `def _run_retrospective(` | Rename definition + all call sites |
 | Enum variant | `RETROSPECTIVE = auto()` | Rename definition + all references |
@@ -218,5 +218,5 @@ prose_left_unchanged: true  # natural language comments
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1734, rename retrospective → learn in Python automation pipeline | 2026-03-28 session |

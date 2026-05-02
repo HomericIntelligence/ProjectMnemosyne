@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-01 |
 | **Objective** | Configure Renovate bot to auto-update all dependency types in C++20 repos: Conan, CMake FetchContent, pixi, GitHub Actions, Dockerfiles |
 | **Outcome** | Configs created and committed; Renovate app being installed on org |
@@ -48,7 +48,7 @@ tags:
 ### Renovate Manager Support
 
 | Ecosystem | Renovate Manager | Native? | Used In |
-|-----------|-----------------|---------|---------|
+| ----------- | ----------------- | --------- | --------- |
 | Conan 2.x (`conanfile.py`) | `conan` | Yes | C++ repos |
 | pixi.toml (conda-forge) | `pixi` | Yes | C++ repos |
 | CMake FetchContent (`GIT_TAG`) | `regex` (custom) | No | C++ repos with nats.c |
@@ -126,7 +126,7 @@ The `ignorePaths` prevents Renovate from scanning submodule directories — each
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Dependabot for Conan | Considered GitHub Dependabot | Dependabot has no native Conan, pixi, or FetchContent support | Renovate is the correct choice for C++ ecosystems — much broader manager coverage |
 | Single config for meta-repo + submodules | Tried one renovate.json at Odysseus root to cover everything | Submodules are separate git repos — Renovate needs a config per repo to open PRs | Use `ignorePaths` in the meta-repo config, put individual configs in each submodule |
 
@@ -155,7 +155,7 @@ repos_configured:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | Meta-repo config | ignorePaths for submodules, GH Actions auto-merge |
 | ProjectAgamemnon | C++20 repo config | Conan + FetchContent regex + pixi + GH Actions + Dockerfile |
 | ProjectNestor | C++20 repo config | Same as Agamemnon |

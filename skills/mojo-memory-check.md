@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Validate Mojo ownership and borrowing rules. - Reviewing code for memory safety - Debugging memory or segfault issues |
 | Outcome | Operational |
@@ -60,7 +60,7 @@ fn modify(mut data: Tensor):
 ## Error Handling
 
 | Error | Cause | Solution |
-|-------|-------|----------|
+| ------- | ------- | ---------- |
 | `Use after move` | Variable used after ownership transfer | Create copy or don't move |
 | `Dangling reference` | Reference to local variable | Return owned value with `^` |
 | `Mutable aliasing` | Multiple mutable refs to same data | Ensure single mutable reference |
@@ -69,7 +69,7 @@ fn modify(mut data: Tensor):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

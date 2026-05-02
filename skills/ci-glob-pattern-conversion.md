@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Consolidated skill for converting explicit CI filename lists to wildcards, checking glob coverage, and fixing catch-all patterns that cause timeouts |
 | **Outcome** | Merged from 5 source skills: ci-catchall-pattern-timeout-fix, ci-matrix-glob-conversion, ci-workflow-glob-pattern-conversion, mojo-ci-wildcard-pattern-coverage, reenable-flaky-ci-test-group |
@@ -88,7 +88,7 @@ grep -A2 '"Shared Infra"' .github/workflows/comprehensive-tests.yml
 **Key insight**: Wildcard groups auto-discover new files; explicit filename groups do not.
 
 | Pattern contains `*`? | Action |
-|-----------------------|--------|
+| ----------------------- | -------- |
 | Yes (`test_*.mojo`) | No CI update needed — new files auto-discovered |
 | No (explicit names) | Add new filenames to pattern |
 
@@ -106,7 +106,7 @@ grep -A2 '"Shared Infra"' .github/workflows/comprehensive-tests.yml
    ```
 
    | Explicit files | Replacement glob |
-   |----------------|-----------------|
+   | ---------------- | ----------------- |
    | `test_activation_ops.mojo` | `test_activation_ops*.mojo` |
    | `test_unsigned.mojo test_unsigned_part2.mojo test_unsigned_part3.mojo` | `test_unsigned*.mojo` |
    | `test_uint_bitwise_not.mojo` | `test_uint*.mojo` (verify no collision) |
@@ -236,7 +236,7 @@ python3 scripts/validate_test_coverage.py
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Used Edit tool to modify workflow YAML | Called Edit tool with old/new strings on `.github/workflows/comprehensive-tests.yml` | Pre-tool security hook returned an error, blocking the edit | Use inline `python3 -c` via Bash for workflow file edits — the security hook is advisory but Edit tool treats hook errors as blockers |
 | Editing Data group pattern (wildcard already present) | Added explicit part filenames to `test_*.mojo` pattern | Unnecessary — wildcard already matched new files | Check pattern type before editing CI YAML |
 | Updating validate_test_coverage.py exclusions for split files | Added new part filenames to excluded list | Wrong direction — files should be included, not excluded | `validate_test_coverage.py` exclusions are for files that should NOT be in CI |
@@ -264,7 +264,7 @@ python3 scripts/validate_test_coverage.py; echo "Exit: $?"
 ### Glob Wildcard Groups vs Explicit Groups
 
 | Group type | Behavior | Action after split |
-|-----------|----------|-------------------|
+| ----------- | ---------- | ------------------- |
 | `test_*.mojo` (wildcard) | Auto-discovers new `test_foo_partN.mojo` files | No CI update needed |
 | `test_foo.mojo test_bar.mojo` (explicit) | Will NOT pick up new split files | Must add new filenames |
 
@@ -289,7 +289,7 @@ gh pr merge --auto --rebase <pr-number>
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #4246, PR #4878 | check_stale_patterns() implementation |
 | ProjectOdyssey | CI comprehensive-tests.yml | Catch-all pattern timeout fix; 247 files covered with 0 orphans |
 | ProjectOdyssey | Test file splits | Wildcard coverage check for multiple test groups |

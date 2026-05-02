@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Surface `scripts/*.py` files with no references in `.github/`, `justfile`, `.pre-commit-config.yaml`, or other `scripts/*.py` files |
 | **Output** | `WARNING: possibly stale: scripts/<name>` lines; always exits 0 (warning, not hard failure) |
 | **Trigger** | Pre-commit hook fires on `^scripts/.*\.py$` changes |
@@ -146,7 +146,7 @@ Add to `.pre-commit-config.yaml` inside the existing `- repo: local` block:
 Test classes and coverage:
 
 | Class | What it covers |
-|-------|---------------|
+| ------- | --------------- |
 | `TestGetAllScripts` | Only `.py` files returned, sorted, empty dir |
 | `TestGetReferenceTargets` | justfile, `.pre-commit-config.yaml`, `.github/` workflows, missing files excluded |
 | `TestFindReferences` | Found in justfile, not found, self-reference excluded, cross-script reference |
@@ -168,7 +168,7 @@ def test_cross_script_reference(self, tmp_path: Path) -> None:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Match import names without `.py` | `from util import helper` → search for `"util.py"` | Import statement uses module name, not filename | Basename matching (with `.py`) is correct; cross-script references should use the full filename in subprocess calls or comments, not bare imports |
 | Hard failure (exit 1) on stale candidates | Exit non-zero to force cleanup | Too aggressive — legitimate one-time scripts used during setup would block future commits | Always exit 0 for stale detection; this is discovery tooling, not enforcement |
 

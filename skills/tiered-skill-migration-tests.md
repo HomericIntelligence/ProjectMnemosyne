@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Name | tiered-skill-migration-tests |
 | Category | testing |
 | Description | Pattern for parametrized pytest tests covering auxiliary subdir copying during skill migration for tier-1 and tier-2 skills |
@@ -71,7 +71,7 @@ pixi run python -m pytest tests/scripts/test_migrate_odyssey_skills.py -v -k "Ti
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Combining tier-1 and top-level tests | Reused the `make_skill_dir()` helper for tiered skills | Helper creates dirs at `skills_root/<name>` not `skills_root/tier-{tier}/<name>` | Separate helper `make_tiered_skill_dir()` needed for correct path structure |
 | Asserting only directory existence | Checked `dest_dir.exists()` without checking file contents | Passes even if `shutil.copytree` copies an empty directory | Always assert specific files AND read their contents to confirm full copy |
 

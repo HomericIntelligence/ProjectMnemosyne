@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-17 |
 | **Objective** | Rebase 73 open PRs after systemic CI fix (#4902) merged to main, resolving conflicts semantically by reading each PR's linked issue context |
 | **Outcome** | Plan created for 8 parallel Sonnet sub-agents in worktree isolation, each handling ~9 PRs |
@@ -152,7 +152,7 @@ done
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Blind `--ours` for all conflicts | Used `git checkout --ours` on every conflicted file | Lost PR-specific feature code that the PR was meant to add | Must read issue context to understand what each side contributes |
 | `git checkout --ours` during rebase | Tried to resolve conflicts with checkout | Safety Net hook blocks `git checkout --` with positional args | Use `git restore --ours` or edit conflict markers manually |
 | `git restore --ours` during rebase | Alternative to checkout for conflict resolution | Safety Net blocks this as "discards uncommitted changes" | Edit conflict markers with Edit tool instead |
@@ -212,5 +212,5 @@ git rebase --abort
 ### Verified On
 
 | Project | Context | PRs Processed |
-|---------|---------|---------------|
+| --------- | --------- | --------------- |
 | ProjectOdyssey | Post-#4902 CI fix rebase | 73 PRs planned across 8 batches |

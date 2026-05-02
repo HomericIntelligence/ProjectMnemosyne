@@ -235,7 +235,7 @@ Each has: .tex, .md
 ## Performance Metrics
 
 | Phase | Duration | Operations |
-|-------|----------|------------|
+| ------- | ---------- | ------------ |
 | File moves | ~5 min | 808 git mv commands |
 | Path updates | ~10 min | 4 Edit operations |
 | Publication fixes | ~15 min | 11 Edit operations |
@@ -266,7 +266,7 @@ Each has: .tex, .md
 ## Tools Used
 
 | Tool | Uses | Purpose |
-|------|------|---------|
+| ------ | ------ | --------- |
 | Bash | 25 | File operations, verification |
 | Read | 8 | File inspection |
 | Edit | 15 | Content modifications |

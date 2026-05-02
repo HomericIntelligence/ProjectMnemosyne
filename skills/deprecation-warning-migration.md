@@ -11,13 +11,13 @@ user-invocable: false
 
 ## Overview
 
-| Field     | Value                                                                          |
-|-----------|--------------------------------------------------------------------------------|
-| Date      | 2026-02-20                                                                     |
-| Issues    | #728, #787                                                                     |
-| PRs       | #779, #835                                                                     |
+| Field | Value |
+| ----------- | -------------------------------------------------------------------------------- |
+| Date | 2026-02-20 |
+| Issues | #728, #787 |
+| PRs | #779, #835 |
 | Objective | Deprecate a plain `@dataclass` by adding a Pydantic `BaseModel` replacement and a `__post_init__` `DeprecationWarning` |
-| Outcome   | Success — pattern proven twice; 2284 tests pass, all pre-commit hooks pass     |
+| Outcome | Success — pattern proven twice; 2284 tests pass, all pre-commit hooks pass |
 
 ## When to Use
 
@@ -239,12 +239,12 @@ print(m.model_dump())
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Files modified | 5 |
 | Tests added | 9 (6 `TestRunMetricsBase` + 3 `TestBaseRunMetricsBackwardCompatibility`) |
 | Total tests passing | 2284 |

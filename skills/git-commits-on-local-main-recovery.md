@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Recover commits made on local main and move them to a feature branch for PR submission |
 | **Outcome** | Successful — branch created, pushed, PR #302 opened in ProjectHephaestus |
@@ -100,7 +100,7 @@ gh pr merge <PR-number> --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `git push origin main` | Push commits directly to protected main | Branch protection rules reject direct pushes to main | Never push directly to main; always use a feature branch + PR |
 | `git reset --hard origin/main` | Undo all commits to start fresh | This destroys all the uncommitted work in local history | Never use reset --hard when there is work to save; create the branch first |
 
@@ -157,5 +157,5 @@ $ git push -u origin feat/automation-6-phase-pipeline
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | 6 automation pipeline commits on local main | PR #302 opened via feat/automation-6-phase-pipeline |

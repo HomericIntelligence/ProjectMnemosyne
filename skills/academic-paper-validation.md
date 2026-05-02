@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-05 (v1.0.0), 2026-02-06 (v2.0.0), 2026-02-22 (v2.1.0), 2026-04-06–08 (v3.0.0), 2026-04-27 (v3.1.0) |
 | **Objective** | Validate and improve academic paper quality through systematic data accuracy checks, statistical rigor improvements, LaTeX fixes, and noise reduction |
 | **Outcome** | v1.0.0: Fixed contractions, colloquialisms, broken paths, statistical language (N=1 dryrun). v2.0.0: Fixed 2 data errors, 2 typos, 12+ statistical claims, 11 cross-references, removed 3 degenerate figures. v2.1.0: Fix pipeline → regenerate data → fix paper text pattern, Holm-Bonferroni family size, SRH degenerate framing, Cliff's delta citation. v3.0.0: Verified 60+ quantitative claims, caught statistical method naming error (Dunn's vs Mann-Whitney U), caught incorrect pairwise comparison count (21 vs 7), fixed Unicode/table/path issues, built arXiv submission. v3.1.0: Added pipeline-side underscore escaping pattern for Python table generators that emit LaTeX |
@@ -506,7 +506,7 @@ grep "figures/\*\." build.sh  # Verify glob matches actual format
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempting to fix all issues in parallel | Made multiple types of edits simultaneously (data fixes + language + formatting) | Hard to track which changes addressed which issues; critical data errors missed | Work through phases sequentially — data accuracy MUST come first |
 | Using `replace_all=true` for statistical language | Replaced all instances of "confirms" at once | Some uses of "confirms" are appropriate (methodology context) — blanket replacement broke them | Manually review each instance in context; use `replace_all=false` with enough surrounding context |
 | Removing "validates" from all contexts | Initial plan was to replace "validates" along with "confirms/proves/demonstrates" | "Validates" is appropriate when discussing methodology validation (not results generalization) | Keep "validates" for pipeline/methodology/design validation; only hedge causal claims about results |
@@ -570,7 +570,7 @@ git commit -m "..."    # commit again
 ### Data Validation Results
 
 | Issue | Paper Claim | Actual Data | Fixed To |
-|-------|-------------|-------------|----------|
+| ------- | ------------- | ------------- | ---------- |
 | Fig 14 correlation | ">0.85" | 0.333/-0.273/-0.522 (Spearman) | "Low-to-moderate correlations, Opus-Sonnet highest (r=0.706)" |
 | Functional scores | "0.95-1.00" | All exactly 1.00 | "Perfect functional scores (1.00)" |
 | Cache read % | "80-99%" | 79.3-83.1% | "~79-83%" |
@@ -579,7 +579,7 @@ git commit -m "..."    # commit again
 ### Statistical Methodology Fixes
 
 | Severity | Issue | Paper Claim | Actual Data | Fix Applied |
-|----------|-------|-------------|-------------|-------------|
+| ---------- | ------- | ------------- | ------------- | ------------- |
 | Critical | Token column semantics | No label | Tier rows = per-run means, Total row = absolute totals | Added footnote to tab05_cost_analysis.tex |
 | Important | Statistical test name | "Dunn's test" | `u_statistic` field in JSON = Mann-Whitney U | Changed to "Mann-Whitney U test" in 4 locations |
 | Important | Comparison count | "21 pairwise comparisons C(7,2)" | 7 comparisons in statistical_results.json | Changed to "7 planned comparisons (6 adjacent + T0-T6)" |
@@ -589,7 +589,7 @@ git commit -m "..."    # commit again
 ### Power Analysis Reference Values (Haiku paper example)
 
 | Transition | N1, N2 | Observed δ | Power@observed | Power@medium(0.3) |
-|------------|--------|------------|----------------|-------------------|
+| ------------ | -------- | ------------ | ---------------- | ------------------- |
 | T0→T1 | 117, 83 | 0.094 | 0.20 | 0.95 |
 | T1→T2 | 83, 130 | 0.096 | 0.22 | 0.96 |
 | T2→T3 | 130, 122 | -0.068 | 0.16 | 0.98 |
@@ -635,7 +635,7 @@ Key insight: T0–T4 null results reflect genuinely small effects (power 0.95–
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Haiku analysis paper LaTeX build (2026-04-06–08) | v3.0.0: Verified 60+ quantitative claims, caught statistical method naming error, fixed Unicode/table/path issues, built arXiv submission |
 | ProjectScylla | Haiku paper paragraph-level data validation (2026-04-27) | v3.1.0: Fixed tectonic "Missing $ inserted" error in tab04_criteria_performance.tex by escaping underscores in static table AND fixing Python pipeline (`src/scylla/analysis/tables/comparison.py:587`); `pixi run paper-build` succeeds (57 pages, 1,003 KiB), all 3 table04 pytest tests pass |
 

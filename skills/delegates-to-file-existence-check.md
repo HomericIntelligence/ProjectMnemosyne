@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `delegates_to` fields in agent frontmatter can reference agents that no longer exist, silently creating broken delegation chains |
 | **Solution** | Build a set of known agent stems at validator init time; check each `delegates_to` name against this set during frontmatter validation |
 | **Scope** | `AgentConfigValidator` class in `tests/agents/validate_configs.py` |
@@ -142,7 +142,7 @@ def test_all_agent_delegates_to_references_exist(self) -> None:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Lazy lookup per validation | Re-glob the agents directory on each `_validate_frontmatter` call | Would be slow for large directories and misses the point of a single-pass validator | Build the set once at `__init__` time |
 | Storing full paths instead of stems | `existing_agents = {f for f in agents_dir.glob("*.md")}` | Comparison against string names from frontmatter always fails | Store stems (`f.stem`) not full `Path` objects |
 | Warning instead of error | Treating missing refs as warnings | Warnings don't fail CI; stale references are definite bugs not style issues | Use `errors.append(...)`, not `warnings.append(...)` |
@@ -188,7 +188,7 @@ if "delegates_to" in frontmatter:
 ### Files changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `tests/agents/validate_configs.py` | Added `existing_agents` set to `__init__`; added `delegates_to` check in `_validate_frontmatter` |
 | `.claude/agents/security-specialist.md` | Removed stale `senior-implementation-engineer` from `delegates_to` |
 | `tests/agents/test_validate_delegates_to.py` | 16 new pytest tests (new file) |

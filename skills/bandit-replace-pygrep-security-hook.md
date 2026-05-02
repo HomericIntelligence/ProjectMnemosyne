@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-05 |
 | **Objective** | Replace naive `shell=True` pygrep hook with bandit for accurate AST-based Python security scanning |
 | **Outcome** | Zero false positives, 2 suppressions, catches 20+ vulnerability classes |
@@ -50,7 +50,7 @@ Key: `-ll` means **medium+ severity** (not "low level" as the flag name implies)
 Common finding patterns in ML/data science projects:
 
 | Bandit ID | Description | Typical Verdict |
-|-----------|-------------|-----------------|
+| ----------- | ------------- | ----------------- |
 | B310 | `urlopen` with controlled URLs | Skip — intentional download scripts |
 | B202 | `tarfile.extractall` without validation | Skip — dataset extraction scripts |
 | B108 | Hardcoded `/tmp` directory | Add `# nosec B108` inline |
@@ -119,14 +119,14 @@ pixi run pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `-ll` thinking it means "low level" | Expected it to flag only high-confidence issues | `-ll` actually means MEDIUM+ severity (not low), causing confusion about threshold | `-l` = LOW+, `-ll` = MEDIUM+, `-lll` = HIGH+ |
 | Keeping B108 in skip list | Skipped all hardcoded /tmp warnings globally | Better to use inline `# nosec B108` so the skip is scoped and documented | Inline suppressions are more precise than global skips |
 
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Severity threshold | `-ll` (medium and above) |
 | Skipped test IDs | `B310` (urlopen), `B202` (tarfile) |
 | Inline suppressions | 2x `# nosec B108` |
@@ -137,7 +137,7 @@ pixi run pre-commit run --all-files
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3157, PR #3355 | [notes.md](../../references/notes.md) |
 
 ## Key Takeaway

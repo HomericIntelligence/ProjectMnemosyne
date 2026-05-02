@@ -41,7 +41,7 @@ because multi-line `if` blocks are awkward inside a Dockerfile `RUN python3 -c "
 ## Manual Verification (expected behavior, not run in CI)
 
 | Command | Expected |
-|---------|----------|
+| --------- | ---------- |
 | `docker build .` | Succeeds (no extras) |
 | `docker build --build-arg EXTRAS=analysis .` | Succeeds |
 | `docker build --build-arg EXTRAS=analyysis .` | Fails: `ERROR: Unknown EXTRAS group(s): ['analyysis']. Valid: ['analysis', 'dev']` |

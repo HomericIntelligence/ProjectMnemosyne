@@ -17,7 +17,7 @@ matching the pattern used in CI Dockerfiles for consistency and reproducibility.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-07 |
 | Issue | #3350 (ProjectOdyssey) |
 | PR | #3986 |
@@ -100,7 +100,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | None | The fix was straightforward — find, edit, commit | N/A | When a reference Dockerfile already has the pattern, just replicate it exactly |
 
 ## Results & Parameters
@@ -108,7 +108,7 @@ gh pr merge --auto --rebase
 ### Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `Dockerfile` | +2 lines: `ENV PIXI_VERSION=0.65.0` + updated `RUN` curl; comment updated |
 
 ### Pattern Template (generalize for any curl-installer)
@@ -122,7 +122,7 @@ RUN curl -fsSL https://<tool>.sh/install.sh | TOOL_VERSION=${TOOL_VERSION} bash
 Works for tools whose install scripts honor an env var for version selection, including:
 
 | Tool | Env Var | Install URL |
-|------|---------|-------------|
+| ------ | --------- | ------------- |
 | Pixi | `PIXI_VERSION` | `https://pixi.sh/install.sh` |
 | nvm | `NVM_VERSION` | `https://raw.githubusercontent.com/nvm-sh/nvm/v.../install.sh` |
 | rustup | `RUSTUP_INIT_RELEASE` | `https://sh.rustup.rs` |
@@ -144,7 +144,7 @@ For consistency with `Dockerfile.ci` and cross-stage visibility, `ENV` is the co
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3350, PR #3986 | [notes.md](../references/notes.md) |
 
 ## Related Skills

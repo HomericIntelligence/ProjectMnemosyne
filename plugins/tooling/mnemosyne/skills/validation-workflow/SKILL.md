@@ -11,7 +11,7 @@ CI/CD pipeline for validating skills and auto-generating marketplace.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2025-12-29 |
 | Objective | Automate skill validation and marketplace generation |
 | Outcome | Consistent quality, auto-updated discoverability |
@@ -61,7 +61,7 @@ Copy from this plugin's `scripts/` directory:
 ## Failed Attempts
 
 | Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
+| --------- | ----------- | -------- |
 | No validation on PRs | Bad plugins entered registry | Validate before merge |
 | Manual marketplace.json edits | Out of sync with actual plugins | Auto-generate on merge |
 | Optional failures section | Most valuable info missing | Make it required in validation |

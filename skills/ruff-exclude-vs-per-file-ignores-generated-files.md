@@ -24,7 +24,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-21 |
 | **Objective** | Suppress all ruff processing (lint + format) for a generated file such as `hephaestus/_version.py` produced by `hatch-vcs` |
 | **Outcome** | Success — `ruff format --check` passes after moving from `per-file-ignores` to top-level `exclude` |
@@ -83,7 +83,7 @@ exclude = ["hephaestus/_version.py"]
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | Added `"hephaestus/_version.py" = ["ALL"]` to `[tool.ruff.lint.per-file-ignores]` | Silenced `ruff check` violations but `ruff format --check` still flagged the file because `per-file-ignores` only applies to the `check` subcommand, not to `format` | `per-file-ignores` is scoped to lint rules only; it is under `[tool.ruff.lint]` for a reason |
 | Attempt 2 | Assumed `.gitignore` entry would prevent ruff from scanning the file | `.gitignore` has no effect on ruff; ruff scans whatever files exist on disk regardless of git tracking status | Generated files that exist at lint time must be explicitly excluded in `pyproject.toml` |
 
@@ -92,7 +92,7 @@ exclude = ["hephaestus/_version.py"]
 ### Key Distinction
 
 | Config | Affects `ruff check` | Affects `ruff format` |
-|--------|---------------------|----------------------|
+| -------- | --------------------- | ---------------------- |
 | `[tool.ruff.lint.per-file-ignores]` | Yes — suppresses specific lint rules | **No** |
 | `[tool.ruff] exclude` | Yes — skips file entirely | **Yes — skips file entirely** |
 
@@ -124,5 +124,5 @@ Adding a generated file to `.gitignore` prevents it from being tracked by git, b
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | `hatch-vcs` generates `hephaestus/_version.py` at install time; CI failed on `ruff format --check` | Resolved by moving from `per-file-ignores` to top-level `exclude` |

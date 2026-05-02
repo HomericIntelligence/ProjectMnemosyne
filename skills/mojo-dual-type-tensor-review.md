@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-21 |
 | **Objective** | Design and review a dual-type tensor system for Mojo ML: Tensor[dtype] (compile-time typed) + AnyTensor (runtime typed) |
 | **Outcome** | Architecture validated with 2 blockers, 6 high issues found and documented |
@@ -95,7 +95,7 @@ Categorize as BLOCKER / HIGH / MEDIUM / LOW with specific file:line references a
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Pure parametric ExTensor | Make ExTensor[dtype] the only type | Heterogeneous collections (List[ExTensor], Dict, Batch) break with no trait objects | Mojo 0.26.1 has no existential types; need a type-erased companion |
 | Auto-parameterization for all functions | Rely on `fn relu(t: Tensor) -> Tensor` auto-inference | Return type auto-param fails: "failed to infer parameter dtype" | Must use explicit `[dt: DType]` on every function returning a parametric type |
 | Change __getitem__ to return Float64 | Wider return type to accept more assignments | Float32 can't implicitly convert to Float64 in Mojo; broke 108 call sites | Mojo has zero implicit numeric conversions between float types |

@@ -10,7 +10,7 @@ user-invocable: false
 # Skill: Comprehensive PR Review Orchestration
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Date** | 2026-01-23 |
 | **Objective** | Conduct comprehensive PR review using code-review-orchestrator to coordinate multiple specialized reviewers |
 | **Outcome** | ✅ Successfully identified 3 blocking issues, posted structured review comments to PR and issue |
@@ -181,7 +181,7 @@ gh issue view ISSUE_NUMBER --json comments --jq '.comments[-1]'
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -189,7 +189,7 @@ gh issue view ISSUE_NUMBER --json comments --jq '.comments[-1]'
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

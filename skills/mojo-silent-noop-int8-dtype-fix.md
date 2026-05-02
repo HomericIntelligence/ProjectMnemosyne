@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Mojo dtype dispatch functions (`_set_float64`, `_set_float32`) silently do nothing for integer dtypes when no matching `elif` branch exists |
 | **Root Cause** | `if/elif` chains without an `else` are silent no-ops in Mojo — unmatched dtypes fall through without error |
 | **Fix** | Add the missing integer `elif` branch with truncation cast (e.g. `value.cast[DType.int8]()`) |
@@ -131,7 +131,7 @@ Replace the call to the old test name with the new test names and add the
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Option 2: raise on unsupported dtype | Issue proposed raising an error for int8 instead of truncating | Raises break all existing callers that pass int8 tensors — truncation is the correct semantic (mirrors Python/numpy behavior) | Silent no-ops are worse than errors, but truncation is better than errors when the operation is semantically valid |
 | Patching only `_set_float64` | Initially considered only fixing the one function mentioned in the issue title | `_set_float32` had the identical missing branch — fixing only one leaves the other broken | Always grep for sibling functions with the same pattern when fixing a dtype dispatch chain |
 | Adding `else: pass` | Considered adding an explicit `else` branch as a no-op documentation | Still silently discards writes — just makes the silence explicit rather than fixing it | Don't document bugs in code; fix them |

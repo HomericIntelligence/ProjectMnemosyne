@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2024-02-13 |
 | **Objective** | Eliminate redundant git clones in E2E testing by centralizing base repositories |
 | **Outcome** | ✅ Successfully implemented - 37-73% disk space savings |
@@ -269,7 +269,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Verification
 
@@ -328,7 +328,7 @@ Time savings: 5.0s (49%)
 ### Scaling Results
 
 | Experiments | Legacy | Centralized | Savings | % |
-|-------------|--------|-------------|---------|---|
+| ------------- | -------- | ------------- | --------- | --- |
 | 1 | 11 MB | 11 MB | 0 MB | 0% |
 | 2 | 22 MB | 14 MB | 8 MB | 37% |
 | 5 | 55 MB | 23 MB | 32 MB | 58% |
@@ -558,7 +558,7 @@ The implementation is fully backward compatible:
 ### Time Complexity
 
 | Operation | Before | After | Change |
-|-----------|--------|-------|--------|
+| ----------- | -------- | ------- | -------- |
 | First experiment | O(clone) | O(clone) | Same |
 | Second experiment | O(clone) | O(1) | **51x faster** |
 | Nth experiment | O(clone) | O(1) | **51x faster** |
@@ -566,7 +566,7 @@ The implementation is fully backward compatible:
 ### Space Complexity
 
 | Metric | Formula | Example (N=10) |
-|--------|---------|----------------|
+| -------- | --------- | ---------------- |
 | Legacy | N × (C + W) | 110 MB |
 | Centralized | C + (N × W) | 38 MB |
 | Savings | (N-1) × C | 72 MB (65%) |

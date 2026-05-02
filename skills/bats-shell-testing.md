@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-21 |
 | PR | #900 |
 | Objective | Add BATS (Bash Automated Testing System) test suite for `preflight_check.sh` covering 5 behavioral edge cases, with mocked `gh`/`git` commands to avoid live API calls |
@@ -226,7 +226,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Related Skills
 

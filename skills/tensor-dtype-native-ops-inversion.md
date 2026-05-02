@@ -13,7 +13,7 @@ tags: [mojo, tensor, dtype, parametric, refactor, typed-ops, dispatch, architect
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-22 |
 | **Objective** | Invert wrapper pattern so Tensor[dtype] typed implementations are the core, AnyTensor dispatches to them |
 | **Outcome** | 8 PRs merged: shared/base/ extraction, arithmetic/elementwise/activation/matrix/reduction/shape/comparison typed cores, AnyTensor delegation, 51 new tests |
@@ -173,7 +173,7 @@ fn test_add_typed_matches_anytensor() raises:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Top-level import of arithmetic in any_tensor.mojo | `from shared.core.arithmetic import add` at module level | Circular import: any_tensor.mojo <- arithmetic.mojo <- any_tensor.mojo | Use local-scope imports inside method bodies (deferred to call time) |
 | Auto-parameterization for return types | `fn relu(t: Tensor) -> Tensor` (no explicit `[dt: DType]`) | Mojo error: "failed to infer parameter 'dtype'" for return types | All functions returning Tensor must use explicit `[dt: DType]` parameter |
 | Single-PR approach for all operations | Bundle all typed ops + AnyTensor delegation in one PR | Too many merge conflicts when parallel agents work on overlapping files | Split by operation category (arithmetic, elementwise, matrix, etc.) with separate PRs |
@@ -272,5 +272,5 @@ shared/core/                    ← Layer 2: Operations + runtime tensor
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #4998, PRs #5030-5035 + #5049-5050 | 8 PRs, ~6,450 lines, ADR-012 implementation |

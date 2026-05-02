@@ -14,7 +14,7 @@ tags: [docker, dockerfile, entrypoint, base-image, ci, achaeanfleet, secrets]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-24 |
 | **Objective** | Ensure all AchaeanFleet base images have ENTRYPOINT set so CI verification passes and vessel containers can load Docker secrets (API keys) at startup |
 | **Outcome** | Success — ENTRYPOINT added to `Dockerfile.python` and `Dockerfile.minimal`; fixes committed to main branch of AchaeanFleet |
@@ -88,7 +88,7 @@ grep -l "ENTRYPOINT" bases/Dockerfile.node bases/Dockerfile.python bases/Dockerf
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | Adding `ENTRYPOINT ["/entrypoint.sh"]` after `USER agent` without the COPY/chmod block above it | The agent user does not have permission to write to `/entrypoint.sh` — the COPY step must be run as root before the USER directive | Always place `COPY <entrypoint> /entrypoint.sh` and `RUN chmod +x /entrypoint.sh` before the `USER agent` line, even though the entrypoint executes as the agent user |
 | Attempt 2 (root cause) | `Dockerfile.python` and `Dockerfile.minimal` were created as copies of `Dockerfile.node` but the ENTRYPOINT block was omitted | The node base was the original template; python and minimal were derived later without the entrypoint, and the CI check was added in a separate PR that exposed the gap | When copying a Dockerfile to create a new variant, audit every structural instruction: HEALTHCHECK, ENTRYPOINT, USER, EXPOSE — all are easy to miss |
 
@@ -135,5 +135,5 @@ ENTRYPOINT=$(docker inspect "$IMAGE" --format '{{json .Config.Entrypoint}}')
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | AchaeanFleet | 2026-04-24 — CI failures on "Verify ENTRYPOINT is set" for python and minimal bases | Fixed by adding `COPY bases/entrypoint.sh /entrypoint.sh`, `RUN chmod +x /entrypoint.sh`, and `ENTRYPOINT ["/entrypoint.sh"]` to both missing bases; committed to main |

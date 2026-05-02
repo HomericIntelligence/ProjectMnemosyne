@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-20 |
 | Issue | #796 |
 | PR | #841 |
@@ -116,14 +116,14 @@ pre-commit run --all-files                       # ruff, mypy, black all pass
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/core/results.py` | Added `GradingInfoBase` class (~20 lines) |
 | `scylla/core/__init__.py` | Added import + `__all__` entry |
 | `scylla/reporting/result.py` | `GradingInfo` now inherits `GradingInfoBase`; removed 3 field definitions; added docstring |

@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Name | no-op-review-fix |
 | Category | documentation |
 | Trigger | `.claude-review-fix-*.md` plan with "no fixes required" conclusion |
@@ -43,7 +43,7 @@ git log --oneline -5
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Creating empty commit | Considered committing `.claude-review-fix-*.md` or a dummy change | Would add noise to git history with no value | Only commit when there are real implementation changes |
 | Running full test suite | Considered running `pixi run python -m pytest tests/ -v` | Tests unrelated to a docs-only PR; CI failures were pre-existing | Skip test runs for documentation-only PRs when fix plan confirms no changes needed |
 | Pushing unchanged branch | Considered pushing origin even with no new commits | Script handles pushing; no-op push would be redundant | Trust the automation script's push step; only commit if there are changes |

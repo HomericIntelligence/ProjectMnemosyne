@@ -15,7 +15,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-09 |
 | **Objective** | Pass capturing closures (that close over runtime variables) to higher-order functions in Mojo 0.26.3 |
 | **Outcome** | Successful — struct + trait pattern compiles with zero `--Werror` errors. Applied to ~35 test files in ProjectOdyssey PR #5209 |
@@ -114,7 +114,7 @@ check_gradient(_MyLayerFwd(weights), _MyLayerBwd(weights), input, grad_output)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `capturing` keyword | `def f(x: T) capturing raises -> T` | `capturing` keyword removed in Mojo 0.26.3 | Use `unified {read}` instead — but see next row |
 | `unified {read}` closure | `def f(x: T) raises unified {read} -> T` | Makes closure non-escaping; cannot pass to `def(T) raises -> T` parameter | `unified` closures are non-escaping by design — no cast exists |
 | Compile-time param | `compute_gradient[forward](x)` | "cannot use a dynamic value in a parameter list" — closures that capture runtime vars are not compile-time values | Compile-time params only work for module-scope non-capturing functions |
@@ -197,6 +197,6 @@ var grad = compute_numerical_gradient(fwd, input, epsilon)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Mojo 0.26.3 migration, branch fix-ci-root-causes | 4 closures in layer_testers.mojo replaced with structs; package compiles --Werror clean |
 | ProjectOdyssey | PR #5209 — 35 test files, ~100+ closure pairs migrated (Groups A-D: activations, losses, conv, normalization, reduction, matrix, gradient checking/validation tests) | Parallel sub-agents handled groups concurrently |

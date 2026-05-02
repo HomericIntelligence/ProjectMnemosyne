@@ -19,7 +19,7 @@ Complete workflow for analyzing codebase duplications and implementing DRY (Don'
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-01-20 |
 | **Objective** | Systematically find and eliminate code duplications while establishing centralized modules |
 | **Outcome** | ✅ Eliminated 48 lines of duplicate code, fixed 2 path violations, merged PR #201 |
@@ -318,7 +318,7 @@ gh pr merge --auto --rebase [PR-NUMBER]
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -401,7 +401,7 @@ gh pr create --title "refactor: [description]" \
 ### Session Metrics
 
 | Metric | Before | After | Result |
-|--------|--------|-------|--------|
+| -------- | -------- | ------- | -------- |
 | Duplicate functions | 1 pair | 0 | ✅ 100% eliminated |
 | Path violations | 2 | 0 | ✅ 100% fixed |
 | Centralized module usage | 66% | 100% | ✅ +34% |
@@ -462,5 +462,5 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #201 - E2E framework DRY consolidation | Eliminated 48 LOC duplicates, standardized paths |

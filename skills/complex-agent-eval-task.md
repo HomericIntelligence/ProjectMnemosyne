@@ -13,7 +13,7 @@ Create sophisticated E2E test cases for AI agent evaluation using real-world PRs
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-01-01 | Create T2+ test case using PR #3017 as reference for dtype migration task | Test case created with patchfile comparison, 50 turn limit, PR #107 merged |
 
 ## When to Use
@@ -152,14 +152,14 @@ The judge should receive:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Recommended Parameters by Task Complexity
 
 | Task Type | max_turns | timeout_seconds | Reference Patch Lines |
-|-----------|-----------|-----------------|----------------------|
+| ----------- | ----------- | ----------------- | ---------------------- |
 | Simple (1-3 files) | 20 | 1800 | 100 |
 | Medium (3-10 files) | 30 | 3600 | 150 |
 | Complex (10+ files) | 50 | 7200 | 200 |

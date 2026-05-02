@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-22 |
 | **Issue** | #756 - Expand ruff rule set with B, S, C90, SIM, RUF rules |
 | **Objective** | Enable 5 additional ruff rule sets, fix all violations, document suppressed rules with rationale |
@@ -193,7 +193,7 @@ pixi run python -m pytest tests/ -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -223,7 +223,7 @@ max-complexity = 12
 ### Violation Scale (before fixes)
 
 | Rule | Violations | Fixed | Suppressed (global) |
-|------|-----------|-------|---------------------|
+| ------ | ----------- | ------- | --------------------- |
 | S603 | 52 | 0 | 52 (controlled subprocess) |
 | S607 | 49 | 0 | 49 (controlled subprocess) |
 | B904 | 38 | 38 | 0 |

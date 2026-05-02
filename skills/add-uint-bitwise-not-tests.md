@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-07 |
 | Objective | Add `~` complement operator tests for UInt8, UInt16, UInt32, UInt64 in a Mojo project |
 | Outcome | 16 tests passing in CI; new standalone file added alongside existing bitwise tests |
@@ -73,7 +73,7 @@ fn test_uint8_double_inversion() raises:
 Alternating bit values per type:
 
 | Type | Input | Expected |
-|------|-------|----------|
+| ------ | ------- | ---------- |
 | UInt8 | `0b10101010` (170) | `0b01010101` (85) |
 | UInt16 | `0xAAAA` (43690) | `0x5555` (21845) |
 | UInt32 | `0xAAAAAAAA` (2863311530) | `0x55555555` (1431655765) |
@@ -94,14 +94,14 @@ assuming no change is needed.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running tests locally with `pixi run mojo run` | Executed the new test file on the host machine | GLIBC version mismatch (requires 2.32/2.33/2.34, host has older version) | Mojo binary only runs in the CI Docker container; verify syntax by pattern-matching against existing files instead |
 | Using `mojo test` runner | Alternative test execution path | Same GLIBC incompatibility on host | Trust pre-commit hooks (mojo format passes = syntactically valid) as local verification proxy |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3293, PR #3891 | [notes.md](../../references/notes.md) |
 
 ## Results & Parameters

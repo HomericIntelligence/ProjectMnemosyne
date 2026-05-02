@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Purpose** | Recover and implement regression tests specified in GitHub issue plans that were never added |
 | **Input** | GitHub issue number with a named test in the description or comments |
 | **Output** | New test function with verified passing behavior |
@@ -74,7 +74,7 @@ Know which branch is exercised before computing expected values.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Search for test by exact name | `grep -r "test_contiguous_stride_correct_values" tests/` | Returned no matches — test never existed | Absence of a test is exactly the bug to fix |
 | Checked existing branch for the fix | Expected `4088-fix-as-contiguous` branch to contain the test | Branch had a different change (pre-commit hook), not the regression test | Branch names can be misleading; use `git diff main..<branch> -- <file>` to confirm |
 | Considered adding to original test file | `test_utility.mojo` seemed consistent with issue plan | File had 43 tests — far exceeds the ≤10 fn test_ limit | Always count tests before adding; use numbered part files |
@@ -129,7 +129,7 @@ grep -c "^fn test_" tests/path/to/file.mojo
 **Strides for common shapes**:
 
 | Shape | Row-major (contiguous) | Column-major (non-contiguous) |
-|-------|------------------------|-------------------------------|
+| ------- | ------------------------ | ------------------------------- |
 | (2, 3) | `[3, 1]` | `[1, 2]` |
 | (3, 4) | `[4, 1]` | `[1, 3]` |
 | (2, 3, 4) | `[12, 4, 1]` | `[1, 2, 6]` |
@@ -137,5 +137,5 @@ grep -c "^fn test_" tests/path/to/file.mojo
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #4088, PR #4868 | [notes.md](../references/notes.md) |

@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-27 |
 | **Issue** | #1143 — Replace assert guards with RuntimeError in workspace_manager.py, llm_judge.py, and executor/runner.py |
 | **Objective** | Replace 4 remaining `assert x is not None  # noqa: S101` suppressions in production code with explicit `if x is None: raise RuntimeError(...)` guards, eliminating all S101 suppressions from production source files |
@@ -47,7 +47,7 @@ Review each hit carefully — some may be in test files where assertions are leg
 For each `assert` site, determine the correct replacement pattern:
 
 | Assert pattern | Correct replacement |
-|---------------|---------------------|
+| --------------- | --------------------- |
 | `assert x is not None` | `if x is None: raise RuntimeError("x must be set before calling method_name")` |
 | `assert x is not None` before `raise x` | `if x is None: raise RuntimeError("invariant message"); raise x` |
 | `assert condition` guarding logic | `if not condition: raise RuntimeError("condition description")` |
@@ -163,14 +163,14 @@ Closes #<issue>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Conversion Table (Issue #1143)
 
 | File | Line | Method | Guard Message |
-|------|------|--------|---------------|
+| ------ | ------ | -------- | --------------- |
 | `scylla/e2e/workspace_manager.py` | 198 | `_checkout_commit()` | `"commit must be set before calling _checkout_commit"` |
 | `scylla/e2e/workspace_manager.py` | 244 | `_ensure_commit_available()` | `"commit must be set before calling _ensure_commit_available"` |
 | `scylla/e2e/llm_judge.py` | 930 | retry loop `else` | `"Judge retry loop exhausted but last_parse_error is None"` |

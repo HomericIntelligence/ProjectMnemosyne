@@ -16,7 +16,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-15 |
 | Objective | Extend re-export audit from `shared/training/` to `shared/core/` and `shared/autograd/`, promoting inline `# NOTE` comments to proper docstring `Note:` sections |
 | Outcome | Success — `shared/core/__init__.mojo` got a `Note:` section (inline `# NOTE` removed); `shared/autograd/__init__.mojo` had its `Note:` section expanded; all subpackages clean |
@@ -73,7 +73,7 @@ Check whether each file already has a `Note:` section in its module docstring or
 **Three cases:**
 
 | Case | Action |
-|------|--------|
+| ------ | -------- |
 | Inline `# NOTE` + no docstring `Note:` | Add `Note:` section to docstring, remove inline comment |
 | Inline `# NOTE` + docstring `Note:` exists | Expand existing `Note:` section, remove redundant inline |
 | Docstring `Note:` exists, no inline comment | Verify content is complete; expand if terse |
@@ -160,7 +160,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Adding `Note:` after `Example:` block | Placed `Note:` section after the `Example:` section in `shared/core/__init__.mojo` | The `Note:` section ended up between `Modules:` and `Example:`, which is the correct ordering — this wasn't a failure, just required verifying Mojo docstring section ordering | Place `Note:` before `Example:` in module docstrings for consistency with the `shared/training/__init__.mojo` pattern |
 | Expanding `Note:` in `shared/autograd/__init__.mojo` without reading first | Almost started editing without reading the full file | `shared/autograd/__init__.mojo` already had a `Note:` section — if we'd added another one it would have been a duplicate | Always read the full `__init__.mojo` before deciding whether to add or expand |
 

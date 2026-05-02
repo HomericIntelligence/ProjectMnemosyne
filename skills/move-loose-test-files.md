@@ -10,7 +10,7 @@ user-invocable: false
 # Move Loose Test Files Into Sub-packages
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-22 |
 | **Objective** | Move test files from `tests/unit/` root into sub-packages mirroring source structure |
 | **Outcome** | ✅ All 3 files moved, 2432 tests pass (identical to baseline), PR #964 merged |
@@ -124,7 +124,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Objective** | Update bare `# NOTE:` comments to `# NOTE(#NNNN):` format linking to GitHub tracking issues |
 | **Trigger** | Cleanup issues requiring all workaround NOTEs to be traceable |
 | **Output** | Modified source files with issue references; no logic changes |
@@ -45,7 +45,7 @@ grep -rn "# NOTE:" --include="*.mojo" . | grep -v "tracked in #\|#[0-9]\{4,\}"
 Group NOTEs into clusters with a shared root cause before creating issues — avoids creating duplicate or overlapping tracking issues:
 
 | Group | Root Cause | Files |
-|-------|-----------|-------|
+| ------- | ----------- | ------- |
 | A | Python interop blocked | trainer_interface.mojo, __init__.mojo |
 | B | FP16 SIMD compiler limitation | mixed_precision.mojo (x2) |
 | C | Image loading external deps | run_infer.mojo |
@@ -137,7 +137,7 @@ Always search `gh issue list` before creating — many cleanup issues already ex
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Linking all NOTEs | Tried to add issue refs to all `# NOTE:` lines including informational ones | Created unnecessary issue noise | Only link NOTEs that describe temporary workarounds or blocked features |
 | Creating new issues for all groups | Started creating new tracking issues for each group without searching first | Would have created duplicates of existing cleanup issues (#3076, #3087, etc.) | Always `gh issue list --search` before creating |
 | Modifying multi-line NOTE body | Considered adding `(tracked in #NNNN)` to body lines that already had `#NNNN` in them | No change needed — body reference is sufficient | If `#NNNN` appears anywhere in the NOTE block, it's already linked |
@@ -154,7 +154,7 @@ Always search `gh issue list` before creating — many cleanup issues already ex
 ### Issue Mapping Reference
 
 | Pattern | Typical Tracking Issue Category |
-|---------|--------------------------------|
+| --------- | -------------------------------- |
 | Python↔Mojo interop blocked | Python interop / Track 4 |
 | FP16/BF16 compiler limitation | Mojo compiler limitation |
 | Missing stdlib function | Mojo stdlib gap |

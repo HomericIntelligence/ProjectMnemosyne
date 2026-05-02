@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | mojo-trait-conformance-for-sequential-integration |
 | **Category** | testing |
 | **Issue** | #3742 — Integrate Sequential into SimpleMLP in shared/testing |
@@ -169,7 +169,7 @@ fn test_simple_mlp2_parameters_count() raises:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Use Sequential3 without Module conformance | Passed `Linear`/`ReLULayer` directly into `Sequential3[Linear, ReLULayer, Linear]` | Compile error: `Linear` not in scope of `Module` trait; `T: Module & Movable` constraint unsatisfied | Must add `Module` to all layer structs before they can be used in Sequential containers |
 | Keep `forward(self, ...)` immutable | Left `forward()` as `fn forward(self, input: ExTensor)` | Mojo compiler error: signature mismatch with `Module` trait's `fn forward(mut self, ...)` | The `Module` trait requires `mut self` on `forward()` to allow stateful layers; all conforming layers must use `mut self` |
 | Add `Copyable` to `SimpleMLP2` | Tried `struct SimpleMLP2(Copyable, Model, Movable)` | `Sequential3` is `Movable` only; compiler rejects copying a type containing a non-Copyable field | Don't declare `Copyable` on model fixtures wrapping Sequential containers |

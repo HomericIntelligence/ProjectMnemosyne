@@ -56,7 +56,7 @@ Described Keystone as "Secrets and credential management; injects secrets into a
 ## Integration Contract Mismatches Found
 
 | Contract | Publisher (Hermes) | Subscriber (Keystone) | Docs (Odysseus) |
-|----------|-------------------|----------------------|-----------------|
+| ---------- | ------------------- | ---------------------- | ----------------- |
 | NATS subjects | `hi.tasks.{team}.{task}.{verb}` | Was: `hi.tasks.*.*.updated` only | Was: `maestro.task.*` |
 | Task verbs | `updated`, `completed`, `failed` | Was: only `updated` | Not documented |
 | Subscribed events | `_TASK_EVENTS` has 3 | `_SUBSCRIBED_EVENTS` had only 1 task event | N/A |
@@ -65,7 +65,7 @@ Described Keystone as "Secrets and credential management; injects secrets into a
 ## Config Pattern Audit
 
 | Repo | Before | After |
-|------|--------|-------|
+| ------ | -------- | ------- |
 | Keystone | pydantic-settings (good) | unchanged |
 | Hermes | os.environ.get + python-dotenv | pydantic-settings |
 | Telemachy | os.environ.get + python-dotenv | pydantic-settings |
@@ -73,7 +73,7 @@ Described Keystone as "Secrets and credential management; injects secrets into a
 ## PRs Created
 
 | Repo | PR | URL |
-|------|-----|-----|
+| ------ | ----- | ----- |
 | ProjectKeystone | #82 | https://github.com/HomericIntelligence/ProjectKeystone/pull/82 |
 | ProjectHermes | #1 | https://github.com/HomericIntelligence/ProjectHermes/pull/1 |
 | ProjectTelemachy | #1 | https://github.com/HomericIntelligence/ProjectTelemachy/pull/1 |

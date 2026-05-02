@@ -16,7 +16,7 @@ How to annotate hundreds of test functions in a test suite to satisfy mypy's `di
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-06 |
 | Objective | Add type annotations to ~635 unannotated test functions in `tests/unit/`, remove `[[tool.mypy.overrides]]` suppress block |
 | Outcome | Success — zero mypy errors across 200 source files, 4455 unit tests pass |
@@ -121,7 +121,7 @@ Ruff will flag E402 if `from typing import Any` lands before other imports or in
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -161,7 +161,7 @@ def my_fixture() -> Generator[Any, None, None]:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1453, issue #1379 — ~635 unannotated functions in tests/unit/ | [notes.md](../../references/notes.md) |
 
 ## References

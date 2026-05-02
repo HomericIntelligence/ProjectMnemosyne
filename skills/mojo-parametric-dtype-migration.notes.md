@@ -39,7 +39,7 @@
 
 ## Bugs Caught by Review Agents
 
-1. **bitcast[Float32]() in BatchNorm parameters()** — Would silently corrupt float64 data
+1. **`bitcast[Float32]()` in BatchNorm parameters()** — Would silently corrupt float64 data
 2. **AnyTensor._data[i] indexes bytes not elements** — Conv2d parameters() partial copy
 3. **B4 test didn't test ASAP destruction** — Both objects alive in same scope
 4. **as_any() heap surgery** — Unsafe field replacement instead of internal constructor

@@ -14,7 +14,7 @@ Systematic upgrade of a Python utility package to production-consumable quality,
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-13 |
 | Objective | Bring ProjectHephaestus (shared utility lib) from C+ to production-grade so ProjectScylla/Odyssey can consume it |
 | Outcome | Success — 372 tests passing, 76% coverage, wheel builds and imports correctly |
@@ -240,7 +240,7 @@ classifiers = [
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `system/__init__.py` re-exporting `SystemInfo` | Added `from .info import SystemInfo` | `SystemInfo` class doesn't exist in `info.py` — only free functions | Always grep for the actual class/function names before writing re-exports: `grep -n "^class \|^def " module.py` |
 | Adding `--cov-report=html` to default `addopts` | Left `--cov-report=html` in | Generates htmlcov/ directory on every test run — noisy and slow | Remove from `addopts`; use on-demand via `--cov-report=html` flag |
 | `test_download_mnist_success` mocking decompress_gz | Mocked `download_with_retry=True` and `decompress_gz=True` | `download_mnist` calls `gz_path.unlink()` after decompress, but the gz file was never created (mocked away) | When mocking a method that succeeds, also create the side-effect artifacts it would have produced (the gz file on disk) |
@@ -251,7 +251,7 @@ classifiers = [
 ### Final Coverage Numbers
 
 | Module | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | `utils/helpers.py` | ~54% | 97% |
 | `config/utils.py` | ~25% | 91% |
 | `utils/retry.py` | ~16% | 94% |
@@ -263,7 +263,7 @@ classifiers = [
 ### Test Count
 
 | Suite | Count |
-|-------|-------|
+| ------- | ------- |
 | Unit tests | 320 |
 | Integration tests | 52 |
 | **Total** | **372** |
@@ -309,7 +309,7 @@ branch = true
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | v0.3.0 modernization — 7 phases in one session | [notes.md](python-repo-modernization.notes.md) |
 
 ## References

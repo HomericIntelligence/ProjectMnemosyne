@@ -25,7 +25,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-06 |
 | **Objective** | Run `validate-conan-install.sh` on epimetheus (Debian 11, CMake 3.18.4) and fix IPC test runner T4 port override |
 | **Outcome** | Packages export + consumer install PASS; consumer build FAIL (CMake version gate); IPC T4 test binds wrong port when --port flag is ignored |
@@ -111,7 +111,7 @@ Both proposed fixes from v1.0.0 have been committed to Odysseus main:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | System cmake on Debian 11 | Used system `cmake` (3.18.4) for conan consumer build | Hits `cmake_minimum_required(VERSION 3.20)` in consumer project | Use pixi-provided cmake (3.20+) or lower minimum version in consumer |
 | Ignoring pixi env | Ran validate script without pixi env | Same CMake version error | validate-conan-install.sh should use `pixi run cmake` to get conda-forge cmake |
 | T4 --port flag assumed working | Passed `--port 9100` to IPC test runner assuming it overrides | Runner bound default port 9000; flag was parsed after bind | Parse all CLI args to completion before any socket operations |
@@ -146,6 +146,6 @@ fix: "move socket bind after full arg parse"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | epimetheus (Debian 11, CMake 3.18.4) via SSH, 2026-04-06 | validate-conan-install.sh Phase 3 consumer build fails; Phases 1-2 PASS |
 | IPC test runner | T4 port override, 2026-04-06 | --port flag ignored due to bind-before-parse ordering bug |

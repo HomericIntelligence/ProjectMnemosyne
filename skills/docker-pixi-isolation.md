@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Problem** | CI test jobs inside Docker fail with `error: unable to locate module 'std'` |
 | **Root Cause** | Host `.pixi/` directory (with native Mojo binaries) bind-mounted into container shadows container's own Mojo installation |
 | **Solution** | Named Docker volume at `/workspace/.pixi` + entrypoint script + remove `setup-pixi` from Docker-routed CI jobs |
@@ -94,7 +94,7 @@ Check with: `grep -l "setup-pixi" .github/workflows/*.yml` cross-referenced with
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Add `NATIVE=1` to CI jobs | Force all Mojo commands to run natively on the runner | Defeats the purpose of Docker isolation; inconsistent with other jobs that use Docker | All CI jobs should use the same execution environment (Docker) |
 | Keep `setup-pixi` alongside Docker volume fix | Let pixi install on host but shadow with volume | Wastes CI time installing pixi on host when it's not used; `.pixi/` still created on host | Remove unnecessary setup steps entirely, don't just work around them |
 | Use absolute imports in Mojo (`from shared.core.shape import ...`) | Import functions using full package path | Creates different type identity when module is also imported via `__init__.mojo`, causing `cannot be converted from 'ExTensor' to 'ExTensor'` errors | Always use relative imports (`from .shape import ...`) within a package to avoid type identity splits |

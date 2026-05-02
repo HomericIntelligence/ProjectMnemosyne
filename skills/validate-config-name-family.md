@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-20 |
 | Issue | #775 |
 | PR | #821 |
@@ -120,14 +120,14 @@ In this project the affected test was:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/config/validation.py` | +`KNOWN_FAMILIES`, +`extract_model_family()`, +`validate_name_model_family_consistency()` |
 | `scylla/config/loader.py` | Updated import, added call to new validator in `load_model()` |
 | `tests/unit/config/test_validation.py` | New file, 30 parametrized tests |

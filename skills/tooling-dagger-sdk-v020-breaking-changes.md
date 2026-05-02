@@ -13,7 +13,7 @@ tags: [dagger, ci-cd, typescript, breaking-changes, dependabot, migration]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-28 |
 | **Objective** | Migrate Dagger SDK usage from v0.9.x to v0.20+ after the removal of `Container.build()`. |
 | **Outcome** | TypeScript typecheck and CI pass after replacing `dag.container().build(context)` with `context.dockerBuild()` and updating all package manifests. |
@@ -125,7 +125,7 @@ in the same commit so neither half is broken independently.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Version bump only | Updated `package.json` and `dagger.json` without touching TypeScript source | TypeScript type errors remained: `Container` has no `build` method in v0.20 SDK typings | SDK version and source changes must be co-located in the same commit |
 | `npm install` in CI | Used `npm install` instead of `npm ci` | Non-reproducible installs: resolved versions differ between local and CI environments, masking lockfile drift | Always use `npm ci` in CI pipelines; `npm install` is for local development |
 
@@ -134,14 +134,14 @@ in the same commit so neither half is broken independently.
 ### API Change Summary
 
 | v0.9.x API | v0.20+ API | Notes |
-|-----------|-----------|-------|
+| ----------- | ----------- | ------- |
 | `dag.container().build(context)` | `context.dockerBuild()` | Entry point moved from `Container` to `Directory` |
 | `Container.build(dir: Directory)` | `Directory.dockerBuild()` | Method removed from `Container` entirely |
 
 ### Files to Update
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `dagger/package.json` | `@dagger.io/dagger`: `^0.9.0` → `^0.20.6`; `@types/node`: `^20.0.0` → `^25.6.0` |
 | `dagger/dagger.json` | `engineVersion`: `v0.9.0` → `v0.20.6` |
 | `dagger/package-lock.json` | Regenerate with `npm install` after version change |
@@ -158,5 +158,5 @@ in the same commit so neither half is broken independently.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectProteus | PR #79 (2026-04-28) | Dependabot bumped `@dagger.io/dagger` to `^0.20.6`; TypeScript CI failed until source and manifest were co-updated |

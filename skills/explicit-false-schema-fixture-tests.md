@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-07 |
 | Objective | Add explicit-false capability field tests to t0/t1 fixture schema and loader tests |
 | Outcome | Success — 11 new tests added, all 4575 unit tests pass, coverage 75.85% |
@@ -144,7 +144,7 @@ pre-commit run --all-files
 ## Key Insight: Two Distinct Test Paths
 
 | Path | What it tests |
-|------|--------------|
+| ------ | -------------- |
 | Field absent | Pydantic default kicks in; schema `additionalProperties` not triggered |
 | Field explicit `false` | Schema `boolean` type constraint exercised; loader correctly parses YAML `false` as Python `False` |
 
@@ -157,7 +157,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results
 

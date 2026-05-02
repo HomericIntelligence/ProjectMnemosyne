@@ -3,7 +3,7 @@
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR review workflow | Imported from ProjectOdyssey .claude/skills/gh-fix-pr-feedback |
 
 ## Source

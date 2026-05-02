@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | claude-config-branch-audit |
 | **Category** | tooling |
 | **Applies To** | Any repo with Claude Code configuration in CLAUDE.md or .claude/ |
@@ -68,7 +68,7 @@ ls pyproject.toml pixi.toml requirements.txt 2>/dev/null
 ```
 
 | If repo uses | Replace CLAUDE.md references to |
-|---|---|
+| --- | --- |
 | `pixi` | `pip`, `venv`, `tox` |
 | `ruff` | `flake8`, `black`, `isort` |
 | `pixi run pytest tests/unit` | `python -m pytest tests/` |
@@ -97,7 +97,7 @@ git commit -m "fix(claude): <summary of fixes>"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Merging branch as-is | Accepting the configuration-optimization branch without review | hooks referenced non-existent scripts; would break every Bash tool call via PreToolUse hook | Always verify hook script paths exist before merging .claude/settings.json changes |
 | Trusting generated Python version | Branch stated Python 3.8+ (likely copied from a template) | Repo requires 3.12+; stale version creates confusion for contributors | Cross-check Python version in CLAUDE.md against pyproject.toml and CI matrix |
 | Trusting generated tooling commands | Branch used `pip`, `flake8`, `black`, `tox` | Repo uses `pixi` + `ruff`; commands would silently fail for new contributors | Always verify environment manager and linter by checking pyproject.toml/pixi.toml |

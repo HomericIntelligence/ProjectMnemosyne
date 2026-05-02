@@ -13,7 +13,7 @@ tags: [audit, documentation, quality, strict-grading, remediation]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-22 |
 | **Objective** | Run a strict 15-section repository audit on ProjectHephaestus and fix identified documentation issues |
 | **Outcome** | Successful. Audit scored B+ (87%) overall. Three documentation issues identified and fixed: stale SECURITY.md, misleading code comment, missing COMPATIBILITY.md |
@@ -70,7 +70,7 @@ grep -r "COMPATIBILITY\|SECURITY\|MIGRATION" CHANGELOG.md
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Initial plan proposed CI matrix expansion | Proposed expanding Python test matrix as top priority fix from audit | User preferred documentation fixes over CI changes | Ask the user which audit findings to prioritize rather than assuming the highest-severity finding should be fixed first |
 
 ## Results & Parameters
@@ -78,7 +78,7 @@ grep -r "COMPATIBILITY\|SECURITY\|MIGRATION" CHANGELOG.md
 ### Common Documentation Audit Findings (Python Libraries)
 
 | Finding | Typical Section | Severity | Fix |
-|---------|----------------|----------|-----|
+| --------- | ---------------- | ---------- | ----- |
 | Stale SECURITY.md versions | Section 8 | MINOR | Update version table to include current release |
 | Misleading code comments | Section 4 | NITPICK | Remove or rewrite comments that don't match function purpose |
 | Missing referenced docs | Section 12 | MINOR | Create the document with appropriate content |
@@ -103,5 +103,5 @@ Key sections for a pre-1.0 library compatibility policy:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Strict audit + documentation remediation | [notes.md](./skills/documentation-strict-audit-remediation-workflow.notes.md) |

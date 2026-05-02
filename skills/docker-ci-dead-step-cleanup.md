@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-27 |
 | **Issue** | #1114 |
 | **PR** | #1157 |
@@ -33,7 +33,7 @@ Apply this pattern when:
 ## Decision Criteria: Implement vs. Remove
 
 | Implement Tests (Option A) | Remove Dead Step (Option B) |
-|---------------------------|----------------------------|
+| --------------------------- | ---------------------------- |
 | Tests are feasible in CI (no secret requirements) | Tests require secrets (API keys, credentials) not available in CI |
 | Test gap is actively causing quality issues | Test gap is tracked elsewhere (another issue/ADR) |
 | Tests can run quickly (<5 min) | Shell scripts better tested with BATS in tests/shell/ |
@@ -82,7 +82,7 @@ Apply this pattern when:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -127,7 +127,7 @@ When running in automated/non-interactive sessions (don't-ask permission mode):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1114, PR #1157 | [notes.md](../references/notes.md) |
 
 ## Related Skills

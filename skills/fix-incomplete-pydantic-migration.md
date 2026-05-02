@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-13 |
 | **Objective** | Fix CI test failures from incomplete Pydantic v2 migration |
 | **Outcome** | ✅ All tests passing, PR merged successfully |
@@ -124,7 +124,7 @@ gh pr merge <number> --rebase --delete-branch
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

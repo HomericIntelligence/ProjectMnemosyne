@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-22 |
 | Branch | `1008-state-machine-refactor` |
 | Objective | Wire ExperimentStateMachine + TierStateMachine into E2ERunner production code |
@@ -194,7 +194,7 @@ else:
 ## Results & Parameters
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Tests | 2676 passed |
 | Coverage | 76.11% (threshold: 73%) |
 | Pre-commit | All hooks pass |

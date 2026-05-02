@@ -15,7 +15,7 @@ tags: [triage, already-done, issue-classification, batch, audit]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Detect GitHub issues that are already fixed before spending time implementing them |
 | **Outcome** | Verified: 11/23 open issues (48%) were ALREADY-DONE in ProjectArgus; 6/57 (10.5%) in ProjectTelemachy — closed with evidence, no code written |
@@ -112,7 +112,7 @@ git diff --name-only origin/main...<branch>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Reading all issue bodies before checking current state | Opened each issue body to understand the fix needed before checking if it was already done | Wasted time reading detailed issue descriptions for changes already in the codebase | Run batch file-existence + grep checks BEFORE reading issue bodies |
 | Assuming audit issues are current | Treated all open audit issues as valid action items | Audit tools file issues against a snapshot — the codebase moves on while issues sit open | Audit issues have a half-life of ~2-4 weeks; always verify current state |
 | Using `git rev-list --count origin/main..<branch>` to confirm branches were ALREADY-DONE | Branches showed 1-5 "unique" commits by SHA count, so an Explore sub-agent classified them as needing PRs | The branches were created before main moved forward. Their content was cherry-picked onto main with different SHAs (different parent commits). SHA comparison shows divergence even when content is identical. | Use content-level checks (grep/ls on current main files, or `git diff origin/main...<branch>` three-dot diff + manual inspection) rather than SHA counts to confirm ALREADY-DONE status. Even three-dot diffs can mislead — the definitive check is: does the file/feature currently exist on main? |
@@ -124,7 +124,7 @@ git diff --name-only origin/main...<branch>
 ### ProjectArgus Session (2026-04-23)
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Total open issues | 23 |
 | ALREADY-DONE | 11 (48%) |
 | SIMPLE (implemented) | 3 |
@@ -135,7 +135,7 @@ git diff --name-only origin/main...<branch>
 ### ProjectTelemachy Session (2026-04-25)
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Total open issues | 57 |
 | ALREADY-DONE | 6 (10.5%) |
 | Lower rate than ProjectArgus | Fewer stale audit issues; more genuine new work |
@@ -144,7 +144,7 @@ git diff --name-only origin/main...<branch>
 ### Signal-to-Issue mapping (ProjectArgus)
 
 | Issue | Signal checked | File/command |
-|-------|---------------|-------------|
+| ------- | --------------- | ------------- |
 | #5 Grafana port mismatch | `grep "3000:3000" docker-compose.yml` | docker-compose.yml |
 | #10 :latest image pins | `grep "image:" docker-compose.yml` — all show pinned versions | docker-compose.yml |
 | #12 Mutable default arg | `grep "def gauge" exporter/exporter.py` | exporter/exporter.py |
@@ -160,7 +160,7 @@ git diff --name-only origin/main...<branch>
 ### Signal-to-Issue mapping (ProjectTelemachy)
 
 | Issue | Signal checked | File/command |
-|-------|---------------|-------------|
+| ------- | --------------- | ------------- |
 | #27 Fix CI targeting master | `gh repo view --json defaultBranchRef` — already `main`; ci.yml already targets `main` | GitHub API + .github/workflows/ci.yml |
 | #32 Missing LICENSE | `ls LICENSE` — present from governance commit (e75e3df) | repo root |
 | #39 Missing SECURITY.md | `ls SECURITY.md` — present from governance commit (e75e3df) | repo root |
@@ -170,7 +170,7 @@ git diff --name-only origin/main...<branch>
 ### Common ALREADY-DONE signals by issue type
 
 | Issue type | Detection command | Time |
-|------------|------------------|------|
+| ------------ | ------------------ | ------ |
 | Missing governance file | `ls LICENSE SECURITY.md CONTRIBUTING.md` | 2s |
 | No lockfile | `ls pixi.lock` | 1s |
 | :latest image tags | `grep "image:" docker-compose.yml` | 2s |
@@ -184,7 +184,7 @@ git diff --name-only origin/main...<branch>
 ## Verified On
 
 | Project | Date | Context | Already-Done Rate |
-|---------|------|---------|-------------------|
+| --------- | ------ | --------- | ------------------- |
 | ProjectArgus | 2026-04-23 | myrmidon-swarm triage of 23 open issues | 11/23 (48%) |
 | ProjectTelemachy | 2026-04-25 | myrmidon-swarm triage of 57 open issues | 6/57 (10.5%) |
 

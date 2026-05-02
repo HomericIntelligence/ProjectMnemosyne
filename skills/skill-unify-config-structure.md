@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-17 |
 | **Objective** | Consolidate tier/config structure to establish single source of truth and fix documentation inconsistencies |
 | **Outcome** | ✅ Success - Unified config structure, fixed all docs, 45/45 tests passing |
@@ -129,7 +129,7 @@ Use this skill when you encounter:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -156,7 +156,7 @@ tests/fixtures/config/               # Test-specific minimal fixtures
 ### Tier Configuration
 
 | Tier | Name | Sub-tests | Description |
-|------|------|-----------|-------------|
+| ------ | ------ | ----------- | ------------- |
 | T0 | Prompts | 24 | System prompt ablation |
 | T1 | Skills | 10 | Domain expertise via skills |
 | T2 | Tooling | 15 | External tools and MCP |
@@ -177,7 +177,7 @@ tests/fixtures/config/               # Test-specific minimal fixtures
 ### Files Modified
 
 | File | Change Type | Lines Modified |
-|------|-------------|----------------|
+| ------ | ------------- | ---------------- |
 | `config/tiers/tiers.yaml` | Fix counts | 2 (lines 8, 25) |
 | `docs/design/architecture.md` | Rewrite tier section | ~20 (lines 474-485, 559-571) |
 | `.claude/shared/evaluation-guidelines.md` | Fix tier names | ~50 (lines 165-212) |

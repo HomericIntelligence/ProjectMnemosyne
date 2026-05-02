@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Consolidated skill for merging overlapping CI workflow files and adding new CI matrix entry types |
 | **Outcome** | Merged from 2 source skills: consolidate-ci-workflows, ci-pattern-updates |
@@ -234,7 +234,7 @@ open('.github/workflows/comprehensive-tests.yml', 'w').write(content.replace(old
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Write tool for workflow files | Used `Write` tool to rewrite `pre-commit.yml` | Security hook blocked writes to `.github/workflows/*.yml` | Use `Bash cat >` heredoc for workflow file writes |
 | Edit tool for workflow files | Tried `Edit` tool to modify workflow files | Same security hook blocks Edit on workflow files | Use Bash for all workflow file modifications |
 | `python3 -c "multi-line"` in YAML | Used double-quoted multi-line Python inside `run:` block | YAML scanner treats `"` as flow scalar start, fails on newlines | Use grep/shell equivalents or single-line Python |
@@ -255,7 +255,7 @@ open('.github/workflows/comprehensive-tests.yml', 'w').write(content.replace(old
 ### Consolidation achieved (ProjectOdyssey reference)
 
 | Target | Absorbed | Net reduction |
-|--------|----------|---------------|
+| -------- | ---------- | --------------- |
 | `comprehensive-tests.yml` | coverage, test-gradients, test-data-utilities | −3 |
 | `pre-commit.yml` | type-check, notebook-validation | −2 |
 | `docs.yml` | link-check, readme-validation | −2 |
@@ -273,7 +273,7 @@ open('.github/workflows/comprehensive-tests.yml', 'w').write(content.replace(old
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3660 | 26 → 13 workflow files consolidation |
 | ProjectOdyssey | Issue #3465, PR #4292 | Test file split with CI and validate_test_coverage.py updates |
 | ProjectOdyssey | CI group splitting | Split Core Utilities (71 files) into 8 groups (A-H) |

@@ -6,10 +6,6 @@ date: 2026-03-19
 version: "1.0.0"
 user-invocable: false
 ---
-name: gh-create-pr-linked
-description: "Create a pull request properly linked to a GitHub issue using gh pr create. Use when creating a PR that implements or addresses a specific issue."
-category: ci-cd-cd
----
 
 # Create PR Linked to Issue
 
@@ -50,7 +46,7 @@ gh issue view <issue-number>  # Check Development section
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | No upstream branch | `git push -u origin branch-name` |
 | Issue not found | Verify issue number exists |
 | Auth failure | Run `gh auth status` |
@@ -72,7 +68,7 @@ Examples:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -86,7 +82,7 @@ Steps that worked:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 
 ## Results & Parameters

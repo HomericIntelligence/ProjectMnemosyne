@@ -13,7 +13,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Parallel workflow tooling pattern — git worktrees for agent isolation, batching PRs per agent, bulk PR triage and merge |
 | **Outcome** | Consolidated from 4 source skills |
@@ -340,7 +340,7 @@ gh issue close <issue-number> --comment "Fixed in PR #<number>"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Launch 2 parallel agents without worktree isolation | Both agents used the same working tree, switching branches with `git switch` | Agents left stale rebase-in-progress state (`.git/rebase-merge/`) from each other's abandoned rebases; commits landed on wrong branches | Always assign each parallel rebase agent a dedicated `git worktree` |
 | `git branch -D` to delete temp branches | Safety Net hook blocked force-delete | Safety Net treats `-D` as destructive | Use `git branch -d` (safe delete); verify content is on remote before asking to force-delete |
 | `git reset --hard origin/<branch>` to sync | Safety Net blocked the command | `reset --hard` is classified as destructive | Use `git pull --rebase origin/<branch>` instead |
@@ -414,7 +414,7 @@ executor: haiku      # Simple rebase, pre-commit fixes
 ### Parallel PR Efficiency Metrics
 
 | Method | PRs | Time | CI Overhead |
-|--------|-----|------|-------------|
+| -------- | ----- | ------ | ------------- |
 | Sequential PRs | Any | 3-4x baseline | Minimal |
 | Parallel worktrees (independent) | 5-9 | 70% faster | Parallel CI runs |
 | 4 parallel agents (3-4 PRs each) | 13 | ~7 minutes | Parallel CI runs |
@@ -423,7 +423,7 @@ executor: haiku      # Simple rebase, pre-commit fixes
 ### Skill PR Common Failures
 
 | Error type | Count (reference) | Fix |
-|-----------|-------|-----|
+| ----------- | ------- | ----- |
 | Missing `.claude-plugin/plugin.json` | 4 | Create with name/version/description/category/tags/date |
 | Invalid category (e.g., `automation`) | 1 | Change to `tooling` in plugin.json and SKILL.md |
 | Missing `version` field | 1 | Add `"version": "1.0.0"` |
@@ -431,7 +431,7 @@ executor: haiku      # Simple rebase, pre-commit fixes
 ### Success Metrics (Reference Sessions)
 
 | Session | PRs | Result |
-|---------|-----|--------|
+| --------- | ----- | -------- |
 | 13 PRs in 4 batched agents (v1.1) | 13 | ~7 min, 5 conflicts resolved semantically |
 | 70 PRs with 3 parallel agents (v1.0) | 70 | ~45 min, 0 DIRTY remaining |
 | 9 parallel worktrees (independent fixes) | 9 | All merged, 1,500+ lines removed |
@@ -441,7 +441,7 @@ executor: haiku      # Simple rebase, pre-commit fixes
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | 70 PRs rebased with 3 parallel agents, 2026-03-15 | parallel-rebase-agent-worktree-isolation v1.0 |
 | ProjectScylla | 13 PRs rebased with 4 batched agents, 2026-03-27 | parallel-rebase-agent-worktree-isolation v1.1 |
 | ProjectScylla | 9/10 stale PRs fixed in 3 iterative rounds | parallel-pr-rebase-fix source |

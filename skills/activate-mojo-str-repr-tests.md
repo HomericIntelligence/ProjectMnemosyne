@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-05 |
 | **Category** | testing |
 | **Objective** | Implement `__str__`/`__repr__` on `ExTensor` and activate placeholder tests in `test_utility.mojo` |
@@ -174,7 +174,7 @@ The local system had GLIBC version incompatibilities preventing `mojo test` from
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | `__str__` format | `ExTensor([0.0, 1.0, 2.0], dtype=float32)` |
 | `__repr__` format | `ExTensor(shape=[2, 2], dtype=float32, numel=4, data=[1.0, 1.0, 1.0, 1.0])` |
 | Trait list addition | `Stringable, Representable` |
@@ -184,7 +184,7 @@ The local system had GLIBC version incompatibilities preventing `mojo test` from
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Grep for `__str__` in `extensor.mojo` | Expected to find existing implementation based on issue title saying "methods are implemented" | Methods did not exist in `extensor.mojo` — only in unrelated `nvfp4.mojo`/`mxfp4.mojo` | Always verify implementation existence before activating tests; issue descriptions can be wrong |
 | Run `pixi run mojo test` locally | Expected to run tests to verify string format | GLIBC version mismatch (`GLIBC_2.32`, `2.33`, `2.34` not found) | Local Mojo requires newer GLIBC; use Docker/CI for actual test runs |
 | Using `_get_float64_at` as method name | Issue plan suggested this name | Method is actually named `_get_float64` in `ExTensor` | Always grep for actual method names rather than trusting plan docs |
@@ -192,5 +192,5 @@ The local system had GLIBC version incompatibilities preventing `mojo test` from
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3371, Issue #3162 | [notes.md](../references/notes.md) |

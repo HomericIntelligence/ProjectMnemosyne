@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Language | Mojo |
 | Component | `ExTensor.__getitem__(*slices: Slice)` |
 | Issue | Silent wrong results when `step != 1` in multi-dim slice |
@@ -137,7 +137,7 @@ gh pr create --title "fix(extensor): raise Error when multi-dim slice step != 1"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Implement full strided copy | Option 2: build a strided multi-dim copy loop analogous to the 1D `__getitem__(Slice)` path | Much more complex; increases surface area with no immediate test coverage; out of scope for a bug-fix issue | When the issue explicitly offers option 1 (fail fast) and option 2 (implement), prefer option 1 unless the caller needs strided access today |
 | Add step check inside existing loop | Put step validation inside the `for dim in range(num_dims)` loop that also computes `starts` | Still correct but slightly harder to read because it mixes validation with computation | Separate validation from computation: a dedicated pre-loop over dimensions is clearer and follows fail-fast idiom |
 

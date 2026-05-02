@@ -17,7 +17,7 @@ TDD-first pattern for extracting method groups from a large class into dedicated
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-02-28 |
 | Objective | Reduce `runner.py` from 1527 lines to <1000 lines by extracting three method groups into collaborator classes |
 | Outcome | Success — 1105 lines (-422 lines, -28%). All 3326 tests pass. All pre-commit hooks pass. |
@@ -154,7 +154,7 @@ When methods move, update:
 Common mypy errors after extraction:
 
 | Error | Fix |
-|-------|-----|
+| ------- | ----- |
 | `Item "None" of "X \| None" has no attribute "Y"` | Add `assert obj is not None` before accessing attributes |
 | `Unexpected keyword argument "cost_of_pass"` for `TierResult` | `cost_of_pass` is a `@property`, not a field — remove from constructor |
 | `Argument "run_tier_fn" has incompatible type "Callable"` | Broaden type hint: `Callable[..., TierResult] \| MagicMock \| None` |
@@ -180,7 +180,7 @@ wc -l scylla/e2e/runner.py
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -202,7 +202,7 @@ Coverage: 79.27% (threshold: 75%)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1146, PR #1230 | [notes.md](collaborator-extraction-tdd.notes.md) |
 
 ## References

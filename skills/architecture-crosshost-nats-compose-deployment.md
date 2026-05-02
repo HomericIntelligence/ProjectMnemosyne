@@ -26,7 +26,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-06 |
 | **Objective** | Deploy HomericIntelligence ecosystem across two Tailscale hosts for E2E agent evaluation |
 | **Outcome** | Two-host deployment with worker host running full compose stack and control host running native Nestor + odysseus-console. Direct NATS over Tailscale, no leaf node needed. Full 6-phase cross-host validation PASS confirmed 2026-04-06. |
@@ -135,7 +135,7 @@ podman compose -f docker-compose.e2e.yml -f docker-compose.crosshost.yml up -d
 **Direct NATS connection over Tailscale** is the correct choice for simple topologies (2 hosts, 1 remote client). Leaf nodes are an optimization for when multiple local services need NATS access on the remote host.
 
 | Topology | Recommended | Reason |
-|----------|-------------|--------|
+| ---------- | ------------- | -------- |
 | 2 hosts, 1 remote client | Direct connection | Zero additional complexity, Tailscale handles routing |
 | 2+ hosts, multiple remote clients | Leaf node | Reduces WAN connections, local pub/sub for co-located services |
 | Hub-and-spoke (many remotes) | Leaf nodes per spoke | Each spoke gets local NATS, leaf auto-reconnects |
@@ -217,7 +217,7 @@ The Myrmidons submodule was pinned to an old commit still targeting `ai-maestro`
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Direct leaf.conf to port 4222 | Connected leaf node to NATS client port | Leaf nodes require dedicated leafnode listener port (7422) | Always use the leafnode-specific port (7422), not the client port (4222) |
 | Submodule scripts as-is | Tried to use provisioning/Myrmidons scripts | Submodule pinned to old commit with `aim_*` functions targeting ai-maestro | Verify submodule pins match standalone checkouts after migrations |
 | Keystone as transport daemon | Planned to use Keystone to bridge BlazingMQ to NATS | Keystone is a C++ library with MessageBus abstraction, not a deployable service. No BlazingMQ binary exists. | Components connect to NATS directly; Keystone transport abstraction is aspirational |
@@ -270,7 +270,7 @@ env_vars:
 ## Related Skills
 
 | Skill | Relationship |
-|-------|-------------|
+| ------- | ------------- |
 | `e2e-homeric-compose-cpp-pipeline` | Base single-host E2E pipeline; this skill extends it to multi-host |
 | `tailscale-agamemnon-setup` | Tailscale installation and Agamemnon cross-host connectivity |
 | `natsc-fetchcontent-cpp20-integration` | NATS C client integration for C++20 services |
@@ -278,6 +278,6 @@ env_vars:
 ## Verified On
 
 | Project | Date | Details |
-|---------|------|---------|
+| --------- | ------ | --------- |
 | Odysseus | 2026-04-03 | Cross-host E2E deployment — 2-host topology: worker (epimetheus) + control host over Tailscale mesh |
 | Odysseus | 2026-04-06 | Full cross-host validation PASS after firewalld fix; all 6 checks: NATS reachable, Agamemnon health, Hermes webhook, task lifecycle, observability metrics |

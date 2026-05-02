@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-25 |
 | **Project** | ProjectScylla |
 | **Objective** | Fix `--retry-errors` in single mode resuming a FAILED experiment that runs only old tiers and then exits immediately |
@@ -174,7 +174,7 @@ to subtest/tier/experiment states.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -233,7 +233,7 @@ assert "T1" in tier_ids
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PRs #1104, #1105 (2026-02-25) | [notes.md](../../references/notes.md) |
 
 ## Related Skills

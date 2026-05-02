@@ -10,13 +10,13 @@ user-invocable: false
 
 ## Overview
 
-| Field      | Value                                              |
-|------------|----------------------------------------------------|
-| Date       | 2026-02-19                                         |
-| Issue      | #682                                               |
-| PR         | #769                                               |
-| Objective  | CI check that filename matches model_id in YAML configs |
-| Outcome    | Success — 28 tests, all pre-commit hooks pass      |
+| Field | Value |
+| ------------ | ---------------------------------------------------- |
+| Date | 2026-02-19 |
+| Issue | #682 |
+| PR | #769 |
+| Objective | CI check that filename matches model_id in YAML configs |
+| Outcome | Success — 28 tests, all pre-commit hooks pass |
 
 ## When to Use
 
@@ -108,18 +108,18 @@ Pre-commit hooks auto-format with ruff on first commit attempt; files are modifi
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
-| Metric          | Value                               |
-|-----------------|-------------------------------------|
-| Tests added     | 28                                  |
-| Tests total     | 2233                                |
-| Coverage        | 73.35% (threshold: 73%)             |
-| Pre-commit hook | `validate-model-configs`            |
-| Hook trigger    | `^config/models/.*\.yaml$`          |
-| Fixtures skipped| Files prefixed with `_`             |
+| Metric | Value |
+| ----------------- | ------------------------------------- |
+| Tests added | 28 |
+| Tests total | 2233 |
+| Coverage | 73.35% (threshold: 73%) |
+| Pre-commit hook | `validate-model-configs` |
+| Hook trigger | `^config/models/.*\.yaml$` |
+| Fixtures skipped | Files prefixed with `_` |
 
 ## Template: Validation Script
 

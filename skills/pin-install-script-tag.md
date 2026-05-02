@@ -17,7 +17,7 @@ are reproducible and do not silently upgrade binary tools.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-07 |
 | Issue | #3349 |
 | PR | #3982 |
@@ -39,7 +39,7 @@ are reproducible and do not silently upgrade binary tools.
 ## Decision: Which version to pin to
 
 | Source | When to use |
-|--------|-------------|
+| -------- | ------------- |
 | Match previous `cargo install --version X.Y.Z` | Easiest — use the same version that was pinned before the installer migration |
 | Check `CLAUDE.md` / `justfile` / CI for a version reference | If no prior pin, look for version hints in project tooling |
 | Tool's latest stable release page | Only if no prior pin existed at all |
@@ -120,7 +120,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A — task was straightforward | The fix was a one-word addition (`--tag 1.14.0`) to an existing curl command | No failures encountered | When migrating from `cargo install --version` to a pre-built installer, always carry the version pin forward immediately |
 
 ## Results & Parameters
@@ -128,7 +128,7 @@ gh pr merge --auto --rebase
 ### Files changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `Dockerfile` | Add `--tag 1.14.0` to `just.systems/install.sh` curl command |
 
 ### just installer version flag syntax
@@ -145,7 +145,7 @@ RUN curl -fsSL https://just.systems/install.sh | bash -s -- --to /usr/local/bin 
 ### Common installer version flags by tool
 
 | Tool | Version flag | Example |
-|------|-------------|---------|
+| ------ | ------------- | --------- |
 | `just` | `--tag` | `--tag 1.14.0` |
 | `pixi` | env var `PIXI_VERSION` | `PIXI_VERSION=0.65.0 curl ... \| bash` |
 | `rustup` | `--default-toolchain` | `--default-toolchain 1.75.0` |
@@ -161,7 +161,7 @@ An unpinned `curl | bash` install always fetches the latest release at build tim
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3349, PR #3982 | [notes.md](../../references/notes.md) |
 
 ## Related Skills

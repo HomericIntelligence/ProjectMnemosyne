@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-29 |
 | **Objective** | Go/NoGo assessment for haiku paper experiment; verify E2E infrastructure supports 3-stage execution with 3 runs x 3 judges, agent commit capture, and judge diff visibility |
 | **Outcome** | GO — repo audit scored A- (91%), infrastructure verified, 3-stage runner script created |
@@ -70,7 +70,7 @@ python scripts/manage_experiment.py run \
 ### Key CLI Flags
 
 | Flag | Purpose | Notes |
-|------|---------|-------|
+| ------ | --------- | ------- |
 | `--until agent_complete` | Stop after agent execution | Runs stay in `in_progress/` |
 | `--until promoted_to_completed` | Stop after commit+diff+promote | Runs move to `completed/` |
 | (no `--until`) | Run to completion including judging | Full pipeline |
@@ -125,7 +125,7 @@ claude --version >/dev/null 2>&1 || { echo "claude CLI not found"; exit 1; }
 ### Concurrency Guidelines
 
 | Stage | Recommended `--max-concurrent-agents` | Rationale |
-|-------|---------------------------------------|-----------|
+| ------- | --------------------------------------- | ----------- |
 | 1 — Agent Execution | 10 | Agents are independent; parallelism speeds up total time |
 | 2 — Commit + Promote | 2 | Git/IO-bound; low concurrency avoids contention |
 | 3 — Judging | 5 | API-bound; moderate to avoid rate limits |
@@ -133,7 +133,7 @@ claude --version >/dev/null 2>&1 || { echo "claude CLI not found"; exit 1; }
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | 1 | Used `--until diff_captured` for Stage 2 | Runs stay in `in_progress/` at `diff_captured` state; judges only read from `completed/` directory so they never see the runs | Must use `--until promoted_to_completed` to move runs into `completed/` before judging |
 | 2 | Pre-flight check for `ANTHROPIC_API_KEY` env var | Agents run via `claude` CLI which has its own auth (OAuth/API key configured in `~/.claude/`); `ANTHROPIC_API_KEY` is not used | Check `claude --version` instead of `ANTHROPIC_API_KEY` in pre-flight scripts |
 | 3 | Used `--judge-models` (plural) flag | CLI uses `--judge-model` (singular) for primary judge + `--add-judge` (repeatable) for additional judges | Always check `manage_experiment.py --help` for exact flag names; plural form does not exist |
@@ -208,7 +208,7 @@ if failed:
 Before running an experiment, audit the repo across these key dimensions:
 
 | Dimension | Weight | What to Check |
-|-----------|--------|---------------|
+| ----------- | -------- | --------------- |
 | Test Coverage | High | >= 75% combined src + scripts |
 | CI Green | High | All checks pass on main |
 | E2E Framework | High | State machine, stages, paths all operational |
@@ -219,5 +219,5 @@ Before running an experiment, audit the repo across these key dimensions:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Go/NoGo for haiku paper experiment | 5,306 tests, 78.24% coverage, A- (91%) audit score |

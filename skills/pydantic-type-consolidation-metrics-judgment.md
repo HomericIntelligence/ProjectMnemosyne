@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-19 |
 | **Objective** | Apply Pydantic inheritance hierarchy to MetricsInfo, JudgmentInfo, and deprecate BaseRunMetrics dataclass |
 | **Outcome** | ✅ Successfully consolidated MetricsInfo and JudgmentInfo with full backward compatibility |
@@ -41,7 +41,7 @@ See that skill for the foundational pattern. Use this skill when:
 ## Key Differences from ExecutionInfo Pattern (#658)
 
 | Aspect | ExecutionInfo (#658) | MetricsInfo/JudgmentInfo (#729) |
-|--------|---------------------|---------------------------------|
+| -------- | --------------------- | --------------------------------- |
 | Starting variants | 3 definitions (executor, reporting, core dataclass) | 1 definition each (reporting only) |
 | Discovery scope | Found duplicates via grep | No duplicates — preemptive extraction |
 | Field defaults | `duration_seconds=0.0`, `timed_out=False` | `cost_usd=0.0`, `impl_rate=0.0` |
@@ -229,7 +229,7 @@ class TestBaseRunMetricsDeprecation:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -281,7 +281,7 @@ pre-commit run --all-files
 ### Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/core/results.py` | Added `MetricsInfoBase`, `JudgmentInfoBase`; deprecated `BaseRunMetrics` |
 | `scylla/core/__init__.py` | Exported `MetricsInfoBase`, `JudgmentInfoBase` |
 | `scylla/reporting/result.py` | `MetricsInfo` → inherits `MetricsInfoBase`; `JudgmentInfo` → inherits `JudgmentInfoBase` |

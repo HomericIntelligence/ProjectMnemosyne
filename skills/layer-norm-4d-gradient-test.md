@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Purpose** | Validate `layer_norm_backward` on 4D inputs via central finite differences |
 | **Language** | Mojo v0.26.1 |
 | **Target file** | `tests/shared/core/test_normalization.mojo` |
@@ -44,7 +44,7 @@ Read the normalization test file to understand its structure and existing test c
 For 4D layer norm (normalizes over last N dims), gamma must be flat over those dims:
 
 | Input shape | Normalized dims | Gamma shape |
-|-------------|----------------|-------------|
+| ------------- | ---------------- | ------------- |
 | `[B, C, H, W]` | `[C, H, W]` | `[C*H*W]` |
 | `[2, 2, 2, 4]` | `[2, 2, 4]` | `[16]` |
 
@@ -144,7 +144,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `grad_output=ones` | Uniform all-ones grad_output for simplicity | `sum(grad_output * x_hat) = sum(x_hat) = 0` by normalization identity — last backward term vanishes, masking bugs | Always use non-uniform grad_output for layer norm gradient tests |
 | Creating a new file | Adding a 5th test_normalization file | Existing file had room (7→8 fns) | Count existing `fn test_` before deciding to create vs extend |
 | Gamma shape `[C, H, W]` = `[2, 2, 4]` | Using full 3D gamma for 4D input | Implementation convention uses flat `[C*H*W]` = `[16]` for 4D inputs | Verify gamma shape convention matches the implementation, not intuition |

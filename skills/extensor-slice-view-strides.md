@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | extensor-slice-view-strides |
 | **Category** | architecture |
 | **Repo** | HomericIntelligence/ProjectOdyssey |
@@ -179,7 +179,7 @@ have docstrings like `"""The view_with_strides method..."""` not
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `var new_shape = self._shape` | Direct assignment to copy shape for `slice()` | Mojo `List[Int]` is not `ImplicitlyCopyable`; compiler error "value of type 'List[Int]' cannot be implicitly copied" | Always use `.copy()` when assigning a `List[Int]` field to a new variable |
 | Docstrings starting with method name | `"""view_with_strides returns..."""` | Mojo compiler error: "doc string summary should begin with a capital letter or non-alpha character" | Prefix with `The`, `A`, `An`, or a non-alpha character |
 | Updating only `slice()` without fixing accessor methods | Assumed `view_with_strides` alone was sufficient | Transposed-view slices returned wrong values because `_get_float32`/`_get_int64` still used `index * dtype_size` | Non-contiguous view correctness requires fixing all element accessor methods, not just the view-creation entry point |
@@ -206,12 +206,12 @@ just test-group "tests/shared/core" "test_extensor_slicing*.mojo"
 ### Pre-existing failures (not introduced)
 
 | Test file | Error | Root cause |
-|-----------|-------|------------|
+| ----------- | ------- | ------------ |
 | `test_extensor_slicing_part3.mojo` | `Single slice only supported for 1D tensors` | Pre-existing limitation in `__getitem__(*slices)` |
 | `test_slicing_part2.mojo` | `'alias' is deprecated, use 'comptime'` | Pre-existing in `shared/data/__init__.mojo` |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3799, PR #4801 | [notes.md](../references/notes.md) |

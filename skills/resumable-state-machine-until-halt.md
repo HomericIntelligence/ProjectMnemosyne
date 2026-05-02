@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-25 |
 | Branch | `1067-additive-cli-args-checkpoint` |
 | Objective | Fix `--until` re-execution bug; additive CLI tiers; `in_progress` run display |
@@ -252,7 +252,7 @@ def _derive_run_result(checkpoint, tier_id, subtest_id, run_num_int, run_state_r
 ## Failed Attempts (Critical)
 
 | Attempt | Why It Failed | Fix |
-|---------|---------------|-----|
+| --------- | --------------- | ----- |
 | Define `UntilHaltError` in `subtest_executor.py` | Circular import: `subtest_executor` imports `subtest_state_machine`, which would need to import `subtest_executor` | Define in `subtest_state_machine.py`; use lazy import in `subtest_executor.py` |
 | Test expects `RUNS_IN_PROGRESS` after `UntilHaltError` from PENDING action | `advance()` updates state AFTER `action()` returns; exception prevents the update; state stays at PENDING | Fix `advance()` to catch `UntilHaltError`, still update state, re-raise |
 | Tier-merge only inside `if experiment_state in ("failed", "interrupted")` | CLI tiers not merged when experiment was previously `"complete"` | Move tier-merge outside the failed/interrupted block |
@@ -263,7 +263,7 @@ def _derive_run_result(checkpoint, tier_id, subtest_id, run_num_int, run_state_r
 ## Results & Parameters
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Tests | 3108 passed |
 | Coverage | 78.27% (threshold: 75%) |
 | Pre-commit | All hooks pass |
@@ -273,7 +273,7 @@ def _derive_run_result(checkpoint, tier_id, subtest_id, run_num_int, run_state_r
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1107 — additive CLI args + --until fix | [notes.md](../references/notes.md) |
 
 ## Key Invariants

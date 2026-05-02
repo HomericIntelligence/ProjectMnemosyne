@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-05 |
 | **Objective** | Replace a `pygrep` hook that used `shell=True` pattern-matching with `bandit` AST-based security scanning |
 | **Outcome** | PR correct as-is; CI failures confirmed pre-existing; no code changes needed |
@@ -130,14 +130,14 @@ crashes pre-existing on `main`, not caused by the security hook change.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Treating CI failures as PR-caused | Assumed all failing CI jobs were related to the PR changes | `Data Loaders` and `Test Examples` failures were Mojo runtime crashes (`execution crashed`) pre-existing on `main`, completely unrelated to `.pre-commit-config.yaml` changes | Always cross-reference CI failures against the PR diff before assuming causation |
 | Unnecessary fix commit | Considered committing a no-op change to "complete" the review-fix task | The fix plan explicitly stated "No fixes needed" — a spurious commit would add noise | When a review-fix plan says "no fixes required," verify with local checks and do NOT commit |
 
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Hook language | `system` (uses pixi environment) |
 | Bandit severity filter | `-ll` (medium + high only) |
 | Skipped rules | `B310,B202` |
@@ -164,5 +164,5 @@ crashes pre-existing on `main`, not caused by the security hook change.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3355, Issue #3157 | [notes.md](../references/notes.md) |

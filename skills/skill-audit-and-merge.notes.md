@@ -25,7 +25,7 @@ Used 3 parallel Explore agents:
 ## Merge Decisions
 
 | Plugins | Result | Rationale |
-|---------|--------|-----------|
+| --------- | -------- | ----------- |
 | worktree-{create,switch,sync,cleanup} | git-worktree-workflow | Sequential workflow, all cross-reference |
 | gh-{get,reply}-review-comments + fix-pr-feedback | gh-pr-review-workflow | Orchestrator pattern |
 | analyze-ci-failure-logs + fix-ci-failures | ci-failure-workflow | Analysis + action pair |

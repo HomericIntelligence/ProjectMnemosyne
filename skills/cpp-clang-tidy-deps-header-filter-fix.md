@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-07 |
 | **Objective** | Stop clang-tidy from reporting warnings from FetchContent _deps/ vendor headers |
 | **Outcome** | clang-tidy CI passes after anchoring HeaderFilterRegex to project name |
@@ -65,9 +65,9 @@ FormatStyle: file
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | ExcludeHeaderFilterRegex | Added `ExcludeHeaderFilterRegex: '_deps/'` to .clang-tidy | "unknown key 'ExcludeHeaderFilterRegex'" — not supported in older clang-tidy | Use anchored HeaderFilterRegex instead |
-| Bare directory regex | `HeaderFilterRegex: '(include|src|test)/'` | Matches `_deps/nats_c-src/src/nats.h` because the path contains `/src/` | Must anchor to project root, not just directory name |
+| Bare directory regex | `HeaderFilterRegex: '(include\|src\|test)/'` | Matches `_deps/nats_c-src/src/nats.h` because the path contains `/src/` | Must anchor to project root, not just directory name |
 | Only -llvm-* suppressor | Expected -llvm-* to cover all llvm-prefixed checks | `llvmlibc-*` checks still fire | The `llvmlibc-*` family has a different prefix — add `-llvmlibc-*` separately |
 
 ## Results & Parameters
@@ -101,6 +101,6 @@ FormatStyle: file
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectAgamemnon | clang-tidy CI check FAILURE to SUCCESS | Anchored HeaderFilterRegex + added -llvmlibc-* suppressor |
 | ProjectNestor | Same fix applied, CI passes | Identical pattern — same FetchContent nats.c dependency |

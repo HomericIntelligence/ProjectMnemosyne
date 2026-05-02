@@ -59,7 +59,7 @@ Docker image CVEs unrelated to the Dependabot change. Deferred to separate issue
 - Total haiku agents spawned: ~35 across all waves
 
 ## PRs That Needed Manual Intervention
-- PR #4723: List[Int]() syntax in test_shape_noncontiguous_values.mojo (handled directly)
+- PR #4723: `List[Int]()` syntax in test_shape_noncontiguous_values.mojo (handled directly)
 - PR #4574: just not in PATH — both .pre-commit-config.yaml AND pre-commit.yml needed fixing
 - PR #4530: Missing test_int_bitwise_not.mojo in CI matrix
-- PR #4730: Missing test_setitem_view.mojo in CI matrix + List[Int]() fixes
+- PR #4730: Missing test_setitem_view.mojo in CI matrix + `List[Int]()` fixes

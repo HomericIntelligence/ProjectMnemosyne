@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Eliminate hardcoded path construction; create single source of truth for directory structure including phase-based routing |
 | **Outcome** | ✅ v1.0.0: basic centralization. v2.0.0: phase-routed paths (in_progress/completed split) |
@@ -127,7 +127,7 @@ grep -rn "experiment_dir / \|experiment_dir/" src/ scripts/ \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Basic string paths | Direct `run_dir / "agent"` in every file | Typos (`"agents"` vs `"agent"`) caused silent failures | Use constants from paths.py even for short strings |
 | Phase split without audit | Added in_progress/completed split but didn't audit all callers | 17 files post-merge still used `experiment_dir / tier_id` directly — silent wrong-dir reads | ALWAYS run the pre-merge audit grep before merging a directory structure change |
 | `shutil.move` for shared baseline | Moved `pipeline_baseline.json` with the first run during promotion | Second run in same subtest can't find baseline — it was moved away | Use `shutil.copy2` for files shared across sibling runs; only move the run directory itself |
@@ -140,7 +140,7 @@ grep -rn "experiment_dir / \|experiment_dir/" src/ scripts/ \
 When the `in_progress/completed` split was added, **17 bypass violations** were found post-merge across:
 
 | Module | Violations | Fix |
-|--------|-----------|-----|
+| -------- | ----------- | ----- |
 | `tier_manager.py` | 3 | `get_tier_dir(..., completed=True)` |
 | `parallel_tier_runner.py` | 1 | `get_subtest_dir(..., completed=True)` |
 | `regenerate.py` | 3 | `get_run_dir/get_tier_dir/get_subtest_dir(completed=True)` |
@@ -154,7 +154,7 @@ When the `in_progress/completed` split was added, **17 bypass violations** were 
 ### `completed=` Routing Decision Table
 
 | Site | `completed=` | Reason |
-|------|-------------|--------|
+| ------ | ------------- | -------- |
 | Active run execution (PENDING to DIFF_CAPTURED) | `False` | Work is in-flight |
 | Judging and reporting (PROMOTED_TO_COMPLETED+) | `True` | Only completed runs are judged |
 | Rehydration / resume scanning | `True` | Completed runs have stable data |
@@ -164,6 +164,6 @@ When the `in_progress/completed` split was added, **17 bypass violations** were 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #137 — initial path standardization | Basic constants and helpers |
 | ProjectScylla | PRs #1738/#1739 — in_progress/completed split | Phase-routed paths, 17 post-merge bypass violations found and fixed |

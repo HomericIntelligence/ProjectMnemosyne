@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-21 |
 | Issue | #878 |
 | PR | #925 |
@@ -35,7 +35,7 @@ Trigger this skill when:
 The canonical policies to check are defined in `CLAUDE.md`. The four enforced rules:
 
 | Rule ID | Violation | Policy |
-|---------|-----------|--------|
+| --------- | ----------- | -------- |
 | `no-label-in-pr-create` | `gh pr create --label` | Labels are prohibited |
 | `no-verify-in-commit` | `git commit --no-verify` | Absolutely prohibited |
 | `wrong-merge-strategy` | `gh pr merge --merge` or `--squash` | Must use `--auto --rebase` |
@@ -142,7 +142,7 @@ gh pr merge --auto --rebase
 Test classes:
 
 | Class | Tests | Coverage |
-|-------|-------|----------|
+| ------- | ------- | ---------- |
 | `TestExtractCodeBlocks` | 7 | Code block extraction |
 | `TestScanFileDetectsViolations` | 6 | All 4 rules triggered |
 | `TestScanFilePassesCleanExamples` | 7 | Compliant examples pass |
@@ -162,5 +162,5 @@ The only historical violation (`--label` in `CONTRIBUTING.md`) was already fixed
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |

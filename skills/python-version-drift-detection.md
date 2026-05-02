@@ -13,7 +13,7 @@ tier: 2
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-02 |
 | Objective | Add CI check to detect when `pyproject.toml` Python classifiers and `Dockerfile FROM python:X.Y` diverge silently |
 | Outcome | Operational — PR #1292 merged into ProjectScylla |
@@ -77,7 +77,7 @@ Place **before** `Install pixi` so it uses the runner's system Python (stdlib-on
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

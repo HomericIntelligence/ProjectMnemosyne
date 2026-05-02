@@ -28,7 +28,7 @@ Graph: ranking nodes (start/intermediate/end) + match nodes + port nodes + team_
 ## Files Changed for Edge Visibility
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `web/js/app.js` | `cytoscapeInstance.edges().style('display', 'none')` after initGraph |
 | `web/js/controls.js` `_applyFilters` | Step 3: `cy.edges().style('display', 'none')` (was: hide only endpoint-hidden edges) |
 | `web/js/controls.js` `_applyHighlight` | `cy.edges().style('display', 'none')` + `teamEdges.style('display', 'element')` |

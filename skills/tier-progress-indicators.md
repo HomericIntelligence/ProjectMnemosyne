@@ -17,7 +17,7 @@ tags:
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-04 |
 | **Objective** | Add real-time progress indicators during parallel tier execution to prevent appearance of hung process |
 | **Outcome** | ✅ Progress logging shows completed/total tasks, active workers, and elapsed time |
@@ -115,7 +115,7 @@ except Exception as e:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -179,5 +179,5 @@ logger.info(f"[PROGRESS] Tier {tier_id}: ...")  # Log progress
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #140 - Progress indicators for E2E tier execution | [notes.md](../../references/notes.md) |

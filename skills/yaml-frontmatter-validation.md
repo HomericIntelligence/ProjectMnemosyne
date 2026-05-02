@@ -15,7 +15,7 @@ Systematic approach to diagnosing and fixing CI validation failures across multi
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-08 |
 | Objective | Fix CI failures on 5 open PRs (4 with failures) caused by missing YAML frontmatter |
 | Outcome | ✅ Successfully fixed all 5 PRs - all CI now passing |
@@ -183,7 +183,7 @@ sleep 30 && gh pr view <number> --json statusCheckRollup --jq '.statusCheckRollu
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -212,7 +212,7 @@ agent: specialist-name
 ### Fix Strategy Decision Matrix
 
 | Scenario | Action |
-|----------|--------|
+| ---------- | -------- |
 | Same error on multiple PRs | Fix on main first |
 | Plugin name validation error | Rename plugin (directories + files) |
 | Missing frontmatter | Add frontmatter block at file start |
@@ -285,7 +285,7 @@ python3 scripts/generate_marketplace.py
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | PR #74, #73, #72, #69, #68 | Fixed 4 failing PRs by adding frontmatter and renaming plugins. See [notes.md](../references/notes.md) for CI logs and commands. |
 
 ## References

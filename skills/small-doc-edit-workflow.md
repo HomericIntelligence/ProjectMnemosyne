@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Category** | documentation |
 | **Complexity** | S (small) |
 | **Typical runtime** | < 5 minutes |
@@ -60,7 +60,7 @@ but still exits 0 — this is non-fatal. The markdown lint and Python hooks run 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `just pre-commit-all` | Used `just` as the command runner | `just` not on PATH in this environment | Fall back to `pixi run pre-commit run --all-files` directly |
 | Using `replace_all: false` without sufficient context | Tried a short old_string that could match multiple locations | Edit tool requires unique old_string | Always include the line before AND after the insertion point |
 

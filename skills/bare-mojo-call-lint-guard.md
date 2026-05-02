@@ -19,7 +19,7 @@ lets existing legitimate calls (inside retry loops) pass without changes to logi
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-15 |
 | Mojo Version | 0.26.1 |
 | Objective | Prevent regression of bare pixi run mojo calls after retry was applied |
@@ -42,7 +42,7 @@ lets existing legitimate calls (inside retry loops) pass without changes to logi
 ### Quick Reference
 
 | File | What it does |
-|------|-------------|
+| ------ | ------------- |
 | `scripts/check_bare_mojo_calls.py` | Grep-based detector script |
 | `.pre-commit-config.yaml` | `no-bare-pixi-mojo-calls` hook |
 | `.github/workflows/validate-workflows.yml` | CI lint step |
@@ -177,7 +177,7 @@ pixi run python -m pytest tests/scripts/test_check_bare_mojo_calls.py -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Context-aware retry detection | Detect retry loop context by scanning surrounding lines | Too complex and fragile; `while [ $attempt -lt 3 ]` above `pixi run mojo` is inconsistently formatted | Per-line suppression comments are simpler and self-documenting |
 | Broad pattern `pixi run mojo [^-]` | Match any pixi run mojo call not starting with `-` | Would flag `pixi run mojo build`, `mojo package`, etc. which are fine without retry | Scope pattern to `test` and `run` subcommands only |
 | Echo message containing literal pattern | CI step's echo included `'pixi run mojo test\|run'` | The linter matched its own echo line, causing false positive | Rephrase echo messages to avoid containing the exact pattern string |

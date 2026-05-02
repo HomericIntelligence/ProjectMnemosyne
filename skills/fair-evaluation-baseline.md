@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2025-02-15 |
 | **Objective** | Implement baseline pipeline regression validation to distinguish agent-introduced failures from pre-existing issues |
 | **Outcome** | ✅ Successfully implemented with 367 additions across 8 files, 100% test pass rate |
@@ -432,14 +432,14 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Metrics
 
 ### Implementation Metrics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | **Files Changed** | 8 files |
 | **Lines Added** | 367 |
 | **Lines Removed** | 9 |
@@ -463,7 +463,7 @@ tests/fixtures/test-001/rubric.yaml  +6   (example rubric updates)
 ### Performance Characteristics
 
 | Aspect | Impact |
-|--------|--------|
+| -------- | -------- |
 | **Baseline Capture** | Single execution per subtest (before first run) |
 | **Checkpoint Resume** | Skips re-capture if baseline file exists |
 | **Memory** | Minimal - single BuildPipelineResult object per subtest |

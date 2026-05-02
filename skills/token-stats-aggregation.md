@@ -11,7 +11,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-01-03 |
 | Objective | Track detailed token statistics (input, output, cache_read, cache_creation) with hierarchical aggregation across E2E report levels |
 | Outcome | Success - implemented TokenStats dataclass with aggregation, enhanced reports at all levels |
@@ -161,7 +161,7 @@ assert result.tokens_input == 100
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -188,7 +188,7 @@ At each report level, add:
 ### Files Modified (Reference)
 
 | File | Changes |
-|------|---------|
+| ------ | --------- |
 | `models.py` | Add TokenStats dataclass, update RunResult/SubTestResult/TierResult/ExperimentResult |
 | `adapters/base.py` | Add AdapterTokenStats, update AdapterResult |
 | `adapters/*.py` | Use token_stats in all adapters |

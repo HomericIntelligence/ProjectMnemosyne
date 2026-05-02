@@ -16,7 +16,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-07 |
 | Objective | Audit `shared/training/` submodule `__init__.mojo` files for re-export limitations and add `Note:` sections documenting findings |
 | Outcome | Success — 4 submodule docstrings updated confirming clean re-export; 0 new limitations found |
@@ -117,7 +117,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `just pre-commit-all` | Ran `just` command runner | `just: command not found` in this environment | Use `pixi run pre-commit run --all-files` instead |
 | Broad `# NOTE` grep on all files | Initial grep for any NOTE in `__init__.mojo` | Returned too many irrelevant NOTEs (method-level notes, inline comments) | Narrow to `# NOTE.*[Rr]e-export` or `# NOTE.*submodule` patterns |
 

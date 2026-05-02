@@ -14,7 +14,7 @@ tags: [blog-posts, bug-validation, verification, codebase-audit]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-09 |
 | **Objective** | Systematically validate that bugs documented in blog posts have been fixed |
 | **Outcome** | Successfully validated 4 bugs from 3 blog posts; 3 fully fixed, 1 partially fixed and completed |
@@ -71,7 +71,7 @@ tags: [blog-posts, bug-validation, verification, codebase-audit]
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Single-pass validation | Tried to validate all bugs in one sequential pass | Too slow for independent bugs; context window fills up | Use parallel Explore agents for independent bug categories |
 | Grep-only verification | Relied solely on grep for pattern elimination | Missed cases where old patterns exist in deprecated/dead code | Must distinguish active code from deprecated files |
 
@@ -80,7 +80,7 @@ tags: [blog-posts, bug-validation, verification, codebase-audit]
 ### Validated Bugs (from March 2026 blog posts)
 
 | Bug | Blog Post | Strategy | Status |
-|-----|-----------|----------|--------|
+| ----- | ----------- | ---------- | -------- |
 | Bitcast UAF | Day 53 (Mar 16) | Pattern elimination | FIXED |
 | Slice view bad-free | Day 61 (Mar 24) | Guard verification | FIXED |
 | alias to comptime | Day 62 (Mar 25) | Pattern elimination | FIXED |
@@ -105,5 +105,5 @@ grep -rn "check_gradient(" tests/ --include="*.mojo"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | March 2026 blog post validation session | Validated 4 bugs from 3 blog posts (Day 53, 61, 62) |

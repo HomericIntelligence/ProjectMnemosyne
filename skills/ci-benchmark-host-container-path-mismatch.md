@@ -24,7 +24,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-27 |
 | **Objective** | Fix benchmark workflow where output directory created on host is not accessible inside container |
 | **Outcome** | Successful — create output directory inside the container exec command |
@@ -96,7 +96,7 @@ Additionally, the output path convention may differ between host and container.
 ### ProjectOdyssey Output Directory Convention
 
 | Purpose | Directory | Notes |
-|---------|-----------|-------|
+| --------- | ----------- | ------- |
 | Benchmark results | `builds/benchmarks/` | JSON output files |
 | Build artifacts | `builds/` | Compiled binaries |
 | Test results | `test-results/` | JUnit XML, coverage |
@@ -104,7 +104,7 @@ Additionally, the output path convention may differ between host and container.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `mkdir -p benchmark-results` on host | Created output dir before exec call | Host dir not accessible by container process due to UID remapping | Create the dir inside the container exec, not on the host |
 | Using `benchmark-results/` path | Used non-standard output dir name | Project convention is `builds/benchmarks/` | Check project output dir conventions before hardcoding paths |
 
@@ -145,5 +145,5 @@ podman compose exec dev id  # uid=1000(dev) -- different from host
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | CI benchmark workflow | PR #5177 (unverified) |

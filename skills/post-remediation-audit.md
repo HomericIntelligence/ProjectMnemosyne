@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | post-remediation-audit |
 | **Category** | ci-cd |
 | **Scope** | Python package repositories with pyproject.toml + GitHub Actions CI |
@@ -34,7 +34,7 @@ Closes the quality gap after a first-pass remediation by auditing CI matrix alig
 ### Quick Reference
 
 | Issue Type | File | Fix |
-|------------|------|-----|
+| ------------ | ------ | ----- |
 | Classifier/CI mismatch | `pyproject.toml` classifiers | Remove classifiers for untested Python versions |
 | pytest version skew | `pyproject.toml` dev deps | Align to range tested in pixi.toml |
 | Release without test gate | `.github/workflows/release.yml` | Add `test` job + `needs: test` on publish job |
@@ -191,7 +191,7 @@ fix: post-remediation audit — classifier cleanup, release gate, CLI docs, and 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `noqa: BLE001` on bare except | Added `# noqa: BLE001` to suppress ruff warning on `except Exception` | `BLE001` was not in the project's ruff `select` list — caused "unused noqa directive" error | Check `[tool.ruff.lint] select` before adding noqa codes; use plain comments when the rule isn't selected |
 | Relative `cd` in Bash commands | Used `cd build/$$/ProjectMnemosyne` with relative paths | Shell PID `$$` expanded to empty string in tool invocation context | Always use absolute paths; capture `$$` into a variable first or use `$PPID`-style workarounds |
 

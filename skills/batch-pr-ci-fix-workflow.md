@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-29 |
 | **Objective** | Diagnose and fix CI failures across multiple open PRs — formatting, pre-commit hooks, broken JSON, MkDocs link errors, rebase-based fixes, required vs non-required checks, src-layout migration conflicts |
 | **Outcome** | Consolidated from 6 source skills (v1.0.0) + new learnings from ProjectScylla PRs #1739/#1734/#1737/#1740 (v2.0.0) |
@@ -105,7 +105,7 @@ gh pr view <number> --json mergeable,mergeStateStatus
 The hook name in the CI log tells you which fix path to take:
 
 | Hook / Error | Fix Path |
-|------|----------|
+| ------ | ---------- |
 | `Ruff Format Python` | Auto-fix (blank lines, indentation) |
 | `Markdown Lint` | Auto-fix (MD032 blank lines) |
 | `Check Tier Label Consistency` | Manual doc fixes (see self-catch path below) |
@@ -280,7 +280,7 @@ git push origin <branch>
 MkDocs strict mode aborts on broken/unrecognized links:
 
 | Error Type | Example | Fix |
-|-----------|---------|-----|
+| ----------- | --------- | ----- |
 | Link to non-existent file | `[Math](math.md)` when file doesn't exist | Remove link or create file |
 | Cross-directory link | `[Workflow](../../.github/workflows/file.yml)` | Convert to backtick code reference |
 | Unrecognized relative link | `[Examples](../../examples/)` | Use valid docs-relative path or remove |
@@ -690,7 +690,7 @@ git rebase origin/main                             # Surface all conflicts at on
 **Conflict resolution heuristics (ProjectHephaestus PR #268, 6 files, 2026-04-12)**:
 
 | File class | Strategy |
-|-----------|----------|
+| ----------- | ---------- |
 | `pyproject.toml` version field | Keep main's (higher) |
 | `pyproject.toml` scripts (additive) | Keep main's full list, drop PR's duplicates |
 | `pixi.lock` | `git checkout --theirs pixi.lock && pixi install` (regenerate, NEVER hand-merge) |
@@ -796,7 +796,7 @@ When all required checks fail simultaneously in a C++ project using Conan + sani
 the failure cause determines the fix path:
 
 | Pattern | Diagnosis | Fix Path |
-|---------|-----------|----------|
+| --------- | ----------- | ---------- |
 | Code Quality = PASS, all 5 build-based checks = FAIL | **Build failure** (compiler error, not test failure) | Read build log for compiler errors |
 | Benchmarks + Code Coverage = SKIPPED, others = FAIL | **Code Quality failing** | Fix clang-format / clang-tidy first |
 | All 5 = FAIL, Code Quality = FAIL | **Code Quality + build failures** | Fix Code Quality first, reassess |
@@ -1230,7 +1230,7 @@ gh api -X PUT repos/{owner}/{repo}/rulesets/{ruleset-id} \
 **Threshold calibration guidance:**
 
 | Scenario | Recommended threshold |
-|----------|-----------------------|
+| ---------- | ----------------------- |
 | New C++ project, growing test suite | 60–70% |
 | Mature project with integration tests | 75–80% |
 | Safety-critical / financial | 85–90% |
@@ -1307,7 +1307,7 @@ GIT_EDITOR=true git rebase --continue
 **Decision table for conflict resolution:**
 
 | File type | Strategy | Why |
-|-----------|----------|-----|
+| ----------- | ---------- | ----- |
 | Shell scripts (.sh) | `take_theirs(path)` | PR's feature content should win |
 | Dockerfiles | `take_theirs(path)` or `strip_conflicts_keep_theirs(path)` | PR adds new instructions; main's base is already in THEIRS |
 | pixi.lock | `git show origin/main:pixi.lock > pixi.lock` (shell) then add | Lockfile always regenerated; take main's to avoid installing |
@@ -1440,7 +1440,7 @@ hundreds of test fixtures.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Trivy `image-ref:` with Podman-built image | Used `image-ref: ghcr.io/org/image:latest` in trivy-action after `podman build` | Trivy searches Docker daemon then containerd then Podman socket then remote GHCR; all 4 fail on GitHub Actions runners (no socket, GHCR pull denied on PR branches) | Use `podman save --output /tmp/image.tar` after build, then `scan-type: image` + `input: /tmp/image.tar` in trivy-action |
 | Trivy secret scanner on image with baked-in pre-commit cache | Left default `scanners: vuln,secret` on CI image containing pre-commit cache | gitleaks test fixtures (fake Stripe/GitHub/HuggingFace tokens) and Go stdlib test certs inside the pre-commit cache trigger hundreds of CRITICAL/HIGH false-positive secret findings | Add `scanners: vuln` to restrict Trivy to CVE scanning only; secrets covered by separate gitleaks step |
 | Pinned base image SHA without `apt-get upgrade` | Pinned `python:3.12-slim@sha256:...` without upgrading packages at build time | New CVEs land in Debian repos after the pin date; Trivy flags them as fixed but still present in the image | Add `apt-get upgrade -y` to all Containerfile stages so patches are applied at build time regardless of pin staleness |
@@ -1504,10 +1504,10 @@ hundreds of test fixtures.
 | markdownlint on .claude/ | Ran markdownlint-cli2 with globs: "**/*.md" with no exclusions | .claude/plugins/ files use <system>, <task>, <section> XML-like tags for Claude prompt templating — triggers MD033 (no-inline-html) and MD013 (line-length) on every line; ~12000 errors on first run | Add .markdownlintignore to exclude .claude/ before enabling markdownlint CI |
 | setup-pixi cache: true without pixi.lock | Added pixi-check job with cache: true and a conditional install step that handles missing pixi.lock | setup-pixi fails to generate a cache key BEFORE reaching the conditional install step, crashing the entire job | Set cache: false when pixi.lock may not exist; the cache savings don't justify the fragility |
 | `aquasecurity/trivy-action` without `v` prefix | Used `@0.36.0` (no `v`) in the action tag | Action tag lookup fails silently — "Unable to resolve action" — the tag is not found on GitHub without the `v` prefix | Always use `@v` prefix: `@v0.36.0` not `@0.36.0` |
-| `gitleaks/gitleaks-action@v2` on free org | Used the GitHub Action to run gitleaks secret scanning on HomericIntelligence org | Requires paid Gitleaks license; job fails with license/unauthorized error on org repos without a license key | Replace with direct binary download via curl: `curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz \| tar xz && ./gitleaks detect --source . --redact --no-git \|\| true` |
+| `gitleaks/gitleaks-action@v2` on free org | Used the GitHub Action to run gitleaks secret scanning on HomericIntelligence org | Requires paid Gitleaks license; job fails with license/unauthorized error on org repos without a license key | Replace with direct binary download via curl: `curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz \ | tar xz && ./gitleaks detect --source . --redact --no-git \ | \ | true` |
 | `git push --force-with-lease` on dependabot branch | Used `--force-with-lease` after rebasing a dependabot branch | GitHub rebases dependabot branches automatically between fetch and push, making the lease stale and causing the push to fail | Use `git push --force` for dependabot branches (with user pre-authorization); `--force-with-lease` is not safe when GitHub auto-rebases the branch |
 | check-jsonschema with external URL | Used `--schemafile https://json.schemastore.org/github-workflow` in CI schema-validation step | schemastore.org returns HTTP 503 intermittently; step fails with network error, not a validation error | Use `--builtin-schema vendor.github-workflows` to avoid runtime network dependency on schemastore.org |
-| auto-merge when required check fails on main | Enabled auto-merge on PRs; PRs were green but never merged | Required check (e.g., `Core Tensors`) was failing on `main` itself — no PR can ever satisfy a check that fails on the base branch; auto-merge deadlock is total | Fix `main` first; detect via `gh run list --branch main --json conclusion,name --jq '.[] \| select(.conclusion=="failure") \| .name'`; do NOT rebase PRs until main is green |
+| auto-merge when required check fails on main | Enabled auto-merge on PRs; PRs were green but never merged | Required check (e.g., `Core Tensors`) was failing on `main` itself — no PR can ever satisfy a check that fails on the base branch; auto-merge deadlock is total | Fix `main` first; detect via `gh run list --branch main --json conclusion,name --jq '.[] \ | select(.conclusion=="failure") \ | .name'`; do NOT rebase PRs until main is green |
 | yamllint `indent-sequences: true` | Changed `.yamllint.yaml` to `indent-sequences: true` | All existing YAML test fixtures with sequence items at parent-key indent level failed yamllint; large blast radius | Use `indent-sequences: consistent` instead, or bulk-fix all fixtures first; always run yamllint against fixture corpus before committing config changes |
 
 ## Results & Parameters
@@ -1569,7 +1569,7 @@ Is a check failing?
 ### Pre-commit Hook Reference
 
 | Hook | Purpose | Common Fix |
-|------|---------|------------|
+| ------ | --------- | ------------ |
 | `Ruff Format Python` | Python formatting | 2 blank lines between top-level classes |
 | `markdownlint-cli2` | Markdown formatting | MD032 blank lines around lists |
 | `Check Tier Label Consistency` | Tier name correctness | Fix tier label ranges |
@@ -1603,7 +1603,7 @@ fn __hash__[H: Hasher](self, mut hasher: H):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Batch merge of 3 documentation PRs | CI fix session 2025-12-29 |
 | ProjectOdyssey | 8 PRs created and 4 CI fixes, 2025-12-31 | batch-pr-ci-fixer source |
 | ProjectScylla | PRs #1462, #1452 pre-commit fixes, 2026-03-08 | batch-pr-pre-commit-fixes source |

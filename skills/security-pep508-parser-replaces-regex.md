@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Eliminate shell-metachar injection risk in `install_package()` by replacing a permissive custom regex with the canonical PEP 508 parser |
 | **Outcome** | Successful — all valid pip requirement syntax accepted, all dangerous inputs rejected |
@@ -98,7 +98,7 @@ if not re.fullmatch(r"[A-Za-z0-9_\-.\[\],>=< ]+", package_name):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Original regex | `r"^[A-Za-z0-9_\-\.\[\],>=<!\s]+$"` with `re.match` | Allowed newlines (via `\s`), `!` (shell history expansion), and other unintended whitespace | Custom regex for complex grammars (PEP 508) is inherently incomplete; use the canonical parser |
 | Tightened regex (PR #126) | `re.fullmatch(r"[A-Za-z0-9_\-.\[\],>=< ]+", ...)` — removed `\s` and `!`, used `fullmatch` | Blocks newlines/tabs/`!` but still can't handle full PEP 508 grammar (markers, extras with dots, etc.) | Useful as interim hardening but not a complete solution; a proper parser is still needed |
 
@@ -134,6 +134,6 @@ if not re.fullmatch(r"[A-Za-z0-9_\-.\[\],>=< ]+", package_name):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #31 — PEP 508 parser replacement | 54 unit tests pass, ruff/mypy clean, helpers.py at 94.83% coverage |
 | ProjectHephaestus | Issue #62 — regex tightening (interim fix) | 41 unit tests pass, `re.fullmatch` with literal space, `!` removed |

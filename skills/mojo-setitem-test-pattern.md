@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-05 |
 | **Issue** | #3165 — Add `__setitem__` tests to `test_utility.mojo` |
 | **Objective** | Add three tests for the new `__setitem__` method on `ExTensor`: valid index (Float64), integer dtype (Int64 overload), and out-of-bounds error |
@@ -128,7 +128,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Verifying tests compile locally | Ran `pixi run mojo build tests/shared/core/test_utility.mojo` | GLIBC version mismatch on this host (requires GLIBC_2.32+, host has older version) | Mojo cannot run locally; CI is the verification gate for compilation |
 | Checking `__setitem__` in current branch | `grep -n "__setitem__" shared/core/extensor.mojo` returned no matches | `__setitem__` lives in the issue-2722 worktree, not yet merged to main | Always check sibling worktrees when a follow-up issue references a parent issue |
 
@@ -137,7 +137,7 @@ gh pr merge --auto --rebase
 ### Test Functions Added
 
 | Test | DType | Overload | Assertion Method |
-|------|-------|----------|-----------------|
+| ------ | ------- | ---------- | ----------------- |
 | `test_setitem_valid_index` | `float32` | `Float64` (implicit) | `assert_value_at` round-trip |
 | `test_setitem_integer_dtype` | `int32` | `Int64` explicit | `assert_value_at` with `7.0` |
 | `test_setitem_out_of_bounds` | `float32` | `Float64` (implicit) | `try/except` + manual flag |
@@ -153,5 +153,5 @@ gh pr merge --auto --rebase
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3165, PR #3385 | [notes.md](../references/notes.md) |

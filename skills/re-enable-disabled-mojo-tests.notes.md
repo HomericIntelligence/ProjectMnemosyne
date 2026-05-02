@@ -38,7 +38,7 @@ Replaced the stub with 18 comprehensive test functions covering:
 - Arithmetic operations (+, -, *, //, %)
 - Bitwise operations (&, |, ^, <<, >>)
 - Comparison operators (==, !=, <, <=, >, >=)
-- Widening conversions via .cast[DType.uintN]()
+- Widening conversions via `.cast[DType.uintN]()`
 - Int to/from unsigned type conversions
 - Large value UInt64 operations
 - Near-boundary arithmetic

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Extend mypy pre-commit hook from `scripts/` to `tests/` and `tools/` directories |
 | **Languages** | Python, YAML, INI |
 | **Config Files** | `.pre-commit-config.yaml`, `mypy.ini`, `pyproject.toml` |
@@ -101,7 +101,7 @@ pixi run pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `[[tool.mypy.overrides]]` in `pyproject.toml` | Added `ignore_errors = true` for `tests.*`, `tools.*` | `mirrors-mypy` hook virtualenv doesn't auto-load `pyproject.toml` | Use `mypy.ini` for overrides — it's auto-discovered by mypy regardless of invocation context |
 | `--config-file pyproject.toml` in hook args | Added to force config loading | `pyproject.toml` has `disallow_untyped_defs = true` which broke `scripts/` (269 new errors) | Config files have stricter settings than hook standalone args; mixing them causes regressions |
 | Including `examples/` in hook pattern | Added `examples` to `files:` regex | Directories like `alexnet-cifar10/` are not valid Python identifiers — duplicate module fatal error | Hyphenated directory names are incompatible with mypy module resolution; exclude them entirely |

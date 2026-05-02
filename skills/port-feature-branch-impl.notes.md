@@ -18,7 +18,7 @@ had only ever existed on the `issue-2722` feature branch worktree, never merged 
 ## Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `shared/core/extensor.mojo` | Added `fn __hash__(self) -> UInt` (28 lines) after `fn __len__` |
 | `tests/shared/core/test_utility.mojo` | Activated `test_hash_immutable`, added `test_hash_different_values`, fixed imports |
 

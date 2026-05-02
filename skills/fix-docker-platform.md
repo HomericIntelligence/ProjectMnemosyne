@@ -19,13 +19,13 @@ created: 2025-12-28
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
-| Objective | | Field | Value | |-------|-------| | Date | 2025-12-28 | | Objective | Fix Docker build failures caused by ARM64 platform not supported by pixi.to... |
+| Objective | Fix Docker build failures caused by ARM64 platform not supported by pixi.toml |
 | Outcome | Operational |
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2025-12-28 |
 | Objective | Fix Docker build failures caused by ARM64 platform not supported by pixi.toml |
 | Outcome | Successfully removed ARM64 builds, all Docker CI jobs now pass |
@@ -102,14 +102,14 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified
 
 | File | Line | Change |
-|------|------|--------|
+| ------ | ------ | -------- |
 | `.github/workflows/docker.yml` | 86 | `linux/amd64,linux/arm64` → `linux/amd64` |
 | `.github/workflows/release.yml` | 454 | `linux/amd64,linux/arm64` → `linux/amd64` |
 

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | update-stale-agent-references |
 | **Category** | documentation |
 | **Trigger** | After agent files are deleted or consolidated |
@@ -60,7 +60,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Searching only `.claude/agents/` | Ran grep scoped to `.claude/agents/*.md` | Tracking docs in `docs/dev/` were missed | Always search the full repo, not just the agents directory |
 | Assuming hierarchy.md is the only doc to update | Only checked `agents/hierarchy.md` | Status/tracking docs like `agent-claude4-update-status.md` also list agents by name | Search recursively across all `*.md` files |
 | Replacing agent names without reading context | Applied sed-style bulk replace | Counting labels ("Review Specialists (10)") also need updating | Read surrounding context before editing; update counts too |

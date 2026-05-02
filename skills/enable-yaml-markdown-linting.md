@@ -10,7 +10,7 @@ user-invocable: false
 # Enable YAML and Markdown Linting in Pre-commit
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Date** | 2026-02-14 |
 | **Objective** | Enable yamllint and markdownlint-cli2 pre-commit hooks with proper configuration for GitHub Actions workflows |
 | **Outcome** | ✅ Success - Both linters enabled and passing on all files |
@@ -127,7 +127,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Validation
 

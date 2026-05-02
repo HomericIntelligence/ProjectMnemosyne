@@ -13,7 +13,7 @@ tags: [worktree, git, parallel, path-awareness, stale-detection]
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-03-28 | Consolidated worktree lifecycle skills | Merged from worktree-create, worktree-switch, worktree-sync, worktree-path-awareness, worktree-prompt-already-done |
 
 Covers the full lifecycle of a git worktree: creation, navigation, syncing with upstream, path
@@ -129,7 +129,7 @@ git merge origin/main
 ```
 
 | Approach | Use When |
-|----------|----------|
+| ---------- | ---------- |
 | Rebase | Linear history preferred (default for most projects) |
 | Merge | Preserving branch topology / public branches |
 
@@ -188,7 +188,7 @@ gh pr list --head <branch-name>
 ```
 
 | git log result | PR exists | Action |
-|----------------|-----------|--------|
+| ---------------- | ----------- | -------- |
 | HEAD matches task | Yes (OPEN) | Report complete, no action |
 | HEAD matches task | No | Check if merged; may need to create PR |
 | HEAD does NOT match | No | Proceed with implementation |
@@ -199,7 +199,7 @@ gh pr list --head <branch-name>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Edit main repo file while in worktree | Called Edit on `/home/user/Project/tests/file.mojo` | Worktree has its own copy; the main repo edit was unrelated to current branch | Always run `git rev-parse --show-toplevel` before editing to get the worktree root |
 | Commit after wrong-path edit | Ran `git add <file> && git commit` | "Nothing to commit" — staged file was from main repo, not worktree branch | Verify `git diff HEAD <file>` shows changes before committing |
 | Start implementation without checking git log | Read prompt, planned to search for imports | File was already deleted in HEAD commit | Always run `git log --oneline -3` before any planning |
@@ -221,7 +221,7 @@ parent-directory/
 ### Error Reference
 
 | Error | Solution |
-|-------|----------|
+| ------- | ---------- |
 | Branch already exists | Use different branch name or delete old branch |
 | Directory already exists | Choose different location or remove directory |
 | Each branch checked out in ONE worktree | Cannot use same branch in two worktrees |
@@ -240,6 +240,6 @@ parent-directory/
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3060, branch `3060-auto-impl`, stale prompt detection | Path awareness and prompt detection patterns |
 | ProjectScylla | Multiple parallel issue workflows | Create/switch/sync workflow |

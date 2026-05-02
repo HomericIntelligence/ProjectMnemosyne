@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-07 |
 | **Issue** | #3292 — Add UInt overflow/wrap-around behavior tests |
 | **Objective** | Add 15 tests verifying that Mojo's built-in unsigned integer types correctly wrap at boundary values (max+1=0, 0-1=max, overflow multiplication) |
@@ -47,7 +47,7 @@ Read the file to understand the existing structure (construction, arithmetic, bi
 For each UInt type (`UInt8`, `UInt16`, `UInt32`, `UInt64`), add three overflow tests:
 
 | Test Pattern | What to Verify |
-|---|---|
+| --- | --- |
 | `max_val + 1 == 0` | Addition overflow wraps to zero |
 | `0 - 1 == max_val` | Subtraction underflow wraps to max |
 | `a * b == 0` when `a*b == 2^N` | Multiplication overflow wraps mod 2^N |
@@ -78,7 +78,7 @@ Key: always declare `var result = ...` typed through the variables, not via `UIn
 ### 4. Choose Overflow-Triggering Values
 
 | Type | Add overflow | Sub underflow | Mul overflow (a, b) |
-|------|---|---|---|
+| ------ | --- | --- | --- |
 | `UInt8` | `255 + 1` | `0 - 1` | `16 * 16 = 256 mod 256 = 0` |
 | `UInt16` | `65535 + 1` | `0 - 1` | `256 * 256 = 65536 mod 65536 = 0` |
 | `UInt32` | `4294967295 + 1` | `0 - 1` | `65536 * 65536 = 2^32 mod 2^32 = 0` |
@@ -119,7 +119,7 @@ git push -u origin <branch>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `pixi run mojo test` locally | Tried to execute the tests locally to verify | GLIBC version mismatch: system has GLIBC_2.31, Mojo requires GLIBC_2.32+ | Mojo tests only run in Docker/CI on this machine; correctness must be verified via code review and CI |
 | Creating a new test file | Considered making `test_uint_overflow.mojo` | File already existed (`test_unsigned.mojo`) with the right structure | Always check for existing test files before creating new ones; extend, don't duplicate |
 
@@ -128,7 +128,7 @@ git push -u origin <branch>
 ### Test Coverage Added
 
 | Test Name | Operation | Expected Result |
-|---|---|---|
+| --- | --- | --- |
 | `test_uint8_add_overflow` | `UInt8(255) + 1` | `0` |
 | `test_uint8_sub_underflow` | `UInt8(0) - 1` | `255` |
 | `test_uint8_mul_overflow` | `UInt8(16) * 16` | `0` |
@@ -159,7 +159,7 @@ Check for Large Files....................................................Passed
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3890, issue #3292 | [notes.md](../../references/notes.md) |
 
 ## Key Takeaways

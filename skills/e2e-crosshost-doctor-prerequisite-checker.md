@@ -35,10 +35,10 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-06 |
 | **Objective** | Create a `just doctor` prerequisite checker/installer for the HomericIntelligence cross-host E2E evaluation pipeline, organized by component categories from docs/architecture.md |
-| **Outcome** | ~530-line bash script (`e2e/doctor.sh`) with 7 check categories, role filtering (`--role worker|control`), auto-install mode (`--install`), and post-deployment service health verification (`--check-services`). All 3 role modes verified on control host. |
+| **Outcome** | ~530-line bash script (`e2e/doctor.sh`) with 7 check categories, role filtering (`--role worker\|control`), auto-install mode (`--install`), and post-deployment service health verification (`--check-services`). All 3 role modes verified on control host. |
 | **Verification** | verified-local |
 
 ## When to Use
@@ -91,7 +91,7 @@ just doctor --role worker --install
 ### The 7 Check Categories
 
 | # | Category | Scope | Key Checks |
-|---|----------|-------|------------|
+| --- | ---------- | ------- | ------------ |
 | 1 | Core Tooling | all hosts | git, just, python3, pip3, curl, jq |
 | 2 | Tailscale (Network Topology) | all hosts | tailscale binary, tailscaled running, peer reachability (if IPs provided) |
 | 3 | Container Runtime (AchaeanFleet) | worker only | podman, podman compose, podman socket, aardvark-dns PID staleness |
@@ -201,7 +201,7 @@ justfile                 # Integration: doctor *ARGS: bash e2e/doctor.sh {{ ARGS
 ### Install Commands by Dependency
 
 | Dependency | Install Method |
-|------------|---------------|
+| ------------ | --------------- |
 | git, python3, pip3, curl, jq, podman, cmake, ninja-build, g++, libssl-dev, make | `apt-get install -y <pkg>` |
 | just | `cargo install just` or prebuilt binary via `just.systems/install.sh` |
 | tailscale | `curl -fsSL https://tailscale.com/install.sh \| sh` |
@@ -215,12 +215,12 @@ justfile                 # Integration: doctor *ARGS: bash e2e/doctor.sh {{ ARGS
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Conan via pixi | Assumed conan would be available through pixi environment since the justfile uses `pixi run conan install` | Conan is expected to be system-installed. Agamemnon's pixi.toml does not declare conan as a dependency. The `pixi run` invocation works because pixi falls through to system PATH. | The doctor check correctly expects system-installed conan. Do not add conan to pixi.toml; it is a system prerequisite. |
 | Single flat check list | Initially wrote all checks in a flat sequence without category sections | Hard to map failures back to the architecture component that needs attention, and no way to skip irrelevant checks per host role | Organize checks by architecture.md component hierarchy (7 categories) and gate by role |
 | Reusing common.sh directly | Tried `source e2e/lib/common.sh` for color and output helpers | common.sh defines functions for E2E test phases (PHASE_START, PHASE_END) that conflict with the doctor's simpler pass/fail/skip model | Define doctor-specific helpers (check_pass, check_fail, check_warn, check_skip) that match common.sh's color palette but have different semantics |
 | Podman socket enable over SSH (silent failure) | `just doctor --role worker --install` ran `systemctl --user enable --now podman.socket` in the install path (`e2e/doctor.sh:233`), with stderr redirected to `/dev/null` | SSH sessions lack `$DBUS_SESSION_BUS_ADDRESS` and `$XDG_RUNTIME_DIR` env vars. Without these, `systemctl --user` cannot connect to the user's D-Bus session bus. The error was silently swallowed by `2>/dev/null`, and the fallback `check_warn` message told the user to run the same failing command manually. Confirmed with `loginctl show-user $USER --property=Linger` showing `Linger=no`. | (1) Always export `XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"` and `DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=${XDG_RUNTIME_DIR}/bus}"` before calling `systemctl --user`. (2) Setting env vars alone is NOT sufficient if the systemd user instance is not running at all (SSH without linger). Must detect this case and print actionable diagnostics: suggest `sudo loginctl enable-linger $USER`, then reconnect, or run from a desktop session. (3) Never swallow `systemctl --user` errors with `2>/dev/null` -- capture and surface them. Fix: PR Odysseus#82, issue #81. |
-| `systemctl --user` when unit files missing (source-built podman) | After PR #82 fixed env vars and linger, `systemctl --user enable --now podman.socket` still failed with "Unit podman.socket could not be found" on a host with podman 5.8.1 built from source to `~/.local/bin/podman` | Podman installed from source does not automatically install systemd user unit files. The `podman.socket` and `podman.service` units were absent from `~/.config/systemd/user/` and all systemd search paths. PR #82's env var fix was necessary but not sufficient — once the D-Bus session was reachable, the unit itself was simply missing. The error message "Unit podman.socket could not be found" is the key diagnostic signal. Source trees (e.g. `~/.local/src/podman-5.8.1/contrib/systemd/user/`) contain `podman.socket` and `podman.service.in` (a template requiring `@@PODMAN@@` substitution with the actual binary path). | Before calling `systemctl --user enable`, probe with `systemctl --user cat podman.socket`. If it fails, search `~/.local/src/podman-*/contrib/systemd/user/` and `/usr/local/src/podman-*/contrib/systemd/user/` for the unit templates. Copy `podman.socket` directly; process `podman.service.in` through `sed "s|@@PODMAN@@|$(command -v podman)|g"` to produce `podman.service`. Install both to`~/.config/systemd/user/`, run`systemctl --user daemon-reload`, then proceed with`enable --now`. Fix: PR Odysseus#86, issue #85. |
+| `systemctl --user` when unit files missing (source-built podman) | After PR #82 fixed env vars and linger, `systemctl --user enable --now podman.socket` still failed with "Unit podman.socket could not be found" on a host with podman 5.8.1 built from source to `~/.local/bin/podman` | Podman installed from source does not automatically install systemd user unit files. The `podman.socket` and `podman.service` units were absent from `~/.config/systemd/user/` and all systemd search paths. PR #82's env var fix was necessary but not sufficient — once the D-Bus session was reachable, the unit itself was simply missing. The error message "Unit podman.socket could not be found" is the key diagnostic signal. Source trees (e.g. `~/.local/src/podman-5.8.1/contrib/systemd/user/`) contain `podman.socket` and `podman.service.in` (a template requiring `@@PODMAN@@` substitution with the actual binary path). | Before calling `systemctl --user enable`, probe with `systemctl --user cat podman.socket`. If it fails, search `~/.local/src/podman-*/contrib/systemd/user/` and `/usr/local/src/podman-*/contrib/systemd/user/` for the unit templates. Copy `podman.socket` directly; process `podman.service.in` through `sed "s\|@@PODMAN@@\|$(command -v podman)\|g"` to produce `podman.service`. Install both to`~/.config/systemd/user/`, run`systemctl --user daemon-reload`, then proceed with`enable --now`. Fix: PR Odysseus#86, issue #85. |
 | Misdiagnosed as Tailscale ACL | `curl http://<worker-ip>:4222/varz` from the control host returned "No route to host" and only port 22 (SSH) was reachable. Initial assumption: Tailscale ACL policy was blocking specific ports. Checked Tailscale admin console — default ACL was "allow all". Attempted to add explicit ACL rules for ports 4222, 8080, 8085, 3001, 9090, 9100 — no effect. | Tailscale's default ACL is "allow all" between devices on the same tailnet. A "No route to host" response is an ICMP reject from the kernel firewall (`firewalld`/`iptables`/`nftables`), not a Tailscale drop. If it were a Tailscale ACL block, the connection would timeout silently (no ICMP reject). The worker host (epimetheus, Debian 11+) had `firewalld` active with `tailscale0` in the `public` zone (default), which blocks inbound connections to most ports. Only SSH (port 22) was permitted through the public zone's default rules. Key diagnostic: `ping <worker-ip>` succeeds (Tailscale up) + `nc -zv <worker-ip> 4222` returns "No route to host" (ICMP reject = firewall block). If Tailscale ACL were blocking, `nc` would hang silently. | (1) Distinguish "No route to host" (ICMP reject = local firewall) from connection timeout (silent drop = network/ACL/Tailscale policy). (2) Tailscale default ACL is "allow all" — do not blame Tailscale ACL without first verifying the worker's kernel firewall. (3) Fix: `sudo firewall-cmd --permanent --zone=trusted --add-interface=tailscale0 && sudo firewall-cmd --reload` on the worker host. After this fix, all 6 cross-host E2E test phases unblocked on epimetheus (2026-04-06). (4) Add this as a `just doctor` check: warn if `tailscale0` is not in the firewalld `trusted` zone. |
 
 ## Results & Parameters
@@ -326,14 +326,14 @@ All 22 checks passed.
 ## Related Skills
 
 | Skill | Relationship |
-|-------|-------------|
+| ------- | ------------- |
 | `e2e-homeric-compose-cpp-pipeline` | The E2E pipeline that this doctor validates prerequisites for |
 | `architecture-crosshost-nats-compose-deployment` | The cross-host deployment topology whose services the doctor verifies |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | feat/crosshost-e2e-pipeline branch | Ran `just doctor`, `just doctor --role worker`, `just doctor --role control` on control host. All 3 modes passed. |
 | Odysseus | main branch, PR #82 (issue #81) | Fixed `just doctor --role worker --install` failing to enable podman socket over SSH due to missing `$DBUS_SESSION_BUS_ADDRESS` and `$XDG_RUNTIME_DIR`. Verified locally on worker host via SSH. |
 | Odysseus | main branch, PR #86 (issue #85) | Fixed `just doctor --role worker --install` failing to enable podman socket when podman 5.8.1 was built from source (`~/.local/bin/podman`) and systemd unit files were not installed. Implemented unit file detection and install from source tree `contrib/systemd/user/`. Verified: `systemctl --user is-active podman.socket` → `active`, socket at `/run/user/1000/podman/podman.sock`. |

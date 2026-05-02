@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-15 |
 | **Issue** | #648 |
 | **Objective** | Migrate bash script generation from f-string interpolation to external template files with parameter substitution |

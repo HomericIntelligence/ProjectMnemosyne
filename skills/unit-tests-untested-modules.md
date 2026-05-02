@@ -13,7 +13,7 @@ user-invocable: true
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Date** | 2026-02-22 |
 | **Objective** | Add unit tests for source modules with no test file |
 | **Outcome** | 133 new tests added, all pass; coverage 74.93% (threshold 73%) |
@@ -66,7 +66,7 @@ cat <project-root>/e2e/paths.py
 ### 3. Decide Mock Strategy Per Module
 
 | Module Type | Mock Strategy |
-|------------|---------------|
+| ------------ | --------------- |
 | File I/O (save/load) | Use `tmp_path` pytest fixture — write real files |
 | Subprocess calls | `patch("subprocess.run")` with `MagicMock(returncode=0)` |
 | External API calls | `patch("module.function_name", return_value=mock_result)` |
@@ -198,14 +198,14 @@ gh pr merge --auto --rebase <pr-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test Count by Module
 
 | Module | Test File | Tests |
-|--------|-----------|-------|
+| -------- | ----------- | ------- |
 | `agent_runner.py` | `test_agent_runner.py` | 23 |
 | `judge_runner.py` | `test_judge_runner.py` | 27 |
 | `parallel_executor.py` | `test_parallel_executor.py` | 14 |
@@ -270,5 +270,5 @@ def test_signal_rate_limit_sets_pause(self) -> None:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #850, PR #975 — 133 tests added, coverage 74.93% | [notes.md](../../references/notes.md) |

@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Identify the GitHub code-quality bot false positive on `await <asyncio.Task>` and confirm no code change is needed |
 | **Outcome** | False positive confirmed — the `await` is correct cleanup boilerplate; bot comment is noise |
@@ -73,7 +73,7 @@ await advance_task   # <-- bot flags this as "Statement has no effect"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Remove `await` | Removing `await advance_task` to silence the bot | Would cause `RuntimeWarning: Task was destroyed but it is pending!` and silently swallow background exceptions | Never remove asyncio task awaits to satisfy a static analysis bot |
 | Assign away result | `_ = await advance_task` to suppress the "no effect" warning | The bot flags the `await` expression, not the assignment; also stylistically misleading | The assignment does not affect whether the bot flags the line |
 | `# noqa` comment | Adding `# noqa` or inline suppression | The GitHub code-quality bot does not respect Python `# noqa` directives | Bot suppression requires different mechanisms (e.g., config file exclusions), but the correct response is dismissal not suppression |
@@ -96,7 +96,7 @@ Task variable created by: asyncio.create_task(...) or loop.create_task(...)
 **Distinguishing true positives from false positives**:
 
 | Situation | Bot Correct? | Action |
-|-----------|-------------|--------|
+| ----------- | ------------- | -------- |
 | `await asyncio.Task` stored in local var | No — false positive | Dismiss, keep code |
 | `x` (bare expression, non-awaitable) | Yes — true positive | Remove dead statement |
 | `await coroutine_function()` (result unused) | Sometimes — depends on side effects | Review intent |
@@ -110,5 +110,5 @@ Task was destroyed but it is pending!
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectKeystone | PR #428, `tests/test_task_claimer.py:283` | `await advance_task` flagged as "Statement has no effect" by `github-code-quality[bot]` |

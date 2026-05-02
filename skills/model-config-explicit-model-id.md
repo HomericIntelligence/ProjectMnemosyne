@@ -10,13 +10,13 @@ user-invocable: false
 
 ## Overview
 
-| Field     | Value                                                             |
-|-----------|-------------------------------------------------------------------|
-| Date      | 2026-02-20                                                        |
-| Issue     | #794                                                              |
-| PR        | #839                                                              |
+| Field | Value |
+| ----------- | ------------------------------------------------------------------- |
+| Date | 2026-02-20 |
+| Issue | #794 |
+| PR | #839 |
 | Objective | Ensure `claude-opus-4-1.yaml` explicitly declares `model_id` and remove incorrect comment |
-| Outcome   | Success — comment removed, model_id already explicit, 2266 tests pass |
+| Outcome | Success — comment removed, model_id already explicit, 2266 tests pass |
 
 ## When to Use
 
@@ -104,24 +104,24 @@ The coverage failure (`3.29% < 73%`) when running `tests/unit/config/test_loader
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
-| Metric           | Value                                  |
-|------------------|----------------------------------------|
-| Lines changed    | -7 (comment block removed)             |
-| Tests passing    | 2266 / 2266                            |
+| Metric | Value |
+| ------------------ | ---------------------------------------- |
+| Lines changed | -7 (comment block removed) |
+| Tests passing | 2266 / 2266 |
 | Pre-commit hooks | All passed (YAML lint, validate-model-config-naming) |
-| PR               | #839                                   |
-| Issue            | #794 (follow-up to #732)               |
+| PR | #839 |
+| Issue | #794 (follow-up to #732) |
 
 ## Pattern: Audit Model Config Consistency
 
 When auditing model config files for `model_id` consistency, apply this checklist per file:
 
 | Check | Command |
-|-------|---------|
+| ------- | --------- |
 | Has explicit `model_id` field? | `grep "model_id" config/models/<file>.yaml` |
 | Filename stem matches `model_id`? | Check `validate_filename_model_id_consistency()` rules |
 | No misleading comments? | Read file header |

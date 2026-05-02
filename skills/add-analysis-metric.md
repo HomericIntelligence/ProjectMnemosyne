@@ -16,7 +16,7 @@ How to add new aggregated metric columns to `build_subtests_df()`, `tier_summary
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-02-27 (updated 2026-03-02) |
 | Objective | Extend analysis aggregation functions with process metrics (r_prog, cfp, pr_revert_rate, strategic_drift) |
 | Outcome | Success — all pre-commit hooks pass |
@@ -186,7 +186,7 @@ pre-commit run --files scylla/analysis/dataframes.py tests/unit/analysis/conftes
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -238,7 +238,7 @@ def _make_runs_df(
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1134, PR #1183 | `build_subtests_df()` + `tier_summary()` |
 | ProjectScylla | Issue #1189, PR #1299 | `model_comparison()` — MultiIndex agg pattern |
 

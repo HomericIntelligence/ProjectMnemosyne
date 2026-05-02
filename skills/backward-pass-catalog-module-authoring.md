@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Skill Name** | backward-pass-catalog-module-authoring |
 | **Category** | documentation |
 | **Language** | Markdown |
@@ -33,7 +33,7 @@ user-invocable: false
 ### Quick Reference
 
 | Step | Action | Tool |
-|------|--------|------|
+| ------ | -------- | ------ |
 | 1 | Locate the `.mojo` source for accurate signatures and line numbers | `Glob` + `Grep` |
 | 2 | Read the full docstring for formulas | `Read` |
 | 3 | Edit catalog: header stats | `Edit` |
@@ -187,7 +187,7 @@ All hooks must pass. Common failures:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Guessing signatures from memory | Wrote the function signature without reading the .mojo source | Line numbers and parameter names were wrong (e.g., `GradientTriple` vs `Tuple[ExTensor, ExTensor, ExTensor]`) | Always read the actual `.mojo` source — use `Grep` for line number, then `Read` the docstring |
 | Updating header denominator inconsistently | Updated total count but not the fractions | Broadcasting and stability fractions showed wrong denominators | Update ALL four header stat lines atomically in one Edit call |
 | Inserting MODULE section after Summary Table | Placed the new module at end of file | Breaks reading flow — catalog is organized by module before the summary | Always insert before `## SUMMARY TABLE:` |
@@ -198,7 +198,7 @@ All hooks must pass. Common failures:
 ### Files Modified
 
 | File | Edits Made |
-|------|-----------|
+| ------ | ----------- |
 | `docs/dev/backward-pass-catalog.md` | Header stats, MODULE 6 section (2 functions), Summary Table rows, Training Readiness checklist, Known Test Pathologies cross-reference |
 
 ### Catalog Entry Template for Normalization Functions
@@ -231,5 +231,5 @@ grad_beta  = sum(grad_output,          axes=[N, H, W])
 ### Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3872, PR #4817 | [notes.md](../references/notes.md) |

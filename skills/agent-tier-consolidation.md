@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Category** | Architecture |
 | **Effort** | Low (30 min) |
 | **Risk** | Low |
@@ -69,7 +69,7 @@ Add to Constraints: junior DO/DO NOT rules (use templates, format consistently, 
 ### Count updates required
 
 | File | Old value | New value |
-|------|-----------|-----------|
+| ------ | ----------- | ----------- |
 | `agents/hierarchy.md` L5 narrative | "3 types (Implementation, Test, Documentation)" | "2 types (Implementation, Test)" |
 | `agents/README.md` Level 5 heading | "(2 agents)" | "(1 agent)" |
 | `agents/docs/agent-catalog.md` overview | "44 agents" | "43 agents" |
@@ -99,13 +99,13 @@ Closes #<issue>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Searching for count updates by number alone | `grep -n "44\|31\|3 L5"` across docs | Multiple unrelated occurrences of these numbers; hard to target | Search for the full count phrase, e.g. "3 junior types" or "44 agents" |
 | Assuming hierarchy.md table already correct | Skipped table check because it showed 31 | L5 narrative ("3 types") was still wrong even though table count was right | Always check both the table AND the narrative prose separately |
 | Updating catalog Quick Reference table row | Tried to remove the Junior Documentation Engineer row without context | `old_string` not unique without surrounding rows | Include both flanking rows in `old_string` for uniqueness |
 | Assuming config file needs deletion | Tried `git rm .claude/agents/junior-implementation-engineer.md` | File was already absent from the worktree (prior consolidation removed it) | Always check with `ls .claude/agents/junior-*` before attempting config changes |
 
-## Results & Parameters
+## Results & Parameters (Consolidation)
 
 ### Consolidation from ProjectOdyssey issue #3146
 
@@ -149,7 +149,7 @@ Total errors: 0
 ### Hierarchy counts to update
 
 | Section | Before | After |
-|---------|--------|-------|
+| --------- | -------- | ------- |
 | Level 4 count line | "6 agents" | "5 agents" |
 | Level 5 count line | "3 types" | "2 types" |
 | Agent Count table L4 | 6 | 5 |
@@ -247,7 +247,7 @@ already had `delegates_to: []`. No `.claude/agents/` file changes were required.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3146 — implementation engineer tier consolidation (3→2 tiers) | See Results above |
 | ProjectOdyssey | Issue #3332 — test engineer tier consolidation (junior-only variant) | See Results above |
 | ProjectOdyssey | Issue #3963 — implementation engineer docs-only cleanup (config already absent) | See Results above |

@@ -16,7 +16,7 @@ Added 60 new tests across 5 new test classes in the existing
 ### Functions Covered
 
 | Function | Tests | Key Cases |
-|----------|-------|-----------|
+| ---------- | ------- | ----------- |
 | `parse_frontmatter()` | 10 | no frontmatter, unclosed `---`, quote stripping, colon-in-value, empty block |
 | `determine_category()` | 13 | override precedence, tier-1/tier-2 maps, CATEGORY_MAP, default fallback |
 | `generalize_content()` | 11 | all 9 PATH_REPLACEMENTS patterns, invariant content, regex compile check |

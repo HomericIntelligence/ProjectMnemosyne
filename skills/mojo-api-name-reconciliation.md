@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | mojo-api-name-reconciliation |
 | **Category** | documentation |
 | **Complexity** | Low |
@@ -37,7 +37,7 @@ gh issue view <number> --comments
 Key mappings discovered in this session:
 
 | Old (planned) | New (actual) | Location |
-|---|---|---|
+| --- | --- | --- |
 | `Conv2D` | `Conv2dLayer` | `shared/core/layers/conv2d.mojo` |
 | `ReLU` | `ReLULayer` | `shared/core/layers/relu.mojo` |
 | `Tensor` | `ExTensor` | `shared/core/extensor.mojo` |
@@ -109,6 +109,6 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `mojo test` locally | Tried `pixi run mojo test tests/shared/integration/test_packaging.mojo` | GLIBC version mismatch (`GLIBC_2.32/2.33/2.34` not found) — Mojo binary incompatible with host libc | For this project, Mojo tests must run in Docker CI; pre-commit hooks are sufficient local verification |
 | Searching for `Linear` as old name | Grepped for `\bLinear\b` to update | `Linear` struct actually exists in `shared/core/layers/linear.mojo` — it's a valid current name, not a stale planned name | Always verify against the implementation before replacing; not all "old" names are actually stale |

@@ -16,7 +16,7 @@ Add a `try/except ImportError` fallback from `tomllib` (stdlib >= 3.11) to `toml
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-02 |
 | Issue | #1200 |
 | PR | #1304 |
@@ -35,7 +35,7 @@ Add a `try/except ImportError` fallback from `tomllib` (stdlib >= 3.11) to `toml
 ## Decision Criteria: Fallback vs. Documentation-Only
 
 | Use Fallback Code (this skill) | Use Documentation Only |
-|-------------------------------|------------------------|
+| ------------------------------- | ------------------------ |
 | Base image version may vary (e.g., musl/Alpine) | Base image version is fully controlled (you own the Dockerfile) |
 | Must support Python 3.10 consumers | Current base image already satisfies 3.11+ |
 | CI matrix or downstream variants include 3.10 | KISS/YAGNI: adding tomli just for hypothetical future |
@@ -149,7 +149,7 @@ gh pr merge --auto --rebase <pr-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -175,14 +175,14 @@ PYEOF
 ### Test coverage after change
 
 | Test File | Tests | Coverage impact |
-|-----------|-------|----------------|
+| ----------- | ------- | ---------------- |
 | `tests/unit/scripts/test_dockerfile_constraints.py` | 15 (+1 new) | None (static file analysis) |
 | `tests/unit/e2e/test_dockerfile.py` | 3 (unchanged) | None (static file analysis) |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1200, PR #1304 | [notes.md](../references/notes.md) |
 
 ## Related Skills

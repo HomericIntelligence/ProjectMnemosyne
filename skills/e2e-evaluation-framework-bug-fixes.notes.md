@@ -135,7 +135,7 @@ prefix = "Maximize usage of the following sub-agents to solve this task:"
 
 **CORRECT Tier Semantics**:
 | Tier | Name | CORRECT Behavior |
-|------|------|------------------|
+| ------ | ------ | ------------------ |
 | T3 | Direct Agent | Single specialist agent executes task directly |
 | T4 | Orchestration | Orchestrator agent coordinates other agents |
 

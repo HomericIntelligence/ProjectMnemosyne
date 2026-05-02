@@ -22,7 +22,7 @@ Entered plan mode and conducted detailed interview to clarify requirements:
 ### Requirements Gathered
 
 | Decision Point | Options Considered | Final Choice | Rationale |
-|----------------|-------------------|--------------|-----------|
+| ---------------- | ------------------- | -------------- | ----------- |
 | Resume Granularity | Tier/Subtest/Run-level | Run-level | Most comprehensive, smallest unit of work |
 | Wait Strategy | Fixed/Exponential/Retry-After | Honor Retry-After + 10% buffer | Respects API guidance |
 | Detection Scope | Agent/Judge/Both | Both | Rate limits can come from either source |

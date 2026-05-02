@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Fix ExTensor __str__/__repr__ to format integers without decimals and bools as True/False |
 | **Language** | Mojo v0.26.1+ |
 | **Files** | shared/core/extensor.mojo, tests/shared/core/test_utility.mojo |
@@ -121,7 +121,7 @@ must all pass.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `dtype.is_integral()` | Using `self._dtype.is_integral()` to check integer types | Not tested locally due to GLIBC mismatch; codebase never used this pattern | Use explicit `== DType.xxx` comparisons to match existing codebase style and avoid potential compile issues |
 | Running mojo locally | `pixi run mojo build shared/core/extensor.mojo` | GLIBC_2.32/2.33/2.34 not found on the host system | Rely on pre-commit hooks for format validation; CI handles actual Mojo compilation |
 

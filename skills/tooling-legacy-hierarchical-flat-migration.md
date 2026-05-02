@@ -14,7 +14,7 @@ tags: [migration, flat-format, hierarchical, legacy, skill-format, plugin-json]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Migrate the last 4 skills from nested `skills/<category>/<name>/skills/<name>/SKILL.md` to flat `skills/<name>.md` |
 | **Outcome** | All 4 migrated, 0 nested directories remain, 1031/1031 skills valid |
@@ -66,7 +66,7 @@ python3 scripts/validate_plugins.py
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assumed SKILL.md needed full rewrite | Expected old format without frontmatter | All 4 already had YAML frontmatter — only needed file move | Check SKILL.md content before assuming a full rewrite is needed; partially migrated files only need relocation |
 | Forgot to check for `version` field | Copied SKILL.md directly without checking required fields | 3 of 4 were missing `version: "1.0.0"` in frontmatter, would fail validation | Always verify all required frontmatter fields after copy: name, description, category, date, version |
 
@@ -84,7 +84,7 @@ nested_directories_remaining: 0
 ### Legacy Skills Migrated
 
 | Skill | Category Dir | Missing Fields |
-|-------|-------------|----------------|
+| ------- | ------------- | ---------------- |
 | e2e-resource-exhaustion | `optimization/` | `version` |
 | experiment-dataset-triage | `evaluation/` | `version` |
 | batch-subprocess-signal-hang | `debugging/` | `version` |
@@ -106,5 +106,5 @@ echo "Legacy dirs: $(find skills/ -type d -mindepth 1 | wc -l)"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | PR #1017, migrated last 4 hierarchical skills | 2026-03-25 session |

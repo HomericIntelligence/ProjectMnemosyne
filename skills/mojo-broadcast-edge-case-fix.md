@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Skill Name** | mojo-broadcast-edge-case-fix |
 | **Category** | testing |
 | **Language** | Mojo |
@@ -196,7 +196,7 @@ git commit -m "fix(shape): add dimension guard and edge-case tests for broadcast
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Fix in are_shapes_broadcastable | Add early-return for empty target_shape inside the helper | Would require changing helper signature/behavior used by other callers | Fix belongs in the caller (broadcast_to), not the shared helper |
 | Using SKIP=mojo-format | Considered skipping pre-commit due to GLIBC | Not needed — mojo format pre-commit hook runs the binary locally but succeeded | Only use SKIP when a hook is genuinely broken; try without first |
 | full(shape_0d, Float32(5.0), ...) | Passed Float32 as fill_value to full() | full() signature takes Float64, causing type mismatch at compile time | Use literal 5.0 (Float64) or check function signature before writing tests |
@@ -234,5 +234,5 @@ When broadcasting `(1, K, 1)` → `(A, K, B)`:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3279, PR #3857 | [notes.md](../references/notes.md) |

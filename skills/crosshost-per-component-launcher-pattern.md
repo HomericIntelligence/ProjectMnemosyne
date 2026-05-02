@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-04 |
 | **Objective** | Create per-component install and launch commands so each HomericIntelligence service can run independently on any Tailscale host, connected via NATS_URL |
 | **Outcome** | 9 new justfile recipes (2 install + 7 launchers) enabling flexible multi-machine deployment where any component runs on any host |
@@ -157,7 +157,7 @@ All hosts must be on the same Tailscale mesh. Replace hostnames with Tailscale I
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | hello-myrmidon C++ binary | Tried to include hello-myrmidon in `just build` targets | hello-myrmidon has no CMakeLists.txt; only Agamemnon, Nestor, Charybdis, Keystone, and Odyssey are compiled by `just build` | Use the Python worker.py fallback instead of adding a build step for simple myrmidon agents |
 | Monolithic e2e-all launcher | Considered a single `just e2e-all` that starts everything | User explicitly wanted per-component granularity for multi-machine flexibility; a monolithic command defeats the purpose | Individual launchers compose better than monolithic scripts for distributed deployment |
 | nats:latest image | Initially used `nats:latest` for the standalone container | `nats:latest` lacks shell utilities needed for container healthchecks | Always use `nats:alpine` which includes the necessary healthcheck tooling |
@@ -217,7 +217,7 @@ recipes:
 ### Design Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| ---------- | ----------- |
 | NATS_URL as universal connector | Every component takes one parameter to join the mesh; no service discovery needed |
 | Default NATS_URL=localhost | Allows single-machine development without any flags |
 | `--replace` on podman run | Makes start-nats idempotent; re-running replaces the container |
@@ -227,7 +227,7 @@ recipes:
 ### Compose vs. Per-Component: When to Use Which
 
 | Approach | Best For | Skill Reference |
-|----------|----------|-----------------|
+| ---------- | ---------- | ----------------- |
 | Compose overlay (`docker-compose.crosshost.yml`) | Single-command deployment, CI/CD, reproducible environments | `architecture-crosshost-nats-compose-deployment` |
 | Per-component launchers (`just start-*`) | Multi-machine flexibility, development, debugging individual services | This skill |
 | Both together | Worker host uses compose, control host uses native binaries | Combine both skills |
@@ -235,7 +235,7 @@ recipes:
 ## Related Skills
 
 | Skill | Relationship |
-|-------|-------------|
+| ------- | ------------- |
 | `architecture-crosshost-nats-compose-deployment` | Compose overlay approach to cross-host deployment; complementary to this per-component approach |
 | `e2e-crosshost-doctor-prerequisite-checker` | The doctor.sh tool used by install-worker and install-control recipes |
 | `e2e-homeric-compose-cpp-pipeline` | Base single-host E2E pipeline that this skill extends to multi-host per-component |
@@ -243,5 +243,5 @@ recipes:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | Per-component launcher recipes | Commit 82742b7 on feat/crosshost-e2e-pipeline branch; dry-run tested, recipes parse correctly, binary paths confirmed |

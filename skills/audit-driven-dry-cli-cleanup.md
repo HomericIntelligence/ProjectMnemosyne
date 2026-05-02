@@ -13,7 +13,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Fix major issues from strict repo audit: DRY violations (5 duplicate functions), legacy CLI removal, CHANGELOG, stale README counts |
 | **Outcome** | PR #1545 merged: -1063 lines, +67 added, 17 files changed. 4772 tests pass, 77.67% coverage. |
@@ -143,7 +143,7 @@ def test_no_test_count_in_readme_is_acceptable(self, ...):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Replace-all on result.json fixtures | Used replace_all to update `'{"exit_code": 0}'` in test fixtures | Some fixtures had different indentation; replace_all worked but ruff reformatted | Always run ruff format after bulk edits |
 | Delete CLI dir before moving progress.py | Tried rmdir on cli/ before copying progress.py out | Directory not empty error | Copy shared modules out first, then delete the directory |
 | Initial pre-commit run after DRY fix | Mypy failed because tests still imported from old module | Tests imported `_has_valid_agent_result` from `regenerate` (deleted) | Always check test imports after moving/deleting source functions |
@@ -153,7 +153,7 @@ def test_no_test_count_in_readme_is_acceptable(self, ...):
 ### PR #1545 Stats
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Files changed | 17 |
 | Lines removed | 1,063 |
 | Lines added | 67 |
@@ -164,14 +164,14 @@ def test_no_test_count_in_readme_is_acceptable(self, ...):
 ### Functions Consolidated
 
 | Function | Copies Before | Canonical Module | Copies After |
-|----------|--------------|------------------|-------------|
+| ---------- | -------------- | ------------------ | ------------- |
 | `_has_valid_agent_result()` | 3 (agent_runner, regenerate, rerun_judges) | `agent_runner.py` | 1 |
 | `_has_valid_judge_result()` | 2 (judge_runner, regenerate) | `judge_runner.py` | 1 |
 
 ### Files Removed
 
 | File | Reason |
-|------|--------|
+| ------ | -------- |
 | `scylla/cli/main.py` | Legacy Click CLI replaced by manage_experiment.py |
 | `scylla/cli/__init__.py` | Only re-exported progress (moved to e2e/) |
 | `scylla/cli/progress.py` | Moved to `scylla/e2e/progress.py` |
@@ -200,5 +200,5 @@ Tests that used the weak version needed fixture updates to include required JSON
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Strict repo audit major issues | PR #1545: DRY, CLI removal, CHANGELOG, README |

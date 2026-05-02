@@ -13,7 +13,7 @@ agent: test-engineer
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Reply to PR review comments using the correct GitHub API. - Responding to inline code review feedback |
 | Outcome | Operational |
@@ -77,7 +77,7 @@ Keep responses SHORT and CONCISE (1 line preferred):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Use `gh pr comment` | Tried standard PR comment command | Creates new PR-level comment, not a reply | Must use API endpoint for review replies |
 | Reply without comment ID | Tried to reply by line number | GitHub doesn't support line-based replies | Always get comment ID from API first |
 | Wrong API endpoint | Used `/issues/comments` endpoint | That's for issue comments, not review comments | Use `/pulls/PR/comments/ID/replies` |
@@ -86,7 +86,7 @@ Keep responses SHORT and CONCISE (1 line preferred):
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Comment ID invalid | Verify using API call |
 | Permission denied | Check `gh auth status` |
 | Reply fails | Verify PR and comment exist |

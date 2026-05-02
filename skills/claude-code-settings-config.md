@@ -13,13 +13,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-16 |
-| Objective | | Field | Value | |-------|-------| | **Date** | 2026-01-16 | | **Objective** | Configure Claude Code settings.json per test workspace to control t... |
+| Objective | Configure Claude Code settings.json per test workspace to control thinking mode via API rather than prompt injection |
 | Outcome | Operational |
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-01-16 |
 | **Objective** | Configure Claude Code settings.json per test workspace to control thinking mode via API rather than prompt injection |
 | **Outcome** | ✅ Successfully implemented settings.json creation with proper thinking mode control |
@@ -156,7 +156,7 @@ self.tier_manager.prepare_workspace(
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -200,7 +200,7 @@ find results -name "settings.json" -exec echo "File: {}" \; -exec cat {} \;
 ### Test Results
 
 | Test | CLI Flag | Result | Score | Cost | Duration |
-|------|----------|--------|-------|------|----------|
+| ------ | ---------- | -------- | ------- | ------ | ---------- |
 | Thinking Disabled | Default | ✅ PASS | 0.950 | $0.0888 | 65.0s |
 | Thinking Enabled | `--thinking UltraThink` | ✅ PASS | 0.930 | $0.0910 | 62.8s |
 
@@ -214,7 +214,7 @@ find results -name "settings.json" -exec echo "File: {}" \; -exec cat {} \;
 ## Files Modified
 
 | File | Changes |
-|------|---------|
+| ------ | --------- |
 | `src/scylla/e2e/tier_manager.py` | Added `json` import, `_create_settings_json()` method, updated `prepare_workspace()` signature and logic |
 | `src/scylla/e2e/subtest_executor.py` | Pass `thinking_enabled` parameter to tier_manager |
 

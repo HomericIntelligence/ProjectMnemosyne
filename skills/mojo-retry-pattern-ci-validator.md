@@ -18,7 +18,7 @@ are NOT protected by an exponential-backoff retry loop (issue #3329).
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-15 |
 | Language | Python 3.7+ with PyYAML |
 | Objective | Enforce retry pattern for all mojo test calls in CI |
@@ -150,7 +150,7 @@ from the start and document it in comments:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Echo false positive | Checked all lines with "pixi run mojo" substring | `echo "Checking for bare 'pixi run mojo' calls..."` inside a `run:` block matched, flagging the validator's own workflow step | Add `_is_echo_or_comment()` check: skip lines starting with `echo`, `printf`, or `#` |
 | Docker continuation false positive | Checked lines starting with `pixi run mojo` as bare calls | `docker run ... \` continuation line had `pixi run mojo test ...` as a multi-line argument, incorrectly flagged | Add `_is_docker_run_call()`: treat indented `pixi run mojo` lines (where `line != line.lstrip()`) as docker continuations |
 | Write tool blocked | Used `Write` tool to create workflow YAML files | Project has a security hook that blocks `Write` and `Edit` on `*.yml` files in `.github/workflows/` | Use `Bash` with heredoc (`cat > file << 'ENDOFFILE'`) or `python3 -c` string replacement to create/edit workflow files |
@@ -176,5 +176,5 @@ from the start and document it in comments:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4839, issue #3955 | [notes.md](../references/notes.md) |

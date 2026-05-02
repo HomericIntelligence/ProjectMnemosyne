@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Details |
-|-----------|---------|
+| ----------- | --------- |
 | **Date** | 2026-02-01 |
 | **Objective** | Systematically complete architecture review tasks using parallel agents, structured tracking, and GitHub issue management |
 | **Outcome** | ✅ Successfully completed 8/10 tasks (80%), filed 3 GitHub issues for remaining work, created comprehensive tracking documentation |
@@ -153,7 +153,7 @@ Use this workflow when:
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Exploration Agents Failed with "classifyHandoffIfNeeded" Error

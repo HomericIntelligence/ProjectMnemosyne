@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Date** | 2026-02-27 |
 | **Objective** | Close 87.5% script test gap by adding `cmd_run()` and `cmd_repair()` unit tests to `manage_experiment.py` test file |
 | **Outcome** | ✅ 5 new tests added, 119 total passing, 78.36% project coverage (above 75% threshold) |
@@ -142,7 +142,7 @@ Also update the module docstring at the top to document new coverage.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -195,7 +195,7 @@ def _make_checkpoint_file(self, path, run_states, completed_runs):
 ### Coverage Impact
 
 | Metric | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | Tests in file | 114 | 119 |
 | Full suite tests | 3185 | 3190 |
 | Project coverage | ~78% | 78.36% |

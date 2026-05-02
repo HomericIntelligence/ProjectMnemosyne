@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Objective** | Replace stale "placeholder" language in `__init__.mojo` docstrings with accurate "implemented and passing" language |
 | **Trigger** | GitHub issue tracking placeholder tests; tests already exist in `tests/` directory |
 | **Outcome** | All 4 `__init__.mojo` docstrings updated, PR created, issue closed |
@@ -100,7 +100,7 @@ Each uses the same before/after replacement pattern. The test count differs per 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assumed tests needed writing | Began planning 26 new test functions | Test files already had real implementations from a prior PR | Always read existing test files before writing new ones |
 | Running `just pre-commit-all` | Used `just` command for pre-commit | `just` not in PATH on this system | Use `pixi run pre-commit run --all-files` instead |
 | Running `pixi run mojo run` to verify tests | Tried to execute tests locally | GLIBC incompatibility prevents mojo from running locally | Rely on CI (Docker) for mojo test execution; pre-commit non-mojo hooks are sufficient for local verification |

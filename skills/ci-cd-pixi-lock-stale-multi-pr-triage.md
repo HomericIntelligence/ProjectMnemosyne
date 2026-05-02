@@ -14,7 +14,7 @@ tags: [pixi, pixi.lock, stale-lock, ci-triage, multi-pr, gh-run-rerun, sha-misma
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-24 |
 | **Objective** | Triage and fix CI failures across 7 repositories (42 open PRs) where most failures were stale pixi.lock files, with several distinct code/infra failure patterns |
 | **Outcome** | Successful — pixi.lock regenerated and pushed for failing PRs; Scylla PRs went green; Myrmidons reruns triggered |
@@ -220,7 +220,7 @@ class AsyncAgamemnonClient:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|---------------|---------------|----------------|
+| --------- | --------------- | --------------- | ---------------- |
 | Push empty commits to re-trigger CI | `git commit --allow-empty -m "ci: re-trigger"` | Myrmidons workflows use `concurrency: cancel-in-progress: true` + `pull_request` trigger deduplicates same SHA | Use `gh run rerun --failed` instead of empty commits |
 | `gh workflow run` to re-trigger | `gh workflow run ci.yml --ref <branch>` | Returns HTTP 422 — workflow has no `workflow_dispatch` trigger | Only works if `on: workflow_dispatch` is in the workflow YAML |
 | Fix gitleaks "missing license" by editing workflow | Attempted to add `GITLEAKS_LICENSE` to workflow env | Secret doesn't exist in the GitHub org — org admin must create it | This is a pure infra issue; skip and don't waste time on code changes |
@@ -241,7 +241,7 @@ class AsyncAgamemnonClient:
 ### Triage Status Classification
 
 | Status | Meaning | Action |
-|--------|---------|--------|
+| -------- | --------- | -------- |
 | `FAILING` + "lock-file not up-to-date" | stale pixi.lock | `pixi install && git add pixi.lock && git commit && git push` |
 | `FAILING` + "missing gitleaks license" | org secret missing | Skip — infra issue |
 | `FAILING` + "bats: command not found" on new platform | platform missing bats-core | Move bats-core to platform-specific deps |
@@ -277,7 +277,7 @@ async def _subscribe_loop(self):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Myrmidons | 42 open PRs, concurrency-cancel workflows | pixi.lock regeneration + gh run rerun pattern |
 | ProjectHermes | LRU cache test failures | dependency_overrides / cache_clear pattern |
 | ProjectScylla | C901 complexity + missing protocol method | helper extraction + protocol compliance |

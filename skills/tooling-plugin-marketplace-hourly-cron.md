@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Auto-update a Claude Code plugin marketplace (ProjectMnemosyne) every hour via cron so new skills are available on next session start |
 | **Outcome** | Success - cron job installed, marketplace updates hourly, no manual intervention needed |
@@ -74,7 +74,7 @@ claude plugin update mnemosyne@ProjectMnemosyne
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using just `claude` without full path | `0 * * * * claude plugin marketplace update ...` | cron does not source `.bashrc`/`.profile`, so `claude` is not on PATH | Always use absolute path to binary in cron jobs (e.g., `/home/<user>/.local/bin/claude`) |
 | Updating only the marketplace | `claude plugin marketplace update ProjectMnemosyne` alone | Marketplace index updates but installed plugin version doesn't change | Must also run `claude plugin update <plugin>@<marketplace>` to pick up new plugin versions |
 
@@ -83,7 +83,7 @@ claude plugin update mnemosyne@ProjectMnemosyne
 ### Claude Code Plugin CLI Reference
 
 | Command | Purpose |
-|---------|---------|
+| --------- | --------- |
 | `claude plugin marketplace update [name]` | Pull latest git for marketplace (updates all if no name) |
 | `claude plugin update <plugin>@<marketplace>` | Update installed plugin to latest version |
 | `claude plugin marketplace list` | List configured marketplaces |
@@ -92,7 +92,7 @@ claude plugin update mnemosyne@ProjectMnemosyne
 ### Marketplace Storage Locations
 
 | Item | Path |
-|------|------|
+| ------ | ------ |
 | Marketplace repos | `~/.claude/plugins/marketplaces/<name>/` |
 | Installed plugins | `~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/` |
 | Plugin registry | `~/.claude/plugins/installed_plugins.json` |
@@ -122,5 +122,5 @@ claude plugin list
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence ecosystem | Session setting up hourly auto-update for ProjectMnemosyne marketplace | Cron job installed, both commands tested manually, log output confirmed |

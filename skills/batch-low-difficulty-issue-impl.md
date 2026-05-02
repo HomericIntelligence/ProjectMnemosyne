@@ -24,7 +24,7 @@ history: batch-low-difficulty-issue-impl.history
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Classify, deduplicate, and batch-implement low-difficulty GitHub issues using worktree-isolated agents |
 | **Outcome** | Verified: worktree isolation works correctly; correct pre-filter order; ALREADY-DONE grep must exclude worktrees; pre-launch repo-capability checks required; C++20/Conan/pixi-specific guards required for C++ projects |
@@ -34,43 +34,43 @@ history: batch-low-difficulty-issue-impl.history
 ### Session (2026-04-25) — ProjectKeystone 180-Issue C++20 Swarm
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-04-25 | Implement 180 open ProjectKeystone issues (C++20 transport library) using 7 EASY waves + 9 MEDIUM waves | 7 new C++20/Conan/pixi-specific failure modes discovered; libssl-dev missing in Dockerfile blocked builds; TSan+concurrentqueue classified as hard blocker; CMakeLists.txt double-agent conflict despite grouping rules; enable_shared_from_this diamond inheritance trap |
 
 ### Session (2026-04-24) — Myrmidons shellcheck-warnings Swarm
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-04-24 | Implement shellcheck warning fixes across Myrmidons repo using wave-based myrmidon swarm with hot-file serialization | All PRs merged, main CI green at 333b40d; Wave 1 = verification sweep; hot-file serialization prevented apply.sh/reconcile.sh conflicts |
 
 ### Session (2026-04-25) — ProjectProteus 43-Issue Swarm
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-04-25 | Implement 43 open HomericIntelligence/ProjectProteus issues (CI/CD pipeline hub repo) using myrmidon swarm | ~20 EASY issues implemented, 14 PRs created, ~8 merged; auto-merge disabled (branch protection requires reviews); no lockfile committed (used npm install not npm ci); pre-commit hooks absent (skipped in all agent prompts) |
 
 ### Session (2026-04-23) — ProjectScylla 15-Issue Medium/High Myrmidon Swarm
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-04-23 | Fix 15 GitHub issues (LOW to HIGH difficulty) across 5 parallel waves (max 5 agents/wave) using `isolation: "worktree"` | 12 PRs merged; 3 issues were ALREADY-DONE; add/add rebase conflicts on `scylla/agamemnon/` package from two agents creating it independently in Wave 1 |
 
 ### Session (2026-04-23) — AchaeanFleet 235-Issue Myrmidon Swarm (Waves 1-24+)
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-04-23 | Implement 235 open HomericIntelligence/AchaeanFleet issues (infra-only Docker/Nomad repo) using 24+ waves of ≤5 Haiku agents each | 202 issues closed, 91 PRs merged (verified-ci), 33 remaining (all MEDIUM/HARD). EASY queue exhausted at ~76% of total. |
 
 ### Session (2026-04-23) — HomericIntelligence/Odysseus 35-Issue Triage
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-04-23 | Classify 35 open Odysseus issues, implement all SIMPLE ones as 1-issue-per-PR using Myrmidon swarm (Haiku agents with isolation=worktree) | 19 issues resolved (17 PRs + 2 ALREADY-DONE closures), 13 merged; remaining auto-merging. Meta-repo with 12 submodule symlinks. |
 
 ### Prior session (2026-03-06)
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-03-06 | Classify 165 open issues, close 9 duplicates, implement 22 LOW issues | 15 PRs merged, 11 issues closed (9 dup + 2 already-done), 0 pre-commit failures |
 
 ## When to Use
@@ -150,7 +150,7 @@ gh issue list --state open --limit 30 --skip 0 --json number,title,labels
 **Classification tiers** (apply pre-filters in this order: DUPLICATE → ALREADY-DONE → verify-before-fix → LOW):
 
 | Tier | Criteria | Action |
-|------|----------|--------|
+| ------ | ---------- | -------- |
 | DUPLICATE | Same change as another open issue | `gh issue close N --comment "Duplicate of #M"` |
 | ALREADY-DONE | Change already in codebase | Grep (with worktree exclusion) to verify, then close with comment |
 | EASY | Single-file doc/text/comment/infra edit, no logic | Implement in batch with Haiku agents |
@@ -355,7 +355,7 @@ After a retrigger, seeing `pending` instead of `queued` confirms runners have re
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Sub-agent isolation with `isolation="worktree"` parameter (2026-03-06) | Launched 5 parallel agents expecting each to work in its own worktree | Agents edited files in the main worktree, not isolated worktrees; all 5 changes landed in the main worktree | The `isolation="worktree"` parameter does not guarantee sub-agents work in separate git worktrees; they share the working directory. Use git stash to separate their changes post-facto. (Note: this failure did NOT occur in the 2026-04-12 session — may be environment-specific; see Results.) |
 | Sub-agents completing full git workflow (2026-03-06) | Asked sub-agents to create branches, commit, push, and create PRs | Agents completed the file edits but did not execute the git commands (output descriptions instead) | Sub-agents reliably edit files but frequently skip the git+PR workflow. Always execute git operations in the main agent after sub-agents return. (Note: NOT observed in 2026-04-12 session with worktree isolation — all 12 agents completed full git workflow.) |
 | Reading files after `git checkout -b` from stash | Assumed `git checkout stash -- file` would have the correct content immediately | The `git checkout stash` command works correctly but the branch check showed "branch already exists" because a previous stash attempt created it | Check for existing branches with `git branch --list` before creating; use `git checkout existing-branch` if it exists. |
@@ -383,9 +383,9 @@ After a retrigger, seeing `pending` instead of `queued` confirms runners have re
 | TSan build added to project using concurrentqueue (ProjectKeystone 2026-04-25) | Attempted to add `-fsanitize=thread` build to verify thread safety; concurrentqueue (moodycamel) lock-free atomics were in use | concurrentqueue triggers TSan false positives by design — the library uses intentional relaxed-ordering patterns that TSan cannot distinguish from real races. Tests fail spuriously under TSan | TSan + concurrentqueue (or any similar lock-free lib using intentional relaxed ordering) is a hard blocker. Classify any issue requiring TSan + concurrentqueue as HARD — cannot be resolved without replacing the dependency. Never attempt to add TSan builds to projects with concurrentqueue |
 | enable_shared_from_this diamond inheritance on derived class (ProjectKeystone 2026-04-25) | When fixing use-after-free via `weak_ptr` capture, added `std::enable_shared_from_this<T>` to a derived class (e.g., `TaskAgent`) to call `weak_from_this()` | Base class `AgentCore` already inherited `enable_shared_from_this<AgentCore>`. Derived class inheriting it again caused diamond inheritance compile error: "ambiguous base class 'enable_shared_from_this'" | Before adding `enable_shared_from_this<T>` to any class, run `grep -rn enable_shared_from_this` across all base classes in the hierarchy. If base already has it, the derived class can call `weak_from_this()` directly without re-inheriting |
 | Two agents both modifying CMakeLists.txt in the same wave (ProjectKeystone 2026-04-25) | Despite same-file grouping rules, two different agents both modified `CMakeLists.txt` for separate SPDX/spdlog fixes (PRs #392 and #395) in the same wave because the changes appeared unrelated | Second PR could not auto-merge cleanly; one became a duplicate requiring manual resolution | Treat `CMakeLists.txt` as a hard file-grouping anchor: any issue touching it must be batched into ONE agent per wave, regardless of how different the individual changes appear. Apply the same rule as ci.yml: batch all CMakeLists.txt issues into a single Sonnet agent per wave |
-| Adding @pytest.mark.asyncio when asyncio_mode='auto' set in pyproject.toml (ProjectKeystone 2026-04-25) | Agent wrote new Python test files and added `@pytest.mark.asyncio` decorators to async test functions | `pyproject.toml` already had `asyncio_mode = "auto"` in `[tool.pytest.ini_options]`. With auto mode, pytest-asyncio automatically treats all async test functions as async tests — the decorator is redundant and produces deprecation warnings or errors | Before writing Python test files, check: `grep -A5 "pytest.ini_options" pyproject.toml | grep asyncio_mode`. If`asyncio_mode = "auto"` is present, omit all `@pytest.mark.asyncio` decorators |
+| Adding @pytest.mark.asyncio when asyncio_mode='auto' set in pyproject.toml (ProjectKeystone 2026-04-25) | Agent wrote new Python test files and added `@pytest.mark.asyncio` decorators to async test functions | `pyproject.toml` already had `asyncio_mode = "auto"` in `[tool.pytest.ini_options]`. With auto mode, pytest-asyncio automatically treats all async test functions as async tests — the decorator is redundant and produces deprecation warnings or errors | Before writing Python test files, check: `grep -A5 "pytest.ini_options" pyproject.toml \| grep asyncio_mode`. If`asyncio_mode = "auto"` is present, omit all `@pytest.mark.asyncio` decorators |
 | Trusting agent-reported PR numbers without verification (ProjectKeystone 2026-04-25) | In 3 out of 16 waves, accepted agent's final output ("PR #403") as the authoritative PR number for wave reconciliation | Agents report their in-flight view of PR numbers, which can be stale or incorrect when races occur or the agent mistakes a draft PR number. 3/16 waves had wrong agent-reported PR numbers | After every wave, always verify PR numbers with `gh pr list --author "@me" --state all --limit 50`. Never trust agent-reported PR numbers as ground truth |
-| CI cancelled mistaken for failure | Diagnosed PR checks showing 'fail' for Python Tests and codeql-analysis after rebase+push | Job conclusion was `cancelled` (runner exhaustion from 28-PR swarm), not `failure` — CI Summary gate treats `cancelled != "success"` and exits 1 | Run `gh run view <id> --json jobs --jq '.jobs[] | {name, conclusion}'` before assuming code is broken; if all are `cancelled`, rebase+force-push to retrigger — do not change code |
+| CI cancelled mistaken for failure | Diagnosed PR checks showing 'fail' for Python Tests and codeql-analysis after rebase+push | Job conclusion was `cancelled` (runner exhaustion from 28-PR swarm), not `failure` — CI Summary gate treats `cancelled != "success"` and exits 1 | Run `gh run view <id> --json jobs --jq '.jobs[] \| {name, conclusion}'` before assuming code is broken; if all are `cancelled`, rebase+force-push to retrigger — do not change code |
 
 ## Results & Parameters
 
@@ -394,7 +394,7 @@ After a retrigger, seeing `pending` instead of `queued` confirms runners have re
 Run these checks **before dispatching any agents** to a C++20/CMake/Conan project:
 
 | # | Guard Check | Command | Action if Fails |
-|---|-------------|---------|-----------------|
+| --- | ------------- | --------- | ----------------- |
 | 1 | Dockerfile has `libssl-dev` if any Conan dep uses OpenSSL | `grep libssl-dev Dockerfile* docker/*/Dockerfile 2>/dev/null` | Add `libssl-dev` to the apt-get install block in every builder stage |
 | 2 | No concurrentqueue (or similar lock-free lib) if TSan build planned | `grep -rn "concurrentqueue\|moodycamel" CMakeLists.txt conanfile.py pixi.toml 2>/dev/null` | Classify any TSan-requiring issues as HARD; skip TSan build addition |
 | 3 | Check base class hierarchy for `enable_shared_from_this` before adding to derived | `grep -rn "enable_shared_from_this" src/ include/ 2>/dev/null` | If base has it, derived must call `weak_from_this()` directly, not re-inherit |
@@ -426,7 +426,7 @@ gh pr list --author "@me" --state all --limit 50
 ### Session Statistics (2026-04-25) — ProjectKeystone 180-Issue C++20 Swarm
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Starting open issues | 180 |
 | Wave architecture | 7 EASY waves + 9 MEDIUM waves |
 | C++20-specific failure modes discovered | 7 |
@@ -441,7 +441,7 @@ gh pr list --author "@me" --state all --limit 50
 ### Session Statistics (2026-04-24) — Myrmidons shellcheck-warnings Swarm
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Target issues | ~25 shellcheck warnings (issues #187-#211) |
 | Wave architecture | EASY(Haiku) → MEDIUM(Sonnet) → HARD(Opus) |
 | Hot files serialized | scripts/apply.sh, scripts/lib/reconcile.sh (1 agent per sub-wave each) |
@@ -454,7 +454,7 @@ gh pr list --author "@me" --state all --limit 50
 ### Session Statistics (2026-04-25) — ProjectProteus 43-Issue Swarm
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Starting open issues | 43 |
 | ALREADY-DONE closed | 4 (#16, #18, #22, #26) |
 | DUPLICATE closed | 1 (#13 → #6) |
@@ -470,7 +470,7 @@ gh pr list --author "@me" --state all --limit 50
 ### Session Statistics (2026-04-23) — ProjectScylla 15-Issue Medium/High Swarm
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Starting issues | 15 (LOW to HIGH difficulty) |
 | ALREADY-DONE detections | 3 |
 | PRs merged (verified-ci) | 12 |
@@ -483,7 +483,7 @@ gh pr list --author "@me" --state all --limit 50
 ### Session Statistics (2026-04-23) — AchaeanFleet 235-Issue Swarm
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Starting open issues | 235 |
 | Ending open issues | 33 |
 | Issues closed/implemented | 202 |
@@ -499,7 +499,7 @@ gh pr list --author "@me" --state all --limit 50
 ### Session Statistics (2026-03-06) — ProjectOdyssey
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Issues triaged | 165 |
 | Duplicates closed | 9 |
 | Already-done closed | 2 (#3227, #3195) |
@@ -511,7 +511,7 @@ gh pr list --author "@me" --state all --limit 50
 ### Session Statistics (2026-04-12) — ProjectScylla 64-Issue Pass
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Issues classified by Haiku | 64 |
 | Haiku ALREADY-DONE miss rate | 4.7% (3 false negatives) |
 | ALREADY-DONE caught by verify-before-fix pass | 3 (including #1655, #1671 caught by worktree-excluded grep) |
@@ -528,7 +528,7 @@ gh pr list --author "@me" --state all --limit 50
 These categories consistently remain after EASY queue exhausts in infra-only repos:
 
 | Category | Signal | Why MEDIUM/HARD |
-|----------|--------|-----------------|
+| ---------- | -------- | ----------------- |
 | Artifact pipeline refactor | "push-to-registry", "reuse build-vessels output" | Multi-step architecture change |
 | Multi-arch support | "arm64", "QEMU", "multi-arch matrix" | CI matrix expansion + QEMU setup |
 | New test functions | "dagger testVesselTools()", "add test for X" | Requires understanding tool API |
@@ -599,7 +599,7 @@ STOP and report BLOCKED if the spec is unclear or requires a design decision.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/ProjectKeystone | 180-issue C++20 swarm, 7 EASY + 9 MEDIUM waves (2026-04-25) | 7 C++20/Conan/pixi-specific failure modes discovered; libssl-dev Dockerfile gap; TSan+concurrentqueue hard blocker; CMakeLists.txt double-agent; enable_shared_from_this diamond inheritance; asyncio_mode='auto' decorator check; agent PR number unreliability |
 | HomericIntelligence/Myrmidons | shellcheck-warnings swarm (~25 issues #187-#211), all PRs merged CI-green (2026-04-24) | Wave-based with hot-file serialization; 8 existing PRs discovered pre-swarm; CHANGELOG consolidation in Wave 6 |
 | HomericIntelligence/ProjectProteus | 43-issue swarm, 14 PRs created, ~8 merged (2026-04-25) | Auto-merge disabled; no lockfile (npm install); no pre-commit config; 4 ALREADY-DONE; 1 DUPLICATE |

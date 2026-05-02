@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `printf '\xf0\x9f\x93\x8a ...'` in shell CI steps is locale/shell-dependent and fragile |
 | **Solution** | Python script with plain UTF-8 string literals; invoked as a single workflow `run:` line |
 | **Language** | Python 3 |
@@ -58,7 +58,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | First commit | Staged all files and ran `git commit` | ruff-format reformatted `build_pr_comment.py` and ruff-check fixed an import order issue; pre-commit hook modified files and aborted | Re-stage the linter-modified files and run `git commit` again — second attempt passes cleanly |
 | Database lock on second commit | Immediately retried the commit after first failure | SQLite pre-commit DB was locked from the previous hook run | Wait briefly or just retry; the lock clears on its own |
 | Emoji in `comment-marker` YAML field | Initially left `"\U0001F4CA Test Metrics Report"` in the workflow YAML | The marker is used to find existing bot comments; keeping it as a unicode escape is inconsistent with the plain-text file content | Update the marker to plain ASCII to match the new header string |

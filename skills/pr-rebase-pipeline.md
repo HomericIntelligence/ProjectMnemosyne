@@ -10,7 +10,7 @@ user-invocable: false
 # Skill: PR Rebase Pipeline (Bulk Issue Triage)
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Date** | 2026-02-23 |
 | **Objective** | Fix a systemic CI failure blocking all PRs, then create and land 13 PRs for simple open issues across 5 waves using parallel worktrees |
 | **Outcome** | ✅ 13 PRs merged, 1 pending auto-merge. All pip-audit Security checks fixed. Zero manual merges required. |
@@ -111,7 +111,7 @@ git branch -v | grep '\[gone\]'
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -119,14 +119,14 @@ git branch -v | grep '\[gone\]'
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Issue Wave Summary
 
 | Wave | Issues | PRs | Strategy |
-|------|--------|-----|----------|
+| ------ | -------- | ----- | ---------- |
 | Phase 0 | pip-audit fix | #1029 | Fix blocker first |
 | Wave 1 | #960, #890, #911 | #1030, #1031, MN#168 | Doc fixes, independent files |
 | Wave 2 | #916, #933, #971 | #1032, #1033, #1034 | Bug/security fixes |

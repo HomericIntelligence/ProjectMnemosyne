@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Eliminate dependency declaration drift across pixi.toml, pyproject.toml, and requirements*.txt |
 | **Outcome** | Successful — single source of truth in pixi.toml with auto-generated lockfiles and CI guardrail |
@@ -95,7 +95,7 @@ pixi run python -m pytest tests/scripts/test_check_dep_sync.py tests/scripts/tes
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Import via sys.path.insert | Used `sys.path.insert(0, PROJECT_ROOT)` then `from scripts.check_dep_sync import ...` | `scripts/` has no `__init__.py`, and pytest's import mechanism conflicts with sys.path hacks in Python 3.14 | Use `importlib.util.spec_from_file_location()` to load modules from scripts without `__init__.py` |
 | Direct `from scripts.X import Y` | Standard Python package import | `scripts/` is not a Python package (no `__init__.py`), and adding one would be a broader change | When `scripts/` lacks `__init__.py`, use `importlib.util` for test imports |
 
@@ -153,5 +153,5 @@ def version_satisfies(version: Tuple[int, ...], constraints: List[VersionRange])
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #4907, PR #5117 | Consolidated deps across pixi.toml, pyproject.toml, requirements.txt, requirements-dev.txt |

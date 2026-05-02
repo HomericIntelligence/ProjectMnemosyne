@@ -13,7 +13,7 @@ Validate markdown formatting and style compliance.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Consistent markdown formatting | Clean documentation passing CI |
 
 ## When to Use
@@ -99,12 +99,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | MD040: Missing language tag | Add language: ` ```mojo ` |
 | MD031: Missing blank lines | Add blank line before/after block |
 | MD013: Line too long | Break line at 120 characters |

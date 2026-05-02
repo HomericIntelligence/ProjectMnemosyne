@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | mojo-getitem-slice-multidim |
 | **Category** | architecture |
 | **Issue** | #3696 – Extend `__getitem__(Slice)` to support multi-dimensional slicing |
@@ -137,7 +137,7 @@ Create a new `test_extensor_slicing_multidim.mojo` (do not add to existing
 1D/2D test files). Cover:
 
 | Test | What it checks |
-|------|----------------|
+| ------ | ---------------- |
 | `test_slice_2d_axis0_basic` | `t[1:3]` on (4,5) → shape (2,5), correct values |
 | `test_slice_2d_axis0_full` | `t[:]` on (3,4) → full copy, shape unchanged |
 | `test_slice_2d_axis0_step2` | `t[::2]` on (6,3) → every-other-row |
@@ -161,7 +161,7 @@ pixi run mojo tests/shared/core/test_extensor_slicing_edge.mojo
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Declare `dst_ptr` before rank branch | `var dst_ptr: __type_of(self._data)` declared before `if/else`, assigned inside each branch | Mojo may not accept uninitialized pointer declarations; risky lifetime semantics | Declare `dst_ptr` inside each branch with `var dst_ptr = result._data` — simpler and safer |
 | Reuse existing `__getitem__(*slices: Slice)` | Considered delegating to the variadic overload with a synthesised `Slice(0, size, 1)` for inner dims | Would require constructing `n-1` full-range slices dynamically; no clean way to do that in Mojo 0.26.1 with variadic args | Slab copy is simpler and more efficient for this axis-0 case |
 | Keep guard, add separate `slice_axis0` method | Considered leaving `__getitem__(Slice)` 1D-only and adding a new method | Would break expected NumPy-style `t[1:3]` syntax; issue specifically asked for that syntax | Remove guard; extend in-place to preserve the expected operator interface |

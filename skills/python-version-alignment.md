@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Align Python version across pyproject.toml, pixi.toml, Dockerfile, and CI test matrix |
 | **Outcome** | v1: Dockerfile aligned. v2: CI test matrix expanded to 3.10-3.12. v3: Added 3.13 forward-looking coverage |
@@ -107,7 +107,7 @@ When a new Python stable release is available (e.g., 3.13), adding it is straigh
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Keep pixi + expand matrix | Attempted to add 3.10/3.11 to matrix while keeping pixi | Pixi ignores setup-python and installs its own Python from conda-forge. Matrix expansion alone has no effect. | For multi-version Python CI, must use setup-python + pip, not pixi |
 | Pixi --override to pin Python | Considered using pixi's override mechanism to force specific Python versions | Fragile and non-standard — fighting the tool rather than working with it | Standard CI patterns (setup-python + pip) are more reliable than tool-specific workarounds |
 | v1.0.0: Dockerfile only | Direct approach worked for Dockerfile alignment | N/A — successful | Straightforward when scope is limited to Dockerfile |
@@ -129,7 +129,7 @@ python-version: ["3.12", "3.13"]  # 4 CI jobs (2 versions × 2 test types)
 
 **Files Changed:**
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `.github/workflows/test.yml` line 16 | `["3.12"]` → `["3.12", "3.13"]` |
 | `pyproject.toml` line 23 | Added `"Programming Language :: Python :: 3.13"` classifier |
 | `pixi.lock` | Auto-updated sha256 due to pyproject.toml change |
@@ -155,7 +155,7 @@ python-version: ["3.10", "3.11", "3.12"]  # 6 CI jobs (3 versions × 2 test type
 
 **Files Changed:**
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `.github/workflows/test.yml` line 16 | `["3.12"]` → `["3.10", "3.11", "3.12"]` |
 | `.github/workflows/test.yml` lines 27-43 | Replaced pixi install/cache with pip install/cache |
 | `.github/workflows/test.yml` lines 47-64 | Removed `pixi run` prefix from all commands |
@@ -168,7 +168,7 @@ python-version: ["3.10", "3.11", "3.12"]  # 6 CI jobs (3 versions × 2 test type
 ### v1.0.0: Dockerfile Alignment (ProjectScylla Issue #1118)
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `docker/Dockerfile` line 15 | `python:3.14.2-slim` → `python:3.12-slim` (pinned SHA256) |
 | `docker/Dockerfile` line 44 | Same update for runtime stage |
 | `docker/Dockerfile` line 53 | `python3.14/site-packages` → `python3.12/site-packages` |
@@ -176,7 +176,7 @@ python-version: ["3.10", "3.11", "3.12"]  # 6 CI jobs (3 versions × 2 test type
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #58, PR #112 — Add Python 3.13 to CI and classifiers | Added 3.13 to matrix and pyproject.toml classifier; 384 tests pass locally |
 | ProjectHephaestus | Issue #44, PR #75 — Expand CI test matrix to 3.10/3.11/3.12 | Replaced pixi with setup-python + pip for multi-version CI |
 | ProjectScylla | Issue #1118, PR #1166 — Dockerfile Python version alignment | Dockerfile updated from 3.14.2 to 3.12 with pinned SHA256 |

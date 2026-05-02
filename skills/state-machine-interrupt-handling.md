@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-27 |
 | Branch | `fix-resume-issues-triple-bug` |
 | Objective | When Ctrl+C kills a subprocess, leave runs at their last good state (not FAILED) so they can be retried cleanly on the next invocation |
@@ -221,7 +221,7 @@ except Exception as e:
 ## Failed Attempts (Critical)
 
 | Attempt | Why It Failed | Fix |
-|---------|---------------|-----|
+| --------- | --------------- | ----- |
 | Catch `KeyboardInterrupt` in the state machine | Signal handler sets `_shutdown_requested = True` rather than raising `KeyboardInterrupt` in Python; `subprocess.run()` returns normally, not via exception | Check `is_shutdown_requested()` after `subprocess.run()` returns instead |
 | Raise `ShutdownInterruptedError` and rely on `except Exception` catching it at the run level | The `except Exception` clause marks the run as `FAILED` — exactly what we want to avoid | Add a dedicated `except ShutdownInterruptedError` clause BEFORE `except Exception` in every `advance_to_completion()` |
 | Let `ShutdownInterruptedError` propagate through `_run_subtest_in_process_safe` | The safe wrapper's `except Exception` converts it to a `WorkerError SubTestResult`, swallowing the signal | Add `if isinstance(e, ShutdownInterruptedError): raise` in the wrapper |
@@ -231,7 +231,7 @@ except Exception as e:
 ## Results & Parameters
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Tests | 3121 passed |
 | Coverage | 78.10% (threshold: 75%) |
 | New tests | 4 (one per state machine level) |
@@ -241,7 +241,7 @@ except Exception as e:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1109 — Ctrl+C interrupt handling | [notes.md](../../references/notes.md) |
 
 ## Key Invariants

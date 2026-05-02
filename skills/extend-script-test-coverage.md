@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-03 |
 | Objective | Raise tested script count from 10/34 (29%) to ≥17/34 (≥50%) with mock-only pytest tests |
 | Outcome | ✅ 22/34 scripts with tests (65%) — exceeded goal; 453 new tests across 13 files |
@@ -55,7 +55,7 @@ ls tests/unit/scripts/
 Score each untested script on two axes and multiply:
 
 | Axis | High (3) | Medium (2) | Low (1) |
-|------|----------|-----------|---------|
+| ------ | ---------- | ----------- | --------- |
 | **Testability** | Pure functions, no subprocess | Some mocking needed | Subprocess-heavy, no helpers |
 | **Impact** | Entry point / pre-commit hook | Frequently invoked | Rarely used utility |
 
@@ -167,14 +167,14 @@ Goal met:              YES / NO
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Priority Matrix Used (2026-03-03)
 
 | Priority | Script | Testability | Impact | Score |
-|----------|--------|-------------|--------|-------|
+| ---------- | -------- | ------------- | -------- | ------- |
 | 1 | `generate_changelog.py` | 3 | 3 | 9 |
 | 2 | `check_type_alias_shadowing.py` | 3 | 3 | 9 |
 | 3 | `validate_links.py` | 3 | 2 | 6 |
@@ -191,7 +191,7 @@ Goal met:              YES / NO
 ### Test Count per File
 
 | Test File | Script | Tests |
-|-----------|--------|-------|
+| ----------- | -------- | ------- |
 | `test_generate_changelog.py` | `generate_changelog.py` | 29 |
 | `test_check_type_alias_shadowing.py` | `check_type_alias_shadowing.py` | 29 |
 | `test_validate_links.py` | `validate_links.py` | 19 |
@@ -208,7 +208,7 @@ Goal met:              YES / NO
 ### Coverage Impact
 
 | Metric | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | Scripts with tests | 10/34 (29%) | 22/34 (65%) |
 | New test files | 0 | 13 |
 | New tests added | 0 | 453 |

@@ -13,7 +13,7 @@ Verify CI/CD status of a pull request and investigate failures.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Efficiently monitor and debug CI status | Faster identification of CI failures |
 
 ## When to Use
@@ -83,12 +83,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | No checks found | PR may not trigger CI (check workflow) |
 | Pending forever | Check logs for stuck jobs |
 | Auth error | Verify `gh auth status` |
@@ -112,7 +112,7 @@ gh pr diff <pr>            # Changes correct?
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | CI status monitoring workflow | Generic patterns applicable to any GitHub project |
 
 ## References

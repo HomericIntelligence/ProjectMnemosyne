@@ -11,7 +11,7 @@ user-invocable: false
 # Code Quality Audit Against Development Principles
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2025-02-09 |
 | **Objective** | Audit ProjectScylla codebase against 7 core development principles for public release readiness |
 | **Outcome** | ✅ 6.3/10 rating, GO with conditions, 13 issues filed (P0-P2), comprehensive audit report created |
@@ -263,7 +263,7 @@ Create comprehensive audit document:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -275,7 +275,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Verified Parameters
 
@@ -292,7 +292,7 @@ Copy-paste ready configurations and expected outputs.
 
 **Module Ratings**:
 | Module | Rating | Status | Key Issue |
-|--------|--------|--------|-----------|
+| -------- | -------- | -------- | ----------- |
 | metrics/ | 8/10 | GO | Minor duplication |
 | judge/ | 7/10 | GO | to_dict repetition |
 | e2e/ | 5/10 | NO-GO* | God class |

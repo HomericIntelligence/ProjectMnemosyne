@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Tests for `is_contiguous()` and `as_contiguous()` were placeholders blocked by missing `transpose()` |
 | **Solution** | Directly mutate `_strides` on an `ExTensor` to produce a non-contiguous layout |
 | **Context** | ProjectOdyssey Mojo ML framework, `shared/core/extensor.mojo` |
@@ -70,7 +70,7 @@ values are preserved unchanged in the output.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Use `transpose()` | Call `transpose(a)` to produce non-contiguous tensor | `transpose()` not yet implemented | Use direct stride mutation instead |
 | Test without assertion | Original placeholder just called `t.is_contiguous()` without asserting | Tests that don't assert provide no value — no failure = no coverage | Always assert the expected return value |
 | Assume `_get_float64` is stride-aware | Expected `as_contiguous()` to reorder values based on strides | `_get_float64` uses flat offset `index * dtype_size`, ignores strides | Flat-order values are preserved; stride mutation only affects contiguity check |
@@ -80,7 +80,7 @@ values are preserved unchanged in the output.
 ### Strides for common shapes
 
 | Shape | Row-major (contiguous) | Column-major (non-contiguous) |
-|-------|------------------------|-------------------------------|
+| ------- | ------------------------ | ------------------------------- |
 | (3, 4) | `[4, 1]` | `[1, 3]` |
 | (2, 3) | `[3, 1]` | `[1, 2]` |
 | (2, 3, 4) | `[12, 4, 1]` | `[1, 2, 6]` |

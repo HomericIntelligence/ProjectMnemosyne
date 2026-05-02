@@ -15,7 +15,7 @@ Replace a hardcoded `pytest.mark.parametrize` filename list with glob-based auto
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-06 |
 | Objective | Replace `["t0.yaml", ..., "t6.yaml"]` hardcoded list with `TIER_FIXTURES_DIR.glob("t*.yaml")` |
 | Outcome | Success — 43 tests pass; new tier fixtures auto-discovered at collection time |
@@ -99,5 +99,5 @@ FAILED tests/unit/config/test_json_schemas.py::TestTierSchema::test_real_tier_fi
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |

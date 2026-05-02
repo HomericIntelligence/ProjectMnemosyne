@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Category | ci-cd |
 | Complexity | High |
 | Repos affected | Multi-repo |
@@ -95,7 +95,7 @@ Some fixes require web UI or org admin:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Fix org Actions permissions via API | `gh api` PATCH to org Actions permissions | HTTP 403 — org-level policy requires org admin via web UI | Cannot fix org-level `can_approve_pull_request_reviews` via API; must use web UI at github.com/organizations/\<org\>/settings/actions |
 | Estimate clang-format violations from PR description | Assumed "6 test files" from issue description | Actual violations spanned 30 files across src/, include/, tests/ | Always run `clang-format --dry-run` to get actual count before committing |
 | Assume alias→comptime is the only Mojo blocker | Only searched for `alias` keyword | Other blockers existed: unused var (--Werror), type mismatch (Float64 vs Int) | After fixing the stated issue, run the compiler to discover additional blockers |
@@ -145,7 +145,7 @@ steps:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | 5 open PRs (alias→comptime, ruff, workflow fixes) | [notes.md](../../references/notes.md) |
 | ProjectMnemosyne | Marketplace workflow broken by org policy | [notes.md](../../references/notes.md) |
 | ProjectScylla | Missing CI container image | [notes.md](../../references/notes.md) |

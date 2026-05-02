@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | mojo-api-signature-test-fix |
 | **Category** | testing |
 | **Trigger** | Mojo test compile errors about missing args or positional/keyword conflicts |
@@ -103,7 +103,7 @@ gh pr create ...
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Only fixing the first reported call site | Patched line 288 of test_normalization_part3.mojo | A second call at line 338 had the same missing-args issue | Always grep for all calls to the changed function, not just the first reported error |
 | Passing `axis` as keyword with two positional tensors | `concatenate(a, b, axis=1)` | Mojo sees `b` as the positional `axis` arg (Int) and `axis=1` as a conflicting keyword | When a function takes `List[T]` as first arg, wrap separate values in `List[T](a, b)` |
 

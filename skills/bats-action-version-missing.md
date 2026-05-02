@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-23 |
 | **Objective** | Install BATS in GitHub Actions CI using `bats-core/bats-action@2` |
 | **Outcome** | Failed — `@2` major-version alias does not exist; reverted to `apt-get install bats` which succeeded |
@@ -55,7 +55,7 @@ tags: []
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `bats-core/bats-action@2` | Used `@2` major-version alias in a GHA workflow after a merge conflict resolution | The `@2` tag does not exist in the `bats-core/bats-action` repository; GitHub Actions immediately fails with "Unable to resolve action `bats-core/bats-action@2`, unable to find version `2`" | The `@2` major-version alias for `bats-core/bats-action` has never been published — only `@1` and specific version tags exist |
 | Merge without verification | Resolved a PR conflict that merged a workflow using `bats-core/bats-action@2` without checking the action's releases | The action tag was invalid, causing immediate CI failure on push | Always verify `uses:` action references against the action's GitHub releases page before pushing |
 
@@ -79,7 +79,7 @@ tags: []
 ### Version alias availability (as of 2026-04-23)
 
 | Alias / Tag | Exists? | Notes |
-|-------------|---------|-------|
+| ------------- | --------- | ------- |
 | `@1` | Yes | Major alias for v1.x |
 | `@2` | **No** | Does not exist — causes "Unable to resolve action" |
 | `@v1.x.x` | Yes (specific) | Check releases page for exact version |
@@ -100,5 +100,5 @@ Always fix by replacing with `apt-get install bats` or a confirmed valid tag.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | AchaeanFleet | Post-merge conflict resolution; reverted to apt-get, CI passed | verified-ci |

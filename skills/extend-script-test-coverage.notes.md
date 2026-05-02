@@ -94,7 +94,7 @@ Scripts not covered in this pass (either too complex, subprocess-heavy, or thin 
 ## Coverage Outcome
 
 | Metric | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | Scripts with tests | 10/34 | 22/34 |
 | Percentage | 29% | 65% |
 | Goal met (≥50%) | ❌ | ✅ |

@@ -64,7 +64,7 @@ The paper incorrectly said "T0--T4" which would include T4→T5 (significant).
 ## All 9 Fixes Applied
 
 | Fix | Critical/Minor | Status | Line(s) |
-|-----|---------------|--------|---------|
+| ----- | --------------- | -------- | --------- |
 | C1: Cliff's delta thresholds | Critical | Applied | ~312, ~591-593, ~933 |
 | C2: SRH → KW | Critical | Applied | ~313-314, ~582, ~585-588 |
 | C3: Cross-model hedging | Critical | Applied | ~729-731 |

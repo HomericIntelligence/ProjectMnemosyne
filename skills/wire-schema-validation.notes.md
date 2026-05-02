@@ -10,7 +10,7 @@
 ## Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/config/loader.py` | Added `_validate_schema()`, wired into `load_defaults()`, `load_tier()`, `load_model()` |
 | `tests/fixtures/config/defaults.yaml` | Fixed `evaluation.runs_per_tier` → `evaluation.runs_per_eval` (Pydantic alias mismatch) |
 | `tests/unit/config/test_config_loader.py` | Added `TestSchemaValidation` class with 15 tests |

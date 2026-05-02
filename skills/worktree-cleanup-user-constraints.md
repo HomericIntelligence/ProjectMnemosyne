@@ -21,7 +21,7 @@ tags: [worktree, cleanup, script, branches, artifacts, safety, merged-branch, ci
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-12 |
 | **Objective** | Remove 36 stale worktrees from ProjectScylla while preserving all branches and not executing any destructive ops directly |
 | **Outcome** | Produced a reviewable 7-section shell script; identified real uncommitted work (circuit breaker) in a merged-branch worktree; classified 6 dirty worktrees |
@@ -136,7 +136,7 @@ git commit -m "chore: gitignore worktree dirs and agent session artifacts"
 **Entries to add** (add only those not already present):
 
 | Pattern | What it ignores |
-|---------|----------------|
+| --------- | ---------------- |
 | `.coverage` | pytest-cov coverage data file |
 | `.coverage.*` | coverage data with worker suffixes |
 | `.worktrees/` | top-level worktree checkout directory |
@@ -338,7 +338,7 @@ bash -n /tmp/<repo>-worktree-cleanup.sh && echo "Syntax OK"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assume large dirty count = artifacts | 187 files dirty → assumed `__pycache__` noise | Agent-a117bab3 had 32 real modified Python files (real uncommitted work) on a merged branch | Always inspect `git status --short` output per-file; never assume based on count alone |
 | Present branch deletion list to user | Plan Phase 5 proposed deletions for user to approve | User explicitly rejected — branches must never be deleted | No branch deletion at all, even with user confirmation; branches are permanent |
 | Execute destructive ops via tool calls | Initial plan executed `git worktree remove` directly | User rejected — wants a script to review first | All destructive ops go into a script file; only read-only analysis runs directly |
@@ -367,7 +367,7 @@ def is_artifact(path: str) -> bool:
 ### Scale reference
 
 | Worktrees | Dirty | Approach | Script size | Time |
-|-----------|-------|----------|-------------|------|
+| ----------- | ------- | ---------- | ------------- | ------ |
 | 14 | 4 dirty (`.coverage` only) | Sequential script | 7 sections, ~80 lines | ~2 min |
 | 17 | 0 dirty (all clean) | Direct execution | No script needed | ~1 min |
 | 36 | 6 dirty | Sequential script | 7 sections, ~120 lines | ~5 min |
@@ -380,7 +380,7 @@ def is_artifact(path: str) -> bool:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | 36 worktrees, 6 dirty, 26 `[gone]` branches | Script at `/tmp/scylla-worktree-cleanup.sh`; execution pending |
 | ProjectMnemosyne | 14 agent worktrees (`.claude/worktrees/agent-*`), all PRs #1221–1255 merged, 4 with `.coverage` only | Script at `/tmp/mnemosyne-worktree-cleanup.sh`; syntax-checked (bash -n); user kept branches, generate-only mode |
 | ProjectScylla | 11 stale myrmidon swarm worktrees, staged-addition failures caught on cleanup, all 11 removed cleanly | 2026-04-13; `reset HEAD -- .` + `checkout -- .` + `clean -fd` sequence verified effective |

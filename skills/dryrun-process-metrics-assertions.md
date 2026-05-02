@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-02 |
 | Project | ProjectScylla |
 | Objective | Add assertions verifying `process_metrics`, `progress_tracking`, and `changes` blocks in `run_result.json` |
@@ -119,7 +119,7 @@ Running integration tests alone shows ~7-8% coverage (below 9% floor). This is e
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

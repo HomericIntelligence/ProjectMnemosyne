@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-07 |
 | Project | ProjectOdyssey |
 | Objective | Add `test_hash_empty_tensor` and `test_hash_empty_tensor_shapes_differ` to verify `__hash__` on 0-element ExTensors is safe, consistent, and shape-discriminating |
@@ -215,7 +215,7 @@ Pre-commit hooks run automatically: `mojo format`, trailing-whitespace, end-of-f
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running tests locally | `pixi run mojo run tests/shared/core/test_utility.mojo` | GLIBC version mismatch — host OS (Debian Buster) too old for the Mojo binary in pixi env (requires GLIBC 2.32+) | Mojo tests can only run inside the Docker CI container; local validation relies on pre-commit hooks passing |
 | Using `empty()` factory | Considered using `empty(shape, DType.float32)` for the 0-element tensor | `empty()` leaves data uninitialized; for a deterministic hash consistency test, deterministic data is not needed (numel=0 means no data), but `zeros()` signals intent more clearly | Use `zeros()` for empty-shape tests to maximize clarity; `empty()` would also work since no data is accessed |
 | `assert_not_equal` for hash comparison | Using `assert_not_equal(hash(t1), hash(t2), ...)` | Function does not exist in the test utility helpers for UInt type | Use `if hash(a) == hash(b): raise Error(...)` — consistent with the existing `test_hash_different_values_differ` pattern in the same file |
@@ -246,7 +246,7 @@ if hash(a) == hash(b):
 ### What the hash covers for an empty tensor
 
 | Component | Contributes to Hash |
-|-----------|---------------------|
+| ----------- | --------------------- |
 | Shape dimensions | YES — `hasher.update(self._shape[i])` for each dim (value 0 in this case) |
 | Dtype ordinal | YES — `hasher.update(dtype_to_ordinal(self._dtype))` |
 | Data elements | NO — loop `for i in range(0)` never executes |
@@ -254,7 +254,7 @@ if hash(a) == hash(b):
 ### Hash coverage for empty multi-dimensional tensors
 
 | Shape | numel | Shape loop iterations | Data loop iterations | Hash unique? |
-|-------|-------|-----------------------|----------------------|--------------|
+| ------- | ------- | ----------------------- | ---------------------- | -------------- |
 | `[0]` | 0 | 1 (value=0) | 0 | Yes |
 | `[0, 0]` | 0 | 2 (values=0, 0) | 0 | Yes — 2 iterations vs 1 |
 | `[0, 1]` | 0 | 2 (values=0, 1) | 0 | Yes — second dim differs |
@@ -267,6 +267,6 @@ if hash(a) == hash(b):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3384, PR #4064 | Empty tensor hash equality test |
 | ProjectOdyssey | Issue #4067 | Empty tensor shape hash discrimination test |

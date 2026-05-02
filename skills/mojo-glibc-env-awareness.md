@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Mojo requires GLIBC_2.32+ but many Linux hosts (e.g., Debian 10) only provide GLIBC_2.28 |
 | **Symptom** | `mojo: /lib/x86_64-linux-gnu/libc.so.6: version 'GLIBC_2.32' not found` |
 | **Scope** | All Mojo CLI operations: `mojo test`, `mojo build`, `mojo format` |
@@ -94,7 +94,7 @@ git log --oneline -5  # Check recent commits exist
 ### Environment Details
 
 | Component | Version |
-|-----------|---------|
+| ----------- | --------- |
 | Host GLIBC | 2.28 (Debian 10 / buster) |
 | Required GLIBC | 2.32+ (Mojo pixi env) |
 | CI Docker base | Ubuntu 22.04+ (GLIBC 2.35) |
@@ -121,7 +121,7 @@ All other hooks (markdownlint, ruff, trailing-whitespace, etc.) run fine.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run `pixi run mojo test` directly | Executed test runner on host | GLIBC_2.32/33/34 not found errors | Mojo pixi env requires newer GLIBC than Debian 10 host |
 | Run `pixi run pre-commit run --files ...` | Ran pre-commit to validate changes | mojo-format hook always fails due to GLIBC | Only mojo-format fails; skip it specifically with `SKIP=mojo-format` |
 | Use `just test-mojo` | Tried justfile recipe | `just` not installed on host | Check available commands before relying on justfile |

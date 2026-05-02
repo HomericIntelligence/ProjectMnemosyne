@@ -10,14 +10,14 @@ user-invocable: false
 
 ## Overview
 
-| Field     | Value                                             |
-|-----------|---------------------------------------------------|
-| Date      | 2026-02-20                                        |
-| Issue     | #782                                              |
-| PR        | #828                                              |
+| Field | Value |
+| ----------- | --------------------------------------------------- |
+| Date | 2026-02-20 |
+| Issue | #782 |
+| PR | #828 |
 | Objective | Consolidate shellcheck `exclude` patterns into a single combined regex |
-| Outcome   | Success — one-line change, all hooks passed       |
-| Category  | ci-cd                                             |
+| Outcome | Success — one-line change, all hooks passed |
+| Category | ci-cd |
 
 ## When to Use
 
@@ -67,7 +67,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -89,11 +89,11 @@ user-invocable: false
 
 ### Convention observed in this repo
 
-| Hook              | Exclude pattern                          |
-|-------------------|------------------------------------------|
+| Hook | Exclude pattern |
+| ------------------- | ------------------------------------------ |
 | markdownlint-cli2 | combined regex (notes, build, docs/arxiv, docs/design) |
-| yamllint          | `^(\.pixi\|build)/`                      |
-| shellcheck        | `^(build/\|docs/arxiv/)` (after this fix) |
+| yamllint | `^(\.pixi\|build)/` |
+| shellcheck | `^(build/\|docs/arxiv/)` (after this fix) |
 
 Markdownlint-cli2 full pattern:
 

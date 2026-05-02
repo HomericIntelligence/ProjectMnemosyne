@@ -15,7 +15,7 @@ Extend Docker Layer 2 `tomllib` extraction to include `[project.optional-depende
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-02-27 |
 | Objective | Cache optional-dependency groups in Docker Layer 2 alongside runtime deps |
 | Outcome | Success |
@@ -78,7 +78,7 @@ Extend Docker Layer 2 `tomllib` extraction to include `[project.optional-depende
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -112,7 +112,7 @@ EXTRAS=analysis docker-compose build                # via compose
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1139, PR #1202 | [notes.md](../../references/notes.md) |
 
 ## References

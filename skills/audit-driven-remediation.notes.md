@@ -13,7 +13,7 @@
 The audit graded 15 sections from A to F with evidence from 40+ files:
 
 | Section | Grade | Key Finding |
-|---------|-------|-------------|
+| --------- | ------- | ------------- |
 | Project Structure | A- (91%) | Clean 13-subpackage architecture |
 | Documentation | B+ (88%) | Outdated docs/README.md tree |
 | Architecture | A- (90%) | 4 noqa:C901 suppressions |

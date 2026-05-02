@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-21 |
 | **Objective** | Make `tensor[i] = value` work without casts, like Mojo's SIMD type |
 | **Outcome** | Short-term workaround deployed; long-term parametric migration planned (issue #4998) |
@@ -108,7 +108,7 @@ Scope: ~100+ functions across all modules, plus all tests.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Add `__setitem__` overloads | Added 9 overloads for Float16, Int, Int8, etc. | Mojo never dispatches `obj[i]=val` to `__setitem__` -- dead code | `__setitem__` is not called via subscript assignment in Mojo |
 | Change `__getitem__` to return Float64 | Wider type to accept more assignments | `Float32` can't implicitly convert to `Float64` in Mojo, broke 108 call sites | Mojo doesn't allow implicit widening between float types |
 | Proxy/reference return type | Return a proxy struct from `__getitem__` | "expression must be mutable in assignment" -- Mojo ownership prevents mutable references | Can't return mutable references to internal data in Mojo |

@@ -17,7 +17,7 @@ old domain-specific names to new generic gradient container types.
 ## Aliases Removed
 
 | Deprecated Alias | Replacement |
-|-----------------|-------------|
+| ----------------- | ------------- |
 | `Conv2dBackwardResult` | `GradientTriple` |
 | `Conv2dNoBiasBackwardResult` | `GradientPair` |
 | `DepthwiseConv2dBackwardResult` | `GradientTriple` |

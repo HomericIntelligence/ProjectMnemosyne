@@ -15,7 +15,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-28 |
 | **Objective** | Consolidated reference for common CI/CD maintenance patterns across the HomericIntelligence ecosystem |
 | **Outcome** | Merged from 11 source skills covering linting, org-wide governance, Mojo JIT debugging, flaky test triage, build validation, and optimization |
@@ -200,7 +200,7 @@ gh api --method PUT repos/ORG/REPO/branches/BRANCH/protection \
 For each failing test, classify into exactly one bucket before attempting any fix:
 
 | Bucket | Signature | Action |
-|--------|-----------|--------|
+| -------- | ----------- | -------- |
 | **Infrastructure** | `504 Gateway Time-out`, `Cache not found`, container build failure | Fix CI config |
 | **Deterministic bug** | `failed to parse`, `error:` with line number, assertion failure | Fix code |
 | **Genuine JIT flake** | `execution crashed` with `libKGENCompilerRTShared.so`, NO test output before crash | Upstream Mojo bug |
@@ -275,7 +275,7 @@ When `mojo build` is used for library code but library modules have no `fn main(
 4. Replace inline `mojo package` commands in CI YAML with `NATIVE=1 just ci-build`.
 
 | Command | Requires main()? | Use For |
-|---------|-------------------|---------|
+| --------- | ------------------- | --------- |
 | `mojo build` | Yes | Entry point binaries |
 | `mojo package` | No | Library validation |
 
@@ -421,7 +421,7 @@ COPY pixi.toml pixi.lock ./
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Adding lint as a step in the test job | Considered adding ruff as a step inside existing test matrix | Would run redundantly for each matrix entry; couples lint to test failures | Use a separate job — runs once, in parallel, with independent failure reporting |
 | Protecting branch "main" when default was "master" | Earlier enforcement script assumed all repos use `main` | GitHub API returned 404 "Branch not found" for repos with `master` default | Always detect actual default branch via API; never assume "main" |
 | `gh api --jq` with `parse_json=True` | Used `parse_json=True` when `--jq` extracts a scalar | `json.loads("master")` fails; wrong branch for 5 repos | When `--jq` extracts a scalar, use `parse_json=False` — output is plain text, not JSON |
@@ -448,7 +448,7 @@ COPY pixi.toml pixi.lock ./
 ### Ruff Lint Job Parameters
 
 | Decision | Rationale |
-|----------|-----------|
+| ---------- | ----------- |
 | Separate job (not step) | Parallel execution, clearer failure attribution |
 | 10-minute timeout | Lint is fast; 30 minutes is wasteful |
 | No `setup-python` in lint job | Pixi manages Python; redundant with `setup-pixi` |
@@ -457,7 +457,7 @@ COPY pixi.toml pixi.lock ./
 ### Org-Wide CI Governance Parameters
 
 | Parameter | Default | Notes |
-|-----------|---------|-------|
+| ----------- | --------- | ------- |
 | `--runs` | 10 | Number of recent runs to analyze per repo |
 | `--min-runs` | 3 | Minimum executed runs for a job to qualify |
 | `--min-pass-rate` | 1.0 | Required pass rate (1.0 = 100%) |
@@ -466,7 +466,7 @@ COPY pixi.toml pixi.lock ./
 ### Flaky CI Classification Statistics
 
 | Metric | From ProjectOdyssey PR #5097 |
-|--------|------------------------------|
+| -------- | ------------------------------ |
 | Total CI failures investigated | 4 unique test files |
 | Infrastructure failures | 1 (Docker 504) |
 | Deterministic code bugs | 3 (parse errors + logic bug) |

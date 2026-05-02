@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Need `tensor.tile([3])` method-style calls alongside existing `tile(tensor, [3])` functional calls |
 | **Constraint** | `shape.mojo` (functional implementations) imports `ExTensor` at module level — adding a top-level import of `shape` in `extensor.mojo` creates a circular import |
 | **Solution** | Local-scope imports inside each method body defer resolution to call time |
@@ -111,7 +111,7 @@ git commit -m "feat(extensor): add tile/repeat/permute/split method wrappers"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Top-level import | Added `from shared.core.shape import tile, repeat, permute, split` at top of `extensor.mojo` | Would create circular import: `extensor → shape → extensor` | Mojo resolves module-level imports eagerly; circular deps at module level are fatal |
 | Re-implementing logic | Copying the implementation from `shape.mojo` into each method | Violates DRY; doubles maintenance burden; bugs fixed in one place don't propagate | Never duplicate logic; use delegation |
 | `alias` trick | Tried using `alias` to defer the import | Alias is compile-time constant, not a deferred import mechanism | Only function-body imports in Mojo can avoid circular resolution |

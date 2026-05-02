@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-02 |
 | **Objective** | Fix `ModuleNotFoundError: No module named 'export_data'` when `pytest tests/unit/analysis/test_figures.py` is run in isolation |
 | **Outcome** | ✅ Success — single-file runs pass; `export_data` patches also applied, speeding up `test_export_data.py` |
@@ -125,14 +125,14 @@ uses no importable names — just modifies `sys.path`.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Before vs After
 
 | Scenario | Before | After |
-|----------|--------|-------|
+| ---------- | -------- | ------- |
 | `pytest tests/unit/analysis/test_figures.py` | `ModuleNotFoundError` (conftest setup) | 55 passed |
 | `pytest tests/unit/analysis/test_export_data.py` | 27 passed, **23s** (unpatched power fns) | 27 passed, **23s** (patched — other stats still run) |
 | `pytest tests/unit/analysis/` | 385 passed | 385 passed |

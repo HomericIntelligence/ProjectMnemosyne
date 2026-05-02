@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-01-09 |
 | Objective | Add language-specific build pipeline support (Python/Mojo) to E2E test judge system |
 | Outcome | Successfully implemented language routing with required field validation across 47 test fixtures |
@@ -177,7 +177,7 @@ def load(cls, path: Path) -> ExperimentConfig:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

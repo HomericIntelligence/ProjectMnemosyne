@@ -33,7 +33,7 @@ were never defined. The correct fix is to use the original aliased-to types dire
 Used `Edit` tool with `replace_all=true` for each bad type name:
 
 | Old (non-existent) | New (canonical) |
-|--------------------|-----------------|
+| -------------------- | ----------------- |
 | `DepthwiseGradientTriple` | `GradientTriple` |
 | `DepthwiseGradientPair` | `GradientPair` |
 | `DepthwiseSeparableGradientTriple` | `GradientQuad` |

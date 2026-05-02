@@ -13,7 +13,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-29 |
 | Objective | Consolidate patterns for implementing and fixing ExTensor methods: utility methods, bfloat16 I/O, stride-view methods, type errors, and view/owner contract documentation |
 | Outcome | Merged from 7 source skills covering bfloat16 I/O fix, __bool__, method-from-issue (transpose), type errors, utility method implementation, utility methods audit, and view contract documentation |
@@ -199,7 +199,7 @@ fn test_bool_requires_single_element() raises:
 Three functions must all have a matching branch for every supported dtype:
 
 | Function | Missing branch symptom |
-|----------|----------------------|
+| ---------- | ---------------------- |
 | `_get_dtype_size_static` | Wrong element offsets → corrupted reads/writes beyond index 0 |
 | `_set_float64` | Silent no-op → value stays at zero-initialized memory |
 | `_get_float64` | Reads bits via wrong path → garbage or zero result |
@@ -234,7 +234,7 @@ fn test_bfloat16_set_get_float64_roundtrip() raises:
 **Tolerance reference:**
 
 | DType | Recommended tolerance |
-|-------|----------------------|
+| ------- | ---------------------- |
 | float64 | 1e-9 |
 | float32 | 1e-6 |
 | float16 | 1e-3 |
@@ -364,7 +364,7 @@ pixi run npx markdownlint-cli2 docs/dev/<file>.md
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Implementing all operations from scratch | Tried to implement every operation in the issue | Most operations (clone, item, diff, __len__, __setitem__, __str__, __repr__, __int__, __float__) already existed | Always grep for existing implementations before writing new code |
 | `Float64(Int64_value)` constructor | Pass `Int64` directly to `Float64()` constructor | Mojo v0.26.1 does not support implicit Scalar[int64] → Scalar[float64] conversion | Always use `.cast[DType.float64]()` for Scalar type conversions in Mojo |
 | Rely on `__setitem__(List[Int])` for `t[[i,j]] = val` | Assumed having `__setitem__(List[Int], ...)` was sufficient | Mojo decomposes `t[x] = val` into `__getitem__(x)` + assign — both must exist | Whenever you add `__setitem__` for a new index type, add matching `__getitem__` too |
@@ -386,7 +386,7 @@ pixi run npx markdownlint-cli2 docs/dev/<file>.md
 ### Methods Added to ExTensor (Reference)
 
 | Method | Signature | Notes |
-|--------|-----------|-------|
+| -------- | ----------- | ------- |
 | `__setitem__` | `(mut self, index: Int, value: Float64) raises` | bounds-checked |
 | `__setitem__` | `(mut self, index: Int, value: Int64) raises` | use `.cast[DType.float64]()` not `Float64(val)` |
 | `__getitem__` | `(self, indices: List[Int]) raises -> Float32` | required for `t[[i,j]] = val` syntax |
@@ -418,7 +418,7 @@ TargetType(source_value)  # Fails for Scalar types in Mojo v0.26.1
 ### Pre-commit Hooks That Apply to Mojo Edits
 
 | Hook | Trigger | Fix |
-|------|---------|-----|
+| ------ | --------- | ----- |
 | `mojo format` | Bad formatting | Auto-fixed by hook — re-stage |
 | `check-list-constructor` | `List[Int](...)` in ANY source line | Use `append()` style everywhere including docstrings |
 | `trailing-whitespace` | Trailing spaces | Auto-fixed — re-stage |

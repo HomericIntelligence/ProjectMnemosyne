@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Objective** | Process all failed automated review plans to unblock stale PRs |
 | **Input** | `.issue_implementer/review-plan-{N}.md` + `review-{N}.json` files |
 | **Output** | All OPEN PRs rebased/fixed and pushed with auto-merge enabled |
@@ -139,11 +139,11 @@ done
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Sequential worktree creation | Creating worktrees one at a time before checking local state | Wasted time — many branches already had local fix commits that just needed pushing | Check `git rev-list --count origin/branch..HEAD` first to detect unpushed commits |
 | Running `git rebase` without checking for existing fix commits | Assumed all failures were "no local changes, just stale" | Some worktrees had 1-2 unpushed fix commits that rebase would reorder or complicate | Always inspect local worktree state before choosing rebase vs push strategy |
 | Trying to push MERGED PR fix commits | Read review plan saying "push failed" without checking PR state first | MERGED PRs can't receive new pushes to update the PR (it's closed) | Always check PR state (OPEN vs MERGED) before any push attempt |
-| Using `grep -c "<<<<<"` to detect conflict markers | Counted `=====` separator lines in YAML as conflict markers | YAML workflows use `=====` legitimately in echo commands | Use `grep -n "^<<<<<<\|^=======\|^>>>>>>>"` (anchored to line start) |
+| Using `grep -c "<<<<<"` to detect conflict markers | Counted `=====` separator lines in YAML as conflict markers | YAML workflows use `=====` legitimately in echo commands | Use `grep -n "^<<<<<<"` (anchored to line start) |
 
 ## Results & Parameters
 
@@ -172,7 +172,7 @@ done
 ### Common Error Patterns in review JSON
 
 | Error Pattern | Root Cause | Fix |
-|--------------|-----------|-----|
+| -------------- | ----------- | ----- |
 | `git push ... returned non-zero exit status 1` | Branch diverged from remote after rebase | `git rebase origin/main && push --force-with-lease` |
 | `git add EADME.md ... returned non-zero exit status` | Typo in filename — `git add` failed silently | Restore corrupted files with `git checkout --`, then push |
 | `Analysis session failed for PR ...` | Review analysis couldn't complete | Read plan file manually to determine action |

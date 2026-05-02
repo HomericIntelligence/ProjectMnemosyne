@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Objective** | Rebase N branches onto main with semantic conflict resolution |
 | **Approach** | Triage by complexity, parallelize simple rebases, delegate complex merges to sub-agents |
 | **Outcome** | All 8 branches rebased, 6 PRs created with auto-merge enabled |
@@ -96,7 +96,7 @@ done
 Before rebasing, categorize each branch:
 
 | Category | Description | Strategy |
-|----------|-------------|----------|
+| ---------- | ------------- | ---------- |
 | **Empty** | All commits already on main | Rebase + skip, no PR needed |
 | **Trivial** | 1-2 small conflicts (docstrings, imports) | Resolve inline with Edit tool |
 | **Complex** | 20+ conflicts requiring semantic understanding | Delegate to sub-agent |
@@ -163,7 +163,7 @@ git worktree prune
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `git push --force` | Force-push after rebase | Safety Net hook blocked it as destructive | Always use `--force-with-lease` for safer force push |
 | `git rebase --continue --no-edit` | Skip editor during rebase continue | `--no-edit` is not a valid git rebase flag | Use `GIT_EDITOR=true git rebase --continue` instead |
 | Parallel worktree for current branch | `git worktree add /tmp/X CURRENT_BRANCH` | Git error: branch already checked out | Rebase current branch in-place, use worktrees only for other branches |

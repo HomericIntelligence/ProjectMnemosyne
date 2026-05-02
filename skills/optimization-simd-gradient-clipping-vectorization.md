@@ -14,7 +14,7 @@ tags: [mojo, simd, vectorization, gradient-clipping, training, performance, norm
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Replace scalar `_get_float64`/`_set_float64` element-by-element loops in gradient clipping with SIMD-vectorized operations for 4-8x throughput improvement |
 | **Outcome** | Successful — 4 functions vectorized via 6 SIMD helpers, 13 tests pass (9 existing + 4 new edge-case), zero regressions |
@@ -107,7 +107,7 @@ fn _clamp_simd_f32(tensor: AnyTensor, min_val: Float32, max_val: Float32):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Direct approach | SIMD helpers + vectorize pattern | Succeeded on first attempt | Following established codebase patterns (activation_simd.mojo, matmul.mojo) eliminates trial-and-error — read reference code first |
 | Consider vectorizing `compute_gradient_statistics` | Considered SIMD for the statistics function (norm + min/max/mean + NaN/Inf detection) | Decided against — mixed concerns (NaN/Inf checking requires per-element branches) and it's a monitoring function called infrequently | Not every function benefits from SIMD; prioritize hot-path functions called every training step |
 
@@ -116,7 +116,7 @@ fn _clamp_simd_f32(tensor: AnyTensor, min_val: Float32, max_val: Float32):
 ### SIMD Helper Function Summary
 
 | Helper | Operation | Used By |
-|--------|-----------|---------|
+| -------- | ----------- | --------- |
 | `_norm_sq_simd_f32/f64` | Squared L2 norm (sum of squares) | `compute_gradient_norm_list`, `clip_gradients_per_param` |
 | `_scale_simd_f32/f64` | In-place multiply by scalar | `clip_gradients_by_global_norm`, `clip_gradients_per_param` |
 | `_clamp_simd_f32/f64` | In-place min/max clamping | `clip_gradients_by_value_list` |
@@ -158,7 +158,7 @@ SIMD `bitcast[Float32]()` + `load[width]` eliminates all three: one bitcast outs
 ### Performance Characteristics
 
 | Metric | Scalar (Before) | SIMD (After) | Improvement |
-|--------|-----------------|--------------|-------------|
+| -------- | ----------------- | -------------- | ------------- |
 | Iterations per 10M float32 (norm) | ~10,000,000 | ~1,250,000 (width=8) | ~8x fewer iterations |
 | Iterations per 10M float32 (scale) | ~10,000,000 | ~1,250,000 | ~8x fewer iterations |
 | Memory accesses per training step | 20M+ scalar reads/writes | 2.5M SIMD loads/stores | ~8x reduction |
@@ -174,5 +174,5 @@ SIMD `bitcast[Float32]()` + `load[width]` eliminates all three: one bitcast outs
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #4911 — SIMD-vectorize gradient clipping | [PR #5120](https://github.com/HomericIntelligence/ProjectOdyssey/pull/5120) |

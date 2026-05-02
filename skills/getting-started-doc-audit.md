@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | getting-started-doc-audit |
 | **Category** | documentation |
 | **Trigger** | Follow-up audit of `docs/getting-started/` after one doc is written |
@@ -107,7 +107,7 @@ pixi run npx markdownlint-cli2 docs/getting-started/*.md
 Common lint errors and fixes:
 
 | Error | Cause | Fix |
-|-------|-------|-----|
+| ------- | ------- | ----- |
 | MD001 heading-increment | h5 after h3 (h3 inside h5 block resets level) | Change inner `#####` to `####` |
 | MD040 fenced-code-language | Code block missing language tag | Add language after opening ` ``` ` |
 | MD031 blanks-around-fences | No blank line before/after code block | Add blank lines |
@@ -124,7 +124,7 @@ gh pr create --title "..." --body "Closes #<issue>"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Keeping fabricated APIs | Preserved `TensorDataset`, `Trainer`, `EarlyStopping` imports in first_model.md | These types don't exist in `shared/`; docs would mislead users and fail when tried | Always grep the codebase to verify APIs before keeping them in docs |
 | Using `#####` subsections inside `####` blocks that also contain `###` headings | Kept original heading structure with h3 inner sections | Markdownlint MD001: after a `###` resets the "current level", a subsequent `#####` is seen as jumping 2 levels | Flatten inner subsections to bold text, or demote the `#####` items to `####` |
 | Referencing non-existent scripts | Kept `python scripts/validate_links.py`, `python tools/paper-scaffold/scaffold.py` in repository-structure.md | Scripts don't exist in the repo; running them fails | Check `ls scripts/` and `ls tools/` before including any script path in docs |

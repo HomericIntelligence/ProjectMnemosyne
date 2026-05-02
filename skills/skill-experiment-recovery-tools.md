@@ -11,13 +11,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-29 |
-| Objective | | Property | Value | |----------|-------| | **Date** | 2026-01-29 | | **Objective** | Build scripts to selectively re-run failed/incomplete agents ... |
+| Objective | Build scripts to selectively re-run failed/incomplete agents and judges in E2E experiments |
 | Outcome | Operational |
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Date** | 2026-01-29 |
 | **Objective** | Build scripts to selectively re-run failed/incomplete agents and judges in E2E experiments |
 | **Outcome** | ✅ Created `rerun_agents.py` and `rerun_judges.py` with 5-status classification system |
@@ -163,7 +163,7 @@ regen_stats = regenerate_experiment(
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Failed: Initial Classification Didn't Check agent/result.json

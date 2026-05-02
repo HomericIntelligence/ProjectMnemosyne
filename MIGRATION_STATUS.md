@@ -9,7 +9,7 @@ Successfully migrated ProjectMnemosyne skills from nested directory structure to
 ## Migration Results
 
 | Phase | Task | Status | Details |
-|-------|------|--------|---------|
+| ------- | ------ | -------- | --------- |
 | 1 | Migration Script | ✅ | Created `scripts/migrate_to_flat.py`, 841/844 nested skills migrated |
 | 2 | Validation Script | ✅ | Rewrote `scripts/validate_plugins.py` for flat files |
 | 3 | Marketplace Generator | ✅ | Rewrote `scripts/generate_marketplace.py` for flat files |

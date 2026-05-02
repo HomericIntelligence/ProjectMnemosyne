@@ -16,7 +16,7 @@ How to fix a ConfigLoader method that bypasses schema validation on a required c
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-07 |
 | Objective | Ensure `load()` in ConfigLoader applies Pydantic schema validation to defaults.yaml |
 | Outcome | Success — routed through `load_defaults()`, removed duplicated dict-mapping logic |
@@ -107,7 +107,7 @@ pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -123,5 +123,5 @@ pre-commit run --all-files
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1462, issue #1436 | Config loader defaults validation bypass fix |

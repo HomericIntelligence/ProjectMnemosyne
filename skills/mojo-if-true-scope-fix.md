@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Mojo `--Werror` treats `if True:` as a constant condition warning, breaking compilation |
 | **Root Cause** | `if True:` was used intentionally to create inner scopes for testing reference counting (destructor triggers on scope exit) |
 | **Solution** | Extract `if True:` block bodies into named helper functions — function return acts as scope exit |
@@ -68,7 +68,7 @@ Each `if True:` block tests one of these patterns:
 Naming convention: prefix with `_` (private), use descriptive verb phrases.
 
 | Pattern | Helper Name | Signature |
-|---------|-------------|-----------|
+| --------- | ------------- | ----------- |
 | Copy and check refcount | `_copy_and_check_refcount` | `(tensor: ExTensor) -> Int` |
 | Modify through copy | `_modify_through_copy` | `(tensor: ExTensor) raises` |
 | Allocate and use | `_alloc_and_use_tensor` | `() raises` |
@@ -123,7 +123,7 @@ grep -n "if True:" tests/shared/core/test_memory_leaks*.mojo
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `with` context manager | Use `with` block for scoping | Not available in Mojo v0.26.1 | Check Mojo version before proposing syntax |
 | Scope helper trait | Dedicated trait to create scope | Not supported in Mojo v0.26.1 | Helper functions are the idiomatic Mojo solution |
 | `_ = var^` for all cases | Use ownership transfer drop for all scopes | Awkward for multi-variable scopes (can only drop one var) | Reserve for single-variable cases; use helpers for complex scopes |

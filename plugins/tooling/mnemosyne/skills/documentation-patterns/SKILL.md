@@ -11,7 +11,7 @@ How to write skills that Claude can find and use effectively.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2025-12-29 |
 | Objective | Document patterns for high-quality skill documentation |
 | Outcome | Improved skill discoverability and reuse |

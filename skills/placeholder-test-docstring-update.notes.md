@@ -29,7 +29,7 @@ had stale "Placeholder...require implementation" language.
 ## Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `shared/__init__.mojo` | Updated docstring (3 lines → 2 lines) |
 | `shared/core/__init__.mojo` | Updated docstring (3 lines → 2 lines) |
 | `shared/utils/__init__.mojo` | Updated docstring (3 lines → 2 lines) |

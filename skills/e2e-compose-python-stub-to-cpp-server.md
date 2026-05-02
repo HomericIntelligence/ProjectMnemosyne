@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-31 |
 | **Objective** | Replace Python FastAPI stub containers with real C++20 multi-stage build containers in an E2E compose stack |
 | **Outcome** | Successful — compose services point to real C++ Dockerfiles, healthchecks use wget instead of python3 |
@@ -64,7 +64,7 @@ agamemnon:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | python3 urllib healthcheck | `python3 -c "import urllib.request; urllib.request.urlopen(...)"` | C++ runtime images (ubuntu:24.04 slim + wget) don't have Python installed | Use `wget -qO-` for healthchecks in containers running compiled binaries |
 | Keeping Python stubs alongside C++ servers | Maintaining both stub/ and real Dockerfile | Stubs drift from real API, cause confusion, violate architecture rules | Delete stubs once real servers exist — single source of truth |
 
@@ -89,5 +89,5 @@ env_vars:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | E2E compose migration | Agamemnon and Nestor services migrated from Python stubs to C++ Dockerfiles |

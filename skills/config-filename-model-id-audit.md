@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | **Date** | 2026-02-19 |
 | **Category** | testing |
 | **Objective** | Audit all `config/models/*.yaml` files for filename/model_id mismatches and fix them |
@@ -174,14 +174,14 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Renamed
 
 | Before | After | model_id |
-|--------|-------|---------|
+| -------- | ------- | --------- |
 | `config/models/claude-opus-4-5.yaml` | `claude-opus-4-5-20251101.yaml` | `claude-opus-4-5-20251101` |
 | `config/models/claude-sonnet-4-5.yaml` | `claude-sonnet-4-5-20250929.yaml` | `claude-sonnet-4-5-20250929` |
 | `config/models/claude-haiku-4-5.yaml` | `claude-haiku-4-5-20250929.yaml` | `claude-haiku-4-5-20250929` |
@@ -189,7 +189,7 @@ gh pr merge --auto --rebase
 ### Test Results
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | New tests added | 9 |
 | Total tests passing | 2214 |
 | Coverage | 73.35% (threshold: 73%) |
@@ -198,7 +198,7 @@ gh pr merge --auto --rebase
 ### Source References Updated
 
 | File | Line | Before | After |
-|------|------|--------|-------|
+| ------ | ------ | -------- | ------- |
 | `scylla/cli/main.py` | 88 | `--model claude-opus-4-5` | `--model claude-opus-4-5-20251101` |
 | `scylla/cli/main.py` | 337 | `judge_model="claude-opus-4-5"` | `judge_model="claude-opus-4-5-20251101"` |
 | `scylla/executor/judge_container.py` | 37 | docstring `claude-opus-4-5` | `claude-opus-4-5-20251101` |

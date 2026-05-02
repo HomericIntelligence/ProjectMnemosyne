@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Checkpoint states become stale after ProcessPool race conditions or interrupted runs — runs that completed on disk still show intermediate states like `judge_prompt_built` or `dir_structure_created` in the checkpoint |
 | **Root Cause** | ProcessPool workers each get a serialized (forked) copy of the checkpoint at fork time; concurrent saves can overwrite each other's state entries |
 | **Solution** | Before retrying, scan on-disk artifacts to infer the true terminal state of each run and advance stale checkpoint entries forward |
@@ -234,7 +234,7 @@ def test_checkpoint_has_retryable_runs_true_for_judge_failed(tmp_path):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Only reset `failed`/`rate_limited` run states | Original `_reset_non_completed_runs` skipped `worktree_cleaned` entirely | Judge-failed runs at `worktree_cleaned` were never re-run | Must also check `completed_runs` status, not just run state |
 | Only fix `_checkpoint_has_retryable_runs` for batch skip | Updated skip detection but not the actual reset logic | Batch would enter retry but `_reset_non_completed_runs` still skipped judge-failed runs | Both detection AND reset must handle judge-failed pattern |
 | Reconcile by resetting all non-`worktree_cleaned` states to `pending` | Simple reset without reading disk first | Would re-run agent from scratch on runs where judge already completed | Must infer state from disk artifacts to resume at the right point |
@@ -250,7 +250,7 @@ def test_checkpoint_has_retryable_runs_true_for_judge_failed(tmp_path):
 ### State inference priority (disk artifacts)
 
 | Disk Artifacts Present | Inferred State |
-|------------------------|----------------|
+| ------------------------ | ---------------- |
 | `run_result.json` + `report.md` + no `workspace/` | `worktree_cleaned` |
 | `run_result.json` + `report.md` + `workspace/` present | `report_written` |
 | `run_result.json` only | `run_finalized` |

@@ -90,7 +90,7 @@ Someone ran `/learn` from within ProjectOdyssey's working directory but pushed t
 ## Key Commands Reference
 
 | Command | Purpose |
-|---------|---------|
+| --------- | --------- |
 | `git merge-base A B` | Find common ancestor (empty = orphan) |
 | `git log A..B` | Commits in B not in A |
 | `git ls-tree --name-only ref` | List files at ref |

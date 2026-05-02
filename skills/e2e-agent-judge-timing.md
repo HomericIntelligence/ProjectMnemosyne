@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-04 |
 | **Objective** | Add separate timing fields for agent and judge execution to enable tiebreaker ranking |
 | **Outcome** | ✅ Success - Timing breakdown implemented with report visualization |
@@ -188,7 +188,7 @@ def test_to_dict(self) -> None:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -204,7 +204,7 @@ judge_duration_seconds: float        # Judge evaluation time
 ### Timing Semantics
 
 | Scenario | agent_duration | judge_duration | duration_seconds |
-|----------|----------------|----------------|------------------|
+| ---------- | ---------------- | ---------------- | ------------------ |
 | Fresh run | Actual time | Actual time | Sum of both |
 | Cached agent | 0.0 | 0.0 or actual | Sum |
 | Cached judge | Actual | 0.0 | Sum |
@@ -213,7 +213,7 @@ judge_duration_seconds: float        # Judge evaluation time
 ### Files Modified
 
 | File | Lines Changed | Purpose |
-|------|---------------|---------|
+| ------ | --------------- | --------- |
 | `src/scylla/e2e/models.py` | +4 | Add timing fields to RunResult |
 | `src/scylla/e2e/subtest_executor.py` | +8 | Track and pass timing data |
 | `src/scylla/e2e/run_report.py` | +15 | Display timing breakdown in reports |
@@ -248,5 +248,5 @@ judge_duration_seconds: float        # Judge evaluation time
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #143 - Separate agent/judge timing for tiebreaker ranking | [notes.md](../../references/notes.md) |

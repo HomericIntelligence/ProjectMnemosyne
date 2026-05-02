@@ -14,7 +14,7 @@ tags: [dry-run, implementer, automation, hephaestus, worktree, pr-creation, earl
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-12 |
 | **Objective** | Prevent `--dry-run` mode from leaking past the Claude-code invocation step into worktree PR creation, `/learn`, and follow-up issue filing in `hephaestus.automation.implementer` |
 | **Outcome** | SUCCESS — early-return guard added after `_run_claude_code()` in dry-run mode; all 596 tests pass; PR #271 created |
@@ -75,7 +75,7 @@ self._file_follow_up_issues(...)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Short-circuit only `_run_claude_code()` | Returned `None` from `_run_claude_code()` when `dry_run=True` | Execution continued to `_ensure_pr_created()` which called `gh pr create` on an empty branch, producing "No commits between main and `<branch>`" errors | A single method guard is not enough; the entire post-simulation pipeline must be skipped via an early return at the worker level |
 | Check `dry_run` inside `_ensure_pr_created()` | Added `if self.options.dry_run: return` inside PR creation | Worked for PR creation but still ran `_run_learn()` and `_file_follow_up_issues()`, creating noise in skill files and issue trackers during testing | Each downstream method would need its own guard — brittle. One early return at the worker level is cleaner and more robust |
 | Trust that empty `session_id` would prevent PR creation | Assumed that `session_id = None` from `_run_claude_code()` would be checked before `_ensure_pr_created()` | `_ensure_pr_created()` did not check `session_id` before attempting PR creation | Never rely on implicit sentinel values flowing through to downstream steps; use explicit control flow |
@@ -113,7 +113,7 @@ if self.options.dry_run:
 ### Dry-Run Phases (After Fix)
 
 | Phase | Dry-Run Behavior | Non-Dry-Run Behavior |
-|-------|-----------------|----------------------|
+| ------- | ----------------- | ---------------------- |
 | `_run_claude_code()` | Returns `None` immediately | Runs Claude Code session |
 | State save | Saves `session_id=None` to checkpoint | Saves real `session_id` |
 | Early return guard | Returns `WorkerResult(success=True)` | Continues to next phase |
@@ -142,5 +142,5 @@ self._file_issues(...)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | PR #271 — automation module porting + dry-run loop testing | 596 tests pass; dry-run across 14 repos confirmed no PRs created |

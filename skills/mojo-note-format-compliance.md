@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Enforce `# NOTE (Mojo vX.Y.Z):` format in `.mojo` files via CI |
 | **Scope** | Pre-commit hook + standalone Python audit script |
 | **Pattern** | `re.compile(r"# NOTE(?!\s*\()")` — negative lookahead |
@@ -83,7 +83,7 @@ pixi run python -m pytest tests/scripts/test_check_note_format.py -v  # 28 passe
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `# NOTE[^(]` as regex | Used character class negation to exclude `(` | `# NOTE (Mojo v0.26.1):` has a space before `(`, so `# NOTE` matches because space ≠ `(` | Always use negative lookahead `(?!\s*\()` when the separator between keyword and delimiter may vary |
 | `language: pygrep` with `[^(]` pattern | Same pattern in pre-commit hook | Same false-positive: compliant lines were flagged and hook blocked all commits | Negative lookaheads work fine in `language: pygrep` hooks — pre-commit uses Python's `re` module |
 | Checking existing violations manually | Tried to enumerate violations from memory | Missed several files; grep output was the source of truth | Always run `grep -rn "# NOTE[^(]" --include="*.mojo" shared/ tests/ ...` first to get the definitive list |
@@ -107,7 +107,7 @@ language: pygrep
 ### Violation categories and fixes
 
 | Type | Example Before | Example After |
-|------|----------------|---------------|
+| ------ | ---------------- | --------------- |
 | Mojo limitation | `# NOTE: Mojo doesn't support __all__` | `# NOTE (Mojo v0.26.1): Mojo doesn't support __all__` |
 | Mojo limitation w/issue | `# NOTE: Batch iteration blocked by #3076` | `# NOTE (Mojo v0.26.1, #3076): Batch iteration blocked` |
 | General comment | `# NOTE: Check is inside else block` | `# Check is inside else block` |

@@ -12,7 +12,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-27 |
 | Project | ProjectScylla |
 | Objective | Add integration tests validating additive resume across sequential --tiers/--max-subtests/--until invocations |
@@ -126,7 +126,7 @@ for tier_id, subtests in previous_cp.run_states.items():
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

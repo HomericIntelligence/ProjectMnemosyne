@@ -13,7 +13,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-29 |
 | Objective | Consolidated workflow for conducting code quality audits: converting findings to GitHub issues, implementing HIGH priority mechanical fixes, and handling docstring false positives |
 | Outcome | Merged from 3 source skills |
@@ -277,7 +277,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `--json` flag with `gh issue create` | `issue_num=$(gh issue create ... --json number --jq .number)` | `--json` flag not available in all gh CLI versions | Extract issue number from URL: `echo "$issue_url" \| grep -oP '\d+$'` |
 | Assuming all fixes need implementation | Created tasks for mypy, YAML linting, .env.example, CONTRIBUTING.md | Many items were already implemented | Check existing infrastructure FIRST before planning implementation |
 | Parallel issue creation with unknown labels | Attempted to create all issues in parallel with label 'tooling' | Label didn't exist; parallel execution means all siblings failed | Always validate labels with `gh label list` first; use sequential scripts |
@@ -290,7 +290,7 @@ gh pr merge --auto --rebase
 ### Issue Creation Timing (38 min for 24 issues)
 
 | Activity | Time |
-|----------|------|
+| ---------- | ------ |
 | Label validation | 2 min |
 | Manual issue creation (first 3) | 5 min |
 | Tracking issue creation | 3 min |
@@ -331,7 +331,7 @@ grep "integration" .github/workflows/test.yml
 ### Label Strategy
 
 | Label Type | Options | Usage |
-|------------|---------|-------|
+| ------------ | --------- | ------- |
 | Priority | P0, P1, P2 | One required per issue |
 | Category | documentation, testing, refactoring, config | 1-2 per issue |
 | Type | bug, epic, tech-debt, enhancement | 0-1 per issue |

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `analyze_dryrun3.py` misclassified active vs orphan subtests due to 1-based IDs |
 | **Root Cause** | `int(sub_id) < effective_max` assumes 0-based IDs; T1-T6 use 1-based (01, 02, ...) |
 | **Impact** | Script reported 0 complete tests (actual: 44), 286 missing subtests (actual: 7), 299 orphans (actual: 20) |
@@ -74,7 +74,7 @@ For T0 with `effective_max=3` and subtests `{00, 01, 02}`:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Original index-based approach | `int(sub_id) >= effective_max` to classify orphans | T1-T6 subtests are 1-based, so highest valid ID (e.g., 10 for T1) equals `effective_max` and gets classified as orphan | Never assume ID numbering scheme; use positional (sort-and-slice) instead of value-based comparison |
 | Original coverage counting | `int(sub_id) < effective_max` to count active subtests | Same 1-based issue: counts `00` (doesn't exist) as expected, misses highest valid subtest | Same fix: count actual subtests present, capped at expected max |
 
@@ -83,7 +83,7 @@ For T0 with `effective_max=3` and subtests `{00, 01, 02}`:
 ### Corrected Analysis Numbers (Post-Fix)
 
 | Category | Old (Buggy) | Corrected |
-|----------|-------------|-----------|
+| ---------- | ------------- | ----------- |
 | Tests fully complete | 0 | 44 |
 | Tests needing work | 47 | 3 |
 | Complete runs (active) | 892 | 1,171 |
@@ -93,7 +93,7 @@ For T0 with `effective_max=3` and subtests `{00, 01, 02}`:
 ### Corrected Pass Rates (Active Runs Only)
 
 | Tier | Pass Rate |
-|------|-----------|
+| ------ | ----------- |
 | T0 | 60% (119/200) |
 | T1 | 54% (85/157) |
 | T2 | 59% (102/172) |

@@ -28,7 +28,7 @@ Note: Action 4 (post-merge monitoring) was deferred — it requires a full exper
 Pre-commit on the cleanup commit had these outcomes:
 
 | Hook | Result | Reason |
-|------|--------|--------|
+| ------ | -------- | -------- |
 | Ruff Format | Auto-fixed | New test class needed reformatting |
 | Ruff Check (S101) | Pre-existing FAIL | assert statements in runner.py + stages.py — already suppressed with `# noqa: S101` |
 | Mypy Check | PASS | |

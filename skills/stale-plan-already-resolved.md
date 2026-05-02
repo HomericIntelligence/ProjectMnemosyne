@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Issue plan was written when code was in state A, but code is now in state B (already fixed or changed further) |
 | **Key insight** | Always verify actual current state before applying a plan — plans can become stale after other PRs merge |
 | **Impact** | Prevents unnecessary changes and incorrect "fixes" that would revert progress |
@@ -60,7 +60,7 @@ grep -A3 '"Models"' .github/workflows/comprehensive-tests.yml
 The key question: does the current state **achieve the same objective** as the planned change?
 
 | Plan objective | Current state | Action |
-|----------------|---------------|--------|
+| ---------------- | --------------- | -------- |
 | `test_*_layers*.mojo` (match part files) | `test_*.mojo` (even broader, also matches part files) | Goal already met — add clarifying comment only |
 | Add explicit filenames | Wildcard already present | Goal already met — no change needed |
 | Remove explicit filenames | Already using wildcard | Goal already met — document only |
@@ -93,7 +93,7 @@ formally closes the issue and documents that the goal was already achieved.
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Key diagnostic | `grep -n "<pattern from plan>" <file>` — if empty, plan is stale |
 | Validation command | `python3 scripts/validate_test_coverage.py` |
 | Correct change scope | Comment-only update when the functional fix already exists |
@@ -102,7 +102,7 @@ formally closes the issue and documents that the goal was already achieved.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Applying plan verbatim | Would have changed `test_*.mojo` back to `test_*_layers*.mojo` | This would have been a regression — narrowing a working broad pattern | Always read actual file before applying a "before → after" from a plan |
 | Skipping verification | Assuming plan's "before" state was current | Plan said line 234 had `test_*_layers.mojo`; actual line 283 had `test_*.mojo` | Verify anchors (line numbers, patterns) before touching anything |
 | Treating as no-op | Issue already resolved, do nothing | Issue remains open; no PR closes it | Even when goal is met, create a PR with a comment clarification to formally close |
@@ -110,5 +110,5 @@ formally closes the issue and documents that the goal was already achieved.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #4280 (follow-up from #3458) | [notes.md](../references/notes.md) |

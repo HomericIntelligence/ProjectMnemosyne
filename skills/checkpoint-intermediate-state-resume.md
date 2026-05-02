@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Problem | Experiments marked "complete" with runs stuck in non-terminal states (e.g. `report_written`) or subtests marked `aggregated` with no `run_states` entries |
 | Root Cause | (1) `reset_failed_states()` only handled `failed`/`interrupted` experiments, not `complete` ones with intermediate runs. (2) Checkpoint integrity: ProcessPool save race can lose run state transitions. |
 | Solution | Extended `reset_failed_states()` to detect and reset intermediate runs and orphaned subtests in complete experiments |
@@ -63,7 +63,7 @@ Look for:
 ### Step 2: Classify Run States
 
 | Category | Run State | Action on Resume | Example |
-|----------|-----------|-----------------|---------|
+| ---------- | ----------- | ----------------- | --------- |
 | INFRA_ERROR | `failed`, `rate_limited` | Always reset to `pending` and retry | Crashed process, API rate limit |
 | AGENT_FAILURE | `worktree_cleaned` + `judge_passed=false` | Never retry (valid data) | Agent didn't solve task |
 | COMPLETE_PASS | `worktree_cleaned` + `judge_passed=true` | Never retry (valid data) | Agent solved task |
@@ -151,7 +151,7 @@ Add to Go/NoGo criteria so orphaned subtests block the GO verdict.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Initial `reset_failed_states()` only handling `failed`/`interrupted` | Only reset experiment states `failed`/`interrupted` to `tiers_running` | `complete` experiments with intermediate runs were skipped entirely — the guard clause returned early | Must also check for intermediate runs when experiment is in `complete`-family states |
 | Monolithic `reset_failed_states()` with inline intermediate/orphan detection | Added all logic directly into `reset_failed_states()` | C901 complexity exceeded limit (19 > 10), SIM102 nested-if lint failure | Extract each concern into its own method; use shared helper constants for state sets |
 | Existing tests with `aggregated` subtests but no `run_states` | Tests assumed orphaned subtests were valid (untouched by reset) | New orphan detection correctly reset them, breaking the old assertions | Add `run_states` entries to test fixtures when subtests are `aggregated` |
@@ -173,7 +173,7 @@ Verdict: GO
 ### Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/e2e/resume_manager.py` | Added `_find_tiers_with_intermediate_runs()`, `_find_orphaned_subtest_states()`, `_reset_intermediate_runs_in_complete_experiment()`, `_reset_orphaned_subtest_states()`, `_reset_failed_and_interrupted()` |
 | `scripts/analyze_dryrun3.py` | Added `check_orphaned_subtest_states()`, added orphaned subtests to Go/NoGo criteria and report |
 | `tests/unit/e2e/test_resume_manager.py` | Added 12 tests, fixed 2 existing tests with missing `run_states` fixtures |

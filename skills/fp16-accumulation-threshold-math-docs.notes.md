@@ -45,7 +45,7 @@ and before `### Example`):
 ## Layers Documented
 
 | Layer | K | C_in | n | Error | Exceeds? |
-|-------|---|------|---|-------|----------|
+| ------- | --- | ------ | --- | ------- | ---------- |
 | LeNet-5 Conv1 | 5 | 1 | 25 | ~2.4e-2 | Borderline |
 | LeNet-5 Conv2 | 5 | 6 | 150 | ~1.5e-1 | Yes |
 | AlexNet Conv1 | 11 | 3 | 363 | ~3.5e-1 | Yes |

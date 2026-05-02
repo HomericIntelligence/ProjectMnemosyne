@@ -14,7 +14,7 @@ Official format requirements for Claude Code plugins based on debugging a market
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2025-12-29 |
 | Objective | Fix ProjectMnemosyne marketplace to use official Claude Code plugin format |
 | Outcome | All plugins validated and working after schema compliance fixes |
@@ -160,7 +160,7 @@ REQUIRED_PLUGIN_FIELDS = {"name", "version", "description"}
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

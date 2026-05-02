@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-15 |
 | **Objective** | Containerize E2E experiment execution for isolation, consistency, and multi-experiment workflows |
 | **Outcome** | ✅ SUCCESS - Single-container architecture with credential mounting, interactive shell, Python 3.14.2 |
@@ -175,7 +175,7 @@ Copy-paste ready configurations and expected outputs.
 
 ## Failed Attempts (Lessons Learned)
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Attempt 1: Nested Container Architecture
@@ -262,7 +262,7 @@ ImportError: cannot import name 'UTC' from 'datetime'
 **Experiment:** test-001 (Hello World task)
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | **Score** | 0.840 (84%) |
 | **Grade** | A |
 | **Status** | ✅ PASS |
@@ -315,7 +315,7 @@ exit
 ### Volume Mounts
 
 | Source | Target | Mode | Purpose |
-|--------|--------|------|---------|
+| -------- | -------- | ------ | --------- |
 | `${PROJECT_DIR}` | `/workspace` | rw | Code and results |
 | `${TEMP_CREDS_DIR}` | `/tmp/host-creds` | ro | Credentials (intermediate) |
 

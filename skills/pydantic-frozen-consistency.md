@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-20 |
 | Issue | #799 |
 | PR | #846 |
@@ -107,7 +107,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Insight: Pydantic Config Inheritance
 
@@ -121,7 +121,7 @@ In this project, `E2ERunResult` was the only subtype that needed updating (it ha
 ## Results
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/core/results.py:53` | `ConfigDict()` → `ConfigDict(frozen=True)` |
 | `scylla/e2e/models.py:292` | `ConfigDict(arbitrary_types_allowed=True)` → `ConfigDict(frozen=True, arbitrary_types_allowed=True)` |
 | `tests/unit/core/test_results.py` | Added `TestRunResultBase` with 6 tests |

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Issue | `ExTensor._set_float64`/`_get_float64` silently write/read zeros for `DType.bfloat16` |
 | Root Cause | Missing `bfloat16` branch in float I/O methods + wrong byte size (4 instead of 2) |
 | Fix | Add two-step cast branches `bf16 ↔ Float32 ↔ Float64` and correct size to 2 |
@@ -98,7 +98,7 @@ pixi run pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Direct bf16↔f64 cast | `ptr[].cast[DType.float64]()` directly from BFloat16 | Produces incorrect values in Mojo 0.26.1 | Always use Float32 as intermediary for bf16 conversions |
 | Skipping `_get_dtype_size_static` fix | Only adding I/O branches without fixing size | 4-byte default causes reads/writes at wrong offsets | All three sites must be fixed together |
 

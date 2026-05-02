@@ -11,13 +11,13 @@ user-invocable: false
 
 ## Overview
 
-| Field     | Value                                                         |
-|-----------|---------------------------------------------------------------|
-| Date      | 2026-02-20                                                    |
-| Issue     | #786                                                          |
-| PR        | #834                                                          |
+| Field | Value |
+| ----------- | --------------------------------------------------------------- |
+| Date | 2026-02-20 |
+| Issue | #786 |
+| PR | #834 |
 | Objective | Upgrade a non-blocking CI grep warning into a hard exit-1 gate |
-| Outcome   | Success — count=0 confirmed, exit 1 added, all 2279 tests pass |
+| Outcome | Success — count=0 confirmed, exit 1 added, all 2279 tests pass |
 
 ## When to Use
 
@@ -122,17 +122,17 @@ changes are needed and no new tests are required.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
-| Metric          | Value                                      |
-|-----------------|--------------------------------------------|
-| Tests total     | 2279                                       |
-| Coverage        | 73.58% (threshold: 73%)                    |
-| Count after fix | 0                                          |
-| Files changed   | 1 (`.github/workflows/test.yml`)           |
-| New exclusions  | `scylla/core/__init__.py`, `(deprecated)`  |
+| Metric | Value |
+| ----------------- | -------------------------------------------- |
+| Tests total | 2279 |
+| Coverage | 73.58% (threshold: 73%) |
+| Count after fix | 0 |
+| Files changed | 1 (`.github/workflows/test.yml`) |
+| New exclusions | `scylla/core/__init__.py`, `(deprecated)` |
 
 ## Checklist for Deprecation Gate Promotion
 

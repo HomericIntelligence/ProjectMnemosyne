@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-03 |
 | **Objective** | Get a Python validation script running when `python3` and `python` resolve to different environments with different installed packages |
 | **Outcome** | Successful — `python3` failed to import `yaml`, `python` resolved to the conda interpreter with PyYAML installed, and validation passed under `python scripts/validate_plugins.py` |
@@ -83,7 +83,7 @@ python <validator-script>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | Ran `python3 <validator-script>` directly | The active `python3` interpreter did not have `PyYAML`, so the validator failed before checking any inputs | When a validator fails on `import yaml`, check interpreter resolution before debugging the validator logic |
 | Attempt 2 | Trusted package presence checks without comparing interpreters | `python3 -m pip show pyyaml` did not prove that the same `python3` binary running the script could import `yaml` | Always print `sys.executable` for the exact interpreter that is failing |
 | Attempt 3 | Assumed the fix required installing new dependencies | A working interpreter with PyYAML was already available as `python` from the conda environment | Prefer interpreter alignment over package installation when multiple Python environments coexist |
@@ -118,5 +118,5 @@ python <validator-script>
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Python repository | Running a script-based validator from an isolated worktree | `python3` failed on `import yaml`, `python` resolved to the conda environment with PyYAML, and `python <validator-script>` passed once the interpreter mismatch was corrected |

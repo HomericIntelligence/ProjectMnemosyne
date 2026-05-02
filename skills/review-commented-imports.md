@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Objective** | Audit commented-out imports in a module `__init__` file to determine status of each |
 | **Language** | Mojo (applies to Python too) |
 | **Trigger** | Module init has `# NOTE: commented out until implementation` blocks |
@@ -51,7 +51,7 @@ grep -rn "^struct Conv" shared/core/layers/
 For each commented import, determine:
 
 | Status | Action |
-|--------|--------|
+| -------- | -------- |
 | Implemented with matching name | Uncomment with corrected path |
 | Implemented under different name | Add comment mapping old→new name |
 | Not yet implemented | Keep commented, add `# NOT YET IMPLEMENTED (see Issue #N)` |
@@ -163,7 +163,7 @@ This is valid since the hook runs correctly in CI Docker containers where GLIBC 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Edit main repo file | Edited `/repo/shared/__init__.mojo` directly | File is tracked by `main` branch, not the worktree branch `3093-auto-impl` | Always edit the worktree copy at `/repo/.worktrees/issue-N/shared/__init__.mojo` |
 | Commit from main repo | `git add shared/__init__.mojo` from `/repo/` | Branch `3093-auto-impl` is checked out in worktree, not main repo | Use `git -C /repo/.worktrees/issue-N` prefix for all git commands |
 | Relative import paths | Used `from .core.activation import ...` | Mojo `__init__` files require absolute import paths | Always use `from shared.core.X import Y` in Mojo init files |

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-24 |
 | **Objective** | Fix `--until` flag executing one extra transition and Ctrl+C having no effect |
 | **Outcome** | ✅ Both bugs fixed; 154 unit tests pass; PR #1102 merged |
@@ -77,7 +77,7 @@ The `--until` flag has **inclusive** semantics:
 ### Files affected (same pattern in all 4)
 
 | File | Method |
-|------|--------|
+| ------ | -------- |
 | `scylla/e2e/state_machine.py` | `StateMachine.advance_to_completion()` |
 | `scylla/e2e/experiment_state_machine.py` | `ExperimentStateMachine.advance_to_completion()` |
 | `scylla/e2e/tier_state_machine.py` | `TierStateMachine.advance_to_completion()` |
@@ -120,7 +120,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Test Pattern for `until_state`
 
@@ -148,5 +148,5 @@ Key insight: `REPLAY_GENERATED` action (not `AGENT_COMPLETE` action) is what pro
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1102 | [notes.md](../../references/notes.md) |

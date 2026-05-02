@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-15 |
 | Objective | Extend `workflow-smoke-test.yml` to protect `pre-commit.yml`, `comprehensive-tests.yml`, and `validate-configs.yml` |
 | Outcome | Operational — applied in ProjectOdyssey PR #4838 (issue #3948) |
@@ -36,7 +36,7 @@ additional critical workflows, each with their own test class and fast-fail grep
 ### Quick Reference
 
 | Workflow | Key Properties to Test |
-|----------|------------------------|
+| ---------- | ------------------------ |
 | `pre-commit.yml` | `pull_request` trigger, mojo-format `continue-on-error: true`, `SKIP=mojo-format`, `__matmul__` enforcement is blocking (no `continue-on-error`) |
 | `comprehensive-tests.yml` | `pull_request` trigger, `fail-fast: false`, Core Tensors/Core Gradient/Models groups present, `test-mojo-comprehensive` needs `mojo-compilation` + `validate-test-coverage` |
 | `validate-configs.yml` | `pull_request` trigger, `yamllint` present, required defaults check present |
@@ -211,7 +211,7 @@ All tests should pass before committing. The full suite runs in under 1 second.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Writing tests without reading the workflow first | Assumed step names from memory | Step was named "Run mojo format (advisory - non-blocking)" not "Run mojo format" — regex didn't match | Always read the actual workflow file before writing tests; don't assume names |
 | Single combined CI job for all workflows | Considered merging security and other checks into one job | Would make it harder to diagnose which workflow has a regression when the job fails | Keep separate jobs per concern area: `smoke-test-security-workflows` + `smoke-test-other-workflows` |
 | Testing `continue-on-error` absence on `__matmul__` step globally | Checked the whole file for `continue-on-error: true` absence | The mojo-format step legitimately has `continue-on-error: true`, so the global check would always fail | Scope `continue-on-error` assertions to the specific step block using DOTALL regex |
@@ -235,5 +235,5 @@ pixi run python -m pytest tests/smoke/ -v
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4838, issue #3948, follow-up to #3318 | [notes.md](../references/notes.md) |

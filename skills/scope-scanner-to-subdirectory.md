@@ -13,7 +13,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-05 |
 | Project | ProjectScylla |
 | Objective | Restrict a repo-wide AST docstring-fragment scanner to `scylla/` only to reduce signal-to-noise |
@@ -177,21 +177,21 @@ assert parsed[0]["file"] == "scylla/bad.py"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Changes Made
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scripts/check_docstring_fragments.py` | Removed `EXCLUDED_PREFIXES`; added `_is_scylla_file()` helper; updated `scan_repository()` |
 | `tests/unit/scripts/test_check_docstring_fragments.py` | Added `TestIsScyllaFile` (6 tests) + `TestScanRepositoryScope` (6 tests); fixed 4 existing `main()` tests |
 
 ### Test Run Results
 
 | Suite | Count | Result |
-|-------|-------|--------|
+| ------- | ------- | -------- |
 | Targeted test file | 75 passed | Pass |
 | Full unit test suite | 4333 passed, 1 skipped | Pass |
 | Coverage | 75.17% | Pass (floor: 75%) |
@@ -201,5 +201,5 @@ assert parsed[0]["file"] == "scylla/bad.py"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1399, PR #1440 | Docstring fragment scanner scoped to `scylla/` |

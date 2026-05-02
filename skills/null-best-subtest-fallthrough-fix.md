@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `elif` fallback unreachable when primary file exists but has null/empty key |
 | **Symptom** | `Cannot build merged baseline: all required tiers failed (T1)` despite T1 complete |
 | **Root Cause** | `if result.exists(): ... elif fallback.exists():` — elif never fires if primary exists |
@@ -155,14 +155,14 @@ gh pr merge --auto --rebase <PR_NUMBER>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Looking for retry/counting bugs only | Initially suspected the `--retry-errors` count fix (commit f77126a0) was sufficient | T5 failures were a separate bug in baseline building, not retry counting | Always check whether multiple independent bugs exist for the same symptom |
 | Assuming `elif` was intentional | The `elif` looked correct at first glance (fallback when primary is absent) | The fallback must also fire when primary exists but has null/empty key | `elif` is wrong when the condition "primary file exists" is necessary but not sufficient |
 
 ## Results & Parameters
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Files changed | 2 (`tier_manager.py`, `test_tier_manager.py`) |
 | Lines changed | +41, -1 |
 | Tests added | 1 (null best_subtest fallthrough) |

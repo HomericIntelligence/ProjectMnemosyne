@@ -14,7 +14,7 @@ tags: [csv, python, regex, financial, transactions, merchant, normalization, lib
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-26 |
 | **Objective** | Normalize 1,039 unique raw transaction descriptions in a bank/CC export CSV down to a manageable set of canonical merchant names for spreadsheet aggregation |
 | **Outcome** | Successful — 1,039 unique descriptions collapsed to 559 unique merchant names; 87% of rows normalized; row count unchanged |
@@ -111,7 +111,7 @@ print('Unchanged (passthrough):', sum(1 for r in rows if r['merchant'] == r['des
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `SMART AND FINAL` regex used `&` | Rule: `r"SMART\s*&\s*FINAL.*"` | Bank description used `AND` not `&` (`SMART AND FINAL`) | Use `(?:AND\|&)` to cover both ampersand and spelled-out "and" in merchant names |
 | Debit Card Purchase inner-text extraction | Extracted inner text with `(.+)` then ran through normalizer | Inner text `7-ELEVEN 12345 SAN JOSE CA` still had trailing location suffix; only the `7` character was captured by a short rule | Strip trailing location noise (`CITY ST US`) before re-normalizing; use a greedy group + optional trailing suffix in the DCP regex |
 | `re.match()` on digit-prefixed descriptions | Rule `r"GREAT\s+CLIPS.*"` via `re.match()` | String starts with `5223 GREAT CLIPS OF MO` — `re.match()` requires match at position 0 | When store-number prefixes are present, add `r"\d+\s+<MERCHANT_NAME>.*"` rule BEFORE the general rule |
@@ -123,7 +123,7 @@ print('Unchanged (passthrough):', sum(1 for r in rows if r['merchant'] == r['des
 ### Normalization Summary (this session)
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Input rows | 2,261 |
 | Unique raw descriptions | 1,039 |
 | Unique canonical merchants | 559 |
@@ -217,5 +217,5 @@ if __name__ == "__main__":
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Personal finance CSV | 2,261-row bank/CC export, 1,039 unique raw descriptions | [notes.md](./tooling-csv-merchant-normalization-regex-rules.notes.md) |

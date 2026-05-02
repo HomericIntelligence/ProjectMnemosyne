@@ -13,7 +13,7 @@ version: 1.1.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-27 |
 | Project | ProjectScylla |
 | Objective | Add unit tests covering all `if x is None: raise RuntimeError(...)` guards added in #1066 |
@@ -182,7 +182,7 @@ class TestLogCheckpointResumeGuard:
 ## Guards Covered in This Session (ProjectScylla #1144)
 
 | Guard Location | Field Tested | Test Class |
-|---|---|---|
+| --- | --- | --- |
 | `runner.py: _log_checkpoint_resume` | `self.checkpoint` | `TestLogCheckpointResumeGuard` |
 | `runner.py: _initialize_or_resume_experiment` | `self.experiment_dir` | `TestInitializeOrResumeExperimentGuard` |
 | `stages.py: stage_execute_agent` | `ctx.adapter_config` | `TestStageExecuteAgentGuard` |
@@ -340,7 +340,7 @@ This applies to any `from x import Y` inside a function body. Always patch `x.Y`
 ## Guards Covered in Follow-Up Session (ProjectScylla #1214)
 
 | Guard Location | Field Tested | Test Class |
-|---|---|---|
+| --- | --- | --- |
 | `runner.py: _build_experiment_actions / action_tiers_complete` | `self.experiment_dir` | `TestBuildExperimentActionsGuards` |
 | `runner.py: run() ~line 688` | `self.checkpoint` (heartbeat) | `TestRunCheckpointGuards` |
 | `runner.py: run() ~line 730` | `self.checkpoint` (ESM) | `TestRunCheckpointGuards` |
@@ -427,7 +427,7 @@ times (e.g., fetch then checkout). The guard fires on the second call.
 subprocess-failure guard under test.
 
 | Guard Location | Trigger Condition | Test Class |
-|---|---|---|
+| --- | --- | --- |
 | `workspace_manager.py: _checkout_commit` line 237 | `git checkout` returncode != 0 | `TestWorkspaceManagerGuards` |
 | `workspace_manager.py: create_worktree` line 283 | `_is_setup is False` | `TestWorkspaceManagerGuards` |
 | `workspace_manager.py: create_worktree` line 319 | `git worktree add` returncode != 0 | `TestWorkspaceManagerGuards` |
@@ -435,7 +435,7 @@ subprocess-failure guard under test.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

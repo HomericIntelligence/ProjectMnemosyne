@@ -9,7 +9,7 @@ user-invocable: false
 # Skill: Rebase Conflict Resolution and Pre-commit Hook Exclusions
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-04 |
 | Category | ci-cd |
 | Outcome | Success |
@@ -95,7 +95,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Parameters
 

@@ -10,7 +10,7 @@ user-invocable: false
 # Skill: Fix Python Subprocess Terminal Corruption and None-Safe Error Handling
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-13 |
 | **Category** | debugging |
 | **Objective** | Fix batch runner crashes from None values and terminal corruption from subprocess management |
@@ -198,7 +198,7 @@ def format_duration(seconds: float) -> str:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -206,7 +206,7 @@ def format_duration(seconds: float) -> str:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

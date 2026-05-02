@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | mojo-as-contiguous-stride-verification |
 | **Category** | testing |
 | **Language** | Mojo |
@@ -106,7 +106,7 @@ flat output.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `transpose_view()` as the non-contiguous source | Create a transposed tensor and assert specific flat positions in the result | `transpose_view` changes shape but the value mapping is harder to control precisely from raw memory | Manually overwriting `_strides` gives full control of the non-contiguous layout |
 | Using `_get_float64(i)` for assertions in the original test | Original `test_contiguous_on_noncontiguous` asserted values via `_get_float64(i)` | `_get_float64` ignores strides — it reads flat memory — so stride bugs are invisible | Always use `assert_value_at` on the result flat indices to catch stride-remapping errors |
 | Asserting only strides and contiguity, not values | Only checking `is_contiguous()` and `_strides[n]` | Does not verify that elements ended up in the correct positions | Both stride metadata AND value positions must be verified |

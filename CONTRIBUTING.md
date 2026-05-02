@@ -64,7 +64,7 @@ tags: [optional, searchable, keywords]
 ```
 
 | Field | Description |
-|-------|-------------|
+| ------- | ------------- |
 | `name` | Lowercase, kebab-case identifier |
 | `description` | Trigger conditions with specific use cases |
 | `category` | One of the 9 approved categories (see below) |
@@ -104,7 +104,7 @@ All lowercase, kebab-case. Examples:
 ## Categories
 
 | Category | Description |
-|----------|-------------|
+| ---------- | ------------- |
 | `training` | ML training experiments and hyperparameters |
 | `evaluation` | Model evaluation and metrics |
 | `optimization` | Performance tuning and speedups |

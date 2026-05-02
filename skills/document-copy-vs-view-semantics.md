@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | document-copy-vs-view-semantics |
 | **Category** | documentation |
 | **Complexity** | Low |
@@ -48,7 +48,7 @@ glob: *.mojo
 For ExTensor, there are three slicing entry points with different semantics:
 
 | Method | Semantics | Reason |
-|--------|-----------|--------|
+| -------- | ----------- | -------- |
 | `slice(start, end, axis)` | **View** — pointer offset + refcount | Efficient batch extraction |
 | `__getitem__(Slice)` | **Copy** — always allocates new buffer | Strided copy avoids lifetime complexity |
 | `__getitem__(*slices)` | **View** — pointer offset per dim | Multi-dim analogue of `slice()` |
@@ -97,7 +97,7 @@ gh pr merge --auto --rebase <pr-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Changing `test_slice_is_view` without updating `main()` | Renamed function but forgot the call site in `main()` | Would have caused a compile error | Always grep for all call sites when renaming a function |
 | Treating all three slice methods as having the same semantics | Assumed `__getitem__(Slice)` was also a view | The 1D `__getitem__(Slice)` always copies (strided), while `slice()` and `__getitem__(*slices)` are views | Read the implementation before writing docstrings |
 | Using `just pre-commit-all` | Ran `just pre-commit-all` to validate | `just` was not on PATH in this environment | Fall back to `pixi run pre-commit run --all-files` |

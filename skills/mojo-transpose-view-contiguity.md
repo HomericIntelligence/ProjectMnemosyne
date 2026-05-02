@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Issue** | Tests for `is_contiguous()` and `as_contiguous()` used direct `_strides` mutation as a hack |
 | **Root Cause** | No `transpose_view()` existed; tests simulated non-contiguous layout manually |
 | **Solution** | Add `transpose_view()` that copies raw bytes + overwrites strides with permuted values |
@@ -110,7 +110,7 @@ The mojo format hook will auto-format. All hooks should pass cleanly.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Inline `from memory import memcpy` inside function | Placed import inside `transpose_view` function body | Works but is bad style; inconsistent with rest of codebase | Always add imports at file top level |
 | Keeping `_strides` mutation tests | Tests directly set `a._strides[0]=1; a._strides[1]=3` | Not a realistic test; doesn't exercise actual transpose code path | Use a real function that produces non-contiguous layout |
 | Asserting `c._strides[0] == 4` after `as_contiguous` | Expected strides `[4,1]` for the result | After transpose `[3,4]→[4,3]`, C-order strides for `[4,3]` are `[3,1]` not `[4,1]` | Always recompute expected strides for the transposed shape, not the original |

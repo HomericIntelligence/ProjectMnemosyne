@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Ensure SECURITY.md supported versions table reflects the current release version from pyproject.toml |
 | **Outcome** | Successful — SECURITY.md updated to include 0.4.x as supported, PR created |
@@ -66,7 +66,7 @@ pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A — first implementation | Direct table edit in SECURITY.md | Did not fail | Simple documentation edits are low-risk; no tests needed beyond pre-commit hooks |
 
 ## Results & Parameters
@@ -103,5 +103,5 @@ This could be automated as part of a release workflow — when `pyproject.toml` 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #47 — Audit S8 Security: SECURITY.md outdated | PR #76: 1 file changed, added 0.4.x row to supported versions table |

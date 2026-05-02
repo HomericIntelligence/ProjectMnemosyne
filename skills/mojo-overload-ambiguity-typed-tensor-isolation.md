@@ -13,7 +13,7 @@ tags: [mojo, tensor, dtype, overload, ambiguity, compilation, architecture, type
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-22 |
 | **Objective** | Fix 242 compilation errors caused by Tensor[dtype] and AnyTensor coexisting in operation files |
 | **Outcome** | Isolating typed implementations into a separate package (`shared/tensor/typed/`) eliminates overload ambiguity |
@@ -131,7 +131,7 @@ just package
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Public typed wrappers (`add_typed`, `relu_typed`) | Added public `fn add_typed[dt: DType](a: Tensor[dt]) -> Tensor[dt]` alongside `fn add(a: AnyTensor) -> AnyTensor` | 242 Mojo overload resolution errors — compiler couldn't disambiguate when both types were in scope | Having `Tensor[dtype]` in scope AT ALL (even in private functions) pollutes overload resolution |
 | Removing only public wrappers | Removed `add_typed` etc. but kept internal `_add_typed` and `_dispatch_add` in same file | Same 242 errors persisted — even PRIVATE typed functions in the same file cause ambiguity | The issue is the `Tensor` TYPE being imported, not the function visibility |
 | Renaming typed functions | Tried using different naming conventions to avoid collisions | Errors remained because the overload confusion is about TYPE resolution, not function NAME resolution | Mojo's issue is with `Tensor[dtype]` type being in the same compilation scope as `AnyTensor` functions |
@@ -188,5 +188,5 @@ typed_implementations: "internal, behind ordinal-based dispatch"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #4998, PRs #5030-5058 | 242 build errors from typed ops, resolved by isolation |

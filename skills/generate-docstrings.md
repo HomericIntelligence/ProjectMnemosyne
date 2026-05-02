@@ -13,7 +13,7 @@ tier: 2
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Write comprehensive docstrings for functions and classes following standard formats (Google, NumPy, reStructuredText). |
 | Outcome | Operational |
@@ -77,7 +77,7 @@ Docstring structure:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

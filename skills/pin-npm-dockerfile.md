@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-15 |
 | **Objective** | Pin npm packages to specific versions in Dockerfiles for build reproducibility |
 | **Outcome** | ✅ Success - Pinned @anthropic-ai/claude-code to v2.1.42 with regression test |
@@ -167,7 +167,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -199,7 +199,7 @@ pixi run python -m pytest tests/docker/test_docker_build.py -v
 ### Version Selection Rationale
 
 | Factor | Decision |
-|--------|----------|
+| -------- | ---------- |
 | **Version chosen** | 2.1.42 |
 | **Why this version** | Verified working in #601 during Docker testing |
 | **Compatibility** | Tested with Python 3.14.2-slim base image |

@@ -12,7 +12,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `struct MyType(Copyable, Movable)` with `UnsafePointer` fields and no explicit `__copyinit__` gets a synthesized shallow copy |
 | **Symptom** | Non-deterministic double-free crash when the struct is stored in a `List` that reallocates |
 | **Fix** | Add explicit `__copyinit__` with `alloc` + `memcpy`, and explicit `__moveinit__` that transfers the pointer without allocating |
@@ -129,7 +129,7 @@ non-deterministic and hard to trace to the reallocation.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assume synthesized copy is safe | Left `Copyable` structs with `UnsafePointer` fields without explicit `__copyinit__` | Mojo docs state synthesized `__copyinit__` copies each field including `UnsafePointer` by value (pointer address, not pointed-to data); both original and copy share the same heap allocation | Always add explicit `__copyinit__` with `alloc` + `memcpy` for any struct that owns heap memory |
 | Use `fetch_add` / `fetch_sub` for mutex | Implemented `lock()` with `_state.fetch_add(1)` and `unlock()` with `_state.fetch_sub(1)` | Fetch-and-add is not a correct mutex primitive — multiple threads can increment simultaneously, each believing it holds the lock | Use compare-exchange (`compare_exchange_weak`) for correct spinlock implementation |
 | Add only `__copyinit__`, not `__moveinit__` | Added deep-copy `__copyinit__` but omitted `__moveinit__` | Without explicit `__moveinit__`, Mojo synthesizes a shallow move which also copies the pointer value — the source destructor still runs and frees the now-shared pointer | Always pair `__copyinit__` with `__moveinit__` (using `deinit` parameter) when a struct owns heap memory |
@@ -137,14 +137,14 @@ non-deterministic and hard to trace to the reallocation.
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Reproducer** | `tests/shared/base/test_spinlock_double_free.mojo` |
 | **PR** | ProjectOdyssey #5199 |
 | **Files changed** | `shared/base/memory_pool.mojo` |
 | **Structs fixed** | `SpinLock`, `AtomicStats` |
 | **Root cause** | Missing explicit `__copyinit__`/`__moveinit__` on heap-owning `Copyable` structs |
 | **Verification** | Pre-commit passed; CI pending at time of skill creation |
-| **Detection grep** | `grep -rn "UnsafePointer" --include="*.mojo" | xargs grep -l "Copyable"` |
+| **Detection grep** | `grep -rn "UnsafePointer" --include="*.mojo" \| xargs grep -l "Copyable"` |
 
 ### Quick Detection Grep
 

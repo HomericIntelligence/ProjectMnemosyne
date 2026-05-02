@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-05 |
 | **Objective** | Fix OOM crash in claude-myrmidon NATS pipeline and add dry-run validation mode |
 | **Outcome** | Pipeline stabilized with session reuse, payload pruning, NATS retention, and DRY_RUN mode. Dry-run completes in ~2s at flat 26.9 MB. |
@@ -130,7 +130,7 @@ services:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `--no-input` flag on Claude CLI | Passed `--no-input` to prevent interactive prompts | Flag does not exist on Claude CLI; caused all stages to produce empty output | Check `claude --help` for valid flags; use `stdin=subprocess.DEVNULL` instead |
 | `capture_output=True` without `stdin=subprocess.DEVNULL` | Captured stdout/stderr but did not redirect stdin | Subprocess blocks waiting for stdin input indefinitely | Always pair `capture_output=True` with `stdin=subprocess.DEVNULL` for non-interactive CLI tools |
 | `{**task_data, "feedback": result}` dict unpacking | Merged all previous stage data when publishing to next NATS subject | Carries ALL previous stage outputs; payload grows exponentially across 5 stages x 5 iterations | Always prune payloads between stages; only carry core keys + what the next stage needs |
@@ -166,7 +166,7 @@ dry_run_memory: 26.9 MB (flat)
 ### Key Files
 
 | File | Role |
-|------|------|
+| ------ | ------ |
 | `e2e/claude-myrmidon.py` | Multi-stage NATS pipeline orchestrator |
 | `e2e/docker-compose.yml` | Container definitions with memory limits |
 
@@ -192,7 +192,7 @@ dmesg | grep -i oom
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | E2E NATS pipeline OOM on 2026-04-04 | Dry-run validated end-to-end locally; memory confirmed flat at 26.9 MB |
 
 ## References

@@ -17,7 +17,7 @@ skills/<category>/<name>/
 ## plugin.json Requirements
 
 | Field | Required | Description |
-|-------|----------|-------------|
+| ------- | ---------- | ------------- |
 | `name` | Yes | Lowercase kebab-case identifier |
 | `version` | Yes | Semantic version (e.g., "1.0.0") |
 | `description` | Yes | Trigger conditions (20+ chars) |
@@ -55,7 +55,7 @@ date: YYYY-MM-DD
 ## Approved Categories
 
 | Category | Description |
-|----------|-------------|
+| ---------- | ------------- |
 | `training` | ML training experiments |
 | `evaluation` | Model evaluation |
 | `optimization` | Performance tuning |
@@ -93,14 +93,14 @@ issues. Verified on gemma-3-12b-it."
 ### Good Failed Attempts
 
 | Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
+| --------- | ----------- | -------- |
 | Used inline vLLM | OOM on single GPU | Use external server |
 | batch_size=16 | Gradient overflow | Use batch_size=4 |
 
 ### Bad Failed Attempts
 
 | Attempt | Why Failed | Lesson |
-|---------|-----------|--------|
+| --------- | ----------- | -------- |
 | It didn't work | Unknown | Try again |
 
 ## Search Command Standards

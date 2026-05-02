@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Issue** | #3770 — migrate_odyssey_skills: log warning when auxiliary subdir already exists at dest |
 | **Follow-up from** | #3228 |
 | **File changed** | `scripts/migrate_odyssey_skills.py` |
@@ -72,7 +72,7 @@ shutil.copytree(src, dest, dirs_exist_ok=True)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | No alternative approaches explored | N/A | Issue was well-scoped: one pattern, two code paths |
 
 ## Results & Parameters

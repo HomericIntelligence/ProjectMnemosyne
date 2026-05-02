@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Fix CI failure where `scripts/doctor.sh` "Check 4: Git hooks" exited 1 because GitHub Actions runners lack `.git/hooks/` infrastructure |
 | **Outcome** | Added `${CI:-}` guard to skip developer-local checks in CI; PR #350 (ProjectMyrmidons) passed |
@@ -113,7 +113,7 @@ check_<name>() {
 **Categories of checks that need CI guards:**
 
 | Check Type | Examples |
-|------------|---------|
+| ------------ | --------- |
 | Git hooks | `.git/hooks/pre-commit`, `.git/hooks/commit-msg` |
 | SSH infrastructure | `~/.ssh/id_ed25519`, `ssh-agent` running |
 | Local config files | `~/.netrc`, `.env.local`, tool-specific dotfiles |
@@ -124,7 +124,7 @@ check_<name>() {
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | No failed attempts | The fix was straightforward once the root cause was identified | N/A | `actions/checkout` creates a minimal git repo without hook infrastructure — this is expected and by design |
 
 ## Results & Parameters
@@ -190,5 +190,5 @@ fi
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMyrmidons | PR #350 | `scripts/doctor.sh` Check 4 was failing `just doctor --skip-connectivity` in CI. Added `${CI:-}` guard. CI job passed after fix. |

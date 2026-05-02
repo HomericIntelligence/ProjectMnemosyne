@@ -19,7 +19,7 @@ not `opencode_linux_amd64.tar.gz`. Docker's `TARGETARCH` build arg must be mappe
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-04-24 |
 | PR | AchaeanFleet #547 |
 | Objective | Fix opencode vessel Dockerfile to download correct release asset for amd64/arm64 |
@@ -32,7 +32,7 @@ not `opencode_linux_amd64.tar.gz`. Docker's `TARGETARCH` build arg must be mappe
 opencode uses **hyphen-separated** names with **x64** (not amd64) for the x86-64 architecture.
 
 | Docker TARGETARCH | opencode asset filename |
-|-------------------|------------------------|
+| ------------------- | ------------------------ |
 | `amd64` | `opencode-linux-x64.tar.gz` |
 | `arm64` | `opencode-linux-arm64.tar.gz` |
 
@@ -42,7 +42,7 @@ not the Linux tool convention used by most Go/Rust binaries.
 ## Contrast: Naming Conventions Across Tools
 
 | Tool | Ecosystem | amd64 asset name | arm64 asset name |
-|------|-----------|-----------------|-----------------|
+| ------ | ----------- | ----------------- | ----------------- |
 | opencode | TypeScript/Bun | `opencode-linux-x64.tar.gz` | `opencode-linux-arm64.tar.gz` |
 | yq | Go | `yq_linux_amd64` | `yq_linux_arm64` |
 | goose | Rust | `x86_64-unknown-linux-gnu` | `aarch64-unknown-linux-gnu` |
@@ -146,7 +146,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `opencode_linux_amd64.tar.gz` | Used Go-style underscore+amd64 naming (common for most Linux tools) | Asset does not exist in sst/opencode releases; curl returns 404 | opencode follows Node.js/npm naming: `x64` not `amd64`, hyphens not underscores |
 | Hardcoded amd64 path without TARGETARCH | Built single-arch image without case statement | Image fails on arm64 hosts or multi-arch CI matrix | Always add TARGETARCH mapping for any binary supporting multiple architectures |
 
@@ -155,7 +155,7 @@ gh pr merge --auto --rebase
 ### Files changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `vessels/opencode/Dockerfile` | Add `ARG TARGETARCH=amd64`, `SHELL` directive, `case` statement mapping TARGETARCH to opencode arch name |
 
 ### The case statement pattern
@@ -180,7 +180,7 @@ sets `TARGETARCH` when using `--platform`.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | AchaeanFleet | PR #547, vessels/opencode/Dockerfile | verified-ci |
 
 ## Related Skills

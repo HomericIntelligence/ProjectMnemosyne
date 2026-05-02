@@ -11,7 +11,7 @@ version: 1.0.0
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-03 |
 | **Objective** | Add B, SIM, C4, RUF rule sets to ruff configuration without breaking CI |
 | **Outcome** | ✅ Success — 233 violations resolved, 0 remaining, all 3999 tests passing |
@@ -43,7 +43,7 @@ pixi run ruff check scylla/ scripts/ tests/ --select B,SIM,C4,RUF 2>&1 \
 **Interpret counts to decide: fix vs. ignore?**
 
 | Volume | Approach |
-|--------|----------|
+| -------- | ---------- |
 | >30 violations | Consider ignoring if the rule has a legitimate exception pattern |
 | Fixable (`[*]` in ruff output) | Apply auto-fix |
 | Requires code restructure | Evaluate cost/benefit |
@@ -203,7 +203,7 @@ pixi run python -m pytest tests/unit/ -x -q
 ### What to Ignore vs. Fix
 
 | Rule | Default Decision | Rationale |
-|------|-----------------|-----------|
+| ------ | ----------------- | ----------- |
 | **SIM117** | **IGNORE** | `pytest.raises()` must be innermost context manager — merging breaks pytest |
 | **B017** | **IGNORE** if comments name type | `pytest.raises(Exception)` acceptable when comment identifies expected type |
 | **RUF001/002/003** | **IGNORE** if intentional Unicode | Greek letters (α, ρ, σ), math symbols (×, –) in scientific code |
@@ -220,7 +220,7 @@ pixi run python -m pytest tests/unit/ -x -q
 After adding B, SIM, C4, RUF to a mature Python codebase (~18K lines):
 
 | Rule | Count | Action |
-|------|-------|--------|
+| ------ | ------- | -------- |
 | SIM117 | 59 | Ignored |
 | RUF100 | 51 | Auto-fixed |
 | RUF001/002/003 | 27 | Ignored |
@@ -240,7 +240,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Configuration
 

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Category | ci-cd |
 | Complexity | Low |
 | Risk | Low — purely additive type checking |
@@ -101,13 +101,13 @@ pixi run pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | No failed attempts — triage-first approach worked | — | Always run the flag manually before committing config to avoid surprise failures |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3370, PR #4036 | [notes.md](../../references/notes.md) |
 
 ## Results & Parameters

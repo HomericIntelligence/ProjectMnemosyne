@@ -18,7 +18,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-03 |
 | **Objective** | Map the actual state of every HomericIntelligence component — what's real code vs documentation claims |
 | **Outcome** | Complete component readiness matrix distinguishing production-ready, needs-work, not-started, and not-relevant components |
@@ -133,7 +133,7 @@ curl -s http://localhost:8222/jsz   # JetStream stats
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assumed Myrmidons scripts target ai-maestro | Read submodule version of api.sh | Submodule was stale; standalone checkout was already migrated | Always check both submodule pin AND standalone checkout |
 | Planned Keystone as transport daemon | Architecture docs describe Keystone as invisible transport | Keystone is a library with MessageBus, not a deployable service | Read actual source, not just architecture docs |
 | Expected Odyssey to integrate with mesh | Architecture calls it "research sandbox graduates to AchaeanFleet" | It's a pure ML framework with zero NATS/REST code | ProjectOdyssey has nothing to do with the agent mesh |

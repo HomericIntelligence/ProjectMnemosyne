@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `PrecisionConfig.bf16()` silently used `DType.bfloat16` on Apple Silicon where it is unsupported, causing runtime failures with no diagnostic message |
 | **Solution** | Extract the platform check into a testable helper, add `raises` to the factory method signature, and call `is_apple_silicon()` from `sys.info` |
 | **Language** | Mojo v0.26.1+ |
@@ -128,7 +128,7 @@ pixi run pre-commit run --files shared/training/precision_config.mojo \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Fallback to FP16 silently | Return `PrecisionConfig.fp16()` when `is_apple_silicon()` | Changes semantics without warning; callers expect BF16 mode but get FP16 | Fail loudly instead — let the caller decide to use FP16 explicitly |
 | Compile-time `@parameter` guard | Use `@parameter if is_apple_silicon()` to block at compile time | `is_apple_silicon()` is a runtime function, not a compile-time parameter in v0.26.1 | Use runtime `raises` pattern; compile-time guard requires a different API |
 | Inline the guard in `bf16()` directly | Put the `if is_apple_silicon(): raise Error(...)` directly inside `bf16()` without a helper | Cannot test the error path on Linux CI — `is_apple_silicon()` always returns `False` | Extract into a helper that accepts `is_apple: Bool` to enable injection in tests |

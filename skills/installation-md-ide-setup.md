@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | installation-md-ide-setup |
 | **Category** | documentation |
 | **Trigger** | Installation docs missing IDE/editor guidance or version constraints in prerequisites |
@@ -146,7 +146,7 @@ gh pr merge --auto --rebase <pr-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `Skill` tool for commit+push+PR | Invoked `commit-commands:commit-push-pr` skill | Skill tool denied in `don't ask` permission mode | Fall back to direct `git add` + `git commit` + `git push` + `gh pr create` commands |
 | Checking `shared/INSTALL.md` for content to copy | Read shared INSTALL.md hoping for IDE section to lift | Shared INSTALL.md focuses on Docker/pixi install, not IDE config | Write IDE Setup from scratch using standard VS Code + LSP patterns |
 

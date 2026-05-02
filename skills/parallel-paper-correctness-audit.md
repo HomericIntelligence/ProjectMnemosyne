@@ -12,7 +12,7 @@ tags: [latex, paper, audit, verification, cross-reference, numerical-accuracy, p
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-28 |
 | **Objective** | Verify every numerical claim in a LaTeX research paper against its underlying data files, fix errors, and ensure internal consistency using parallel agent teams |
 | **Outcome** | Found and fixed 12 issues across 3 audit passes + 7 issues in post-correction audit (v1.2.0) + 1 best-tier mislabeling bug via 5-agent swarm (v1.3.0) + 1 CRITICAL pivot_table cross-experiment averaging bug (v1.4.0): original passes found false universality claim, stale inline tables, aggregation mismatch, pandas NaN bug, over-scoring judge, variable criteria; post-correction pass found 1 CRITICAL figure/caption mismatch, 4 MODERATE, 2 MINOR; v1.3.0 swarm found idxmax() tie-breaking bug; v1.4.0 swarm found pivot_table silently averaging across experiments, deflating Spearman correlations from ~0.5 to ~0.1 and Krippendorff's alpha from 0.135 to 0.034 |
@@ -391,7 +391,7 @@ pivot = df.pivot_table(
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Verify 16 divergent pass classifications | Tried to reconstruct majority-vote logic from raw judge data | Would require full replay of judge aggregation pipeline; too complex for manual verification | Accept qualitative documentation for complex derived classifications; verify a sample, not all |
 | Glob on large figures directory | Used glob tool to list all figure files | Timeout on directory with 100+ files | Use `ls` via Bash for large directories instead of glob |
 | pre-commit gitleaks hook | Ran pre-commit to validate changes | Go version mismatch broke gitleaks | Run individual linters directly (`pixi run python -m ruff`, `pixi run python -m mypy`) when pre-commit hooks have environment issues |
@@ -410,7 +410,7 @@ pivot = df.pivot_table(
 ### Input Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Paper | `docs/arxiv/haiku/paper.tex` (~2,400 lines) |
 | Experiments | 3 (test-001, test-002, test-003) |
 | Tiers | 7 (T0-T6) |
@@ -425,7 +425,7 @@ pivot = df.pivot_table(
 #### Passes 1-3 (v1.0.0-v1.1.0)
 
 | Severity | Issue | Paper Claim | Data Value | Error Magnitude |
-|----------|-------|-------------|------------|-----------------|
+| ---------- | ------- | ------------- | ------------ | ----------------- |
 | Critical | False universality (normality) | "All 14 reject" | 13 of 14 (T6 Cost p=0.069) | Binary wrong |
 | Critical | Stale inline T6 cost | $0.070 | $0.106 | 34% |
 | Major | Consistency mismatch | Table: 0.77 (T0) | Figure: 0.54 (T0) | 0.23 absolute |
@@ -442,20 +442,20 @@ pivot = df.pivot_table(
 #### 5-Agent Swarm Audit (v1.3.0)
 
 | Severity | Issue | Paper Claim | Data Value | Error Magnitude |
-|----------|-------|-------------|------------|-----------------|
+| ---------- | ------- | ------------- | ------------ | ----------------- |
 | Major | Best-tier mislabel (test-001 pass rate) | T1 best tier | T5 best tier (score 0.930 vs T1 0.908) | Wrong tier (6 tied at pass_rate=1.0, idxmax picked T1 alphabetically) |
 
 #### 5-Agent Swarm Audit with Pre-Flight Recomputation (v1.4.0)
 
 | Severity | Issue | Paper Claim | Data Value | Error Magnitude |
-|----------|-------|-------------|------------|-----------------|
+| ---------- | ------- | ------------- | ------------ | ----------------- |
 | Critical | pivot_table cross-experiment averaging (detail.py:39-43) | Spearman ~0.1, Krippendorff 0.034 | Spearman ~0.5, Krippendorff 0.135 | 5x deflation (entire inter-rater narrative wrong) |
 | Critical | 20+ paper references to wrong statistics | "nearly uncorrelated", "poor agreement" | "low-to-moderate rank agreement" | Narrative reversal across 20 sections |
 
 #### Post-Correction Audit (v1.2.0)
 
 | Severity | Issue | Paper Claim | Data Value | Error Magnitude |
-|----------|-------|-------------|------------|-----------------|
+| ---------- | ------- | ------------- | ------------ | ----------------- |
 | Critical | Figure/caption mismatch (fig06) | Caption: "CoP" | Spec plots raw cost | Metric identity wrong |
 | Moderate | Caption error (fig08) | "21 tier-experiment combos" | Spec aggregates to 7 tier-level values | Cardinality wrong |
 | Moderate | Scale inconsistency | Body: H=4.0 (1dp) | Appendix: H=4.00 (2dp) | Precision inconsistency |
@@ -506,7 +506,7 @@ verified-local (4,950 tests pass, ruff clean, mypy clean, corrected tab03 regene
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Branch fix-validate-model-retry-config, correctness audit of docs/arxiv/haiku/paper.tex (passes 1-2) | 2026-04-26, Opus 4.6 (1M context), 1,080 runs across 7 tiers |
 | ProjectScylla | Branch fix-validate-model-retry-config, third-pass audit of docs/arxiv/haiku/paper.tex | 2026-04-26, Opus 4.6 (1M context), found 4 additional issues (best-CoP mislabel, systematic is-not-None, tab03 nan, p-value precision) |
 | ProjectScylla | Branch fix-validate-model-retry-config, post-correction paragraph-level audit of docs/arxiv/haiku/paper.tex (2428 lines) | 2026-04-27, Opus 4.6 (1M context), 3 parallel Explore agents + 1 Plan agent, found 7 issues (1 CRITICAL figure/caption, 4 MODERATE, 2 MINOR), 72 VL JSON specs cross-checked |

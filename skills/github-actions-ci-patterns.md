@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-04-25 |
 | Objective | Consolidated GitHub Actions CI patterns: setup, caching, artifact handling, security, action migration, build gates, GITHUB_TOKEN permissions, and required check alignment |
 | Outcome | Merged from 7 source skills; v2.2.0 adds required status check alignment, orphan workflow cleanup, and duplicate job removal patterns |
@@ -53,7 +53,7 @@ tags:
 ### Quick Reference
 
 | Problem | Fix |
-|---------|-----|
+| --------- | ----- |
 | Slow CI — `setup-pixi` cache broken | Remove `cache: true`, use `actions/cache@v4` explicitly |
 | Pre-commit runs on all files in PRs | Use `--from-ref`/`--to-ref` on PR, `--all-files` on push |
 | Artifact name has spaces/`&` | Add `sanitized-name` field; use in upload step |
@@ -408,14 +408,14 @@ jobs:
 
 **Permission values**:
 | Value | Meaning |
-|-------|---------|
+| ------- | --------- |
 | `read` | Can read the resource |
 | `write` | Can read and write |
 | `none` | No access |
 
 **Common permissions needed**:
 | Operation | Permission Required |
-|-----------|-------------------|
+| ----------- | ------------------- |
 | Post PR comment | `pull-requests: write` |
 | Create/update PR review | `pull-requests: write` |
 | Create issue comment | `issues: write` |
@@ -498,7 +498,7 @@ When a future workflow is planned but the required checks list has not been upda
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Large single Edit replacing all 14 matrix entries at once | Used Edit tool with full block replacement including sanitized-name fields | Security hook (`security_reminder_hook.py`) triggered on GitHub Actions workflow edit and returned error | Security hooks on workflow files may block large edits; use smaller targeted edits or Bash heredoc instead |
 | Write tool for workflow file | Used the `Write` tool directly to create a `.github/workflows/` file | Pre-tool security reminder hook fired and blocked the call | Use Bash heredoc (`cat > file << 'EOF'`) for GitHub Actions workflow files to avoid the pre-tool hook |
 | Use Edit tool to change workflow | Called Edit tool with exact old string on workflow file | Pre-commit hook (`security_reminder_hook.py`) blocked the edit | Use `python3 -c "str.replace()"` as fallback when Edit is blocked on workflow files |
@@ -518,7 +518,7 @@ When a future workflow is planned but the required checks list has not been upda
 ### CI Speed Benchmarks (pixi caching fix)
 
 | Metric | Before | After (cache hit) |
-|--------|--------|-------------------|
+| -------- | -------- | ------------------- |
 | pixi install (test job) | ~6m21s | ~10-20s |
 | pixi install (pre-commit job) | ~6m16s | ~10-20s |
 | pre-commit hook setup | ~32s | ~3-5s |
@@ -541,7 +541,7 @@ restore-keys: |
 ### Build Gate Key Decisions
 
 | Decision | Value | Rationale |
-|----------|-------|-----------|
+| ---------- | ------- | ----------- |
 | `timeout-minutes` | 30 | Mojo builds are slow on cold cache |
 | `permissions` | `contents: read` | Build-only — no PR write needed |
 | Path filters | `shared/**/*.mojo`, `pixi.toml`, `justfile` | Avoids running on doc-only changes |
@@ -551,7 +551,7 @@ restore-keys: |
 ### Action Migration Metrics
 
 | Metric | Before | After | Delta |
-|--------|--------|-------|-------|
+| -------- | -------- | ------- | ------- |
 | Lines in step | 15 | 5 | -10 |
 | Manual SHA256 hashes to maintain | 1 | 0 | -1 |
 | Conditional branches | 2 | 0 | -2 |

@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Format Mojo code files to ensure consistent style. - Preparing code for commit - Pre-commit hook reports formatting issues |
 | Outcome | Operational |
@@ -56,7 +56,7 @@ pixi run mojo format --check path/to/file.mojo
 ## Error Handling
 
 | Error | Cause | Solution |
-|-------|-------|----------|
+| ------- | ------- | ---------- |
 | `Syntax error` | Invalid Mojo syntax | Fix syntax before formatting |
 | `File not found` | Wrong path | Verify file exists |
 | `Permission denied` | File permissions | Check `chmod` settings |
@@ -65,7 +65,7 @@ pixi run mojo format --check path/to/file.mojo
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

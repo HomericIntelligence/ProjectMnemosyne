@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-06 |
 | Category | refactoring |
 | Objective | Reduce cyclomatic complexity of three `llm_judge.py` functions from CC>15 to CC≤8 by extracting private pipeline step helpers |
@@ -59,7 +59,7 @@ def _run_mojo_build_step(workspace: Path, is_modular: bool) -> tuple[bool, bool,
 All step helpers use a consistent 3-tuple:
 
 | Position | Type | Meaning |
-|----------|------|---------|
+| ---------- | ------ | --------- |
 | 0 | `bool` | `passed` — step succeeded |
 | 1 | `bool` | `na` — step not applicable (tool not installed) |
 | 2 | `str` | `output` — stdout/stderr from the subprocess |
@@ -158,7 +158,7 @@ flags variables that are completely unused in the rest of the scope.
 Each step helper needs three test cases:
 
 | Test | Setup | Assert |
-|------|-------|--------|
+| ------ | ------- | -------- |
 | tool not installed | `mock_which.return_value = None` | `passed=False`, `na=True`, `output=""` |
 | tool installed, step fails | `mock_which.return_value = "/usr/bin/mojo"`, subprocess returns failure | `passed=False`, `na=False` |
 | tool installed, step passes | `mock_which.return_value = "/usr/bin/mojo"`, subprocess returns success | `passed=True`, `na=False` |
@@ -168,14 +168,14 @@ Use `unittest.mock.patch` with `side_effect` for subprocess, `wraps` is unnecess
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### CC before and after
 
 | Function | CC Before | CC After |
-|----------|-----------|----------|
+| ---------- | ----------- | ---------- |
 | `_run_mojo_pipeline` | ~18 | ~6 |
 | `_run_python_pipeline` | ~16 | ~6 |
 | `run_llm_judge` | ~17 | ~8 |
@@ -183,7 +183,7 @@ Use `unittest.mock.patch` with `side_effect` for subprocess, `wraps` is unnecess
 ### New helpers added
 
 | Helper | Shared? | Returns |
-|--------|---------|---------|
+| -------- | --------- | --------- |
 | `_run_mojo_build_step` | no | `tuple[bool, bool, str]` |
 | `_run_mojo_format_step` | no | `tuple[bool, bool, str]` |
 | `_run_mojo_test_step` | no | `tuple[bool, bool, str]` |

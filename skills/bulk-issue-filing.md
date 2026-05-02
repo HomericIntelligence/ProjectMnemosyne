@@ -12,7 +12,7 @@ File GitHub issues in bulk from code markers (TODO, FIXME, DEPRECATED, NOTE).
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-01 |
 | Objective | Create GitHub issues for 357+ code markers across a codebase |
 | Outcome | Successfully filed 36 issues with proper categorization and linking |
@@ -45,7 +45,7 @@ grep -rn "NOTE" --include="*.mojo" . | wc -l
 Organize markers into batches:
 
 | Batch | Type | Action |
-|-------|------|--------|
+| ------- | ------ | -------- |
 | DEPRECATED | Files/aliases to delete | File deletion issues |
 | Blocked TODOs | Depend on other issues | Create tracking issues |
 | Already tracked | Reference existing issues | Skip |
@@ -135,7 +135,7 @@ done
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -167,7 +167,7 @@ Part of #[master-issue-number]
 ### Batch Statistics from Session
 
 | Category | Count | Issues Created |
-|----------|-------|----------------|
+| ---------- | ------- | ---------------- |
 | DEPRECATED files | 7 | #3060-#3066 |
 | Blocked TODOs | 32 | #3067-#3069, #3077-#3079 |
 | Template placeholders | 30 | #3070, #3080 (tracking only) |

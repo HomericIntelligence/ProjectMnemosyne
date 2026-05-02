@@ -34,7 +34,7 @@ Implement GitHub cleanup issue #3086: document and track tensor slicing behavior
 The three slicing methods in ExTensor have **different semantics**:
 
 | Method | Semantics |
-|--------|-----------|
+| -------- | ----------- |
 | `slice(start, end, axis)` | True view (pointer offset, refcount++) |
 | `__getitem__(Slice)` | Copy by design (strided byte copy) |
 | `__getitem__(*slices)` | True view (pointer offset per dim) |

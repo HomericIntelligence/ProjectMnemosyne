@@ -22,7 +22,7 @@ The tier label mismatch in `.claude/shared/metrics-definitions.md` had recurred 
 PRs #1345 and #1362. The correct tier-to-label mapping is:
 
 | Tier | Name |
-|------|------|
+| ------ | ------ |
 | T0 | Prompts |
 | T1 | Skills |
 | T2 | Tooling |

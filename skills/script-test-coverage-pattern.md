@@ -12,7 +12,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-03 |
 | Project | ProjectScylla |
 | Objective | Extend unit test coverage from 10/34 to ≥17/34 scripts (≥50% goal) using mock-only pattern |
@@ -168,14 +168,14 @@ def test_type_to_category_mapping(self, commit_type, category):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Final Coverage Numbers
 
 | Metric | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | Scripts tested | 10/34 (29%) | 22/34 (65%) |
 | New test files | 0 | 13 |
 | New tests | 0 | 453 |
@@ -184,7 +184,7 @@ def test_type_to_category_mapping(self, commit_type, category):
 ### Scripts Covered in This Session
 
 | Script | Test File | Test Count | Technique |
-|--------|-----------|-----------|-----------|
+| -------- | ----------- | ----------- | ----------- |
 | `generate_changelog.py` | `test_generate_changelog.py` | 29 | Mock subprocess + pure functions |
 | `check_type_alias_shadowing.py` | `test_check_type_alias_shadowing.py` | 29 | tmp_path filesystem |
 | `validate_links.py` | `test_validate_links.py` | 19 | tmp_path filesystem |

@@ -14,7 +14,7 @@ tags: [pep-561, py.typed, mypy, hatchling, packaging, typing]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Add PEP 561 py.typed marker to a Python package using hatchling so type checkers recognize it as typed |
 | **Outcome** | Successful — marker file created, build config updated, regression tests added |
@@ -70,7 +70,7 @@ pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A — first implementation | Straightforward addition | N/A | The key insight is that hatchling `packages` directive only includes `.py` files; non-Python files like `py.typed` need `force-include` |
 
 ## Results & Parameters
@@ -120,5 +120,5 @@ def test_py_typed_in_hatch_build_targets() -> None:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1530 — PEP 561 compliance | PR #1559, pre-commit verified |

@@ -10,13 +10,13 @@ user-invocable: false
 
 ## Overview
 
-| Field     | Value |
-|-----------|-------|
-| Date      | 2026-02-20 |
-| Issue     | #755 |
-| PR        | #869 |
+| Field | Value |
+| ----------- | ------- |
+| Date | 2026-02-20 |
+| Issue | #755 |
+| PR | #869 |
 | Objective | Add automated dependency vulnerability scanning to CI using pip-audit and Dependabot for a pixi-managed Python project |
-| Outcome   | Success — Dependabot weekly PRs + pip-audit in a dedicated security workflow added in one session |
+| Outcome | Success — Dependabot weekly PRs + pip-audit in a dedicated security workflow added in one session |
 
 ## When to Use
 
@@ -123,12 +123,12 @@ After pushing:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Deliverable | File | Trigger |
-|-------------|------|---------|
+| ------------- | ------ | --------- |
 | Dependabot weekly pip PRs | `.github/dependabot.yml` | GitHub-native; automatic |
 | pip-audit availability | `pixi.toml` `[feature.lint.pypi-dependencies]` | On lint environment install |
 | pip-audit CI scan | `.github/workflows/security.yml` | PRs (path filter) + weekly cron + manual |

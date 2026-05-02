@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | batchnorm-epsilon-audit |
 | **Category** | documentation |
 | **Scope** | `shared/testing/layer_testers.mojo` |
@@ -64,7 +64,7 @@ alias GRADIENT_CHECK_EPSILON_OTHER: Float64 = 1e-3
 ### Tolerance values by layer type
 
 | Layer | Tolerance | Rationale |
-|-------|-----------|-----------|
+| ------- | ----------- | ----------- |
 | Conv2d backward | `1e-1` (10%) | Accumulated matmul errors |
 | Linear backward | `0.10` wide + `0.01` abs | Matrix op accumulated errors, see #2704 |
 | Activation backward | `1e-2` float32, `1e-1` other | Elementwise, less accumulation |
@@ -86,6 +86,6 @@ alias GRADIENT_CHECK_EPSILON_OTHER: Float64 = 1e-3
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Looking for pooling backward tester | Searched for `test_pool*_backward` methods in `layer_testers.mojo` | No such method exists in the file | Always confirm scope first — issue says "if they also use hardcoded epsilon"; absence means nothing to audit |
 | Assuming BatchNorm tolerance matches activation | Initially considered `1e-2` (activation pattern) for BatchNorm float32 | BatchNorm normalization accumulates division errors across all N×H×W elements, making it closer to conv2d than elementwise ops | Match tolerance to the accumulation regime of the operation, not to its layer category |

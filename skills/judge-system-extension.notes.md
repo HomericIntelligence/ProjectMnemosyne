@@ -110,7 +110,7 @@ from scylla.judge.prompts import (
 ## Test Coverage
 
 | Module | Test File | Tests Added |
-|--------|-----------|-------------|
+| -------- | ----------- | ------------- |
 | cross_tier.py | test_cross_tier.py | 25 |
 | cleanup_evaluator.py | test_cleanup_evaluator.py | 32 |
 | evaluator.py (consensus) | test_evaluator.py | 15 |
@@ -121,7 +121,7 @@ Total: 89 new tests
 ## Pull Requests Created
 
 | PR | Issue | Title | Status |
-|----|-------|-------|--------|
+| ---- | ------- | ------- | -------- |
 | #84 | #37 | Cross-tier analysis metrics | CI/CD failing |
 | #85 | #38 | Cleanup script assessment | CI/CD failing |
 | #86 | #43 | Judge consensus with retry | CI/CD failing |

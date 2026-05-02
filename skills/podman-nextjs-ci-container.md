@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Objective** | Create a Podman dev container that runs the full CI pipeline (test, lint, typecheck, build) for a Next.js project with native Node modules |
 | **Stack** | Next.js 14, Vitest, ESLint, TypeScript, node-pty, Podman |
 | **Base Image** | `docker.io/library/node:20.19.2-bookworm-slim` |
@@ -132,7 +132,7 @@ When running build after other steps sequentially, the `.next` directory from a 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | node:20.18.3 base image | Used older Node LTS | vite 7.3.1 requires >=20.19.0, build failed with engine incompatibility | Always check vite/next engine requirements before picking Node version |
 | `npm install -g yarn` in Dockerfile | Tried installing yarn globally | yarn is pre-installed in official node images, command fails | Check what's already in the base image before adding install steps |
 | `groupadd -g 1000 node` | Tried creating node user with GID 1000 | GID 1000 already taken by existing `node` user in base image | Use the existing `node` user — it's already set up correctly |
@@ -170,7 +170,7 @@ CMD ["yarn", "test"]
 ### Verified CI Results (in container)
 
 | Check | Command | Result |
-|-------|---------|--------|
+| ------- | --------- | -------- |
 | Tests | `yarn test` | 486 tests pass, 13 test files |
 | Lint | `yarn lint` | Warnings only, no errors |
 | Typecheck | `npx tsc --noEmit` | Clean |
@@ -180,7 +180,7 @@ CMD ["yarn", "test"]
 ### Key Configuration
 
 | Parameter | Value | Why |
-|-----------|-------|-----|
+| ----------- | ------- | ----- |
 | Node version | 20.19.2 | Minimum for vite 7.3.1 |
 | Base image | bookworm-slim | Minimal Debian with native build support |
 | Heap size | 4096 MB | Required for Next.js production builds |

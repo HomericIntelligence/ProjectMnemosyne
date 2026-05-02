@@ -94,7 +94,7 @@ User requested analysis of `results.log` and results directory to fix 4 bugs in 
 ### Files Modified
 
 | File | Lines Changed | Purpose |
-|------|---------------|---------|
+| ------ | --------------- | --------- |
 | `config/judge/system_prompt.md` | +60 | Added 3 new criteria sections |
 | `src/scylla/judge/prompts.py` | +20 | Added enum values, weights, schema |
 | `src/scylla/e2e/subtest_executor.py` | +18 | Enhanced `_has_valid_agent_result()` |

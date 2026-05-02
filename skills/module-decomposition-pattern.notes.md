@@ -9,7 +9,7 @@
 ### Cluster mapping
 
 | Cluster | Functions | New Module |
-|---------|-----------|------------|
+| --------- | ----------- | ------------ |
 | Pipeline execution | `_is_modular_repo`, `_run_mojo_build_step`, `_run_mojo_format_step`, `_run_mojo_test_step`, `_run_precommit_step`, `_run_mojo_pipeline`, `_get_pipeline_env`, `_execute_python_scripts`, `_run_python_build_step`, `_run_python_format_step`, `_run_python_test_step`, `_run_python_pipeline`, `_run_build_pipeline` + `BuildPipelineResult` | `build_pipeline.py` |
 | Workspace context | `_get_workspace_state`, `_get_patchfile`, `_get_deleted_files`, `_load_reference_patch`, `_run_and_log_pipeline`, `_format_pipeline_result`, `_gather_judge_context` | `judge_context.py` |
 | Judge execution | `_call_claude_judge`, `_parse_judge_response`, `_execute_judge_with_retry` | `judge_execution.py` |

@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | Issue | `dirpath + "/" + filename` produces double slashes when `dirpath` already ends with `/` |
 | Symptom | Paths like `"checkpoint//weights.weights"` written or read; may silently work on Linux but is incorrect |
 | Root Cause | No normalization of trailing slash before constructing file paths |
@@ -150,7 +150,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Use `rstrip("/")` result directly | `if not create_directory(dirpath.rstrip("/"))` | Mojo's `rstrip` returns `StringSlice`, not `String`; `create_directory` expects `String` — compile error: "cannot be converted from 'StringSlice[dirpath]' to 'String'" | Always wrap `rstrip()` result with `String(...)` when passing to functions that expect `String` |
 | Check `mojo -c` for quick REPL test | `pixi run mojo -c 'var s = ...'` | Mojo does not support the `-c` flag (unlike Python) | Use a temp `.mojo` file for quick one-off Mojo tests |
 
@@ -195,7 +195,7 @@ pixi run mojo /tmp/test_rstrip.mojo
 Always cover all three cases to prevent regressions:
 
 | Test | Save | Load | Verifies |
-|------|------|------|---------|
+| ------ | ------ | ------ | --------- |
 | `test_save_..._trailing_slash` | `dir + "/"` | `dir` | save normalization |
 | `test_load_..._trailing_slash` | `dir` | `dir + "/"` | load normalization |
 | `test_save_load_..._round_trip` | `dir + "/"` | `dir + "/"` | both paths normalized |
@@ -203,5 +203,5 @@ Always cover all three cases to prevent regressions:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3791, PR #4800 | [notes.md](../references/notes.md) |

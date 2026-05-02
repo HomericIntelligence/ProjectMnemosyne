@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-23 |
 | **Objective** | Fix three critical bugs causing test failures in dryrun3 batch analysis |
 | **Outcome** | Fixed — 2975 tests pass, 77.94% coverage, all pre-commit hooks pass |
@@ -135,14 +135,14 @@ else:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Tests Written
 
 ### Bug 1: `TestSaveCheckpointThreadSafety` in `tests/unit/e2e/test_checkpoint.py`
 
 | Test | Assertion |
-|------|-----------|
+| ------ | ----------- |
 | `test_concurrent_saves_do_not_raise` | 20 threads writing concurrently, none raise |
 | `test_no_stale_tmp_files_after_concurrent_saves` | No `.tmp.*.json` leftovers after 10 concurrent writes |
 | `test_sequential_saves_still_work` | Regression: single-threaded save still works |
@@ -150,7 +150,7 @@ else:
 ### Bug 2: `TestResumeTierConfigPreload` in `tests/unit/e2e/test_runner.py`
 
 | Test | Assertion |
-|------|-----------|
+| ------ | ----------- |
 | `test_tier_ctx_populated_when_resuming_from_config_loaded` | `load_tier_config` called for `CONFIG_LOADED` state |
 | `test_tier_ctx_not_preloaded_for_pending_state` | `PENDING` state skips preload |
 | `test_tier_ctx_not_preloaded_for_complete_state` | `COMPLETE` state skips preload |
@@ -158,7 +158,7 @@ else:
 ### Bug 3: `TestRunLlmJudgeRetry` in `tests/unit/e2e/test_llm_judge.py`
 
 | Test | Assertion |
-|------|-----------|
+| ------ | ----------- |
 | `test_first_attempt_success_no_retry` | Clean JSON on first try = 1 call total |
 | `test_retry_on_conversational_response` | Bad then good = 2 calls, second has JSON reminder |
 | `test_succeeds_on_third_attempt` | Bad, bad, good = 3 calls |
@@ -168,7 +168,7 @@ else:
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Max judge retry attempts | 3 |
 | Thread lock scope | Module-level (`_checkpoint_write_lock`) |
 | Temp file naming | `{stem}.tmp.{pid}.{thread_id}{suffix}` |
@@ -179,5 +179,5 @@ else:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1080, dryrun3 batch analysis | [notes.md](../../references/notes.md) |

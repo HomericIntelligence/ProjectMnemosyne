@@ -16,7 +16,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-01-04 |
 | **Objective** | Fix inconsistent root-level field mapping in tier configurations and enhance resource prompt suffixes to encourage maximum usage |
 | **Outcome** | ✅ Successfully mapped root-level `tools`, `agents`, and `skills` to resources dict; enhanced all prompt messages to use "Maximize usage" wording for multiple items |
@@ -187,7 +187,7 @@ def test_root_level_tools_mapped(self, tmp_path: Path) -> None:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -241,7 +241,7 @@ resources:
 ### Expected Prompt Outputs
 
 | Configuration | Output |
-|---------------|--------|
+| --------------- | -------- |
 | `tools: {enabled: all}` | "Maximize usage of all available tools to complete this task." |
 | `tools: {names: [Read, Write]}` | "Maximize usage of the following tools to complete this task:\n- Read\n- Write" |
 | `tools: {names: [Read]}` | "Use the following tool to complete this task:\n- Read" |

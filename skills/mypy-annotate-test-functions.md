@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-02 |
 | **Issues** | #1120, #1289, #1283 — Annotate test functions in tests/unit/ for mypy compliance |
 | **Objective** | Add `-> None` return type annotations to all test functions and explicit type hints to helper classes in pytest test files |
@@ -107,12 +107,12 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Files changed | 1 (`tests/unit/adapters/test_base.py`) |
 | Lines changed | 1 (method signature on line 22) |
 | Tests affected | 160 adapter unit tests — all pass |

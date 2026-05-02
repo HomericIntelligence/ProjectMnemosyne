@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | enable-disabled-mojo-tests |
 | **Category** | testing |
 | **Complexity** | Low-Medium |
@@ -59,7 +59,7 @@ Do NOT use when:
 Before writing anything, determine which pattern applies:
 
 | Pattern | Indicator | Action |
-|---------|-----------|--------|
+| --------- | ----------- | -------- |
 | Stub file | `main()` only prints "SKIPPED", no test functions | Write all tests from scratch |
 | NOTE-disabled | `NOTE: temporarily disabled pending X` | Check if X is resolved, then write tests |
 | TODO commented-out | `# var b = fn(a)` + `pass # Placeholder` | Uncomment + fix syntax |
@@ -196,7 +196,7 @@ Key transformations:
 Common syntax bugs in commented-out Mojo code:
 
 | Bug Pattern | Fix |
-|-------------|-----|
+| ------------- | ----- |
 | `target_shape[0] = 4` | `target_shape.append(4)` (List requires append) |
 | `var b = tile(a, 3)` | `var reps = List[Int](); reps.append(3); var b = tile(a, reps)` |
 | `# var parts = split(a, [3, 5, 10])` | Use `split_with_indices` with `List[Int]` |
@@ -272,7 +272,7 @@ python3 -m pytest tests/ -v -rs
 Common patterns and fixes:
 
 | Pattern | Root Cause | Fix |
-|---------|------------|-----|
+| --------- | ------------ | ----- |
 | `if not file.exists(): pytest.skip()` | Wrong path calculation | Count `.parent` calls; add missing required fields |
 | `try: ... except Error: pytest.skip()` | Missing Pydantic fields | Add required fields to config YAML |
 
@@ -326,7 +326,7 @@ SKIP=mojo-format git commit -m "fix(tests): re-enable X tests"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assuming tests existed but were "disabled" | Expected to find a skip guard or `@disabled` annotation to remove | The file had zero test functions — it was a complete stub | Always `Read` the actual file before assuming its structure from the issue description |
 | Write file via Write tool without reading first | Called Write tool on existing file | Write tool requires the file to be Read first | Always Read the existing file before calling Write, even for full rewrites. Use Bash `cat >` as fallback. |
 | Run `pixi run mojo run test_X.mojo` to verify | Executed mojo directly on host | GLIBC_2.32/2.33/2.34 not found — Mojo requires newer libc | Mojo tests can only be verified in CI (Docker). Trust existing test patterns and submit to CI. |
@@ -456,7 +456,7 @@ Closes #NNNN"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3082 — re-enable test_validation_loop.mojo | Validation loop tests, DataLoader 2D shape pattern |
 | ProjectOdyssey | Issue #3085 — re-enable Conv2D backward tests | Backward pass, GradientTriple/GradientPair field names |
 | ProjectOdyssey | Issue #3081 — re-enable test_unsigned.mojo | Stub file, 18 tests written from scratch |

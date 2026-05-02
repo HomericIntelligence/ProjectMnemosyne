@@ -216,7 +216,7 @@ git branch -d refactor-dry-consolidation
 ### Duplication Analysis
 
 | Category | Count | Details |
-|----------|-------|---------|
+| ---------- | ------- | --------- |
 | Total Python files | 58 | All in src/ |
 | Duplicate files by hash | 0 | All files unique |
 | Duplicate class names | 15 pairs | 4x RunResult, 3x TierConfig, etc. |
@@ -228,14 +228,14 @@ git branch -d refactor-dry-consolidation
 ### Implementation Results
 
 | Metric | Before | After | Change |
-|--------|--------|-------|--------|
+| -------- | -------- | ------- | -------- |
 | Lines in llm_judge.py | ~1100 | ~1076 | -24 |
 | Lines in run_report.py | ~420 | ~396 | -24 |
 | Total duplicate LOC | 48 | 0 | -48 |
 | New centralized module | 0 | 1 | +1 (filters.py) |
 | Path violations | 2 | 0 | -2 |
 | Centralized module usage | 66% | 100% | +34% |
-| Net LOC change | - | - | -15 |
+| Net LOC change | --- | --- | -15 |
 | Tests passing | 1,051 | 1,051 | 0 (no regression) |
 
 ## Technical Details

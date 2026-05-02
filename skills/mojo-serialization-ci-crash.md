@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | Issue | `test_serialization.mojo` crashes in CI with exit code 1 (non-zero, not a compile error) |
 | Symptoms | `libKGENCompilerRTShared.so` crash during `test_hex_encoding()`, dtype roundtrip failures |
 | Root Causes | (1) `String(dtype)` vs `dtype_to_string()` mismatch; (2) Python pathlib interop crash in `load_named_tensors` |
@@ -113,7 +113,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run test locally | `pixi run mojo tests/shared/test_serialization.mojo` | GLIBC version incompatibility on dev machine (`GLIBC_2.32` not found) | Can't reproduce Mojo crashes locally; must rely on CI logs |
 | Assume crash is from `bytes_to_hex` string indexing | Examined `hex_chars[high]` and `result += hex_chars[low]` for bounds issues | The crash was actually caused by Python pathlib interop in `load_named_tensors`, not hex encoding | The crash location in logs ("Testing hex encoding...") is misleading — print statement precedes the crashing function call, but the actual crash may be from a different test that runs earlier |
 | Check if `String(DType)` format is wrong | Checked if `String(DType.float32)` produces something other than `"float32"` | Test passed in recent CI even with `String(dtype)` — Mojo's DType `__str__` apparently produces `"float32"` format | Even if the existing code works, using `dtype_to_string()` is more explicit and defensive |

@@ -9,7 +9,7 @@
 ## Audit Scorecard
 
 | Section | Grade | Score | Status |
-|---------|-------|-------|--------|
+| --------- | ------- | ------- | -------- |
 | Project Structure & Organization | B+ | 87% | Healthy |
 | Documentation | C+ | 75% | Needs attention |
 | Architecture & Design | B | 83% | Healthy |
@@ -72,7 +72,7 @@ since they add little value in a log context.
 ## File Change Summary
 
 | File | Change Type | Key Change |
-|------|------------|------------|
+| ------ | ------------ | ------------ |
 | `hephaestus/github/pr_merge.py` | Exception narrowing + f-string logging | 7 broad excepts → commented; 16 f-strings → %s |
 | `hephaestus/validation/config_lint.py` | Exception narrowing + f-string logging | OSError for IO; yaml keeps Exception; 7 f-strings → %s |
 | `hephaestus/validation/structure.py` | F-string logging | 10 f-strings → %s |

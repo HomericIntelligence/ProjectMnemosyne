@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-07 |
 | **Objective** | Systematically eliminate all `tensor._data.bitcast[T]()[i] = val` UAF write patterns codebase-wide using a parallel agent swarm |
 | **Outcome** | 1,062 writes fixed across 50 files in ~2 hours via 5 parallel agents (PRs #5200–#5204) |
@@ -204,7 +204,7 @@ are impossible. Enable auto-merge on all 5 simultaneously.
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Files affected | ~50 `.mojo` files (including `DISABLED_*.mojo`) |
 | Total instances | ~1,062 writes |
 | Agents / PRs | 5 parallel |
@@ -216,7 +216,7 @@ are impossible. Enable auto-merge on all 5 simultaneously.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Manual file-by-file sed | Used `sed -i` to replace patterns one file at a time | Too slow at scale (50 files, 1,062 writes); `sed` misses complex multiline expressions and nested parentheses | Use Python regex for batch replacement with type-wrapping awareness; avoids double-wrap bugs |
 | Single large PR with all files | All 1,062 fixes in one branch and one PR | Creates merge conflicts between agents working in parallel; one huge diff is hard to review; CI takes longer on massive changesets | One PR per batch with non-overlapping file assignments enables true parallelism and reviewable diffs |
 

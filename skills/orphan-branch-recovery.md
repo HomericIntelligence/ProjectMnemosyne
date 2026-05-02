@@ -10,13 +10,13 @@ version: 1.0.0
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
-| Objective | | Field | Value | |-------|-------| | Date | 2026-01-01 | | Objective | Fix a branch that completely diverged from main with no common history | |
+| Objective | Fix a branch that completely diverged from main with no common history |
 | Outcome | Operational |
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-01-01 |
 | Objective | Fix a branch that completely diverged from main with no common history |
 | Outcome | Identified branch was pushed from wrong repo, extracted content, deleted and recreated |
@@ -97,7 +97,7 @@ git push -u origin <branch-name>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

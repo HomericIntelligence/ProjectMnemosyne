@@ -14,7 +14,7 @@ Fix Havok WASM loading failures in Babylon.js projects using Vite dev server, pl
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-03 |
 | Objective | Fix blue screen caused by Havok physics WASM failing to load in Vite dev server |
 | Outcome | Success |
@@ -95,7 +95,7 @@ private async _init(): Promise<void> {
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -126,7 +126,7 @@ cp node_modules/@babylonjs/havok/lib/esm/HavokPhysics.wasm public/HavokPhysics.w
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | SoccerGame | Babylon.js 7.x + Havok + Vite 5 soccer game, blue screen on match scene load | [notes.md](references/notes.md) |
 
 ## References

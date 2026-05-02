@@ -14,7 +14,7 @@ Migrate duplicated test fixture configs to a centralized shared location with ru
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-01-03 |
 | **Category** | architecture |
 | **Objective** | Migrate duplicated test fixture configs to a centralized shared location with runtime loading |
@@ -134,19 +134,19 @@ for tier_id in TierID:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Before/After Metrics
 
 | Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
+| -------- | -------- | ------- | ------------- |
 | Fixture size | 47MB | 1.4MB | 97% reduction |
 | config.yaml files | 5,361 | 160 | 97% reduction |
 | Tier directories per test | 7 | 0 | 100% |
 | Subtest directories | 5,361 | 0 | 100% (now YAML files) |
-| Lines of code deleted | - | 120,735 | - |
+| Lines of code deleted | --- | 120,735 | --- |
 
 ### Final Directory Structure
 

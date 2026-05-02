@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Name** | gitleaks-version-upgrade |
 | **Category** | ci-cd |
 | **Effort** | ~5 minutes |
@@ -147,7 +147,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Edit tool on `security.yml` | Used the `Edit` tool directly to replace multi-line block | Pre-commit hook fires a security reminder that blocks the Edit tool for workflow files | Use `sed -i` for workflow file edits; the hook is informational but blocks the Edit tool |
 | Single `sed` with escaped pipe | Tried to include the `sha256sum --check` pipe in the sed pattern | Shell escaping of `\|` inside the replacement string is fragile | Split the SHA256 replacement into a simple hex-string substitution; avoid embedding shell operators in sed replacements |
 

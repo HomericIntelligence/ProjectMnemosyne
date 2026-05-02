@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-07 |
 | **Issue** | #3312 (ProjectOdyssey) |
 | **PR** | #3932 (ProjectOdyssey) |
@@ -114,7 +114,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Single-pass implementation | — | Task was well-scoped: one file edit, HTML comment, no broken links |
 
 ## Results & Parameters
@@ -122,7 +122,7 @@ gh pr merge --auto --rebase
 ### Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `docs/index.md` | +55 lines: HTML comment block between Getting Started and Advanced Topics sections |
 
 ### Comment Block Template (copy-paste)
@@ -159,7 +159,7 @@ All hooks passed with a pure HTML comment addition:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3312, PR #3932 | 17-topic Core Documentation section restored as deferred comment after stubs deleted in #3142 |
 
 ## Related Skills

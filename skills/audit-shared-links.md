@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Skill** | audit-shared-links |
 | **Category** | documentation |
 | **Complexity** | Low |
@@ -119,7 +119,7 @@ git commit -m "feat(docs): audit .claude/shared/ links and add missing Quick Lin
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Regex `[^)#\s]+` as full pattern | Pattern `\(/?\.claude/shared/([^)#\s]+)\)` — stops capture at `#` but then requires `)` immediately | Links with anchors like `foo.md#section` never match because `)` comes after `#section`, not right after the filename | Use `([^)#\s]+)(?:#[^]*)?` to capture filename separately, then allow optional anchor before closing paren |
 
 ## Results & Parameters

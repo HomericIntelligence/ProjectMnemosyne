@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-02 |
 | **Objective** | Identify why a GitHub PR remains blocked after signed commits are fixed and no review feedback exists |
 | **Outcome** | Successful — the block was traced to an active repository ruleset requiring `code_quality` and `code_scanning` results in a repo that emitted no checks |
@@ -98,7 +98,7 @@ git ls-tree -r --name-only HEAD
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | Queried only `branches/<default>/protection` and treated the `404 Branch not protected` response as proof there was no policy gate | GitHub repository rulesets can block merges independently of classic branch protection | When classic branch protection returns 404, immediately check `/rulesets` before concluding there is no branch policy |
 | Attempt 2 | Assumed the PR was still blocked by commit signing after the commits were already verified | The commits were valid, but the merge gate still remained because separate ruleset checks were unsatisfied | Verify commit signatures separately, then continue tracing merge blockers if the PR state stays `BLOCKED` |
 | Attempt 3 | Expected `gh pr checks` to reveal the policy source directly | `gh pr checks` only reported that no checks existed, not which ruleset required them | Combine PR state, ruleset API output, and repo inventory to diagnose impossible check requirements |
@@ -151,5 +151,5 @@ A repository can be governed by a ruleset that is internally consistent in GitHu
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Radiance | PR #33 merge-block diagnosis | Verified signed commits were no longer the issue, inspected active rulesets, and traced the remaining block to required `code_quality` and `code_scanning` rules in a repo with no emitted checks |

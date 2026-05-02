@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-19 |
 | Objective | Add a new CLI tool as an evaluation target in ProjectScylla |
 | Outcome | Success — GooseAdapter implemented, 23/23 tests pass, PR #812 merged |
@@ -42,7 +42,7 @@ cat scylla/adapters/base_cli.py  # understand inherited methods
 ### 2. Files to Create (exactly 3)
 
 | File | Template |
-|------|---------|
+| ------ | --------- |
 | `scylla/adapters/<name>.py` | Copy `cline.py`, change CLI_EXECUTABLE, `_build_command()`, `_parse_token_counts()` |
 | `config/models/<name>.yaml` | Copy any existing model YAML, update fields |
 | `tests/unit/adapters/test_<name>.py` | Copy `test_cline.py`, swap `ClineAdapter` for new adapter |
@@ -113,7 +113,7 @@ cost_per_1k_output: 0.0
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

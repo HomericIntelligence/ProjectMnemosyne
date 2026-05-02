@@ -17,7 +17,7 @@ Rewrite any files with placeholder text, sourcing commands from `justfile` and v
 ## Files Audited
 
 | File | Status | Action |
-|------|--------|--------|
+| ------ | -------- | -------- |
 | `quickstart.md` | Accurate | No changes |
 | `installation.md` | Accurate (written in #3304) | No changes |
 | `first_model.md` | Fabricated APIs throughout | Full rewrite |

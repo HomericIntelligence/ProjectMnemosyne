@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | note-variant-canonical-audit |
 | **Category** | documentation |
 | **Language** | Mojo |
@@ -53,7 +53,7 @@ user-invocable: false
 ### Quick Reference
 
 | Change Type | Detection Pattern | Action |
-|-------------|------------------|--------|
+| ------------- | ------------------ | -------- |
 | Inverted order | `# NOTE (Mojo v0.26.1, #` | Swap to `# NOTE(#NNNN, Mojo v0.26.1):` |
 | Missing version | `# NOTE(#\d+):` without `, Mojo` | Add `, Mojo v0.26.1` after issue ref |
 | TODO-style | `# NOTE.*could be added\|if needed\|will be implemented` (future tense prose) | Convert to `# TODO:` |
@@ -152,7 +152,7 @@ gh pr merge --auto --rebase <pr-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Deriving dispositions from grep alone | Ran grep and tried to classify all 23 occurrences from scratch | Slow and error-prone — many occurrences look similar without file context | Read the issue plan comment first; it contains a pre-computed disposition table per file |
 | Using the Skill tool for commit | Called `commit-commands:commit` skill | Denied in don't-ask permission mode | Fall back to direct `git commit` with HEREDOC message format |
 
@@ -168,7 +168,7 @@ gh pr merge --auto --rebase <pr-number>
 **The 3 actual changes:**
 
 | File | Line | Change Type | Detail |
-|------|------|-------------|--------|
+| ------ | ------ | ------------- | -------- |
 | `shared/training/__init__.mojo` | 443 | Inverted order | `(Mojo v0.26.1, #3076)` → `(#3076, Mojo v0.26.1)` |
 | `shared/training/trainer_interface.mojo` | 385 | Missing version | `# NOTE(#3076):` → `# NOTE(#3076, Mojo v0.26.1):` |
 | `shared/utils/toml_loader.mojo` | 115 | TODO-style | `# NOTE (Mojo v0.26.1): List handling could be added` → `# TODO: Add list handling if needed` |
@@ -186,5 +186,5 @@ gh pr merge --auto --rebase <pr-number>
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3883, PR #4821 | [notes.md](../references/notes.md) |

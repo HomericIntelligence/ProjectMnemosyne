@@ -13,7 +13,7 @@ tier: 2
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Implement and execute model training loops including forward/backward passes, gradient updates, and checkpoint management. |
 | Outcome | Operational |
@@ -70,7 +70,7 @@ Training report:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

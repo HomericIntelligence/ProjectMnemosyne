@@ -12,7 +12,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-24 |
 | **Project** | ProjectScylla |
 | **Objective** | Close the #687 mypy incremental strictness roadmap after Phases 1-6 completed |
@@ -169,7 +169,7 @@ gh issue close 687
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -207,7 +207,7 @@ disable_error_code = [
 ### Error counts for remaining strict settings (as of 2026-02-24)
 
 | Setting | Errors | Primary file(s) |
-|---------|--------|-----------------|
+| --------- | -------- | ----------------- |
 | `check_untyped_defs` | 26 | `scripts/export_data.py` (all 26) |
 | `disallow_untyped_defs` | 32 | `scripts/lint_configs.py` (11), `scripts/migrate_skills_to_mnemosyne.py` (4) |
 | `warn_return_any` | 58 | `scylla/analysis/config.py` (33), `scripts/check_coverage.py` (4) |

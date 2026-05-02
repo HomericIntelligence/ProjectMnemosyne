@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-22 |
 | **Issue** | #889 — Enable mypy checking for tests/ and scripts/ directories |
 | **Objective** | Remove `ignore_errors = true` overrides for `tests.*` and `scripts.*`, extend the regression guard to track baselines per-directory, and populate initial counts |
@@ -244,7 +244,7 @@ git commit -m "feat(mypy): Enable type checking for tests/ and scripts/ director
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

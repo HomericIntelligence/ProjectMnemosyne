@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-12 |
 | **Objective** | Pass `deliver_policy` from NATSConfig to `js.subscribe()` in ProjectScylla (issue #1654) |
 | **Outcome** | Successful — PR #1784 merged; fix avoids triggering optional import guard by passing string directly |
@@ -106,7 +106,7 @@ sub = await js.subscribe(
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Enum conversion inside try block | `from nats.js.api import DeliverPolicy` placed inside the `try:` after `import nats`, used as `DeliverPolicy(self._config.deliver_policy)` | Mock does not define `nats.js.api` submodule → `ImportError` → guard's `return` fires → `js.subscribe()` never called | Any import from an optional dependency inside a try/except ImportError guard will trigger early return if that import fails, even if previous imports in the same block succeeded |
 | Enum conversion before try block | Placing `from nats.js.api import DeliverPolicy` at module top level | Causes `ImportError` at import time in environments without nats-py, breaking the optional-dependency contract entirely | Optional dependency imports must always be deferred inside the guard, not placed at module level |
 
@@ -147,5 +147,5 @@ FAILED tests/unit/nats/test_subscribe_multi.py::TestMultiSubjectSubscription::te
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/ProjectScylla | PR #1784, fix for issue #1654 (pass deliver_policy to js.subscribe) | 2026-04-12 — CI passed |

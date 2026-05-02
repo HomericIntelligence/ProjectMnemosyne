@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Goal** | Eliminate duplicate documentation by merging into one canonical file |
 | **Inputs** | Two overlapping markdown files, grep search for cross-references |
 | **Outputs** | Updated canonical file, deleted duplicate, updated references |
@@ -117,7 +117,7 @@ Eliminates DRY violation. Closes #ISSUE"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Closing code blocks with ` ```text ` | Original file used ` ```text ` to close fenced blocks (not just open them) | markdownlint treats ` ```text ` as an opening of a new block, not a closing | Always close fenced code blocks with plain ` ``` ` — only opening tags get a language specifier |
 | Adding merged content without checking line lengths | Pasted detailed spec content directly | Lines from the detailed file were 150-241 chars, failing MD013 (120 char limit) | After merging content, always run markdownlint to catch line-length violations from the source file |
 | Keeping self-referential "See Also" link | `hierarchy.md` had a link to `agent-hierarchy.md` in its See Also section | Creates a broken link after deletion | When merging, remove all references to the deleted file from the canonical file itself |

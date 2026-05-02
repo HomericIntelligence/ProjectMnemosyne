@@ -14,7 +14,7 @@ tags: [meta-repo, submodules, myrmidon-swarm, git-worktrees, multi-wave, cleanup
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-03 |
 | **Objective** | Clean up dirty submodule state across 15 submodules in the Odysseus meta-repo using a myrmidon swarm of 8 agents in 2 waves |
 | **Outcome** | 5 PRs created across 5 repos, 1 merged immediately, 2 worktrees removed, 2 submodule pins updated |
@@ -86,7 +86,7 @@ git commit -m "chore: update submodule pins for ..."
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Compose `profiles: ["disabled"]` for Nestor | Set nestor to disabled profile in overlay | argus-exporter `depends_on` nestor caused "undefined service" error | `depends_on` is merged additively in compose overlays; use a busybox stub with `healthcheck: test: ["CMD", "true"]` instead |
 | Committing submodule changes from parent | Tried `git add` for files inside submodule from Odysseus root | "Pathspec is in submodule" error | Submodule commits must happen inside the submodule's own git context |
 | Pinning submodules on feature branches | Considered updating all submodule pins after Wave 1 | Would pin Odysseus to non-main commits for unmerged PRs | Only pin submodules whose `main` branch actually moved forward |
@@ -96,7 +96,7 @@ git commit -m "chore: update submodule pins for ..."
 ### Swarm configuration
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Wave 1 agents** | 4 Haiku (gitignore tasks) + 2 Sonnet (WIP commit tasks) = 6 parallel |
 | **Wave 2 agents** | 1 Haiku (worktree cleanup) + 1 Sonnet (pin updates) = 2 after Wave 1 |
 | **Total agents** | 8 agents across 2 waves |
@@ -107,7 +107,7 @@ git commit -m "chore: update submodule pins for ..."
 ### Submodule dirty state categories
 
 | Category | Example Files | Agent Tier | Action |
-|----------|---------------|------------|--------|
+| ---------- | --------------- | ------------ | -------- |
 | Untracked generated files | CMakeUserPresets.json, pixi.lock | Haiku | Add to .gitignore, commit, PR |
 | Real WIP changes | CMakeLists.txt modifications | Sonnet | Commit on feature branch, PR |
 | Stale local checkouts | Behind origin/main | N/A (Wave 2) | Fast-forward if on main branch |
@@ -137,5 +137,5 @@ Some repos have auto-merge disabled at the repository level. Agents should:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/Odysseus | 15 submodules, 8 agents, 2 waves | Verified-local — 5 PRs created, 2 pins updated, 2 worktrees removed |

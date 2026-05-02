@@ -18,7 +18,7 @@ tags: [porting, cross-repo, python, circuit-breaker, re-export, test-merge, shim
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-12 |
 | **Objective** | Port `CircuitBreaker` from an orphaned Scylla worktree to ProjectHephaestus, which already had its own implementation |
 | **Outcome** | `success_threshold` feature added to Hephaestus; 10 new tests merged; bug found and fixed during porting; re-export shim issue filed in Scylla |
@@ -62,7 +62,7 @@ gh issue create --repo <source-repo> --title "cleanup: replace <file> with re-ex
 Read both files completely. Build a feature matrix:
 
 | Feature | Source | Destination | Action |
-|---------|--------|-------------|--------|
+| --------- | -------- | ------------- | -------- |
 | Core state machine | ✓ | ✓ | Skip (exists) |
 | `success_threshold` | ✓ | ✗ | **Port** |
 | `half_open_max_calls` | ✗ | ✓ | Skip (dest is better) |
@@ -181,7 +181,7 @@ gh issue create \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Port the entire source implementation over destination | Replace destination `circuit_breaker.py` wholesale | Destination had more features (`time_until_recovery`, registry, logging, `half_open_max_calls`) | Never replace destination with source — do a feature diff first; only port what's missing |
 | `success_threshold=2` test with `half_open_max_calls=1` | First success probe left `_half_open_calls` exhausted, blocking second probe | `CircuitBreakerOpenError` raised on second call instead of passing through | When `success_threshold > 1`, reset `_half_open_calls = 0` after each non-final success so subsequent probes can pass |
 | Run tests with coverage | `pixi run python -m pytest ... -v` (no `--no-cov`) | Coverage measured whole project → 3.88% (far below 80% floor) → exit 1 | Use `--no-cov` for targeted test runs; full coverage run only at CI step |
@@ -224,12 +224,12 @@ __all__ = ["ClassA", "ClassB", "EnumC", "func_d", "func_e"]
 ### Test count reference (this session)
 
 | Before port | After port | New tests |
-|-------------|------------|-----------|
+| ------------- | ------------ | ----------- |
 | 19 tests | 29 tests | +10 (4 success_threshold, 2 time-mock, 4 parametrized) |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | `CircuitBreaker.success_threshold` ported from Scylla orphaned worktree | Branch `port-circuit-breaker-success-threshold`; 29/29 local; CI pending |
 | ProjectScylla | Cleanup issue filed | HomericIntelligence/ProjectScylla#1805 |

@@ -11,7 +11,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-27 |
 | **Project** | ProjectScylla |
 | **Issue** | #1133 |
@@ -313,7 +313,7 @@ def test_weights_sum_to_one_with_multiple_files(self) -> None:
 ## Failed Attempts & Lessons Learned
 
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | `patch("scylla.e2e.stages.detect_rate_limit")` | AttributeError — lazy import in stage function | Patch `scylla.e2e.rate_limit.detect_rate_limit` instead |
 | Using `dataclasses` import without adding it | `dataclasses.asdict()` needed for ProgressStep/ChangeResult serialization | Add `import dataclasses` at top of file |
 | `-> dict` return type annotation | mypy `[type-arg]` error | Use `-> dict[str, Any]` with `from typing import Any` |
@@ -372,7 +372,7 @@ def _make_judgment(self, passed: bool = True, score: float = 0.8) -> dict[str, A
 ### Files Modified
 
 | File | Lines Added | Purpose |
-|------|-------------|---------|
+| ------ | ------------- | --------- |
 | `scylla/e2e/stages.py` | +303 | New helper functions, RunContext fields, stage updates |
 | `tests/unit/e2e/test_stage_process_metrics.py` | +649 (new) | 51 unit tests for all helpers and integration |
 
@@ -387,7 +387,7 @@ All pre-commit hooks pass (ruff format, ruff check, mypy, markdown lint, etc.)
 ### Helper Function Summary
 
 | Function | Input | Output | Errors |
-|----------|-------|--------|--------|
+| ---------- | ------- | -------- | -------- |
 | `_get_diff_stat(workspace)` | `Path` | `dict[str, tuple[int, int]]` | `{}` on any error |
 | `_parse_diff_stat_output(text)` | `str` | `dict[str, tuple[int, int]]` | skips bad lines |
 | `_build_change_results(diff_stat, *, judge_passed, pipeline_passed)` | dict + bools | `list[ChangeResult]` | `[]` for empty input |

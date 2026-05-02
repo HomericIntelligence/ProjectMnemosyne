@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-03 |
 | Issue | #1348 (4th quality audit recurrence) |
 | Objective | Fix tier label mismatches in `.claude/shared/metrics-definitions.md` |
@@ -29,7 +29,7 @@ user-invocable: false
 ## Authoritative Tier Table
 
 | Tier | Name |
-|------|------|
+| ------ | ------ |
 | T0 | Prompts |
 | T1 | Skills |
 | T2 | Tooling |
@@ -59,7 +59,7 @@ Both zones must be fixed. Prior partial fixes only addressed section headers, ca
 Typical mismatched strings and their corrections:
 
 | Wrong | Correct |
-|-------|---------|
+| ------- | --------- |
 | `T3 - Tooling` | `T2 - Tooling` |
 | `T4 - Delegation` | `T3 - Delegation` |
 | `T5 - Hierarchy` | `T4 - Hierarchy` |

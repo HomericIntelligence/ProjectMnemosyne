@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-04-10 |
 | Objective | Consolidated patterns for diagnosing Mojo JIT compiler crashes, investigating root causes (double-free, broken locks, bitcast UAF), creating minimal standalone reproducers, and filing upstream issues against modular/modular. **v3.0.0 note**: retry workaround approach from v2.2.0 has been reversed — do not add retry logic; create reproducers and file upstream bugs instead. |
 
@@ -64,7 +64,7 @@ tags:
 ### Crash Diagnostic Quick-Reference Table
 
 | Symptom | Crash Type | Action |
-|---------|-----------|--------|
+| --------- | ----------- | -------- |
 | `execution crashed` BEFORE any test output + fixed stack offsets `+0x6d4ab` | Crash 2 — UID mismatch | Fix UID in Docker cache key + entrypoint HOME-fixup |
 | `execution crashed` BEFORE any test output + variable stack offsets | Crash 3 — volume overflow | Audit imports; convert to targeted submodule imports |
 | `execution crashed` AFTER test output at ~15th test, fixed offsets `+0x3cb78b` | Crash 1 — bitcast UAF | Already resolved by ADR-013; verify bitcast fix was applied |
@@ -239,7 +239,7 @@ ptr[i] = val
 > suspected UAF or double-free in function parameters or struct lifecycle.
 
 | Fact | Details |
-|------|---------|
+| ------ | --------- |
 | **Default argument convention is `read`** | `fn foo(x: AnyTensor)` does NOT copy `x`. The default is an immutable borrow (reference). Only `owned` convention causes a copy/move. |
 | **`deinit` in `__moveinit__` suppresses destructor on source** | `fn __moveinit__(out self, deinit existing: Self)` — Mojo does NOT call `__del__` on `existing` after the function. This is correct move semantics. Source is consumed, not destroyed separately. |
 | **ASAP destruction** | Mojo destroys values as soon as their last use is seen — potentially before end-of-scope. Pointer aliases (bitcast, raw UnsafePointer) may dangle if the owning value is destroyed early. |
@@ -304,7 +304,7 @@ pixi run mojo repro/repro_crash_standalone.mojo   # confirm crash
 **Diagnosis by output position** — the single most reliable heuristic:
 
 | Symptom | Cause |
-|---------|-------|
+| --------- | ------- |
 | `execution crashed` before any test output | Possibly compiler flake — but first check root causes above |
 | `execution crashed` after test output | Likely a real test bug |
 | Specific assertion failure message | Real test bug — investigate |
@@ -465,7 +465,7 @@ fn main():
 **Known crash categories** (from ProjectOdyssey PR #5212):
 
 | Category | File | Issue |
-|----------|------|-------|
+| ---------- | ------ | ------- |
 | ASAP Destruction + Bitcast UAF | `repro/repro_crash_standalone.mojo` | modular/modular#6187 |
 | JIT Compilation Volume Crash | `repro/repro_jit_volume_crash.mojo` | `repro/issues/jit-compilation-volume-crash.md` |
 | ASAN + Python FFI dlsym Conflict | — | `repro/issues/asan-dlsym-abort.md` |
@@ -519,7 +519,7 @@ pattern for hook exceptions. Never use `--no-verify`.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assumed crash was caused by new test code | Investigated new backward test code for memory bugs | Unchanged files (test_layers, test_linear) were ALSO crashing | Always check if unchanged files are also failing before debugging new code |
 | Removing imports to narrow the crash | Changed `loss.mojo` to avoid `activation.mojo` import | `test_loss_funcs.mojo` doesn't import activation at all but still crashed | The crash is in the JIT compiler itself, not triggered by any specific Mojo code pattern |
 | Region-specific theory | Checked if specific Azure region always fails | Crashes occur on multiple regions; others pass sometimes | Azure region is not the determining factor |
@@ -562,7 +562,7 @@ gh run list --branch <branch> --limit 3
 When filing crash reports against modular/modular, use this structure:
 
 | Section | Content |
-|---------|---------|
+| --------- | --------- |
 | **Environment** | Mojo version, OS, hardware (CPU-only/GPU), reproduction status |
 | **Description** | One-paragraph plain-language explanation |
 | **Crash Signature** | Stack trace with `libKGENCompilerRTShared.so` offsets (redact project paths) |

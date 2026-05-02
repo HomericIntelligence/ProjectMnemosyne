@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | Category | documentation |
 | Complexity | S |
 | Files changed | N stubs deleted + M referencing files updated |
@@ -74,7 +74,7 @@ documentation should be written alongside feature implementation, not created as
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Deleting files without checking referencing files first | Ran `rm` on all stubs immediately | Left broken links in `docs/README.md`, `docs/glossary.md`, `docs/advanced/troubleshooting.md`, `docs/getting-started/first_model.md` | Always grep for all references before deleting |
 | Running `just pre-commit-all` | Used `just` to invoke pre-commit | `just` not in PATH in this environment | Use `pixi run pre-commit run --all-files` directly |
 | Expecting all pre-commit hooks to pass | Ran full pre-commit suite | `mojo-format` fails due to GLIBC version mismatch (pre-existing env issue, not caused by our changes) | Use `SKIP=mojo-format` when the hook failure is environmental, not code-related |

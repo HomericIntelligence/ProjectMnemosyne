@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Generate formatted changelogs from git commit history using safe delimiter parsing |
 | **Outcome** | Operational — delimiter bug fixed, edge-case tests added |
@@ -75,8 +75,8 @@ git log v1.0.0..HEAD --pretty=format:"%h%x09%s%x09%an" --no-merges
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
-| Pipe delimiter | `--pretty=format:%h\|%s\|%an` with `split("\|", 2)` | Commit subjects containing `\|` (e.g., "add A\|B toggle") produce garbled fields — the split finds 4+ parts instead of 3 | Use a character that cannot appear in commit subjects. Tab (`%x09`) is ideal since git strips tabs from subjects |
+| --------- | ---------------- | --------------- | ---------------- |
+| Pipe delimiter | `--pretty=format:%h\|%s\|%an` with `split("\|", 2)` | Commit subjects containing pipe characters produce garbled fields — the split finds 4+ parts instead of 3 | Use a character that cannot appear in commit subjects. Tab (`%x09`) is ideal since git strips tabs from subjects |
 | Chained split for scope | `prefix.split("(")[1].split(")")[0]` | Breaks on nested parentheses like `feat(core(sub))` — `split("(")[1]` returns `core` and `split(")")[0]` returns `core`, losing the inner parens entirely | Use `index("(")`/`rindex(")")` to grab everything between the outermost parentheses |
 | Split on all colons | `subject.split(":")` without maxsplit | Loses everything after the second colon in messages like `fix: url: handle https://` | Always use `split(":", 1)` to split only on the first colon |
 
@@ -125,7 +125,7 @@ def test_parse_commit_edge_cases(commit_line, expected):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #33 — pipe delimiter bug fix | 38 changelog tests pass, 401 total unit tests pass (82.14% coverage) |
 
 ## References

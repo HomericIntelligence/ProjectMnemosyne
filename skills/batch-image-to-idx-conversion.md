@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | batch-image-to-idx-conversion |
 | **Category** | tooling |
 | **Language** | Python 3.7+ |
@@ -33,7 +33,7 @@ user-invocable: false
 ### Quick Reference
 
 | Step | What to do |
-|------|-----------|
+| ------ | ----------- |
 | 1 | Add `resolve_batch_inputs(input_arg: str) -> list` |
 | 2 | Add `write_idx_images_batch(images: list, output_path: Path) -> None` |
 | 3 | Add `--batch` flag to argparse; route to batch path in `main()` |
@@ -152,7 +152,7 @@ patterns with `*` are not coerced to a Path object before `resolve_batch_inputs`
 ### 4. Write tests (21 tests across 3 classes)
 
 | Class | Count | What it covers |
-|-------|-------|----------------|
+| ------- | ------- | ---------------- |
 | `TestResolveBatchInputs` | 8 | Sorted dir listing, JPEG inclusion, non-image exclusion, glob expansion, glob non-image filter, empty dir exits, no-match glob exits, returns Path objects |
 | `TestWriteIdxImagesBatch` | 8 | File created, magic=2051, count=N for N∈{1,3,10}, rows=28, cols=28, size=16+N×784, N=1 matches single-mode pixels, pixel ordering |
 | `TestBatchMain` | 5 | End-to-end directory, end-to-end glob, missing dir exits nonzero, `--no-emnist-transform`, single mode unchanged |
@@ -199,7 +199,7 @@ pixi run python -m pytest tests/scripts/test_convert_image_to_idx_batch.py -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `input` as `type=Path` for batch | Kept `type=Path` on the `input` argparse argument | Glob patterns like `"images/*.png"` coerced to a Path before `resolve_batch_inputs` could parse them | Change `input` type to plain `str` when accepting glob patterns |
 | Detecting glob vs directory by `*`/`?` in string | Checked if `*` or `?` present in input string to decide directory vs glob | Fails for directory paths that happen to contain those chars; also `Path("foo/bar")` is a dir not a glob | Use `Path.is_dir()` as the primary branch — cleaner and unambiguous |
 | `return []` on empty match | Returned empty list and let caller handle | Caller `main()` would silently write a 0-image IDX file | `sys.exit(1)` in `resolve_batch_inputs` itself, consistent with single-image error handling |
@@ -207,7 +207,7 @@ pixi run python -m pytest tests/scripts/test_convert_image_to_idx_batch.py -v
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Batch IDX header | `struct.pack(">IIII", 2051, N, 28, 28)` |
 | File size formula | `16 + N × 784` bytes |
 | Pixel ordering | Sequential: image 0 at offset 16, image 1 at offset 800, etc. |

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Name** | mojo-type-alias-cleanup |
 | **Category** | ci-cd |
 | **Trigger** | CI Mojo compilation failure with unknown type names after deprecated alias removal |
@@ -70,7 +70,7 @@ user-invocable: false
 When removing deprecated `DepthwiseConv2d*` and `DepthwiseSeparableConv2d*` aliases:
 
 | Deprecated Alias | Canonical Type | Reason |
-|-----------------|---------------|--------|
+| ----------------- | --------------- | -------- |
 | `DepthwiseConv2dBackwardResult` | `GradientTriple` | Returns input, kernel, bias (3 values) |
 | `DepthwiseConv2dNoBiasBackwardResult` | `GradientPair` | Returns input, kernel (2 values) |
 | `DepthwiseSeparableConv2dBackwardResult` | `GradientQuad` | Returns input, depthwise kernel, pointwise kernel, bias (4 values) |
@@ -82,7 +82,7 @@ canonical type (`GradientPair`=2, `GradientTriple`=3, `GradientQuad`=4).
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Used new descriptive names | PR replaced `DepthwiseConv2dBackwardResult` with `DepthwiseGradientTriple` | `DepthwiseGradientTriple` was never defined anywhere | When removing aliases, replace with the original aliased-to type, not a new invented name |
 | Running `pixi run mojo format` locally | Tried to format before committing | GLIBC version mismatch on host (requires 2.32+ but host has older version) | Use `SKIP=mojo-format` for local commits; CI Docker environment has correct GLIBC |
 

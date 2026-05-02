@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-12 |
 | **Objective** | Complete 6-issue epic (#330) for research paper preparation |
 | **Outcome** | ✅ Success - All 6 issues implemented and 5/6 PRs merged |
@@ -259,7 +259,7 @@ for metric in ["score", "impl_rate", "cost_usd", "duration_seconds"]:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -297,13 +297,13 @@ statistical:
 ### Outcome Metrics
 
 | Issue | LOC Changed | Tests Added | PRs | Status |
-|-------|-------------|-------------|-----|--------|
-| #316  | ~100 assertions | 0 (refactor) | #521 | ✅ Merged |
-| #315  | 1 line | 0 (config) | #519 | ✅ Merged |
-| #323  | ~50 | 1 | #520 | ✅ Merged |
-| #314  | ~200 | 11 | #522 | ✅ Merged |
-| #328  | ~150 | 8 | #523 | ⏳ Pending CI |
-| #329  | ~260 | 5 | #524 | ✅ Merged |
+| ------- | ------------- | ------------- | ----- | -------- |
+| #316 | ~100 assertions | 0 (refactor) | #521 | ✅ Merged |
+| #315 | 1 line | 0 (config) | #519 | ✅ Merged |
+| #323 | ~50 | 1 | #520 | ✅ Merged |
+| #314 | ~200 | 11 | #522 | ✅ Merged |
+| #328 | ~150 | 8 | #523 | ⏳ Pending CI |
+| #329 | ~260 | 5 | #524 | ✅ Merged |
 | **Total** | **~760** | **25** | **6** | **5/6 merged** |
 
 ### Test Coverage Verification

@@ -14,7 +14,7 @@ tags: [gh-tidy, myrmidon, rebase, swarm, git, worktree, branch, asyncio, claude-
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Wrap `gh tidy --rebase-all` with a Myrmidon swarm that semantically resolves rebase conflicts gh-tidy aborted, without ever deleting branches |
 | **Outcome** | hephaestus-tidy CLI + /hephaestus:tidy skill built and passing lint/mypy/unit tests; CI pending |
@@ -168,7 +168,7 @@ git log origin/<trunk>..HEAD --oneline
 ### Safety Net Workarounds
 
 | Blocked command | Safe alternative |
-|-----------------|-----------------|
+| ----------------- | ----------------- |
 | `git checkout <ref> -- <path>` | `git show <ref>:<path> > <path>` |
 | `git checkout <branch>` | `git switch <branch>` |
 | `git reset --hard` | `git reset --keep` (only if clean) |
@@ -205,7 +205,7 @@ Parse with: `re.search(r"STATUS:\s*(\S+)", text)`
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `stdin=subprocess.PIPE` with auto-answers | Piped `n\nn\n` to stdin to auto-decline gh-tidy's delete prompts | User loses ability to delete branches via gh-tidy's own prompts; design requirement changed | Use `stdin=sys.stdin` to pass TTY through; user answers their own prompts |
 | `{k: v for k in list}` dict comprehension | Used comprehension with constant value | ruff C420: use `dict.fromkeys(list, v)` for constant-value comprehensions | Replace with `dict.fromkeys(iterable, constant)` |
 | Single large `main()` function | All logic in one function | ruff C901: complexity > 10 | Extract `_build_arg_parser()`, `_validate_environment()`, `_print_summary()` helpers |
@@ -222,7 +222,7 @@ hephaestus-tidy [--dry-run] [--trunk BRANCH] [--no-swarm] [--max-concurrent N] [
 ```
 
 | Flag | Default | Purpose |
-|------|---------|---------|
+| ------ | --------- | --------- |
 | `--dry-run` | false | Print actions without executing |
 | `--trunk` | auto-detected | Override default branch |
 | `--no-swarm` | false | Run gh-tidy only; print failures, skip agents |
@@ -231,7 +231,7 @@ hephaestus-tidy [--dry-run] [--trunk BRANCH] [--no-swarm] [--max-concurrent N] [
 ### Agent Status Values
 
 | Status | Meaning | Action |
-|--------|---------|--------|
+| -------- | --------- | -------- |
 | `rebased` | Branch pushed to remote, auto-merge re-armed | Done |
 | `subsumed` | All commits already on trunk after rebase | Branch still exists; user can delete manually |
 | `conflict-too-complex` | Agent could not confidently resolve | Manual intervention needed |
@@ -267,5 +267,5 @@ hephaestus-tidy = "hephaestus.github.tidy:main"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | PR #306 feat/hephaestus-tidy — ruff + mypy + 12 unit tests pass | verified-precommit; CI pending |

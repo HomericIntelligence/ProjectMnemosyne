@@ -103,7 +103,7 @@ Total: 104 tests, 100% passing
 ## Files Changed
 
 | File | Lines Added | Lines Deleted | Purpose |
-|------|-------------|---------------|---------|
+| ------ | ------------- | --------------- | --------- |
 | scylla/core/results.py | +53 | -8 | Added ExecutionInfoBase, marked BaseExecutionInfo deprecated |
 | scylla/core/**init**.py | +1 | -0 | Exported ExecutionInfoBase |
 | scylla/executor/runner.py | +29 | -15 | Created ExecutorExecutionInfo, added type alias, fixed immutability |

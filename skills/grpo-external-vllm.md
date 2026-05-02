@@ -12,7 +12,7 @@ Configure GRPO (Group Relative Policy Optimization) training with an external vL
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2025-12-28 |
 | Objective | Train LLM with GRPO using separate inference server |
 | Outcome | Success |
@@ -58,7 +58,7 @@ Configure GRPO (Group Relative Policy Optimization) training with an external vL
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

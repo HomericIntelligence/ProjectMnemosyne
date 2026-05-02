@@ -14,7 +14,7 @@ tags: [nomad, hcl, variable, sensitive, terraform, job-spec]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-23 |
 | **Objective** | Fix Nomad HCL parse error caused by unsupported `sensitive` attribute in variable blocks |
 | **Outcome** | Removed `sensitive = true` from variable blocks; Nomad parsed job spec correctly |
@@ -83,7 +83,7 @@ variable "anthropic_api_key" {
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Keeping `sensitive = true` in Nomad variable blocks | Assumed Nomad HCL supports same variable attributes as Terraform | Nomad 1.9.7 HCL parser rejects: `An argument named 'sensitive' is not expected here` | `sensitive` is a Terraform/OpenTofu-only attribute; Nomad variable blocks only support `type`, `description`, and `default` |
 
 ## Results & Parameters
@@ -102,7 +102,7 @@ variable "example" {
 ### Nomad vs Terraform Variable Block Comparison
 
 | Attribute | Terraform | Nomad |
-|-----------|-----------|-------|
+| ----------- | ----------- | ------- |
 | `type` | Yes | Yes |
 | `description` | Yes | Yes |
 | `default` | Yes | Yes |
@@ -132,5 +132,5 @@ Nomad does not expose a `sensitive` attribute for variables because Nomad's reco
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | AchaeanFleet | CI repair — nomad/mesh.nomad.hcl rejected by Nomad 1.9.7 parser | 2026-04-23; CI passed after removing sensitive = true from all variable blocks |

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-09 |
 | **Objective** | Fix E2E judge regeneration by reusing saved `judge_prompt.md` files instead of rebuilding from potentially corrupted workspaces |
 | **Outcome** | ✅ Successfully fixed regenerate.py, verified 13/13 dryrun pass, eliminated 26-28% failure rates for prompt-based rejudging |
@@ -173,14 +173,14 @@ done
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified
 
 | File | Changes | Lines |
-|------|---------|-------|
+| ------ | --------- | ------- |
 | `scylla/e2e/regenerate.py` | Add saved prompt reuse | +31 -6 |
 
 **Total**: +31 insertions, -6 deletions
@@ -188,7 +188,7 @@ done
 ### Additional Cleanup (Obsolete Environment References)
 
 | Location | Files Updated |
-|----------|---------------|
+| ---------- | --------------- |
 | ProjectScylla local files | 4 files |
 | ProjectMnemosyne skills | 17 files |
 
@@ -208,7 +208,7 @@ pixi run python -m scylla.e2e.regenerate \
 ### Judge Failure Rate Impact
 
 | Scenario | Before Fix | After Fix |
-|----------|------------|-----------|
+| ---------- | ------------ | ----------- |
 | Haiku fullrun regeneration | 26-28% failures | 0% (using saved prompts) |
 | Sonnet fullrun regeneration | Unknown baseline | Expected: match original run |
 

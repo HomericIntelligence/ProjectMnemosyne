@@ -10,14 +10,14 @@ user-invocable: false
 
 ## Overview
 
-| Field     | Value                                                      |
-|-----------|------------------------------------------------------------|
-| Date      | 2026-02-20                                                 |
-| Issue     | #771                                                       |
-| PR        | #815                                                       |
+| Field | Value |
+| ----------- | ------------------------------------------------------------ |
+| Date | 2026-02-20 |
+| Issue | #771 |
+| PR | #815 |
 | Objective | Extract shared `wired_runner` pytest fixture for `E2ERunner` tests |
-| Outcome   | Success — 4 tests refactored, zero per-test boilerplate    |
-| Category  | testing                                                    |
+| Outcome | Success — 4 tests refactored, zero per-test boilerplate |
+| Category | testing |
 
 ## When to Use
 
@@ -108,7 +108,7 @@ pre-commit run --files tests/unit/e2e/test_runner.py
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

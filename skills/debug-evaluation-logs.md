@@ -11,7 +11,7 @@ version: 1.0.0
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Date** | 2026-01-08 |
 | **Category** | Evaluation |
 | **Objective** | Improve diagnostic clarity of LLM judge warning messages |
@@ -147,7 +147,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results
 

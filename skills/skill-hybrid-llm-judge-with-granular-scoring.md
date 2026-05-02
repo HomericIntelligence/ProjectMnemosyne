@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-10 |
 | **Objective** | Reduce LLM judge variance while maintaining quality assessment through hybrid evaluation |
 | **Outcome** | ✅ Variance reduced from 14% → 6%, granular scoring working, multi-run reporting added |
@@ -202,7 +202,7 @@ Copy-paste ready configurations and expected outputs.
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Pure Checklist Approach
@@ -249,7 +249,7 @@ Copy-paste ready configurations and expected outputs.
 ### Variance Reduction
 
 | Metric | Before | After | Target |
-|--------|--------|-------|--------|
+| -------- | -------- | ------- | -------- |
 | Variance (identical outputs) | 14% | 6% | <10% |
 | Score range | 0.74-0.88 | 0.81-0.87 | ±0.05 |
 | Scoring resolution | 3 values | Continuous | >10 distinct |

@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | ExTensor lacked `__setitem__`, causing `t[i] = v` to fail; mojo format pre-commit hook unusable locally due to GLIBC mismatch |
 | **Project** | ProjectOdyssey |
 | **PR** | #3385 (issue #3165) |
@@ -96,7 +96,7 @@ manually and commit again with `SKIP=mojo-format`.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run `pixi run mojo format` locally | Called mojo format on changed files | `GLIBC_2.32 not found` — mojo binary requires newer glibc than system provides | Mojo toolchain only works inside the project's Docker container on older Linux hosts |
 | Find mojo in system PATH | `which mojo` and `find /usr /opt` | Only found the pixi env binary, same GLIBC issue | There is no alternative mojo installation; CI Docker is the only viable environment |
 | Inspect formatter output manually | Compared test file against passing commits | Could not determine exact formatter changes without running it | Mojo formatter changes are subtle; the only reliable approach is to run it in CI |
@@ -115,7 +115,7 @@ SKIP=mojo-format git commit -m "fix(core): ..."
 ### ExTensor.__setitem__ dispatch table
 
 | Dtype group | Internal setter called |
-|-------------|----------------------|
+| ------------- | ---------------------- |
 | `DType.float16`, `DType.float32`, `DType.float64` | `_set_float64(index, value)` |
 | `DType.int8`, `DType.int16`, `DType.int32`, `DType.int64`, `DType.bool`, etc. | `_set_int64(index, Int64(value))` |
 

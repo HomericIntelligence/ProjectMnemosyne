@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Purpose** | Fix 49+ failing PRs across 4 repos with parallel haiku sub-agents |
 | **Primary trigger** | 40+ PRs failing CI with heterogeneous failure types |
 | **Key insight** | Wave-0 diagnosis first; never spawn fix agents until root cause per cluster is known |
@@ -34,7 +34,7 @@ user-invocable: false
 ### Quick Reference
 
 | Failure Category | Fix Strategy | Tool |
-|-----------------|-------------|------|
+| ----------------- | ------------- | ------ |
 | ruff format/check | `pixi run ruff format <file>` + `pixi run ruff check --fix <file>` | haiku agent |
 | mojo format parity | Copy pre-formatted file from fixed branch: `git show origin/<branch>:<file>` | haiku agent |
 | `List[Int](n)` deprecated | Replace with `[n]` list literals throughout | haiku agent |
@@ -73,7 +73,7 @@ Agent prompt template:
 Typical distribution across 46 Odyssey PRs:
 
 | Category | Count | Fix Time |
-|----------|-------|---------|
+| ---------- | ------- | --------- |
 | ruff format/check | ~8 | 2 min/PR |
 | mojo format parity | ~18 | 5 min/PR |
 | deprecated `List[Int]()` syntax | ~3 | 2 min/PR |
@@ -236,7 +236,7 @@ gh api repos/HomericIntelligence/ProjectOdyssey/actions/runs?branch=<branch> \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | GraphQL bulk PR status query | `gh pr list --json statusCheckRollup` on 46 PRs | 504 Gateway Timeout from GitHub under 40+ concurrent CI runs | Use individual `gh pr checks <N>` or REST API `actions/runs?branch=X` |
 | snap ruff on /tmp paths | `ruff format /tmp/fix-4574/scripts/file.py` | Snap sandbox blocks access to `/tmp` | Always use `pixi run ruff` with `--manifest-path` or from within the worktree cwd |
 | `git worktree add --force` | Create worktree over existing path | Safety Net plugin blocks `--force` flag | Check if worktree exists first; reuse if clean |

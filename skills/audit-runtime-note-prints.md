@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Category** | documentation |
 | **Trigger** | Follow-up audit after partial NOTE/TODO/FIXME print cleanup in examples/ |
 | **Outcome** | Zero `print.*NOTE\|TODO\|FIXME` matches in examples/; all pre-commit hooks pass |
@@ -76,9 +76,9 @@ print("\nThis implementation demonstrates the inference structure.")
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Trusting the issue plan line numbers | Used plan's line numbers directly to edit files | Files were partially fixed already; line numbers had shifted | Always read the actual file state before editing — issue plans can be stale |
-| Case-sensitive grep only | Used `print.*NOTE` without `-i` flag | Missed `Note:` (mixed case) variants in inference.mojo files | Use case-insensitive grep (`-i`) or include `\|print.*Note:` in pattern |
+| Case-sensitive grep only | Used `print.*NOTE` without `-i` flag | Missed `Note:` (mixed case) variants in inference.mojo files | Use case-insensitive grep (`-i`) or include `\| print.*Note:` in pattern |
 
 ## Results & Parameters
 

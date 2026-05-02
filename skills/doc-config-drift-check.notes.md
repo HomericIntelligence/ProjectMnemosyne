@@ -37,7 +37,7 @@ CI script to automatically detect future drift.
 ### Actual Values in ProjectScylla
 
 | Source | Key | Value |
-|--------|-----|-------|
+| -------- | ----- | ------- |
 | `pyproject.toml` | `[tool.coverage.report].fail_under` | 75 |
 | `pyproject.toml` | `[tool.pytest.ini_options].addopts` | includes `--cov=scylla` |
 | `CLAUDE.md` | Coverage mention | `75%+ test coverage enforced in CI` |

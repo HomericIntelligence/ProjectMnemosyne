@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-05 |
 | **Project** | ProjectScylla |
 | **Objective** | Prevent expensive filesystem rehydrate when re-running an already-complete experiment |
@@ -110,7 +110,7 @@ pixi run python -m pytest tests/unit/e2e/test_runner.py -v -k "already_complete"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct early-exit approach worked | N/A | The `_current_exp_state` variable was already available |
 
 ## Results & Parameters
@@ -168,7 +168,7 @@ This is the same class of bug fixed in commit 21f09b1 (`manage_experiment.py` no
 ## Code Locations (ProjectScylla)
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `src/scylla/e2e/runner.py` | 6-line early-exit guard after state machine |
 | `tests/unit/e2e/test_runner.py` | 62 lines - test for early-exit behavior |
 

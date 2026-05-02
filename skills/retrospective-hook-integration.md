@@ -13,7 +13,7 @@ Setup SessionEnd hooks to automatically prompt for `/learn` when ending Claude C
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2025-12-29 |
 | **Objective** | Integrate ProjectMnemosyne marketplace with ProjectOdyssey for automatic knowledge capture |
 | **Outcome** | Successfully configured SessionEnd hooks and marketplace registration with worktree workflow |
@@ -129,7 +129,7 @@ After marketplace registration:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

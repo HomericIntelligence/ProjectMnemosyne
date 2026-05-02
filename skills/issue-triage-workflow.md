@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-29 |
 | Objective | Consolidated workflow for bulk GitHub issue triage: verify before implementing, classify by complexity, and execute in parallel waves using worktree-isolated agents |
 | Outcome | Merged from 3 skills covering bulk triage+fix, verification before implementation, and wave-based parallel execution |
@@ -182,7 +182,7 @@ Distinguish transient CI failures (pre-existing on main, network issues) from re
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Starting to implement without verifying | Read issue plan suggesting operations needed implementation | All functions already existed with full test coverage | Always verify current state before coding; issues filed weeks/months ago may describe problems already solved |
 | Looking for files by stale path | Issue referenced `shared/core/extensor.mojo:23-28` | File didn't exist — was renamed or never created | File paths in issues go stale; always glob/grep to find current locations |
 | Searching for old issue number refs | Expected `#2717-#2721` TODO references in code | A previous commit had already cleaned these up | Check git log for recent related commits before starting work |

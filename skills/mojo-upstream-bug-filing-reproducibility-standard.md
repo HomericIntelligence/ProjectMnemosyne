@@ -14,7 +14,7 @@ tags: [mojo, upstream, bug-filing, reproducibility, modular, determinism, minima
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-11 |
 | **Objective** | Apply a strict reproducibility gate before filing upstream Mojo bugs against modular/modular |
 | **Outcome** | Prevented filing a stale bug (FP16 SIMD) that had already been fixed in 0.26.3; saved Modular's triage time and avoided making the project look sloppy |
@@ -33,7 +33,7 @@ tags: [mojo, upstream, bug-filing, reproducibility, modular, determinism, minima
 Only file upstream if **ALL four** conditions are met:
 
 | Condition | Gate |
-|-----------|------|
+| ----------- | ------ |
 | Reproducer is ≤20 lines, zero external dependencies | Must be true |
 | Error/crash happens on EVERY run (100% deterministic) | Must be true |
 | Reproducer tested on the CURRENT pinned Mojo version (`pixi.toml`) | Must be true |
@@ -109,7 +109,7 @@ done
 Decision table:
 
 | Outcome | Action |
-|---------|--------|
+| --------- | -------- |
 | Fails all 3 runs | Proceed to file |
 | Passes any run | Do NOT file — mark as non-deterministic |
 | Passes all 3 runs | Do NOT file — bug is fixed in current version |
@@ -126,7 +126,7 @@ Only after all 3 runs fail consistently:
 The following table documents how bugs were classified in the session that produced this skill:
 
 | Bug | Deterministic? | Filed? | Reason |
-|-----|---------------|--------|--------|
+| ----- | --------------- | -------- | -------- |
 | ASAN + Python FFI dlsym abort | YES (5-line repro, every run) | YES (template) | 100% deterministic on 0.26.3 |
 | FP16 SIMD limitation | N/A — resolved | NO | Feature works in 0.26.3; was 0.26.1-only |
 | JIT volume crash | NO (~40-60% CI only) | NO | Non-deterministic; never reproduces locally |
@@ -136,7 +136,7 @@ The following table documents how bugs were classified in the session that produ
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Write blog post before verifying | Wrote full blog post claiming FP16 SIMD was broken in Mojo | Had to retract when verification showed FP16 SIMD worked in 0.26.3 | Always verify FIRST, write SECOND — never document a bug without running a reproducer |
 | Trust old ADRs without re-testing | Cited ADR-010 which stated FP16 SIMD was unsupported (written for 0.26.1) | Project had upgraded to 0.26.3 where the feature was fixed; ADR was stale | ADRs document a version snapshot; always re-test the claim before citing them |
 | File from memory | Recalled a crash from testing, began drafting upstream issue without re-running | The bug may have been fixed or the memory may be wrong | Run the reproducer just-in-time, every time — never file from memory |
@@ -165,7 +165,7 @@ When updating an ADR or blog post after re-testing:
 ### Determinism Test Threshold
 
 | Hit Rate | Decision |
-|----------|----------|
+| ---------- | ---------- |
 | 100% (3/3, 5/5, 10/10) | File upstream |
 | 80-99% (fails most runs) | Investigate environment; do not file yet |
 | <80% or CI-only | Do not file — mark as flaky/environment-specific |
@@ -187,7 +187,7 @@ grep -E "^mojo\s*=" pixi.toml
 ## Verified On
 
 | Project | Context | Outcome |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | FP16 SIMD upstream bug classification | Correctly suppressed filing — feature works in 0.26.3 |
 | ProjectOdyssey | ASAN + Python FFI dlsym abort | Correctly filed — 100% deterministic 5-line repro |
 | ProjectOdyssey | JIT volume crash + fortify abort | Correctly suppressed filing — non-deterministic / CI-only |

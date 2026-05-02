@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | note-comment-cleanup |
 | **Category** | documentation |
 | **Language** | Mojo / Python / any |
@@ -44,7 +44,7 @@ Run the full codebase grep first, then targeted reads for context.
 ### 2. Categorize NOTEs into dispositions
 
 | Category | Action |
-|----------|--------|
+| ---------- | -------- |
 | Stale "X removed" markers | **Remove** — changelog noise once code is gone |
 | Reference to closed GitHub issue | **Update** — remove issue number or reword |
 | NOTE inside a docstring | **Convert to prose** — strip `NOTE:` prefix |
@@ -107,7 +107,7 @@ Part of #<parent>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running pre-commit in background and waiting | Used `run_in_background=True` then `TaskOutput` to poll | TaskOutput `block` and `timeout` params require JSON types not strings; polling was unclear | Run pre-commit synchronously with explicit timeout; check output file directly via Bash if background |
 | Running `just pre-commit-all` | Called `just` command directly | `just` not on PATH in this environment | Use `pixi run pre-commit run --all-files` instead |
 | Running multiple pre-commit hooks by name in one call | `pixi run pre-commit run trailing-whitespace end-of-file-fixer` | pre-commit CLI doesn't accept multiple hook IDs as positional args | Run `--all-files` or one hook at a time with `--hook-stage` |

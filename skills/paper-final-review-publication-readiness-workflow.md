@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Date | 2026-02-07 |
 | Objective | Validate academic paper against experimental data across 10 categories for publication readiness |
 | Outcome | ✅ Success - Paper ready for publication after 5 minor fixes |
@@ -61,7 +61,7 @@ Use this workflow when:
 Use this 10-category rubric with GO/CONDITIONAL GO/NO-GO grading:
 
 | # | Category | What to Check |
-|---|----------|---------------|
+| --- | ---------- | --------------- |
 | 1 | Numerical Accuracy | All numbers match data sources within rounding tolerance |
 | 2 | Internal Consistency | Terminology consistent, sections cross-reference correctly, methodology matches implementation |
 | 3 | Clarity & Readability | Logical flow, jargon explained, abstractions introduced before use |
@@ -130,7 +130,7 @@ Structure the plan document with:
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Don't assume file paths are correct without verification

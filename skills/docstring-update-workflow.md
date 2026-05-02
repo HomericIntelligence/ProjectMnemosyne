@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Update a stale module-level docstring example to match the current function signature |
 | **Trigger** | A function's signature changed (new required argument added), but the module docstring example still shows the old call |
 | **Outcome** | Docstring example compiles and matches actual API; pre-commit hooks pass |
@@ -93,7 +93,7 @@ gh pr create --title "..." --body "Closes #NNNN"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Copying old example verbatim | Kept `print_training_header` + `TrainingCallbacks` pattern | Did not demonstrate `run_epoch_with_batches` at all | Always grep the actual function signature before writing the example |
 | Referencing non-existent imports | Used `from shared.training.script_runner import run_epoch_with_batches` without checking available exports | Function was in the same file, import would be circular/redundant | Read the file fully to know which symbols need cross-module imports vs same-file usage |
 | Omitting the `step_fn` stub | Showed `run_epoch_with_batches(loader, callbacks)` without `step` | Signature requires `step_fn: fn(ExTensor, ExTensor) raises -> ExTensor` | Check every parameter with no default value |

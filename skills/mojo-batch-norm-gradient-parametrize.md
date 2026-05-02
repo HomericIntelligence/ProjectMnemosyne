@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Skill Name** | mojo-batch-norm-gradient-parametrize |
 | **Category** | testing |
 | **Language** | Mojo v0.26.1 |
@@ -33,7 +33,7 @@ user-invocable: false
 ### Quick Reference
 
 | Batch Size | Variance | Gradient Check Strategy |
-|------------|----------|------------------------|
+| ------------ | ---------- | ------------------------ |
 | 1 | = 0 (degenerate) | Assert finite + non-NaN only |
 | 2 | > 0 (normal) | Full numerical gradient check |
 | 4 | > 0 (normal) | Full numerical gradient check |
@@ -157,7 +157,7 @@ the glob pattern `test_normalization*.mojo` — no workflow changes needed.
 ### Step 5: Tolerance selection
 
 | Gradient | rtol | atol | Rationale |
-|----------|------|------|-----------|
+| ---------- | ------ | ------ | ----------- |
 | grad_input | 5e-2 | 5e-4 | Batch norm has compounding FP errors across normalize/scale/shift |
 | grad_gamma | 1e-2 | 1e-4 | Simpler: sum(grad_output × x_hat) per channel |
 | grad_beta | 1e-2 | 1e-4 | Simplest: sum(grad_output) per channel |
@@ -165,7 +165,7 @@ the glob pattern `test_normalization*.mojo` — no workflow changes needed.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Use uniform grad_output=ones for grad_input check | Set `grad_output = ones_like(output)` for all batch sizes | For symmetric inputs, the analytical gradient is near-zero (sum(x_hat)=0 cancellation), making the test insensitive to bugs | Always use non-uniform grad_output to break symmetry; see `batch-norm-backward-gradient-analysis` skill |
 | Apply full numerical gradient check for batch_size=1 | Called `compute_numerical_gradient` with epsilon=1e-3 for batch_size=1 | When variance≈0, the denominator `sqrt(eps_bn)≈0.00316` is much smaller than the finite difference step, causing catastrophic amplification of perturbations | Bifurcate: finiteness-only assertions for batch_size=1, full check for batch_size≥2 |
 | Use batch_size=1 with varying input to avoid variance=0 | Set non-uniform x values like `Float32(i)*0.1+0.05` | Even with non-uniform values across (H,W)=(2,2), per-channel variance is very small and the backward is still numerically unstable for finite differences | The fundamental issue is batch statistics computed over (N,H,W) with N=1; H×W=4 elements is too few for stable FD |

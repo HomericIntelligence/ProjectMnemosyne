@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Task** | Return multiple values from a Mojo `fn` method |
 | **Mojo Version** | v0.26.1 |
 | **Key Error** | `error: no matching function in initialization` on `-> (Int, Int, Int, Int):` |
@@ -113,7 +113,7 @@ just test-group tests/shared/core test_normalize_slice_indices.mojo
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `-> (Int, Int, Int, Int):` in return type | Used Python-style parenthesized tuple syntax in the `fn` return type annotation | Mojo v0.26.1 does not support `(T, T, T, T)` as a return type — compiler error: `no matching function in initialization` | Always use `Tuple[T, T, T, T]` in the `->` annotation |
 | `Tuple[Int, Int, Int, Int](v1, v2, v3, v4)` in return body | Tried explicit constructor syntax in return | Works but is verbose; the shorter `return (v1, v2, v3, v4)` is idiomatic and compiles fine | Paren syntax is fine in the **body**; only the **type annotation** needs `Tuple[...]` |
 

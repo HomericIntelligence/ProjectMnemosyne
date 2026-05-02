@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-23 |
 | **Objective** | Fix `Code Coverage` CI job failing with `Could NOT find GTest` when Conan 2 manages dependencies |
 | **Outcome** | Success — Coverage CI passed after adding `-DCMAKE_TOOLCHAIN_FILE` to coverage script cmake invocation |
@@ -93,7 +93,7 @@ cmake "${CMAKE_ARGS[@]}" "$PROJECT_ROOT"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Bare cmake invocation | `cmake -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug -G Ninja "$PROJECT_ROOT"` | Conan toolchain not passed; `find_package(GTest)` cannot locate Conan-installed GTest | Shell scripts don't inherit cmake preset or Makefile context — toolchain must be explicit |
 | Relative source path | `cd "$BUILD_DIR" && cmake .. -DENABLE_COVERAGE=ON ...` | `..` resolves to build parent which may differ from `$PROJECT_ROOT` in CI | Always use `"$PROJECT_ROOT"` as an explicit absolute path for the cmake source directory |
 | Assuming Makefile context propagates | Expected coverage script to "just work" because the Makefile build passed | Each cmake invocation is independent — no shared context between Makefile and scripts | Every cmake call in a Conan project needs `-DCMAKE_TOOLCHAIN_FILE` if it runs `find_package` |
@@ -124,5 +124,5 @@ Phase 2 fails silently because the shell script omits it, and `find_package(GTes
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectKeystone | PR #340 Code Coverage CI job — verified-ci 2026-04-23 | `Code Coverage: FAIL` → fixed by adding `-DCMAKE_TOOLCHAIN_FILE` to `generate_coverage.sh`; Benchmarks/Tests 4/5 passed |

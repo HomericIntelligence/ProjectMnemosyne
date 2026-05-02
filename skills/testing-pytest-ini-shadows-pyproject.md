@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Diagnose CI Python test job hanging until timeout; fix root cause |
 | **Outcome** | Success — deleting `pytest.ini` restored `pyproject.toml` authority and tests collected correctly |
@@ -91,7 +91,7 @@ git rm pytest.ini
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Increase `timeout-minutes` | Raised CI job timeout from 10 to 20 minutes | Rejected by team — tests exceeding 10 min are considered buggy; and the root cause was not slow tests but infinite hang | Never mask a hang by increasing timeout; diagnose the hang |
 | Inspect test source for slow `asyncio.sleep` | Found 3 tests with `asyncio.sleep(10.0)` — filed as issue #480 | These were not the cause of the CI timeout; they run fine once imports succeed | Collection failures cause hangs independent of test execution time |
 
@@ -147,5 +147,5 @@ pytest collects test files
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectKeystone | CI `Python Tests` job hung on every run; branch `fix/security-scan-gitleaks-jq` | pytest.ini had no `pythonpath`, pyproject.toml had `pythonpath = ["src"]` |

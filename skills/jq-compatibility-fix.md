@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-12 |
 | Objective | Fix jq syntax error `unexpected '+', expecting '}'` in install-agent-cli.sh on older jq versions |
 | Outcome | Success -- replaced in-jq array concatenation with bash-built JSON array passed via --argjson |
@@ -78,7 +78,7 @@ echo "$result" | jq .
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -111,5 +111,5 @@ files_json+="]"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ai-maestro | Issue #272 - jq syntax error in install-agent-cli.sh | [notes.md](../../references/notes.md) |

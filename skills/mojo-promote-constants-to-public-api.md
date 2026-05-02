@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-07 |
 | **Objective** | Move module-local `alias`/`comptime` constants to `tolerance_constants.mojo` and re-export via `__init__.mojo` so any test file can import them without pulling in the whole source module |
 | **Outcome** | `GRADIENT_CHECK_EPSILON_FLOAT32` and `GRADIENT_CHECK_EPSILON_OTHER` exported from `shared.testing`; source module (`layer_testers.mojo`) imports from canonical location; PR #3721 created |
@@ -158,14 +158,14 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Keeping `alias` keyword in `tolerance_constants.mojo` | Used `alias GRADIENT_CHECK_EPSILON_FLOAT32: Float64 = 3e-4` to match `layer_testers.mojo` style | `tolerance_constants.mojo` uses `comptime` for all existing constants; mixing styles is inconsistent | Check the existing style in the target file before adding constants; use `comptime` in tolerance files |
 | Checking if Mojo test runner works locally | Ran `pixi run mojo test` | GLIBC version mismatch on host (requires GLIBC_2.32+, host has older version) | Can't run Mojo tests directly on this host; rely on pre-commit hooks and CI for validation |
 
 ## Results & Parameters
 
 | Parameter | Value | Notes |
-|-----------|-------|-------|
+| ----------- | ------- | ------- |
 | Source of truth file | `shared/testing/tolerance_constants.mojo` | All `comptime` tolerance/epsilon values live here |
 | Keyword | `comptime` | Matches existing style in `tolerance_constants.mojo` (not `alias`) |
 | `__init__.mojo` pattern | Add to existing `from shared.testing.tolerance_constants import (...)` block | No new `from` statement needed |
@@ -177,5 +177,5 @@ gh pr merge --auto --rebase
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3209, PR #3721 | Branch `3209-auto-impl`; all pre-commit hooks passed |

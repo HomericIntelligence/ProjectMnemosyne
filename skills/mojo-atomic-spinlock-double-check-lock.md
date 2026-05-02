@@ -26,7 +26,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-22 (v1.1.0 amendment) |
 | **Original Date** | 2026-04-10 (v1.0.0) |
 | **Objective** | Fix race conditions in `TensorMemoryPool` SpinLock causing thread-safety tests to hang or deadlock |
@@ -165,7 +165,7 @@ bounded below by 0 once all in-flight `fetch_add(-1)` undos have completed.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Naive fetch_add lock + fetch_sub unlock | `lock`: `fetch_add(1)` unconditionally; `unlock`: `fetch_sub(1)` | Under high contention multiple threads have in-flight increments before the holder's unlock runs. `fetch_sub(1)` goes e.g. 3->2 (not to 0), so waiting threads never see counter==0 and spin forever (liveness violation). | Counter must be exactly 1 when held, not ">=1". All contenders must undo their increment when they lose. |
 | Loop in unlock: `while fetch_sub != 1` | `unlock`: keep subtracting until it returns 1 | When multiple threads have in-flight increments, looping `fetch_sub` drives the counter below 1->0->-1. The holder subtracts from a negative value; contenders see counter < 0 and either spin or underflow further. Counter never stabilizes. | The unlock path must be a single atomic operation. The cleanup of excess increments must happen in `lock()`, not `unlock()`. |
 | Direct CAS translation from C++ | `compare_exchange_weak(&expected, 0, 1)` | Mojo `Atomic[DType.int64]` has no `compare_exchange_weak` or `exchange` methods (as of Mojo 0.26.x). Compilation fails. | Check Mojo Atomic API before porting. The TTAS double-check pattern is the correct Mojo substitute. |
@@ -217,7 +217,7 @@ pixi run mojo test tests/shared/base/test_memory_pool_threadsafe.mojo
 ### Mojo Atomic API Reference (0.26.x)
 
 | Method | Signature | Notes |
-|--------|-----------|-------|
+| -------- | ----------- | ------- |
 | `load` | `() -> Scalar[type]` | Non-atomic on some platforms; use for cheap inner spin |
 | `fetch_add` | `(rhs: Scalar[type]) -> Scalar[type]` | Returns *previous* value; atomic. Use with negative rhs for subtract. |
 | `fetch_sub` | `(rhs: Scalar[type]) -> Scalar[type]` | Returns *previous* value; atomic |
@@ -230,7 +230,7 @@ pixi run mojo test tests/shared/base/test_memory_pool_threadsafe.mojo
 ### CI Impact Reference
 
 | Symptom | Likely Cause | Fix |
-|---------|-------------|-----|
+| --------- | ------------- | ----- |
 | Test group times out at 100% rate (e.g. 15 min limit) | Spinlock deadlock — all threads spinning on counter != 0 | Check `unlock()` for `store(0)` pattern; replace with `fetch_add(-1)` |
 | Individual tests fail intermittently with wrong counts | Counter underflow from excess `fetch_sub` | Ensure contenders use `fetch_add(-1)` undo in `lock()`, not `fetch_sub` |
 | Tests hang locally but pass in CI with fewer threads | Race only manifests under high contention | Test with `parallelize[worker](8)` to expose races |
@@ -238,6 +238,6 @@ pixi run mojo test tests/shared/base/test_memory_pool_threadsafe.mojo
 ## Verified On
 
 | Project | Version | Context | Details |
-|---------|---------|---------|---------|
+| --------- | --------- | --------- | --------- |
 | ProjectOdyssey | v1.0.0 | PR `fix/ci-stability-and-quality` — `TensorMemoryPool` SpinLock race causing 6 thread-safety test failures | Compiled and ran 8-thread x 1000-iteration counter test locally with `pixi run mojo`; CI auto-merge enabled |
 | ProjectOdyssey | v1.1.0 | Branch `ci-main-green` — `store(0)` unlock race in TTAS protocol causing Core Utilities C test group to time out at 15 min on 100% of CI runs | Fix: replaced `store(0)` with `fetch_add(-1)` in `SpinLock.unlock()`; pushed to CI; run in progress |

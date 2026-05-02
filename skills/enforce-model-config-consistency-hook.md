@@ -11,13 +11,13 @@ user-invocable: false
 
 ## Overview
 
-| Field     | Value                                                                 |
-|-----------|-----------------------------------------------------------------------|
-| Date      | 2026-02-20                                                            |
-| Issue     | #792                                                                  |
-| PR        | #837                                                                  |
+| Field | Value |
+| ----------- | ----------------------------------------------------------------------- |
+| Date | 2026-02-20 |
+| Issue | #792 |
+| PR | #837 |
 | Objective | Promote runtime warning to hard pre-commit gate by reusing validation.py |
-| Outcome   | Success — 16 tests, pre-commit hook blocks mismatching commits        |
+| Outcome | Success — 16 tests, pre-commit hook blocks mismatching commits |
 
 ## When to Use
 
@@ -87,7 +87,7 @@ Because the script imports from `scylla/`, it must run inside the pixi environme
 There are now two complementary hooks:
 
 | Hook | Script | Logic | Purpose |
-|------|--------|-------|---------|
+| ------ | -------- | ------- | --------- |
 | `validate-model-configs` | `validate_model_configs.py` | Prefix match (`stem` is prefix of `model_id`) | Allows date-stamp suffixes |
 | `check-model-config-consistency` | `check_model_config_consistency.py` | Exact or `:` → `-` normalization (from `validation.py`) | Enforces load-time contract |
 
@@ -119,15 +119,15 @@ def write_yaml(directory: Path, filename: str, content: str) -> Path:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
-| Metric               | Value                                       |
-|----------------------|---------------------------------------------|
-| Tests added          | 16                                          |
-| Hook ID              | `check-model-config-consistency`            |
-| Hook trigger         | `^config/models/.*\.yaml$`                  |
-| Validation function  | `scylla.config.validation.validate_filename_model_id_consistency` |
-| Fixtures skipped     | Files prefixed with `_`                     |
-| Entry command        | `pixi run python scripts/check_model_config_consistency.py` |
+| Metric | Value |
+| ---------------------- | --------------------------------------------- |
+| Tests added | 16 |
+| Hook ID | `check-model-config-consistency` |
+| Hook trigger | `^config/models/.*\.yaml$` |
+| Validation function | `scylla.config.validation.validate_filename_model_id_consistency` |
+| Fixtures skipped | Files prefixed with `_` |
+| Entry command | `pixi run python scripts/check_model_config_consistency.py` |

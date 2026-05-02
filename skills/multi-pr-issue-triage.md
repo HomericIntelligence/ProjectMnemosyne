@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-25 |
 | Objective | Resolve 9 open GitHub issues across preflight check and pip-audit feature areas |
 | Outcome | 3 issues closed with comments, 5 PRs created (all merged or pending CI) |
@@ -193,12 +193,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results
 
 | PR | Issue(s) | Key Change | Tests |
-|----|----------|------------|-------|
+| ---- | ---------- | ------------ | ------- |
 | #1093 | #909 | Fix `:-` to `-` in mock + BATS tests 9-10 | 10/10 pass |
 | #1094 | #983 | pip-audit pre-commit hook + 24 unit tests | 24/24 pass |
 | #1095 | #918 | Move script to `scripts/`, update 4 references | 10/10 pass |

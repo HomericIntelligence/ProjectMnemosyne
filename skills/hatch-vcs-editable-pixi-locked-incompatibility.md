@@ -13,7 +13,7 @@ tags: [hatch-vcs, pixi, pixi-lock, editable-install, setup-pixi, locked, ci-cd]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-21 |
 | **Objective** | Fix perpetual `lock-file not up-to-date with the workspace` CI failures caused by `hatch-vcs` editable installs invalidating `pixi.lock` on every commit |
 | **Outcome** | All CI jobs pass without requiring a new lock-file commit on each push; external dependencies remain reproducibly pinned |
@@ -178,7 +178,7 @@ In CI, confirm that:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Regenerating `pixi.lock` after each commit | Manually ran `pixi install` and committed the updated lock | The commit that adds the regenerated lock creates a new SHA, which immediately invalidates the lock again — infinite cycle | The root cause is SHA-based versioning, not a stale lock; regeneration cannot fix it |
 | Adding `hatch-vcs` to `[pypi-dependencies]` in `pixi.toml` | Listed `hatch-vcs` as an explicit dependency | Does not affect the local editable package hash; `hatch-vcs` is a build-time tool, not the source of the problem | The problem is the editable package's wheel hash changing per commit, not `hatch-vcs` being missing |
 | Running `pixi install --all` to update all solve groups | Updated both `default` and `dev` solve groups before pushing | The install regenerates the lock, but the new commit SHA again invalidates it | Same infinite cycle; `--all` does not avoid SHA-based versioning |
@@ -208,7 +208,7 @@ pixi run pre-commit run --all-files
 ### Behavior With `locked: false`
 
 | Dependency Type | With `locked: true` | With `locked: false` |
-|----------------|---------------------|----------------------|
+| ---------------- | --------------------- | ---------------------- |
 | External conda packages (ruff, mypy, etc.) | Pinned from lock file | Still pinned from lock file |
 | External PyPI packages | Pinned from lock file | Still pinned from lock file |
 | Local editable `path = "."` package | Hash checked — fails on new commit | Hash re-resolved — always current |
@@ -219,7 +219,7 @@ relaxes the hash check for local path dependencies, which are re-installed from 
 ### Impact
 
 | Metric | Before Fix | After Fix |
-|--------|-----------|-----------|
+| -------- | ----------- | ----------- |
 | CI success on new commit | Never (every commit invalidates lock) | Always |
 | External dep reproducibility | Yes | Yes (unchanged) |
 | Need to commit pixi.lock per push | Yes (impossible to keep up) | No |
@@ -243,5 +243,5 @@ This pattern applies to any project where all of the following are true:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Switched from hardcoded `version = "0.7.0"` in `pyproject.toml` to `hatch-vcs` auto-versioning; all pixi-based CI jobs (lint, pre-commit, security) failed with `lock-file not up-to-date`; fixed by adding `locked: false` to all `setup-pixi` steps; PR #298, 2026-04-21 | v1.0.0 |

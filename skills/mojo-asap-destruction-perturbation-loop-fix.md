@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-29 |
 | **Objective** | Root-cause and fix intermittent CI crashes in gradient checking tests |
 | **Outcome** | Success — ASAP destruction UAF in `_check_gradients_perturb` fixed; CI stabilised |
@@ -44,7 +44,7 @@ tags:
 The key diagnostic is **where the crash appears relative to test output**:
 
 | Symptom | Cause | Fix |
-|---------|-------|-----|
+| --------- | ------- | ----- |
 | `execution crashed` appears **before any test output** | JIT compilation buffer overflow — reduce `from shared.core import` to targeted submodule imports | See `mojo-jit-crash-doc` skill |
 | `execution crashed` appears **after test output** | Runtime memory bug — ASAP destruction UAF | This skill |
 | Crash after "Running X tests..." + warning lines | UAF during perturbation loop | This skill |
@@ -146,7 +146,7 @@ for j in range(output_plus.numel()):
 `gradient_checker.mojo` had 3 perturbation functions with this pattern:
 
 | Function | Tensors affected |
-|----------|-----------------|
+| ---------- | ----------------- |
 | `_check_gradients_perturb[dtype]` | `output_plus`, `output_minus` |
 | `_compute_sampled_grad_perturb[dtype]` | `f_plus`, `f_minus` |
 | `_perturb_and_compute_loss[dtype]` | `out_plus`, `out_minus`, `grad_output` |
@@ -171,7 +171,7 @@ across multiple runs. The crash was ~40-60% rate before the fix.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Classifying crash as JIT buffer overflow | Assumed `execution crashed` = compilation-time issue because same stack trace as known JIT crashes | Ignored the test output printed BEFORE the crash — compilation crashes never produce test output | Always check whether test output precedes the crash; if yes, it's a runtime bug |
 | Transitive import fix (targeted submodule imports) | Converted 22 `from shared.core import` to `from shared.core.submodule import` in library code | Correct fix for JIT buffer overflow crashes, but doesn't fix runtime UAF crashes | Two different bugs have identical crash signatures; the import fix was valid for a different population of crashes |
 | Assuming existing `_get_float64` fix was complete | Prior commit (#5104) fixed perturbation loops with `data_ptr`; assumed fix was comprehensive | `_check_gradients_perturb` was fixed but `_compute_sampled_grad_perturb` and `_perturb_and_compute_loss` still used `_get_float64` on temporaries | When fixing a pattern, grep for ALL instances in the file, not just the reported location |
@@ -220,5 +220,5 @@ shared/testing/gradient_checker.mojo  — 3 perturbation functions fixed
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #5116, branch 4458-auto-impl | Gradient checking tests stabilized; ASAN coverage added |

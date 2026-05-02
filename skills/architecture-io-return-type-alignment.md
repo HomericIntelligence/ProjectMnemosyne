@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Change `write_file`, `safe_write`, `ensure_directory`, and `save_data` to return `None` instead of `True`, aligning code with CHANGELOG v0.3.2 documentation |
 | **Outcome** | Success — all 384 tests pass, mypy clean, PR #74 created |
@@ -88,7 +88,7 @@ If the edit was silently blocked, retry with a smaller edit scope that avoids th
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Single edit for `save_data` | Edited the entire `save_data` function body including serialization code | Security hook warning about serialization blocked the edit silently | Split edits to avoid triggering security hooks on unchanged code. Edit return type/docstring separately from function body containing flagged patterns |
 
 ## Results & Parameters
@@ -96,7 +96,7 @@ If the edit was silently blocked, retry with a smaller edit scope that avoids th
 ### Files Modified
 
 | File | Changes |
-|------|---------|
+| ------ | --------- |
 | `hephaestus/io/utils.py` | 4 functions: `-> bool` to `-> None`, removed `return True`, removed `Returns:` docstrings |
 | `tests/unit/io/test_utils.py` | 10 call sites: `assert func(...)` to `func(...)`, 1 docstring update |
 | `scripts/run_tests.py` | 1 call site: removed `result = ensure_directory(...)` / `assert result` |
@@ -120,6 +120,6 @@ In this case, `-> None` is more honest — callers should handle errors via try/
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #43, PR #74 | Fixed 4 IO functions, 384 tests pass |
 | ProjectHephaestus | Issue #50, PR #88 | Same 4 IO functions, part of full audit remediation, 387 tests pass |

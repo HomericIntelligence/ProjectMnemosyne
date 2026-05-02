@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Experiment results show "garbage data" in later tiers (T3-T6) -- all runs fail with zero tokens, zero cost, ~8-10s duration |
 | **Root cause** | Anthropic API monthly usage limit (HTTP 429) hit mid-experiment; later tiers disproportionately affected because they run after earlier tiers consume quota |
 | **Fix** | Diagnose via result.json inspection, then reset affected runs in checkpoint for retry using `scripts/reset_rate_limited_runs.py` |
@@ -179,7 +179,7 @@ checkpoint["run_states"]["T3"]["16"]["01"]  # WRONG
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assumed tier design problem | Investigated whether T4-T6 tier configs were broken | Aggregate data alone does not reveal root cause | Always check actual error messages in `agent/result.json` before hypothesizing |
 | Assumed infrastructure crash | Looked for Docker/system errors | No infra errors present | Rate limits can masquerade as clean failures with exit_code=1 |
 | Checked only checkpoint state | Read checkpoint.json tier_states | Checkpoint said "failed" for T4 but actual pass rate was 97.3% on non-rate-limited runs | Checkpoint state does not always reflect data quality; inspect run-level data |
@@ -235,7 +235,7 @@ done
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | test-001 experiment (2026-03-30) | T4-T6 garbage results diagnosed as monthly API quota exhaustion; reset script created and applied successfully |
 
 ## Related Skills

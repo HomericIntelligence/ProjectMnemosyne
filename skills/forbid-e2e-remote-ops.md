@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-14 |
 | **Objective** | Prevent agents from performing remote Git operations during e2e tests and optimize worktree creation |
 | **Outcome** | ✅ Success - Remote operations blocked, worktree creation optimized from 2 to 1 subprocess call |
@@ -162,7 +162,7 @@ def test_worktree_includes_commit(self, tmp_path: Path) -> None:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -198,7 +198,7 @@ print(manager.build_resource_suffix(subtest))
 ### Performance Impact
 
 | Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
+| -------- | -------- | ------- | ------------- |
 | Subprocess calls per worktree | 2 | 1 | 50% reduction |
 | Lines of code (worktree logic) | ~60 | ~20 | 67% reduction |
 | Test coverage | 100% | 100% | Maintained |

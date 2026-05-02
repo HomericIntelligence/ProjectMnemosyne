@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-22 |
 | **Objective** | Move an orphaned module from the package root into the correct sub-package to restore consistent structure |
 | **Outcome** | Complete success — tests pass, all pre-commit hooks pass, PR created and auto-merge enabled |
@@ -140,12 +140,12 @@ Closes #<issue-number>"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Files changed | 6 (new file, 2 consumers, 2 `__init__.py`, deleted old) |
 | Content changes | Zero in the moved file |
 | Git detection | Rename (100% similarity) — preserves full file history |
@@ -176,5 +176,5 @@ The old import path is removed entirely when all consumers are internal. A shim 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #847, PR #958 | [notes.md](../../references/notes.md) |

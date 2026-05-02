@@ -14,7 +14,7 @@ tags: [github-actions, secrets, vars, actionlint, job-if, context]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-28 |
 | **Objective** | Gate a CI job on the presence of a secret (e.g. skip deploy when AGAMEMNON_URL is not set) |
 | **Outcome** | Successful — switched from `secrets.AGAMEMNON_URL` to `vars.AGAMEMNON_URL` (repository variable) for the job-level gate; secret value passed via `env:` as always |
@@ -94,7 +94,7 @@ jobs:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `if: ${{ secrets.AGAMEMNON_URL != '' }}` | Gate deploy job on secret presence | actionlint error: `context "secrets" is not allowed here. available contexts are "github", "inputs", "needs", "vars"` | `secrets` context is only available in `env:` and `with:` — not in `if:` at job level |
 | `if: ${{ secrets.AGAMEMNON_URL }}` (truthy check, no `!= ''`) | Shorter form | Same actionlint error — context restriction applies regardless of expression form | Use `vars` for the gate; pass secret via `env:` |
 
@@ -110,7 +110,7 @@ see https://docs.github.com/en/actions/learn-github-actions/contexts#context-ava
 **GitHub Actions context availability table** (relevant subset):
 
 | Context | Job `if:` | Step `if:` | `env:` | `with:` |
-|---------|-----------|------------|--------|---------|
+| --------- | ----------- | ------------ | -------- | --------- |
 | `github` | yes | yes | yes | yes |
 | `vars` | yes | yes | yes | yes |
 | `secrets` | no | no | yes | yes |
@@ -124,5 +124,5 @@ see https://docs.github.com/en/actions/learn-github-actions/contexts#context-ava
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Myrmidons | fix/ci-precommit-parity — apply.yml gated on AGAMEMNON_URL presence | 2026-04-28 |

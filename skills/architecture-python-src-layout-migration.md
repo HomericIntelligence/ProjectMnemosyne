@@ -15,7 +15,7 @@ tags: [python, src-layout, migration, pyproject, hatchling, directory-restructur
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Migrate a Python project from flat layout (`package/` at repo root) to src-layout (`src/package/`) |
 | **Outcome** | Successful on 2 projects — validated across large (4782 tests) and small (435 tests) repos |
@@ -105,7 +105,7 @@ pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Test `mkdir()` without `parents=True` | Changed `tmp_path / "scylla"` to `tmp_path / "src" / "scylla"` but kept `mkdir()` | `FileNotFoundError` — `src/` parent directory doesn't exist in `tmp_path` | When adding a directory level to test fixtures, always add `parents=True` to `mkdir()` calls |
 | Missing `--cov=` in README | Updated most README references but missed a `--cov=scylla` inside a code block | Pre-commit `check-doc-config-consistency` hook caught the mismatch | Run the full pre-commit suite, not just tests — consistency checkers catch documentation drift |
 | Write-protected `.claude/` directory | Tried to update example paths in `.claude/agents/` and `.claude/shared/` files | Permission denied in don't-ask mode for `.claude/` directory edits | Agent config files under `.claude/` may be write-protected; these are informational-only and don't affect builds |
@@ -137,7 +137,7 @@ source = ["src/<package>"]
 ### Scope of Changes by Project Size
 
 | Category | Large Project (Scylla) | Small Project (Hephaestus) | Notes |
-|----------|----------------------|---------------------------|-------|
+| ---------- | ---------------------- | --------------------------- | ------- |
 | Build config | 3 files | 3 files | Always: pyproject.toml, pixi.toml, pixi.lock |
 | Pre-commit | 7 hooks | 6 hooks | Scales with number of hooks referencing package path |
 | CI workflows | 3 files | 0 files | CI uses `pixi run` + `pip install -e .` — resolves via pyproject.toml |
@@ -174,7 +174,7 @@ Simpler projects (no Dockerfile, no `Path(__file__)` navigations, CI that resolv
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1523, PR #1555 | Migrated `scylla/` → `src/scylla/`, 4782 tests pass, 30 pre-commit hooks pass |
 | ProjectHephaestus | Issue #41, PR #73 | Migrated `hephaestus/` → `src/hephaestus/`, 384 unit + 51 integration tests pass, 82% coverage |
 | ProjectHephaestus | Issue #49, PR #83 | Combined justfile + src-layout migration as single atomic PR; fixed `__version__` metadata lookup with non-matching distribution name |

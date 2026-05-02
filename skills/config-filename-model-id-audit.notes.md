@@ -68,7 +68,7 @@ Correct usage: `ConfigLoader('.')` or `ConfigLoader(Path.cwd())`.
 ## Files Changed in ProjectScylla
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `config/models/claude-opus-4-5.yaml` | Renamed → `claude-opus-4-5-20251101.yaml` |
 | `config/models/claude-sonnet-4-5.yaml` | Renamed → `claude-sonnet-4-5-20250929.yaml` |
 | `config/models/claude-haiku-4-5.yaml` | Renamed → `claude-haiku-4-5-20250929.yaml` |

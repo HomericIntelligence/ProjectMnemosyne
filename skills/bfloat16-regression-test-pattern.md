@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Dtype-dispatched functions (e.g. `_get_float32`, `_set_float32`) often have `if/elif` chains for float16/float32/float64 but omit bfloat16, causing silent failures — writes are no-ops and reads return garbage via the integer fallback path. |
 | **Solution** | Three-part regression test: zero-guard, round-trip, and multi-element verification. The zero-guard is the most important — it exactly mirrors the failure mode. |
 | **Language** | Mojo 0.26.1 |
@@ -128,7 +128,7 @@ tests/shared/core/test_extensor_getset_<fn>_bf16.mojo  # new file for bfloat16 t
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `1.5` in round-trip via `_set_float32` | Called `t._set_float32(0, Float32(1.5))` then `_get_float32` on bfloat16 | 1.5 IS exactly representable in bfloat16 (= 1 + 1/2), this actually works | Verify representability before assuming a value is "safe" |
 | Using `2.7` for bfloat16 test | Test value `2.7` used in float32 tests copy-pasted to bfloat16 | 2.7 is not exactly representable in bfloat16; test would fail even with correct code | Use only power-of-2 fractions for bfloat16: 0.5, 1.0, 1.5, 2.0, -1.0 |
 | Reading back via `_get_int64` to verify | Used the int64 fallback to confirm writes | The int64 path reinterprets bfloat16 bits as integers — misread. Confirmed fix actually works | Always use the float64 cross-check path (`_get_float64`) to verify bfloat16 writes |

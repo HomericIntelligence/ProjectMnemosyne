@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-30 |
 | **Objective** | Fix compose startup blocked by healthcheck failures on scratch/distroless images |
 | **Outcome** | Successful — remove healthchecks for scratch images, use simple depends_on |
@@ -69,7 +69,7 @@ services:
 ### What scratch images lack
 
 | Tool | Available? | Used by |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | `/bin/sh` | No | CMD-SHELL healthchecks |
 | `wget` | No | HTTP healthchecks |
 | `curl` | No | HTTP healthchecks |
@@ -80,7 +80,7 @@ services:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `CMD-SHELL "wget ..."` | Shell-based HTTP healthcheck | No shell in scratch image | Scratch = no shell at all |
 | `CMD-SHELL "true"` | Simplest possible shell command | Still requires a shell to interpret "true" | Even `true` needs `/bin/sh` |
 | `CMD ["nats-server", "--help"]` | Use existing binary as health proxy | `nats-server --help` exits with code 1 (not 0) when already running | Binary help commands often return non-zero |
@@ -113,5 +113,5 @@ cpp_retry: |
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | E2E compose with NATS | nats:latest scratch image caused compose deadlock |

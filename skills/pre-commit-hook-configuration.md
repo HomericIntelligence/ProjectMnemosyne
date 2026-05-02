@@ -13,7 +13,7 @@ history: pre-commit-hook-configuration.history
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-29 |
 | Objective | Consolidated pre-commit hook configuration patterns: pass_filenames, version alignment, pygrep hooks, maintenance, config testing, and REPO_ROOT resolution in test repos |
 | Outcome | v2.1.0: Added REPO_ROOT resolution fix for hooks installed in .git/hooks/ of test repos; all 332 unit tests pass, CI green. v2.2.0: Added Go-based hook build failure workaround using pre-built binary downloads |
@@ -44,7 +44,7 @@ history: pre-commit-hook-configuration.history
 ### Quick Reference
 
 | Problem | Fix |
-|---------|-----|
+| --------- | ----- |
 | Hook runs on all files, not staged | Set `pass_filenames: true`, remove hardcoded dirs from `entry` |
 | Hook `rev:` out of sync with pixi | Run `pixi run <tool> --version`, update `rev:` to match exactly |
 | Update all hooks to latest | `pre-commit autoupdate` |
@@ -117,7 +117,7 @@ grep -n "sys.argv\|argparse\|positional" <script-path>
 ```
 
 | Script behavior | Correct setting |
-|----------------|-----------------|
+| ---------------- | ----------------- |
 | Iterates over `sys.argv[1:]` as file paths | `pass_filenames: true` |
 | Uses `argparse` with positional `files` argument | `pass_filenames: true` |
 | Scans repo root with `Path.glob` / `os.walk` | `pass_filenames: false` |
@@ -440,7 +440,7 @@ pre-commit run gitleaks --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assuming changes needed for pass_filenames fix | Started planning edits to `.pre-commit-config.yaml` | Fix was already committed | Always check `git log` before implementing fixes from a review plan |
 | Running tests first before fixing hook | Ran `pixi run python -m pytest tests/ -v` | `ModuleNotFoundError: No module named 'scripts.dashboard'` — pre-existing unrelated failure | Pre-existing test failures are not blockers; verify they are unrelated before spending time on them |
 | Pinning `rev:` to `>=1.19.1` | Tried using a semver range in the `rev:` field | `rev:` only accepts exact git tags, not semver ranges | Always use an exact tag (e.g. `v1.19.1`) matching the installed binary |
@@ -452,12 +452,12 @@ pre-commit run gitleaks --all-files
 | Regex `[A-Z_]+BASE_URL\s*=` for URL constants | Looked for `*BASE_URL` naming pattern | `download_cifar10.py` uses `CIFAR10_URL` (not `BASE_URL`) | Use broader pattern `^[A-Z][A-Z0-9_]*URL\s*=\s*["\']` with `re.MULTILINE` |
 | Single commit on hook failure | Expected pre-commit to leave file unchanged after failure | Ruff reformatted the file; re-staging needed | After a hook modifies files, re-stage and commit again (never use `--no-verify`) |
 | `pygrep` commented-out print as negative case | Added `# print("NOTE: ...")` to NEGATIVE_CASES | `pygrep` matches raw line — `# print(...)` still contains `print.*NOTE` | Move commented-out prints to POSITIVE_CASES; pygrep does not understand comments |
-| Using `\|` alternation in pygrep entry | Wrote `print.*NOTE\|print.*TODO\|print.*FIXME` (grep syntax) | pygrep uses Python `re` syntax; `\|` is a literal pipe | Use `(NOTE|TODO|FIXME)` group syntax |
+| Using `\|` alternation in pygrep entry | Wrote `print.*NOTE\|print.*TODO\|print.*FIXME` (grep syntax) | pygrep uses Python `re` syntax; `\|` is a literal pipe | Use `(NOTE\|TODO\|FIXME)` group syntax |
 | Treating all CI failures as PR-related | Initially considered fixing flaky test failures | Failures were `mojo: error: execution crashed` — pre-existing infra issue | Check `main` branch CI history to distinguish pre-existing flaky failures from PR regressions |
-| Using `${REPO_ROOT}` for find/validate paths in hook installed in .git/hooks/ | Used `find "${REPO_ROOT}/agents" -name "*.yaml"` in hook where `REPO_ROOT="${SCRIPT_DIR}/.."` | When hook is `.git/hooks/pre-commit`, `SCRIPT_DIR` is `.git/hooks/` so `REPO_ROOT` is `.git/` — find operates on `.git/agents/` which doesn't exist | Use `REPO_ROOT_HOOK="$(git rev-parse --show-toplevel 2>/dev/null || echo "${REPO_ROOT}")"` and replace all working-tree paths with `${REPO_ROOT_HOOK}` |
+| Using `${REPO_ROOT}` for find/validate paths in hook installed in .git/hooks/ | Used `find "${REPO_ROOT}/agents" -name "*.yaml"` in hook where `REPO_ROOT="${SCRIPT_DIR}/.."` | When hook is `.git/hooks/pre-commit`, `SCRIPT_DIR` is `.git/hooks/` so `REPO_ROOT` is `.git/` — find operates on `.git/agents/` which doesn't exist | Use `REPO_ROOT_HOOK="$(git rev-parse --show-toplevel 2>/dev/null \|\| echo "${REPO_ROOT}")"` and replace all working-tree paths with `${REPO_ROOT_HOOK}` |
 | Removed `[[ $# -eq 0 ]] && return 0` guard from `report_unmanaged()` | Cleaned up what appeared to be a redundant guard in `report_unmanaged()` | Broke bats test 299 — the guard is needed in `report_unmanaged()` specifically (different from `get_unmanaged_names()` where the check was correctly replaced with array-length check) | Only remove the `$# -eq 0` guard from `get_unmanaged_names()`; keep it in `report_unmanaged()` |
 | `just test` inside hook without Justfile guard | Hook ran `if command -v just; then just test; fi` | When hook runs in a temporary test repo (bats test), `just` searches upward and finds the real repo's Justfile, running the full test suite inside the temp repo context | Add `[[ -f "${REPO_ROOT_HOOK}/Justfile" ]]` guard before calling `just`; also set `SKIP_TESTS=1` in bats tests that invoke the hook |
-| `[[ -n "$n" ]] && printf '%s\n' "$n"` without `|| true` | Short-circuit conditional in hook body under `set -euo pipefail` | When the `&&` condition is false (empty `$n`), bash treats the command as having failed (exit 1), which triggers `set -e` to abort the script | Add `|| true`:`[[ -n "$n" ]] && printf '%s\n' "$n" || true` |
+| `[[ -n "$n" ]] && printf '%s\n' "$n"` without `\|\| true` | Short-circuit conditional in hook body under `set -euo pipefail` | When the `&&` condition is false (empty `$n`), bash treats the command as having failed (exit 1), which triggers `set -e` to abort the script | Add `\|\| true`: `[[ -n "$n" ]] && printf '%s\n' "$n" \|\| true` |
 | `pixi search gitleaks` for pre-built binary | Tried to install gitleaks via conda-forge | Not available on conda-forge | Go-based security tools are rarely packaged for conda; use pre-built GitHub release binaries |
 | Checking if pixi provides newer Go | Ran `pixi search go` | Only Go 1.15 available via system/conda | Cannot rely on conda-forge for up-to-date Go; use pre-built binaries for Go-based hooks |
 | Pinning to older gitleaks version | Considered downgrading gitleaks to a version with lower Go requirement | All recent gitleaks versions (v8.18+) require Go 1.22+ which is still newer than system Go 1.15 | The Go version gap is too large to bridge by downgrading the hook; pre-built binary is the only viable path |
@@ -500,7 +500,7 @@ Closes #<issue>
 ### pygrep Hook Parameters
 
 | Field | Value | Notes |
-|-------|-------|-------|
+| ------- | ------- | ------- |
 | `language` | `pygrep` | Zero external deps; pattern matched via Python `re` |
 | `entry` | `'print.*(NOTE\|TODO\|FIXME)'` | Quoted to prevent shell expansion |
 | `files` | `^examples/` | Scope to one directory; adjust as needed |
@@ -561,6 +561,6 @@ gh run view <run-id> --log-failed
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
-| Myrmidons | shellcheck-warnings swarm; 332 unit tests pass, CI green; REPO_ROOT_HOOK pattern, SKIP_TESTS guard, Justfile guard, || true fix (2026-04-24) | verified-ci |
+| --------- | --------- | --------- |
+| Myrmidons | shellcheck-warnings swarm; 332 unit tests pass, CI green; REPO_ROOT_HOOK pattern, SKIP_TESTS guard, Justfile guard, `\|\| true` fix (2026-04-24) | verified-ci |
 | ProjectScylla | gitleaks v8.30.1 Go build failure; converted from `language: golang` to pre-built binary download in `.pre-commit-config.yaml` (2026-04-27) | verified-local |

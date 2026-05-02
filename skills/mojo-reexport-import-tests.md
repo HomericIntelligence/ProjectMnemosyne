@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | mojo-reexport-import-tests |
 | **Category** | testing |
 | **Trigger** | Adding re-exports to `__init__.mojo`, package API verification issues |
@@ -152,7 +152,7 @@ gh pr create --title "test(<pkg>): add import tests for <TypeName> package expor
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Modifying `__init__.mojo` | Tried to add re-exports from scratch | Export was already present (added in prior work with `# Issue #3851` comment) | Always check `__init__.mojo` first — the re-export is often done, only tests are missing |
 | Callback re-export pattern | Assumed same limitation applied to all types | Callbacks have a specific Mojo v0.26.1 re-export limitation; `DataLoader`/`DataBatch` work fine | Check the docstring in `__init__.mojo` for existing limitation notes before assuming failure |
 | Adding to test_imports.mojo only | Added tests to monolithic file only | Split files exist for a reason — part1 also needs coverage for CI split runs | Always update both `test_imports.mojo` AND `test_imports_part1.mojo` |

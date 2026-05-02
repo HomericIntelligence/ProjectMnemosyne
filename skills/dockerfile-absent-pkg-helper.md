@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | Category | testing |
 | Pattern | Extract shared helper to conftest.py |
 | Language | Python / pytest |
@@ -111,7 +111,7 @@ def test_rustc_absent(self, dockerfile: Path) -> None:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Separate helpers.py | Creating a dedicated `tests/foundation/helpers.py` file | conftest.py is already the shared utilities file for the suite; a second file adds unnecessary indirection | Put plain helper functions directly in conftest.py — no separate helpers module needed |
 | pytest fixture for the helper | Making `assert_pkg_absent` a pytest fixture | Fixtures are injected by pytest; assertion helpers are plain functions and more flexible | Use plain functions for assertion helpers, fixtures for test data/setup |
 | Comma-separated Closes in commit | Using `Closes #3994, #3995` in one line | Project convention requires separate `Closes #N` lines per issue | Always use separate lines per issue per feedback_pr_closes_format.md |

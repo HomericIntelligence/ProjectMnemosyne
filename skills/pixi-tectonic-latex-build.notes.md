@@ -96,6 +96,6 @@ Tectonic uses XeTeX backend, which does not support `\pdfoutput`. Also `\usepack
 
 ### Platform availability summary (conda-forge, 2026-04)
 | Package | linux-64 | osx-arm64 | osx-64 | win-64 |
-|---------|----------|-----------|--------|--------|
+| --------- | ---------- | ----------- | -------- | -------- |
 | tectonic | >=0.15 | >=0.15 | >=0.15 | N/A |
 | texlive-core | 20230313 (broken) | 20230313 (broken) | 20230313 (broken) | N/A |

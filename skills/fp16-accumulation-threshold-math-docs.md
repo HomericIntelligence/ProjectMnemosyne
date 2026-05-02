@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Skill Name** | fp16-accumulation-threshold-math-docs |
 | **Category** | documentation |
 | **Issue Type** | Follow-up doc addition — Float16 section omitted from original Success Criteria |
@@ -84,7 +84,7 @@ user-invocable: false
 ## Key Technical Facts
 
 | Float16 Property | Value |
-|-----------------|-------|
+| ----------------- | ------- |
 | Mantissa bits | 10 explicit + 1 implicit = 11 effective |
 | Machine epsilon | ≈ 9.77e-4 |
 | Relative precision | ~0.1% |
@@ -93,7 +93,7 @@ user-invocable: false
 ### Per-layer accumulation counts (n = K² × C_in)
 
 | Layer | Formula | n |
-|-------|---------|---|
+| ------- | --------- | --- |
 | LeNet-5 Conv1 | 5² × 1 | 25 |
 | LeNet-5 Conv2 | 5² × 6 | 150 |
 | AlexNet Conv1 | 11² × 3 | 363 |
@@ -105,7 +105,7 @@ Float16 error ≈ n × 9.77e-4. Exceeds tolerance 1e-1 when n > ~102.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Checking for existing skill before creating | Searched for `fp16` skills in marketplace | Found `fp16-precision-test-documentation` — similar but targets test file docstrings, not dev guides | Always read the existing skill before deciding to create a new one; scope difference (test file vs. dev guide) justifies a new skill |
 | Trying markdownlint-cli2 via `pixi run npx` | `pixi run npx markdownlint-cli2 ...` | `npx: command not found` in this environment | Pre-commit hooks run markdownlint automatically on commit — rely on hooks rather than running manually |
 | Trying `pixi run markdownlint-cli2` directly | Direct invocation without `npx` | `markdownlint-cli2: command not found` | The tool is invoked via pre-commit, not directly; `just pre-commit-all` is the correct entry point |
@@ -156,5 +156,5 @@ Closes #<follow-up-issue>
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3299, follow-up to #3089 | [notes.md](../references/notes.md) |

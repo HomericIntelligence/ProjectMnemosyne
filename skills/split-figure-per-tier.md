@@ -11,13 +11,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
-| Objective | | Field | Value | |-------|-------| | **Date** | 2026-02-08 | | **Objective** | Fix figure generation failures caused by Altair's 5,000-row dataset... |
+| Objective | Fix figure generation failures caused by Altair's 5,000-row dataset limit |
 | Outcome | Operational |
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-08 |
 | **Objective** | Fix figure generation failures caused by Altair's 5,000-row dataset limit |
 | **Outcome** | Successfully split 3 judge figures into per-tier subfigures, achieving 30/30 figure generation success |
@@ -189,7 +189,7 @@ corr_df.to_csv(corr_csv_path, index=False)  # NameError!
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -208,7 +208,7 @@ corr_df.to_csv(corr_csv_path, index=False)  # NameError!
 ### Dataset Sizes
 
 | Dataset | Total Rows | Per-Tier Rows | Status |
-|---------|------------|---------------|--------|
+| --------- | ------------ | --------------- | -------- |
 | judges\_df | 7,236 | <1,100 | Split required |
 | runs\_df (T0) | ~1,200 | N/A | Faceting OK |
 | runs\_df (T3) | ~3,500 | N/A | Faceting OK |
@@ -228,7 +228,7 @@ Examples:
 ### Code Changes Summary
 
 | File | Change | Reason |
-|------|--------|--------|
+| ------ | -------- | -------- |
 | `judge_analysis.py:19-62` | fig02: Add per-tier loop | 7,236 rows → <1,100 per tier |
 | `judge_analysis.py:65-167` | fig14: Add tier column + loop | 7,194 rows → per-tier |
 | `judge_analysis.py:175-270` | fig17: Add per-tier loop | 7,236 rows → <1,100 per tier |

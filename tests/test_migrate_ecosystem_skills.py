@@ -135,7 +135,7 @@ class TestParseFrontmatter:
         assert body == content
 
     def test_quoted_string_values_stripped(self):
-        content = '---\nname: "double-quoted"\nother: \'single-quoted\'\n---\nBody.'
+        content = "---\nname: \"double-quoted\"\nother: 'single-quoted'\n---\nBody."
         fm, body = parse_frontmatter(content)
         assert fm["name"] == "double-quoted"
         assert fm["other"] == "single-quoted"
@@ -478,8 +478,13 @@ class TestTransformSkill:
     def test_missing_sections_injected(self):
         content = "---\nname: my-skill\ndescription: desc\n---\nJust some text.\n"
         result = transform_skill(content, "my-skill", None)
-        for section in ["## Overview", "## When to Use", "## Verified Workflow",
-                         "## Failed Attempts", "## Results & Parameters"]:
+        for section in [
+            "## Overview",
+            "## When to Use",
+            "## Verified Workflow",
+            "## Failed Attempts",
+            "## Results & Parameters",
+        ]:
             assert section in result, f"Missing section: {section}"
 
     def test_no_frontmatter_still_produces_valid_output(self):

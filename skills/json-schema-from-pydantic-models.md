@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-03 |
 | Project | ProjectScylla |
 | Objective | Add JSON schemas for config types lacking validation (defaults.yaml, tier configs, model configs) |
@@ -37,7 +37,7 @@ that may not be visible in the YAML files themselves.
 ### Field Mapping: Pydantic → JSON Schema
 
 | Pydantic | JSON Schema |
-|----------|-------------|
+| ---------- | ------------- |
 | `str` with `min_length=1` | `{"type": "string", "minLength": 1}` |
 | `int` with `ge=1, le=100` | `{"type": "integer", "minimum": 1, "maximum": 100}` |
 | `float` with `ge=0.0, le=2.0` | `{"type": "number", "minimum": 0.0, "maximum": 2.0}` |
@@ -175,14 +175,14 @@ Expected: all parametrized tests pass (9 schema meta tests + N real-file tests +
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Schema Files Created
 
 | File | Required Fields | Total Properties | Real Config Coverage |
-|------|----------------|-----------------|---------------------|
+| ------ | ---------------- | ----------------- | --------------------- |
 | `schemas/defaults.schema.json` | none (all optional) | 11 top-level + nested | `config/defaults.yaml` ✓ |
 | `schemas/tier.schema.json` | `tier`, `name` | 8 | `tests/fixtures/config/tiers/t0.yaml`, `t1.yaml` ✓ |
 | `schemas/model.schema.json` | `model_id` | 10 | 4 model YAML files ✓ |
@@ -190,7 +190,7 @@ Expected: all parametrized tests pass (9 schema meta tests + N real-file tests +
 ### Test Counts
 
 | Class | Tests |
-|-------|-------|
+| ------- | ------- |
 | `TestSchemaFiles` | 9 (3 schemas × 3 checks) |
 | `TestDefaultsSchema` | 7 |
 | `TestTierSchema` | 10 |

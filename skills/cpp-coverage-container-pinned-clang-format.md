@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-31 |
 | **Objective** | Fix failing Code Coverage CI check (80% threshold) and eliminate clang-format version mismatch between local dev and CI |
 | **Outcome** | 96.1% line coverage achieved; clang-format 17.0.6 pinned via Podman container used by both CI and local dev; all CI checks passing |
@@ -234,7 +234,7 @@ clang-format:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Coverage flags not wired | Declared `ENABLE_COVERAGE` option but never added `--coverage` to compile/link | gcovr produces zero `.gcno` files — reports nothing | Always verify the coverage option is consumed: `add_compile_options(-O0 --coverage)` + `add_link_options(--coverage)` |
 | Test target links only version lib | `target_link_libraries(tests PRIVATE ProjectNestor::ProjectNestor)` | Tests can only reach version_info.cpp (~5% coverage) | Create `_core` static library from server sources (excluding main); link tests against it |
 | Local clang-format v22 vs CI v18 | Ran `clang-format -i` locally with v22 | CI uses apt-get clang-format (v18 on ubuntu-24.04); braced-scope `{ Foo f; }` formatted differently | Pin clang-format version via Podman container; never rely on host-installed version |
@@ -260,7 +260,7 @@ Breakdown:
 ### Test Count: 26 tests
 
 | Suite | Count | What |
-|-------|-------|------|
+| ------- | ------- | ------ |
 | VersionTest | 4 | kProjectName, kVersion, get_version, get_project_name |
 | GenerateUuidTest | 2 | V4 format validation, uniqueness |
 | NowIso8601Test | 2 | Format validation, year sanity |
@@ -326,5 +326,5 @@ void RoutesTest::TearDown() {
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/ProjectNestor | PR #1 — C++20 research stats REST API | Coverage CI check + clang-format CI check both passing |

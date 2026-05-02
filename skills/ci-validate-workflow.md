@@ -12,7 +12,7 @@ tags: []
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | (fill in objective) |
 | **Outcome** | (fill in outcome) |
@@ -135,7 +135,7 @@ See GitHub Actions documentation for complete reference.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 
 ## Results & Parameters

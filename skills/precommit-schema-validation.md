@@ -26,7 +26,7 @@ surfacing violations at commit time rather than in CI or at runtime.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-05 (updated 2026-03-07) |
 | Objective | Add/extend `scripts/validate_config_schemas.py` + `validate-config-schemas` pre-commit hook |
 | Outcome | Success — PR HomericIntelligence/ProjectScylla#1439 (initial), #1464 (extend to config/tiers/) |
@@ -149,7 +149,7 @@ class TestResolveSchema:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -162,6 +162,6 @@ class TestResolveSchema:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1439, issue #1382 | Initial creation of hook (3 schema map entries) |
 | ProjectScylla | PR #1464, issue #1441 | Extended to `config/tiers/*.yaml` (4th `_SCHEMA_MAP` entry) |

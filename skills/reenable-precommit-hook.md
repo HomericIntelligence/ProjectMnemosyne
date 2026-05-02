@@ -10,7 +10,7 @@ user-invocable: false
 # Re-enable Pre-commit Hooks with Dependency Issues
 
 | **Aspect** | **Details** |
-|------------|-------------|
+| ------------ | ------------- |
 | **Date** | 2026-02-15 |
 | **Objective** | Re-enable commented-out pre-commit hooks that were disabled due to dependency version incompatibilities |
 | **Outcome** | ✅ Successfully re-enabled nbstripout hook after upgrading transitive dependency (identify library) |
@@ -152,7 +152,7 @@ pixi run pre-commit run --all-files
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -160,7 +160,7 @@ pixi run pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## ✅ Working Solution
 

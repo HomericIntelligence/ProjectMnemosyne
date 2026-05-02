@@ -14,7 +14,7 @@ tags: [yaml, yamllint, lint, trailing-blank-lines, eof, ci, github-actions]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-23 |
 | **Objective** | Fix yamllint CI failure caused by trailing blank lines at end of YAML files |
 | **Outcome** | Stripping trailing blank lines fixed the yamllint error; CI passed |
@@ -91,7 +91,7 @@ yamllint .github/workflows/ci.yml
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Removing conflict markers without checking trailing whitespace | Resolved git merge conflict in ci.yml, removed markers | Left a trailing blank line that conflict resolution introduced | Always run yamllint after conflict resolution on YAML files; check for trailing blank lines specifically |
 | `sed -i '${/^$/d}' file.yml` | Tried to delete last blank line with sed | Fragile — only deletes one blank line; fails if there are multiple; also fails on macOS sed | Use Python `content.rstrip() + '\n'` — handles any number of trailing blank lines portably |
 
@@ -139,5 +139,5 @@ with open(p, 'w') as f: f.write(c.rstrip() + '\n')
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | AchaeanFleet | CI repair — conflict resolution left trailing blank line in .github/workflows/ci.yml | 2026-04-23; yamllint passed after fix |

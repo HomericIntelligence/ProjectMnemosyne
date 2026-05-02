@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | update-blocker-note |
 | **Category** | documentation |
 | **Trigger** | Cleanup issue for a NOTE/FIXME/TODO comment that references a blocker |
@@ -106,7 +106,7 @@ Note:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Edit without Read | Called Edit tool directly on the file | Tool requires file to be read first in the conversation | Always Read the target file before Edit, even if you already saw its content from a sibling file |
 | Reading main repo copy | Read `/home/mvillmow/Odyssey2/shared/training/__init__.mojo` | Worktree has its own copy at `.worktrees/issue-3092/` path | Always edit the worktree path, not the main repo path |
 | Running `just pre-commit-all` | Used `just` command runner | `just` not in PATH in this environment | Use `pixi run pre-commit run --all-files` directly |

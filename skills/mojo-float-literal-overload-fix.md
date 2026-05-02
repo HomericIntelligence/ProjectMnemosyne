@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Mojo float literals (e.g. `9.5`, `1.0`) infer as `Float32`, not `Float64` |
 | **Symptom** | `no matching method in call to '__setitem__'` in CI for float-literal assignments |
 | **Root Cause** | API only has `Float64` overload; Mojo does not auto-promote `Float32` to `Float64` |
@@ -43,7 +43,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Fix tests with explicit casts | Change `t[1] = 9.5` to `t[1] = Float64(9.5)` in test files | Fixes tests but leaves broken ergonomics for all real users | Prefer fixing the API, not the callers |
 | Run mojo test locally | `pixi run mojo test tests/shared/core/test_utility.mojo` | GLIBC version mismatch (`GLIBC_2.32/2.33/2.34` not found) on this host | Local Mojo execution is blocked by OS GLIBC — trust CI for Mojo compilation |
 | Run pre-commit without SKIP | `git commit` triggered `mojo-format` hook | Same GLIBC error — hook exits 1 | Use `SKIP=mojo-format` when Mojo binary cannot run locally; document why |

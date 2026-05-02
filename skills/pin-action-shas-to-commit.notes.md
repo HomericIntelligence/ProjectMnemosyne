@@ -46,7 +46,7 @@ gh api repos/actions/github-script/git/ref/tags/v8 --jq '.object | {sha, type}'
 ## Changes Made
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `.github/actions/setup-pixi/action.yml` | `prefix-dev/setup-pixi@v0.9.4` → `@a0af7a228712d6121d37aba47adf55c1332c9c2e  # v0.9.4` |
 | `.github/actions/pr-comment/action.yml` | `actions/github-script@v8` → `@ed597411d8f924073f98dfc5c65a23a2325f34cd  # v8` |
 

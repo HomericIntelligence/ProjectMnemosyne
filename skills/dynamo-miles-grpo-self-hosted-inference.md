@@ -24,7 +24,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Run GRPO training using Miles RL framework with NVIDIA Dynamo as a self-hosted multi-node inference orchestrator (SGLang backend) instead of a cloud service like Baseten |
 | **Outcome** | Scripts and integration code ready, awaiting cluster execution for validation |
@@ -77,7 +77,7 @@ DYNAMO_JOB_ID=$DYNAMO_JOB sbatch train-grpo-dynamo.sbatch
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Miles `--rollout-external` with Dynamo | Tried to use Miles' native external SGLang engine support to connect to Dynamo's frontend | Miles' `--rollout-external` requires SGLang-native endpoints: `/generate`, `/health_generate`, `/get_server_info`, and worker registration via `POST /add_worker`. Dynamo only exposes OpenAI-compatible `/v1/chat/completions` through its frontend. The native SGLang endpoints are not proxied. | `--rollout-external` is for direct SGLang engine connections only. For any frontend that wraps SGLang (like Dynamo), use a custom generate function instead. |
 | Dynamo v1.0.0 for logprobs | Initially researched v1.0.0 release | v1.0.0 had a critical bug where logprobs fields weren't populated when requests routed through Dynamo Frontend. Fixed in v1.0.1. | Always use Dynamo v1.0.1+ for GRPO training. The `bytes` and `token` fields are now properly populated. |
 | Sourcing one sbatch from another | Production sbatch tried to `source` base sbatch to reuse training logic | Slurm only parses `#SBATCH` directives from the submitted file. Sourced files' `#SBATCH` lines are treated as comments. | Make each sbatch standalone, or use `bash script.sh` (not `source`) where the base file's SBATCH lines become harmless comments since Slurm already allocated resources from the calling file. |
@@ -110,7 +110,7 @@ enable-metrics: true
 ### Dynamo vs Baseten
 
 | Aspect | Baseten | Dynamo |
-|--------|---------|--------|
+| -------- | --------- | -------- |
 | Location | Cloud (remote HTTPS) | Self-hosted (cluster LAN) |
 | Auth | `Api-Key` header required | None (internal network) |
 | Endpoint | `/production/predict` | `/v1/chat/completions` (standard) |
@@ -165,5 +165,5 @@ system_port: 8081
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Dynamo + Miles GRPO Pipeline | Qwen3-4B E2E training on Slurm+Enroot cluster | [notes](./dynamo-miles-grpo-self-hosted-inference.notes.md) |

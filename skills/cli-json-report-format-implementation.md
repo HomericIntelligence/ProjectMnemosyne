@@ -15,7 +15,7 @@ tags: [json, cli, dataclasses, serialization, nan-sanitization, click]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Add `--format json` to a Click CLI report command that already has a dataclass-based `ReportData` model and a working Markdown generator |
 | **Outcome** | Successful — JSON report generator created, CLI wired, HTML stub removed, 20 new tests, PR merged |
@@ -73,7 +73,7 @@ elif output_format == "json":
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Adding comments to `__all__` | Added section comments (`# JSON`, `# Markdown`, etc.) between entries in `__all__` | ruff RUF022 requires isort-style sorting which doesn't support interleaved comments | Keep `__all__` as a flat sorted list without comments when RUF022 is enabled |
 | N/A — direct approach worked | First implementation attempt succeeded | N/A | When the dataclass model is already structured for serialization, `dataclasses.asdict()` + sanitization is minimal work |
 
@@ -100,5 +100,5 @@ elif output_format == "json":
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1510 — CLI report JSON format | PR #1553, all tests pass locally |

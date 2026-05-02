@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-11 |
 | **Objective** | Reproduce CI-only test failures locally by replicating CI environment conditions |
 | **Outcome** | Success — crash previously declared "non-reproducible locally" reproduced immediately, 100% deterministic, by combining all three CI conditions |
@@ -111,7 +111,7 @@ USER_ID=1001 GROUP_ID=1001 podman compose exec -T projectodyssey-dev bash -c \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run tests with warm cache + UID 1000 | 10 parallel agents ran the same test commands locally | All passed because agents used warm pixi cache and matching UID — not replicating CI | Never declare a test "passes locally" without verifying you're running under identical conditions |
 | Conclude "non-deterministic JIT flakiness" | Read only the `execution crashed` message, not full stack trace | The error message is the symptom; the real cause (permission error) was in the stack trace | Always read the complete stack trace before forming a hypothesis |
 | Declare crash "non-reproducible locally" | Filed issue doc concluding the crash couldn't be reproduced | Cold cache + UID mismatch + no-TTY was never tried simultaneously | Don't conclude non-reproducible until you've replicated ALL CI conditions at once |
@@ -154,7 +154,7 @@ USER_ID=1001 GROUP_ID=1001 podman compose exec -T projectodyssey-dev bash -c \
 ### Environment Condition Checklist
 
 | Condition | Local Default | CI Default | How to Replicate Locally |
-|-----------|--------------|------------|--------------------------|
+| ----------- | -------------- | ------------ | -------------------------- |
 | Pixi cache | Warm (persistent volumes) | Cold (fresh volumes each run) | `podman compose down -v` before starting |
 | Container UID | 1000 (matches image build UID) | 1001 (CI runner UID) | `USER_ID=1001 GROUP_ID=1001 podman compose up -d` |
 | TTY allocation | TTY present | No TTY (`-T` flag) | Use `podman compose exec -T` instead of `exec` |
@@ -163,5 +163,5 @@ USER_ID=1001 GROUP_ID=1001 podman compose exec -T projectodyssey-dev bash -c \
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Reproducing `fortify_fail_abort` crash declared non-reproducible in `jit-fortify-buffer-overflow.md` | Cold cache + UID 1001 + `-T` flag combined triggered crash 100% deterministically |

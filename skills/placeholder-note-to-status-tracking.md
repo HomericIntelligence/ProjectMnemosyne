@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-04 |
 | Objective | Resolve GitHub issue #3084 — clarify backward pass NOTEs in ML example training scripts |
 | Outcome | Success — 3 files updated, 3 GitHub tracking issues created, PR #3189 merged |
@@ -57,7 +57,7 @@ Enumerate all occurrences across affected files. Classify each as:
 For issue #3084, the affected files were:
 
 | File | Line | Type | Action |
-|------|------|------|--------|
+| ------ | ------ | ------ | -------- |
 | `examples/resnet18-cifar10/train.mojo` | 313 | Runtime print | Replace |
 | `examples/googlenet-cifar10/train.mojo` | 97 | Docstring | Leave |
 | `examples/googlenet-cifar10/train.mojo` | 436 | Runtime print | Replace |
@@ -155,7 +155,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Changing in-docstring `# NOTE:` comments | Considered replacing `# NOTE:` at lines 97 (googlenet) and 65 (mobilenetv1) | These are appropriate documentation comments; changing them adds no value | In-docstring NOTEs are fine — only runtime `print("NOTE: ...")` calls confuse users |
 | Generic STATUS message without issue link | Drafting "This is a documented placeholder" without a GitHub issue number | Users have no way to track when the implementation will happen | Always create tracking issues *before* editing prints so you can include the issue number in the message |
 | Implementing the backward passes | Considered actually writing ~2000-3500 lines of backward pass code | Out of scope for a `[Cleanup]` issue; issue explicitly says "If not needed: update NOTEs to clarify" | Cleanup issues ask for documentation clarity, not full implementations |
@@ -165,7 +165,7 @@ gh pr merge --auto --rebase
 ### Issue Numbers (for ProjectOdyssey)
 
 | Model | Tracking Issue | Lines |
-|-------|---------------|-------|
+| ------- | --------------- | ------- |
 | ResNet-18 | #3181 | ~2000 |
 | GoogLeNet | #3184 | ~3500 |
 | MobileNetV1 | #3187 | ~2000 |

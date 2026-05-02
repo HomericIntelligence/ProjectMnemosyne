@@ -13,7 +13,7 @@ tags: [parallel-agents, worktree, wave-execution, batch, rebase, issue-triage, a
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-03-28 | Consolidated parallel agent/worktree execution skills | Merged from parallel-issue-resolution-with-worktrees, parallel-rebase-agent-worktree-isolation, parallel-worktree-workflow, tooling-parallel-worktree-bulk-issue-execution, tooling-parallel-worktree-issue-batch |
 
 Covers launching multiple sub-agents in parallel, each in a dedicated git worktree, to achieve
@@ -219,7 +219,7 @@ git worktree add worktrees/main-work origin/my-branch
 **Decision tree for common conflict types:**
 
 | File | Resolution |
-|------|-----------|
+| ------ | ----------- |
 | `CLAUDE.md`, config files | Take `--ours` always |
 | CI workflow YAML | Take `--ours` unless branch is adding the workflow |
 | Deleted file (modify/delete) | Honor the deletion with `git rm <file>` |
@@ -290,7 +290,7 @@ pixi run mypy <package>/
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Sequential agent execution | Launch one agent, wait, then launch next | 10 issues × 3 min = 30 min total; no parallelism benefit | Launch all independent agents in ONE message with multiple Task tool calls |
 | Agents working on main branch | Multiple agents working on main or shared branches | Merge conflicts when agents push simultaneously; race conditions on git state | Each agent gets its own worktree in `worktrees/` directory |
 | Parallel agents without worktree isolation | Both agents shared the same working tree | Agents left stale rebase-in-progress state (`.git/rebase-merge/`) from each other's abandoned rebases | Always assign each parallel rebase agent a dedicated `git worktree` |
@@ -310,7 +310,7 @@ pixi run mypy <package>/
 ### Proven Scale Metrics
 
 | Session | Issues/PRs | Agents | Time | Speedup |
-|---------|-----------|--------|------|---------|
+| --------- | ----------- | -------- | ------ | --------- |
 | ProjectScylla PR sprint | 10 issues, 9 PRs merged | 6-8 agents | 15-20 min | 6-8x |
 | ProjectScylla test/refactor | 3 issues, 4 PRs | 3 agents | 5 min | 3x |
 | ProjectMnemosyne LOW issues | 12 issues, 12 PRs | 12 agents | 6 min | ~5x |
@@ -352,7 +352,7 @@ This ensures agents cannot push directly to main.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | 10 issues resolved, 9 PRs merged, ~1,335 lines eliminated | parallel-issue-resolution-with-worktrees 2026-02-13 |
 | ProjectScylla | 3 issues, 193 new tests, 4 PRs | parallel-worktree-workflow 2025-02-09 |
 | ProjectMnemosyne | 35 issues triaged, 12 LOW executed in parallel, PRs #959-#971 | tooling-parallel-worktree-bulk-issue-execution 2026-03-24 |

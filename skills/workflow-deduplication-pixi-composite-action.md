@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Issue | Replace repeated `prefix-dev/setup-pixi@v0.9.4` blocks in 9+ workflows |
 | Solution | Composite action at `.github/actions/setup-pixi/action.yml` |
 | Result | Eliminated all inline Pixi setup; merged 2 workflows into 1 |
@@ -102,7 +102,7 @@ git commit -m "ci(workflows): replace inline pixi setup with composite action"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Parallel Edit tool calls | Used Edit tool on 6 files simultaneously | 3 files failed with "File has not been read yet" error despite being read earlier in session | Edit tool requires each file to be read in the current tool-use response, not earlier in the conversation |
 | `rm` with multiple args in single Bash call | Ran `rm file1 && echo msg && rm file2 && ls` | Shell parsed the echo arguments as filenames and deleted all .yml files in the directory | Never mix `rm` with unquoted multiline strings in Bash tool — use separate commands |
 | `git restore .github/workflows/` after accidental deletion | Tried to recover deleted files | `git restore` restored original (unmodified) files from HEAD, wiping all in-session edits | `git restore` is destructive to uncommitted changes; use a Python script to re-apply all edits at once |

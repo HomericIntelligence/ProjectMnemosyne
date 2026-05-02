@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | cherry-pick-fix-diverged-pr |
 | **Category** | ci-cd |
 | **Trigger** | Fix commit exists locally but `git push` is rejected as non-fast-forward |
@@ -90,7 +90,7 @@ gh pr view <pr-number> --json headRefOid,statusCheckRollup | \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Re-trigger CI via `gh run rerun` | Re-ran the failing CI run on the old commit | CI ran against the unfixed commit SHA — still failed mojo format | Re-triggering doesn't help if the fix was never pushed to the remote branch |
 | Direct push fix commit to PR branch | `git push origin <fix-sha>:refs/heads/<pr-branch>` | Rejected as non-fast-forward — local fix had a different parent SHA than the remote tip | When histories diverge (same content, different SHAs), a direct push always fails |
 | Trust "no changes needed" in review plan | Plan said fix was on the branch already | Plan was generated against a local branch with diverged history; remote never had the fix | Always verify the fix is on `origin/<pr-branch>` not just locally |

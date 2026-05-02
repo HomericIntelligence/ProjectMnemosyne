@@ -13,7 +13,7 @@ The implementation was complete but the session ran out of context before commit
 Files modified (14 total, +1393 -345 lines):
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scripts/manage_experiment.py` | Replaced 6 subcommands with 2 (run, repair); batch via ThreadPoolExecutor; `--from`/`--filter-*` args |
 | `scylla/e2e/checkpoint.py` | Added `reset_runs_for_from_state()`, `reset_tiers_for_from_state()`, `reset_experiment_for_from_state()` |
 | `scylla/e2e/models.py` | Added 8 ephemeral fields (excluded from config hash) |

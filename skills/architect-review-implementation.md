@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-23 |
 | **Objective** | Implement all recommended post-merge actions from a Chief Architect review of the state machine refactor (1008-state-machine-refactor) |
 | **Outcome** | ✅ Success — 3 doc/test tasks completed, branch rebased against origin/main, 72/72 tests passing, mypy counts verified |
@@ -98,7 +98,7 @@ git rebase origin/main
 **Expect conflicts in these categories:**
 
 | Conflict Type | Resolution Strategy |
-|---------------|---------------------|
+| --------------- | --------------------- |
 | `# noqa: S101` annotations | Keep HEAD (branch) version — pre-existing suppression |
 | Class renames (e.g. `TestFoo` → `TestFooState`) | Take incoming (more descriptive name) |
 | Docstring expansions | Take incoming (more detail is better) |
@@ -149,14 +149,14 @@ git push origin <branch> --force-with-lease
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `CLAUDE.md` | Added "Partial-Failure Semantics" subsection to Evaluation Protocol |
 | `scylla/e2e/stages.py` | Updated module docstring: 16-stage count now documented as "15 explicit + 1 implicit" |
 | `tests/unit/e2e/test_subtest_state_machine.py` | Added `TestSubtestStateMachineUntilState` (5 tests) |

@@ -13,7 +13,7 @@ tags: [git, rebase, worktree, agent, stale, cleanup, -X-ours, residual-diff, sub
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Reconcile agent-generated worktree branches whose commits have been re-done on main with slightly different wording, without grinding through 1000+ semantic-reword conflicts |
 | **Outcome** | Use `git rebase -X ours` to auto-collapse reword conflicts, then hash-compare residual diffs to cluster duplicates and isolate branches with genuine unique content |
@@ -168,7 +168,7 @@ Once clusters are collapsed and outliers classified, cherry-pick or commit only 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | 1 | Plain `git rebase main` on first branch | 39 files x ~107 conflict hunks in the first commit alone; projected ~1000+ hunks across 13 branches | Plain rebase is impractical when main has re-done the same audit with polished rewording |
 | 2 | Manually resolve each conflict hunk by "understanding intent" | Every hunk was a trivial reword of the same sentence; real resolution devolves into pattern-matching "keep main" across hundreds of hunks | Manual per-hunk review isn't "doing the work properly" when the work is 95% identical rewording — it's just slow Option-C |
 | 3 | `git cherry main <branch>` to detect redundancy | Patch-id matching missed most branch commits because main's re-done versions had slightly different content | `git cherry` works for clean cherry-picks, not for "re-done from scratch with edits" |

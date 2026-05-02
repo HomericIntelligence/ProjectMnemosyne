@@ -16,7 +16,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-10 |
 | Project | ProjectScylla |
 | Objective | Decompose `scylla/e2e/llm_judge.py` (1,488 lines, 35 functions) into 4 focused modules + slimmed orchestrator |
@@ -89,7 +89,7 @@ Models and orchestrator functions that are part of the public API (`__init__.py`
 Before writing any code, map all top-level functions to logical groups. Good decomposition boundaries:
 
 | Pattern | Signal |
-|---------|--------|
+| --------- | -------- |
 | Functions share a common prefix (e.g., `_build_*`, `_finalize_*`) | Extract to one module |
 | Functions share a common type they operate on (`ProgressStep`, `ChangeResult`) | Extract together |
 | Functions only called from one stage of a pipeline | Extract to that stage's module |
@@ -98,7 +98,7 @@ Before writing any code, map all top-level functions to logical groups. Good dec
 ### 5. New module naming conventions
 
 | Content | Module name pattern |
-|---------|---------------------|
+| --------- | --------------------- |
 | Private helpers for `foo.py` | `foo_sections.py` or `foo_helpers.py` |
 | Stage-specific logic extracted from `stages.py` | `stage_<topic>.py` |
 | Hierarchical save functions | `foo_hierarchy.py` |
@@ -256,7 +256,7 @@ wc -l scylla/e2e/stages.py scylla/e2e/run_report.py
 ### Files created/modified (Issue #1446 — update import sites approach)
 
 | File | Lines | Role |
-|------|-------|------|
+| ------ | ------- | ------ |
 | `llm_judge.py` (was 1,488) | 142 | Orchestrator: JudgeResult model + run_llm_judge() |
 | `build_pipeline.py` (new) | 548 | BuildPipelineResult + 13 pipeline functions |
 | `judge_context.py` (new) | 334 | 7 workspace context/assembly functions |
@@ -266,7 +266,7 @@ wc -l scylla/e2e/stages.py scylla/e2e/run_report.py
 ### Import sites updated (Issue #1446)
 
 | File | Import changed |
-|------|---------------|
+| ------ | --------------- |
 | `stages.py` | 5 lazy imports |
 | `stage_finalization.py` | 2 lazy imports |
 | `rerun_judges.py` | 1 lazy import |
@@ -279,7 +279,7 @@ wc -l scylla/e2e/stages.py scylla/e2e/run_report.py
 ### Test files updated (Issue #1446)
 
 | File | Changes |
-|------|---------|
+| ------ | --------- |
 | `test_llm_judge.py` | Import block rewritten (4 source modules), 12 patch targets updated |
 | `test_stages.py` | 10 patch targets updated |
 | `test_stage_finalization.py` | 2 patch targets updated |
@@ -290,7 +290,7 @@ wc -l scylla/e2e/stages.py scylla/e2e/run_report.py
 ### Files created in Issue #1359 / PR #1392 — re-export approach
 
 | New File | Lines | Extracted Content |
-|----------|-------|-------------------|
+| ---------- | ------- | ------------------- |
 | `scylla/e2e/stage_process_metrics.py` | 309 | `_get_diff_stat`, `_parse_diff_numstat_output`, `_load_process_metrics_from_run_result`, `_build_change_results`, `_build_progress_steps`, `_finalize_change_results`, `_finalize_progress_steps` |
 | `scylla/e2e/stage_finalization.py` | 438 | `stage_execute_judge`, `stage_finalize_run`, `stage_write_report`, `stage_cleanup_worktree` |
 | `scylla/e2e/run_report_sections.py` | 600 | All `_generate_*` and `_format_*` private helpers + `_get_workspace_files` |
@@ -299,26 +299,26 @@ wc -l scylla/e2e/stages.py scylla/e2e/run_report.py
 ### Before / After (Issue #1359 / PR #1392)
 
 | File | Before | After | Reduction |
-|------|--------|-------|-----------|
+| ------ | -------- | ------- | ----------- |
 | `stages.py` | 1,534 | 855 | −44% |
 | `run_report.py` | 1,385 | 289 | −79% |
 
 ### Ruff rules triggered
 
 | Rule | Context | Fix |
-|------|---------|-----|
+| ------ | --------- | ----- |
 | `F401` | Unused imports left after body deletion when using re-export approach | Remove the import |
 | `I001` | Import order changed by adding new re-exports | Ruff auto-fixes |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1446 - llm_judge.py decomposition (update import sites) | [notes.md](../references/notes.md) |
 | ProjectScylla | Issue #1359, PR #1392 - stages.py/run_report.py decomposition (re-export) | [notes.md](../references/notes.md) |

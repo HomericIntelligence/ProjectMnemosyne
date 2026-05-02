@@ -9,7 +9,7 @@ user-invocable: false
 # Skill: Backward Compatibility Removal
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-13 |
 | **Objective** | Remove deprecated `fallback` field compatibility code after migration to `is_valid` field |
 | **Outcome** | ✅ Successfully removed 135 lines of deprecated code and tests across 9 files |
@@ -230,7 +230,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Common Patterns
 

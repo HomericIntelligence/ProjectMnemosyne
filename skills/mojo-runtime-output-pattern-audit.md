@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Category** | tooling |
 | **Complexity** | Low |
 | **Risk** | Low (audit + one-line source fix + new enforcement script) |
@@ -88,7 +88,7 @@ and report each line only once (break after first matching pattern).
 Create `tests/scripts/test_check_runtime_output_patterns.py` with classes:
 
 | Test class | Coverage |
-|------------|----------|
+| ------------ | ---------- |
 | `TestBannedPatterns` | Each banned pattern; case-insensitivity; clean print not flagged; comment line not flagged |
 | `TestIsCommentLine` | Hash prefix detection; code lines; empty/blank lines |
 | `TestIsExcluded` | Each excluded dir; valid source dirs |
@@ -158,7 +158,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Matching `WARNING:` anywhere on the line (not just in print calls) | Initial regex `r'WARNING\s*:'` without requiring `print\(` prefix | Would flag comment lines like `# WARNING: this is fine` as violations | Scope pattern to `print\([^)]*WARNING\s*:` and add an explicit `is_comment_line` check |
 | Using a multiline regex to catch print() calls spanning lines | `re.compile(r'print\(.*WARNING.*\)', re.MULTILINE)` | Mojo print calls with banned prefixes are always single-line in practice; adds complexity for no gain | Keep patterns single-line — real-world violations are never multi-line print calls |
 | Reporting the same line multiple times when it matches multiple patterns | No dedup inside `find_violations` | A line like `print("WARNING: HACK: ...")` would appear twice | `break` after the first matching pattern; one violation entry per line |
@@ -196,5 +196,5 @@ BANNED_PATTERNS = [
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4776, issue #3704 | [notes.md](../../references/notes.md) |

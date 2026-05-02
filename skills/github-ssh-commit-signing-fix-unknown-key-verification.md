@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-02 |
 | **Objective** | Unblock a GitHub PR gated by required signed commits and fix `unknown_key` verification failures |
 | **Outcome** | Successful — a dedicated SSH signing key produced `verified: true` on GitHub for the amended PR commits |
@@ -110,7 +110,7 @@ gh api repos/<OWNER>/<REPO>/commits/$(git rev-parse HEAD) --jq '.commit.verifica
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | Reused an existing SSH key that was not yet registered on GitHub as a signing key | GitHub saw the SSH signature but returned `reason: "unknown_key"` because the public key was not mapped to a signing key on the account at verification time | GitHub commit verification depends on the exact public key being uploaded as a **signing** key, not just any SSH key |
 | Attempt 2 | Ran `git commit -S` in an environment that defaulted to GPG signing | The shell tried to invoke `gpg`, which was unavailable, so the signed commit failed before it could be written | For SSH signing, set `gpg.format=ssh` and point `user.signingkey` at the `.pub` key |
 | Attempt 3 | Tried to update repo-local git config inside a sandboxed worktree whose git metadata lived outside the writable root | Git could not lock the external `.git/config` path, so config writes failed | Use global config outside the sandbox or a one-shot `git -c ... commit -S` invocation when repo-local config is blocked |
@@ -159,5 +159,5 @@ git config --get commit.gpgsign
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Radiance | PR #33 signed-commit remediation | Re-signed two commits on `codex/radiance-docs-architecture`, verified them with GitHub commit API, and unblocked the signed-commit rule |

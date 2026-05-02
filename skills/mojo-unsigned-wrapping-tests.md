@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | mojo-unsigned-wrapping-tests |
 | **Category** | testing |
 | **Issue** | #3178 (ProjectOdyssey) |
@@ -63,7 +63,7 @@ user-invocable: false
 ### Type Boundaries
 
 | Type | MAX | Overflow result | Underflow result |
-|------|-----|-----------------|-----------------|
+| ------ | ----- | ----------------- | ----------------- |
 | UInt8 | 255 | 0 | 255 |
 | UInt16 | 65535 | 0 | 65535 |
 | UInt32 | 4294967295 | 0 | 4294967295 |
@@ -72,7 +72,7 @@ user-invocable: false
 ### Mid-Range Overflow Examples
 
 | Type | Expression | Result |
-|------|-----------|--------|
+| ------ | ----------- | -------- |
 | UInt8 | 250 + 10 | 4 |
 | UInt16 | 65530 + 10 | 4 |
 | UInt32 | 4294967290 + 10 | 4 |
@@ -81,7 +81,7 @@ user-invocable: false
 ### Multiply Overflow
 
 | Expression | Result | Explanation |
-|-----------|--------|-------------|
+| ----------- | -------- | ------------- |
 | UInt8(128) * UInt8(2) | 0 | 256 mod 256 == 0 |
 
 ### Pre-commit output (all passing)
@@ -99,6 +99,6 @@ Fix Mixed Line Endings...................................................Passed
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running mojo directly | `pixi run mojo run -c 'fn main(): ...'` | GLIBC version mismatch on host (requires GLIBC_2.32+, host has older) | Mojo tests run in Docker/CI only; can't verify wrapping semantics locally |
 | Importing assert helpers | Considered using `assert_equal_int` from `tests/shared/conftest` | File uses standalone `fn` functions with no imports — adding imports would change the file's style | Match the existing file's import-free pattern exactly |

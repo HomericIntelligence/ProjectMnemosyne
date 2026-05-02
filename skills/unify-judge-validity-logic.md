@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-09 |
 | **Objective** | Fix E2E judge data quality bugs by unifying validity checks and ensuring `is_valid` is the single source of truth |
 | **Outcome** | ✅ Successfully fixed 4 critical bugs, added comprehensive tests, all 218 tests passing |
@@ -137,7 +137,7 @@ valid = [j for j in judges if j.score is not None and j.is_valid]
 **Test Coverage Required**:
 
 | Test | What It Verifies |
-|------|------------------|
+| ------ | ------------------ |
 | `test_parse_judge_response_raises_on_missing_score` | ValueError when JSON has no `score` field |
 | `test_compute_judge_consensus_excludes_invalid_judges` | Only valid judges in consensus (check average) |
 | `test_has_valid_judge_result_rejects_invalid` | `is_valid=False` → False |
@@ -180,14 +180,14 @@ assert _has_valid_judge_result(run_dir)  # WORKS!
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified
 
 | File | Changes | Lines |
-|------|---------|-------|
+| ------ | --------- | ------- |
 | `scylla/e2e/llm_judge.py` | Validate `score` field | +6 |
 | `scylla/e2e/rerun_judges.py` | Unify validity checks (2 functions) | +11 -6 |
 | `scylla/e2e/subtest_executor.py` | Filter invalid + validate results | +13 -2 |

@@ -14,7 +14,7 @@ complementing the existing pre-commit hook with full-corpus validation in CI.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-03-07 | Add `Validate config schemas` step to `.github/workflows/test.yml` | PR #1466 merged; schema drift now caught in CI even if pre-commit skipped |
 
 ## When to Use
@@ -102,7 +102,7 @@ pixi run python scripts/validate_config_schemas.py --verbose \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Edit Tool Hook Workaround
 
@@ -119,7 +119,7 @@ open('.github/workflows/test.yml', 'w').write(content)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1443 — follow-up from #1382 | `validate_config_schemas.py` + pre-commit hook already existed; CI step was the only missing piece |
 
 ## References

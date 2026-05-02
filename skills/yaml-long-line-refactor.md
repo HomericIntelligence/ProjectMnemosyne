@@ -15,7 +15,7 @@ user-invocable: false
 **Outcome:** ✅ Success
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | **Objective** | Fix yamllint warnings for lines exceeding 120 characters |
 | **Files Modified** | 2 (docs/arxiv/dryrun/raw/rubric.yaml, tests/fixtures/tests/test-001/expected/rubric.yaml) |
 | **Warnings Eliminated** | 2 (line length: 228 → 3 lines under 120 chars each) |
@@ -54,7 +54,7 @@ yamllint path/to/file.yaml
 **Decision Matrix:**
 
 | Scalar Type | Symbol | Behavior | Use Case |
-|-------------|--------|----------|----------|
+| ------------- | -------- | ---------- | ---------- |
 | **Folded** | `>` | Joins lines with spaces (single paragraph) | Long descriptions, error messages, documentation |
 | **Literal** | `\|` | Preserves line breaks (multi-line text) | Code blocks, formatted text, poetry |
 
@@ -136,7 +136,7 @@ gh pr merge --auto --rebase
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -144,7 +144,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

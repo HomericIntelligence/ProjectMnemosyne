@@ -11,7 +11,7 @@ user-invocable: false
 # Pygrep Artifact Detection Pre-commit Hook
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-03 |
 | **Objective** | Prevent regression of Mojo migration docstring artifacts in `scylla/` that survived two manual audits and one prior fix attempt |
 | **Outcome** | ✅ Hook implemented, 12 unit tests added, full suite passes (4011+12), PR #1401 merged |
@@ -134,12 +134,12 @@ This ensures the hook doesn't immediately fail on the codebase it's being added 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Hook language | `pygrep` |
 | Entry pattern | `(Mojo equivalents\|no Mojo)` |
 | File filter | `^scylla/.*\.py$` |

@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-04-25 |
 | Objective | Fix gitleaks SARIF parsing and security-report aggregator so required check passes |
 | Outcome | verified-local — fix committed to ProjectKeystone PR #451; upstream gitleaks job passed (0 secrets with allowlist) |
@@ -136,7 +136,7 @@ grep -c 'grep.*"❌"' .github/workflows/security-scan.yml
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|---------------|---------------|----------------|
+| --------- | --------------- | --------------- | ---------------- |
 | 1 | `grep -q '"results":\s*\[\]' results.sarif` | POSIX `grep` treats `\s` as a literal backslash-s, not whitespace; never matches even when results array is empty | Always use `jq` for JSON/SARIF parsing; never use POSIX grep for structured data |
 | 2 | `grep -q "❌" report.md` as the CI failure gate | Any ❌ symbol anywhere in the report triggers failure, including the false-positive status written by Bug 1; creates a self-reinforcing failure loop | Use specific line-prefix patterns (`^- ❌ Secret Scanning:`) to target real failures only |
 | 3 | Fixing Bug 1 alone without .gitleaks.toml | After fixing the parser, gitleaks correctly reported 5 findings — all in docs/k8s/example files with placeholder credentials | Fix the parser first (to see real findings), then add the allowlist; do both in the same PR |
@@ -167,7 +167,7 @@ paths = [
 **Extend the paths list** for your repo's actual false-positive files. Common candidates:
 
 | File Pattern | Why Gitleaks Flags It |
-|---|---|
+| --- | --- |
 | `k8s/secrets.yaml` | Base64 TLS cert placeholder or `REPLACE_ME` credential |
 | `k8s/*-security.yaml` | `prometheus:PASSWORD` in curl example metrics endpoint |
 | `docs/KUBERNETES_DEPLOYMENT.md` | `-----BEGIN PRIVATE KEY-----` comment placeholder |

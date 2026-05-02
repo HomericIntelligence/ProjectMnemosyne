@@ -266,7 +266,7 @@ EOF
 **Sections moved to `.claude/shared/` (move+link session):**
 
 | New File | Content Moved From | Lines Saved |
-|----------|-------------------|-------------|
+| ---------- | ------------------- | ------------- |
 | `.claude/shared/output-style-guidelines.md` | Output Style Guidelines section | ~144 lines |
 | `.claude/shared/tool-use-optimization.md` | Tool Use Optimization + Agentic Loop Patterns | ~210 lines |
 

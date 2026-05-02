@@ -13,7 +13,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | What was this skill developed to accomplish? |
 | **Outcome** | Was it successful? Operational? Deprecated? |
@@ -47,14 +47,14 @@ command --flag value
 Document what was tried but didn't work:
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | Describe the approach | Why did it fail? | What did you learn? |
 | Attempt 2 | Describe the approach | Why did it fail? | What did you learn? |
 
 If no failures occurred, write:
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked first try | N/A | Solution was straightforward |
 
 ## Results & Parameters
@@ -81,7 +81,7 @@ Describe what successful execution looks like:
 Document where this skill has been tested:
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectName | PR #XXX or brief context | [notes.md](../skills/skill-name.notes.md) if additional context needed |
 
 ## References

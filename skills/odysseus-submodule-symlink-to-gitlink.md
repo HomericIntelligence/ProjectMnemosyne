@@ -15,7 +15,7 @@ tags: [submodule, symlink, gitlink, git, meta-repo, gitmodules]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-29 |
 | **Objective** | Fix submodules that were absolute-path symlinks (mode 120000) pointing to local paths instead of real git submodules (mode 160000) |
 | **Outcome** | Successful. PR #66 converted all 11 symlinks to real submodules cloned from `https://github.com/HomericIntelligence/<RepoName>.git`, pinned to main HEAD SHA, normalized `.gitmodules` to `HomericIntelligence` URL casing and 4-space indentation. |
@@ -105,7 +105,7 @@ git commit -m "fix(submodules): convert symlinks to real gitlinks, normalize .gi
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | git submodule add before git rm | Attempted `git submodule add` with the symlink still on disk | `git submodule add` fails if the destination path already exists, even as a symlink | Always `git rm` the symlink first; confirm the directory is gone from disk before running `git submodule add` |
 | Relative symlinks in .gitmodules url | Left the original `url = ../AchaeanFleet` relative paths in .gitmodules after conversion | Relative URLs in `.gitmodules` resolve relative to the remote origin, not the local filesystem; CI failed to clone submodules | Use full `https://github.com/OrgName/RepoName.git` absolute URLs in every `.gitmodules` entry |
 | Wrong URL casing (`homeric-intelligence` vs `HomericIntelligence`) | Used lowercase or hyphenated org name in `.gitmodules` url | Submodule clone fails silently or resolves to wrong repo; breaks `git submodule update --init` on case-sensitive filesystems | Always verify the exact org/repo casing on GitHub and use the canonical form in every `.gitmodules` entry |
@@ -165,5 +165,5 @@ issue_39: "gitmodules URL casing inconsistency (homericintelligence vs HomericIn
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/Odysseus | PR #66 (symlink conversion) — 2026-03-29 session | 11 symlinks converted, 14 .gitmodules entries normalized |

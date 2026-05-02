@@ -17,7 +17,7 @@ Systematic process for auditing and completing scaffolded repositories: adding j
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-15 |
 | Objective | Make two scaffolded Docker/GitOps repos production-ready after an audit revealed missing files, bugs, hardcoded values, and inconsistencies |
 | Outcome | Success — all 7 new files created, all 11 modifications made, both repos committed and pushed to GitHub |
@@ -328,7 +328,7 @@ Group changes by repo and commit each separately. Include:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `replace_all: true` on compose file for agent-server-mount anchor | Tried to replace all occurrences of the hardcoded path at once | The YAML anchor line and the individual service volume lines had different surrounding context | Use `replace_all: true` only when all occurrences have identical surrounding context; otherwise use targeted edits |
 | Delegating file reads to a subagent | Asked Explore agent to read files and return exact contents | Agent returned summaries and paraphrases, not exact file content | For files that will be edited, always use the Read tool directly — never rely on an agent's description of content |
 | Assuming the `python-repo-modernization` skill in ProjectMnemosyne represented the current validation format | Copied its flat `plugin.json` structure (no `.claude-plugin/` directory) | The validator (`validate_plugins.py`) requires `.claude-plugin/plugin.json` — the flat format would fail CI | Always read `scripts/validate_plugins.py` to understand the exact expected structure before creating skill files |
@@ -338,7 +338,7 @@ Group changes by repo and commit each separately. Include:
 ### Files created (7 total across 2 repos)
 
 | Repo | File | Purpose |
-|------|------|---------|
+| ------ | ------ | --------- |
 | AchaeanFleet | `justfile` | Task runner with build, test, push, compose recipes |
 | AchaeanFleet | `pixi.toml` | just dependency via conda-forge |
 | AchaeanFleet | `scripts/build-all.sh` | Build 3 bases then 9 vessels in dependency order |
@@ -350,7 +350,7 @@ Group changes by repo and commit each separately. Include:
 ### Files modified (11 total)
 
 | Repo | File | Change |
-|------|------|--------|
+| ------ | ------ | -------- |
 | AchaeanFleet | `compose/.env.example` | Added `AGENT_SERVER_JS` variable |
 | AchaeanFleet | `compose/docker-compose.claude-only.yml` | Parameterized 3 agent-server.js mounts |
 | AchaeanFleet | `compose/docker-compose.mesh.yml` | Parameterized YAML anchor |
@@ -359,7 +359,7 @@ Group changes by repo and commit each separately. Include:
 | Myrmidons | `scripts/lib/api.sh` | All curl via `_aim_curl` with `--max-time 10` + HTTP error logging |
 | Myrmidons | `scripts/lib/reconcile.sh` | Fixed HIBERNATE syntax; added `normalize_path()`; added tag drift |
 | Myrmidons | `scripts/export.sh` | `program_to_image()` mapping; YAML string quoting via `jq -Rr` |
-| Myrmidons | `scripts/apply.sh` | Replaced `|| true` with error tracking; passed tags to `compute_drift()` |
+| Myrmidons | `scripts/apply.sh` | Replaced `\|\| true` with error tracking; passed tags to `compute_drift()` |
 | Myrmidons | `hooks/pre-commit` | Changed missing-yq from `exit 0` to `exit 1` |
 | Myrmidons | `agents/_templates/*.yaml` | Added clarifying comments about docker block |
 
@@ -388,7 +388,7 @@ For **GitOps/provisioning** repos:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | AchaeanFleet | Post-scaffold flesh-out — Docker image infrastructure | [notes.md](../../references/notes.md) |
 | Myrmidons | Post-scaffold flesh-out — GitOps agent provisioning | [notes.md](../../references/notes.md) |
 

@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill name** | mojo-shared-test-helper-extraction |
 | **Category** | testing |
 | **Trigger** | Parametric helper duplicated across Mojo test files or at risk of duplication after file splits |
@@ -153,7 +153,7 @@ This pattern is already established for all other shared assertion helpers in th
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Put helper directly in `conftest.mojo` | Copy function body into `tests/shared/conftest.mojo` | Mojo v0.26.1 does not support generic functions shared across test files via conftest directly; compile errors | Always put parametric helpers in the library module (`shared/testing/`), then re-export |
 | Duplicate helper in each split file | Leave local copy in part1 and copy to part2/part3 | Triplication creates drift risk — any fix must be applied 3× | Sharing is better; the library approach is the right fix |
 
@@ -162,7 +162,7 @@ This pattern is already established for all other shared assertion helpers in th
 ### Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `shared/testing/assertions.mojo` | Add canonical `fn assert_matrices_equal[dtype: DType]` + docstring entry |
 | `tests/shared/conftest.mojo` | Add `assert_matrices_equal` to re-export import list |
 | `tests/shared/core/test_matmul_part1.mojo` | Remove 84-line local definition + section comment; add import |

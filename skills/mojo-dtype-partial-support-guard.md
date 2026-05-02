@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-05 |
 | **Category** | debugging |
 | **Objective** | Detect when a Mojo DType is in the type system but not fully supported at runtime |
@@ -72,7 +72,7 @@ The dtype test immediately before the failure is the culprit.
 ### 2. Distinguish Full vs Partial Support
 
 | Check | Full Support | Partial Support |
-|-------|-------------|-----------------|
+| ------- | ------------- | ----------------- |
 | `DType.bfloat16` compiles | ✅ | ✅ |
 | `tensor.dtype() == DType.bfloat16` | ✅ | ✅ |
 | `tensor._set_float64(i, 1.0)` | ✅ stores 1.0 | ❌ stores 0.0 |
@@ -168,7 +168,7 @@ Do NOT use `git pull --rebase` when the remote was force-pushed — use `git reb
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Enable test with real assertions | Uncomment BF16 test body assuming native DType support = full runtime support | `_set_float64`/`_get_float64` don't handle bfloat16 storage, silently write zeros | Type existing in DType enum ≠ full runtime I/O support across all paths |
 | Assuming CI failures were pre-existing | Didn't check main branch CI first | Main branch had all tests passing; failures were introduced by the PR | Always compare failing CI jobs against recent main before concluding pre-existing |
 | Force-push to recover from remote divergence | Not attempted (correctly avoided) | Would overwrite remote history | Use `git rebase origin/<branch>` then regular push |

@@ -18,7 +18,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Fix CI pre-commit failure where adding new conditional blocks to `_restore_run_context()` pushed cyclomatic complexity from ~8 to 11, exceeding the C901 limit of 10 |
 | **Outcome** | Successful — extracted two helper functions, CC dropped below 10, all CI checks pass |
@@ -80,7 +80,7 @@ def _restore_run_result(ctx, state): # CC=2 (separate function)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Inline all restore logic in one function | Added judgment + run_result restore as new `if` blocks in `_restore_run_context()` | CC went from ~8 to 11, exceeding C901 limit of 10 | Always check CC budget before adding conditional blocks to existing functions near the limit |
 | Using `# noqa: C901` suppression | Considered suppressing the warning | ProjectScylla prohibits `--no-verify` and suppression of lint rules | Extract-method is the correct fix, not suppression |
 
@@ -89,7 +89,7 @@ def _restore_run_result(ctx, state): # CC=2 (separate function)
 ### CC Budget Rule of Thumb
 
 | CC Score | Status | Action |
-|----------|--------|--------|
+| ---------- | -------- | -------- |
 | 1-7 | Safe | Can add 1-3 branches freely |
 | 8-9 | Warning zone | One more `if/else` block hits the limit |
 | 10 | At limit | Any new branch will fail CI |
@@ -121,5 +121,5 @@ def _restore_judgment(ctx: Any) -> None:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1546 CI fix | Extracted `_restore_judgment()` and `_restore_run_result()` from `_restore_run_context()`, CC 11 -> ~7 |

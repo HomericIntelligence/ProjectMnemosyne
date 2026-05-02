@@ -10,7 +10,7 @@ user-invocable: false
 # Investigate Test Failures - Framework vs Model Issues
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-12 |
 | **Objective** | Analyze failed test runs in ~/testruns/haiku to determine root cause: framework bug or model hallucination |
 | **Outcome** | ✅ SUCCESS - Identified model-level hallucination issue, ruled out framework bugs, filed upstream bug report |
@@ -176,7 +176,7 @@ gh issue comment <issue_number> --repo anthropics/claude-code \
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |

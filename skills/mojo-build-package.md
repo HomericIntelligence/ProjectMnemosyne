@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Build compiled Mojo packages for distribution and reuse. - Creating distributable libraries - Packaging phase of development |
 | Outcome | Operational |
@@ -56,7 +56,7 @@ mojo package src/tensor -o packages/tensor.mojopkg
 ## Error Handling
 
 | Error | Cause | Solution |
-|-------|-------|----------|
+| ------- | ------- | ---------- |
 | `Missing __init__.mojo` | No package entry point | Add `__init__.mojo` to package dir |
 | `Circular dependency` | Modules depend on each other | Refactor to break cycle |
 | `Export not found` | Missing from `__all__` | Add name to `__all__` list |
@@ -65,7 +65,7 @@ mojo package src/tensor -o packages/tensor.mojopkg
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

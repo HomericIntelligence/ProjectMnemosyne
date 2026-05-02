@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Category** | tooling |
 | **Complexity** | Low |
 | **Risk** | Low (read-only audit first, removal only after confirmation) |
@@ -118,7 +118,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Include `migrate_odyssey_skills.py` in "active" category | Assumed cross-project migration scripts might still be needed | Script targets a different repo (ProjectMnemosyne) with no callers in CI, justfile, or README | Always grep for callers before assuming a script is active; cross-project tools with no callers are stale |
 | Remove `bisect_heap_test.py` without checking its pair | Would have left `run_bisect_heap.sh` referencing a deleted file | `run_bisect_heap.sh` copies `bisect_heap_test.py` to /tmp | Always grep within the removal candidate set itself — scripts can reference each other |
 | Skip README update | Only remove files, skip documentation | `scripts/README.md` overview mentioned "Migration utilities" which became inaccurate after removal | Always update README when removing scripts; the overview bullet list needs to stay accurate |

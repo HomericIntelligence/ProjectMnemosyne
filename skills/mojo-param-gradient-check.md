@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Layer** | Normalization (batch_norm2d) |
 | **Parameters tested** | grad_gamma (index 1), grad_beta (index 2) |
 | **Method** | Central finite differences on the parameter tensor |
@@ -100,7 +100,7 @@ print("test_batch_norm2d_backward_gradient_beta")
 ## Key Parameters
 
 | Parameter | Value | Rationale |
-|-----------|-------|-----------|
+| ----------- | ------- | ----------- |
 | `epsilon` (finite diff) | `1e-3` | Matches existing grad_input test; stable for float32 |
 | `rtol` | `1e-2` (2%) | Batch norm compounding across normalize/scale/shift |
 | `atol` | `1e-4` | Handles near-zero gradients in outer channels |
@@ -110,7 +110,7 @@ print("test_batch_norm2d_backward_gradient_beta")
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `grad_output = ones_like(output)` | Standard all-ones upstream gradient | For batch norm, `sum(x_norm)=0` by construction, so `grad_input` is analytically zero — the test would pass vacuously even with wrong code | Always use non-uniform `grad_output` for batch norm gradient tests |
 | Running mojo tests locally | `pixi run mojo test tests/...` | GLIBC version mismatch — host has GLIBC 2.31, mojo requires 2.32+ | Mojo tests only run inside the Docker container; rely on pre-commit hooks and CI for validation |
 | Perturbing `x` to test `grad_gamma` | Used `compute_numerical_gradient` on `x` with the `gamma`-perturbing closure | Wrong: the numerical gradient shape would be `x.shape` not `gamma.shape` | Each parameter's gradient must be validated by perturbing that specific parameter, not the input |

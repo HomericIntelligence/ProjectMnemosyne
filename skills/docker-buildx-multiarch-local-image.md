@@ -15,7 +15,7 @@ tags: [docker, buildx, multi-arch, oci, local-image, base-image, github-actions,
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-24 |
 | **Objective** | Chain two multi-arch buildx builds without a registry when the second depends on the first |
 | **Outcome** | OCI layout directory export + build-contexts reference pattern resolves pull access denied; CI passed |
@@ -109,7 +109,7 @@ tags: [docker, buildx, multi-arch, oci, local-image, base-image, github-actions,
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `type=oci,dest=/tmp/foo.tar` + `oci-layout:///tmp/foo.tar` | Added `.tar` extension to dest and oci-layout path, thinking it referenced the archive | `oci-layout://` requires a directory; `.tar` creates a single archive file — fails with `not a directory` | Omit `.tar` extension entirely so buildx saves an OCI layout directory |
 | QEMU step missing, arm64 check with `\|\| true` | Forgot `docker/setup-qemu-action`; `RUN goose --version \|\| true` passed silently | Without QEMU, arm64 binary invocations fail silently when guarded by `\|\| true` | Set up QEMU before buildx; remove `\|\| true` once QEMU is confirmed present |
 | `RUN goose --version \|\| true` with QEMU present | Kept `\|\| true` even after fixing QEMU ordering | `\|\| true` masks all failures regardless of QEMU; real binary errors won't fail the build | Always remove `\|\| true` from version/sanity checks after confirming QEMU is set up |
@@ -123,7 +123,7 @@ tags: [docker, buildx, multi-arch, oci, local-image, base-image, github-actions,
 ### OCI Layout: Directory vs Tarball
 
 | `dest=` value | Result on disk | `oci-layout://` compatible? |
-|---------------|----------------|------------------------------|
+| --------------- | ---------------- | ------------------------------ |
 | `/tmp/foo.tar` | Single `.tar` archive file | No — fails with "not a directory" |
 | `/tmp/foo` | OCI layout directory (`index.json`, `blobs/`, `oci-layout`) | Yes |
 
@@ -144,7 +144,7 @@ tags: [docker, buildx, multi-arch, oci, local-image, base-image, github-actions,
 ### Driver Comparison
 
 | Driver | Multi-Arch | Shares Daemon Store | Best For |
-|--------|-----------|---------------------|----------|
+| -------- | ----------- | --------------------- | ---------- |
 | `docker-container` (default) | Yes | No | Multi-arch builds, caching, push to registry |
 | `docker` | No | Yes | Single-arch builds, load into local daemon |
 
@@ -193,6 +193,6 @@ jobs:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | AchaeanFleet | CI repair — goose multi-arch vessel build failing with pull access denied | 2026-04-23; OCI tarball pattern resolved the issue, CI passed |
 | AchaeanFleet | CI repair — build-goose-multiarch job; oci-layout "not a directory" + QEMU ordering | 2026-04-24; directory (no .tar) + QEMU-before-buildx pattern resolved all failures, CI passed |

@@ -13,7 +13,7 @@ Analyze and report code complexity metrics.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Identify complex code for refactoring | Maintainable, readable codebase |
 
 ## When to Use
@@ -60,7 +60,7 @@ lizard path/to/code/ -l python
 **Cyclomatic Complexity (CC)**
 
 | CC Range | Assessment | Action |
-|----------|------------|--------|
+| ---------- | ------------ | -------- |
 | 1-10 | Simple | Keep as is |
 | 11-20 | Moderate | Consider refactoring |
 | 21+ | Complex | Needs refactoring |
@@ -68,7 +68,7 @@ lizard path/to/code/ -l python
 **Nesting Depth**
 
 | Depth | Assessment | Action |
-|-------|------------|--------|
+| ------- | ------------ | -------- |
 | 1-3 | Good | Keep as is |
 | 4-5 | High | Consider flattening |
 | 6+ | Very High | Refactor required |
@@ -76,7 +76,7 @@ lizard path/to/code/ -l python
 **Function Length**
 
 | LOC | Assessment | Action |
-|-----|------------|--------|
+| ----- | ------------ | -------- |
 | 1-20 | Good | Keep as is |
 | 21-50 | Acceptable | Monitor |
 | 51+ | Too long | Consider splitting |
@@ -134,12 +134,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Script not found | Install radon: `pip install radon` |
 | Syntax errors | Fix code syntax before analyzing |
 | No output | Verify source files exist |

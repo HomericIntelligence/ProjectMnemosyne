@@ -16,7 +16,7 @@ Prevent silent CI false-passes when test file discovery returns zero results in 
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-03-07 | Fix #3356: merged `Autograd & Benchmarking` CI entry silently passes with 0 tests if subdirectory is renamed | Two-part fix: exit guard in justfile + split CI matrix entry |
 
 ## When to Use
@@ -104,7 +104,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | No attempts failed | Both fixes were applied directly based on issue plan | N/A | Reading the issue comments/plan first gives all necessary context |
 | Checked if `continue-on-error` needed updating | Searched for `Benchmarking` reference in workflow | The existing condition already referenced `'Benchmarking'` by name, which matches the new standalone entry | Always verify downstream references when renaming matrix entries |
 
@@ -122,5 +122,5 @@ gh pr merge --auto --rebase
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3356, PR #3996 | [notes.md](../../references/notes.md) |

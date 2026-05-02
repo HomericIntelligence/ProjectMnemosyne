@@ -11,7 +11,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2025-12-31 |
 | **Objective** | Fix CI failures from partially commented placeholder code and dtype migration assertion mismatches |
 | **Outcome** | Success - All 58 CI checks passing |
@@ -109,7 +109,7 @@ git push --force-with-lease origin <branch>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

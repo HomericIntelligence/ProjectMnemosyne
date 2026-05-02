@@ -118,7 +118,7 @@ for i, f in enumerate(files_sorted):
 ## User Decisions
 
 | Question | Answer |
-|----------|--------|
+| ---------- | -------- |
 | Backdate commits? | Yes (Recommended) |
 | Include low-activity days (Dec 16, 13 commits)? | Yes |
 | AI notice placement? | Both top AND bottom |

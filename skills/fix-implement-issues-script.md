@@ -9,7 +9,7 @@ user-invocable: false
 # Fix implement_issues.py Automation Pipeline
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-14 |
 | **Objective** | Fix failing automation pipeline for GitHub issue implementation |
 | **Outcome** | ✅ Fully robust pipeline with fallback logic |
@@ -153,7 +153,7 @@ pr_data = json.loads(result.stdout)  # Must parse stdout
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

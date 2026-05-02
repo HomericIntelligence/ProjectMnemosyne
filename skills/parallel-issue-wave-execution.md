@@ -25,7 +25,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-04-26 |
 | Version | 2.5.0 |
 | Objective | Implement 20-35 issues per repo in parallel waves using myrmidon swarm agents, with pre-verification and CI-first strategy |
@@ -268,7 +268,7 @@ file overlap and can all be dispatched in a single message. Saves ~5 min wall cl
 
 **Issue bundles for shared config files:**
 Multiple issues touching the same config file (e.g. #22 remove pixi.lock, #28 add entries,
-# 30 add .env) should be bundled into ONE agent/PR — the file-level conflict is unavoidable anyway.
+# 30 add .env) should be bundled into ONE agent/PR — the file-level conflict is unavoidable anyway
 
 ## Critical Pitfalls
 
@@ -500,7 +500,7 @@ print(f'{len(pending)} PRs with pending/in-progress checks')
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Agent Edit/Write in worktree | Agent used Edit and Write tools in its worktree to modify CI workflow files | Permission denied errors from the tool sandbox on some worktree paths | Use bash-based file writing (heredoc, python inline) as fallback when Edit/Write fail in worktrees |
 | Implementing already-resolved issues | Launched agents for issues that were already fixed (justfile existed, pytest already in CI, etc.) | Wasted agent time discovering the issue was moot | Always pre-verify issue state before launching agents; close resolved issues first |
 | Linter reverting file changes | Modified skill files (version bumps, content merges) were silently reverted to git HEAD state | A pre-commit hook or linter was running `git checkout` on tracked files that had been modified | Check for hooks that auto-revert changes; stage changes immediately after editing |
@@ -522,7 +522,7 @@ print(f'{len(pending)} PRs with pending/in-progress checks')
 ### Wave Sizing
 
 | Run | Wave | Issues | Result |
-|-----|------|--------|--------|
+| ----- | ------ | -------- | -------- |
 | ProjectScylla (Mar 2026) | 1-8 | 35 total | 35 PRs created, 31 merged, 4 superseded |
 | ProjectScylla (Mar 2026) | Fix pass | 4 failing + 1 stale | All resolved |
 | ProjectMnemosyne (Apr 2026) | Wave 1 | 7 agents (independent files) | 7 PRs, all CI passing |
@@ -542,7 +542,7 @@ print(f'{len(pending)} PRs with pending/in-progress checks')
 Use these patterns to immediately classify an issue as HARD (defer to human review, do not send to wave agent):
 
 | Pattern | Trigger Keywords | Why It's HARD |
-|---------|-----------------|---------------|
+| --------- | ----------------- | --------------- |
 | **NATS/JetStream integration** | "JetStream", "real NATS server", "service container", "NATS integration test", "TransparentBridge wiring" | Requires a live NATS server via service containers in CI; nats.c JetStream subscription loops are complex; embedded NATS server in C++ tests is non-trivial. An agent cannot implement this without the full NATS infrastructure present. |
 | **TSan + lock-free queue libraries** | "TSan", "ThreadSanitizer", "concurrentqueue", "moodycamel", "lock-free" (combined with TSan) | Lock-free data structures like `concurrentqueue` use relaxed atomics by design and trigger TSan false positives. These cannot be silenced without replacing the library. Issues like "Add TSan test run for X" where X uses these libraries are fundamentally blocked. |
 | **Circular CMake dependency refactors** | "circular dependency", "CMake target graph", "link dependency cycle" (e.g., `keystone_core ↔ keystone_concurrency`) | Breaking circular link dependencies between CMake targets requires architectural changes to the entire target graph. An agent without full build system understanding can easily break other targets or create new cycles. |
@@ -553,7 +553,7 @@ Use these patterns to immediately classify an issue as HARD (defer to human revi
 ### Optimal Batch Sizes
 
 | Method | Batch Size | Notes |
-|--------|-----------|-------|
+| -------- | ----------- | ------- |
 | Direct worktrees | 2 issues | Best balance of parallelism vs context |
 | Agent(isolation="worktree") EASY | 7 issues per wave | Fully parallel, tested successfully |
 | Agent(isolation="worktree") MEDIUM (C++) | 3 issues per wave | C++ compile times mean agents may time out if forced to rebuild from scratch at 5+ agents; confirmed across 9 MEDIUM waves in ProjectKeystone |
@@ -671,7 +671,7 @@ gh pr close <old-pr> --comment "Superseded by #<new-pr>"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | 35 LOW issues, 8 parallel waves, March 2026 | [notes.md](parallel-issue-wave-execution.notes.md) |
 | ProjectScylla | 14 LOW issues, 4 parallel waves, March 2026 (second run) | pyproject.toml change required pixi.lock SHA update; nested worktree carried stale commits |
 | ProjectMnemosyne | 27 open issues triaged, 14 PRs in 2 waves, 6 closed directly, April 2026 | CI gate: pytest + validate_plugins.py (39 tests, 953 skills) |

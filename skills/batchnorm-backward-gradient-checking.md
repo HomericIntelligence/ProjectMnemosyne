@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | Language | Mojo |
 | Layer Type | Batch Normalization (2D) |
 | Pattern | Finite-difference gradient checking |
@@ -132,7 +132,7 @@ assert_gradients_close(grad_input, numerical_grad, rtol=tolerance, atol=toleranc
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `ones_like(output)` as grad_output | Used `var grad_output = ones_like(output)` identical to conv2d pattern | BatchNorm normalizes so `sum(x_norm) ≈ 0` per channel; `dot(ones, x_norm) ≈ 0`; analytical grad ≈ 0 but numerical gives ~0.009 | Any layer with zero-mean output requires non-uniform grad_output |
 | Reusing conv2d forward closure directly | `fn forward(x): return batch_norm2d(x, ...)` returning full tensor | `compute_numerical_gradient` sums all output elements when output is non-scalar, which is equivalent to `ones` upstream — same cancellation problem | The closure must compute the scalar loss explicitly |
 | `tolerance=1e-2` (1%) | Tried tighter tolerance matching linear layer | BatchNorm accumulates normalization errors across N×H×W elements; 6-7% errors are common in practice (same finding as conv2d, issue #3090) | Always use 10% tolerance for normalization layers |

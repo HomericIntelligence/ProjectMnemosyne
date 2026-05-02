@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Adding new figures to an existing Altair pipeline for a multi-experiment dataset (47 tests, ~1196 runs) while gracefully handling degenerate cases (single model, single judge, N=1 runs/subtest) |
 | **Solution** | Guard-set pattern for conditional generation + task-analysis module with 5 new figures + Kendall's tau for rank stability |
 | **Key Insight** | Data-dependent guards (detecting model/judge count at generation time) are more robust than hardcoded exclusion lists |
@@ -99,7 +99,7 @@ full_ablation_experiments = list(max_subtests[max_subtests > 3].index)
 ### Figures Created in This Session
 
 | Figure | Type | Purpose |
-|--------|------|---------|
+| -------- | ------ | --------- |
 | fig35 | Histogram | Task difficulty distribution (per-experiment pass rates) |
 | fig36 | Heatmap | Tier rank stability (rank 1=best per experiment, sorted by difficulty) |
 | fig37 | Scatter | Task complexity vs tier differentiation (mean pass rate vs std) |
@@ -109,7 +109,7 @@ full_ablation_experiments = list(max_subtests[max_subtests > 3].index)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Kendall's tau test with p < 0.01 | Used strict threshold in unit test for perfect correlation | With n=5 samples, `scipy.stats.kendalltau` returns p=0.017 even for perfect correlation (exact test, not asymptotic) | Use p < 0.05 for small-sample rank correlation tests; Kendall's tau p-values are larger than Spearman's for small N |
 
 ## Results & Parameters
@@ -143,7 +143,7 @@ Figures registered: 43 total (38 existing + 5 new)
 ### Key Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/analysis/figures/task_analysis.py` | NEW — fig35, fig36, fig37, fig38 |
 | `scylla/analysis/figures/cost_analysis.py` | Added fig39_cost_scaling_with_difficulty |
 | `scylla/analysis/stats.py` | Added kendall_tau() |

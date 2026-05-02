@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Name | mojo-run-epoch-with-batches |
 | Category | testing |
 | Description | Pattern for testing Mojo epoch-runner functions that accept DataLoader + step_fn |
@@ -91,13 +91,13 @@ fn test_run_epoch_with_batches_reset_semantics() raises:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3880, PR #4820 | [notes.md](../references/notes.md) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Lambda / closure as step_fn | Tried `var step_fn = fn(d: ExTensor, l: ExTensor) raises -> ExTensor: return ExTensor(0.5)` | Mojo function pointer type `fn(ExTensor, ExTensor) raises -> ExTensor` does not accept closures | Always use a named top-level `fn`, never a closure or lambda |
 | `ExTensor(Float32(0.5))` for scalar | Used Float32 conversion to create scalar loss | `ExTensor` has no implicit `Float32` constructor; only `Float64` and `Int` are implicitly converted | Use `ExTensor(Float64(value))` for scalar loss tensors |
 | Keyword args in DataLoader constructor | Used `DataLoader(data^, labels^, batch_size=2)` | Mojo struct constructors don't support keyword arguments | Use positional args: `DataLoader(data^, labels^, 2)` |

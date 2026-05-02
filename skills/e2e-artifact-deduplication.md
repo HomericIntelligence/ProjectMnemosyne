@@ -13,13 +13,13 @@ outcome: success
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-11 |
-| Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-01-11 | | **Objective** | Consolidate duplicate artifacts in E2E evaluation output | |
+| Objective | Consolidate duplicate artifacts in E2E evaluation output |
 | Outcome | Operational |
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-11 |
 | **Objective** | Consolidate duplicate artifacts in E2E evaluation output |
 | **Outcome** | ✅ Success - 4 optimizations implemented, ~12KB saved per run with multiple judges |
@@ -40,7 +40,7 @@ Use this skill when you observe:
 E2E evaluation frameworks often generate redundant artifacts:
 
 | Issue | Impact | Frequency |
-|-------|--------|-----------|
+| ------- | -------- | ----------- |
 | Judge prompts duplicated per judge | ~7KB × N judges per run | Every run with multiple judges |
 | Pipeline commands per judge directory | ~5 files × N judges | Every run |
 | Prompts inlined in replay scripts | ~1KB bloat per script | Every agent/judge run |
@@ -224,7 +224,7 @@ else:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -257,7 +257,7 @@ experiment_dir/
 ### Space Savings
 
 | Optimization | Before | After | Savings per Run |
-|-------------|--------|-------|-----------------|
+| ------------- | -------- | ------- | ----------------- |
 | Judge prompts | 7KB × N judges | 7KB × 1 | ~7KB × (N-1) judges |
 | Pipeline commands | 5 files × N judges | 5 files × 1 | ~5 files × (N-1) |
 | Agent prompts | Inlined (~1KB) | Extracted | Better readability |

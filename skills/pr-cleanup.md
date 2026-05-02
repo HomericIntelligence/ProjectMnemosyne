@@ -12,7 +12,7 @@ tags: []
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | (fill in objective) |
 | **Outcome** | (fill in outcome) |
@@ -164,7 +164,7 @@ See: [Link to PR]
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | CI failing | Fix root cause before cleanup (see fix-ci-failures skill) |
 | Unresolvable conflicts | Escalate to implementation team |
 | Complex rebase | Break into smaller steps, resolve one conflict at a time |
@@ -181,7 +181,7 @@ See: [Link to PR]
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 
 ## Results & Parameters

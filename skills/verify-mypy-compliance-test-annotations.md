@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | **Date** | 2026-03-02 |
 | **Objective** | Annotate all test functions in a test directory with `-> None` return types and parameter type hints for mypy compliance |
 | **Context** | Part of #1120 quality audit — applied to `tests/unit/config/` (#1286), `tests/integration/` (#1288), and `tests/unit/analysis/` (#1285) |
@@ -121,7 +121,7 @@ def test_load_all_tiers_mismatched(self, tmp_path: Path) -> None:
 
 Common parameter annotations:
 | Parameter | Type |
-|-----------|------|
+| ----------- | ------ |
 | `tmp_path` | `Path` |
 | `capsys` | `pytest.CaptureFixture[str]` |
 | `monkeypatch` | `pytest.MonkeyPatch` |
@@ -186,14 +186,14 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Instance 1: `tests/unit/config/` (issue #1286)
 
 | File | Test Count | Status |
-|------|-----------|--------|
+| ------ | ----------- | -------- |
 | `test_pricing.py` | 16 | ✓ Fully annotated (pre-existing) |
 | `test_validation.py` | 31 | ✓ Fully annotated (pre-existing) |
 | `test_pixi_upper_bounds.py` | 6 | ✓ Fully annotated (pre-existing) |
@@ -211,7 +211,7 @@ pixi run python -m mypy tests/unit/config/
 ### Instance 2: `tests/integration/` (issue #1288)
 
 | File | Source Files | Status |
-|------|-------------|--------|
+| ------ | ------------- | -------- |
 | `tests/integration/__init__.py` | empty | ✓ Compliant |
 | `tests/integration/e2e/__init__.py` | empty | ✓ Compliant |
 | `tests/integration/e2e/conftest.py` | helper functions | ✓ Fully annotated (pre-existing) |
@@ -228,7 +228,7 @@ pixi run python -m mypy tests/integration/
 19 files, 385 tests across a large data-analysis test directory. All required annotation work.
 
 | File | Tests | Changes |
-|------|-------|---------|
+| ------ | ------- | --------- |
 | `conftest.py` | (fixtures) | Added return types + `Generator[None, None, None]` for yield fixtures |
 | `test_apareto.py` | 8 | `-> None` to all test functions |
 | `test_config.py` | 14 | `-> None` + parameter types |

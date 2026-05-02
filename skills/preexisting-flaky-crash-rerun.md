@@ -16,7 +16,7 @@ Quickly determine if CI failures are transient/environmental crashes that predat
 ## Overview
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Date** | 2026-03-06 |
 | **Objective** | Fix PR #3355 CI failures (Data Loaders, Test Examples) |
 | **Outcome** | CI re-triggered with `gh run rerun --failed`; no code changes needed |
@@ -98,7 +98,7 @@ If the same jobs crash again after re-run:
 ## Results & Parameters
 
 | Parameter | Value Used |
-|-----------|-----------|
+| ----------- | ----------- |
 | Workflow run ID | `22737649305` |
 | Failing jobs | `Data Loaders` (`test_batch_loader.mojo`), `Test Examples` (`test_trait_based_serialization.mojo`) |
 | Crash type | `mojo: error: execution crashed` |
@@ -109,6 +109,6 @@ If the same jobs crash again after re-run:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Code investigation | Considered modifying test files or adding `# nosec` suppressions | Failing tests had zero overlap with PR changes | Always diff-check before touching code |
 | Local repro | Considered reproducing crash locally | Not needed — diff-check was sufficient to confirm pre-existing | Save time by checking the diff first |

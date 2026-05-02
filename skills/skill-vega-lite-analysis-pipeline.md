@@ -11,13 +11,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-30 |
-| Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-01-30 | | **Project** | ProjectScylla | |
+| Objective | Build a complete analysis pipeline for experiment results with text-based figures and statistical tables |
 | Outcome | Operational |
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-30 |
 | **Project** | ProjectScylla |
 | **Objective** | Build a complete analysis pipeline for experiment results with text-based figures and statistical tables |
@@ -357,14 +357,14 @@ apply_publication_theme()
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Final Output Counts
 
 | Category | Count | Formats |
-|----------|-------|---------|
+| ---------- | ------- | --------- |
 | **Data Files** | 5 | CSV, JSON |
 | **Figures** | 15 | `.vl.json` + `.csv` per figure |
 | **Tables** | 7 | `.md` + `.tex` per table |
@@ -376,7 +376,7 @@ apply_publication_theme()
 From 2,238 loaded runs:
 
 | Metric | Overall | Sonnet 4.5 | Haiku 4.5 |
-|--------|---------|------------|-----------|
+| -------- | --------- | ------------ | ----------- |
 | Pass Rate | 83.9% | 94.2% | 73.4% |
 | Mean Score | 0.786 | 0.908 | 0.662 |
 | Mean Cost/Run | $0.060 | $0.077 | $0.043 |

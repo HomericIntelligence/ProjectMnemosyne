@@ -14,7 +14,7 @@ tags: [rubric, grading, research-docs, tpot, novelty-verdict, baseline-geometry,
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-18 |
 | **Objective** | Provide a weighted rubric for grading AI architecture research documents across 6 dimensions, plus canonical baseline geometry for LLM-scale proposals |
 | **Outcome** | Verified — rubric applied to 39 documents; all passed after remediation |
@@ -42,7 +42,7 @@ GO = all dims ≥ B  |  WATCH = any dim < B  |  NO-GO = weighted < 60
 ### The 6 Dimensions
 
 | Dim | Name | Weight | Grade A Criteria | Common Failure |
-|-----|------|--------|-----------------|----------------|
+| ----- | ------ | -------- | ----------------- | ---------------- |
 | D1 | Structure | 25% | All sections §1–§8 in order (standard) or `## Benefits vs Baseline X` sections (thematic) | Missing §5 Risks or §6 Open Questions |
 | D2 | Citations | 20% | ≥90% of paper claims have `[N]` inline + author/venue/year/arXiv in References | Named papers without `[N]` markers |
 | D3 | Baselines | 15% | All 4 baselines A1/A2/B/C present with correct geometry | A2 KV@32K shown as ~68 GB instead of ~8.59 GB |
@@ -67,7 +67,7 @@ Two valid templates:
 → §4 Comparison Tables → §5 Risks → §6 Open Questions → §7 Appendix
 ```
 
-**Thematic template:** `## Benefits vs Baseline X` sections  
+**Thematic template:** `## Benefits vs Baseline X` sections
 (exempt from strict §1–§7 order check for D1)
 
 Most common failures: missing §5 Risks, missing §6 Open Questions.
@@ -85,7 +85,7 @@ Failure mode: "As shown by Smith et al." without `[N]` or no References entry.
 **Canonical baseline geometry (A1/A2/B/C):**
 
 | Baseline | Description | H_q | H_kv | head_dim | d_model | Layers | KV@32K |
-|----------|-------------|-----|------|----------|---------|--------|--------|
+| ---------- | ------------- | ----- | ------ | ---------- | --------- | -------- | -------- |
 | A1 | 27B Hybrid (DeltaNet-style) | 16 | 4 | 256 | 5120 | 64 (16 full-attn) | **2.15 GB** |
 | A2 | 32B Dense | 64 | 8 | 128 | 8192 | 64 | **8.59 GB** |
 | B | 397B MoE | 64 | 8 | 128 | — | — | **≈8.59 GB** |
@@ -96,8 +96,8 @@ Failure mode: "As shown by Smith et al." without `[N]` or no References entry.
 KV_bytes = L_full_attn × 2 × H_kv × head_dim × seq_len × 2
 ```
 
-**Most common error — A2 KV@32K shown as ~68 GB:**  
-Root cause: using H_q=64 (query heads) instead of H_kv=8 (KV heads) in the formula.  
+**Most common error — A2 KV@32K shown as ~68 GB:**
+Root cause: using H_q=64 (query heads) instead of H_kv=8 (KV heads) in the formula.
 Correct: `64 × 2 × 8 × 128 × 32768 × 2 = 8.59 GB` (not 68 GB).
 
 **A1 derivation:**
@@ -155,7 +155,7 @@ The `*` footnotes to an exec-summary callout stating the condition under which t
 For 39+ file corpora, partition files across 6 agents by file-number range:
 
 | Agent | File range | Example |
-|-------|-----------|---------|
+| ------- | ----------- | --------- |
 | G1 | Files 1.x | research_1_*.md |
 | G2 | Files 2.x–3.x | research_2_*.md, research_3_*.md |
 | G3 | Files 4.x | research_4_*.md |
@@ -163,13 +163,13 @@ For 39+ file corpora, partition files across 6 agents by file-number range:
 | G5 | Files 6.x (first half) | research_6_1 – 6_3 |
 | G6 | Files 6.x (second half) | research_6_4 – 6_7 |
 
-Each agent returns per-file scorecards (D1–D6 grades + weighted score + verdict).  
+Each agent returns per-file scorecards (D1–D6 grades + weighted score + verdict).
 Main context aggregates into corpus scoreboard and flags all WATCH/NO-GO files for remediation.
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Single-agent full corpus | One agent reads all 39 files sequentially | Context overflow; early files forgotten by end | Partition across 6 agents by file range |
 | Implicit TPOT direction | Leaving TPOT direction to reader interpretation | Reviewers miss the sequential-pass caveat | Require explicit `↓*` notation with footnote |
 | Inline novelty verdict | Embedding verdict in prose conclusion | Hard to scan; often omitted on revision | Require standalone bold line in canonical format |
@@ -198,7 +198,7 @@ Main context aggregates into corpus scoreboard and flags all WATCH/NO-GO files f
 ### Grade Conversion
 
 | Letter | Numeric |
-|--------|---------|
+| -------- | --------- |
 | A | 100 |
 | B | 85 |
 | C | 75 |
@@ -218,5 +218,5 @@ When fixing documents with multiple failures:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ArchIdeas | Applied to 39 AI architecture research documents; all passed after remediation | Session 2026-04-18 |

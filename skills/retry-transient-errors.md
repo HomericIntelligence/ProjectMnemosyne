@@ -12,13 +12,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
-| Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-01-04 | | **Objective** | Fix git clone failures caused by transient network errors (... |
+| Objective | Fix git clone failures caused by transient network errors ("Connection reset by peer", "curl 56") |
 | Outcome | Operational |
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-04 |
 | **Objective** | Fix git clone failures caused by transient network errors ("Connection reset by peer", "curl 56") |
 | **Outcome** | ✅ Successfully implemented exponential backoff retry logic with comprehensive tests |
@@ -161,7 +161,7 @@ def setup_base_repo(self) -> None:
 
 ## Failed Attempts & Learnings
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Initial Pattern Matching Too Narrow
@@ -198,7 +198,7 @@ pixi run pytest tests/unit/e2e/test_workspace_manager.py -v
 ### Final Configuration
 
 | Parameter | Value | Rationale |
-|-----------|-------|-----------|
+| ----------- | ------- | ----------- |
 | **Max retries** | 3 | Project standard from `.claude/shared/error-handling.md` |
 | **Base delay** | 1.0s | Project standard |
 | **Backoff multiplier** | 2x | Exponential: 1s, 2s, 4s |

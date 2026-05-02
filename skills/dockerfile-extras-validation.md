@@ -16,7 +16,7 @@ Fail-fast validation of Docker `--build-arg EXTRAS` group names against
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-02 |
 | Issue | #1204 |
 | PR | #1306 |
@@ -181,7 +181,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Message Format
 
@@ -201,7 +201,7 @@ Pattern: `f"ERROR: Unknown EXTRAS group(s): {sorted(unknown)}. Valid: {sorted(va
 ### Test counts
 
 | Test Class | Tests | What it checks |
-|------------|-------|----------------|
+| ------------ | ------- | ---------------- |
 | `TestDockerfileExtrasValidation` | 5 | sys.exit present, unknown referenced, error message present, issue comment present, Dockerfile exists |
 | `TestOptionalDependenciesNonEmpty` | 3 | non-empty optional-deps, analysis group present, dev group present |
 | **Total** | **8** | |
@@ -224,7 +224,7 @@ Matches a `RUN python3 -c` line plus all backslash-continued lines. Filter for `
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1204, PR #1306 | [notes.md](../../references/notes.md) |
 
 ## Related Skills

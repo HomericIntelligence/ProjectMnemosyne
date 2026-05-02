@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Bug Pattern** | `key, _, value = line.partition(":")` silently drops everything after the first colon |
 | **Trigger** | Script reads YAML frontmatter by splitting on `:` instead of using a YAML parser |
 | **Fix** | Replace with `yaml.safe_load()` — handles colons in values, quoted strings, invalid YAML |
@@ -107,7 +107,7 @@ except yaml.YAMLError:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Search for file in worktree | `find` in `.worktrees/issue-3929/` for `migrate_to_skills.py` | File lives in `ProjectMnemosyne` repo, not in the ProjectOdyssey worktree | Check `build/*/ProjectMnemosyne/` and `~/ProjectMnemosyne/` for sibling repo scripts |
 | Look for tracked file in git | `git ls-files \| grep migrate_to_skills` | Script is in a separate cloned repo, never committed to ProjectOdyssey | For cross-repo fixes, always look for the local checkout of the target repo first |
 | Assume `build/` in worktree | Looked for `build/` under `.worktrees/issue-3929/` | `build/` is under the main repo root, not under worktree paths | PID-scoped builds live at `<repo_root>/build/<PID>/`, not under worktree subdirectories |

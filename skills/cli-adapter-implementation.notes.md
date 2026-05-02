@@ -18,7 +18,7 @@ ProjectScylla by implementing `GooseAdapter` following the existing `BaseCliAdap
 ### Created
 
 | File | LOC | Purpose |
-|------|-----|---------|
+| ------ | ----- | --------- |
 | `scylla/adapters/goose.py` | 115 | GooseAdapter implementation |
 | `config/models/goose.yaml` | 15 | Model config with 0.0 costs |
 | `tests/unit/adapters/test_goose.py` | 280 | 23 unit tests |
@@ -26,7 +26,7 @@ ProjectScylla by implementing `GooseAdapter` following the existing `BaseCliAdap
 ### Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/adapters/__init__.py` | +2 lines: import + `__all__` entry |
 
 ## Implementation Steps Taken

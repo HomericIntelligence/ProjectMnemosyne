@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Mojo v0.26.1 cannot pass `-lm` as a linker flag, so files that transitively import libm symbols fail during AOT compilation (`mojo build`) |
 | **Symptom** | `undefined reference to symbol 'fmaxf@@GLIBC_2.2.5'` / `DSO missing from command line` |
 | **Root Cause** | `find`-based build recipes include `examples/` and `benchmarks/` directories whose files are designed for JIT execution (`mojo run`), not AOT binary compilation |
@@ -119,7 +119,7 @@ just build
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Pass `-lm` to mojo build | Add `-lm` linker flag via `mojo build` CLI | Mojo v0.26.1 does not support passing arbitrary linker flags | This is a compiler limitation, not fixable at the build recipe level |
 | Replace C math calls with Mojo builtins in all example files | Rewrite `fmaxf`, `sincos`, etc. using Mojo stdlib math | Requires changes across many files; examples import shared/ which is the transitive source | Too invasive; examples are not the primary deliverable |
 | Silence errors with `FAIL_ON_ERROR=0` | Set flag to 0 globally and in `ci` mode | Hides all linker failures including future real errors; makes CI unreliable | Workarounds that hide errors compound technical debt |

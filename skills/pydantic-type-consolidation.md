@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-15 |
 | **Objective** | Consolidate duplicate type definitions into a unified Pydantic-based inheritance hierarchy |
 | **Outcome** | ✅ Successfully standardized ExecutionInfo types with full backward compatibility |

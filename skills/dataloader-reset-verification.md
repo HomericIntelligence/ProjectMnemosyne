@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Category | testing |
 | Language | Mojo |
 | Issue | #3186 (ProjectOdyssey) |
@@ -71,7 +71,7 @@ categorically different from the success mode (valid bounded Float64). No spy ob
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Mock-based approach | Wrapping DataLoader to count reset() calls | Mojo structs don't support vtable-based mocking easily; no trait for spy | Use direct field mutation + observable side effects instead |
 | Checking batch count post-call | Asserting `loader.current_batch == 2` after run_subset | run_subset may call reset() again at end or leave loader in partial state | Assert on the output (loss) not loader state after the call |
 | Asserting exact loss value | `assert_almost_equal(val_loss, Float64(1.0), ...)` | Relies on loss function returning exactly 1.0; brittle if loss function changes | Use range assertions (`> -eps` and `< large`) for robustness |

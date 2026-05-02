@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-15 |
 | **Issue** | #639 - Decompose _initialize_or_resume_experiment |
 | **Objective** | Reduce method complexity from 90 LOC to <50 LOC using Extract Method pattern |

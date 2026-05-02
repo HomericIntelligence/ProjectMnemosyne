@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | BFloat16 NaN canonicalization in `__hash__` could silently fail due to numeric cast path |
 | **Root Cause** | `Float64(Float32(BFloat16))` may canonicalize unusual NaN bit patterns before the `isnan()` check |
 | **Fix** | Raw bit manipulation: read UInt16, shift left 16 bits, bitcast to Float32, then convert to Float64 |
@@ -30,7 +30,7 @@ user-invocable: false
 ### Quick Reference
 
 | Step | What to Do |
-|------|------------|
+| ------ | ------------ |
 | 1 | Identify the `_get_float64` / dtype conversion path for BFloat16 |
 | 2 | Replace numeric cast with raw bit manipulation |
 | 3 | Add `make_bf16_nan_tensor` helper that writes raw UInt16 bits |
@@ -106,7 +106,7 @@ def test_bf16_nan_cross_variant_hash():
 ## BF16 NaN Bit Patterns Reference
 
 | Pattern | Hex | Meaning |
-|---------|-----|---------|
+| --------- | ----- | --------- |
 | `0111 1111 1100 0000` | `0x7FC0` | Canonical positive quiet NaN |
 | `1111 1111 1100 0000` | `0xFFC0` | Negative quiet NaN |
 | `0111 1111 1000 0000` | `0xFF80` | ⚠️ Positive Infinity (NOT NaN — mantissa is zero!) |
@@ -118,7 +118,7 @@ def test_bf16_nan_cross_variant_hash():
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Test 0xFF80 as negative NaN | Used `0xFF80` as the "negative NaN" bit pattern | `0xFF80` is BF16 negative infinity (mantissa = 0), not NaN; the test would fail the isnan() check | Always verify NaN bit patterns: mantissa must be non-zero. Negative quiet NaN is `0xFFC0`. |
 | Numeric cast for _get_float64 | `Float64(Float32(BFloat16))` | CPU numeric cast canonicalizes NaN before `isnan()` check, different NaN variants get different hashes | Use raw bit manipulation (UInt16 → UInt32 shift → Float32 bitcast) to preserve NaN bits |
 | Use `_set_float64` to inject NaN | Called the typed setter with NaN to populate test tensor | `_set_float64` itself uses the same numeric cast path, immediately canonicalizing the injected value | Use pointer cast (`bitcast[UInt16]`) to write raw bits, bypassing the typed setter entirely |

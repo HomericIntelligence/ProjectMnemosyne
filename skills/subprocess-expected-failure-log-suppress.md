@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-22 |
 | **Objective** | Suppress noisy ERROR log entries for subprocess failures that callers intentionally catch and handle |
 | **Outcome** | Success — 1403 tests pass, PR #301 merged |
@@ -140,7 +140,7 @@ result = run(
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A — direct approach | The pattern was clear from the first probe site in worktree_manager.py | N/A | Callers that catch CalledProcessError are the canonical signal that the failure is expected |
 
 ## Results & Parameters
@@ -148,7 +148,7 @@ result = run(
 ### Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `hephaestus/utils/helpers.py` | Added `log_on_error: bool = True` kwarg; guard `logger.error()` with it |
 | `hephaestus/automation/git_utils.py` | Added `log_errors: bool = True` kwarg; guard `logger.error()` with it |
 | `hephaestus/automation/worktree_manager.py` | Pass `log_errors=False` at probe/cleanup call sites |
@@ -186,5 +186,5 @@ pixi run pytest tests/unit -v
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | PR #301, branch port-circuit-breaker-success-threshold | 1403 tests pass in CI |

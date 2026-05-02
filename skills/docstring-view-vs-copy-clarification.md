@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Objective** | Audit and fix docstrings that claim view/shared-memory semantics but whose implementation actually copies data (or vice versa) |
 | **Scope** | Docstring-only — no implementation changes |
 | **Language** | Mojo (applicable to any language with view/copy distinction) |
@@ -46,7 +46,7 @@ user-invocable: false
 ### Classification Table (from Issue #3297)
 
 | Method | Implementation | `_is_view` | Docstring Fix Needed |
-|--------|---------------|------------|----------------------|
+| -------- | --------------- | ------------ | ---------------------- |
 | `slice()` | `self.copy()` + pointer offset | `True` | Clarify "shallow pointer copy" — **yes** |
 | `__getitem__(Slice)` | Fresh `Self(shape, dtype)` + byte copy | `False` | Already said "copy" — **no** |
 | `__getitem__(*slices)` | Fresh `Self(shape, dtype)` + byte copy | `False` | Already said "copy" — **no** |
@@ -86,7 +86,7 @@ Notes:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Fixing implementation instead of docs | Considered changing `__getitem__(*slices)` to use pointer offset | Multi-dim slices produce non-contiguous data; a simple pointer offset is insufficient without stride metadata | Always check whether the "bug" is in the docs or the code first |
 | Updating only one method | Would have fixed `slice()` without updating `__getitem__` overloads | Sibling inconsistency would remain; callers still confused | Read all sibling methods before writing any fix |
 | Assuming `self.copy()` = deep copy | Initially worried `self.copy()` copied bytes | Mojo `self.copy()` calls `__copyinit__`, which for pointer-based structs is a shallow copy (pointer copy, not byte copy) | Verify what `copy()` / `__copyinit__` actually does for the specific type |

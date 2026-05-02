@@ -16,7 +16,7 @@ Eliminate a legacy `config/` directory by moving its contents into `tests/` (or 
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-19 |
 | **Category** | architecture |
 | **Objective** | Move `config/tiers/` into `tests/claude-code/shared/`, strip `prompt_file`/`prompt_content` from tier config system |
@@ -155,7 +155,7 @@ ls config/
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -173,7 +173,7 @@ config/tiers/           # Entire directory (18 files)
 ### Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/executor/tier_config.py` | Remove `prompt_file`/`prompt_content`, rename param to `tiers_dir` |
 | `scylla/e2e/tier_manager.py` | Update auto-detection path, remove `prompt_content=...` |
 | `scylla/e2e/models.py` | Remove `prompt_content` from `TierConfig` |
@@ -209,5 +209,5 @@ tiers:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | `repo_cleanup` branch, PR from plan | [notes.md](../references/notes.md) |

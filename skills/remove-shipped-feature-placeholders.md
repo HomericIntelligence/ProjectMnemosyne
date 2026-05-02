@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-04 |
 | Objective | Remove stale BF16 alias/placeholder comments from Mojo training code after DType.bfloat16 shipped natively |
 | Outcome | Success — 4 files cleaned, stale NOTE/TODO comments removed, disabled test enabled, PR #3197 created |
@@ -181,14 +181,14 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `mojo build` locally | Tried to verify no syntax errors with `pixi run mojo build` | GLIBC version mismatch on host (needs 2.32/2.33/2.34, host has older version) | Mojo compilation only works in Docker CI on this host. Pre-commit hooks suffice for local validation. |
 | Searching only `precision_config.mojo` | Initial grep focused on the file named in the issue | Missed 3 other files with stale comments (`dtype_utils.mojo`, 2 test files) | Always grep the entire repo with multiple patterns, not just the issue-cited file. |
 
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Files changed | `shared/training/precision_config.mojo`, `shared/training/dtype_utils.mojo`, `tests/shared/testing/test_special_values.mojo`, `tests/shared/integration/test_multi_precision_training.mojo` |
 | Lines removed | 37 lines of stale comments/placeholder code |
 | Lines added | 12 lines of accurate documentation |
@@ -218,5 +218,5 @@ gh pr merge --auto --rebase
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3088, cleanup epic #3059 | [notes.md](../references/notes.md) |

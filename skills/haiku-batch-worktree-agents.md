@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Purpose** | Implement 60-80 low-complexity GitHub issues using 4 parallel Haiku sub-agents in persistent worktrees |
 | **When to Use** | Large issue backlogs (50+), pre-existing worktrees, multiple rounds of batch work |
 | **Model** | `haiku` (cost-efficient, adequate for low-complexity issues) |
@@ -33,7 +33,7 @@ user-invocable: false
 ### Quick Reference
 
 | Step | Action |
-|------|--------|
+| ------ | -------- |
 | 1 | Reset worktrees with `git switch` (not `git checkout` — safety hook blocks it) |
 | 2 | Launch 4 Haiku agents in parallel with `run_in_background=true` |
 | 3 | On agent completion, check output, resume with remaining issues |
@@ -163,7 +163,7 @@ Some issues will be skipped as "too complex" on first pass. On resume, push agen
 Typical skip reasons and responses:
 
 | Agent Says | Orchestrator Response |
-|------------|----------------------|
+| ------------ | ---------------------- |
 | "References non-existent files" | "The issue may be asking to CREATE those files" |
 | "Requires extensive auditing" | "A partial audit with findings documented is valid" |
 | "Complex algorithm" | "Read the issue — may want validation/error only, not full impl" |
@@ -174,7 +174,7 @@ Typical skip reasons and responses:
 ### Round 3 Session Results (2026-03-15)
 
 | Agent | Model | Worktree | Issues Assigned | PRs Created |
-|-------|-------|----------|-----------------|-------------|
+| ------- | ------- | ---------- | ----------------- | ------------- |
 | Agent 1 | Haiku | `agent-1-batch` (main) | 20 | 20 |
 | Agent 2 | Haiku | `agent-2-batch` | 20 | 18 |
 | Agent 3 | Haiku | `agent-3-batch` | 19 | 12 |
@@ -222,7 +222,7 @@ pixi run pre-commit run --files <specific-files>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `git checkout main` in worktrees 2-4 | Reset all worktrees to main using checkout | Safety net hook blocked `git checkout` with branch args; also only one worktree can be on main | Use `git switch -c batch-agentN-reset origin/main` for worktrees that can't be on main |
 | Single large agent prompt (20 issues, no resume plan) | Expected one agent invocation to handle all 20 issues | Haiku exhausts context after ~10 issues and stops | Build in resume loop from the start; expect 3-5 resumes per agent |
 | Treating all "skipped" issues as truly complex | Accepting agent's first pass skip classification | Many "complex" issues were actually simple when re-read with better framing | Resume with explicit framing: "even partial implementation counts", "creating scripts is fine" |

@@ -12,7 +12,7 @@ Retrieve all context from a GitHub issue before starting work.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Gather full context before implementation | Informed decisions based on prior work |
 
 ## When to Use
@@ -79,12 +79,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Issue not found | Check issue number, may be in different repo |
 | No comments | Issue may be new or have minimal discussion |
 | Auth error | Run `gh auth status` to verify |

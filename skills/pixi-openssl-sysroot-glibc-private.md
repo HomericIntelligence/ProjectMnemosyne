@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-31 |
 | **Objective** | Fix undefined reference to GLIBC_PRIVATE symbols when linking OpenSSL in a pixi/conda-forge C++ environment |
 | **Outcome** | Solved — adding `openssl >= 3` to pixi.toml provides conda-forge-compatible OpenSSL |
@@ -76,7 +76,7 @@ compiler.version=14    # NOT 13
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | System OpenSSL with pixi linker | `find_package(OpenSSL)` found `/usr/lib/x86_64-linux-gnu/libssl.so` | pixi's conda linker uses different sysroot — GLIBC_PRIVATE symbols undefined | Add `openssl >= 3` to pixi.toml so OpenSSL comes from conda-forge |
 | Conan profile `compiler.version=13` | Assumed GCC 13 was standard | pixi conda-forge ships GCC 14.3.0 — version mismatch causes Conan package hash errors | Always run `pixi run g++ --version` and match the Conan profile |
 | Rebuild without cleaning CMakeCache | Added OpenSSL to pixi.toml and re-ran cmake | CMakeCache.txt cached the system OpenSSL path from the previous configure | Always delete build directory when changing how OpenSSL is provided |
@@ -104,6 +104,6 @@ cmake_additions:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectNestor | nats.c static link failed with GLIBC_PRIVATE errors | Fixed by adding `openssl >= 3` to pixi.toml + cleaning build dir |
 | ProjectAgamemnon | Same nats.c + OpenSSL pattern | Same fix applied preventatively |

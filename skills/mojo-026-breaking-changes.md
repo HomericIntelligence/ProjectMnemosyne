@@ -15,7 +15,7 @@ tags: [mojo, breaking-changes, migration, 0.26.3, deprecation, capturing, Implic
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-08 |
 | **Objective** | Document all breaking changes and deprecation warnings introduced in Mojo 0.26.3 vs 0.26.1, with exact fixes |
 | **Outcome** | Zero compile errors confirmed locally on ~525 .mojo files / 7807 fn definitions in ProjectOdyssey (PR #5207) |
@@ -44,7 +44,7 @@ pixi run mojo package -I . shared -o /tmp/shared.mojopkg 2>&1 | grep ": warning:
 ### Breaking Change Reference Table
 
 | # | Change | Severity | Error Message | Fix |
-|---|--------|----------|---------------|-----|
+| --- | -------- | ---------- | --------------- | ----- |
 | 1 | `fn` keyword deprecated | WARNING only | `warning: 'fn' is deprecated, use 'def' instead` | Replace `fn` with `def` — NOT a hard error in 0.26.3, still compiles |
 | 2 | `@register_passable("trivial")` removed | HARD ERROR | `decorator @register_passable("trivial") is removed, conform to TrivialRegisterPassable trait instead` | Change to struct inheritance: `struct Foo(TrivialRegisterPassable):` |
 | 3 | `escaping` function effect removed | HARD ERROR | `the 'escaping' function effect is no longer supported` | See capturing closure section below — requires compile-time parametric approach |
@@ -73,7 +73,7 @@ pixi run mojo package -I . shared -o /tmp/shared.mojopkg 2>&1 | grep ": warning:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `fn(AnyTensor) raises capturing -> AnyTensor` as param type | Used `capturing` as type in `[ForwardFn: fn(AnyTensor) raises capturing -> AnyTensor]` | "expected a type, not a value" — wrong ordering | Correct ordering is `fn(AnyTensor) capturing raises -> AnyTensor` with `capturing` BEFORE `raises` |
 | `unified {}` empty capture list | Changed closures to `fn forward(x) raises unified {} -> AnyTensor` | "Could not infer capture convention" | Use `capturing` keyword, not `unified {}` |
 | `unified {mut}` capture list | Changed to `unified {mut}` for outer variable access | "Cannot capture X by mut because value is immutable" | Immutable outer vars cannot use `mut`; use `capturing` which captures by value |
@@ -178,33 +178,33 @@ Table above for migration-specific fixes.
 
 ### Removed Syntax — Complete Table
 
-| Removed                                          | Replacement                                                          |
-|--------------------------------------------------|----------------------------------------------------------------------|
-| `alias X = ...`                                  | `comptime X = ...`                                                   |
-| `@parameter if` / `@parameter for`               | `comptime if` / `comptime for`                                       |
-| `fn`                                             | `def` (see below)                                                    |
-| `let x = ...`                                    | `var x = ...` (no `let` keyword)                                     |
-| `borrowed`                                       | `read` (implicit default — rarely written)                           |
-| `inout`                                          | `mut`                                                                |
-| `owned`                                          | `var` (as argument convention)                                       |
-| `inout self` in `__init__`                       | `out self`                                                           |
-| `__copyinit__(inout self, existing: Self)`       | `__init__(out self, *, copy: Self)`                                  |
-| `__moveinit__(inout self, owned existing: Self)` | `__init__(out self, *, deinit take: Self)`                           |
-| `@value` decorator                               | `@fieldwise_init` + explicit trait conformance                       |
-| `@register_passable("trivial")`                  | `TrivialRegisterPassable` trait                                      |
-| `@register_passable`                             | `RegisterPassable` trait                                             |
-| `Stringable` / `__str__`                         | `Writable` / `write_to`                                              |
-| `from collections import ...`                    | `from std.collections import ...`                                    |
-| `from memory import ...`                         | `from std.memory import ...`                                         |
-| `from sys import ...`                            | `from std.sys import ...`                                            |
-| `from os import ...`                             | `from std.os import ...`                                             |
-| `from pathlib import ...`                        | `from std.pathlib import ...`                                        |
-| `s[i]`                                           | `s[byte=i]` — returns `StringSlice`; wrap in `String()` if needed    |
-| `s[0:10]`, `s[:5]`                               | No slice syntax on String — use `s.codepoint_slices()` or Python FFI |
-| `constrained(cond, msg)`                         | `comptime assert cond, msg`                                          |
-| `DynamicVector[T]`                               | `List[T]`                                                            |
-| `InlinedFixedVector[T, N]`                       | `InlineArray[T, N]`                                                  |
-| `Tensor[T]`                                      | Not in stdlib (use SIMD, List, UnsafePointer)                        |
+| Removed | Replacement |
+| -------------------------------------------------- | ---------------------------------------------------------------------- |
+| `alias X = ...` | `comptime X = ...` |
+| `@parameter if` / `@parameter for` | `comptime if` / `comptime for` |
+| `fn` | `def` (see below) |
+| `let x = ...` | `var x = ...` (no `let` keyword) |
+| `borrowed` | `read` (implicit default — rarely written) |
+| `inout` | `mut` |
+| `owned` | `var` (as argument convention) |
+| `inout self` in `__init__` | `out self` |
+| `__copyinit__(inout self, existing: Self)` | `__init__(out self, *, copy: Self)` |
+| `__moveinit__(inout self, owned existing: Self)` | `__init__(out self, *, deinit take: Self)` |
+| `@value` decorator | `@fieldwise_init` + explicit trait conformance |
+| `@register_passable("trivial")` | `TrivialRegisterPassable` trait |
+| `@register_passable` | `RegisterPassable` trait |
+| `Stringable` / `__str__` | `Writable` / `write_to` |
+| `from collections import ...` | `from std.collections import ...` |
+| `from memory import ...` | `from std.memory import ...` |
+| `from sys import ...` | `from std.sys import ...` |
+| `from os import ...` | `from std.os import ...` |
+| `from pathlib import ...` | `from std.pathlib import ...` |
+| `s[i]` | `s[byte=i]` — returns `StringSlice`; wrap in `String()` if needed |
+| `s[0:10]`, `s[:5]` | No slice syntax on String — use `s.codepoint_slices()` or Python FFI |
+| `constrained(cond, msg)` | `comptime assert cond, msg` |
+| `DynamicVector[T]` | `List[T]` |
+| `InlinedFixedVector[T, N]` | `InlineArray[T, N]` |
+| `Tensor[T]` | Not in stdlib (use SIMD, List, UnsafePointer) |
 
 ### `def` Is the Only Function Keyword
 
@@ -323,13 +323,13 @@ struct MyCollection(Iterable):
 
 ### Memory and Pointer Types
 
-| Type                            | Use                                                                    |
-|---------------------------------|------------------------------------------------------------------------|
-| `Pointer[T, mut=M, origin=O]`   | Safe, non-nullable. Deref with `p[]`.                                  |
+| Type | Use |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| `Pointer[T, mut=M, origin=O]` | Safe, non-nullable. Deref with `p[]`. |
 | `alloc[T](n)` / `UnsafePointer` | Free function `alloc[T](count)` → `UnsafePointer`. `.free()` required. |
-| `Span(list)`                    | Non-owning contiguous view.                                            |
-| `OwnedPointer[T]`               | Unique ownership (like Rust `Box`).                                    |
-| `ArcPointer[T]`                 | Reference-counted shared ownership.                                    |
+| `Span(list)` | Non-owning contiguous view. |
+| `OwnedPointer[T]` | Unique ownership (like Rust `Box`). |
+| `ArcPointer[T]` | Reference-counted shared ownership. |
 
 ### Origin System (Not "Lifetime")
 
@@ -389,6 +389,6 @@ AnyType
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Mojo 0.26.1 → 0.26.3 migration, ~525 .mojo files, PR #5207 | Zero compile errors confirmed locally on branch fix-ci-root-causes |
 | (upstream) | Modular official skills repo | Authoritative syntax reference merged in v3.0.0 |

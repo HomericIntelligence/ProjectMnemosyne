@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Category | documentation |
 | Trigger | ADR status says Accepted but implementation uses a bypass (e.g., `# Temporary: Direct malloc`) |
 | Root Cause | Status label was set at design time and not updated when implementation deferred activation |
@@ -64,7 +64,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `just pre-commit-all` | Ran `just pre-commit-all` to validate markdown | `just` not available in the worktree shell environment | Use `pixi run pre-commit run markdownlint-cli2 --files <file>` instead |
 | `pixi run npx markdownlint-cli2` | Ran markdownlint via npx | `npx` not available in the pixi environment | Use `pixi run pre-commit run markdownlint-cli2 --files <file>` — pre-commit has the tool |
 | Single Edit without `replace_all` | Edited only the header status field | ADR has two status locations (header + Document Metadata); only one was updated | Use `replace_all: true` to catch all occurrences in one edit |
@@ -107,5 +107,5 @@ The existing limitation section is sufficient context.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3151, PR #3339 | ADR-003 memory pool bypassed pending Mojo global state support |

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-15 |
 | **Objective** | Unify accuracy computation in validate() to eliminate a duplicate forward pass over the validation set |
 | **Outcome** | Success — validate() now returns (loss, accuracy) tuple; ValidationLoop.run() reduced from 3× to 2× forward passes per batch |
@@ -123,7 +123,7 @@ metrics.update_val_metrics(val_loss, val_accuracy)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Returning named struct | Considered creating a `ValidationResult` struct with `loss` and `accuracy` fields | Adds unnecessary type complexity for a 2-value return; Mojo Tuple syntax is well-supported | Prefer Tuple for small fixed-arity returns; structs add overhead |
 | Keeping accuracy computation only in caller | Leave validate() unchanged and just pass the accuracy metric out | Would require exposing internal AccuracyMetric state or running an extra pass | The accuracy data is already computed inside validate(); returning it is free |
 | Using Optional[Float64] for accuracy | Return Optional to signal "not computed" | More verbose to destructure; 0.0 sentinel is sufficient since accuracy is always in [0.0, 1.0] | Use 0.0 sentinel for "not computed" accuracy — simpler contract |
@@ -164,7 +164,7 @@ var (loss, _) = validate(...)
 ### Performance Impact
 
 | Scenario | Before | After |
-|----------|--------|-------|
+| ---------- | -------- | ------- |
 | `compute_accuracy=True` | 3× forward passes per batch | 2× forward passes per batch |
 | `compute_accuracy=False` | 2× forward passes per batch | 2× forward passes per batch (unchanged) |
 
@@ -179,5 +179,5 @@ tests/shared/training/test_validate_returns_tuple.mojo  — 6 new tuple-specific
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3683, PR #4895 | [notes.md](../references/notes.md) |

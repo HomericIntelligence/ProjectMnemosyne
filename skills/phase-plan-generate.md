@@ -121,7 +121,7 @@ Additional context, assumptions, or considerations.
 ## Error Handling
 
 | Error | Fix |
-|-------|-----|
+| ------- | ----- |
 | Missing sections | Add all 9 sections from template |
 | Broken links | Use relative paths (`../` notation) |
 | Vague inputs/outputs | Make specific and measurable |
@@ -131,7 +131,7 @@ Additional context, assumptions, or considerations.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

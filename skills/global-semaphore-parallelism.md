@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-08 |
 | **Project** | ProjectScylla |
 | **Objective** | Fix E2E runner errors and implement global parallelism control using shared semaphores |
@@ -239,7 +239,7 @@ finally:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -275,7 +275,7 @@ pixi run pytest tests/unit/e2e/ -v
 ### Code Changes Summary
 
 | File | Lines Changed | Change Type |
-|------|--------------|-------------|
+| ------ | -------------- | ------------- |
 | `models.py` | +18 | Add cost_of_pass property |
 | `run_report.py` | +2 | Add mkdir before write |
 | `runner.py` | +12 | Create and pass semaphore |

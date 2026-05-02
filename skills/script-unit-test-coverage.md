@@ -15,7 +15,7 @@ How to systematically add unit test coverage for Python scripts that use subproc
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-03 |
 | Objective | Add tests for 12 untested scripts in scripts/ (40% coverage gap) |
 | Outcome | Success — 130 new tests across 12 files, all passing, pre-commit clean |
@@ -139,14 +139,14 @@ pixi run python -m pytest tests/unit/scripts/ -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 **Test counts by script:**
 
 | Script | Tests | Key technique |
-|--------|-------|---------------|
+| -------- | ------- | --------------- |
 | `check_defaults_filename.py` | 4 | patch `_REPO_ROOT`, `validate_defaults_filename` |
 | `docker_build_timing.py` | 13 | Pure functions — no mocking needed |
 | `export_data.py` | 8 | patch `shapiro_wilk`; pandas DataFrame in tests |

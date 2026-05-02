@@ -15,7 +15,7 @@ history: multi-repo-pr-orchestration-swarm-pattern.history
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-19 |
 | **Objective** | Use myrmidon swarm to scan all HomericIntelligence repos, merge open PRs, resolve conflicts, fix CI failures, and update Odysseus submodule pins -- all in parallel waves |
 | **Outcome** | Successful -- 87 PRs across 8 repos merged, submodule pins updated, Odysseus rebased on main |
@@ -298,7 +298,7 @@ git status
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Parallel PR merges within same repo | Merged PRs #4, #5, #6 in parallel targeting the same branch | PR #6 got conflicts because its base changed when #4 and #5 merged | Must merge sequentially within a repo (oldest-first); parallelize only across repos |
 | Treating BLOCKED+empty statusCheckRollup as permanent block | Saw `mergeStateStatus: BLOCKED` + `statusCheckRollup: []` and concluded PR was stuck | This is a transient state: CI hadn't started yet (10-30s after force-push). PR merged normally after CI queued | Wait 60s after force-push before concluding a PR is permanently blocked; re-check with `gh pr view --json statusCheckRollup` |
 | Bumping submodule pin before all open PRs merged | Updated pin to latest main immediately after one PR merged | A second PR merged 10 minutes later, making the pin stale again instantly | Always verify `gh pr list --state open` is empty for a repo before bumping its Odysseus pin |
@@ -316,7 +316,7 @@ git status
 ### Agent Tier Assignment
 
 | Task | Agent Tier | Rationale |
-|------|-----------|-----------|
+| ------ | ----------- | ----------- |
 | Merge clean PRs | Haiku | Mechanical: check status, run merge command |
 | Fix merge conflicts | Sonnet | Requires understanding code context for rebase resolution |
 | Fix CI failures | Sonnet | Requires reading logs, diagnosing issues, writing code fixes |
@@ -348,7 +348,7 @@ Phase 6: Verify         [Opus orchestrator]
 ### Merge Ordering Rules
 
 | Rule | Description |
-|------|-------------|
+| ------ | ------------- |
 | **Sequential within repo** | Merge PRs oldest-first to avoid conflicts from base changes |
 | **Parallel across repos** | Different repos are independent; agents work simultaneously |
 | **Rebase after each merge** | If multiple PRs target same repo, rebase remaining after each merge |
@@ -360,7 +360,7 @@ Phase 6: Verify         [Opus orchestrator]
 ### Session Scale Reference
 
 | Scale | Agents | Estimated Time |
-|-------|--------|----------------|
+| ------- | -------- | ---------------- |
 | 2-3 repos, 1-2 PRs each | 3 Haiku | ~10-15 min |
 | 5 repos, 2-4 PRs each | 5 Haiku + 2 Sonnet | ~30-45 min |
 | 10+ repos, mixed PRs | 6 Haiku + 4 Sonnet + pin agent | ~1-2 hours |
@@ -394,7 +394,7 @@ gh pr checks $PR_NUM --repo HomericIntelligence/$REPO
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence ecosystem | 5 repos (Agamemnon, Nestor, Keystone, Charybdis, Hephaestus) with open PRs, myrmidon swarm orchestration, 2026-04-04 | Wave 1: 4 Haiku agents merged clean PRs; Wave 1b: Sonnet agents fixed conflicts; Wave 1c: Sonnet agent fixed Charybdis CI; Wave 2: Odysseus submodule pins updated |
 | HomericIntelligence ecosystem | 8 repos (AchaeanFleet 50, Myrmidons 45, + 6 others), 87 PRs total, myrmidon swarm orchestration, 2026-04-19 | Wave 1 cap-5 rule critical; ~15% subsumed PRs; Safety Net Python workaround for conflict resolution; auto-merge disabled on AchaeanFleet + Myrmidons |
 

@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-20 |
 | **Objective** | Fix systemic JIT compilation volume overflow crashes in required CI checks by localizing heavy module-level imports in shared library modules into per-function bodies. |
 | **Outcome** | Successful — all four required CI checks (Core Gradient, Core Loss, Integration Tests, Data Utilities Test Suite) unblocked after library module import audit. |
@@ -211,7 +211,7 @@ just pre-commit-all
 ## Module Heaviness Reference (ProjectOdyssey)
 
 | Module | Lines | Impact | Notes |
-|--------|-------|--------|-------|
+| -------- | ------- | -------- | ------- |
 | `shared/core/shape.mojo` | 1371 | HIGH — pulled in by 5+ library modules | Most common transitive culprit |
 | `shared/core/elementwise.mojo` | 1650 | HIGH — pulled in by loss_utils at module level | Fixed by localizing in loss_utils |
 | `shared/core/dtype_dispatch.mojo` | 1520 | CRITICAL — 176+ monomorphizations; pulled in via elementwise | Heaviest module; never import at module level |
@@ -219,7 +219,7 @@ just pre-commit-all
 ## Affected CI Groups (ProjectOdyssey — PR #5259)
 
 | CI Group | Root Module | Heavy Import Chain | Crash Pattern |
-|----------|-------------|-------------------|---------------|
+| ---------- | ------------- | ------------------- | --------------- |
 | Core Gradient | `conv.mojo` | `conv.mojo` → `shape.mojo` (1371 lines) | 15 test files import conv; all crashed |
 | Core Loss | `reduction.mojo`, `loss_utils.mojo` | `reduction.mojo` → `shape.mojo`; `loss_utils.mojo` → `elementwise.mojo` → `dtype_dispatch.mojo` | Dual chain; both needed fixing |
 | Integration Tests | Multiple | `reduction.mojo` + `conv.mojo` + `pooling.mojo` chains via test_end_to_end.mojo | Module-level imports in test file AND library modules |
@@ -228,7 +228,7 @@ just pre-commit-all
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Test-file import audit only | Converted all test files from `from shared.core import` to targeted submodule imports | Crashes persisted in Core Gradient, Core Loss, Integration, and Data groups | Library modules themselves carry module-level imports that apply to ALL their importers — test file audit is necessary but not sufficient |
 | Assuming crash = test code bug | Inspected new test code for assertion bugs after seeing `execution crashed` | Crash occurred BEFORE any test output — no test assertion could be the cause | Use diagnostic rule: crash before test output = module load issue, not test logic |
 | Removing unused import from comments | Found `reduce_sum` imported but never called — only in a docstring | Actually this worked — removing it eliminated `shape.mojo` from the compilation | Scan for imports that only appear in comments; they are invisible to code search but real to the compiler |
@@ -239,7 +239,7 @@ just pre-commit-all
 ### Lines Saved Per Library Module Fix
 
 | Module Fixed | Heavy Import Removed | Lines Eliminated Per Importer |
-|--------------|---------------------|-------------------------------|
+| -------------- | --------------------- | ------------------------------- |
 | `shared/core/reduction.mojo` | `from .shape import as_contiguous` → per-function | 1371 |
 | `shared/core/conv.mojo` | `from .shape import ...` → per-function | 1371 |
 | `shared/core/pooling.mojo` | `from .shape import ...` → per-function | 1371 |
@@ -285,5 +285,5 @@ Together, these eliminate JIT compilation volume overflow from both sides of the
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #5259 — fixed 4 required CI check groups (Core Gradient, Core Loss, Integration Tests, Data Utilities) | CI queued with 77-run backlog at session end; pre-commit verified |

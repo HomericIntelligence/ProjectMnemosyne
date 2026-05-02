@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Verify agent configurations meet ML Odyssey requirements. - Creating or modifying agent configurations |
 | Outcome | Operational |
@@ -65,7 +65,7 @@ Validation includes:
 ## Error Handling
 
 | Error | Fix |
-|-------|-----|
+| ------- | ----- |
 | No YAML frontmatter | Ensure file starts/ends with `---` |
 | Invalid phase value | Use: Plan, Test, Implementation, Package, Cleanup |
 | Delegation target not found | Verify agent name or create referenced agent |
@@ -75,7 +75,7 @@ Validation includes:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

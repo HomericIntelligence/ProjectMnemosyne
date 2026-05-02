@@ -15,7 +15,7 @@ Consolidated skill for handling PR review plans that conclude no code changes ar
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-29 |
 | Objective | Consolidated skill covering all "PR review needs no action" and CI diagnosis scenarios |
 | Outcome | Merged from 7 skills covering clean state handling, no-op detection, CI flake analysis, stale branch, no-action determination, no-fixes-needed, no-op verification |
@@ -152,7 +152,7 @@ gh pr view <pr-number> --json headRefOid,headRefName
 **Diagnosis matrix:**
 
 | Local has fix commit | Remote has fix commit | CI shows failures | Action |
-|---------------------|----------------------|-------------------|--------|
+| --------------------- | ---------------------- | ------------------- | -------- |
 | Yes | No | Yes (stale) | Push branch to trigger CI re-run |
 | Yes | Yes | Yes (stale) | Re-run CI manually: `gh run rerun <id> --failed` |
 | Yes | Yes | No | Done — CI is passing |
@@ -223,7 +223,7 @@ Conclusion: PR is ready to merge as-is. No commit needed.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assuming grep hits = real imports | Ran grep for scheduler imports, got 16 files | File still exists on this branch (21 commits behind main) | Always check `git log` and branch position before interpreting grep results |
 | Treating all CI failures as actionable | Investigated "Core Gradient" failures | They are Mojo heap corruption flakes unrelated to the PR | Read the failure type (`execution crashed`) and cross-reference with known flakes before investigating |
 | Create empty fix commit | Ran `git commit --allow-empty` to satisfy automation | Empty commits add noise to history with zero value | Never fabricate work; if the plan says no fixes, do nothing |

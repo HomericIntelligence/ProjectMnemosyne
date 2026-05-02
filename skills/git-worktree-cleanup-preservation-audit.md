@@ -19,7 +19,7 @@ tags: [git, worktree, cleanup, stash, branch, preservation, audit, squash-merge,
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Safely clean up stale git artifacts (worktrees, branches, stashes) while proving — not assuming — each one is redundant before discarding |
 | **Outcome** | Audit methodology executed end-to-end in ProjectHermes; all artifacts verified as redundant via multi-method evidence before discard |
@@ -101,7 +101,7 @@ gh pr list --head <branch> --state all --json number,state,title
 ```
 
 | PR State | Initial Verdict | Next Step |
-|----------|-----------------|-----------|
+| ---------- | ----------------- | ----------- |
 | `MERGED` | Candidate for discard | Still run cherry + diff verification |
 | `CLOSED` | Candidate for discard | Check if cherry has unique commits |
 | `OPEN` | KEEP | No further action |
@@ -210,7 +210,7 @@ git stash drop 'stash@{N}'  # drop in reverse-index order (highest N first)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Trusting git cherry as definitive | `git cherry origin/main <branch>` showed `+` → concluded work not in main | Squash merges always produce `+` because squashing changes the commit context/SHA even when content is identical | `git cherry` is not definitive for squash-merged branches; follow up with message search + tree diff |
 | Assuming dirty worktree = real WIP | Worktree 95 commits behind main showed hundreds of dirty files | The "dirty" state was entirely drift — main had moved forward; the worktree had not | Check `git status --short` in the worktree itself; drift shows as many modifications, real WIP is a small targeted set |
 | Running git stash drop directly | Agent executed `git stash drop stash@{4}` | Safety Net treats stash drop as a destructive operation and blocks it | Stash drops must be handed to user to run manually |
@@ -225,7 +225,7 @@ git stash drop 'stash@{N}'  # drop in reverse-index order (highest N first)
 For any artifact candidate, apply these checks in order — stop when confidence is established:
 
 | Method | Command | Positive Signal (Safe to Discard) |
-|--------|---------|-----------------------------------|
+| -------- | --------- | ----------------------------------- |
 | **PR state** | `gh pr list --head <branch> --state all` | `MERGED` or `CLOSED` |
 | **Patch-ID** | `git cherry origin/main <branch>` | All `-` prefix (skip if squash-merge suspected) |
 | **Message match** | `git log origin/main --oneline \| grep -i "<subject>"` | Match found on main |
@@ -278,5 +278,5 @@ git remote prune origin
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHermes | 2026-04-25 — branch `9-auto-impl`, cleaned up stale worktrees + stashes + branches after feature work, strong preservation bias | Audit methodology applied: squash-merge detection confirmed rate-limiting branch content on main; stash content cross-referenced via grep; locked worktrees identified as Safety Net-blocked |
