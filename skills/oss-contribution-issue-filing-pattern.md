@@ -161,7 +161,7 @@ EOF
 
 If the maintainer already has an open "should we add CI?" issue, don't file a new one
 asking the same question. File a **concrete implementation issue** that says
-"here's the actual CI config, addresses #<existing-issue-number>."
+"here's the actual CI config, addresses `#<existing-issue-number>`."
 
 ```bash
 --body "...
@@ -306,12 +306,12 @@ Group by area, then within each group order by effort (ascending). Suggested are
 
 ## Failed Attempts
 
-| Approach | Why It Failed | Correct Approach |
-| ---------- | --------------- | ----------------- |
-| Filing a new CI issue without referencing the maintainer's existing #28 | Looks like you didn't read the issue tracker; duplicate question | File a concrete implementation issue that says "addresses #28" |
-| Filing 12 separate quality-improvement issues | Floods the issue tracker; maintainer has to triage 12 issues, most of which they may not want | Bundle into one omnibus issue and ask which ones they want |
-| Filing the audit results before checking existing issues | Discovered issues #64/#65/#66 already existed from the same session; would have created duplicates | Always run `gh issue list --state all` first |
-| Assigning labels without checking what labels exist | `gh issue create --label xyz` fails silently or errors if label doesn't exist | Run `gh label list --repo <owner>/<repo>` first |
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| File a new CI issue without referencing existing | Filed new "should we add CI?" issue without checking tracker | Looks like you didn't read the issue tracker; duplicate question | Reference the maintainer's existing issue; file a concrete implementation that says "addresses #28" |
+| File 12 separate quality-improvement issues | One issue per audit finding | Floods the issue tracker; maintainer has to triage 12 issues, most of which they may not want | Bundle into one omnibus issue and ask which ones they want |
+| File audit results before checking existing issues | Ran audit, immediately filed issues | Discovered issues #64/#65/#66 already existed from the same session; would have created duplicates | Always run `gh issue list --state all` first |
+| Assign labels without checking what labels exist | `gh issue create --label xyz` | Fails silently or errors if label doesn't exist | Run `gh label list --repo <owner>/<repo>` first |
 
 ## Related Skills
 
