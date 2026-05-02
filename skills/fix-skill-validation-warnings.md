@@ -1,11 +1,17 @@
 ---
 name: fix-skill-validation-warnings
-description: 'Automated approach to fix CI validation errors and warnings across skill
-  plugins. Use when: CI reports validation failures in SKILL.md files, bulk fixing
-  missing sections, or converting Failed Attempts to table format.'
+description: 'Fix CI validation errors and markdownlint failures in skill files. Use
+  when: (1) CI reports validation failures in skill .md files, (2) bulk fixing missing
+  sections or converting Failed Attempts to table format, (3) validate check says
+  "Failed Attempts table missing required columns" (must be: Attempt | What Was Tried
+  | Why It Failed | Lesson Learned), (4) markdownlint MD033 inline HTML error caused
+  by bare angle-bracket placeholders like `<existing-issue-number>` in prose.'
 category: ci-cd
-date: 2026-02-13
-version: 1.0.0
+date: 2026-05-02
+version: 1.1.0
+user-invocable: false
+verification: verified-precommit
+history: fix-skill-validation-warnings.history
 ---
 # Fix Skill Validation Warnings
 
@@ -30,6 +36,8 @@ Use this skill when:
 3. **Failed Attempts sections** use prose or `###` subsections instead of required pipe tables
 4. **plugin.json name fields** are in title-case instead of kebab-case
 5. **Achieving 100% pass rate** after large-scale skill migrations
+6. **`validate` check fails** with "Failed Attempts table missing required columns" — columns must be exactly: `Attempt | What Was Tried | Why It Failed | Lesson Learned`
+7. **markdownlint MD033** fails due to bare angle-bracket placeholders (e.g., `<existing-issue-number>`) in prose being parsed as inline HTML
 
 ## Verified Workflow
 
@@ -169,6 +177,57 @@ git push -u origin <branch-name>
 gh pr create --title "fix: Resolve all plugin validation errors and warnings"
 ```
 
+### 8. Fix Single-Skill CI Failures: Wrong Column Names + MD033 Inline HTML
+
+For individual skill PRs (not bulk fixes), the two most common CI failures are:
+
+**A. `validate` check — "Failed Attempts table missing required columns"**
+
+The Failed Attempts table must have **exactly these 4 column headers** (case-sensitive):
+
+```markdown
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+```
+
+Common wrong variants that fail validation:
+
+| Wrong Columns | Error |
+|---------------|-------|
+| `Approach \| Why It Failed \| Correct Approach` | Only 3 columns, wrong names |
+| `Attempt \| Description \| Result \| Fix` | Wrong column names |
+| `Step \| What Was Tried \| Outcome \| Lesson` | Wrong first column name |
+
+Fix: replace the entire table header row (and separator row) with the correct 4 columns.
+
+**B. markdownlint MD033 — inline HTML from angle-bracket placeholders**
+
+Any text in the form `<word>` or `<word-word>` in markdown prose is parsed as an HTML
+element by markdownlint and triggers MD033. This includes placeholder text like
+`<existing-issue-number>`, `<your-branch>`, `<package-manager>`, etc.
+
+**Fix** — wrap in backticks to make it inline code:
+
+```markdown
+# Before — triggers MD033:
+Reference the existing issue with #<existing-issue-number> in your PR.
+
+# After — safe:
+Reference the existing issue with `#<existing-issue-number>` in your PR.
+```
+
+**Verification** (run locally before pushing):
+
+```bash
+# Validate skill structure
+python3 scripts/validate_plugins.py
+
+# Check markdownlint specifically
+npx markdownlint-cli2 skills/<name>.md
+# OR with pixi:
+pixi run npx markdownlint-cli2 skills/<name>.md
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -176,6 +235,8 @@ gh pr create --title "fix: Resolve all plugin validation errors and warnings"
 | **Single script for all fixes** | One `fix_validation_warnings.py` to handle all warning types | Missed 38 warnings because it only looked for exact "## Verified Workflow", not wrapper patterns like "## Quick Reference" | Need separate script for wrapper pattern handling |
 | **Generic table for all Failed Attempts** | Added same boilerplate table to every plugin regardless of content | Didn't extract useful info from existing `### ❌ Attempt N:` subsections | Extract attempt titles from subsections to create meaningful summary tables |
 | **Regex on section name variations** | Used exact match instead of pattern matching | Missed sections with suffixes like "& Lessons Learned" | Use flexible regex patterns for section matching |
+| **Wrong Failed Attempts column names** | Created skill with columns `Approach \| Why It Failed \| Correct Approach` (3 columns) | `validate` check requires exactly 4 columns: `Attempt \| What Was Tried \| Why It Failed \| Lesson Learned` — wrong names and count fail validation | Memorize or copy-paste the exact required headers; do not paraphrase them |
+| **Bare angle-bracket placeholder in prose** | Wrote `#<existing-issue-number>` in markdown prose to indicate a placeholder | markdownlint MD033 parses `<existing-issue-number>` as an inline HTML element tag | Wrap all angle-bracket placeholders in backticks: `` `#<existing-issue-number>` `` |
 
 ## Results & Parameters
 
@@ -211,9 +272,17 @@ python3 scripts/validate_plugins.py plugins/
 - Git for version control
 - GitHub CLI (`gh`) for PR creation
 
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectMnemosyne | Bulk fix — PR #108 (2026-02-13) | 198 plugins, 151 warnings resolved |
+| ProjectMnemosyne | Single-skill fix — PRs #1498, #1516 (2026-05-02) | Wrong Failed Attempts columns + MD033 inline HTML in `skills/oss-contribution-issue-filing-pattern.md` |
+
 ## References
 
-- PR #108: https://github.com/HomericIntelligence/ProjectMnemosyne/pull/108
+- PR #108: <https://github.com/HomericIntelligence/ProjectMnemosyne/pull/108>
 - CI validation script: `scripts/validate_plugins.py`
 - Related skill: `mnemosyne:validation-workflow`
 - Related skill: `mnemosyne:documentation-patterns`
+- [markdownlint MD033 rule](https://github.com/DavidAnson/markdownlint/blob/main/doc/md033.md)

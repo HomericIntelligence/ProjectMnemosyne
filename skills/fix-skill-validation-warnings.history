@@ -1,0 +1,47 @@
+# fix-skill-validation-warnings — History
+
+## v1.1.0 (2026-05-02)
+
+**Changed by:** Session — fix CI failures in PRs #1498 and #1516 (ProjectMnemosyne)
+**Verification:** verified-precommit
+
+### What changed
+
+- Updated description to include trigger conditions for wrong Failed Attempts column names and MD033 inline HTML
+- Added `user-invocable: false`, `verification`, and `history` frontmatter fields
+- Added 2 new When to Use triggers (#6 wrong column names, #7 MD033 angle-bracket placeholders)
+- Added new Step 8 with detailed fix patterns for single-skill CI failures:
+  - Failed Attempts table required columns (exact 4-column format)
+  - MD033 inline HTML from bare angle-bracket placeholders
+- Added 2 new Failed Attempts rows: wrong column names, bare angle-bracket placeholder
+- Added Verified On section
+- Fixed bare URL in References (MD034 compliance)
+- Added markdownlint MD033 reference link
+
+### Why
+
+The existing skill covered bulk validation fixes via automation scripts. A new pattern
+emerged: individual skill PRs failing CI due to (1) wrong Failed Attempts column names
+and (2) markdownlint MD033 from angle-bracket placeholder text in prose. These are
+single-file fixes unrelated to bulk imports, and the exact required column names are
+non-obvious (easy to paraphrase incorrectly).
+
+### Previous version (v1.0.0) snapshot
+
+```
+---
+name: fix-skill-validation-warnings
+description: 'Automated approach to fix CI validation errors and warnings across skill
+  plugins. Use when: CI reports validation failures in SKILL.md files, bulk fixing
+  missing sections, or converting Failed Attempts to table format.'
+category: ci-cd
+date: 2026-02-13
+version: 1.0.0
+---
+```
+
+---
+
+## v1.0.0 (2026-02-13)
+
+**Initial version** — bulk automation for 198-plugin validation fix (PR #108).
