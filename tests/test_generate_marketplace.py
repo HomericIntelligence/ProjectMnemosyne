@@ -231,9 +231,9 @@ class TestDeduplication:
         result = generate_marketplace()
 
         names = [p["name"] for p in result["plugins"]]
-        assert len(names) == len(set(names)), (
-            f"Duplicate plugin names found: {[n for n in names if names.count(n) > 1]}"
-        )
+        assert len(names) == len(
+            set(names)
+        ), f"Duplicate plugin names found: {[n for n in names if names.count(n) > 1]}"
 
     def test_no_duplicate_source_paths(self, tmp_path, monkeypatch):
         """Source paths must be unique."""
@@ -244,9 +244,9 @@ class TestDeduplication:
         result = generate_marketplace()
 
         sources = [p["source"] for p in result["plugins"]]
-        assert len(sources) == len(set(sources)), (
-            f"Duplicate source paths found: {[s for s in sources if sources.count(s) > 1]}"
-        )
+        assert len(sources) == len(
+            set(sources)
+        ), f"Duplicate source paths found: {[s for s in sources if sources.count(s) > 1]}"
 
     def test_duplicate_name_in_frontmatter_is_deduplicated(self, tmp_path, monkeypatch):
         """If two files declare the same name, only one should appear."""
@@ -284,9 +284,9 @@ class TestPathResolution:
         for plugin in result["plugins"]:
             source = plugin["source"]
             resolved = tmp_path / source.lstrip("./")
-            assert resolved.exists(), (
-                f"Source path '{source}' does not resolve to an existing file (checked {resolved})"
-            )
+            assert (
+                resolved.exists()
+            ), f"Source path '{source}' does not resolve to an existing file (checked {resolved})"
 
     def test_source_paths_match_skills_pattern(self, tmp_path, monkeypatch):
         """Source paths must match ./skills/<name>.md pattern."""
@@ -314,9 +314,9 @@ class TestCategoryValidation:
         result = generate_marketplace()
 
         for plugin in result["plugins"]:
-            assert plugin["category"] in ALLOWED_CATEGORIES, (
-                f"Plugin '{plugin['name']}' has invalid category '{plugin['category']}'"
-            )
+            assert (
+                plugin["category"] in ALLOWED_CATEGORIES
+            ), f"Plugin '{plugin['name']}' has invalid category '{plugin['category']}'"
 
     def test_category_counts_match_actual_plugin_counts(self, tmp_path, monkeypatch):
         """Category counts dict must match actual per-category plugin counts."""
@@ -372,9 +372,9 @@ class TestDateFormat:
         result = generate_marketplace()
 
         pattern = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
-        assert pattern.match(result["last_updated"]), (
-            f"Timestamp '{result['last_updated']}' does not match ISO 8601 pattern"
-        )
+        assert pattern.match(
+            result["last_updated"]
+        ), f"Timestamp '{result['last_updated']}' does not match ISO 8601 pattern"
 
 
 class TestMainSummaryOutput:
