@@ -10,13 +10,13 @@ user-invocable: false
 
 ## Overview
 
-| Field     | Value                                                                 |
-|-----------|-----------------------------------------------------------------------|
-| Date      | 2026-02-20                                                            |
+| Field | Value |
+| ----------- | ----------------------------------------------------------------------- |
+| Date | 2026-02-20 |
 | Objective | Add a new log level function to a shared bash library that already defines its color variable but lacks the corresponding log function |
-| Outcome   | Success — `log_debug()` added, pre-commit (ShellCheck) and syntax checks pass, PR merged via auto-merge |
-| Issue     | #781                                                                  |
-| PR        | #829                                                                  |
+| Outcome | Success — `log_debug()` added, pre-commit (ShellCheck) and syntax checks pass, PR merged via auto-merge |
+| Issue | #781 |
+| PR | #829 |
 
 ## When to Use
 
@@ -80,12 +80,12 @@ Include `Closes #<issue>` in the commit message body.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Item | Value |
-|------|-------|
+| ------ | ------- |
 | File changed | `scripts/docker_common.sh` |
 | Lines changed | +8 / -4 (net +4) |
 | ShellCheck result | Passed |

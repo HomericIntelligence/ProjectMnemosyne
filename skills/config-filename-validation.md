@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-19 |
 | Issue | #733 (follow-up to #692) |
 | PR | #795 |
@@ -240,7 +240,7 @@ class TestDefaultsFilenameValidation:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 
 ## Results & Parameters
@@ -248,7 +248,7 @@ class TestDefaultsFilenameValidation:
 ### Files modified (Issue #733 / PR #795 — exact match)
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/config/validation.py` | Added `validate_filename_tier_consistency()` (+31 lines) |
 | `scylla/config/loader.py` | Import + 7 lines in `load_tier()` |
 | `tests/unit/test_config_loader.py` | Added `TestFilenameTierConsistency` class (+84 lines) |
@@ -256,7 +256,7 @@ class TestDefaultsFilenameValidation:
 ### Files modified (Issue #806 / PR #941 — stem-only)
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/config/validation.py` | Added `validate_defaults_filename()` |
 | `scylla/config/loader.py` | Import + validation call in `load_defaults()` |
 | `tests/unit/config/test_validation.py` | Added `TestValidateDefaultsFilename` class |
@@ -272,7 +272,7 @@ Coverage: 73.38% (threshold: 73%)
 ### Tests added (Issue #806 / PR #941)
 
 | Category | Count |
-|----------|-------|
+| ---------- | ------- |
 | Unit tests for `validate_defaults_filename` | 8 |
 | Integration tests in loader test file | 2 |
 | Total | 10 |

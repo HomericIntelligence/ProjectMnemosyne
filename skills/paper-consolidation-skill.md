@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-07 |
 | **Objective** | Consolidate scattered LaTeX paper files into unified `docs/arxiv/dryrun/` structure with publication readiness fixes |
 | **Outcome** | ✅ Success - Clean structure, 11 publication fixes applied, 0 LaTeX errors, 494KB PDF generated |
@@ -81,7 +81,7 @@ rm -rf docs/paper-dryrun-arxiv docs/paper-dryrun docs/paper-dryrun-data
 **Required Edits:**
 
 | Pattern | Old Value | New Value |
-|---------|-----------|-----------|
+| --------- | ----------- | ----------- |
 | `\graphicspath{}` | `{{paper-dryrun/}}` | `{{./}}` |
 | `\input{}` | `{paper-dryrun/tables/...}` | `{tables/...}` |
 | Data references | `docs/paper-dryrun/` | `docs/arxiv/dryrun/` |
@@ -101,7 +101,7 @@ rm -rf docs/paper-dryrun-arxiv docs/paper-dryrun docs/paper-dryrun-data
 **Priority 2: Content Fixes**
 
 | Line | Pattern | Replacement | Reason |
-|------|---------|-------------|--------|
+| ------ | --------- | ------------- | -------- |
 | ~761 | "extra steps that actually helped" | "completed all expected steps" | Clarity - R_Prog metric description |
 | ~95 | "state of the art" | "state-of-the-art" | Hyphenation rule |
 | ~125 | "improvement on the output" | "effect on the output" | Grammar - "effect" not "improvement" |
@@ -113,7 +113,7 @@ rm -rf docs/paper-dryrun-arxiv docs/paper-dryrun docs/paper-dryrun-data
 Use `Edit` with `replace_all: true` for consistent terminology:
 
 | Pattern | Standardize To | Occurrences |
-|---------|---------------|-------------|
+| --------- | --------------- | ------------- |
 | "dry run", "Dryrun" | "dryrun" | ~5 |
 | "sub-test", "sub-tests" | "subtest", "subtests" | ~14 |
 | "mcp" | "MCP" | 1 |
@@ -187,7 +187,7 @@ test ! -d docs/paper-dryrun && echo "OK"
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Failed: Editing Before Reading File

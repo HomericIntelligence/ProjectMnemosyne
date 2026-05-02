@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Category** | documentation |
 | **Effort** | Low (docs-only, no logic changes) |
 | **Files Changed** | 2 (`extensor.mojo`, `shared/core/__init__.mojo`) |
@@ -103,7 +103,7 @@ from shared.core.extensor import (
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Searching for `__hash__` without context | Grepped for `__hash__` alone | Found the method but missed that the docstring `Example` was already present but minimal | Always read `-C 10` context to see the full docstring before editing |
 | Trying to add `__hash__` to the import list | Considered adding `__hash__` as an explicit re-export in `__init__.mojo` | Dunder methods are not importable symbols — they are trait implementations on the struct | Document dunders via comments and docstrings, not import lists |
 | Reading the full `extensor.mojo` file | Attempted `Read` on the full file | File exceeds 25K token limit, read fails | Use `Grep` with `-C` context for targeted reads; use `offset`+`limit` for specific line ranges |

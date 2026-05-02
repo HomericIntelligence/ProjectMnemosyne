@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-19 |
 | **Objective** | Fix `ValidationError` from `criteria_scores=None` propagating into a non-Optional Pydantic field |
 | **Outcome** | ✅ Fixed 8 vulnerable sites + added defense-in-depth Pydantic validator |
@@ -167,7 +167,7 @@ pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Audit Checklist
 
@@ -191,7 +191,7 @@ grep -rn "criteria_scores" <project-root>/tests/
 ### Vulnerability Map (ProjectScylla example)
 
 | # | File | Pattern | Fix |
-|---|------|---------|-----|
+| --- | ------ | --------- | ----- |
 | 1 | `subtest_executor.py:360` | `.get("criteria_scores", {})` on checkpoint data | `or {}` |
 | 2 | `subtest_executor.py:858` | `.get("criteria_scores", {})` on consensus dict | `or {}` |
 | 3 | `regenerate.py:210` | `.get("criteria_scores", {})` on stored data | `or {}` |
@@ -240,5 +240,5 @@ def test_criteria_scores_null_in_checkpoint_data() -> None:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #760 - 8 sites fixed after 2026-02-14 dry run revealed 13 failing tests | [notes.md](../../references/notes.md) |

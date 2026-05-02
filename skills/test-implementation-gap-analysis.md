@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2025-12-31 |
 | Objective | Detect and fix gaps between test expectations and implementation |
 | Outcome | SUCCESS - 756 tests passing, 0 warnings |
@@ -153,7 +153,7 @@ pixi run pytest tests/ --tb=short
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 | Assuming test failure = conflict resolution error | Looked at merge conflicts and rebase output when test returned 404 | The 404 was because the route was never implemented — git show HEAD showed server.py wasn't in the changed files | Always run `git show HEAD --stat` to verify the actual diff matches the commit message claims before debugging conflict resolution |
 
@@ -162,7 +162,7 @@ pixi run pytest tests/ --tb=short
 ### Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `src/scylla/judge/prompts.py` | Full implementation (~300 lines added) |
 | `src/scylla/reporting/summary.py` | Fixed NameError |
 | `tests/unit/cli/test_cli.py` | Fixed exit code expectations |
@@ -174,7 +174,7 @@ pixi run pytest tests/ --tb=short
 ### Class Renames Applied
 
 | Before | After | Files Updated |
-|--------|-------|---------------|
+| -------- | ------- | --------------- |
 | TestCase | EvalCase | 5 |
 | TestOrchestrator | EvalOrchestrator | 4 |
 | TestRunner | EvalRunner | 4 |

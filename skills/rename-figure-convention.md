@@ -18,7 +18,7 @@ How to rename figure functions from ad-hoc names to the `fig{NN}_{description}` 
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-02 |
 | Objective | Rename `fig_r_prog_by_tier`, `fig_cfp_by_tier`, `fig_pr_revert_by_tier` → `fig28_r_prog_by_tier`, `fig29_cfp_by_tier`, `fig30_pr_revert_by_tier` |
 | Outcome | Success — 4 files updated atomically, all 69 analysis tests pass, pre-commit clean |
@@ -53,7 +53,7 @@ grep -E '"fig[0-9]+_' scripts/generate_figures.py | grep -oE 'fig[0-9]+' | sort 
 A figure rename touches exactly 4 files:
 
 | File | What changes |
-|------|-------------|
+| ------ | ------------- |
 | `scylla/analysis/figures/{module}.py` | Function name, `save_figure()` name arg, logger warning strings, module docstring |
 | `scripts/generate_figures.py` | Import names, FIGURES dict keys and values |
 | `tests/unit/analysis/test_figures.py` | Registry assertion strings, smoke test function names, import names, `.vl.json` filename assertions |
@@ -201,7 +201,7 @@ pre-commit run --files \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Critical Lesson: Plan the Target Numbers First
 
@@ -218,7 +218,7 @@ Do **not** rename some functions to fig28/29/30 and leave others with old names 
 ### Figure number assignment (issue #1199)
 
 | Old name | New name | Number |
-|----------|----------|--------|
+| ---------- | ---------- | -------- |
 | `fig_r_prog_by_tier` | `fig28_r_prog_by_tier` | 28 |
 | `fig_cfp_by_tier` | `fig29_cfp_by_tier` | 29 |
 | `fig_pr_revert_by_tier` | `fig30_pr_revert_by_tier` | 30 |
@@ -245,7 +245,7 @@ When filing issues after `wire-figure-pipeline`, note whether the wired figures 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1199, PR #1302 | Follow-up from #1136 (wire-figure-pipeline) |
 
 ## References

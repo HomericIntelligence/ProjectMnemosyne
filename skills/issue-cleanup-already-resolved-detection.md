@@ -11,7 +11,7 @@ tags: [cleanup, deletion, quality-audit, already-done, file-existence, git-log, 
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Trigger** | Cleanup/deletion/quality-audit issue where the target artifact may already be gone |
 | **Goal** | Avoid re-doing work already completed via a prior merge or commit |
 | **Outcome** | Either confirm the fix is in place (report and stop), or find a minimal gap and close the issue with a real commit |
@@ -178,7 +178,7 @@ NO -> Check git log for prior commits on branch, proceed as above
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Read file and assume work needed | Assumed issue open = work missing | All assertions were already present in main via prior PR | Always check `git log main..HEAD` first |
 | Skip PR creation because no changes needed | Considered not creating a PR at all | Issue stays open with no resolution | Even for "already done" work, a PR is required to close the issue formally |
 | Use `assert_all_values` as the only gap | Looked only at value assertions | `assert_numel` was the actual missing gap | Compare each test with its siblings to find structural coverage gaps |
@@ -218,7 +218,7 @@ gh issue view <number> --json state -q '.state'
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3060, branch `3060-auto-impl`, PR #3250 | `schedulers.mojo` already deleted in commit `a7e56eb1` |
 | ProjectOdyssey | Issue #3066, branch `3066-auto-impl`, PR #3263 | `benchmarks/__init__.mojo` already deleted in commit `98f5ce44` |
 | ProjectOdyssey | Issue #3094, branch `3094-auto-impl`, PR #3213 | Stale NOTE/TrainingLoop trait bounds already removed; PR open with auto-merge |

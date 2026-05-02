@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-24 |
 | **Objective** | Diagnose and fix 13 open PRs across AchaeanFleet without exhausting GitHub API rate limit |
 | **Outcome** | Rate limit exhausted within ~2 hours of intensive `gh run list` + job log fetching |
@@ -75,7 +75,7 @@ echo "Sleep ${DELAY}s until reset"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Per-PR `gh pr view` loop | Called `gh pr view <N>` for each of 13 PRs sequentially | 13 API calls instead of 1 bulk call | Use `gh pr list --json` to get all PR statuses at once |
 | Per-failure log fetch loop | Fetched job logs for every failed run without rate limit checks | Job log endpoints are expensive; exhausted limit before all PRs investigated | Check rate limit every ~20 log fetches; only fetch logs for actionable failures |
 | Ignoring rate limit until 403 | Did not check `gh api rate_limit` at session start | Had no budget awareness; couldn't predict when limit would exhaust | Always check remaining quota at session start and at each loop iteration |
@@ -86,7 +86,7 @@ echo "Sleep ${DELAY}s until reset"
 ### Rate Limit Budget Reference
 
 | Operation | Approximate Cost | Notes |
-|-----------|-----------------|-------|
+| ----------- | ----------------- | ------- |
 | `gh api rate_limit` | 1 call | Always cheap — check freely |
 | `gh pr list --json ...` (50 PRs) | 1 call | Bulk — always prefer this |
 | `gh pr view <N> --json statusCheckRollup` | 1 call | Gets all checks for 1 PR |
@@ -142,5 +142,5 @@ Error: HTTP 403: API rate limit exceeded for user ID XXXXXXX
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | AchaeanFleet | Batch investigation of 13 open PRs with CI failures, session 2026-04-24 | Rate limit exhausted within ~2 hours of intensive `gh run list` and job log fetching |

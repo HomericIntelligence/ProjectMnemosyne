@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-07 |
 | **Objective** | Establish comprehensive 10-category GO/NO-GO framework for academic paper publication readiness |
 | **Context** | "Taming Scylla" arXiv paper after 5+ prior review passes |
@@ -41,7 +41,7 @@ Use this skill when:
 Evaluate papers across these categories with GO/NO-GO/CONDITIONAL grades:
 
 | # | Category | What to Check |
-|---|----------|---------------|
+| --- | ---------- | --------------- |
 | 1 | **Numerical Accuracy** | All numerical claims match raw data sources |
 | 2 | **Internal Consistency** | Terminology, methodology descriptions, cross-references |
 | 3 | **Clarity & Readability** | Logical flow, jargon explained, technical terms defined |
@@ -208,7 +208,7 @@ done < configs_cited.txt
 ### 9. Common Issues Found in This Session
 
 | Issue | Location | Fix |
-|-------|----------|-----|
+| ------- | ---------- | ----- |
 | Docker listed as container runtime | Software Stack table (line 883) | Changed to "Git Worktrees" (actual isolation mechanism) |
 | Prior: Fabricated bibliography URLs | references.bib | Verified all 10 entries against official sources |
 | Prior: Parallel/sequential contradiction | Judge execution description | Standardized to "sequentially" throughout |
@@ -286,7 +286,7 @@ done < configs_cited.txt
 ### Final Grading Summary
 
 | Category | Grade | Issues Found |
-|----------|-------|--------------|
+| ---------- | ------- | -------------- |
 | 1. Numerical Accuracy | ✅ GO | 0 |
 | 2. Internal Consistency | ✅ GO | 0 |
 | 3. Clarity & Readability | ✅ GO | 0 |
@@ -398,7 +398,7 @@ grep -i docker paper.tex  # Returns 0 matches ✓
 **When to use this vs other paper review skills:**
 
 | Skill | Use When |
-|-------|----------|
+| ------- | ---------- |
 | `publication-readiness-review` | Final GO/NO-GO decision before arXiv submission |
 | `arxiv-paper-polish` | Formatting and LaTeX style improvements |
 | `paper-final-review` | Content review focusing on narrative and clarity |

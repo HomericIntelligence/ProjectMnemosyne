@@ -15,7 +15,7 @@ How to migrate flat API fixture directories to per-division slugged subdirs, ext
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-01 |
 | Objective | Add a second AES division fixture set without breaking existing integration tests, then make the system auto-scale to N divisions |
 | Outcome | Success — 189 tests pass (175 unit + 14 integration = 7 per division × 2 divisions) |
@@ -125,7 +125,7 @@ Adding a new division now automatically adds 7 more integration tests with zero 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

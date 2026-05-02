@@ -14,7 +14,7 @@ tags: [python, logging, json, structured-logging, stdlib, formatter]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Add optional JSON-formatted log output to an existing Python logging setup without adding dependencies |
 | **Outcome** | Successful — `setup_logging(json_format=True)` outputs valid JSON, backward-compatible, 387 tests pass |
@@ -92,7 +92,7 @@ def setup_logging(..., json_format: bool = False) -> None:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Creating dummy LogRecord inside `format()` | `logging.LogRecord("", 0, "", 0, "", (), None)` called per format invocation to filter standard attrs | Wasteful — creates a new object for every log line | Pre-compute the standard attribute set at module level as a `frozenset` |
 | Using `record.__dict__` directly without filtering | Iterated `record.__dict__` and included all keys in JSON | JSON output contained internal attributes like `relativeCreated`, `thread`, `processName`, etc. | Filter using a pre-computed set of standard `LogRecord` attribute names |
 | Setting `format` kwarg on `basicConfig` with `json_format=True` | Passed `format=format_string` to `logging.basicConfig()` even when `json_format=True` | The `format` kwarg overrides handler formatters in some cases | When using custom formatters, set them on handlers explicitly and omit `format` from `basicConfig()` |
@@ -146,5 +146,5 @@ The `| {"message", "msg", "args"}` is needed because:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #45, PR #88 | Added `JsonFormatter` + `json_format` param, 387 unit tests pass, 82.20% coverage |

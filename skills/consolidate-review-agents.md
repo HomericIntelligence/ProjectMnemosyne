@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Pattern** | Agent consolidation — many-to-one specialist merge |
 | **When Applicable** | Early-stage projects with premature specialization |
 | **Effort** | ~30 min (read 10 files, write 1, update 2 references) |
@@ -116,7 +116,7 @@ environment issues unrelated to agent file changes.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `Edit` tool without prior `Read` | Tried to edit `code-review-orchestrator.md` directly after reading it via `bash sed` | Tool requires `Read` tool call in conversation history | Always call `Read` tool explicitly before `Edit`, even if you saw file contents via Bash |
 | Single `git rm` with wildcard | `git rm .claude/agents/*-review-specialist.md` excluding some files | Shell glob would also match files to keep (mojo, security, test) | List each file explicitly in `git rm` |
 
@@ -139,7 +139,7 @@ Total agents: 44 → 35
 **Which specialists to keep separate (decision criteria)**:
 
 | Keep Separate | Reason |
-|---------------|--------|
+| --------------- | -------- |
 | `mojo-language-review-specialist` | Language-specific: SIMD patterns, ownership semantics, v0.26.1+ syntax |
 | `security-review-specialist` | Domain expertise: CVEs, attack vectors, auth flows |
 | `test-review-specialist` | Metrics-driven: coverage thresholds, assertion quality, test isolation |

@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Mojo version** | 0.26.1 |
 | **Problem** | `is_apple_silicon()` does not exist in `sys.info`; overloads with same leading params + defaults cause "ambiguous call" |
 | **Solution** | Use `is_defined["APPLE"]()` from `sys` for compile-time platform detection; remove defaults from the explicit N-arg overload |
@@ -120,7 +120,7 @@ recommend_precision_dtype(50.0)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `from sys.info import is_apple_silicon` | Used `is_apple_silicon()` from `sys.info` as documented in newer Mojo versions | Error: "module 'info' does not contain 'is_apple_silicon'" — function does not exist in Mojo 0.26.1 | Use `is_defined["APPLE"]()` from `sys` instead |
 | `from sys import os_is_macos` | Tried `os_is_macos()` from `sys` module | Error: "package 'sys' does not contain 'os_is_macos'" | Not in 0.26.1 stdlib; `is_defined` is the only compile-time option |
 | 1-arg overload alongside 3-arg with defaults | `fn foo(x)` + `fn foo(x, y=True, z=True)` — 1-arg call matched both | Mojo emits "ambiguous call" — does not prefer more-specific overload | Remove defaults from the explicit N-arg overload to make overloads unambiguous |

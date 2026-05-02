@@ -12,7 +12,7 @@ tags: [pixi, tectonic, latex, pdflatex, texlive, conda-forge, iftex, cross-platf
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-04-06 |
 | Category | tooling |
 | Objective | Add LaTeX compilation capability to a pixi-managed Python project using tectonic from conda-forge |
@@ -139,7 +139,7 @@ git add pixi.lock pixi.toml
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | texlive-core from conda-forge | Added `texlive-core` as a pixi dependency | pdflatex binary exists but format files (.fmt) are missing; fmtutil fails because mktexlsr.pl Perl module is not shipped in the conda package | texlive-core on conda-forge is fundamentally broken for direct pdflatex use; use tectonic instead |
 | texlive-core version constraint | Used `texlive-core = ">=2025,<2026"` | Only version 20230313 exists on conda-forge; solve fails | Check available versions with `pixi search texlive-core` before constraining |
 | texlive-core + perl dependency | Added both `texlive-core` and `perl` as dependencies | Perl binary installed but TeX Live's internal Perl modules (tlpkg/) are not included in the conda package | TeX Live's internal Perl dependencies are not satisfiable through conda's perl package |
@@ -169,5 +169,5 @@ git add pixi.lock pixi.toml
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Haiku analysis paper LaTeX build (2026-04-06) | tectonic builds 50-page PDF from docs/arxiv/haiku/paper.tex |

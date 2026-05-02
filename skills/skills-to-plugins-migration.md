@@ -14,7 +14,7 @@ user-invocable: true
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-22 |
 | Objective | Migrate 5 open PRs from flat `skills/` directory to `plugins/<category>/<name>/` so CI triggers and PRs can merge |
 | Outcome | All 5 PRs migrated, validated, pushed, and merged successfully |
@@ -184,14 +184,14 @@ done
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Category mapping for common invalid values
 
 | Invalid | Use Instead |
-|---------|-------------|
+| --------- | ------------- |
 | `vcs` | `tooling` |
 | `documentation` | `documentation` (valid — was missing from some lists) |
 | `research` | `evaluation` or `architecture` |
@@ -224,5 +224,5 @@ For each PR:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | PRs #155, #158, #160, #165, #167 — all 5 migrated and merged | [notes.md](../../references/notes.md) |

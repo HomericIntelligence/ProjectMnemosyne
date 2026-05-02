@@ -11,13 +11,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-10 |
-| Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-01-10 | | **Project** | ProjectScylla | |
+| Objective | Fix T5 tier complete failure when API rate limits hit during parallel evaluation |
 | Outcome | Operational |
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-10 |
 | **Project** | ProjectScylla |
 | **Objective** | Fix T5 tier complete failure when API rate limits hit during parallel evaluation |
@@ -349,7 +349,7 @@ Copy-paste ready configurations and expected outputs.
 
 ## Failed Attempts (Critical Learnings)
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Failed: Relying Only on RateLimitError Exception Handling

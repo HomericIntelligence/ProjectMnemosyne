@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Add SHA256 checksum verification for binary downloads in GitHub Actions workflows |
 | **Context** | Security hardening — supply chain attack prevention |
 | **Trigger** | Workflow downloads a binary (wget/curl) and executes it without integrity check |
@@ -101,7 +101,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `curl` to checksums URL returned empty | Used `curl -s` without `-L` flag | GitHub releases redirect; without `-L`, curl follows no redirect and returns empty | Always use `curl -L -s` for GitHub Releases URLs, or use `wget -q -O -` |
 | Searching for `security-pr-scan.yml` | Issue description mentioned this filename | The actual file is `security.yml` — the issue description used an informal name | Always `ls .github/workflows/` to find actual filenames before assuming |
 

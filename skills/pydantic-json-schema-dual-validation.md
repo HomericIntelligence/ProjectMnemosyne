@@ -17,7 +17,7 @@ Pattern for enforcing cross-field semantic constraints at two layers: JSON Schem
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-07 |
 | Objective | Enforce that `uses_hierarchy=true` requires `uses_delegation=true` in `TierConfig` — caught at both JSON Schema and Pydantic layers |
 | Outcome | Success — dual-layer validation, 8 new tests, all 4463 unit tests pass, 80.25% coverage |
@@ -121,12 +121,12 @@ def test_load_tier_hierarchy_without_delegation_raises_configuration_error(self,
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Layer | Mechanism | Error type |
-|-------|-----------|-----------|
+| ------- | ----------- | ----------- |
 | JSON Schema | `if/then` with `const: true` | `jsonschema.ValidationError` → `ConfigurationError` (loader wraps it) |
 | Pydantic | `@model_validator(mode="after")` | `pydantic.ValidationError` → `ConfigurationError` (loader wraps it) |
 
@@ -135,5 +135,5 @@ def test_load_tier_hierarchy_without_delegation_raises_configuration_error(self,
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1460, issue #1434 | `TierConfig.uses_hierarchy` → `uses_delegation` constraint; 4463 tests pass |

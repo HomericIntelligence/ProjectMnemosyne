@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Add `.editorconfig` to ensure consistent editor settings across all file types and IDEs |
 | **Outcome** | Success — PR created, pre-commit passes |
@@ -126,7 +126,7 @@ feat(dx): add .editorconfig for cross-editor consistency
 ### Alignment with Existing Tools
 
 | Concern | `.editorconfig` | `.gitattributes` | ruff/black |
-|---------|-----------------|-------------------|------------|
+| --------- | ----------------- | ------------------- | ------------ |
 | Line endings | `end_of_line = lf` | `* text=auto eol=lf` | N/A |
 | Python indent | `indent_size = 4` | N/A | Enforced |
 | YAML indent | `indent_size = 2` | N/A | N/A |
@@ -138,7 +138,7 @@ feat(dx): add .editorconfig for cross-editor consistency
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Adding .editorconfig is straightforward — no gotchas encountered |
 
 ## Results & Parameters
@@ -156,5 +156,5 @@ feat(dx): add .editorconfig for cross-editor consistency
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1526, PR #1556 | Audit finding S13 — DX section |

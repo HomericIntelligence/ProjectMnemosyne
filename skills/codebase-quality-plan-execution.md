@@ -12,7 +12,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-28 |
 | Objective | Apply 9 categories of fixes from a static analysis report to a Python scraper + JS frontend codebase |
 | Outcome | **Success** — all 175 tests pass; 1 previously undiscovered runtime bug also found and fixed during implementation |
@@ -125,7 +125,7 @@ Copy-paste ready configurations and expected outputs.
 ## Key Fixes Applied
 
 | Fix | File | Mechanism |
-|-----|------|-----------|
+| ----- | ------ | ----------- |
 | `Team.team_id: int` → `int \| None` | `models.py:47` | Match actual nullable usage in builder |
 | HTTP 429 retry | `client.py:56-61` | `status >= 500 or status == 429` |
 | Parser KeyError protection | `division.py`, `pool.py` | `.get()` + `continue` on missing required keys |

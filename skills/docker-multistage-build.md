@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-14 |
 | **Issue** | #601 |
 | **PR** | #649 |
@@ -172,15 +172,15 @@ docker run --rm -v $(pwd):/workspace app:multi-stage pytest
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Image Size Comparison
 
 | Version | Size | Reduction |
-|---------|------|-----------|
-| Original (single-stage) | 818MB | - |
+| --------- | ------ | ----------- |
+| Original (single-stage) | 818MB | --- |
 | Multi-stage | 572MB | **-246MB (-30%)** |
 
 ### Build Time Impact

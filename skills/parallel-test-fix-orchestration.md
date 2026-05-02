@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Scope** | Mass CI test failure resolution |
 | **Scale** | 10-50+ failing test files per session |
 | **Parallelism** | Up to 10 concurrent worktree agents |
@@ -52,7 +52,7 @@ Key files to read:
 Group failures into categories to write better agent prompts:
 
 | Category | Typical Fix | Agent Complexity |
-|----------|-------------|-----------------|
+| ---------- | ------------- | ----------------- |
 | **Wrong import path** | Change `from X import Y` → `from Z import Y` | Simple (~30s) |
 | **API signature change** | Add missing arg, wrap type, reorder params | Simple (~60s) |
 | **Docstring formatting** | Capitalize, add periods | Trivial (~20s) |
@@ -108,7 +108,7 @@ git worktree prune
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Launch all 45 agents simultaneously | Tried launching all agents at once in a single message | Tool call limits and context pressure; some agents got minimal context | Launch in waves of 5-10 to give each agent adequate prompt detail |
 | Fix tests without reading source first | Early agents tried fixing tests based only on error messages | Agents guessed wrong APIs, produced incorrect fixes | Always explore source APIs first and include signatures in agent prompts |
 | Assume all failures are test-only | Categorized all failures as "fix the test" | 4 were real source bugs (missing else branch, ignored step field, wrong offset, stub method) | Read source carefully; runtime assertion failures often indicate real source bugs |
@@ -146,7 +146,7 @@ These were categorized as "test failures" but were actually source code bugs:
 ### Key Metrics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Total agents launched | 45 |
 | Success rate | 100% |
 | Avg agent duration (simple) | 45-90 seconds |

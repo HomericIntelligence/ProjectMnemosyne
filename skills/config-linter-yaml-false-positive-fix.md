@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Eliminate false-positive "Possible malformed key" warnings from a line-level YAML syntax checker that flagged valid constructs containing colons |
 | **Outcome** | Success — all false-positive cases resolved, genuine malformed keys still detected, 30 tests pass |
@@ -79,7 +79,7 @@ if in_block_scalar:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Expanding the single regex | Try to make `^\s*[\w\-]+:` handle quoted keys and flow mappings in one pattern | Regex becomes unmaintainable and still misses edge cases like list items and document separators | An allowlist of specific patterns is clearer than one universal regex |
 | Nested `if` statements | `if ":" in line: if not valid:` | Ruff SIM102 flags nested `if` that can be combined with `and` | Use `if ":" in x and not valid(x):` instead |
 | Inline block scalar check | Keeping the block scalar continuation logic inside `_check_yaml_syntax` | Ruff C901 complexity exceeded 10 (was 12) | Extract state-checking logic into static helper methods |
@@ -132,5 +132,5 @@ url: https://example.com
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #64 / PR #130 | 30 unit tests pass, ruff lint+format clean |

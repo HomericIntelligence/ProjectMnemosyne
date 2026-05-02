@@ -15,7 +15,7 @@
 ### implementer.py (18 → 9 broad)
 
 | Line | Action | Reason |
-|------|--------|--------|
+| ------ | -------- | -------- |
 | 116 | Tighten → `CyclicDependencyError` | `detect_cycles()` only raises this |
 | 176 | Keep | network + API + JSON all possible |
 | 194,201,208,218 | Tighten → `(CalledProcessError, FileNotFoundError, OSError)` | health check `run()` calls |
@@ -34,7 +34,7 @@
 ### llm_judge.py (8 → 0 broad)
 
 | Line | Action | Reason |
-|------|--------|--------|
+| ------ | -------- | -------- |
 | 430 | Tighten → `(OSError, SubprocessError)` | subprocess execution |
 | 432 | Tighten → `OSError` | Python script finding (glob/file ops) |
 | 644 | Tighten → `(SubprocessError, OSError)` | git status |

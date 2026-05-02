@@ -11,7 +11,7 @@
 ### FIXME Categories Found (22 items)
 
 | Category | Count | Old Issues | Files |
-|----------|-------|------------|-------|
+| ---------- | ------- | ------------ | ------- |
 | P0 Critical Test Coverage | 2 | #2378, #2379 | fp4.mojo, mxfp4.mojo |
 | Float16 Precision Issues | 4 | #2701, #2703 | test_alexnet_layers.mojo, test_lenet5_fc_layers.mojo |
 | Placeholder Test Fixtures | 6 | #2715 | Various __init__.mojo files |
@@ -20,7 +20,7 @@
 ### External Blockers (2 items)
 
 | Blocker | File | Notes |
-|---------|------|-------|
+| --------- | ------ | ------- |
 | BFloat16 Workaround | shared/training/dtype_utils.mojo | Mojo limitation |
 | Coverage Tool Blocker | scripts/check_coverage.py | Mojo lacks coverage |
 

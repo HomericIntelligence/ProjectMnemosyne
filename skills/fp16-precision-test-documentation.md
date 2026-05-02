@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Skill Name** | fp16-precision-test-documentation |
 | **Category** | documentation |
 | **Issue Type** | [Cleanup] document Float16 precision limitations |
@@ -47,7 +47,7 @@ user-invocable: false
 ## Key Technical Facts for Float16 Precision Documentation
 
 | Float16 Property | Value |
-|-----------------|-------|
+| ----------------- | ------- |
 | Mantissa bits | 11 (implicit) |
 | Decimal precision | ~3.3 digits |
 | Max safe accumulations | ~100-200 for FP-representable inputs |
@@ -68,7 +68,7 @@ faithfully modeling this pattern.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Changing code to skip FP16 tests programmatically | Adding conditional dtype checks in test body | Out of scope for a [Cleanup] documentation issue | Documentation-only issues require ONLY docstring changes, no code logic changes |
 | Creating separate investigation issues for all NOTEs | Treating all FP16 NOTEs as potential bugs | All NOTEs were well-reasoned expected limitations, not bugs | Read existing NOTE context carefully before escalating — most are already explained |
 | Adding inline comments at noted lines | Adding more inline comments alongside existing NOTEs | Inline comments don't help file-level discoverability | Consolidate into file header docstring for canonical reference |

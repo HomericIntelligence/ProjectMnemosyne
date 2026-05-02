@@ -60,7 +60,7 @@ if slot_id is not None:
 Mapped status updates to unused `ImplementationPhase` enum values:
 
 | Phase | Status Messages |
-|-------|-----------------|
+| ------- | ----------------- |
 | PLANNING | "Checking plan", "Generating plan" |
 | IMPLEMENTING | "Fetching issue", "Running Claude Code" |
 | CREATING_PR | "Checking commit", "Pushing branch", "Creating PR" |

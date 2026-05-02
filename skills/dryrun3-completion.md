@@ -11,7 +11,7 @@ user-invocable: true
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-04 (updated 2026-03-14) |
 | Objective | Complete all 47 experiments in ~/dryrun3/ to 7/7 run_results each, then generate full analysis pipeline output |
 | Outcome | Operational — 47/47 experiments complete, 329 total runs, $148.64 API cost, 34.3% pass-rate |
@@ -300,14 +300,14 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results and Parameters
 
 ### Experiment Statistics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Total experiments | 47 |
 | Experiments broken (0/7 run_results) | 16 |
 | Experiments partial (1-6/7 run_results) | 3 |
@@ -320,7 +320,7 @@ Copy-paste ready configurations and expected outputs.
 ### Analysis Pipeline Outputs
 
 | Output Type | Count |
-|-------------|-------|
+| ------------- | ------- |
 | CSV files | 4 |
 | JSON files | 2 |
 | Figures (PNG/SVG) | 56 |
@@ -359,7 +359,7 @@ results-dir: ~/dryrun3
 ## Files and References
 
 | File | Role |
-|------|------|
+| ------ | ------ |
 | `scripts/manage_experiment.py` | Batch experiment runner; contains batch skip logic bug fixed in PR #1404 |
 | `scylla/analysis/loader.py` | Analysis data loader; expects `data_dir/<exp>/<timestamp>/T*/NN/run_*/run_result.json` |
 | `scripts/generate_all_results.py` | Master analysis pipeline; produces figures, tables, CSVs, JSONs |

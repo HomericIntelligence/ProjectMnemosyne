@@ -14,7 +14,7 @@ Eliminate duplicated test fixture files by using runtime block-based composition
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-01-02 |
 | **Category** | testing |
 | **Objective** | Eliminate duplicated test fixture files by using runtime block-based composition |
@@ -115,7 +115,7 @@ du -sh tests/fixtures/
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -147,7 +147,7 @@ directory_patterns:
 ### Metrics
 
 | Metric | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | CLAUDE.md files in T0 | 1034 | 0 |
 | Fixture size | 56MB | 47MB |
 | Lines removed | 0 | 239,888 |

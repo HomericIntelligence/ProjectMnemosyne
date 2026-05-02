@@ -12,7 +12,7 @@
 ## CSV Column Layout (after normalization)
 
 | Column | Name | Example |
-|--------|------|---------|
+| -------- | ------ | --------- |
 | A | (account/type) | CHECKING |
 | B | description | `SQ* VERVE COFFEE ROASTERS SAN JOSE CA` |
 | C | merchant | `Verve Coffee` |
@@ -74,7 +74,7 @@ for desc, count in freq.most_common(30):
 ## Files Created
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `/home/mvillmow/Downloads/normalize_descriptions.py` | Normalization script (idempotent, re-runs from .bak) |
 | `/home/mvillmow/Downloads/combined_transactions.csv` | Enriched CSV with `merchant` column added |
 | `/home/mvillmow/Downloads/combined_transactions.csv.bak` | Backup of original CSV before modification |

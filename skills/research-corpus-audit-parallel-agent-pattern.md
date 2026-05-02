@@ -15,7 +15,7 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon, kv-ca
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-17 |
 | **Objective** | Strict evidence-based quality audit of 68-file AI architecture research corpus across 10 dimensions; extended to per-idea numerical correctness review for KV cache quantization papers |
 | **Outcome** | Successful — all 10 dimensions graded with file:line evidence; 3 structural issues identified and fixed; overall grade raised from B to A. Per-idea review of TurboQuant (5.1) found 2 critical inherited errors and 3 moderate issues. |
@@ -55,7 +55,7 @@ tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon, kv-ca
 2. **Wave 1 — 4 parallel agents (single message, 4 tool calls):**
 
    | Agent | Dimensions | Strategy |
-   |-------|-----------|----------|
+   | ------- | ----------- | ---------- |
    | A (Haiku OK) | D1, D3, D4, D7 | Grep entire corpus for presence strings: `Baseline A1`, `Baseline A2`, `Baseline B`, `Baseline C`, `TTFT`, `TPOT`, `Accuracy`. Return per-file miss list. |
    | B (Sonnet) | D2 | Read 5 seeded summary files. For each, find first 3 numeric values in comparison tables; verify citation block or first-principles marker. Report 15/15 tally. |
    | C (Sonnet) | D5, D6 | Read 5 targeted summaries for TPOT direction. Read priority_ranking.md; pick 5 EXISTS/NOVEL verdicts; verify Prior Art Gap names papers. |
@@ -116,9 +116,9 @@ When an executive summary value conflicts with a detailed body derivation, the b
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Single-agent corpus read | Reading all 68+ files in main context for a comprehensive audit | Context bloat; impractical at scale | Use parallel agents; each reads a subset; synthesize results in main context |
-| Narrative TPOT section | Using `## TPOT Impact Analysis` prose section instead of standard table rows | Invisible to corpus-wide grep; fails D4 audit automatically | TTFT and TPOT MUST appear as explicit `| TTFT (8K prompt) |` and `| TPOT (batch=1) |` rows in each comparison table |
+| Narrative TPOT section | Using `## TPOT Impact Analysis` prose section instead of standard table rows | Invisible to corpus-wide grep; fails D4 audit automatically | TTFT and TPOT MUST appear as explicit `TTFT (8K prompt)` and `TPOT (batch=1)` rows in each comparison table |
 | `↑ negligible` for zero-overhead ideas | Using `↑ negligible` in TPOT cells for ideas with < 0.1% overhead | Corpus convention requires `≈ ref` for true no-overhead ideas; `↑` implies a real compute addition | TPOT direction: `↑` = real overhead, `≈ ref` = negligible/zero, `↓` = improvement |
 | Wrong section header | Using `## Quality Tradeoff Evidence` instead of `## Accuracy / Quality Tradeoff` | D7 grep for "Accuracy" missed the section entirely | Section header must match corpus standard exactly: `## Accuracy / Quality Tradeoff` |
 | Trust "32K ctx" label for A2 KV cache | Accepting the "32K ctx" label on KV cache figures without verifying the formula arithmetic | The 68.7 GB figure requires 262,144 tokens, not 32,768 — the label was wrong while the arithmetic used the full max context | Always re-derive: `64×2×8×128×32768×2 = 8 GB` (actual 32K), not 68.7 GB; the inherited error is context 32,768→262,144 |
@@ -288,7 +288,7 @@ When reviewing a research doc about KV cache quantization (ideas referencing KIV
 ### Realistic TPOT Improvement Table (for reference)
 
 | Model | Seq len | KV BW before | Weight BW | Realistic INT4 KV TPOT | Attention kernel only |
-|-------|---------|-------------|----------|------------------------|----------------------|
+| ------- | --------- | ------------- | ---------- | ------------------------ | ---------------------- |
 | A1 (27B Hybrid) | 32K | ~2.0 GB | ~54 GB | ~1.03× | ~4× (kernel only) |
 | A2 (32B Dense) | 32K | ~8.0 GB | ~64 GB | ~1.13× | ~4× (kernel only) |
 | A2 (32B Dense) | 262K | ~68.7 GB | ~64 GB | ~1.63× | ~4× (kernel only) |
@@ -297,7 +297,7 @@ When reviewing a research doc about KV cache quantization (ideas referencing KIV
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ArchIdeas corpus | 34 ideas, 68 files, 5 artifacts | Audit Apr 2026 — found D4/D5/D7 issues in summary_5_3 and summary_3_8; all fixed |
 | ArchIdeas idea 5.1 (TurboQuant) | Per-idea review with 5-agent swarm | Apr 2026 — found context length mislabel (68.7 GB at 262K labeled "32K"), A1 head_dim error, TPOT overstatement |
 | ArchIdeas corpus (post Phase C/D) | 39 ideas, 4-baseline grading | Apr 2026 — D1=F (7 Phase A thematic docs missing all 4 baseline sections), D4=F (94/156 TTFT, 125/156 TPOT), D5=F (research_6_4 no TPOT rows), D7=F (10/39 have strict Accuracy header), D3/D6/D8/D9/D10=A; overall grade D; synthesis artifacts excellent, per-file structural compliance poor |

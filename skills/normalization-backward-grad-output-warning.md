@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Objective | Add a warning to the shared testing guide (testing-patterns.md) about `grad_output=ones` causing false-zero gradients in normalization backward tests |
 | Outcome | Section added to Pattern 3 (Gradient Checking) with math, failing pattern, correct pattern, and canonical code reference |
 | Applies To | Any project with a shared Mojo/Python testing guide and normalization layer backward tests |
@@ -107,13 +107,13 @@ that hides implementation errors entirely.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3249, PR #3816 | [notes.md](../references/notes.md) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Create a new standalone doc | Draft a new `normalization-testing-guide.md` | Duplication — content belongs in the existing shared guide | Always extend the existing doc rather than creating a parallel one |
 | Add the warning to the Troubleshooting section | Place it under "Gradient Check Failing" | The existing troubleshooting entry is about discontinuities (ReLU), not cancellation; mixing them confused the pattern | Group normalization-specific warnings in the Gradient Checking Pattern section, not in general troubleshooting |
 | Use `---` before the subsection | Added a horizontal rule before the warning | Created visual separation that broke the logical grouping within Pattern 3 | Insert warning as a `###` subsection inside the existing pattern, after the tolerances block |

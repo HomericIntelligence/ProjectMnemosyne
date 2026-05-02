@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Name | mojo-bounds-test-pattern |
 | Category | testing |
 | Trigger | Adding missing boundary condition test that mirrors an existing one |
@@ -55,7 +55,7 @@ fn test_setitem_negative_index() raises:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run mojo test locally | `pixi run mojo test tests/shared/core/test_utility.mojo` | GLIBC_2.32/2.33/2.34 not found on host OS | Mojo tests must run in Docker/CI on this dev machine |
 
 ## Results & Parameters

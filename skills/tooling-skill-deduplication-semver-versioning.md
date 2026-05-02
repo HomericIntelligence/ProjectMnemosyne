@@ -15,7 +15,7 @@ tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Merge duplicate skill clusters into consolidated skills, with semantic versioning for amendments |
 | **Outcome** | Six rounds: 16 test-splitting-*merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-*merged to 1 (net -5); 9 conv2d-gradient-* merged to 3 (net -6); 12 test-splitting-*merged to 3 (net -9); 4 test-splitting-* merged to 1 with OBSOLETE notice (net -3) after heap corruption was fixed at compiler level. |
@@ -176,7 +176,7 @@ done
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Parallel agents in same worktree | Launched 3 agents to merge 3 groups simultaneously in one worktree | Worked fine — no conflicts since each agent writes different files | Parallel agents in a shared worktree work when they touch non-overlapping files |
 | Major-only version bumps | Always bump X.0.0 for any amendment | Loses information about change scale — a typo fix looks the same as a full rewrite | Use semver: Major for rewrites/merges, Minor for new findings, Patch for typos |
 | Merging by exact text dedup | Tried deduplicating Failed Attempts by exact row match | Different skills describe the same lesson with different wording | Deduplicate by lesson/concept, not by exact text match |
@@ -279,7 +279,7 @@ key_insight: topic-adjacent skills with different APIs warrant separate skills e
 ### Semver Rules for /learn
 
 | Change Type | Bump | When |
-|-------------|------|------|
+| ------------- | ------ | ------ |
 | Major (X.0.0) | `1.0.0` → `2.0.0` | Merge skills, rewrite workflow, change core recommendation |
 | Minor (0.X.0) | `1.0.0` → `1.1.0` | Add findings, failed attempts, extend workflow |
 | Patch (0.0.X) | `1.0.0` → `1.0.1` | Fix typos, formatting, metadata |
@@ -321,7 +321,7 @@ Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-fi
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | PR #1040, merged 16 test-splitting skills + added semver | 2026-03-25 session |
 | ProjectMnemosyne | PR #1075, merged 10 mojo-test-* skills into 1 | 2026-03-27 session |
 | ProjectMnemosyne | PR #1077, merged 6 deprecated-file-cleanup-* skills into 1 | 2026-03-28 session |

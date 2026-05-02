@@ -13,7 +13,7 @@ tags: [audit, triage, remediation, github-issues, dead-code, ci, requirements, p
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Run a strict repo audit on ProjectMnemosyne, triage all findings by complexity, fix simple/medium items directly, and file GitHub issues for complex work |
 | **Outcome** | Successful. Audit scored C+ (77%). 10 simple fixes applied in one PR (14 files changed, -1,280 net lines). 6 GitHub issues filed (#1105–#1110). 9/9 tests passing after fixes. |
@@ -71,7 +71,7 @@ Run `/repo-analyze-strict`. This produces a graded report across 15 dimensions. 
 Use these criteria to decide between **fix-now** and **file-as-issue**:
 
 | Criteria | Fix Now | File as Issue |
-|----------|---------|---------------|
+| ---------- | --------- | --------------- |
 | Time estimate | < 1 hour | > 1 hour |
 | Design decisions required | None | Yes |
 | Cross-repo or multi-file refactor | No | Yes |
@@ -193,7 +193,7 @@ git commit -m "fix: apply audit remediation (dead code, CI, docs, requirements)"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run `pytest tests/` in CI | Pointed the CI workflow test step at the full `tests/` directory | Two test files import a non-existent module (`fix_remaining_warnings`), causing `ImportError` collection failure | Always verify full test suite runs clean before setting CI to `tests/`; scope to working subset and file issues for broken files |
 | Attribute test failures to own changes | Assumed `ImportError` failures in `test_fix_remaining_warnings.py` were caused by the deletion of migration scripts | Git stash + re-run proved the failures pre-existed | Always stash and re-run before concluding test failures are your fault |
 | Fix broken test files in same PR | Tried to fix the broken test imports as part of the cleanup PR | The missing module `fix_remaining_warnings` doesn't exist and creating it is a design decision requiring its own scope | Keep the cleanup PR focused; file a dedicated issue for the broken tests |
@@ -203,7 +203,7 @@ git commit -m "fix: apply audit remediation (dead code, CI, docs, requirements)"
 ### Audit Score Baseline (ProjectMnemosyne, 2026-03-28)
 
 | Section | Grade | Key Findings |
-|---------|-------|--------------|
+| --------- | ------- | -------------- |
 | Documentation | B+ | Good README/CHANGELOG, missing ADRs |
 | AI Agent Tooling | B+ | Skills marketplace functional |
 | Planning/Compliance | B | Issues filed but no roadmap doc |
@@ -214,7 +214,7 @@ git commit -m "fix: apply audit remediation (dead code, CI, docs, requirements)"
 ### Changes Applied (10 fix-now items)
 
 | Change | Type | Net Lines |
-|--------|------|-----------|
+| -------- | ------ | ----------- |
 | Fix `.claude-plugin/plugin.json` metadata | Edit | +10 / -10 |
 | Create `requirements.txt` | New file | +2 |
 | Create `requirements-dev.txt` | New file | +3 |
@@ -232,7 +232,7 @@ git commit -m "fix: apply audit remediation (dead code, CI, docs, requirements)"
 ### GitHub Issues Filed (Complex Work)
 
 | Issue | Title | Label |
-|-------|-------|-------|
+| ------- | ------- | ------- |
 | #1105 | Fix broken test files (`fix_remaining_warnings`) | testing, technical-debt |
 | #1106 | Add type annotations throughout codebase | code-quality |
 | #1107 | Security hardening: input validation + sandboxing | security |
@@ -243,7 +243,7 @@ git commit -m "fix: apply audit remediation (dead code, CI, docs, requirements)"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | Strict audit + triage + 10-item cleanup PR (March 2026) | 9/9 tests passing, 6 issues filed (#1105–#1110) |
 
 ## References

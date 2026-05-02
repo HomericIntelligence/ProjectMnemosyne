@@ -14,7 +14,7 @@ tags: [docker, hadolint, dockerfile, lint, failure-threshold, ci, github-actions
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-23 |
 | **Objective** | Fix hadolint-action job failing on warnings that are already in the ignore list |
 | **Outcome** | Setting failure-threshold to `error` stopped false failures on ignored rules |
@@ -69,7 +69,7 @@ ignore:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Adding rules to `ignore:` list with `failure-threshold: warning` | Expected that ignored rules would not cause CI failure | hadolint-action v3.1.0 can still exit non-zero when threshold is `warning` even if the specific rule triggering it is in the ignore list (edge case in threshold evaluation) | Use `failure-threshold: error` when all warning-level rules you care about are in `ignore:` — this is the correct semantics: explicit ignores mean you've accepted those warnings |
 
 ## Results & Parameters
@@ -77,7 +77,7 @@ ignore:
 ### hadolint Severity Levels (low → high)
 
 | Level | Example Rules | CI Behavior with `failure-threshold: error` |
-|-------|--------------|----------------------------------------------|
+| ------- | -------------- | ---------------------------------------------- |
 | `info` | DL3048 (label conventions) | Does NOT fail CI |
 | `warning` | DL3008 (unversioned apt), DL3009 (apt lists) | Does NOT fail CI |
 | `error` | DL3006 (always tag FROM), invalid syntax | FAILS CI |
@@ -105,5 +105,5 @@ trustedRegistries:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | AchaeanFleet | CI repair session — hadolint job was failing despite ignore list | 2026-04-23; resolved by setting failure-threshold: error |

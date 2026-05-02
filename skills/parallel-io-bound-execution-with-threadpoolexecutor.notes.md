@@ -278,7 +278,7 @@ pixi run python scripts/rerun_judges.py \
 ## Performance Expectations
 
 | Scenario | Workers | Expected Speedup |
-|----------|---------|------------------|
+| ---------- | --------- | ------------------ |
 | Single slot | any | 1× (no parallelism benefit) |
 | 10 slots | 1 | 1× (sequential baseline) |
 | 10 slots | 3 | ~3× (I/O-bound ideal) |

@@ -15,7 +15,7 @@ history: arch-research-myrmidon-swarm-review.history
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-13 |
 | **Objective** | Review and validate 31 AI architecture research documents (research + summary pairs) for citation accuracy, Big-O correctness, baseline comparison validity, and implementation feasibility |
 | **Outcome** | Successful — 31 review docs, 155 verification files, 2 synthesis reports, 1 final summary produced |
@@ -206,7 +206,7 @@ When the corpus has accumulated separate review_*.md, summary_*.md, and verifica
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using prelude/command baseline specs directly | Accepted SHARED_PRELUDE.md baseline numbers at face value | Prelude had 5 factual errors: wrong vocab (151,936→248,320 for A1/B), wrong context (32,768→262,144), wrong head_dim (128→256 for GatedAttn), wrong head counts for B global attention. These cascaded into all 31 research docs | Always web-fetch authoritative config.json before starting any quantitative analysis |
 | Single-agent review | Tried reviewing multiple ideas sequentially | Context window exhaustion; cross-contamination between ideas | One lead agent per idea; no agent works on more than one idea |
 | Agent self-approval stall | 4 agents invoked `/hephaestus:advise` internally, presented a plan, and waited for approval | Agents stalled indefinitely waiting for human approval in background context | Detect stalled agents by checking for verification files without corresponding review files; unblock by sending explicit approval via SendMessage |
@@ -230,7 +230,7 @@ When the corpus has accumulated separate review_*.md, summary_*.md, and verifica
 ### Corpus Merge Parallelization — Verified Grouping (39 Ideas, 6 Groups)
 
 | Wave | Groups | Ideas | Lead agents | Sub-agents |
-|------|--------|-------|-------------|------------|
+| ------ | -------- | ------- | ------------- | ------------ |
 | 1 | 1, 2, 3 | 1.1–1.7, 2.1–2.2, 3.1–3.8 | 17 | 85 |
 | 2 | 4, 5, 6 | 4.1–4.7, 5.1–5.10, 6.1–6.5 | 22 | 110 |
 
@@ -274,7 +274,7 @@ After reviews complete, launch parallel surgical correction agents (one per grou
 These IDs were WebFetch-verified during the N1–N4 research pass:
 
 | Idea | Key paper | arXiv ID | Verified |
-|------|-----------|----------|---------|
+| ------ | ----------- | ---------- | --------- |
 | N1 (AR loop + stop token) | PonderNet | arXiv:2107.05407 | YES |
 | N1 | EAGLE speculative decoding | arXiv:2401.15077 | YES |
 | N2 (prefill/decode split) | Splitwise | arXiv:2311.18677 | YES |
@@ -287,7 +287,7 @@ These IDs were WebFetch-verified during the N1–N4 research pass:
 ### N1–N4 Final Verdicts
 
 | Idea | Verdict | Rationale |
-|------|---------|-----------|
+| ------ | --------- | ----------- |
 | N1 (In-arch AR loop + stop token) | INVESTIGATE | Novel framing; prior art (PonderNet, Medusa) covers components but not the specific trained-in stop-token-as-architecture-gate |
 | N2 (Prefill/decode split) | PURSUE | Splitwise and DistServe validate the operational benefit; architectural-level split (vs. system-level) is the novel angle |
 | N3 (Block-diffusion AR decoder) | INVESTIGATE | BD3-LM and LLaDA are close prior art; the AR-across-blocks + diffusion-within-block combination at architecture level has novelty |
@@ -296,7 +296,7 @@ These IDs were WebFetch-verified during the N1–N4 research pass:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ArchIdeas | 31 AI architecture ideas (sections 1–5 plus 4.7) | Qwen3.5-27B Hybrid, Qwen3-32B Dense, Qwen3.5-397B-A17B MoE baselines |
 | ArchIdeas | 4 new ideas (N1–N4) added to existing 31-idea corpus | research_6_1 through research_6_4 produced by parallel Myrmidon swarms; all 4 included in final LaTeX paper |
 | ArchIdeas | 39-idea corpus merge (Phase B) | review_*.md + summary_*.md + 5× verification_*.md merged into 39 unified research_*.md files; 195 merged verification files produced; synthesis docs regenerated |

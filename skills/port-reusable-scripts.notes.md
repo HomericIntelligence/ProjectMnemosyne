@@ -16,7 +16,7 @@
 ## PR Summary
 
 | PR | Status | Scripts | Lines | Key Work |
-|----|--------|---------|-------|----------|
+| ---- | -------- | --------- | ------- | ---------- |
 | #499 | ✅ Merged | 4 | ~575 | Foundation utilities |
 | #500 | Created | 6 | ~1,478 | Agent management |
 | #501 | Created | 3 | ~855 | Markdown tools |

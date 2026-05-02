@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-31 |
 | **Objective** | Enhance analysis pipeline to produce rigorous, publication-quality figures, tables, and statistical outputs suitable for academic papers |
 | **Outcome** | ✅ Successfully implemented all 6 work packages (WP1-WP6) across 6 PRs with comprehensive test coverage |
@@ -283,7 +283,7 @@ Next WP: <Next WP description>
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Failed: Direct figure module patching in tests

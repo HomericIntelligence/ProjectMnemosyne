@@ -10,7 +10,7 @@ user-invocable: false
 # Checkpoint Save Guard Bug
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-13 |
 | Objective | Fix `--retry-errors` not working for runs stuck in intermediate states |
 | Outcome | Success - one-line fix, all 4774 tests pass |
@@ -32,7 +32,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -40,7 +40,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -54,5 +54,5 @@ user-invocable: false
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1474 - dryrun3 intermediate state fix | 4774 tests pass, 76.45% unit coverage |

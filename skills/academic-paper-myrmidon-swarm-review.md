@@ -15,7 +15,7 @@ tags: [academic, paper-review, myrmidon, swarm, latex, statistics, vega-lite, ar
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-28 |
 | **Objective** | Comprehensive parallel review of academic papers OR AI architecture research docs using role-stratified swarm agents. For LaTeX papers: statistical methodology, data accuracy, writing quality, figure/caption verification, Go/NoGo quantitative claim audits. For arch research docs: citation verification, complexity audit, literature gap finding, comparison validation, feasibility checking. |
 | **Outcome** | Operational — LaTeX paper v1: caught 4 CRITICAL figure/caption mismatches, 8 missing citations (ProjectScylla#1758). Arch research doc (TurboQuant 5.1): caught context length mislabel (68.7 GB labeled "32K"), head_dim error, TPOT overstatement, 3 missing literature citations. LaTeX paper v2 Go/NoGo audit: 5-agent swarm verified 100+ numeric claims with 0 data mismatches; caught false "monotonic relationship" claim; coordinator caught and overrode 1 agent false alarm on cost p-value. |
@@ -103,7 +103,7 @@ pixi run --environment docs bash build.sh
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Fix captions before reading VL JSON | Rewrote figure captions based on paper context and section headings | Captions were wrong — the figures showed different variables than assumed | Always read the `.vl.json` spec before touching a figure caption |
 | Use system LaTeX | `pdflatex build.sh` or `latexmk` | No system LaTeX installed in the environment | Use `pixi install --environment docs` then `pixi run --environment docs bash build.sh` |
 | Sequential single-agent review | One Sonnet agent reading 2,180 lines end-to-end | Slow and likely to miss cross-domain issues (statistical + framing + data accuracy simultaneously) | Parallel role-stratified swarm is faster and catches more cross-domain issues |
@@ -119,7 +119,7 @@ pixi run --environment docs bash build.sh
 ### Swarm Agent Role Mapping
 
 | Role | Model | Domain | Focus |
-|------|-------|--------|-------|
+| ------ | ------- | -------- | ------- |
 | Coordinator | Opus | Orchestration | Subdivide, delegate, aggregate, deduplicate |
 | Professor | Opus | Statistical methodology | Test selection, effect size reporting, CIs, alpha |
 | Expert A | Sonnet | Data accuracy | Every number verified against source tables |
@@ -130,7 +130,7 @@ pixi run --environment docs bash build.sh
 ### Go/NoGo Audit Swarm Role Mapping (Configuration B)
 
 | Role | Model | Domain | Focus |
-|------|-------|--------|-------|
+| ------ | ------- | -------- | ------- |
 | Coordinator | Opus | Orchestration | Subdivide, delegate, aggregate, **independently verify any CRITICAL finding** |
 | Agent A | Opus | Abstract/Intro/Conclusions | Interpretive judgment, claim framing, hedging language |
 | Agent B | Sonnet | IRR/Cost Analysis | Statistical claim verification against JSON data files |
@@ -143,7 +143,7 @@ pixi run --environment docs bash build.sh
 A recurring source of confusion in paper audits with Scheirer-Ray-Hare and Kruskal-Wallis tests:
 
 | Statistic Type | Source File | Contents |
-|----------------|-------------|----------|
+| ---------------- | ------------- | ---------- |
 | Omnibus KW (pass_rate, impl_rate, duration) | `statistical_results.json` | Kruskal-Wallis H-statistic and p-value per metric |
 | SRH by factor (tier, experiment, interaction) | `srh_tier_experiment.json` | SRH H-statistic and p-value for each factor, including cost_usd |
 | Per-metric SRH | `srh_tier_experiment.json` | All metrics including cost_usd that are NOT in statistical_results.json |
@@ -164,7 +164,7 @@ When any sub-agent raises a CRITICAL finding during a Go/NoGo audit:
 Add these to `references.bib` if the paper uses these methods:
 
 | Test / Method | Citation |
-|---------------|----------|
+| --------------- | ---------- |
 | Kruskal-Wallis test | Kruskal & Wallis (1952) |
 | Mann-Whitney U test | Mann & Whitney (1947) |
 | Holm-Bonferroni correction | Holm (1979) |
@@ -255,7 +255,7 @@ Wave 2 — Lead reviewer synthesizes into: review_{id}_{name}.md
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | docs/arxiv/haiku/paper.tex — 2,180-line ablation study, 1,080 runs, 7 tiers, Claude Haiku 4.5 | PR HomericIntelligence/ProjectScylla#1758 |
 | ArchIdeas research | review of idea 5.1 TurboQuant (KV cache QAT) — 5 Sonnet specialists + synthesis | Apr 2026 — found context mislabel, head_dim error, TPOT overstatement, 3 missing papers |
 | ProjectScylla | docs/arxiv/haiku/paper.tex — 2,427-line Go/NoGo audit, 1,080 runs, 7 tiers, 3 experiments, 120 subtests. 1 Opus + 4 Sonnet agents verified 100+ claims, 0 data mismatches, caught 1 false monotonicity claim, coordinator overrode 1 false alarm. CONDITIONAL GO. | Apr 2026 — 5-agent parallel audit, ~5-9 min per agent |

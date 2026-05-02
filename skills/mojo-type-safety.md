@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Ensure Mojo code follows type safety principles. - Type errors during compilation - Code review for type safety |
 | Outcome | Operational |
@@ -61,7 +61,7 @@ fn validate[size: Int]():
 ## Error Handling
 
 | Error | Cause | Solution |
-|-------|-------|----------|
+| ------- | ------- | ---------- |
 | `Missing type annotation` | Untyped parameter | Add `: Type` to parameter |
 | `Type mismatch` | Incompatible types | Add explicit conversion |
 | `Unsupported operation` | Trait not constrained | Add trait constraint |
@@ -70,7 +70,7 @@ fn validate[size: Int]():
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

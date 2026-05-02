@@ -13,7 +13,7 @@ user-invocable: false
 # Skill: Mojo Boolable Trait Conformance via `__bool__` / `bool_strict()` Split
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-15 |
 | **Objective** | Add `Boolable` trait conformance to `ExTensor` by splitting the raising `__bool__` into a non-raising version and a new `bool_strict()` method |
 | **Outcome** | `Bool(t)` syntax enabled; NumPy-style multi-element False behavior added; existing raising semantics preserved via `bool_strict()`; PR #4869 created |
@@ -51,7 +51,7 @@ for users of the `Boolable` trait.
 ### Quick Reference
 
 | Step | Action | Key Point |
-|------|--------|-----------|
+| ------ | -------- | ----------- |
 | 1 | Add `Boolable` to struct trait list | Before `Copyable`, alphabetical order |
 | 2 | Replace raising `__bool__` | Non-raising, `_numel != 1` check returns `False` |
 | 3 | Add `bool_strict()` method | Delegates to `item()` just like old `__bool__` |
@@ -169,7 +169,7 @@ Register this test in the runner alongside the existing `__bool__` tests.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Delegating `__bool__` to `item()` | `fn __bool__(self) -> Bool { return self.item() != 0.0 }` | `item()` raises for multi-element tensors; non-raising `__bool__` cannot call a raising function without try/except | Access `_numel` and the underlying buffer directly in `__bool__`; delegate to `item()` only in `bool_strict()` |
 | Using `Bool(t)` in old test | Tried calling `Bool(t)` in the raising test before implementing non-raising `__bool__` | `Bool(t)` would not raise once `__bool__` was non-raising | After the split, the raising test must call `bool_strict()` explicitly |
 
@@ -178,7 +178,7 @@ Register this test in the runner alongside the existing `__bool__` tests.
 **Files modified**: 3
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `shared/core/extensor.mojo` | Added `Boolable` to trait list, replaced `__bool__`, added `bool_strict()` (+37/-7 lines net) |
 | `tests/shared/core/test_utility.mojo` | Updated raising test to use `bool_strict()`, added `test_bool_multi_element_non_raising` |
 | `tests/shared/core/test_utility_part3.mojo` | Updated raising test to use `bool_strict()` |
@@ -212,12 +212,12 @@ added the original raising `__bool__`. The Boolable conformance split is a natur
 second step once the basic implementation is in place and trait ergonomics become important.
 
 | Skill | What It Covers |
-|-------|----------------|
+| ------- | ---------------- |
 | `mojo-extensor-bool-method` | Adding `fn __bool__(self) raises -> Bool` for the first time |
 | `mojo-boolable-trait-conformance` (this skill) | Splitting to non-raising + `bool_strict()` to add `Boolable` to trait list |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #4091, PR #4869 | Follow-up from #3393; workaround in #4089 used `t.__bool__()` directly because `Bool(t)` wasn't available |

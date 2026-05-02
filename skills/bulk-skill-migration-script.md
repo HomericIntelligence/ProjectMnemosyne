@@ -16,7 +16,7 @@ to ProjectMnemosyne's `skills/<category>/<name>/` plugin structure.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-04 |
 | Objective | Migrate all source skills to Mnemosyne plugin format idempotently |
 | Outcome | 4 missing skills ported; 81 already-present skills correctly skipped |
@@ -90,7 +90,7 @@ to ProjectMnemosyne's `skills/<category>/<name>/` plugin structure.
 ## Category Mapping Table
 
 | Source Category | Mnemosyne Category |
-|---|---|
+| --- | --- |
 | `github`, `worktree`, `agent`, `plan`, `generation` | `tooling` |
 | `ci`, `phase` | `ci-cd` |
 | `mojo` | `architecture` |
@@ -122,7 +122,7 @@ FIELDS_TO_REMOVE = {"mcp_fallback", "agent", "tier", "source"}
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `comm` with inline `ls` substitution | `ls dir/ \| sort > /tmp/file.txt` in one command | Sort error: "cannot read: ls" — shell quoting issue | Pipe `ls` output separately before passing to sort |
 | Checking existence only by top-level dir name | `if (mnemosyne_dir / skill_name).exists()` | Skills may be under category subdirs; flat check misses them | Iterate all category subdirs: `for cat in mnemosyne_skills_dir.iterdir(): if (cat / skill_name).exists()` |
 | Regex substitution order matters | Replacing `pixi run mojo` after `pixi run` | `pixi run` replacement fires first, leaving `mojo` dangling | Put more specific patterns (longer strings) before general ones |
@@ -134,7 +134,7 @@ FIELDS_TO_REMOVE = {"mcp_fallback", "agent", "tier", "source"}
 ### Script Parameters
 
 | Parameter | Default | Description |
-|-----------|---------|-------------|
+| ----------- | --------- | ------------- |
 | `--dry-run` | false | Show planned actions without creating files |
 | `--skill NAME` | all | Migrate only a specific skill by name |
 | `--force` | false | Overwrite skills that already exist in Mnemosyne |

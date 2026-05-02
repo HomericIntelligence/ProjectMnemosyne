@@ -16,7 +16,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-22 |
 | **Objective** | Migrate ExTensor (runtime-typed, UnsafePointer[UInt8]) to Tensor[dtype: DType] (compile-time typed, UnsafePointer[Scalar[dtype]]) + AnyTensor (renamed ExTensor) across 600+ files / ~15,700 lines |
 | **Outcome** | 6 integrated PRs merged via 22+ sub-agent invocations with parallel worktrees |
@@ -138,7 +138,7 @@ Use parallel sub-agents to process test directories simultaneously. The `comptim
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Package split (Phase 0) | Move files to `shared/base/`, `shared/tensor/`, `shared/core/` physically | 500+ import path changes with zero functional value; Mojo re-export chain limitation (#3754) prevents transparent backward compat | Keep files in place, create new package only for genuinely new files |
 | Auto-parameterized return types | `fn relu(t: Tensor) -> Tensor` without explicit `[dt: DType]` | "failed to infer parameter 'dtype'" — Mojo can't infer return type params from input params | All 480 functions need explicit `[dt: DType]` parameter (B1) |
 | Monolithic sub-agent for keystone PR | Single agent implementing Tensor[dtype] + AnyTensor rename + tests in one worktree | Too large for one agent, hard to parallelize, no separation of concerns | Split into impl/test/review/fix agents in separate worktrees |
@@ -210,5 +210,5 @@ Phases: 11 (ADR → Tensor[dtype] → Factories → Ops → Layers → Traits �
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Epic #4998, PRs #5002-#5023 | Full ExTensor → Tensor[dtype] + AnyTensor migration |

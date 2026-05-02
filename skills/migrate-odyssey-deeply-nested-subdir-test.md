@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | migrate-odyssey-deeply-nested-subdir-test |
 | **Category** | testing |
 | **Task** | Add pytest test verifying deeply nested subdirs (e.g. `scripts/utils/helper.sh`) survive a `shutil.copytree`-based migration |
@@ -105,7 +105,7 @@ All tests in the class (not just the new one) must pass before committing.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A — direct approach worked | Read existing test class, identified pattern, inserted test immediately | — | The flat-nesting test (`test_skill_with_nested_scripts_content`) was a perfect template; no iteration needed |
 
 ## Results & Parameters

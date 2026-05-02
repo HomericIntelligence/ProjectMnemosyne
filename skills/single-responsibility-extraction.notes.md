@@ -49,7 +49,7 @@ because:
 ## Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/e2e/resume_manager.py` | New file — ResumeManager class |
 | `tests/unit/e2e/test_resume_manager.py` | New file — 26 unit tests |
 | `scylla/e2e/runner.py` | Thin delegation; removed 2 private helpers |

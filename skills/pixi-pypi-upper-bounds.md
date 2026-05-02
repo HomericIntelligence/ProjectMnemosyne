@@ -14,7 +14,7 @@ tier: 2
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-02-27 |
 | Objective | Add `<next-major>` upper bounds to all unbounded `[pypi-dependencies]` entries in `pixi.toml` to prevent silent breakage on major releases |
 | Outcome | Successful — all 11 packages bounded, 3209 tests passing, 78.36% coverage |
@@ -126,5 +126,5 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |

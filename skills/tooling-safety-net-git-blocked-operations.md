@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Document which git/filesystem operations the Safety Net hook blocks and the correct fallback pattern when a block is encountered |
 | **Outcome** | Successful — blocking behaviour observed live in a ProjectHermes session; fallback pattern confirmed effective |
@@ -111,7 +111,7 @@ git worktree prune
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Batch `stash drop` in one compound command | Chained multiple `git stash drop stash@{N}` calls with `&&` | Safety Net blocks the first `stash drop` in the chain; the entire command fails | Safety Net blocks each `stash drop` individually — splitting does not help; must delegate to user |
 | Retry blocked operation | Re-issued the same blocked command hoping for a different result | Safety Net blocks every attempt; the block is deterministic | Never retry blocked commands — pivot to user delegation immediately |
 | `git worktree remove` on locked worktree without `--force` | Called `git worktree remove <path>` on a Claude Code session worktree | Fails with "is locked, use 'git worktree unlock' to unlock it first" — not a Safety Net block, but a git error | Locked worktrees need `--force`; but `--force` is then blocked by Safety Net — must delegate both steps to user |
@@ -122,7 +122,7 @@ git worktree prune
 ### Operations Table
 
 | Operation | Safety Net Action | Why | Correct Fallback |
-|-----------|------------------|-----|-----------------|
+| ----------- | ------------------ | ----- | ----------------- |
 | `git stash drop stash@{N}` | BLOCKED | Permanently deletes stashed changes | Ask user to run manually |
 | `git worktree remove --force <path>` | BLOCKED | Force-removes locked worktrees (data loss risk) | Ask user to run manually |
 | `rm -rf <path>` | BLOCKED | Destructive file deletion | Ask user to run manually |
@@ -152,5 +152,5 @@ These are safe to run because: <brief justification — what was verified before
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHermes | Session with Safety Net hook configured; multiple git ops blocked during branch cleanup | Observed live — stash drop, worktree remove --force, rm -rf all blocked; worktree prune and branch -D allowed |

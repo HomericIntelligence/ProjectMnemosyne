@@ -291,7 +291,7 @@ with open('paper.tex') as f:
 ### Time Breakdown
 
 | Phase | Duration | Notes |
-|-------|----------|-------|
+| ------- | ---------- | ------- |
 | Setup & context gathering | 15 min | Read prior review history, locate data sources |
 | Category 1-10 reviews | 2.5 hours | ~15 min per category for 32-page paper |
 | Numerical verification | 45 min | Manual calculation checks against raw data |

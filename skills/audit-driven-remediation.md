@@ -11,7 +11,7 @@ user-invocable: false
 # Audit-Driven Remediation Workflow
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-15 |
 | **Category** | tooling |
 | **Objective** | Implement all actionable findings from a strict 15-section repository audit |
@@ -180,7 +180,7 @@ Write changelog AFTER all changes are validated, not before:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Remove `cast()` with no type ignore | Removed `cast(str \| bytes, f.read())` and left bare `f.read()` | mypy reports `no-any-return` because `open()` with string `mode` returns `IO[Any]` | Use `# type: ignore[no-any-return]` instead of `cast()` when the actual return type is correct but mypy can't narrow it |
 | Add noqa for security rule not in ruleset | Added `# noqa: S403` to suppress a security hook warning on an import | ruff flagged `RUF100` (unused noqa directive) because S403 isn't in the configured rule set | Check which ruff rules are actually enabled before adding noqa comments; security hooks are separate from ruff |
 | Write logging formatter on one line | `def _make_formatter(json_format: bool = False, format_string: str \| None = None) -> logging.Formatter:` | ruff E501: line too long (102 > 100 chars) | Always check line length limit from `pyproject.toml` (100 chars in this project); break function signatures early |
@@ -191,7 +191,7 @@ Write changelog AFTER all changes are validated, not before:
 ### Changes Made (v0.3.2)
 
 | Category | Count | Examples |
-|----------|-------|---------|
+| ---------- | ------- | --------- |
 | CI/CD | 2 files | test.yml (3 Python versions x 2 OS), release.yml (tag-version check) |
 | Source code | 3 files | io/utils.py (return types, cast removal), logging/utils.py (JsonFormatter), constants.py |
 | Tests | 2 files | test_utils.py (io), test_utils.py (logging) |
@@ -224,7 +224,7 @@ warn_unused_ignores = true
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | v0.3.2 audit remediation (March 2026) | 3 major + 9 minor findings, all resolved |
 
 ## References

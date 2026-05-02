@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-06 |
 | **Objective** | Fix 4 failing PRs with pre-commit and test failures |
 | **Outcome** | ✅ All 4 PRs fixed and passing CI |
@@ -50,7 +50,7 @@ done
 **Create a triage table:**
 
 | PR | Branch | Pre-commit | Tests | Issue Summary |
-|----|--------|-----------|-------|---------------|
+| ---- | -------- | ----------- | ------- | --------------- |
 | 356 | pr1-discovery-library | FAIL | PASS | 5 docstrings missing blank line |
 | 359 | pr4-document-recovery-scripts | FAIL | PASS | 1 line too long |
 | 360 | pr5-subtest-provider | FAIL | FAIL | Constructor bug + lint |
@@ -264,7 +264,7 @@ Copy-paste ready configurations and expected outputs.
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Failed: Using `git reset --hard` Without Checking State
@@ -390,7 +390,7 @@ gh pr list --state all --limit 10 --json number,state,headRefName
 ```
 
 | PR | Status | Commits Added | Issues Fixed |
-|----|--------|---------------|--------------|
+| ---- | -------- | --------------- | -------------- |
 | 356 | ✅ PASSING | 2 | 8 docstring blank lines |
 | 359 | ✅ PASSING | 1 | 1 line length issue |
 | 360 | ✅ PASSING | 6 | Constructor bug, 11 test updates, lint |

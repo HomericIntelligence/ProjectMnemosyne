@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Issue** | #3937 — migrate_odyssey_skills --audit mode uses hardcoded MNEMOSYNE_SKILLS_DIR |
 | **Root cause** | `--audit-skip` path was resolved relative to CWD but this was undocumented, causing confusion |
 | **Fix** | Updated argparse help text + added e2e test verifying CWD-relative resolution |
@@ -71,7 +71,7 @@ def test_audit_skip_resolved_relative_to_cwd(self, tmp_path):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Changing path resolution logic | Considered making `--audit-skip` resolve relative to script dir instead of CWD | Would break existing callers who already pass absolute paths or rely on CWD behavior | Don't change behavior — document it instead |
 | Writing only a unit test | Considered mocking `load_skip_list` to unit-test the flag | Would not catch the real CWD-relative resolution end-to-end | Use subprocess + explicit `cwd=` to exercise the actual script behavior |
 

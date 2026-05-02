@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | stale-agent-count-fix |
 | **Category** | documentation |
 | **Context** | ML Odyssey / ProjectOdyssey agent system |
@@ -86,7 +86,7 @@ user-invocable: false
 ## Key Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Files to check | `CLAUDE.md`, `agents/hierarchy.md`, `agents/README.md`, `docs/dev/*.md` |
 | Count verification | `ls .claude/agents/*.md \| wc -l` |
 | Validation command | `python3 tests/agents/validate_configs.py .claude/agents/` |
@@ -96,7 +96,7 @@ user-invocable: false
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Files to check | `CLAUDE.md`, `agents/hierarchy.md`, `agents/README.md`, `docs/dev/*.md` |
 | Count verification | `ls .claude/agents/*.md \| wc -l` |
 | Validation command | `python3 tests/agents/validate_configs.py .claude/agents/` |
@@ -108,7 +108,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `just pre-commit-all` | Used `just` command runner for pre-commit | `just` not in PATH in this environment | Use `pre-commit run --all-files` directly |
 | Expecting mojo-format to pass | Ran full pre-commit suite | `mojo` binary requires GLIBC 2.32-2.34, host only has older version | This is a pre-existing env limitation; only non-Mojo hooks matter for doc-only changes |
 | Deleting tracking doc entries outright | Removing lines 95-96 from status doc | Would lose historical context of what was converted | Use strikethrough annotation instead: `~~file~~` — converted to skill |

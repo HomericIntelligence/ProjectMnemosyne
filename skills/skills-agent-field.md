@@ -14,7 +14,7 @@ Pattern for routing skills to specific agent types using the `agent` field in Cl
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-08 |
 | Objective | Document skills agent field pattern from Claude Code v2.1.0 |
 | Outcome | Verified pattern for routing skills to specialized agents |
@@ -121,7 +121,7 @@ category: tooling
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -193,7 +193,7 @@ tags: ["code-review", "quality", "standards"]
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | Template updates and documentation | [notes.md](../references/notes.md) |
 
 ## References

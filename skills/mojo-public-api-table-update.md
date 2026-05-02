@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-15 |
 | **Objective** | Keep `shared/__init__.mojo` API documentation consistent with actual live exports |
 | **Outcome** | Success — comment-only PR merged via auto-merge with no test impact |
@@ -90,13 +90,13 @@ git commit -m "docs(shared): update public API table in shared/__init__.mojo"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4786, issue #3751 | [notes.md](../../references/notes.md) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Including `Autograd` in "Available now" | Listed `autograd` subpackage alongside `core` etc. | `autograd` subpackage is imported via `from shared import autograd` so it IS live — not a failure, but it's easy to forget it. | Cross-check every `from shared import X` line, not just the ones in the `# Core Exports` section. |
 | Leaving `ConfusionMatrix`/`CSVMetricsLogger` out of ASCII table | They were present in the flat list but the table only mentioned `LossTracker, AccuracyMetric` | Table row exceeded column width; continuation lines were needed | Use two or three continuation rows for long symbol lists rather than widening the column. |
 

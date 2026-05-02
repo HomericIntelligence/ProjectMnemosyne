@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Trigger** | Count mismatch found during audit (agents, skills, workflows, architectures) |
 | **Output** | Updated documentation with accurate, consistent counts |
 | **Scope** | All docs claiming counts of file-backed entities |
@@ -111,7 +111,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Trust CLAUDE.md count | Used "42 agents" from CLAUDE.md as ground truth | CLAUDE.md had 42, hierarchy had 37, disk had 31 — all wrong | Always count with `ls *.md \| wc -l` first |
 | Count `ls .claude/agents/` | `ls` of directory returns 32 (includes `templates/` dir) | `templates/` is a directory, not an agent file | Use `ls .claude/agents/*.md` to get only .md files |
 | Fix only CLAUDE.md | Updated CLAUDE.md count but not hierarchy.md or agents/README.md | Three docs still disagreed | Search ALL docs for count claims before committing |
@@ -124,7 +124,7 @@ gh pr merge --auto --rebase
 **Before reconciliation:**
 
 | Doc | Claimed Count |
-|-----|--------------|
+| ----- | -------------- |
 | `CLAUDE.md` | 42 agents, 82 skills |
 | `agents/hierarchy.md` | 37 agents |
 | `agents/README.md` | 42 agents (with 12 non-existent entries) |
@@ -133,7 +133,7 @@ gh pr merge --auto --rebase
 **After reconciliation:**
 
 | Entity | On-Disk Count | All Docs Now Say |
-|--------|--------------|-----------------|
+| -------- | -------------- | ----------------- |
 | Agents | 31 `.md` files | 31 |
 | Skills | 58 entries | 58 |
 

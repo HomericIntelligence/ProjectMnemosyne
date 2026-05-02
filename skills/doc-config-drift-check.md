@@ -12,13 +12,13 @@ user-invocable: false
 
 ## Overview
 
-| Field     | Value |
-|-----------|-------|
-| Date      | 2026-02-28 |
-| Issue     | #1151 |
-| PR        | #1225 |
+| Field | Value |
+| ----------- | ------- |
+| Date | 2026-02-28 |
+| Issue | #1151 |
+| PR | #1225 |
 | Objective | Add a pre-commit gate that detects when documented metric values (coverage %, --cov path) diverge from the authoritative values in `pyproject.toml` |
-| Outcome   | Success — `scripts/check_doc_config_consistency.py` with 26 unit tests; wired as pre-commit hook |
+| Outcome | Success — `scripts/check_doc_config_consistency.py` with 26 unit tests; wired as pre-commit hook |
 
 ## When to Use
 
@@ -307,19 +307,19 @@ pixi run python -m pytest tests/ -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A (Checks 1-3) | Direct approach worked | N/A | Solution was straightforward |
 | Patch `subprocess.run` globally | `patch("subprocess.run", ...)` in test for `collect_actual_test_count` | Script already imported `subprocess`; patching the stdlib location has no effect on the already-imported reference | Always patch in the module's own namespace: `scripts.check_doc_config_consistency.subprocess.run` |
 
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Script location | `scripts/check_doc_config_consistency.py` |
 | Test location | `tests/unit/scripts/test_check_doc_config_consistency.py` |
 | Test count (after Check 4) | 53 (26 original + 20 new + updates) |
 | Hook ID | `check-doc-config-consistency` |
-| Hook trigger | `^(CLAUDE\.md|README\.md|pyproject\.toml)$` |
+| Hook trigger | `^(CLAUDE\.md\|README\.md\|pyproject\.toml)$` |
 | stdlib used | `tomllib` (Python 3.11+), `re`, `argparse`, `subprocess` |
 | Exit codes | 0 = all pass, 1 = any violation |
 | Pattern matched in CLAUDE.md | `(\d+)%\+?\s+test coverage` |
@@ -330,7 +330,7 @@ pixi run python -m pytest tests/ -v
 ### Files Modified
 
 | File | Changes |
-|------|---------|
+| ------ | --------- |
 | `scripts/check_doc_config_consistency.py` | Original 3 checks (Issue #1151 / PR #1225) |
 | `scripts/check_doc_config_consistency.py` | Added `import subprocess`, `collect_actual_test_count()`, `check_readme_test_count()`, Check 4 in `main()` (Issue #1226 / PR #1315) |
 | `tests/unit/scripts/test_check_doc_config_consistency.py` | Added `TestCollectActualTestCount` (6 tests), `TestCheckReadmeTestCount` (8 tests), updated 5 integration tests to mock `collect_actual_test_count`, added 2 new integration tests |
@@ -349,7 +349,7 @@ r"(\d[\d,]*)\+?\s+tests?"
 ```
 
 | Component | Matches |
-|-----------|---------|
+| ----------- | --------- |
 | `(\d[\d,]*)` | `3172`, `3,500`, `1` (commas allowed after first digit) |
 | `\+?` | Optional `+` suffix (e.g. `3,500+`) |
 | `\s+` | One or more spaces |
@@ -374,6 +374,6 @@ r"(\d[\d,]*)\+?\s+tests?"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1151, PR #1225 — Checks 1-3 (coverage threshold + cov path) | [notes.md](../../references/notes.md) |
 | ProjectScylla | Issue #1226, PR #1315 — Check 4 (test count validation) | [notes.md](../../references/notes.md) |

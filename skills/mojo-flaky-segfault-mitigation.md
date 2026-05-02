@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-06 |
 | Objective | Unblock PR blocked by flaky Mojo runtime segfaults in CI matrix test groups |
 | Outcome | Success — extended `continue-on-error` to cover flaky groups; PR unblocked |
@@ -102,7 +102,7 @@ git commit -m "fix: add continue-on-error for flaky Mojo runtime segfault test g
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Empty commit re-trigger only | Push empty commit to re-trigger CI without code change | Would not fix the underlying flakiness — same crash would recur | Re-triggering alone is insufficient; need to also add mitigation |
 | Waiting for CI to pass | Considered waiting for a clean CI run | Flaky segfaults are non-deterministic; could block indefinitely | Proactive `continue-on-error` is the right mitigation pattern |
 
@@ -134,5 +134,5 @@ python3 -c "import yaml; yaml.safe_load(open('.github/workflows/comprehensive-te
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3340 (issue #3149) — CI workflow consolidation | [notes.md](../../references/notes.md) |

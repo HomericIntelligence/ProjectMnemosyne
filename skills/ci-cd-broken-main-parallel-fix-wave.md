@@ -15,7 +15,7 @@ tags: [ci, broken-main, agamemnon, parallel-agents, myrmidon, conan, dependabot,
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-23 |
 | **Objective** | Use the HomericIntelligence agent mesh to fix broken CI/main across multiple repositories simultaneously — NATS + Agamemnon task registry + parallel Claude Code sub-agents as myrmidon workers |
 | **Outcome** | Successful — 5 repos triaged, tasks registered in Agamemnon, 5 parallel fix agents dispatched (mix of Haiku and Sonnet tiers); clang-format violations fixed via podman container |
@@ -105,7 +105,7 @@ curl -s -X POST $AGAMEMNON/v1/teams/$TEAM_ID/tasks \
 Select agent tier based on root cause certainty:
 
 | Certainty Level | Agent Tier | Example Failures |
-|----------------|-----------|-----------------|
+| ---------------- | ----------- | ----------------- |
 | Known fix, 1-3 file mechanical change | Haiku | conan profile detect, dependabot.yml cleanup, persist-credentials |
 | Unknown root cause, investigation required | Sonnet | BATS exit 127, Python import errors, pixi cache 400 |
 
@@ -128,7 +128,7 @@ curl -s -X PATCH $AGAMEMNON/v1/teams/$TEAM_ID/tasks/fix-odysseus-conan-profile \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `/v1/tasks` Agamemnon endpoint | `POST /v1/tasks` to register fix tasks | Returns 404 — endpoint does not exist | Correct endpoint is `/v1/teams/<teamId>/tasks` (team-scoped) |
 | `bats-core/bats-action@2` in GitHub Actions | Used `bats-core/bats-action@2` to install BATS | Action version `@2` does not exist on GitHub Marketplace | Use `apt-get install bats` or `bats-core/bats-action@1` |
 | `peter-evans/create-pull-request` without `persist-credentials: false` | `actions/checkout` default + `peter-evans/create-pull-request@271a8d0` | "fatal: Duplicate header: Authorization" — both steps configure git credentials independently | Add `persist-credentials: false` to the `actions/checkout` step when using `peter-evans/create-pull-request` |
@@ -293,7 +293,7 @@ Monitor(
 ### Agent Tier Selection Table
 
 | Failure Type | Agent Tier | Why |
-|-------------|-----------|-----|
+| ------------- | ----------- | ----- |
 | conan profile detect missing | Haiku | Exact fix known: add 1-line step to workflow YAML |
 | dependabot.yml docker block cleanup | Haiku | Exact fix known: remove block from YAML |
 | persist-credentials: false missing | Haiku | Exact fix known: add 1 attribute to checkout step |
@@ -324,7 +324,7 @@ curl -s -X POST http://localhost:8080/v1/teams/$TEAM_ID/tasks \
 ### Session Scale Reference
 
 | Scale | Haiku Agents | Sonnet Agents | Estimated Time |
-|-------|-------------|--------------|----------------|
+| ------- | ------------- | -------------- | ---------------- |
 | 1-2 repos, known fix patterns | 2 Haiku | 0 | ~10-15 min |
 | 3-5 repos, mixed known/unknown | 2-3 Haiku | 2-3 Sonnet | ~30-60 min (+ CI wait) |
 | 10+ repos, diverse failures | 5+ Haiku | 4+ Sonnet | ~2-4 hours (+ CI wait) |
@@ -333,7 +333,7 @@ curl -s -X POST http://localhost:8080/v1/teams/$TEAM_ID/tasks \
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence ecosystem | 5 repos with broken main: Odysseus, Myrmidons, ProjectMnemosyne, ProjectArgus, ProjectTelemachy — 2026-04-24 | 5 fix tasks registered in Agamemnon, 5 parallel agents dispatched (3 Haiku + 2 Sonnet); PRs in flight at capture time |
 
 ## References

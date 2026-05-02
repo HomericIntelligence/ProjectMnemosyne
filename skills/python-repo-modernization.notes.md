@@ -16,7 +16,7 @@ bring it from C+ quality to production-consumable in a single session.
 ### Subpackages Fixed
 
 | Subpackage | Issue | Fix |
-|------------|-------|-----|
+| ------------ | ------- | ----- |
 | `hephaestus/io/` | Empty `__init__.py` | Added re-exports for `read_file`, `write_file`, `safe_write`, `load_data`, `save_data`, `ensure_directory` |
 | `hephaestus/logging/` | Empty `__init__.py` | Added re-exports for `setup_logging`, `get_logger`, `ContextLogger`, `log_context` |
 | `hephaestus/system/` | Empty `__init__.py` | Added re-exports for `get_system_info`, `format_system_info` |

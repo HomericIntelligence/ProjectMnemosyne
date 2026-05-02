@@ -11,13 +11,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-10 |
-| Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-01-10 | | **Objective** | Fix critical issues in E2E evaluation reports and add judge... |
+| Objective | Fix critical issues in E2E evaluation reports and add judge model validation |
 | Outcome | Operational |
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-10 |
 | **Objective** | Fix critical issues in E2E evaluation reports and add judge model validation |
 | **Outcome** | ✅ Success - All P0/P1 issues resolved |
@@ -39,7 +39,7 @@ Use this skill when encountering these symptoms in E2E evaluation reports:
 ### Issues Fixed
 
 | Priority | Issue | Impact |
-|----------|-------|--------|
+| ---------- | ------- | -------- |
 | P0 | `UnboundLocalError: cannot access local variable 'json'` | Experiment crashes immediately |
 | P0 | Workspace detection broken - only shows README | Reports incomplete, missing actual deliverables |
 | P0 | Invalid judge model IDs cause fallback scores | Incorrect evaluation results |
@@ -233,7 +233,7 @@ Example: "Code works but uses 8 lines where 3 would suffice" → -0.15
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -271,7 +271,7 @@ pixi run python scripts/run_e2e_experiment.py \
 ### Expected Outcomes
 
 | Metric | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | Crashes | UnboundLocalError immediately | ✅ No crashes |
 | Workspace detection | Only README shown | ✅ Shows hello.py + status |
 | Invalid judges | 3/5 fallback scores (0.7) | ✅ All valid or skipped |

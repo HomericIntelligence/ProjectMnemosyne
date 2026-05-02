@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-07 |
 | Objective | Update ADR-004 directory tree to reflect actual `tests/helpers/` contents after `gradient_checking.mojo` was deleted in a prior PR |
 | Outcome | Success — single-file listing replaced with accurate 5-file listing, PR #3820 created and auto-merge enabled |
@@ -100,14 +100,14 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Searching for `gradient_checking` in ADR-004 | Used `grep` to find stale reference to deleted file | No matches — file was already deleted from ADR in a prior PR | Always check both the filesystem AND the ADR independently; the issue may describe a state that has already been partially fixed |
 | Looking for "Related Files" section at a specific line | Issue description referenced line 326 as the location of a stale entry | The line number referenced an earlier state of the file | Don't rely on line numbers from issue descriptions; grep for the actual pattern instead |
 
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Files changed | `docs/adr/ADR-004-testing-strategy.md` |
 | Lines changed | 1 removed, 5 added |
 | Pre-commit hooks | All passed (markdownlint, trailing whitespace, end-of-file) |
@@ -118,7 +118,7 @@ gh pr merge --auto --rebase
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3252 follow-up from #3061 | [notes.md](../references/notes.md) |
 
 ## Key Insight

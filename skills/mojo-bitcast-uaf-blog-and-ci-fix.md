@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-17 |
 | **Objective** | Expand Day 53 blog with 3-month UAF history, create on separate branch, fix CI failures from gitignore and test coverage hooks |
 | **Outcome** | Blog PR #4900 merged, fix branch rebased with import reversion, CI issues identified and fixed |
@@ -103,7 +103,7 @@ If failure exists on main and your PR doesn't touch that file, it's pre-existing
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `git add notes/blog/` for test_*.mojo files | Standard git add for blog artifacts | `.gitignore` has `test_*` pattern that blocks them | Use `git add -f` to force-add gitignored files |
 | `git checkout --ours` during rebase conflict | Resolve blog file conflicts by keeping main's version | Safety Net hook blocks `git checkout --` with multiple args | Use `git restore --ours` or edit conflict markers manually |
 | `git restore --ours` for conflict resolution | Alternative to checkout for conflict resolution | Safety Net blocks `git restore` as "discards uncommitted changes" | Edit conflict markers manually with the Edit tool |

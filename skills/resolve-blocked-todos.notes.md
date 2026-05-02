@@ -18,7 +18,7 @@ Resolve 7 `TODO(#2722)` markers across test files, now that #2722 was closed.
 ## Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `shared/core/extensor.mojo` | Cherry-pick 171 lines: `__str__`, `__repr__`, `__hash__`, `contiguous()`, `__setitem__`, `__int__`, `__float__` |
 | `shared/testing/assertions.mojo` | Add `assert_contiguous()` helper |
 | `tests/shared/conftest.mojo` | Export `assert_contiguous` |
@@ -37,7 +37,7 @@ The tracking issue description said "wait until #2722 is resolved" but:
 ## TODO Locations Resolved
 
 | File | Line | TODO | Resolution |
-|------|------|------|------------|
+| ------ | ------ | ------ | ------------ |
 | test_utility.mojo | 139 | `assert_contiguous(t)` | Added to assertions.mojo + called |
 | test_utility.mojo | 152 | `transpose()` | Cherry-picked, imported from matrix.mojo |
 | test_utility.mojo | 172 | `contiguous()` | Used `.contiguous()` method (no module-level fn) |

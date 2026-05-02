@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-05 |
 | **Objective** | Prevent duplicate GitHub issue comments when claude-myrmidon pipeline worker restarts |
 | **Outcome** | Successful -- `_load_existing_comment_ids()` repopulates in-memory cache from GitHub API on first use per issue, enabling idempotent PATCH-or-POST |
@@ -40,7 +40,7 @@ tags:
 ### Quick Reference
 
 | Step | What to do |
-|------|-----------|
+| ------ | ----------- |
 | 1 | Add `_comment_ids: dict[str, int]` and `_comment_ids_loaded: set[int]` instance attributes |
 | 2 | Implement `_load_existing_comment_ids(issue_number)` to paginate issue comments via `gh api` |
 | 3 | Parse each comment body prefix with `## Stage: (\w+)(?:\s+\(iteration (\d+)\))?` regex |
@@ -159,7 +159,7 @@ The fix adds a lazy-loading step that queries the GitHub API for existing commen
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | In-memory `_comment_ids` dict only | Cached comment IDs in a dict during process lifetime for PATCH-or-POST logic | Dict is empty after process restart; every stage comment creates a new POST, producing duplicates on re-run | In-memory caches for idempotency must be hydrated from the source of truth (GitHub API) on startup or first access |
 | Fetching full comment bodies | Called `gh api` without `--jq` body truncation to get complete comment content | Wasteful -- full comment bodies can be large (multi-KB markdown) but the `## Stage:` header is always in the first line | Use `--jq` with `.body[0:80]` to fetch only what's needed for pattern matching, reducing API payload |
 
@@ -180,7 +180,7 @@ The dedup logic relies on comments following this header convention:
 ### Key Mapping
 
 | Comment Header | Dict Key |
-|----------------|----------|
+| ---------------- | ---------- |
 | `## Stage: PLAN` | `plan-0` |
 | `## Stage: TEST (iteration 2)` | `test-2` |
 | `## Stage: BUILD (iteration 3)` | `build-3` |
@@ -188,7 +188,7 @@ The dedup logic relies on comments following this header convention:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | claude-myrmidon pipeline worker | Pipeline posts stage-progress comments to GitHub issues; verified syntax and logic flow locally |
 
 ## References

@@ -272,7 +272,7 @@ gh pr list --state open --json number,title,statusCheckRollup --limit 10
 **Results:**
 
 | PR | Status | Conclusion |
-|----|--------|------------|
+| ---- | -------- | ------------ |
 | #74 | COMPLETED | SUCCESS ✅ |
 | #73 | COMPLETED | SUCCESS ✅ |
 | #72 | COMPLETED | SUCCESS ✅ |

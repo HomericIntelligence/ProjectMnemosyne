@@ -11,7 +11,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2025-12-30 |
 | Objective | Register a private skills marketplace with Claude Code CLI |
 | Outcome | Successfully registered marketplace and installed 7 plugins |
@@ -112,7 +112,7 @@ cat ~/.claude/settings.json | grep -A5 "plugins"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-22 |
 | Objective | Configure pip-audit in pixi CI to fail only on HIGH/CRITICAL severity vulnerabilities |
 | Outcome | Success — pixi task definition approach avoids workflow YAML changes |
@@ -73,7 +73,7 @@ on:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

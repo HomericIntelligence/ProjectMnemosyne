@@ -17,7 +17,7 @@ tags:
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-08 |
 | **Project** | ProjectScylla |
 | **Objective** | Debug and fix resume crashes in e2e experiment framework |
@@ -147,7 +147,7 @@ def _load_judge_result(judge_dir: Path) -> dict:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | **Hypothesis: Aggregation bug** | Assumed zeros in reports meant aggregation logic was broken | User's actual error was FileNotFoundError, not aggregation | Always get the actual error traceback before diagnosing |
 | **Hypothesis: Checkpoint out of sync** | Thought checkpoint was marking complete before files saved | Actual bug was file path mismatch in loading function | File path bugs can look like state sync issues |
 | **Exploring aggregation code first** | Launched agents to understand report generation pipeline | Needed error traceback to find root cause, not exploration | For crashes, start with the error, not architecture exploration |
@@ -252,5 +252,5 @@ def _save_judge_logs(..., raw_stdout: str = "", raw_stderr: str = ""):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | E2E experiment framework resume bugs | [notes.md](../../references/notes.md) |

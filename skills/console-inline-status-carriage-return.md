@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-05 |
 | **Objective** | Stop odysseus-console.py from printing a new line for every disconnect/reconnect/retry cycle, which spams the terminal when NATS is down |
 | **Outcome** | Successful -- transient states overwrite in place via `\r`, permanent states (connected, events) print on new lines |
@@ -117,7 +117,7 @@ print(f"[event] {subject}: {payload}")
 ### Which States Are Inline vs Newline
 
 | State | Mode | Reason |
-|-------|------|--------|
+| ------- | ------ | -------- |
 | DISCONNECTED | inline | Transient -- may repeat many times when NATS is down |
 | RECONNECTING | inline | Transient -- immediately follows DISCONNECTED |
 | "Retrying in Ns..." | inline | Transient -- countdown between attempts |
@@ -131,7 +131,7 @@ print(f"[event] {subject}: {payload}")
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Print every status on new line | Each state change (DISCONNECTED, RECONNECTING, etc.) printed via `print()` | Creates a wall of repeating status text when NATS is down -- hundreds of lines of `[DISCONNECTED]` / `[RECONNECTING]` / `[DISCONNECTED]` | Transient states should overwrite in place; only permanent states deserve their own line |
 | Suppress transient states entirely | Skip printing DISCONNECTED/RECONNECTING, only show CONNECTED | Loses all visibility into what the console is doing during reconnection -- user sees nothing and thinks it is frozen | Transient states must be visible but should not accumulate; inline overwrite is the right balance |
 
@@ -164,7 +164,7 @@ print(f"[event] {subject}: {payload}")
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | odysseus-console.py NATS event viewer | Syntax checked; inline status eliminates terminal spam during NATS downtime |
 
 ## References

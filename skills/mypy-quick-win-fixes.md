@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-22 |
 | **Issue** | #767 - Fix quick-win mypy errors: override, no-redef, exit-return, return-value, call-overload |
 | **Objective** | Resolve 5 single-violation mypy error codes and remove them from `disable_error_code` in `pyproject.toml` |
@@ -169,7 +169,7 @@ failures. Solution: `git add pixi.lock` before committing.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -185,7 +185,7 @@ Mypy 1.19 (compiled: yes)
 ### Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/executor/capture.py` | `__exit__` return `bool` → `None`, remove `return False` |
 | `scylla/e2e/checkpoint.py` | Rename `model_validate` → `from_dict`, update internal caller |
 | `scylla/e2e/models.py` | `-> dict` → `-> dict[str, Any]` on field validator |

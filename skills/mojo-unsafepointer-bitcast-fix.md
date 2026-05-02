@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Category | ci-cd |
 | Trigger | `UnsafePointer.address_of` compile error in Mojo |
 | Scope | Single file edit — `extensor.mojo` or similar |
@@ -69,7 +69,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Prior commit `b6cbd428` | Commit message said "use bitcast for exact float bit representation" | Code was NOT actually changed — `UnsafePointer.address_of` remained | Always verify the diff, not just the commit message |
 | `UnsafePointer.address_of(local_val).bitcast[UInt64][]` | Static method call on type | `address_of` is not a method on `UnsafePointer` type in Mojo v0.26.1 | Use constructor `UnsafePointer[T](to=val)` to take address |
 | Running `mojo format --check` locally | Tried to verify formatting pre-commit | `mojo` binary requires GLIBC 2.32+ not available on host | Use `SKIP=mojo-format` locally; CI Docker has correct GLIBC |

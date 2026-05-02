@@ -10,7 +10,7 @@ user-invocable: false
 # Split Large Test File Into Sub-modules
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-02 |
 | **Objective** | Split `tests/unit/e2e/test_manage_experiment.py` (4212 lines, ~25K+ tokens) into four focused sub-modules |
 | **Outcome** | ✅ 119 tests preserved across 4 files; all pass; git history kept; PR #1293 merged |
@@ -238,7 +238,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -246,7 +246,7 @@ gh pr merge --auto --rebase
 
 **Split**:
 | File | Tests | Lines | Classes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `test_manage_experiment_parser.py` | 35 | ~760 | 5 |
 | `test_manage_experiment_cmd_run.py` | 53 | ~2800 | 30 |
 | `test_manage_experiment_cmd_repair.py` | 7 | ~160 | 2 |
@@ -268,7 +268,7 @@ formatting). Running hooks twice (or checking that they auto-fixed) is expected.
 ## Splitting Decision Guide
 
 | Criteria | Split Strategy |
-|---|---|
+| --- | --- |
 | Source has distinct command groups (cmd_run, cmd_repair) | One file per command |
 | Source has a large parser/argument section | Separate `_parser` file |
 | Helper classes (e.g., `TestFindCheckpointPath`) | Group with the command that uses the helper |

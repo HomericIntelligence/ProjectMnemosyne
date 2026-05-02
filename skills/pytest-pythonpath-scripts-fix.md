@@ -14,7 +14,7 @@ Fix suppressed test collection caused by scripts/ not being on the pytest Python
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-02-27 |
 | Objective | Make all analysis unit tests that import `export_data` (a script in `scripts/`) collect and run under pytest, pre-push hooks, and CI |
 | Outcome | Success |
@@ -78,7 +78,7 @@ pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -104,7 +104,7 @@ Coverage: 78.31% (threshold 75%)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1137, PR #1190 | [notes.md](pytest-pythonpath-scripts-fix.notes.md) |
 
 ## References

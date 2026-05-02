@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-30 |
 | **Objective** | Fix container-to-container DNS resolution in podman rootless compose networks |
 | **Outcome** | Automated workaround via start-stack.sh launcher script |
@@ -114,7 +114,7 @@ The failure occurs because:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `depends_on: condition: service_healthy` | Wait for NATS healthy before starting dependent containers | NATS scratch image has no shell — `CMD-SHELL` healthchecks fail. Also, even with delay, DNS can still fail. | Healthcheck-based ordering doesn't fix DNS race |
 | `healthcheck: test: ["CMD-SHELL", "true"]` | Trivial healthcheck that always passes | NATS image has no `/bin/sh` at all — scratch/distroless image | Cannot use CMD-SHELL with scratch images |
 | `healthcheck: test: ["CMD-SHELL", "wget ..."]` | Wget-based health check | NATS image has no wget, no curl, no shell | NATS official image is a minimal scratch image |
@@ -151,5 +151,5 @@ fix: pkill -f rootlessport  # or remap to non-conflicting ports
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | E2E pipeline with 9 containers | NATS, Agamemnon, Nestor, Hermes, Myrmidon all affected by DNS race |

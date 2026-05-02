@@ -15,7 +15,7 @@ tags: [achaeanfleet, docker, ci-cascade, multi-arch, oci, opencode, goose, entry
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Document the ordered cascade of CI failures encountered in AchaeanFleet myrmidon swarm sessions so future sessions can fix them in sequence without wasted iteration |
 | **Outcome** | Successful — 13 open PRs → 0 open PRs; ~10 issues implemented; cascade sequence fully mapped |
@@ -324,7 +324,7 @@ Even bot users (`github-actions[bot]`) cannot bypass branch protection with a di
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Fix ENTRYPOINT in only Dockerfile.node | Assumed only node base needed ENTRYPOINT since most vessels use it | CI "Verify ENTRYPOINT" check runs on all 3 base images independently | All three bases (node, python, minimal) MUST have ENTRYPOINT |
 | `--output type=oci,dest=/tmp/foo.tar` | Assumed .tar suffix creates valid OCI tarball for oci-layout:// | `oci-layout://` protocol reads directory layout, not tarballs | Write .tar then extract with `tar -xf` to a separate directory |
 | `opencode_linux_amd64.tar.gz` download URL | Followed naming convention from other tools (amd64) | The opencode release asset is named `opencode-linux-x64.tar.gz` (x64 not amd64) | Always verify release asset names with `gh release view` before hardcoding URLs |
@@ -373,6 +373,6 @@ documented in `batch-low-difficulty-issue-impl`.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/AchaeanFleet | Multi-session myrmidon swarm 2026-04 | 13 PRs → 0, cascade sequence fully mapped |
 | HomericIntelligence/AchaeanFleet | Follow-up session 2026-04-25 | Level 6 corrected; Levels 1.5, 4.5, 9 added from new cascade failures |

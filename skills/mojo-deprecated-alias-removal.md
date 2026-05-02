@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-05 |
 | **Objective** | Remove deprecated `comptime` type aliases from Mojo modules and replace all usages with canonical types |
 | **Outcome** | ✅ Successfully applied across Linear (2 aliases) and Conv (6 aliases) modules |
@@ -187,7 +187,7 @@ Before making changes in the main checkout, check if the worktree branch already
 ### Linear Module (Issue #3065, PR #3262)
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Aliases removed | 2 (`LinearBackwardResult` → `GradientTriple`, `LinearNoBiasBackwardResult` → `GradientPair`) |
 | Files modified | 3 (`linear.mojo`, `__init__.mojo`, `test_backward_compat_aliases.mojo`) |
 | Net lines | -73 |
@@ -195,7 +195,7 @@ Before making changes in the main checkout, check if the worktree branch already
 ### Conv Module (Issue #3064, PR #3264)
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Aliases removed | 6 (Conv2d, DepthwiseConv2d, DepthwiseSeparableConv2d variants) |
 | Files modified | 4 (`conv.mojo`, `__init__.mojo`, `layers/conv2d.mojo`, `test_conv.mojo`) |
 | Files deleted | 1 (`test_backward_compat_aliases.mojo`, 291 lines) |
@@ -233,7 +233,7 @@ Closes #<issue-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Local `pixi run mojo build` | Ran mojo build locally to verify | GLIBC version incompatibility (`GLIBC_2.32/2.33/2.34` not found) — mojo requires newer glibc than available on the host | Mojo compilation must run in Docker container or CI; local verification is not possible on older Linux hosts |
 | Deleting only alias definitions | Only removed the `comptime X = Y` lines, didn't search for usages | Function return types still referenced the removed alias, would cause compile errors | Always grep for all occurrences before removing — aliases appear in return types, docstrings, and test files |
 | Grepping only code, not comments | Searched for aliases in code/imports only | Missed stale comments in test files that still referenced deprecated aliases | Grep with no type filter to catch alias names in comments too; verification grep must return 0 results across ALL file content |
@@ -244,7 +244,7 @@ Closes #<issue-number>
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3065, PR #3262 — Linear alias removal (2 aliases) | — |
 | ProjectOdyssey | Issue #3064, PR #3264 — Conv alias removal (6 aliases) | — |
 | ProjectOdyssey | Issue #3267, PR #3833 — Conv follow-up (stale comment cleanup) | — |

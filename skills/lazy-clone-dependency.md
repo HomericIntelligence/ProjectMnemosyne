@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-03 |
 | **Objective** | Fix planner silently skipping the advise step when ProjectMnemosyne was not present locally |
 | **Outcome** | ✅ `_ensure_mnemosyne()` clones the repo on first use; advise step proceeds normally |
@@ -137,7 +137,7 @@ from pathlib import Path
 ### 5. Write tests
 
 | Test | What to assert |
-|------|----------------|
+| ------ | ---------------- |
 | `test_clone_success` | `subprocess.run` called with correct `gh repo clone` args; returns `True` |
 | `test_clone_failure` | `CalledProcessError` → returns `False` |
 | `test_no_clone_if_exists` | directory present → `subprocess.run` NOT called; returns `True` |
@@ -148,14 +148,14 @@ from pathlib import Path
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/automation/planner.py` | Added `_mnemosyne_lock`, `_ensure_mnemosyne()`; updated `_run_advise()` |
 | `tests/unit/automation/test_planner.py` | Added 4 new tests for `_ensure_mnemosyne`, updated 1 existing test |
 
@@ -190,5 +190,5 @@ The lock file is created alongside (not inside) the clone destination so it pers
 ## Verified On
 
 | Project | Context |
-|---------|---------|
+| --------- | --------- |
 | ProjectScylla | PR #1326 — issue #1324 reported skipping; fixed 2026-03-03 |

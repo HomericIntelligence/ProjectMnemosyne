@@ -33,7 +33,7 @@
 ## Workflows Inventoried
 
 | Workflow file | Runs on PR? | Badge-worthy? | Already badged? |
-|---------------|-------------|---------------|-----------------|
+| --------------- | ------------- | --------------- | ----------------- |
 | comprehensive-tests.yml | Yes | Yes | Yes (CI) |
 | pre-commit.yml | Yes | Yes | Yes |
 | security.yml | Yes | Yes | Yes |

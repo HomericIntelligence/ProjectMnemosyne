@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-13 |
 | **Objective** | Isolate where a Radiance graph-load hang occurs: browser rendering, API transport, or persisted run artifact generation |
 | **Outcome** | Success — identified the minimum debug bundle needed to localize hangs without guessing |
@@ -95,7 +95,7 @@ podman exec "$CID" sh -lc "head -n 40 /radiance/runs/$RUN_ID/run_manifest.json"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Generic log request | Asking for “the logs” without specifying browser/API/artifacts | Mixed together frontend, backend, and container signals with no way to localize the fault | Ask for a structured debug bundle, not generic logs |
 | Server stdout only | Looking only at the terminal running the webserver | A clean server log does not prove that `graphCollections.json` exists or that the browser consumed it correctly | Always pair stdout with direct API and artifact checks |
 | Runs list only | Checking `GET /api/v1/radiance/runs` and stopping there | Confirms run discovery, but does not prove graph payload generation or renderability | `runs` must be followed by `runs/<run_id>` and `runs/<run_id>/graph` |
@@ -147,5 +147,5 @@ When someone reports a graph hang, ask for exactly this:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Radiance | Local appliance debugging on 2026-04-13 | Verified live `runs`, `jobs`, `run`, and `run graph` endpoints plus persisted graph artifact layout inside the running Podman container |

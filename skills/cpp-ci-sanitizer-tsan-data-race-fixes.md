@@ -28,7 +28,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-18 |
 | **Objective** | Fix TSan CI failures: real data races, lock-free ConcurrentQueue false positives, and hung tests under TSan instrumentation |
 | **Outcome** | Real races fixed with targeted mutex additions; ConcurrentQueue false positives suppressed via tsan.supp; hung ThreadPool test disabled with DISABLED_ prefix; CI green |
@@ -88,7 +88,7 @@ gh run view <run-id> --log 2>&1 | grep -A 20 "WARNING: ThreadSanitizer: data rac
 Common race patterns in C++ multi-agent systems:
 
 | Race Pattern | Root Cause | Fix |
-|---|---|---|
+| --- | --- | --- |
 | Shared `std::mt19937 rng_` | Worker threads call `generateLatency()` / `shouldDropPacket()` concurrently | Add `mutable std::mutex rng_mutex_`; lock in both methods |
 | Shared `std::unordered_map<string, size_t>` | `registerAgent()`, `submit()`, `getAgentNode()` run concurrently | Add `mutable std::mutex map_mutex_`; lock in all 4 methods |
 | `std::function<bool()> readiness_check_` | Server thread reads while another thread calls `setReadinessCheck()` | Add `mutable std::mutex readiness_mutex_`; use `std::atomic<int>` for fd/port fields |
@@ -315,7 +315,7 @@ gh pr create --title "fix: resolve CI failures (TSan races, hung test, MSan buil
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `--log-failed` for full error context | `gh run view <id> --log-failed` to see build errors | Output shows git cleanup/restore steps but misses actual compilation and test output | Use `gh run view <id> --log` with targeted `grep` patterns instead |
 | Increasing TSan job timeout | Proposed setting a longer `timeout-minutes` on the TSan GitHub Actions job | User explicitly rejected: "reduce/disable instead" — a hung test wastes CI minutes at any timeout | Disable the hung test + add `--timeout 120` to ctest; do not increase job timeout |
 | Fixing MSan by instrumenting libc++ | Discussed compiling instrumented libc++ from source | Multi-hour build, complex CI setup, not worth it when ASan+UBSan+LSan cover most cases | Remove MSan from CI matrix and file an issue for later |
@@ -491,7 +491,7 @@ strategy:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/ProjectKeystone | PR #146 — fix CI failures on main and 2 open PRs | C++20 HMAS, GCC/Clang, GitHub Actions, Google Benchmark |
 | HomericIntelligence/ProjectKeystone | Repo audit + quick wins | PR #147, Issues #148-#158 |
 | HomericIntelligence/ProjectMnemosyne | TSan fixes: NUMA node data race, ConcurrentQueue false positives, ThreadPool hang | verified-ci: all three failure modes resolved |

@@ -11,7 +11,7 @@ user-invocable: false
 # Enforce Unit Test Structure via Pre-commit Hook
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-27 |
 | **Objective** | Add a pre-commit gate that prevents `test_*.py` files from being placed directly under `tests/unit/`, enforcing the sub-package mirroring convention at commit time |
 | **Outcome** | ✅ Hook implemented, 13 unit tests added, full suite passes (3185/3185), PR #1122 merged |
@@ -99,7 +99,7 @@ if __name__ == "__main__":
 Create `tests/unit/scripts/test_check_unit_test_structure.py`. Essential test cases:
 
 | Test | Assertion |
-|------|-----------|
+| ------ | ----------- |
 | `test_returns_empty_for_clean_directory` | No `test_*.py` → empty list |
 | `test_detects_test_file_at_root` | `test_foo.py` at root → violation |
 | `test_ignores_allowed_names` | `__init__.py`, `conftest.py` → allowed |
@@ -163,7 +163,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

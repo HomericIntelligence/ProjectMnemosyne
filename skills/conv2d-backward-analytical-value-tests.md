@@ -11,7 +11,7 @@ tags: [conv2d, backward-pass, analytical-values, mojo, batch-accumulation, multi
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Topic** | Analytically tractable value tests for conv2d backward pass |
 | **Approach** | All-ones configuration with exact expected values derived analytically |
 | **Key outputs verified** | `grad_input`, `grad_weights`, `grad_bias` — exact floating-point values |
@@ -34,7 +34,7 @@ tags: [conv2d, backward-pass, analytical-values, mojo, batch-accumulation, multi
 **All-ones formula table (padding=0, spatial=kH=kW, → single output position):**
 
 | Gradient | Formula | Example (in_ch=3, out_ch=8, batch=1) |
-|----------|---------|--------------------------------------|
+| ---------- | --------- | -------------------------------------- |
 | `grad_weights[oc,ic,kh,kw]` | `batch * 1.0` | `1.0` |
 | `grad_input[b,ic,ih,iw]` | `out_channels * 1.0` | `8.0` |
 | `grad_bias[oc]` | `batch * out_H * out_W` | `1.0` (out is 1×1) |
@@ -42,7 +42,7 @@ tags: [conv2d, backward-pass, analytical-values, mojo, batch-accumulation, multi
 **Batched formula (batch=2, spatial=3, kernel=3, → out is 1×1):**
 
 | Gradient | Expected value |
-|----------|---------------|
+| ---------- | --------------- |
 | `grad_bias[oc]` | `2.0` (= batch *1* 1) |
 | `grad_weights[oc,ic,kh,kw]` | `2.0` (= batch * 1.0) |
 | `grad_input[b,ic,ih,iw]` | `8.0` (= out_channels) |
@@ -289,7 +289,7 @@ Create a new file (e.g., `test_backward_conv_pool_batch.mojo`) to keep batch tes
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `rtol`/`atol` in assert_almost_equal | Passed `rtol=1e-2, atol=1e-2` as keyword args | `assert_almost_equal` takes `tolerance: Float32`, not `rtol`/`atol` | Always check the actual Mojo function signature — differs from PyTorch/numpy |
 | Adding tests to existing file | Considered adding to `test_backward_conv_pool.mojo` | File already had many tests; creating a dedicated file keeps concerns separated | Create a dedicated `_batch.mojo` file for batch-specific tests |
 | Using `randn` for test inputs | Considered seeded random inputs for variety | Seed-not-wired bug from prior learnings makes randn unreliable | Use deterministic all-ones/all-zeros — always analytically verifiable |
@@ -311,7 +311,7 @@ Padding=1 value test:      batch=1, in_channels=3, out_channels=8, spatial=5x5, 
 ### Tolerance by test type
 
 | Test type | tolerance | Reason |
-|-----------|-----------|--------|
+| ----------- | ----------- | -------- |
 | All-ones, 1×1 output (padding=0) | `1e-4` | Small sums, no accumulation error |
 | All-ones, padding=1, large sums | `1e-3` | Sums up to 72.0 need slightly looser tolerance |
 
@@ -333,7 +333,7 @@ With batch>1, same config:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3235, PR (multi-channel shapes+values) | [notes.md](../references/notes.md) |
 | ProjectOdyssey | Issue #3783, PR #4797 (batched grad_bias + grad_weights) | [notes.md](../references/notes.md) |
 | ProjectOdyssey | Issue #3785, PR #4799 (padding=1 border pixel formula) | [notes.md](../references/notes.md) |

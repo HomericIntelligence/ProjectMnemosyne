@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-20 |
 | Issue | #759 |
 | PR | #877 |
@@ -97,12 +97,12 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Commit type | `fix(docs):` |
 | Files typically changed | 1 markdown doc file |
 | Pre-commit hooks | Markdown lint, trim whitespace — Python linters skip if no .py files changed |
@@ -114,5 +114,5 @@ When the issue asks to check whether other Future Improvements are stale, do it 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #759, PR #877 | [notes.md](../../references/notes.md) |

@@ -14,7 +14,7 @@ history: wave-based-bulk-issue-triage.history
 # Skill: Wave-Based Bulk Issue Triage
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-22 |
 | **Objective** | Fix 8 GitHub issues (2 waves × 4 PRs) — simple fixes + test additions |
 | **Outcome** | ✅ Success — 8 PRs created in parallel, auto-merge enabled |
@@ -235,7 +235,7 @@ bypass the planning reflex.
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -243,7 +243,7 @@ bypass the planning reflex.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked for code-fix waves | N/A | Solution was straightforward |
 | Body quoting (2026-04-06) | Single-quoted `--body '...'` strings with apostrophes/single quotes embedded | Shell interprets `'` inside `'...'` as end of string, breaking the command | Use `--body-file /tmp/issue-body.md` for any body containing single quotes or apostrophes |
 | Plan-mode text (2026-04-11) | Adding "complete all steps end-to-end" and "Do NOT stop and ask for help" to Sonnet agents with `isolation="worktree"` | Agents ignored these instructions and still paused to present plans | Use Haiku model + imperative `Run:` command form; Haiku over-plans far less than Sonnet |
@@ -306,7 +306,7 @@ gh issue create \
 Phase 0 closures. All completed successfully.
 
 | Wave | Fix Type | Agents | Completions | Plan-Mode Stalls |
-|------|----------|--------|-------------|------------------|
+| ------ | ---------- | -------- | ------------- | ------------------ |
 | A | Documentation-only | 4 | 4 | 0 |
 | B | Config/cleanup | 5 | 5 | 0 |
 
@@ -329,7 +329,7 @@ merging. No evidence of CI thrash or queue starvation from simultaneous merges.
 followed by 28 LOW-complexity issues fixed across 4 fix-type waves.
 
 | Wave | Fix Type | Issues Fixed | PRs Created |
-|------|----------|--------------|-------------|
+| ------ | ---------- | -------------- | ------------- |
 | A | Documentation-only | 7 | 7 |
 | B | Config/cleanup | 8 | 8 |
 | C | Simple code fixes | 8 | 8 |
@@ -367,7 +367,7 @@ actual code defects. All fixed in subsequent CI re-runs.
 ### Session Results (2026-02-22)
 
 | Wave | Issue | Fix Type | PR | Tests Added |
-|------|-------|----------|----|-------------|
+| ------ | ------- | ---------- | ---- | ------------- |
 | 6a | #930 | Add test method to existing class | #1051 | 1 |
 | 6b | #959 | Update 3 phantom doc paths | #1052 | 0 |
 | 6c | #920 | 1-char .gitignore fix | #1053 | 0 |
@@ -382,7 +382,7 @@ actual code defects. All fixed in subsequent CI re-runs.
 ### Wave Sizing Guidelines
 
 | Wave Size | Agents | Expected Duration |
-|-----------|--------|-------------------|
+| ----------- | -------- | ------------------- |
 | 2-3 issues | 2-3 parallel | ~1-2 min |
 | 4-5 issues | 4-5 parallel | ~2-5 min |
 | 6+ issues | Split into sub-waves | Varies |
@@ -390,7 +390,7 @@ actual code defects. All fixed in subsequent CI re-runs.
 ### Issue Complexity Thresholds
 
 | Category | Fits in Wave? | Notes |
-|----------|--------------|-------|
+| ---------- | -------------- | ------- |
 | 1-char config fix | ✅ Yes | Simplest possible |
 | Add 1 test method | ✅ Yes | 15-30 lines |
 | Add new test class (5-8 tests) | ✅ Yes | Wave B material |
@@ -410,7 +410,7 @@ Add a comment in the plan when excluding:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Wave 6+7, PRs #1051-#1059 | [notes.md](references/notes.md) |
 | HomericIntelligence/Odysseus | Bulk issue filing, issues #99-#109 (2026-04-06) | 11 issues, 3 waves (5+5+1 Haiku agents), ~30s total |
 | HomericIntelligence/ProjectOdyssey | 66-issue classification + 28-issue fix (2026-04-11) | 3 parallel Explore classifiers, 4 fix-type waves, 28 PRs created |

@@ -10,7 +10,7 @@ There was no way to inspect experiment state from the CLI without manually readi
 ### Key Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scripts/manage_experiment.py` | Added ~270 lines: helper functions, format renderers, `cmd_visualize()`, parser registration |
 | `tests/unit/e2e/test_manage_experiment.py` | Added `TestCmdVisualize` class with 16 tests |
 

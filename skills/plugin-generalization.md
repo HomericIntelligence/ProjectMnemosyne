@@ -12,7 +12,7 @@ Migrate plugins/skills from repository-specific to cross-repository compatible f
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-03 |
 | Objective | Make plugins work across multiple repositories without hardcoded references |
 | Outcome | Success - 33 plugins migrated, 109 validated |
@@ -97,14 +97,14 @@ python scripts/generate_marketplace.py
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Changed Per Plugin
 
 | File | Change Type | Lines |
-|------|-------------|-------|
+| ------ | ------------- | ------- |
 | SKILL.md | Modify | ~10-20 (remove source, add Verified On) |
 | references/notes.md | Create | ~30-50 (project-specific details) |
 | plugin.json | Modify | ~5 (add requires, verified_on) |
@@ -122,7 +122,7 @@ python scripts/generate_marketplace.py
 ### Placeholder Reference
 
 | Placeholder | Example | Purpose |
-|-------------|---------|---------|
+| ------------- | --------- | --------- |
 | `<project-root>` | `/home/user/project` | Repository root |
 | `<test-path>` | `tests/` | Test directory |
 | `<package-manager>` | `pixi`, `npm`, `pip` | Package manager command |
@@ -132,7 +132,7 @@ python scripts/generate_marketplace.py
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | Generalized 33 plugins across 8 categories | [notes.md](../../references/notes.md) |
 
 ## References

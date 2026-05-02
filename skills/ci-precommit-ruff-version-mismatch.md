@@ -14,7 +14,7 @@ tags: [ruff, pre-commit, formatting, pixi, ci, version-isolation]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Fix CI failure where `pre-commit run --all-files` failed with "1 file would be reformatted" for ruff-format, but `pixi run ruff format --check` passed cleanly |
 | **Outcome** | Success — removed ruff hooks from `.pre-commit-config.yaml` entirely; CI passed |
@@ -119,7 +119,7 @@ repos:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `repo: local` hook type | Pointed pre-commit hook at the pixi ruff binary via `language: system` | pixi ruff was not reliably on PATH inside pre-commit's execution environment | `language: system` requires the tool to be in PATH; pixi-managed binaries often aren't unless the pixi shell is activated |
 | Investigating 0-byte `__init__.py` files | Checked whether empty `tests/__init__.py` was missing a newline | Empty files are valid; not the root cause of ruff-format disagreement | Ruff-format disagreements are environment-specific, not file-content issues |
 | Pinning pre-commit ruff to exact pixi version | Set `astral-sh/ruff-pre-commit` rev to precisely match `pixi run ruff --version` output | Different virtualenv isolation still produced divergent formatting decisions | Matching the version string is insufficient; the virtualenvs are fundamentally different execution environments |
@@ -167,5 +167,5 @@ the hook to only warn locally without blocking CI pre-commit checks:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHermes | PR #291 — CI "Lint & Test" job | Removing ruff from pre-commit config caused all required checks to pass and the PR merged to main |

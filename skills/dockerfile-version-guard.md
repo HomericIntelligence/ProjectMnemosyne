@@ -22,7 +22,7 @@ cross-validation, SHA256 digest consistency, and optional-dependency group drift
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-04-07 |
 | Objective | Prevent silent drift between Dockerfile pins and project configuration files |
 | Outcome | Merged from 6 source skills |
@@ -39,7 +39,7 @@ cross-validation, SHA256 digest consistency, and optional-dependency group drift
 ## Decision Criteria: Which version to pin to
 
 | Source | When to use |
-|--------|-------------|
+| -------- | ------------- |
 | `pyproject.toml [build-system].requires` | Build backends (hatchling, setuptools, flit, etc.) |
 | `pixi.toml` or `requirements.txt` locked version | Runtime/dev dependencies with an explicit lock |
 | `pip index versions <package>` latest | When no lockfile exists and you want current stable |
@@ -48,7 +48,7 @@ cross-validation, SHA256 digest consistency, and optional-dependency group drift
 ## Decision Criteria: Fallback Code vs. Documentation (Python version constraints)
 
 | Use Fallback Code (try/except) | Use Documentation Only |
-|-------------------------------|------------------------|
+| ------------------------------- | ------------------------ |
 | Base image version is not controlled (user-supplied) | Base image version is controlled (you own the Dockerfile) |
 | Downstream consumers may use different Python versions | Current base image already satisfies the constraint |
 | Library must install on Python < minimum version | Single controlled Python version in CI |
@@ -347,7 +347,7 @@ gh pr create --title "fix(docker): pin and guard dependency versions" --body "Cl
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `type: ignore[no-redef]` on tomli fallback | Added `# type: ignore[no-redef]` to the `else: import tomli as tomllib` line | mypy with `warn_unused_ignores=true` on Python >=3.11 flags it as unused — tomllib imported successfully so the ignore is never used | Omit the comment; bare `import tomli as tomllib` in the else-branch is sufficient |
 | Running only the test file for coverage check | `pixi run python -m pytest tests/unit/e2e/test_dockerfile.py` | Produces 0% source coverage, triggering `--cov-fail-under` failure | This is not a real failure — run the full `tests/unit/` suite to verify the threshold is met |
 | Short hash in digest regex | Used `[a-f0-9]+` instead of `[a-f0-9]{64}` | Matched partial/truncated hashes | Strict 64-hex requirement prevents false positives |
@@ -360,7 +360,7 @@ gh pr create --title "fix(docker): pin and guard dependency versions" --body "Cl
 ### Typical test counts per guard
 
 | Guard | Tests Added |
-|-------|------------|
+| ------- | ------------ |
 | Pip pin presence | 1 |
 | Python base image version | 4 integration + 4 unit = 8 |
 | pyproject.toml cross-validation | 2 |
@@ -380,5 +380,5 @@ Pinned deps mean Docker only re-fetches a package when the pin changes. Unpinned
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issues #1138/#1141/#1174/#1201/#1208, PRs #1195/#1203/#1294/#1305/#1308/#1342 | Merged from 6 skills |

@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-23 |
 | **Objective** | Apply expert peer review corrections (9 fixes) to an ablation study paper's statistical claims, verifying each against raw CSV data and authoritative references before editing |
 | **Outcome** | SUCCESS - All 9 fixes applied, paper compiles cleanly (0 LaTeX errors), critical issues resolved |
@@ -149,7 +149,7 @@ Pass-rate BCa CIs (Table~\ref{tab:aggregate-tiers}) are computed during table ge
 When cross-model (or cross-group) comparisons have enumerated confounds (different tasks, judges, N, etc.), check that conclusions use hedged language:
 
 | Too Strong | Appropriately Hedged |
-|-----------|----------------------|
+| ----------- | ---------------------- |
 | "Model X is economically viable for real coding tasks" | "Model X *appears* economically viable for the tasks tested here, pending confirmatory same-task comparison" |
 | "X's economics are competitive with Y" | "X's economics are competitive with Y for tasks where X can succeed" |
 | "X consistently produces lower quality" | "X produced lower quality on the single subtest available (no selection advantage)" |
@@ -184,7 +184,7 @@ grep "^!" paper.log                          # Should be 0 fatal errors
 ## Failed Attempts & Lessons Learned
 
 | Attempt | What Went Wrong | Lesson |
-|---------|----------------|--------|
+| --------- | ---------------- | -------- |
 | Trusted plan's T4 failure count (said "4") without checking CSV | CSV showed T4=5, not 4. Total was still 16, but the distribution was wrong | **Always verify counts from raw data, not from the plan** |
 | Applied SRH→KW fix without reading the existing footnote | The paper already had a footnote on the KW statistic mentioning SRH; removing it without reading caused loss of context | Read every related line before editing; the paper may already partially address the issue |
 | Assumed "T0--T4" in power analysis was a table note | Two other `T0--T4` instances in the paper were legitimate (table footnote, quality summary); only the power analysis line needed fixing | Grep for the pattern and inspect each occurrence before replace_all |
@@ -246,7 +246,7 @@ Fix End of Files         ... Failed (modified paper.log)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Haiku 4.5 ablation study, PR #1060 | [notes.md](../references/notes.md) |
 
 ## Related Skills

@@ -34,7 +34,7 @@ A secondary problem discovered during the session: the dashboard auto-detected t
 ## Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `package.json` | Added `@xterm/addon-unicode11: ^0.9.0` |
 | `hooks/useTerminal.ts` | Load Unicode11Addon, set activeVersion to '11' |
 | `hooks/useWebSocket.ts` | Set binaryType='arraybuffer', handle ArrayBuffer in onmessage, pass cols/rows in URL |

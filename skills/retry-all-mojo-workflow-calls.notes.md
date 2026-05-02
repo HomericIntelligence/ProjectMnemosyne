@@ -23,7 +23,7 @@ Issue #3329 was filed to audit ALL workflows and extend retry everywhere.
 Bare `pixi run mojo` calls found (excluding `mojo --version` and `mojo format`):
 
 | File | Line | Call | Type |
-|------|------|------|------|
+| ------ | ------ | ------ | ------ |
 | `comprehensive-tests.yml` | 114 | `mojo package -I "$REPO_ROOT" shared` | Package build |
 | `test-gradients.yml` | 39-40 | `mojo -I . tests/shared/core/test_gradient_checking_basic.mojo` + dtype | Test file |
 | `test-data-utilities.yml` | 47,52,60,67,75,84 | `mojo -I . tests/shared/data/...` | Test files (5) |

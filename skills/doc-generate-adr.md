@@ -13,7 +13,7 @@ Create Architecture Decision Records for technical decisions.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Standardized architectural documentation | Consistent, traceable technical decisions |
 
 ## When to Use
@@ -118,12 +118,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Missing context | Add background and constraints |
 | Unclear decision | Make decision more specific |
 | Missing alternatives | Document at least 2 alternatives |

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-03 |
 | Category | documentation |
 | Objective | Scan all module-level docstrings for orphaned lowercase continuation lines and remove them |
@@ -139,7 +139,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -154,7 +154,7 @@ gh pr merge --auto --rebase
 ### Files Fixed
 
 | File | Orphaned Fragment Removed |
-|------|--------------------------|
+| ------ | -------------------------- |
 | `scylla/config/pricing.py` | Merged 2-line sentence (short enough to fit 100 chars) |
 | `scylla/config/models.py` | `and Pydantic validation capabilities.` |
 | `scylla/config/loader.py` | `and complex file operations with error handling.` |
@@ -165,7 +165,7 @@ gh pr merge --auto --rebase
 ### Files Left Unchanged (legitimate wraps)
 
 | File | Reason |
-|------|--------|
+| ------ | -------- |
 | `scylla/adapters/__init__.py` | Merged line = 103 chars > 100-char limit; legitimate wrap |
 | `scylla/analysis/__init__.py` | Genuine 2-line sentence, grammatically complete |
 | `scylla/config/__init__.py` | Genuine continuation in multi-line sentence |

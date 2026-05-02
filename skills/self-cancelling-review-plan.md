@@ -17,7 +17,7 @@ are required.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-05 |
 | Issue | #3152 |
 | PR | #3343 |
@@ -57,7 +57,7 @@ git log --oneline -5
 ## Key Signals That a Plan Is Self-Cancelling
 
 | Signal | Location in File | Meaning |
-|--------|-----------------|---------|
+| -------- | ----------------- | --------- |
 | "No fixes are required" | Fix Order section | Plan explicitly cancels itself |
 | "The PR is correct and complete" | Summary section | Implementation already done |
 | "Pre-existing failures on main" | Problems Found section | Failing CI is not caused by PR |
@@ -67,7 +67,7 @@ git log --oneline -5
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A — correct approach taken immediately | Read the full fix plan before acting | — | Always read the entire plan body, not just the outer wrapper instruction |
 | Potential mistake: manufacturing a commit | Could have committed a no-op or modified an unrelated file | Would create spurious history and confuse reviewers | "Implement all fixes" means implement what the plan says, and if the plan says nothing, do nothing |
 

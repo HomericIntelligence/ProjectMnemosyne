@@ -12,7 +12,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-28 |
 | Objective | Fix slow rendering + 4 interaction bugs in a Cytoscape.js tournament DAG |
 | Outcome | **Success** — all bugs fixed, rendering noticeably faster |

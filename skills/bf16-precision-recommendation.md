@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-07 |
 | **Objective** | Enable BF16 in `recommend_precision_dtype()` for large models (>= 1000 MB) with Apple Silicon guard |
 | **Outcome** | Implemented `hardware_has_bf16` parameter, large models return `DType.bfloat16` by default, fall back to FP16 on Apple Silicon |
@@ -92,7 +92,7 @@ assert_equal(no_hw_dtype, DType.float32, "Without FP16 hardware should use FP32"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run tests locally via `pixi run mojo test` | Executed test file directly | GLIBC version mismatch — system GLIBC 2.31, Mojo requires 2.32+ | Tests must run in Docker/CI; local Mojo execution fails on this machine due to GLIBC constraints |
 | Run `just test-group` | Used `just` command runner | `just` not in PATH in the worktree shell | Use `pixi run mojo test <file>` directly, not `just` wrapper, or verify `just` is installed |
 
@@ -111,7 +111,7 @@ fn recommend_precision_dtype(
 ### Return Value by Configuration
 
 | model_size_mb | hardware_has_fp16 | hardware_has_bf16 | Returns |
-|---------------|-------------------|-------------------|---------|
+| --------------- | ------------------- | ------------------- | --------- |
 | < 100 | any | any | `DType.float32` |
 | 100-999 | True | any | `DType.float16` |
 | 100-999 | False | any | `DType.float32` |
@@ -127,5 +127,5 @@ All hooks passed: `Mojo Format`, `Check for deprecated List[Type](args) syntax`,
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3710 / Issue #3202 | [notes.md](../references/notes.md) |

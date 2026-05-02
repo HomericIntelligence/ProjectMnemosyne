@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | strip-note-prefix-comments |
 | **Category** | documentation |
 | **Language** | Mojo |
@@ -51,7 +51,7 @@ Compare results against the issue's file list. Files with zero hits are already 
 ### 2. Categorize variant patterns
 
 | Pattern | Conversion |
-|---------|-----------|
+| --------- | ----------- |
 | `# NOTE: text` | `# text` |
 | `# NOTE(#N): text` | `# text (#N):` — preserve issue reference at end |
 | `# NOTE (Mojo vX.Y): text` | `# text (Mojo vX.Y).` — preserve version context inline |
@@ -85,7 +85,7 @@ No compilation or test execution needed locally (CI is authoritative for Mojo bu
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Trusting issue line numbers | Read files at the exact lines from the issue body | Several files had no `# NOTE` at those lines — already cleaned | Always grep first to discover actual state |
 | Searching only `# NOTE:` (colon) | `grep -n "# NOTE:"` | Missed `# NOTE(#3084):` and `# NOTE (Mojo v0.26.1):` variants | Use `# NOTE` (no colon) to catch all variants |
 | Dropping issue/version context | `# NOTE(#3084): text` → `# text` | Loses traceability to the referenced issue | Move context inline: `# text (#3084)` |

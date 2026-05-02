@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Layer** | Layer Normalization (`layer_norm_backward`) |
 | **Parameters tested** | `grad_gamma` (index 1), `grad_beta` (index 2) |
 | **Method** | Central finite differences on the parameter tensor |
@@ -37,7 +37,7 @@ user-invocable: false
 ### Quick Reference
 
 | Step | Action |
-|------|--------|
+| ------ | -------- |
 | 1 | Locate `test_layer_norm_backward_gradient_input` in test file |
 | 2 | Add `test_layer_norm_backward_gradient_gamma` extracting `result[1]` |
 | 3 | Add `test_layer_norm_backward_gradient_beta` extracting `result[2]` with non-zero beta |
@@ -167,7 +167,7 @@ Add after `test_layer_norm_backward_gradient_input`:
 ### 5. Key differences from batch norm parameter checks
 
 | Aspect | Batch Norm | Layer Norm |
-|--------|------------|------------|
+| -------- | ------------ | ------------ |
 | `epsilon` for finite diff | `1e-3` | `1e-4` (finer) |
 | Normalization axis | Per-channel (C) | Per-sample (last N dims) |
 | `beta` in forward closure | Required to check `grad_beta` | Required to check `grad_beta` |
@@ -177,7 +177,7 @@ Add after `test_layer_norm_backward_gradient_input`:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Reuse batch norm epsilon `1e-3` | Used same finite diff epsilon as batch norm param checks | Would work, but `1e-4` gives tighter numerical agreement for layer norm's per-sample normalization | Prefer finer epsilon for layer norm to get better agreement |
 | Zero beta in beta test | Used `beta = zeros(...)` without setting non-zero values | Beta gradient is `sum(grad_output)` and doesn't depend on beta values — still validates correctly, but non-zero beta documents intent | Use non-zero beta to signal the test exercises the additive shift path |
 | Reusing same grad_output pattern as grad_input test | Copied the same non-uniform values `[0.3, -0.5, 1.2, -0.8, 0.7, -0.2, 0.9, -1.1]` | Works correctly — same values are valid since the closure fixes the parameter being perturbed | Non-uniform grad_output is the key property; exact values don't matter as long as they aren't uniform or all-zeros |

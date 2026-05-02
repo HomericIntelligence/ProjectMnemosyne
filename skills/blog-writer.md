@@ -12,7 +12,7 @@ tags: []
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | (fill in objective) |
 | **Outcome** | (fill in outcome) |
@@ -145,7 +145,7 @@ markdown-compliant, saved to `notes/blog/MM-DD-YYYY.md`.
 ## Error Handling
 
 | Issue | Fix |
-|-------|-----|
+| ------- | ----- |
 | No metrics | Measure before/after with specific numbers |
 | Vague accomplishments | List specific implementations or fixes |
 | Missing learnings | Add what was discovered/surprised you |
@@ -163,7 +163,7 @@ markdown-compliant, saved to `notes/blog/MM-DD-YYYY.md`.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 
 ## Results & Parameters

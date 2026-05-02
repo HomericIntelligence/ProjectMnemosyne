@@ -39,7 +39,7 @@ Fix: add `"unused-ignore"` to the same override block. This suppresses the circu
 ## Issue Triage Summary
 
 | Issue | Action | Reason |
-|-------|--------|--------|
+| ------- | -------- | -------- |
 | #952 | Closed | Scope was scylla/ suppressed errors -- all fixed |
 | #1001 | Closed | DISABLED_ERROR_CODES=[]. No "next code" globally |
 | #1002 | Closed | Tracking infra removed in #1082 |

@@ -30,7 +30,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-14 |
 | **Objective** | Fix deterministic CI failures where `mojo run` crashes before executing any user code |
 | **Outcome** | Successful — crash reproduced and fixed; CI cache key fix added to prevent recurrence |
@@ -192,7 +192,7 @@ _run CMD:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assumed JIT flakiness | Classified crash as non-deterministic `__fortify_fail_abort` JIT issue | Crash was 100% deterministic at UID mismatch; warm-cache local tests at UID 1000 always passed, masking the real bug | Never close a crash as "unfixable JIT flakiness" without first reproducing at the exact CI UID |
 | Local parallel test run | Ran 10 parallel `mojo test` locally without replicating CI UID | Local UID = 1000 matched image owner, so home dir was accessible and all tests passed | Always replicate the exact runtime UID of the CI runner when diagnosing "CI-only" crashes |
 | Setting `MODULAR_HOME` env var | Tried redirecting via `MODULAR_HOME=/tmp/.modular` | `libAsyncRTMojoBindings.so` reads `$HOME/.modular` directly via `std::filesystem::status`; env var redirect does not affect this call | The crash happens in native C++ before any Mojo env var handling; must fix permissions or pre-create the directory |
@@ -294,6 +294,6 @@ podman compose exec -T myservice bash -c "id && mojo run -e 'print(42)'"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | CI deterministic crash reproduced and fixed locally, PR #5217 | UID 1001 CI runner vs UID 1000 image owner; `docker-compose.yml` with `USER_ID` ARG |
 | ProjectOdyssey | CI cache key UID isolation added, PR #5252 | `setup-container/action.yml` amended to include `uid` step output in cache key; justfile `_run` recipe amended with HOME_FIXUP |

@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-21 |
 | **Objective** | Review and revise a plan to split a 4,700-line runtime-typed tensor (ExTensor) into compile-time Tensor[dtype: DType] + runtime AnyTensor in Mojo 0.26.1 |
 | **Outcome** | Found 4 blockers, 8 high, 6 medium, 4 low issues; designed 3-layer package split; revised 7-phase plan into 17 sub-phases; revised scope from 9,700 to 15,700 lines |
@@ -76,7 +76,7 @@ Ask about: package placement, file rename timing, test volume handling strategy.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Separate review document | Created standalone review doc as deliverable | User wanted findings integrated directly into the plan, not a separate file | Ask delivery format preference before creating new files. In-place integration is often preferred. |
 | 2-layer package split | Proposed Tensor[dtype] in shared/tensor/ separate from ExTensor in shared/core/ | User wanted 3-layer split with base layer for zero-dependency utilities. 2-layer also creates circular deps. | Ask about package architecture early. Verify circular dep freedom by tracing actual imports, not conceptual analysis. |
 | Auto-parameterization assumption | Plan assumed `fn relu(t: Tensor) -> Tensor` would auto-parameterize | Mojo 0.26.1 auto-parameterization fails for return types. Codebase had 0 existing uses — strong signal. | Always verify language feature claims by checking existing usage count. Zero existing uses = likely doesn't work. |

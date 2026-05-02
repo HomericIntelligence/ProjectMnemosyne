@@ -16,7 +16,7 @@
 ### Files Created/Modified
 
 | File | Action |
-|------|--------|
+| ------ | -------- |
 | `scripts/check_python_version_consistency.py` | Created — 130 lines |
 | `tests/unit/scripts/test_check_python_version_consistency.py` | Created — 31 tests |
 | `.pre-commit-config.yaml` | Added hook after `check-tier-config-consistency` |

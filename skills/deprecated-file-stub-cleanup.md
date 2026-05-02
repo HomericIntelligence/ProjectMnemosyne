@@ -11,7 +11,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Safely delete deprecated files/stubs with zero breakage |
 | **Outcome** | File deleted, cross-references updated, PR created and auto-merged |
@@ -156,7 +156,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `pixi run mojo build` as validation | Executed build after deletion to confirm no breakage | GLIBC version mismatch prevented mojo from running (pre-existing env issue, not deletion-related) | Use pre-commit hooks as validation signal, not raw mojo build; GLIBC mismatch is a Docker-only env constraint |
 | Searching only `.mojo` files for references | Grepped only source code for imports | Missed references in `__init__.mojo` comments and `.md` doc files | Always grep across ALL file types after deletion |
 | Searching only `.md` files | Ran grep with `--include="*.md"` only | Missed `scripts/update_agents_claude4.py` which generates agent configs | Include `--include="*.py"` and all config types in grep sweep |
@@ -193,7 +193,7 @@ SKIP=mojo-format pixi run pre-commit run --all-files
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3062 - delete `tests/shared/fixtures/mock_models.mojo` | PR #3254 |
 | ProjectOdyssey | Issue #3063 - delete plan-* skill directories (3 dirs, 8 files updated) | Merged |
 | ProjectOdyssey | Issue #3066 - delete deprecated `benchmarks/__init__.mojo` | Merged |

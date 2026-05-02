@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-15 |
 | Objective | Find SHA-pinned `uses:` lines missing `# vX.Y.Z` version comments, add them, and create a regression test |
 | Outcome | All SHA-pinned action refs have human-readable version comments; a pytest regression blocks future omissions |
@@ -144,13 +144,13 @@ grep -rn "uses:.*@[0-9a-f]\{40\}" .github/ | grep -v "#"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4845, issue #3974 | [notes.md](../../references/notes.md) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Searching only for lines entirely without `#` using `grep -v "#"` | Expected to catch all bare SHA lines | Lines with unrelated `#` characters elsewhere on the line (e.g. in job names) were excluded from the match incorrectly | Use a more targeted regex: `grep -rn "uses:.*@[0-9a-f]{40}" \| grep -v "#"` to match only lines where the action SHA itself lacks a trailing comment |
 | Assuming a prior SHA-pinning PR was complete | Trusted the issue description that all workflow files were already pinned consistently | Bare SHA lines existed in `comprehensive-tests.yml` at lines 40, 76, 166, 552, 634 while other lines in the same file had `# v6.0.1` | Always run the grep audit yourself — don't trust issue descriptions or prior PR completeness claims |
 
@@ -180,6 +180,6 @@ COMMENT_RE = re.compile(r"uses:\s+\S+@[0-9a-f]{40}.*#")      # matches SHA + com
 **ProjectOdyssey verified action SHAs with comments:**
 
 | Action | Comment | SHA |
-|--------|---------|-----|
+| -------- | --------- | ----- |
 | `actions/checkout` | `# v6.0.1` | `8e8c483db84b4bee98b60c0593521ed34d9990e8` |
 | `actions/checkout` | `# v6` | `de0fac2e4500dabe0009e67214ff5f5447ce83dd` |

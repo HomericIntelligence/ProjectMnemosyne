@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-07 |
 | Objective | Confirm a known environment incompatibility (mojo-format GLIBC mismatch) is tracked as an infrastructure issue, and update documentation to reference all tracking issues |
 | Outcome | Verified — existing tracking issues found, pre-commit comment updated |
@@ -105,7 +105,7 @@ The <hook> fails silently on <env> because <reason>.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assuming no tracking issue exists | Planned to create a new tracking issue immediately | Three issues already existed (#3170 closed, #3253, #3365 open) | Always search before creating; use `--state all` to catch closed originals |
 | Searching only by tool name | `gh issue list --search "mojo-format"` | Missed issues that described the symptom differently | Search by multiple terms: tool name, error type, and symptom |
 | Treating a closed issue as "not tracked" | Assumed closed = resolved = no tracking | #3170 was closed after a partial fix; #3253 and #3365 remained open | A closed issue often spawns open follow-ups — check all three |
@@ -129,5 +129,5 @@ gh issue list --state open --search "infrastructure mojo-format"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3212, PR #3729 | [notes.md](../references/notes.md) |

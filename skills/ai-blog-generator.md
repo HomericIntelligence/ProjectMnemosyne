@@ -13,7 +13,7 @@ Generate blog posts retroactively based on git commit history, with proper AI-ge
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Fill 29 missing blog posts from git history | 50 sequential posts (Day One - Day Fifty) |
 
 ## When to Use
@@ -139,7 +139,7 @@ for i, f in enumerate(files_sorted, 1):
 ### Parameters Used
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Date range | Nov 7 - Dec 29, 2025 |
 | Posts generated | 29 |
 | Total posts | 50 |
@@ -160,12 +160,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Duplicate day numbers | Renumber ALL posts chronologically after generation |
 | Markdown lint failures | Run `just pre-commit-all` before committing |
 | Missing AI attribution | Include notice at BOTH top and bottom of posts |

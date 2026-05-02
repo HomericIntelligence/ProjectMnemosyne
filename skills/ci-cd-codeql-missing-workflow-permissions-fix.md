@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-27 |
 | **Objective** | Resolve GitHub CodeQL alert #2 (`actions/missing-workflow-permissions`) on `validate-plugins.yml` |
 | **Outcome** | Successful — 2-line addition resolved the alert |
@@ -95,7 +95,7 @@ permissions:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked on first try | N/A | The fix is always a 2-line YAML block; no complex debugging needed |
 
 ## Results & Parameters
@@ -134,7 +134,7 @@ jobs:
 **Permission level guide**:
 
 | Workflow Type | Recommended Permissions |
-|---------------|------------------------|
+| --------------- | ------------------------ |
 | Validate / lint / check (read-only) | `contents: read` |
 | Test matrix (read-only) | `contents: read` |
 | Release / publish to package registry | `contents: write`, `packages: write` |
@@ -153,5 +153,5 @@ gh api repos/<OWNER>/<REPO>/code-scanning/alerts/<N>
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | CodeQL alert #2 on `validate-plugins.yml` | Added `permissions: contents: read` between `on:` and `jobs:` blocks |

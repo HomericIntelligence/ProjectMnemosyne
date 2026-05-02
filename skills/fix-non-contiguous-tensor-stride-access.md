@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Issue** | Tensor element access using flat offset `i * dtype_size` instead of stride-based indexing |
 | **Symptom** | Silent wrong values for transposed/sliced (non-contiguous) tensors |
 | **Root Cause** | `_get_float64(i)` assumes contiguous stride-1 layout |
@@ -130,7 +130,7 @@ Functions to audit: `tile()`, `repeat()`, `broadcast_to()`, `permute()`, `concat
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Use `_get_float64(i)` directly | Called existing helper with flat index | Computes `offset = i * dtype_size` — correct only for stride-1 (contiguous) tensors; for transpose with strides [1,4] reads wrong positions | `_get_float64` is NOT stride-aware; never call it on non-contiguous source tensors |
 | Check strides after `as_contiguous()` | Verified `_strides` and `is_contiguous()` return value | Strides are correctly set on the output (result is contiguous), but input was read with flat offsets | Contiguity of output does not validate correctness of input reads |
 | Running mojo test locally | `pixi run mojo test tests/...` | GLIBC version mismatch (`GLIBC_2.32/2.33/2.34` not found) — tests only run in Docker/CI | Always verify logic via mental walkthrough and CI; local mojo execution unavailable on this host |

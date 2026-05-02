@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-23 |
 | **Issue** | #687 — Bring mypy to compliance for scylla/ and scripts/ |
 | **Objective** | Incrementally fix all suppressed mypy error codes in scylla/ and scripts/, remove them from `disable_error_code`, and simplify tracking infrastructure |
@@ -274,7 +274,7 @@ python scripts/check_mypy_counts.py → OK — counts match mypy output
 ### Phase Summary
 
 | Phase | Error Code(s) | Violations Fixed | PR |
-|-------|---------------|------------------|----|
+| ------- | --------------- | ------------------ | ---- |
 | 0 | 5 zero codes removed | 0 | #1068 |
 | 1 | tests/ override added | 0 | #1069 |
 | 2 | var-annotated | 9 | #1070 |
@@ -289,10 +289,10 @@ python scripts/check_mypy_counts.py → OK — counts match mypy output
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #687, PRs #1068–#1077 | [notes.md](../../references/notes.md) |

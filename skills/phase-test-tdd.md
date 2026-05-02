@@ -13,7 +13,7 @@ phase: Test
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Coordinate test-driven development by writing tests first, then implementing to make them pass. - Creating tests before implementation (TDD workflow) |
 | Outcome | Operational |
@@ -61,7 +61,7 @@ mojo test tests/test_component.mojo
 ## Test Types
 
 | Type | Location | Purpose |
-|------|----------|---------|
+| ------ | ---------- | --------- |
 | Unit | `tests/unit/` | Test individual functions in isolation |
 | Integration | `tests/integration/` | Test component interactions |
 | Performance | `tests/performance/` | Benchmark SIMD and critical paths |
@@ -127,7 +127,7 @@ class TestComponent:
 ## Error Handling
 
 | Error | Fix |
-|-------|-----|
+| ------- | ----- |
 | Test import fails | Check file path and module structure |
 | Test timeout | Optimize code or increase timeout |
 | Flaky tests | Add setup/teardown, check for randomness |
@@ -136,7 +136,7 @@ class TestComponent:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

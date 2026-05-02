@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Date** | 2026-02-01 |
 | **Objective** | Integrate multiple metrics (Impl-Rate, CoP, Frontier CoP, Duration, Process, Latency) into statistical analysis pipeline in parallel |
 | **Outcome** | ✅ SUCCESS: 3 metrics fully integrated, 2 documented for future work, 4 issues resolved simultaneously |
@@ -354,7 +354,7 @@ Copy-paste ready configurations and expected outputs.
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Attempt 1: Sequential Integration (Rejected)
@@ -421,7 +421,7 @@ git push -u origin 326-327-integrate-available-metrics --force
 ### Quantitative Results
 
 | Metric | Status | Statistical Tests | Entries Added | Issue |
-|--------|--------|-------------------|---------------|-------|
+| -------- | -------- | ------------------- | --------------- | ------- |
 | Pass-Rate | ✅ Baseline | YES | 0 (existing) | N/A |
 | Impl-Rate | ✅ Integrated | YES | +39 | #324 |
 | CoP | ✅ Integrated | Descriptive | ~15 | #325 |
@@ -444,7 +444,7 @@ git push -u origin 326-327-integrate-available-metrics --force
 **After Integration**: 4 metrics across 5 test categories
 
 | Test Category | Metrics Covered | Entries |
-|---------------|----------------|---------|
+| --------------- | ---------------- | --------- |
 | Normality Tests | Pass-Rate, Impl-Rate, Cost, Duration | 70 |
 | Omnibus Tests | Pass-Rate, Impl-Rate, Duration | 8 |
 | Pairwise Comparisons | Pass-Rate, Impl-Rate, Duration | 48 |

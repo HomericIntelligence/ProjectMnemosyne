@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-07 |
 | **Session Context** | Issue #3382 - ExTensor __hash__ NaN stability (follow-up to #3164) |
 | **Objective** | Ensure NaN-containing tensors hash identically regardless of NaN bit pattern |
@@ -53,7 +53,7 @@ This correctly distinguishes `1.0` from `2.0` and handles large/small values. Ho
 IEEE 754 defines many valid NaN bit patterns:
 
 | NaN Type | Float32 Example | Float64 Example |
-|----------|----------------|----------------|
+| ---------- | ---------------- | ---------------- |
 | Quiet NaN (positive) | `0x7FC00000` | `0x7FF8000000000000` |
 | Quiet NaN (negative) | `0xFFC00000` | `0xFFF8000000000000` |
 | Signaling NaN | `0x7F800001` | `0x7FF0000000000001` |
@@ -175,7 +175,7 @@ fn test_hash_f32_signaling_nan_equals_quiet_nan() raises:
 ### Step 5: Canonical NaN bit patterns reference
 
 | Type | Canonical Quiet NaN Bits | Infinity Bits | NaN Condition |
-|------|--------------------------|---------------|---------------|
+| ------ | -------------------------- | --------------- | --------------- |
 | Float16 | `0x7E00` | `0x7C00` | `(bits & 0x7FFF) > 0x7C00` |
 | Float32 | `0x7FC00000` | `0x7F800000` | `(bits & 0x7FFFFFFF) > 0x7F800000` |
 | Float64 | `0x7FF8000000000000` | `0x7FF0000000000000` | `(bits & 0x7FFFFFFFFFFFFFFF) > 0x7FF0000000000000` |
@@ -183,7 +183,7 @@ fn test_hash_f32_signaling_nan_equals_quiet_nan() raises:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Per-dtype NaN canonicalization | Add separate float16/float32/float64 branches in `__hash__`, canonicalize in each native width | More complex, and the `_get_float64()` helper already unifies all dtypes in float64 space | If there's a `_get_float64()` helper, canonicalize once in float64 space — no per-dtype branches needed |
 | `math.isnan()` for detection | Import `isnan` from `math` and call `isnan(val)` | Works but requires an import; the bitwise test `(bits & mask) > inf_bits` is self-contained and avoids the import | Bitwise NaN detection is simpler and requires no additional imports |
 | Canonicalize in stored data | Modify `_data` bytes to replace NaN with canonical form when calling `nan_tensor()` | Violates the principle that hash should not mutate stored data; also breaks roundtrip fidelity | NaN canonicalization is a hash-side concern only — never mutate tensor data |
@@ -205,7 +205,7 @@ alias F64_ABS_MASK:  UInt64 = 0x7FFFFFFFFFFFFFFF
 ### Test Matrix
 
 | Test | What It Verifies |
-|------|-----------------|
+| ------ | ----------------- |
 | `+qNaN == -qNaN hash` | Sign bit doesn't affect hash |
 | `NaN payload 1 == NaN payload 2 hash` | Mantissa payload doesn't affect hash |
 | `sNaN == qNaN hash` | Quiet/signaling distinction doesn't affect hash |
@@ -225,5 +225,5 @@ alias F64_ABS_MASK:  UInt64 = 0x7FFFFFFFFFFFFFFF
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3382, PR #4058 | Follow-up to #3164 bitcast fix |

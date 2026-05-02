@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | extend-structural-test-with-value-assertions |
 | **Category** | testing |
 | **Language** | Mojo |
@@ -123,13 +123,13 @@ derive expected values from the transpose stride mapping.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3842, PR #4812 | [notes.md](../references/notes.md) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Checking only strides and contiguity | Original test asserted `is_contiguous() == True` and `_strides[0] == 3`, `_strides[1] == 1` | Structural metadata can be correct while element values are wrong (flat copy instead of stride copy) | Always append element-value assertions after structural checks |
 | Using `_get_float64(i)` on the non-contiguous tensor before `as_contiguous()` | Asserting values on `t` (the transposed view) before copying | `_get_float64(i)` reads flat memory index `i`, ignoring strides — gives original row-major order, not transpose order | Assert values on `c` (the contiguous result), not on the non-contiguous view |
 | Manually overwriting `_strides` to create non-contiguous tensor | Alternative approach from `mojo-as-contiguous-stride-verification` skill | Harder to control predictable values when stride override decouples logical and physical layout | When the tensor is built with `arange + reshape + transpose`, the value mapping is derivable without stride manipulation — prefer the simpler path |

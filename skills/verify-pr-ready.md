@@ -12,7 +12,7 @@ Check that PR meets all requirements before merging.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Pre-merge validation checklist | Prevent broken merges |
 
 ## When to Use
@@ -76,7 +76,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Blocking Issues
 
@@ -92,7 +92,7 @@ PR cannot merge if:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Mergeable check fails | Rebase on main and resolve conflicts |
 | CI pending | Wait for checks to complete |
 | Approvals missing | Request review from required reviewers |
@@ -102,7 +102,7 @@ PR cannot merge if:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR merge validation workflow | Generic patterns applicable to any GitHub project |
 
 ## References

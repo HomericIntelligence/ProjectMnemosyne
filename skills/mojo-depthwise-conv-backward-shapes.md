@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Skill name** | mojo-depthwise-conv-backward-shapes |
 | **Category** | testing |
 | **Mojo version** | 0.26.1 |
@@ -130,7 +130,7 @@ gradient mismatch) is unrelated to this change.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `in_channels` for kernel depth | Set `kernel_shape.append(in_channels)` at dim 1 | Depthwise kernels always have depth=1, not `in_channels` | Always use `1` for the second kernel dimension in depthwise conv; assert `shape()[1] == 1` |
 | Using `grad_kernel` field name | Accessed `result.grad_kernel` as in regular conv test | `DepthwiseConv2dNoBiasGradient` uses `grad_weights`, not `grad_kernel` | Check the return type's actual field names before writing assertions |
 

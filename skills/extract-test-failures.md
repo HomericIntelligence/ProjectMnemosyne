@@ -12,7 +12,7 @@ Parse test logs to extract failure information and create summary.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Systematic test failure analysis | Quick identification of what broke |
 
 ## When to Use
@@ -74,7 +74,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Output Format
 
@@ -90,7 +90,7 @@ Report failures with:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | No FAILED markers | Check log format, may use different pattern |
 | Truncated output | Get full log from artifacts |
 | Mixed output types | Filter by log level or timestamp |

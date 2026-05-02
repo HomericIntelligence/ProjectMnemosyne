@@ -322,7 +322,7 @@ import logging
 ## Exit Codes
 
 | Code | Meaning | Action |
-|------|---------|--------|
+| ------ | --------- | -------- |
 | 0 | Success - All tests completed | None (done) |
 | 1 | Error - Permanent failure | Investigate and fix |
 | 2 | Rate limited - Transient failure | Wait and re-run |

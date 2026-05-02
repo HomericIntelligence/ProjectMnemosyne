@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Generate and analyze test coverage reports. - After running tests - Before creating PR - Identifying untested code |
 | Outcome | Operational |
@@ -65,10 +65,10 @@ Missing branches: line 12->15, line 18->20
 ## Coverage Goals
 
 | Category | Minimum | Target | Critical |
-|----------|---------|--------|----------|
+| ---------- | --------- | -------- | ---------- |
 | Line coverage | 80% | 90% | 100% |
 | Branch coverage | 70% | 85% | 95% |
-| Critical paths | - | - | 100% |
+| Critical paths | --- | --- | 100% |
 
 ## Coverage Report
 
@@ -127,7 +127,7 @@ pytest --cov=src --cov-report=html tests/
 ## Error Handling
 
 | Error | Fix |
-|-------|-----|
+| ------- | ----- |
 | "No module named pytest" | Install: `pip install pytest-cov` |
 | "Cannot find tests/" | Verify test directory exists |
 | No coverage report | Ensure tests ran successfully |
@@ -135,7 +135,7 @@ pytest --cov=src --cov-report=html tests/
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

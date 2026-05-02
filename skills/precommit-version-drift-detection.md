@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | precommit-version-drift-detection |
 | **Category** | ci-cd |
 | **Complexity** | Medium |
@@ -253,7 +253,7 @@ git add .pre-commit-config.yaml && pixi run pre-commit run check-precommit-versi
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Include `markdownlint-cli2` in `HOOK_TO_PIXI_MAP` | Added it to the map with `>=0.12.1,<0.13` in pixi.toml | conda-forge only has `markdownlint-cli2 >=0.13`; the npm package `v0.12.1` is a different versioning series | JS tools published on npm and conda-forge use incomparable version numbers — exclude them from drift tracking |
 | Add `markdownlint-cli2 = ">=0.12.1,<0.13"` to pixi.toml | Tried to install it | `pixi install` failed immediately with "No candidates" — conda-forge has no 0.12.x build | Always verify conda-forge availability with `pixi search <pkg>` before adding constraints |
 | Require exact version match for all packages | Used `version_tuple(hook) == version_tuple(pixi)` where pixi is lower bound | For `>=0.7.1` (no upper bound), the lower bound is `0.7.1` and hook rev is also `0.7.1` — they match exactly by accident | The exact-match approach works when pixi lower bound equals the hook rev; consider range checking for future robustness |
@@ -284,14 +284,14 @@ pre-commit-hooks = ">=4.5.0,<4.6"  # pinned to match .pre-commit-config.yaml rev
 ### Script Exit Codes
 
 | Exit Code | Meaning |
-|-----------|---------|
+| ----------- | --------- |
 | `0` | All tracked hooks consistent with pixi.toml/pixi.lock |
 | `1` | Drift detected, missing entry, or file not found |
 
 ### HOOK_TO_PIXI_MAP — Which Repos to Track
 
 | Repo URL | Pixi Package | Include? | Reason |
-|----------|-------------|---------|--------|
+| ---------- | ------------- | --------- | -------- |
 | `mirrors-mypy` | `mypy` | Yes | Pure Python, same versioning |
 | `nbstripout` | `nbstripout` | Yes | Pure Python, same versioning |
 | `pre-commit-hooks` | `pre-commit-hooks` | Yes | Pure Python, same versioning |

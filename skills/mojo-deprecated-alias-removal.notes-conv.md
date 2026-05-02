@@ -14,7 +14,7 @@ Remove 6 deprecated `comptime` type aliases from `shared/core/conv.mojo` (lines 
 ## Aliases Removed
 
 | Alias | Replacement |
-|-------|-------------|
+| ------- | ------------- |
 | `Conv2dBackwardResult` | `GradientTriple` |
 | `Conv2dNoBiasBackwardResult` | `GradientPair` |
 | `DepthwiseConv2dBackwardResult` | `GradientTriple` |

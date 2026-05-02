@@ -14,7 +14,7 @@ tags: [mojo, python, interop, pythonobject, extension-module, modular-upstream]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-09 |
 | **Objective** | Canonical patterns for Mojo ↔ Python interoperability |
 | **Outcome** | Authoritative reference from Modular for Python interop in Mojo |
@@ -47,11 +47,11 @@ var b = Bool(py=py_obj)            # Bool is the exception — positional also w
 
 ### Common WRONG/CORRECT Patterns
 
-| WRONG                    | CORRECT                      |
-|--------------------------|------------------------------|
-| `Int(py_obj)`            | `Int(py=py_obj)`             |
-| `Float64(py_obj)`        | `Float64(py=py_obj)`         |
-| `String(py_obj)`         | `String(py=py_obj)`          |
+| WRONG | CORRECT |
+| -------------------------- | ------------------------------ |
+| `Int(py_obj)` | `Int(py=py_obj)` |
+| `Float64(py_obj)` | `Float64(py=py_obj)` |
+| `String(py_obj)` | `String(py=py_obj)` |
 | `from python import ...` | `from std.python import ...` |
 
 ### Mojo → Python Conversions
@@ -195,17 +195,17 @@ ptr[].field                                    # access fields
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | (none — sourced from upstream) | Sourced from Modular's official skills repo | N/A — authoritative reference | Verify `py=` keyword usage — positional conversion is the #1 mistake |
 
 ## Results & Parameters
 
 ### Method Signature Patterns
 
-| Pattern         | First parameter                               | Use when                     |
-|-----------------|-----------------------------------------------|------------------------------|
-| Manual downcast | `py_self: PythonObject`                       | Need raw PythonObject access |
-| Auto downcast   | `self_ptr: UnsafePointer[Self, MutAnyOrigin]` | Simpler, direct field access |
+| Pattern | First parameter | Use when |
+| ----------------- | ----------------------------------------------- | ------------------------------ |
+| Manual downcast | `py_self: PythonObject` | Need raw PythonObject access |
+| Auto downcast | `self_ptr: UnsafePointer[Self, MutAnyOrigin]` | Simpler, direct field access |
 
 ### Common Patterns
 
@@ -228,7 +228,7 @@ var sorted_data = builtins.sorted(data, key=key_fn)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | (upstream) | Modular official skills repo | Authoritative reference for Mojo-Python interop |
 
 ---

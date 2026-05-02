@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Monitor completion of planned components and identify blockers. - Regular progress tracking during implementation |
 | Outcome | Operational |
@@ -203,7 +203,7 @@ Report progress with:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Can't access issues | Check gh auth status |
 | Issues not updated | Filter for last updated date |
 | Missing data | Check issue descriptions and labels |
@@ -224,7 +224,7 @@ Report progress with:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

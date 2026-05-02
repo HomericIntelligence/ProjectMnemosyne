@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-05 |
 | **Objective** | Add `mypy` pre-commit hook to enforce Python type checking on `scripts/*.py` |
 | **Outcome** | All hooks passing; `pixi run pre-commit run --all-files` green |
@@ -104,7 +104,7 @@ pixi run pre-commit run --all-files
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | `rev` | `v1.8.0` |
 | `--python-version` | `3.10` |
 | `additional_dependencies` | `[types-PyYAML]` |
@@ -117,7 +117,7 @@ pixi run pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run mypy without `--explicit-package-bases` | `pixi run mypy scripts/` | "Source file found twice under different module names" for `scripts/generators/templates.py` | scripts/ has subdirectories without `__init__.py`; always use `--explicit-package-bases` |
 | Run mypy without `--python-version 3.10` | Default mypy python version | 6 errors: "X \| Y syntax for unions requires Python 3.10" | mypy defaults to a version < 3.10 even when runtime Python is 3.14; must explicitly set `--python-version 3.10` |
 | Add mirrors-mypy hook without `additional_dependencies` | Standard hook config from issue spec | "Library stubs not installed for yaml" in 4 files | `mirrors-mypy` creates an isolated venv; stubs installed in pixi env are NOT available — must declare via `additional_dependencies` |
@@ -125,5 +125,5 @@ pixi run pre-commit run --all-files
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3364, issue #3159 | [notes.md](../../references/notes.md) |

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-27 |
 | Objective | Move inline zombie detection out of `_initialize_or_resume_experiment()` into `ResumeManager.handle_zombie()` |
 | Outcome | Success — clean sequential call chain, all logic in ResumeManager, 3260 tests pass |
@@ -147,7 +147,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Rule: Mock Patch Paths After Import Refactoring
 
@@ -155,7 +155,7 @@ When moving an import from **lazy/inline** (`from x import y` inside a function)
 the mock patch path MUST change:
 
 | Import style | Correct patch target |
-|---|---|
+| --- | --- |
 | Lazy: `from scylla.e2e.health import is_zombie` inside method | `scylla.e2e.health.is_zombie` |
 | Module-level: `from scylla.e2e.health import is_zombie` at top | `scylla.e2e.resume_manager.is_zombie` |
 
@@ -166,7 +166,7 @@ not where it was originally defined. After moving to a module-level import, the 
 ## Results
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Tests | 3260 passed |
 | Coverage | 78.41% (threshold 75%) |
 | Files changed | 4 |

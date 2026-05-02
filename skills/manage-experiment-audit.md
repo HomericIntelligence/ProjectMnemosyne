@@ -10,7 +10,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-24 |
 | **Objective** | Audit and fix manage_experiment.py CLI surface, --from logic, and batch mode dispatch |
 | **Outcome** | Bug fixed, tests added, docs updated |
@@ -211,7 +211,7 @@ Steps that worked:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 
 ## Results & Parameters

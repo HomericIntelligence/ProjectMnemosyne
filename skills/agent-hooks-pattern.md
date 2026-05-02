@@ -14,7 +14,7 @@ Pattern for adding lifecycle hooks directly to agent frontmatter in Claude Code 
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-08 |
 | Objective | Document agent-scoped hooks pattern from Claude Code v2.1.0 |
 | Outcome | Verified pattern for PreToolUse, PostToolUse, and Stop hooks in agent frontmatter |
@@ -118,7 +118,7 @@ hooks:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

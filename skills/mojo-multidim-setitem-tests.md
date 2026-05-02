@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-07 |
 | **Issue** | #3388 — Add `__setitem__` tests for multi-dimensional tensors |
 | **Parent Issue** | #3165 — 1D `__setitem__` tests |
@@ -133,7 +133,7 @@ Verify `t[1, 0] = 1.5` writes to flat index 4 (stride 4 for a [3,4] tensor), and
 For `[2, 3, 4]` tensor (strides `[12, 4, 1]`):
 
 | Assignment | Flat Index | Calculation |
-|------------|------------|-------------|
+| ------------ | ------------ | ------------- |
 | `t[0, 0, 0] = 1.0` | 0 | `0+0+0` |
 | `t[0, 0, 3] = 0.5` | 3 | `0+0+3` |
 | `t[0, 2, 0] = 1.5` | 8 | `0+8+0` |
@@ -203,7 +203,7 @@ gh pr merge --auto --rebase <PR-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `__getitem__(Int)` as oracle | Calling `t[flat_idx]` to read back after `t[i,j]=v` | `__getitem__(Int)` returns `Float32`, not ideal for precise comparison; also risks dispatch ambiguity | Use `_get_float64(flat_index)` directly as the test oracle — it's the lowest-level reader |
 | Wrong `assert_value_at` helper | Attempted to use `assert_value_at` from conftest | Not available in all test files; causes import error | Import from `tests.shared.conftest`: only `assert_true`, `assert_almost_equal`, `assert_equal` |
 | Checking if multi-dim setitem existed | Searched for variadic Int overload in extensor.mojo | None existed — only 1D overloads | Always grep `fn __setitem__` to confirm which overloads exist before writing tests |
@@ -213,7 +213,7 @@ gh pr merge --auto --rebase <PR-number>
 ### Stride Math Reference
 
 | Shape | Strides | Example index | Flat index |
-|-------|---------|---------------|------------|
+| ------- | --------- | --------------- | ------------ |
 | `[3, 4]` | `[4, 1]` | `[1, 2]` | `6` |
 | `[2, 3, 4]` | `[12, 4, 1]` | `[1, 2, 3]` | `23` |
 | `[2, 5, 3]` | `[15, 3, 1]` | `[1, 3, 2]` | `26` |

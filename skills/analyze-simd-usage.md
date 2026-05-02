@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Identify where SIMD (Single Instruction Multiple Data) can improve performance. - Performance-critical tensor operations |
 | Outcome | Operational |
@@ -138,7 +138,7 @@ fn sum_simd[simd_width: Int](tensor: Tensor) -> Float32:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Vectorization causes wrong results | Check for loop-carried dependencies |
 | Segment fault with SIMD | Verify alignment and bounds |
 | Minimal speedup | May not be vectorizable, profile to confirm |
@@ -156,7 +156,7 @@ fn sum_simd[simd_width: Int](tensor: Tensor) -> Float32:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

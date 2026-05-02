@@ -39,7 +39,7 @@ hooks:
 ## Verified On
 
 | Project | Context | Status |
-|---------|---------|--------|
+| --------- | --------- | -------- |
 | ProjectMnemosyne | Documentation skill creation | ✅ Verified from v2.1.0 CHANGELOG |
 
 ## Key Findings

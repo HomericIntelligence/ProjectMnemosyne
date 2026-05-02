@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Mojo v0.26.1 does not support dynamic dispatch via `List[Module]` — trait objects are not heap-dispatchable without unsafe pointer indirection |
 | **Solution** | Parametric structs `Sequential2[T0: Module, T1: Module]` resolved at compile time |
 | **Benefit** | Type-safe, no `ImplicitlyCopyable` constraint, no `UnsafePointer`, matches Mojo idioms |
@@ -145,7 +145,7 @@ pixi run pre-commit run --files shared/core/sequential.mojo tests/shared/core/te
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `List[Module]` dynamic dispatch | Store trait objects in a `List` and loop over them | Mojo v0.26.1 requires `ImplicitlyCopyable` for `List` elements; `Module` trait objects don't satisfy this without `UnsafePointer` indirection | Use parametric bounds `[T0: Module, T1: Module]` for compile-time dispatch |
 | Single `Sequential[*Ts: Module]` variadic generics | Unify into one struct with variadic type params | Mojo v0.26.1 does not support variadic generic parameters | Two structs (`Sequential2`, `Sequential3`) per depth level; can unify when Mojo adds `*Ts: Module` |
 | Adding `Copyable` to Sequential | Making Sequential both `Movable` and `Copyable` | Sub-layers (e.g., `Linear`) may not implement `ImplicitlyCopyable`; forces constraint on all contained layer types | Only implement `Movable`; use ownership transfer `^` in constructors |

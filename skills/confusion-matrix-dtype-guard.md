@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-15 |
 | **Category** | debugging |
 | **Objective** | Guard Mojo metric `update()` methods against float dtype tensors passed as integer labels |
@@ -105,7 +105,7 @@ Raises:
 Test the three rejection cases and three acceptance cases:
 
 | Test | Checks |
-|------|--------|
+| ------ | -------- |
 | `test_float32_labels_raises` | `DType.float32` labels → raises with "int32 or int64" in message |
 | `test_float64_labels_raises` | `DType.float64` labels → raises |
 | `test_float32_predictions_1d_raises` | 1D `DType.float32` predictions → raises |
@@ -132,7 +132,7 @@ assert_true(raised, "Expected Error for float32 labels was not raised")
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Guard after loop | Placing the check inside the per-element loop | Redundant work; raises on first iteration instead of fast-failing before any loop | Always validate inputs before iterating — guards belong before the loop |
 | Validate 2D predictions | Adding dtype check for `pred_classes` after the 2D argmax path | `argmax()` always returns `int32`, so the guard would never trigger and adds dead code | Only validate 1D inputs; document the 2D exemption explicitly |
 | Generic "invalid dtype" message | Using `raise Error("invalid dtype")` without mentioning accepted types | Forces callers to read source to fix; poor UX | Error messages should include accepted values: "requires int32 or int64, got X" |
@@ -158,5 +158,5 @@ ConfusionMatrix.update() requires int32 or int64 labels, got float32
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3686, PR #4769 | [notes.md](../references/notes.md) |

@@ -13,7 +13,7 @@ tags: [ai-maestro, odysseus, integration-gap, api-audit, webhook, nats, memory, 
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-27 |
 | **Objective** | Map the full integration surface between ai-maestro (23blocks-OS/ai-maestro v0.26.5) and the HomericIntelligence/Odysseus ecosystem, quantifying what is used vs unused |
 | **Outcome** | Ecosystem uses approximately 10% of ai-maestro's API surface (4 of ~100 REST endpoints). Critical mismatches identified in task webhooks, PUT semantics, soft-delete behavior, and consumer naming. Entire subsystems (memory, AMP, AID, agent lifecycle) are unused. |
@@ -383,7 +383,7 @@ priority_3_investigation:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assumed /tasks endpoint exists | Checked for standalone /tasks route based on Odysseus docs | ai-maestro only has team-scoped /api/teams/{id}/tasks -- no standalone route | Always verify endpoint paths against the actual ai-maestro source (server.mjs route registrations), not downstream documentation |
 | Looked for task webhook events | Searched ai-maestro webhook service for task.* event types | Only agent.* events are implemented (created, updated, deleted, email.changed) | The webhook event vocabulary is smaller than expected -- do not assume CRUD events exist for all resource types |
 | Searched for PATCH endpoint | Looked for PATCH /api/teams/{id}/tasks/{taskId} as alternative to PUT | No PATCH endpoint exists for tasks | ai-maestro uses PUT-as-replace semantics -- always send complete objects |

@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-04 |
 | Objective | Document Mojo import limitation in `shared/training/__init__.mojo` module docstring |
 | Outcome | Success — `Note:` section added with broken/working examples, PR #3206 created |
@@ -116,7 +116,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `just pre-commit-all` | Used `just` command runner | `just: command not found` in this environment | Use `pixi run pre-commit run --all-files` directly |
 | mojo-format hook | Pre-commit mojo-format hook ran on `.mojo` files | GLIBC version mismatch (`GLIBC_2.32` not found) — infrastructure issue, not code | Skip mojo-format concern; it's a pre-existing environment limitation, not caused by the change |
 

@@ -14,7 +14,7 @@ tags: [mojo, fp16, simd, mixed-precision, vectorization, upgrade, float16]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-11 |
 | **Objective** | Replace scalar element-by-element FP16↔FP32 conversion loops with vectorized SIMD paths after upgrading to Mojo 0.26.3 |
 | **Outcome** | Successful — `SIMD[DType.float16, N]` fully supported in Mojo 0.26.3; vectorized paths compile and run correctly |
@@ -116,7 +116,7 @@ vectorize[vectorized_fp32_to_fp16, simdwidthof[DType.float32]()](size)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Kept scalar loops after 0.26.3 upgrade | Assumed FP16 SIMD was still broken without testing | ADR from 0.26.1 was stale — FP16 SIMD was actually fixed in 0.26.3 but not tested | Always write a concrete test for the claimed limitation when bumping Mojo version |
 | Only updated ADR, not code | Marked ADR as superseded but left scalar workaround loops in place | Code was slower than necessary; `# See ADR-010` comments became confusing | ADR supersession must be accompanied by code changes removing the workaround |
 | Used `Float32(fp16_val)` constructor | Tried to use type constructors for scalar conversion | Still O(n) scalar, and compiler may optimize poorly vs SIMD intrinsics | Use `.cast[DType.float32]()` on a SIMD vector loaded with `ptr.load[width=w](i)` |
@@ -126,7 +126,7 @@ vectorize[vectorized_fp32_to_fp16, simdwidthof[DType.float32]()](size)
 ### SIMD Width Reference
 
 | DType | `simdwidthof[dtype]()` (typical x86-64 AVX2) |
-|-------|----------------------------------------------|
+| ------- | ---------------------------------------------- |
 | `DType.float16` | 16 |
 | `DType.float32` | 8 |
 | `DType.float64` | 4 |
@@ -142,7 +142,7 @@ AVX2 hardware due to processing 16 FP16 elements per iteration vs 1.
 ### Mojo Version Matrix
 
 | Mojo Version | `SIMD[DType.float16, N]` | Action Required |
-|---|---|---|
+| --- | --- | --- |
 | 0.26.1 | Not supported — compiler error | Use scalar loop workaround |
 | 0.26.3 | Fully supported | Remove scalar workaround; use vectorized pattern |
 
@@ -180,5 +180,5 @@ fn convert_fp32_to_fp16(
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Mojo 0.26.1 → 0.26.3 upgrade | `mixed_precision.mojo` scalar workarounds replaced; ADR-010 marked Superseded; CI PR #5215 merged |

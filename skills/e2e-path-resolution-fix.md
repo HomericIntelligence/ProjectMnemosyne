@@ -11,13 +11,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-17 |
-| Objective | | Field | Value | |-------|-------| | **Date** | 2026-01-17 | | **Objective** | Fix E2E agent execution failures caused by relative path handling | |
+| Objective | Fix E2E agent execution failures caused by relative path handling |
 | Outcome | Operational |
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-01-17 |
 | **Objective** | Fix E2E agent execution failures caused by relative path handling |
 | **Outcome** | ✅ SUCCESS - Fixed critical bug causing 100% agent execution failure |
@@ -164,7 +164,7 @@ pixi run pytest tests/unit/e2e/test_subtest_executor.py -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -222,7 +222,7 @@ The agent stderr logs were crucial for diagnosis - they showed the exact cd comm
 ## Files Modified
 
 | File | Lines | Description |
-|------|-------|-------------|
+| ------ | ------- | ------------- |
 | `scylla/e2e/subtest_executor.py` | 809 | Changed `cwd=workspace` to `cwd=workspace.resolve()` |
 | `scylla/e2e/subtest_executor.py` | 1022 | Changed `cwd=str(workspace)` to `cwd=str(workspace.resolve())` |
 

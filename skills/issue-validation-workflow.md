@@ -14,7 +14,7 @@ Systematically validate GitHub issue state against codebase reality before start
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-02-12 | Validate 12 GitHub issues (340, 341, 342, 346, 419-426) before parallel implementation | Discovered 6/12 issues already resolved, 1 issue scope inverted, triaged remaining into parallel workstreams |
 
 ## When to Use
@@ -66,7 +66,7 @@ Task tool with subagent_type=Explore (2-3 parallel agents recommended)
 For each issue, categorize:
 
 | Category | Action | Example |
-|----------|--------|---------|
+| ---------- | -------- | --------- |
 | **Already Resolved** | Close with evidence | Issue #419: `tests/unit/core/test_results.py` exists (292 lines) |
 | **Scope Inverted** | Update issue description | Issue #426: Remove "Python justification" lines (not add them) |
 | **Split Required** | Break into sub-issues | Issue #421: Split into 8 module-specific PRs |
@@ -106,14 +106,14 @@ Total: ~1200 lines of comprehensive test coverage."
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Session Metrics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Issues reviewed | 12 |
 | Issues already resolved | 6 (50%) |
 | Issues with inverted scope | 1 |

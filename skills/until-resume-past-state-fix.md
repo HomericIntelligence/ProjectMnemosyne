@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-25 |
 | Category | debugging |
 | Objective | Fix crash when resuming with `--until` on runs already past the target state |
@@ -146,14 +146,14 @@ def test_until_skips_run_already_past_target(self, tmp_path: Path) -> None:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/e2e/state_machine.py` | Add `_RUN_STATE_INDEX`, `is_at_or_past_state()`, early-return guard in `advance_to_completion()` |
 | `scylla/e2e/subtest_executor.py` | Change `==` to `is_at_or_past_state()` in pre-loop skip check |
 | `tests/unit/e2e/test_state_machine.py` | 6 tests for `is_at_or_past_state` + 1 for early-return guard |

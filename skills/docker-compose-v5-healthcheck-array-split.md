@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-21 |
 | **Objective** | Fix all-unhealthy containers in Odysseus E2E stack after upgrading to Docker Compose v5.0.2 |
 | **Outcome** | Successful — all 9 containers healthy, 8/8 E2E phases pass after switching to string form |
@@ -95,7 +95,7 @@ docker-compose --version
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `["CMD-SHELL", "cmd"]` array form | Used `["CMD-SHELL", "wget -qO- http://localhost:8080/v1/health"]` — single-element payload | Docker Compose v5 still splits this; confirmed via `podman inspect .Config.Healthcheck` showing `["CMD-SHELL","wget","-qO-","http://..."]` | `CMD-SHELL` array form is also split — only the string form is safe |
 | `["CMD", "sh", "-c", "wget -q -O /dev/stdout ... \| grep -q ok"]` array form | Attempted to use the BusyBox-compatible `-O /dev/stdout` syntax inside the array | Array still split; `sh` received `-c` then `wget` as separate args, ignoring `-c` | Array splitting is unconditional in v5 regardless of flag style |
 | `["CMD", "sh", "-c", "wget -qO- ... \| grep -q ok"]` array form | GNU wget combined `-qO-` flag inside CMD array | Two failures: (1) v5 splits the array so only `wget` ran; (2) even if unsplit, BusyBox in `nats:alpine` rejects `-qO-` as invalid combined flag | Combined `-qO-` is GNU wget only; always use `-q -O /dev/stdout` for BusyBox |
@@ -139,5 +139,5 @@ podman inspect nats --format '{{json .Config.Healthcheck}}'
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | E2E stack (`docker-compose.e2e.yml`) with Docker Compose v5.0.2 via `/snap/bin/docker-compose`, podman 4.9.3, WSL2 Ubuntu 24.04 | All 9 containers healthy, 8/8 E2E phases passed after fix |

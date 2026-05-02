@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-26 |
 | **Objective** | Roll out `homeric-main-baseline` repository ruleset to all 15 HomericIntelligence repos, enforcing 8 required CI checks on every PR |
 | **Outcome** | Successful — all 15 rulesets applied live, PRs opened and merged successfully |
@@ -206,7 +206,7 @@ jobs:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | Using `orgs/<ORG>/rulesets` endpoint | Returns HTTP 403 on free GitHub plan — org-level rulesets require Team plan | Use `repos/<ORG>/<REPO>/rulesets` (repo-level) instead — works on free plan |
 | Attempt 2 | Context string `"Required Checks / lint"` (workflow-prefixed form) | GitHub reports bare job `name:` values in check run contexts, not workflow-prefixed names | Use bare job names: `lint`, `build`, `unit-tests`, etc. |
 | Attempt 3 | Adding `typecheck` as a 9th standalone required context | Typecheck belongs as a step inside `lint`, not a separate job | Keep typecheck as a step in `lint`; required context count is 8 |
@@ -295,6 +295,6 @@ The v1.0.0 skill used `PUT repos/<ORG>/<REPO>/branches/main/protection`. This st
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence (all 15 repos) | Ruleset rollout session 2026-04-26 | Applied `homeric-main-baseline` ruleset via repo-level API, PRs opened and merged successfully |
 | HomericIntelligence (all 15 repos) | Legacy branch protection session 2026-04-22 | Applied Scylla-style PUT policy, verification loop confirmed linear=true conversation=true on every repo |

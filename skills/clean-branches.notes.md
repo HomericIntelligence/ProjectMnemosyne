@@ -8,7 +8,7 @@ remote branches accumulated without local counterparts.
 ## Branches Found
 
 | Branch | Local | Remote | PR | PR State | Action |
-|--------|-------|--------|----|----------|--------|
+| -------- | ------- | -------- | ---- | ---------- | -------- |
 | `1359-auto-impl` | No | Yes | #1392 | MERGED | Deleted remote |
 | `1395-auto-impl` | No | Yes | #1444 | MERGED | Deleted remote |
 | `998-auto-impl` | No | Yes | #1172 | MERGED | Deleted remote |

@@ -24,7 +24,7 @@ returns a copy, and by missing `.as_any()` type conversions.
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-24 |
 | **Objective** | Fix CI failures introduced by our own PR during iterative bug fixing |
 | **Outcome** | Success -- 2 of 3 failures fixed, 1 identified as pre-existing upstream Mojo bug |
@@ -65,7 +65,7 @@ grep "fn forward.*self.*input" shared/core/layers/conv2d.mojo
 Two AnyTensor methods look similar but have different semantics:
 
 | Method | Returns | `_is_view` | Memory | Use When |
-|--------|---------|------------|--------|----------|
+| -------- | --------- | ------------ | -------- | ---------- |
 | `tensor[a:b]` (`__getitem__(Slice)`) | Copy | `False` | New allocation | Read-only slicing, safe to mutate independently |
 | `tensor.slice(a, b)` | View | `True` | Shared with parent | Write-through to original, zero-copy batching |
 
@@ -118,7 +118,7 @@ When fixing CI failures, expect that your fix may introduce new failures:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Fixed tuple destructuring in test_typed_conv2d | Changed `var (a,b,c) = fn()` to subscript access | Introduced new error: `forward(input)` now fails because Tensor can't convert to AnyTensor | When fixing one error in a function, check ALL other calls in that function for type compatibility |
 | Assumed `__getitem__(Slice)` returns view | Test at line 40 asserted `_is_view == True` on `original[2:8]` | `__getitem__(Slice)` explicitly returns a copy per its docstring | Always read the method's docstring before assuming its semantics |
 | Expected `__del__` view fix to prevent all training_loop crashes | Added `_is_view` guard in `__del__` to prevent bad-free | CI still crashed because without ASAN, prior heap corruption from bitcast UAF (Day 53 pattern) causes the same crash symptoms | A fix that works with ASAN may not fix crashes without ASAN if there are multiple bugs |
@@ -139,7 +139,7 @@ gh run view <RUN_ID> --log-failed 2>&1 | grep -B5 "FAILED.*<test_file>"
 ```
 
 | Classification | Pattern | Action |
-|---------------|---------|--------|
+| --------------- | --------- | -------- |
 | **Our fix broke it** | Error on line we changed or in function we modified | Fix it |
 | **Our fix exposed it** | Pre-existing bug now reachable due to our changes | Fix if trivial, else document and defer |
 | **Pre-existing, unrelated** | Error in file we didn't touch | Not our problem |
@@ -159,7 +159,7 @@ tensor.transpose()  # transpose() -> AnyTensor VIEW (stride-based)
 ### Confirmed CI Fix Results
 
 | Fix | Before | After |
-|-----|--------|-------|
+| ----- | -------- | ------- |
 | `test_typed_conv2d`: add `.as_any()` | `cannot convert Tensor to AnyTensor` | Passes |
 | `test_setitem_view_part1/2`: use `slice()` | `Sliced tensor should be a view` | Passes |
 | Container image tar cache | `504 Gateway Time-out` on every job | `Cache hit` + `Cache restored successfully` (682 MB) |
@@ -167,5 +167,5 @@ tensor.transpose()  # transpose() -> AnyTensor VIEW (stride-based)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #5097 round 2 | Iterative CI fix after initial PR introduced new failures |

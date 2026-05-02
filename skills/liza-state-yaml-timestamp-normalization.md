@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-07 |
 | **Objective** | Restore a Liza workspace after `.liza/state.yaml` timestamps were serialized in a format the Liza parser rejects |
 | **Outcome** | Successful -- normalized every affected timestamp back to RFC3339 and restored `liza validate`, `liza status`, and `liza resume` |
@@ -111,7 +111,7 @@ If you need to patch `.liza/state.yaml`, prefer minimal text edits that preserve
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Normalizing only `+00:00` timestamps | Replaced `YYYY-MM-DD HH:MM:SS+00:00` with `YYYY-MM-DDTHH:MM:SSZ` | Local timestamps such as `2026-04-07 11:38:50.820435-07:00` still broke the parser | Use one regex that handles both `Z`/UTC and signed offsets |
 | Running `liza resume` before re-validating | Tried to resume immediately after partial repair | Liza failed on the next malformed timestamp and the workspace stayed down | Always run `liza validate` first so you catch every parse error in one pass |
 | Rewriting the whole YAML via `yaml.safe_dump()` | Cleared one stale field and wrote the whole state back out | PyYAML changed timestamp formatting across the file, introducing new parser errors | For live Liza state, serializer convenience is not worth the format drift risk |
@@ -127,7 +127,7 @@ r'(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}(?:\.\d+)?)(Z|[+-]\d{2}:\d{2})'
 ### Expected Before/After
 
 | Before | After |
-|--------|-------|
+| -------- | ------- |
 | `2026-04-07 17:21:30.117542+00:00` | `2026-04-07T17:21:30.117542+00:00` |
 | `2026-04-07 11:38:50.820435-07:00` | `2026-04-07T11:38:50.820435-07:00` |
 
@@ -140,5 +140,5 @@ r'(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}(?:\.\d+)?)(Z|[+-]\d{2}:\d{2})'
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Radiance | Live Liza workspace recovery after direct state edits | Restored a broken `.liza/state.yaml` that had 281 timestamps rewritten into space-separated form |

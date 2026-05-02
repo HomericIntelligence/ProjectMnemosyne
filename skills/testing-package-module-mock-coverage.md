@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Add comprehensive unit tests for installed Python package modules that use subprocess/shutil, achieving >85% coverage |
 | **Outcome** | 99% coverage of `readme_commands.py` with 65 tests, all mocked |
@@ -84,7 +84,7 @@ pixi run pytest tests/unit -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Importing unused constants | Imported `BLOCKED_PATTERNS`, `EXECUTE_LANGUAGES`, `SKIP_MARKERS` for documentation purposes | ruff F401 auto-removed them in pre-commit | Only import symbols actually used in assertions |
 | Running coverage without `--no-cov-on-fail` | Used default `--cov=hephaestus` from pyproject.toml | Coverage fails at 12% overall since only one module's tests ran | Use `--cov=hephaestus.validation.readme_commands --no-cov-on-fail` to see module-specific coverage |
 | Writing multi-line strings in test fixture | Used multi-line string with explicit newlines for markdown content | ruff format collapsed them to single-line concatenation | Let ruff format handle it; the single-line version is equivalent and passes formatting |
@@ -148,7 +148,7 @@ def test_execution(self, mock_run: MagicMock, mock_root: MagicMock) -> None:
 ### Coverage Results
 
 | Module | Before | After | Tests |
-|--------|--------|-------|-------|
+| -------- | -------- | ------- | ------- |
 | `hephaestus/validation/readme_commands.py` | ~0% | 99% | 65 |
 
 ### Key pyproject.toml Settings
@@ -167,5 +167,5 @@ pixi run python -m pytest tests/unit/validation/test_readme_commands.py \
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #51: Add test coverage for readme_commands.py | 65 tests, 99% coverage, PR #94 |

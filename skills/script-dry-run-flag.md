@@ -17,7 +17,7 @@ the exit code is always 0, allowing developers to preview failures without block
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-07 |
 | Objective | Add `--dry-run` to `scripts/validate_config_schemas.py` |
 | Outcome | Success — PR HomericIntelligence/ProjectScylla#1463 |
@@ -154,7 +154,7 @@ help="Print all errors but exit 0 — useful for previewing violations without b
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -166,5 +166,5 @@ help="Print all errors but exit 0 — useful for previewing violations without b
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1463, issue #1442 | Follow-up to precommit-schema-validation (#1382/#1439) |

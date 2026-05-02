@@ -19,7 +19,7 @@ tags: [review-wave, pre-impl, plan-review, second-opinion, r0, r1, multi-agent-r
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-26 |
 | **Objective** | Catch regressions in an Epic plan + child issues before handing off to implementers |
 | **Outcome** | R1 wave found R0 fixes applied only to plan file, not to 4 child issue bodies; one wrong-port value introduced by R0 also caught |
@@ -171,7 +171,7 @@ gh issue view <N> --json body --jq '.body' | grep "<expected_value>"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | R0 "fix" that only edits the plan file | R0 author edited `plan.md` but not 4 child issue bodies | Implementers reading issues (not the plan) would re-introduce every regression | A review wave fix pass must enumerate every artifact containing the incorrect text |
 | Correcting wrong port with another wrong value | R0 found "8082 is wrong, actual is 8080" but wrote "8082 → 8085" in the resolution | The fix-author guessed instead of re-reading the upstream source | When fixing a port/config, always re-read the actual source file before picking a value |
 | `html.WithUnsafe(false)` to disable raw HTML | Plan suggested using `html.WithUnsafe(false)` on goldmark renderer | `html.WithUnsafe()` (no args) ENABLES raw HTML; `WithUnsafe(false)` is a compile error or no-op | Omit the call entirely — goldmark's default is safe (raw HTML disabled) |
@@ -256,5 +256,5 @@ ENDBODY
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/Odysseus | Epic #151 Atlas dashboard — R1 wave after R0 partial fixes | 4 child issues (#154, #164, #166, #167) body-edited; wrong Hermes port (8085→8080) corrected |

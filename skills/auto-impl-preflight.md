@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-05 |
 | Category | documentation |
 | Objective | Verify that a prior auto-impl session completed all required steps, and identify any gaps between the implementation plan and actual commits |
@@ -124,7 +124,7 @@ Closes #<number>"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | No failed attempts in this session — pattern was followed correctly | N/A | The key risk is over-implementing: adding changes beyond what Success Criteria require, or re-implementing things already done |
 
 ## Results & Parameters

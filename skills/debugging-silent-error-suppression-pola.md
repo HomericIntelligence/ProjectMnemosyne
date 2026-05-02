@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Remove try/except fallback in `save_data()` that silently defaulted to JSON for unknown file extensions, making it consistent with `load_data()` which correctly raises `ValueError` |
 | **Outcome** | Success — all 435 tests pass, PR #97 created |
@@ -98,7 +98,7 @@ pixi run pytest tests/ -v --no-cov
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A — direct fix | The fix was straightforward (3 lines removed, docstring updated, test updated) | N/A | When the symmetric function already has the correct behavior, the fix is just removing the suppression code |
 
 ## Results & Parameters
@@ -106,7 +106,7 @@ pixi run pytest tests/ -v --no-cov
 ### Files Modified
 
 | File | Changes |
-|------|---------|
+| ------ | --------- |
 | `hephaestus/io/utils.py` | Removed try/except fallback (3 lines), updated docstring Raises section |
 | `tests/unit/io/test_utils.py` | Replaced `test_default_format_json` with `test_unknown_extension_raises` |
 
@@ -134,5 +134,5 @@ grep -B1 -A2 "except ValueError" src/ --include="*.py" -rn | grep -v "raise"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #53, PR #97 | Fixed `save_data()` silent JSON fallback, 435 tests pass |

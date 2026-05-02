@@ -18,7 +18,7 @@ PR Revert Rate) as the concrete example.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-02 |
 | Objective | Surface `process_metrics` from `run_result.json` in the per-run `report.md` and `report.json` |
 | Outcome | Success — 7 new tests, 3591 total passing, all pre-commit hooks pass |
@@ -191,7 +191,7 @@ Add `from typing import Any` to the test file imports.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Gotchas
 
@@ -213,7 +213,7 @@ Add `from typing import Any` to the test file imports.
 ## Results & Parameters
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/e2e/run_report.py` | Added `import math`, `_format_process_metric_value()`, `_generate_process_metrics_section()`, `process_metrics` param to `generate_run_report()` + `save_run_report()` + `save_run_report_json()` |
 | `scylla/e2e/stages.py` | `stage_write_report()` reads `run_result.json`, passes `process_metrics` to both save functions |
 | `tests/unit/e2e/test_run_report.py` | 7 new tests (2 new test classes), `from typing import Any` added |

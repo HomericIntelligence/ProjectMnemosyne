@@ -75,7 +75,7 @@ the `--max-subtests 1` scope of Stage 4.
 ## File Locations (ProjectScylla)
 
 | File | Role |
-|------|------|
+| ------ | ------ |
 | `scylla/e2e/runner.py` | `ShutdownInterruptedError` class + `is_shutdown_requested()` |
 | `scylla/e2e/stages.py` | `stage_execute_agent()` — shutdown check after `subprocess.run()` |
 | `scylla/e2e/state_machine.py` | Run-level SM — `except ShutdownInterruptedError` before `except Exception` |

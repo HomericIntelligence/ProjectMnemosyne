@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Issue** | `concatenate()` axis-0 non-contiguous else-branch uses `_get_float64(i)` (flat index), ignoring tensor strides |
 | **Symptom** | Wrong values when concatenating transposed or sliced (non-contiguous) tensors along axis=0 |
 | **Root Cause** | `_get_float64(i)` computes `offset = i * dtype_size` — valid only for stride-1 contiguous tensors |
@@ -152,7 +152,7 @@ Functions to audit: `tile()`, `repeat()`, `broadcast_to()`, `permute()`, `stack(
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assumed `as_contiguous()` had the bug | Read the issue description expecting both functions to be buggy | `as_contiguous()` was already fixed in a prior PR (issue #3391, PR #4079) — only `concatenate()` remained | Always read source before assuming — `as_contiguous()` was already correct |
 | Assumed general-axis branch was also in scope | Issue description mentioned "non-contiguous else branch" (plural sense) | Issue explicitly scoped to axis-0 path (lines 519-522); general-axis branch is a separate bug | Match scope precisely to what the issue describes |
 | Running tests locally | `pixi run mojo test ...` | GLIBC version mismatch — mojo test runtime unavailable on this host | Use `just test-group` which wraps the mojo runner correctly; or use CI |

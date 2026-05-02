@@ -19,13 +19,13 @@ created: 2025-12-30
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
-| Objective | | Field | Value | |-------|-------| | Date | 2025-12-30 | | Objective | Fix test failures caused by randn() ignoring its seed parameter | |
+| Objective | Fix test failures caused by randn() ignoring its seed parameter |
 | Outcome | Operational |
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2025-12-30 |
 | Objective | Fix test failures caused by randn() ignoring its seed parameter |
 | Outcome | Tests now reproducible - same seed produces identical random tensors |
@@ -124,14 +124,14 @@ pixi run mojo test tests/shared/training/test_training_loop.mojo -I .
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified
 
 | File | Line | Change |
-|------|------|--------|
+| ------ | ------ | -------- |
 | `shared/core/extensor.mojo` | 38 | Added `seed as random_seed` to import |
 | `shared/core/extensor.mojo` | 3298-3300 | Added seed call before tensor creation |
 
@@ -150,7 +150,7 @@ if seed > 0:
 ### Seed Convention
 
 | Seed Value | Behavior |
-|------------|----------|
+| ------------ | ---------- |
 | `seed = 0` | Use system randomness (non-reproducible) |
 | `seed > 0` | Set PRNG seed for reproducibility |
 | `seed = -1` | Alternative convention: random (used elsewhere) |

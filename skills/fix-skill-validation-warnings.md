@@ -14,7 +14,7 @@ Automated approach to achieve 100% CI validation pass rate by fixing missing sec
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-02-13 |
 | Objective | Fix all skill plugin validation errors and warnings to achieve 100% CI pass rate (198/198 plugins) |
 | Outcome | ✅ Success - 1 hard error fixed, 151 warnings resolved across 133 plugins |
@@ -172,7 +172,7 @@ gh pr create --title "fix: Resolve all plugin validation errors and warnings"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | **Single script for all fixes** | One `fix_validation_warnings.py` to handle all warning types | Missed 38 warnings because it only looked for exact "## Verified Workflow", not wrapper patterns like "## Quick Reference" | Need separate script for wrapper pattern handling |
 | **Generic table for all Failed Attempts** | Added same boilerplate table to every plugin regardless of content | Didn't extract useful info from existing `### ❌ Attempt N:` subsections | Extract attempt titles from subsections to create meaningful summary tables |
 | **Regex on section name variations** | Used exact match instead of pattern matching | Missed sections with suffixes like "& Lessons Learned" | Use flexible regex patterns for section matching |
@@ -190,7 +190,7 @@ gh pr create --title "fix: Resolve all plugin validation errors and warnings"
 
 **Fix Breakdown**:
 | Fix Type | Count |
-|----------|-------|
+| ---------- | ------- |
 | Added `## Overview` tables | 94 plugins |
 | Renamed `## Workflow` → `## Verified Workflow` | 50 plugins |
 | Added `## Results & Parameters` | 64 plugins |

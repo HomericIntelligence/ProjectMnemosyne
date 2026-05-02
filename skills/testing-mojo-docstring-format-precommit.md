@@ -10,7 +10,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `mojo format` reformats long single-line docstrings by splitting the closing `"""` to its own line |
 | **Symptom** | Pre-commit CI fails with diff showing `"""..."""` changed to multiline form |
 | **Root Cause** | `mojo format` enforces a line length limit; single-line docstrings exceeding it are split |
@@ -58,7 +58,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Write file directly without re-reading worktree file | Called `Write` tool on worktree file after reading main repo copy | Write tool requires reading the exact file path before writing; worktree files are separate from main repo files | Always read the worktree path (`/.worktrees/<branch>/`) not the main repo path before editing |
 | Skip pre-commit CI check | Assumed all checks passed since main Comprehensive Tests all succeeded | `pre-commit` is a separate workflow job; it can fail independently | Always check all workflow jobs, not just the main test suite |
 

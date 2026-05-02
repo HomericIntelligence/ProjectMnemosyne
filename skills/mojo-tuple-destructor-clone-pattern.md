@@ -28,7 +28,7 @@ Mojo 0.26.x. The correct fix is to return `.clone()` (owned deep copies) from
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-09 |
 | **Objective** | Fix ASAN `pooled_alloc` leak in Dataset tests — 7 datasets, 12072 bytes leaked |
 | **Outcome** | Success -- returning `.clone()` from `__getitem__` eliminates all ASAN leaks |
@@ -155,7 +155,7 @@ pixi run mojo build --sanitize address -g -I "$(pwd)" -I . \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Return `.slice()` views directly from `__getitem__` | Shared parent's refcount through view; relied on Tuple.__del__ to call element destructors | Tuple.__del__ in Mojo 0.26.x does NOT call __del__ on non-trivial element types; refcount never reaches 0; ASAN reports `pooled_alloc` leak matching dataset count | Tuple is not a smart container in Mojo 0.26.x; don't rely on it to destroy elements |
 | Give slice() views independent refcounts (not shared with parent) | Modified `slice()` to create a view with its own refcount=1 instead of sharing parent's | Fixed the Tuple destructor leak BUT introduced heap-use-after-free: Mojo's ASAP destruction destroys `dataset` as soon as the last syntactic use is detected; independent refcount=1 on the view meant parent refcount went 0→freed while view still held offset pointer into freed memory; `sample[0][0]` triggered `heap-use-after-free in AnyTensor::_get_float32` | Independent refcount on a view is dangerous with ASAP destruction: the parent can be freed before the view is done using it; views MUST share parent's refcount to extend parent lifetime |
 | Leave `.slice()` and add explicit `_ = dataset` to extend lifetime | Attempted to keep dataset alive past last syntactic use using `_ = dataset` binding | Fragile: requires every call site to remember the trick; doesn't fix the Tuple.__del__ omission; breaks encapsulation | Caller should not need to know about internal ownership tricks; fix at the API boundary instead |
@@ -213,14 +213,14 @@ guaranteed to outlive all views.
 ### Mojo 0.26.x Known Limitations (Relevant to This Pattern)
 
 | Limitation | Impact | Workaround |
-|------------|--------|------------|
+| ------------ | -------- | ------------ |
 | `Tuple.__del__` does not call element `__del__` | AnyTensor elements inside tuples are not freed when tuple goes out of scope | Return `.clone()` so elements have independent ownership via variable binding |
 | ASAP destruction fires when last syntactic use is detected | Parent tensor freed before views are done using it | Views must share parent refcount, not have independent refcounts |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #5210, ASAN dataset leak investigation | Fix commit `15fa7f24`; CI runs `24229346898` and `24229510642` — all 6 ASAN tests green |
 
 ## References

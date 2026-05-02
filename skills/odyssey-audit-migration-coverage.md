@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Name | odyssey-audit-migration-coverage |
 | Category | tooling |
 | Source file | `scripts/migrate_odyssey_skills.py` |
@@ -166,7 +166,7 @@ FAIL: 2 skill(s) are missing from Mnemosyne.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Hardcoded paths in tests | Called `main()` directly without `--source-dir`/`--target-dir` | `find_all_skills()` used the global `ODYSSEY_SKILLS_DIR` constant, not the test's tmp_path, so 80+ real skills were scanned instead of the fixture | Make path constants overridable via function args before writing tests; subprocess integration tests are the fallback |
 | First commit attempt | Staged files and ran `git commit` | Pre-commit hook ran `ruff-format-python` which reformatted both files (no errors, just style) and reported "files were modified" causing the commit to abort | Always re-stage after ruff reformats; run a second `git commit` with the same message to succeed |
 
@@ -175,7 +175,7 @@ FAIL: 2 skill(s) are missing from Mnemosyne.
 ### CLI flags added
 
 | Flag | Default | Purpose |
-|------|---------|---------|
+| ------ | --------- | --------- |
 | `--audit` | off | Enable audit mode |
 | `--audit-skip FILE` | `.audit-skip` | Allowlist file (one skill name per line) |
 | `--no-color` | off | Disable ANSI colors |

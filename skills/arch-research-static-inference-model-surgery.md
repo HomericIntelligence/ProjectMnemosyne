@@ -14,7 +14,7 @@ tags: [static-inference, model-surgery, frozen-gates, residual-gating, layer-pru
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-13 |
 | **Objective** | Clarify the implementation requirement for "static at inference time" speedup claims in architecture research about learned gating / layer pruning |
 | **Outcome** | Operational pattern — identified and documented while reviewing idea 4.5 (Learned Residual Flow Control) in the ArchIdeas research series |
@@ -67,7 +67,7 @@ Read the document's §5 (Implementation) or inference section. Find the answer t
 #### Step 2: Map Claim to Scenario
 
 | What the document says | Which scenario | Real speedup? |
-|-----------------------|----------------|--------------|
+| ----------------------- | ---------------- | -------------- |
 | "Gates are frozen after training" (no further detail) | Scenario A | NO — gates are frozen but layers still execute |
 | "Zero-gate layers are skipped" | Scenario B | YES — conditional execution with static branch |
 | "Layers with g < 0.5 are removed from the checkpoint" | Scenario C | YES — true model surgery |
@@ -87,7 +87,7 @@ If g_i = 0 but the code is not conditioned on it, RMSNorm runs and F_i runs — 
 #### Step 4: Framework Feasibility Check
 
 | Framework | Model surgery feasibility |
-|-----------|--------------------------|
+| ----------- | -------------------------- |
 | PyTorch | `nn.ModuleList` can be filtered in-place. `torch.jit.script` or torch.compile() will compile the pruned model with no residual gate infrastructure. FEASIBLE. |
 | JAX | `jax.lax.scan` over variable-length list requires refactoring; functional-style layer application over a filtered list works. FEASIBLE with effort. |
 | HuggingFace Transformers | Most models use `nn.ModuleList` for layers; filtering is straightforward. Some models have hardcoded layer count in config — requires config update. FEASIBLE. |
@@ -103,7 +103,7 @@ After removing layers [i1, i2, ...] from a 64-layer model:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Claiming speedup from frozen soft gates | Research doc stated "static at inference, therefore zero overhead" for frozen continuous gate values | Frozen gate is multiplied with layer output — the full layer still computes F_i(x) before the multiply | "Static" means the gate VALUE doesn't change; it does NOT mean the computation is eliminated |
 | Conditional execution with per-token gates | Prior work like GateSkip uses dynamic (per-token) gates with conditional execution | Per-token conditional causes SIMD divergence on GPU — different tokens take different branches | Dynamic gates cannot use efficient static branching; only truly static (same for all tokens) gates allow branch prediction optimization |
 | Forgetting that pre-norm still runs | Implementation skipped the sublayer but kept the RMSNorm running | RMSNorm cost is ~O(d) per token per layer — small but not zero | Model surgery must remove the entire layer block (norm + attention/MLP), not just the sublayer computation |
@@ -178,5 +178,5 @@ L_total = L_task + gate_loss(gate_logits)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ArchIdeas research | Idea 4.5 (Learned Residual Flow Control) review, sub-agent B complexity audit | `/home/mvillmow/Random/ArchIdeas/research/verification_4_5_complexity.md` §B.2 |

@@ -10,14 +10,14 @@ user-invocable: false
 
 ## Overview
 
-| Field      | Value                                              |
-|------------|----------------------------------------------------|
-| Date       | 2026-02-19                                         |
-| Category   | documentation                                      |
-| Objective  | Fix stale "Current Status" in CLAUDE.md            |
-| Issue      | #753                                               |
-| PR         | #810                                               |
-| Outcome    | Success — merged via auto-merge after CI passed    |
+| Field | Value |
+| ------------ | ---------------------------------------------------- |
+| Date | 2026-02-19 |
+| Category | documentation |
+| Objective | Fix stale "Current Status" in CLAUDE.md |
+| Issue | #753 |
+| PR | #810 |
+| Outcome | Success — merged via auto-merge after CI passed |
 
 ## When to Use
 
@@ -70,7 +70,7 @@ Trigger this skill when:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

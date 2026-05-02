@@ -25,7 +25,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Consolidated skill covering all CI matrix group lifecycle operations: splitting, promoting, consolidating, deduplicating, and managing timeout guidance |
 | **Outcome** | Merged from 9 source skills: ci-cd-promote-subgroups-to-matrix, ci-group-split-glob-patterns, ci-matrix-overlap-detection, ci-matrix-timeout-guidance, ci-mypy-matrix-entry, ci-test-matrix-management, consolidate-ci-matrix, deduplicate-ci-test-groups, split-ci-data-subgroups |
@@ -286,7 +286,7 @@ def check_group_overlaps(
 **Flaky vs. real bug diagnosis**:
 
 | Signal | Interpretation |
-|--------|---------------|
+| -------- | --------------- |
 | Tests passed in at least one historical CI run | Likely flaky runtime — safe to re-enable |
 | Tests never passed in any CI run | Likely real code bug — investigate implementation |
 | "execution crashed" in Mojo (not assertion failure) | Runtime crash, often transient |
@@ -341,7 +341,7 @@ Use after consolidation, to document timeout risk without changing runtime behav
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using Edit tool on workflow files | Called Edit tool directly on `.github/workflows/comprehensive-tests.yml` | Pre-commit security hook blocked with a reminder about GitHub Actions injection risks | Use Bash + Python str.replace for workflow file edits |
 | Counting patterns instead of files | Assumed 28 patterns meant ~28 files | `test_extensor_*.mojo` alone expanded to 26 files; total was 91 | Always expand globs to count actual files before designing the split |
 | Merging groups with different `path:` roots | Combined `benchmarks/` and `tests/shared/benchmarking/` into one entry | `just test-group` uses a single `path` prefix; can't glob across two roots | Keep separate matrix entries when root paths differ |
@@ -374,7 +374,7 @@ pixi run pre-commit run --files .github/workflows/comprehensive-tests.yml
 ### Pre-commit hooks that run on workflow files
 
 | Hook | Purpose |
-|------|---------|
+| ------ | --------- |
 | `check-yaml` | YAML syntax validation |
 | `trailing-whitespace` | No trailing spaces |
 | `end-of-file-fixer` | File must end with newline |
@@ -413,7 +413,7 @@ pixi run pre-commit run --files .github/workflows/comprehensive-tests.yml
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3156, PR #3354 | 31 → 16 group consolidation |
 | ProjectOdyssey | Issue #3640, PR #4453 | Deduplicated overlapping wildcard patterns |
 | ProjectOdyssey | Issue #3357, PR #4001 | Timeout guidance comments on 15-group matrix |

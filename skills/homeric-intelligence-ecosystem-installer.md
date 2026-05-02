@@ -31,7 +31,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-28 |
 | **Objective** | Create a portable ecosystem installer (`scripts/shell/install.sh`) in ProjectHephaestus that installs all HomericIntelligence dependencies on any Tailnet host — and deploy it across all reachable Tailnet hosts via parallel SSH fan-out |
 | **Outcome** | Installer runs on 5 of 7 hosts; 2 hosts (aeolus, hephaestus) fully complete; 3 partial (artemis, hermes, apollo); 2 failed (athena, titan) due to missing git + sudo password requirement |
@@ -122,7 +122,7 @@ ssh <host> 'sudo apt-get install -y git && mkdir -p ~/Projects && \
 2. **Script structure** — sections in order:
 
    | Section | Role Gate | Notes |
-   |---------|-----------|-------|
+   | --------- | ----------- | ------- |
    | Core tooling: git, curl, jq, unzip, just, gh CLI | all | gh installed via official apt source |
    | Tailscale | all | install script + tailscaled status check |
    | Python 3.10+, pip3, nats-py, pixi | all | nats-py: `--break-system-packages` fallback to `--user` |
@@ -196,7 +196,7 @@ Tailnet host.
 ### Difference from e2e/doctor.sh (Odysseus)
 
 | Feature | `e2e/doctor.sh` | `scripts/shell/install.sh` |
-|---------|-----------------|----------------------------|
+| --------- | ----------------- | ---------------------------- |
 | Location | Odysseus repo | ProjectHephaestus (shared) |
 | Go check | None | Yes (1.23+) |
 | templ check | None | Yes |
@@ -209,12 +209,12 @@ Tailnet host.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | pip3 install nats-py (plain) | `pip3 install nats-py` on Debian 12 | Debian 12 enforces PEP 668 — system pip refuses installs without `--break-system-packages` | Always use `--break-system-packages` first, fall back to `--user` |
 | podman for NATS server | Run `nats-server` inside rootless podman container | Slirp4netns NAT hides real Tailscale IP; cross-host NATS connections fail | NATS server must be a native binary bound to the Tailscale interface |
 | apt cmake on Debian stable | `sudo apt install cmake` | Debian stable ships cmake 3.18.x; Agamemnon requires cmake 3.20+ | Use `pip3 install cmake --break-system-packages` or add kitware apt repo |
 | apt go on Debian stable | `sudo apt install golang` | Debian stable ships Go 1.19; templ and Agamemnon require 1.23+ | Download official Go tarball from https://go.dev/dl/ |
-| pkill -f nats-server | `pkill -f "nats-server"` to stop stale server | Returns exit code 144 on some hosts (pkill receives SIGTERM itself) | Use `kill $(ps aux | grep nats-server | grep -v grep | awk '{print $2}')` |
+| pkill -f nats-server | `pkill -f "nats-server"` to stop stale server | Returns exit code 144 on some hosts (pkill receives SIGTERM itself) | Use `kill $(ps aux \| grep nats-server \| grep -v grep \| awk '{print $2}')` |
 | hermes.main:app entrypoint | `uvicorn hermes.main:app` | Module `hermes.main` does not exist; correct module is `hermes.server` | Always use `uvicorn hermes.server:app` for ProjectHermes |
 | Agamemnon/Nestor auto-reconnect | Restarted NATS server, expected binaries to reconnect automatically | C++ NATS clients do not auto-reconnect after server restart | After any NATS restart, kill and restart Agamemnon and Nestor too |
 | NATS monitoring on :4222 | `curl http://localhost:4222/varz` | Port 4222 is the NATS protocol port; monitoring HTTP is on :8222 | NATS monitoring endpoint: `http://localhost:8222/varz` |
@@ -230,7 +230,7 @@ Tailnet host.
 ### Tailnet Host Inventory (2026-04-28)
 
 | Host | IP | Python | git | sudo | Result |
-|------|----|--------|-----|------|--------|
+| ------ | ---- | -------- | ----- | ------ | -------- |
 | aeolus | 100.65.107.65 | 3.12.3 | yes | NOPASSWD | DONE |
 | apollo | 100.68.51.128 | 3.7.3 | yes | NOPASSWD | PARTIAL — Python 3.7 too old |
 | artemis | 100.74.100.3 | 3.12.3 | yes | NEEDS-PASSWORD | PARTIAL — 16/30 ✓, Go/podman/cmake need sudo |
@@ -242,7 +242,7 @@ Tailnet host.
 ### Dependency Version Matrix
 
 | Dependency | Minimum | Recommended | Install Method |
-|------------|---------|-------------|----------------|
+| ------------ | --------- | ------------- | ---------------- |
 | Go | 1.23.0 | 1.23.4 | Official tarball → `/usr/local/go` |
 | cmake | 3.20.0 | 3.28+ | `pip3 install cmake --break-system-packages` |
 | nats-server | 2.10.0 | 2.10.21 | Native binary → `~/.local/bin` |
@@ -317,6 +317,6 @@ Only dispatch agents to hosts where: Python >= 3.10, git is installed, and sudo 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | PR #309 (2026-04-28) | install.sh bash -n syntax check passed; script ran clean on epimetheus; CI pending |
 | Tailnet fan-out (2026-04-28) | 7-host parallel SSH deployment | 2 fully done (aeolus, hephaestus); 3 partial (artemis, hermes, apollo); 2 failed (athena, titan) |

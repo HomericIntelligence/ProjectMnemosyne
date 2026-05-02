@@ -12,7 +12,7 @@ Analyze error patterns to suggest specific fixes and improvements.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Convert errors to actionable fixes | Faster resolution of test/build failures |
 
 ## When to Use
@@ -78,7 +78,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Priority Levels
 
@@ -115,7 +115,7 @@ Report suggestions with:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Unknown error type | Classify as "other", suggest investigation |
 | Insufficient context | Request more detailed error info |
 | Multiple causes | Suggest fixes in priority order |

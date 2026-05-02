@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-07 |
 | Objective | Add regression tests preventing recurrence of security workflow gaps |
 | Outcome | Operational — applied in ProjectOdyssey PR #3945 (issue #3318) |
@@ -159,7 +159,7 @@ Do NOT write tests for the broken state. Tests should document the correct state
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `entry: '--no-git'` in pygrep hook | Used `--no-git` directly as the pygrep entry pattern | pre-commit passes `entry` as program args; `--no-git` becomes a CLI flag, causing `unrecognized arguments` error | Prefix pattern with anchoring context: `gitleaks detect.*\-\-no\-git` |
 | `pixi run pytest` pre-commit hook | Used `pixi run python -m pytest tests/smoke/...` as hook entry | pytest creates/modifies `__pycache__/*.pyc` files; pre-commit detects "files modified by hook" and fails commit even though tests pass | For pre-commit, use pygrep (no side effects) for negative assertions; reserve pytest for CI |
 | `negate: true` on pygrep hook | Added `negate: true` to flip "pattern found = fail" to "pattern absent = fail" | `negate` is not a valid key for pygrep hooks in pre-commit; causes `Unexpected key` warning and hook is skipped | pygrep has no `negate` field — use `--negate` flag in a shell hook instead, or just flip the pattern logic |
@@ -192,5 +192,5 @@ pixi run pre-commit run check-security-workflow-no-git --files .github/workflows
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3945, issue #3318 | [notes.md](../references/notes.md) |

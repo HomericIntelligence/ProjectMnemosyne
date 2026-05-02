@@ -33,7 +33,7 @@ Before filing issues, check:
 ## Quick Reference
 
 | Error Pattern | Likely Cause | Quick Fix |
-|--------------|--------------|-----------|
+| -------------- | -------------- | ----------- |
 | OOM errors | Batch too large | Reduce batch_size by 50% |
 | NaN loss | Learning rate too high | Reduce LR by 10x |
 | Slow convergence | LR too low | Increase by 2-5x |

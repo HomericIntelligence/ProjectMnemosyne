@@ -40,7 +40,7 @@ that conda-forge has a package at a comparable version.
 ## Packages Verified Available on conda-forge
 
 | Package | conda-forge version | Pre-commit rev | Match? |
-|---------|---------------------|----------------|--------|
+| --------- | --------------------- | ---------------- | -------- |
 | mypy | >=1.19.1 | v1.19.1 | ✅ |
 | nbstripout | >=0.7.1 (0.9.1 available) | 0.7.1 | ✅ |
 | pre-commit-hooks | 4.5.0 available | v4.5.0 | ✅ |

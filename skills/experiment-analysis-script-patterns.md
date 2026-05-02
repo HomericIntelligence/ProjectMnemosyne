@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Category | evaluation |
 | Complexity | Low |
 | Context | Post-experiment analysis of dryrun result directories |
@@ -30,7 +30,7 @@ user-invocable: false
 ### Quick Reference
 
 | Bug | Root Cause | Fix |
-|-----|-----------|-----|
+| ----- | ----------- | ----- |
 | 0 experiments discovered | Regex doesn't match actual dir names | Loosen timestamp pattern: `T\d{6}` → `T[\d-]+` |
 | Wrong expected/missing counts | Multiplied by 3 (assumed 3 runs/subtest) | Change multiplier to 1 |
 | Retry script aborts on failure | `set -e` exits on first non-zero | Remove `set -e`; capture failures explicitly |
@@ -158,7 +158,7 @@ Use `|| true` on the pre-run call so a NOGO state before retries doesn't abort t
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Original regex `T\d{6}` | Expected timestamp format `T185610` (6 contiguous digits) | Actual dirs use `T18-56-10` (dashes between HH, MM, SS) | Always inspect actual dir names before writing regex — shell `ls \| head` is faster than assuming |
 | Group 3 for test name | Regex had 3 groups; test name was group 3 | After removing the intermediate `(\w+)` group, test name dropped to group 2 | Group indices shift when you remove captures — update all `.group(N)` calls together |
 | `* 3` multiplier | Assumed 3 runs per subtest (standard dryrun config) | dryrun3 was configured with 1 run per subtest | Read the actual artifact count before coding the multiplier; don't assume from docs |
@@ -205,7 +205,7 @@ pixi run python scripts/analyze_dryrun3.py --results-dir "$RESULTS_DIR"
 ### Exit Code Convention
 
 | Verdict | Exit Code | Meaning |
-|---------|-----------|---------|
+| --------- | ----------- | --------- |
 | GO | 0 | All criteria met, paper-ready |
 | CONDITIONAL_GO | 0 | Minor warnings, proceed with caution |
 | NOGO | 1 | Missing data or incomplete runs, don't write paper yet |

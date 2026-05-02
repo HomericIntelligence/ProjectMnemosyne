@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | multi-domain-audit-remediation |
 | **Category** | architecture |
 | **Source** | ProjectHephaestus 2026-03-14 post-audit remediation v2 |
@@ -98,7 +98,7 @@ Rules:
 Distinguish three classes of `print()` calls:
 
 | Class | Action |
-|-------|--------|
+| ------- | -------- |
 | Library internal status (inside a class method or non-`main()` function) | Replace with `logger.info/warning/error` |
 | CLI output in `main()` or `process_path()` | Replace with `logger.info/warning/error` if it's operational, keep as `print()` only for truly interactive terminal prompts |
 | Progress bar (`print("\r...", end="", flush=True)`) | Keep as `print()` — this is a terminal UI pattern |
@@ -114,7 +114,7 @@ grep -n 'sys\.' hephaestus/markdown/link_fixer.py
 **Strategy by module type**:
 
 | Module | Recommended exceptions |
-|--------|----------------------|
+| -------- | ---------------------- |
 | File I/O (`open`, `read_text`, `write_text`) | `OSError` |
 | YAML parsing | Keep `Exception` + add comment (yaml raises undocumented subtypes) |
 | Subprocess | `subprocess.CalledProcessError`, `OSError` |
@@ -204,19 +204,19 @@ All must pass before committing.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Added `# noqa: BLE001` to intentional broad except clauses | Used `except Exception as e: # noqa: BLE001` to suppress ruff warnings | `BLE` is not in the ruff `select` list — ruff flagged `RUF100` (unused noqa directive) | Always check `pyproject.toml` select list before adding noqa comments |
 | Narrowed PyGithub API exceptions to `(OSError, KeyError)` | Changed `except Exception` to `(OSError, KeyError)` in pr_merge.py | 3 tests failed — tests use `mock.side_effect = Exception("API error")` which doesn't match the narrow type | When narrowing exceptions in GitHub API code, keep `Exception` with comment; API libraries raise unpredictable subtypes |
 | Added `# noqa: BLE001` comment that was too long | `except Exception as e: # broad catch intentional: yaml raises undocumented exception subtypes` | Line exceeded 100-character limit → ruff E501 error | Keep inline comments short; truncate to stay within line length |
 | Removed `sys` import from fixer.py after replacing stderr prints | Deleted `import sys` when `print()` calls to `sys.stderr` were replaced | `sys.exit(0)` in `main()` still requires `sys` | Always grep for all `sys.` usages before removing the import |
-| Used `set[str] | None` type for shared find_markdown_files | `def find_markdown_files(directory, exclude_dirs: set[str] | None = None)` | mypy error: callers pass `frozenset[str]` from dataclass defaults | Use `set[str] | frozenset[str] | None` for exclude_dirs parameters |
+| Used `set[str] \| None` type for shared find_markdown_files | `def find_markdown_files(directory, exclude_dirs: set[str] \| None = None)` | mypy error: callers pass `frozenset[str]` from dataclass defaults | Use `set[str] \| frozenset[str] \| None` for exclude_dirs parameters |
 
 ## Results & Parameters
 
 **Session outcome**: 24 files modified, 358 tests pass (7 new), 81.66% coverage, all pre-commit hooks green.
 
 | Metric | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | Tests passing | 351 | 358 |
 | Coverage | 81.65% | 81.66% |
 | Broad `except Exception` (unjustified) | 21 | 0 |
@@ -251,5 +251,5 @@ logger = get_logger(__name__)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Post-audit remediation v2 branch, 2026-03-14 | [notes.md](../references/notes.md) |

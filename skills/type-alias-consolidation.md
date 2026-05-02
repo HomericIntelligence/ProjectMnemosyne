@@ -10,7 +10,7 @@ tags: [refactoring, type-consolidation, python, architecture]
 # Type Alias Consolidation
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-15 |
 | **Category** | architecture |
 | **Objective** | Consolidate multiple type definitions by removing shadowing type aliases |

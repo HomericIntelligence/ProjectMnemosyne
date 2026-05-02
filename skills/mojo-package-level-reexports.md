@@ -12,7 +12,7 @@ user-invocable: false
 # Skill: Mojo Package-Level Re-exports and New Optimizer Structs
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-07 (updated 2026-03-15) |
 | **Objective** | Enable `from shared import SGD, Adam, AdamW, AdaGrad, RMSprop` at top-level package |
 | **Outcome** | Activated/extended re-export line in `shared/__init__.mojo`; all 5 optimizers exposed |
@@ -44,7 +44,7 @@ commented-out blocks don't point to the wrong submodule.
 ### Quick Reference
 
 | Step | Action | Command |
-|------|--------|---------|
+| ------ | -------- | --------- |
 | 1 | Find defining module | `grep -rn "^struct AdaGrad" shared/` |
 | 2 | Check intermediate `__init__` | `grep -n "AdaGrad" shared/autograd/__init__.mojo` |
 | 3 | Audit active imports in top-level | `grep -n "^from" shared/__init__.mojo` |
@@ -231,7 +231,7 @@ This limitation is documented in `shared/__init__.mojo` under "Re-export Chain L
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `mojo test` locally | Tried `pixi run mojo test tests/shared/test_imports.mojo` | GLIBC version mismatch on host (requires 2.32+, host has 2.31) | Local mojo execution not available on this host; CI is the test oracle |
 | Running tests via Docker | `docker run ghcr.io/homericintelligence/projectodyssey:main ...` | Docker image not locally available (denied, not cached) | CI must run tests; verify by reviewing code structure and running pre-commit |
 | Using relative import in `__init__.mojo` | Considered `from .autograd.optimizers import ...` | Relative imports from `shared/__init__.mojo` in Mojo use absolute-style paths | Use `from shared.autograd.optimizers import ...` (absolute module path) |
@@ -246,7 +246,7 @@ This limitation is documented in `shared/__init__.mojo` under "Re-export Chain L
 ### Files Modified
 
 | Session | File | Change |
-|---------|------|--------|
+| --------- | ------ | -------- |
 | PR #3738 | `shared/autograd/optimizers.mojo` | +295 lines: AdamW struct |
 | PR #3738 | `shared/__init__.mojo` | Activated: `from shared.autograd.optimizers import SGD, Adam, AdamW` |
 | PR #3738 | `tests/shared/test_imports.mojo` | +8 lines: `test_shared_optimizer_imports()` |
@@ -257,7 +257,7 @@ This limitation is documented in `shared/__init__.mojo` under "Re-export Chain L
 ### Key Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Mojo version | 0.26.1 (pinned in pixi.toml) |
 | Import path | `shared.autograd.optimizers` (absolute, direct to defining module) |
 | Test assertion | `assert_almost_equal(opt.get_lr(), expected, tolerance=1e-10)` |
@@ -267,6 +267,6 @@ This limitation is documented in `shared/__init__.mojo` under "Re-export Chain L
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3219, PR #3738 — SGD/Adam/AdamW | [notes.md](../../references/notes.md) |
 | ProjectOdyssey | Issue #3745, PR #4785 — AdaGrad/RMSprop | [notes.md](../../references/notes.md) |

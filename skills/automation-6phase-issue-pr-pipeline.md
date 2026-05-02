@@ -14,7 +14,7 @@ tags: [automation, github, pipeline, pr-review, address-review, ci-driver, graph
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-24 |
 | **Objective** | Design and implement a complete 6-phase automation pipeline in Python for processing open GitHub issues across HomericIntelligence repos in a loop |
 | **Outcome** | SUCCESS — all 6 phases implemented with 251 unit tests passing; ruff + mypy clean; verified-precommit |
@@ -206,7 +206,7 @@ done
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Workers discover their own PR | `_find_pr_for_issue()` called inside each worker thread | Claude could be launched before discovering there's no PR — wasting quota and producing noise | Move `_discover_prs()` to `run()` level as a pre-filter; workers only receive `(issue_number, pr_number)` pairs where PR is confirmed to exist |
 | `_address_issue(issue_number, slot_id)` signature | Original signature without `pr_number` | When pre-discovery pattern was added, `pr_number` was needed inside the worker to avoid re-discovery | Changed to `_address_issue(issue_number, pr_number, slot_id)` — all tests updated accordingly |
 | Hardcoded `dry_run=False` in thread list call | `gh_pr_list_unresolved_threads(pr_number, dry_run=False)` in address_review | In dry-run mode, the API call still ran — inconsistent dry-run behavior | Pass `dry_run=self.options.dry_run` through to all helper calls |
@@ -217,7 +217,7 @@ done
 ### Files Created
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `hephaestus/automation/plan_reviewer.py` | Phase 2 — review posted plans, comment on issues |
 | `hephaestus/automation/pr_reviewer.py` | Phase 4 — read-only inline PR review via GraphQL |
 | `hephaestus/automation/address_review.py` | Phase 5 — resume implementer session to fix review feedback |
@@ -275,7 +275,7 @@ gh api graphql -f query='
 ### Key Invariants
 
 | Invariant | Enforcement |
-|-----------|-------------|
+| ----------- | ------------- |
 | `address_review` resolves only explicitly-addressed threads | Parse `{"addressed": [...]}` JSON; never resolve threads not in this list |
 | `ci_driver` runs exactly 1 fix iteration per PR | No internal retry loop; 1 Claude invocation per `_fix_pr()` call |
 | `drive-green` runs only on final loop | `if loop == LOOPS:` gate in `run_automation_loop.sh` |
@@ -286,5 +286,5 @@ gh api graphql -f query='
 ### Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Session 2026-04-24 — 6-phase pipeline design + implementation | 251 tests pass, ruff + mypy clean; CI not yet run |

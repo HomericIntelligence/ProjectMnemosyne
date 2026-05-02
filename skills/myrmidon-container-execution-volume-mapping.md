@@ -31,7 +31,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-05 |
 | **Objective** | Replace bare `subprocess.run(["claude", ...])` in the claude-myrmidon NATS pipeline with containerized execution using the `achaean-claude` image from AchaeanFleet |
 | **Outcome** | SUCCESS — agents run inside ephemeral `achaean-claude:latest` containers with proper volume mappings, network access to NATS, and configurable container runtime |
@@ -172,7 +172,7 @@ def _invoke_claude_sync(prompt: str, working_dir: str) -> str:
 ### Volume Mapping Reference
 
 | Flag | Host Path | Container Path | Purpose |
-|------|-----------|----------------|---------|
+| ------ | ----------- | ---------------- | --------- |
 | `-v WORKING_DIR:/workspace` | Host working directory | `/workspace` | Maps project files into container |
 | `-v ~/.claude.json:~/.claude.json` | `$HOME/.claude.json` | `$HOME/.claude.json` (same path) | **Claude config FILE** — missing this causes infinite retry loop |
 | `-v ~/.claude:~/.claude` | `$HOME/.claude` | `$HOME/.claude` (same path) | Claude session directory |
@@ -183,7 +183,7 @@ def _invoke_claude_sync(prompt: str, working_dir: str) -> str:
 ### Environment Variable Reference
 
 | Variable | Required | Purpose |
-|----------|----------|---------|
+| ---------- | ---------- | --------- |
 | `ANTHROPIC_API_KEY` | Yes | API authentication for claude CLI |
 | `HOME` | Yes | So claude finds its config at `~/.claude` inside the container |
 | `CONTAINER_RUNTIME` | No (default: `docker`) | Override container runtime (`podman` or `docker`); podman rootless may fail on WSL2 without runc |
@@ -198,7 +198,7 @@ Hardcoding `--network homeric-mesh` when NATS is on the default bridge causes im
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `claude` directly on host | `subprocess.run(["claude", "-p", prompt], cwd=working_dir)` | Breaks container isolation — agents run on bare host with no network segmentation, no resource limits, and direct filesystem access | Agents must always run inside the `achaean-claude` container from AchaeanFleet |
 | Using `docker exec` on a running container | Attempted to exec into a long-lived container for each invocation | Wrong pattern — the myrmidon pipeline creates ephemeral containers per invocation with `--rm`, not a persistent container | Use `docker run --rm` for ephemeral per-invocation containers, not `docker exec` on a running instance |
 | Missing `~/.claude.json` mount | Only mounted `~/.claude/` directory but not `~/.claude.json` config file | Claude CLI couldn't find its config and looped retrying until the 600s timeout expired — produced no output, pipeline stalled | Always mount BOTH `-v "$HOME/.claude.json:$HOME/.claude.json"` AND `-v "$HOME/.claude:$HOME/.claude"`. They are separate paths. |
@@ -212,7 +212,7 @@ Hardcoding `--network homeric-mesh` when NATS is on the default bridge causes im
 ### Container Image
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Image name | `achaean-claude:latest` |
 | Dockerfile | `infrastructure/AchaeanFleet/vessels/claude/Dockerfile` |
 | Lifecycle | Ephemeral (`--rm`) — created per invocation, destroyed after completion |
@@ -284,7 +284,7 @@ This, combined with `asyncio.to_thread()`, prevents the NATS connection from dro
 ### Key Differences from Host Execution
 
 | Aspect | Host Execution (wrong) | Container Execution (correct) |
-|--------|----------------------|-------------------------------|
+| -------- | ---------------------- | ------------------------------- |
 | Isolation | None — full host access | Container namespace isolation |
 | Network | Host network | Configurable via `CONTAINER_NETWORK` |
 | Filesystem | Full host filesystem | Only mounted volumes |
@@ -297,6 +297,6 @@ This, combined with `asyncio.to_thread()`, prevents the NATS connection from dro
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | claude-myrmidon | NATS pipeline worker (initial) | Replaced bare `subprocess.run(["claude", ...])` with containerized execution; syntax checked, dry-run tested |
 | claude-myrmidon-multi.py | NATS multi-repo pipeline (full e2e) | All 4 pitfalls discovered and fixed; pipeline progressed past planner stage with Docker runtime on WSL2 |

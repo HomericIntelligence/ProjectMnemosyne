@@ -56,7 +56,7 @@ All 4 checks passed on host without code fixes needed:
 ## Files Created/Modified
 
 | File | Action |
-|------|--------|
+| ------ | -------- |
 | `Containerfile` | Created |
 | `.containerignore` | Created |
 | `package.json` | Modified (6 container:* scripts) |

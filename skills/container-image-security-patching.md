@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Trivy vulnerability scan fails CI with HIGH/CRITICAL CVEs in pinned base images |
 | **Root Cause** | SHA256-pinned base images freeze OS packages and npm deps at a point in time |
 | **Fix** | Bump digests + add apt-get upgrade + npm audit fix as defense-in-depth |
@@ -119,7 +119,7 @@ docker run --rm aquasec/trivy image --severity HIGH,CRITICAL scylla-runner:test
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Only bumping python:3.12-slim digest | Updated Python base image SHA only | npm CVEs from node:20-slim remained (cross-spawn, minimatch, tar) | Must bump ALL pinned image digests, not just the primary base |
 | Pinning to SHA256 without upgrade | Relied solely on digest pinning for security | Pinned images freeze vulnerabilities at the pin date; no automatic patches | Digest pinning gives reproducibility but needs periodic bumps + apt-get upgrade as fallback |
 | Ignoring docker-test failures | Assumed Trivy failures were transient | Failure persisted for 3+ days across all branches, blocking PRs | Check `gh run list --workflow X` across branches; if ALL fail, it's infra not your code |
@@ -161,7 +161,7 @@ RUN npm install -g @anthropic-ai/claude-code@X.Y.Z \
 ### Key Files
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `docker/Dockerfile` | Experiment runner image (python + node + claude-code) |
 | `ci/Containerfile` | CI image (python + pixi + pre-commit) |
 | `.github/workflows/docker-test.yml` | Docker build timing + Trivy scan |

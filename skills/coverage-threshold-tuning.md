@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-15 |
 | **Objective** | Fix failing CI tests due to unrealistic coverage thresholds |
 | **Outcome** | ✅ Successfully tuned threshold from 80% → 72% to match actual coverage baseline |
@@ -144,7 +144,7 @@ EOF
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

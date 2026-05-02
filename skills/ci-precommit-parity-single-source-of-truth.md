@@ -14,7 +14,7 @@ tags: [pre-commit, shellcheck, yamllint, actionlint, gitleaks, parity, lint, ci-
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-28 |
 | **Objective** | Eliminate silent divergence between what CI linters catch and what pre-commit catches locally; make coverage identical |
 | **Outcome** | Successful — all CI lint jobs collapsed to one `pre-commit run --all-files` job; gitleaks, actionlint, yamllint (all .yaml), shellcheck (.sh + .bats) all running identically in CI and locally |
@@ -127,7 +127,7 @@ pre-commit run yamllint --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Divergent CI lint steps | Running shellcheck only on `*.sh` in CI while pre-commit also covered `*.bats` | SC2034/SC2120 violations in `.bats` files passed CI but blocked pre-commit | Always make CI and pre-commit use identical file patterns |
 | yamllint scoped to agents/ | CI ran `yamllint agents/` but `.github/workflows/*.yml` had long lines | Workflow files with >80 char lines passed CI yamllint but failed pre-commit | Broaden yamllint to all `\.ya?ml$`; fix lines rather than narrowing scope |
 | CI-only actionlint step | `actionlint -shellcheck shellcheck` ran in validate.yml but not in pre-commit | SC2015 violations in `_required.yml` caught by CI but not locally before push | Add actionlint to pre-commit so violations are caught at commit time |
@@ -199,5 +199,5 @@ pre-commit:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Myrmidons | fix/ci-precommit-parity PR — closed CI divergence across shellcheck/yamllint/actionlint/gitleaks | 2026-04-28 |

@@ -17,7 +17,7 @@ eliminate slow Rust compilation from Docker build time.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-05 |
 | Issue | #3152 |
 | PR | #3343 |
@@ -38,7 +38,7 @@ eliminate slow Rust compilation from Docker build time.
 ## Decision Criteria: Where to install the binary
 
 | Scenario | Install location | Notes |
-|----------|-----------------|-------|
+| ---------- | ----------------- | ------- |
 | Tool needed by all stages | Base stage, as root, to `/usr/local/bin` | Available everywhere, no sudo needed |
 | Tool needed only by dev user | Development stage, to `~/.local/bin` | Must be on user PATH |
 | Tool needed only in CI | CI stage, to `/usr/local/bin` as root | Smaller base image |
@@ -147,7 +147,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Install just in development stage as dev user writing to /usr/local/bin | Moved `curl just.systems/install.sh \| bash -s -- --to /usr/local/bin` to development stage after `USER ${USER_NAME}` | Dev user lacks permission to write to `/usr/local/bin` (owned by root) | Move to base stage as root, OR install to `~/.local/bin` (user-writable) |
 | Keep cargo in image just for just install | Left cargo in apt deps to avoid restructuring | Wastes ~500MB image space for a single tool; defeats purpose of optimization | Remove cargo entirely when it's only used for one tool install |
 
@@ -156,7 +156,7 @@ gh pr merge --auto --rebase
 ### Files changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `Dockerfile` | Remove `cargo` from apt; remove `.cargo/bin` from PATH; add just pre-built install in base stage; remove `cargo install just` from development stage |
 | `Dockerfile.ci` | Add `ENV PIXI_VERSION=0.65.0` in builder and runtime stages; pass version to pixi installer |
 
@@ -191,7 +191,7 @@ depending on hardware. Pre-built binary download takes ~5 seconds.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3152, PR #3343 | [notes.md](../../references/notes.md) |
 
 ## Related Skills

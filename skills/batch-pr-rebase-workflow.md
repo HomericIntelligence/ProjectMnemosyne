@@ -14,7 +14,7 @@ tags: [git, rebase, pr, parallel, myrmidon, wave, batch, conflict, ci, pixi, myp
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-07 |
 | **Objective** | Consolidated reference for rebasing multiple PRs, resolving conflicts, fixing CI failures, managing PR waves, and bulk GitHub housekeeping |
 | **Outcome** | Merged from 6 source skills: batch-pr-rebase-conflict-resolution-workflow, batch-pr-rebase-and-ci-fix, batch-pr-conflict-resolution-and-merge, mass-pr-parallel-rebase-workflow, batch-pr-rebase-myrmidon-wave-execution, github-bulk-housekeeping-issue-triage-batch-prs-rebase-branch-cleanup |
@@ -305,7 +305,7 @@ gh pr list --state open --json number,mergeStateStatus \
 **mergeStateStatus reference:**
 
 | Value | Meaning | Action |
-|-------|---------|--------|
+| ------- | --------- | -------- |
 | `CLEAN` | No conflicts, CI passing — ready to merge | Let auto-merge handle; if stuck for hours check `statusCheckRollup` |
 | `DIRTY` | Merge conflict with main | Rebase onto `origin/main`, force-push-with-lease, re-arm auto-merge |
 | `CONFLICTING` | Same as DIRTY in some API responses | Same as DIRTY |
@@ -326,7 +326,7 @@ git diff origin/main...origin/BRANCH   # net diff from common ancestor
 ```
 
 | Signal | Decision |
-|--------|----------|
+| -------- | ---------- |
 | Main's implementation is a complete superset | Take main's version; integrate unique tests from branch |
 | Branch adds logic not in main | Integrate branch's approach into main's structure |
 | Branch and main both modified the same function differently | Semantic merge: keep main's structure + branch's unique additions |
@@ -560,7 +560,7 @@ done
 For PRs with inter-dependencies (shared files, version PRs, structural migrations):
 
 | Wave | Criteria | Parallelism |
-|------|----------|-------------|
+| ------ | ---------- | ------------- |
 | Wave 1 | Independent PRs with no file overlap | Fully parallel |
 | Wave 2 | PRs that depend on Wave 1 changes | Parallel within wave, sequential between waves |
 | Wave 3 | Version/CHANGELOG PRs (overlap on same files) | **Strictly sequential** within wave |
@@ -598,7 +598,7 @@ done
 **Never use blind `--theirs` or `--ours` for everything.** Read the PR intent and combine both sides.
 
 | File Type | Strategy |
-|-----------|----------|
+| ----------- | ---------- |
 | `pixi.lock` | Accept main's version (`git show origin/main:pixi.lock > pixi.lock`), then regenerate with `pixi install`; or `rm pixi.lock && pixi install` |
 | `pixi.toml` | Merge both sides: keep main's deps + PR's new deps |
 | `pixi.toml` version field | Always take main's side — pyproject.toml is sole version authority |
@@ -738,7 +738,7 @@ gh api repos/{owner}/{repo}/branches/main --jq '.protection.required_status_chec
 **Common CI failures and fixes:**
 
 | Hook / Failure | Fix |
-|----------------|-----|
+| ---------------- | ----- |
 | `Ruff Format Python` | Auto-fix (blank lines, indentation) |
 | `Markdown Lint` | Auto-fix (MD032 blank lines) |
 | `mojo-format` | `pixi run mojo format <file>` — NOTE: GLIBC mismatch on some machines; use CI logs instead |
@@ -800,7 +800,7 @@ mypy = "mypy hephaestus/"
 ```
 
 | Caller | Command | Expands to | Result |
-|--------|---------|------------|--------|
+| -------- | --------- | ------------ | -------- |
 | pre-commit hook | `pixi run mypy` | `mypy hephaestus/` | Correct |
 | CI step (correct) | `pixi run mypy` | `mypy hephaestus/` | Correct |
 | CI step (wrong) | `pixi run mypy hephaestus/` | `mypy hephaestus/ hephaestus/` | "Duplicate module" error |
@@ -911,7 +911,7 @@ When handling a large issue backlog (20+ issues):
 **Issue classification:**
 
 | Bucket | Criteria | Action |
-|--------|----------|--------|
+| -------- | ---------- | -------- |
 | **Simple** | Single file change, no design decisions, clear spec | Batch into groups of 3–5, one PR per batch |
 | **Medium** | 2–5 files, some design choices, needs tests | Individual issues, one PR each |
 | **Complex** | Cross-cutting, architectural, 10+ files | File subtasks, assign to future sprint |
@@ -1084,7 +1084,7 @@ git fetch origin main && git pull --ff-only origin main
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `gh pr checkout` on previously-checked-out branch | Used `gh pr checkout <N>` to switch to a dependabot branch for rebase | `gh pr checkout` reuses an existing local branch if the name matches; that branch may have commits from a prior agent (e.g. scipy commits on a pyyaml branch) causing wrong-branch rebases | Always use `git worktree add /tmp/<name> origin/<branch>` to create a clean checkout directly from the remote ref; bypasses all local branch state |
 | `git reset --hard origin/<branch>` to fix stale local branch | Agent tried to align local branch to remote before rebase | Safety Net blocks `--hard` reset even on a clean worktree | Use `git worktree add` from the remote ref instead; avoids the need for reset entirely |
 | Parallel rebase agents sharing the main repo working tree | First-wave agents used `gh pr checkout` in the main worktree concurrently | Agents checkout different branches sequentially in the same tree; later agents see the previous agent's branch still checked out | Each parallel agent must work in its own isolated worktree (`git worktree add /tmp/<unique-name> origin/<branch>`) |
@@ -1155,7 +1155,7 @@ git fetch origin main && git pull --ff-only origin main
 | `git checkout <ref> -- <path>` during rebase for conflict resolution | Attempted to take a specific file version using `git checkout HEAD -- scripts/apply.sh` during rebase conflict | Blocked by Safety Net "overwrites uncommitted working tree files"; the same pattern documented elsewhere but now confirmed inside .claude/worktrees paths | Use `git show <ref>:<path> > <path>` instead — writes file contents without triggering Safety Net |
 | `git push --force` to push rebased agent worktree branch | Tried `git push --force` to update remote after rebase completed in detached HEAD state | Blocked by Safety Net; also the remote tracking ref was absent in detached HEAD mode | Use `git -C <worktree> push --force-with-lease origin <branch>:refs/heads/<branch>` — explicit refspec bypasses detached HEAD tracking ref issue; or run `git -C <worktree> branch -f <branch> HEAD` first to reattach |
 | Merging CHANGELOG.md conflicts during individual PR rebase | Each agent PR had CHANGELOG.md entries; tried to merge branch's CHANGELOG entries with main's during rebase | Created compound conflicts when the next PR rebased and introduced overlapping CHANGELOG sections; spiral of conflicts | Always take HEAD/main for CHANGELOG.md during myrmidon swarm rebase; designate a consolidation Wave to gather all entries after individual PRs merge |
-| Reading top-level CI conclusion to decide if required checks passed | `gh run view <id> --json conclusion` returned `"failure"` — assumed all required checks failed and blocked the PR queue | The overall conclusion is `failure` if ANY job fails (including non-required ones like `Pre-commit Checks` and `Python Quality (mypy)`); all 5 required checks (`Benchmarks`, `Code Coverage`, `Test (asan)`, `Test (lsan)`, `Test (ubsan)`) had actually passed | Use `gh run view <id> --json jobs --jq '.jobs[] | {name, conclusion}'` and cross-reference against `gh api repos/<owner>/<repo>/branches/main/protection --jq '.required_status_checks.contexts[]'` |
+| Reading top-level CI conclusion to decide if required checks passed | `gh run view <id> --json conclusion` returned `"failure"` — assumed all required checks failed and blocked the PR queue | The overall conclusion is `failure` if ANY job fails (including non-required ones like `Pre-commit Checks` and `Python Quality (mypy)`); all 5 required checks (`Benchmarks`, `Code Coverage`, `Test (asan)`, `Test (lsan)`, `Test (ubsan)`) had actually passed | Use `gh run view <id> --json jobs --jq '.jobs[] \| {name, conclusion}'` and cross-reference against `gh api repos/<owner>/<repo>/branches/main/protection --jq '.required_status_checks.contexts[]'` |
 | Retrying `gh pr merge` immediately after "Base branch was modified" error | After one of two concurrently-fired `gh pr merge` calls returned GraphQL "Base branch was modified", retried the merge immediately without rebasing first | The branch was still pointing at the pre-merge base SHA — the retry fails again for the same reason | Rebase the failed PR's branch onto the new `origin/main` first, then re-arm with `gh pr merge --squash --auto` and let CI run; do not retry immediate merge |
 | `git checkout --theirs CMakeLists.txt` for additive conflict | Two PRs both added `add_executable`/`gtest_discover_tests` blocks at the same location; used `--theirs` during rebase of the second PR | Dropped the rebasing PR's new test target entirely — only the already-merged PR's block remained | For additive CMakeLists.txt conflicts (independent test targets), keep BOTH sides: strip conflict markers with Python while retaining HEAD and incoming content |
 | Removing `%.native:` Makefile pattern rule | PR `remove-native-podman` removed the `ifeq ($(NATIVE),1)` block and `%.native:` pattern rule to eliminate Docker in favour of Podman | CI calls `make deps.native`, `make compile.debug.native`, etc. everywhere; with the pattern rule gone, these silently resolve to nothing and exit 2; additionally rootless Podman has no socket on ubuntu-24.04 GitHub runners so `podman compose exec` also fails | Restore both pieces: the `ifeq ($(NATIVE),1)` block that zeroes `CONTAINER_CHECK`/`CONTAINER_PREFIX`, and the `%.native:` pattern rule that dispatches `$(MAKE) $* NATIVE=1` |
@@ -1213,7 +1213,7 @@ gh pr merge PR_NUM --auto --rebase
 ### Conflict Hotspots by File
 
 | File | Pattern | Resolution |
-|------|---------|-----------|
+| ------ | --------- | ----------- |
 | `.claude-plugin/plugin.json` | Every skill branch conflicts | Python JSON merge: add new skill to ours array |
 | `scylla/core/results.py` | Multiple PRs touch same file | Take THEIRS; verify imports; run tests |
 | `.pre-commit-config.yaml` | Hook additions conflict | Take THEIRS for the specific hook entry |
@@ -1296,9 +1296,9 @@ git -C /tmp/rebase-NNN diff origin/main -- .
 ### Parameter Findings
 
 | Command / Pattern | Finding |
-|-------------------|---------|
+| ------------------- | --------- |
 | `git checkout -B <branch> origin/<branch>` | Loop-safe and works even when a local tracking branch exists; `-B` force-resets the branch to the target ref, unlike `-b` which fails if the branch already exists. Preferred over `gh pr checkout` when the branch may be checked out in another worktree. |
-| `gh run view <id> --json jobs --jq '.jobs[] | {name, conclusion}'` | Per-job conclusion inspection — required when overall run conclusion is `failure` but you need to know if required branch-protection checks passed. Top-level `conclusion` is `failure` if any job fails regardless of required status. |
+| `gh run view <id> --json jobs --jq '.jobs[] \| {name, conclusion}'` | Per-job conclusion inspection — required when overall run conclusion is `failure` but you need to know if required branch-protection checks passed. Top-level `conclusion` is `failure` if any job fails regardless of required status. |
 | `git -C <wt> diff origin/main -- .` | Pre-flight stale worktree diff check — always use this instead of inspecting log messages; a matching commit message does not guarantee the diff is correct. |
 
 ### Branch Protection Gotchas
@@ -1310,7 +1310,7 @@ git -C /tmp/rebase-NNN diff origin/main -- .
 ### Safety Net Hook Workarounds
 
 | Blocked Command | Safe Alternative |
-|----------------|-----------------|
+| ---------------- | ----------------- |
 | `git branch -D` | `git branch -d` |
 | `git checkout -` | `git switch <explicit-branch-name>` |
 | `git checkout <ref> -- <path>` | `git restore --source=<ref> <path>` |
@@ -1321,7 +1321,7 @@ git -C /tmp/rebase-NNN diff origin/main -- .
 ### Session Scale Reference
 
 | Scale | Method | Time |
-|-------|--------|------|
+| ------- | -------- | ------ |
 | 1–3 branches, 1 commit each | Sequential temp-branch rebase + semantic resolution | ~20-30 min/branch |
 | 3–10 branches, 1–3 commits | Sequential with targeted tests per branch | ~1.5-3 hours total |
 | 5-10 PRs | Sequential fresh worktrees | ~20-30 min |
@@ -1352,7 +1352,7 @@ Branch conflicts with main on file X:
 ### Common Mojo Issues After Cherry-Picks
 
 | Issue | Fix |
-|-------|-----|
+| ------- | ----- |
 | `alias` → `comptime` migration | Use `comptime` (Mojo 0.26.1+) |
 | `str()` not available | Use `String(dtype)` |
 | String iteration `for ch in part:` | Use `for ch in part.codepoint_slices():` |
@@ -1361,7 +1361,7 @@ Branch conflicts with main on file X:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | 40+ PRs, mojo format root fix + mass rebase, 2026-03-06/07 | mass-pr-ci-fix source |
 | ProjectOdyssey | 16 DIRTY branches rebased in ~60 minutes, 2026-03-07 | mass-pr-rebase-conflict-resolution source |
 | ProjectOdyssey | 25+ PRs DIRTY → 27/28 fixed, 13 auto-merged, 2026-03-17 | batch-pr-rebase-conflict-resolution source |

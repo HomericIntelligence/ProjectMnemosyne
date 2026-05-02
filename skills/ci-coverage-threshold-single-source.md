@@ -24,7 +24,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Establish `[tool.coverage.report].fail_under` as the single source of truth for coverage thresholds |
 | **Outcome** | Success - threshold raised from 9% to 75%, addopts flag removed, consistency checks updated |
@@ -51,7 +51,7 @@ When both are present, the **CLI flag wins** - it overrides the config file valu
 **Three places this flag can hide:**
 
 | Location | Precedence | Scope |
-|----------|-----------|-------|
+| ---------- | ----------- | ------- |
 | `addopts` in `[tool.pytest.ini_options]` | Highest (local runs) | All local `pytest` invocations |
 | `--cov-fail-under=N` in CI workflow | Highest (CI runs) | CI pytest invocations only |
 | `fail_under` in `[tool.coverage.report]` | Lowest (fallback) | Any run without CLI override |
@@ -100,7 +100,7 @@ pixi run pytest tests/ -v --tb=no -q 2>&1 | tail -5
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Removing flag only | Removed --cov-fail-under=9 from addopts without raising fail_under | Pre-commit consistency check script expected the flag in addopts | Always check for consistency-check scripts that validate addopts contents |
 | Raising floor without measuring | Would have set fail_under=50 per issue suggestion | Would have left 27% gap below actual (77.42%) | Always measure actual coverage first, then set floor 2% below baseline |
 
@@ -109,7 +109,7 @@ pixi run pytest tests/ -v --tb=no -q 2>&1 | tail -5
 ### v2.0.0 - Issue #1511, PR #1554
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Previous combined floor | fail_under = 9 + --cov-fail-under=9 in addopts |
 | New combined floor | fail_under = 75 (single source of truth) |
 | Actual combined coverage | 77.42% (2.42% buffer) |
@@ -120,7 +120,7 @@ pixi run pytest tests/ -v --tb=no -q 2>&1 | tail -5
 ### v1.0.0 - Issue #754, PR #868
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Threshold removed from CI | --cov-fail-under=72 |
 | Authoritative threshold | fail_under = 73 in [tool.coverage.report] |
 | Files changed | .github/workflows/test.yml |
@@ -135,6 +135,6 @@ pixi run pytest tests/ -v --tb=no -q 2>&1 | tail -5
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1511, PR #1554 | Raised floor 9% to 75%, added test-unit task |
 | ProjectScylla | Issue #754, PR #868 | Removed CI --cov-fail-under, aligned to pyproject.toml |

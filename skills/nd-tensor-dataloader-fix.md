@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Skill Name** | nd-tensor-dataloader-fix |
 | **Category** | testing |
 | **Language** | Mojo |
@@ -108,7 +108,7 @@ In this session, `mojo format` ran successfully (pre-commit passed clean), so no
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running tests locally | `pixi run mojo test tests/shared/training/test_training_loop.mojo` | GLIBC_2.32/2.33/2.34 not found on host | Local host GLIBC too old; Mojo tests must run in Docker/CI |
 | Manual shape construction | Considered building `batch_data_shape` with a loop over `self.data.shape()` | More complex than needed, would still allocate new tensor | `ExTensor.slice()` is already implemented and returns a shared-memory view |
 
@@ -151,5 +151,5 @@ fn slice(self, start: Int, end: Int, axis: Int = 0) raises -> ExTensor
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3846, Issue #3277 | [notes.md](../references/notes.md) |

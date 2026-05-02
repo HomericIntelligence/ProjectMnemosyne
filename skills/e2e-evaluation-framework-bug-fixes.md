@@ -9,7 +9,7 @@ user-invocable: false
 # E2E Evaluation Framework Bug Fixes
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Date | 2026-01-16 |
 | Objective | Fix 8 critical bugs in E2E evaluation framework identified during validation runs |
 | Outcome | ✅ All bugs fixed, framework now correctly evaluates agents and captures execution logs |
@@ -491,7 +491,7 @@ def save_checkpoint(checkpoint: E2ECheckpoint, path: Path) -> None:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -571,7 +571,7 @@ python scripts/run_e2e_experiment.py \
 ## Files Modified
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `config/judge/system_prompt.md` | Functional verification instructions |
 | `config/tiers/t3-delegation.md` | Direct specialist execution prompt |
 | `config/tiers/t4-hierarchy.md` | Orchestrator coordination prompt |

@@ -209,7 +209,7 @@ Total expected runs: 1130
 ## Performance Characteristics
 
 | Operation | Time | Execution |
-|-----------|------|-----------|
+| ----------- | ------ | ----------- |
 | Scan 1,130 runs | ~1s | File checks only |
 | Regenerate 1,130 agent/result.json | ~4s | JSON I/O only |
 | Re-run single agent | ~30s | Claude Code execution |

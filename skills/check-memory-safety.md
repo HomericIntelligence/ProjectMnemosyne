@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Validate Mojo code for memory safety violations and ownership issues. - Code review focused on memory safety |
 | Outcome | Operational |
@@ -140,7 +140,7 @@ Report memory safety issues with:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Compiler not available | Build with `mojo build` to get errors |
 | Complex ownership | Trace step-by-step through ownership chain |
 | Generic code | Check all type instantiations |
@@ -162,7 +162,7 @@ Before committing Mojo code:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

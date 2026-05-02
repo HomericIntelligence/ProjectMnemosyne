@@ -88,7 +88,7 @@ flip the pattern or use a shell hook with `grep -v`.
 ## Key Insight: pygrep for Pre-commit vs pytest for CI
 
 | Tool | Best for | Avoid for |
-|------|----------|-----------|
+| ------ | ---------- | ----------- |
 | pygrep hook | "Pattern X must NOT exist" (fast, no side effects) | Positive assertions ("must exist"), complex logic |
 | pytest in CI | Both positive and negative, complex regex, multi-file | Pre-commit (slow startup, side effects from .pyc writes) |
 | Shell steps in CI workflow | Quick sanity checks before expensive setup | Complex multi-line logic |

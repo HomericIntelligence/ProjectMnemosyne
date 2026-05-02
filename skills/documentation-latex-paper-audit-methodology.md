@@ -14,7 +14,7 @@ tags: [latex, audit, paper, academic, cross-reference, citation, data-consistenc
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-26 |
 | **Objective** | Perform a multi-pass audit of a LaTeX academic paper covering data consistency, cross-references, scientific rigor, and writing quality using parallel agent exploration |
 | **Outcome** | Successful -- Pass 1 caught a dangling `\ref{tab:criteria_performance}`, two missing Related Work citations, and hardcoded numbers without table refs. Pass 2 identified ceiling effect confounds, missing power analysis for null results, SRH test validity caveats, figure caption inaccuracies, logical tensions between Results and Conclusions, and score reliability paradoxes. Pass 3 flagged unusual citations, redundant sections, undefined terminology, and confusing qualifiers. |
@@ -66,7 +66,7 @@ grep -rn "TODO\|FIXME\|XXX\|PLACEHOLDER\|TBD" paper.tex tables/ figures/
 Deploy 3 parallel Explore agents for maximum coverage:
 
 | Agent | Responsibility | What to Check |
-|-------|---------------|---------------|
+| ------- | --------------- | --------------- |
 | **Agent A: Data Consistency** | Read all data files (CSV, JSON, summary.json) and verify every hardcoded number in the paper text against its source | Numbers in text, tables, abstract, conclusions |
 | **Agent B: Figure/Table Audit** | Audit all figures and tables for orphans (files on disk not referenced) and missing files (referenced but not on disk) | `\includegraphics`, `\input`, file system listing |
 | **Agent C: LaTeX Cross-References** | Check all `\ref`, `\cite`, `\input` chains for completeness and correctness | `\label` definitions, `\ref` usage, `.bib` entries, `\input` targets |
@@ -319,7 +319,7 @@ Simplify sentences with unclear parenthetical qualifiers:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Check \label existence only | Verified that `\label{tab:criteria_performance}` existed in `tables/tab04_criteria_performance.tex` | The file was never `\input`-ed in paper.tex, so the label was invisible to LaTeX -- PDF showed "??" | Must verify the FULL chain: `\ref` -> `\label` -> file is `\input`-ed. Label existence on disk is necessary but not sufficient. |
 | Single-agent sequential audit | One agent reading paper.tex top-to-bottom checking everything | Too slow for large papers (100+ pages); missed cross-cutting issues | Use 3 parallel agents with distinct responsibilities: data, files, cross-references |
 | Check claims by reading paper only | Assumed Related Work citations were complete because the text read well | Two claims ("studies have shown coordination overhead" and "multi-agent system surveys") had no `\cite` | Systematically grep for claim patterns without adjacent `\cite` commands |
@@ -397,7 +397,7 @@ A findings report organized by severity:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Haiku ablation study paper (`docs/arxiv/haiku/`) -- Pass 1 | Caught dangling `\ref{tab:criteria_performance}`, two missing Related Work citations, hardcoded token numbers without table refs |
 | ProjectScylla | Haiku ablation study paper (`docs/arxiv/haiku/`) -- Pass 2 | Identified ceiling effect in pass rates (0.903--1.000), missing power analysis for null tier-equivalence claim, SRH validity caveat needed, misleading "faceted by model" caption for single-model study, logical tension between non-significant pass rate and significant score difference |
 | ProjectScylla | Haiku ablation study paper (`docs/arxiv/haiku/`) -- Pass 3 | Flagged negotiation book citation in methodology section, redundant restatements of tier equivalence across Discussion/Conclusions, undefined "budget frontier model" term, confusing parenthetical qualifiers in statistical interpretation sentences |

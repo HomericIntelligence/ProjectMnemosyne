@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-14 |
 | **Objective** | Fix CI failures on PRs #665, #666, #667 caused by markdownlint issues in main branch |
 | **Outcome** | ✅ **Fixed main, unblocked 3 PRs**: All PRs passing CI after fixing markdown formatting in main |
@@ -151,7 +151,7 @@ done
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -190,7 +190,7 @@ done
 ### Timeline
 
 | Event | Duration | Notes |
-|-------|----------|-------|
+| ------- | ---------- | ------- |
 | Diagnosis | 5 min | Checked multiple PRs, identified pattern |
 | Local reproduction | 2 min | Ran hook on main, saw failures |
 | Fix creation | 10 min | Created branch, made edits, verified |
@@ -219,7 +219,7 @@ git diff
 ## Common Markdownlint Rules
 
 | Rule | Description | Auto-fix |
-|------|-------------|----------|
+| ------ | ------------- | ---------- |
 | MD032 | Lists should be surrounded by blank lines | ✅ Yes |
 | MD034 | Bare URL used | ✅ Yes (wraps in `<>`) |
 | MD009 | Trailing spaces | ✅ Yes |

@@ -12,7 +12,7 @@ Execute local builds with environment setup matching CI pipeline.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Local verification before push | Catch issues before CI, faster iteration |
 
 ## When to Use
@@ -79,12 +79,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Environment not found | Activate environment manager (pixi, conda, venv) |
 | Module not found | Verify `-I .` flag and correct paths |
 | Permission denied | Check file permissions and ownership |
@@ -103,7 +103,7 @@ Copy-paste ready configurations and expected outputs.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Local build verification with pixi/Mojo | Patterns adaptable to any build system |
 
 ## References

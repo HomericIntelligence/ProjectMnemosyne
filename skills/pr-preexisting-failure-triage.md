@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Determine whether CI failures on a PR are pre-existing (safe to ignore) or regressions (must fix) |
 | **Input** | PR number, review plan file (`.claude-review-fix-*.md`) |
 | **Output** | Triage assessment: which failures are blockers vs pre-existing noise |
@@ -58,7 +58,7 @@ For each FAILURE check:
 ### Step 4: Classify each failure
 
 | Failure | PR touches those files? | Classification |
-|---------|------------------------|----------------|
+| --------- | ------------------------ | ---------------- |
 | `Data Datasets` FAIL | No (PR only changed `.github/workflows/`) | Pre-existing |
 | `Shared Infra` FAIL | No | Pre-existing |
 | `sast-scan` PASS | Yes (workflow files) | Correctly passing |
@@ -79,7 +79,7 @@ Document findings:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Committing review plan file | Treated `.claude-review-fix-*.md` as an implementation artifact to commit | File is a working artifact for the agent, not a deliverable | Only commit actual code/config changes, never the review plan file |
 | Looking for additional changes | Searched for uncommitted fixes matching the plan's deliverables | The plan correctly stated all changes were already pushed; branch was clean | When plan says "no fixes required", verify git status first before assuming work remains |
 | Retrying tests locally | Attempted to rerun failing CI groups locally to confirm pre-existing status | Unnecessary — PR CI history and test group vs diff analysis is sufficient | Use `gh pr view --json statusCheckRollup` + diff analysis to classify failures without running tests |

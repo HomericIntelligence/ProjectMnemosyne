@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | mojo-slice-negative-step |
 | **Category** | debugging |
 | **Language** | Mojo |
@@ -107,7 +107,7 @@ for i in range(result_size):
 **Verification by trace:**
 
 | Slice | size | start | end (after norm) | result_size | Indices |
-|-------|------|-------|-------------------|-------------|---------|
+| ------- | ------ | ------- | ------------------- | ------------- | --------- |
 | `[::-1]` | 5 | 4 | -1 | 5 | 4,3,2,1,0 |
 | `[3:1:-1]` | 5 | 3 | 1 | 2 | 3,2 |
 | `[::-2]` | 5 | 4 | -1 | 3 | 4,2,0 |
@@ -115,7 +115,7 @@ for i in range(result_size):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Apply `or_else(0)` / `or_else(size)` then handle negative step | Extract step after setting defaults, then swap start/end | For `[::-1]`, start=0, end=5 after defaults; swap set start=size-1=4, end=0 giving `ceildiv(5,1)=5` but wrong sentinel: end=0 excludes index 0 | Defaults must be chosen based on step sign before any normalization |
 | `ceildiv(start - end + 1, neg_step)` | Add +1 to match "inclusive end" intuition | For `t[3:1:-1]`, produces `ceildiv(3,1)=3` instead of 2; Python slice end is exclusive | Python end is always exclusive — use `ceildiv(start - end, neg_step)` with end clamped to -1 for full reverse |
 | Conditional swap `start = end if end < size-1 else size-1` | Preserve user's explicit end when within bounds | Silently discards explicit end for in-bounds values, making `t[3:0:-1]` and `t[3:1:-1]` behave identically | Never conditionally discard user-provided slice bounds |
@@ -164,6 +164,6 @@ fn __getitem__(self, slice: Slice) raises -> Self:
 **Key formula difference:**
 
 | Direction | result_size formula | end sentinel |
-|-----------|---------------------|--------------|
+| ----------- | --------------------- | -------------- |
 | Forward (`step > 0`) | `ceildiv(end - start, step)` | `size` (exclusive) |
 | Reverse (`step < 0`) | `ceildiv(start - end, neg_step)` | `-1` (exclusive, index 0 included) |

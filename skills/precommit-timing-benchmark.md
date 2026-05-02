@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Measure pre-commit hook wall-clock runtime in CI and emit a warning annotation if it exceeds a threshold |
 | **Trigger issue** | Hook config changes (e.g. `pass_filenames: true` on ruff) that should speed up partial-change commits |
 | **Language** | Python helper script + GitHub Actions YAML + justfile recipe |
@@ -109,7 +109,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `date +%s` for timing | Shell `date +%s` subtraction in YAML | Fragile across platforms; requires subshell | Use `$SECONDS` bash built-in — always integer seconds, no subshell needed |
 | Failing CI on slow hooks | Exit 1 from helper when threshold exceeded | Blocked legitimate CI runs on slow runners | Timing benchmarks must be non-blocking; use `::warning::` annotation instead |
 | Attaching `if: failure()` to summary step | Wrote summary only on failure | Miss timing data for passing slow runs | Use `if: always()` so summary is always written |
@@ -119,7 +119,7 @@ gh pr merge --auto --rebase
 ### Thresholds
 
 | Parameter | Default | Override |
-|-----------|---------|----------|
+| ----------- | --------- | ---------- |
 | `--threshold` | 120 s | `--threshold 60` |
 | Warning annotation | `::warning::` | Not configurable |
 | Exit code | Always 0 | Not configurable |

@@ -17,7 +17,7 @@ tags: [mojo, writable, stringable, write_to, __str__, trait, migration, moderniz
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-10 |
 | **Objective** | Modernize Mojo structs from deprecated `Stringable`/`__str__` pattern to `Writable`/`write_to` for Mojo 0.26.3+ conformance |
 | **Outcome** | Successful — 5 structs across 3 files modernized; codebase reached ~98% Writable conformance |
@@ -128,7 +128,7 @@ grep -rn "def __str__" shared/ --include="*.mojo"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | None | This is a straightforward mechanical migration | N/A | The pattern is consistent across all structs |
 
 ## Results & Parameters
@@ -175,7 +175,7 @@ grep -rn "Writable" shared/ --include="*.mojo" -l | \
 ### Files Modernized (ProjectOdyssey PR #5212)
 
 | File | Struct(s) | Pattern Used |
-|------|-----------|--------------|
+| ------ | ----------- | -------------- |
 | `shared/benchmarking/result.mojo` | `BenchmarkResult` | Transitional delegation (`write_to` → `str(self)`) |
 | `shared/core/types/mxfp4.mojo` | `MXFP4`, `MXFP4Block` | Full migration (added `write_to`; already had `Writable` declared) |
 | `shared/core/types/nvfp4.mojo` | `NVFP4`, `NVFP4Block` | Full migration (added `write_to`; already had `Writable` declared) |
@@ -183,7 +183,7 @@ grep -rn "Writable" shared/ --include="*.mojo" -l | \
 ### When to Choose Each Pattern
 
 | Condition | Pattern |
-|-----------|---------|
+| ----------- | --------- |
 | `__str__` is only used for string representation | Full migration |
 | `__str__` is called by other code (e.g., logging, display) | Transitional delegation |
 | Formatting logic is simple (one or two fields) | Full migration |
@@ -193,5 +193,5 @@ grep -rn "Writable" shared/ --include="*.mojo" -l | \
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #5212, branch `fix/ci-stability-and-quality`, Mojo 0.26.3 | 5 structs in 3 files modernized; pre-commit hooks passed |

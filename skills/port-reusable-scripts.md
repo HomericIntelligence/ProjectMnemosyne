@@ -20,7 +20,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-10 |
 | **Objective** | Port reusable scripts or full libraries between HomericIntelligence repositories using sequential PRs |
 | **Outcome** | Proven across four major migrations: 17 scripts (Odyssey→Scylla, 5 PRs), full `scylla.automation` library (~4,400 lines, 16 modules to Hephaestus, 4 PRs + 1 cleanup), 7 validation/resilience scripts + 2 core library modules (Scylla→Hephaestus, 6 parallel PRs + 1 Scylla cleanup), and `hephaestus/automation/` 15-file module from Odysseus staging copy (1 PR, 596 tests pass, 80.63% coverage) |
@@ -112,7 +112,7 @@ ls tests/unit/markdown/
 **For full library ports, organize by dependency layer:**
 
 | PR | Layer | Contents |
-|----|-------|----------|
+| ---- | ------- | ---------- |
 | 1 | Foundation | Common utilities, retry, pydantic models, data classes |
 | 2 | GitHub/Worktree Layer | Git utilities, GitHub API wrappers, worktree helpers |
 | 3 | Orchestration | Subprocess-orchestrating modules (implementer, reviewer, planner) |
@@ -514,7 +514,7 @@ Wave 1 (6 parallel agents, isolated worktrees):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | pydantic only in pixi.toml | Added pydantic to pixi.toml but not pyproject.toml | CI uses `pip install -e ".[dev]"` which reads pyproject.toml only; `ModuleNotFoundError: No module named 'pydantic'` in all matrix jobs | Always add dependencies to `[project.dependencies]` in pyproject.toml; pixi.toml is local-only |
 | Coverage without omit list | Tried to get full coverage including orchestrator modules | Orchestrators shell out to `claude`, `gh` — no meaningful unit test possible without full integration environment | Exclude orchestrator modules via `[tool.coverage.run] omit` in pyproject.toml |
 | Force-push to stale branch | Force-pushed to a years-old stale branch after rebasing | Only CodeQL triggered, not the full test suite (pytest, mypy, lint) | Rebase onto fresh main and push again to trigger complete CI matrix |
@@ -536,7 +536,7 @@ Wave 1 (6 parallel agents, isolated worktrees):
 ### Migration Statistics
 
 | Session | Source | Target | Lines | Modules/Scripts | PRs | CI Result |
-|---------|--------|--------|-------|-----------------|-----|-----------|
+| --------- | -------- | -------- | ------- | ----------------- | ----- | ----------- |
 | 2026-02-12 | ProjectOdyssey scripts | ProjectScylla scripts | ~4,500 | 17 scripts | 5 | green |
 | 2026-03-30 | scylla.automation library | hephaestus.automation | ~4,400 | 16 modules | 4 + 1 cleanup | green (Python 3.10-3.13) |
 | 2026-03-30 | ProjectScylla validation/resilience scripts | hephaestus.validation + hephaestus.resilience | ~202 tests | 7 scripts + 2 library modules | 6 Hephaestus + 1 Scylla cleanup | verified-ci (PR #218 merged; #213-217 in CI queue) |
@@ -705,7 +705,7 @@ git status pixi.lock  # should show modified
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Port 17 scripts from ProjectOdyssey (PRs #1-5) | 2026-02-12 session |
 | ProjectHephaestus | Port scylla.automation library (PRs #209-212, cleanup PR #1742) | 2026-03-30 session |
 | ProjectHephaestus | Port 7 validation/resilience scripts + 2 library modules from Scylla (PRs #213-218, Scylla PR #1743) | 2026-03-30 session |

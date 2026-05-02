@@ -77,7 +77,7 @@ before accessing `score`. See `e2e-judge-rubric-design` skill for the correct pa
 Three distinct sessions visible in thread_1.log:
 
 | Session | Approx Time | Behavior |
-|---------|-------------|---------|
+| --------- | ------------- | --------- |
 | Session 1 | ~00:28 UTC | Real runs with costs ($0.6–$3.9), real results |
 | Session 2 | ~11:16 UTC | All exit code -1, 0s — `pixi` not on PATH |
 | Session 3 | ~13:59 UTC | 12 tests: $0 cost, 8-22s — ValidationError on resume; rest ran normally |
@@ -85,7 +85,7 @@ Three distinct sessions visible in thread_1.log:
 ## True First-Run Results (from thread_1.log Session 1)
 
 | Test | Session 1 Result | batch_summary Result |
-|------|-----------------|---------------------|
+| ------ | ----------------- | --------------------- |
 | test-031 | PASS ($0.61) | FAIL ($0.00) — overwritten by bug |
 | test-036 | PASS ($0.77) | FAIL ($0.00) — overwritten by bug |
 | test-012 | PASS ($3.93) | FAIL ($0.00) — overwritten by bug |

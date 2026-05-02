@@ -16,7 +16,7 @@ Review the ExTensor → Tensor[dtype] + AnyTensor migration plan for completenes
 - 569 files import ExTensor
 - 395 test files reference ExTensor (4,793 total references)
 - 480 functions return ExTensor, 368 take it as parameter
-- 708 _data.bitcast[T]() calls across shared/
+- 708 `_data.bitcast[T]()` calls across shared/
 - 177 dtype branch checks inside extensor.mojo
 
 ## Key Discoveries
@@ -30,7 +30,7 @@ Review the ExTensor → Tensor[dtype] + AnyTensor migration plan for completenes
 
 **B4: Refcount protocol for zero-copy conversion**
 - Location: extensor.mojo:435-489 (copyinit/del protocol)
-- as_tensor[dtype]() and as_any() must share _refcount pointer and increment it
+- `as_tensor[dtype]()` and as_any() must share `_refcount` pointer and increment it
 - Without this: ASAP destruction of source causes UAF on the view
 - Required test: create source, convert, drop source, verify view data intact
 
@@ -56,7 +56,7 @@ Review the ExTensor → Tensor[dtype] + AnyTensor migration plan for completenes
 ### Scope Revision
 
 | Phase | Original | Revised | Why |
-|-------|----------|---------|-----|
+| ------- | ---------- | --------- | ----- |
 | Phase 1 | ~200 changed | ~1,500 | Rename in 4,703-line file + alias + collision fix |
 | Phase 7 | ~3,000 | ~5,600 | 3,975 creation calls + 412 imports, not 8 lines/file |
 | Total | 9,700 | 15,700 | Across all phases |
@@ -64,7 +64,7 @@ Review the ExTensor → Tensor[dtype] + AnyTensor migration plan for completenes
 ### Language Feature Verification (Mojo 0.26.1)
 
 | Feature | Existing Usage | Works? |
-|---------|---------------|--------|
+| --------- | --------------- | -------- |
 | Auto-parameterization | 0 instances in codebase | Partially (fails for return types) |
 | comptime aliases | 7+ instances | Yes |
 | Variant | 0 instances | Yes (verified) |

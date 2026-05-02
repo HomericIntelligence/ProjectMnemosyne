@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-05 |
 | **Objective** | Prepare codebase for dynamic benchmark generator by extracting reusable logic, eliminating coupling, and formalizing interfaces |
 | **Outcome** | ✅ Successfully completed 6/9 PRs: extracted discovery library, removed 1,051 lines of dead/duplicate code, created pluggable SubtestProvider, formalized TestFixture schema |
@@ -207,7 +207,7 @@ extends_previous = tier_id != TierID.T0 or int(subtest_id) >= T0_FIRST_EXTENDING
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Failed: Trying to refactor everything in one PR
@@ -262,7 +262,7 @@ extends_previous = tier_id != TierID.T0 or int(subtest_id) >= T0_FIRST_EXTENDING
 ### Completed PRs
 
 | PR | Phase | Files Changed | Lines Changed | Status |
-|----|-------|---------------|---------------|--------|
+| ---- | ------- | --------------- | --------------- | -------- |
 | #356 | 1.1 | +4 new | +439 | ✅ Merged |
 | #357 | 1.2 | -6 deleted | -945 | ✅ Merged |
 | #358 | 1.3 | +1, ~2 | +37/-153 | ✅ Merged |

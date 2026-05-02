@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-03 |
 | **Objective** | Rename stale branch-name references in GitHub issues without corrupting unrelated natural-language uses of the same word |
 | **Outcome** | Successful — updated live issue titles, bodies, and one authored comment in a real repository while leaving ordinary-English `main` references untouched |
@@ -116,7 +116,7 @@ gh search issues <OLD_BRANCH> --repo <OWNER>/<REPO> \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | Treated every `gh search issues main` hit as an edit target | Search results also surfaced ordinary-English uses like `main roadmap` and `main ingestion path` | Always classify hits semantically before changing issue text |
 | Attempt 2 | Ran `gh issue edit` from a network-restricted sandbox | The command returned `error connecting to api.github.com` even though the edit payload was valid | When `gh` fails on connectivity inside a harness, retry with approved network or escalated access before redesigning the workflow |
 | Attempt 3 | Looked for a single `gh issue edit` flow to update both issue metadata and existing comments | `gh issue edit` updates issue title/body only; it does not mutate existing comments | Use `gh api graphql` with `updateIssueComment` and the authored comment node ID for comment edits |
@@ -161,5 +161,5 @@ gh issue view <RELATED_ISSUE> --json number,title,body,url
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | GitHub repository | Semantic issue cleanup after confirming the repo default branch had changed | Updated one issue title/body, one related issue body, and one authored issue comment via `updateIssueComment`, then verified that the remaining matches were ordinary-English false positives |

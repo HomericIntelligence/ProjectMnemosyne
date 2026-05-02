@@ -213,7 +213,7 @@ gh pr create
 ## Files Modified
 
 | File | Lines Changed | Purpose |
-|------|---------------|---------|
+| ------ | --------------- | --------- |
 | pyproject.toml | 82-89 | Added pytest coverage addopts configuration |
 | pyproject.toml | 160-161 | Added Protocol and abstractmethod exclusions |
 | .github/workflows/test.yml | 40, 42 | Updated threshold from 70% to 80% |

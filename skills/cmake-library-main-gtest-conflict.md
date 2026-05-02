@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-30 |
 | **Objective** | Fix `ctest` reporting zero tests when a C++20 library target includes `main()` |
 | **Outcome** | Successful — tests discovered and pass after extracting `main()` from library |
@@ -102,7 +102,7 @@ If `ctest --preset coverage` fails with "No such test preset", add it to `CMakeP
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Keep main.cpp in library | Library had `add_library(Foo src/main.cpp)` with test linking `Foo::Foo` + `GTest::gtest_main` | Two `main()` symbols — linker picks library's `main()`, GTest never runs | Library targets must NEVER contain `main()` |
 | Make library INTERFACE | Changed `add_library(Foo ...)` to `add_library(Foo INTERFACE)` | CMake errors — INTERFACE libraries can't have source files, compile features need different syntax | Use a stub source file instead of INTERFACE |
 | Set sources to empty | `set(sources "")` in SourcesAndHeaders.cmake | `add_library` with no sources fails in CMake | Must have at least one source file |
@@ -137,6 +137,6 @@ ctest_output: |
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectAgamemnon | CI coverage fix | Library had main.cpp → replaced with version_info.cpp |
 | ProjectNestor | CI coverage fix | Same pattern applied |

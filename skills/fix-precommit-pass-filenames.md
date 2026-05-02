@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | fix-precommit-pass-filenames |
 | **Category** | ci-cd |
 | **Complexity** | S (small) |
@@ -62,7 +62,7 @@ files that match the `files:` pattern.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `just pre-commit-all` | Used `just` command runner | `just` not in PATH on this machine | Fall back to `pixi run pre-commit run --all-files` directly |
 | Removing `files:` pattern too | Considered removing `files:` alongside adding `pass_filenames: true` | Not needed — `files:` is still required to restrict hook to Python files | Only remove the hardcoded dirs from `entry`; keep `files:` intact |
 

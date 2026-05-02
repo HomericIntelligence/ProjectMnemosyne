@@ -14,7 +14,7 @@ tags: [radiance, metrics, hardware-profile, operator-kernels, layer-aggregation,
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-15 |
 | **Objective** | Add an extensible analytical metrics system to Radiance that computes per-layer compute, memory, bandwidth, and SoL from exact operator kernels. |
 | **Outcome** | Successful local implementation: new `radiance.metrics` package, one-op-per-file kernels, operator-to-layer aggregation, selected-profile-only hardware projection, docs updated, and backend tests passing. |
@@ -66,7 +66,7 @@ pytest tests/backend -q
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Start from layer-only graph extraction | Reuse the existing layer graph as the sole source of analytical truth | Layer nodes are the right user-facing scope, but they do not preserve the exact operator semantics needed for FLOPs and memory formulas | Keep operator truth internally and aggregate onto layers afterward |
 | Treat hardware as a fixed built-in catalog | Initial plan referenced preselected accelerator profiles for every run | Product direction changed: hardware must be configurable per request, and computing all profiles adds noise and cost | Make `hardwareProfile` required on run start and project only the selected profile |
 | Hide unsupported operations behind heuristic fallbacks | Could have estimated unknown ops from adjacent layer shape or layer type | That would silently inflate modeled coverage and weaken trust in analytical output | Unsupported ops must stay explicit in coverage and produce no fabricated metric values |
@@ -156,5 +156,5 @@ pytest tests/backend -q
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Radiance | Implementing configurable single-profile per-layer analytical metrics and selected-profile SoL persistence | Verified locally with targeted backend tests and full `tests/backend` suite after updating routes, run persistence, docs, and fixtures |

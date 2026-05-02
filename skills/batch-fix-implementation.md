@@ -10,7 +10,7 @@ user-invocable: false
 ## Overview
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Purpose** | Coordinate batch fixes across 5+ files using minimal, focused edits |
 | **When to Use** | Multiple low-complexity issues (text, comments, docstrings, trivial one-liners) that benefit from a single PR |
 | **Complexity** | Simple edits per file, complex coordination across files |
@@ -159,7 +159,7 @@ gh pr merge --auto --rebase
 ### Quick Reference
 
 | Task | Command |
-|------|---------|
+| ------ | --------- |
 | Read file to verify state | `Read` tool with offset/limit |
 | Make single edit | `Edit` with enough context for uniqueness |
 | Make bulk replacements | Python script with `re.sub()` and MULTILINE flag |
@@ -171,7 +171,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using Bash sed/awk for multiple edits | `sed -i 's/String(dtype)/dtype_to_string(dtype)/g'` | Pattern matching too broad, missed context-specific nuances | Always use Edit tool for code changes to preserve context |
 | Replacing all ```text at once without checking context | Single regex replace for all 17 instances | Some were opening fences (need language tag), some closing (need bare ```) | Use `read()` to understand pattern first, then apply targeted fix |
 | Making edits without reading file state first | Started editing based on plan assumptions | Didn't verify imports existed or understand exact line numbers | Always read files first, especially when dependencies may exist |

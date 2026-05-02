@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-23 |
 | **Objective** | Stop `detect-private-key` hook from false-firing on test fixtures, TLS unit test files, and Kubernetes secret manifests that contain PEM-style headers but are not real credentials |
 | **Outcome** | Success — hook passes; real private key detection remains active for non-excluded paths |
@@ -81,7 +81,7 @@ For broader exclusions (test directories, example certs, k8s secret patterns):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Delete the hook entirely | Remove `detect-private-key` from `.pre-commit-config.yaml` | Would miss real credential leaks in non-test paths — eliminates security value of the hook | Use `exclude:` to scope the hook, never remove it entirely |
 | Move test files to a different path | Rename `tests/unit/test_grpc_tls.cpp` to avoid detection | Disrupts test structure and doesn't scale for k8s manifests that must live in `k8s/` | Path-based `exclude:` is the correct mechanism; don't relocate files to satisfy a hook |
 | Add `# noqa` or inline ignore comments | Tried embedding per-line directives in the C++ source | `detect-private-key` is a grep-based hook, not a Python linter — inline suppressions are not supported | Hook-level `exclude:` is the only supported suppression mechanism for `pre-commit-hooks` |
@@ -105,7 +105,7 @@ For broader exclusions (test directories, example certs, k8s secret patterns):
 ### Regex rules for the `exclude:` field
 
 | Pattern | Matches |
-|---------|---------|
+| --------- | --------- |
 | `^path/to/file\.ext$` | Exact file |
 | `^(file1\.yaml\|file2\.cpp)$` | Either of two exact files |
 | `^tests/` | All files under `tests/` |
@@ -127,5 +127,5 @@ These patterns appear in TLS unit tests (`test_grpc_tls.cpp`, `test_tls_*.py`) a
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectKeystone | Branch `fix/main-pre-commit-mypy`, PR #384 | Fix committed and pushed; CI was running at capture time |

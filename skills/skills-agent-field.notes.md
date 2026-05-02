@@ -36,7 +36,7 @@ Based on the user's original request and common patterns:
 ## Verified On
 
 | Project | Context | Status |
-|---------|---------|--------|
+| --------- | --------- | -------- |
 | ProjectMnemosyne | Template updates | ✅ Added to template with examples |
 
 ## Key Findings

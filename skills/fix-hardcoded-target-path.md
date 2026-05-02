@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Name | fix-hardcoded-target-path |
 | Category | tooling |
 | Problem | Script has a hardcoded absolute path constant that works only on the original developer's machine |
@@ -151,7 +151,7 @@ Add a section to `scripts/README.md` with:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Set `default=str(MNEMOSYNE_DIR)` in argparse | Used the hardcoded constant as the CLI default | Still evaluates the hardcoded path at import time; users get the wrong default path | Set `default=None` and resolve in `main()` via `resolve_mnemosyne_dir()` |
 | Used `/tmp/` default without `# nosec B108` | Added default path `/tmp/ProjectMnemosyne` | Bandit B108 flagged it as a security issue, blocking commit | Add `# nosec B108` inline comment on the line with the `/tmp/` path |
 | Removed unused variable without re-staging | Fixed ruff F841 but didn't re-stage the file | Ruff Format hook auto-reformatted the file, causing the second commit to also fail | After any hook auto-fix, `git add` the modified files before re-running commit |

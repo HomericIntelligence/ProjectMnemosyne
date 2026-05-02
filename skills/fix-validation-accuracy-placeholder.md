@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `run_subset()` passed `0.0` as accuracy to `metrics.update_val_metrics()` — a hardcoded placeholder |
 | **Root cause** | Method was written before accuracy tracking was required; the sibling `run()` method had already been fixed (#3183) but `run_subset()` was missed |
 | **Fix pattern** | Add `AccuracyMetric` variable before the batch loop; accumulate predictions per batch inside the loop when `self.compute_accuracy=True`; compute final value after loop; pass to `update_val_metrics()` instead of `0.0` |
@@ -128,7 +128,7 @@ gh pr merge --auto --rebase <pr-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using a separate reset+loop for accuracy | Re-iterate the entire loader after the loss loop to compute accuracy (same pattern as `run()`) | Would process up to `max_batches` again from reset, ignoring the already-completed subset iteration | In `run_subset()`, accumulate accuracy inside the existing capped loop — do not add a second loop |
 | Passing `0.0` unchanged | Leave `update_val_metrics(avg_loss, 0.0)` and only add a comment | Issue explicitly requires computing real accuracy; comment does not fix the bug | The fix must replace the literal `0.0` with a computed value |
 

@@ -30,7 +30,7 @@
 ### Metrics Module (`src/scylla/metrics/`)
 
 | File | Metrics | Status |
-|------|---------|--------|
+| ------ | --------- | -------- |
 | `grading.py` | pass_rate, impl_rate, cost_of_pass, composite_score | ✓ Aligned |
 | `statistics.py` | median, mean, mode, std_dev, variance | ✓ Aligned |
 | `process.py` | R_Prog, Strategic Drift, CFP, PR Revert Rate | ✓ Aligned |
@@ -40,7 +40,7 @@
 ### Configuration (`config/`)
 
 | File | Content | Status |
-|------|---------|--------|
+| ------ | --------- | -------- |
 | `tiers/tiers.yaml` | Tier definitions | ❌ Missing T4-T6 |
 
 ## Gaps Identified and Fixed

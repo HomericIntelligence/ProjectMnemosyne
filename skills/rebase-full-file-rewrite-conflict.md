@@ -14,7 +14,7 @@ tags: [git, rebase, conflict, merge, full-rewrite, migration]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-29 |
 | **Objective** | Resolve a rebase conflict on `docs/architecture.md` where PR #64 completely rewrote the file (post-migration, ~230 lines) and `origin/main` had a small incremental change (one-line ProjectScylla description update in commit `d85bcfa`) |
 | **Outcome** | Successful. Took the full rewrite side (`git checkout --theirs`), then manually applied the one-line delta from main. Rebase continued cleanly. |
@@ -91,7 +91,7 @@ This is the **opposite** of `git merge` where `--ours` is your branch. Always ve
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Let git auto-merge the conflict | Allowed `git rebase` to produce a merged result | Result mixed old ai-maestro content with new Agamemnon content, duplicated sections, broken markdown | Never auto-merge when one side is a complete rewrite — the result is always incoherent |
 | Use `git checkout --ours` | Attempted to take main's version (the incremental change) | This kept the old pre-migration architecture.md, discarding the entire post-migration rewrite | During `git rebase`, `--ours` is the upstream (main), not the PR branch. Use `--theirs` to get the PR branch version. |
 | Copy the clean file from a known-good ref | Did `git show REBASE_HEAD:docs/architecture.md > docs/architecture.md` | This works but skips the manual delta application step — result was missing main's one-line description update | Use `git checkout --theirs` instead (cleaner), then apply the delta explicitly. |
@@ -121,5 +121,5 @@ rebase_sides_reminder:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/Odysseus | PR #64 rebase onto origin/main, 2026-03-29 | Conflict on docs/architecture.md: 234-line post-migration rewrite vs 3-line incremental update |

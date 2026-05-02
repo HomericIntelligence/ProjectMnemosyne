@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Baseline compilation errors on `main` propagate to all open PRs, causing CI failures in multiple test groups |
 | **Context** | Mojo `--Werror` treats warnings as errors; `full()` only accepts `Float64` for fill_value; `alias` keyword deprecated in favor of `comptime` |
 | **Outcome** | 4 files changed, 12 insertions/deletions; all pre-commit hooks passed; PR created with auto-merge enabled |
@@ -161,7 +161,7 @@ gh pr view <PR-number> --json autoMergeRequest
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Edit with duplicate context | Used `old_string` matching a line that appeared twice in the file (`var throughput = Float64(...)`) | Edit tool returned "Found 2 matches, replace_all is false" error | Always `grep -n` first to check for duplicate lines; use more surrounding context to make the match unique |
 | `git pull --rebase` on main | Tried to pull main before branching, while there were unstaged modifications to workflow files | Git rejected with "cannot pull with rebase: You have unstaged changes" | Use `git stash` before pulling/branching when there are unstaged changes from a previous session |
 | Running `just pre-commit` without staging | Ran hooks before `git add` — all Mojo hooks reported "no files to check, Skipped" | Pre-commit only runs on staged files by default | Always `git add` the target files before running `just pre-commit` |
@@ -180,7 +180,7 @@ gh pr view <PR-number> --json autoMergeRequest
 ### Test groups fixed
 
 | Test Group | Root Cause | Fix Applied |
-|------------|-----------|-------------|
+| ------------ | ----------- | ------------- |
 | Benchmarks | `var throughput` unused (`--Werror`) | Changed to `_ = ...` |
 | Core Utilities | `full()` received integer types, requires `Float64` | Wrapped 9 call sites with `Float64()` |
 | Integration Tests | `alias` deprecation + missing `Normalize/ToTensor/Compose` re-export | `alias` → `comptime`, uncommented import |

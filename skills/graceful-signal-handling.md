@@ -17,7 +17,7 @@ tags:
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-04 |
 | **Objective** | Enable graceful shutdown on Ctrl+C (SIGINT) and SIGTERM without losing completed work |
 | **Outcome** | ✅ Processes save checkpoints on interrupt and return partial results |
@@ -149,7 +149,7 @@ if is_shutdown_requested():
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -222,5 +222,5 @@ finally:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #141 - Graceful signal handling for E2E experiments | [notes.md](../../references/notes.md) |

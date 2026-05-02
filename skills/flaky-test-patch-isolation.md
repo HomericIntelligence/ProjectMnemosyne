@@ -11,7 +11,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-03 |
 | Category | testing |
 | Objective | Fix intermittent test failure caused by class-level mock state leakage |
@@ -88,7 +88,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts / Alternatives Considered
 
 | Approach | Why Rejected |
-|----------|-------------|
+| ---------- | ------------- |
 | Use `patch.object(instance, "method", ...)` | Would fix the root cause but was out of scope — the test predated this session |
 | Add teardown only to `TestEvalOrchestratorEndToEnd` | Wrong class — the leak originates in `TestEvalOrchestratorWithFixture` |
 | `unittest.mock.patch` as a decorator | No benefit over context manager; doesn't address class-level leak |

@@ -18,7 +18,7 @@ extremely long strings.
 ## Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `shared/core/extensor.mojo` | Updated `__repr__` with truncation logic and improved docstring |
 | `tests/shared/core/test_extensor_repr.mojo` | New test file (11 tests) |
 

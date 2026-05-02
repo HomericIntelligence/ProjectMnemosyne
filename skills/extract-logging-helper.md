@@ -14,7 +14,7 @@ Workflow for eliminating duplicate `logger.info/warning` calls by extracting a v
 ## Overview
 
 | Attribute | Details |
-|-----------|---------|
+| ----------- | --------- |
 | **Date** | 2026-02-19 |
 | **Objective** | Extract duplicate checkpoint resume logging from two branches into `_log_checkpoint_resume()` |
 | **Outcome** | ✅ Success — 2 duplicate logging blocks → 1 helper, 5 new tests, no behavior change |
@@ -168,14 +168,14 @@ Ruff will collapse single-line f-strings inside `logger.info(...)` — let it re
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Code Changes
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/e2e/runner.py` | +12 lines (helper) / -9 lines (deduplication) |
 | `tests/unit/e2e/test_runner.py` | +103 lines (5 new tests) |
 

@@ -13,7 +13,7 @@ Systematically review implementation plans, identify gaps, and capture decisions
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Review plan, identify gaps, interview stakeholder for decisions | 11 key decisions captured, 4 new issues created, 6 existing issues updated |
 
 ## When to Use
@@ -113,12 +113,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Session Statistics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Questions asked | 11 batched topics |
 | Decisions captured | 11 key decisions |
 | Issues updated | 6 |
@@ -147,7 +147,7 @@ sections:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Too many questions | Batch by topic, max 4 per batch |
 | Lost issue context | Use comments instead of body edits |
 | Missing traceability | Always reference issue numbers |

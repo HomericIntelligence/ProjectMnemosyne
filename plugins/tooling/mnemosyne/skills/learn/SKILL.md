@@ -11,7 +11,7 @@ Capture session learnings and create a new skill plugin with PR.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2025-12-29 |
 | Objective | Automate knowledge capture from sessions into searchable skill plugins |
 | Outcome | ✅ Operational |
@@ -27,7 +27,7 @@ Capture session learnings and create a new skill plugin with PR.
 ## Common Mistakes and Fixes
 
 | Mistake | Symptom | Fix |
-|---------|---------|-----|
+| --------- | --------- | ----- |
 | Forgot `.claude-plugin/plugin.json` | "Missing .claude-plugin/plugin.json" | Create with name, version, description, category, date |
 | Description < 20 chars | "Description too short" | Add "Use when:" trigger conditions |
 | Failed Attempts as prose | "should contain a table" | Use pipe-delimited table format |
@@ -40,7 +40,7 @@ Capture session learnings and create a new skill plugin with PR.
 ## Failed Attempts
 
 | Attempt | Why Failed | Lesson Learned |
-|---------|-----------|----------------|
+| --------- | ----------- | ---------------- |
 | Auto-trigger on every session | User fatigue from constant prompts | Use >10 messages threshold |
 | Generic skill names | Hard to find later via /advise | Enforce kebab-case with category prefix |
 | Optional Failed Attempts section | Most valuable content missing | Make failures REQUIRED in template |

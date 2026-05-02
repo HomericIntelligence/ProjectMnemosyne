@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-19 |
 | Issue | #722 |
 | PR | #778 |
@@ -105,7 +105,7 @@ pixi run python -m pytest tests/ -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Gotchas
 
@@ -126,7 +126,7 @@ ShellCheck does NOT support per-pattern rules like "apply SC2034 only to `*.temp
 **Suppressions moved to subdirectory:**
 
 | Code | Description | Reason in Templates |
-|------|-------------|---------------------|
+| ------ | ------------- | --------------------- |
 | SC2034 | Variable appears unused | `$variable` → runtime substitution |
 | SC2154 | Variable referenced but not assigned | `$workspace` etc. from template context |
 | SC1036 | Invalid parentheses | `$$` escaping in Python string.Template |

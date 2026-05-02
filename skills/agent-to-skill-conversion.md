@@ -17,7 +17,7 @@ Convert Claude Code agent configurations to skills when the task matches the ski
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-05 |
 | Objective | Convert blog-writer and pr-cleanup agents to skills (ProjectOdyssey issue #3145) |
 | Outcome | 2 agents removed, 2 skills created, all references updated, PR #3320 created |
@@ -170,7 +170,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `just pre-commit-all` | Used `just` command directly | `just` not in PATH in this environment | Use `pixi run pre-commit run --all-files` instead |
 | Running `pixi run npx markdownlint-cli2` directly | Called markdownlint outside pre-commit | `npx` not in pixi environment PATH | Markdown linting runs correctly via the pre-commit hook |
 | Expecting mojo-format to pass | Ran pre-commit expecting all hooks to pass | GLIBC version incompatibility on host (requires 2.32-2.34, host has older) | mojo-format failure is environment-specific, not caused by our changes; other hooks still validate |
@@ -183,7 +183,7 @@ gh pr merge --auto --rebase
 For each agent converted to skill:
 
 | Action | File |
-|--------|------|
+| -------- | ------ |
 | Create | `.claude/skills/<name>/SKILL.md` |
 | Delete | `.claude/agents/<name>-specialist.md` |
 | Update | `agents/hierarchy.md` (counts, listings) |
@@ -222,7 +222,7 @@ grep -r "^agent:" .claude/skills/ --include="SKILL.md"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3145, PR #3320 | [notes.md](../references/notes.md) |
 
 ## Related Skills

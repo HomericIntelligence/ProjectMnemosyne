@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Reliably trigger `on: pull_request` GitHub Actions workflows when normal pushes fail to re-trigger CI |
 | **Outcome** | Force push after rebase (or empty amend) reliably triggers pull_request event; all required checks passed; PR merged |
@@ -87,7 +87,7 @@ A force push updates the branch tip SHA. GitHub evaluates the new SHA against al
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Empty commit + push | `git commit --allow-empty -m "ci: trigger checks"` then `git push` | No files changed between the empty commit and the PR base — path-filtered workflows see no matching changed files and skip entirely | Empty commits do not re-evaluate path filters; they show zero file diff |
 | Close and reopen PR | `gh pr close <pr> && gh pr reopen <pr>` | GitHub may re-trigger some workflows on reopen, but this is unreliable; required status checks may still show as missing | Not a reliable trigger for path-filtered or branch-protected workflows |
 | `workflow_dispatch` manual trigger | `gh workflow run <workflow.yml> --ref <branch>` | The workflow runs and the code can be verified to pass, BUT `workflow_dispatch` runs do **not** satisfy branch protection required status checks — those specifically require the check to pass on a `pull_request` event | `workflow_dispatch` ≠ required check; always ensure CI is triggered by `pull_request` event |
@@ -119,5 +119,5 @@ Always ensure CI is triggered via a push to the PR branch (not manual dispatch).
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHermes | PR #291, branch `192-193-auto-impl`, path-filtered workflows | Force push after rebase triggered all three required checks; PR merged |

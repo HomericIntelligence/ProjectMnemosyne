@@ -3,7 +3,7 @@
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | E2E framework | Imported from ProjectScylla .claude-plugin/skills/claude-code-settings-config |
 
 ## Source

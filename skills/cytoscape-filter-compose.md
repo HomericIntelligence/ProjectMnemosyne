@@ -12,7 +12,7 @@ version: 1.0.0
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-27 |
 | **Category** | debugging |
 | **Objective** | Fix 6 bugs introduced by a Cytoscape.js graph with day filter, status filter, and team trajectory that all mutually reset each other's visibility state |
@@ -196,7 +196,7 @@ def test_no_orphan_intermediate_ranking_nodes(self):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -227,7 +227,7 @@ clearTrajectory() [trajectory.js]
 ### Files modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `web/js/controls.js` | Single-owner reset, dual-date boundary assignment, conditional relayout, inline `_applyTeamHighlight` |
 | `web/js/trajectory.js` | Remove `clearTrajectory()` from `activateTrajectory()`, use `.filter(visible)`, clean unused classes |
 | `web/js/graph.js` | Edge opacity 0.5→0.7, remove unused `.dimmed`/`.highlighted` selectors |

@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-07 |
 | Objective | Replace mutable version tags in GitHub Actions `uses:` references with pinned commit SHAs |
 | Outcome | Supply chain security parity between composite action files and workflow files |
@@ -87,13 +87,13 @@ user-invocable: false
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3971, issue #3342 | [notes.md](../../references/notes.md) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Searching only `.github/workflows/` | Ran `grep` scoped to workflow files to find unpinned references | Missed composite action files under `.github/actions/` which are in a sibling directory | Always scope search to all of `.github/` not just `.github/workflows/` |
 | Assuming issue plan was accurate about file locations | Issue plan claimed no composite action files existed; assumed workflow files were the target | Composite action files existed at `.github/actions/` and were the actual source of the mutable references | Always verify with `grep -rn` rather than trusting issue description about file locations |
 
@@ -123,6 +123,6 @@ uses: owner/action@<40-char-sha>  # vX.Y.Z
 **Verified SHAs (as of 2026-03-07):**
 
 | Action | Tag | Commit SHA |
-|--------|-----|-----------|
+| -------- | ----- | ----------- |
 | `prefix-dev/setup-pixi` | `v0.9.4` | `a0af7a228712d6121d37aba47adf55c1332c9c2e` |
 | `actions/github-script` | `v8` | `ed597411d8f924073f98dfc5c65a23a2325f34cd` |

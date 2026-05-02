@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-15 |
 | Objective | Get Prometheus metrics from services that only expose JSON REST APIs |
 | Outcome | ✅ Operational — both `homeric-exporter` and `prometheus` targets show `up=1` |
@@ -208,7 +208,7 @@ This enables per-agent dashboards and alerting in Grafana.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Point Prometheus at ai-maestro `/api/diagnostics` directly | Added scrape job with `metrics_path: /api/diagnostics` | Endpoint returns JSON, not Prometheus text format — all targets showed `up=0` | Always verify upstream returns `# TYPE` lines before adding as scrape target |
 | Point Prometheus at NATS `/metrics` | Added NATS scrape job targeting `localhost:8222/metrics` | NATS exposes `/varz` and `/jsz` JSON, not `/metrics`; also `localhost` inside container ≠ host | Check NATS docs — monitoring endpoints are JSON only; need sidecar |
 | Use `POST /-/reload` to apply new prometheus.yml | Called `curl -X POST http://localhost:9090/-/reload` | Container still showed old config (`docker exec ... cat`) — volume mount may have been cached | Use `docker compose restart prometheus` for reliable config reload |

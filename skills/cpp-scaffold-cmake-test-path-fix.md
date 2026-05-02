@@ -14,7 +14,7 @@ tags: [cmake, gtest, add_subdirectory, test-path, cpp20, scaffold, ctest, odysse
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-29 |
 | **Objective** | Fix ctest reporting "No tests were found" in C++20 scaffold repos (Agamemnon/Nestor/Charybdis template) |
 | **Outcome** | Successful. Test binary compiles and links. ctest discovers tests correctly. |
@@ -99,7 +99,7 @@ Both scaffold bugs (path + main symbol) need to be fixed together for tests to a
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Absolute path in test/CMakeLists.txt | Used `${CMAKE_SOURCE_DIR}/test/src/test_main.cpp` | Works from repo root but breaks when `-S` points to a different directory (Odysseus meta-repo case) | Always use paths relative to `CMAKE_CURRENT_SOURCE_DIR` inside subdirectories; never rely on `CMAKE_SOURCE_DIR` for test sources |
 | Fix only for preset build | Only tested with `cmake --preset debug`, not the `-S/-B` meta-repo path | Meta-repo uses `cmake -S <submodule> -B <BUILD_ROOT>/<Name>` which bypasses presets entirely | Must verify both build contexts: preset (per-repo) and `-S/-B` (meta-repo) |
 
@@ -130,7 +130,7 @@ related_skill: meta-repo-build-root-pattern
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectAgamemnon | PR #68, 2026-03-29 Odysseus full build session | Fix applied, both build contexts verified |
 | ProjectNestor | PR #68, 2026-03-29 Odysseus full build session | Fix applied, both build contexts verified |
 | ProjectCharybdis | PR #68, 2026-03-29 Odysseus full build session | Fix applied, both build contexts verified |

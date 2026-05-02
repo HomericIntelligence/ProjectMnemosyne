@@ -16,7 +16,7 @@ and you need to apply a specific fix commit on top of the updated remote state.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-05 |
 | Objective | Apply a local fix commit onto a remote branch that has diverged |
 | Outcome | Success |
@@ -91,7 +91,7 @@ sed -n '<start>,<end>p' path/to/fixed/file.ext
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Direct push after local commits | Assumed local was ahead of remote | Branches had diverged; remote had 13 additional commits not present locally | Always check `HEAD..origin/<branch>` not just `origin/<branch>..HEAD` before pushing |
 | Treating fix plan at face value | Fix plan said "2 commits ahead, just push" | Plan was written before remote accumulated additional commits | Verify actual remote state with `git log --oneline HEAD..origin/<branch>` before acting |
 | Keeping local commits and merging | Would merge unrelated cleanup commit with remote's version of same | Remote already had an equivalent cleanup commit; merge would create duplicate | Use cherry-pick of the minimal fix only, not the full local commit stack |
@@ -122,5 +122,5 @@ git status                                    # should show "ahead by 1 commit"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3197, issue #3088 — BF16 test skip | [notes.md](../../references/notes.md) |

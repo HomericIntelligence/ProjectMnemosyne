@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-03-22 | Configure OIDC trusted publishing for HomericIntelligence-Hephaestus | Successfully published v0.4.0 after fixing distribution name, environment, and pending publisher |
 
 ## When to Use
@@ -82,7 +82,7 @@ When changing distribution name, also update:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Hardcoded SHA for pypi-publish | `pypa/gh-action-pypi-publish@76f52bc...` | SHA was invalid/not found | Use `@release/v1` branch ref |
 | Protected branches only on env | GitHub env `protected_branches: true` | Tags are not protected branches | Use "Selected branches and tags" with `v*` pattern |
 | Distribution name mismatch | `pyproject.toml` name `hephaestus`, PyPI project `HomericIntelligence` | `403 OIDC scoped token not valid for project` | Distribution name must EXACTLY match PyPI project |
@@ -115,7 +115,7 @@ jobs:
 ### Namespace package pattern
 
 | Repo | PyPI Name | Import | Wheel |
-|------|-----------|--------|-------|
+| ------ | ----------- | -------- | ------- |
 | ProjectHephaestus | `HomericIntelligence-Hephaestus` | `import hephaestus` | `homericintelligence_hephaestus-*.whl` |
 | ProjectKeystone | `HomericIntelligence-Keystone` | `import keystone` | `homericintelligence_keystone-*.whl` |
 

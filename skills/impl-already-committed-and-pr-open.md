@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-05 |
 | Category | documentation |
 | Objective | Recognize that an auto-impl session has nothing left to do because work was pre-committed |
@@ -81,7 +81,7 @@ Report the PR URL to the user. Do **not**:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | (None in this session) | N/A | N/A | The verify-first pattern was followed correctly; no spurious actions taken |
 | Anticipated failure: re-committing | Staging `.claude-prompt-*.md` or re-editing target files to "have something to commit" | Creates noise commit with unrelated files or duplicate changes | Never commit prompt files; verify file content matches issue requirements before touching anything |
 | Anticipated failure: creating duplicate PR | Running `gh pr create` without first checking `gh pr list --head <branch>` | Creates a second open PR for the same branch, causing CI confusion | Always check for existing PRs before creating one |

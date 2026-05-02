@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-22 |
 | **Issue** | #808 - Extract common validation test fixture pattern for loaders |
 | **Follow-up from** | #733 |
@@ -267,7 +267,7 @@ git commit -m "feat(config): ..."
 ### Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/config/validation.py` | Added `validate_filename_tier_consistency()` (22 lines) |
 | `scylla/config/loader.py` | Updated `load_tier()`: normalization guard + validation call + import |
 | `tests/unit/test_config_loader.py` | Added `TestFilenameTierConsistency` (4 tests, ~60 lines) |
@@ -275,7 +275,7 @@ git commit -m "feat(config): ..."
 ### Test Metrics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | New tests added | 4 |
 | Total tests | 2396 passed |
 | Coverage | 74.19% (threshold: 73%) |

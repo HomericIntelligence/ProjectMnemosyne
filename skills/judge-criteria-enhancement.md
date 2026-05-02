@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Session Date** | 2026-01-04 |
 | **Objective** | Fix E2E evaluation bugs: add judge criteria to penalize over-engineering, fix T6 cost tracking bug, reward proportionate solutions |
 | **Outcome** | ✅ Successfully added 3 new criteria (workspace_cleanliness, test_quality, scope_discipline), fixed invalid result detection, updated unit tests |
@@ -253,7 +253,7 @@ def _has_valid_agent_result(run_dir: Path) -> bool:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

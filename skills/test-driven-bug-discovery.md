@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-07 |
 | Objective | Add unit tests for git-quoted filename handling in `commit_changes()` |
 | Outcome | Tests exposed a real bug; both bug fix and tests merged in PR #1467 |
@@ -133,7 +133,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Insight
 
@@ -147,5 +147,5 @@ space (`M ...`).
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1467, issue #1447 | `scylla/automation/pr_manager.py::commit_changes` |

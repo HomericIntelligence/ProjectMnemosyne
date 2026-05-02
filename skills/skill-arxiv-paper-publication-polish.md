@@ -11,13 +11,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-02-07 |
-| Objective | | Field | Value | |-------|-------| | **Date** | 2026-02-07 | | **Objective** | Apply publication-ready polish to LaTeX papers based on comprehensi... |
+| Objective | Apply publication-ready polish to LaTeX papers based on comprehensive review feedback |
 | Outcome | Operational |
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-07 |
 | **Objective** | Apply publication-ready polish to LaTeX papers based on comprehensive review feedback |
 | **Outcome** | ✅ SUCCESS - All 5 fix categories applied, paper compiles cleanly, ready for arXiv submission |
@@ -51,7 +51,7 @@ Use this skill when you have:
 Organize fixes into categories for systematic application:
 
 | Category | Examples |
-|----------|----------|
+| ---------- | ---------- |
 | **Precision** | Decimal places, rounding consistency, numerical formatting |
 | **Terminology** | Standardize technical terms (containers → git worktrees) |
 | **Bibliography** | Remove uncited entries, verify all citations resolve |
@@ -163,7 +163,7 @@ Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>"
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Attempt: Apply fixes in line-number order
@@ -225,7 +225,7 @@ LaTeX Compilation: SUCCESS
 ### Fix Application Summary
 
 | Category | Edits | Impact |
-|----------|-------|--------|
+| ---------- | ------- | -------- |
 | Precision | 8 | CoP values 2dp → 3dp, T4 score 4dp → 3dp |
 | Terminology | 4 | "container" → "git worktree", remove Docker |
 | Bibliography | 1 | 36 entries → 10 cited entries (-307 lines) |

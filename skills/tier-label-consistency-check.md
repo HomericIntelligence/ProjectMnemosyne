@@ -12,7 +12,7 @@ user-invocable: false
 # Tier Label Consistency Check
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-04 (v1), 2026-03-06 (v2 glob extension) |
 | **Objective** | Prevent recurring tier label mismatches (T3/Tool, T4/Deleg, T5/Hier, T2/Skill) — initially scoped to `metrics-definitions.md`, then extended to all project markdown files |
 | **Outcome** | Python script + 55 tests + pre-commit hook covering all `*.md` files; PR #1421 (v1), PR #1452 (v2) |
@@ -145,7 +145,7 @@ recursive matching.
 Test classes to cover in v1 (24 tests):
 
 | Class | Tests |
-|-------|-------|
+| ------- | ------- |
 | `TestFindViolations` | Each pattern detected, line numbers correct, correct names not flagged, multi-violation, empty content |
 | `TestCheck<Name>` | Clean file → 0, violation → 1, missing file → 1, stderr output, violation count, parametrize all patterns |
 | `TestBadPatterns` | Non-empty, entries are string tuples |
@@ -153,7 +153,7 @@ Test classes to cover in v1 (24 tests):
 Additional test classes for v2 (31 more tests):
 
 | Class | Tests |
-|-------|-------|
+| ------- | ------- |
 | `TestCollectMismatches` | Each mismatch detected, correct names not flagged, line numbers, expected_name field, dataclass fields, missing file → [], empty file → [], multiple mismatches |
 | `TestScanRepository` | Clean repo → [], multi-file, default excludes, .pixi excluded, custom excludes, relative paths in findings, empty dir, custom glob, nested subdirs |
 | `TestFormatReport` | Empty → clean message, findings in report, count in header |
@@ -221,12 +221,12 @@ Add `types: [markdown]` as a belt-and-suspenders filter alongside `files:`.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Script path | `scripts/check_tier_label_consistency.py` |
 | Test path | `tests/unit/scripts/test_check_tier_label_consistency.py` |
 | Test count | 55 (v2); 24 (v1) |
@@ -239,7 +239,7 @@ Add `types: [markdown]` as a belt-and-suspenders filter alongside `files:`.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1421, issue #1370 | [notes.md](../../references/notes.md) |
 
 ## Key Takeaways

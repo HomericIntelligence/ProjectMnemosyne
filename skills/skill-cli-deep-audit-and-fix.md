@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | **Date** | 2026-02-24 |
 | **Objective** | Audit `manage_experiment.py` (CLI entry point for e2e experiment runs) across 8 dimensions and fix all confirmed issues |
 | **Outcome** | ✅ 1 real bug fixed (argparse `default=3600` silently overriding YAML timeout), 5 code-quality concerns fixed, 12 new tests added |
@@ -101,7 +101,7 @@ git commit -m "fix(cli): <description>"
 ## Audit Dimensions
 
 | # | Dimension | What to Check |
-|---|-----------|---------------|
+| --- | ----------- | --------------- |
 | 1 | **Bugs** | Argparse defaults silently overriding config layer; off-by-one errors in range checks |
 | 2 | **Dead code** | Unused imports, unreachable branches, obsolete helper functions |
 | 3 | **Duplication** | Same dict/constant defined in multiple places; copy-paste validation logic |
@@ -159,12 +159,12 @@ error messages if N threads all hit the same missing path.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Item | Value |
-|------|-------|
+| ------ | ------- |
 | Files changed | 2 (production: `manage_experiment.py`; tests: `test_manage_experiment.py`) |
 | New tests added | 12 |
 | Bug fixed | 1 (argparse `default=3600` silently overriding YAML timeout) |
@@ -175,5 +175,5 @@ error messages if N threads all hit the same missing path.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Branch `consolidate-run-command`, commit `554bfac` | [notes.md](../references/notes.md) |

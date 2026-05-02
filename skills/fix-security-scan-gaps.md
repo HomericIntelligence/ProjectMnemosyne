@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-05 |
 | Objective | Fix three common security scanning gaps in GitHub Actions workflows |
 | Outcome | Operational — applied in ProjectOdyssey PR #3315 (issue #3143) |
@@ -121,7 +121,7 @@ for f in ['.github/workflows/security-scan.yml', '.github/workflows/security-pr-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Remove all continue-on-error | Removed `continue-on-error` from every step in the file | SARIF upload and artifact download steps legitimately use it to prevent reporting failures from blocking scan results | Only remove `continue-on-error` from the scan step itself, not reporting/upload steps |
 | Use `--log-opts` for PR diff only | Considered `--log-opts="HEAD~1..HEAD"` to limit Gitleaks to PR diff | Would miss secrets introduced earlier in the branch history | Default git log mode is safer; scans entire branch reachable history |
 

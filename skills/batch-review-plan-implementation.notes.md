@@ -23,7 +23,7 @@ files. About 24 of those reviews failed (mostly git push failures), leaving fixe
 
 ### OPEN PR Actions Required
 | Issue | PR | Action |
-|-------|-----|--------|
+| ------- | ----- | -------- |
 | 3066 | #3263 | Local fix commit (delete benchmarks/test_framework.mojo) — rebase+push |
 | 3071 | #3269 | Rebase only (20+ commits behind, activation crash fix on main) |
 | 3077 | #3232 | Local fix commit (add Stringable/Representable/Hashable traits) — rebase+push |

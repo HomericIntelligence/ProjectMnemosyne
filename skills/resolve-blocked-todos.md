@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Category** | testing |
 | **Trigger** | Blocking issue closed; TODO(#N) markers remain in code |
 | **Outcome** | All TODO markers removed, disabled tests enabled, functionality implemented |
@@ -185,7 +185,7 @@ from shared.core.matrix import transpose
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Check if blocking issue is open before acting | Assumed blocking issue #2722 was still open because the tracking issue said to wait | Issue had been closed (merged) since the tracking issue was created | Always verify `gh issue view N --json state` first - don't trust the tracking issue description |
 | Wait for methods to appear in main | Expected `__str__`, `__repr__`, `__hash__` to be in the current main branch after #2722 closed | The implementation PR existed on a feature branch (`2722-auto-impl`) not yet merged to main | Check git branches and cherry-pick from the feature branch instead of waiting |
 | Use `contiguous(b)` as a module-level function | Test code had `# var c = contiguous(b)` implying a module-level function | No module-level `contiguous()` exists; only `tensor.contiguous()` method and `as_contiguous()` function | Always verify function signatures with grep before enabling commented-out test code |

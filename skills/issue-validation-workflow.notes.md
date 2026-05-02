@@ -120,7 +120,7 @@
 ### Close as Already Resolved (6 issues)
 
 | Issue | Title | Evidence |
-|-------|-------|----------|
+| ------- | ------- | ---------- |
 | #419 | Test core/results.py | `tests/unit/core/test_results.py` (292 lines, 26 tests) |
 | #420 | Test discovery/ | 3 test files, ~1200 lines total |
 | #422 | pixi.toml wrong dirs | Already shows `scylla scripts tests` |
@@ -131,7 +131,7 @@
 ### Implement (5 issues + 1 scope change)
 
 | Issue | Status | Work Required |
-|-------|--------|---------------|
+| ------- | -------- | --------------- |
 | #340 | Valid | Create `scylla/judge/runner.py` module |
 | #341 | Valid | Add verification docs to Docker README |
 | #342 | Valid | Add Docker build CI workflow |

@@ -9,7 +9,7 @@
 ### Ported Skills
 
 | Ported Skill | Source File | Action |
-|---|---|---|
+| --- | --- | --- |
 | `mojo-026-breaking-changes.md` (v3.0.0) | `mojo-syntax/SKILL.md` | Merged into existing skill |
 | `mojo-gpu-fundamentals-programming-guide.md` | `mojo-gpu-fundamentals/SKILL.md` | New skill |
 | `mojo-python-interop-patterns-guide.md` | `mojo-python-interop/SKILL.md` | New skill |

@@ -39,7 +39,7 @@ to an existing comment).
 ## Existing Infrastructure Found
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `scripts/mojo-format-compat.sh` | Wrapper that exits 0 with warning on incompatible hosts |
 | `docs/dev/mojo-glibc-compatibility.md` | Comprehensive documentation of affected OS versions and resolution options |
 | `.pre-commit-config.yaml` lines 5-9 | Comment block documenting constraint |
@@ -47,7 +47,7 @@ to an existing comment).
 ## GLIBC Compatibility Matrix
 
 | OS | glibc | Status |
-|----|-------|--------|
+| ---- | ------- | -------- |
 | Debian 10 (Buster) | 2.28 | Incompatible |
 | Debian 11 (Bullseye) | 2.31 | Incompatible |
 | Debian 12 (Bookworm) | 2.36 | Compatible |

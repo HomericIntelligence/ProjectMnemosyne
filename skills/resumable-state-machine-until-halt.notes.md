@@ -55,7 +55,7 @@ A previously-complete experiment would exit immediately even if new tiers were r
 ## Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/e2e/subtest_state_machine.py` | `UntilHaltError` class; `advance()` catches it, transitions state, re-raises |
 | `scylla/e2e/subtest_executor.py` | Skip runs at `until_run_state`; raise `UntilHaltError` when non-terminal runs remain |
 | `scylla/e2e/runner.py` | 4-step resume: capture ephemeral→load→restore ephemeral→merge tiers+detect incomplete |

@@ -17,7 +17,7 @@ and protect them with retry logic — either by routing through `just test-group
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-07 |
 | Mojo Version | 0.26.1.0.dev2025122805 |
 | Objective | Extend JIT crash retry from one workflow to all workflows |
@@ -47,7 +47,7 @@ grep -rn "pixi run mojo" .github/workflows/ --include="*.yml"
 For each hit, decide:
 
 | Call type | Best fix |
-|-----------|----------|
+| ----------- | ---------- |
 | Test file (`*.mojo` test) | Route through `just test-group` (add `Install Just` step) |
 | Package build (`mojo package`) | Inline retry loop |
 | Benchmark run (`mojo run`) | Inline retry loop |
@@ -148,7 +148,7 @@ pixi run check-yaml .github/workflows/*.yml
 ## Files Changed in ProjectOdyssey #3329
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `justfile` | Upgraded `test-group` per-file retry: 2 → 3 attempts, 1s/2s backoff |
 | `comprehensive-tests.yml` | Wrapped `mojo package` compilation in 3-attempt retry |
 | `test-gradients.yml` | Added `Install Just` + routed 2 bare calls through `just test-group` |
@@ -156,14 +156,14 @@ pixi run check-yaml .github/workflows/*.yml
 | `simd-benchmarks-weekly.yml` | Wrapped benchmark run in 3-attempt retry |
 | `benchmark.yml` | Wrapped Mojo benchmark run in 3-attempt retry |
 | `release.yml` | Wrapped `mojo build` loop + 2 `mojo test` steps in 3-attempt retry |
-| `paper-validation.yml` | Wrapped `mojo test` + `mojo train` in 3-attempt retry (preserving `|| true`) |
+| `paper-validation.yml` | Wrapped `mojo test` + `mojo train` in 3-attempt retry (preserving `\|\| true`) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Routing benchmark runs through `just test-group` | Tried to use `just test-group` for `simd-benchmarks-weekly.yml` | `test-group` expects test files, not benchmark scripts; output format is different | Benchmarks need inline retry, not `just test-group` routing |
-| Single retry for all call types | Considered using one inline loop pattern everywhere | `|| true` soft-failure semantics must be preserved for paper validation scripts | Soft-failure workflows need the retry loop wrapped with `|| true`, not`exit 1` |
+| Single retry for all call types | Considered using one inline loop pattern everywhere | `\|\| true` soft-failure semantics must be preserved for paper validation scripts | Soft-failure workflows need the retry loop wrapped with `\|\| true`, not `exit 1` |
 | Skipping `mojo --version` wrapping | Initially flagged `pixi run mojo --version` for retry | Version check does not invoke the JIT compiler, so it cannot crash this way | Only JIT-compilation calls (`mojo <file>`, `mojo test`, `mojo package`, `mojo build`, `mojo run`) need retry |
 
 ## Results & Parameters
@@ -183,5 +183,5 @@ grep -n "pixi run mojo" .github/workflows/*.yml | grep -v "mojo --version" | gre
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3329, PR #3950 | [notes.md](../../references/notes.md) |

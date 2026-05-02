@@ -17,7 +17,7 @@ struct that stores data in a flat buffer with row-major strides.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-03-07 | Add `t[[1, 2]] = 5.0` syntax to ExTensor | Implemented via stride-based flat-index delegation, all pre-commit hooks pass |
 
 ## When to Use
@@ -71,7 +71,7 @@ struct that stores data in a flat buffer with row-major strides.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3275, PR #3836 | [notes.md](../references/notes.md) |
 
 ## Results & Parameters
@@ -94,7 +94,7 @@ Example for `shape=[3,4]`, `strides=[4,1]`, `indices=[1,2]`:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Accepting `Float32` value in multi-dim overload | Added separate `(List[Int], Float32)` overload | Redundant — flat `(Int, Float64)` already handles Float32 via dtype dispatch | Delegate to the existing flat overload; only one multi-dim overload needed |
 | Trying to run `mojo` locally | `pixi run mojo -I . tests/...` | GLIBC version incompatibility on Debian Buster (requires GLIBC 2.32+, host has 2.31) | Mojo can only run in CI/Docker; verify via pre-commit + code review instead |
 | Looking for existing `List[Int]` `__getitem__` to mirror | Expected a `__getitem__(indices: List[Int])` to exist | Not present — multi-dim reads use `*slices: Slice` pattern | Read the actual overloads before assuming symmetry; `__setitem__` can be added independently |

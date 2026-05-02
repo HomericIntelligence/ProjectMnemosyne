@@ -14,7 +14,7 @@ Workflow for rebasing pull request branches and resolving merge conflicts effici
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-08 |
 | Objective | Rebase ProjectOdyssey PR #3097 with 23 merge conflicts |
 | Outcome | Successfully rebased and force-pushed with all conflicts resolved |
@@ -147,7 +147,7 @@ git rebase --continue
 **Common errors**:
 
 | Error | Solution |
-|-------|----------|
+| ------- | ---------- |
 | `you have staged changes in your working tree` | Run `git commit --no-edit` then `git rebase --continue` |
 | `fatal: You are in the middle of a cherry-pick` | Don't use `--amend`, just `git commit --no-edit` |
 | New conflicts on next commit | Repeat steps 4-7 for new conflicts |
@@ -178,7 +178,7 @@ gh pr comment <PR_NUMBER> --repo <owner>/<repo> --body "✅ Rebased against main
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -260,7 +260,7 @@ user-invocable: false' skill.md
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3097 - user-invocable field | 23 conflicts, 74 files changed |
 
 ## References

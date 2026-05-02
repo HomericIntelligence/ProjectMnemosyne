@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Consolidated skill for detecting and removing stale CI patterns — patterns that reference renamed or deleted test files |
 | **Outcome** | Merged from 2 source skills: stale-ci-pattern-detection, stale-ci-pattern-removal |
@@ -147,7 +147,7 @@ def test_multiple_stale_sorted(tmp_repo):
 **Key design decisions**:
 
 | Decision | Choice | Rationale |
-|----------|--------|-----------|
+| ---------- | -------- | ----------- |
 | Exit code | No change (warnings only) | Stale patterns are advisory; only missing coverage blocks CI |
 | Output stream | `sys.stderr` | Keeps stdout clean for downstream consumers |
 | Return type | `List[str]` (sorted group names) | Stable, testable, easy to iterate |
@@ -208,7 +208,7 @@ Use when a test file was deleted but its name still appears in CI workflow patte
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A for `check_stale_patterns` implementation | Implementation was straightforward on first attempt | — | Reusing `expand_pattern()` directly avoided any duplication |
 | Glob for the file in worktree before confirming deletion | `Glob tests/shared/core/test_backward_compat_aliases.mojo` | File did not exist — already deleted in a prior commit | Always verify file existence first; issue descriptions may lag behind actual state |
 | Background `find` command for existence check | Used `find /home/... -name "test_backward_compat_aliases.mojo"` as background task | Output wasn't available when needed | For quick existence checks, use `ls` or `Glob` synchronously |
@@ -268,6 +268,6 @@ Closes #<issue>
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3357, PR #4001 | stale-ci-pattern-detection implementation (13 tests pass) |
 | ProjectOdyssey | Cleanup issues | stale-ci-pattern-removal for deleted test files |

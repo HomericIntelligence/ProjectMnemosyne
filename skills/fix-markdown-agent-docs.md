@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | fix-markdown-agent-docs |
 | **Category** | documentation |
 | **Applies To** | agents/hierarchy.md and similar agent hierarchy docs |
@@ -129,7 +129,7 @@ The Level 3 total = implementation specialists + code review specialists.
 Example after PR #3319 consolidation (13→5 review specialists):
 
 | Category | Count | Agents |
-|----------|-------|--------|
+| ---------- | ------- | -------- |
 | Implementation | 11 | implementation, test, documentation, performance, security, blog writer, numerical stability, test flakiness, PR cleanup, mojo syntax validator, CI failure analyzer |
 | Code Review | 4 | general, mojo language, security, test |
 | **Total L3** | **15** | |
@@ -137,7 +137,7 @@ Example after PR #3319 consolidation (13→5 review specialists):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Match closing fence with surrounding context | Used box-drawing characters from diagram as part of old_string | Box-drawing chars varied in width/encoding between Read output and Edit matcher | Read the exact lines around the closing fence and use minimal unique context (2-3 lines before) |
 | Trust the plan's count directly | Used "10 implementation specialists + 5 code review" from plan doc without verifying | Plan doc was stale; actual files showed 11 + 4 | Always grep actual `.claude/agents/` files to verify counts before editing |
 | Fix all fences with replace_all | Tried replace_all on ` ```text ` → ` ``` ` | Would also replace opening ` ```text ` fences used legitimately for diagrams | Fix each closing fence individually using surrounding context to distinguish from openers |
@@ -170,7 +170,7 @@ grep -r "^level:" .claude/agents/*.md | grep "level: 3" | wc -l
 **Agent level distribution after PR #3319** (ProjectOdyssey):
 
 | Level | Count |
-|-------|-------|
+| ------- | ------- |
 | 0 | 1 |
 | 1 | 6 |
 | 2 | 4 |

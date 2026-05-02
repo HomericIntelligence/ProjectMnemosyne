@@ -14,7 +14,7 @@ Complete TDD-driven workflow for identifying and eliminating code duplication by
 ## Overview
 
 | Attribute | Details |
-|-----------|---------|
+| ----------- | --------- |
 | **Date** | 2026-02-15 |
 | **Objective** | Extract duplicate token aggregation logic into reusable helper method |
 | **Outcome** | ✅ Successfully eliminated duplication, added tests, maintained functionality |
@@ -225,7 +225,7 @@ Use this workflow when you encounter:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -285,7 +285,7 @@ def _aggregate_token_stats(self, tier_results: dict[TierID, TierResult]) -> Toke
 ## Success Metrics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Duplication eliminated | 2 instances → 1 helper |
 | Lines saved | ~15 lines per call site |
 | Test coverage | 4 comprehensive tests |

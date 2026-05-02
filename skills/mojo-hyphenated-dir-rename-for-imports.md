@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-27 |
 | **Objective** | Rename hyphenated example directories to underscores so Mojo can import from them |
 | **Outcome** | 9 directories renamed, 50+ files updated, all CI passes. Filed upstream: modular/modular#6275 |
@@ -80,7 +80,7 @@ grep -rn 'old-name' --include='*.mojo' --include='*.py' --include='*.md' \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Blind replace_all for `getting-started` | Would have changed `docs/getting-started/` references too | `docs/getting-started/` is a separate documentation directory NOT being renamed | Always check if a hyphenated name appears in multiple contexts before global replace |
 | Running full test suite locally after rename | `just test-mojo` to validate | Crashes the machine | Push to CI for full validation, use `just test-group` for targeted checks |
 
@@ -122,5 +122,5 @@ skill/tool names with hyphens   — unrelated to directory imports
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #5130, CI pass, modular/modular#6275 filed | Renamed 9 dirs, updated 50+ files |

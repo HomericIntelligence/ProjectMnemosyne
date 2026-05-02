@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-22 |
 | **Objective** | Apply post-fix accuracy review to a research paper, catching issues that survived or were introduced by the first correction round |
 | **Outcome** | ✅ 6 fixes applied (1 new consistency issue, 1 missed error, 4 optional improvements), 0 LaTeX errors, clean 2-pass compile |
@@ -54,7 +54,7 @@ grep "W=0.835" paper.tex    # Confirm statistical values match data files
 Create a fix verification table:
 
 | Fix | Paper Value | Source Value | Status |
-|-----|-------------|--------------|--------|
+| ----- | ------------- | -------------- | -------- |
 | E1: Shapiro-Wilk W | 0.835, p=9.3e-11 | statistical_results.json: W=0.8351 | CORRECT |
 
 Only proceed to new issues after confirming all prior fixes are sound.
@@ -98,7 +98,7 @@ grep -n "effect)" paper.tex
 **Romano et al. (2006) standard thresholds** (verify paper defines these explicitly):
 
 | Label | δ range |
-|-------|---------|
+| ------- | --------- |
 | negligible | < 0.11 |
 | small | 0.11–0.27 |
 | medium | 0.28–0.42 |
@@ -178,7 +178,7 @@ grep "3\.5\$\\\\times\$" paper.tex  # Confirm ratio updated if changed
 ## Failed Attempts & Lessons Learned
 
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | Grepping for "3.5×" to verify fix | The pattern `3.5$\times$` in LaTeX source didn't match simple grep for `3.5` — other legitimate 3.5 occurrences exist | Use precise LaTeX pattern: `grep "3\.5\$\\\\times\$"` or visually inspect the specific context |
 | Assuming internal consistency after first-round fixes | Fixing one section (analysis) while leaving a stale summary section created a new contradiction N1 | Always cross-reference ALL descriptions of the same entity after any edit |
 | Trusting "medium-large" as a valid Romano category | Romano (2006) defines hard thresholds: small/medium/large — no composite labels | Check the paper's own threshold table and apply the hard boundary rule |
@@ -189,7 +189,7 @@ grep "3\.5\$\\\\times\$" paper.tex  # Confirm ratio updated if changed
 ### Fix Summary (This Session)
 
 | Fix ID | Type | Location | Change |
-|--------|------|----------|--------|
+| -------- | ------ | ---------- | -------- |
 | N1 | New (introduced by prior fix) | Line 288 | "very early stages" → "partially complete with 3 of 7 tiers finished" |
 | E5 | Missed error | Line 574 | "medium-large effect" → "large effect" (δ=0.433 ≥ 0.43) |
 | W1 | Warning/improvement | Tables 4-6 captions | Added "Cost = mean cost per run for best subtest" |
@@ -216,7 +216,7 @@ grep "Cost = mean cost" paper.tex
 ### Prior Fix Verification Table
 
 | Fix | Paper Value | Source | Status |
-|-----|-------------|--------|--------|
+| ----- | ------------- | -------- | -------- |
 | E1: Shapiro-Wilk T2 | W=0.835, p=9.3e-11 | statistical_results.json: W=0.8351, p=9.345e-11 | CORRECT |
 | E2: pairwise p-values | T4→T5 p=0.0024, T5→T6 p=0.0243 | JSON: 0.002373, 0.02430 | CORRECT |
 | E3: test-007 T0 cost | $3.10 | Table 5 row | CORRECT |
@@ -228,7 +228,7 @@ grep "Cost = mean cost" paper.tex
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Branch 1048-haiku-analysis-paper, second review pass | [notes.md](../../references/notes.md) |
 
 ## Key Takeaways

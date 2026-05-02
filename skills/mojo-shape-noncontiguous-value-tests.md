@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | mojo-shape-noncontiguous-value-tests |
 | **Category** | testing |
 | **Language** | Mojo |
@@ -155,7 +155,7 @@ fn assert_all_values(
 For non-contiguous `(4,3)` with strides `[1,4]` (logical `[r,c] = r + 4c`):
 
 | Op | Input | Expected Flat Output |
-|----|-------|----------------------|
+| ---- | ------- | ---------------------- |
 | `reshape([12])` | `(4,3)` nc | `[0,4,8, 1,5,9, 2,6,10, 3,7,11]` |
 | `flatten()` | `(4,3)` nc | `[0,4,8, 1,5,9, 2,6,10, 3,7,11]` |
 | `permute([1,0])` | `(4,3)` nc | `[0,1,2,3, 4,5,6,7, 8,9,10,11]` (original arange) |
@@ -190,7 +190,7 @@ Use this subsection when adding value assertions to existing contiguous shape te
 ### Categorize each test by input type
 
 | Input type | Assertion strategy |
-|------------|--------------------|
+| ------------ | -------------------- |
 | `arange(0..N)` input | Loop `assert_value_at(b, i, Float64(i))` for all N elements |
 | `ones(shape)` input | `assert_all_values(b, 1.0)` |
 | `full(shape, V)` fill | `assert_all_values(b, V)` or spot-check boundary indices |
@@ -280,7 +280,7 @@ var t_nc = transpose_view(t2d)  # (4,3), strides [1,4]
 **Contiguous value assertion results** (Issue #3242, PR #3793):
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | File changed | `tests/shared/core/test_shape.mojo` |
 | Lines added | 31 insertions |
 | Test functions with new assertions | 14 |
@@ -289,7 +289,7 @@ var t_nc = transpose_view(t2d)  # (4,3), strides [1,4]
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Pass message as 3rd positional arg to `assert_value_at` | `assert_value_at(result, i, expected[i], "message")` | 3rd param is `tolerance: Float64`, not `String` — type error | Always check assertion function signatures; use `message=` keyword or 3-arg form |
 | Start docstring with lowercase function name | `"""reshape() on ...` | Mojo compiler requires docstring to start with capital letter or non-alpha | Capitalize first word: `"""Verify reshape()...` or `"""Test reshape()...` |
 | Use `assert_shape` helper | Called `assert_shape(result, expected_shape)` | `assert_shape` takes `(tensor, shape_list)` but validation errors arose | Use explicit shape checks with `result.shape()[0] != N` instead for clarity |

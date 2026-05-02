@@ -11,13 +11,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-30 |
-| Objective | | Field | Value | |-------|-------| | **Date** | 2026-01-30 | | **Objective** | Convert sequential I/O-bound loop to parallel execution using Threa... |
+| Objective | Convert sequential I/O-bound loop to parallel execution using ThreadPoolExecutor |
 | Outcome | Operational |
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-01-30 |
 | **Objective** | Convert sequential I/O-bound loop to parallel execution using ThreadPoolExecutor |
 | **Context** | Parallelizing judge slot reruns in `rerun_judges.py` (subprocess-based LLM judge execution) |
@@ -197,7 +197,7 @@ if tasks:
 ### Key Implementation Details
 
 | Pattern | Purpose |
-|---------|---------|
+| --------- | --------- |
 | `parallel <= 1` check | Skip pool overhead for sequential execution |
 | `len(tasks) <= 1` check | No benefit from pool with single task |
 | `with lock:` blocks | Protect shared stats/sets (minimize critical section) |
@@ -208,7 +208,7 @@ if tasks:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -242,7 +242,7 @@ python scripts/rerun_judges.py /path/to/experiment/ --status missing --dry-run
 ### Performance Characteristics
 
 | Workers | Expected Speedup | Use Case |
-|---------|------------------|----------|
+| --------- | ------------------ | ---------- |
 | 1 | 1× (sequential) | Default, debugging, low concurrency |
 | 3-6 | 3-6× | Typical LLM API calls (rate limits) |
 | 10+ | 10×+ | High-throughput I/O (file processing) |

@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-30 |
 | **Objective** | Fix undefined behavior in cpp-httplib route handlers that capture shared state |
 | **Outcome** | Successful — root cause identified and fixed across 20+ route handlers |
@@ -69,7 +69,7 @@ void register_routes(httplib::Server& server, Store& store) {
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `[&store]` capture | Reference capture of function parameter | cpp-httplib stores handlers in `std::function` by value — the lambda outlives the `register_routes` stack frame, leaving a dangling reference | cpp-httplib copies lambdas into internal handler storage; any by-ref capture of a local/parameter is UB |
 | `[&]` default capture | Capture everything by reference | Same problem — all references dangle after function returns | Never use `[&]` in cpp-httplib route handlers |
 
@@ -91,5 +91,5 @@ void register_routes(httplib::Server& server, Store& store, NatsClient& nats) {
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectAgamemnon | E2E pipeline implementation | 20+ route handlers fixed from [&store] to [sp] capture pattern |

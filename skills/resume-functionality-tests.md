@@ -17,7 +17,7 @@ tags:
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-04 |
 | **Objective** | Add comprehensive test coverage for checkpoint/resume system across all failure modes |
 | **Outcome** | ✅ 15 test cases covering agent crash, judge crash, signal handling, partial completion, config mismatch |
@@ -204,7 +204,7 @@ class TestCheckpointOperations:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -324,5 +324,5 @@ class TestCheckpointOperations: ...        # 3 tests
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #142 - Resume functionality tests for E2E experiments | [notes.md](../../references/notes.md) |

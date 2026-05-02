@@ -15,7 +15,7 @@ generate a shell script to file all GitHub issues at once (rather than filing is
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-02-19 | Analyze 47-test dry run (Haiku/T0), write analysis files, generate issue script | All files written under `<results-dir>/analysis/`, `file_issues.sh` syntax-checks clean |
 
 ## When to Use
@@ -244,12 +244,12 @@ When `best_score < 1.0`, the test partially passed. A score of 0.667 means 2/3 s
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | 47-test dry run, Haiku/T0, 2026-02-14 | [notes.md](../references/notes.md) |
 
 ## Related Skills

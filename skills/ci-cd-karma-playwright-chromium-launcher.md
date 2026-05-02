@@ -14,7 +14,7 @@ tags: [ci-cd, github-actions, playwright, karma, chromium]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-22 |
 | **Objective** | Make GitHub Actions frontend unit tests use Playwright-installed Chromium instead of depending on system Chrome discovery. |
 | **Outcome** | Successful locally. Karma continued using the Chrome launcher API, but the actual browser binary came from Playwright Chromium through `CHROME_BIN`. |
@@ -60,7 +60,7 @@ npm test -- --watch=false --browsers=PlaywrightChromiumHeadless
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | System Chrome discovery | Looked up `google-chrome`, `chromium`, or `chromium-browser` on the runner | This depends on runner image state and reintroduced exactly the environment variability the fix was trying to remove | Install and own the browser dependency inside the job |
 | Keeping the old launcher contract | Left the workflow and CI contract tests pinned to `ChromeHeadless` strings | The repo’s own CI contract tests then failed even though the browser source changed correctly | Update test contracts and workflow text together when renaming CI launchers |
 | Treating “Playwright” as a full Karma launcher replacement | Expected the runtime logs to stop mentioning `ChromeHeadless` entirely | Karma still uses the Chrome launcher plugin under the hood, so only the binary source changed | Distinguish between launcher API name and actual browser binary source |
@@ -100,5 +100,5 @@ pytest: 6 passed
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Radiance | PR #110 rebase + frontend CI browser change | Rebased against `origin/master`, resolved workflow conflict in favor of Playwright Chromium, and updated the CI contract to match |

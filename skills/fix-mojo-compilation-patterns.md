@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-29 |
 | Objective | Consolidated patterns for fixing Mojo compilation errors: import path changes, format line limits, nightly version mismatches, and migration artifact cleanup |
 | Outcome | Merged from 4 skills covering CI compilation errors, format line length, migration artifacts, and nightly compatibility |
@@ -66,7 +66,7 @@ pixi run mojo package -I . shared -o /tmp/shared.mojopkg 2>&1 | grep "error:\|wa
 When CI fails due to module renames or Python type errors:
 
 | Error Type | Root Cause | Fix |
-|------------|-----------|-----|
+| ------------ | ----------- | ----- |
 | mypy `X \| Y` unsupported | `python_version` in `mypy.ini` too low | Bump to match runtime (e.g., 3.12) |
 | Mojo import not found | Module was renamed/moved | Check actual module path in `shared/` package `__init__.mojo` files |
 | `assert_equal` won't compile | Type doesn't implement required trait | Use `assert_true(a == b, msg)` instead |
@@ -127,7 +127,7 @@ When mojo-format CI fails and mojo binary is unavailable locally:
 **Mojo Format Line-Wrapping Rules**:
 
 | Rule | Detail |
-|------|--------|
+| ------ | -------- |
 | Line limit | 88 characters |
 | String splitting | Implicit concatenation with leading space on continuation |
 | Wrap style | `print(\n    "first part"\n    " continuation"\n)` |
@@ -162,7 +162,7 @@ grep -rn '^\s*alias\b' --include='*.mojo'
 **Fix other deprecation warnings**:
 
 | Warning | Fix |
-|---------|-----|
+| --------- | ----- |
 | `ptr.offset(n)` | `ptr + n` |
 | `transfer ^ on owned value` | Remove the `^` |
 | `owned` keyword | Replace with `var` in function params |
@@ -223,7 +223,7 @@ Even for CI fix commits — never push directly to main.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run `pixi run mojo format` locally | Execute mojo formatter to auto-fix files | GLIBC_2.32/2.33/2.34 not found on host OS (Debian Buster, glibc 2.31) | Mojo requires newer GLIBC than some CI/dev hosts have |
 | Run `just pre-commit-all` locally | Apply all pre-commit hooks including mojo-format | Same GLIBC incompatibility blocks mojo binary | Pre-commit hooks using mojo also fail on incompatible hosts |
 | Skip and rely on CI to auto-fix | Let CI apply the format and commit back | CI does not commit back — it just fails | Must apply formatting fixes manually when mojo unavailable |
@@ -243,7 +243,7 @@ Continuation: leading space on continuation strings
 ### Nightly Compatibility Fix Counts (Example Session)
 
 | Fix Type | Count |
-|----------|-------|
+| ---------- | ------- |
 | `String[byte=]` replacements | ~14 across 5 files |
 | `alias` -> `comptime` replacements | 55 across 8 files |
 | `owned` -> `var` replacements | 9 across 2 files |

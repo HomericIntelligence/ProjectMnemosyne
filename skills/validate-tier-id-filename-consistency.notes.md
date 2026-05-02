@@ -73,7 +73,7 @@ PR #945 created, auto-merge enabled.
 ## File Changes
 
 | File | Type | Lines changed |
-|------|------|--------------|
+| ------ | ------ | -------------- |
 | `scylla/config/loader.py` | Modified | +14, -1 (lines 244–261) |
 | `tests/unit/test_config_loader.py` | Modified | +25, -0 (after line 194) |
 

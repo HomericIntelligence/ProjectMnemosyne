@@ -17,7 +17,7 @@ read from disk exactly once per process lifetime, regardless of how many config 
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-07 |
 | Objective | Eliminate N redundant file reads in `load_all_tiers()` / `load_all_models()` by caching JSON schemas at module level |
 | Outcome | Success — PR HomericIntelligence/ProjectScylla#1461 merged |
@@ -120,7 +120,7 @@ valid_tier = {"tier": "t0", "name": "Prompts", "description": "desc", "subtests"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -133,5 +133,5 @@ valid_tier = {"tier": "t0", "name": "Prompts", "description": "desc", "subtests"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1461, issue #1437 (follow-up to #1380 / PR #1424) | `scylla/config/loader.py` |

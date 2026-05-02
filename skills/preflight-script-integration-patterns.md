@@ -14,11 +14,11 @@ tags: [preflight, bash, automation, closingIssuesReferences, script, gh-implemen
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Build and maintain automated preflight check scripts integrated into issue-implementation workflows |
 | **Outcome** | Preflight gates worktree creation; 100% adoption enforced; false positives eliminated via `closingIssuesReferences` |
-| **Key Learning** | Use `set -uo pipefail` (not `-e`), `|| true` for grep, and `closingIssuesReferences` (not free-text PR search) |
+| **Key Learning** | Use `set -uo pipefail` (not `-e`), `\|\| true` for grep, and `closingIssuesReferences` (not free-text PR search) |
 
 Consolidates: `gh-implement-issue-preflight-integration`, `preflight-check-skill-propagation`, `preflight-closing-issues-fix`.
 
@@ -112,7 +112,7 @@ Key: `grep -qx "$ISSUE"` uses full-line match to prevent `73` matching `735`.
 ### Step 3: Exit Code Discipline
 
 | Exit | Check | Reason |
-|------|-------|--------|
+| ------ | ------- | -------- |
 | 1 | Issue CLOSED | Never proceed — work complete or abandoned |
 | 1 | PR MERGED (via `closingIssuesReferences`) | Duplicate work risk |
 | 1 | Worktree exists | Git prevents two worktrees on same branch |
@@ -148,7 +148,7 @@ strip_ansi() { echo "$1" | sed 's/\x1b\[[0-9;]*m//g'; }
 Six test cases to cover:
 
 | Test | Scenario | Expected exit |
-|------|----------|---------------|
+| ------ | ---------- | --------------- |
 | 1 | No PRs exist | 0 (PASS) |
 | 2 | MERGED PR, `closingRef=[issue]` | 1 (STOP) |
 | 3 | OPEN PR, `closingRef=[issue]` | 0 (WARN) |
@@ -182,8 +182,8 @@ gh pr merge --auto --rebase <pr-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
-| `set -e` with grep in script | Used `set -e` and ran `git log ... \| grep "$ISSUE" \| head -5` | `grep` returns exit code 1 when no matches found; script aborted silently, looking like a critical failure | Use `set -uo pipefail` and capture with `|| true`:`EXISTING_COMMITS=$(... || true)` |
+| --------- | ---------------- | --------------- | ---------------- |
+| `set -e` with grep in script | Used `set -e` and ran `git log ... \| grep "$ISSUE" \| head -5` | `grep` returns exit code 1 when no matches found; script aborted silently, looking like a critical failure | Use `set -uo pipefail` and capture with `\|\| true`: `EXISTING_COMMITS=$(...\|\| true)` |
 | Treating open PRs as critical failures | Hard-stopped on any open PR | An open PR may be stale, abandoned, or collaborative — blocks legitimate handoff scenarios | Open PR → WARN (exit 0). Only MERGED PRs closing the issue are critical (exit 1) |
 | Script at repo root or top-level `scripts/` | Placed `preflight_check.sh` at `scripts/preflight_check.sh` | Breaks discoverability and portability; doesn't communicate skill ownership | Collocate scripts with their skill: `<test-path>/skills/<skill-name>/scripts/` |
 | Using `gh pr list --search "<issue-number>"` for ownership | Free-text PR search for issue number | Full-text search matches any PR mentioning the number in title or body — false positives on "Fix issue 735-related bug" for issue 735 | Use `closingIssuesReferences` via `gh pr view "$pr_num" --json closingIssuesReferences` |
@@ -202,7 +202,7 @@ gh pr merge --auto --rebase <pr-number>
 ### Check Sequence Summary
 
 | Check | Type | Exit on failure |
-|-------|------|----------------|
+| ------- | ------ | ---------------- |
 | 1. Issue state | `gh issue view "$ISSUE" --json state,title,closedAt` | exit 1 (CLOSED) |
 | 2. Existing commits | `git log --all --oneline --grep="#${ISSUE}" \| head -5` | exit 0 (WARN) |
 | 3. PR via `closingIssuesReferences` | Two-phase lookup (see above) | exit 1 (MERGED), exit 0 (OPEN) |
@@ -213,7 +213,7 @@ gh pr merge --auto --rebase <pr-number>
 ### Key Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | PR fetch limit | `--limit 100` (avoids timeout on large repos) |
 | `closingIssuesReferences` jq expression | `.closingIssuesReferences[].number` |
 | grep for exact issue match | `grep -qx "$ISSUE"` (full-line match, avoids 73 matching 735) |
@@ -222,7 +222,7 @@ gh pr merge --auto --rebase <pr-number>
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #735 — integrate preflight into gh-implement-issue | PR #917, 100% adoption enforced |
 | ProjectScylla | Issue #802 — fix false positives in Check 3 | PR #912, 6 bash tests passing |
 | ProjectScylla | Issue #803 — propagate preflight to worktree-create | PR #917, docs-only change |

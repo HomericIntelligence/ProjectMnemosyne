@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-10 |
 | **Objective** | Fix ASAN-reported pooled_alloc memory leaks in `AnyTensor.copy()` caused by missing `ptr.free()` after `UnsafePointer.take_pointee()` |
 | **Outcome** | Successful — ASAN tests pass after adding `ptr.free()` |
@@ -86,7 +86,7 @@ def copy(self) -> Self:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assume `take_pointee()` frees the pointer | Relied on the assumption that moving the value out would also release the heap allocation | `take_pointee()` only moves the VALUE; the allocation backing the pointer is unrelated and must be freed separately with `ptr.free()` | `take_pointee()` and `ptr.free()` are orthogonal operations — always pair them |
 | Rewrite to avoid `mem_alloc` entirely | Attempted to construct the value directly on the stack without a temporary pointer | Pattern is sometimes required for trait-based initialization where the object needs to be addressable during construction | Use the `mem_alloc` + `take_pointee()` + `ptr.free()` triple when in-place initialization is unavoidable |
 | Ignore ASAN warnings as false positives | Dismissed `pooled_alloc` reports as noise from Mojo's internal allocator | ASAN accurately identified 18 genuine allocations (13944 bytes) that were never freed, tracing back exactly to `AnyTensor.copy()` | Never dismiss ASAN `pooled_alloc` warnings; they point to real allocation/free mismatches |
@@ -121,5 +121,5 @@ mem_alloc[T](n) + take_pointee()  →  must call ptr.free() before function exit
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #5210 ASAN leak investigation | Fix commit `9126cf99`; CI ASAN tests passing after fix |

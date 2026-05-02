@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-20 |
 | Issue | #758 |
 | PR | #871 |
@@ -97,20 +97,20 @@ gh pr merge --auto --rebase <pr-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Actual change made
 
 | File | Location | Before | After |
-|------|----------|--------|-------|
+| ------ | ---------- | -------- | ------- |
 | `CONTRIBUTING.md` | Line ~190-191 | `- [x] Documentation updated" \` + `--label "appropriate-label"` | `- [x] Documentation updated"` |
 
 ### Files checked but not changed
 
 | File | Status |
-|------|--------|
+| ------ | -------- |
 | `CLAUDE.md` | Already correct — "Never use labels" rule present |
 | `.claude/shared/pr-workflow.md` | Already correct — no `--label` usage |
 

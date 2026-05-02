@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Category** | documentation |
 | **Complexity** | XS (extra-small) |
 | **Typical runtime** | < 3 minutes |
@@ -96,7 +96,7 @@ Closes #<issue-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Staging with `git add -A` | Added all untracked files | Picked up `tests/__pycache__/` and `tests/scripts/__pycache__/` directories | Always use `git add <specific-file>` for docstring-only changes to keep the commit clean |
 | Using Skill tool for commit | Invoked `commit-commands:commit` skill | Skill tool denied in don't-ask mode for this session | Fall back to direct `git commit -m "$(cat <<'EOF'...EOF)"` bash command |
 | Writing new docstring from scratch | Attempted to overwrite the entire docstring | Risk of losing existing content and introducing whitespace differences | Always Read the file first, then use Edit with targeted `old_string`/`new_string` |

@@ -13,7 +13,7 @@ Replace academic grading scales with production-readiness focused thresholds.
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-01-02 |
 | Objective | Replace academic A=95%/B=85% grading with industry-aligned scale |
 | Outcome | Centralized grading definition with S/A/B/C/D/F scale |
@@ -38,7 +38,7 @@ Academic grading (A=95%, B=85%, C=75%, D=65%) has issues for software evaluation
 ## Industry-Aligned Grade Scale
 
 | Grade | Threshold | Label | Description |
-|-------|-----------|-------|-------------|
+| ------- | ----------- | ------- | ------------- |
 | S | 1.00 | Amazing | Exceptional, above and beyond |
 | A | 0.80 | Excellent | Production ready, no issues |
 | B | 0.60 | Good | Minor improvements possible |
@@ -49,7 +49,7 @@ Academic grading (A=95%, B=85%, C=75%, D=65%) has issues for software evaluation
 ### Score Interpretation
 
 | Score Range | Action |
-|-------------|--------|
+| ------------- | -------- |
 | 1.00 | Ship immediately |
 | 0.80-0.99 | Ship with confidence |
 | 0.60-0.79 | Ship after minor fixes |
@@ -133,7 +133,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Industry Standards Research
 

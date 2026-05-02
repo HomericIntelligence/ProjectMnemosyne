@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Trigger** | PR review finds stale links in `.claude/agents/*.md` after consolidation |
 | **Scope** | `.claude/agents/` directory |
 | **Output** | Updated `Coordinates With` sections pointing to replacement agents |
@@ -88,7 +88,7 @@ pre-existing and not caused by cross-reference fixes. Zero errors = passing.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Merging two lines into continuation indent | `- [General...] - Suggests...\n  untested code paths` | Markdownlint may reject indented continuation in list items | Prefer shortening the description to a single line under 120 chars |
 | Running `just pre-commit-all` | `just: command not found` | `just` not installed on this host | Fall back to `pre-commit run --all-files` directly |
 | Running `npx markdownlint-cli2` directly | `npx: command not found` | Node.js not in PATH outside pixi env | Use `pixi run npx markdownlint-cli2` or rely on pre-commit hook |

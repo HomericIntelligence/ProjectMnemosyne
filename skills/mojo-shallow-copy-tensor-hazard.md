@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `tensor.copy()` in Mojo is `__copyinit__` — a shallow copy sharing the underlying `_data` buffer |
 | **Symptom** | Mutations to the copy silently corrupt the caller's original tensor |
 | **Fix** | Replace `tensor.copy()` with `_deep_copy(tensor)` to get an independent buffer |
@@ -69,7 +69,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Restoring value after each loop iteration | Already done — `input_copy_plus._set_float64(i, original_val)` at end of loop | Does not help: restoration writes to the same shared buffer, so the caller's tensor is already mutated before restoration | Restoration cannot fix a shared buffer; only independent allocation can |
 | Using `__copyinit__` directly | `__copyinit__` is exactly what `.copy()` calls — same shallow behaviour | Identical to the original bug | Mojo `__copyinit__` for ExTensor is explicitly shallow |
 

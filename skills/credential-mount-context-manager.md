@@ -16,7 +16,7 @@ cleanup to fix silent resource leaks caused by Docker mount-release race conditi
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-02-22 |
 | Objective | Fix `.scylla-temp-creds-*` directory leak — 498 credential copies accumulating in `~/` |
 | Outcome | ✅ Success — 0 leaked dirs after fix; 498 existing dirs cleaned up via recovery utility |
@@ -225,7 +225,7 @@ rm -rf ~/.scylla-temp-creds-*  # adapt glob to your naming convention
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -254,7 +254,7 @@ One module → one context manager → imported by all managers.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1010 — Fixed 498 leaked `.scylla-temp-creds-*` dirs | [notes.md](../references/notes.md) |
 
 ## References

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | mojo-numerical-gradient-test |
 | **Category** | testing |
 | **Applies To** | Mojo ML layer backward pass tests |
@@ -114,7 +114,7 @@ rtol = 2e-2, atol = 1e-4
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `grad_output = ones(...)` | Using uniform all-ones grad_output as in structural tests | `sum(grad_output * x_hat) = sum(x_hat) = 0` by normalization — last backward term vanishes, masking bugs | Always use non-uniform grad_output for normalization backward tests |
 | `epsilon = 1e-3` for layer norm | Using same finite-difference step as batch norm | Acceptable but 1e-4 gives tighter numerical gradients for the simpler layer norm structure | Use 1e-4 for layer norm; reserve 1e-3 for batch norm with more intermediate steps |
 | `atol = 1e-4` for layer norm | Matching batch norm tolerance | Layer norm is simpler (fewer intermediate steps) so tighter tolerance 1e-5 is achievable | Match atol to layer complexity: layer norm 1e-5, batch norm 1e-4 |

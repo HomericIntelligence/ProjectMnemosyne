@@ -14,7 +14,7 @@ tags: [docker, dockerfile, from, comment, parse-error, sha256, digest]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-23 |
 | **Objective** | Fix Docker build parse error caused by inline comments on FROM lines |
 | **Outcome** | All three base Dockerfiles fixed; CI passed after removing inline comments |
@@ -68,7 +68,7 @@ grep -rn "^FROM.*#" bases/ vessels/ Dockerfile*
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Inline comment after SHA256 digest | `FROM debian:bookworm-slim@sha256:abc123... # label` | Docker parser treats `# label` as a 4th positional argument to FROM; FROM only accepts 1 or 3 args | Comments on FROM lines must be on a separate line above the instruction, never inline |
 
 ## Results & Parameters
@@ -87,7 +87,7 @@ Docker's Dockerfile parser does not strip inline comments from instruction lines
 ### Pattern to Fix
 
 | Pattern | Status | Notes |
-|---------|--------|-------|
+| --------- | -------- | ------- |
 | `FROM image:tag # comment` | BROKEN | Comment is 2nd arg; only 1 allowed unless AS alias is 3rd |
 | `FROM image@sha256:... # comment` | BROKEN | Comment is 4th arg when combined with digest |
 | `# comment\nFROM image:tag` | CORRECT | Comment on its own line before FROM |
@@ -96,5 +96,5 @@ Docker's Dockerfile parser does not strip inline comments from instruction lines
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | AchaeanFleet | CI repair session — all 3 base Dockerfiles had this issue | 2026-04-23; CI went green after fix |

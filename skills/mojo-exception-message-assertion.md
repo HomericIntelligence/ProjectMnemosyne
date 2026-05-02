@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-07 |
 | **Issue** | #3389 — Verify `__setitem__` error message text in out-of-bounds test |
 | **Objective** | Replace bare `except:` with `except e:` and assert `String(e) == "Index out of bounds"` |
@@ -120,7 +120,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Used `testing.assert_equal` directly | Called `testing.assert_equal(String(e), "...")` without importing `testing` | `testing` module not imported in the test file | Check existing imports first; use the project's `assert_equal` helper from conftest instead |
 | Run mojo test locally | `pixi run mojo test tests/shared/core/test_utility.mojo` | GLIBC_2.32/2.33/2.34 not found on host | Mojo tests must run in Docker/CI on this dev machine; pre-commit hooks are the local gate |
 
@@ -129,7 +129,7 @@ gh pr merge --auto --rebase
 ### Pattern Summary
 
 | Component | Before | After |
-|-----------|--------|-------|
+| ----------- | -------- | ------- |
 | Exception binding | `except:` (bare) | `except e:` (named) |
 | Variable name | `raised` | `error_raised` |
 | Message assertion | None | `assert_equal(String(e), "exact message")` |
@@ -144,5 +144,5 @@ gh pr merge --auto --rebase
 ### Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3389, PR #4070, follow-up from #3165 | [notes.md](../references/notes.md) |

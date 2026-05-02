@@ -11,14 +11,14 @@ user-invocable: false
 
 ## Overview
 
-| Field       | Value                                                                  |
-|-------------|------------------------------------------------------------------------|
-| Date        | 2026-02-20                                                             |
-| Issue       | #793                                                                   |
-| PR          | #838                                                                   |
-| Objective   | Eliminate hardcoded model-ID literals that silently drift from config  |
-| Outcome     | Success — single source of truth in `config/defaults.yaml`            |
-| Category    | architecture                                                           |
+| Field | Value |
+| ------------- | ------------------------------------------------------------------------ |
+| Date | 2026-02-20 |
+| Issue | #793 |
+| PR | #838 |
+| Objective | Eliminate hardcoded model-ID literals that silently drift from config |
+| Outcome | Success — single source of truth in `config/defaults.yaml` |
+| Category | architecture |
 
 ## When to Use
 
@@ -138,28 +138,28 @@ pre-commit run --all-files                    # all hooks pass
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
-| Parameter         | Value                        |
-|-------------------|------------------------------|
-| Files changed     | 5                            |
-| Lines added       | 41                           |
-| Lines removed     | 2                            |
-| Tests added       | 1                            |
-| Total tests       | 2267 (all passing)           |
-| Pre-commit hooks  | 13 / 13 passing              |
+| Parameter | Value |
+| ------------------- | ------------------------------ |
+| Files changed | 5 |
+| Lines added | 41 |
+| Lines removed | 2 |
+| Tests added | 1 |
+| Total tests | 2267 (all passing) |
+| Pre-commit hooks | 13 / 13 passing |
 
 ### Files Modified
 
-| File                             | Change                                                  |
-|----------------------------------|---------------------------------------------------------|
-| `config/defaults.yaml`           | Added `default_model` key                               |
-| `scylla/config/models.py`        | Added `default_model` field to `DefaultsConfig`         |
-| `scylla/cli/main.py`             | Replaced literal with `ConfigLoader().load_defaults()…` |
-| `scylla/orchestrator.py`         | Updated docstring example                               |
-| `tests/unit/cli/test_cli.py`     | Added `test_run_default_model_from_config`              |
+| File | Change |
+| ---------------------------------- | --------------------------------------------------------- |
+| `config/defaults.yaml` | Added `default_model` key |
+| `scylla/config/models.py` | Added `default_model` field to `DefaultsConfig` |
+| `scylla/cli/main.py` | Replaced literal with `ConfigLoader().load_defaults()…` |
+| `scylla/orchestrator.py` | Updated docstring example |
+| `tests/unit/cli/test_cli.py` | Added `test_run_default_model_from_config` |
 
 ## Key Insight
 

@@ -13,7 +13,7 @@ phase: Cleanup
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Refactor and finalize code after all parallel phases (Test, Implementation, Package) are complete. - After Test, Implementation, and Package phases... |
 | Outcome | Operational |
@@ -136,7 +136,7 @@ fn preprocess_data(data: RawData) -> Tensor:
 ## Error Handling
 
 | Issue | Action |
-|-------|--------|
+| ------- | -------- |
 | TODOs remain | Document in issue or remove code |
 | Tests fail | Revert changes, debug, try again |
 | Coverage low | Add tests for uncovered lines |
@@ -171,7 +171,7 @@ git status  # No uncommitted changes
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

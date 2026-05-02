@@ -46,7 +46,7 @@
 ## Cross-References Updated (7 files)
 
 | File | Old Reference | New Reference |
-|------|--------------|---------------|
+| ------ | -------------- | --------------- |
 | `agents/hierarchy.md` | `[agent-hierarchy.md](agent-hierarchy.md)` | removed (self-ref) |
 | `agents/README.md` (line 476) | description of agent-hierarchy.md | updated description |
 | `agents/README.md` (line 503) | `[Complete Agent Hierarchy](agent-hierarchy.md)` | `hierarchy.md` |

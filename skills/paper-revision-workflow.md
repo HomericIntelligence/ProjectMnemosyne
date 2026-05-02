@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-01 |
 | **Objective** | Systematically revise research paper for data accuracy, structural quality, and tone consistency |
 | **Outcome** | ✅ Success - 9 data corrections, 2 structural trims, complete tone unification across §9-§12 |
@@ -141,7 +141,7 @@ Did I answer my original questions? Partially. CoP lets me quantify efficiency..
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Failed: Editing without reading first

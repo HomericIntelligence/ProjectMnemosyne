@@ -13,7 +13,7 @@ tags: [mojo, type-errors, subscript, setitem, getitem, lvalue, ExTensor, Float32
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-21 |
 | **Objective** | Fix 314 type errors after replacing bitcast UAF writes with subscript assignment |
 | **Outcome** | All errors resolved; discovered Mojo `obj[i]=val` uses lvalue, not `__setitem__` |
@@ -50,7 +50,7 @@ This means `__setitem__` overloads for `Float64`, `Float16`, `Int64`, etc. are *
 ### Step 2: Choose the Right Fix Pattern
 
 | Context | Pattern | Example |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | RHS is same type as `__getitem__` return | Direct assignment | `result[i] = Float32(expr)` |
 | RHS is different type, in `raises` context | `set()` method | `result.set(i, Float64(expr))` |
 | Inside `@parameter fn` / `parallelize[]` closure | Direct pointer write | `result._set_float64(i, Float64(expr))` |
@@ -110,7 +110,7 @@ grad_beta.set(f, Float64(grad_beta[f]) + grad_out)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Add `__setitem__` overloads | Added 9 new `__setitem__` overloads for Float16, Int, Int8, etc. | Mojo never dispatches `obj[i] = val` to `__setitem__` -- these are dead code | `__setitem__` in Mojo is not called via subscript assignment syntax |
 | Wrap all RHS in `Float32()` | Changed `result[i] = Float64(x)` to `result[i] = Float32(x)` everywhere | Introduced "cannot call function that may raise" errors in `@parameter fn` closures | `Float32()` constructor raises; can't use in non-raising contexts like `parallelize[]` |
 | Delegate to sub-agents (round 1) | Launched 8 parallel agents to fix all files | Agents only fixed ~60% of errors; missed Float16 paths and arithmetic mismatches | Sub-agents need explicit error line numbers and all error categories enumerated |
@@ -155,5 +155,5 @@ shared/core/pooling.mojo        -- 12 lines changed
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4996 follow-up fix | Fixed 314 type errors across 9 files after bitcast UAF migration |

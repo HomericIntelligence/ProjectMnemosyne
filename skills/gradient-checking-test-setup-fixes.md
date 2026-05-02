@@ -24,7 +24,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-09 |
 | **Objective** | Complete migration from `check_gradients()` to `check_gradient()` across all gradient checking tests |
 | **Outcome** | All 5 remaining test files migrated (59 calls). 2 meta-test files intentionally keep `check_gradients()`. PR #5210. |
@@ -164,7 +164,7 @@ Writing or migrating a gradient checking test?
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Increasing tolerance to hide batch norm mismatch | Raise tolerance from 1e-2 to 1e-1 | Masks the real issue -- doesn't validate the backward pass correctly | Fix the test setup, not the threshold |
 | Fixing the batch norm backward formula | Suspected formula bug since analytical=0 but numerical=0.09 | The formula IS correct -- zero is the right answer for uniform grad_output | Verify the math before assuming the implementation is wrong |
 | Using epsilon=1e-5 for conv2d | Smaller epsilon for more accurate finite differences | Float32 rounding error gets WORSE with smaller epsilon (~56% precision loss) | Smaller epsilon != more accurate in float32; use 3e-4 |
@@ -209,6 +209,6 @@ Only 2 files keep check_gradients(): meta-tests that need Bool return value.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #5107 (2 commits), CI Core Gradient group | [notes.md](./gradient-checking-test-setup-fixes.notes.md) |
 | ProjectOdyssey | PR #5210, 5 files / 59 calls migrated | Migration complete across entire test suite |

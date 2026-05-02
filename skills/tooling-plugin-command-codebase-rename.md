@@ -14,7 +14,7 @@ tags: [rename, plugin, command, refactor, bulk-rename, mnemosyne]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-26 |
 | **Objective** | Rename `skills-registry-commands` plugin to `mnemosyne` and `/retrospective` command to `/learn` across 41 files |
 | **Outcome** | All references updated, CI passes, zero stale references remaining |
@@ -87,7 +87,7 @@ git worktree prune
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `git mv` for directory rename | `git mv plugins/tooling/old plugins/tooling/new` | Failed with "bad source" error on directory-to-directory rename | Use plain `mv` + `git add -A` instead of `git mv` for directory renames |
 | Parallel agents in shared worktree | Launched 3 parallel Haiku agents to edit non-overlapping files in same worktree | Worktree was lost/cleaned up between phases, losing all edits | Use ONE comprehensive agent for all content edits in a shared worktree, or use separate worktrees per agent |
 | Split content edits across 3+ agents | Each agent edited its group of files (plugin files, docs, skills) | Work was lost when worktree disappeared; had to redo everything | Single Sonnet agent handling all 41 files is more reliable than 3 parallel Haiku agents |
@@ -125,7 +125,7 @@ replacements:
 ### File Groups Affected
 
 | Group | Count | Examples |
-|-------|-------|---------|
+| ------- | ------- | --------- |
 | Plugin internals | 8 | plugin.json, commands/*.md, hooks/*.py |
 | Root config | 2 | .claude/settings.json, .claude/hooks/ |
 | Documentation | 5 | CLAUDE.md, README.md, CONTRIBUTING.md |
@@ -134,5 +134,5 @@ replacements:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | PR #1061, full plugin+command rename | 2026-03-26 session |

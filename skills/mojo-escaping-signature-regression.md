@@ -16,7 +16,7 @@ tags: [mojo, escaping, gradient-checker, function-signatures, type-mismatch, bui
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-20 |
 | **Objective** | Fix build-blocking regression caused by removing `escaping` from shared library fn type parameters |
 | **Outcome** | Restored `escaping` on 3 gradient_checker functions, converted test helpers to local escaping closures |
@@ -102,7 +102,7 @@ just build  # Package compilation should succeed
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Remove `escaping` from gradient_checker.mojo | Removed `escaping` from 3 fn type params to simplify signatures | Broke `layer_testers.mojo` which passes escaping closures -- type mismatch at build time | `escaping` is part of the fn type; removing it is a breaking API change |
 | Top-level test helpers without `escaping` | Defined helpers as top-level `fn foo(x: ExTensor) raises -> ExTensor` | Top-level fns are non-escaping by default; can't pass to `escaping` fn params | Convert to local closures with explicit `escaping` annotation |
 | VGG16 output range test with `ones` input | Used `ones(input_shape, DType.float32)` for deep network forward pass | Values overflow to `inf` through 16 conv+ReLU + 3 FC layers | Use `full(input_shape, 0.01, DType.float32)` for deep networks |
@@ -131,5 +131,5 @@ just build  # Package compilation should succeed
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4994 CI fix round 2 | Commit 2e52580d restored escaping and fixed VGG16 overflow |

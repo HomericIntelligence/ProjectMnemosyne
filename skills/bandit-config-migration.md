@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-07 |
 | **Objective** | Move bandit B310/B202 skip flags from pre-commit `--skip` CLI arg to a `.bandit` config file |
 | **Outcome** | `.bandit` INI at repo root, `pixi run bandit` works for developers, pre-commit hook uses `--ini .bandit` |
@@ -121,7 +121,7 @@ pixi run pre-commit run --all-files bandit
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `[tool.bandit]` in pyproject.toml | Added `[tool.bandit]` with `targets` and `skips` arrays | Bandit 1.9.x does not read `pyproject.toml`; it only reads `.bandit` INI files via `--ini` or auto-discovery within target dirs | Always verify with `bandit --version` and check source — `[tool.bandit]` is a community expectation, not reality for 1.9.x |
 | `pixi run bandit -r scripts/` as task | Set pixi task to `bandit -r scripts/` then tried `pixi run bandit -ll -r scripts/` | Pixi tasks append extra args after the task command, causing `bandit -r scripts/ -ll -r scripts/` which bandit rejects as duplicate args | Pixi task args are appended, not replaced — keep pixi tasks minimal (`bandit --ini .bandit`) with no positional args |
 | `bandit --ini .bandit` without `recursive = true` | Set targets in `.bandit` but no recursive flag | Bandit skipped the directory with warning "Skipping directory (scripts), use -r flag to scan contents" | The `.bandit` INI `recursive = true` is required; `targets` alone doesn't enable recursion |
@@ -130,7 +130,7 @@ pixi run pre-commit run --all-files bandit
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Bandit version | 1.9.4 |
 | Config file format | INI (configparser), `[bandit]` section |
 | `pyproject.toml [tool.bandit]` support | Not supported in 1.9.x |
@@ -161,5 +161,5 @@ pixi run pre-commit run --all-files bandit
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3361, PR #4017 | [notes.md](../references/notes.md) |

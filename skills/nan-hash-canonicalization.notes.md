@@ -95,7 +95,7 @@ The one failing check (`Ruff Check Python` — F811 redefinition in
 ## NaN Bit Pattern Reference
 
 | Type | Bits (hex) | Description |
-|------|-----------|-------------|
+| ------ | ----------- | ------------- |
 | Float32 +qNaN | `0x7FC00000` | Positive quiet NaN (canonical) |
 | Float32 -qNaN | `0xFFC00000` | Negative quiet NaN |
 | Float32 sNaN | `0x7F800001` | Signaling NaN (MSB mantissa = 0, payload = 1) |

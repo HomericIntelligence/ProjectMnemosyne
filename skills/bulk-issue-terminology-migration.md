@@ -13,7 +13,7 @@ tags: [github, issues, bulk-update, terminology, migration, myrmidon-swarm]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-05 |
 | **Objective** | Purge all deprecated "ai-maestro" references from ~80 open issues across 10 HomericIntelligence repos |
 | **Outcome** | Success — 5 parallel Sonnet agents updated all issues with context-sensitive mapping |
@@ -75,7 +75,7 @@ This gives you exact matches in issue bodies. Run for all repos and collect a fu
 Before writing agent prompts, produce an explicit bidirectional mapping table:
 
 | Old Term | New Term | Notes |
-|----------|----------|-------|
+| ---------- | ---------- | ------- |
 | `ai-maestro` | `ProjectAgamemnon` | In prose |
 | `ai-maestro API` | `ProjectAgamemnon REST API` | API references |
 | `MAESTRO_URL` | `AGAMEMNON_URL` | Env vars |
@@ -95,7 +95,6 @@ Before writing agent prompts, produce an explicit bidirectional mapping table:
 | `AIM_TLS_SKIP_VERIFY` | `AGAMEMNON_TLS_VERIFY` | **Inverted semantics** — SKIP_VERIFY=true becomes TLS_VERIFY=false; value must be logically negated, not just renamed |
 
 > **Note on bash function names:** Discovery scans for env vars and class names can miss internal function name prefixes in shell scripts. When a bash-heavy repo is in scope (e.g., Myrmidons), explicitly include function-prefix patterns (`_aim_`, `aim_`) in the per-repo scan regex.
-
 > **Note on inverted flag names:** When the old and new names have opposite semantic suffixes (SKIP vs non-inverted), mechanical string replacement is **wrong** — the boolean value must be logically negated. Flag these in the mapping table explicitly and instruct agents to handle them with a comment explaining the inversion.
 
 **Flag context-sensitive cases** — terms that look the same but need different treatment depending on the repo. Example: Scylla's `MaestroClient` was a local class targeting Agamemnon's chaos endpoints; it needed renaming too, but the rationale differs from Telemachy's `MaestroClient`.
@@ -158,7 +157,7 @@ gh search issues "old-term" --owner OrgName --state open --json number,title,rep
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `gh search issues "maestro" --owner HomericIntelligence` | Used GitHub search API to find issues | Returns false positives matching repo names, README text, not just issue bodies | Always use `gh issue list --json body \| jq` per-repo scan for body-text matching |
 | Heredoc directly in `gh issue edit --body` | `gh issue edit --body "$(cat <<'HEREDOC'\n...\nHEREDOC)"` | Backticks in code blocks inside the body break heredoc quoting; shell expands incorrectly | Always write to a temp file first, then pass `"$(cat $TMPFILE)"` |
 | 1 agent per issue | Spawning 80 agents for 80 issues | Excessive agent spawn overhead; hits parallelism limits | Batch 10-20 issues per agent grouped by repo |
@@ -203,7 +202,7 @@ Append to every updated issue body to provide audit trail:
 ### Issue Count Metrics (reference session)
 
 | Repo | Issues Found | Notes |
-|------|-------------|-------|
+| ------ | ------------- | ------- |
 | Odysseus | 5 | Cross-repo audit issues |
 | ProjectScylla | 8 | MaestroClient class rename |
 | ProjectTelemachy | 21 | Heaviest — MaestroClient + env vars |
@@ -219,12 +218,12 @@ Append to every updated issue body to provide audit trail:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence | ADR-006 ai-maestro → Agamemnon migration, 2026-04-05 | ~80 issues across 10 repos |
 
 ## Changelog
 
 | Version | Date | Changes |
-|---------|------|---------|
+| --------- | ------ | --------- |
 | 1.1.0 | 2026-04-05 | Added bash function name prefixes (`_aim_*`, `aim_*`) to terminology mapping; added inverted flag semantic warning for `AIM_TLS_SKIP_VERIFY` → `AGAMEMNON_TLS_VERIFY`; added Failed Attempts row for inverted flag mechanical rename; confirmed Phase 5 verification returns accurate 0-remaining results |
 | 1.0.0 | 2026-04-05 | Initial skill creation |

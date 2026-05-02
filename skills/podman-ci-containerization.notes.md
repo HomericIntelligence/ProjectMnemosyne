@@ -30,7 +30,7 @@ Both scheduled and `workflow_dispatch` events should push the image.
 ## PRs Created
 
 | PR | Branch | Title |
-|----|--------|-------|
+| ---- | -------- | ------- |
 | #1492 | `1492-composite-pixi-action` | feat: composite action for pixi setup |
 | #1493 | `1493-ci-containerfile` | feat: CI Containerfile + containerignore + README |
 | #1494 | `1494-ci-image-workflow` | feat: CI image build workflow with Trivy scanning |

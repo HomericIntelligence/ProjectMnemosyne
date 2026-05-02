@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-21 |
 | Issue | N/A (CI fix) |
 | PR | #882 |
@@ -106,12 +106,12 @@ pre-commit run --files <changed-files>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Root cause | Removal commit authored pre-fix replayed post-fix via rebase |
 | Diagnostic signal | Broken commit message says "remove deprecated X" but other symbols also gone |
 | Canary imports | `import warnings` + `import dataclasses` unused after bad merge |
@@ -128,5 +128,5 @@ pre-commit run --files <changed-files>
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | CI main breakage after PR #832, fixed in PR #882 | [notes.md](../../references/notes.md) |

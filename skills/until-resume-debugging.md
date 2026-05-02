@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-25 |
 | Objective | Validate --until sequential stepping via live E2E test; find and fix resume bugs |
 | Outcome | 3 bugs found and fixed; stepping works cleanly end-to-end for test-031 and test-033 |
@@ -88,7 +88,7 @@ assert cp['run_states']['T0']['00']['1'] == '<expected_state>'
 ### Expected state progression
 
 | Step | run_state | subtest_state | Notes |
-|------|-----------|---------------|-------|
+| ------ | ----------- | --------------- | ------- |
 | Batch A | `replay_generated` | `runs_in_progress` | ✓ regression check |
 | Step 7 | `agent_complete` | `runs_in_progress` | ✓ regression check |
 | Batch B | `judge_prompt_built` | `runs_in_progress` | ✓ regression check |
@@ -198,12 +198,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Files
 
 | File | Role |
-|------|------|
+| ------ | ------ |
 | `scylla/e2e/runner.py` | STEP 3 (failed reset) and STEP 4 (incomplete run re-entry) |
 | `scylla/e2e/stages.py` | `stage_execute_agent`, `stage_finalize_run`, `restore_run_context()` |
 | `scylla/e2e/subtest_executor.py` | RunContext creation + `restore_run_context` call |

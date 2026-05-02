@@ -14,7 +14,7 @@ tier: 2
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-04 |
 | Objective | Add YAML fixture files for tiers t2–t6 and update tests to cover the full tier range |
 | Outcome | Success — 7 fixtures, 4331 tests passing, 75.17% unit coverage |
@@ -50,7 +50,7 @@ Each fixture **must**:
 - Exercise a **distinct** boolean flag to differentiate the tier
 
 | Tier | Name | Distinguishing flag |
-|------|------|---------------------|
+| ------ | ------ | --------------------- |
 | t2 | Tooling | `uses_tools: true` |
 | t3 | Delegation | `uses_delegation: true` |
 | t4 | Hierarchy | `uses_hierarchy: true` |
@@ -100,7 +100,7 @@ pixi run python -m pytest tests/unit/ -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

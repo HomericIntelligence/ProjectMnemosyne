@@ -12,7 +12,7 @@ user-invocable: true
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-27 |
 | **Project** | ProjectScylla |
 | **Issue** | #995 |
@@ -227,21 +227,21 @@ def test_rubric_conflict_float_tolerance(tmp_path):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test coverage added
 
 | File | Tests Added |
-|------|------------|
+| ------ | ------------ |
 | `tests/unit/analysis/test_rubric_conflict.py` | 11 new tests |
 | `tests/unit/analysis/test_loader.py` | 1 updated signature test |
 
 ### Final metrics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Tests passed | 3196 / 3196 |
 | Coverage | 78.42% (threshold: 75%) |
 | Pre-commit hooks | All passed |

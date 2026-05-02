@@ -10,7 +10,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Objective** | Assess experiment dataset completion status for paper inclusion |
 | **Context** | ProjectScylla e2e experiments with v3.1 checkpoints across T0-T6 tiers |
 | **Complexity** | Medium — requires understanding 4-level state hierarchy |
@@ -57,7 +57,7 @@ Group by test number (e.g., `test-001`) since multiple timestamp directories may
 For each checkpoint, check for these patterns:
 
 | Pattern | Meaning | Action |
-|---------|---------|--------|
+| --------- | --------- | -------- |
 | `experiment_state=complete`, all runs `worktree_cleaned` | Truly complete | Paper-ready |
 | `experiment_state=complete`, runs at `agent_complete` | **Stale/inconsistent** | Needs resume — `_reset_non_completed_runs()` will fix |
 | `experiment_state=complete`, runs at `replay_generated` | **Never executed** | Checkpoint states are fake — needs full execution |
@@ -108,7 +108,7 @@ After each phase, re-scan checkpoints to confirm progress. Watch for runs stuck 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Merge old 1-run data into new 3-run experiment | Copy run artifacts from old dirs to new, update checkpoint | Config hashes differed, runs-per-subtest incompatible (1 vs 3-5), would corrupt statistics | Always check config_hash and runs-per-subtest before attempting merge |
 | Trust `experiment_state=complete` at face value | Assumed complete experiments were paper-ready | 12 experiments showed complete state but all runs were at `replay_generated` (never executed) | Always verify run_states — tier/experiment states can be misleading |
 | Trust `tier_states=complete` with `subtest_states=runs_in_progress` | Assumed subtests in `runs_in_progress` were actively running | Subtests were actually stuck — the tier completion was premature | Cross-reference all 4 levels of state hierarchy (experiment → tier → subtest → run) |

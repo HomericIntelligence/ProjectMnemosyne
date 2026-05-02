@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | cleanup-issue-doc-only-change |
 | **Category** | documentation |
 | **Use Case** | Implementing cleanup issues that are documentation-only (no code changes) |
@@ -54,7 +54,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `just pre-commit-all` | Used `just` command runner | `just` not on PATH in this environment | Fall back to `pixi run pre-commit run --all-files` directly |
 | Committing without SKIP | Ran full pre-commit including mojo-format | mojo-format fails with GLIBC_2.32/2.33/2.34 not found on Debian Buster host | Use `SKIP=mojo-format git commit` — this is a known env constraint, not a code issue |
 | Inserting README section after "References" | Tried appending after the references section | "Contributing" section already existed and the insertion point was between References and Contributing | Use Edit with the "Contributing" header as the anchor to insert before it |

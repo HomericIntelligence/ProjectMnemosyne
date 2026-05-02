@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | document-hook-glibc-incompatibility |
 | **Category** | documentation |
 | **Complexity** | Low |
@@ -105,7 +105,7 @@ SKIP=mojo-format pixi run pre-commit run markdownlint-cli2 --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run markdownlint via `pixi run npx markdownlint-cli2` | Called `pixi run npx markdownlint-cli2 CONTRIBUTING.md` | `npx` not in PATH on this host | Use `pixi run pre-commit run markdownlint-cli2 --all-files` instead |
 | Changing `.pre-commit-config.yaml` | Plan originally included adding GLIBC comment to config | File already had a full comment block from #3170 | Always read files before editing; audit existing state first |
 

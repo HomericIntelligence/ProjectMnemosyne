@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Pattern** | Thin method wrappers on Mojo structs |
 | **Problem** | Free functions exported from a module but no corresponding `self.method()` API on the struct |
 | **Solution** | Add inline-import delegation methods after the last method in the struct |
@@ -150,7 +150,7 @@ SKIP=mojo-format git commit -m "feat(extensor): add split_with_indices method wr
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Passing message as 4th positional arg to `assert_value_at` | Called `assert_value_at(tensor, idx, 0.0, "message")` | Mojo tried to convert `StringLiteral` to `Float64` for the `tolerance` parameter | Always use `message=` keyword argument; check function signature before writing tests |
 | Running `pixi run mojo test` | Used `mojo test` subcommand | Mojo v0.26.1 has no `test` subcommand; only `mojo <file>` works | Use `pixi run mojo <file>` directly to run test files |
 

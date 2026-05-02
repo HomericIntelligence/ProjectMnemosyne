@@ -24,7 +24,7 @@ to prevent future regressions.
 ## Files Created
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `scripts/validate_workflow_checkout_order.py` | Python script: scans workflow YAML, reports violations |
 | `.github/workflows/validate-workflows.yml` | CI workflow: runs script on PRs touching `.github/**` |
 | `.github/workflows/README.md` (modified) | Added "Composite Action Checkout Invariant" section |

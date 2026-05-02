@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-15 |
 | **Objective** | Systematically identify and close duplicate or resolved GitHub issues |
 | **Outcome** | ✅ Successfully closed 5 issues (4 duplicates, 1 already resolved) |
@@ -113,7 +113,7 @@ For each issue to close:
 ### Duplicates Identified
 
 | Keep (older) | Close (newer) | Reason |
-|--------------|---------------|--------|
+| -------------- | --------------- | -------- |
 | #652 | #661 | Both request HEALTHCHECK in Dockerfile |
 | #651 | #662 | Both request pinning base image to SHA256 |
 | #650 | #660 | Both request pinning npm package version |
@@ -157,7 +157,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Parameters & Configuration
 
@@ -173,7 +173,7 @@ gh auth status
 ### Issue Closure Reasons
 
 | Reason | Use Case |
-|--------|----------|
+| -------- | ---------- |
 | `not planned` | Duplicates, out of scope, decided against |
 | `completed` | Already resolved, work finished |
 

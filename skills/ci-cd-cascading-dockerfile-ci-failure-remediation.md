@@ -14,7 +14,7 @@ tags: [docker, dockerfile, cascading-failures, compose, nomad, bats, pixi, multi
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-24 |
 | **Objective** | Fix 13 open PRs in AchaeanFleet (Docker/compose infrastructure repo) — all failing CI due to cascading failures introduced one at a time as main advanced |
 | **Outcome** | All 13 PRs merged; CI green across the entire repo |
@@ -256,11 +256,11 @@ git push --force-with-lease origin HEAD
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Fix all PRs before fixing main | Rebased individual PR branches and pushed patches | CI kept failing because root-cause bugs were on main; each rebase pulled the broken main back in | Fix root-cause bugs on main FIRST, then rebase all PRs |
 | Inline comments in RUN apt-get | `apt-get install curl \ # comment` thinking # after \ is a comment | Docker parser treats the token after \ as a new instruction, not a comment continuation | Never put # comments after \ in multi-line RUN blocks |
 | Running nomad validate on all .hcl files | `for f in *.hcl; do nomad job validate "$f"; done` | vault-policy.hcl has no `job` stanza — nomad validate errors on non-job HCL | Guard with `grep -q '^job '` before calling nomad job validate |
-| Using hardcoded service count in compose validation | `[ "$ACTUAL" -eq 12 ]` | Adding new agent services broke the hardcoded count without anyone noticing | Always compare dynamically using `docker compose config --services | wc -l` |
+| Using hardcoded service count in compose validation | `[ "$ACTUAL" -eq 12 ]` | Adding new agent services broke the hardcoded count without anyone noticing | Always compare dynamically using `docker compose config --services \| wc -l` |
 | OCI layout via docker save | `docker save image:tag -o artifact.tar` for OCI layout pipeline | `oci-layout://` requires an uncompressed directory tree, not a tarball | Use `docker buildx build --output type=oci,dest=<dir>` for OCI layout format |
 | Multi-arch build without QEMU | `docker buildx build --platform linux/amd64,linux/arm64` | Fails with exec format error for non-native arch without binfmt_misc registration | Always run `docker/setup-qemu-action` before `docker/setup-buildx-action` in CI |
 | Bare workspace mount | `${WORKSPACE_ROOT}:/workspace` | CI security validator flags bare home directory mounts as too broad | Use per-agent paths: `${WORKSPACE_ROOT}/Agents/<name>:/workspace` |
@@ -320,5 +320,5 @@ Resolution: Keep main's corrected path AND the PR's new line:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/AchaeanFleet | Fixed 13 open PRs all failing CI; cascading failure remediation session | 2026-04-24; all PRs merged, CI green |

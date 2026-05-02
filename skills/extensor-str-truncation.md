@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-07 |
 | **Objective** | Add NumPy-style truncation to `ExTensor.__str__` in Mojo for large tensors |
 | **Outcome** | ✅ Implemented — threshold 1000, show first 3 + last 3 with `...` in between |
@@ -125,7 +125,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run `pixi run mojo test` locally | Executed `pixi run mojo test tests/shared/core/test_extensor_str.mojo` | GLIBC version mismatch (requires 2.32/2.33/2.34, host has older) | Mojo tests only run in CI Docker; verify logic by inspection, trust pre-commit hooks |
 | Use `just test-group` to run tests | Ran `just test-group "tests/shared/core" "test_extensor_str.mojo"` | `just` is not installed on the host | Same — local Mojo test execution is not available in this environment |
 | Inclusive threshold (`>= 1000`) | Considered using `>= 1000` for the truncation check | Issue example shows 1000-element output as `[0.0, ..., 999.0]` which implies 1000 IS truncated | Read the issue example carefully — issue showed 1000-element tensor truncated, but threshold choice is a design decision; went with `> 1000` (exclusive) per clarifying analysis |
@@ -169,5 +169,5 @@ gh pr merge --auto --rebase
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3375, PR #4037 | [notes.md](../references/notes.md) |

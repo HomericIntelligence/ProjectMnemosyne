@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Machine crashes during parallel E2E experiment runs due to memory/disk exhaustion |
 | **Root Cause** | Unbounded workspace accumulation + unbounded concurrent `claude` CLI processes |
 | **Environment** | WSL2 (16GB RAM), 7 concurrent Mojo tests, 120 subtests x 3-5 runs each |
@@ -99,7 +99,7 @@ pixi run python scripts/manage_experiment.py run \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running with `--threads 15` unguarded | Let all 7 tests run with unbounded concurrency | 7 concurrent `claude` processes + 2700+ workspaces exhausted 16GB RAM and 1TB disk | Always limit concurrent subprocesses to `min(threads, cpu_count)` |
 | Checking `dmesg` for OOM killer | Expected Linux OOM traces | WSL2 VM gets killed by Windows host silently - no kernel logs survive | On WSL2, memory exhaustion kills the VM, not individual processes |
 | Relying on `_pipeline_lock` alone | Lock serializes build pipeline (`mojo build`) | Lock only covers build pipeline, not `claude` CLI processes which are the main RAM consumers | Need separate semaphores for different resource types |
@@ -124,7 +124,7 @@ mojo_build_memory: ~1-2GB      # serialized under _pipeline_lock
 ### Key Files
 
 | File | Role |
-|------|------|
+| ------ | ------ |
 | `scylla/e2e/stages.py` | `_workspace_semaphore`, `_agent_semaphore`, `configure_resource_limits()` |
 | `scylla/e2e/stage_finalization.py` | `stage_cleanup_worktree()` (eager cleanup), `stage_execute_judge()` (agent semaphore) |
 | `scylla/e2e/health.py` | `log_resource_preflight()`, `_log_resource_usage()` |

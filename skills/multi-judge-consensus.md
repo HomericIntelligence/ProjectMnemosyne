@@ -9,7 +9,7 @@ user-invocable: false
 # Skill: Multi-Judge Consensus in E2E Evaluation
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Date** | 2026-01-08 |
 | **Objective** | Add support for multiple LLM judges with consensus voting to E2E evaluation framework |
 | **Outcome** | ✅ Successfully implemented multi-judge support with consensus scoring, per-judge reporting, and clean shutdown handling |
@@ -281,7 +281,7 @@ Trigger conditions:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -289,7 +289,7 @@ Trigger conditions:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -351,7 +351,7 @@ Traceback (most recent call last):
 ## Files Modified
 
 | File | Changes |
-|------|---------|
+| ------ | --------- |
 | `scripts/run_e2e_experiment.py` | Added `--add-judge` argument, model resolver, config assembly |
 | `src/scylla/e2e/models.py` | `judge_model` → `judge_models`, added `JudgeResultSummary`, updated `RunResult`, added backward compatibility |
 | `src/scylla/e2e/subtest_executor.py` | Multi-judge loop, consensus calculation, clean shutdown handling |

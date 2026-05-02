@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | placeholder-doc-rewrite |
 | **Category** | documentation |
 | **Trigger** | Placeholder docs with stub text; quickstart/installation guides needing real content |
@@ -84,7 +84,7 @@ gh pr merge --auto --rebase <pr-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `pixi run npx markdownlint-cli2 <file>` | Run markdownlint via npx inside pixi env | `npx: command not found` — npx not installed in the pixi conda env | Use `pixi run pre-commit run markdownlint-cli2 --files <file>` instead |
 | Running pixi command as background task | Used `run_in_background=true` for markdownlint | Command took 3+ minutes just for pixi env init, causing repeated timeouts | Run markdownlint synchronously with a generous timeout (120s+), not in background |
 | Documenting APIs from `shared/EXAMPLES.md` | Copied import examples from the EXAMPLES doc | EXAMPLES.md uses aspirational/planned APIs, not what's actually implemented | Always read `__init__.mojo` or package index to find real exports |

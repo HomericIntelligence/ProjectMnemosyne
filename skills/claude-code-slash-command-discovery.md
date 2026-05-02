@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Name | claude-code-slash-command-discovery |
 | Category | tooling |
 | Root cause | Commands placed in `.claude/plugins/<name>/commands/` without marketplace registration are never loaded |
@@ -83,7 +83,7 @@ Start a new Claude Code session and type `/` — the commands should appear in a
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Placing commands in `.claude/plugins/<name>/commands/` | Created plugin directory structure with plugin.json and command .md files | Claude Code only loads plugin commands from plugins registered in `installed_plugins.json` + `enabledPlugins` — unregistered plugins are silently ignored | Plugin directory structure requires marketplace registration; without it, files are dead |
 | Expecting plugin.json alone to enable commands | Created `.claude-plugin/plugin.json` in the plugin directory | `plugin.json` describes the plugin but does not register it — registration requires marketplace install flow | A plugin.json alone has no effect on discovery without the install flow |
 | `rm -rf ~/.claude/plugins/...` from within project | Tried to delete user-level plugin dir in same bash command as project-level cleanup | Safety hook blocks `rm -rf` on paths outside the current working directory | Run user-level deletions manually or ask user to confirm separately |
@@ -93,7 +93,7 @@ Start a new Claude Code session and type `/` — the commands should appear in a
 ### Discovery mechanism summary
 
 | Location | Scope | Registration required? |
-|----------|-------|------------------------|
+| ---------- | ------- | ------------------------ |
 | `.claude/commands/*.md` | Current project only | No — auto-discovered |
 | `~/.claude/commands/*.md` | All projects for this user | No — auto-discovered |
 | `.claude/plugins/<name>/commands/*.md` | Plugin-scoped | Yes — needs marketplace install + `enabledPlugins` |
@@ -123,5 +123,5 @@ git commit -m "fix: move ${PLUGIN_NAME} from broken plugin to .claude/commands/ 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | repo-analyzer commands migration | [notes.md](../../references/notes.md) |

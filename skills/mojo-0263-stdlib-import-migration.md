@@ -14,7 +14,7 @@ tags: [mojo, 0.26.3, stdlib, migration, imports, escaping, bulk-fix]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-09 |
 | **Objective** | Fix compile errors when upgrading Mojo to 0.26.3 |
 | **Outcome** | Successful — 92 test files fixed, zero --Werror errors |
@@ -66,7 +66,7 @@ pixi run mojo package --Werror -I . shared -o /tmp/shared.mojopkg 2>&1 | grep ':
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Manual file edits | Editing each file one by one | 92+ files to change — impractical | Use bulk Python/sed script |
 | `sed -i 's/from testing/from std.testing/'` | Simple sed substitution | Matches partial strings in comments or middle of identifiers | Use regex with word boundaries: `^from\s+testing\s+import` |
 | Keeping `escaping` | Leaving `raises escaping` as-is | Mojo 0.26.3 removed the keyword entirely — compile error | Must remove `escaping` unconditionally |
@@ -106,5 +106,5 @@ and 17 files for `raises escaping`.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Mojo 0.26.3 migration, branch fix-ci-root-causes | 92 files import-fixed, 17 files escaping-fixed; package --Werror clean |

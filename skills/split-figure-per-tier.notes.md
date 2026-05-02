@@ -107,7 +107,7 @@ Matches pattern from fig23/fig24 tests.
 ### Tier Distribution (judges_df)
 
 | Tier | Rows | Percentage |
-|------|------|------------|
+| ------ | ------ | ------------ |
 | T0 | ~1,030 | 14.2% |
 | T1 | ~460 | 6.3% |
 | T2 | ~690 | 9.5% |

@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Problem** | `run_epoch()` and `run_epoch_with_batches()` silently return `0.0` due to `PythonObject` interop deferral placeholders |
 | **Root Cause** | Track 4 interop deferral comments like `# NOTE: Batch iteration blocked by Track 4` suppress real iteration, leaving `num_batches = 0` always |
 | **Solution** | The Mojo `DataLoader` struct was already implemented — replace `PythonObject` with it and add `has_next()`/`next()` loop |
@@ -100,7 +100,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running tests locally | `pixi run mojo test tests/shared/training/test_training_loop.mojo` | GLIBC version mismatch — Mojo requires GLIBC 2.32+ but host has 2.31 | This project runs tests in Docker/CI; local mojo execution is not available in this environment |
 | Assuming `DataLoader.next()` extracts real slices | Expected `batch.data` to be a real slice of the dataset | `DataLoader.next()` creates placeholder tensors (not actual slices) due to a separate NOTE comment | The fix for correct slicing is a separate issue; the deferral resolution is just removing the loop-bypass |
 | Looking for `run_epoch` in `trainer.mojo` | Found `self.training_loop.run_epoch(...)` with many args | This calls a different `TrainingLoop` from `loops/training_loop.mojo`, not the generic `TrainingLoop[M,L,O]` struct | There are two separate `TrainingLoop` implementations — be precise about which one the issue targets |

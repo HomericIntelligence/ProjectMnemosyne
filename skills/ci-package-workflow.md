@@ -11,7 +11,7 @@ tags: [ci-cd, github-actions, packaging, release]
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Create GitHub Actions workflows for automated packaging |
 | **Outcome** | Operational |
@@ -125,7 +125,7 @@ on:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 
 ## Results & Parameters
@@ -135,7 +135,7 @@ N/A — this skill describes a workflow pattern.
 ## Error Handling
 
 | Error | Fix |
-|-------|-----|
+| ------- | ----- |
 | Action version invalid | Use latest stable version (v4, not @main) |
 | Missing environment | Add setup step before build |
 | Build script not found | Verify script path and permissions |

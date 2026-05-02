@@ -13,7 +13,7 @@ phase: Package
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Create distributable packages including Mojo packages (.mojopkg), archives, and installation procedures. |
 | Outcome | Operational |
@@ -134,7 +134,7 @@ Before marking package complete:
 ## Error Handling
 
 | Error | Fix |
-|-------|-----|
+| ------- | ----- |
 | Build fails | Check syntax, verify all files in module |
 | Import fails | Verify `__init__.mojo` exports, check paths |
 | Archive corrupted | Recreate archive, verify contents |
@@ -144,7 +144,7 @@ Before marking package complete:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

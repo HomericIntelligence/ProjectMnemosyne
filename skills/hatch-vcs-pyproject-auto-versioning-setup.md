@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-21 |
 | **Objective** | Replace a hardcoded `version = "X.Y.Z"` in `pyproject.toml` with `hatch-vcs` dynamic versioning so the auto-tag CI workflow only needs to push a git tag — no file edits, no bot commits. |
 | **Outcome** | hatch-vcs generates `_version.py` at install time from the most recent git tag; pyproject.toml declares `dynamic = ["version"]`; CI auto-tag workflow simplified to tag-push only. |
@@ -164,7 +164,7 @@ in the source tree containing the current version string. This file:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|---------------|---------------|----------------|
+| --------- | --------------- | --------------- | ---------------- |
 | Add `hatch-vcs` to `pixi.toml [pypi-dependencies]` | Added `hatch-vcs = ">=0.4.0,<1"` under `[pypi-dependencies]` in `pixi.toml` | Unnecessary; pip resolves it automatically from `[build-system].requires`. Adds noise to lock file but does not cause errors. | `hatch-vcs` is a build-time dep — declare it only in `[build-system].requires`, never in `pixi.toml` |
 | Keep auto-tag workflow with `pyproject.toml` bump steps | Left steps in CI that read the version, incremented it, rewrote `pyproject.toml`, and committed back to `main` | Creates a bot commit on `main` on every CI pass, triggers infinite loop potential, and defeats the purpose of auto-versioning | With `hatch-vcs`, the workflow only needs to push a git tag — all file-edit/commit steps must be removed |
 | Not adding `_version.py` to `.gitignore` | Omitted `yourpackage/_version.py` from `.gitignore` | Generated file gets accidentally staged and committed; ruff lints it on next pre-commit run and fails CI | Always add the generated `_version.py` to `.gitignore` immediately when enabling `hatch-vcs` |
@@ -175,7 +175,7 @@ in the source tree containing the current version string. This file:
 ### Key Parameters
 
 | Parameter | Description | Example |
-|-----------|-------------|---------|
+| ----------- | ------------- | --------- |
 | `yourpackage` | The package directory (contains `__init__.py`) | `hephaestus` |
 | `your-dist-name` | The `name` field in `pyproject.toml` | `HomericIntelligence-Hephaestus` |
 | Bootstrap version | Last known release version for tag-list fallback | `"0.7.0"` |
@@ -206,5 +206,5 @@ The `importlib.metadata` runtime pattern stays the same.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Branch `5047-separate-dev-production-deps` | `version = "0.7.0"` removed; `dynamic = ["version"]` added; auto-tag workflow simplified to tag-push; pre-commit passes locally |

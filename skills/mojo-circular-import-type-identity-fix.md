@@ -16,7 +16,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-23 |
 | **Objective** | Fix 255+ CI compilation errors ("cannot implicitly convert 'AnyTensor' to 'AnyTensor'") caused by circular imports between shared.core and shared.tensor packages |
 | **Outcome** | Successful in two phases: Phase 1 (PR #5062) moved AnyTensor, Phase 2 (PR #5063) broke remaining circular deps by deleting fake wrappers and extracting utilities |
@@ -68,7 +68,7 @@ grep -rn "^from shared\.core" shared/tensor/typed/ --include="*.mojo"
 #### Step 2: Classify each reverse import
 
 | Classification | Action | Example |
-|----------------|--------|---------|
+| ---------------- | -------- | --------- |
 | **Fake typed wrapper** (converts Tensor→AnyTensor, calls core fn, converts back) with zero callers | **DELETE** | `typed/matrix.mojo`, `typed/reduction.mojo`, `typed/conv.mojo` |
 | **Pure utility function** with no tensor dependencies | **MOVE** to `shared/base/` | `_resolve_shape` (just resolves -1 dims in shape lists) |
 | **Function needed** but only in 1-2 call sites | **Function-scoped import** | `as_contiguous` in `typed/arithmetic.mojo` |
@@ -153,7 +153,7 @@ Target: `shared.base ← shared.tensor ← shared.core` (clean DAG, no cycles)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Moving AnyTensor only (Phase 1) | Moved AnyTensor from shared.core to shared.tensor | Fixed some cycles but shared.tensor.typed still imported from shared.core (matrix, reduction, conv, shape, arithmetic), maintaining the cycle | Moving a type to break one cycle can leave other cycles intact; must audit ALL cross-package imports |
 | Checking import paths | Verified all files use `from shared.tensor.any_tensor import AnyTensor` (same path everywhere) | All paths were identical — the error persisted | Type identity errors are NOT caused by different import paths; they're caused by dual compilation contexts from circular deps |
 | Function-scoped imports everywhere | Considered making ALL reverse imports function-scoped | Works as a band-aid for 1-2 imports but doesn't address fake wrapper files that shouldn't exist | Prefer deleting dead code over working around it; function-scoped imports are for imports that genuinely need to exist |
@@ -219,7 +219,7 @@ Found module-level import from Package A in Package B (reverse dep):
 ### Impact (Combined Phases)
 
 | Metric | Phase 1 (PR #5062) | Phase 2 (PR #5063) |
-|--------|--------------------|--------------------|
+| -------- | -------------------- | -------------------- |
 | Files changed | 590 | 8 |
 | Lines added | ~2000 | 80 |
 | Lines removed | ~2000 | 712 |
@@ -229,6 +229,6 @@ Found module-level import from Package A in Package B (reverse dep):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #5062 | Phase 1: Moved AnyTensor from shared/core/ to shared/tensor/, inlined operators |
 | ProjectOdyssey | PR #5063 | Phase 2: Deleted 3 fake typed wrappers, extracted _resolve_shape to shared/base, function-scoped imports |

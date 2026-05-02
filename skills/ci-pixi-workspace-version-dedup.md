@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Eliminate duplicated `version` field from `pixi.toml` `[workspace]` section, making `pyproject.toml` the single source of truth |
 | **Outcome** | Successful — version removed, drift detection added to existing script, 20 new tests pass |
@@ -72,7 +72,7 @@ pixi run pre-commit run check-python-version-consistency --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A — first approach succeeded | Removed version + extended existing script | N/A | When a field is optional, removing it is always simpler than syncing it |
 
 ## Results & Parameters
@@ -114,5 +114,5 @@ OK: pixi.toml has no workspace version (single source of truth in pyproject.toml
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #57 — version duplication | PR #111: removed pixi.toml version, extended drift detection script |

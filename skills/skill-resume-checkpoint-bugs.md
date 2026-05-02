@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-26 |
 | **Objective** | Fix three bugs preventing correct behavior when re-running experiments with changed CLI args |
 | **Outcome** | All three bugs fixed, 3175 tests passing, PR #1109 merged |
@@ -146,7 +146,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results and Parameters
 
@@ -168,7 +168,7 @@ After fix:
 ### Key Files
 
 | File | Role |
-|------|------|
+| ------ | ------ |
 | `<project-root>/scylla/e2e/runner.py` | Ephemeral CLI field handling (STEP 2), `_check_tiers_need_execution()`, tier state reset logic, `_capture_experiment_baseline()`, `_handle_experiment_interrupt()` INTERRUPTED fix |
 | `<project-root>/scylla/e2e/stages.py` | `stage_capture_baseline()` load order |
 | `<project-root>/tests/unit/e2e/test_runner.py` | INTERRUPTED test update + new tests for ephemeral handling and missing subtest detection |
@@ -191,5 +191,5 @@ runner.tier_manager.load_tier_config.return_value = TierConfig(subtests=[...4 it
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1109 | [notes.md](../../references/notes.md) |

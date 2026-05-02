@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-02 |
 | **Issue** | #1287 — Annotate test functions in `tests/unit/scripts/` for mypy compliance |
 | **Objective** | Ensure `tests/unit/scripts/` is mypy-compliant and excluded from the `no-untyped-def` suppressor |
@@ -164,7 +164,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

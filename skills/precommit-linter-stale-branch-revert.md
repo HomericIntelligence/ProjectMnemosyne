@@ -14,7 +14,7 @@ tags: [pre-commit, linter, rebase, migration, branch, stale]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-26 |
 | **Objective** | Understand and fix the pattern where pre-commit hooks revert Makefile/justfile changes on branches created before a migration was merged to main |
 | **Outcome** | Fixed by rebasing the stale branch onto current main before CI runs |
@@ -74,7 +74,7 @@ git push --force-with-lease origin <stale-branch>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Cherry-picking the migration commit onto the stale branch | Cherry-pick the Podman migration commit to bring the files forward | Cherry-pick only applies the diff of one commit; if the stale branch had other divergences, this creates conflicts without full context | Use `git rebase origin/main` instead of cherry-pick — rebase replays the entire history and handles the full context |
 | Ignoring the revert and re-applying the migration manually | Manually edit Makefile/justfile on the stale branch to match main | Duplicates work and is error-prone; creates a maintenance burden if more files were changed in the migration | Always rebase; never manually re-apply a migration that's already in main |
 
@@ -111,5 +111,5 @@ git log --oneline | grep -i "migration\|podman\|docker"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectKeystone | 2026-04-26 PRs #497, #498 stale branch revert after Podman migration PR #499 | Resolved by `git rebase origin/main` + `git push --force-with-lease` on both branches |

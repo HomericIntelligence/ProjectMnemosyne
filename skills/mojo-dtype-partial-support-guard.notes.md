@@ -46,7 +46,7 @@ is correct. Only the value I/O through float64 path is broken.
 ## Key Distinction
 
 | Statement | Truth |
-|-----------|-------|
+| ----------- | ------- |
 | "DType.bfloat16 is not supported in Mojo" | FALSE - it exists in the type system |
 | "DType.bfloat16 is fully supported" | FALSE - _set_float64/_get_float64 don't work |
 | "DType.bfloat16 compiles and creates tensors" | TRUE |

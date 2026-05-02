@@ -13,7 +13,7 @@ Fix interactive Docker shell commands that fail due to missing or incorrect TTY 
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2025-12-30 |
 | Objective | Fix `just shell` command failing to start interactive Docker shell |
 | Outcome | Success - Added `-it` flags to enable proper TTY allocation |
@@ -44,7 +44,7 @@ grep -n "docker.*exec" justfile
 ### 2. Understand TTY Flags
 
 | Flag | Purpose | Use Case |
-|------|---------|----------|
+| ------ | --------- | ---------- |
 | `-T` | **Disable** pseudo-TTY | Non-interactive scripts, CI pipelines |
 | `-t` | Allocate pseudo-TTY | Interactive terminal sessions |
 | `-i` | Keep STDIN open | Interactive input |
@@ -79,7 +79,7 @@ just shell
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -163,7 +163,7 @@ docker run --rm image ./script.sh
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #2961 - justfile shell recipe fix | Docker TTY flag pattern |
 
 ## References

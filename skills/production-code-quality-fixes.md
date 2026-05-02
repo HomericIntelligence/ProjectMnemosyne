@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-21 |
 | Issue | #757 |
 | PR | #891 |
@@ -121,12 +121,12 @@ pre-commit run --files scylla/metrics/grading.py scylla/e2e/llm_judge.py \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/metrics/grading.py:131-132` | `assert` → `if not ... raise ValueError` |
 | `scylla/e2e/llm_judge.py:370` | `"/tmp/scylla_pycache"` → `str(Path(tempfile.gettempdir()) / "scylla_pycache")` |
 | `tests/unit/metrics/test_grading.py` | Added 4-case parametrized `ValueError` test |

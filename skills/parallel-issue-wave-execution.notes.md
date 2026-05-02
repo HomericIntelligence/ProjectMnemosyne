@@ -11,7 +11,7 @@
 Issues grouped by area:
 
 | Area | Count | Examples |
-|------|-------|---------|
+| ------ | ------- | --------- |
 | Config (pyproject.toml) | 7 | #1156 markers, #1192 --cov=scripts, #1191 pythonpath, #1167 py3.13 classifier, #1212 S101, #1207 hatchling pin, #1192 cov |
 | Docker | 4 | #1141 hatchling pin, #1209 pip pins, #1138 tomllib fallback, #1176 tomllib .get() |
 | Tests | 8 | #1165 TierID, #1197 figs, #1213 checkout, #1155 config hash, #1175 Dockerfile layers, #1218 sleep mock, #1128 conftest, #1188 process metrics |
@@ -49,7 +49,7 @@ The fix was PR #1266 which merged before fix-pass PRs (#1272–#1277) were creat
 ## PRs Created
 
 | Wave | PRs | Notes |
-|------|-----|-------|
+| ------ | ----- | ------- |
 | 1 | #1231–#1235 | All merged |
 | 2 | #1236–#1240 | All merged |
 | 3 | #1241–#1244 | All merged |
@@ -63,7 +63,7 @@ The fix was PR #1266 which merged before fix-pass PRs (#1272–#1277) were creat
 ## PRs Superseded / Closed
 
 | Old PR | New PR | Reason |
-|--------|--------|--------|
+| -------- | -------- | -------- |
 | #1231 → #1269 → #1270 → #1272 | #1272 | pixi.lock stale, pre-#1266 main |
 | #1237 | #1266 | Redesigned per user feedback (9% threshold) |
 | #1262 | #1267 | pixi.lock conflict |

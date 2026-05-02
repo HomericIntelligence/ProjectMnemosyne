@@ -9,7 +9,7 @@ user-invocable: false
 # Skill: Experimental Feature Sub-tests
 
 | Metadata | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Date** | 2026-02-05 |
 | **Category** | evaluation |
 | **Objective** | Add A/B testing for experimental features in evaluation tiers |
@@ -174,7 +174,7 @@ T4:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

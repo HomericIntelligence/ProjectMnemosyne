@@ -20,7 +20,7 @@ meant any exception in that 6-line window leaked the temp dir with no cleanup.
 **Files Modified**:
 
 | File | Action |
-|------|--------|
+| ------ | -------- |
 | `scylla/executor/credential_mount.py` | Created — context manager + retry + stale cleanup |
 | `scylla/executor/agent_container.py` | Modified — `run()` uses context manager |
 | `scylla/executor/judge_container.py` | Modified — `run_judge()` uses context manager |

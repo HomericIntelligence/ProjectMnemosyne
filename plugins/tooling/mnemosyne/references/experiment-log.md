@@ -11,7 +11,7 @@ Use this for detailed experiment tracking.
 ### Environment
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Hardware | [GPU model, RAM, CPU] |
 | Software | [Framework versions, OS] |
 | Dataset | [Name, size, splits] |
@@ -28,14 +28,14 @@ param2: value2
 ### Results
 
 | Run | Config | Metric | Notes |
-|-----|--------|--------|-------|
+| ----- | -------- | -------- | ------- |
 | 1 | baseline | 85.3% | [Observations] |
 | 2 | +changes | 87.1% | [Observations] |
 
 ### Failed Runs
 
 | Run | Config | Error | Root Cause | Fix |
-|-----|--------|-------|------------|-----|
+| ----- | -------- | ------- | ------------ | ----- |
 | 3 | x=10 | OOM | Batch too large | Reduce to x=5 |
 
 ### Conclusions

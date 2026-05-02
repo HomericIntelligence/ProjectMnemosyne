@@ -10,7 +10,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-01-02 |
 | Objective | Create benchmark test cases for AI agent evaluation from real PR history |
 | Outcome | Generated 45 test cases across 9 categories following SWE-bench methodology |
@@ -110,14 +110,14 @@ done
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Recommended Categories
 
 | Category | Description | Example PRs |
-|----------|-------------|-------------|
+| ---------- | ------------- | ------------- |
 | Build System | Build configs, Dockerfiles, pixi | Add dependency, fix build errors |
 | CI/CD | GitHub Actions, workflows | Bump actions, add workflows |
 | Bug Fixing | Code fixes, error resolution | Remove unused vars, fix threading |
@@ -131,7 +131,7 @@ done
 ### Timeout Guidelines
 
 | Task Complexity | Timeout | Max Cost |
-|-----------------|---------|----------|
+| ----------------- | --------- | ---------- |
 | Simple (<100 LOC) | 600-1800s | $1-2 |
 | Medium (100-500 LOC) | 1800-3600s | $2-5 |
 | Large (500-2000 LOC) | 3600-7200s | $5-10 |

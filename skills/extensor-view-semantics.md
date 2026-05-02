@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | extensor-view-semantics |
 | **Category** | architecture |
 | **Repo** | HomericIntelligence/ProjectOdyssey |
@@ -144,7 +144,7 @@ fn test_ravel_view(ctx: TestContext) raises:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Raw buffer access in test | `result._data.bitcast[Float32]()[i]` to read transposed view | Reads underlying buffer in original (non-permuted) order, gives wrong values | Always use `_get_float32(i)` for stride-aware access in view tests |
 | Flat index in `_get_float32` without contiguity check | `offset = index * dtype_size` always | Non-contiguous tensors (after transpose) have wrong element offsets | Add `is_contiguous()` branch; use `_nd_index_to_flat_offset` otherwise |
 | Calling `as_contiguous` in matmul directly on `a` | Forgot matmul uses pointer arithmetic assuming flat layout | Transposed view has correct strides but kernel still read wrong positions | Must materialize to contiguous buffer before passing to flat-buffer kernels |

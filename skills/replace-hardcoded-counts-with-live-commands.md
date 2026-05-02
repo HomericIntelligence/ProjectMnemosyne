@@ -13,7 +13,7 @@ user-invocable: true
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-03 |
 | **Objective** | Remove flaky hardcoded test counts from README.md (badge + prose) and replace with a live command users can run |
 | **Outcome** | Three locations updated; pre-commit passes; PR #1325 merged |
@@ -47,7 +47,7 @@ grep -n "2026%2B\|[0-9]\+\+ test\|check_test_counts\|[0-9]\+\+ tests" README.md 
 Check these locations systematically:
 
 | Location | What to Check |
-|----------|--------------|
+| ---------- | -------------- |
 | Badge line (top of README) | `tests-N%2B` in shields.io URL |
 | `### Testing` section | `N+ test files` in prose and bullets |
 | Research features checklist | `N+ tests, all passing` bullet |
@@ -113,7 +113,7 @@ Also remove any CI reference to it (check `.github/workflows/*.yml` for `check_t
 
 > **Note:** In the session that produced this skill, the script did not exist in the worktree — confirm with `ls scripts/check_test_counts.py` before attempting deletion.
 
-### Phase 5: Verify and Commit
+## Phase 5: Verify and Commit
 
 ```bash
 # Confirm no stale count references remain
@@ -148,7 +148,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Observations
 
@@ -167,12 +167,12 @@ Copy-paste ready configurations and expected outputs.
 ## Results
 
 | File | Changes Applied |
-|------|----------------|
+| ------ | ---------------- |
 | `README.md` | Badge: `tests-2026%2B` → `tests-passing`; prose: replaced `115+ test files` with live command block; checklist: removed `(2026+ tests, all passing)` count |
 | `scripts/check_test_counts.py` | Not present — no action taken |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1322, PR #1325 | Pre-commit passed (markdown-lint, audit-doc-policy, trim-whitespace, end-of-files) |

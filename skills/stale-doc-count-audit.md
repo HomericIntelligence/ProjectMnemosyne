@@ -16,7 +16,7 @@ How to audit and fix stale numeric counts in documentation files when the underl
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-13 |
 | Objective | Fix stale "27 figures" count across all docs after FIGURE_REGISTRY grew to 34 entries |
 | Outcome | Success — fixed 8 occurrences across 3 files, plus 1 stale sub-test count |
@@ -84,14 +84,14 @@ Keep the planned fix and any newly-discovered fixes in separate commits for clea
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files fixed in this session
 
 | File | Old | New | Occurrences |
-|------|-----|-----|-------------|
+| ------ | ----- | ----- | ------------- |
 | `README.md` | 27 figures | 34 figures | 5 |
 | `docs/analysis-prompt.md` | 27 figures | 34 figures | 1 |
 | `docs/analysis-prompt.md` | ~114 sub-tests | 120 sub-tests | 1 |
@@ -100,7 +100,7 @@ Keep the planned fix and any newly-discovered fixes in separate commits for clea
 ### Verified correct counts (no change needed)
 
 | Claim | Value | Source |
-|-------|-------|--------|
+| ------- | ------- | -------- |
 | Tables | 11 | `scripts/generate_tables.py` pipeline list |
 | Subtests | 120 | YAML files in `tests/claude-code/shared/subtests/` |
 | Combined coverage | 9% | `pyproject.toml` `--cov-fail-under=9` |
@@ -109,5 +109,5 @@ Keep the planned fix and any newly-discovered fixes in separate commits for clea
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1477 — fix stale figure/subtest counts | Quality audit finding |

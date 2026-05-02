@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-19 |
 | Issue | #752 |
 | PR | #811 |
@@ -91,14 +91,14 @@ gh pr merge --auto --rebase <pr-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Actual changes made to CLAUDE.md
 
 | Location | Before | After |
-|----------|--------|-------|
+| ---------- | -------- | ------- |
 | Quick Links > Agent System | 3 bullets (including broken links) | 1 bullet (Agent Configurations only) |
 | Agent Hierarchy section | `See [agents/hierarchy.md](agents/hierarchy.md)...` | `Agent hierarchy is defined in .claude/agents/ and tests/claude-code/shared/agents/:` |
 | Documentation Rules | `**Team guides**: /agents/ (quick start, hierarchy, templates)` | `**Agent guides**: /.claude/agents/ (configurations, roles, capabilities)` |

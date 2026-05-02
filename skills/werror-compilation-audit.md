@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | werror-compilation-audit |
 | **Category** | ci-cd |
 | **Language** | Mojo (v0.26.1) |
@@ -96,7 +96,7 @@ For each file in [FILE_LIST]:
 Parse all agent outputs and categorize errors:
 
 | Category | Pattern | Action |
-|----------|---------|--------|
+| ---------- | --------- | -------- |
 | **PASS** | Exit 0 | No action |
 | **SIMPLE_UNUSED_VAR** | `assignment to 'x' was never used` | Fix: `_ = expr` or remove |
 | **SIMPLE_UNUSED_LOOP** | `for i in range(...)` with `i` unused | Fix: `for _ in range(...)` |
@@ -239,7 +239,7 @@ done
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Single sequential compilation script | Ran all 498 files in one bash loop | Took >8 hours; each file takes 30-60s to compile | Split into 6 parallel Haiku agents covering ~80 files each |
 | `alias x = val` for unused variable fix | Changed `var x = val` to `alias x = val` | Mojo 0.26.1 reports `alias` is deprecated in function bodies | Use `var x = val; _ = x` or just `_ = val` directly |
 | `for _ in range(...)` with `replace_all` | Tried to replace all loop vars at once | Multiple different variable names; regex too broad | Target specific line numbers from compiler error output |
@@ -264,7 +264,7 @@ timeout 60 pixi run mojo build --Werror -I "/home/mvillmow/ProjectOdyssey" -I . 
 ### Round 2 Audit Results (2026-03-14)
 
 | Scope | Files | PASS | Fixed | Issues Filed |
-|-------|-------|------|-------|-------------|
+| ------- | ------- | ------ | ------- | ------------- |
 | tests/shared/core (1-80) | 80 | 76 | 4 | — |
 | tests/shared/core (81+) | 133 | 124 | 5 | #4523, #4524, #4525, #4526 |
 | tests/shared/training+testing+utils | 123 | 106 | 14 | #4520, #4521, #4522 |

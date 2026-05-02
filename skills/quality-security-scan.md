@@ -12,7 +12,7 @@ Scan code for security vulnerabilities and unsafe patterns.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Detect security issues before deployment | Secure codebase free of vulnerabilities |
 
 ## When to Use
@@ -140,12 +140,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | "Secret detected" | Move to .env, add to .gitignore |
 | "Unsafe dependency" | Update to patched version |
 | "Unsafe pattern" | Refactor code to use safe approach |

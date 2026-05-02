@@ -11,7 +11,7 @@ tags: [conv2d, gradient-checking, finite-differences, mojo, backward-pass, numer
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Topic** | Numerical gradient checking for conv2d backward pass (standard conv2d) |
 | **Approach** | Finite differences via `check_gradient` / `check_gradients` / `compute_numerical_gradient` |
 | **Key outputs verified** | `grad_input`, `grad_weights`, `grad_bias` |
@@ -46,7 +46,7 @@ grep -n "Core Gradient" .github/workflows/comprehensive-tests.yml
 **Tolerance quick-ref:**
 
 | Parameter | Value | API |
-|-----------|-------|-----|
+| ----------- | ------- | ----- |
 | `rtol` | `1e-2` | `check_gradient(forward, backward, x, grad_output, rtol=1e-2, atol=1e-2)` |
 | `atol` | `1e-2` | Same as above |
 | `epsilon` | `1e-4` (or `3e-4`) | `check_gradients(..., epsilon=1e-4, tolerance=1e-2)` |
@@ -150,7 +150,7 @@ for i in range(output.numel()):
 Tensor shapes for padding tests:
 
 | padding | Input | Kernel | Output | grad_output elements |
-|---------|-------|--------|--------|---------------------|
+| --------- | ------- | -------- | -------- | --------------------- |
 | 1 | `(1,1,4,4)` | `(1,1,3,3)` | `(1,1,4,4)` | 16 |
 | 2 | `(1,1,5,5)` | `(1,1,3,3)` | `(1,1,7,7)` | 49 |
 
@@ -179,7 +179,7 @@ fn test_conv2d_grad_<variant>() raises:
 Three configurations to cover:
 
 | Config | in_ch | out_ch | kernel | stride | padding | input shape |
-|--------|-------|--------|--------|--------|---------|-------------|
+| -------- | ------- | -------- | -------- | -------- | --------- | ------------- |
 | same-padding | 1 | 1 | 3x3 | 1 | 1 | (1,1,5,5) |
 | strided | 1 | 1 | 3x3 | 2 | 0 | (1,1,7,7) |
 | multi-channel | 2 | 3 | 3x3 | 1 | 0 | (1,2,5,5) |
@@ -230,7 +230,7 @@ Mojo format is enforced in CI via Docker where GLIBC >= 2.32.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `mojo test` locally | `pixi run mojo test <test-path>` | GLIBC version mismatch (requires 2.32+, host has 2.31) | Use `SKIP=mojo-format` for commit; tests validated in CI Docker environment |
 | Using tight tolerances (1e-3/1e-6) | Copying atol/rtol from linear layer tests | Conv2d has higher accumulation error than linear; tests fail | Use rtol=1e-2, atol=1e-2 for conv2d — matches deprecated test_backward.mojo pattern |
 | Using `ones_like(output)` with padding>0 | Copied pattern from padding=0 tests | Symmetric boundary positions get uniform gradient → potential cancellation; non-uniform is safer | Always use non-uniform `grad_output` (`i % 4 * 0.25 - 0.3`) when testing padded convolutions |
@@ -244,7 +244,7 @@ Mojo format is enforced in CI via Docker where GLIBC >= 2.32.
 ### Recommended test tensor shapes
 
 | Tensor | Shape | Elements | Rationale |
-|--------|-------|----------|-----------|
+| -------- | ------- | ---------- | ----------- |
 | input (padding=0) | `(1,1,4,4)` | 16 | Fast gradient check, non-trivial output |
 | kernel | `(1,1,3,3)` | 9 | Standard 3x3, output is 2x2 = 4 elements |
 | input (padding=1) | `(1,1,4,4)` | 16 | Same-size output (4x4) |
@@ -276,7 +276,7 @@ test_backward_conv_padding.mojo:    ≤10 tests  (padding=1 + padding=2 × 2 out
 ### Tolerance comparison
 
 | Layer type | rtol | atol | epsilon |
-|------------|------|------|---------|
+| ------------ | ------ | ------ | --------- |
 | Linear | 1e-3 | 5e-4 | 1e-4 |
 | Conv2D | 1e-2 | 1e-2 | 1e-4 or 3e-4 |
 
@@ -285,7 +285,7 @@ Conv2D uses relaxed tolerances due to strided access patterns and multiple accum
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3281, PR #3865 (grad_input/weights, padding=0) | [notes.md](../references/notes.md) |
 | ProjectOdyssey | PR #3772, issue #3233 (3 configs via check_gradients) | [notes.md](../references/notes.md) |
 | ProjectOdyssey | PR #4793, issue #3774 (all 3 outputs × 3 configs) | [notes.md](../references/notes.md) |

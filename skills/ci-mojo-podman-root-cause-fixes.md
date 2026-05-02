@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Fix four distinct CI failure root causes in ProjectOdyssey |
 | **Outcome** | All four fixed in PR #5178 (verified pre-commit; CI pending) |
@@ -276,7 +276,7 @@ Does the cycle go through a type definition?
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Heap corruption hypothesis | Assumed CI failures were a recurrence of the Mojo heap corruption bug (now fixed at compiler level) | That bug is fixed; user explicitly corrected this assumption | Don't attribute new CI failures to previously-fixed bugs |
 | Sub-agents for implementation | Delegated to sub-agents via worktrees | Agents produced correct analysis and plans but left changes unstaged — no commits | Verify sub-agent outputs include committed changes, not just summaries |
 | Checkout main with unstaged changes | Tried `git checkout main` directly | Failed due to unstaged changes from sub-agent work | Run `git stash` first, or switch via worktrees |
@@ -287,7 +287,7 @@ Does the cycle go through a type definition?
 ### Files Changed
 
 | File | Change Type | Purpose |
-|------|-------------|---------|
+| ------ | ------------- | --------- |
 | `docs/adr/ADR-014-jit-crash-retry-mitigation.md` | Edit | Fix broken relative link (`../../docs/dev/` → `../dev/`) |
 | `.github/workflows/benchmark.yml` | Edit | Write to `/tmp/` inside container, `podman cp` out |
 | `.github/workflows/asan-tests.yml` | New | ASAN test workflow |
@@ -326,7 +326,7 @@ tensor_creation.mojo    (imports from tensor_constants, not from any_tensor)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #5178 | All four fixes committed and pushed; CI pending |
 
 ## References

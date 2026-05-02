@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Name | fix-mypy-ruff-script-ci |
 | Category | ci-cd |
 | Description | Fix mypy and ruff CI failures in Python scripts caused by unused variables, missing type annotations, and bare f-strings |
@@ -120,7 +120,7 @@ git push origin <branch>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Direct push | `git push origin <branch>` after rebase | Remote had been force-pushed; local was behind | Always `git pull --rebase origin <branch>` before pushing when collaborating |
 | Fixing only mypy errors | Added `Optional[str]` annotations but left unused variables | Ruff F841 still failed in validate-scripts job | Both mypy and ruff errors must be fixed together |
 
@@ -129,14 +129,14 @@ git push origin <branch>
 **Common mypy errors in migration/porting scripts**:
 
 | Error Code | Pattern | Fix |
-|------------|---------|-----|
-| `[return-value]` | `list[T1]` returned where `list[T1 | T2]` expected | Annotate the list: `skills: list[tuple[str, Path, Optional[str]]] = []` |
+| ------------ | --------- | ----- |
+| `[return-value]` | `list[T1]` returned where `list[T1 \| T2]` expected | Annotate the list: `skills: list[tuple[str, Path, Optional[str]]] = []` |
 | `[annotation-needed]` | `None`-initialized variable later assigned different type | Add `Optional[T]` annotation: `var: Optional[str] = None` |
 
 **Common ruff errors in scripts**:
 
 | Code | Pattern | Fix |
-|------|---------|-----|
+| ------ | --------- | ----- |
 | F841 | `x = [...]` assigned but never used | Remove the variable |
 | F541 | `f"string without {placeholders}"` | Convert to plain string |
 | E501 | Line too long | Let `ruff format` handle it automatically |

@@ -24,7 +24,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-05 |
 | **Objective** | Add a justfile to a pixi-managed project so that cross-repo orchestration and developer CLI is consistent via the HomericIntelligence ecosystem convention; or add just <prefix>-<recipe> delegation recipes to a meta-repo |
 | **Outcome** | Successful — verified on CI-heavy (Scylla, 12 recipes), library (Hephaestus, 9 recipes), and meta-repo delegation (Odysseus, 4 submodules) |
@@ -317,7 +317,7 @@ gh pr create --title "feat(justfile): add delegation recipes for 4 submodule rep
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A — clean implementation (Scylla) | Direct pixi run delegation | Did not fail | Following the ecosystem convention from prior skills avoided all known pitfalls |
 | N/A — clean implementation (Hephaestus v1) | Direct pixi run delegation with `*ARGS` | Did not fail | Pattern is now well-established; `*ARGS` forwarding works cleanly for test and lint |
 | bootstrap in git worktree | `pixi run pre-commit install` in a worktree with `core.hooksPath` set | pre-commit refuses to install when `core.hooksPath` is set | `just bootstrap` works in normal clones; in worktrees with custom hook paths, pre-commit install may fail — this is a git config issue, not a justfile issue |
@@ -337,7 +337,7 @@ just = ">=1.25.0,<2"
 ### Recipe-to-Pixi Mapping (Library Repo — Hephaestus)
 
 | Recipe | Delegates To | Notes |
-|--------|-------------|-------|
+| -------- | ------------- | ------- |
 | `default` | `@just --list` | Ecosystem standard |
 | `bootstrap` | `pixi install` + `pixi run pre-commit install` | One-command setup |
 | `test *ARGS` | `pixi run pytest {{ test_dir }} {{ ARGS }}` | Forwards args to pytest |
@@ -351,7 +351,7 @@ just = ">=1.25.0,<2"
 ### Recipe-to-Pixi Mapping (CI-Heavy Repo — Scylla)
 
 | Recipe | Delegates To | Notes |
-|--------|-------------|-------|
+| -------- | ------------- | ------- |
 | `default` | `@just --list` | Ecosystem standard |
 | `test` | `pixi run test` | pytest |
 | `test-shell` | `pixi run test-shell` | BATS tests |
@@ -368,7 +368,7 @@ just = ">=1.25.0,<2"
 ### Meta-Repo Delegation Parameters (Odysseus — 4 submodules)
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Wave 1 agents** | 3 Sonnet (one per submodule needing justfile changes), parallel |
 | **Wave 2 agents** | 1 Sonnet (Odysseus justfile + submodule pin updates), sequential |
 | **Total agents** | 4 agents across 2 waves |
@@ -379,7 +379,7 @@ just = ">=1.25.0,<2"
 ### Delegation Recipe Naming Convention
 
 | Submodule | Prefix | Example Recipes |
-|-----------|--------|----------------|
+| ----------- | -------- | ---------------- |
 | infrastructure/AchaeanFleet | `fleet` | `fleet-build`, `fleet-test`, `fleet-validate` |
 | ci-cd/ProjectProteus | `proteus` | `proteus-build`, `proteus-test`, `proteus-lint` |
 | shared/ProjectMnemosyne | `mnemosyne` | `mnemosyne-validate`, `mnemosyne-test` |
@@ -390,7 +390,7 @@ just = ">=1.25.0,<2"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1506 — ecosystem convention alignment | PR #1550 |
 | ProjectHephaestus | Issue #35 — add justfile for ecosystem convention | PR #72 |
 | ProjectHephaestus | Issue #48 — bootstrap, check, variables, docs update | PR #77 |

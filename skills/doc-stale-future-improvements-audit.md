@@ -14,7 +14,7 @@ user-invocable: true
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-22 |
 | **Objective** | Systematically audit all design docs for "Future Improvements" sections listing features already implemented in source code |
 | **Outcome** | Fixed stale entries across 2 doc files; confirmed 2 others have genuinely-future items; PR merged |
@@ -66,7 +66,7 @@ grep -n "def calculate_\|def compute_\|def <function>" <project-root>/<module>.p
 ### Phase 3: Categorize Findings
 
 | Status | Action |
-|--------|--------|
+| -------- | -------- |
 | Listed as Planned/Future but .py file exists with real code | **Fix: mark Implemented** |
 | Listed as Future but function exists, not integrated | **Fix: move to "Implemented but not yet integrated" section** |
 | Listed as Future and genuinely not in source | **Leave as-is** |
@@ -99,7 +99,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Observations
 
@@ -117,7 +117,7 @@ Copy-paste ready configurations and expected outputs.
 ## Results
 
 | File | Stale Entries Found | Fixed |
-|------|--------------------|----|
+| ------ | -------------------- | ---- |
 | `docs/design/architecture.md` | 4 adapters listed as Planned, missing adapter, wrong filename, diagram missing entry | Yes |
 | `docs/research.md` | Functions not listed as implemented; multi-experiment loading not listed as done | Yes |
 | `docs/design/container-architecture.md` | None (ARM64, layer caching genuinely not implemented) | N/A |
@@ -142,5 +142,5 @@ grep -n "def " <project-root>/analysis/stats.py | grep -i "<function-name>"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #880 (follow-up from #759), PR #989 merged | [notes.md](../../references/notes.md) |

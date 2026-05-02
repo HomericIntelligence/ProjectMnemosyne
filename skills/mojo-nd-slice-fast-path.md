@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-15 |
 | Objective | Replace O(numel × ndim) element-wise byte copy with a single `memcpy` for the common first-axis-only slice pattern (e.g. `data[0:16, :, :, :]`) |
 | Outcome | Implemented and verified in ProjectOdyssey PR #4772 (issue #3697) |
@@ -121,7 +121,7 @@ else:
 Five tests cover the critical cases:
 
 | Test | What it checks |
-|------|---------------|
+| ------ | --------------- |
 | `test_fast_path_shape_4d` | Shape `[0:16, :, :, :]` on `[50, 3, 32, 32]` → `[16, 3, 32, 32]` |
 | `test_fast_path_values_3d` | Byte values at key flat positions match expected sequential values |
 | `test_fast_path_matches_element_wise` | Verify every element equals the expected source element |
@@ -138,7 +138,7 @@ assert_almost_equal(Float64(data_ptr[0]), 24.0, Float64(1e-5))
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Track separate `ends` list | Planned to track `ends[dim]` alongside `starts[dim]` in the loop to check `ends[dim] == self._shape[dim]` | Unnecessary — since `result_shape[dim] = clamped_end - clamped_start` and `starts[dim] == 0`, the check `result_shape[dim] == self._shape[dim]` is equivalent without adding another list | Exploit what's already computed; avoid new data structures when the detection can be derived from existing variables |
 | Add `steps` tracking | Considered tracking `steps[dim]` to also guard against strided inner-dim slices | The existing multi-dim `__getitem__` ignores `Slice.step` entirely (it's unimplemented for N-D); adding step tracking would be dead code | Read the existing implementation before adding guards — only guard what the code actually supports |
 | Place fast-path after `dtype_size` computation | Initial plan put the branch immediately before the element-wise loop but after `dtype_size` | The placement is correct and works; no issue here | Confirmed: insert after `result_numel`, `dtype_size`, `src_ptr`, `dst_ptr` are all declared |
@@ -148,7 +148,7 @@ assert_almost_equal(Float64(data_ptr[0]), 24.0, Float64(1e-5))
 ### Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4772, issue #3697 | [notes.md](../../references/notes.md) |
 
 ### Key Numbers

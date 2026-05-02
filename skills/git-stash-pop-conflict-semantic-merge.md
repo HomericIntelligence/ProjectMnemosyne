@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Resolve merge conflicts produced by `git stash pop` when Safety Net blocks both the discard path (`git checkout --`) and the delete path (`git stash drop`) |
 | **Outcome** | Successful — all conflict markers resolved, pre-commit passed, branch pushed to PR |
@@ -77,7 +77,7 @@ git add <file>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | `git checkout -- skills/learn/SKILL.md` | Safety Net blocked: "discards uncommitted changes permanently" | Safety Net treats `checkout --` as a destructive discard; cannot be used even for conflict resolution |
 | Attempt 2 | `git stash drop stash@{0}` | Safety Net blocked: "permanently deletes stashed changes" | Even deleting an unwanted stash entry is blocked; must surface the command to the user or use Edit-based resolution |
 | Attempt 3 | `git stash` (to save working state) then check main | No local changes existed to save — the conflicted file was already the working state produced by the failed stash pop | `git stash pop` leaves conflicted files as working-tree modifications; there is no separate "new" stash to create |
@@ -87,7 +87,7 @@ git add <file>
 ### Common Hunk Patterns from Old-Branch Stashes
 
 | Pattern | Likely Correct Side | How to Tell |
-|---------|---------------------|-------------|
+| --------- | --------------------- | ------------- |
 | Step numbering (e.g., step 6 vs step 5) | HEAD (upstream) | Step count changes with refactoring; stash has stale numbering |
 | Indentation inside heredoc / code block | HEAD (upstream) | Stash may have content at column 0 that was moved inside a block |
 | Section description detail | HEAD (upstream) | Upstream adds detail over time; stash has older, terser text |
@@ -120,5 +120,5 @@ pre-commit run --files <file>
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | `skills/learn/SKILL.md` — stash from branch `136-auto-impl` conflicted with HEAD after step-renumbering refactor | Stash `stash@{0}` left in place (not dropped) after resolution |

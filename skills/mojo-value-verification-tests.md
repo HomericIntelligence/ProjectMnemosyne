@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Problem | Shape operation tests verify structure (numel, dim) but not correctness of output values |
 | Fix | Add `assert_value_at` (per-element) and `assert_all_values` (constant fill) checks |
 | Applies To | split, tile, repeat, broadcast_to, permute, and any shape op producing predictable values |
@@ -31,7 +31,7 @@ user-invocable: false
 For each operation, derive expected flat-index values from the input:
 
 | Operation | Input | Expected Output |
-|-----------|-------|-----------------|
+| ----------- | ------- | ----------------- |
 | `split(a, 3)` where `a=[0..11]` | parts[k] starts at k*4 | `parts[k][j] == k*4 + j` |
 | `split_with_indices(a, [3,7])` where `a=[0..9]` | parts are [0..2],[3..6],[7..9] | `parts[0][j]==j`, `parts[1][j]==j+3`, `parts[2][j]==j+7` |
 | `tile(a, [3])` where `a=[0,1,2]` | repeats `a` 3 times | `b[rep*3 + j] == j` |
@@ -109,7 +109,7 @@ fn test_broadcast_to_compatible() raises:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run tests locally | `pixi run mojo test tests/shared/core/test_shape.mojo` | GLIBC version incompatibility on host (needs Docker) | Verify logical correctness by inspection; CI will run actual tests |
 | Use `assert_all_values` for repeat_elements | All elements checked as a constant | repeat_elements produces mixed values [0,0,1,1,2,2] not a constant | Use `assert_value_at` in a loop for non-uniform outputs |
 | Checking broadcast by column only | `assert_value_at(b, col, Float64(col))` only checking first row | Only validated row 0; rows 1-3 unchecked | Use nested row/col loop with flat index `row * cols + col` |
@@ -149,7 +149,7 @@ Both are re-exported from `shared.testing.assertions`.
 ### Which Helper to Use
 
 | Scenario | Helper |
-|----------|--------|
+| ---------- | -------- |
 | Output from `ones` tensor (tile/repeat/permute) | `assert_all_values(b, 1.0)` |
 | Output from `arange` tensor (split/tile/repeat_elements) | `assert_value_at` in loop |
 | Broadcast of `arange` to 2D | Nested `assert_value_at` with `row * cols + col` |
@@ -157,5 +157,5 @@ Both are re-exported from `shared.testing.assertions`.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3276 / PR #3845 | [notes.md](../references/notes.md) |

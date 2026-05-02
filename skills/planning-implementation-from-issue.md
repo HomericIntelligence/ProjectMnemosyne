@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-14 |
 | **Objective** | Create detailed implementation plans for GitHub issues #595 (resolve 4 skipped tests and cleanup merge artifacts) |
 | **Outcome** | Successfully created comprehensive plan with file-by-file breakdown, investigation steps, and verification strategy |
@@ -327,7 +327,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Verification
 

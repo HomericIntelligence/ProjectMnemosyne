@@ -11,7 +11,7 @@ user-invocable: false
 # Verify and Commit
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-24 |
 | Objective | Verify a pre-implemented feature, fix linting/typing issues, and ship a PR |
 | Outcome | All 1014 e2e unit tests passed; all 3015 total tests passed (78% coverage); all pre-commit hooks passed; PR #1081 created and auto-merge enabled |
@@ -122,7 +122,7 @@ gh pr merge --auto --rebase
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -130,14 +130,14 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Project-Specific Commands
 
 | Task | Command |
-|------|---------|
+| ------ | --------- |
 | Run e2e unit tests only | `pixi run python -m pytest tests/unit/e2e/ -v --no-cov` |
 | Run full suite | `pixi run python -m pytest tests/ -v` |
 | Update mypy counts | `pixi run python scripts/check_mypy_counts.py --update` |
@@ -160,5 +160,5 @@ The `check-mypy-counts` hook tracks counts per directory so drift is caught auto
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1081 — consolidate run subcommands | [notes.md](../../references/notes.md) |

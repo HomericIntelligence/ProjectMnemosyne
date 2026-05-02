@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | write-installation-docs |
 | **Category** | documentation |
 | **Trigger** | Placeholder installation docs, README linking to stub guide |
@@ -129,6 +129,6 @@ git add docs/getting-started/installation.md
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `pixi run npx markdownlint-cli2 path/to/file.md` | Used npx to run markdownlint directly | `npx: command not found` in the pixi env | Use `pixi run pre-commit run --all-files markdownlint-cli2` instead |
 | Hardcoding Mojo version string | Writing `0.26.1.0.dev2025122805` directly | Full nightly build strings go stale immediately | Use version range (`>=0.26.1,<0.27`) from pixi.toml constraint |

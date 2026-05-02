@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Verify all `[project.scripts]` entry points are importable and respond to `--help` without crashing |
 | **Outcome** | Success — 8 tests (4 import + 4 subprocess) all pass in 0.39s |
@@ -145,7 +145,7 @@ pixi run ruff format --check tests/integration/test_cli_entry_points.py
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using installed script names | Tried `subprocess.run(["hephaestus-changelog", "--help"])` | Requires package to be pip-installed with entry points registered; fails in pixi/dev environments | Use `sys.executable -m module.path` — tests the same `main()` code path via `__main__` block without needing pip install |
 | N/A — direct approach worked | Import + subprocess two-pronged strategy succeeded on first try | N/A | For argparse-based CLIs, `--help` is always safe — argparse calls `sys.exit(0)` before any business logic |
 
@@ -170,5 +170,5 @@ pixi run ruff format --check tests/integration/test_cli_entry_points.py
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #52, PR #95 | 4 CLI entry points: changelog, merge-prs, system-info, download-dataset |

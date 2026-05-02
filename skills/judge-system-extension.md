@@ -12,7 +12,7 @@ Patterns and workflows for extending AI evaluation systems with consensus retry 
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-31 | Extend judge system with 4 new modules | 4 PRs created, all tests passing, comprehensive coverage |
 
 ## When to Use
@@ -158,12 +158,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Session Statistics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | New modules created | 4 |
 | New test files | 3 |
 | Tests added | 89 |
@@ -173,7 +173,7 @@ Copy-paste ready configurations and expected outputs.
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Import errors in tests | Check that `__init__.py` exports match actual module exports |
 | Test threshold failures | Calculate actual variance/range values before setting test thresholds |
 | Security scanner false positives | Avoid function names containing "eval", "exec", etc. |

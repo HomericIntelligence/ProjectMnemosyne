@@ -14,7 +14,7 @@ tags: [pixi, ci, github-actions, setup-order, lock-check, command-not-found, set
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Fix a `lock-check.yml` workflow that ran `pixi install --locked` without first installing pixi |
 | **Outcome** | Successful — workflow fixed by adding `.github/actions/setup-pixi` composite action before pixi commands |
@@ -109,7 +109,7 @@ GitHub Actions runners (ubuntu-latest, etc.) do **not** have pixi pre-installed.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Manual cache + pixi install pattern | Added a manual `actions/cache` step and `curl`-based pixi binary download | Fragile — duplicated logic already in the repo's composite action; cache key format differed from other workflows | Always use the repo's existing `.github/actions/setup-pixi` when it exists; don't duplicate install logic |
 
 ## Results & Parameters
@@ -154,7 +154,7 @@ grep -n "setup-pixi\|prefix-dev/setup-pixi" .github/workflows/lock-check.yml
 This is a **distinct** problem from `checkout-before-composite-action`:
 
 | Issue | Symptom | Root Cause |
-|-------|---------|------------|
+| ------- | --------- | ------------ |
 | `composite-action-checkout-order` | `Cannot find action './.github/actions/X'` | `actions/checkout` not run before local composite action |
 | `ci-pixi-lock-check-setup-order` | `pixi: command not found` | Pixi binary not installed before running pixi commands |
 
@@ -163,5 +163,5 @@ Both issues stem from missing prerequisite steps, but the errors and fixes are d
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMyrmidons | PR #350, `lock-check.yml` workflow | Fixed by adding `.github/actions/setup-pixi` before `pixi install --locked` |

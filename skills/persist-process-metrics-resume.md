@@ -16,7 +16,7 @@ How to persist intermediate stage data through crash-resume cycles in ProjectScy
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-02 |
 | Objective | When a run resumes into `stage_finalize_run` after a crash between JUDGE_COMPLETE and RUN_FINALIZED, reload `progress_steps` and `change_results` from a prior `run_result.json` instead of silently producing empty process_metrics |
 | Outcome | Success — 20 new tests, 3530 total passing, 79.6% unit coverage, all pre-commit hooks pass |
@@ -182,14 +182,14 @@ pre-commit run --files scylla/e2e/stages.py tests/unit/e2e/test_<feature>_resume
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Key design decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| ---------- | ----------- |
 | `is None` guard (not `not ctx.field`) | Preserves `[]` set by `stage_capture_diff` when agent made no changes |
 | Return `(None, None)` not `([], [])` on error | Lets the existing `or []` fallbacks in `stage_finalize_run` handle the empty case naturally |
 | Skip malformed entries (filter, not raise) | Partial data is better than a crash on resume |
@@ -199,7 +199,7 @@ pre-commit run --files scylla/e2e/stages.py tests/unit/e2e/test_<feature>_resume
 ### Test count breakdown
 
 | File | Tests | Focus |
-|------|-------|-------|
+| ------ | ------- | ------- |
 | `test_stage_finalize_run_resume.py` | 20 | Helper (13) + integration (6) + partial-None (1) |
 
 ### Coverage impact
@@ -210,7 +210,7 @@ pre-commit run --files scylla/e2e/stages.py tests/unit/e2e/test_<feature>_resume
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1179, PR #1296 | Follow-up from #1133 (process metrics initial implementation) |
 
 ## References

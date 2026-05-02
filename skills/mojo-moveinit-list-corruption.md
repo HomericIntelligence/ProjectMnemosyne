@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Mojo version | 0.26.1 |
 | Affected type | `List[T]` fields in `__moveinit__` |
 | Symptom | List element values wrong after move; assertions on shape/stride fail |
@@ -84,7 +84,7 @@ After reverting `^` to `.copy()`, confirm:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Replace `.copy()` with `^` in `ExTensor.__moveinit__` | Hypothesis: `.copy()` orphaned source List buffers, causing heap corruption at 15+ tests | `test_slicing.mojo` assertion `Batch shape[2]` failed — `slice()` mutates `result._shape[axis]` in-place then returns `result^`; the `^` transfer loses the mutation | In Mojo 0.26.1, `^` on a List field in `__moveinit__` does not preserve in-place element mutations made before the move |
 | Checking other structs that use `^` | `attention.mojo`, `variable.mojo`, `tape_types.mojo` all use `^` for List — so it should work for ExTensor too | Those structs never mutate List elements in-place before moving; ExTensor's `slice()` does, which is the key difference | `^` on List is safe only when the List was not mutated in-place between `__copyinit__` and `__moveinit__` |
 | Consolidating 5 split test files into one `test_lenet5_layers.mojo` | If `__moveinit__` was the root cause, 24 tests in one file should now be safe | The `^` fix was wrong, so consolidation was premature; would likely re-introduce original heap corruption at 15+ tests | Do not reconsolidate until the actual root cause of the heap corruption is confirmed |

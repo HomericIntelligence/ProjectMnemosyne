@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-18 |
 | Branch | `fix-experiment-hang-signal-handling` |
 | Objective | Fix experiment runner hanging after tier initialization and not responding to Ctrl+C or Ctrl+Z |
@@ -134,7 +134,7 @@ Call `set_log_context(tier_id=..., subtest_id=..., run_num=...)` at worker entry
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Named constant `_AGENT_POLL_INTERVAL` inside function | Used uppercase naming for module-level constants inside a function body | Ruff N806: variable in function should be lowercase | Extract to helper function or use lowercase variable name |
 | `for f in pending: f.cancel()` in batch loop | Variable `f` reused from earlier `with open(summary_path) as f:` in same function scope | Mypy type error: `Future` incompatible with `TextIOWrapper` | Use unique variable names (`pending_future`) to avoid scope collisions |
 | `type: ignore[attr-defined]` on LogRecord attributes | Added suppression comments to `record.tier_id = ...` | Mypy says the comments are unused — LogRecord accepts arbitrary attrs | Don't add preemptive type: ignore; let mypy tell you if it's needed |
@@ -144,7 +144,7 @@ Call `set_log_context(tier_id=..., subtest_id=..., run_num=...)` at worker entry
 ## Results & Parameters
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Tests | 4924 passed (2 skipped) |
 | Coverage | 77.74% |
 | New tests | 14 (guard tests for all 6 bugs + logging) |
@@ -163,7 +163,7 @@ resume_event_timeout: 2.0  # worker pause poll interval
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1515 — Fix hang and signal handling | [notes.md](../../references/notes.md) |
 
 ## Key Invariants

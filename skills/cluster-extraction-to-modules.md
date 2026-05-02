@@ -14,7 +14,7 @@ tier: 2
 ## Overview
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Date** | 2026-03-05 |
 | **Objective** | Reduce `implementer.py` from 1,221 to <1,000 lines by extracting method clusters into sub-modules |
 | **Outcome** | ✅ Success — 1,221 → 837 lines, 3 new modules, 37 new tests, 336 automation tests pass |
@@ -53,7 +53,7 @@ wc -l <target_file>.py  # confirm > 1000
 Read the file and group methods into clusters:
 
 | Cluster | Methods | Shared resource | Lines |
-|---------|---------|-----------------|-------|
+| --------- | --------- | ----------------- | ------- |
 | Retrospective | `_run_retrospective`, `_retrospective_needs_rerun` | Claude CLI | ~80 |
 | Follow-up | `_run_follow_up_issues`, `_parse_follow_up_items` | Claude CLI + GitHub API | ~150 |
 | PR/Git | `_commit_changes`, `_ensure_pr_created`, `_create_pr` | git CLI + GitHub API | ~190 |
@@ -209,7 +209,7 @@ pixi run python -m pytest tests/unit/<package>/ -q  # all tests pass
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | **`object` type for status_tracker** | Used `status_tracker: object \| None` to avoid importing `StatusTracker` | mypy error: `"object" has no attribute "update_slot"` — `object` is too broad | Import the concrete type; the module already imports from the same package so there's no circular import risk |
 | **Bare `dict` in test helper** | Wrote `def _make_output(items: list[dict]) -> str` | mypy `type-arg` error: generic type needs params | Use `list[dict[str, Any]]` consistently |
 | **Forgetting to update existing test patch paths** | Left `patch("scylla.automation.implementer.run")` for methods that moved to `follow_up.py` | Test passes Python import but mock is never triggered — `AssertionError: Called 0 times` | Always grep for module-level patches in existing tests when extracting code to a new module |
@@ -221,7 +221,7 @@ pixi run python -m pytest tests/unit/<package>/ -q  # all tests pass
 ## Key Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| ---------- | ----------- |
 | **Keep thin delegation wrappers** | Preserves the existing public interface — callers and tests that use `instance._run_retrospective()` continue to work unchanged |
 | **Extract to module-level functions, not classes** | Methods only used `self.state_dir` and `self.status_tracker` — passing these as parameters is simpler than creating a new class |
 | **Explicit parameters over `self`** | `run_retrospective(session_id, worktree_path, issue_number, state_dir, slot_id)` is independently unit-testable; no need to construct a full `IssueImplementer` |
@@ -316,6 +316,6 @@ keep the delegation shell. Removing it to inline the call breaks those tests.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1444 — decompose `scylla/automation/implementer.py` 1221→837 lines | [notes.md](../references/notes.md) |
 | ProjectScylla | PR #1468 — decompose `scylla/e2e/runner.py` 1230→999 lines (class-based variant) | [runner-notes.md](../references/runner-notes.md) |

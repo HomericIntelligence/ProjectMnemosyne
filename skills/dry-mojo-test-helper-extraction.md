@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-15 |
 | **Objective** | Reduce duplication in Mojo test files by extracting repeated tensor setup into a private helper function |
 | **Outcome** | -10 net lines, identical behavior, no new `fn test_` functions added |
@@ -103,7 +103,7 @@ Closes #<issue-number>"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Tuple destructuring with `var (x, kernel, bias) = ...` | Tried Python-style tuple unpacking syntax | Mojo v0.26.1 does not support destructuring assignment for tuples in `var` declarations | Use indexed access: `tensors[0]`, `tensors[1]`, `tensors[2]` |
 | Placing helper after consumers | Considered inserting helper at end of file | Mojo requires forward declarations or definition-before-use; helper must appear before its callers | Always insert private helpers immediately before their first caller |
 

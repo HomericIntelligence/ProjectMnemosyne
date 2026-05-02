@@ -13,7 +13,7 @@ user-invocable: true
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-03 |
 | **Objective** | Reconcile conflicting package version specs in `pixi.toml` |
 | **Outcome** | Single authoritative constraint per package; `pixi install` succeeds cleanly |
@@ -99,7 +99,7 @@ git commit -m "fix(deps): remove duplicate <package> specs from feature.dev.depe
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -126,5 +126,5 @@ pytest --version → pytest 9.0.2
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | March 2026 quality audit, issue #1354 — pytest `>=7.0` vs `>=9.0.2,<10` | PR #1373 |

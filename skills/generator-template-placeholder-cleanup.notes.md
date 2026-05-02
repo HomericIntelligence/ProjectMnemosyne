@@ -18,7 +18,7 @@ Review 31 TODO comments across 4 generator Python scripts and determine whether 
 ## Files Affected
 
 | File | TODOs | Classification |
-|------|-------|----------------|
+| ------ | ------- | ---------------- |
 | `scripts/generators/generate_tests.py` | 14 | All template placeholders |
 | `scripts/generators/generate_model.py` | 5 | All template placeholders (3 in Mojo template strings, 2 in Python fallback strings) |
 | `scripts/generators/generate_layer.py` | 4 | All template placeholders |

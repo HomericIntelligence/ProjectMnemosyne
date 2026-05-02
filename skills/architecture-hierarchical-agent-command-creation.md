@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Create a reusable Claude Code custom command (`/myrmidon-swarm`) that decomposes complex tasks into hierarchical agent trees with automatic model tier assignment (Opus for orchestrators, Sonnet for specialists, Haiku for executors) |
 | **Outcome** | Success - 387-line command file installed at `~/.claude/commands/myrmidon-swarm.md`, immediately discoverable in Claude Code autocomplete |
@@ -67,7 +67,7 @@ description: Brief description of what the command does
 3. **Define model tier assignments** — Map agent levels to Claude models:
 
    | Tier | Levels | Model | Role |
-   |------|--------|-------|------|
+   | ------ | -------- | ------- | ------ |
    | Orchestrator | L0, L1 | `model: "opus"` | Strategic decisions, coordination |
    | Specialist | L2, L3 | `model: "sonnet"` | Design, analysis, code review |
    | Executor | L4, L5 | `model: "haiku"` | Implementation, boilerplate |
@@ -104,7 +104,7 @@ description: Brief description of what the command does
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Initial model mapping from ProjectOdyssey | Used Odyssey's exact mapping (only L0=Opus, L1-L3=Sonnet, L4-L5=Haiku) | User wanted Orchestrators (L0+L1) on Opus, not just L0 | Always confirm model tier assignments with the user — the command owner's preferences may differ from the source project |
 | Generic command name | Proposed `/agentic-workflow` as the command name | User wanted `/myrmidon-swarm` to fit the Homeric theme | Ask about naming preferences — ecosystem naming conventions matter |
 | Skip approval gate | Considered autonomous execution for speed | User explicitly wanted mandatory approval before spawning agents | Default to requiring approval for commands that spawn multiple agents — the cost of misunderstood tasks is high |
@@ -134,7 +134,7 @@ description: Summon the Myrmidon swarm — hierarchical agent delegation with Op
 ### Key Design Decisions
 
 | Decision | Choice | Rationale |
-|----------|--------|-----------|
+| ---------- | -------- | ----------- |
 | File location | `~/.claude/commands/` (user-level) | Works across all repos without per-repo setup |
 | Prompt structure | XML sections in markdown | Matches `repo-analyze.md` convention, gives Claude clear semantic boundaries |
 | Approval gate | Mandatory in Phase 1 | Prevents wasted compute on misunderstood tasks |
@@ -161,7 +161,7 @@ Key rules from `wave-based-bulk-issue-triage` skill:
 ### Integration Points
 
 | Integration | Required? | How |
-|-------------|-----------|-----|
+| ------------- | ----------- | ----- |
 | ProjectMnemosyne `/advise` | Yes (auto) | Skill tool invocation in Phase 1 |
 | ProjectMnemosyne `/learn` | No (suggest) | User decides in Phase 5 |
 | AI Maestro | No (detect) | Check for `~/.aimaestro/` directory |
@@ -170,5 +170,5 @@ Key rules from `wave-based-bulk-issue-triage` skill:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence ecosystem | Session creating /myrmidon-swarm command | Installed at ~/.claude/commands/myrmidon-swarm.md, 387 lines, appears in autocomplete |

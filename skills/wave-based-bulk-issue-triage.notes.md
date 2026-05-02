@@ -25,7 +25,7 @@ All 4 Wave 7 agents launched in a SINGLE message after Wave 6 completed.
 ## Agent Outcomes
 
 | Issue | Agent ID | PR | Tests | Duration |
-|-------|----------|----|-------|----------|
+| ------- | ---------- | ---- | ------- | ---------- |
 | #930 | aed21aa6 | #1051 | 1 added | ~2 min |
 | #959 | ac2f8db1 | #1052 | 0 | ~1.5 min |
 | #920 | aa3ad84a | #1053 | 0 | ~37s |

@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | png-jpeg-to-idx-conversion |
 | **Category** | tooling |
 | **Language** | Python 3.7+ |
@@ -98,7 +98,7 @@ if __name__ == "__main__":
 Test classes and what they cover:
 
 | Class | Tests |
-|-------|-------|
+| ------- | ------- |
 | `TestLoadAndPreprocess` | 784-byte output, uint8 range, JPEG accepted, transform changes pixels |
 | `TestWriteIdxImage` | file created, 800-byte size, IDX magic/count/rows/cols, pixel data verbatim |
 | `TestMain` | end-to-end PNG, end-to-end JPEG, missing input exits 1, `--no-emnist-transform` flag |
@@ -150,7 +150,7 @@ All 15 tests pass in ~1.3s. Ruff may reformat the argparse description line (lin
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `sys.path` insert in test file | Used `sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))` | Works, but test runner must be invoked from repo root | Always insert scripts path relative to `__file__`, not cwd |
 | Writing IDX with `float32` pixels | Considered writing float32 values (0.0–1.0) instead of uint8 | EMNIST IDX images use uint8; run_infer.mojo normalizes internally | Keep pixel bytes as raw uint8 and let the Mojo side normalize |
 | Subprocess-based CLI tests | Considered `subprocess.run(["python", script, ...])` | Adds process overhead and path resolution complexity | Call `main()` directly by patching `sys.argv` — faster and simpler |
@@ -158,7 +158,7 @@ All 15 tests pass in ~1.3s. Ruff may reformat the argparse description line (lin
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Output size | 800 bytes (16 header + 784 pixels) |
 | IDX magic | 2051 (0x00000803) |
 | Image size | 28×28 pixels |

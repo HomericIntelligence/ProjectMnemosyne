@@ -15,7 +15,7 @@ tags: [bash, git-branch, function-definition, arg-parsing, ansi-color, env-var, 
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-27 |
 | **Objective** | Implement and review bash PRs against upstream forks, handle out-of-scope bug discovery, and manage multi-PR branch dependencies |
 | **Outcome** | PR #63 (feature), PR #67/#68/#69 (bugs) created at `HaywardMorihara/gh-tidy`; all fixes verified locally |
@@ -368,10 +368,10 @@ git push origin branch1 branch2 branch3
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `if git branch --list "$branch"; then` | Used exit code of `git branch --list` to check branch existence | `git branch --list` always exits 0, even when the branch does not exist — the exit code only reflects command execution, not whether any branch was matched | Always test the OUTPUT: `[[ -n "$(git branch --list "$branch")" ]]` |
 | Calling `red()` from inside arg-parsing while loop | Emitted a colored error message during argument parsing using a color function defined later in the file | Bash function definitions are not hoisted; functions defined below the while loop don't exist when the loop runs | Use `echo >&2` or `printf >&2` for all error output inside arg-parsing blocks |
-| `--trunk` flag with no guard after inner shift | After `shift` to consume `--trunk`, used `$1` directly as `TRUNK_BRANCH` | If `--trunk` is the last arg or is followed immediately by another flag, `$1` is empty or another flag name | After shifting a value-flag, always guard: `[[ -z "$1" || "$1" == --* ]]` and emit an error |
+| `--trunk` flag with no guard after inner shift | After `shift` to consume `--trunk`, used `$1` directly as `TRUNK_BRANCH` | If `--trunk` is the last arg or is followed immediately by another flag, `$1` is empty or another flag name | After shifting a value-flag, always guard: `[[ -z "$1" \|\| "$1" == --* ]]` and emit an error |
 | "is the same as local $trunk_branch" prompt text | Used this phrasing to tell users a branch matches trunk | The phrase is misleading — "same as" implies identical content, but the check is whether the branch is merged into trunk | Use "is merged into $trunk_branch" for accuracy |
 | Assuming $problem_branches was always initialized | Used `$problem_branches` in cleanup code without unconditional declaration | When `REBASE_ALL=false`, the block that populates `problem_branches` was skipped — using the array later caused an unbound variable error | Always declare arrays unconditionally before conditional blocks that populate them |
 | Placing env-var notices inside the while loop | Emitted override notices during argument parsing | The CLI override for that flag may appear later in the argument list | Place the entire notice block after the while loop closes, before the first git operation |
@@ -500,6 +500,6 @@ Round 2 (logic/safety):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | gh-tidy (HaywardMorihara/gh-tidy) | PR #63 `--auto-delete-merged` feature (issue #62) | Two review rounds; verified locally with `GH_TIDY_DEV_MODE=1` |
 | gh-tidy (HaywardMorihara/gh-tidy) | PRs #67/#68/#69 — three bug fixes found during PR #63 review | Issues #64 (word-split), #65 (exit 1), #66 (style); #69 branched off #63's branch; #67/#68 branched off main |

@@ -9,7 +9,7 @@ user-invocable: false
 # Judge Rerun Workspace Corruption Fix
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-09 |
 | Objective | Fix judge reruns that were judging against reset/empty workspaces instead of original agent work |
 | Root Cause | Judge reruns rebuilt prompts from workspace state, which was corrupted/reset by agent rerun scripts |
@@ -153,7 +153,7 @@ except Exception as e:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -171,14 +171,14 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Key Parameters
 
 ### Run Status Classifications
 
 | Status | Definition | Requires Agent Rerun? | Requires Judge Rerun? |
-|--------|------------|----------------------|----------------------|
+| -------- | ------------ | ---------------------- | ---------------------- |
 | COMPLETED | Agent + judge + run_result.json exist | ❌ No | Maybe (if judge failed) |
 | RESULTS | Agent finished, missing result files | ❌ No (regenerate only) | ✅ Yes |
 | FAILED | Agent ran but failed (stderr, no output) | ✅ Yes | ✅ Yes (after agent) |
@@ -188,7 +188,7 @@ Copy-paste ready configurations and expected outputs.
 ### File Locations
 
 | File | Purpose | Scope |
-|------|---------|-------|
+| ------ | --------- | ------- |
 | `run_dir/judge_prompt.md` | Full judge evaluation context | Per-run (shared by all judges) |
 | `run_dir/judge/judge_01/judgment.json` | Individual judge result | Per-judge |
 | `run_dir/judge/judge_01/timing.json` | Judge execution timing + error info | Per-judge |
@@ -198,7 +198,7 @@ Copy-paste ready configurations and expected outputs.
 ### Script Coordination
 
 | Script | Purpose | Workspace Handling |
-|--------|---------|-------------------|
+| -------- | --------- | ------------------- |
 | `rerun_agents.py` | Re-run failed/incomplete agents | Recreates workspace for FAILED/PARTIAL/MISSING |
 | `rerun_judges.py` | Re-run failed judge evaluations | Reuses existing workspace + saved judge_prompt.md |
 | `regenerate.py` | Rebuild result.json from logs | Reuses existing workspace (no recreation) |

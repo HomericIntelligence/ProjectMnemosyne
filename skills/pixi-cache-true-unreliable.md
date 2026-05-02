@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-08 |
 | Project | ProjectOdyssey |
 | Objective | Consolidate 14+ independent Pixi setup blocks into a single shared composite action with reliable caching |
@@ -159,7 +159,7 @@ gh pr merge --auto --rebase
 ## Results & Parameters
 
 | Parameter | Value | Notes |
-|-----------|-------|-------|
+| ----------- | ------- | ------- |
 | `actions/cache` version | `@v5` | Match what other workflows use |
 | Cache path 1 | `.pixi` | Project environment directory |
 | Cache path 2 | `~/.cache/rattler/cache` | Package download cache — must include both |
@@ -170,7 +170,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Keep `cache: true` | Used `prefix-dev/setup-pixi@v0.9.4` with `cache: true` enabled | Internally fails silently; logs "Saved cache with ID -1"; no cache ever saved | Never use `cache: true` — always use explicit `actions/cache` |
 | Cache only `.pixi` | Cached `.pixi` path only, skipped `~/.cache/rattler/cache` | Pixi re-downloads packages on every run even when `.pixi` hits | Must cache both paths or cache is incomplete |
 | Hash `pixi.toml` | Used `hashFiles('pixi.toml')` as cache key | `pixi.toml` doesn't encode exact resolved versions; false positives on cache hits | Use `pixi.lock` for precise cache invalidation |

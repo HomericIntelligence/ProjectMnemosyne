@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `mypy` receives multiple files sharing the same basename (e.g. `download_cifar10.py`) from different hyphenated subdirectories (e.g. `examples/alexnet-cifar10/`, `examples/resnet-cifar10/`). Because hyphens are not valid Python identifiers, mypy cannot resolve the parent directory as a package, and emits an unrecoverable **"Duplicate module named X"** blocker error. |
 | **Root cause** | `pre-commit` passes all matched files in one `mypy` invocation. Hyphenated directory names cannot be used as Python package components, so mypy has no way to disambiguate duplicate basenames. |
 | **Solution** | A thin wrapper script (`scripts/mypy-each-file.py`) that invokes `mypy` once per file, aggregating exit codes. The pre-commit hook is configured as a `local` hook pointing at this wrapper. |
@@ -144,7 +144,7 @@ if __name__ == "__main__":
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Bulk `mypy` invocation on all examples files | Pass all `^examples/.*\.py$` files directly to a single `mypy` run with `--explicit-package-bases` | `mypy` emits "Duplicate module named 'download_cifar10'" because `alexnet-cifar10` and `resnet-cifar10` are not valid Python identifiers — mypy cannot disambiguate the two `download_cifar10.py` files | Hyphenated directory names can never serve as Python package components; per-file invocation is the only robust solution |
 | Using `namespace_packages = true` in mypy config | Attempted to configure mypy namespace package support to handle non-standard paths | Does not resolve the duplicate-module conflict when two files truly share the same basename at the same namespace level | The issue is a name collision, not a package discovery problem |
 | Adding `--exclude` patterns | Tried excluding one of the duplicate subdirs per invocation | Would suppress legitimate type-check coverage on excluded dirs | Defeats the purpose of extending coverage; per-file wrapper is cleaner |
@@ -154,7 +154,7 @@ if __name__ == "__main__":
 ### Wrapper Script Parameters
 
 | Flag | Value | Purpose |
-|------|-------|---------|
+| ------ | ------- | --------- |
 | `--ignore-missing-imports` | (flag) | Suppress errors for unresolved third-party imports |
 | `--no-strict-optional` | (flag) | Allow implicit `Optional` — matches project's existing mypy config |
 | `--explicit-package-bases` | (flag) | Required to avoid package-root confusion in non-package dirs |

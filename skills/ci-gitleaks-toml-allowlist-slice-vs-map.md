@@ -14,7 +14,7 @@ tags: [gitleaks, toml, allowlist, config, secrets-scan, pre-commit]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-28 |
 | **Objective** | Fix gitleaks crash when loading `.gitleaks.toml` with `[[rules.allowlist]]` section |
 | **Outcome** | Successful — changed `[[rules.allowlist]]` (array-of-tables) to `[allowlist]` (top-level map) |
@@ -77,7 +77,7 @@ paths = [
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `[[rules.allowlist]]` double-bracket syntax | TOML array-of-tables — produces a slice/list | gitleaks v8.24.3 AllowList field expects a map, not a slice; error: `'Rules[0].AllowList' expected a map, got 'slice'` | Use `[allowlist]` (top-level map) not `[[rules.allowlist]]` (nested array-of-tables) |
 | Multiple `[[rules.allowlist]]` blocks | Adding a second `[[rules.allowlist]]` for different path patterns | Same error — still produces a slice even with one block | There is exactly one `[allowlist]` block; all patterns go inside it |
 
@@ -105,5 +105,5 @@ gitleaks detect --source . --no-git -v
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Myrmidons | fix/ci-precommit-parity PR — gitleaks pre-commit hook crashing on config load | 2026-04-28 |

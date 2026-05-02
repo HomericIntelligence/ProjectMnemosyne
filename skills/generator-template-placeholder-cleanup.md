@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Category** | documentation |
 | **Effort** | Low (mechanical substitution) |
 | **Languages** | Python (generator scripts), any generated language |
@@ -81,7 +81,7 @@ Closes #<issue>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Batch-replace all TODOs at once | Considered using `replace_all=True` on a single Edit call per file | TODOs had slightly different surrounding context, making single-pattern replacement fragile | Use individual targeted Edit calls per TODO for precision |
 | Running full test suite | Ran `pixi run python -m pytest tests/ -v` expecting generator tests | No `tests/scripts/generators/` directory exists; generator scripts have no pytest tests | Check for test coverage before assuming tests exist; pre-commit is sufficient validation here |
 

@@ -15,7 +15,7 @@ tags: [latex, narrative-removal, corpus-edit]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-13 |
 | **Objective** | Apply corrections identified by a review pass to 62 research/summary documents and 4 synthesis documents — without rewriting sections or losing provenance |
 | **Outcome** | All 66 files corrected across 8 parallel batches; every change marked with `[corrected: ...]` inline notes |
@@ -136,7 +136,7 @@ section_patterns = [
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Single agent for all 62 files | Tried one agent to fix everything | Context exhaustion; agent loses track of which corrections it has applied | Partition into groups of 5–8 files per agent |
 | Silent corrections without markers | Applied corrections without `[corrected: ...]` notes | Changes become invisible in the document; humans can't audit what changed without diffing | Always add inline `[corrected: ...]` markers — even for "obvious" fixes |
 | Rewriting whole sections | Replaced entire paragraphs to fix one number | Lost surrounding context and nuance; introduced new errors | Surgical edits only: change the minimum needed, preserve everything else |
@@ -178,7 +178,7 @@ Per review_[id].md:
 ### Correction Rate Statistics (31 research docs + 31 summary docs + 4 synthesis docs)
 
 | Error Type | Files Affected | Batches Required |
-|------------|----------------|-----------------|
+| ------------ | ---------------- | ----------------- |
 | KV cache ~68 GB → ~8.59 GB for A2 at 32K | 23/62 research+summary | All 7 research batches |
 | Vocab 151,936 → 248,320 for A1/B | 12/62 | Most batches |
 | Context 32,768 → 262,144 for A1/B | 15/62 | Most batches |
@@ -201,5 +201,5 @@ Patterns that required special care:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ArchIdeas | 31 AI architecture ideas post-review correction | 62 research/summary docs + 4 synthesis docs; 8 parallel correction batches |

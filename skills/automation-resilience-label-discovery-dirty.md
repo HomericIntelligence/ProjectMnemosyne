@@ -24,7 +24,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-22 |
 | **Objective** | Fix five failure modes in implement_issues.py / plan_issues.py pipeline |
 | **Outcome** | Success — 1403 tests pass, PR #301 merged |
@@ -226,7 +226,7 @@ class WorktreeManager:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Retry on all CalledProcessError from gh issue create | Retry the entire create call when any gh error occurs | Too broad — retries would loop on unrelated errors (rate limit, auth) | Parse the specific label name from stderr; only retry after creating that exact label |
 | Use gh_list_labels() without caching | Called gh API on every label check per issue | O(N) API calls for N issues — slow and rate-limit-prone | Cache with functools.lru_cache; invalidate only after write operations |
 | Always force-remove dirty worktrees in cleanup_all() | Used --force to ensure cleanup completes | Silently discards in-progress agent work; users lost partial implementations | Block removal with WorktreeDirtyError; accumulate in preserved list; report at summary |
@@ -236,7 +236,7 @@ class WorktreeManager:
 ### Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `hephaestus/automation/github_api.py` | Added `gh_list_labels()`, `gh_create_label()`, `_ensure_labels_exist()`, `gh_list_open_issues()` |
 | `hephaestus/automation/implementer.py` | Added open-issue auto-discovery in `main()`; call `_ensure_labels_exist()` |
 | `hephaestus/automation/planner.py` | Added open-issue auto-discovery in `main()` |
@@ -267,5 +267,5 @@ gh issue list --state open --limit 500 --json number --jq '.[].number'
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | PR #301, branch port-circuit-breaker-success-threshold | 1403 tests pass in CI |

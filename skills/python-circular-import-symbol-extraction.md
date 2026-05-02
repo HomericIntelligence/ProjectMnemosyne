@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-29 |
 | **Objective** | Break Python circular import chains that produce `ImportError: cannot import name 'X' from partially initialized module` on startup |
 | **Outcome** | Two verified fixes: (1) ProjectScylla PR #1850 — extract shutdown symbols to leaf module; (2) ProjectHephaestus PR #308 — remove eager CLI re-exports from `__init__.py` + extract `_gh_call` to leaf module |
@@ -257,7 +257,7 @@ grep -rn "from <pkg>.<original_module> import <symbol>" src/ --include="*.py"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Lazy imports inside function bodies | Moved `from scylla.e2e.runner import is_shutdown_requested` inside function bodies in rate_limit.py and parallel_executor.py | Did not fix the error — the symbol was referenced during module-level code (class body, module-level constant) in one of the intermediate modules, so deferring the import statement didn't defer the actual resolution | Lazy function-body imports only help if the symbol is used at call time. If any intermediate module in the chain references the symbol during its own initialization, lazy imports don't break the cycle |
 | Patching old module location after symbol move | 4 tests continued to use `patch("scylla.e2e.runner.is_shutdown_requested", ...)` after moving the symbol to `shutdown.py` | The patches registered the mock on `runner.is_shutdown_requested` but callers looked up `shutdown.is_shutdown_requested` — the mock was never invoked | Python mock patches intercept name lookups. After moving a symbol, update ALL patches to target the module where callers actually resolve the name |
 | Delete only `__init__.py` re-exports without moving `_gh_call` | Removed `fleet_sync`/`tidy` from `hephaestus/github/__init__.py` but left `from hephaestus.automation.github_api import _gh_call` in `fleet_sync.py` | The `github → automation` import edge in `fleet_sync.py` remained intact; any future code path touching both packages can re-trigger the same cycle | Must eliminate the layering violation at the source (move the shared symbol to a leaf module), not just remove the eager load from `__init__.py` |
@@ -275,7 +275,7 @@ src/scylla/e2e/shutdown.py          -- 3 symbols, ~40 lines, zero heavy deps
 ### Files updated (ProjectHephaestus PR #308)
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `hephaestus/github/__init__.py` | Removed eager re-exports of `fleet_sync` and `tidy`; removed from `__all__` |
 | `hephaestus/github/gh_subprocess.py` | New leaf module containing `_gh_call` |
 | `hephaestus/github/fleet_sync.py` | Updated import to `gh_subprocess` (from `automation.github_api`) |
@@ -284,7 +284,7 @@ src/scylla/e2e/shutdown.py          -- 3 symbols, ~40 lines, zero heavy deps
 ### Files updated (ProjectScylla PR #1850)
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `src/scylla/e2e/runner.py` | Added re-export block for backward compat |
 | `src/scylla/e2e/rate_limit.py` | Updated import to `shutdown.py` |
 | `src/scylla/e2e/parallel_executor.py` | Updated import to `shutdown.py` |
@@ -326,6 +326,6 @@ from hephaestus.github.gh_subprocess import _gh_call as _gh_call
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #1850 — circular import fix on `scylla.e2e` package | Fixed startup `ImportError`; 4 mock patches updated; CI passed |
 | ProjectHephaestus | PR #308 — eager `__init__.py` re-exports triggering circular import | Removed CLI re-exports from `github/__init__.py`; extracted `_gh_call` to `gh_subprocess.py`; pre-commit passed, unit tests passed locally |

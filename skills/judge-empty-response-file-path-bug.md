@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Fix LLM judge returning empty responses — two distinct root causes |
 | **Outcome** | v2: stdin piping fixes variadic flag issue. v3: stream-json parsing works around CLI v2.1.83 result field bug. |
@@ -116,7 +116,7 @@ python3 ~/fullruns/haiku-2/reset_judges.py --apply
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Pass content as positional arg (PR #1543) | Replaced temp file path with prompt content as positional CLI arg | --allowedTools is variadic and consumed the positional arg | Variadic CLI flags consume all subsequent non-flag args; use stdin piping instead |
 | Test CLI from within Claude Code | Ran claude -p "hello" from bash tool | All invocations returned empty due to CLI bug (not CLAUDECODE env) | Cannot distinguish env issues from CLI bugs when testing inside Claude Code |
 | Resume old checkpoint after code fix | Applied fix and resumed old experiment | Already-completed subtests had zero-score results baked in | Code fixes don't retroactively fix completed checkpoint states; must reset run states |
@@ -129,7 +129,7 @@ python3 ~/fullruns/haiku-2/reset_judges.py --apply
 ### PRs
 
 | PR | Change |
-|----|--------|
+| ---- | -------- |
 | #1543 | Pass prompt content instead of temp file path + diagnostics |
 | #1544 | Pipe via stdin instead of positional arg (fixes variadic flag) |
 | #1558 | Switch to stream-json parsing (works around CLI v2.1.83 result bug) |
@@ -141,7 +141,7 @@ python3 ~/fullruns/haiku-2/reset_judges.py --apply
 ### CLI Patterns
 
 | Pattern | Works? | Why |
-|---------|--------|-----|
+| --------- | -------- | ----- |
 | `--allowedTools "" "prompt"` | No | Variadic flag consumes prompt as tool name |
 | `echo "prompt" \| claude --output-format text` | No (v2.1.83) | Result field empty despite model responding |
 | `echo "prompt" \| claude --output-format json` | No (v2.1.83) | Same empty result field |
@@ -167,5 +167,5 @@ echo "Say hello" | env -u CLAUDECODE claude -p --model claude-haiku-4-5 \
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | haiku-2 fullrun judge failures | v2: PRs #1543+#1544; v3: PR #1558; upstream bug anthropics/claude-code#39028 |

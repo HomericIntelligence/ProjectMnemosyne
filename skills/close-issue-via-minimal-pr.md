@@ -15,7 +15,7 @@ history: close-issue-via-minimal-pr.history
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Issue is still open but all code changes already landed on main; branch has no diff from main |
 | **Pattern** | Minimal docstring update in the primary file to create a substantive commit |
 | **Trigger** | `git diff main..HEAD` is empty; issue asks for "CI verification" of existing code |
@@ -158,7 +158,7 @@ a pin-bump or chore commit where no individual PR carries the `Closes #N` body.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Create empty commit | `git commit --allow-empty` | GitHub still creates a PR but it's harder to justify; pre-commit hooks may reject it | A real docstring improvement is cleaner and more reviewable than an empty commit |
 | Use `.claude-prompt-N.md` as the commit file | Stage and commit the prompt file | Prompt files are ephemeral implementation details, not project files — staging them pollutes history | Only commit actual project files; leave prompt files untracked |
 | Look for missing implementation | Read test files expecting to find TODOs or stubs | Tests were fully implemented; the only missing piece was the PR | Always check `git diff origin/main` first before assuming code is missing |
@@ -186,7 +186,7 @@ gh pr merge --auto --rebase 4811
 ### GitHub auto-close keyword rules
 
 | Phrase | Auto-closes? |
-|--------|-------------|
+| -------- | ------------- |
 | `Closes #N` | YES |
 | `Fixes #N` | YES |
 | `Resolves #N` | YES |
@@ -220,6 +220,6 @@ When the issue says "cannot verify locally due to GLIBC mismatch":
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3840, PR #4811 | [notes.md](../references/notes.md) |
 | Odysseus | Issue #102, PR #138 — "Closes part of #102" failed to auto-close; used `gh issue close 102 --reason completed` | 2026-04-23 |

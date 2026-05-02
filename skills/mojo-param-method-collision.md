@@ -10,7 +10,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-22 |
 | **Objective** | Fix Mojo v0.26.1 compilation errors from struct parameter-method name collision and typed overload ambiguity |
 | **Outcome** | Renamed trait method `dtype()` → `get_dtype()` and typed overloads to `_typed` suffix; 27 functions across 11 files |
@@ -126,7 +126,7 @@ grep -rn "from.*import.*add\b" tests/ --include="*.mojo"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Rename struct parameter `dtype` → `dt` | Changed `struct Tensor[dt: DType]` to avoid collision with `fn dtype()` method | Cascades through ALL callers (`Self.dtype` → `Self.dt` in 32+ locations); non-idiomatic (Mojo stdlib uses `dtype`) | Rename the METHOD, not the parameter — method is called in fewer places |
 | Rename trait method `dtype()` → `get_dtype()` in TensorLike only | Changed trait but not implementations | Implementations must also rename, AND AnyTensor needs both old+new for backward compat | When renaming trait methods, update ALL conforming types |
 | Review agent claims collision doesn't exist | Agent said `struct Tensor[dtype]` + `fn dtype()` compiles fine in Mojo v0.26.1 | CI proved it DOES fail with `invalid redefinition of 'dtype'` | ALWAYS trust the compiler over review agent claims — test assumptions with `mojo build` |
@@ -181,5 +181,5 @@ grep -rn "_typed\[" shared/core/ --include="*.mojo" | wc -l  # Should be 27 (typ
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Epic #4998, PRs #5028-#5029 | ExTensor → Tensor[dtype] + AnyTensor migration |

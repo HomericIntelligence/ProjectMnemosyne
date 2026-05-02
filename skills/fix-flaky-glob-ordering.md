@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Tests fail intermittently due to non-deterministic `pathlib.glob()` ordering |
 | **Root Cause** | Filesystem glob order is OS/filesystem-dependent and not guaranteed |
 | **Fix** | Sort glob results before iterating; update test assertions to match sorted order |
@@ -52,7 +52,7 @@ This pattern matches existing usage in the codebase (e.g. `shared/utils/config.m
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `sorted(p.glob("*.weights"))` | Called `sorted()` directly in Mojo as if it were a builtin | Mojo compiler error: `use of unknown declaration 'sorted'` — `sorted()` is a Python builtin, not Mojo | In Mojo, Python builtins must be accessed via `Python.import_module("builtins")` |
 | Fix only the test assertions | Reorder test to match observed CI output | Doesn't fix the non-determinism; different filesystems may return different orders | Always fix the source of non-determinism, not just the test |
 

@@ -10,14 +10,14 @@ user-invocable: false
 
 ## Overview
 
-| Field     | Value                                                          |
-|-----------|----------------------------------------------------------------|
-| Date      | 2026-02-19                                                     |
-| Issue     | #746                                                           |
-| PR        | #804                                                           |
-| Objective | Configure hatchling to produce wheel-only distributions        |
-| Outcome   | Success — single 2-line addition resolved the issue            |
-| Category  | tooling                                                        |
+| Field | Value |
+| ----------- | ---------------------------------------------------------------- |
+| Date | 2026-02-19 |
+| Issue | #746 |
+| PR | #804 |
+| Objective | Configure hatchling to produce wheel-only distributions |
+| Outcome | Success — single 2-line addition resolved the issue |
+| Category | tooling |
 
 ## When to Use
 
@@ -73,7 +73,7 @@ No test changes needed — this is a build configuration change only.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

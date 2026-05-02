@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Test fixtures for checkpoint-based resume logic silently break when they set higher-level state (e.g., subtest "aggregated") without providing the lower-level backing state (e.g., run_states entries) that integrity validators expect |
 | **Solution** | Always populate all four checkpoint hierarchy levels consistently: experiment_state → tier_states → subtest_states → run_states |
 | **Key Insight** | Runtime validators (orphan detectors, intermediate-run scanners) run during resume and will correct inconsistent fixtures — causing "correct code, broken test" failures |
@@ -58,7 +58,7 @@ experiment_state  (1 value)
 **Consistency rules enforced at resume time:**
 
 | Higher State | Required Lower State | Validator |
-|-------------|---------------------|-----------|
+| ------------- | --------------------- | ----------- |
 | subtest "aggregated" or "runs_complete" | At least one entry in `run_states[tier][subtest]` | `_find_orphaned_subtest_states()` |
 | subtest "runs_in_progress" | At least one run in non-terminal state | `_find_tiers_with_intermediate_runs()` |
 | tier "complete" | All subtests in "aggregated" | `_reset_tier_state_for_rerun()` |
@@ -106,7 +106,7 @@ def test_resume_resets_failed_subtests_only(self, mock_config, tmp_path):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Minimal fixture with subtest_states only | Set `subtest_states={"T0": {"00": "failed", "01": "aggregated"}}` without run_states | `_find_orphaned_subtest_states()` detected "01" as orphaned (aggregated with no backing runs) and correctly reset it to "pending" | Fixtures must be cross-level consistent — higher-state assertions require lower-state backing data |
 | Using `_run_resume` helper for complex fixtures | Used the shared helper which only accepts subtest_states/tier_states kwargs | Helper creates checkpoint with `run_states={}` — no way to inject run_states | For tests needing run_states, inline the checkpoint creation instead of using the shared helper |
 

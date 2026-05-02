@@ -11,13 +11,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-08 |
-| Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-01-08 | | **Objective** | Add links to JSON result files in markdown reports for easy... |
+| Objective | Add links to JSON result files in markdown reports for easy access to structured data |
 | Outcome | Operational |
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-08 |
 | **Objective** | Add links to JSON result files in markdown reports for easy access to structured data |
 | **Outcome** | ✅ Successfully added JSON links to run reports for both judge and agent results |
@@ -147,7 +147,7 @@ pixi run pytest tests/unit/reporting/test_markdown.py -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

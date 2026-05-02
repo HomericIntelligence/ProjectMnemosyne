@@ -101,7 +101,7 @@ All skills are now flat files in the `skills/` directory. Metadata is stored as 
 ### Categories
 
 | Category | Description |
-|----------|-------------|
+| ---------- | ------------- |
 | `training` | ML training experiments and hyperparameters |
 | `evaluation` | Model evaluation and metrics |
 | `optimization` | Performance tuning and speedups |

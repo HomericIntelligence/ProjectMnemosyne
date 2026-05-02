@@ -12,7 +12,7 @@ Compare test results across multiple runs to identify flaky tests.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Identify flaky and inconsistent tests | Reliable test suite with consistent results |
 
 ## When to Use
@@ -64,7 +64,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Flaky Test Indicators
 
@@ -99,7 +99,7 @@ Report analysis with:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Different environment | Run in controlled environment (docker) |
 | Insufficient data | Run more iterations to get pattern |
 | No failure info | Enable debug output, increase verbosity |

@@ -11,14 +11,14 @@ user-invocable: false
 
 ## Overview
 
-| Field       | Value                                                                              |
-|-------------|------------------------------------------------------------------------------------|
-| Date        | 2026-02-22                                                                         |
-| Issue       | #851                                                                               |
-| PR          | #974                                                                               |
-| Objective   | Replace 9+ hardcoded model-ID string literals with a shared `constants.py` module |
-| Outcome     | Success — single source of truth, all 2442 tests passing, 74.17% coverage         |
-| Category    | architecture                                                                       |
+| Field | Value |
+| ------------- | ------------------------------------------------------------------------------------ |
+| Date | 2026-02-22 |
+| Issue | #851 |
+| PR | #974 |
+| Objective | Replace 9+ hardcoded model-ID string literals with a shared `constants.py` module |
+| Outcome | Success — single source of truth, all 2442 tests passing, 74.17% coverage |
+| Category | architecture |
 
 ## When to Use
 
@@ -212,35 +212,35 @@ pixi run python -m pytest tests/unit/ -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
-| Parameter          | Value                                  |
-|--------------------|----------------------------------------|
-| Files changed      | 11                                     |
-| Files created      | 2 (`constants.py`, `test_constants.py`) |
-| Tests added        | 10                                     |
-| Total tests        | 2442 (all passing)                     |
-| Coverage           | 74.17% (threshold: 73%)                |
-| Pre-commit hooks   | All passing                            |
-| Hardcoded literals | 9 functional replacements              |
+| Parameter | Value |
+| -------------------- | ---------------------------------------- |
+| Files changed | 11 |
+| Files created | 2 (`constants.py`, `test_constants.py`) |
+| Tests added | 10 |
+| Total tests | 2442 (all passing) |
+| Coverage | 74.17% (threshold: 73%) |
+| Pre-commit hooks | All passing |
+| Hardcoded literals | 9 functional replacements |
 
 ### Files Modified
 
-| File                                    | Change                                              |
-|-----------------------------------------|-----------------------------------------------------|
-| `scylla/config/constants.py`            | **New** — `DEFAULT_AGENT_MODEL`, `DEFAULT_JUDGE_MODEL` |
-| `tests/unit/config/test_constants.py`   | **New** — 10 tests                                 |
-| `scylla/config/__init__.py`             | Export both constants                               |
-| `scylla/config/models.py`              | `JudgeConfig.model`, `DefaultsConfig.default_model` |
-| `scylla/executor/agent_container.py`    | `AgentContainerConfig.model`                        |
-| `scylla/executor/judge_container.py`    | `JudgeContainerConfig.judge_model`                  |
-| `scylla/e2e/models.py`                 | `ExperimentConfig` Field defaults + `load()` fallbacks |
-| `scylla/e2e/llm_judge.py`              | `run_llm_judge()` parameter default                 |
-| `scylla/e2e/regenerate.py`             | `effective_judge_model` fallback                    |
-| `scylla/judge/evaluator.py`            | `JudgeConfig.model` Field default                   |
-| `scylla/cli/main.py`                   | `ReportData.judge_model` value                      |
+| File | Change |
+| ----------------------------------------- | ----------------------------------------------------- |
+| `scylla/config/constants.py` | **New** — `DEFAULT_AGENT_MODEL`, `DEFAULT_JUDGE_MODEL` |
+| `tests/unit/config/test_constants.py` | **New** — 10 tests |
+| `scylla/config/__init__.py` | Export both constants |
+| `scylla/config/models.py` | `JudgeConfig.model`, `DefaultsConfig.default_model` |
+| `scylla/executor/agent_container.py` | `AgentContainerConfig.model` |
+| `scylla/executor/judge_container.py` | `JudgeContainerConfig.judge_model` |
+| `scylla/e2e/models.py` | `ExperimentConfig` Field defaults + `load()` fallbacks |
+| `scylla/e2e/llm_judge.py` | `run_llm_judge()` parameter default |
+| `scylla/e2e/regenerate.py` | `effective_judge_model` fallback |
+| `scylla/judge/evaluator.py` | `JudgeConfig.model` Field default |
+| `scylla/cli/main.py` | `ReportData.judge_model` value |
 
 ## Key Insights
 

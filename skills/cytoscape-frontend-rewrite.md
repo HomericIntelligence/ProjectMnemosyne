@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-27 |
 | **Category** | architecture |
 | **Objective** | Full rewrite of 5 frontend files (graph.js, trajectory.js, controls.js, index.html, styles.css) to fix sparse layout, broken filter composition, missing edges, unnecessary relayout, and cluttered multi-row UI |
@@ -290,7 +290,7 @@ cy.on('tap', function(evt) {
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -332,7 +332,7 @@ clearTrajectory(cy)  [trajectory.js]
 ### Files rewritten
 
 | File | Key change |
-|------|-----------|
+| ------ | ----------- |
 | `web/js/graph.js` | Court-slot packing, shared `_computePackedPositions`, new constants |
 | `web/js/trajectory.js` | Array teamIds, multi-team coloring, `edge-highlight` class |
 | `web/js/controls.js` | `_activeTeamIds[]`, removed status filter, match click → all teams |

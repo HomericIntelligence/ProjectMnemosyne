@@ -11,15 +11,15 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-02-05 |
-| Objective | | Field | Value | |-------|-------| | Date | 2026-02-05 | | Objective | Fix T0 subtest 00 missing `--system-prompt ""` flag due to YAML config not ... |
+| Objective | Fix T0 subtest 00 missing `--system-prompt ""` flag due to YAML config not propagating to command building |
 | Outcome | Operational |
 
 ## Session Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-05 |
 | Objective | Fix T0 subtest 00 missing `--system-prompt ""` flag due to YAML config not propagating to command building |
 | Outcome | ✅ SUCCESS - Fixed config propagation + eliminated DRY violation |
@@ -186,7 +186,7 @@ grep -- "--system-prompt" results/*/T0/01/*/agent/replay.sh     # Should NOT mat
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

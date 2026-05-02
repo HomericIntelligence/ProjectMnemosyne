@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-07 |
 | **Objective** | Fix three distinct failure modes from dryrun3 (test-001/002/003 across T0-T6) |
 | **Outcome** | ✅ All three fixed, 140 unit tests pass, pre-commit clean, PR #1469 |
@@ -183,14 +183,14 @@ pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified
 
 | File | Change | Tests |
-|------|--------|-------|
+| ------ | -------- | ------- |
 | `scylla/e2e/subtest_executor.py` | `JUDGE_COMPLETE` → `JUDGE_PROMPT_BUILT` in `_restore_run_context` | +2 |
 | `scylla/e2e/stage_finalization.py` | Prompt reload defense + `_call_judge_with_retry()` | +4 |
 | `scylla/e2e/tier_manager.py` | Graceful T5 skip on partial failure | +5 |
@@ -206,7 +206,7 @@ pre-commit: all hooks pass
 ### Observed Failure Counts Fixed
 
 | Failure Mode | Count in dryrun3 |
-|---|---|
+| --- | --- |
 | Judge prose responses (zero-score) | 57 |
 | T5 inheritance ValueError | 22 |
 | "Judge pipeline: SOME FAILED" (informational) | 7 (not errors) |
@@ -214,7 +214,7 @@ pre-commit: all hooks pass
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | dryrun3 (test-001/002/003, T0-T6) | [notes.md](references/notes.md) |
 
 ## Related Skills

@@ -16,7 +16,7 @@ tags:
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-04 |
 | **Objective** | Fix AttributeError when serializing Pydantic BaseModel objects to JSON |
 | **Outcome** | ✅ Successfully migrated from `.to_dict()` to `.model_dump()` |
@@ -95,7 +95,7 @@ python scripts/run_e2e_experiment.py
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -147,5 +147,5 @@ done
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #136 - E2E runner crash fix | [notes.md](../../references/notes.md) |

@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Enable true integration tests where a struct method populates internal state that tests can inspect after the call |
 | **Outcome** | Successfully exposed `ConfusionMatrix` on `ValidationLoop` struct; integration test verifies exact cell counts through the full `run()` path |
@@ -129,7 +129,7 @@ This lets you set up data as 2-column logits where argmax produces known class p
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Test ConfusionMatrix directly (bypass ValidationLoop) | Created ConfusionMatrix separately and called update() with known data | Tests the metric in isolation, not the integration path through ValidationLoop.run() | Isolated unit tests don't verify the wiring between struct method and internal metric |
 | Inspect confusion matrix without struct changes | Tried to access confusion matrix after validate() call | validate() creates ConfusionMatrix locally and discards it — no way to inspect | Internal state must be promoted to a field or returned to be testable |
 | Add field without adding `raises` to __init__ | Added ConfusionMatrix field but left __init__ as non-raising | ConfusionMatrix.__init__() raises, so the containing struct's __init__ must also raise | Mojo propagates `raises` requirements — always check if a field's constructor raises |
@@ -169,5 +169,5 @@ true=1    1       1    (FN=1, TP=1)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3185 | [notes.md](./skills/mojo-expose-internal-state-testability.notes.md) |

@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-22 |
 | Objective | Remove phantom `tests/integration/` directory references from README.md and CONTRIBUTING.md |
 | Outcome | Success — all phantom references removed, PR #954 created and auto-merge enabled |
@@ -118,12 +118,12 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Files changed | `README.md`, `CONTRIBUTING.md` |
 | Lines removed | 7 |
 | Lines added | 3 |

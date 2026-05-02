@@ -176,7 +176,7 @@ pre-commit run --files scylla/e2e/runner.py tests/unit/e2e/test_runner.py
 ## Metrics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Files changed | 2 |
 | Lines added | +173 |
 | Lines removed | -18 |

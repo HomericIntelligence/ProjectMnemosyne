@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Replace `curl -s <url> \| sh` installer steps with `uses: ./.github/actions/setup-pixi` |
 | **Context** | Supply-chain hardening — live-redirect URLs cannot be SHA256-verified |
 | **Trigger** | Workflow installs a runtime (Mojo, Modular CLI, etc.) via piped curl without a hash check |
@@ -30,7 +30,7 @@ user-invocable: false
 ### Quick Reference
 
 | Pattern to replace | Safe replacement |
-|--------------------|-----------------|
+| -------------------- | ----------------- |
 | `curl -s <url> \| sh -` + `modular install mojo` | `uses: ./.github/actions/setup-pixi` |
 | Two steps (install CLI + install tool) | One step (composite action) |
 
@@ -91,7 +91,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Searching for `wget` patterns only | Used `grep -rn "wget" .github/workflows/` to find unverified downloads | Missed the `curl \| sh` installer in `validate-configs.yml` — it uses `curl`, not `wget` | Always grep for BOTH `wget` and `curl` with pipe patterns when auditing CI |
 | Keeping `continue-on-error: true` | Left it on the replacement step | Unnecessary — the entire point is that `setup-pixi` is stable and pinned; `continue-on-error` would hide failures | Remove `continue-on-error` when replacing a curl-sh step with `setup-pixi` |
 
@@ -136,5 +136,5 @@ grep -rn "curl\|wget" .github/workflows/*.yml | grep -v "sha256sum" | grep "|.*s
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3941 — CI hardening follow-up from #3316 | [notes.md](../../references/notes.md) |

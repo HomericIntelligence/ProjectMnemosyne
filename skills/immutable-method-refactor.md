@@ -15,7 +15,7 @@ tier: 1
 ## Overview
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Date** | 2026-03-02 |
 | **Objective** | Remove `self.checkpoint` mutation from `handle_zombie()` to match the immutable pattern of sibling methods |
 | **Outcome** | ✅ Success — 2-line change, all 30 tests pass, new immutability assertion added |
@@ -122,7 +122,7 @@ Expected: all tests pass including the new assertion.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

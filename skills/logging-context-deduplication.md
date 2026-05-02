@@ -10,7 +10,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Log lines show duplicated context (e.g., `[T5/12/1]` from filter AND `[T5/12/run_01]` from f-string) |
 | **Root Cause** | Logging filter injects fields into records, but message f-strings also manually prefix the same info |
 | **Secondary Bug** | When no context is set, format string renders `[//]` instead of being omitted |
@@ -28,7 +28,7 @@ user-invocable: false
 ### Quick Reference
 
 | Layer | What to change | Pattern |
-|-------|---------------|---------|
+| ------- | --------------- | --------- |
 | Filter | Add composite `log_context_tag` field | Empty when no context, `[T0/00/1]` when set |
 | Format string | Use `%(log_context_tag)s` | Replaces `[%(tier_id)s/...]` |
 | Log messages | Remove manual `[tier/sub/run]` prefixes | Keep only the message content |
@@ -101,7 +101,7 @@ Replace `%(thread)d` with `%(threadName)s` for human-readable thread identificat
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Keep manual prefixes, remove filter | Would require updating every log call site to include context | Hundreds of log sites across the codebase; filter approach is the right abstraction | Use filters for cross-cutting concerns, not per-message formatting |
 | Conditional format string with `%(tier_id)s` | Format string is static; can't conditionally include/exclude sections | Python's `logging.Formatter` doesn't support conditional sections | Build the conditional logic in the Filter, emit a single composite field |
 | Use `os.setpgrp()` for signal handling | Creates new process group, detaching from terminal's foreground group | Kernel sends Ctrl+C/Ctrl+Z to terminal's foreground group, which is now empty | Child processes already use `start_new_session=True`; parent doesn't need its own group |
@@ -125,7 +125,7 @@ Replace `%(thread)d` with `%(threadName)s` for human-readable thread identificat
 ### Files modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/e2e/log_context.py` | Added composite `log_context_tag` field to ContextFilter |
 | `scripts/manage_experiment.py` | Updated format string to use `%(log_context_tag)s` and `%(threadName)s` |
 | `scylla/e2e/state_machine.py` | Removed `[tier/sub/run]` prefixes from 5 log messages |

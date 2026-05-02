@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-22 |
 | **Issue** | #881 |
 | **PR** | #990 |
@@ -100,20 +100,20 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Modified
 
 | File | Change |
-|---|---|
+| --- | --- |
 | `docs/design/container-architecture.md` | +50 lines: expanded Future Improvements from 4 bare bullets to structured entries with Status/Why Deferred/Acceptance Criteria |
 
 ### Item Findings (issue-881 specific)
 
 | Item | Status | Key Evidence |
-|---|---|---|
+| --- | --- | --- |
 | Multi-platform ARM64 | Deferred | `FROM` SHA digest is x86_64-only; no ARM64 CI runner |
 | Layer caching | Deferred | Source + deps copied together before `pip install`; hatchling makes split non-trivial |
 | Resource limits | Deferred | No `--memory`/`--cpus` flags in wrapper script; no profiling data |

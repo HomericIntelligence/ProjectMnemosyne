@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `_reconcile_checkpoint_with_disk()` uses a `state_order` rank list. States missing from the list get rank=0 (same as `pending`), so `inferred_rank > current_rank` is `0 > 0 = False` — the state never advances. No error is raised. |
 | **Root Cause** | `state_order` was not kept in sync with the `RunState` enum. Three states were missing: `worktree_created`, `config_committed`, `prompt_written`. |
 | **Fix** | Add all non-terminal `RunState` values in sequential order. Add a regression-guard test that asserts every non-terminal state appears in the function source. |
@@ -170,7 +170,7 @@ def test_reset_interleaved_rate_limited_and_failed(self, tmp_path):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Assert `get_run_status() is None` after corrupted JSON | Expected that no `mark_run_completed` call → `None` status | `set_run_state("worktree_cleaned")` auto-calls `mark_run_completed("passed")` as backward-compat sync | Always check if `set_run_state` has side-effects on `completed_runs` before asserting status |
 | `completed_runs={"T0": {"00": {"3": "passed"}}}` (str key) | Used string `"3"` as inner dict key | `E2ECheckpoint` declares `completed_runs: dict[str, dict[str, dict[int, str]]]` — inner key is `int` | Mypy error: `Dict entry 0 has incompatible type "str": "str"; expected "int": "str"` |
 | Assumed `json.JSONDecodeError` not caught by `except (OSError, ValueError, KeyError)` | Thought the except block wouldn't fire | `json.JSONDecodeError` IS a subclass of `ValueError` — it is caught; the issue was the `set_run_state` side-effect | Verify the inheritance chain before assuming exception handling gaps |

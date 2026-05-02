@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Multiple PRs in a series all fail CI after the stack diverged from main |
 | **Trigger** | Predecessor PR merged to main; downstream branches now missing files, have stale digests, or have test/action mismatches |
 | **Context** | 7-PR CI containerization effort; 3 merged, 4 remaining with failures |
@@ -63,7 +63,7 @@ gh run view <run-id> --log-failed 2>/dev/null | grep -E "(error|Error|FAIL|asser
 **Common failure patterns and their root causes:**
 
 | Log Output | Root Cause | Fix |
-|------------|------------|-----|
+| ------------ | ------------ | ----- |
 | `stat .../ci/Containerfile: no such file or directory` | Predecessor PR not merged; file missing | Rebase onto main |
 | `[HomericIntelligence] is an organization. License key is required` | `gitleaks-action@v2` requires paid org license | Replace with gitleaks CLI |
 | `failed to resolve source metadata for docker.io/library/node:20-slim@sha256:...not found` | Pinned SHA256 digest is expired/updated | Pull fresh digest |
@@ -225,7 +225,7 @@ git switch B-branch && git rebase origin/main && git push --force-with-lease
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Expecting rebase alone to fix PR #1494 | Rebased ci-image-workflow without checking if CI Image job had other issues | CI Image build was previously failing due to missing Containerfile from unmerged predecessor — rebase fixes this specific case | Always read the actual log line to confirm root cause before assuming rebase is sufficient |
 | Using `grep -v "# deprecated"` alone | The deprecation guard excluded `# deprecated` comments but not docstring `(deprecated)` markers | Docstrings use `(deprecated)` notation, not `# deprecated` bash comment style | Both patterns must be excluded; read the exact matching line from CI logs |
 | Assuming docker manifest inspect gives single digest | Used `d.get('manifests', [{}])[0].get('digest')` without filtering by platform | Multi-arch manifests list all platforms; index[0] may not be linux/amd64 | Filter by `os==linux && architecture==amd64` explicitly |

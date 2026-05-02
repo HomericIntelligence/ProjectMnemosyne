@@ -22,7 +22,7 @@ all testing tolerances) and re-export them from `shared/testing/__init__.mojo`.
 ## Files Changed
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `shared/testing/tolerance_constants.mojo` | Added `GRADIENT_CHECK_EPSILON_FLOAT32` and `GRADIENT_CHECK_EPSILON_OTHER` as `comptime` constants |
 | `shared/testing/__init__.mojo` | Added both constants to the `tolerance_constants` re-export block |
 | `shared/testing/layer_testers.mojo` | Replaced local `alias` definitions with `from shared.testing.tolerance_constants import (...)` |

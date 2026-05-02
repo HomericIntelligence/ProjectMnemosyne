@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Tensor ops using `_get_float64(i)` (flat byte offset) produce wrong element order when the source is non-contiguous (transposed, sliced with non-unit strides) |
 | **Root Cause** | `_get_float64(i)` computes `offset = i * dtype_size`, ignoring `_strides` entirely |
 | **Fix Pattern** | Branch on `is_contiguous()`: fast flat copy for contiguous, stride-based byte copy for non-contiguous |
@@ -113,7 +113,7 @@ Always verify by hand before writing the assertion — wrong expected values mas
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Wrong expected values in test | Used strides `(1,3)` on shape `(3,4)` expecting `[0,4,8,...]` | Stride formula gave `[0,3,6,9,1,4,...]` instead | Must compute expected values from actual stride formula, not intuitively |
 | `List[Float64](0,4,8,...)` constructor | Tried variadic init for expected list | Mojo 0.26.1 has no variadic `List` constructor | Use literal syntax: `var x: List[Float64] = [0, 4, 8, ...]` |
 | Calling `as_contiguous()` inside fix | Considered materializing contiguous copy first | Would allocate an extra tensor; also `as_contiguous()` had same flat-index bug | Implement stride loop inline; do not chain through another buggy function |

@@ -10,7 +10,7 @@ user-invocable: false
 # Resolve Mojo Rebase Conflict Skill
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-07 |
 | Objective | Resolve git rebase conflict in a Mojo test file caused by invalid Python syntax in incoming commit |
 | Outcome | Conflict resolved with valid Mojo Bool-flag pattern; rebase completed; test passes |
@@ -82,7 +82,7 @@ Use `just test-group <dir> <pattern>` — faster than `just test-mojo` which run
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -94,12 +94,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Mojo vs Python Differences for Test Assertions
 
 | Python (invalid in Mojo) | Mojo equivalent |
-|--------------------------|-----------------|
+| -------------------------- | ----------------- |
 | `expected = {"a": 1}` | `var found_a = False` (Bool flag) |
 | `found = set()` | Multiple `var found_x = False` flags |
 | `for item in collection:` | `for i in range(len(collection)):` |

@@ -13,7 +13,7 @@ tier: 2
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-07 |
 | Objective | Add JSON schema validation to `load_test()` and `load_rubric()` in `ConfigLoader`, consistent with existing `_validate_schema()` pattern used for `load_defaults()`, `load_tier()`, and `load_model()`. |
 | Outcome | Success — PR #1465, 4481 unit tests pass |
@@ -96,7 +96,7 @@ Pre-commit auto-fixes ruff formatting issues on first run — rerun to confirm a
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

@@ -25,7 +25,7 @@ pointers that were never returned by `malloc()`.
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-24 |
 | **Objective** | Find root cause of "flaky" test_training_loop.mojo CI crashes |
 | **Outcome** | Success -- found 1-line bug in AnyTensor.__del__: missing _is_view check before pooled_free |
@@ -151,7 +151,7 @@ pixi run mojo build --sanitize address -g -I "$(pwd)" -I . \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Classified as JIT compilation overflow | Assumed crash was before any test output (JIT can't compile) | Re-reading CI logs showed 17 tests PASSED before crash -- runtime error, not JIT | Always read the actual CI log output, don't trust initial classification |
 | Assumed same root cause as Day 53 bitcast UAF | Same libKGENCompilerRTShared.so+0x3cb78b offset as the bitcast UAF | ASAN reported "bad-free" not "heap-use-after-free" -- different bug entirely | Same crash signature does NOT mean same root cause -- ASAN distinguishes them |
 | Assumed allocation churn from prior tests was required | Blog's bitcast UAF needed ~15 prior functions for churn | Running the crash test ALONE with ASAN still triggered the bad-free | Always test the failing function in isolation first -- eliminates churn hypothesis |
@@ -192,7 +192,7 @@ if not self._is_view:
 ### Why It Appeared Flaky Without ASAN
 
 | Condition | Behavior |
-|-----------|----------|
+| ----------- | ---------- |
 | With ASAN | Crashes immediately on first bad-free (100% reproducible) |
 | Without ASAN, 1 test | Usually passes (heap corruption too minor to trigger abort) |
 | Without ASAN, 15+ tests | Crashes ~50-80% of the time (corruption accumulates) |
@@ -204,7 +204,7 @@ if not self._is_view:
 All three produce identical `libKGENCompilerRTShared.so+0x3cb78b` crash output:
 
 | Bug | Root Cause | ASAN Report | Our Code? |
-|-----|-----------|-------------|-----------|
+| ----- | ----------- | ------------- | ----------- |
 | Day 53 bitcast UAF | ASAP destruction frees tensor before bitcast write | heap-use-after-free | No (Mojo compiler bug) |
 | Mojo "heap corruption" | Same bitcast UAF with more churn | heap-use-after-free | No (same Mojo bug) |
 | This bug (slice view) | __del__ frees offset _data pointer from slice() | bad-free (attempting free on non-malloc'd address) | **Yes (our bug)** |
@@ -212,5 +212,5 @@ All three produce identical `libKGENCompilerRTShared.so+0x3cb78b` crash output:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #5097, ADR-013 | Fix + ADR + Day 61 blog post |

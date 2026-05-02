@@ -14,7 +14,7 @@ tags: [latex, parallel, assembly, pdflatex, bibtex, cleanup, citations, verdicts
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-14 |
 | **Objective** | Produce a single compilable LaTeX paper from parts written by N parallel agents |
 | **Outcome** | Successful — 272 KB paper (3,320 lines, 102 pages, 0 errors) assembled from 4 parallel agent parts + cross-compiled with 395 BibTeX entries |
@@ -231,7 +231,7 @@ grep -n 'PURSUE\|INVESTIGATE\|DEPRIORITIZE' paper.tex  # verify all are in \sect
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Single agent for full 38-idea paper | One agent writes the entire paper.tex | Context exhaustion mid-paper; agent loses track of earlier sections; inconsistent LaTeX macros between ideas | Partition into 4–6 parts; each agent handles a disjoint slice of 8–10 ideas |
 | Including `\documentclass` in all part files | Each part file was a standalone compilable document | Assembly produced multiple `\documentclass` commands in paper.tex, which pdflatex rejects | Only part1 gets the full preamble; parts 2..N start from their first `\subsection` |
 | Using `\citeauthor{}` without natbib | Agent wrote `\citeauthor{key}~\cite{key}` patterns | Plain BibTeX does not define `\citeauthor`; pdflatex errors on every citation of this form | Replace all `\citeauthor{X}~\cite{X}` patterns with `\cite{X}` using Python regex before compiling |
@@ -250,7 +250,7 @@ grep -n 'PURSUE\|INVESTIGATE\|DEPRIORITIZE' paper.tex  # verify all are in \sect
 ### Verified Assembly (2026-04-14)
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Source parts | 4 (part1.tex through part4.tex) |
 | Total ideas | 38 (34 original + 4 new) |
 | Final paper size | 3,320 lines, ~272 KB |
@@ -264,7 +264,7 @@ grep -n 'PURSUE\|INVESTIGATE\|DEPRIORITIZE' paper.tex  # verify all are in \sect
 ### Verified Citation and Verdict Cleanup (2026-04-14)
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | arXiv hrefs removed | All (grep -c 'arxiv.org' paper.tex → 0) |
 | Cite keys preserved | Unchanged count |
 | Verdict codes consolidated | All body occurrences → Future Work section only |
@@ -317,6 +317,6 @@ pdflatex -interaction=nonstopmode paper.tex
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ArchIdeas | 38-idea AI architecture research paper | 4 parallel agents, head+awk assembly, 342 stubs, 3 compile passes, 102 pages final |
 | ArchIdeas (post-assembly cleanup) | Same paper, post-assembly citation and verdict cleanup pass | Removed all arXiv hrefs, consolidated PURSUE/INVESTIGATE/DEPRIORITIZE into Future Work section, fixed \texttt{} underscore escaping, deduplicated bib entries — paper built cleanly with 0 errors after cleanup |

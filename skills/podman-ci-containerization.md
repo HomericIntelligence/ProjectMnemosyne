@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-14 |
 | **Objective** | Containerize a GitHub Actions CI pipeline with Podman (rootless), add security hardening, and enable local CI parity |
 | **Outcome** | ✅ SUCCESS — 7 PRs merged covering composite actions, CI Containerfile, GHCR workflow, Podman local scripts, security hardening, container CI, and robustness improvements |
@@ -38,7 +38,7 @@ user-invocable: false
 7 PRs in order, each independent except PR 6 (depends on PR 2+3 for image availability):
 
 | PR | What | Key files |
-|----|------|-----------|
+| ---- | ------ | ----------- |
 | 1 | Composite pixi setup action | `.github/actions/setup-pixi/action.yml` |
 | 2 | CI Containerfile | `ci/Containerfile`, `ci/.containerignore`, `ci/README.md` |
 | 3 | CI image build + Trivy scan workflow | `.github/workflows/ci-image.yml` |
@@ -412,7 +412,7 @@ fail_under = 9
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Write tool for workflow files | Used Write tool to create `.github/workflows/ci-image.yml` | Security hook blocked the Write tool for GitHub Actions workflow files | Use Bash heredoc (`cat > file.yml << 'EOF'`) to write workflow files when the Write tool is blocked by security hooks |
 | `contains(github.event.pull_request.changed_files, ...)` for pip-audit path filter | Tried to conditionally run pip-audit only when dependency files changed, using `contains()` on `changed_files` | `changed_files` is a count integer, not a list — cannot use `contains()` on it | Path filtering in the `on:` trigger is the correct approach; per-job `if:` conditions using changed_files are not feasible without GitHub API calls |
 | Bandit severity: `-ll` flag | Originally planned to use `-ll` (medium/high) CLI flag | The correct CLI arg is `--severity-level medium` (not `-ll` which is a different filter) | Verify bandit CLI flags against installed version; use `--severity-level medium` for pre-commit hooks |
@@ -425,7 +425,7 @@ fail_under = 9
 ### Verified Environment
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Base image | `python:3.12-slim@sha256:f3fa41d74a768c2fce8016b98c191ae8c1bacd8f1152870a3f9f87d350920b7c` |
 | Pixi version | `v0.63.2` |
 | Gitleaks version | `v8.21.2` |

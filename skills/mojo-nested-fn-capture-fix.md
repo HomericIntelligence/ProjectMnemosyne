@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-15 |
 | Objective | Fix `--Werror` compilation failures in Mojo when nested `fn` captures a non-copyable struct |
 | Outcome | Inlined batch processing loop directly in the outer function, eliminating the need for a nested capturing fn |
@@ -98,7 +98,7 @@ synthesized.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Add explicit `__init__` with `^` ownership | Pass model ownership into the nested fn | Would require significant restructuring of `train_epoch` signature | Over-engineered; inlining is simpler |
 | Use `UnsafePointer[Model]` | Store model as unsafe pointer to avoid copyability requirement | Introduces unsafe code unnecessarily | Only appropriate when pointer semantics are needed |
 | Add `@register_passable` | Mark the containing struct as register-passable | Not appropriate for complex structs with heap-allocated fields like model weights | `@register_passable` is for simple value types |
@@ -106,7 +106,7 @@ synthesized.
 ## Results & Parameters
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Files fixed | 2 (`examples/googlenet-cifar10/train.mojo`, `examples/mobilenetv1-cifar10/train.mojo`) |
 | Lines changed per file | ~10-15 (remove nested fn, inline loop) |
 | Compilation errors after fix | 0 |
@@ -115,5 +115,5 @@ synthesized.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR fixing GoogLeNet and MobileNetV1 training examples | [notes.md](../../references/notes.md) |

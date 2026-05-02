@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Objective** | Prevent re-introduction of a removed Dockerfile dependency via pytest regression tests and a pygrep pre-commit hook |
 | **Trigger** | Dependency removed from Dockerfile; need automated guard against regression |
 | **Output** | `tests/foundation/test_dockerfile_<name>.py` + pre-commit hook in `.pre-commit-config.yaml` |
@@ -111,7 +111,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Initial regex `\bcargo\s+install\b` against Dockerfile | Ran tests immediately after writing | Matched `# Install just tool (pre-built binary, much faster than cargo install)` — a comment line | Scan target files for false positives **before** writing the test; update comments that contain the forbidden phrase |
 | Keeping original Dockerfile comment | Left comment as-is, expected test to pass | The regex matches inside comments too — there is no Dockerfile "comment-aware" mode in Python `re` | Either strip comment lines before matching, or (simpler) reword the comment to avoid the forbidden phrase |
 

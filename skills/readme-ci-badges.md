@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | readme-ci-badges |
 | **Category** | documentation |
 | **Effort** | Very Low (single-line edit) |
@@ -85,7 +85,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Adding badge before the CI badge | Inserted new badge before `[![CI](…)]` | Broke visual grouping — CI should anchor the block | Always append after the last existing CI badge, not before |
 | Comma-separating `Closes` lines | `Closes #3922, #3306` in PR body | Project convention requires one `Closes #N` per line | Use separate lines for each issue reference |
 

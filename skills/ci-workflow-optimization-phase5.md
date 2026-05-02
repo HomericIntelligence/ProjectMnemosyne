@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Reduce per-PR CI runtime by eliminating unnecessary runs and serial job overhead |
 | **Techniques** | Path filters, hook deduplication, job inlining, timing workflow, artifact retention |
 | **Measured savings** | 2-5 min/PR (path filters), 30-60s/PR (job inlining), 3-5 min/doc-PR (security) |
@@ -31,7 +31,7 @@ user-invocable: false
 ### Quick Reference
 
 | Optimization | Where | Change | Savings |
-|-------------|-------|--------|---------|
+| ------------- | ------- | -------- | --------- |
 | Path filter on `pull_request:` | `pre-commit.yml`, `security.yml` | Add `paths:` block | 2-5 min/doc-PR |
 | Remove duplicate hooks | `.pre-commit-config.yaml` | Delete mypy + bandit blocks | ~1 min/PR |
 | Inline syntax check | `comprehensive-tests.yml`, `nightly-comprehensive.yml` | Remove job, add step to compilation | 30-60s/PR |
@@ -210,7 +210,7 @@ test-report:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Edit workflow files with `github.event.label.name` in old_string | Used Edit tool with the `if: github.event.label.name == 'nightly-tests'` expression in old_string | The `security_reminder_hook.py` pre-tool hook treated GitHub context expressions as injection risks and blocked the edit | Split the edit: first delete the old job block (without the `if:` condition in old_string), then add the `if:` condition to the new job in a separate edit |
 | Write collect-test-timing.yml with Write tool | Used Write tool with `${{ github.workflow }}` in file content | Same security hook blocked the write because it detected `${{` patterns | Use Bash heredoc (`cat > file << 'YAMLEOF'`) to bypass the hook — single-quoted heredoc delimiter prevents variable expansion and the hook doesn't intercept Bash writes |
 | Verify hook was "just warning" | Assumed the hook error was informational since it said "error" not "blocked" | The hook actually blocks the tool call — the file was not written | When a PreToolUse hook returns an error, the operation is **blocked** (not just warned). The "updated successfully" message only appears if the edit went through |
@@ -220,7 +220,7 @@ test-report:
 ### Before/After comparison
 
 | Metric | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | Doc-only PR triggers pre-commit | Yes (always) | No (path filter) |
 | Doc-only PR triggers security scan + full git history fetch | Yes | No |
 | mypy runs in pre-commit AND type-check.yml | Yes (duplicate) | No (removed from pre-commit) |

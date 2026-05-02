@@ -14,7 +14,7 @@ tags: [codex, skills, projecthephaestus, install, openai-yaml, agents-md, advise
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-02 |
 | **Objective** | Import `repo-analyze*`, `advise`, and `learn` from `HomericIntelligence/ProjectHephaestus` into Codex and make them discoverable in both global skill storage and repo-local instructions |
 | **Outcome** | Successful locally — 5 skills installed into `~/.codex/skills`, Codex UI metadata added, `advise`/`learn` adapted for Codex, ProjectMnemosyne cache seeded, and repo `AGENTS.md` updated |
@@ -137,7 +137,7 @@ git clone --depth 1 https://github.com/HomericIntelligence/ProjectMnemosyne ~/.a
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Generating `agents/openai.yaml` without `--name` | Ran `generate_openai_yaml.py` directly against imported skills | Local Python lacked `PyYAML`, so frontmatter parsing failed with `ModuleNotFoundError: No module named 'yaml'` | Pass `--name <skill-name>` to bypass frontmatter parsing when the helper environment is missing `PyYAML` |
 | Importing `advise` and `learn` unchanged | Kept upstream `SKILL.md` content exactly as shipped | The docs referenced Claude slash commands, `$ARGUMENTS`, and mandatory sub-agent behavior that do not cleanly match Codex | Treat imported skills as source material; patch interaction-model assumptions while preserving workflow logic |
 | Stopping after global installation | Installed skills into `~/.codex/skills` but did not surface them in the repo | Future sessions in the repo would not be nudged toward the new skills, reducing discoverability | Update repo-local `AGENTS.md` after installation so the skills become part of the project’s working conventions |
@@ -147,7 +147,7 @@ git clone --depth 1 https://github.com/HomericIntelligence/ProjectMnemosyne ~/.a
 ### Installed Skills
 
 | Skill | Local Path | Notes |
-|-------|------------|-------|
+| ------- | ------------ | ------- |
 | `repo-analyze` | `~/.codex/skills/repo-analyze` | Direct import + metadata |
 | `repo-analyze-quick` | `~/.codex/skills/repo-analyze-quick` | Direct import + metadata |
 | `repo-analyze-strict` | `~/.codex/skills/repo-analyze-strict` | Direct import + metadata |
@@ -157,7 +157,7 @@ git clone --depth 1 https://github.com/HomericIntelligence/ProjectMnemosyne ~/.a
 ### Files Changed Pattern
 
 | Target | Change |
-|--------|--------|
+| -------- | -------- |
 | `~/.codex/skills/<skill>/SKILL.md` | Imported from GitHub; patch if the skill assumes Claude-only behavior |
 | `~/.codex/skills/<skill>/agents/openai.yaml` | Generated or written manually for Codex UI metadata |
 | `~/.agent-brain/ProjectMnemosyne` | Seeded or updated to support `advise` / `learn` |
@@ -188,5 +188,5 @@ rg -n "Recommended ProjectHephaestus flow|\\$repo-analyze|\\$advise|\\$learn" AG
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Radiance | Local Codex setup using ProjectHephaestus skills | Installed 5 skills, added Codex metadata, patched `advise`/`learn`, seeded ProjectMnemosyne, updated repo-local `AGENTS.md` |

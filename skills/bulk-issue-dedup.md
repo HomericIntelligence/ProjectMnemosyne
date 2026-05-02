@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Category** | tooling |
 | **Complexity** | Low-Medium |
 | **Time** | 30–90 min depending on issue count |
@@ -124,7 +124,7 @@ gh issue list --state open --limit 500 --json number --jq 'length'
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Close all in one loop | Used single bash loop for all 95 issues | `gh` rate limiting hit on large batches | Break into smaller batches of 10-20 |
 | Auto-detect duplicates via title similarity | Tried fuzzy string matching in Python | Too many false positives (e.g., "audit X" ≠ "add X audit") | Use agent reasoning for cluster detection instead |
 | Fix pre-existing lint in same PR | Attempted to fix unrelated markdown violations | Scope creep, complex diff | Keep fix PR focused on intended changes only |
@@ -135,7 +135,7 @@ gh issue list --state open --limit 500 --json number --jq 'length'
 ### Session Results (2026-03-13, ProjectOdyssey)
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Starting issue count | 363 |
 | Round 1 closed (duplicate clusters) | 84 |
 | Round 2 closed (other clusters) | 11 |

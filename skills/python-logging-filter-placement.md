@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Problem** | `KeyError` or `ValueError` when using custom `%(field)s` placeholders in Python logging format strings |
 | **Root Cause** | `logging.Filter` added to logger instead of handler; filter runs but fields may not reach formatter |
 | **Fix** | Add filter to handler(s), not the logger |
@@ -92,7 +92,7 @@ def test_handler_pipeline():
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Test with `handler.format()` | Called `handler.format(record)` to test the pipeline | `format()` does not invoke filters; only `handle()` runs `filter()` before `emit()`/`format()` | Always test through `handler.handle()` for integration tests |
 | Filter on logger only | Added `ContextFilter` to root logger via `addFilter()` | In Python 3.14t with threaded workers, propagated loggers could miss the filter injection | Add filter to handlers for guaranteed field injection |
 

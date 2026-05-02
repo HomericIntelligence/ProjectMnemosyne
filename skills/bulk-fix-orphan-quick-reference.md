@@ -16,7 +16,7 @@ inside `## Verified Workflow` across an entire skills directory in one pass.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Name | bulk-fix-orphan-quick-reference |
 | Category | tooling |
 | Trigger | validate_plugins.py warns about orphaned Quick Reference sections |
@@ -132,7 +132,7 @@ Key properties:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Simple string replace `## Quick Reference` → `### Quick Reference` | Used `str.replace()` without extracting and relocating the block | Demoted the heading in place without moving it under Verified Workflow — structural position unchanged | Must extract + remove + reinsert, not just replace heading in place |
 | Assert `"## Quick Reference" not in result` | Used plain substring check to verify heading was gone | `### Quick Reference` contains `## Quick Reference` as a substring, so the assertion always failed | Use `re.search(r"^## Quick Reference", result, re.MULTILINE)` to check for top-level heading only |
 | Running fix against `.claude/skills/` expecting 54+ hits | Assumed Odyssey `.claude/skills/` format would trigger the warning | Odyssey files have `## Workflow` (not `## Verified Workflow`), so 0 files matched the condition | The warning only fires in Mnemosyne format; the 54 affected files live in the migrated `skills/` directory |
@@ -140,7 +140,7 @@ Key properties:
 ## Results & Parameters
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Script | `scripts/fix_quick_reference_batch.py` |
 | Tests | `tests/scripts/test_fix_quick_reference_batch.py` (33 tests) |
 | Target directory | Any `skills/` directory (pass as argument) |

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | **Date** | 2026-03-02 |
 | **Objective** | Fix a test that claims to verify two calls but only asserts one — the missing `as mock_X` capture and `assert_called_once()` |
 | **Context** | PR #1313 review feedback for issue #1216 — `test_calls_setup_and_baseline` in `tests/unit/e2e/test_runner_experiment_actions.py` |
@@ -108,12 +108,12 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | File changed | `tests/unit/e2e/test_runner_experiment_actions.py` |
 | Lines changed | +4 insertions, -1 deletion |
 | Tests in file | 18 (all pass) |

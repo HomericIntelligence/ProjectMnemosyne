@@ -15,7 +15,7 @@ tags: [cmake, justfile, meta-repo, build-root, out-of-tree, pixi, submodule, moj
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-29 |
 | **Objective** | Add `just build` to the Odysseus meta-repo that compiles C++/CMake submodules into `<root>/build/<Name>/` using CMake's native out-of-tree support, without adding cmake/ninja/etc. to root pixi.toml |
 | **Outcome** | Successful. PR #67 added just build/test/lint/clean recipes. PR #68 fixed e2e gaps. All 5 targets build; 489/489 Keystone tests pass. |
@@ -73,7 +73,7 @@ clean:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Add cmake/ninja to root pixi.toml | Added `cmake`, `ninja`, `cxx-compiler` as root-level pixi dependencies | Violates meta-repo principle: Odysseus should not own build tool deps — each submodule manages its own pixi env | Root `pixi.toml` is for meta-repo tooling only (just, gh, etc.). Submodule build tools stay in each submodule's `pixi.toml`. |
 | Override CMake binaryDir in CMakePresets.json | Set `binaryDir` in submodule's CMakePresets.json to `${sourceDir}/../../build/${sourceDirName}` | CMake presets `binaryDir` is relative to sourceDir; path traversal with `../..` is unreliable and not portable | Use `cmake -S <srcdir> -B <external_builddir>` at the call site. The `-B` CLI flag always overrides presets. |
 | Pass BUILD_ROOT through just -d delegation | Called `just -d <submodule_path> build BUILD_ROOT=<root>/build/<Name>` hoping sub-repo justfile would use it | Sub-repo justfiles don't declare a BUILD_ROOT variable; the override is silently ignored | Call cmake directly from the meta-repo justfile rather than delegating through the submodule's own build recipe. |
@@ -113,5 +113,5 @@ root_pixi_toml_deps: [just]  # only just — no cmake, ninja, compilers
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/Odysseus | PR #67, 2026-03-29 session | just build/test/lint/clean recipes added; all C++/CMake repos build into root build/ directory |

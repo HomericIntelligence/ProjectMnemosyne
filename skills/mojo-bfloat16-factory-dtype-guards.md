@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Mojo tensor factory functions (`arange`, `eye`, `linspace`, `randn`) check `dtype == DType.float16 or float32 or float64` to route values to `_set_float64`. Missing `DType.bfloat16` causes silent routing to `_set_int64`, truncating all float values to 0 |
 | **Symptom** | bfloat16 tensors created by factory functions have all-zero or integer-truncated values |
 | **Root Cause** | Dtype condition list `float16 or float32 or float64` does not include `bfloat16` |
@@ -32,7 +32,7 @@ user-invocable: false
 ### Quick Reference
 
 | Function | Dtype test | Value test |
-|----------|-----------|------------|
+| ---------- | ----------- | ------------ |
 | `arange` | correct dtype preserved | [0.0, 1.0, 2.0, 3.0] not [0, 0, 0, 0] |
 | `eye` | correct dtype preserved | diagonal=1.0, off-diagonal=0.0 |
 | `linspace` | correct dtype preserved | [0.0, 1.0, 2.0, 3.0, 4.0] |
@@ -151,7 +151,7 @@ All bfloat16 dtype guard tests passed!
 **Test count breakdown**:
 
 | Function | Tests | Names |
-|----------|-------|-------|
+| ---------- | ------- | ------- |
 | `arange` | 2 | `test_arange_bfloat16_dtype`, `test_arange_bfloat16_values` |
 | `eye` | 2 | `test_eye_bfloat16_dtype`, `test_eye_bfloat16_values` |
 | `linspace` | 2 | `test_linspace_bfloat16_dtype`, `test_linspace_bfloat16_values` |
@@ -166,13 +166,13 @@ All bfloat16 dtype guard tests passed!
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4826 / Issue #3906 | [notes.md](../references/notes.md) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Adding tests to existing part3/part4 files | Append bfloat16 tests directly to `test_creation_part3.mojo` (8 tests) and `test_creation_part4.mojo` (6 tests) | Part3 was at 8 tests — adding would exceed the ≤10 file limit | Create a new dedicated file when existing files are near the ≤10 fn test_ limit |
 | Using `1e-6` tolerance for bfloat16 | Same tolerance as float32 tests | bfloat16 has only ~2 decimal digits of precision; could cause false failures with non-integer values | Use `1e-2` tolerance for bfloat16; `1e-6` is safe only for float32/float64 |
 | Asserting exact mean/std for randn bfloat16 | Testing distribution statistics (mean≈0, std≈1) like float32 randn tests | bfloat16 precision makes statistical convergence unreliable for small N | Test structural property (non-zero values) instead of distribution statistics |

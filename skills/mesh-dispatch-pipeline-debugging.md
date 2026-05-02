@@ -34,7 +34,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-25 |
 | **Objective** | Dispatch GitHub issues #22 (CI hardening) and #69 (Claude read-permissions) through the live HomericIntelligence agent mesh (Agamemnon → NATS → claude-myrmidon Python workers → GitHub PRs), running the full PLAN→TEST→IMPLEMENT→REVIEW→SHIP pipeline |
 | **Outcome** | SUCCESS — both issues closed by mesh PRs; PR #147 merged to main; `e2e/claude-myrmidon.py` committed with all container fixes |
@@ -222,7 +222,7 @@ cherry-pick only the needed diff (see PR Conflict Resolution Pattern above).
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | 1 | `POST /v1/tasks` to Agamemnon | Returns 404; task creation requires team-scoped route | Use `POST /v1/teams/:team_id/tasks`; discover team ID via `GET /v1/teams` |
 | 2 | npm Claude 2.1.101 in achaean-claude container | Traefik intercepts `api.claude.ai` system-wide with self-signed cert (hostname mismatch) — zero API traffic reaches Anthropic | Mount standalone binary (`~/.local/share/claude/versions/<latest>`) as `/usr/local/bin/claude-host` — connects to `api.anthropic.com` directly |
 | 3 | Podman rootless without `--userns=keep-id` | Maps host UID to root inside container; `.credentials.json` (0600) unreadable by agent user (uid=1000) | Add `--userns=keep-id` so host UID maps to same UID inside container |
@@ -240,7 +240,7 @@ cherry-pick only the needed diff (see PR Conflict Resolution Pattern above).
 ## Results & Parameters
 
 | Parameter | Verified Value |
-|-----------|----------------|
+| ----------- | ---------------- |
 | Agamemnon task POST endpoint | `POST /v1/teams/:team_id/tasks` |
 | Agamemnon task list endpoint | `GET /v1/tasks` |
 | Agamemnon default port | `8080` |

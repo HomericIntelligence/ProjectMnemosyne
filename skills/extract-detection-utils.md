@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Date** | 2026-02-15 |
 | **Objective** | Extract private detection/validation functions into centralized, reusable modules with optional caching |
 | **Outcome** | ✅ Successfully extracted `_is_modular_repo()` into `scylla/e2e/repo_detection.py` with 5 detection functions, 14 tests, zero regressions |

@@ -13,7 +13,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-29 |
 | Objective | Consolidated patterns for implementing, fixing, and testing __hash__ on Mojo tensor/struct types, covering bitcast-based float hashing, collision resistance, dtype regression guards, shape sensitivity, stability, and integer dtype coverage |
 | Outcome | Merged from 7 source skills |
@@ -179,7 +179,7 @@ fn test_hash_empty_tensor_dtype_differs() raises:
 Hash contributors for empty tensors:
 
 | Component | Contributes to Hash | Notes |
-|-----------|---------------------|-------|
+| ----------- | --------------------- | ------- |
 | Shape dimensions | YES | `hasher.update(self._shape[i])` — value is 0 |
 | Dtype ordinal | YES | `hasher.update(dtype_to_ordinal(self._dtype))` — SOLE differentiator |
 | Data elements | NO | `for i in range(0)` never executes |
@@ -256,7 +256,7 @@ Note: Mojo tests cannot run locally on hosts with GLIBC < 2.32. Use CI or Docker
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Direct address_of on return value | `UnsafePointer.address_of(self._get_float64(i)).bitcast[UInt64][]` | Dangling pointer — temporary has no stable address | Always assign to a named local variable before taking its address |
 | `Int(val * 1000000.0)` for large values | Multiply float by 1e6 then truncate to Int | `1e15 * 1e6 = 1e21` overflows Int64, producing garbage hash | Use bitcast to avoid any arithmetic on the float value |
 | `Int(val * 1000000.0)` for small values | Multiply float by 1e6 then truncate to Int | `1e-7 * 1e6 = 0.1` rounds to 0 — same as `2e-7`, false collision | Bitcast preserves all 64 bits, no rounding |

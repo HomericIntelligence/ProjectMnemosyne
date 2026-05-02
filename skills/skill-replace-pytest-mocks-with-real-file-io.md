@@ -11,13 +11,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-02-05 |
-| Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-02-05 | | **Objective** | Fix test isolation issues by removing mocks and using real ... |
+| Objective | Fix test isolation issues by removing mocks and using real file I/O in pytest |
 | Outcome | Operational |
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-05 |
 | **Objective** | Fix test isolation issues by removing mocks and using real file I/O in pytest |
 | **Context** | PR #353 failing CI due to mock pollution between test_figures.py and test_integration.py |
@@ -291,14 +291,14 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Validation
 
 ### Test Conversion Statistics
 
 | Metric | Before | After | Change |
-|--------|--------|-------|--------|
+| -------- | -------- | ------- | -------- |
 | Mock fixtures | 1 (`mock_save_figure`) | 0 | -100% |
 | `with patch()` blocks | ~51 | 0 | -100% |
 | `tmp_path` usage | 2 tests | 71 tests | +3450% |
@@ -317,7 +317,7 @@ tests/unit/analysis/test_figures.py | 1079 +++++++++++++++++------------------
 ### Performance Impact
 
 | Test Suite | Before | After | Change |
-|------------|--------|-------|--------|
+| ------------ | -------- | ------- | -------- |
 | test_figures.py | 5.1s | 5.09s | -0.01s |
 | test_integration.py | 1.1s | 1.08s | -0.02s |
 | Full analysis suite | 9.3s | 9.25s | -0.05s |
@@ -364,7 +364,7 @@ tests/unit/analysis/test_figures.py | 1079 +++++++++++++++++------------------
 ### Conversion Patterns
 
 | Pattern | Before | After |
-|---------|--------|-------|
+| --------- | -------- | ------- |
 | **Fixture** | `mock_save_figure` | `tmp_path` |
 | **Path** | `Path("/tmp")` | `tmp_path` |
 | **Assertion** | `assert mock.called` | `assert (tmp_path / "file.vl.json").exists()` |

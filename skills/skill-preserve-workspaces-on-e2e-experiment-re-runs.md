@@ -11,13 +11,13 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-08 |
-| Objective | | Field | Value | |-------|-------| | **Date** | 2026-01-08 | | **Objective** | Prevent workspace destruction when re-running E2E experiments | |
+| Objective | Prevent workspace destruction when re-running E2E experiments |
 | Outcome | Operational |
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-01-08 |
 | **Objective** | Prevent workspace destruction when re-running E2E experiments |
 | **Outcome** | ✅ SUCCESS - Workspaces preserved for passing runs |
@@ -125,7 +125,7 @@ else:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -176,7 +176,7 @@ Re-run: Preserves workspace (checkpoint passed), skips setup ✅
 ## Files Modified
 
 | File | Lines Changed | Purpose |
-|------|---------------|---------|
+| ------ | --------------- | --------- |
 | `scylla/e2e/subtest_executor.py` | +12, -4 | Add checkpoint check before workspace setup |
 | `.gitignore` | +2 | Ignore worktrees/ directory |
 | `scylla/e2e/llm_judge.py` | +39, -2 | Better error handling (related improvement) |

@@ -13,7 +13,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-24 |
 | **Objective** | Prevent expensive worker slots from being consumed for non-actionable items by pre-discovering resource availability before submitting any workers |
 | **Outcome** | Success — 251 unit tests pass, ruff + mypy clean |
@@ -187,7 +187,7 @@ def test_no_pr_skips(driver):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Lookup inside worker | Original design called `_find_pr_for_issue` inside `_process_issue` | Wasted a worker slot per non-actionable issue; caught in code review | Always pre-discover before submitting workers when the lookup is cheap |
 | Forgetting to update test assertions | After adding `pr_number` param, some `assert_called_once_with(42)` asserted old value | Tests failed because PR number was now passed as 456 but asserted as 42 | Update ALL assertions in tests when changing a method signature |
 | Leaving stale patches in worker tests | `patch.object(driver, "_find_pr_for_issue", return_value=42)` left in direct worker test | Dead code causing confusion; may hide bugs during future refactors | Remove stale patches immediately when they become unreachable |
@@ -212,7 +212,7 @@ run()
 ### Resource Savings
 
 | Scenario | Without Pre-Discovery | With Pre-Discovery |
-|----------|-----------------------|--------------------|
+| ---------- | ----------------------- | -------------------- |
 | 20 issues, 5 have PRs, 3 workers | 20 worker slots consumed | 5 worker slots consumed |
 | Wasted Claude launches | Up to 15 (issues without PRs) | 0 |
 | Worker slot utilization | ~25% effective | 100% effective |

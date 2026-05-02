@@ -14,7 +14,7 @@ tags: [github, issues, rate-limit, bulk-filing, epic, deduplication, pagination]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-28 |
 | **Objective** | File 680 GitHub issues across 15 repos (one Epic + per-finding child issues per repo) reliably without duplicates |
 | **Outcome** | Successful — 15 Epics + 680 child issues filed; required one org-limit recovery cycle and a duplicate cleanup pass |
@@ -91,7 +91,7 @@ gh issue close $DUPE_NUM --repo "$REPO" \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Haiku filer for 40+ issues | Used Haiku agents to file issues per repo | Hit GitHub secondary rate limits (403 BCE2) — smaller models issue requests faster, hitting burst limits | Use Sonnet agents for large filing batches; they pace naturally and are more resilient |
 | Retry via parallel agents | Dispatched 5 parallel retry filer agents for blocked repos | All hit the org monthly usage limit simultaneously; no issues filed | Test the limit with a single API call first; wait for daily reset before any retry |
 | `gh issue list` without `--limit` | Used `gh issue list --label audit-finding --jq length` for verification | GitHub defaults to 30 results — repos with 31+ issues always showed as MISMATCH | Always use `--limit 200` (or `--limit 500` for very large repos) |
@@ -103,7 +103,7 @@ gh issue close $DUPE_NUM --repo "$REPO" \
 ### Filing Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Sleep between issues | 3 seconds |
 | Sleep on 403 | 60 seconds |
 | Max retries on 403 | 3 |
@@ -154,5 +154,5 @@ def find_and_close_dupes(org_repo, expected_count):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/Odysseus (15 repos) | 2026-04-28 ecosystem-wide strict audit | 680 findings, 15 Epics, ~119 duplicates closed, org limit hit once |

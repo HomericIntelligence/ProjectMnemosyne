@@ -11,7 +11,7 @@ user-invocable: false
 # Docstring Fragment Validator Pre-commit Hook
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-03 |
 | **Objective** | Add a pre-commit gate that detects genuine docstring sentence fragments in Python files without false-positiving on correctly-wrapped multi-line docstrings |
 | **Outcome** | ✅ Hook implemented, 35 unit tests added, full suite passes (4034/4034), PR #1384 merged |
@@ -142,7 +142,7 @@ def main() -> int: ...
 Create `tests/unit/scripts/test_check_docstring_fragments.py`. Essential test cases:
 
 | Class | Test | Assertion |
-|-------|------|-----------|
+| ------- | ------ | ----------- |
 | `TestIsGenuineFragment` | `test_wrapped_sentence_not_flagged` | Multi-line wrapped sentence with capital start → not a fragment |
 | `TestIsGenuineFragment` | `test_continuation_word_across_flagged` | `"across multiple tiers."` → genuine fragment |
 | `TestIsGenuineFragment` | `test_continuation_word_and_flagged` | `"and returns the result."` → genuine fragment |
@@ -208,7 +208,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

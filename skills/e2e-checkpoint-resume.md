@@ -11,13 +11,13 @@ version: 1.0.0
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-01-03 |
-| Objective | | Field | Value | |-------|-------| | **Date** | 2026-01-03 | | **Project** | ProjectScylla | | **Objective** | Enable E2E testing to automatically... |
+| Objective | Enable E2E testing to automatically pause when rate limits are hit, wait for retry time, and resume from exact run that was interrupted |
 | Outcome | Operational |
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-01-03 |
 | **Project** | ProjectScylla |
 | **Objective** | Enable E2E testing to automatically pause when rate limits are hit, wait for retry time, and resume from exact run that was interrupted |
@@ -314,7 +314,7 @@ run_result = RunResult(
 
 ## Failed Attempts & Lessons Learned
 | Attempt | Issue | Resolution |
-|---------|-------|------------|
+| --------- | ------- | ------------ |
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
 ### ❌ Attempt 1: Load from `report.json`
@@ -439,7 +439,7 @@ Total Cost: $0.1111 (no new cost)
 ### Files Modified
 
 | File | Lines Added | Purpose |
-|------|-------------|---------|
+| ------ | ------------- | --------- |
 | `src/scylla/e2e/checkpoint.py` | 330 | NEW - Checkpoint state management |
 | `src/scylla/e2e/rate_limit.py` | 190 | NEW - Rate limit detection and wait |
 | `src/scylla/e2e/subtest_executor.py` | +200 | RateLimitCoordinator, checkpoint support |

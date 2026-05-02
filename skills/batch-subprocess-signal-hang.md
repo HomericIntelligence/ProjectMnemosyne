@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Python batch runners hang indefinitely or ignore Ctrl+C |
 | **Root Causes** | 3 distinct bugs: stdin blocking, process group isolation, worker-thread stty |
 | **Languages** | Python 3.10+ |
@@ -85,7 +85,7 @@ def restore_terminal() -> None:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Move rate limit check from per-tier to once-per-experiment only | Initial fix removed per-tier check but didn't add stdin=DEVNULL | The subprocess still blocked for 3s waiting for stdin even when called once | Always add stdin=subprocess.DEVNULL for non-interactive subprocesses |
 | Remove SIGTSTP handler only, keep os.setpgrp() | Thought SIGTSTP kill handler was the only signal problem | os.setpgrp() itself was the root cause — it isolated the process from terminal SIGINT delivery | os.setpgrp() affects ALL signals from terminal, not just the ones you handle |
 | Add noqa comment to unused import instead of removing it | Tried to keep rate_limit imports in tier_action_builder.py with noqa:F401 | Unnecessary complexity — the import should just be removed when the function call is removed | Clean up imports immediately when removing call sites |

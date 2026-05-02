@@ -8,13 +8,13 @@ user-invocable: false
 ---
 # Skill: Test Internal Methods with Mocks in E2ERunner
 
-| Field      | Value                                                           |
-|------------|-----------------------------------------------------------------|
-| Date       | 2026-02-20                                                      |
-| Objective  | Add unit tests for an internal method that delegates to injected collaborators |
-| Outcome    | Success — 3 tests added, all 2208 unit tests pass (73.54% coverage) |
-| Issue      | #773 (follow-up from #712)                                      |
-| PR         | #819                                                            |
+| Field | Value |
+| ------------ | ----------------------------------------------------------------- |
+| Date | 2026-02-20 |
+| Objective | Add unit tests for an internal method that delegates to injected collaborators |
+| Outcome | Success — 3 tests added, all 2208 unit tests pass (73.54% coverage) |
+| Issue | #773 (follow-up from #712) |
+| PR | #819 |
 
 ## When to Use
 
@@ -100,7 +100,7 @@ def _make_tier_result(
 ### 6. Three standard test cases for filtering+selection methods
 
 | Test | Config | Input | Expected |
-|------|--------|-------|----------|
+| ------ | -------- | ------- | ---------- |
 | Gate condition false | T5 absent | Any tier_results | `None`, no calls to `tier_manager` |
 | Selection logic | T5 present | Multiple tiers with different CoP | Baseline from lowest-CoP tier |
 | Missing winner | T5 present | Tier with `best_subtest=None` | `None`, no calls to `tier_manager` |
@@ -108,7 +108,7 @@ def _make_tier_result(
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -116,7 +116,7 @@ def _make_tier_result(
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

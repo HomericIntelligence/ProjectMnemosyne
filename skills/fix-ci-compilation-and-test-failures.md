@@ -12,7 +12,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-29 |
 | Objective | Consolidated CI failure fix patterns: compilation errors, lint failures, test assertion edge cases, memory safety crashes, and broken main-branch plugins |
 | Outcome | Merged from 5 source skills |
@@ -195,7 +195,7 @@ fn _dtype_to_string(dtype: DType) -> String:
 Fix deprecated Mojo syntax:
 
 | Deprecation | Old | New |
-|-------------|-----|-----|
+| ------------- | ----- | ----- |
 | Pointer offset | `ptr.offset(n)` | `ptr + n` |
 | Type alias | `alias X = Y` | `comptime X = Y` |
 | Docstring format | Missing period in Returns | Add `.` at end |
@@ -210,7 +210,7 @@ pixi run mojo package -I . shared -o /tmp/shared.mojopkg
 ### Step 4: Fix Markdown Lint Errors
 
 | Rule | Issue | Fix |
-|------|-------|-----|
+| ------ | ------- | ----- |
 | MD051 | Link fragment points to non-existent heading | Remove link or fix anchor |
 | MD037 | Spaces inside emphasis markers (`* text*`) | Escape asterisks with `\*` if used as math operators |
 | MD031 | Missing blank line before/after code block | Add blank line between closing ``` and `---` |
@@ -403,7 +403,7 @@ grep -r "actions/cache@" .github/
 Use the SHA that appears most frequently (or is confirmed correct by other passing workflows).
 
 | Action | Version | Example Confirmed SHA |
-|--------|---------|----------------------|
+| -------- | --------- | ---------------------- |
 | `actions/checkout` | v4 | `8e8c483db84b4bee98b60c0593521ed34d9990e8` |
 | `actions/cache` | v5 | `cdf6c1fa76f9f475f3d7449005a359c84ca0f306` |
 
@@ -536,7 +536,7 @@ git add <files> && git commit -m "fix: ..." && git push
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Fix MD051 by changing `#pre-commit` to `#pre-commit-1` | Assumed GitHub auto-dedup suffix for duplicate anchors | The heading wasn't duplicated — `#pre-commit` was the correct anchor | Always check actual heading count before guessing dedup suffixes |
 | Fix MD037 by removing spaces around `*` | Changed `grad_output * alpha` to `grad_output *alpha` | This created emphasis markers wrapping `alpha, ...` | Use `\*` to escape asterisks used as math multiplication operators |
 | Fix without reading logs | Guessed at fix based on error message | Missed root cause, fixed wrong thing | Always read full CI logs first |
@@ -561,7 +561,7 @@ git add <files> && git commit -m "fix: ..." && git push
 ### Common CI Failures Reference
 
 | Failure | Command | Fix |
-|---------|---------|-----|
+| --------- | --------- | ----- |
 | Trailing whitespace | `just pre-commit-all` | Stage and re-commit |
 | Mojo compilation error | `pixi run mojo package -I . shared -o /tmp/shared.mojopkg` | Fix declaration/import |
 | Markdown lint | `SKIP=mojo-format pixi run pre-commit run --all-files` | Fix per MD rule table |
@@ -673,7 +673,7 @@ git add <files> && git commit -m "fix: ..." && git push
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #336 pre-commit + test failures | Ruff, pytest approx fix |
 | ProjectOdyssey | PR #4897 Dockerfile + pre-commit hook | GID 1000 collision, bash -c -- fix |
 | ProjectOdyssey | PR #4494 CI matrix JIT crash handling | continue-on-error for flaky groups |

@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `are_shapes_broadcastable(shape1, shape2)` returned `True` when `shape2` had fewer dimensions than `shape1` because the right-to-left loop was vacuous — no iterations fired to return `False` |
 | **Fix pattern** | Add `if len(shape2) < len(shape1): return False` as the first check, before the loop |
 | **Why helper, not caller** | The guard belongs in the helper so all callers are protected, not just the one that discovered the bug |
@@ -73,7 +73,7 @@ if len(target_shape) < len(shape):
 Keep the per-file test count reasonable (≤10 test functions per file). Create `test_<module>_part<N>.mojo` covering:
 
 | Test | Expected |
-|------|----------|
+| ------ | ---------- |
 | `ndim_reduction_3d_to_2d` | `False` |
 | `ndim_reduction_2d_to_1d` | `False` |
 | `empty_target_nonempty_source` | `False` |
@@ -91,7 +91,7 @@ Because `broadcast_to` already guarded against the same case with an explicit er
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Fix only in `broadcast_to` | The original bug fix (issue #3279) added the guard only to `broadcast_to`, not to `are_shapes_broadcastable` | Other callers of `are_shapes_broadcastable` could still get a silently wrong `True` | Guards belong in the helper, not only in one caller |
 | No docstring update | Leaving the old example `[3,4,5] vs [4,5] -> True` in the docstring | The docstring would continue to document the buggy behavior, misleading future readers | Always update docstring examples when fixing a bug in a helper |
 

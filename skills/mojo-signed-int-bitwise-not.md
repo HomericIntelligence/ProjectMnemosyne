@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Language** | Mojo 0.26.1 |
 | **Operator** | `~` (bitwise NOT) |
 | **Types** | `Int8`, `Int16`, `Int32`, `Int64` |
@@ -44,7 +44,7 @@ CI update: .github/workflows/comprehensive-tests.yml (explicit filenames)
 Mojo signed integer types use two's complement. Key boundary values:
 
 | Type | `~0` | `~(-1)` | `~MAX` | MAX | MIN |
-|------|------|---------|--------|-----|-----|
+| ------ | ------ | --------- | -------- | ----- | ----- |
 | `Int8` | -1 | 0 | -128 | 127 | -128 |
 | `Int16` | -1 | 0 | -32768 | 32767 | -32768 |
 | `Int32` | -1 | 0 | -2147483648 | 2147483647 | -2147483648 |
@@ -176,7 +176,7 @@ gh pr merge --auto --rebase <PR_NUMBER>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Single file with 16 tests | Put all Int8/16/32/64 tests in one file | Would exceed the ≤10 per-file limit | Always split at 8 tests/file when covering 4 integer types × 4 cases |
 | Glob pattern in CI | Used `test_int_bitwise_not*.mojo` in comprehensive-tests.yml | `pattern` field accepts only space-separated literal filenames, not globs | Enumerate all split filenames explicitly in the pattern field |
 | Omitting `~(-1) == 0` test case | Initial draft only tested `~0`, `~MAX`, and `~~x` | The `~(-1) == 0` case is the canonical signed complement identity and was mentioned in the issue | Include all four boundary cases: `~0`, `~(-1)`, `~MAX`, `~~x` |

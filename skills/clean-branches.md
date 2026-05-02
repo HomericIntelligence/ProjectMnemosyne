@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Date** | 2026-03-07 |
 | **Objective** | Remove stale local/remote branches and worktrees after PR waves |
 | **Outcome** | Deleted 3 merged remote branches; 0 worktrees (only `main` existed); 5 branches kept (open PRs/issues) |
@@ -43,7 +43,7 @@ gh pr list --head <branch> --state all --json number,state,title
 ```
 
 | PR State | Verdict |
-|----------|---------|
+| ---------- | --------- |
 | `MERGED` | DONE — safe to delete |
 | `CLOSED` | DONE — safe to delete |
 | `OPEN` | KEEP |
@@ -70,7 +70,7 @@ Run the same `gh pr list --head <branch> --state all` check for each.
 Print a table before taking action:
 
 | Branch | PR | PR State | Verdict | Reason |
-|--------|----|----------|---------|--------|
+| -------- | ---- | ---------- | --------- | -------- |
 | `1359-auto-impl` | #1392 | MERGED | DONE | Merged into main |
 | `1427-auto-impl` | #1452 | OPEN | KEEP | Open PR |
 
@@ -112,7 +112,7 @@ git remote prune origin
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | **Batch `gh issue view` for all branches** | Called `gh issue view <N>` for each `<N>-*` branch to check issue state | User interrupted — unnecessary extra call when PR state already tells you everything | PR merge status is sufficient; skip issue state checks unless no PR exists at all |
 | **`gh pr list --state merged`** | Filtered to merged only | Returns empty when the branch has a CLOSED (not merged) PR, or no PR at all | Always use `--state all` to catch all terminal states |
 | **Checking only local branches** | Ran `git branch -vv` and stopped | Missed remote-only branches (e.g., `998-auto-impl`) that had never been checked out locally | Always enumerate remote refs via `gh api repos/.../git/refs/heads` |
@@ -120,7 +120,7 @@ git remote prune origin
 ## Key Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| ---------- | ----------- |
 | **PR state over issue state** | A merged PR means the work landed in main — issue state is secondary |
 | **`gh api DELETE` over `git push --delete`** | Bypasses pre-push hooks; works regardless of local branch existence |
 | **`-d` over `-D` for local branches** | `-d` refuses to delete unmerged branches — safe default; only escalate to `-D` with explicit confirmation |
@@ -153,5 +153,5 @@ git remote prune origin
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | 2026-03-07 — pruned 3 merged remote branches after wave of auto-impl PRs | [notes.md](../../references/notes.md) |

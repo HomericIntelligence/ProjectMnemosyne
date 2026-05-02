@@ -14,7 +14,7 @@ tags: [mojo, adr, superseded, version-upgrade, workaround, fp16, simd]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-11 |
 | **Objective** | Ensure ADRs that document compiler limitations are re-tested and marked Superseded when a Mojo version upgrade fixes them |
 | **Outcome** | Successful — ADR-010 (FP16 SIMD unsupported in 0.26.1) found still showing "Accepted" after upgrade to 0.26.3 where FP16 SIMD works fully |
@@ -115,7 +115,7 @@ pixi run mojo run /tmp/test_claim.mojo
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Skipping re-test | Assumed version bump automatically supersedes old ADRs | ADR-010 stayed "Accepted" for months while FP16 SIMD already worked in 0.26.3 | Always write a concrete test for the claimed limitation — assumption is not evidence |
 | Updating status only | Changed `Status: Accepted` → `Status: Superseded` without adding banner | Other developers missed the status change buried in Document Metadata | Add a visible banner at the top of the file, not just in the metadata |
 | Removing workarounds without documenting why | Replaced scalar FP16 with SIMD but left no comment explaining the change | Future reviewers confused about why the scalar code was removed | Update ADR-referencing comments to say "ADR-NNN superseded in X.Y.Z" |
@@ -163,5 +163,5 @@ pixi run mojo run /tmp/test_claim.mojo
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Mojo 0.26.1 → 0.26.3 version bump | ADR-010 (FP16 SIMD) found still "Accepted"; confirmed FP16 SIMD works in 0.26.3 |

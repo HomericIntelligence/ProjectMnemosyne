@@ -24,7 +24,7 @@ Found ~25 NOTEs total. Filtered to temporary workarounds (not informational note
 ## NOTE Inventory
 
 | File | Line | Status | Action |
-|------|------|--------|--------|
+| ------ | ------ | -------- | -------- |
 | shared/training/trainer_interface.mojo | 391 | Unlinked | Updated to NOTE(#3076) |
 | examples/lenet-emnist/run_infer.mojo | 340 | Unlinked | Updated to NOTE(#3087) |
 | shared/utils/file_io.mojo | 671 | Unlinked | Updated to NOTE(#3071) |

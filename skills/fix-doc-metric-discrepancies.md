@@ -13,7 +13,7 @@ user-invocable: true
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-27 |
 | **Objective** | Fix four documentation discrepancies found during code audit: coverage threshold, test counts (x2), and `--cov` path typo |
 | **Outcome** | All five fixes applied; 3,185 tests passed at 78.36% coverage; PR #1150 merged |
@@ -58,7 +58,7 @@ find config/ -name "*.yaml" | wc -l   # adjust path to match project
 Check these locations for numeric claims:
 
 | Location | What to Check |
-|----------|--------------|
+| ---------- | -------------- |
 | `CLAUDE.md` | Coverage % in "Current Status" line; subtest counts in tier table |
 | `README.md` | Test count badges/bullets; `--cov=<path>` in Running Tests section |
 | `pyproject.toml` | `[tool.coverage.report] fail_under` |
@@ -120,7 +120,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Observations
 
@@ -137,12 +137,12 @@ Copy-paste ready configurations and expected outputs.
 ## Results
 
 | File | Changes Applied |
-|------|----------------|
+| ------ | ---------------- |
 | `README.md` | `2026+` → `3,000+` tests; `115+` → `127+` test files (×2 occurrences); `--cov=scylla/scylla` → `--cov=scylla` |
 | `CLAUDE.md` | Already correct in worktree (prior commit had fixed `73%` → `75%` and `120+` → `120`) |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1112, PR #1150 | 3,185 tests, 78.36% coverage, pre-push hook passed |

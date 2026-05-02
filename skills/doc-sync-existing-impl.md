@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-15 |
 | Project | ProjectOdyssey |
 | Objective | Fix GLIBC mojo-format docs lag — issue requested fix that was already implemented |
@@ -42,7 +42,7 @@ Use this skill when:
 ### Quick Reference
 
 | Step | Action |
-|------|--------|
+| ------ | -------- |
 | 1 | Read the issue body and prompt file |
 | 2 | Grep for referenced scripts/files to see if fix exists |
 | 3 | Compare `.pre-commit-config.yaml` entry vs CLAUDE.md description |
@@ -111,14 +111,14 @@ gh pr create --title "docs(...): ..." --body "Closes #<issue>"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A — direct path | Checked pre-commit config and scripts first before writing any code | No failures; implementation was pre-existing | Always read `.pre-commit-config.yaml` entry fields before assuming code needs writing |
 | Skill invocation for commit | Used `Skill commit-commands:commit-push-pr` | Permission denied in don't-ask mode | Fall back to manual `git add && git commit && git push && gh pr create` |
 
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Issue type | Documentation-only (fix pre-existed) |
 | Files changed | 1 (`CLAUDE.md`) |
 | Edits needed | 2 targeted string replacements |
@@ -128,5 +128,5 @@ gh pr create --title "docs(...): ..." --body "Closes #<issue>"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3365 — mojo-format GLIBC fix docs | [notes.md](../../references/notes.md) |

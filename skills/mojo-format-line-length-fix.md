@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Trigger** | pre-commit CI fails with `mojo-format` modifying a .mojo file |
 | **Root cause** | A line (often a `print()` call with a long string) exceeds mojo-format's line length limit |
 | **Fix** | Wrap the long line into multi-line form that mojo-format accepts |
@@ -56,7 +56,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run `pixi run mojo format` locally | Ran the formatter on the local machine to verify formatting | GLIBC version too old (`GLIBC_2.32`/`2.33`/`2.34` not found) — mojo binary requires newer glibc | Mojo requires a modern Linux (Ubuntu 22.04+). On older systems, apply multi-line form manually using the known mojo-format output style |
 
 ## Results & Parameters

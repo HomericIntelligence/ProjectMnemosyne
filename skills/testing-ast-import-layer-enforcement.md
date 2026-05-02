@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-29 |
 | **Objective** | After fixing a circular import (`hephaestus.github` importing from `hephaestus.automation`), add a CI regression gate that fails immediately if the forbidden import edge is reintroduced |
 | **Outcome** | Four-test suite catches both runtime cycle failures and the structural AST invariant; no regression possible without a red CI build |
@@ -140,7 +140,7 @@ def test_ui_does_not_import_db() -> None:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Test only one import order | `import hephaestus.github, hephaestus.automation` only | Order-dependent cycles pass when the "wrong" package loads first; failed only in the reverse order | Always test both A→B and B→A import orderings to catch order-dependent cycles |
 | `importlib.import_module` inside test process | Used `importlib.import_module("hephaestus.automation.planner")` directly in the test function instead of a subprocess | If an earlier test (or module collection phase) triggered a partial import that left a broken half-loaded module in `sys.modules`, the re-import succeeds silently because Python returns the cached partial module | Use `subprocess.run([sys.executable, "-c", "..."])` for each import test — each subprocess starts with a clean `sys.modules` state |
 | AST walk only at top-level statements | Used `for node in tree.body` instead of `ast.walk(tree)` | Missed function-local (`def foo(): from X import Y`) and class-body imports that also cause runtime cycles | `ast.walk(tree)` traverses all nodes recursively; always use it to catch imports at any nesting depth |
@@ -156,7 +156,7 @@ tests/unit/test_no_import_cycles.py
 ### Four-test structure
 
 | Test | What It Catches |
-|------|-----------------|
+| ------ | ----------------- |
 | `test_planner_imports_cleanly` | Original failure repro — cold-boot import failure |
 | `test_packages_import_in_either_order` | Order-dependent circular imports |
 | `test_console_script_entry_points_resolve` | Console-script targets broken by `__init__.py` cleanup |
@@ -187,5 +187,5 @@ def _run(code: str) -> subprocess.CompletedProcess[str]:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | PR #308 — fixed `hephaestus.github` → `hephaestus.automation` circular import | `pixi run pytest tests/unit -v` passed all 4 tests locally; CI pending |

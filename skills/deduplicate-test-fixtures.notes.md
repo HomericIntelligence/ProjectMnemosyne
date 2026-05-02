@@ -36,7 +36,7 @@ Used runtime block-based composition:
 ## Results
 
 | Metric | Before | After |
-|--------|--------|-------|
+| -------- | -------- | ------- |
 | CLAUDE.md files in T0 | 1034 | 0 |
 | Fixture size | 56MB | 47MB |
 | Lines removed | 0 | 239,888 |

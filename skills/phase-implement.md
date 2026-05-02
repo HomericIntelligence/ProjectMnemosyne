@@ -13,7 +13,7 @@ phase: Impl
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Coordinate implementation phase by breaking down work, delegating to engineers, and maintaining quality standards. |
 | Outcome | Operational |
@@ -57,7 +57,7 @@ just pre-commit-all
 ## Delegation Matrix
 
 | Complexity | Task | Engineer |
-|------------|------|----------|
+| ------------ | ------ | ---------- |
 | High | Complex algorithms, SIMD optimizations | Senior |
 | High | Memory management, ownership patterns | Senior |
 | Medium | Standard functions, business logic | Standard |
@@ -124,7 +124,7 @@ Before code review approval:
 ## Error Handling
 
 | Blocker | Resolution |
-|---------|-----------|
+| --------- | ----------- |
 | Unclear requirements | Escalate to Design for clarification |
 | Performance issues | Consult Performance Specialist |
 | Test failures | Debug with Test Specialist |
@@ -134,7 +134,7 @@ Before code review approval:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Update stale 3-repo ecosystem listing to accurate 12-repo table across CLAUDE.md, README.md, and architecture.md simultaneously |
 | **Outcome** | Successful — all 3 files updated consistently, pre-commit passes, PR created |
@@ -78,7 +78,7 @@ pre-commit run --all-files
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Edit .claude/agents/ in worktree | Tried to update chief-evaluator.md ecosystem references | Permission denied in don't-ask mode for `.claude/agents/` path | Some paths are restricted in auto-impl worktrees — note for follow-up instead of blocking |
 | Edit before Read | Attempted Edit tool on files not yet read in conversation | Edit tool requires Read first | Always Read target files before editing, even for simple text replacements |
 
@@ -87,7 +87,7 @@ pre-commit run --all-files
 ### File Locations Updated (ProjectScylla)
 
 | File | Section | Lines |
-|------|---------|-------|
+| ------ | --------- | ------- |
 | `CLAUDE.md` | `**Ecosystem Context**:` | ~15-19 |
 | `README.md` | `## Ecosystem` | ~103-109 |
 | `docs/design/architecture.md` | `### Ecosystem Context` | ~17-25 |
@@ -114,5 +114,5 @@ grep -rn "three-project" CLAUDE.md README.md docs/
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1507 — update ecosystem from 3 to 12 repos | PR #1551 |

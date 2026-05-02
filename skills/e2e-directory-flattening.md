@@ -9,7 +9,7 @@ user-invocable: false
 # E2E Directory Flattening
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-01-02 |
 | Objective | Flatten E2E results directory structure, share workspaces, generate hierarchical reports |
 | Outcome | Successfully flattened structure with JSON+markdown reports at every level |
@@ -133,7 +133,7 @@ if self.config.max_subtests is not None:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -141,7 +141,7 @@ if self.config.max_subtests is not None:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -162,7 +162,7 @@ pixi run python scripts/run_e2e_experiment.py \
 ### Files Modified
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `runner.py` | Flatten tier paths, copy grading materials, limit subtests |
 | `subtest_executor.py` | Workspace at subtest level, run_dir directly |
 | `adapters/base.py` | Remove logs/ subdirectory |

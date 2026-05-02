@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Rootless Podman on GitHub Actions introduces multiple failure modes not seen with Docker or rootful Podman |
 | **Scope** | Multi-stage Dockerfiles, docker-compose.yml, CI composite actions, justfile build recipes |
 | **Environment** | GitHub Actions `ubuntu-latest` runners with rootless Podman + docker-compose CLI plugin |
@@ -33,7 +33,7 @@ user-invocable: false
 ### Quick Reference
 
 | Issue | Root Cause | Fix |
-|-------|-----------|-----|
+| ------- | ----------- | ----- |
 | `can't find uid for user :` | Docker ARGs don't persist across FROM | Re-declare `ARG` in each stage |
 | `Permission denied` on workspace files | Rootless Podman UID namespace mapping | `chmod -R a+rwX .` on host before container use |
 | docker-compose ignores `userns_mode` | docker-compose CLI plugin, not Podman compose | Don't use Podman-specific compose extensions |
@@ -154,7 +154,7 @@ GitHub Actions `ubuntu-latest` runners have Podman installed but the socket is n
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `userns_mode: keep-id` in docker-compose.yml | Add Podman-specific user namespace mapping to compose file | `podman compose` on GH Actions delegates to `docker-compose` CLI plugin, which doesn't understand Podman extensions | Check what compose provider is actually used (`/usr/libexec/docker/cli-plugins/docker-compose`) before using Podman-specific features |
 | `PODMAN_USERNS=keep-id` env var | Set env var so Podman applies keep-id to all containers | Unreliable when containers are created through the Docker API by docker-compose, not directly by Podman CLI | Podman CLI env vars may not be honored when docker-compose creates containers via the API |
 | `chown` inside container as root | Run `podman compose exec -u 0 -T` to chown workspace to container user | Overcomplicated; in rootless Podman, root inside container IS the host user, but chown to non-root UID involves subuid mapping complexities | Prefer simpler host-side solutions (`chmod`) over in-container ownership changes |

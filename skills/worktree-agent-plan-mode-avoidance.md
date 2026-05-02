@@ -14,7 +14,7 @@ tags: [worktree, agent, plan-mode, execution, myrmidon, haiku]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-12 |
 | **Objective** | Prevent worktree-isolated agents from presenting plans instead of executing end-to-end |
 | **Outcome** | Resolved — Haiku model + imperative-only prompts eliminated plan-mode stalling |
@@ -75,7 +75,7 @@ Agent(
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Preamble text | "DO NOT PLAN. EXECUTE IMMEDIATELY." at prompt start | Sonnet agents ignored preamble and planned anyway | Text instructions are unreliable; model selection and prompt structure matter more |
 | End-of-prompt instruction | "Complete all steps end-to-end, don't stop and ask for help" | Same agents still stopped after planning phase | Post-hoc instructions don't override planning behavior |
 | Section headers | Prompts with `## Context`, `## Steps`, `## Rules` sections | Headers trigger planning mode — agent treats each section as something to process before acting | Remove all section headers; use flat numbered `Run:` list |
@@ -87,7 +87,7 @@ Agent(
 ### Model Selection Guide
 
 | Task Type | Model | Reasoning |
-|-----------|-------|-----------|
+| ----------- | ------- | ----------- |
 | Single-file edit (<50 lines) | Haiku | Fully specified; no judgment needed |
 | Import migration (mechanical) | Haiku | Pattern-based; no design decisions |
 | Config file restructuring | Haiku | Well-defined; deterministic |
@@ -147,5 +147,5 @@ Agent got stuck in plan mode if its output:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Wave D/E bulk issue fixing — 26 PRs, 2026-04-12 | 5/8 Sonnet agents stalled; Haiku relaunches all executed |

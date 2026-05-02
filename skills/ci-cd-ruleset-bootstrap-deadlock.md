@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-28 |
 | **Objective** | Unblock a PR that introduces a new CI workflow whose job names are already in the branch ruleset's required_status_checks |
 | **Outcome** | Successful — confirmed via admin bypass merge and ruleset inspection |
@@ -161,7 +161,7 @@ gh pr create --base main --repo $OWNER/$REPO \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | Re-triggered CI runs manually via `gh workflow run` and `gh pr comment` push triggers | No new workflow runs were created because the workflow file does not exist on the base branch (`main`); GitHub resolves workflow files from the base branch for PR checks | GitHub only runs workflows that exist on the **base branch** of a PR. A workflow added only in the PR branch cannot run against that PR. |
 | Attempt 2 | Enabled auto-merge expecting it to fire once existing checks completed | Auto-merge armed successfully but never fired because `mergeStateStatus` stayed `BLOCKED` due to the ruleset requiring check names that were never emitted | Auto-merge fires only when all required status checks pass; a permanently absent check is treated the same as a permanently failing one — the PR stays blocked indefinitely |
 | Attempt 3 | Checked classic branch protection to understand which checks were required | `GET /repos/{owner}/{repo}/branches/main/protection` returned 404 because the repo uses branch rulesets, not classic protection | When classic branch protection returns 404, always check `/rulesets` and `/rules/branches/{branch}` — the enforcement mechanism is different but equally binding |
@@ -206,7 +206,7 @@ GET /repos/{owner}/{repo}/branches/{branch}/protection
 **How this differs from related ruleset issues:**
 
 | Issue | Symptom | Root Cause |
-|-------|---------|------------|
+| ------- | --------- | ------------ |
 | Bootstrap deadlock (this skill) | BLOCKED, 0 failing, no CI runs at all | Required check names only exist in the PR being blocked |
 | Matrix context mismatch | BLOCKED, checks "waiting" forever after all jobs pass | Ruleset uses bare job ID but matrix jobs emit `job (value)` format |
 | Missing code scanning | BLOCKED, 0 checks emitted, no CI configured | Ruleset requires CodeQL/code-quality but repo has no source to scan |
@@ -226,5 +226,5 @@ Is mergeStateStatus=BLOCKED AND failing_count=0?
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence/ProjectCharybdis | PRs #4 and #5, 2026-04-28 | New `_required.yml` adding granular job names (`lint`, `unit-tests`, `integration-tests`, `security/dependency-scan`); ruleset already required those names; both PRs blocked with 0 failing checks; resolved via admin bypass |

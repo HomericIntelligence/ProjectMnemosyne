@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-05 |
 | Objective | Fix two common issues when introducing GitHub Actions composite actions: incomplete job migration and redundant double-caching |
 | Outcome | All jobs use composite action; no cache key conflicts |
@@ -68,13 +68,13 @@ user-invocable: false
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3340, issue #3149 | [notes.md](../references/notes.md) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | First commit after removing cache step | Committed immediately after edit | `end-of-file-fixer` pre-commit hook modified the YAML file (missing trailing newline) and blocked commit | After editing YAML files, re-stage all auto-modified files before committing |
 | Committing both files in one shot with original edits | Staged both workflow files without re-staging after hook ran | Hook fixed `action.yml` but it wasn't re-staged, so commit still failed | Always check which files were modified by hooks and re-stage them |
 

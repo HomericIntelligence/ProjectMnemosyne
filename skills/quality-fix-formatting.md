@@ -12,7 +12,7 @@ mcp_fallback: none
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Automatically fix code formatting issues across file types. - Pre-commit checks fail due to formatting |
 | Outcome | Operational |
@@ -41,7 +41,7 @@ just pre-commit-all
 ## Auto-Fix Capabilities
 
 | Tool | Coverage | Manual Fixes |
-|------|----------|--------------|
+| ------ | ---------- | -------------- |
 | pixi run mojo format | 100% | None |
 | markdownlint | 70% | Language tags, line length |
 | pre-commit | 100% | None |
@@ -193,7 +193,7 @@ Fix locally and push if CI fails.
 ## Error Handling
 
 | Error | Cause | Fix |
-|-------|-------|-----|
+| ------- | ------- | ----- |
 | "Syntax error" | Invalid Mojo code | Fix syntax before formatting |
 | "Permission denied" | File permissions | Check file ownership |
 | "Merge conflict" | Merge markers present | Resolve conflicts first |
@@ -210,7 +210,7 @@ Fix locally and push if CI fails.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

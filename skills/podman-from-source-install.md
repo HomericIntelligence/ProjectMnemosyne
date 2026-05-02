@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Goal** | Install working full Podman 4.0+ on Debian 11 / PureOS 10 |
 | **Host** | PureOS 10 (Byzantium), Debian 11 base, GLIBC 2.31 |
 | **Problem** | Kubic apt repos max at 3.4.2; GitHub releases ship podman-remote only |
@@ -159,7 +159,7 @@ elif command -v podman &>/dev/null && \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | GitHub static binary | Downloaded `podman-remote-static-linux_amd64.tar.gz` from GitHub releases | It is `podman-remote`, not full podman — requires a running podman socket | GitHub releases only ship `podman-remote`; full podman must be built from source |
 | Kubic apt repo (unstable, Debian_11) | Added `devel:/kubic:/libcontainers:/unstable/Debian_11` repo | Repo returns 404 for Debian 11 | Only `stable` Kubic repo exists for Debian 11 |
 | Kubic apt repo (stable, Debian_11) | Added `devel:/kubic:/libcontainers:/stable/Debian_11` repo | Only ships 3.4.2 — too old | Kubic repos cap at 3.4.2 for Debian 11; no 4.x available |

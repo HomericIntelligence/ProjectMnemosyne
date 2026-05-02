@@ -15,7 +15,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-15 |
 | Objective | Harden 6 GitHub Actions workflows with security and robustness improvements |
 | Outcome | Operational — applied in ProjectScylla PR #1499 |
@@ -37,7 +37,7 @@ Covers the five most commonly missing hardening measures in mature CI setups tha
 ### Quick Reference
 
 | Hardening Measure | Files | Impact |
-|-------------------|-------|--------|
+| ------------------- | ------- | -------- |
 | Concurrency + cancel | All workflows | Saves runner minutes on push chains |
 | `permissions: contents: read` | 5 of 6 workflows | Limits blast radius of `GITHUB_TOKEN` |
 | `timeout-minutes: 30` | `pre-commit.yml` only | Prevents 6-hour zombie jobs |
@@ -205,20 +205,20 @@ pixi run pytest tests/integration -v \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
-| `gitleaks/gitleaks-action@v2` | Used the official GitHub Action for gitleaks | Requires a paid Gitleaks license for org repos — produces auth errors in CI | Use gitleaks CLI directly: `curl ... | tar xz gitleaks` then `gitleaks detect` |
+| --------- | ---------------- | --------------- | ---------------- |
+| `gitleaks/gitleaks-action@v2` | Used the official GitHub Action for gitleaks | Requires a paid Gitleaks license for org repos — produces auth errors in CI | Use gitleaks CLI directly: `curl ... \| tar xz gitleaks` then `gitleaks detect` |
 | gitleaks without `--config` | Ran `gitleaks detect --source . --verbose` on a repo with test fixtures | Found 333 false positives in `tests/fixtures/` and `docs/paper-dryrun-data/` | Always create `.gitleaks.toml` allowlist before running gitleaks on repos with test data |
 | `node:20-slim` pinned by SHA256 | Pinned base image by SHA256 digest in Containerfile | SHA256 digests for `node:20-slim` expired/rotated within 24 hours, breaking builds | Pin by version tag not SHA256 for actively maintained images; SHA256 only works for immutable registries |
 | `docker --check` for Containerfile validation | Used `docker build --check` to validate Containerfile syntax | `--check` flag not available in Podman — command fails silently or errors | Use `hadolint` for Containerfile linting instead; `docker --check` is Docker-specific |
 | concurrency group without `head_ref \|\| sha` fallback | Used only `github.head_ref` in concurrency group | Empty string on `push` events — all push runs share the same empty-string group and cancel each other | Always use `${{ github.head_ref \|\| github.sha }}` to handle both PR and push events |
-| PR #1497 rebase (conflict) | Rebased `ci-container-workflows` branch onto main | Single conflict in `test.yml` on artifact `path:` format — one used scalar `coverage.xml`, other used literal block `| coverage.xml` | Both formats are valid YAML; resolve by keeping either; no functional difference |
+| PR #1497 rebase (conflict) | Rebased `ci-container-workflows` branch onto main | Single conflict in `test.yml` on artifact `path:` format — one used scalar `coverage.xml`, other used YAML literal block scalar form | Both formats are valid YAML; resolve by keeping either; no functional difference |
 
 ## Results & Parameters
 
 ### Complete Hardening Audit Score (Before/After)
 
 | Workflow | Concurrency | Permissions | Timeout | Grade |
-|----------|-------------|-------------|---------|-------|
+| ---------- | ------------- | ------------- | --------- | ------- |
 | `test.yml` | ✅ Added | ✅ Added | ✅ Existing 30m | A |
 | `pre-commit.yml` | ✅ Added | ✅ Added | ✅ Added 30m | A |
 | `shell-test.yml` | ✅ Added | ✅ Added | ✅ Existing 10m | A |

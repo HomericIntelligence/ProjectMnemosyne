@@ -13,7 +13,7 @@ tags: [github-actions, protected-branch, GH006, auto-commit, create-pull-request
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-22 |
 | **Objective** | Fix GitHub Actions workflow that regenerates `marketplace.json` and pushed directly to `main`, hitting branch protection (GH006) |
 | **Outcome** | Successful — replaced direct push with `peter-evans/create-pull-request` + auto-merge + three-layer loop prevention |
@@ -89,7 +89,7 @@ on:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Exclude chore branch in trigger | Added `!chore/update-marketplace` to `branches:` filter | Irrelevant — `branches` already only matches `main`; the chore branch never matched `branches: [main]` anyway. Pure noise. | Path exclusion (`!artifact-file`) is the correct tool, not branch exclusion |
 | `[skip ci]` on squash-merge commit | Tried to put `[skip ci]` on the squash-merge commit message | Not possible — GitHub controls the squash-merge commit message; you cannot inject tokens into it reliably | Use path filter as the primary guard; `[skip ci]` only helps on the branch commit, not the merge commit |
 | `Validate Plugins` regenerate and commit back to PR branches | Considered having the validate workflow regenerate and push to the source PR branch | Requires write access to forks (security risk) and creates race conditions | Bot-generated artifact updates should live on a dedicated bot branch (`chore/update-marketplace`), not back-patched onto contributor branches |
@@ -150,7 +150,7 @@ jobs:
 ### Three-Layer Loop Prevention Summary
 
 | Layer | Mechanism | Guards Against |
-|-------|-----------|----------------|
+| ------- | ----------- | ---------------- |
 | 1 (primary) | `!.claude-plugin/marketplace.json` in `paths` trigger | Squash-merge commit touching only that file never re-triggers workflow |
 | 2 (secondary) | `[skip ci]` in branch commit message | Suppresses CI runs on the `chore/update-marketplace` branch itself |
 | 3 (fallback) | "Check for changes" gate before PR creation | Skips PR creation when `marketplace.json` is unchanged (idempotency) |
@@ -165,7 +165,7 @@ jobs:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | PR opened, CI not yet confirmed end-to-end (`verified-precommit`) | `.github/workflows/update-marketplace.yml` |
 
 ## References

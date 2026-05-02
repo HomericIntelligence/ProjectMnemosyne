@@ -13,7 +13,7 @@ user-invocable: false
 This skill documents the complete process for setting up Tailscale on Linux (Debian-based systems) and configuring cross-host AI Maestro connectivity. It includes installation steps, network diagnostics, and troubleshooting for common SSL/connectivity errors.
 
 | Phase | Purpose |
-|-------|---------|
+| ------- | --------- |
 | Tailscale Installation | Enable VPN networking on Linux via Debian package repository |
 | Network Diagnostics | Verify Tailscale connectivity and port accessibility |
 | AI Maestro Configuration | Bind AI Maestro to all interfaces (0.0.0.0) for cross-host access |
@@ -129,7 +129,7 @@ Both machines should now appear in the same AI Maestro network.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Accessed via localhost from remote machine | Used `http://localhost:23000` to connect from hermes to epimetheus | localhost on machine A doesn't resolve to machine B — each machine has its own localhost | Always use Tailscale IP addresses (100.x.x.x) for cross-host communication, never localhost |
 | Accessed via HTTPS | Tried `https://100.75.198.77:23000` | Browser auto-upgraded HTTP to HTTPS, but AI Maestro serves plain HTTP; SSL layer rejected raw HTTP traffic with SSL_ERROR_RX_RECORD_TOO_LONG | Always use `http://` (not `https://`) for cross-host AI Maestro connectivity; localhost-only app doesn't use TLS |
 | SSH to remote host | Ran `ssh hermes "curl ..."` to verify server binding | SSH was not configured on the target machine (WSL2 environment) | Not all machines will have SSH available; use network diagnostics (ping, nc) to test connectivity instead |
@@ -208,7 +208,7 @@ If cross-host setup fails, follow this checklist in order:
 ### Common Error Messages
 
 | Error | Cause | Fix |
-|-------|-------|-----|
+| ------- | ------- | ----- |
 | "Unable to connect" (Firefox) | AI Maestro not listening on 0.0.0.0 or port 23000 is blocked | Update server.mjs: `listen(PORT, '0.0.0.0')` and restart |
 | SSL_ERROR_RX_RECORD_TOO_LONG | Browser forced HTTPS, but server serves HTTP | Use `http://` (not `https://`) in the URL |
 | "Connection refused" | Port 23000 is not open on remote machine | Verify port is bound: `netstat -tuln \| grep 23000` on remote |

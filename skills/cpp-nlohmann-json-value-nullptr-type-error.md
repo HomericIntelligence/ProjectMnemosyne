@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-07 |
 | **Objective** | Fix clang-diagnostic-error when calling .is_null() on result of json::value() with nullptr default |
 | **Outcome** | Compile error fixed by wrapping nullptr in json() constructor |
@@ -57,7 +57,7 @@ if (!obj.contains("myField") || obj["myField"].is_null()) { ... }
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Bare nullptr default | `obj.value("completedAt", nullptr).is_null()` | clang-diagnostic-error: "member reference base type 'std::nullptr_t' is not a structure or union" | json::value() returns the type of the default argument — nullptr gives nullptr_t, not json |
 
 ## Results & Parameters
@@ -86,5 +86,5 @@ if (body.contains("status") && body["status"] == "completed" &&
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectAgamemnon | store.cpp update_task() — check completedAt null before setting timestamp | CI passes after changing nullptr to json(nullptr) |

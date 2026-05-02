@@ -11,7 +11,7 @@ version: 1.0.0
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Post structured documentation to GitHub issues following ML Odyssey standards. - Starting work on a GitHub issue |
 | Outcome | Operational |
@@ -179,7 +179,7 @@ Must be measurable checkboxes:
 ## Error Handling
 
 | Issue | Fix |
-|-------|-----|
+| ------- | ----- |
 | Issue locked | Contact maintainer |
 | Rate limited | Wait and retry |
 | Content too long | Split into multiple comments |
@@ -188,7 +188,7 @@ Must be measurable checkboxes:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

@@ -10,7 +10,7 @@ user-invocable: false
 # Skill: Mass Figure Documentation
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Date** | 2026-02-12 |
 | **Objective** | Document all 30 analysis figures with comprehensive 9-section markdown files |
 | **Outcome** | ✅ Success - All 30 PRs created, 15+ merged, filenames standardized |
@@ -137,7 +137,7 @@ gh pr merge --auto --rebase
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -145,14 +145,14 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Execution Metrics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | **Total figures** | 30 |
 | **Agents launched** | 30 (29 unique + 1 duplicate) |
 | **Batch size** | 10 agents per batch |

@@ -28,7 +28,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-21 |
 | **Objective** | Wire all HomericIntelligence services into a dual-runtime (podman + docker) compose E2E stack for testing |
 | **Outcome** | 10-container stack running on both podman compose and docker compose: NATS, Agamemnon (C++), Nestor (C++), Hermes (Python), hello-myrmidon (C++), Prometheus, Loki, Promtail, Grafana, argus-exporter. All 7 E2E phases passing on both runtimes. Host-network workaround documented for rootlessport-absent hosts. |
@@ -170,7 +170,7 @@ CMD ["ProjectFoo_server"]
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Symlink build contexts | `context: ./infrastructure/ProjectHermes/` (symlink) | Podman compose can't follow symlinks for build contexts | Use absolute paths: `context: /home/user/ProjectHermes/` |
 | `dockerfile_inline` in compose | Inline Dockerfile for argus-exporter | Podman's external compose provider doesn't support `dockerfile_inline` | Create a standalone Dockerfile and reference via `dockerfile:` key |
 | CMD-SHELL healthcheck on NATS (v1.0) | `test: ["CMD-SHELL", "wget ..."]` on `nats:latest` | NATS official `nats:latest` is scratch — no shell, no wget, no curl | Remove healthchecks for scratch images; use simple `depends_on` |
@@ -198,7 +198,7 @@ CMD ["ProjectFoo_server"]
 | `task.created` event to Hermes (v1.5) | Sent `task.created` webhook event to Hermes for Phase 3 test validation | Hermes `_TASK_EVENTS` only maps `task.updated`, `task.completed`, `task.failed`, `agent.*` — `task.created` is silently dropped with zero error and zero NATS message published | Always use `task.updated` for test webhook validation calls |
 | `worker.py` in `start-myrmidon` recipe (v1.5) | Referenced `provisioning/Myrmidons/hello-world/worker.py` in justfile `start-myrmidon` recipe | File does not exist — the Python NATS JetStream subscriber worker is `main.py` | Use `main.py`; it subscribes to `hi.myrmidon.hello.>` via JetStream push consumer and publishes completion to `hi.tasks.{team_id}.{task_id}.completed` via core NATS |
 | CMD-SHELL array in healthcheck (podman-compose 1.5.0) (v1.5) | Used `["CMD-SHELL", "wget ..."]` in `docker-compose.yml` healthcheck definitions | podman-compose 1.5.0 rejects the CMD-SHELL array format (Docker Compose accepts it) with a parse error | Use `["CMD", "sh", "-c", "wget ..."]` for dual-runtime compatibility |
-| `["CMD","sh","-c","full cmd"]` healthcheck on Docker Compose v5 (v1.6) | Used JSON array form `["CMD", "sh", "-c", "wget -qO- http://localhost:8080/v1/health 2>/dev/null || exit 1"]` for all service healthchecks | Docker Compose v5.x splits the 4th array element on spaces into separate exec args — `sh -c wget` runs wget binary alone (prints help, exit 1); does not pass the full string to `-c` | Switch all healthcheck `test:` values to YAML string form (no array); string form is treated as CMD-SHELL and passed verbatim to `sh -c`. Works on both v2 and v5. |
+| `["CMD","sh","-c","full cmd"]` healthcheck on Docker Compose v5 (v1.6) | Used JSON array form `["CMD", "sh", "-c", "wget -qO- http://localhost:8080/v1/health 2>/dev/null \|\| exit 1"]` for all service healthchecks | Docker Compose v5.x splits the 4th array element on spaces into separate exec args — `sh -c wget` runs wget binary alone (prints help, exit 1); does not pass the full string to `-c` | Switch all healthcheck `test:` values to YAML string form (no array); string form is treated as CMD-SHELL and passed verbatim to `sh -c`. Works on both v2 and v5. |
 | `["CMD-SHELL","full cmd"]` array form on Docker Compose v5 (v1.6) | Tried CMD-SHELL array form as alternative to CMD array | Docker Compose v5 also splits CMD-SHELL array elements on spaces — confirmed via `podman inspect .Config.Healthcheck` showing tokenized args | Use plain string `test: "cmd"` (no array at all); Docker Compose treats it as CMD-SHELL without splitting |
 | `wget -qO-` in nats:alpine healthcheck (v1.6) | Used combined short flag `-qO-` (stdout redirect) with BusyBox wget in nats:alpine | BusyBox wget does not support combined `-qO-`; prints usage text and exits 1 | Use `-q -O /dev/stdout` (space-separated, explicit path) for BusyBox wget |
 | Prometheus scraping argus-exporter by hostname (v1.6) | `prometheus.yml` static config used `argus-exporter:9100` as scrape target | `start-stack.sh` restarts argus-exporter via `podman run --replace` (not compose), giving it a dynamic IP not registered in compose-managed DNS; Prometheus gets "no such host" | Generate `prometheus.runtime.yml` with resolved argus-exporter IP before compose up; after exporter starts, update runtime config with actual IP and reload Prometheus via `/-/reload` (requires `--web.enable-lifecycle` flag on Prometheus) |
@@ -415,7 +415,7 @@ teardown_orphan_cleanup: |
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Odysseus | Full E2E pipeline on feat/cpp-skeleton branch | 9-container stack with C++20 Agamemnon, Nestor, hello-myrmidon |
 | Odysseus | Dual-runtime E2E on fix/governance-compliance-files branch | 10-container stack passing all 7 phases on both podman compose and docker compose. WSL2 aardvark-dns workaround verified. |
 | Odysseus | Host-network validation on epimetheus (SSH) | Validated host-network workaround on rootlessport-absent host. Grafana analytics hang, Hermes task.created drop, IPC T4 port override, and datasource hostname issues all confirmed and resolved. |

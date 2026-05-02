@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Prevent reappearance of removed deprecated identifiers by failing CI on any match |
 | **Trigger** | Post-cleanup follow-up issue: "add regression guard for identifiers removed in #N" |
 | **Output** | New `run:` step in an existing syntax-check job (no new workflow needed) |
@@ -129,7 +129,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Emoji in echo | Used `❌ FAILED:` and `✅ PASSED:` strings in `echo` lines | CI runners on some Ubuntu images mis-render multi-byte emoji, causing garbled output in logs | Use plain ASCII text like `FAILED:` / `PASSED:` in CI echo statements |
 | Single grep pass | Used one `grep -rn "$PATTERN" ... \| grep -q .` without filtering comments | Matched lines inside `# TODO: remove OldName` comments, causing false positives | Add `grep -v '^\s*#'` and `grep -v '^\s*"""'` filter stages |
 | `--label ci` on PR create | Passed `--label ci` to `gh pr create` | Label `ci` does not exist in the target repo, causing `gh` to exit 1 | Check available labels with `gh label list` before using `--label`; omit unknown labels |
@@ -179,7 +179,7 @@ suggestion in the originating issue.
 Scan the directories where the deprecated names could legitimately reappear:
 
 | Directory | Include |
-|-----------|---------|
+| ----------- | --------- |
 | `shared/` | Yes — library code |
 | `tests/` | Yes — test files could import old names |
 | `examples/` | Optional — may still reference old names during migration |

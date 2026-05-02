@@ -14,7 +14,7 @@ tags: [sonnet, content-filter, code-of-conduct, contributor-covenant, subagent, 
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-03 |
 | **Objective** | Write `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1) to 11 repositories via parallel Sonnet subagents |
 | **Outcome** | All 11 Sonnet subagents blocked by content filtering policy; workaround via Opus parent succeeded |
@@ -63,7 +63,7 @@ done
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | 11 parallel Sonnet subagents | Each agent cloned repo, created branch, then tried to write CODE_OF_CONDUCT.md via Write tool | API Error: 400 `{"type":"error","error":{"type":"invalid_request_error","message":"Output blocked by content filtering policy"}}` on every agent | Contributor Covenant v2.1 text contains phrases about harassment, sexualized language, and conduct topics that trigger Sonnet's content filter |
 | Sonnet retry (second attempt) | Retried subagent on same task after first failure | Identical HTTP 400 failure — not a transient error | The block is deterministic, not flaky; retrying Sonnet agents wastes time |
 | Sonnet subagent with shorter text | (Hypothetical) Truncating the CoC text | Would break legal/policy requirements of the document | Full Contributor Covenant text is required; truncation is not a valid workaround |
@@ -85,7 +85,7 @@ API Error: 400 {"type":"error","error":{"type":"invalid_request_error","message"
 ### Model Behavior Difference
 
 | Model | Contributor Covenant Write | Notes |
-|-------|---------------------------|-------|
+| ------- | --------------------------- | ------- |
 | Claude Sonnet (subagent) | BLOCKED — HTTP 400 content filter | Fails deterministically |
 | Claude Opus (parent) | SUCCESS | No content filter triggered |
 
@@ -112,5 +112,5 @@ git -C /tmp/clone-repo-N push
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | HomericIntelligence (11 repos) | Multi-repo audit — adding CODE_OF_CONDUCT.md to all repos | 11 Sonnet agents failed; Opus parent + cp workaround succeeded; all PRs created |

@@ -14,7 +14,7 @@ tags: []
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-29 |
 | **Objective** | Consolidated reference for recurring debugging and fix patterns across evaluation, testing, and experiment infrastructure |
 | **Outcome** | Merged from 8 source skills covering CI test failures, directory creation, evaluation bugs, checkpoint issues, judge access, mock patching, Pydantic fixtures, and rerun completion |
@@ -243,7 +243,7 @@ examine code structure.
 > **Core Rule**: Patch where the name is **used**, not where it is **defined**.
 
 | Import Style | Call Style | Correct Patch Target |
-|---|---|---|
+| --- | --- | --- |
 | `import subprocess` | `subprocess.run(...)` | `"<calling_module>.subprocess.run"` |
 | `from subprocess import run` | `run(...)` | `"<calling_module>.run"` |
 | `import time` | `time.sleep(...)` | `"time.sleep"` (module object attr, works globally) |
@@ -341,7 +341,7 @@ except Exception as e:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Mocking `executor.run()` | Injected mock executor and set `executor.run.return_value` | Code called `_run_with_volumes()` directly, bypassing the executor | Read the actual code path; mock the method that is actually called |
 | Not creating directories explicitly | Relying on child operations to create parent directories implicitly | Child operations only run on some code paths; parallel execution exposes the gap | Always call `.mkdir(parents=True, exist_ok=True)` immediately after path assignment |
 | `--Werror` asymmetry (local vs CI) | Tests compile locally without errors | CI uses `--Werror`; deprecation warnings become errors | Reproduce locally with CI flags: `pixi run mojo --Werror -I "$(pwd)" <test_file>` |
@@ -377,7 +377,7 @@ directory_path.mkdir(parents=True, exist_ok=True)
 ### Mock Patch Targets (ProjectScylla)
 
 | File | Old Target | New Target |
-|------|---|---|
+| ------ | --- | --- |
 | `test_claude_code.py` | `subprocess.run` | `scylla.adapters.claude_code.subprocess.run` |
 | `test_cline.py` | `subprocess.run` | `scylla.adapters.base_cli.subprocess.run` |
 | `test_goose.py` | `subprocess.run` | `scylla.adapters.base_cli.subprocess.run` |
@@ -387,7 +387,7 @@ directory_path.mkdir(parents=True, exist_ok=True)
 ### Judge E2E Evaluation Recovery
 
 | Tier | Score Before | Score After |
-|------|-------------|-------------|
+| ------ | ------------- | ------------- |
 | T2 (file creation) | 0.07 | 0.77 |
 
 **Judge tool allowlist**: `--allowedTools Read,Glob,Grep` (read-only, no Write/Edit/Bash)

@@ -13,7 +13,7 @@ tier: 1
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Run linting tools to identify style issues, potential bugs, and code quality problems in source files. |
 | Outcome | Operational |
@@ -63,7 +63,7 @@ Lint report:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

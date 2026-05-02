@@ -14,7 +14,7 @@ tags: [mojo, max, project-setup, pixi, uv, scaffolding, modular-upstream]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-09 |
 | **Objective** | Interactive wizard for creating new Mojo/MAX projects with correct toolchain setup |
 | **Outcome** | Authoritative setup guide from Modular covering pixi, uv, pip, and conda |
@@ -43,12 +43,12 @@ Infer options from user's request, then prompt only for unspecified options:
 
 ### System Prerequisites
 
-| OS            | Command                                                  |
-|---------------|----------------------------------------------------------|
-| Ubuntu/Debian | `sudo apt install gcc`                                   |
-| Fedora/RHEL   | `sudo dnf install gcc`                                   |
-| macOS         | `xcode-select --install`                                 |
-| Windows       | WSL2 required (`wsl --install`), then gcc in WSL         |
+| OS | Command |
+| --------------- | ---------------------------------------------------------- |
+| Ubuntu/Debian | `sudo apt install gcc` |
+| Fedora/RHEL | `sudo dnf install gcc` |
+| macOS | `xcode-select --install` |
+| Windows | WSL2 required (`wsl --install`), then gcc in WSL |
 
 ### Pixi (Recommended)
 
@@ -135,7 +135,7 @@ Mismatched versions cause kernel compilation failures. Use the same channel for 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `magic` for project setup | `magic init` / `magic add` | `magic` is deprecated; Pixi replaced it | Always use `pixi` — do not look for or use `magic` |
 | (sourced from upstream) | Modular's official skills repo | N/A — authoritative reference | Version strings differ: mojo uses `0.` prefix (0.26.1.0.0.0), max does not (26.1.0.0.0) |
 
@@ -144,9 +144,9 @@ Mismatched versions cause kernel compilation failures. Use the same channel for 
 ### Channel URLs
 
 | Channel | Conda URL | PyPI Index |
-|---------|-----------|------------|
+| --------- | ----------- | ------------ |
 | Nightly | `https://conda.modular.com/max-nightly/` | `https://whl.modular.com/nightly/simple/` |
-| Stable  | `https://conda.modular.com/max/` | `https://modular.gateway.scarf.sh/simple/` |
+| Stable | `https://conda.modular.com/max/` | `https://modular.gateway.scarf.sh/simple/` |
 
 ### References
 
@@ -162,7 +162,7 @@ Mismatched versions cause kernel compilation failures. Use the same channel for 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | (upstream) | Modular official skills repo | Authoritative project setup reference |
 
 ---

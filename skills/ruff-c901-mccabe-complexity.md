@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-05 |
 | Category | tooling |
 | Objective | Enable C901 McCabe complexity rule in ruff with a pragmatic threshold |
@@ -76,7 +76,7 @@ def run_subtest(
 ### 5. Rationale categories used
 
 | Rationale | Functions |
-|-----------|-----------|
+| ----------- | ----------- |
 | `orchestration with many retry/outcome paths` | `run`, `run_subtest`, `_implement_all`, `_run_batch`, `cmd_run`, `rerun_experiment`, `rerun_judges_experiment` |
 | `pipeline with sequential conditional stages` | `_run_mojo_pipeline`, `_run_python_pipeline` |
 | `CLI dispatch with many command branches` | `main` (multiple), `cmd_run`, `cmd_visualize` |
@@ -103,7 +103,7 @@ pixi run python -m pytest tests/ -v
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -120,7 +120,7 @@ max-complexity = 12
 ### Violation summary
 
 | Complexity Range | Count | Action |
-|-----------------|-------|--------|
+| ----------------- | ------- | -------- |
 | > 12 (suppressed) | 43 | `# noqa: C901` with rationale |
 | 11–12 (accepted) | 22 | No change needed |
 | Total at threshold 10 | 65 | — |

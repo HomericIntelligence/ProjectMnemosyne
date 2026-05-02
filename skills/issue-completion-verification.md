@@ -9,7 +9,7 @@ user-invocable: false
 # Issue Completion Verification
 
 | **Attribute** | **Value** |
-|---------------|-----------|
+| --------------- | ----------- |
 | **Date** | 2026-02-15 |
 | **Objective** | Verify GitHub issue completion and manually close when PR auto-close automation fails |
 | **Outcome** | Success - Issue #594 properly closed after detecting completed work |
@@ -116,7 +116,7 @@ git status
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2026-03-28 | Consolidated diagnosis and log-analysis knowledge for CI failures | Operational |
 | 2026-04-12 | v2.0.0: Absorbed pre-existing failure triage, batch PR diagnosis, and crash decision tree | Merged |
 
@@ -129,7 +129,7 @@ gh run watch <run-id> --repo <owner>/<repo> --exit-status
 **Error category patterns**:
 
 | Category | Look For | Check |
-|----------|----------|-------|
+| ---------- | ---------- | ------- |
 | Compilation Errors | `error:`, `undefined`, `type mismatch` | Mojo/Python syntax, imports, type annotations |
 | Test Failures | `FAILED`, `AssertionError`, `ValueError` | Test logic, expected vs actual values |
 | Timeout Issues | `timeout`, `timed out`, `hanging` | Long-running loops, infinite recursion |
@@ -160,7 +160,7 @@ git diff main...HEAD -- '*.mojo'
 #### Step 3b: Classify by Changed File Type
 
 | File Type | Can Cause |
-|-----------|-----------|
+| ----------- | ----------- |
 | `.claude/agents/*.md`, `agents/*.md`, `*.md` only | Documentation only — cannot cause Mojo runtime crashes |
 | `.mojo`, `.🔥`, `shared/`, `tests/` | Can cause test failures |
 | `.github/workflows/` | Can affect CI infrastructure |
@@ -188,7 +188,7 @@ If all recent runs on `main` show `failure`, the failure is pre-existing.
 #### Step 3d: Decision Table
 
 | Changed files | Failing CI | Action |
-|---------------|-----------|--------|
+| --------------- | ----------- | -------- |
 | Only `.claude/`, `agents/`, docs | Mojo runtime crashes | Pre-existing — proceed |
 | Only `.claude/`, `agents/`, docs | `link-check` on untouched files | Pre-existing — proceed |
 | Only `.claude/`, `agents/`, docs | `pre-commit` / `test-agents` | PR-caused — fix required |
@@ -408,7 +408,7 @@ Expected output: all hooks show `Passed`. The `mojo format` hook may emit GLIBC 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Read only last few lines | Used `tail` to check end of log | Missed earlier context and root cause | Read full log or use grep for patterns |
 | Search for single keyword | Grepped only "error" | Missed "FAILED", "panic", "exception" variants | Use multiple error patterns together |
 | Analyze without PR context | Looked at logs in isolation | Couldn't connect to code changes | Always compare with PR diff |
@@ -527,7 +527,7 @@ safe_file_types:
 ### Environment Comparison for Misdiagnosis
 
 | Parameter | Local | Docker | CI |
-|-----------|-------|--------|-----|
+| ----------- | ------- | -------- | ----- |
 | GLIBC | 2.39 | 2.35 | 2.35 |
 | Mojo | 0.26.1 | 0.26.1 | 0.26.1 |
 | `--Werror` | No (default) | No (default) | Yes |
@@ -543,7 +543,7 @@ safe_file_types:
 ### Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Logs not accessible | Use `gh run view` to check permissions |
 | Truncated logs | Download full artifact instead of view |
 | Large log files | Use grep to extract relevant sections |
@@ -552,7 +552,7 @@ safe_file_types:
 ### Common Pre-Existing Failures (ProjectOdyssey)
 
 | Check | Status | Notes |
-|-------|--------|-------|
+| ------- | -------- | ------- |
 | `link-check` | Pre-existing | Root-relative links (`/.claude/...`) fail on all PRs — lychee needs `--root-dir` |
 | `Core ExTensor` | Intermittent flaky | Mojo runtime crash; passes on other PRs; re-run resolves it |
 | `Core Initializers` | Intermittent flaky | Same pattern as Core ExTensor |
@@ -589,7 +589,7 @@ gh pr checks <PR> | grep fail | awk '{print $1}'
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #336 CI diagnosis | Multiple CI check triage and fix |
 | ProjectOdyssey | PR #4494 / #4898 Mojo JIT vs compile error misdiagnosis | alias→comptime fix |
 | ProjectOdyssey | PR #4897 Dockerfile + pre-commit triage | GID collision + bash -c args |

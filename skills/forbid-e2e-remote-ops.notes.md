@@ -150,7 +150,7 @@ The `<commit-ish>` argument is supported natively by git worktree add.
 ## Files Modified
 
 | File | Lines Changed | Purpose |
-|------|---------------|---------|
+| ------ | --------------- | --------- |
 | `scylla/e2e/tier_manager.py` | +13 | Add test constraints to suffix |
 | `scylla/e2e/workspace_setup.py` | -44 +4 | Optimize worktree creation |
 | `scylla/e2e/workspace_manager.py` | -12 +2 | Optimize worktree creation |

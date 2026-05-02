@@ -147,12 +147,12 @@ Claude CLI
 ### Permission Matrix
 
 | File/Dir | Host | Container | Purpose |
-|----------|------|-----------|---------|
-| `~/.claude/` | 700 | - | Host credentials (owner-only) |
-| `.tmp-container-creds/` | 755 | - | Temp mount point (world-readable) |
-| `/tmp/host-creds/` | - | ro | Mounted credentials (read-only) |
-| `/home/scylla/.claude/` | - | 700 | Container .claude dir (owner-only) |
-| `.credentials.json` | - | 600 | Credentials file (owner read/write) |
+| ---------- | ------ | ----------- | --------- |
+| `~/.claude/` | 700 | --- | Host credentials (owner-only) |
+| `.tmp-container-creds/` | 755 | --- | Temp mount point (world-readable) |
+| `/tmp/host-creds/` | --- | ro | Mounted credentials (read-only) |
+| `/home/scylla/.claude/` | --- | 700 | Container .claude dir (owner-only) |
+| `.credentials.json` | --- | 600 | Credentials file (owner read/write) |
 | `results/` | 777 | rw | Results directory (world-writable) |
 
 ## Code Changes Summary
@@ -287,7 +287,7 @@ docker run --rm -v .tmp-container-creds:/tmp/host-creds:ro \
 ## Agent Summary
 
 | Agent ID | Purpose | Outcome |
-|----------|---------|---------|
+| ---------- | --------- | --------- |
 | a9dbcee | Run experiment and fix errors | ✅ Found credential issues |
 | a079476 | Configure thinking mode | ✅ Settings configured |
 | a340122 | Fix Docker credential mapping | ✅ Credentials mounted |

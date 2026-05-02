@@ -22,7 +22,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Establish a single-source-of-truth version management system: `pyproject.toml` is canonical, `importlib.metadata` reads it at runtime, pre-commit hook guards against drift, and CHANGELOG uses `[Unreleased]` convention. |
 | **Outcome** | Successful — two PRs (#1557, #1562) across two issues (#1527, #1535), 4808+ tests passing, all pre-commit hooks green. |
@@ -91,7 +91,7 @@ python -c "import mypackage; print(mypackage.__version__)"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Test file at `tests/unit/test_version_consistency.py` | Placed test directly under `tests/unit/` | Pre-commit hook `check-unit-test-structure` requires tests in sub-packages | Always check project's test structure conventions before placing new test files |
 | Regex-based TOML parsing | Used `re.match(r'^version\s*=\s*"([^"]+)"')` to read TOML values | Fragile: breaks on inline comments, multi-line strings, or non-standard formatting | Use `tomllib` (stdlib since 3.11) for reliable TOML parsing; fall back to `tomli` for 3.10 |
 | `if cond: return False; return True` pattern | Simple conditional in `check_init_uses_importlib()` | Ruff SIM103 requires direct condition return | Use `return not pattern.search(content)` for boolean-returning functions |
@@ -177,6 +177,6 @@ Update any code-generation templates that produce CHANGELOG entries:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1527 — Audit S10 versioning remediation | PR #1557: 8 files changed, 35 tests passing, all pre-commit hooks green |
 | ProjectScylla | Issue #1535 — Reconcile version 0.1.0 with CHANGELOG refs | PR #1562: 8 files changed, 26 new tests, 4808 total passing, 77.50% coverage |

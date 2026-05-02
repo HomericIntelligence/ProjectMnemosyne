@@ -16,7 +16,7 @@ Detailed notes from the plugin generalization session.
 
 **Categories Affected**:
 | Category | Plugins Updated |
-|----------|-----------------|
+| ---------- | ----------------- |
 | ci-cd | 9 |
 | tooling | 9 |
 | testing | 5 |

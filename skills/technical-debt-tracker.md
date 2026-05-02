@@ -12,7 +12,7 @@ Audit FIXME/TODO comments in a codebase, create categorized GitHub issues, and u
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Track and resolve all FIXME/TODO comments referencing closed issues | Created 8 category issues + 1 Epic, updated 20+ source files |
 
 ## When to Use
@@ -115,7 +115,7 @@ Use `replace_all` for bulk updates:
 Issues created in ProjectOdyssey session:
 
 | Issue | Category | Description |
-|-------|----------|-------------|
+| ------- | ---------- | ------------- |
 | #3008 | Testing | FP4/MXFP4 Test Coverage |
 | #3009 | Testing | Float16 Precision Issues |
 | #3010 | Testing | Placeholder Test Fixtures |
@@ -133,12 +133,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | `label not found` | Run `gh label list` and use existing labels |
 | `File has not been read` | Read file before edit |
 | Issue not linked | Use "Replaces #OLD" in body to document history |

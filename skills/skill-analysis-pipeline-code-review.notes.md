@@ -134,18 +134,18 @@ The 7 planned PRs were broken down into 15 individual PRs for faster parallel ex
 ### P0 (Critical) - 6 Issues
 
 | Issue | Title | PR |
-|-------|-------|-----|
+| ------- | ------- | ----- |
 | #215 | Fix Krippendorff's alpha implementation for interval-level data | #241 |
 | #216 | Fix inverted Pareto frontier algorithm | #242 |
 | #217 | Fix fig11_tier_uplift crash when model has no T0 data | #243 |
-| -- | Table 3 triple mismatch (covered in #215) | #241 |
-| -- | Krippendorff nominal branch implements Scott's pi (covered in #215) | #241 |
-| -- | Krippendorff ordinal metric uses index-based distance (covered in #215) | #241 |
+| --- | Table 3 triple mismatch (covered in #215) | #241 |
+| --- | Krippendorff nominal branch implements Scott's pi (covered in #215) | #241 |
+| --- | Krippendorff ordinal metric uses index-based distance (covered in #215) | #241 |
 
 ### P1 (High) - 10 Issues
 
 | Issue | Title | PR |
-|-------|-------|-----|
+| ------- | ------- | ----- |
 | #218 | Add Bonferroni correction for multiple hypothesis tests | #246 |
 | #219 | Vectorize Cliff's delta calculation for performance | #245 |
 | #220 | Replace normal-approx CI with bootstrap in fig12_consistency | #247 |
@@ -160,33 +160,33 @@ The 7 planned PRs were broken down into 15 individual PRs for faster parallel ex
 ### P2 (Medium) - 5 Issues
 
 | Issue | Title | PR |
-|-------|-------|-----|
+| ------- | ------- | ----- |
 | #227 | Eliminate tier_order duplication (17 instances) | #252 |
 | #228 | Centralize consistency formula (5 duplications) | #252 |
 | #229 | Centralize CoP formula (6 duplications) | #252 |
 | #230 | Centralize model color scale (11 duplications) | #252 |
-| -- | Unexported functions in dataframes.py (not filed) | -- |
+| --- | Unexported functions in dataframes.py (not filed) | --- |
 
 ### P3 (Low) - 11 Issues
 
 | Issue | Title | PR |
-|-------|-------|-----|
+| ------- | ------- | ----- |
 | #232 | Update stale analysis_pipeline.md documentation | #253 |
 | #233 | Remove generated files from git tracking | #253 |
 | #234 | Remove empty renderers directory | #253 |
-| -- | P3-4: Figure category metadata (fixed in #255) | #255 |
-| -- | P3-5: Bootstrap BCa method (fixed in #255) | #255 |
-| -- | P3-6: Consistency clamping (fixed in #255) | #255 |
-| -- | P3-7: Table06 NaN prevention (fixed in #255) | #255 |
-| -- | P3-8: mode()[0] guard (fixed in #255) | #255 |
-| -- | P3-9: Sorted directories (fixed in #255) | #255 |
-| -- | P3-10: Judge model fallback (fixed in #255) | #255 |
-| -- | P3-11: Run parsing robustness (fixed in #255) | #255 |
+| --- | P3-4: Figure category metadata (fixed in #255) | #255 |
+| --- | P3-5: Bootstrap BCa method (fixed in #255) | #255 |
+| --- | P3-6: Consistency clamping (fixed in #255) | #255 |
+| --- | P3-7: Table06 NaN prevention (fixed in #255) | #255 |
+| --- | P3-8: mode()[0] guard (fixed in #255) | #255 |
+| --- | P3-9: Sorted directories (fixed in #255) | #255 |
+| --- | P3-10: Judge model fallback (fixed in #255) | #255 |
+| --- | P3-11: Run parsing robustness (fixed in #255) | #255 |
 
 ### META Tracking Issues (6)
 
 | Issue | Title | Status |
-|-------|-------|--------|
+| ------- | ------- | -------- |
 | #235 | [META] PR 1: Critical Statistical & Algorithm Fixes | Closed |
 | #236 | [META] PR 2: Statistical Methodology Improvements | Closed |
 | #237 | [META] PR 3: Robustness & Error Handling | Closed |

@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-02 |
 | **Issue** | #1173 |
 | **PR** | #1291 |
@@ -117,14 +117,14 @@ Critical details:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files Created/Modified
 
 | File | Type | Lines |
-|------|------|-------|
+| ------ | ------ | ------- |
 | `scripts/docker_build_timing.py` | New — shared utility | 80 |
 | `tests/unit/docker/test_docker_build_timing.py` | New — 20 unit tests | 182 |
 | `.github/workflows/docker-test.yml` | Modified — new job + trigger path | +76 |
@@ -191,7 +191,7 @@ on:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1173, PR #1291 | [notes.md](../references/notes.md) |
 
 ## Related Skills

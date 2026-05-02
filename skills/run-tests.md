@@ -12,7 +12,7 @@ tier: 1
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Execute test suites to verify code functionality and identify regressions or failures. - Pre-commit validation |
 | Outcome | Operational |
@@ -64,7 +64,7 @@ Test results:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

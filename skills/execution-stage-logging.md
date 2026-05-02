@@ -17,7 +17,7 @@ tags:
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-04 |
 | **Objective** | Add visibility into which stage each worker thread is executing and how long each stage takes |
 | **Outcome** | ✅ Structured stage logging with timing prevents "appears hung" issues |
@@ -146,7 +146,7 @@ def execute_pipeline(worker_id: str):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -225,5 +225,5 @@ def parse_stage_log(line: str):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #139 - Worker stage reporting for E2E experiments | [notes.md](../../references/notes.md) |

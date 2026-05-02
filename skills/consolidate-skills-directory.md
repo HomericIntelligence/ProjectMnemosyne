@@ -16,7 +16,7 @@ Migrate from a dual `plugins/` + `skills/` structure to a single canonical `skil
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-02-23 |
 | Objective | Consolidate 225 plugins/ + 88 legacy skills/ into a single skills/ directory |
 | Outcome | ✅ 310 skills in skills/, plugins/ contains only mnemosyne |
@@ -118,7 +118,7 @@ for plugin_json_path in skills_root.rglob('.claude-plugin/plugin.json'):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -152,5 +152,5 @@ category_map:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | PR #183 — 971 files changed | [notes.md](../references/notes.md) |

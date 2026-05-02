@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Mojo struct implements trait methods (e.g. `__hash__`) but is not declared as conforming to the trait |
 | **Symptom** | CI fails: `argument type 'X' does not conform to trait 'Hashable'` / `no matching function in call to 'hash'` |
 | **Fix** | Add the missing trait to the struct declaration: `struct Foo(Existing, NewTrait):` |
@@ -57,7 +57,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `pixi run mojo test` locally | Attempted to verify fix with local Mojo test runner | GLIBC version mismatch: host has 2.31, Mojo requires 2.32+ | Local Mojo is not runnable on this host; rely on CI for test verification |
 | Running `git commit` without SKIP | Pre-commit hook `mojo-format` invokes `mojo` binary which fails with GLIBC error | Same GLIBC constraint prevents formatter from running | Use `SKIP=mojo-format` when Mojo cannot run locally; CI enforces formatting |
 

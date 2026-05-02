@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Purpose** | Replace duplicate inline limitation comments with a single ADR + concise cross-references |
 | **Trigger** | Follow-up issue requesting ADR consolidation of a workaround documented in multiple places |
 | **Scope** | Any language; illustrated with Mojo `.mojo` files and `docs/adr/` directory |
@@ -97,7 +97,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Manual `npx markdownlint-cli2` | Ran `pixi run npx markdownlint-cli2 <file>` to lint ADR before committing | `npx: command not found` even inside pixi environment | Use `pixi run pre-commit run --all-files` instead — it invokes markdownlint correctly |
 | Long URL list item on one line | Put `[Issue #NNN](https://...): description text (this ADR)` on one line | MD013 fired: line was 138 chars (limit 120) | Wrap after the closing `)` of the URL: `[Issue #NNN](https://...):↵  description text` |
 | Referencing sibling function in comment | Left "see sibling_fn() for details" in inline comment instead of pointing to ADR | Defeats the purpose — still requires navigating to another function | Update ALL cross-references to point directly to the new ADR path |
@@ -138,5 +138,5 @@ pixi run pre-commit run --all-files
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3291 — FP16 SIMD limitation | [notes.md](../references/notes.md) |

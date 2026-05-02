@@ -11,7 +11,7 @@ tags: [depthwise-conv2d, gradient-checking, finite-differences, mojo, backward-p
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Topic** | Numerical gradient checking for `depthwise_conv2d_backward` |
 | **Approach** | Finite differences via `check_gradient()` from `shared.testing` |
 | **Key outputs verified** | `grad_input`, `grad_weights`, `grad_bias` |
@@ -34,7 +34,7 @@ tags: [depthwise-conv2d, gradient-checking, finite-differences, mojo, backward-p
 **Critical API differences from regular conv2d:**
 
 | Aspect | Regular Conv2D | Depthwise Conv2D |
-|--------|---------------|-----------------|
+| -------- | --------------- | ----------------- |
 | Kernel shape | `(out_channels, in_channels, kH, kW)` | `(channels, 1, kH, kW)` |
 | Gradient field | `.grad_weights` | `.grad_weights` (NOT `.grad_kernel`) |
 | Return type | `GradientTriple` | `GradientTriple` |
@@ -169,7 +169,7 @@ grep -c "^fn test_" <test-root>/test_depthwise_conv_grad_check_part2.mojo
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `.grad_kernel` field name | Assumed `depthwise_conv2d_backward` returns `GradientPair` with `.grad_kernel` | Actual return is `GradientTriple` with `.grad_weights` (confirmed from `gradient_types.mojo`) | Always verify field names from `gradient_types.mojo`, not just the function docstring |
 | Using `ones_like(output)` as `grad_output` | Uniform gradient for initial test | Causes sum-to-zero cancellation in symmetric kernel configurations — numerical and analytical gradients both become ~0 | Use `Float32(i % 4) * 0.25 - 0.3` non-uniform pattern |
 | Adding tests to `test_backward_conv_pool.mojo` | Kept tests in one file | File already at or near the per-file test limit; adding more risks heap corruption in CI | Always check `grep -c "^fn test_"` before adding; create new split files when ≥6 tests exist |
@@ -194,5 +194,5 @@ check_gradient(forward_fn, backward_fn, x, grad_output, rtol=1e-2, atol=1e-2)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4794, issue #3775 | [notes.md](../references/notes.md) |

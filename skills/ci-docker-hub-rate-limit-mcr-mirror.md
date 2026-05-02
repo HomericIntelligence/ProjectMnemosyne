@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-27 |
 | **Objective** | Fix Docker Hub anonymous pull rate limit failures during parallel container builds |
 | **Outcome** | Successful — MCR mirror has no pull limits and stays current with upstream Ubuntu |
@@ -112,7 +112,7 @@ Examples:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Adding Docker Hub credentials | Considered authenticating to Docker Hub for higher limits | Adds secret management overhead; MCR mirror is simpler and free | Use MCR mirror — no auth required, no cost, no rate limits |
 | Serializing builds | Considered running builds sequentially to avoid concurrent pulls | Increases CI wall time significantly | MCR mirror is better — parallel builds are fine |
 
@@ -121,7 +121,7 @@ Examples:
 ### MCR Mirror Properties
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | URL | `mcr.microsoft.com/mirror/docker/library/` |
 | Authentication | None required |
 | Rate limit | None |
@@ -148,5 +148,5 @@ unaffected. Only the `FROM ubuntu:24.04` base image pull at build time is rate-l
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Dockerfile and Dockerfile.ci | PR #5177 (unverified) |

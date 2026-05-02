@@ -23,7 +23,7 @@ Issue #728 asked for:
 ## Key files
 
 | File | Role |
-|------|------|
+| ------ | ------ |
 | `scylla/core/results.py` | Source class — added `__post_init__` |
 | `tests/unit/core/test_results.py` | All `BaseExecutionInfo` instantiations wrapped in `pytest.warns` |
 | `.github/workflows/test.yml` | Added grep-based usage tracker before pixi install |

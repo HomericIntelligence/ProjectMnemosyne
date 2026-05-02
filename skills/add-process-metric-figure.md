@@ -20,7 +20,7 @@ single self-contained change.
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-02 |
 | Objective | Add `fig_strategic_drift_by_tier` box-plot figure for the `strategic_drift` column |
 | Outcome | Success — 3 new smoke tests, 388 analysis tests pass, pre-commit clean |
@@ -38,7 +38,7 @@ single self-contained change.
 `process_metrics.py` uses two distinct patterns depending on metric semantics:
 
 | Pattern | When to use | Examples |
-|---------|-------------|---------|
+| --------- | ------------- | --------- |
 | `mark_boxplot()` | Metric is a **distribution** value (bounded [0,1], shows spread) | `r_prog`, `strategic_drift` |
 | `mark_bar()` + `mark_errorbar()` layered | Metric is a **rate/frequency** (mean makes more sense than distribution) | `cfp`, `pr_revert_rate` |
 
@@ -234,14 +234,14 @@ PYTHONPATH=scripts pixi run python -m pytest tests/unit/analysis/ -v --no-cov
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Files changed (3 files, 0 new files)
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `scylla/analysis/figures/process_metrics.py` | +50 lines: module docstring update + `fig_strategic_drift_by_tier` |
 | `scripts/generate_figures.py` | +2 lines: import + registry entry |
 | `tests/unit/analysis/test_figures.py` | +42 lines: 3 new tests + 2 registry assertion updates |
@@ -258,7 +258,7 @@ PYTHONPATH=scripts pixi run python -m pytest tests/unit/analysis/ -v --no-cov
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1198, PR #1301 | Follow-up from #1136 (wire-figure-pipeline) |
 
 ## References

@@ -14,7 +14,7 @@ tier: 2
 ## Overview
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Date** | 2026-01-04 |
 | **Objective** | Fix E2E test resume behavior to avoid re-running completed tests and track pass/fail status |
 | **Outcome** | ✅ Success - All 70 E2E tests passing |
@@ -249,14 +249,14 @@ agent_dir.mkdir(parents=True)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | **Backward Compatibility** | Initially considered checking both old and new paths during transition period | User explicitly stated "don't provide backward compatibility, just move everything to the new directory structure" | When user gives explicit architectural direction, follow it exactly rather than second-guessing |
 | **Checkpoint-Only Validation** | Resume logic initially only checked `checkpoint.is_run_completed()` to skip runs | Checkpoint could be corrupted or incomplete (T0/00 completed but not in checkpoint) | Must validate filesystem artifacts exist and are valid, not just trust checkpoint state |
 
 ## Key Decisions
 
 | Decision | Rationale |
-|----------|-----------|
+| ---------- | ----------- |
 | **No backward compatibility** | User requirement - clean break from v1.0 |
 | **Separate agent/judge directories** | Enables granular resume (run only judge if agent cached) |
 | **dict[int, str] for status** | Can track "passed", "failed", or "agent_complete" |

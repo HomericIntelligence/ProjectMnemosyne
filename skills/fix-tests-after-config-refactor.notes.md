@@ -265,13 +265,13 @@ tmp_path/
 ## Files Modified
 
 | File | Changes | Lines |
-|------|---------|-------|
+| ------ | --------- | ------- |
 | `tests/unit/e2e/test_tier_manager.py` | Updated 5 test methods | 52 insertions, 36 deletions |
 
 ## Commits Created
 
 | Commit | Branch | Message |
-|--------|--------|---------|
+| -------- | -------- | --------- |
 | `caa34c1` | skill/architecture/unify-config-structure | fix(tests): update tier_manager tests for new config structure |
 | `b57fce8` | skill/debugging/e2e-path-resolution-fix | fix(tests): update tier_manager tests for new config structure (cherry-picked) |
 

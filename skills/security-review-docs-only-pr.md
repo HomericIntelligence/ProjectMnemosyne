@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | security-review-docs-only-pr |
 | **Category** | documentation |
 | **Scope** | Any PR where all changed files are documentation or static metadata |
@@ -33,7 +33,7 @@ When a `/security-review` is triggered on a PR that contains only markdown files
 ### Quick Reference
 
 | File Type | Has Attack Surface? | Action |
-|-----------|--------------------|-----------------------|
+| ----------- | -------------------- | ----------------------- |
 | `.md` markdown | No | Classify as docs-only |
 | `plugin.json` (static metadata) | No | Classify as docs-only |
 | `references/notes.md` | No | Classify as docs-only |
@@ -86,7 +86,7 @@ This is a complete and accurate security review — brevity here is a feature, n
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Performing full multi-phase review on docs-only PR | Running Phase 1 repo context research + Phase 2 comparative analysis + Phase 3 vulnerability assessment on a PR with only `.md` and `plugin.json` files | Wastes significant time with zero security value; all findings would be excluded by the hard exclusion rule for documentation files | Classify file types first; if all are docs/metadata, skip to the no-findings report immediately |
 | Flagging YAML workflow examples inside SKILL.md as injection risks | The SKILL.md contained example GitHub Actions YAML with expression patterns | The YAML is inside a markdown code block — it is documentation of a pattern, not an executable workflow | Code blocks inside `.md` files are documentation, not executable. Apply the same hard exclusion. |
 

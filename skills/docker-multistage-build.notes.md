@@ -234,7 +234,7 @@ build:
 ### Metrics
 
 | Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
+| -------- | -------- | ------- | ------------- |
 | Image Size | 818MB | 572MB | **-246MB (-30%)** |
 | Build Tools | Present | Absent | **Security ✅** |
 | Build Time | 42s | 54s | +12s (acceptable) |

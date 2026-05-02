@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `ProcessPoolExecutor` hangs on Python 3.14t (free-threaded) |
 | **Root Cause** | `forkserver` serializes arguments; `Manager().Semaphore()` proxies contain `AuthenticationString` that refuses serialization |
 | **Solution** | Convert to `ThreadPoolExecutor` with `threading.Semaphore`/`Event`/`dict` |
@@ -89,7 +89,7 @@ When the final commit subsumes earlier incremental fixes:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Incremental lock fixes | Added `filelock.FileLock` for pipeline serialization, then removed it | Each fix addressed a symptom, not the root cause (processes themselves) | When you are fixing serialization issues in multiprocessing, consider whether threads would eliminate the entire problem class |
 | Keeping `_checkpoint_write_lock` | Kept a threading.Lock for checkpoint writes after converting to threads | Unnecessary — threads sharing one checkpoint object don't need merge locks | Identify which synchronization primitives exist solely because of process boundaries |
 | Rebase with all intermediate commits | Tried to rebase all 7 commits onto main | Created cascading conflicts since each commit partially undid the previous one | When commits form a superseding chain, drop intermediates and keep only the final result |
@@ -100,7 +100,7 @@ When the final commit subsumes earlier incremental fixes:
 ### Files Changed (Source)
 
 | File | Change |
-|------|--------|
+| ------ | -------- |
 | `parallel_executor.py` | Core conversion + delete 3 functions (~400 lines removed) |
 | `scheduler.py` | `Manager.Semaphore` -> `threading.Semaphore` |
 | `runner.py` | Remove `Manager`, `BrokenProcessPool`, `checkpoint_merge_lock` |

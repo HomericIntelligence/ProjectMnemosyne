@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Skill Name** | pool-layer-backward-tester |
 | **Category** | testing |
 | **Language** | Mojo |
@@ -119,7 +119,7 @@ CI runs mojo format with the correct version.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Using `ones_like(output)` as grad_output for numerical check | Passed `ones_like(output)` as upstream gradient into the scalar closure | AvgPool with symmetric (seeded random) inputs caused gradient cancellation — numerical grad ≈ 0 everywhere | Use non-uniform grad_output (e.g. `i%4 * 0.25 - 0.3`) to break symmetry and prevent cancellation |
 | Using `compute_numerical_gradient` directly on the pool output (vector) | Called `compute_numerical_gradient(forward, input, epsilon)` where `forward` returned the raw pool output | The vector-output path sums all Jacobian elements, which works for some layers but can cancel for AvgPool | Wrap the forward fn to compute a weighted dot product with grad_out_nu and return a scalar ExTensor |
 | Adding `maxpool2d_backward` import inline with existing single-line import | `from shared.core.pooling import maxpool2d, avgpool2d, pool_output_shape, maxpool2d_backward, avgpool2d_backward` | No actual failure — but the multi-import form is cleaner | Expand single-line imports to parenthesized form when adding backward functions |
@@ -143,7 +143,7 @@ LayerTester.test_pool_layer_backward(
 ### Tolerance rationale
 
 | Layer Type | rtol | atol | Reason |
-|------------|------|------|--------|
+| ------------ | ------ | ------ | -------- |
 | Pool backward | 1e-3 | 5e-4 | Simple routing/averaging — minimal accumulation error |
 | Conv backward | 1e-1 | 1e-1 | Large kernel accumulates floating-point errors |
 | Linear backward | 0.10 | 0.10 | Matmul accumulates errors over in_features |
@@ -173,5 +173,5 @@ var gi_avg = avgpool2d_backward(go, x_avg, 2, 2, 0)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3720, PR #4782 | [notes.md](../references/notes.md) |

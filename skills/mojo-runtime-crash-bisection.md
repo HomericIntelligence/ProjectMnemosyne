@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | Category | debugging |
 | Language | Mojo 0.26.1 |
 | Complexity | High |
@@ -106,7 +106,7 @@ handles `List` allocation/deallocation interleaved with other allocations.
 Before filing upstream, rule out user error with explicit checks:
 
 | Check | How |
-|-------|-----|
+| ------- | ----- |
 | Bounds | Add `if idx < 0 or idx >= numel: raise` on every array access |
 | Refcount | Add print statements in `__init__`/`__copyinit__`/`__moveinit__`/`__del__` |
 | Move semantics | Write a `Probe` struct to verify `__del__` is NOT called after `__moveinit__` |
@@ -169,7 +169,7 @@ The isolation experiments table is the most valuable part:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Raw alloc/free churn + bitcast | Created 1000 alloc/free cycles with raw `alloc[UInt8]` then bitcast write | No crash — raw allocation alone doesn't trigger the bug | The bug requires `List[Int]` internal buffer management, not just raw alloc/free |
 | Pure `List[Int]` churn + bitcast | Created 1000 `List[Int]` objects, destroyed them, then did bitcast write | No crash — List churn alone doesn't trigger | Needs the combination of List-in-struct + heavy computation + bitcast |
 | Assumed two separate crashes | Plan assumed `libKGENCompilerRTShared.so` and `libAsyncRTRuntimeGlobals.so` were separate crash types | Both libraries appear in the same stack trace — it is ONE crash | Always check if multiple library names in a trace are frames in a single call chain, not separate crashes |

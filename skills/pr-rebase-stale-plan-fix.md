@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Date** | 2026-03-06 |
 | **Objective** | Rebase PR #3286 (issue #3073) onto main and enable auto-merge after automated fix plan contained stale state information |
 | **Outcome** | Successfully rebased, resolved 1 comment-only conflict, force-pushed, auto-merge enabled |
@@ -117,7 +117,7 @@ Expected output confirms `autoMergeRequest.mergeMethod == "REBASE"`.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Trusting fix plan's "already merged" claim | Plan said commit `1d3afd6b` was in main; plan said close PR or re-target | `git log origin/main \| grep 1d3afd6b` returned nothing — commit was only on the branch | Always verify git state independently; automated plans can have stale snapshots |
 | Assuming no conflicts for comment-only changes | Expected `git rebase origin/main` to succeed cleanly | Main had also updated the same comment in `trainer_interface.mojo` between branch creation and rebase | Comment-only PRs can still conflict if main updated the same comments independently |
 

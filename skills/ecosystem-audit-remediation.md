@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Objective** | Audit and remediate a distributed multi-repo ecosystem for integration bugs, documentation drift, and pattern inconsistencies |
 | **Scope** | 12 repositories, 6 PRs, 6 issues filed |
 | **Findings** | 4 critical bugs, 9 important issues, 5 minor issues |
@@ -39,7 +39,7 @@ user-invocable: false
 Build an alignment matrix comparing documented behavior vs actual behavior:
 
 | Repo | Documented Role | Actual Role | Aligned? |
-|------|----------------|-------------|----------|
+| ------ | ---------------- | ------------- | ---------- |
 | Each repo | What docs say | What code does | Yes/No |
 
 Key areas to cross-check:
@@ -73,7 +73,7 @@ Execute fixes in dependency order:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Trusting CLAUDE.md status values over code | Used `todo`/`done` from CLAUDE.md as authoritative | Code actually uses `pending`/`completed` — CLAUDE.md was stale | Always treat code (especially Pydantic models and enums) as the source of truth for field names and status values |
 | Assuming NATS subject part count from comments | Code comment said "6 parts" so check was `< 6` | `hi.tasks.team.task.updated` is actually 5 parts — the comment was wrong | Count the actual dots in the subject string; never trust comments over split() behavior |
 | Creating PRs targeting default branch without checking | Used `gh pr create` without `--base` flag | Some repos use `main`, others `master` — PR creation failed with "no common history" | Always check `gh repo view --json defaultBranchRef` and verify local branch was created from the correct base |

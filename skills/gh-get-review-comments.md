@@ -13,7 +13,7 @@ agent: test-engineer
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Retrieve and analyze all review comments from a pull request. - Checking for unresolved review feedback |
 | Outcome | Operational |
@@ -68,7 +68,7 @@ Comments include:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Use `gh pr view` | Tried to get comments with standard view | Doesn't show review comment IDs | Use API endpoint for comment IDs |
 | Parse from web UI | Copied comments from GitHub website | Lost comment IDs needed for replies | Always use API for programmatic access |
 | Filter by resolved status | Tried to filter resolved comments | API doesn't expose resolved field directly | Check `in_reply_to_id` for top-level only |
@@ -77,7 +77,7 @@ Comments include:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | PR not found | Verify PR number |
 | Auth failure | Check `gh auth status` |
 | No comments | API returns empty array (not an error) |

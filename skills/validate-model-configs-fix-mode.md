@@ -10,7 +10,7 @@ user-invocable: false
 # Skill: Validate Model Configs with --fix Mode
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-02-20 |
 | **Category** | tooling |
 | **Objective** | Add `--fix` mode to a validation script that renames YAML files to match their `model_id` field |
@@ -113,7 +113,7 @@ All hooks must pass (Ruff Format, Ruff Check, Mypy, Trim Whitespace, etc.).
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -121,7 +121,7 @@ All hooks must pass (Ruff Format, Ruff Check, Mypy, Trim Whitespace, etc.).
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -154,7 +154,7 @@ Exit codes:
 ### Test Coverage by Class
 
 | Test Class | Scenarios Covered |
-|------------|------------------|
+| ------------ | ------------------ |
 | `TestLoadModelId` | valid file, missing field, bad YAML, non-dict YAML |
 | `TestCollectMismatches` | no mismatch, mismatch, underscore skip, no model_id, multiple, colon normalize |
 | `TestConfirmRename` | y, n, empty, uppercase N |

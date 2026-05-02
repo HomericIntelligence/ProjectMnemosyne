@@ -13,7 +13,7 @@ mismatches across documentation — agents (3 different numbers), skills (3 diff
 ## Audit Findings
 
 | Entity | CLAUDE.md | hierarchy.md | agents/README.md | Actual (disk) |
-|--------|-----------|--------------|------------------|---------------|
+| -------- | ----------- | -------------- | ------------------ | --------------- |
 | Agents | 42 | 37 | 42 | 31 |
 | Skills | 82 | — | — | 58 |
 

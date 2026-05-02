@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-20 |
 | **Issue** | #768 - Update MYPY_KNOWN_ISSUES.md as part of mypy fix workflow |
 | **Objective** | Define a convention + enforcement mechanism so MYPY_KNOWN_ISSUES.md stays current as type errors are fixed |
@@ -156,7 +156,7 @@ def valid_md(tmp_path: Path) -> Path:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -170,21 +170,21 @@ Pre-commit hooks: all 13 pass
 
 Error count breakdown (2026-02-20):
 
-| Error Code    | Count |
-|---------------|-------|
-| arg-type      | 30    |
-| call-arg      | 28    |
-| operator      | 20    |
-| var-annotated | 17    |
-| union-attr    | 16    |
-| assignment    | 14    |
-| index         | 10    |
-| misc          | 6     |
-| attr-defined  | 4     |
-| valid-type    | 2     |
-| return-value  | 1     |
-| override      | 1     |
-| no-redef      | 1     |
-| exit-return   | 1     |
-| call-overload | 1     |
-| **Total**     | **152** |
+| Error Code | Count |
+| --------------- | ------- |
+| arg-type | 30 |
+| call-arg | 28 |
+| operator | 20 |
+| var-annotated | 17 |
+| union-attr | 16 |
+| assignment | 14 |
+| index | 10 |
+| misc | 6 |
+| attr-defined | 4 |
+| valid-type | 2 |
+| return-value | 1 |
+| override | 1 |
+| no-redef | 1 |
+| exit-return | 1 |
+| call-overload | 1 |
+| **Total** | **152** |

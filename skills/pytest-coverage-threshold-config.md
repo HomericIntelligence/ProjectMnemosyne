@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-02-15 |
 | **Category** | ci-cd |
 | **Objective** | Configure pytest coverage thresholds to enforce minimum code coverage in CI/CD pipelines |
@@ -165,7 +165,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -189,7 +189,7 @@ gh pr merge --auto --rebase
 ### Report Formats
 
 | Format | Purpose | Location |
-|--------|---------|----------|
+| -------- | --------- | ---------- |
 | term-missing | CLI output with missing line numbers | stdout |
 | html | Detailed interactive coverage report | `htmlcov/index.html` |
 | xml | Codecov integration | `coverage.xml` |

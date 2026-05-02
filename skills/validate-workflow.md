@@ -12,7 +12,7 @@ Validate workflow files for syntax, best practices, and correctness.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Catch workflow errors before commit | Fewer CI failures, faster iteration |
 
 ## When to Use
@@ -78,12 +78,12 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Common Issues
 
 | Issue | Example | Fix |
-|-------|---------|-----|
+| ------- | --------- | ----- |
 | Syntax error | `on: [push pull_request]` | Add comma: `on: [push, pull_request]` |
 | Invalid action version | `uses: actions/checkout@v99` | Use valid version: `@v4` |
 | Missing required field | Job missing `runs-on` | Add `runs-on: ubuntu-latest` |
@@ -103,7 +103,7 @@ Copy-paste ready configurations and expected outputs.
 ## Error Handling
 
 | Error | Fix |
-|-------|-----|
+| ------- | ----- |
 | "Invalid YAML" | Fix YAML syntax errors |
 | "Unknown action" | Check action name and version |
 | "Missing field" | Add required fields (run, uses, etc.) |
@@ -112,7 +112,7 @@ Copy-paste ready configurations and expected outputs.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | GitHub Actions workflow validation | Generic patterns applicable to any project |
 
 ## References

@@ -14,7 +14,7 @@ tags: [config, environment-variables, nesting, convention]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Fix ambiguous `_` → `.` mapping in `merge_with_env()` so config keys with underscores can be set via env vars |
 | **Outcome** | Success — `__` adopted as nesting delimiter, single `_` preserved as literal |
@@ -52,7 +52,7 @@ segments = config_key.split("__")
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Original impl | `replace("_", ".")` — single underscore as nesting delimiter | Cannot represent config keys with underscores (e.g., `max_connections` becomes `max.connections`) | Need distinct characters for nesting vs. literal underscore |
 | Configurable separator param | Considered adding a `separator` kwarg to `merge_with_env` | YAGNI — `__` convention is well-established (Django, Flask) and sufficient | Don't add parameters for hypothetical flexibility when a convention solves the problem |
 
@@ -77,5 +77,5 @@ segments = raw_key.split("__")
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #29 — merge_with_env ambiguity fix | All 389 unit tests pass locally |

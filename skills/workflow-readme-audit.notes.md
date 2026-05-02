@@ -51,7 +51,7 @@ validate-configs.yml
 The old README documented these workflows:
 
 | Listed in README | Exists on Disk? |
-|------------------|-----------------|
+| ------------------ | ----------------- |
 | `unit-tests.yml` | NO — deleted in #3149 |
 | `integration-tests.yml` | NO — deleted in #3149 |
 | `comprehensive-tests.yml` | YES |

@@ -13,7 +13,7 @@ user-invocable: true
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-02-22 |
 | Objective | Add `.gitattributes` for cross-platform line-ending normalization |
 | Outcome | Success — PR merged, no renormalization needed |
@@ -90,7 +90,7 @@ user-invocable: true
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -134,5 +134,5 @@ git add --renormalize . && git diff --cached --name-only
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | PR #968 merged, no renormalization needed | [notes.md](../../references/notes.md) |

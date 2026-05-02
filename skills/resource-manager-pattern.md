@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Global mutable semaphores leak on crash/shutdown, causing permanent capacity reduction and hangs |
 | **Pattern** | Dependency-injected ResourceManager with context-manager-based acquire/release |
 | **Language** | Python (threading.Semaphore, threading.Lock, contextlib) |
@@ -110,7 +110,7 @@ If multiple threads save checkpoints, add a module-level `_checkpoint_write_lock
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Global semaphores with `configure_resource_limits()` | Module-level `_workspace_semaphore` initialized by function | No reset between runs, race in init, no-op after first call, PLW0603 | Never use mutable module-level globals for concurrency primitives |
 | Acquire in stage_create_worktree, release in stage_cleanup_worktree | Split acquire/release across 14 stages | ShutdownInterruptedError bypassed release, leaking slot permanently | Always pair acquire/release in the same scope (context manager) |
 | `finally` block after try/except in stage_execute_agent | Manual `_agent_sem_acquired` flag + conditional release | ShutdownInterruptedError re-raised before reaching the post-except code | Context managers are more reliable than manual try/finally for semaphore lifecycle |
@@ -141,7 +141,7 @@ pipeline_slot()               # No timeout — Lock() blocks until available
 ### Key Files (ProjectScylla)
 
 | File | Purpose |
-|------|---------|
+| ------ | --------- |
 | `scylla/e2e/resource_manager.py` | ResourceManager class (new) |
 | `scylla/e2e/stages.py` | RunContext.resource_manager field; agent/judge slot wrappers in build_actions_dict() |
 | `scylla/e2e/stage_finalization.py` | Removed global semaphore imports |

@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | repo-hygiene-audit-implementation |
 | **Category** | architecture |
 | **Source** | ProjectScylla 2026-03-13 post-audit hygiene sprint |
@@ -70,7 +70,7 @@ grep -n "mvillmow" pyproject.toml      # URL mismatches
 Build a verified issue table:
 
 | Audit Finding | Actual Status |
-|---|---|
+| --- | --- |
 | SECURITY.md missing | NOT missing — exists but untracked |
 | 11 manual to_dict() | CONFIRMED in models.py |
 | 6 silent except catches | CONFIRMED (6 locations) |
@@ -180,7 +180,7 @@ gh pr merge --auto --rebase <pr-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Push all 3 branches at once | `git push -u origin branch1 branch2 branch3` | Remote rejected: "Pushes can not update more than 2 branches or tags" | Push branches one at a time in HomericIntelligence repos |
 | Add `# noqa: BLE001` to broad except | Added noqa comment to suppress BLE001 | `BLE` not in ruff select — comment is unnecessary noise, ruff warns about unused ignores | Always check `pyproject.toml` select list before adding noqa comments |
 | First commit attempt without staging pixi.lock | `git add pyproject.toml SECURITY.md && git commit` | pip-audit hook stash conflict: hook modifies pixi.lock mid-run but can't restore stash | Stage pixi.lock before committing whenever pip-audit hook has already run |
@@ -191,7 +191,7 @@ gh pr merge --auto --rebase <pr-number>
 **Session outcome**: 3 PRs created, all passing CI
 
 | PR | Branch | Change |
-|----|--------|--------|
+| ---- | -------- | -------- |
 | #1482 | `hygiene-pr1-pyproject-security` | pyproject.toml URLs + SECURITY.md |
 | #1483 | `hygiene-pr2-silent-exceptions` | 5 silent exception catches → logger.debug() |
 | #1484 | `hygiene-pr3-tokenstats-model-dump` | TokenStats.to_dict() → model_dump() |

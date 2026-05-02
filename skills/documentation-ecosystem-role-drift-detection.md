@@ -18,7 +18,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Reconcile ProjectScylla's ecosystem role from stale "chaos/resilience testing" description to actual "ablation benchmarking framework" implementation |
 | **Outcome** | Successful — internal docs corrected, ADR created, drift-detection tests added (18 parametrized cases) |
@@ -71,7 +71,7 @@ gh issue create --repo OtherOrg/OtherProject --title "Update architecture.md rol
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A — no failed approaches | Decision was straightforward: 69K lines of ablation code, zero chaos code | N/A | When implementation is overwhelmingly one thing, don't consider adding code to match stale docs |
 
 ## Results & Parameters
@@ -124,7 +124,7 @@ def test_canonical_role_present(doc_path: Path) -> None:
 ### Alignment Matrix Template
 
 | Location | Current Description | Accurate? | Action |
-|----------|-------------------|-----------|--------|
+| ---------- | ------------------- | ----------- | -------- |
 | `README.md` | "..." | Yes/No | Update/No change |
 | `CLAUDE.md` | "..." | Yes/No | Update/No change |
 | External repo | "..." | No | File cross-repo issue |
@@ -132,5 +132,5 @@ def test_canonical_role_present(doc_path: Path) -> None:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1503, PR #1547 | Reconciled ecosystem role from chaos testing to ablation benchmarking |

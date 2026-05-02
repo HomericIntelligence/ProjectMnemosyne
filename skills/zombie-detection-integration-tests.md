@@ -13,7 +13,7 @@ version: 1.0.0
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-02 |
 | Project | ProjectScylla |
 | Objective | Add integration test exercising the full zombie detection path: dead PID + stale heartbeat → `reset_zombie_checkpoint()` → `checkpoint.status='interrupted'` |
@@ -158,14 +158,14 @@ class TestExperimentDirNoneIsNoop:            # Guard against None dir
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test counts (11 total)
 
 | Class | Count |
-|-------|-------|
+| ------- | ------- |
 | `TestZombieResetsStatusToInterrupted` | 2 |
 | `TestZombieResetPreservesStateData` | 4 |
 | `TestNonZombieCheckpointUnchanged` | 3 |

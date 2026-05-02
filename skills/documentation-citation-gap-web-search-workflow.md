@@ -14,7 +14,7 @@ tags: [citation, web-search, latex, bibtex, academic-writing, citation-gap, pape
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-26 |
 | **Objective** | Find real, published academic papers to cite for unsupported claims in a LaTeX paper, using targeted web searches to discover papers and retrieve full bibliographic metadata. |
 | **Outcome** | Successfully found two strong citations for claims in a ProjectScylla research paper: (1) IJCAI 2024 survey on multi-agent LLM systems for the claim that multi-agent architectures improve frontier model performance, and (2) MDPI Electronics Dec 2025 empirical study showing 7B-8B multi-agent configs underperformed single-agent baselines by -4.4% to -35.3%, backing the claim that smaller models struggle with coordination overhead. Both added to references.bib with full metadata and cited in paper.tex. |
@@ -123,7 +123,7 @@ Collect for each paper:
 **LaTeX prose update:** When adding citations, also update the surrounding prose to match the citation strength:
 
 | Before (hedged) | After (cited) |
-|------------------|---------------|
+| ------------------ | --------------- |
 | "Anecdotal evidence suggests X" | "Recent work demonstrates X~\\cite{key}" |
 | "It is commonly believed that Y" | "Y, as shown by~\\cite{key}" |
 | "Studies indicate Z" | "\\citet{key} found Z" |
@@ -137,7 +137,7 @@ Collect for each paper:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Broad initial queries | Searched "multi-agent systems language models" without qualifiers | Returned thousands of irrelevant results spanning robotics, game theory, classical MAS | Always add qualifiers: "research paper", "arxiv", "survey", "empirical study", or specific model sizes (7B, 8B) to narrow to relevant LLM literature |
 | Relying on first search for metadata | Tried to extract full BibTeX metadata (authors, DOI, volume, pages) from initial search snippets | Search snippets rarely contain complete bibliographic data; got partial author lists and missing DOIs | Always run a follow-up search with the exact paper title + "DOI" or fetch the arxiv/publisher page directly for complete metadata |
 | Single query per claim | Used only one search query per unsupported claim | Sometimes the best paper is found only with an alternative formulation; the first query may surface surveys when you need empirical work | Use 2-3 query formulations per claim with different angles (survey vs empirical, exact language vs technical terms) and run them in parallel |
@@ -156,7 +156,7 @@ When multiple candidate papers are found, prefer in this order:
 ### Search query templates
 
 | Claim type | Query template |
-|------------|----------------|
+| ------------ | ---------------- |
 | Performance improvement | `"<technology> performance improvement <domain> empirical study"` |
 | Performance limitation | `"<technology> <limitation> <model size> benchmark results"` |
 | Architectural advantage | `"<architecture> vs <baseline> comparison survey"` |
@@ -169,5 +169,5 @@ For N unsupported claims with M query formulations each, dispatch N*M web search
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla arxiv paper | Two unsupported claims in paper.tex about multi-agent LLM performance | Found IJCAI 2024 survey (guo2024llmmultiagents) and MDPI Electronics Dec 2025 empirical study (dervishi2025multiagent); added BibTeX entries with full metadata including DOI, volume, pages; updated paper.tex prose from "Anecdotal evidence" to "Recent work" with proper \cite commands |

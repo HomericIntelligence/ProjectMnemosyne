@@ -15,7 +15,7 @@ tags: [arch-research, lora, low-rank, complexity-audit, citation-verification, i
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-13 |
 | **Objective** | Parallel Myrmidon swarm review of AI architecture research documents for ideas involving (a) low-rank parameterization or (b) layer pruning / residual gating |
 | **Outcome** | Operational — verified on idea 4.3 (LoRA Everywhere) and idea 4.5 (Learned Residual Flow Control), producing 5 verification files + final review per idea |
@@ -73,7 +73,7 @@ Five-agent parallel review:
 For any W = W_core + A·B document, ALWAYS distinguish three cases before analyzing any claim:
 
 | Case | Formula | W_core | Expected Benefit |
-|------|---------|--------|-----------------|
+| ------ | --------- | -------- | ----------------- |
 | Case 1: Merged | W_full = W_core + A·B materialized | Any | ZERO inference benefit — identical to dense |
 | Case 2: Unmerged, W_core present | x·W_core + (x·A)·B | Present | 1.5× MORE bandwidth and FLOPs than dense — a regression |
 | Case 3: Unmerged, W_core absent | (x·A)·B only | Absent | 2× fewer weight bytes, ~1.64× TPOT improvement |
@@ -107,7 +107,7 @@ For each row in any complexity or benefit table, verify:
 For any document citing papers about LoRA or low-rank training, verify:
 
 | Citation | What to Check |
-|----------|--------------|
+| ---------- | -------------- |
 | GaLore (Zhao et al., 2024) | Verify: reduces GRADIENT optimizer states; weights remain full-rank. Do NOT use to support weight parameter reduction in LoRA Everywhere. |
 | CoLA (Liu et al., 2025) | Verify: has nonlinearity σ between A and B. Claims are valid only at ≤7B. EMNLP 2025 venue is plausible. |
 | WeLore (Wei et al., 2025) | Verify: post-training compression study (not pre-training). Uniform 50% rank → PPL 1836.62; non-uniform → 11.87 for LLaMA-2 7B. |
@@ -131,7 +131,7 @@ For any low-rank parameterization research doc, check whether these are cited:
 **ALWAYS verify which inference regime each speedup claim applies to:**
 
 | Regime | Characteristic | Who benefits |
-|--------|---------------|-------------|
+| -------- | --------------- | ------------- |
 | Batch=1 decode | Bandwidth-bound — TPOT proportional to bytes loaded | Case 3 (pure A·B): ~1.64× faster |
 | Large-batch decode | Compute-bound — TPOT proportional to FLOPs | No benefit (FLOPs same or higher) |
 | Prefill (any batch) | Compute-bound — TTFT proportional to FLOPs | Case 3 (pure A·B): ~2× faster |
@@ -148,7 +148,7 @@ For any low-rank parameterization research doc, check whether these are cited:
 **CRITICAL**: Documents claiming "static at inference time" speedup MUST specify the implementation path. There are two paths; only one delivers the claimed speedup:
 
 | Path | Description | Inference speedup? |
-|------|-------------|-------------------|
+| ------ | ------------- | ------------------- |
 | Frozen soft gates | Gates g_i ∈ (0,1) frozen after training; layer still computes F_i(x) then multiplies by g_i | **NONE** — layer executes fully; only one scalar multiply saved |
 | Model surgery | After training, identify zero-gate layers (g_i < 0.5), physically remove them from model graph, reindex | **REAL** — identical to a model originally designed with L·p layers; zero per-token overhead |
 
@@ -176,7 +176,7 @@ For p = fraction of layers active after pruning (e.g., p=0.75 means 25% pruned):
 **Gate type → training overhead mapping:**
 
 | Gate type | Extra FLOPs per forward pass | Training overhead |
-|-----------|------------------------------|-------------------|
+| ----------- | ------------------------------ | ------------------- |
 | Scalar gate per layer (L scalars) | L × batch_size × seq_len scalar ops | ~1.00× (negligible — <0.01% of baseline) |
 | Vector gate per layer (L × d vectors) | L × d × batch_size × seq_len scalar ops | ~1.00× (still negligible vs d·d_ff matmuls) |
 | Hyper-Connections SHC (n × d expansion matrix) | n × d² per layer | 1.05–1.15× (measurable overhead) |
@@ -190,7 +190,7 @@ For p = fraction of layers active after pruning (e.g., p=0.75 means 25% pruned):
 For any document about learned layer skipping, residual gating, or static pruning, verify:
 
 | Citation | What to Check |
-|----------|--------------|
+| ---------- | -------------- |
 | Mixture of Depths (Raposo et al., 2024, arXiv:2404.02258) | **CRITICAL MISSING CHECK** — MoD is the closest prior art for learned skip decisions at scale. If not cited, flag as significant gap. Note: MoD is DYNAMIC (per-token); idea 4.5 is STATIC — this distinction preserves PARTIAL novelty. |
 | LayerDrop (Fan et al., 2020, arXiv:1909.11556) | Foundational work on training transformers to be robust to layer dropping. If not cited, flag as important gap. Note: LayerDrop is RANDOM (not learned); idea 4.5 learns the optimal static pattern. |
 | ShortGPT (Men et al., 2024, arXiv:2403.03853) | Block Influence (BI) metric proves 24–27% of layers are redundant. Quality claims: LLaMA 2-7B: 27.1% pruned MMLU 45.39→43.96 (−3.2%); LLaMA 2-13B: 24.6% pruned MMLU 55.00→54.69 (−0.6%). Verify math: 45.39→43.96 = −1.43 abs = −3.15% relative ✓ |
@@ -205,7 +205,7 @@ When a layer-pruning document claims synergy with Skip List Layers (idea 4.4):
 **The composition is ORDER-DEPENDENT:**
 
 | Order | Composability | Notes |
-|-------|--------------|-------|
+| ------- | -------------- | ------- |
 | 4.5 first (determine survivors), then 4.4 (apply skip topology to survivors) | CLEAN — 4.4 operates on the pruned architecture with known layer count | Requires sequential training |
 | 4.4 first (set skip intervals), then 4.5 (prune) | BROKEN — pruning a layer that is an anchor for a 4.4 skip connection breaks the topology | Skip intervals must be recomputed after pruning |
 | Joint training | COMPLEX — 4.4 skip connections may help gradient flow past near-zero gates; possible positive interaction but requires careful design | Not cleanly validated |
@@ -217,7 +217,7 @@ When a layer-pruning document claims synergy with Skip List Layers (idea 4.4):
 Check the complexity tables against these known issues:
 
 | Formula | Common Error | Correct |
-|---------|-------------|---------|
+| --------- | ------------- | --------- |
 | Weight memory | O(p·L·d·d_ff + L·d) — missing attention weights | O(p·L·(d·d_ff + d²) + L·d) |
 | Bandwidth (A1 hybrid) | O(p·L·(d²+s·d_kv/4)) — missing MLP loading | O(p·L·(d²+d·d_ff+s·d_kv/4)) |
 | Baseline B compute | O(L·(d²+k·d·d_e)) — missing global-attn term | O(L·(d²+s·d/4+k·d·d_e)) for B's 25% global-attn layers |
@@ -228,7 +228,7 @@ Check the complexity tables against these known issues:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Treating "unmerged" as a single case (LoRA) | Research doc had a single "unmerged" row covering all three cases | TTFT and TPOT values were contradictory (one showed penalty, other showed speedup) | Always split into Case 1/2/3 before populating any table |
 | Using GaLore optimizer savings to quantify LoRA Everywhere training benefit | Doc cited GaLore Table 1 (65.5%) to support LoRA Everywhere (50%) | Different mechanisms: GaLore reduces gradient states; LoRA reduces weight parameters | Cite separately; note that GaLore 65.5% beats LoRA Everywhere 50% for optimizer state alone |
 | Applying dLoRA 38.9% to TPOT (batch=1 decode) | Complexity table used 38.9% overhead as TPOT estimate | dLoRA measures compute-bound multi-request; TPOT at batch=1 is bandwidth-bound | dLoRA measurement is only valid for Case 2 in compute-bound serving |
@@ -324,6 +324,6 @@ Compute cost: ~4 A100-weeks
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ArchIdeas research | Myrmidon swarm review of idea 4.3 (LoRA Everywhere), 5 parallel sub-agents | `/home/mvillmow/Random/ArchIdeas/research/review_4_3_lora_everywhere.md` |
 | ArchIdeas research | Myrmidon swarm review of idea 4.5 (Learned Residual Flow Control), 5 parallel sub-agents | `/home/mvillmow/Random/ArchIdeas/research/review_4_5_learned_residual_flow.md` |

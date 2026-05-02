@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Prevent placeholder tests from going silently stale |
 | **Language** | Mojo (applies to any language) |
 | **Trigger** | Issue tracking stale/pass-only placeholder tests |
@@ -95,7 +95,7 @@ fn test_from_array_1d() raises:
 Use the project's standard FP-representable special values for specs:
 
 | Values | Rationale |
-|--------|-----------|
+| -------- | ----------- |
 | `0.0, 0.5, 1.0, 1.5, -0.5, -1.0` | Tier 1 layerwise test values (exactly representable in FP32) |
 
 For multi-dimensional tests, scale up:
@@ -115,7 +115,7 @@ git commit -m "docs(tests): upgrade from_array() placeholder tests with TODO ann
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Implement the actual test | Write real assertions without `from_array()` existing | `from_array()` is not in the codebase yet; compilation would fail | Don't implement until the dependency ships; annotation is the right deliverable |
 | Remove the placeholder entirely | Delete the `pass`-only test functions | Loses intent and spec — future implementor has no guidance | Keep placeholders; they document what must be tested |
 | Use `NOTE(#N)` prose only | Leave as vague comment in docstring | Not grep-discoverable; Claude would generate the same vague comment again | `# TODO(#N)` above `pass` is machine-readable and survives issue searches |

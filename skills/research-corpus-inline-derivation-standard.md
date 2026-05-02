@@ -15,7 +15,7 @@ tags: [research, corpus, derivation, citation, inline, numeric, documentation, a
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-18 (v1.1.0), 2026-04-17 (v1.0.0) |
 | **Objective** | Define the required format for tagging analytically-derived numeric claims in AI architecture research corpus documents |
 | **Outcome** | Standard established during 39-file corpus audit; user explicitly rejected bare labels and confirmed inline computation format. Confirmed again in follow-up remediation pass. |
@@ -84,7 +84,7 @@ A3: 64×2×4×128×32768×2 = 4.29 GB. A4: 64×2×16×128×32768×2 = 17.18 GB.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Bare `[derived from first principles]` tag | Added the tag to numeric claims with no further detail | User explicitly rejected: "bare tags are useless to a reader — they signal 'trust me' without showing the work" | Always show the actual computation; the tag alone carries zero information |
 | `[derived from first principles — no direct experimental citation]` | Extended label explaining why there's no citation | Still no verifiable arithmetic; just a longer "trust me" | The explanation of why there's no citation is irrelevant — what matters is showing the derivation |
 | Deferring arithmetic to a notes.md file | Wrote `[derived — see notes.md §3.2]` | Reader must switch files to verify; breaks the audit flow | Inline derivations must be self-contained; the reader should never have to leave the file |
@@ -151,6 +151,6 @@ Use `[derived: ...]` when:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ArchIdeas corpus | 39-file audit, Phase C + D | Apr 2026 — user rejected bare tags mid-session, standard applied to multiple files during the audit |
 | ArchIdeas corpus | Follow-up quality remediation pass | Apr 2026 — found and fixed block-level disclaimer antipattern in research_5_4_linked_attention.md; added per-baseline KV cache derivation |

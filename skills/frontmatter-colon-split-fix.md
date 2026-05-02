@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Problem** | Manual `line.split(":", 1)` parsing of YAML frontmatter silently truncates values that contain colons (URLs like `https://...`, ratios like `3:1`, quoted strings with mid-sentence colons) |
 | **Root Cause** | `split(":", 1)` splits on the *first* colon in the line, so `description: See https://example.com` becomes key=`description`, value=`See https` |
 | **Fix** | Replace manual parsing with `yaml.safe_load()` which correctly handles all YAML value types |
@@ -206,7 +206,7 @@ All colon-variant tests should pass. If any fail, check if the test itself uses 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Test with bare `to: parse` colon | Wrote test: `description: Use when you need to: parse, validate, or check files` | PyYAML raises `ScannerError` — this is genuinely invalid YAML (colon+space = mapping key) | Only test valid YAML forms; bare `key: value` mid-sentence is invalid YAML, not a parser bug |
 | Keep `Dict[str, str]` type annotation | Left return type as `Dict[str, str]` after switching to `yaml.safe_load()` | `yaml.safe_load()` returns `Any` values (int, bool, list), not just strings | Update type annotations to `Dict[str, Any]` when switching from manual parsing to PyYAML |
 

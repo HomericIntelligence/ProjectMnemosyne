@@ -284,7 +284,7 @@ $ gh pr merge --auto --rebase
 ## Metrics
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | **Files modified** | 2 |
 | **Lines refactored** | 2 (both 228 chars) |
 | **New lines after refactor** | 6 (3 per file) |

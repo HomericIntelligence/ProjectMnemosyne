@@ -15,7 +15,7 @@ user-invocable: true
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-07 |
 | **Objective** | Audit `.github/workflows/README.md` against actual on-disk files after a consolidation pass removed/added workflows |
 | **Outcome** | README updated: removed 2 stale entries, added 13 undocumented workflows, corrected filename, documented 13 inline `setup-pixi` duplications; pre-commit passed; PR created |
@@ -53,7 +53,7 @@ ls .github/workflows/*.yml | wc -l
 Cross-reference with the current README table. Identify:
 
 | Finding | Action |
-|---------|--------|
+| --------- | -------- |
 | File in README but not on disk | Remove from README |
 | File on disk but not in README | Add to README |
 | Filename mismatch (e.g., `security-scan.yml` vs `security.yml`) | Correct the filename |
@@ -108,7 +108,7 @@ markdownlint-cli2 treats this as MD031/MD040 violations. Replace with bare ` ```
 Also watch for:
 
 | Error | Fix |
-|-------|-----|
+| ------- | ----- |
 | `MD013/line-length` (>120 chars) | Wrap blockquote or table cell content |
 | `MD029/ol-prefix` (out-of-sequence numbered list) | Reset list numbering to 1/2/3 when starting a new logical group |
 
@@ -140,7 +140,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `pixi run npx markdownlint-cli2` for pre-validation | Run markdownlint before committing | `npx` not in PATH in this shell context; pixi environment setup takes >2 min | Just commit — pre-commit hook runs markdownlint automatically and gives precise line numbers |
 | `find ~/.pixi -name "markdownlint*"` for binary | Locate markdownlint outside of pixi run | `find` on home dir ran for >3 min without completing | Use `git commit` directly; the pre-commit hook finds markdownlint via its own env |
 | Closing fences with `text` on same line (from original README) | Kept existing style of ` ```text ` | MD031/MD040 lint failures at commit time | Always use bare ` ``` ` for closing fences; only opening fences take a language tag |
@@ -210,5 +210,5 @@ ls .github/workflows/*.yml | wc -l
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3344, PR #3978 | 22 workflows; pre-commit passed (markdownlint, trailing-whitespace, end-of-file-fixer) |

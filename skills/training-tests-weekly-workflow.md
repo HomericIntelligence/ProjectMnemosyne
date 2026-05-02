@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Training/slow test files excluded from per-PR CI become silently untested unless a separate periodic workflow covers them |
 | **Solution** | Create a weekly GitHub Actions workflow that runs all files in `tests/shared/training/` (or similar excluded directories) |
 | **Key Insight** | The `validate_test_coverage.py` exclusion list is the source of truth — if a file is excluded from PR CI, it MUST appear in a periodic workflow |
@@ -112,7 +112,7 @@ pixi run pre-commit run check-yaml --files .github/workflows/training-tests-week
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Adding test files to `comprehensive-tests.yml` | Initially considered adding 9 new files directly to PR CI matrix | Training tests are excluded from PR CI intentionally (slow/dataset-dependent); adding them back breaks the design | Always check WHY files were excluded before deciding where to add coverage |
 | Modifying `validate_test_coverage.py` | Considered adding 9 files to exclusion list as part of this change | Files were already in the exclusion list — the gap was the missing workflow, not the validator | Always check if exclusion list already contains the files before editing it |
 
@@ -123,7 +123,7 @@ pixi run pre-commit run check-yaml --files .github/workflows/training-tests-week
 Offset weekly workflows from each other to avoid resource contention:
 
 | Workflow | Schedule | Time |
-|----------|----------|------|
+| ---------- | ---------- | ------ |
 | `simd-benchmarks-weekly.yml` | `0 2 * * 0` | Sunday 2 AM UTC |
 | `training-tests-weekly.yml` | `0 3 * * 0` | Sunday 3 AM UTC |
 

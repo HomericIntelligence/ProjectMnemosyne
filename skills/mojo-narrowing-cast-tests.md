@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Pattern** | `if/raise` narrowing cast tests |
 | **File** | `tests/shared/core/test_unsigned.mojo` |
 | **Trigger** | New UInt narrowing path needs test coverage |
@@ -34,16 +34,16 @@ at key boundary values.
 ## Boundary Values Quick Reference
 
 | Target | Modulus (M) | Boundary value | Expected result | Rationale |
-|--------|-------------|----------------|-----------------|-----------|
-| UInt8  | 256         | 256            | 0               | M % M = 0 |
-| UInt8  | 256         | 257            | 1               | (M+1) % M = 1 |
-| UInt8  | 256         | 255            | 255             | M-1 fits exactly |
-| UInt16 | 65536       | 65536          | 0               | M % M = 0 |
-| UInt16 | 65536       | 65537          | 1               | (M+1) % M = 1 |
-| UInt16 | 65536       | 65535          | 65535           | M-1 fits exactly |
-| UInt32 | 4294967296  | 4294967296     | 0               | M % M = 0 |
-| UInt32 | 4294967296  | 4294967297     | 1               | (M+1) % M = 1 |
-| UInt32 | 4294967296  | 4294967295     | 4294967295      | M-1 fits exactly |
+| -------- | ------------- | ---------------- | ----------------- | ----------- |
+| UInt8 | 256 | 256 | 0 | M % M = 0 |
+| UInt8 | 256 | 257 | 1 | (M+1) % M = 1 |
+| UInt8 | 256 | 255 | 255 | M-1 fits exactly |
+| UInt16 | 65536 | 65536 | 0 | M % M = 0 |
+| UInt16 | 65536 | 65537 | 1 | (M+1) % M = 1 |
+| UInt16 | 65536 | 65535 | 65535 | M-1 fits exactly |
+| UInt32 | 4294967296 | 4294967296 | 0 | M % M = 0 |
+| UInt32 | 4294967296 | 4294967297 | 1 | (M+1) % M = 1 |
+| UInt32 | 4294967296 | 4294967295 | 4294967295 | M-1 fits exactly |
 
 ## Verified Workflow
 
@@ -135,7 +135,7 @@ gh pr merge --auto --rebase <PR-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Run mojo locally | `pixi run mojo -I . tests/shared/core/test_unsigned.mojo` | GLIBC_2.32/2.33/2.34 not found — Mojo requires newer libc | Use CI (Docker) for test verification, not local host |
 | Use `assert_equal` | Considered `from testing import assert_equal` | The existing file uses raw `if/raise` pattern | Match the existing test file's assertion style |
 | Wrong just recipe | Ran `just precommit` | Recipe doesn't exist; correct name is `just pre-commit` | Check `just --list` if a recipe name is uncertain |
@@ -162,6 +162,6 @@ gh pr merge --auto --rebase <PR-number>
 ## Verified On
 
 | Project | Issue | PR | Target types | Details |
-|---------|-------|----|--------------|---------|
+| --------- | ------- | ---- | -------------- | --------- |
 | ProjectOdyssey | #3179 | #3672 | UInt8 | [notes.md v1](../references/notes.md) |
 | ProjectOdyssey | #3675 | #4765 | UInt16, UInt32 | [notes.md v2](../references/notes-3675.md) |

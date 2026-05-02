@@ -14,7 +14,7 @@ tags: [claude-code, plugin, skills, porting, third-party, mit-license, superpowe
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Integrate obra/superpowers methodology skills into ProjectHephaestus without license violations, avoiding duplication of existing capabilities |
 | **Outcome** | Successful — 8 additive skills ported, 4 redundant skills skipped, MIT attribution applied, PR #206 opened |
@@ -83,7 +83,7 @@ Key things to document:
 Choose one of three approaches:
 
 | Approach | When to Use | Risk |
-|---|---|---|
+| --- | --- | --- |
 | **Install as separate plugin** | Source skills don't overlap AND hooks don't conflict | SessionStart hook conflicts, routing confusion, double maintenance |
 | **Fork/vendor** | Need all skills AND can maintain a fork | High — rapidly evolving repos require ongoing sync |
 | **Port select skills** | Only need a subset AND source has hardcoded conventions | Low — only adapt what you need |
@@ -105,7 +105,7 @@ For each source skill, classify as: **redundant** (skip) or **additive** (port).
 **obra/superpowers overlap analysis result:**
 
 | Superpowers Skill | Decision | Reason |
-|---|---|---|
+| --- | --- | --- |
 | subagent-driven-development | SKIP | myrmidon-swarm is superior: tiered models, waves, Mnemosyne integration |
 | dispatching-parallel-agents | SKIP | Covered by myrmidon-swarm Phase 3 wave execution |
 | writing-skills | SKIP | Covered by learn + ProjectMnemosyne advise/learn loop |
@@ -170,7 +170,7 @@ This achieves the same guidance effect without hook conflicts.
 #### 7. Version Bump the Plugin
 
 | Change size | Version bump |
-|---|---|
+| --- | --- |
 | 1-3 new skills | Minor (2.0.0 → 2.1.0) |
 | 4+ new skills or significant restructuring | Major (2.0.0 → 3.0.0) |
 | Bug fixes or attribution only | Patch (2.0.0 → 2.0.1) |
@@ -180,7 +180,7 @@ Adding 8 new skills from superpowers: bump v2.0.0 → v3.0.0 (major).
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Install superpowers as separate plugin | Would add all 14 skills without modification | SessionStart hook in hooks/hooks.json conflicts with ai-maestro hooks; two plugins routing the same action space causes confusion | Check for hook conflicts before choosing separate plugin installation |
 | Fork/vendor superpowers | Would maintain full upstream compatibility | Forking a 120K-star rapidly-evolving repo creates ongoing sync burden for only 7 needed skills | Prefer selective porting over forking when you only need a subset |
 | Direct copy without adaptation | Would save time on each skill port | superpowers hardcodes docs/superpowers/specs/ and docs/superpowers/plans/ paths; doesn't reference Mnemosyne, myrmidon-swarm, or pixi tooling | Always audit for hardcoded paths and project-specific tooling before copying |
@@ -191,7 +191,7 @@ Adding 8 new skills from superpowers: bump v2.0.0 → v3.0.0 (major).
 ### Skills Successfully Ported (8 total)
 
 | Ported Skill File | Source Skill(s) | Key Adaptation |
-|---|---|---|
+| --- | --- | --- |
 | `skills/test-driven-development.md` | superpowers test-driven-development | Added pixi run pytest, /advise before, /learn after |
 | `skills/systematic-debugging.md` | superpowers systematic-debugging | Added Mnemosyne loop, conventional commits |
 | `skills/verification.md` | superpowers verification-before-completion | Added Hephaestus checklist items |
@@ -204,7 +204,7 @@ Adding 8 new skills from superpowers: bump v2.0.0 → v3.0.0 (major).
 ### Plugin Version History
 
 | Version | Change |
-|---|---|
+| --- | --- |
 | v2.0.0 | Pre-integration baseline |
 | v3.0.0 | +8 skills from superpowers; CLAUDE.md Automatic Skill Selection section; THIRD_PARTY_LICENSES.md |
 
@@ -219,5 +219,5 @@ python3 scripts/validate_plugins.py
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | obra/superpowers integration, PR #206 | 8 skills ported from MIT-licensed repo, YAML frontmatter valid, CI pending |

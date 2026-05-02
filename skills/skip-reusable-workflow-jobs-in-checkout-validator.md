@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | A checkout-order validator that iterates `jobs.<job>.steps` fires false positives (or crashes on missing keys) when encountering reusable workflow caller jobs, which use a job-level `uses:` key instead of a `steps:` list. |
 | **Solution** | Add a `_is_reusable_workflow_job()` guard before the steps loop. Skip any job whose top-level `uses:` starts with `./.github/workflows/`. The callee runs in its own VM with its own checkout — the invariant does not apply at the caller level. |
 | **Scope** | Python checkout-order validator scripts; GitHub Actions YAML workflows |
@@ -145,7 +145,7 @@ that reusable workflow jobs are intentionally skipped:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Edit tool blocked on workflow file | Used `Edit` tool to update the `.github/workflows/validate-workflows.yml` echo comment | A security-reminder hook blocked the `Edit` tool call on GitHub Actions workflow files | Use `Write` tool (full file rewrite) for workflow files when Edit is blocked by security hooks |
 | Investigating caller-side enforcement | Considered adding checkout enforcement at the caller level for reusable workflow jobs | Reusable workflow caller jobs have no steps; enforcement at caller level is not meaningful since execution is fully delegated to the callee | The correct design is to skip the job entirely, not add special-case step injection |
 
@@ -179,5 +179,5 @@ existing `if not isinstance(steps, list): continue` guard anyway.
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4849, issue #3987 | [notes.md](../references/notes.md) |

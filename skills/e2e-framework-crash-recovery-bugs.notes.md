@@ -48,7 +48,7 @@ The `_parse_judge_response()` function raises `ValueError` on non-JSON output. W
 ## Key File Locations (ProjectScylla)
 
 | File | Role |
-|------|------|
+| ------ | ------ |
 | `scylla/e2e/checkpoint.py` | Bug 1 fix: thread-safe temp file naming + lock |
 | `scylla/e2e/runner.py` | Bug 2 fix: preload tier config on resume |
 | `scylla/e2e/llm_judge.py` | Bug 3 fix: retry loop with JSON reminder |

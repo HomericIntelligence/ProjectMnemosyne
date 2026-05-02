@@ -15,13 +15,13 @@ triggers:
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
-| Objective | | Field | Value | |-------|-------| | Date | 2026-01-01 | | Objective | Systematically resolve all FIXME/TODO items in a directory | |
+| Objective | Systematically resolve all FIXME/TODO items in a directory |
 | Outcome | Operational |
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-01-01 |
 | Objective | Systematically resolve all FIXME/TODO items in a directory |
 | Outcome | 7 PRs merged, 3 issues closed |
@@ -88,15 +88,15 @@ gh run rerun <run-id> --failed
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Items Resolved
 
 | PR | Issue | Description |
-|----|-------|-------------|
-| #3035 | - | Update stale issue references |
+| ---- | ------- | ------------- |
+| #3035 | --- | Update stale issue references |
 | #3036 | #3031 | Remove MXFP4 FIXME |
 | #3037 | #3033 | Implement conftest fixtures |
 | #3038 | #3034 | Implement script_runner |
@@ -107,7 +107,7 @@ gh run rerun <run-id> --failed
 ### Items NOT Resolved (External Blockers)
 
 | File | Line | Blocker |
-|------|------|---------|
+| ------ | ------ | --------- |
 | profiling.mojo | 650 | Mojo FileIO stability |
 | logging.mojo | 442 | Mojo env var support |
 | mixed_precision.mojo | 284, 368 | Compiler SIMD FP16 support |

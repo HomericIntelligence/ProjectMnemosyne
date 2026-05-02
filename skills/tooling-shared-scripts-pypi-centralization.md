@@ -18,7 +18,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-22 |
 | **Objective** | Audit all HomericIntelligence repos for duplicated Python validation scripts and port them into ProjectHephaestus as first-class library modules with CLI entry points, published to PyPI |
 | **Outcome** | Successfully ported 9 validation modules from ProjectScylla/Hephaestus scripts/ into `hephaestus.validation.*`, added 9 CLI entry points, bumped to v0.5.0. Filed tracking issues against 2 repos with duplicated code. |
@@ -90,7 +90,7 @@ gh issue create --repo <org>/<repo> --title "chore: Replace duplicated scripts w
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Class-level `@pytest.mark.skipif` with `pytest.importorskip` | Used `@pytest.mark.skipif(not pytest.importorskip(...))` on test class | `pytest.importorskip` raises `Skipped` exception at collection time, causing the entire module to be skipped (0 tests collected) | Use `pytest.importorskip()` inside individual test methods, not at class/module level |
 | Lazy import of argparse inside helper function | Deferred `import argparse` to `_build_parser()` while using `argparse.ArgumentParser` in the return type annotation | `from __future__ import annotations` makes annotations lazy but ruff F821 still flags undefined names in annotations when the import is deferred | Import modules at top level if they appear in type annotations, even with `from __future__ import annotations` |
 | Using `replace_all=false` with non-unique string | Tried to append code after `return issues` in markdown.py | String `return issues` appeared twice in the file | Provide more surrounding context to make the match unique, or use a different anchor point |
@@ -149,7 +149,7 @@ all = ["MyPackage[github,toml,xml,schema]"]
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Porting shared validation scripts to PyPI package v0.5.0 | [notes.md](./tooling-shared-scripts-pypi-centralization.notes.md) |
 | ProjectScylla | Source of 9 duplicated scripts, tracking issue #1537 | Scripts in scripts/ directory |
 | ProjectOdyssey | Source of duplicated utilities, tracking issue #5061 | common.py, validation.py |

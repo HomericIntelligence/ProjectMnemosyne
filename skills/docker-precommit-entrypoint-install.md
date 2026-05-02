@@ -13,7 +13,7 @@ tags: [docker, podman, pre-commit, git-hooks, bind-mount, entrypoint, container]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-10 |
 | **Objective** | Ensure pre-commit git hooks are installed and run inside a Docker/Podman container where the project workspace is bind-mounted at runtime (not COPY'd at image build time) |
 | **Outcome** | Success — hooks fire correctly on `git commit` inside the container; CI validates them on every push |
@@ -141,7 +141,7 @@ each test job. Pre-commit hooks installed by it are validated by the pre-commit 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `RUN pixi run pre-commit install` in Dockerfile | Added install command to the image build | At build time the workspace bind-mount does not exist; `.git/` is absent or a stale base-image layer. The bind-mount at `podman run` time shadows the layer, erasing the installed hooks. | `RUN` in Dockerfile is image-build time; volume mounts are container-start time. Never install hooks into a bind-mounted path during image build. |
 | `RUN pixi run pre-commit install --install-hooks` silently "succeeds" | Command returned exit 0 during build | pre-commit found and used a temporary `.git/` stub from the base image layer. Hooks were written to a layer that got shadowed at runtime. | Exit 0 does not mean hooks are usable — verify with `ls .git/hooks/pre-commit` inside a running container after the mount is active. |
 | `COPY . /workspace` at build time + Dockerfile install | Copied the entire repo to avoid the bind-mount problem | Makes the image embed a snapshot of the repo, breaking live development workflows; `.git/` is still read-only at build time. | For development containers, bind-mount is the correct pattern; Dockerfile install is not the right fix. |
@@ -181,7 +181,7 @@ pre-commit installed at .git/hooks/pre-push
 ### core.hooksPath Diagnosis & Fix
 
 | Symptom | Diagnosis Command | Fix |
-|---------|-------------------|-----|
+| --------- | ------------------- | ----- |
 | `Cowardly refusing to install hooks with 'core.hooksPath' set` | `git config --get core.hooksPath` | `git config --unset-all core.hooksPath` |
 | Hooks not firing after install | `ls -la .git/hooks/pre-commit` | Re-run `pixi run pre-commit install` |
 | Hook exists but container startup is slow | Check `--install-hooks` flag | Drop `--install-hooks` for faster cold start; hooks download on first `git commit` instead |
@@ -189,7 +189,7 @@ pre-commit installed at .git/hooks/pre-push
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Commit `0d6b2272` — `fix(docker): install pre-commit git hooks at container startup` | Fixed dev-container workflow where `docker/entrypoint.sh` was missing the install block; hooks now fire on every `git commit` inside the Podman dev container |
 
 ## References

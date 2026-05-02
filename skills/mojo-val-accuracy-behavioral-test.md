@@ -14,7 +14,7 @@ user-invocable: false
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-15 |
 | **Category** | testing |
 | **Objective** | Close the test gap where `ValidationLoop.run()` effect on `val_accuracy` was untested |
@@ -128,7 +128,7 @@ Expected output:
 ### Quick Reference
 
 | Pattern | Code |
-|---------|------|
+| --------- | ------ |
 | Deterministic accuracy fixture | `ones([batch, 10])` logits + `zeros` labels → accuracy = 1.0 |
 | Discard return value | `_ = vloop.run(...)` |
 | Tolerance-safe upper bound | `assert_less(x, Float64(1.0) + Float64(1e-10))` |
@@ -137,7 +137,7 @@ Expected output:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Exact equality `== 1.0` | Used `assert_equal(metrics.val_accuracy, Float64(1.0))` | Floating point precision — accumulated division may not be exactly 1.0 | Use `assert_greater(x, 0.0)` + `assert_less(x, 1.0 + epsilon)` |
 | Skip fixture reuse | Created a new unique fixture for the test | Adds coupling; existing `create_val_loader` + `simple_forward` already produce deterministic all-zero labels with ones logits | Always check if existing fixtures produce the needed determinism before creating new ones |
 

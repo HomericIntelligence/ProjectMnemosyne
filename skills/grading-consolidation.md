@@ -10,7 +10,7 @@ user-invocable: false
 # Grading Infrastructure Consolidation
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-01-19 |
 | **Project** | ProjectScylla |
 | **Objective** | Eliminate duplicate grading definitions and consolidate to single source of truth |
@@ -176,7 +176,7 @@ Use this approach when you observe:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Insights
 

@@ -24,7 +24,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-27 |
 | **Objective** | Fix Mojo 0.26.1 use-after-free crashes in bitcast write paths and dtype conversion functions |
 | **Outcome** | Successful — two fix patterns: @always_inline on accessor methods; pointer arithmetic for direct UAF writes |
@@ -129,7 +129,7 @@ If a crash workaround is marked "Resolved" but crashes persist:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Removing debug_assert | Removed debug_assert from load/store/data_ptr (commit dbc94176c) | Fixed JIT buffer overflow but not the bitcast crash — different root cause | debug_assert removal and @always_inline fix address different crash mechanisms |
 | Test file splitting | Split test files to 10 fn test_ functions | Reduced frequency but did not eliminate crashes — real issue is pointer lifetime | File splitting is a workaround, not a root cause fix |
 | Local reproduction | Ran tests 20+ times locally to reproduce | All passed locally — crash is CI-only due to different JIT optimization levels | Mojo JIT behavior differs between local and CI environments |
@@ -180,5 +180,5 @@ Any method on AnyTensor that:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | shared/tensor/any_tensor.mojo | [notes](./mojo-bitcast-always-inline-crash-fix.notes.md) |

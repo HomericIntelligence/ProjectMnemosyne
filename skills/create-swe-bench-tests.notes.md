@@ -31,7 +31,7 @@
 ### Build System (5 PRs)
 
 | PR # | Title | Parent Commit | LOC |
-|------|-------|---------------|-----|
+| ------ | ------- | --------------- | ----- |
 | 2976 | feat: add mypy to pixi | 8e59e100d11e760a28693796a504e9a864051e83 | 4 |
 | 2972 | chore(docker): bump ubuntu 22.04→24.04 | 66628858c553abed2fdcb5f4b0bbdefc764d289c | 6 |
 | 2962 | fix(docker): install gh/claude as root | e8a470059158a399b99e24170bf7bba47f4e3a02 | 17 |
@@ -41,7 +41,7 @@
 ### CI/CD (5 PRs)
 
 | PR # | Title | Parent Commit | LOC |
-|------|-------|---------------|-----|
+| ------ | ------- | --------------- | ----- |
 | 3000 | chore(ci): bump github-actions | d61b7e047d00174f8914241ed8a0d35828b3ce92 | 12 |
 | 2982 | fix(ci): lowercase Docker SBOM | 3360ae74a88f7ed4f39949aa7f1858a8c08db3f8 | 3 |
 | 2894 | Optimize batch extraction | 87a02fed42ba953163f1daf6f9751cd26fbe13f9 | 482 |
@@ -51,7 +51,7 @@
 ### Bug Fixing (5 PRs)
 
 | PR # | Title | Parent Commit |
-|------|-------|---------------|
+| ------ | ------- | --------------- |
 | 3054 | fix(tests): remove unused out_shape | 050bcdc049c51e2ab112015cc57bc2fc24d98e11 |
 | 3053 | fix: delete ralph loop | 1ab38fd8809554d148d420a4500c3856de482d36 |
 | 2977 | fix(mypy): type annotations | ac9b7658757448347ecb5178108e69a3f4efe9bf |
@@ -61,7 +61,7 @@
 ### New Features (5 PRs)
 
 | PR # | Title | Parent Commit |
-|------|-------|---------------|
+| ------ | ------- | --------------- |
 | 3040 | feat(training): export modules | 1f83a291811f06f4939ee79c2361202948ea865d |
 | 3020 | feat: claude code safety net | 011a3ff024954c0e15d0220bd67d72d6f74ffb64 |
 | 3039 | feat(training): dataset_loaders | 33e1689820d3a8cfe547ceb34ea6556560ab5aa9 |
@@ -71,7 +71,7 @@
 ### Refactoring (5 PRs)
 
 | PR # | Title | Parent Commit |
-|------|-------|---------------|
+| ------ | ------- | --------------- |
 | 3024 | refactor: remove unused vars | 1a1a74758b3be246bde846d6c0ec18934814119d |
 | 2984 | refactor: migrate to get_repo_root() | af62bf493b15e06ab412dae292ba2468daeada70 |
 | 3035 | cleanup: FIXME/TODO references | 2b06d667fa7b51ce357cefa6954254d9f3aa1c88 |
@@ -81,7 +81,7 @@
 ### Optimization (5 PRs)
 
 | PR # | Title | Parent Commit |
-|------|-------|---------------|
+| ------ | ------- | --------------- |
 | 2770 | perf: tensor ops subtract_backward | 5bb122cd1163f04373552291240ba8d7e0cf569d |
 | 2750 | perf: pre-allocate stride lists | 9c009fad15a29b33096d958df331018b1c58387b |
 | 2936 | perf: @always_inline ops | 55ad174ae1fe0a8831fbefad33160425ca0db7fd |
@@ -91,7 +91,7 @@
 ### Documentation (5 PRs)
 
 | PR # | Title | Parent Commit |
-|------|-------|---------------|
+| ------ | ------- | --------------- |
 | 3057 | docs: from_array() status | 1ec9699bcc0f360eb290ab909abbaedcd07ebd6d |
 | 3055 | docs: TODO→NOTE argv | 1f0ff3d0ce392ceecd4f20155b54c469b484cd15 |
 | 2995 | docs: Mojo version update | 0878a2e285bb7c1dca106244dfc22091cac4b383 |
@@ -101,7 +101,7 @@
 ### Testing (5 PRs)
 
 | PR # | Title | Parent Commit |
-|------|-------|---------------|
+| ------ | ------- | --------------- |
 | 3056 | test: enable eye() diagonal | dc9a74a94e5406b1d985e71159285b5aa3ddbdde |
 | 3044 | cleanup: float16 FIXME→NOTE | 8fb66e59921ed2ec7bf635c45bce9401d5a4d8c1 |
 | 3007 | test: implement_issues.py tests | fa1f2882fd7ac8c61f030374237d3cfeeae0164a |
@@ -111,7 +111,7 @@
 ### Issue Planning (5 Issues → Markdown Plans)
 
 | Issue # | Title |
-|---------|-------|
+| --------- | ------- |
 | 3094 | Document TrainingLoop bounds |
 | 3093 | Review commented imports |
 | 3086 | Document slicing behavior |

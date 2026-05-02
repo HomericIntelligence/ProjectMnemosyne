@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Issue | #3185 — Add ValidationLoop confusion matrix integration test |
 | Language | Mojo v0.26.1+ |
 | Files changed | `tests/shared/training/test_validation_loop.mojo` |
@@ -91,7 +91,7 @@ assert_greater(val_loss, Float64(-1e-10))
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `pixi run mojo test` locally | Tried to execute Mojo tests to verify correctness | GLIBC version too old (2.31 on Debian Buster, needs 2.32+) — mojo binary exits with version errors | Tests can only run in Docker/CI; write tests by reading existing patterns and source code, not by executing |
 | Asserting exact confusion matrix counts in the ValidationLoop smoke test | Tried to check TP/TN/FP/FN after `vloop.run()` | `DataLoader.next()` is a placeholder that returns zero-initialized tensors, not slices of the real dataset | Use the ValidationLoop smoke test only to verify no crash; test exact counts directly on `ConfusionMatrix.update()` |
 | Using float32 labels with ValidationLoop | Passed float32 labels to DataLoader expecting ConfusionMatrix to handle them | `ConfusionMatrix.update()` requires int32 or int64 labels; float labels produce wrong index reads | Always use `DType.int32` for class index label tensors passed to ConfusionMatrix |

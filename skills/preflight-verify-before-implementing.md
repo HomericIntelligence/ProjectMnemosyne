@@ -14,7 +14,7 @@ tags: [preflight, verification, github, duplicate-prevention, issue-management, 
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-28 |
 | **Objective** | Prevent duplicate work and wasted effort by verifying current state before implementing |
 | **Outcome** | Consistently prevents 30-60 minutes of duplicated or unnecessary work |
@@ -61,7 +61,7 @@ git branch --list "*<issue-number>*"
 ### Decision Matrix
 
 | Commits on branch | PR exists | Action |
-|-------------------|-----------|--------|
+| ------------------- | ----------- | -------- |
 | Yes (issue ref) | Yes (open) | Report done, stop — do NOT re-implement |
 | Yes (issue ref) | No | Create PR, do NOT re-commit |
 | No | No | Proceed with implementation |
@@ -132,7 +132,7 @@ Always use `--comments` to load the full discussion thread — critical context 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Start implementing without checking git log | Read prompt file, began planning deletions | Commit `e738761d` already contained the exact implementation | Always run `git log --oneline -5` before any work on a pre-existing branch |
 | Assume clean branch because `git status` is clean | Relied on `git status` showing nothing unstaged | Clean status means nothing unstaged — prior commits can have done all the work | `git status` clean != implementation not started; check `git log` too |
 | Check only the issue state | Looked at issue description to understand deliverables | Issue state (open/closed) doesn't tell you if the branch already has commits | Check git log on the **current branch**, not just the issue |
@@ -173,7 +173,7 @@ grep -r "TODO.*#<issue-number>" --include="*.mojo" .
 ### Timing Benchmarks
 
 | Phase | Time |
-|-------|------|
+| ------- | ------ |
 | `git log --oneline -5` | <1s |
 | `gh issue view` (state check) | ~1s |
 | `gh pr list --head <branch>` | ~1s |
@@ -196,7 +196,7 @@ All checks passed when:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3063 auto-impl worktree | Detected pre-existing commit `e738761d` in 2 tool calls |
 | ProjectOdyssey | Issue #2672 training dashboard | Detected closed issue + existing implementation after 12 wasted calls |
 | ProjectOdyssey | Issue #3013 ExTensor operations | All operations already existed; only stale TODOs needed updating |

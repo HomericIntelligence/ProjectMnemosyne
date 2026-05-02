@@ -9,7 +9,7 @@ user-invocable: false
 # Parallel Test Generation for Module Decomposition
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-13 |
 | **Objective** | Generate test files for 4 newly extracted modules in parallel using sub-agents |
 | **Outcome** | 179 tests created across 4 files, all passing, PR merged |
@@ -40,7 +40,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | YYYY-MM-DD |
 | **Objective** | Skill objective |
 | **Outcome** | Success/Operational |
@@ -48,7 +48,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
@@ -65,7 +65,7 @@ Key elements to include in agent prompts:
 ### Performance
 
 | Agent | Tests | Duration |
-|-------|-------|----------|
+| ------- | ------- | ---------- |
 | test_build_pipeline.py | 73 | ~106s |
 | test_judge_context.py | 46 | ~147s |
 | test_judge_artifacts.py | 35 | ~99s |

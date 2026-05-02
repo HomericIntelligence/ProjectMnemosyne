@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | standardize-matmul-calls |
 | **Category** | architecture |
 | **Language** | Mojo |
@@ -72,7 +72,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Modifying definition in extensor.mojo | Considered changing `fn __matmul__` | Not a call site; removing it would break `@` operator | Only convert call sites, not definitions |
 | Modifying test_dunder_matmul | Considered rewriting `a @ b` test | The test specifically validates `@` operator; comments referencing `__matmul__` are documentation | Skip tests whose purpose is testing the dunder/operator directly |
 

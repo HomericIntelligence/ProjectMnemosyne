@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | 2026-03-07 |
 | Objective | Add regression test asserting that `slice()` shares memory with the original tensor |
 | Outcome | Test added to `test_slicing.mojo`, PR created, all pre-commit hooks pass |
@@ -67,13 +67,13 @@ fn test_slice_mutation_visible_in_original() raises:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3298, PR #3898 | [notes.md](../references/notes.md) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `pixi run mojo test` locally | Executed `mojo test tests/shared/core/test_slicing.mojo` on the host | GLIBC version mismatch — host has GLIBC 2.31, Mojo requires 2.32+ | This repo runs Mojo inside Docker/CI; local execution is not supported on older Linux hosts |
 | Using `just test-group` | Tried `just test-group "tests/shared/core" "test_slicing.mojo"` | `just` not in PATH on the host | Use `pixi run mojo test` or rely on CI — don't assume `just` is installed outside Docker |
 

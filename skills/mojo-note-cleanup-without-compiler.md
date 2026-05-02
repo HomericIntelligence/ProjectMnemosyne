@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Category** | tooling |
 | **Trigger** | Cleanup issue for Mojo compiler limitation NOTEs; local Mojo unavailable (GLIBC mismatch) |
 | **Outcome** | Concise, tracked NOTEs with version + issue reference; PR created and auto-merged |
@@ -113,7 +113,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running `pixi run mojo --version` | Tried to verify Mojo version directly | GLIBC 2.32 required but host has 2.28; mojo binary crashes | Use `pixi.toml` version constraint instead — it's the authoritative version spec |
 | Running `pixi run mojo /tmp/test_fp16_simd.mojo` | Tried to compile test to confirm FP16 SIMD limitation still exists | Same GLIBC crash | On Debian 10 hosts, mojo cannot run outside Docker. Use version range from pixi.toml + cross-reference existing docstring comments |
 | Running `just pre-commit-all` | Tried to use justfile shortcut | `just` not installed on this system | Use `pixi run pre-commit run --all-files` directly |

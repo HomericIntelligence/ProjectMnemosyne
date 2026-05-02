@@ -13,7 +13,7 @@ tags: [odysseus, ruflo, agent-orchestration, multi-repo, comparison, ecosystem-a
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-27 |
 | **Objective** | Deep architectural comparison of HomericIntelligence/Odysseus (12-submodule meta-repo) with ruflo (TypeScript/Rust monorepo v3.5), identifying complementarity and integration opportunities |
 | **Outcome** | Analysis complete — 6 integration proposals identified. No code executed; research only. |
@@ -62,7 +62,7 @@ Parallel exploration strategy:
 Compare across these 6 dimensions:
 
 | Dimension | Odysseus Pattern | Ruflo Pattern |
-|-----------|-----------------|---------------|
+| ----------- | ----------------- | --------------- |
 | **Paradigm** | Infrastructure-centric (process boundaries, 12 repos) | Application-centric (DDD monorepo, in-process) |
 | **Orchestration** | 3-layer REST/NATS (ai-maestro → Telemachy → Keystone DAGs) | In-process SwarmCoordinator + Q-Learning 3-tier router |
 | **Agent model** | Container-per-agent (Podman + Nomad, strong isolation) | Logical TypeScript objects (60+ types, shared heap) |
@@ -94,7 +94,7 @@ Use the complementarity framework to generate integration proposals (value-order
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A — research session | Direct parallel exploration approach worked | N/A | For architectural comparisons, parallel sub-agents (one per codebase) are more efficient than sequential exploration |
 
 ## Results & Parameters
@@ -217,14 +217,14 @@ ruflo:
 ### Complementarity Matrix
 
 | Odysseus Gap | Ruflo Capability | Integration Path |
-|-------------|------------------|------------------|
+| ------------- | ------------------ | ------------------ |
 | No vector memory | HNSW search | AgentDB sidecar or Ruflo vessel |
 | No ML routing | Q-Learning 3-tier | QueenCoordinator → Keystone |
 | No learning | SONA adaptation | Shared memory bridge via Hephaestus |
 | No MCP tooling | Can consume MCP | MCP bridge for ai-maestro REST |
 
 | Ruflo Gap | Odysseus Capability | Integration Path |
-|-----------|---------------------|------------------|
+| ----------- | --------------------- | ------------------ |
 | Fake distribution | Real Tailscale+Nomad | Containerize Ruflo in AchaeanFleet |
 | Crash loses state | NATS JetStream | NATS as Ruflo external event bus |
 | No container isolation | Podman per agent | Nomad task driver wraps Ruflo workers |

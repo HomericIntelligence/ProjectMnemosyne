@@ -25,7 +25,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-07 |
 | **Session Context** | ProjectOdyssey `test_hash.mojo` NaN hash test failures |
 | **Objective** | Write raw IEEE 754 bit patterns (NaN, Inf) into float32/float64 AnyTensor slots |
@@ -158,7 +158,7 @@ dtype. The offset calculation `idx * dtype_size` is the same pattern used throug
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `set(UInt32)` assuming bitcast semantics | Called `tensor.set(0, UInt32(0x7FC00000))` expecting raw bit write into float32 slot | Delegates to `_set_int64` which silently ignores float dtypes | Always check the implementation of `set()` overloads — numeric conversion ≠ bitcast |
 | UnsafePointer read pattern (wrong direction) | `UnsafePointer[UInt32](to=f32_bits).bitcast[Float32]()[]` | This is the read path (UInt32 → Float32), not the write path | Bitcast direction matters: for writes, start from the `_data` pointer, not from the value |
 | Assuming `_set_int64` covers all dtypes | Trusted that `set(UInt32)` would route correctly for any dtype | `_set_int64` only handles integer DTypes — float dtypes silently fall through all branches | Always verify internal dispatch functions cover the dtypes you intend to write |
@@ -184,7 +184,7 @@ ptr[] = value
 ### Affected DType Pairs
 
 | set() Overload | Affected Dtype | Symptom |
-|----------------|---------------|---------|
+| ---------------- | --------------- | --------- |
 | `set(UInt32)` | `DType.float32` | Write silently dropped |
 | `set(UInt64)` | `DType.float64` | Write silently dropped |
 | `set(UInt32)` | integer dtypes | Works correctly (handled by `_set_int64`) |
@@ -193,7 +193,7 @@ ptr[] = value
 ### Common IEEE 754 Bit Patterns for Testing
 
 | Pattern | Float32 (UInt32) | Float64 (UInt64) |
-|---------|-----------------|-----------------|
+| --------- | ----------------- | ----------------- |
 | +Quiet NaN | `0x7FC00000` | `0x7FF8000000000000` |
 | -Quiet NaN | `0xFFC00000` | `0xFFF8000000000000` |
 | +Signaling NaN | `0x7F800001` | `0x7FF0000000000001` |
@@ -211,5 +211,5 @@ ptr[] = value
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | `test_hash.mojo` NaN hash failures | `any_tensor.mojo` ~line 1007; fix applied, CI pending |

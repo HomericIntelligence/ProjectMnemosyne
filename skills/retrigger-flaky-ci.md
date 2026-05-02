@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | retrigger-flaky-ci |
 | **Category** | ci-cd |
 | **Trigger** | Pre-existing flaky CI failure on a PR with unrelated changes |
@@ -67,6 +67,6 @@ gh run watch 22749573506
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Making code changes | Considered modifying test files to fix the crash | Not needed — crash is a pre-existing Mojo runtime flake, not introduced by PR | Always verify whether failing tests are in the PR diff before attempting fixes |
 | Full workflow rerun | Could have re-run the entire workflow | Wastes CI minutes re-running passing jobs | Use `--failed` flag to re-trigger only the failed jobs |

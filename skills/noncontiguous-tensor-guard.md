@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | noncontiguous-tensor-guard |
 | **Category** | testing |
 | **Mojo Version** | v0.26.1 |
@@ -141,7 +141,7 @@ git commit -m "fix(core): add as_contiguous guard to all flat-buffer kernels"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `transpose(0, 1)` on `(1,1,4,4)` for NCHW fixture | Create non-contiguous (1,1,4,4) tensor by swapping N and C dims | N=1 and C=1 have the same size so strides are equal after swap — `is_contiguous()` returns true, assertion `assert_false(nc.is_contiguous())` triggers runtime error | Only `transpose(dim0, dim1)` with dims of **different sizes** produces non-contiguous strides |
 | `transpose(0, 1)` on `(1,1,2,2)` for grad_output | Create non-contiguous grad_output for backward pass tests | Same issue: all batch/channel dims have size 1, swapping gives identical strides | For NCHW tensors with N=C=1, always transpose the spatial dims H and W, using non-square spatial sizes (e.g., 4×6→transpose→6×4) |
 | Guard in inner `_reduce_all_impl` | Tried to add guard inside the implementation function which lacks `raises` | `as_contiguous()` is marked `raises`; functions without `raises` cannot call it | Place guard in the `_dispatch_*` wrapper that already has `raises`, pass the contiguous copy to the inner function |
@@ -185,5 +185,5 @@ fn _make_nc_nchw() raises -> ExTensor:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #4804, Issue #3800 | [notes.md](../references/notes.md) |

@@ -12,7 +12,7 @@ Generate customized review checklists based on type of change.
 ## Overview
 
 | Date | Objective | Outcome |
-|------|-----------|---------|
+| ------ | ----------- | --------- |
 | 2025-12-30 | Tailored PR review checklists | Thorough, focused code reviews |
 
 ## When to Use
@@ -86,7 +86,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Change Type Detection
 
@@ -119,7 +119,7 @@ Copy-paste ready configurations and expected outputs.
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | Mixed change types | Create separate checklists for each |
 | Unclear type | Inspect files to determine type |
 | Complex change | Break into multiple checklists |

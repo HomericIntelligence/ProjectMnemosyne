@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Date** | 2026-02-01 |
 | **Objective** | Implement defensive programming patterns for statistical analysis pipeline to handle data quality issues gracefully |
 | **Outcome** | ✅ Successfully implemented P2 improvements with 3 PRs (309 tests passing, defensive type coercion, centralized config) |
@@ -246,14 +246,14 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 
 ### Test Coverage Summary
 
 | Category | Before | After | Change |
-|----------|--------|-------|--------|
+| ---------- | -------- | ------- | -------- |
 | stats.py tests | 36 | 99 | +63 parametrized |
 | export_data.py tests | 2 | 8 | +6 edge cases |
 | **Total tests** | **240** | **309** | **+69 (+28%)** |
@@ -261,7 +261,7 @@ gh pr merge --auto --rebase
 ### PR Summary
 
 | PR | Title | Status | Lines Changed |
-|----|-------|--------|---------------|
+| ---- | ------- | -------- | --------------- |
 | #307 | Move correlation metric pairs to config.yaml | ✅ Merged | +24 -6 |
 | #308 | Add parametrized tests for statistical functions | ✅ Merged | +356 |
 | #309 | Expand export_data test coverage | ✅ Merged | +129 |

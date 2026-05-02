@@ -14,7 +14,7 @@ tags: [background-agent, run_in_background, api-error, connection-refused, recov
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-17 |
 | **Objective** | Detect and recover from silent background agent failures that report `status: completed` but contain `result: API Error` |
 | **Outcome** | Successful — pattern identified and recovery workflow confirmed |
@@ -59,7 +59,7 @@ grep -rn "<pattern-agent-was-fixing>" <target-directory>/
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Trusting `status: completed` | Assumed the task was done when the notification arrived with `completed` status | `status: completed` only means the agent process exited — it does not mean the task succeeded | Always check `result` field content, not just `status` |
 | Waiting for background agent on large multi-file task | Used `run_in_background: true` for a task requiring 50–77 tool uses across many files | Background agents can hit connection timeouts after ~20–40 minutes, silently failing with ConnectionRefused | Use foreground for tasks estimated >5 minutes or requiring many sequential tool calls |
 | Attempting to redirect running background agent | Tried to send updated instructions mid-flight | `SendMessage` is not available in the main conversation context | Plan for immutable instructions when using background agents; prefer foreground when requirements may evolve |
@@ -80,7 +80,7 @@ result: API Error: Unable to connect to API (ConnectionRefused)
 **Background vs. foreground decision guide:**
 
 | Condition | Use |
-|-----------|-----|
+| ----------- | ----- |
 | Short task (<5 min estimated) | `run_in_background: true` |
 | Truly independent — don't need result before proceeding | `run_in_background: true` |
 | Many file edits or sequential tool calls | Foreground (default) |
@@ -90,5 +90,5 @@ result: API Error: Unable to connect to API (ConnectionRefused)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ArchIdeas | Background agent launched to fix patterns across many research files; failed silently with ConnectionRefused after ~26K tokens and 77 tool uses | Session 2026-04-17 |

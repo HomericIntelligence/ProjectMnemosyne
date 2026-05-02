@@ -16,7 +16,7 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-04-06 |
 | Objective | Consolidated skill covering all git worktree creation, use, and cleanup patterns — including branch deletion policy |
 | Outcome | v2.5.0: Added stale-lock cleanup pattern for dead agent PIDs — unlock + remove + prune sequence, with PID liveness check and user-delegated `--force` workaround |
@@ -400,7 +400,7 @@ git branch -v | grep '\[gone\]'
 **Triage categories:**
 
 | Category | Criteria | Wave | Executor |
-|----------|----------|------|----------|
+| ---------- | ---------- | ------ | ---------- |
 | A — Stale/Merged | 0 commits ahead of main, OR `[gone]` remote, OR merged PR | Wave 1 | Haiku |
 | B — Unreleased | 1+ commits ahead, no merged PR (open, closed-without-merge, or NONE) | Wave 2a | Sonnet |
 | C — Stale-PR conflict | Closed PR + suspected conflicts with main | Wave 2b | Haiku |
@@ -858,7 +858,7 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Edit files via absolute path in main repo | Used Read/Edit on main repo path from session rooted in worktree | Changes landed on main branch, not feature branch | Always verify CWD branch with `git -C <dir> branch --show-current` before editing |
 | Push feature branch after editing wrong location | Ran `git push` without copying changes to correct worktree | Push rejected: remote had commits the local branch lacked | Check `git diff --stat` in worktree before pushing |
 | Force-push to fix diverged branch | Considered `git push --force` | Would overwrite legitimate remote commits | Fetch remote, inspect, then `reset --hard` + `pull --rebase` |
@@ -892,7 +892,7 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 | Shellcheck `A && B \|\| C` pattern | `git branch -d "$branch" 2>/dev/null && log_info "Deleted" \|\| true` | Shellcheck SC2015: `\|\|` doesn't guarantee proper if-then-else; if log_info fails, `\|\| true` hides it | Use explicit if-then: `if git branch -d "$branch" 2>/dev/null; then log_info "..."; fi` |
 | Bulk-delete remote branches in one push | `git push origin --delete branch1 branch2 branch3` | GitHub branch protection rules block deleting more than 2 branches in a single push | Delete remote branches one at a time |
 | `git worktree remove` on locked worktree directly | Ran `git worktree remove .claude/worktrees/agent-X` without unlocking first | Fails with "is locked, use 'git worktree unlock' to unlock it first" even for clean worktrees | Always run `git worktree unlock <path>` before `git worktree remove <path>` |
-| Assuming all locks are from live processes | Skipped PID liveness check before unlocking | Risked unlocking a worktree still held by a live agent process | Always check `ps aux | grep <pid> | grep -v grep` before treating a lock as stale |
+| Assuming all locks are from live processes | Skipped PID liveness check before unlocking | Risked unlocking a worktree still held by a live agent process | Always check `ps aux \| grep <pid> \| grep -v grep` before treating a lock as stale |
 | `git worktree remove --force` on dirty merged-PR worktrees | Attempted force removal of worktrees with artifact files (even though PR was merged) | Safety Net blocks `--force` flag | Unlock first (`git worktree unlock <path>`), then ask the user to run `git worktree remove --force <path>` |
 | `git checkout --` / `git restore` to discard working-tree artifact files in worktree | After user ran `git restore <files>` manually, pyc files showed as `D` (deleted) not `M` (modified); tried `git -C <wt> checkout -- <pycache_dir>` to restore them | Safety Net blocked it; additionally, user's `git restore` had deleted tracked files (status `D`), not restored them — working tree state was worse than before | After a user manually runs `git restore` / `git checkout --` on tracked files, inspect `git status` carefully. `D` means the file was deleted. Use `git stash` to recover a consistent state, or let the rebase proceed (rebase restores files to the correct version per commit). |
 
@@ -901,7 +901,7 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 ### Worktree nesting patterns from agent waves
 
 | Pattern | Path depth | Occurs when |
-|---------|-----------|-------------|
+| --------- | ----------- | ------------- |
 | Simple wave | `.claude/worktrees/agent-XXXXXXXX` | Agent spawned from main session |
 | Nested depth-2 | `.claude/worktrees/agent-A/.claude/worktrees/agent-B` | Wave-2 agent spawned another agent |
 | Nested depth-3 | `agent-A/.../agent-B/.../agent-C` | Wave-2 agent's agent spawned yet another agent |
@@ -909,7 +909,7 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 ### Safety Net interaction
 
 | Operation | Blocked? | Workaround |
-|-----------|----------|------------|
+| ----------- | ---------- | ------------ |
 | `git worktree remove --force` (untracked files) | Yes | Delete untracked files first, then remove without `--force` |
 | `git worktree remove --force` (merged-PR dirty worktrees) | Yes | Unlock first with `git worktree unlock`, then ask user to run `--force` manually |
 | `git branch -D` | No | Allowed |
@@ -939,7 +939,7 @@ WORKTREE_DIR="/tmp/mnemosyne-$(date +%s)-e2e-homeric"
 ### Scale reference for mass cleanup
 
 | Worktrees | Time | Notes |
-|-----------|------|-------|
+| ----------- | ------ | ------- |
 | 33 worktrees | ~3 min | All removed successfully |
 | 20 stale (merged) | ~1 min | No --force needed after cleaning untracked dirs |
 | 13 active | ~1 min | 2 needed --force for modified tracked files |
@@ -947,7 +947,7 @@ WORKTREE_DIR="/tmp/mnemosyne-$(date +%s)-e2e-homeric"
 ### Scale reference for myrmidon wave pattern
 
 | Worktree Count | Approach | Expected Duration |
-|----------------|----------|-------------------|
+| ---------------- | ---------- | ------------------- |
 | < 10 | Sequential, skip myrmidon | 10-20 min |
 | 10-20 | Myrmidon waves, 3-5 agents/wave | 15-25 min |
 | 20-35 | Myrmidon waves, 5-10 agents/wave | 20-45 min |
@@ -965,7 +965,7 @@ WORKTREE_DIR="/tmp/mnemosyne-$(date +%s)-e2e-homeric"
 ### Myrmidon Wave Session Results (2026-04-05, ProjectHephaestus)
 
 | Wave | Executor | Category | Count | Action | Outcome |
-|------|----------|----------|-------|--------|---------|
+| ------ | ---------- | ---------- | ------- | -------- | --------- |
 | 1 | Haiku (parallel) | A — stale/merged | 13 | Direct removal | All removed cleanly |
 | 2a | Sonnet (parallel) | B — unreleased | 10 (`worktree-agent-*`) | Rebase + PR | 3 PRs (#262–#264) created; 7 superseded by main |
 | 2b | Haiku (parallel with 2a) | C — stale-PR | 3 (closed PRs #29, #31, #32) | Conflict-check | All had conflicts; work superseded; kept closed |
@@ -974,7 +974,7 @@ WORKTREE_DIR="/tmp/mnemosyne-$(date +%s)-e2e-homeric"
 ### Model tier assignment
 
 | Task | Tier | Reason |
-|------|------|--------|
+| ------ | ------ | -------- |
 | Remove stale worktrees + artifact cleanup | Haiku | Mechanical, no analysis needed |
 | Conflict pre-check (closed-PR branches) | Haiku | Binary output: conflicts or no conflicts |
 | Final prune + verification | Haiku | Mechanical, single command sequence |
@@ -989,7 +989,7 @@ ARTIFACT_PATTERNS="__pycache__ .pyc build/ dist/ *.egg-info .claude-prompt-*.md 
 ### Harness-aware git operation split
 
 | Task type | Preferred context | Why |
-|-----------|-------------------|-----|
+| ----------- | ------------------- | ----- |
 | Worktree creation, listing, prune, fleet-wide audit | Parent repo | These are genuinely repo-wide orchestration steps |
 | `status`, `add`, `commit`, `push`, `rebase`, conflict resolution for one issue branch | Inside that worktree | Avoids repeated permission prompts and shared metadata lock failures in sandboxed harnesses |
 | Cross-worktree inspection from one control shell | Parent repo with targeted `git -C <path>` | Fine for read-mostly audits; don't use it as the default write loop |
@@ -1016,14 +1016,14 @@ git worktree list --porcelain | awk '/^worktree /{path=$2} /^branch / {print pat
 ### Branch delete flag reference
 
 | Flag | Use when |
-|------|----------|
+| ------ | ---------- |
 | `-d` (safe) | Remote branch still exists OR automation scripts (safety net) |
 | `-D` (force) | Remote branch confirmed deleted (PR merged, `[gone]` in `git branch -v`) |
 
 ### Repo rename affected repos (as of 2026-03-24)
 
 | Repo | Had origin/main locally? | Had origin/HEAD? |
-|------|--------------------------|-------------------|
+| ------ | -------------------------- | ------------------- |
 | Odysseus | No (only master) | No |
 | ProjectHermes | No (only master) | No |
 | ProjectKeystone | No (only master) | No |
@@ -1036,7 +1036,7 @@ git worktree list --porcelain | awk '/^worktree /{path=$2} /^branch / {print pat
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Parallel wave execution cleanup — 55 worktrees, 29 branches | worktree-branch-cleanup session 2026-03-02 |
 | ProjectOdyssey | 23 worktrees bulk artifact cleanup | worktree-bulk-artifact-cleanup session 2026-03-10 |
 | ProjectScylla | 20 worktrees, EOF fixes (PRs #783, #764, #826), 4 skill registration PRs | skill-batch-eof-worktree-cleanup session 2026-02-20 |

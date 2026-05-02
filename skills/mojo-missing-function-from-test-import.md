@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-15 |
 | **Category** | debugging |
 | **Problem** | Mojo test file imports a function that doesn't exist in the source module |
@@ -162,13 +162,13 @@ For the bf16 guard tests, the error message must contain:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3717 / PR #4779 | [notes.md](../../references/notes.md) |
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Original PR #3714 | Used `sys.info.is_apple_silicon()` for platform detection | `sys.info` module does not have `is_apple_silicon` in Mojo v0.26.1 | Always check Mojo v0.26.1 stdlib before using platform detection APIs |
 | Edit tool with non-unique string | Tried `Edit` tool with a string that appeared twice in the file | Tool returned "Found 2 matches" error | Provide more surrounding context to make the match unique |
 | Assumed tests weren't covered by CI | Considered adding test to workflow before checking | Test was already covered by `training/test_*.mojo` wildcard pattern | Run `validate_test_coverage.py` first before modifying CI workflows |

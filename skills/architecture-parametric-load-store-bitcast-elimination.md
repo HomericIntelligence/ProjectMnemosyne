@@ -26,7 +26,7 @@ patterns to prevent ASAP destruction use-after-free in Mojo.
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Eliminate 101+ raw bitcast patterns in shared/training/ that cause UAF crashes in CI |
 | **Outcome** | Success -- zero `_data.bitcast` patterns remain in shared/training/, all ASAN tests pass |
@@ -151,7 +151,7 @@ pixi run mojo build --sanitize address -g -I "$(pwd)" -I . \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Named `get[dtype]`/`set[dtype]` | Used get/set as method names | Conflicts with existing 12 `set()` overloads on AnyTensor | Use `load`/`store` (LLVM/SIMD terminology) to avoid name conflicts |
 | Both agents adding API independently | Parallel sub-agents both added load/store/data_ptr to any_tensor.mojo | Cherry-pick created duplicate blocks with conflicting signatures (one missing `origin=MutAnyOrigin`) | When agents modify the same file, one should add the API and the other should only use it |
 | `data_ptr` without `origin=MutAnyOrigin` | Agent's version returned `UnsafePointer[Scalar[dtype]]` | Compile error -- return type doesn't match `_data.bitcast` which has `origin=MutAnyOrigin` | Always include `origin=MutAnyOrigin` on returned pointers from AnyTensor |
@@ -216,6 +216,6 @@ gain_per_layer:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #5097 | 101+ bitcast patterns replaced, ASAN clean, VGG16 numerical fix |
 | ProjectOdyssey | PR #5175 | Pooling bitcast fix: 6 functions migrated to _get_float64/_set_float64 |

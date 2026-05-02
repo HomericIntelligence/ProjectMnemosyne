@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Fix `ContextLogger.process()` mutating caller-provided `extra` dict and add thread-safe `_context` reads |
 | **Outcome** | Successful — all 15 tests pass, PR created |
@@ -66,7 +66,7 @@ def process(self, msg, kwargs):
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A — direct fix | The pattern was well-understood from the issue description | N/A | When the mutation pattern is `extra.update(self._context)`, the fix is always to create a new dict via spread. No need for `copy()` + `update()` intermediate step. |
 
 ## Results & Parameters
@@ -103,5 +103,5 @@ def test_process_includes_bound_context(self) -> None:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #60 — ContextLogger.process mutation fix | 15/15 tests pass, PR #118 |

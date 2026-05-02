@@ -22,7 +22,7 @@ Systematic audit and consolidation of a skills marketplace to eliminate duplicat
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-12 |
 | **Objective** | Reduce 1,667 → ~1,625 skill files by removing near-exact duplicates and consolidating topic clusters |
 | **Outcome** | 1,667 → 1,625 files (41 removed) across 4 phases; all 98 CI tests passing throughout |
@@ -82,7 +82,7 @@ python3 scripts/validate_plugins.py
 
 3. **Triage clusters into tiers**:
    | Tier | Criteria | Action |
-   |------|----------|--------|
+   | ------ | ---------- | -------- |
    | Near-exact | Same workflow, <5% unique content | Delete one immediately |
    | High-overlap | Same topic, 20-40% unique content each | Merge unique content, delete one |
    | Topic cluster | Related angles on same domain, 3+ files | Consolidate into 1-2 authoritative files |
@@ -159,7 +159,7 @@ git commit -m "chore: phase N — <description> (X files removed)"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | No triage step | Started merging immediately without classifying pairs | Wasted time on pairs that turned out to be truly distinct; had to undo work | Always build the full triage table first; 30 min of analysis saves hours of rework |
 | YAML description with unquoted colon | `description: Run pre-commit. Use when: (1) ...` | YAML parser treats `Use when:` as a mapping key; fails in CI (Python 3.11 strict YAML) but not always locally (Python 3.9) | Always quote the entire description value with double quotes when it contains a colon |
 | Pushing directly to main with branch protection | Used `git push origin main` on a branch-protected repo | Remote accepted but logged "bypassed rule violations" warning | For repos with strict protection, use PR-based workflow even if you have bypass permissions |
@@ -171,7 +171,7 @@ git commit -m "chore: phase N — <description> (X files removed)"
 ### Scale Achieved (2026-04-12 session)
 
 | Phase | Description | Files Removed |
-|-------|-------------|---------------|
+| ------- | ------------- | --------------- |
 | 1 | 4 near-exact duplicate pairs — delete one each | 8 |
 | 2 | 9 high-overlap pairs — merge unique content, delete one | 14 |
 | 3a | 4 small paired clusters — merge, delete one each | 6 |
@@ -181,7 +181,7 @@ git commit -m "chore: phase N — <description> (X files removed)"
 ### Merge Patterns (small-scale reference)
 
 | Pattern | Example | Structure |
-|---------|---------|-----------|
+| --------- | --------- | ----------- |
 | Sequential workflow | worktree-{create,switch,sync,cleanup} | 4 sub-skills in skills/ |
 | Orchestrator + primitives | gh-fix-pr-feedback + get/reply | 3 sub-skills, orchestrator is primary |
 | Analysis + Action | analyze-ci-failure-logs + fix-ci-failures | 2 sub-skills: analyze/ and fix/ |
@@ -222,7 +222,7 @@ ls skills/*.md | wc -l
 ### Triage Decision Matrix
 
 | Signal | Likely Tier |
-|--------|-------------|
+| -------- | ------------- |
 | Filename differs only in last token | Near-exact (Tier 1) |
 | Same "When to Use" triggers, different examples | High-overlap (Tier 2) |
 | Same domain, different failure modes documented | Topic cluster (Tier 3) |
@@ -231,7 +231,7 @@ ls skills/*.md | wc -l
 ### CI Check Names
 
 | Check | Command | Threshold |
-|-------|---------|-----------|
+| ------- | --------- | ----------- |
 | Validate Plugins | `python3 scripts/validate_plugins.py` | Must pass (0 errors) |
 | Test suite | `python3 -m pytest tests/ -q --tb=short` | 98 tests, all green |
 
@@ -264,7 +264,7 @@ Before creating a new skill:
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectMnemosyne | PR #22 (v1.0.0) — 43 → 37 plugins, ~1 hour | [notes.md](skill-audit-and-merge.notes.md) |
 | ProjectMnemosyne | 2026-04-12 session (v2.0.0) — 1,667 → 1,625 files, 41 removed, 98 tests passing | 4-phase deduplication, verified-ci |
 

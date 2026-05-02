@@ -24,7 +24,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-24 |
 | **Objective** | Implement exponential backoff with jitter for NATS JetStream publish retries, distinguishing retryable from non-retryable errors, with schema-versioned envelopes and Pydantic Settings integration |
 | **Outcome** | Verified in CI — full retry loop with jitter, configurable via env vars, 5 retryable error types captured |
@@ -195,7 +195,7 @@ async def webhook(request: Request) -> JSONResponse:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Sleeping after final attempt | `if attempt < retries` instead of `if attempt < retries - 1` | Adds unnecessary sleep latency after all retries are exhausted before raising | Guard the sleep with `if attempt < retries - 1` to avoid sleeping after the last failure |
 | Catching bare `Exception` in retry loop | Wrapping entire `except` in `Exception` catch | Hides non-retryable bugs (auth errors, bad subjects, logic errors) as transient failures — burns retry budget and delays surfacing real errors | Only catch the explicit `_RETRYABLE_PUBLISH_ERRORS` tuple; let non-retryable errors propagate immediately |
 | Fixed delay without jitter | `delay = base_delay * 2**attempt` (no jitter) | When many publishers fail simultaneously (e.g., broker restart), they all retry at the same times — thundering herd overwhelms broker | Multiply by `random.uniform(0.5, 1.5)` to spread retries across a window |
@@ -207,7 +207,7 @@ async def webhook(request: Request) -> JSONResponse:
 ### Configuration
 
 | Parameter | Env Var | Default | Constraint | Notes |
-|-----------|---------|---------|------------|-------|
+| ----------- | --------- | --------- | ------------ | ------- |
 | `publish_retries` | `PUBLISH_RETRIES` | 3 | `ge=1` | Total attempts including first try |
 | `publish_retry_base_delay` | `PUBLISH_RETRY_BASE_DELAY` | 0.1s | `gt=0` | Doubles each attempt |
 | `nats_publish_timeout` | `NATS_PUBLISH_TIMEOUT` | 5.0s | `gt=0` | Per-attempt JetStream ACK timeout |
@@ -219,7 +219,7 @@ async def webhook(request: Request) -> JSONResponse:
 With defaults (`retries=3`, `base_delay=0.1s`, `publish_timeout=5.0s`):
 
 | Attempt | Sleep Before (mean) | Timeout Budget |
-|---------|---------------------|----------------|
+| --------- | --------------------- | ---------------- |
 | 1 | 0s | 5.0s |
 | 2 | 0.1s | 5.0s |
 | 3 | 0.2s | 5.0s |
@@ -228,7 +228,7 @@ With defaults (`retries=3`, `base_delay=0.1s`, `publish_timeout=5.0s`):
 ### Retryable Error Coverage
 
 | Error Type | Cause | Safe to Retry? |
-|-----------|-------|----------------|
+| ----------- | ------- | ---------------- |
 | `nats.errors.TimeoutError` | Broker did not ACK within `publish_timeout` | Yes |
 | `nats.errors.NoRespondersError` | No active JetStream stream or consumer | Yes |
 | `nats.errors.DrainTimeoutError` | Client in drain mode | Yes |
@@ -241,7 +241,7 @@ With defaults (`retries=3`, `base_delay=0.1s`, `publish_timeout=5.0s`):
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHermes | `src/hermes/publisher.py` `Publisher.publish()` | Full retry loop verified in CI; 5 retryable error types, jitter, schema_version, Settings integration |
 
 ## References

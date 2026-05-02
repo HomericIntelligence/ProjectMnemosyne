@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | merged-pr-noop-detection |
 | **Category** | tooling |
 | **Trigger** | Fix plan file contains "No fixes needed", "PR is merged", or similar no-op signals |
@@ -47,7 +47,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Running tests anyway | Executed `pixi run python -m pytest tests/ -v` despite no-op plan | Wastes CI minutes and can produce confusing output suggesting something was "fixed" | Always check fix plan content before executing any workflow steps |
 | Creating an empty commit | Committed with "fix: Address review feedback" when there was nothing to fix | Creates misleading history implying work was done | Only commit when actual code changes exist |
 | Ignoring the plan content | Skipped reading the fix plan body and just ran all fix steps | Script-generated fix plans may be no-ops when PRs merge between analysis and execution | Fix plans must be read and interpreted before executing any steps |

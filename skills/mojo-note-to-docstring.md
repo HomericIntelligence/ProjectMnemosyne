@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Objective** | Convert `# NOTE:` inline comments to proper docstring `Note:` sections |
 | **Language** | Mojo (.mojo files) |
 | **Scope** | Implementation constraint comments that describe design decisions |
@@ -39,7 +39,7 @@ This gives a complete list of files and line numbers to review.
 Classify each NOTE into one of these types:
 
 | Type | Action |
-|------|--------|
+| ------ | -------- |
 | Implementation constraint (design decision) | Add to function/struct docstring `Note:` section |
 | Redundant (already covered by docstring) | Remove inline NOTE entirely |
 | Module-level constraint (no function context) | Reword as plain comment, remove `NOTE:` prefix |
@@ -204,7 +204,7 @@ cleanup(docs): convert implementation constraint NOTEs to docstrings
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Convert ALL NOTE comments | Initially considered converting every `# NOTE:` in the repo | Test files have NOTE-style skip explanations that don't belong in docstrings | Filter by context: only convert NOTEs in production code that describe API constraints |
 | Remove NOTE block wholesale | Considered deleting the large FP16 SIMD block comment entirely | Would lose important performance rationale for future developers | Summarize key points in docstring Note:, condense inline to 1-liner |
 | Add Note: to every function | Considered adding Note: to all functions touched | Would bloat docstrings unnecessarily | Only add Note: when the constraint is something callers need to know |

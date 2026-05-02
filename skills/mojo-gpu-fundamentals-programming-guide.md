@@ -14,7 +14,7 @@ tags: [mojo, gpu, max-gpu, kernel, parallel, optimization, modular-upstream, cud
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-09 |
 | **Objective** | Canonical GPU programming patterns in Mojo — replaces CUDA mental model |
 | **Outcome** | Authoritative reference from Modular for writing GPU kernels in Mojo |
@@ -37,21 +37,21 @@ Mojo GPU programming has **no CUDA syntax**. No `__global__`, `__device__`,
 
 ### Not-CUDA — Key Concept Mapping
 
-| CUDA / What you'd guess                 | Mojo GPU                                                                             |
-|-----------------------------------------|--------------------------------------------------------------------------------------|
-| `__global__ void kernel(...)`           | Plain `def kernel(...)` — no decorator                                               |
-| `kernel<<<grid, block>>>(args)`         | `ctx.enqueue_function[kernel, kernel](args, grid_dim=..., block_dim=...)`            |
-| `cudaMalloc(&ptr, size)`                | `ctx.enqueue_create_buffer[dtype](count)`                                            |
-| `cudaMemcpy(dst, src, ...)`             | `ctx.enqueue_copy(dst_buf, src_buf)` or `ctx.enqueue_copy(dst_buf=..., src_buf=...)` |
-| `cudaDeviceSynchronize()`               | `ctx.synchronize()`                                                                  |
-| `__syncthreads()`                       | `barrier()` from `std.gpu` or `std.gpu.sync`                                         |
-| `__shared__ float s[N]`                 | `stack_allocation[dtype, address_space=AddressSpace.SHARED](layout)`                 |
-| `threadIdx.x`                           | `thread_idx.x`                                                                       |
-| `blockIdx.x * blockDim.x + threadIdx.x` | `global_idx.x` (convenience, returns `Int`)                                          |
-| `__shfl_down_sync(mask, val, d)`        | `warp.sum(val)`, `warp.reduce[...]()`                                                |
-| `atomicAdd(&ptr, val)`                  | `Atomic.fetch_add(ptr, val)`                                                         |
-| Raw `float*` kernel args                | `TileTensor[dtype, LayoutType, MutAnyOrigin]`                                        |
-| `cudaFree(ptr)`                         | Automatic — buffers freed when out of scope                                          |
+| CUDA / What you'd guess | Mojo GPU |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| `__global__ void kernel(...)` | Plain `def kernel(...)` — no decorator |
+| `kernel<<<grid, block>>>(args)` | `ctx.enqueue_function[kernel, kernel](args, grid_dim=..., block_dim=...)` |
+| `cudaMalloc(&ptr, size)` | `ctx.enqueue_create_buffer[dtype](count)` |
+| `cudaMemcpy(dst, src, ...)` | `ctx.enqueue_copy(dst_buf, src_buf)` or `ctx.enqueue_copy(dst_buf=..., src_buf=...)` |
+| `cudaDeviceSynchronize()` | `ctx.synchronize()` |
+| `__syncthreads()` | `barrier()` from `std.gpu` or `std.gpu.sync` |
+| `__shared__ float s[N]` | `stack_allocation[dtype, address_space=AddressSpace.SHARED](layout)` |
+| `threadIdx.x` | `thread_idx.x` |
+| `blockIdx.x * blockDim.x + threadIdx.x` | `global_idx.x` (convenience, returns `Int`) |
+| `__shfl_down_sync(mask, val, d)` | `warp.sum(val)`, `warp.reduce[...]()` |
+| `atomicAdd(&ptr, val)` | `Atomic.fetch_add(ptr, val)` |
+| Raw `float*` kernel args | `TileTensor[dtype, LayoutType, MutAnyOrigin]` |
+| `cudaFree(ptr)` | Automatic — buffers freed when out of scope |
 
 ### Imports
 
@@ -251,7 +251,7 @@ def main() raises:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | (none — sourced from upstream) | Sourced from Modular's official skills repo | N/A — authoritative reference | Verify against local GPU hardware before relying on specific patterns |
 
 ## Results & Parameters
@@ -270,11 +270,11 @@ comptime layout = row_major[SIZE]()
 
 ### Hardware Details
 
-| Property      | NVIDIA          | AMD CDNA     | AMD RDNA      |
-|---------------|-----------------|--------------|---------------|
-| Warp size     | 32              | 64           | 32            |
-| Shared memory | 48-228 KB/block | 64 KB/block  | configurable  |
-| Tensor cores  | SM70+ (WMMA)    | Matrix cores | WMMA (RDNA3+) |
+| Property | NVIDIA | AMD CDNA | AMD RDNA |
+| --------------- | ----------------- | -------------- | --------------- |
+| Warp size | 32 | 64 | 32 |
+| Shared memory | 48-228 KB/block | 64 KB/block | configurable |
+| Tensor cores | SM70+ (WMMA) | Matrix cores | WMMA (RDNA3+) |
 
 ## Related Skills
 
@@ -284,7 +284,7 @@ comptime layout = row_major[SIZE]()
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | (upstream) | Modular official skills repo | Authoritative reference for Mojo GPU programming |
 
 ---

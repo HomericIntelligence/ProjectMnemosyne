@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Category** | architecture |
 | **Effort** | Low (minutes) |
 | **Risk** | Very Low (no logic changes) |
@@ -83,7 +83,7 @@ higher-level module then imports from the canonical source.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Local compiler build | Ran `pixi run mojo build` to verify compilation | GLIBC version mismatch on local host (CI uses Docker) | Mojo compilation can only be verified in CI Docker environment; syntactic changes are safe to push without local compile verification |
 | N/A | No other approaches tried | N/A | Straightforward refactor with no ambiguity |
 

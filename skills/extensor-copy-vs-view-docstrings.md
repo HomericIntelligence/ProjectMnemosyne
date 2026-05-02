@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | Date | 2026-03-15 |
 | Objective | Add explicit copy-vs-view memory semantics documentation to `ExTensor` in `shared/core/extensor.mojo` |
 | Outcome | Success — 4 docstring improvements, pre-commit passed, PR #4823 created |
@@ -45,7 +45,7 @@ Note which docstrings already cross-reference the view/copy contract and which d
 ### 2. Identify the four documentation gaps
 
 | Location | Gap |
-|----------|-----|
+| ---------- | ----- |
 | Struct docstring | No "Memory Semantics" summary section |
 | `_is_view` field | One-line docstring with no explanation of which methods set it |
 | `__getitem__(*slices)` | No cross-reference to `slice()` (inconsistent with `__getitem__(Slice)`) |
@@ -129,14 +129,14 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Checking for existing gaps | Expected `slice()` docstring to be the weak point | `slice()` already had full cross-references to `__getitem__`; the gaps were in `__getitem__(Int)`, `__getitem__(*slices)`, the struct docstring, and the `_is_view` field | Read ALL related docstrings before assuming where the gap is — good docs in one method don't mean sibling methods are consistent |
 | Scope assessment | Considered adding a separate `.md` design doc | Issue was documentation-only with no behavioral changes — a separate file would be over-engineering | For docstring-only issues, edit in-place; no need for new files |
 
 ## Results & Parameters
 
 | Parameter | Value |
-|-----------|-------|
+| ----------- | ------- |
 | File modified | `shared/core/extensor.mojo` |
 | Lines added | +38 (net, documentation only) |
 | Pre-commit hooks | All passed (mojo format, trailing whitespace, end-of-file) |

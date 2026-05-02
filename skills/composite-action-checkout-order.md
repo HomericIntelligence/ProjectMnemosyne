@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | Local composite actions (`uses: ./.github/actions/X`) are resolved from disk. If `actions/checkout` has not yet run in a job, GitHub cannot find the action and fails with `Cannot find action`. |
 | **Solution** | A Python script that parses workflow YAML files and reports any job where a `./.github/actions/` step appears before (or without) `actions/checkout`. A CI workflow runs this check on every PR touching `.github/`. |
 | **Scope** | GitHub Actions YAML workflows; Python 3.7+; `pyyaml` |
@@ -155,7 +155,7 @@ pixi run pre-commit run --files <files>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | First pre-commit run | Committed with long inline ternary expression | Ruff auto-reformatted it (line too long) | Stage → pre-commit → if hooks auto-fix files, re-stage → re-run → then commit |
 | pixi-based test run (background) | `pixi run python -m pytest ...` in background task | Took >2 min to resolve pixi environment; TaskOutput timed out | Use `python -m pytest` directly (pixi env already active) for faster feedback |
 
@@ -177,7 +177,7 @@ python3 scripts/validate_workflow_checkout_order.py .github/workflows/benchmark.
 ### Exit codes
 
 | Code | Meaning |
-|------|---------|
+| ------ | --------- |
 | 0 | All workflows pass; no violations |
 | 1 | One or more violations found |
 

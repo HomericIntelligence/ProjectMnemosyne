@@ -14,7 +14,7 @@ tags: [thread-safety, metaclass, threading-local, python, immutable-state]
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-03-25 |
 | **Objective** | Replace mutable class-level state with per-thread computed access while preserving the `Class.ATTR` API |
 | **Outcome** | Success — backward-compatible, thread-safe, 15 tests pass including concurrent access |
@@ -72,7 +72,7 @@ class Colors(metaclass=_Meta):
 ### Why Metaclass (Not Other Approaches)
 
 | Approach | Problem |
-|----------|---------|
+| ---------- | --------- |
 | `threading.Lock` around mutations | Still global state — all threads share one enable/disable flag |
 | Instance-based `Colors()` | Breaks the `Colors.ATTR` class-level access pattern used everywhere |
 | `__class_getattr__` (PEP 657) | Python 3.12+ only, not available in 3.10 |
@@ -111,7 +111,7 @@ Use `threading.Barrier` to synchronize threads so the reader checks *after* the 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `typing.Dict` import | Used `from typing import Dict` for type annotation | Ruff UP035/UP006 flags it as deprecated in 3.10+ | Use builtin `dict[str, str]` directly |
 | Import ordering | Put `from hephaestus... import Colors, _CODES, _state` | Ruff I001 wants underscore-prefixed names sorted first | Ruff sorts `_CODES` before `Colors` (leading underscore sorts before uppercase) |
 
@@ -128,5 +128,5 @@ Use `threading.Barrier` to synchronize threads so the reader checks *after* the 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectHephaestus | Issue #30 — thread-safe Colors class | PR #68, all 394 tests pass |

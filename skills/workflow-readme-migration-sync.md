@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Skill** | workflow-readme-migration-sync |
 | **Category** | documentation |
 | **Trigger** | Issue closing deferred README documentation after workflows are already migrated |
@@ -118,7 +118,7 @@ gh pr merge --auto --rebase
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Editing "Uses inline" bullets one at a time | Used `replace_all: false` for the first bullet, then tried to match the second with trailing context | Context string wasn't unique — edit tool reported string not found | When the same phrase appears multiple times, use `replace_all: true` on the first pass; only use contextual matching when the surrounding text differs |
 | Updating SHA-pinning documentation examples | Considered replacing `prefix-dev/setup-pixi@v0.9.3` in the SHA-pinning examples section | Those lines are intentional documentation of the pinning pattern, not actual workflow steps | Always check whether a `prefix-dev/setup-pixi` reference is in a code example block explaining a concept vs. a step to be migrated |
 

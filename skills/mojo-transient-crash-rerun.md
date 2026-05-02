@@ -16,7 +16,7 @@ them by re-triggering the failed jobs — no code changes required.
 ## Overview
 
 | Aspect | Details |
-|--------|---------|
+| -------- | --------- |
 | **Date** | 2026-03-06 |
 | **Objective** | Clear spurious CI failures on PR #3288 (ProjectOdyssey) |
 | **Outcome** | Identified as transient crash; re-triggered CI with `--failed` flag |
@@ -90,7 +90,7 @@ gh run view <NEW_RUN_ID> --repo <REPO>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Code fix | Looked for code to change that would fix the crash | No code caused the crash — stack frames were all in Mojo runtime | Check stack frames first; if no repo frames, skip code investigation entirely |
 | Full workflow rerun | Would re-run all 32 test groups | Wastes CI minutes on passing jobs | Always use `--failed` flag to limit rerun to only failing jobs |
 
@@ -131,5 +131,5 @@ CI job fails with "mojo: error: execution crashed"?
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | PR #3288 — Core Activations & Data Loaders crash, run 22734969748 | [notes.md](../../references/notes.md) |

@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Purpose** | Standardize Mojo limitation comment format across codebase |
 | **Target Pattern** | `# NOTE (Mojo vX.Y.Z):` |
 | **Scope** | All `.mojo` files with limitation NOTEs |
@@ -71,7 +71,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Grepping for all NOTEs broadly | Used case-insensitive grep on all `.mojo` files for "NOTE" | Output was 39KB+ with many irrelevant matches (docstring `Note:`, print statements, etc.) | Narrow the grep pattern to `# NOTE` (with hash) to exclude prose and docstrings |
 | Assuming all NOTEs need changes | Planned to edit all NOTE occurrences found | Many NOTEs already used correct `# NOTE (Mojo vX.Y.Z):` format | Always read target lines first; skip already-correct entries |
 | Using `replace_all` on multi-file patterns | Considered batch replace across all files | Edit tool requires the file to be read first; `replace_all` is per-file, not cross-file | Read each file individually before editing; do targeted per-file edits |

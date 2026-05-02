@@ -64,7 +64,7 @@ The pre-push hook ran the full 3183-test suite and consistently failed at test #
 ## File List
 
 | File | Action | Notes |
-|------|--------|-------|
+| ------ | -------- | ------- |
 | `scylla/analysis/loader.py` | Modified | Core implementation |
 | `tests/unit/analysis/test_rubric_conflict.py` | Created | 11 new tests |
 | `tests/unit/analysis/test_loader.py` | Modified | 1 signature test updated |

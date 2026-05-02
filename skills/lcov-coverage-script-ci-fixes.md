@@ -23,7 +23,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-24 |
 | **Objective** | Fix `generate_coverage.sh` failing in CI with multiple sequential independent bugs, each masked until the previous was fixed |
 | **Outcome** | Success — all 4 bugs fixed; coverage script ran to completion on ProjectKeystone PR #340 |
@@ -154,7 +154,7 @@ All 4 bugs must be fixed together — each one masks the next in CI.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Relative BUILD_DIR | `BUILD_DIR=build/x86.coverage.debug` passed from CI; used directly without canonicalization | After `cd "$BUILD_DIR"`, all derived paths (`$COVERAGE_DIR`, `$COVERAGE_INFO`) were wrong | Always canonicalize BUILD_DIR to absolute path at script startup before any `cd` |
 | Using `..` as cmake source | `cd "$BUILD_DIR" && cmake ... ..` | `..` resolves to parent of BUILD_DIR, not PROJECT_ROOT | Use `"$PROJECT_ROOT"` explicitly as cmake source directory |
 | `--ignore-errors negative,mismatch` only | Added mismatch to suppress gcov format error | gcov version string `B33*` vs `4.8*` still fatal with lcov 2.0 | Add `version` to the ignore-errors list |
@@ -165,7 +165,7 @@ All 4 bugs must be fixed together — each one masks the next in CI.
 **Environment verified on:**
 
 | Component | Version |
-|-----------|---------|
+| ----------- | --------- |
 | OS | Ubuntu 24.04 |
 | lcov | 2.0-4ubuntu2 |
 | Clang | 18.1.3 |
@@ -196,5 +196,5 @@ PROJECT_ROOT="$(git rev-parse --show-toplevel)"
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectKeystone | PR #340 Code Coverage CI — verified-ci 2026-04-24 | All 4 bugs fixed sequentially; coverage script ran to completion |

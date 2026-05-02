@@ -13,7 +13,7 @@ Target: Qwen3-4B for E2E testing, scaling to Qwen3.5-397B MoE later
 Baseten wraps vLLM behind its API gateway. Tried multiple URL patterns:
 
 | URL Tried | Result |
-|-----------|--------|
+| ----------- | -------- |
 | `https://model-{ID}.api.baseten.co/v1/chat/completions` | 404 |
 | `https://model-{ID}.api.baseten.co/production/v1/chat/completions` | 404 |
 | `https://model-{ID}.api.baseten.co/production/v1` | 404 |

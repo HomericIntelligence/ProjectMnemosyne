@@ -20,7 +20,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-26 |
 | **Objective** | Fix permanently blocked PR caused by ruleset requiring a bare job ID that GitHub Actions never emits for matrix jobs |
 | **Outcome** | Successful — ruleset PUT succeeded, all four expanded matrix contexts confirmed via API |
@@ -119,7 +119,7 @@ gh api -X PUT repos/{owner}/{repo}/rulesets/{RULESET_ID} \
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Attempt 1 | Queried classic branch protection (`/branches/{branch}/protection`) to find the required check | Returns 404 when only rulesets are used; no policy visible | When classic branch protection returns 404, check `/rulesets` and `/rules/branches/{branch}` instead |
 | Attempt 2 | Left the bare job ID `integration-tests` in the ruleset, expecting GitHub to match matrix children | GitHub has no wildcard or parent-child matching for required contexts; the bare name is never emitted by matrix jobs | Register each expanded matrix context verbatim — one entry per matrix value |
 | Attempt 3 (not attempted, documented) | Adding a roll-up job (`needs: integration-tests`, `name: integration-tests`) to produce the bare context | Adds a phantom job to every run, doubles required check count, and creates confusing debugging surface | Prefer updating the ruleset to match what the workflow emits, not restructuring the workflow to match an inflexible ruleset |
@@ -177,5 +177,5 @@ Required Checks / integration-tests (lsan)
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectKeystone | PR #451, branch `fix/security-scan-gitleaks-jq` | Ruleset ID 15556488, four sanitizer matrix values; PUT confirmed via API |

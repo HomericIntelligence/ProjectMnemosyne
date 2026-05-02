@@ -12,7 +12,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Problem** | `check_stale_patterns()` results were printed to stderr only; `post_to_pr()` was guarded by `if uncovered:`, so stale-only situations never appeared in the PR comment |
 | **Solution** | Add `stale_patterns` param to `generate_report()`, append `### Stale CI Patterns` section when non-empty, change guard to `if uncovered or stale_patterns:` |
 | **Follow-up from** | Issue #3358 (stale pattern detection) → Issue #4010 (surface in PR comment) |
@@ -33,7 +33,7 @@ user-invocable: false
 ### Quick Reference
 
 | Step | What to do |
-|------|-----------|
+| ------ | ----------- |
 | 1 | Add `Optional` to imports |
 | 2 | Add `stale_patterns: Optional[List[str]] = None` to `generate_report()` |
 | 3 | Append `### Stale CI Patterns` section inside `generate_report()` when non-empty |
@@ -160,7 +160,7 @@ class TestGenerateReportStalePatterns:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Combined guard `if post_pr and uncovered or stale_patterns:` | Operator precedence: `and` binds tighter than `or`, so the `stale_patterns` arm ran unconditionally | Python operator precedence — always parenthesize mixed `and`/`or` | Use `if post_pr and (uncovered or stale_patterns):` or separate the two cases |
 | Adding stale section inside the `if not uncovered:` branch | Stale section only appeared in the "all covered" path, not when uncovered files also existed | The section must be appended after both branches, unconditionally | Place stale section append after both `if/else` blocks, before `return` |
 

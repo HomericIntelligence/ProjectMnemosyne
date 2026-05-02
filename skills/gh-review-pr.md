@@ -11,7 +11,7 @@ version: 1.0.0
 ## Overview
 
 | Item | Details |
-|------|---------|
+| ------ | --------- |
 | Date | N/A |
 | Objective | Evaluate PR quality and provide structured feedback. - Reviewing a PR before merge - Evaluating code quality and standards |
 | Outcome | Operational |
@@ -105,7 +105,7 @@ Provide review with sections:
 ## Error Handling
 
 | Problem | Solution |
-|---------|----------|
+| --------- | ---------- |
 | PR not found | Verify PR number |
 | Auth failure | Check `gh auth status` |
 | CI pending | Note review based on current state |
@@ -113,7 +113,7 @@ Provide review with sections:
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Results & Parameters
 

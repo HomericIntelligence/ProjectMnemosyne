@@ -13,7 +13,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Objective** | Replace sparse or stale docstrings in Mojo test functions with accurate multi-line descriptions |
 | **Trigger** | Issue flags a test fn docstring as inaccurate or placeholder; test is already active and passing |
 | **Outcome** | Docstring updated, pre-commit passes, PR merged |
@@ -31,7 +31,7 @@ user-invocable: false
 ### Quick Reference
 
 | Step | Action |
-|------|--------|
+| ------ | -------- |
 | 1 | Read issue + comments to get exact target file/function/line |
 | 2 | Glob for the file (the original path may have changed due to splitting) |
 | 3 | Grep for function name to confirm current docstring |
@@ -126,7 +126,7 @@ Key rules:
 ### Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3904, PR #4824 | [notes.md](../references/notes.md) |
 
 ### Commit Message Template
@@ -142,7 +142,7 @@ Closes #<issue-number>
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Searching original file path | Globbed for `test_special_values.mojo` | File was split into `_part1/_part2/_part3` in a prior commit | Always glob with `*test_special_values*.mojo` when file might have been split |
 | Using Edit without Read | Called Edit tool immediately | Edit tool requires a prior Read of the file | Always Read first, even for a single-line change |
 | Assuming file was unchanged | Relied on line numbers from issue body | Issue said "lines 241-264" but split moved function to line 124 of `_part2` | Treat issue line numbers as hints only; Grep to confirm actual location |

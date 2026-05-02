@@ -21,7 +21,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-23 |
 | **Objective** | Migrate a shell-only GitOps repo (Myrmidons) from ad-hoc `curl` tool installs on ubuntu-latest to pixi-managed tooling, eliminating PATH shadowing and silent version mismatches |
 | **Outcome** | Operational — 51/51 unit tests pass, 44/44 harness tests pass, shellcheck clean |
@@ -184,7 +184,7 @@ git commit -m "feat: migrate CI tooling to pixi (go-yq v4, bats, shellcheck)"
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | `curl -o /usr/local/bin/yq` without sudo on ubuntu-latest | Downloaded mikefarah yq v4 to `/usr/local/bin/yq` | Appeared to succeed but ubuntu-latest's `/usr/bin/yq` (python-yq v3) took precedence in bats subshells; tests failed with `invalid input text 'tostring)'` | PATH ordering in subshells can differ from the runner's main shell — always verify with `which yq && yq --version` in the actual bats test context |
 | conda-forge package named `yq` | Added `yq` to `[dependencies]` in pixi.toml | Installs python-yq v3 (a jq Python wrapper), not Mikefarah's yq v4; expressions like `\| tostring` and `to_entries[]` are rejected | The conda-forge package `yq` is python-yq v3. Mikefarah's go-based yq v4 ships as **`go-yq`** on conda-forge |
 | `find tests -name '*.bats' \| while IFS='' read -r script` in CI | Discovered and ran all test scripts dynamically | Picked up standalone harness scripts (designed for manual use) that fail in CI with exit 127 due to missing environment setup | Use explicit `pixi run test-unit`, `pixi run test-schema` tasks instead of glob discovery; keeps job scopes clean |
@@ -197,7 +197,7 @@ git commit -m "feat: migrate CI tooling to pixi (go-yq v4, bats, shellcheck)"
 ### conda-forge Package Name Map (Critical)
 
 | Tool | conda-forge Package | Notes |
-|------|---------------------|-------|
+| ------ | --------------------- | ------- |
 | Mikefarah yq v4 | **`go-yq`** | Supports `\| tostring`, `to_entries[]`, all v4 expressions |
 | python-yq v3 | `yq` | jq wrapper; rejects v4 expressions; this is what ubuntu-latest ships |
 | shellcheck | `shellcheck` | Current version (0.10.x) |
@@ -306,5 +306,5 @@ If `which yq` returns `/usr/bin/yq` instead of `/usr/local/bin/yq` or the pixi p
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Myrmidons (HomericIntelligence/Myrmidons) | CI broken on main — ubuntu-latest PATH shadowing bug with yq | 51/51 unit tests, 44/44 harness tests, shellcheck clean after pixi migration |

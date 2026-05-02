@@ -13,7 +13,7 @@ user-invocable: true
 ## Overview
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Date** | 2026-03-03 |
 | **Objective** | Fix tier label mismatches in `.claude/shared/metrics-definitions.md` flagged by the March 2026 quality audit (issue #1348) |
 | **Outcome** | 19 label corrections across 4 sections; PR #1362 merged |
@@ -22,7 +22,7 @@ user-invocable: true
 ## Authoritative Tier Table (CLAUDE.md)
 
 | Tier | Name |
-|------|------|
+| ------ | ------ |
 | T0 | Prompts |
 | T1 | Skills |
 | T2 | Tooling |
@@ -64,7 +64,7 @@ The issue description said lines 239, 253, 267 were wrong — those were already
 Cross-reference each `T[0-9]` occurrence against the authoritative tier table:
 
 | Pattern That Is Wrong | Correct Replacement |
-|----------------------|---------------------|
+| ---------------------- | --------------------- |
 | `T2 (Skills)` | `T1 (Skills)` |
 | `T3 (Tooling)` | `T2 (Tooling)` |
 | `T4 (Delegation)` | `T3 (Delegation)` |
@@ -144,7 +144,7 @@ Copy-paste ready configurations and expected outputs.
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | N/A | Direct approach worked | N/A | Solution was straightforward |
 ## Key Observations
 
@@ -161,11 +161,11 @@ Copy-paste ready configurations and expected outputs.
 ## Results
 
 | File | Changes Applied |
-|------|----------------|
+| ------ | ---------------- |
 | `.claude/shared/metrics-definitions.md` | 19 label fixes across 4 sections: Future Instrumentation headers (5), Token Tracking section (5), Component Cost table (9) |
 
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | ProjectScylla | Issue #1348, PR #1362 | March 2026 4th quality audit; 19 corrections applied |

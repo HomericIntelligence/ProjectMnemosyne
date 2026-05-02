@@ -11,7 +11,7 @@ user-invocable: false
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Goal** | Extend bandit pre-commit hook to cover additional Python directories |
 | **Trigger** | New dirs added to project, or existing dirs not covered by bandit hook |
 | **Outcome** | All Python files scanned for security issues before commit |
@@ -56,7 +56,7 @@ user-invocable: false
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Extend scope without pre-scanning | Extended `files:` pattern directly and committed | B301 (pickle) violations in `examples/` would have broken CI | Always pre-scan new directories before extending hook scope |
 | Adding `# nosec` to all pickle calls | Considered adding `# nosec B301` to every `pickle.load()` call | More invasive than needed; 5 identical files would each need annotation | Prefer adding to `--skip` when the pattern is project-wide and intentional |
 
@@ -78,7 +78,7 @@ user-invocable: false
 ### Skip ID reference
 
 | ID | Rule | When to skip |
-|----|------|-------------|
+| ---- | ------ | ------------- |
 | B310 | `urllib` urlopen | Controlled/hardcoded URLs only |
 | B202 | `tarfile` extraction | Download scripts with known-safe archives |
 | B301 | `pickle.load` | Loading trusted local dataset files (e.g., CIFAR-10) |
