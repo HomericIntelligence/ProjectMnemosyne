@@ -67,7 +67,7 @@ Two valid templates:
 → §4 Comparison Tables → §5 Risks → §6 Open Questions → §7 Appendix
 ```
 
-**Thematic template:** `## Benefits vs Baseline X` sections  
+**Thematic template:** `## Benefits vs Baseline X` sections
 (exempt from strict §1–§7 order check for D1)
 
 Most common failures: missing §5 Risks, missing §6 Open Questions.
@@ -96,8 +96,8 @@ Failure mode: "As shown by Smith et al." without `[N]` or no References entry.
 KV_bytes = L_full_attn × 2 × H_kv × head_dim × seq_len × 2
 ```
 
-**Most common error — A2 KV@32K shown as ~68 GB:**  
-Root cause: using H_q=64 (query heads) instead of H_kv=8 (KV heads) in the formula.  
+**Most common error — A2 KV@32K shown as ~68 GB:**
+Root cause: using H_q=64 (query heads) instead of H_kv=8 (KV heads) in the formula.
 Correct: `64 × 2 × 8 × 128 × 32768 × 2 = 8.59 GB` (not 68 GB).
 
 **A1 derivation:**
@@ -163,7 +163,7 @@ For 39+ file corpora, partition files across 6 agents by file-number range:
 | G5 | Files 6.x (first half) | research_6_1 – 6_3 |
 | G6 | Files 6.x (second half) | research_6_4 – 6_7 |
 
-Each agent returns per-file scorecards (D1–D6 grades + weighted score + verdict).  
+Each agent returns per-file scorecards (D1–D6 grades + weighted score + verdict).
 Main context aggregates into corpus scoreboard and flags all WATCH/NO-GO files for remediation.
 
 ## Failed Attempts

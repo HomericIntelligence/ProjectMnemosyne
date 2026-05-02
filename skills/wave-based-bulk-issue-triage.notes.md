@@ -3,7 +3,7 @@
 ## Session Context
 
 - **Repository**: ProjectScylla
-- **Branch at start**: `skill/ci-cd/pr-rebase-pipeline`  
+- **Branch at start**: `skill/ci-cd/pr-rebase-pipeline`
 - **Issues open at start**: 55 open issues, 0 open PRs
 - **Issues resolved**: 8 (PRs #1051, #1052, #1053, #1055, #1056, #1057, #1058, #1059)
 

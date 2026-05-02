@@ -63,7 +63,7 @@ def add_overview_section(content: str) -> str:
     """Add ## Overview table after title."""
     date = extract_frontmatter_date(content)
     objective = extract_objective(content)
-    
+
     overview_table = f"""
 ## Overview
 
@@ -73,7 +73,7 @@ def add_overview_section(content: str) -> str:
 | Objective | {objective} |
 | Outcome | Operational |
 """
-    
+
     # Insert after H1 title
     lines = content.split('\n')
     insert_pos = find_title_position(lines)
@@ -102,7 +102,7 @@ N/A — this skill describes a workflow pattern.
 def add_verified_workflow_wrapper(content: str) -> str:
     """Wrap Quick Reference/Analysis Workflow under ## Verified Workflow."""
     workflow_sections = ['Quick Reference', 'Analysis Workflow', 'Usage']
-    
+
     for section_name in workflow_sections:
         pattern = f'^## {section_name}$'
         if re.search(pattern, content, re.MULTILINE):

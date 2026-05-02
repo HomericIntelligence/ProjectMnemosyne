@@ -70,7 +70,7 @@ def extract_objective(content: str) -> str:
     in_frontmatter = False
     past_title = False
     objective_lines = []
-    
+
     for line in lines:
         if line.strip() == '---':
             in_frontmatter = not in_frontmatter
@@ -84,7 +84,7 @@ def extract_objective(content: str) -> str:
             objective_lines.append(line.strip())
             if len(' '.join(objective_lines)) > 100:
                 break
-    
+
     objective = ' '.join(objective_lines)
     return objective[:147] + "..." if len(objective) > 150 else objective
 ```

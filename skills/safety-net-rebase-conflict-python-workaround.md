@@ -141,7 +141,7 @@ import subprocess, re, os
 def resolve_conflicts_and_continue(repo_path):
     """Run inside a worktree after `git rebase origin/main` stops at a conflict."""
     os.chdir(repo_path)
-    
+
     # Get conflicted files
     result = subprocess.run(['git', 'status', '--short'], capture_output=True, text=True)
     conflicted = [
@@ -149,7 +149,7 @@ def resolve_conflicts_and_continue(repo_path):
         for line in result.stdout.splitlines()
         if line[:2] in ('UU', 'AA', 'DD', 'AU', 'UA')
     ]
-    
+
     for filepath in conflicted:
         if filepath.endswith('.sh') or 'Dockerfile' in filepath:
             take_theirs(filepath)
@@ -160,7 +160,7 @@ def resolve_conflicts_and_continue(repo_path):
             take_ours(filepath)
         else:
             strip_conflicts_keep_theirs(filepath)
-    
+
     subprocess.run(['git', 'add'] + conflicted)
     subprocess.run(['git', '-c', 'core.editor=true', 'rebase', '--continue'])
 ```

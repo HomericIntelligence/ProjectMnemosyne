@@ -20,7 +20,7 @@ user-invocable: false
 ## When to Use This Skill
 
 - **Capture session context automatically** - Resume Claude Code sessions for post-implementation tasks
-- **Extract session IDs from Claude CLI** - Parse JSON output to get session identifiers  
+- **Extract session IDs from Claude CLI** - Parse JSON output to get session identifiers
 - **Add optional pipeline phases** - Integrate new phases into existing automation workflows
 - **Implement graceful degradation** - Add non-blocking features that enhance but don't break pipelines
 - **Design opt-in features** - Add capabilities disabled by default to avoid disrupting workflows
