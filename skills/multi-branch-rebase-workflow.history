@@ -1,0 +1,47 @@
+# multi-branch-rebase-workflow — History
+
+## v2.1.0 (2026-05-02)
+
+**Changed by:** Session — rebase 3 ProjectMnemosyne branches onto origin/main
+**Verification:** verified-local
+
+### What changed
+
+- Added markdown table separator conflict pattern to When to Use and Step 3
+- Added new Step 3 subsection: "Markdown table separator conflicts (`:---` vs `-------`)"
+- Added clarifying note to Step 6 (cleanup) about `git worktree prune` being a no-op when no stale worktrees exist
+- Added 2 new Failed Attempts rows: keeping `-------` separator style, and creating PR for 0-commits-ahead branch
+- Added "Markdown Separator Conflict Pattern" config block to Results & Parameters
+- Added Verified On section documenting both sessions (ProjectOdyssey 2026-04-03, ProjectMnemosyne 2026-05-02)
+- Added `verification` and `history` frontmatter fields
+
+### Why
+
+Previous v2.0.0 already covered the core pitfalls (--force-with-lease, GIT_EDITOR=true,
+worktrees for non-current branches) but did not document the markdown table separator
+conflict pattern. In a repo like ProjectMnemosyne where markdownlint compliance was
+enforced on main, all conflicts across 3 branches were this same formatting issue.
+The resolution rule (always keep main's `:---`) is non-obvious and worth documenting.
+
+### Previous version (v2.0.0) snapshot
+
+```
+---
+name: multi-branch-rebase-workflow
+description: 'Parallel multi-branch rebase with semantic conflict resolution and batch
+  PR creation. Includes prevention: ALWAYS branch from origin/main to avoid stale
+  bases. Use when: (1) creating feature branches (always from origin/main), (2) multiple
+  branches need rebasing, (3) semantic conflict resolution needed, (4) batch PR creation
+  after rebase.'
+category: tooling
+date: 2026-04-03
+version: 2.0.0
+user-invocable: false
+---
+```
+
+---
+
+## v2.0.0 (2026-04-03)
+
+**Initial version of this file** (prior history not recorded — skill was created/amended before history tracking was introduced).

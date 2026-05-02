@@ -1,14 +1,17 @@
 ---
 name: multi-branch-rebase-workflow
-description: 'Parallel multi-branch rebase with semantic conflict resolution and batch
-  PR creation. Includes prevention: ALWAYS branch from origin/main to avoid stale
-  bases. Use when: (1) creating feature branches (always from origin/main), (2) multiple
-  branches need rebasing, (3) semantic conflict resolution needed, (4) batch PR creation
-  after rebase.'
+description: >-
+  Parallel multi-branch rebase with semantic conflict resolution and batch PR creation.
+  Includes prevention: ALWAYS branch from origin/main to avoid stale bases. Use when:
+  (1) creating feature branches (always from origin/main), (2) multiple branches need
+  rebasing, (3) semantic conflict resolution needed, (4) batch PR creation after rebase,
+  (5) rebase conflicts are purely markdown table separator style differences.
 category: tooling
-date: 2026-04-03
-version: 2.0.0
+date: 2026-05-02
+version: 2.1.0
 user-invocable: false
+verification: verified-local
+history: multi-branch-rebase-workflow.history
 ---
 # Multi-Branch Rebase Workflow
 
@@ -29,6 +32,7 @@ user-invocable: false
 - Some branches have conflicts that require semantic understanding (not just accept-theirs/ours)
 - Batch PR creation is needed after rebase
 - Branches have varying complexity: some empty (already on main), some trivial, some with 20+ conflicts
+- Rebase conflicts are purely markdown table separator style — `main` uses `:---` (markdownlint-compliant) and branches use `-------` (plain dashes)
 
 ## Verified Workflow
 
@@ -129,6 +133,23 @@ git rebase --skip  # commit becomes empty, skip it
 
 **Trivial conflicts**: Use Edit tool to resolve conflict markers directly.
 
+**Markdown table separator conflicts** (`:---` vs `-------`): When main enforces markdownlint-compliant `:---` separators and branches use plain `-------` dashes, the conflict is purely formatting. Resolution rule:
+- **Always keep main's `:---` style** (it is markdownlint-compliant; `-------` fails CI)
+- This can appear multiple times across separate rebase commits — resolve identically each time
+- For **content+formatting conflicts** (branch changed real content AND separator style): keep the branch's content data, but use main's `:---` separator style
+
+```bash
+# Example conflict block — always resolve by keeping HEAD (main) version for separators:
+# <<<<<<< HEAD
+# | Col A | Col B |
+# | :--- | :--- |
+# =======
+# | Col A | Col B |
+# | ------- | ------- |
+# >>>>>>> branch-commit
+# Resolution: use the :--- version from HEAD
+```
+
 **Complex semantic merges (20+ conflicts)**: Delegate to a general-purpose sub-agent with explicit resolution rules per conflict group. Provide:
 - The file path and conflict count
 - Category of each conflict group (e.g., "arithmetic operators", "save/load methods")
@@ -156,9 +177,14 @@ Skip PRs for empty branches (0 commits ahead of main).
 ### Step 6: Cleanup
 
 ```bash
+# Remove the temp worktree for this branch
 git worktree remove /tmp/rebase-NAME
+
+# Prune stale worktree refs (no-op if only main worktree remains)
 git worktree prune
 ```
+
+Note: `git worktree prune` is always safe to run. If no stale worktrees exist it exits silently. It does NOT remove existing worktrees or delete branches.
 
 ## Failed Attempts
 
@@ -171,6 +197,8 @@ git worktree prune
 | Branched from detached HEAD in submodule | `git checkout -b chore/fix` from detached HEAD at old pin | Branch was based on stale commit, main had 3-10 new commits with governance files and CI fixes | Always `git fetch origin main` then branch from `origin/main` explicitly |
 | Branched from current branch without fetch | `git checkout -b feat/x` on submodule's current branch | Current branch was behind main | Specify `origin/main` as the start point |
 | Assumed main hadn't moved | Didn't fetch before branching | Main had governance files, CI fixes, coverage improvements merged since submodule pin | Always `git fetch origin main` first, even if you think main is up to date |
+| Kept `-------` separator in markdown conflict | Resolved markdown table separator conflict by keeping branch's `-------` style | Fails markdownlint MD055/table rules in CI | Always use main's `:---` separator style — it is the markdownlint-compliant form |
+| Treated 0-commits-ahead branch as needing PR | Rebased branch that turned out to be identical to main | Branch's content was already merged; rebase left 0 commits ahead | Check `git log --oneline origin/main..BRANCH` before creating a PR — skip if empty |
 
 ## Results & Parameters
 
@@ -216,3 +244,23 @@ split_docstring:  # 1 conflict
 final_block:  # 1 large conflict
   resolution: keep_both  # main's split/split_with_indices + branch's helpers
 ```
+
+### Markdown Separator Conflict Pattern (2026-05-02 Session)
+
+```yaml
+# ProjectMnemosyne — 3 branches, all conflicts were markdown table separator style
+branches_total: 3
+conflict_type: markdown_table_separators  # :--- (main) vs ------- (branch)
+branches_with_formatting_only_conflicts: 2
+branches_already_on_main: 1  # skill/radiance-sol-dtype-serving-estimates-v1-1 (0 commits ahead)
+resolution_rule: always_keep_main_style  # :--- is markdownlint-compliant
+worktree_pattern: /tmp/rebase-<slug>  # one per branch, removed after push
+push_strategy: --force-with-lease
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | 8 branches, 26-conflict semantic merge, 2026-04-03 | Full semantic rebase including submodule detached HEAD fix |
+| ProjectMnemosyne | 3 branches, markdown separator conflicts only, 2026-05-02 | All conflicts were `:---` vs `-------` table separator style |
