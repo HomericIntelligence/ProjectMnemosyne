@@ -164,10 +164,9 @@ For non-contiguous `(4,3)` with strides `[1,4]` (logical `[r,c] = r + 4c`):
 | `tile([1,2])` | `(2,3)` nc | `[0,2,4,0,2,4, 1,3,5,1,3,5]` |
 | `repeat(2, 0)` | `(2,3)` nc | `[0,2,4,0,2,4, 1,3,5,1,3,5]` |
 
-### ADR-009 Compliance
+### Test File Limit
 
-Limit each file to ≤10 `fn test_` functions to avoid Mojo v0.26.1 heap
-corruption (`libKGENCompilerRTShared.so`). With 7 tests this file fits in one
+Limit each file to ≤10 `fn test_` functions. With 7 tests this file fits in one
 file. If adding more ops, split to `_part2.mojo`.
 
 ### Mojo Docstring Rule

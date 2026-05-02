@@ -148,7 +148,7 @@ return result^
 **Critical**: `var new_shape = self._shape` fails with "cannot be implicitly
 copied" — always use `self._shape.copy()`.
 
-### 6. Write tests (ADR-009 split: ≤10 test functions per file)
+### 6. Write tests (≤10 test functions per file)
 
 **`test_extensor_slicing_view_strides.mojo`** — primitives:
 

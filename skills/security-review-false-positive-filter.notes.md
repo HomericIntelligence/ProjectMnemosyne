@@ -13,7 +13,7 @@ Modified files:
 - `shared/utils/file_io.mojo` — Mojo tensor checkpoint I/O utilities
 - `scripts/convert_image_to_idx.py` — image dataset conversion script
 - `tests/test_validate_test_coverage.py` — new unit test for coverage validation
-- `split_test_files.py` — utility to split oversized test files (ADR-009)
+- `split_test_files.py` — utility to split oversized test files
 
 ## Approach Used
 

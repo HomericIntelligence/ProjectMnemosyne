@@ -70,7 +70,7 @@ if len(target_shape) < len(shape):
 
 ### Step 5 — Write a dedicated test file
 
-Follow the project's ADR-009 convention (≤10 test functions per file). Create `test_<module>_part<N>.mojo` covering:
+Keep the per-file test count reasonable (≤10 test functions per file). Create `test_<module>_part<N>.mojo` covering:
 
 | Test | Expected |
 |------|----------|

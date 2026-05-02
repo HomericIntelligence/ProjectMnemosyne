@@ -62,16 +62,13 @@ byte_offset = offset * dtype_size
 
 ### Test run results
 
-All new tests pass. Pre-existing failures in `test_extensor_slicing_part3.mojo`
-and `test_slicing_part2.mojo` were confirmed as pre-existing by running `git stash`
-and verifying the same failures occurred on the base branch.
+All new tests pass. Pre-existing failures in related slicing test files were confirmed as pre-existing by running `git stash` and verifying the same failures occurred on the base branch.
 
 ## Gotchas
 
 1. `var x = some_list_field` in Mojo requires explicit `.copy()` — `List[Int]` is not
    `ImplicitlyCopyable`
-2. ADR-009: ≤10 test functions per file to avoid `libKGENCompilerRTShared.so` heap
-   corruption in Mojo v0.26.1
+2. Keep test files reasonably sized for maintainability
 3. Docstrings in Mojo must start with capital letter or non-alpha character —
    method names at the start require a prefix like `The` or `A`
 4. `is_contiguous()` check for the fast path is important because the non-contiguous

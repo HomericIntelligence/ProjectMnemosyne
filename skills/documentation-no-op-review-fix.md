@@ -50,7 +50,7 @@ git log --oneline -5
 
 ## Results & Parameters
 
-**Session context**: PR #3338 for issue #3150 — added ADR-009 to `docs/adr/README.md` index.
+**Session context**: PR #3338 for issue #3150 — added heap corruption workaround ADR entry to `docs/adr/README.md` index.
 
 **Fix plan conclusion**: "No fixes required. The PR correctly implements the issue deliverable."
 

@@ -7,8 +7,8 @@
 ## Context
 
 165 open issues without open PRs. User requested batch implementation of all
-low-difficulty issues in a single session, excluding 130 ADR-009 heap corruption
-splits (user-specified exclusion).
+low-difficulty issues in a single session, excluding 130 heap corruption split issues
+(user-specified exclusion).
 
 ## Classification Results
 

@@ -51,4 +51,4 @@ fn main():
 - `shared/core/layers/dropout.mojo` -- 24 lines changed
 - `shared/core/normalization.mojo` -- 187 lines changed (largest, most complex)
 - `shared/core/pooling.mojo` -- 12 lines changed
-- `docs/adr/ADR-009-heap-corruption-workaround.md` -- Fixed broken blog link
+- `docs/adr/` heap corruption workaround ADR -- Fixed broken blog link

@@ -278,21 +278,20 @@ var grad_output = ones(output.shape(), DType.float32)
 
 Do NOT hardcode the grad_output shape — use the computed output shape.
 
-### Step 9: Create a new split file (ADR-009)
+### Step 9: Create a dedicated file for batch tests
 
 ```mojo
-# ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
 """Tests for conv2d backward pass with batch>1 and/or multi-channel verification."""
 ```
 
-Create a new file (e.g., `test_backward_conv_pool_batch.mojo`) rather than adding to an existing file.
+Create a new file (e.g., `test_backward_conv_pool_batch.mojo`) to keep batch tests organized separately.
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Using `rtol`/`atol` in assert_almost_equal | Passed `rtol=1e-2, atol=1e-2` as keyword args | `assert_almost_equal` takes `tolerance: Float32`, not `rtol`/`atol` | Always check the actual Mojo function signature — differs from PyTorch/numpy |
-| Adding tests to existing file | Considered adding to `test_backward_conv_pool.mojo` | Would push the file over the ADR-009 ≤10 fn limit | Create a new `_batch.mojo` split file instead |
+| Adding tests to existing file | Considered adding to `test_backward_conv_pool.mojo` | File already had many tests; creating a dedicated file keeps concerns separated | Create a dedicated `_batch.mojo` file for batch-specific tests |
 | Using `randn` for test inputs | Considered seeded random inputs for variety | Seed-not-wired bug from prior learnings makes randn unreliable | Use deterministic all-ones/all-zeros — always analytically verifiable |
 | Using list literals for shapes | `List[Int](1, 3, 6, 6)` | Deprecated syntax flagged by pre-commit hook | Always use `List[Int]()` + `.append()` calls for shape construction |
 | Using `padding=2` for smaller overlap | Larger padding → more zero-padded region | Over-complicates analytical derivation; output spatial changes unless carefully sized | Stick to same-padding (padding=1, kernel=3) so output spatial = input spatial |

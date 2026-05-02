@@ -24,7 +24,7 @@ Consolidated skill for handling PR review plans that conclude no code changes ar
 ## When to Use
 
 - A `.claude-review-fix-<issue>.md` plan concludes "No problems found" or "No fixes required"
-- CI failure type is `execution crashed` (e.g. Mojo heap corruption / ADR-009 flake)
+- CI failure type is `execution crashed` (e.g. Mojo heap corruption flake)
 - The failing test files have no logical connection to the files changed in the PR
 - A PR shows red CI but only modifies documentation, configuration, or agent files
 - A fix plan says "already fixed" but CI still shows failures (fix may be local-only)
@@ -115,9 +115,9 @@ For each failing job, determine if it could plausibly be caused by the PR's diff
 - Agent/config-only changes cannot cause Mojo runtime crashes
 - Documentation-only changes cannot cause test execution failures
 - `link-check` failures from `CLAUDE.md` root-relative paths predate any PR
-- `execution crashed` = ADR-009 heap corruption flake (Mojo 0.26.1), not a regression
+- `execution crashed` = Mojo 0.26.1 heap corruption flake, not a regression
 
-**ADR-009 Mojo heap corruption signature:**
+**Mojo heap corruption signature:**
 ```
 error: execution crashed
 libKGENCompilerRTShared.so (segfault)
@@ -225,7 +225,7 @@ Conclusion: PR is ready to merge as-is. No commit needed.
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Assuming grep hits = real imports | Ran grep for scheduler imports, got 16 files | File still exists on this branch (21 commits behind main) | Always check `git log` and branch position before interpreting grep results |
-| Treating all CI failures as actionable | Investigated "Core Gradient" failures | They are ADR-009 heap corruption flakes unrelated to the PR | Read the failure type (`execution crashed`) and cross-reference with known flakes before investigating |
+| Treating all CI failures as actionable | Investigated "Core Gradient" failures | They are Mojo heap corruption flakes unrelated to the PR | Read the failure type (`execution crashed`) and cross-reference with known flakes before investigating |
 | Create empty fix commit | Ran `git commit --allow-empty` to satisfy automation | Empty commits add noise to history with zero value | Never fabricate work; if the plan says no fixes, do nothing |
 | Re-run grep to find missed issues | Searched codebase for remaining NOTE: comments | The review plan already covered this; extra work is out of scope | Trust the review plan; if it says clean, it is clean |
 | Assumed fix was pushed because plan said "already fixed" | Checked CI status without verifying remote branch | CI showed stale failures; fix commit was local-only | Always verify `git log origin/<branch>` vs local before concluding push state |

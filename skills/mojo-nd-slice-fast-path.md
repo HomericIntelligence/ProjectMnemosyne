@@ -116,7 +116,7 @@ else:
 `src_ptr + src_byte_offset` works because `UnsafePointer[UInt8]` pointer arithmetic is in bytes.
 `self._strides[0]` is in elements, so multiply by `dtype_size` to get bytes.
 
-### Step 5 — Tests (ADR-009: ≤10 fn per file)
+### Step 5 — Tests (≤10 fn per file)
 
 Five tests cover the critical cases:
 

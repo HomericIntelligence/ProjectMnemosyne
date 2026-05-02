@@ -52,7 +52,7 @@ if len(pred_shape) == 1:
 ### `tests/training/test_confusion_matrix_dtype_guard.mojo` (new)
 
 6 test functions covering float32/float64 rejection and int32/int64/2D acceptance.
-File kept ≤10 tests per ADR-009 (Mojo v0.26.1 heap corruption workaround).
+File has 6 test functions.
 
 ## Key Decisions
 
@@ -65,9 +65,7 @@ File kept ≤10 tests per ADR-009 (Mojo v0.26.1 heap corruption workaround).
 3. **Error message includes accepted types**: "requires int32 or int64, got float32"
    tells the caller exactly what to fix.
 
-4. **Separate test file**: Per ADR-009, split files keep total test count ≤10 per file
-   to avoid the Mojo v0.26.1 heap corruption issue with
-   `libKGENCompilerRTShared.so` under high test load.
+4. **Separate test file**: Keeps dtype guard tests organized in their own file.
 
 ## IEEE 754 Corruption Example
 

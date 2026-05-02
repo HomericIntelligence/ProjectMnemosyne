@@ -45,7 +45,7 @@ user-invocable: false
    ls docs/adr/
    ```
 
-   Read one recent ADR (e.g., ADR-009) to match structure — Status, Date, Issue Reference,
+   Read one recent ADR to match structure — Status, Date, Issue Reference,
    Executive Summary, Context, Decision, Rationale, Consequences, Alternatives, Implementation
    Plan, References, Revision History, Document Metadata.
 

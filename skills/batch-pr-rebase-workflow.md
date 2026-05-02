@@ -749,7 +749,7 @@ gh api repos/{owner}/{repo}/branches/main --jq '.protection.required_status_chec
 | `E501 Line too long` | Break long string literals across multiple lines |
 | `S101 use of assert` | Use `if x is None: raise ImportError(...)` pattern instead |
 | `check-mypy-counts: MYPY_KNOWN_ISSUES.md is out of date` | `python scripts/check_mypy_counts.py --update` |
-| ADR-009 heap crashes (`mojo: error: execution crashed`) | NOT real failures — rerun: `gh run rerun <RUN_ID> --failed` |
+| Transient Mojo heap crashes (`mojo: error: execution crashed`) | NOT real failures — rerun: `gh run rerun <RUN_ID> --failed` |
 
 **Self-catch expanded-scope pre-commit hook:**
 When a PR widens a hook (e.g., from one file to `*.md`) and the wider scan catches pre-existing violations in other files the PR didn't touch:
@@ -1095,13 +1095,13 @@ git fetch origin main && git pull --ff-only origin main
 | `git checkout main 2>&1` | Used `2>&1` redirect with git checkout | Safety Net parsed `2>&1` as positional args | Use `git switch` instead of `git checkout` to avoid safety net issues |
 | `git branch -D temp-N` | Force-deleted temp branch | Safety Net blocked `-D` flag | Use `git branch -d` (safe delete) instead |
 | `git checkout -` to return to branch | Safety Net blocked "checkout with multiple positional args" | Hook pattern-matched on args | Use `git switch <branch-name>` explicitly |
-| Rebase PR with file splits | Attempted rebase of PR that splits 20+ test files | modify/delete conflicts everywhere, new content from main would be lost | PRs that restructure files after main diverges significantly need re-implementation, not rebasing |
+| Rebase PR with large-scale file restructuring | Attempted rebase of PR that restructures 20+ test files | modify/delete conflicts everywhere, new content from main would be lost | PRs that restructure files after main diverges significantly need re-implementation, not rebasing |
 | Parallel processing in shared working tree | Considered processing PRs in parallel without worktrees | Git state confusion risk; agents left stale rebase-in-progress state | Sequential processing in shared tree is safer; use worktrees for parallel |
 | `&&` chaining grep with git add | `grep -c "<<<" file && git add file && git rebase --continue` | grep exit code 0 but file was modified by linter between edit and add | Check `git status` for UU (unmerged) state; re-add after linter modifies |
 | Direct push fix to protected branch | Tried pushing marketplace.json update directly from workflow | GH006: Protected branch update failed — requires PR | All changes to main must go through PRs even from CI bots |
 | Force-with-lease after repeated rebases | PR kept going DIRTY as main advanced during rebase session | 100 PRs auto-merging rapidly kept advancing main faster than rebases completed | Accept transient DIRTY states — auto-merge will handle them once CI passes |
 | Running `pixi run mojo format` locally | Tried to format files to fix pre-commit | GLIBC_2.32/2.33/2.34 not found on dev machine | Read CI logs instead; the diff shows exact changes needed |
-| `gh run rerun` on still-running workflow | Tried to rerun ADR-009 crashes before new push | "run cannot be rerun; This workflow is already running" | Pushing a new commit triggers fresh CI automatically |
+| `gh run rerun` on still-running workflow | Tried to rerun transient crashes before new push | "run cannot be rerun; This workflow is already running" | Pushing a new commit triggers fresh CI automatically |
 | `--ours` for extensor.mojo when branch adds new methods | Kept HEAD version thinking it already had everything | HEAD was missing `__hash__[H: Hasher]` — the correct trait impl | Always check what new content the branch adds; don't blindly use `--ours` |
 | Adding `Hashable` to struct without `Representable` | Took branch struct declaration that dropped `Representable` | Struct missing `Representable` breaks `__repr__` trait satisfaction | Always merge trait lists from both sides |
 | Cherry-pick with `--no-commit` | Used `git cherry-pick --no-commit` to test conflicts before committing | `git cherry-pick --abort` wiped ALL prior staged changes | Always commit each cherry-pick individually; abort only undoes the current one |

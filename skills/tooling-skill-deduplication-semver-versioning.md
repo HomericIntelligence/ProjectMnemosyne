@@ -18,13 +18,13 @@ tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
 |-------|-------|
 | **Date** | 2026-03-28 |
 | **Objective** | Merge duplicate skill clusters into consolidated skills, with semantic versioning for amendments |
-| **Outcome** | Six rounds: 16 adr009-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5); 9 conv2d-gradient-* merged to 3 (net -6); 12 adr009-test-splitting-* merged to 3 (net -9); 4 adr009-* merged to 1 with OBSOLETE notice (net -3). |
+| **Outcome** | Six rounds: 16 test-splitting-* merged to 3 (net -13); 10 mojo-test-* merged to 1 (net -9); 6 deprecated-file-cleanup-* merged to 1 (net -5); 9 conv2d-gradient-* merged to 3 (net -6); 12 test-splitting-* merged to 3 (net -9); 4 test-splitting-* merged to 1 with OBSOLETE notice (net -3) after heap corruption was fixed at compiler level. |
 | **Verification** | verified-ci |
 | **History** | [changelog](./tooling-skill-deduplication-semver-versioning.history) |
 
 ## When to Use
 
-- Multiple skills share a common prefix (e.g., `adr009-*`, `pr-review-*`, `mojo-test-*`)
+- Multiple skills share a common prefix (e.g., `pr-review-*`, `mojo-test-*`)
 - `/advise` returns redundant or contradictory advice for the same topic
 - Need to identify duplicate clusters in a large skills registry (900+ skills)
 - Need algorithmic detection of semantic duplicates (not just prefix matching)
@@ -56,7 +56,7 @@ done
 
 1. List all skill names, extract 2-part prefixes, count occurrences
 2. Focus on clusters with 3+ skills sharing a prefix
-3. Read descriptions to sub-group within each cluster (e.g., adr009-* split into: test-splitting, CI-patterns, audit)
+3. Read descriptions to sub-group within each cluster (e.g., test-splitting-* split into: workflow, CI-patterns, audit — these were later consolidated to one with OBSOLETE notice after the heap corruption was fixed at compiler level)
 
 **Phase 2: Merge each sub-group**
 
@@ -185,19 +185,19 @@ done
 | Cross-category consolidation | Source skills had mismatched categories (e.g., one marked `documentation`, rest `tooling`) | Category was set per-skill rather than reflecting the actual content topic | When consolidating, pick the most accurate category for the merged skill's actual function, not just the majority |
 | Over-splitting subtopics | Planned 9 conv2d skills into more than 3 groups | Content analysis showed clear 3-way split: finite-difference checks, depthwise-specific quirks, analytical-value tests | Group by actual usage scenario (how the tests are written), not by file naming pattern |
 | Depthwise mixed with standard conv2d | Considered merging depthwise into the standard conv2d finite-differences skill | Depthwise has critical API differences (kernel shape, field names, tolerance API) that warrant a dedicated skill | Even when topics are adjacent, separate skills when the API contract differs significantly |
-| Assuming one-time merges are durable | Merged adr009-* cluster in Round 1 (16->3), assumed stable | /learn calls after the merge created 9 new duplicate skills covering the same adr009 split topic | Deduplication is not permanent; re-duplication occurs organically — schedule periodic re-consolidation passes |
+| Assuming one-time merges are durable | Merged test-splitting-* cluster in Round 1 (16->3), assumed stable | /learn calls after the merge created 9 new duplicate skills covering the same topic | Deduplication is not permanent; re-duplication occurs organically — schedule periodic re-consolidation passes; also note that test-splitting itself became obsolete when the underlying compiler bug was fixed |
 | Plan agent underestimating duplicates | Asked plan agent to identify duplicates before executing | Plan agent only checked exact name matches (~10 found), actual semantic grouping found ~42 | Always run algorithmic pass (prefix grouping + SequenceMatcher) — plan agents miss semantic duplicates |
 | Reading all 975 skill files | Tried to read every skill .md file to find duplicates | Extremely slow; 975 file reads times out and wastes context | Use marketplace.json which has names + descriptions — no need to read individual files for detection phase |
 | Committing directly to main | Made dedup commits directly on main branch | Bypasses PR review process; user corrected immediately | Always use a feature branch (`skill/<name>`) via git worktree, even for registry cleanup work |
 | Planning merges without checking file existence | Identified 42 duplicate groups from analysis, started merging | Many skills existed only in git history (prior sessions already merged them on main) | Always `ls skills/<name>.md` before attempting to read or merge — skip gracefully if missing |
 | Sequential agent execution for large batches | Ran merge agents one-at-a-time for 22 groups | Very slow for 42 absorptions across 22 groups | Run 3 agents in parallel, each handling 2 groups — 6x faster, no conflicts when touching different files |
-| Stopping at 3 when topic is OBSOLETE | Round 5 consolidated 12 adr009 skills to 3 sub-skills | When the underlying topic (ADR-009 workaround) was declared OBSOLETE, the 3-file structure fragmented the OBSOLETE notice | When a topic is OBSOLETE, consolidate further to 1 file — the obsolescence notice is the dominant content |
+| Stopping at 3 when topic is OBSOLETE | Round 5 consolidated 12 test-splitting skills to 3 sub-skills | When the underlying topic was declared OBSOLETE (heap corruption fixed at compiler level), the 3-file structure fragmented the OBSOLETE notice | When a topic is OBSOLETE, consolidate further to 1 file — the obsolescence notice is the dominant content |
 
 ## Results & Parameters
 
 ### Deduplication Results
 
-**Round 1: ADR-009 cluster (2026-03-25)**
+**Round 1: test-splitting cluster (2026-03-25)**
 
 ```yaml
 skills_before: 16
@@ -231,7 +231,7 @@ unique_lessons_preserved: 8 Failed Attempts rows
 consolidated_into: deprecated-file-stub-cleanup
 ```
 
-**Round 5: ADR-009 test splitting second pass (2026-03-28)**
+**Round 5: test-splitting second pass (2026-03-28)**
 
 ```yaml
 skills_before: 12
@@ -241,22 +241,23 @@ files_deleted: 19 (12 .md + 5 .notes.md + 1 .history + 1 extra notes)
 lines_deleted: 2745
 lines_added: 553
 split_into:
-  - adr009-test-file-split-workflow (ci-cd): how to split — full CI pattern fork, import audit, compile hang variant
-  - adr009-split-audit-recovery (testing): codebase audit, batch issue creation, dropped-test recovery
-  - adr009-desplit-merge-workflow (testing): reversing splits; CRITICAL dedup bug where struct defs get "<top-level>" name
+  - test-file-split-workflow (ci-cd): how to split — full CI pattern fork, import audit, compile hang variant
+  - split-audit-recovery (testing): codebase audit, batch issue creation, dropped-test recovery
+  - desplit-merge-workflow (testing): reversing splits; CRITICAL dedup bug where struct defs get "<top-level>" name
 key_insight: prior round merged these to 3, but subsequent /learn calls recreated 9 more duplicates — re-consolidation needed
 ```
 
-**Round 6: ADR-009 OBSOLETE consolidation (2026-03-28)**
+**Round 6: test-splitting OBSOLETE consolidation (2026-03-28)**
 
 ```yaml
 skills_before: 4
 skills_after: 1
 net_reduction: 3 skills (-75%)
-files_deleted: 3 (adr009-split-audit-recovery.md, adr009-desplit-merge-workflow.md, adr009-ci-pattern-updates.md)
-motivation: ADR-009 was fixed at compiler level; needed single skill with prominent OBSOLETE notice
+files_deleted: 3 (split-audit-recovery.md, desplit-merge-workflow.md, ci-pattern-updates.md)
+motivation: heap corruption workaround was fixed at compiler level; needed single skill with prominent OBSOLETE notice
 key_insight: when a topic is OBSOLETE, consolidate to 1 even if subtopics were well-organized into 3
 obsolete_notice_position: immediately after Overview table (before "When to Use")
+note: test-file splitting was a workaround for a Mojo 0.26.1 heap corruption bug; the bug was fixed at compiler level so the practice is no longer required
 ```
 
 **Round 4: Conv2D gradient testing cluster (2026-03-28)**
@@ -315,16 +316,16 @@ key_insights:
 5  batch-pr-*
 ```
 
-Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-file-*` cluster (was 6) resolved in PR #1077 (6->1). `conv2d-gradient-*` cluster (was 9) resolved in PR #1080 (9->3). ADR-009 second pass (12 re-duplicated) resolved in PR #1086 (12->3). ADR-009 OBSOLETE pass resolved in PR #1097 (4->1).
+Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-file-*` cluster (was 6) resolved in PR #1077 (6->1). `conv2d-gradient-*` cluster (was 9) resolved in PR #1080 (9->3). test-splitting second pass (12 re-duplicated) resolved in PR #1086 (12->3). test-splitting OBSOLETE pass resolved in PR #1097 (4->1).
 
 ## Verified On
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectMnemosyne | PR #1040, merged 16 adr009 skills + added semver | 2026-03-25 session |
+| ProjectMnemosyne | PR #1040, merged 16 test-splitting skills + added semver | 2026-03-25 session |
 | ProjectMnemosyne | PR #1075, merged 10 mojo-test-* skills into 1 | 2026-03-27 session |
 | ProjectMnemosyne | PR #1077, merged 6 deprecated-file-cleanup-* skills into 1 | 2026-03-28 session |
 | ProjectMnemosyne | PR #1080, merged 9 conv2d-gradient-* skills into 3 | 2026-03-28 session |
-| ProjectMnemosyne | PR #1086, re-consolidated 12 adr009-test-splitting-* skills into 3 (cluster re-duplicated after prior merge) | 2026-03-28 session |
-| ProjectMnemosyne | PR #1097, consolidated 4 adr009-* skills to 1 with prominent OBSOLETE notice (ADR-009 fixed at compiler level) | 2026-03-28 session |
+| ProjectMnemosyne | PR #1086, re-consolidated 12 test-splitting skills into 3 (cluster re-duplicated after prior merge) | 2026-03-28 session |
+| ProjectMnemosyne | PR #1097, consolidated 4 test-splitting skills to 1 with prominent OBSOLETE notice (heap corruption fixed at compiler level) | 2026-03-28 session |
 | ProjectMnemosyne | PR pending, algorithmic dedup of 975 skills → 933 (-42 net) via marketplace.json + SequenceMatcher + 22 merge groups | 2026-04-07 session |

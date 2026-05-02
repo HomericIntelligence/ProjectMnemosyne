@@ -131,7 +131,7 @@ Create `tests/shared/autograd/test_top_level_optimizer_imports.mojo`
 (or update `tests/shared/test_imports.mojo`):
 
 ```mojo
-# ADR-009: ≤10 fn test_ functions per file (heap corruption workaround)
+# ≤10 fn test_ functions per file
 from shared import AdaGrad, RMSprop, SGD, Adam, AdamW
 
 fn test_adagrad_top_level_import() raises:
@@ -261,7 +261,7 @@ This limitation is documented in `shared/__init__.mojo` under "Re-export Chain L
 | Mojo version | 0.26.1 (pinned in pixi.toml) |
 | Import path | `shared.autograd.optimizers` (absolute, direct to defining module) |
 | Test assertion | `assert_almost_equal(opt.get_lr(), expected, tolerance=1e-10)` |
-| Test functions per file | ≤10 (ADR-009 heap corruption workaround) |
+| Test functions per file | ≤10 per file |
 | AdamW weight_decay default | `0.01` (not `0.0` like Adam) |
 
 ## Verified On

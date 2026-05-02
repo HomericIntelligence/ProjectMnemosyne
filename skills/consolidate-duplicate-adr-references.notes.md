@@ -21,7 +21,7 @@ would be cleaner than cross-referencing between two function docstrings.
    comment, specifying exact lines to change and ADR structure to follow.
 
 2. Read existing ADR files to match structure:
-   - `docs/adr/ADR-009-heap-corruption-workaround.md` (most recent, used as template)
+   - `docs/adr/` heap corruption workaround ADR (most recent at the time, used as template)
    - `docs/adr/README.md` (to find index format and next ADR number)
 
 3. Read `shared/training/mixed_precision.mojo` around lines 239–360 to see the exact

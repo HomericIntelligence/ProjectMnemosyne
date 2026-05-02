@@ -3,8 +3,8 @@ name: mojo-bitcast-always-inline-crash-fix
 description: "Fix Mojo 0.26.1 UAF crashes from bitcast pointer writes. Use when: (1)
   libKGENCompilerRTShared.so crash in CI showing 3 fixed frames (0x3cb78b/0x3c93c6/0x3cc397),
   (2) heap corruption after bitcast writes in dtype conversion functions, (3) ASAP
-  destruction invalidating pointers before write completes, (4) ADR-009 workaround marked
-  Resolved but source still has UAF writes."
+  destruction invalidating pointers before write completes, (4) file-splitting workaround
+  marked Resolved but source still has UAF writes."
 category: debugging
 date: '2026-03-27'
 version: "1.1.0"
@@ -36,7 +36,7 @@ tags:
 - Methods that use `ptr.bitcast[T]()` to write tensor data crash intermittently
 - Working `load[dtype]`/`store[dtype]` methods have `@always_inline` but similar methods without it crash
 - Dtype conversion functions (`to_int8`, `to_fp8`, block packing functions) crash
-- ADR-009 was marked "Resolved" but crashes persist — fix may have been applied to test callers, not source
+- File-splitting workaround was marked "Resolved" but crashes persist — fix may have been applied to test callers, not source
 
 ## Verified Workflow
 
@@ -117,9 +117,9 @@ tensor._set_int64(index, Int64(value))
 7. **Replace any local deep-copy functions** with `AnyTensor.clone()` to avoid duplicate
    bitcast code paths.
 
-### ADR-009 "Resolved" Trap
+### "Resolved" Trap
 
-If ADR-009 is marked "Resolved" but crashes persist:
+If a crash workaround is marked "Resolved" but crashes persist:
 
 - The fix was likely applied only to **test callers**, not the **source functions**
 - Source files like `any_tensor.mojo` can have 20+ UAF write sites in dtype conversion
@@ -131,7 +131,7 @@ If ADR-009 is marked "Resolved" but crashes persist:
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Removing debug_assert | Removed debug_assert from load/store/data_ptr (commit dbc94176c) | Fixed JIT buffer overflow but not the bitcast crash — different root cause | debug_assert removal and @always_inline fix address different crash mechanisms |
-| ADR-009 file splitting | Split test files to 10 fn test_ functions | Reduced frequency but did not eliminate crashes — real issue is pointer lifetime | File splitting is a workaround, not a root cause fix |
+| Test file splitting | Split test files to 10 fn test_ functions | Reduced frequency but did not eliminate crashes — real issue is pointer lifetime | File splitting is a workaround, not a root cause fix |
 | Local reproduction | Ran tests 20+ times locally to reproduce | All passed locally — crash is CI-only due to different JIT optimization levels | Mojo JIT behavior differs between local and CI environments |
 | Fixing test callers only | Applied UAF fixes to test code while source functions still had the UAF writes | Source `any_tensor.mojo` had ~20 UAF writes in dtype conversion functions | Always search source files for UAF writes — do not trust "Resolved" ADR status |
 | Retrying CI runs | Rerunning failed CI jobs | Retrying masks root causes; crashes recur on subsequent runs | Investigate and fix the actual UAF write site |

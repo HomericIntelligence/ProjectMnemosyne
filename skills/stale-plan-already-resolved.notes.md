@@ -4,7 +4,7 @@
 
 - **Date**: 2026-03-15
 - **Issue**: ProjectOdyssey #4280 "Update CI Models pattern to use glob for part files"
-- **Follow-up from**: #3458 (split test_googlenet_layers.mojo per ADR-009)
+- **Follow-up from**: #3458 (split test_googlenet_layers.mojo)
 - **Branch**: 4280-auto-impl
 - **PR created**: #4880
 
@@ -47,7 +47,7 @@ Between plan creation and this session, another PR consolidated the pattern to `
 
 ### The Part Files
 
-The issue plan also said "no _partN files yet — this is proactive prevention" but by the time
+The issue plan also said "no `_partN` files yet — this is proactive prevention" but by the time
 of this session, the part files already existed:
 
 ```
@@ -69,9 +69,8 @@ Since `test_*.mojo` already covers all part files:
 ### Change Made
 
 ```diff
-- # ADR-009: test_googlenet_layers.mojo split into 3 parts (≤8 tests each)
-- # to avoid Mojo v0.26.1 heap corruption under high test load.
-+ # test_*.mojo glob auto-discovers all model tests including ADR-009 _partN split files
+- # test_googlenet_layers.mojo split into 3 parts (≤8 tests each)
++ # test_*.mojo glob auto-discovers all model tests including _partN split files
 + # (e.g., test_googlenet_layers_part1.mojo) without requiring manual CI updates.
 ```
 

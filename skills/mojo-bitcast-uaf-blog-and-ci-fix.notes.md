@@ -9,7 +9,7 @@ created blog PR on separate branch off main, fixed multiple CI failures, and reb
 
 ## Key Events
 
-1. Read existing blog post, ADR-009, and deprecated LeNet-5 monolithic test file
+1. Read existing blog post, heap corruption workaround ADR, and deprecated LeNet-5 monolithic test file
 2. Created `blog/day-53-unsafe-pointer-investigation` branch off main
 3. Wrote expanded blog with Prologue covering Dec 2025 → Mar 2026 history
 4. Copied LeNet-5 monolithic file as artifact
@@ -49,6 +49,6 @@ created blog PR on separate branch off main, fixed multiple CI failures, and reb
 ## Upstream References
 
 - [modular/modular#6187](https://github.com/modular/modular/issues/6187) — UnsafePointer.bitcast UAF
-- [ADR-009](docs/adr/ADR-009-heap-corruption-workaround.md) — file split workaround (same bug)
+- heap corruption workaround ADR (`docs/adr/`) — file split workaround (same bug; now obsolete as the compiler bug was fixed)
 - PR #4900 — blog post (merged)
 - PR #4897 — fix branch

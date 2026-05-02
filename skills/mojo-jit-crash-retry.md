@@ -38,8 +38,6 @@ tags:
 - **Determinism**: 100% deterministic — same offsets every run, crashes after ~15 cumulative tests in one file
 - **Trigger**: `List[Int]` struct churn + bitcast write to tensor data
 - **Fix**: ADR-013 bitcast UAF fix (2026-03-20) — **fully resolved**
-- **INVALID workaround** (do not apply): splitting test files to ≤10 functions (ADR-009)
-  — ADR-009 was written for Crash 1, which is now resolved
 
 ### Crash 2 — `__fortify_fail_abort` / HOME Directory Permission (CI-ONLY)
 
@@ -71,13 +69,6 @@ tags:
 | `execution crashed` BEFORE any test output + variable stack offsets | Crash 3 — volume overflow | Audit imports; convert to targeted submodule imports |
 | `execution crashed` AFTER test output at ~15th test, fixed offsets `+0x3cb78b` | Crash 1 — bitcast UAF | Already resolved by ADR-013; verify bitcast fix was applied |
 | Crash after test output with assertion message | Real test bug | Debug the assertion |
-
-### ADR-009 Status: INVALID
-
-The ADR-009 constraint ("≤10 test functions per file") was written as a workaround for Crash 1
-(bitcast UAF). Crash 1 is resolved by ADR-013. Applying ADR-009 file splits to Crashes 2 or 3
-does nothing — the crash triggers before the test runner even starts. Removing stale
-`# ADR-009:` annotations from test files is correct cleanup, not regression.
 
 ## When to Use
 
@@ -479,58 +470,13 @@ fn main():
 | JIT Compilation Volume Crash | `repro/repro_jit_volume_crash.mojo` | `repro/issues/jit-compilation-volume-crash.md` |
 | ASAN + Python FFI dlsym Conflict | — | `repro/issues/asan-dlsym-abort.md` |
 
-### Step 5: Split Test Files for Deterministic Heap Corruption
-
-When crashes are deterministic (always at the same Nth call), the root cause is JIT heap corruption that accumulates across sequential test calls — not a code bug.
-
-**Safe limits by network scale**:
-
-| Network Scale | Safe Tests Per File | Notes |
-|--------------|--------------------|----|
-| Shallow (≤5 layers) | ≤10 | Standard Mojo guidance |
-| Medium (6–10 layers) | ≤7 | LeNet-5, small ResNets |
-| Deep (11+ layers) | ≤5 | VGG-16, ResNet-50 |
-
-**Split workflow**:
-
-1. Count test functions:
-   ```bash
-   grep -c "^fn test_" tests/models/test_my_model_e2e.mojo
-   ```
-
-2. Create `_part1.mojo` and `_part2.mojo` with ADR-009 header:
-   ```mojo
-   # ADR-009: This file is intentionally limited to <=10 fn test_ functions.
-   # Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
-   # high test load. Split from test_<model>_e2e.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
-   ```
-
-3. Duplicate any shared helpers (`conv_block`, `forward`) in both files — Mojo has no `include` mechanism.
-
-4. Split tests:
-   - **Part 1**: forward pass tests, training tests (heavier)
-   - **Part 2**: gradient checks, output range, numerical stability (lighter)
-
-5. Update each file's `main()` to only call the tests it contains.
-
-6. Delete original: `git rm tests/models/test_my_model_e2e.mojo`
-
-7. Verify CI uses glob discovery (no workflow changes needed if using `test_*.mojo` pattern).
-
-**Naming convention**:
-```text
-test_<model>_e2e.mojo        → deleted
-test_<model>_e2e_part1.mojo  → forward/training tests
-test_<model>_e2e_part2.mojo  → gradient/numerical/stability tests
-```
-
-### Step 6: Document the Crash (when creating a dev doc)
+### Step 5: Document the Crash (when creating a dev doc)
 
 For `docs/dev/mojo-jit-crash-workaround.md`, include:
 - **Problem** — what `execution crashed` means and that it originates in `libKGENCompilerRTShared.so`
 - **Diagnosis table** — crash before vs. after test output
 - **Workaround: CI Retry Pattern** — shell retry loop + GitHub Actions `nick-fields/retry` snippet
-- **Relationship to ADR-009** — comparison table distinguishing JIT flake (non-deterministic, retry) from heap corruption (deterministic, file split)
+- **Crash type comparison** — table distinguishing JIT flake (non-deterministic, retry) from heap corruption (deterministic, use ASAN to find root cause)
 - **Long-term resolution** — checklist for what to remove when upgrading Mojo
 
 Add cross-reference in `docs/dev/mojo-test-failure-patterns.md`:
@@ -579,7 +525,7 @@ pattern for hook exceptions. Never use `--no-verify`.
 | Region-specific theory | Checked if specific Azure region always fails | Crashes occur on multiple regions; others pass sometimes | Azure region is not the determining factor |
 | Reduce batch size | Halved batch_size from 4 to 2 in all tests | Crash still occurs — root cause is cumulative JIT memory across test calls, not per-call memory | Batch size is not the root cause; number of sequential JIT compilations is |
 | Use smaller model variant | Considered using fewer channels (e.g., VGG-8) | Would change test semantics | Keep the real model, reduce the number of calls per session instead |
-| Add teardown between tests | Mojo has no per-test teardown hooks in v0.26.1 | Not applicable — Mojo `main()` runs tests sequentially with shared JIT state | File splitting is the only reliable workaround |
+| Add teardown between tests | Mojo has no per-test teardown hooks in v0.26.1 | Not applicable — Mojo `main()` runs tests sequentially with shared JIT state | Fix the root cause with ASAN rather than working around it |
 | Blind retry-all loop | Original retry retried ALL failures, not just crashes | Wasted CI time retrying normal assertion failures | Only retry on `grep -q "execution crashed"` |
 | Using `tee` + `${PIPESTATUS[0]}` for capture | Stream output in real-time while capturing | Works but adds temp file complexity | `$(... 2>&1)` with immediate `echo` is simpler for short test output |
 | Separate crash-check run | Run mojo twice: once to capture, once to check exit code | Doubles execution time unnecessarily | Capture once with `$()`, check exit code and output from same run |

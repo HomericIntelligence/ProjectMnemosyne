@@ -89,7 +89,7 @@ Raises:
 
 ### Step 4 — Write targeted tests
 
-Create a new ADR-009-compliant test file (≤10 `fn test_` functions):
+Create a new test file with ≤10 `fn test_` functions:
 
 ```mojo
 fn test_multidim_step2_first_dim_raises() raises:
@@ -147,7 +147,7 @@ gh pr create --title "fix(extensor): raise Error when multi-dim slice step != 1"
 **Lines inserted**: ~14 (validation loop + comment)
 **Test file**: `tests/shared/core/test_extensor_multidim_step.mojo`
 **Test functions**: 6
-**ADR-009 file limit**: ≤10 `fn test_` per file (respected)
+**File limit**: ≤10 `fn test_` per file (respected)
 
 **Key `or_else` pattern** — Mojo `Optional[Int]` step default:
 

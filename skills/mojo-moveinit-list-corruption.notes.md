@@ -48,7 +48,7 @@ move the whole struct.
 ## What we actually shipped
 
 1. `shared/testing/layer_testers.mojo` — mojo format fix (3 long ternaries wrapped)
-2. `docs/adr/ADR-009-heap-corruption-workaround.md` — revision 1.1 with finding #6
+2. `docs/adr/` heap corruption workaround ADR — revision 1.1 with finding #6
 
 The heap corruption root cause (why 15+ ExTensor tests in one file crash)
 remains unresolved. The file-splitting workaround stays in place.

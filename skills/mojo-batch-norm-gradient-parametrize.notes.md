@@ -36,7 +36,7 @@ for `batch_size=1`.
 The approach taken was:
 1. Private `fn _check_<grad>_batch_size(batch_size: Int)` helpers
 2. Public `fn test_` functions that call the helper for [1, 2, 4]
-3. 3 public test functions total — well within ADR-009's ≤10 limit
+3. 3 public test functions total — well within the ≤10 fn test_ limit
 
 ### Finding 3: Non-uniform grad_output prevents cancellation
 

@@ -72,7 +72,7 @@ fn __moveinit__(out self, deinit existing: Self):
 
 ### Step 4: Verify the ADR / comment is accurate
 
-The comment "to avoid potential corruption issues with List's internal buffer" is **correct**. Do not remove it thinking it is wrong. Update the ADR (e.g. ADR-009) to record this finding explicitly so future engineers don't repeat the investigation.
+The comment "to avoid potential corruption issues with List's internal buffer" is **correct**. Do not remove it thinking it is wrong. Document this finding explicitly so future engineers don't repeat the investigation.
 
 ### Step 5: Check CI
 
@@ -115,7 +115,7 @@ Does the struct have List fields that get mutated in-place BEFORE being moved?
 - `shared/core/extensor.mojo` — `ExTensor.__moveinit__` at line ~417
 - `shared/core/extensor.mojo` — `ExTensor.slice()` at line ~604 (the in-place mutation at line ~675)
 - `tests/shared/core/test_slicing.mojo` — `test_batch_extraction_uses_view()` is the canary test
-- `docs/adr/ADR-009-heap-corruption-workaround.md` — Finding #6 added 2026-03-06
+- `docs/adr/` heap corruption workaround ADR — Finding #6 added 2026-03-06
 
 ### mojo format fix (separate issue found in same PR)
 

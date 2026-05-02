@@ -14,7 +14,7 @@ user-invocable: false
 |-------|-------|
 | **Date** | 2026-03-15 |
 | **Objective** | Reduce duplication in Mojo test files by extracting repeated tensor setup into a private helper function |
-| **Outcome** | -10 net lines, identical behavior, no new `fn test_` functions added (ADR-009 limit respected) |
+| **Outcome** | -10 net lines, identical behavior, no new `fn test_` functions added |
 | **Project** | ProjectOdyssey |
 | **Issue** | #3870 (follow-up from #3281) |
 
@@ -23,7 +23,7 @@ user-invocable: false
 - Two or more `fn test_*` functions in a Mojo file open with identical tensor shape lists, `zeros()`/`ones()` calls, and initialization loops
 - A new test variant (e.g., padding or stride) would copy-paste the same setup block
 - Applying DRY principle to a numerical gradient test suite
-- The file has an ADR-009 cap on the number of `fn test_` functions — you cannot add a new test, but you can add a private helper
+- You want to reduce duplication without adding a new `fn test_` function — a private helper is the right approach
 
 ## Verified Workflow
 
@@ -85,9 +85,9 @@ var kernel = tensors[1]
 var bias = tensors[2]
 ```
 
-### Step 5 — Verify ADR-009 compliance
+### Step 5 — Verify test count
 
-Count `fn test_` functions. The helper is `fn _make_...` so it does NOT count toward the limit. The file's test count is unchanged.
+Count `fn test_` functions. The helper is `fn _make_...` so it does NOT count as a test. The file's test count is unchanged.
 
 ### Step 6 — Commit with DRY rationale
 

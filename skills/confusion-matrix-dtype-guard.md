@@ -100,7 +100,7 @@ Raises:
 """
 ```
 
-### Step 5: Write regression tests (ADR-009: ≤10 tests per file)
+### Step 5: Write regression tests
 
 Test the three rejection cases and three acceptance cases:
 

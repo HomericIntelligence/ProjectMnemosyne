@@ -14,7 +14,7 @@ user-invocable: false
 | Field | Value |
 |-------|-------|
 | Date | 2026-03-05 |
-| Objective | Add ADR-009 to the ADR index table in `docs/adr/README.md` |
+| Objective | Add a missing ADR entry to the ADR index table in `docs/adr/README.md` |
 | Outcome | Success — one-line table row added, pre-commit passed, PR #3338 created |
 | Category | documentation |
 

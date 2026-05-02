@@ -116,10 +116,9 @@ fn test_add_noncontiguous_lhs() raises:
         assert_almost_equal(rp[i], ep[i], tolerance=1e-4)
 ```
 
-### 6. Split test files per ADR-009
+### 6. Split test files
 
-Mojo v0.26.1 heap corruption triggers under high test load. Limit each file to ≤10
-`fn test_` functions. Use `_part1.mojo`, `_part2.mojo` naming:
+Limit each file to ≤10 `fn test_` functions. Use `_part1.mojo`, `_part2.mojo` naming:
 
 ```text
 test_arithmetic_noncontiguous_part1.mojo   (8 tests: add/sub/mul/div element-wise)
@@ -181,7 +180,7 @@ fn _make_nc_nchw() raises -> ExTensor:
     return nc^
 ```
 
-**Test count per file**: ≤8 `fn test_` functions (ADR-009 headroom below 10-function limit).
+**Test count per file**: ≤8 `fn test_` functions (headroom below the 10-function limit).
 
 ## Verified On
 

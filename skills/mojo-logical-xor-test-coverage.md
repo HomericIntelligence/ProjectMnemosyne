@@ -1,8 +1,8 @@
 ---
 name: mojo-logical-xor-test-coverage
 description: 'Add logical_xor test coverage for Mojo elementwise operations. Use when:
-  (1) a logical op is imported but untested, (2) ADR-009 10-test file limit requires
-  a new file, (3) binary logical truth-table coverage is missing.'
+  (1) a logical op is imported but untested, (2) the file is at the per-file test limit
+  and a new file is needed, (3) binary logical truth-table coverage is missing.'
 category: testing
 date: 2026-03-15
 version: 1.0.0
@@ -20,7 +20,7 @@ user-invocable: false
 ## When to Use
 
 - A Mojo elementwise function is imported in a test file but has no corresponding `fn test_*` functions
-- The existing test file is at the ADR-009 limit (≤10 `fn test_` functions) and cannot receive more tests
+- The existing test file is at the per-file test limit (≤10 `fn test_` functions) and cannot receive more tests
 - You need to add binary logical operation (AND/OR/XOR/NAND) truth-table coverage
 - Following a file split that revealed pre-existing coverage gaps
 
@@ -33,7 +33,7 @@ user-invocable: false
 grep -n "logical_xor" tests/shared/core/test_elementwise_part5.mojo
 # Found in imports, zero fn test_logical_xor_* functions
 
-# 2. Count existing tests in the file to check ADR-009 limit
+# 2. Count existing tests in the file
 grep -c "^fn test_" tests/shared/core/test_elementwise_part5.mojo
 # Returns 10 → at limit, must create new file
 
@@ -50,14 +50,14 @@ grep -n "logical_xor" tests/shared/core/test_elementwise_part5.mojo
 # Appears only in the import block — no fn test_logical_xor_*
 ```
 
-### Step 2 – Check ADR-009 Test Limit
+### Step 2 – Check Per-File Test Limit
 
 ```bash
 grep -c "^fn test_" tests/shared/core/test_elementwise_part5.mojo
 # 10 → at limit; new file required
 ```
 
-ADR-009 caps each Mojo test file at ≤10 `fn test_` functions to avoid
+Keep each Mojo test file to ≤10 `fn test_` functions to avoid
 `libKGENCompilerRTShared.so` heap corruption in Mojo v0.26.1.
 
 ### Step 3 – Read the Implementation Signature
@@ -72,9 +72,6 @@ grep -n "fn logical_xor" shared/core/elementwise.mojo
 Follow the header comment and import pattern from `test_elementwise_part5.mojo` exactly:
 
 ```mojo
-# ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
-# Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
-# high test load. Split from test_elementwise.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
 """Tests for elementwise logical_xor operation.
 ...
 """
@@ -173,20 +170,20 @@ gh pr merge --auto --rebase
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Add tests to part5 | Append `fn test_logical_xor_*` to existing `test_elementwise_part5.mojo` | File already at 10-test ADR-009 limit | Always count existing tests before editing; create new file if at limit |
+| Add tests to part5 | Append `fn test_logical_xor_*` to existing `test_elementwise_part5.mojo` | File already at the 10-test per-file limit | Always count existing tests before editing; create new file if at limit |
 | Use `logical_xor` import from part5 without checking signature | Assumed same 2-tensor signature as logical_and | N/A (worked) — but skipping the grep would risk wrong args | Always verify function signature from source before writing tests |
 
 ## Results & Parameters
 
 ```text
 File created: tests/shared/core/test_elementwise_logical_xor.mojo
-Tests added:  5  (well under ADR-009 limit of 10)
+Tests added:  5  (well under the 10-test per-file limit)
 PR:           #4874
 Issue closed: #4145
 Branch:       4145-auto-impl
 ```
 
-Key config values from ADR-009:
+Key config values:
 
 ```text
 Max fn test_ per file: 10

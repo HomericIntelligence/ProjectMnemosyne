@@ -46,4 +46,4 @@ in memory and a single `memcpy` suffices.
    list — avoids extra memory allocation
 2. Slow path is kept fully intact (just wrapped in `else:` branch)
 3. No changes to `__moveinit__`, `is_contiguous()`, or any other method
-4. Test file capped at 5 functions per ADR-009 heap corruption workaround (≤10 fn limit)
+4. Test file capped at 5 functions (≤10 fn limit)

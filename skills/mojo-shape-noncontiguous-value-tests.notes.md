@@ -57,9 +57,9 @@ or non-alpha character. `"""reshape()...` fails; `"""Verify reshape()...` passes
 `broadcast_to()` in `shape.mojo` already uses stride-aware indexing internally,
 so it passes the non-contiguous value test without any fix needed.
 
-### ADR-009 File Limit
+### Test File Limit
 
-Max 10 `fn test_` per file to avoid heap corruption. 7 tests fit comfortably.
+Max 10 `fn test_` per file. 7 tests fit comfortably.
 
 ## Files Created
 

@@ -26,7 +26,7 @@ Invoke this workflow when you encounter:
 
 1. **CI-only crashes** that don't reproduce locally
 2. **Heap corruption** errors in `libKGENCompilerRTShared.so`
-3. **Crashes after ~15 cumulative tests** (ADR-009 threshold)
+3. **Crashes after ~15 cumulative tests** (heap corruption threshold in Mojo 0.26.1)
 4. **Runtime crashes** with stack traces but no symbols
 5. **Intermittent failures** in integration test suites
 
@@ -103,8 +103,8 @@ git log -1 --oneline
    - Complex dtype casting operations
    - Raw pointer access via `._data.bitcast[T]()`
 
-3. **Check ADR-009 patterns**:
-   - Cumulative test count (>10-15 tests triggers heap corruption)
+3. **Check cumulative test count patterns**:
+   - Cumulative test count (>10-15 tests triggers heap corruption in Mojo 0.26.1)
    - Operations that worked in isolation but fail in CI
 
 ### Phase 5: Apply Fix
@@ -195,7 +195,6 @@ gh pr checks <pr-number>
 
 ## Related Documentation
 
-- [ADR-009: Heap Corruption Workaround](../../../docs/adr/ADR-009-heap-corruption-workaround.md)
 - [PR #3103: Fix Test 9 Crash](https://github.com/mvillmow/ProjectOdyssey/pull/3103)
 - [Failing CI Run](https://github.com/mvillmow/ProjectOdyssey/actions/runs/20826482385)
 

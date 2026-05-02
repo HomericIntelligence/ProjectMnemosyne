@@ -2,8 +2,8 @@
 name: mojo-signed-int-bitwise-not
 description: 'Pattern for adding bitwise NOT (~) tests for Mojo signed integer types
   using two''s complement semantics. Use when: adding ~ operator tests for Int8/Int16/Int32/Int64,
-  extending unsigned NOT tests to signed types, or implementing ADR-009 compliant
-  test splits.'
+  extending unsigned NOT tests to signed types, or splitting test files when the
+  per-file test limit is reached.'
 category: testing
 date: 2026-03-15
 version: 1.0.0
@@ -17,14 +17,14 @@ user-invocable: false
 | **Operator** | `~` (bitwise NOT) |
 | **Types** | `Int8`, `Int16`, `Int32`, `Int64` |
 | **Semantics** | Two's complement: `~x == -x - 1` |
-| **Split** | 2 files (ADR-009: ≤10 tests per file) |
+| **Split** | 2 files (≤10 tests per file) |
 | **CI** | Explicit filenames in `comprehensive-tests.yml` |
 
 ## When to Use
 
 - Adding `~` operator tests for any signed Mojo integer type
 - Following up on unsigned bitwise NOT tests (e.g., after issues covering `UInt8`–`UInt64`)
-- Creating new integer operator test files that must comply with ADR-009 (Mojo 0.26.1 heap corruption limit)
+- Creating new integer operator test files that must respect the per-file test count limit
 - Registering new Mojo test files into the `comprehensive-tests.yml` CI pattern
 
 ## Verified Workflow
@@ -50,10 +50,10 @@ Mojo signed integer types use two's complement. Key boundary values:
 | `Int32` | -1 | 0 | -2147483648 | 2147483647 | -2147483648 |
 | `Int64` | -1 | 0 | -9223372036854775808 | 9223372036854775807 | -9223372036854775808 |
 
-### Step 2: Check ADR-009 limit
+### Step 2: Check per-file test limit
 
-ADR-009 caps test files at **≤10 test functions** due to a Mojo 0.26.1 heap corruption bug
-triggered after ~15 cumulative tests. With 4 types × 4 cases = 16 tests, split into 2 files:
+Keep test files to **≤10 test functions** per file.
+With 4 types × 4 cases = 16 tests, split into 2 files:
 
 - **part1**: Int8 (4 tests) + Int16 (4 tests) = 8 total
 - **part2**: Int32 (4 tests) + Int64 (4 tests) = 8 total
@@ -69,7 +69,7 @@ semantics: ~x == -x - 1.
 Follow-up from #3293 (issue #3896).
 
 Note: Split from part2 due to Mojo 0.26.1 heap corruption bug that occurs after
-~15 cumulative tests. See ADR-009 and Issue #2942.
+~15 cumulative tests. See Issue #2942.
 """
 
 
@@ -108,7 +108,7 @@ in a `try/except` block and prints `OK <test_name>` or `FAIL <test_name>: <error
 
 The `test-mojo` justfile recipe auto-discovers `tests/**/*.mojo`, so new files run locally
 without any changes. However, `comprehensive-tests.yml` requires **explicit filenames**
-(not globs) per ADR-009 CI constraint (see Issue #4110).
+(not globs) — see Issue #4110.
 
 Add filenames to the correct group pattern in the workflow:
 
@@ -154,10 +154,10 @@ Add two split test files covering the ~ operator for Int8, Int16,
 Int32, and Int64 with signed two's complement semantics (~x == -x - 1).
 
 Each file covers two types × 4 cases (not_zero, not_neg_one, not_max,
-double_inversion), keeping under the ADR-009 limit of ≤10 tests per file.
+double_inversion), keeping under the ≤10 tests per file limit.
 
 Also registers the new files in comprehensive-tests.yml CI pattern (per
-ADR-009 CI constraint: explicit filenames, not globs).
+explicit filenames, not globs).
 
 Closes #3896
 
@@ -177,8 +177,8 @@ gh pr merge --auto --rebase <PR_NUMBER>
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Single file with 16 tests | Put all Int8/16/32/64 tests in one file | Would exceed ADR-009 ≤10 limit, risking Mojo 0.26.1 heap corruption | Always split at 8 tests/file when covering 4 integer types × 4 cases |
-| Glob pattern in CI | Used `test_int_bitwise_not*.mojo` in comprehensive-tests.yml | ADR-009 CI constraint: `pattern` field accepts only space-separated literal filenames, not globs | Enumerate all split filenames explicitly in the pattern field |
+| Single file with 16 tests | Put all Int8/16/32/64 tests in one file | Would exceed the ≤10 per-file limit | Always split at 8 tests/file when covering 4 integer types × 4 cases |
+| Glob pattern in CI | Used `test_int_bitwise_not*.mojo` in comprehensive-tests.yml | `pattern` field accepts only space-separated literal filenames, not globs | Enumerate all split filenames explicitly in the pattern field |
 | Omitting `~(-1) == 0` test case | Initial draft only tested `~0`, `~MAX`, and `~~x` | The `~(-1) == 0` case is the canonical signed complement identity and was mentioned in the issue | Include all four boundary cases: `~0`, `~(-1)`, `~MAX`, `~~x` |
 
 ## Results & Parameters
@@ -186,8 +186,8 @@ gh pr merge --auto --rebase <PR_NUMBER>
 ### Test count per file
 
 ```
-part1: 8 (Int8×4 + Int16×4) — safely under ADR-009 limit of 10
-part2: 8 (Int32×4 + Int64×4) — safely under ADR-009 limit of 10
+part1: 8 (Int8×4 + Int16×4) — safely under the per-file limit of 10
+part2: 8 (Int32×4 + Int64×4) — safely under the per-file limit of 10
 ```
 
 ### Boundary values used
@@ -206,7 +206,7 @@ Mojo Format .......................... Passed
 Check for deprecated List[Type]() ... Passed
 Enforce no .__matmul__() ............. Passed
 Validate Test Coverage ............... Passed
-Validate ADR-009 Headers ............. Passed
+Validate Test Headers ................ Passed
 Trim Trailing Whitespace ............. Passed
 Fix End of Files ..................... Passed
 Check YAML ........................... Passed

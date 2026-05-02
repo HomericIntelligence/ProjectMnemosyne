@@ -24,7 +24,7 @@ rank > 1.
    implementation location (line ~935).
 3. Read the existing implementation fully (lines 935–1135).
 4. Read `test_extensor_slicing_2d.mojo` to understand existing test structure
-   and the ADR-009 ≤10 fn test_ constraint.
+   and the ≤10 fn test_ per file constraint.
 5. Designed the fix: split on `len(self._shape) == 1`; reuse `_strides[0]`
    as slab size for N-D path.
 6. Considered declaring `dst_ptr` before the branch — rejected for safety.

@@ -146,9 +146,7 @@ All gradient checking test files now use `check_gradient()` except for 2 intenti
        input._data.bitcast[Float32]()[i] = Float32(i) * Float32(0.1)
    ```
 
-6. **Remove stale ADR-009 comments**: If test files contain comments about file-splitting
-   workarounds for JIT/bitcast crashes, remove them. The root cause (bitcast UAF) has been
-   fixed, so the workaround comments are stale.
+6. **Remove stale comments**: If test files contain comments referencing old workarounds for JIT/bitcast crashes, remove them. The root cause (bitcast UAF) has been fixed.
 
 ### Decision Tree (v3.0.0)
 

@@ -91,14 +91,12 @@ pixi run mojo build tests/shared/testing/test_assertions_float.mojo -o /tmp/test
 /tmp/test_float
 ```
 
-### Step 7: Watch ADR-009 test count limit
+### Step 7: Watch test count
 
-Mojo 0.26.1 has a heap corruption bug after approximately 15 cumulative test function calls in
-one file. Add a comment near the test count if approaching the limit:
+Add a comment near the test count if the file is getting large:
 
 ```mojo
-# NOTE: ADR-009 heap corruption limit is ~15 tests per file.
-# Currently at 19 tests — split file if adding more.
+# NOTE: Currently at 19 tests — consider a new file if adding more.
 ```
 
 ## Failed Attempts

@@ -43,7 +43,7 @@ on `forward()`, and `train()`/`inference()` no-ops.
 4. Exported `SimpleMLP2` from `shared/testing/__init__.mojo`
 
 5. Wrote tests in `tests/shared/testing/test_test_models_simple_mlp2.mojo`
-   - 5 test functions (under ADR-009 10-function limit)
+   - 5 test functions (under the ≤10 fn test_ limit)
    - Tests: initialization, forward shape, parameter count, parameter shapes, train/inference mode
 
 ## Key Decision: Path A vs Path B

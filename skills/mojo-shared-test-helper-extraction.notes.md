@@ -14,7 +14,7 @@ Follow-up from #3449 (matmul test file split).
 
 The `assert_matrices_equal[dtype: DType]` utility function was defined locally in
 `tests/shared/core/test_matmul_part1.mojo` after the matmul tests were split into
-part1/2/3 to work around the Mojo v0.26.1 heap corruption issue (ADR-009). The issue
+part1/2/3 to work around the Mojo v0.26.1 heap corruption issue (now fixed at compiler level). The issue
 asked for this helper to be moved to the shared testing infrastructure to avoid
 triplication if additional splits are needed.
 

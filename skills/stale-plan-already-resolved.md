@@ -73,9 +73,8 @@ If the goal is already met, the appropriate fix is:
 - Create a PR that closes the issue by documenting the already-correct state
 
 ```diff
-- # ADR-009: test_googlenet_layers.mojo split into 3 parts (≤8 tests each)
-- # to avoid Mojo v0.26.1 heap corruption under high test load.
-+ # test_*.mojo glob auto-discovers all model tests including ADR-009 _partN split files
+- # test_googlenet_layers.mojo split into 3 parts (≤8 tests each)
++ # test_*.mojo glob auto-discovers all model tests including _partN split files
 + # (e.g., test_googlenet_layers_part1.mojo) without requiring manual CI updates.
 ```
 

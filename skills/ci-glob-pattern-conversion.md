@@ -1,6 +1,6 @@
 ---
 name: ci-glob-pattern-conversion
-description: "Use when: (1) CI test groups have explicit filename lists that miss new ADR-009 split files or silently exclude new test files, (2) a catch-all test_*.mojo pattern is causing timeouts by matching unintended files in a directory with multiple test groups, (3) needing to verify whether a CI pattern is already a wildcard (check before editing), (4) determining if CI needs updating after adding or splitting Mojo test files."
+description: "Use when: (1) CI test groups have explicit filename lists that miss new split test files or silently exclude new test files, (2) a catch-all test_*.mojo pattern is causing timeouts by matching unintended files in a directory with multiple test groups, (3) needing to verify whether a CI pattern is already a wildcard (check before editing), (4) determining if CI needs updating after adding or splitting Mojo test files."
 category: ci-cd
 date: 2026-03-28
 version: "1.0.0"
@@ -10,7 +10,7 @@ tags:
   - ci-cd
   - github-actions
   - glob-patterns
-  - adr-009
+
   - test-splitting
   - comprehensive-tests
   - wildcard
@@ -33,7 +33,7 @@ tags:
 - A GitHub issue requests converting a CI test group from explicit filenames to glob patterns
 - A new test split file (e.g., `test_foo_part4.mojo`) is silently excluded from CI because the workflow only lists part1-3 explicitly
 - A CI group comment says "manual update required when files are added"
-- ADR-009 splits have been created but the workflow pattern hasn't been updated
+- Test file splits have been created but the workflow pattern hasn't been updated
 - A CI test group is timing out when it previously worked
 - A test group runs far more tests than expected (catch-all `test_*.mojo` matching everything)
 - You split a test file and need to verify whether CI needs updating
@@ -138,8 +138,8 @@ grep -A2 '"Shared Infra"' .github/workflows/comprehensive-tests.yml
    git add .github/workflows/comprehensive-tests.yml
    git commit -m "ci(workflow): convert <GroupName> to wildcard glob patterns
 
-   Replace explicit filename lists with glob patterns so new ADR-009
-   split files are auto-discovered without requiring manual workflow updates.
+   Replace explicit filename lists with glob patterns so new split
+   files are auto-discovered without requiring manual workflow updates.
 
    All existing files still covered (validate_test_coverage.py exits 0).
 
@@ -240,11 +240,11 @@ python3 scripts/validate_test_coverage.py
 | Used Edit tool to modify workflow YAML | Called Edit tool with old/new strings on `.github/workflows/comprehensive-tests.yml` | Pre-tool security hook returned an error, blocking the edit | Use inline `python3 -c` via Bash for workflow file edits — the security hook is advisory but Edit tool treats hook errors as blockers |
 | Editing Data group pattern (wildcard already present) | Added explicit part filenames to `test_*.mojo` pattern | Unnecessary — wildcard already matched new files | Check pattern type before editing CI YAML |
 | Updating validate_test_coverage.py exclusions for split files | Added new part filenames to excluded list | Wrong direction — files should be included, not excluded | `validate_test_coverage.py` exclusions are for files that should NOT be in CI |
-| Assuming all groups need explicit names after split | Updated every test group after ADR-009 split | Most groups use wildcards and auto-discover | Read the pattern field before assuming work is needed |
+| Assuming all groups need explicit names after split | Updated every test group after a test file split | Most groups use wildcards and auto-discover | Read the pattern field before assuming work is needed |
 | Modifying the workflow YAML when fix already landed | Planned to change explicit list to glob | `grep` showed `testing/test_*.mojo` was already present — the YAML fix had already landed on main | Always grep the actual file before assuming the YAML needs editing |
 | Assuming the issue was closed | Issue described the YAML state before the fix; the branch was already up-to-date | Pre-existing test file imported `check_stale_patterns` which didn't exist | Run `pytest` first — ImportError from tests reveals the actual missing piece |
-| Catch-all pattern for ADR-009 split convenience | Used `test_*.mojo` to auto-include split files | Matched 250+ files instead of 17, causing 15-min timeout and triple execution of some tests | Never use `test_*.mojo` catch-all in a directory with multiple test groups |
-| ADR-009 split without CI update | Split test files into parts but kept the catch-all pattern | The catch-all absorbed the new split files but also everything else | When splitting files per ADR-009, always update CI patterns to match the new filenames |
+| Catch-all pattern for split convenience | Used `test_*.mojo` to auto-include split files | Matched 250+ files instead of 17, causing 15-min timeout and triple execution of some tests | Never use `test_*.mojo` catch-all in a directory with multiple test groups |
+| Test file split without CI update | Split test files into parts but kept the catch-all pattern | The catch-all absorbed the new split files but also everything else | When splitting files, always update CI patterns to match the new filenames |
 
 ## Results & Parameters
 
@@ -275,7 +275,7 @@ gh pr create \
   --title "ci(workflow): convert <GroupName> to wildcard glob patterns" \
   --body "## Summary
 - Replace explicit filenames in <GroupName> CI group with glob patterns
-- New ADR-009 split files will be auto-discovered without manual workflow edits
+- New split files will be auto-discovered without manual workflow edits
 
 ## Verification
 - \`python scripts/validate_test_coverage.py\` exits 0
@@ -292,5 +292,5 @@ gh pr merge --auto --rebase <pr-number>
 |---------|---------|---------|
 | ProjectOdyssey | Issue #4246, PR #4878 | check_stale_patterns() implementation |
 | ProjectOdyssey | CI comprehensive-tests.yml | Catch-all pattern timeout fix; 247 files covered with 0 orphans |
-| ProjectOdyssey | ADR-009 file splits | Wildcard coverage check for multiple test groups |
+| ProjectOdyssey | Test file splits | Wildcard coverage check for multiple test groups |
 | ProjectOdyssey | Core Activations & Types group | Converted 6 explicit filenames to wildcards |

@@ -19,7 +19,7 @@
 5. **#3822** - Add mojo-format compatibility note to CLAUDE.md
 6. **#3823** - Fix Debian 10/11 glibc reference in mojo-glibc-compatibility.md
 7. **#3968** - Remove stale directory trees from scripts/README.md
-8. **#4097** - Add ADR-009 header to test_imports_part1.mojo
+8. **#4097** - Update test_imports.mojo header comment
 
 ---
 
@@ -204,16 +204,14 @@ SKIP=trailing-whitespace git commit -m "message"
 
 **Context**: Debian 11 (glibc 2.31) added to compatibility table, reference updated to match
 
-### Edit 10: tests/shared/test_imports_part1.mojo - Add ADR-009 Header
+### Edit 10: tests/shared/test_imports.mojo - Update Header Comment
 
 **Added before docstring**:
 ```
-# ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
-# Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
-# high test load. Split from test_imports.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
+# Imports test suite.
 ```
 
-**Pattern**: Matched existing format from test_packaging_part1/2/3 files
+**Pattern**: Matched existing format from other test files in the suite
 
 ---
 
@@ -344,4 +342,3 @@ SKIP=trailing-whitespace git commit -m "message"
 - PR #4509: Batch Fix Implementation Round 1 (for comparison)
 - GitHub Issues: #3830, #3919, #4465, #3988, #3822, #3823, #3968, #4097
 - Mojo Compiler Issue: `comptime_assert_stmt` missing in formatter
-- ADR-009: Heap corruption workaround for Mojo test load limits

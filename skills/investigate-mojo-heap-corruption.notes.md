@@ -111,7 +111,7 @@ fn test_fp16_vs_fp32_accuracy() raises:
 - `test_data` is Float32 dtype
 - `back_to_fp32` is Float32 dtype
 - Using `._get_float64()` forces Float32 → Float64 conversion
-- This conversion triggers Mojo 0.26.1 heap corruption (ADR-009)
+- This conversion triggers Mojo 0.26.1 heap corruption
 
 ### 6. Fix Applied
 
@@ -190,18 +190,16 @@ fn _get_float64(self, index: Int) -> Float64:
 
 **Key insight**: Using `_get_float32()` for Float32 data avoids conversion overhead and potential heap corruption.
 
-## ADR-009 Context
+## Mojo Heap Corruption Context
 
 **Known Bug**: Mojo 0.26.1 has heap corruption after ~15 cumulative tests
 
-**Workaround**: Split test files to <10 tests each
-
 **This case**:
 
-- Test 9 is within the 10-test threshold
-- BUT cumulative execution (test_end_to_end → test_multi_precision_training) exceeds threshold
+- Test 9 is the 9th test in this file
+- BUT cumulative execution (test_end_to_end → test_multi_precision_training) means many tests have already run
 - CI runs tests sequentially: data_pipeline → end_to_end → multi_precision → packaging → training_e2e → training_workflow
-- By the time Test 9 runs, ~13+ cumulative tests have executed
+- By the time Test 9 runs, ~13+ cumulative tests have executed across files
 
 ## Environment Differences
 
