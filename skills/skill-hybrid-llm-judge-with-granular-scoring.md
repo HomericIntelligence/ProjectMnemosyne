@@ -205,7 +205,6 @@ Copy-paste ready configurations and expected outputs.
 |---------|-------|------------|
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
-
 ### ❌ Pure Checklist Approach
 **What we tried**: 100% checklist with discrete 0/0.5/1 scoring
 

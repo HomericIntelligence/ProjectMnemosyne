@@ -118,7 +118,7 @@ Key rules:
 
 - Closing `"""` on its own line, indented to match opening
 - Blank line between summary and extended body
-- Lists use `- ` prefix (not `*`)
+- Lists use `-` prefix (not `*`)
 - Keep all lines ≤ 90 chars including indent
 
 ## Results & Parameters

@@ -191,13 +191,14 @@ jobs:
         with:
           fetch-depth: 0
       - name: Install Gitleaks
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          GITLEAKS_VERSION=8.30.1
-          OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-          ARCH=$(uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/')
-          curl -sSfL \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_${OS}_${ARCH}.tar.gz" \
-            | tar -xz -C /usr/local/bin gitleaks
+          gh release download v8.30.1 \
+            --repo gitleaks/gitleaks \
+            --pattern "gitleaks_8.30.1_linux_x64.tar.gz" \
+            --output /tmp/gitleaks.tar.gz
+          tar -xz -C /usr/local/bin -f /tmp/gitleaks.tar.gz gitleaks
           gitleaks version
 
       - name: Run Gitleaks

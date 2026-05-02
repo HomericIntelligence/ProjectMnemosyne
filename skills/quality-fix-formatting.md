@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Automatically fix code formatting issues across file types. - Pre-commit checks fail due to formatting |
 | Outcome | Operational |
 
-
 Automatically fix code formatting issues across file types.
 
 ## When to Use

@@ -84,7 +84,7 @@ pixi run python -m pytest tests/scripts/test_check_note_format.py -v  # 28 passe
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| `# NOTE[^(]` as regex | Used character class negation to exclude `(` | `# NOTE (Mojo v0.26.1):` has a space before `(`, so `# NOTE ` matches because space ≠ `(` | Always use negative lookahead `(?!\s*\()` when the separator between keyword and delimiter may vary |
+| `# NOTE[^(]` as regex | Used character class negation to exclude `(` | `# NOTE (Mojo v0.26.1):` has a space before `(`, so `# NOTE` matches because space ≠ `(` | Always use negative lookahead `(?!\s*\()` when the separator between keyword and delimiter may vary |
 | `language: pygrep` with `[^(]` pattern | Same pattern in pre-commit hook | Same false-positive: compliant lines were flagged and hook blocked all commits | Negative lookaheads work fine in `language: pygrep` hooks — pre-commit uses Python's `re` module |
 | Checking existing violations manually | Tried to enumerate violations from memory | Missed several files; grep output was the source of truth | Always run `grep -rn "# NOTE[^(]" --include="*.mojo" shared/ tests/ ...` first to get the definitive list |
 

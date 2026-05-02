@@ -12,7 +12,6 @@ tags:
   - test-matrix
   - auto-discovery
   - wildcard-patterns
-  - adr-009
   - test-splitting
   - glob-patterns
   - consolidation
@@ -34,7 +33,7 @@ tags:
 
 ## When to Use
 
-- A CI matrix group has 30+ test files and needs splitting per ADR-009 (heap corruption risk)
+- A CI matrix group has 30+ test files and needs splitting
 - A single monolithic group uses multi-pattern strings covering subdirectories — new files silently missed
 - A CI matrix has >20 groups with ~30-60s startup cost each and needs consolidating
 - CI test files run in multiple jobs due to wildcard overlap or a parent group subsumes child groups
@@ -91,7 +90,7 @@ for s in stale: print(f'  {s}')
 
 ### A. Splitting an Oversized Group (30+ files)
 
-Use when a CI matrix group has grown too large and needs to be split per ADR-009.
+Use when a CI matrix group has grown too large and needs to be split.
 
 1. **Count actual files per glob pattern** (glob patterns hide the true file count):
 
@@ -326,7 +325,7 @@ Use after consolidation, to document timeout risk without changing runtime behav
      # ---------------------------------------------------------------------------
      # Timeout policy: all groups share the single <N>-minute timeout-minutes above.
      # Action threshold: if a group consistently exceeds <N-5> minutes, split it into
-     # two non-overlapping entries (see <ADR-reference> for the split pattern).
+     # two non-overlapping entries following the split pattern in this skill.
      # File counts below are based on the explicit pattern lists; glob-only groups
      # are marked "monitor" because the count varies as new tests are added.
      # ---------------------------------------------------------------------------
@@ -354,8 +353,8 @@ Use after consolidation, to document timeout risk without changing runtime behav
 | `pixi run mypy <package>/` in CI when task already includes it | Used redundant argument after defining `mypy = "mypy hephaestus/"` in pixi.toml | "Duplicate module named hephaestus" — pixi appends CLI args to the task command | When a pixi task already includes arguments, do not repeat them |
 | Modifying `name:` values to include file counts | Added "(20 files)" suffix to entry names | `continue-on-error` expressions reference the name string directly; breaks the check | Never touch `name:` — annotation goes in YAML comments only |
 | Setting per-group `timeout-minutes` override | Tried adding `timeout-minutes: 12` to large groups | GitHub Actions matrix entries do not support per-entry `timeout-minutes`; only job-level is valid | Timeout is job-level only; inline comments are the correct approach |
-| Removing `continue-on-error` from leaf groups when splitting | Considered dropping `continue-on-error: true` since sub-groups are smaller | Parent had `continue-on-error: true` due to heap corruption crashes; dropping it would block CI | Always propagate `continue-on-error` when splitting a group that had it |
-| Prior skill: explicit filenames for split | Listed all 71 files individually across 8 groups | Fragile — new `_partN.mojo` files from future splits aren't auto-discovered | Use glob patterns like `test_extensor_*.mojo` to auto-include future splits |
+| Removing `continue-on-error` from leaf groups when splitting | Considered dropping `continue-on-error: true` since sub-groups are smaller | Parent had `continue-on-error: true` for a reason; dropping it would block CI | Always propagate `continue-on-error` when splitting a group that had it |
+| Prior skill: explicit filenames for split | Listed all 71 files individually across 8 groups | Fragile — new split files from future splits aren't auto-discovered | Use glob patterns like `test_extensor_*.mojo` to auto-include future splits |
 
 ## Results & Parameters
 

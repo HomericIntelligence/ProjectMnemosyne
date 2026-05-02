@@ -20,7 +20,6 @@ triggers:
 | Objective | | Field | Value | |-------|-------| | Date | 2026-01-01 | | Objective | Systematically resolve all FIXME/TODO items in a directory | |
 | Outcome | Operational |
 
-
 | Field | Value |
 |-------|-------|
 | Date | 2026-01-01 |

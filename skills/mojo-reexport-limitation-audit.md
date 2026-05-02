@@ -123,7 +123,7 @@ gh pr merge --auto --rebase
 
 ## Results & Parameters
 
-### Template for clean re-export Note:
+### Template for clean re-export Note
 
 ```mojo
 Note:

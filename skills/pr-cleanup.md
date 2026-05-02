@@ -57,7 +57,6 @@ git push --force-with-lease
 # (fill in quick reference commands)
 ```
 
-
 1. **Verify CI passing** - All checks must pass before cleanup
 2. **Check for conflicts** - Identify any conflicts with main branch
 3. **Plan commit consolidation** - Decide squash strategy
@@ -188,4 +187,3 @@ See: [Link to PR]
 ## Results & Parameters
 
 - (fill in key parameters and outcomes)
-

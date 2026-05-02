@@ -137,7 +137,7 @@ gh issue list --state open --limit 500 --json number --jq 'length'
 | Metric | Value |
 |--------|-------|
 | Starting issue count | 363 |
-| Round 1 closed (ADR-009 clusters) | 84 |
+| Round 1 closed (duplicate clusters) | 84 |
 | Round 2 closed (other clusters) | 11 |
 | Round 3 closed (subsets) | 28 |
 | Round 4 closed (already-resolved) | 12 |

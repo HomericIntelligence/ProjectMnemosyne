@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Check Mojo code for correct usage of language patterns and conventions. - Code review to catch pattern violations |
 | Outcome | Operational |
 
-
 Check Mojo code for correct usage of language patterns and conventions.
 
 ## When to Use

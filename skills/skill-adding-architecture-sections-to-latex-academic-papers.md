@@ -163,7 +163,6 @@ grep "??" paper.log
 |---------|-------|------------|
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
-
 ### ❌ Failed: TikZ Font Commands Without Braces
 
 **What we tried:** Direct use of `\tiny`, `\scriptsize` after `\\` in node text

@@ -15,7 +15,7 @@ analytically on 4D inputs `[2, 2, 2, 4]` using central finite differences.
 
 1. Read `.claude-prompt-3813.md` for task context
 2. Read issue #3247 comments for the established 2D gradient test pattern
-3. Read `test_normalization_part3.mojo` to understand structure and ADR-009 limit
+3. Read `test_normalization.mojo` to understand structure and existing test count
 4. Added new test function after the 2D gradient test (line 259)
 5. Added call in `main()` (line 480)
 6. Committed, pushed, created PR #4808, enabled auto-merge
@@ -25,7 +25,7 @@ analytically on 4D inputs `[2, 2, 2, 4]` using central finite differences.
 - **Shape `[2, 2, 2, 4]`**: Explicitly requested in issue; 32 elements, 16 per sample
 - **Gamma shape `[16]`**: Matches implementation convention (flat over last N dims)
 - **Non-uniform grad_output**: Alternating mixed-sign values ~0.01–0.09 magnitude
-- **Same file**: `test_normalization_part3.mojo` had 7 fns, ADR-009 allows up to 10
+- **Same file**: `test_normalization.mojo` had 7 fns, adding one more
 - **Identical tolerances**: `rtol=1e-2`, `atol=1e-5`, `epsilon=1e-4` — same as 2D test
 
 ## PR

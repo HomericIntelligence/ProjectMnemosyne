@@ -116,13 +116,12 @@ print("Running _set_<fn> bfloat16 tests (regression for #<issue>)...")
 test_set_<fn>_bfloat16()
 ```
 
-### Step 5: ADR-009 heap corruption constraint
+### Step 5: Keep files manageable
 
-Mojo 0.26.1 has a heap corruption bug after ~15 cumulative tests in a single file.
-If the target test file already has ≥12 tests, split to a new file:
+If the target test file is already large, use a dedicated file for bfloat16 tests:
 
 ```
-tests/shared/core/test_extensor_getset_<fn>.mojo  # ≥12 tests → split
+tests/shared/core/test_extensor_getset_<fn>.mojo       # existing tests
 tests/shared/core/test_extensor_getset_<fn>_bf16.mojo  # new file for bfloat16 tests
 ```
 

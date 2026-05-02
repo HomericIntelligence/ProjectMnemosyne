@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Invoke section orchestrators to coordinate complex development workflows. - Starting work on new section |
 | Outcome | Operational |
 
-
 Invoke section orchestrators to coordinate complex development workflows.
 
 ## When to Use

@@ -18,7 +18,6 @@ tier: 2
 | Objective | Identify code quality issues, anti-patterns, and maintainability problems that suggest need for refactoring. |
 | Outcome | Operational |
 
-
 Identify code quality issues, anti-patterns, and maintainability problems that suggest need for refactoring.
 
 ## When to Use

@@ -277,7 +277,7 @@ Does the cycle go through a type definition?
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| ADR-009 hypothesis | Assumed CI failures were a recurrence of the heap corruption bug | ADR-009 is fixed; user explicitly corrected this assumption | Don't attribute new CI failures to previously-fixed bugs |
+| Heap corruption hypothesis | Assumed CI failures were a recurrence of the Mojo heap corruption bug (now fixed at compiler level) | That bug is fixed; user explicitly corrected this assumption | Don't attribute new CI failures to previously-fixed bugs |
 | Sub-agents for implementation | Delegated to sub-agents via worktrees | Agents produced correct analysis and plans but left changes unstaged — no commits | Verify sub-agent outputs include committed changes, not just summaries |
 | Checkout main with unstaged changes | Tried `git checkout main` directly | Failed due to unstaged changes from sub-agent work | Run `git stash` first, or switch via worktrees |
 | `../../docs/dev/` link assumed correct | The path resolves to the right file on disk | mkdocs `--strict` detects the link exits the docs tree even if the file exists | mkdocs strict validates the _path logic_, not just file existence |

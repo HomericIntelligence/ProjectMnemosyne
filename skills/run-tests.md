@@ -17,7 +17,6 @@ tier: 1
 | Objective | Execute test suites to verify code functionality and identify regressions or failures. - Pre-commit validation |
 | Outcome | Operational |
 
-
 Execute test suites to verify code functionality and identify regressions or failures.
 
 ## When to Use

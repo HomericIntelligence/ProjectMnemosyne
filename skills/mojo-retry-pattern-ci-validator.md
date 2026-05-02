@@ -2,7 +2,7 @@
 name: mojo-retry-pattern-ci-validator
 description: 'Detect bare pixi run mojo test/run/build/package calls in GitHub Actions
   workflows not wrapped in a retry loop. Use when: (1) adding a new mojo workflow
-  file, (2) auditing existing workflows for ADR-009 compliance, (3) CI enforcement
+  file, (2) auditing existing workflows for retry-loop compliance, (3) CI enforcement
   after mojo-jit-crash-retry fix.'
 category: ci-cd
 date: 2026-03-15
@@ -13,7 +13,7 @@ user-invocable: false
 
 A Python validator script (`validate_mojo_retry_pattern.py`) that detects bare
 `pixi run mojo` test/run/build/package calls in GitHub Actions workflow files that
-are NOT protected by an exponential-backoff retry loop (ADR-009, issue #3329).
+are NOT protected by an exponential-backoff retry loop (issue #3329).
 
 ## Overview
 
@@ -21,7 +21,7 @@ are NOT protected by an exponential-backoff retry loop (ADR-009, issue #3329).
 |------|---------|
 | Date | 2026-03-15 |
 | Language | Python 3.7+ with PyYAML |
-| Objective | Enforce ADR-009 retry pattern for all mojo test calls in CI |
+| Objective | Enforce retry pattern for all mojo test calls in CI |
 | Outcome | Success — 26 workflows audited, 0 violations, false-positive cases handled |
 | Repository | ProjectOdyssey |
 | Issue | #3955 (follow-up to #3329) |
@@ -31,7 +31,7 @@ are NOT protected by an exponential-backoff retry loop (ADR-009, issue #3329).
 
 - A new GitHub Actions workflow file includes `pixi run mojo test`, `mojo run`, `mojo build`,
   or `mojo package` calls and you want to verify they are retry-wrapped
-- Auditing an existing repo after implementing the mojo-jit-crash-retry fix (ADR-009, issue #3329)
+- Auditing an existing repo after implementing the mojo-jit-crash-retry fix (issue #3329)
   to catch any workflow files that were added after the original fix
 - Wiring a CI enforcement step into an existing `validate-workflows.yml` job
 
@@ -49,7 +49,7 @@ python3 scripts/validate_mojo_retry_pattern.py .github/workflows/
 # Expected on a file with a bare call:
 # ERROR: .github/workflows/foo.yml :: job 'run-tests' :: step 'Run tests' :: line 2
 #   Bare pixi run mojo call without retry loop: pixi run mojo test -I . tests/
-#   Wrap with 3-attempt exponential-backoff retry (issue #3329, ADR-009).
+#   Wrap with 3-attempt exponential-backoff retry (issue #3329).
 ```
 
 ### 1. Create the validator script
@@ -126,7 +126,7 @@ while [ $attempt -lt 3 ]; do
     break
   fi
   if [ $attempt -lt 3 ]; then
-    echo "Attempt $attempt failed, retrying in ${delay}s (JIT crash -- ADR-009, issue #3329)"
+    echo "Attempt $attempt failed, retrying in ${delay}s (JIT crash -- issue #3329)"
     sleep $delay
     delay=$((delay * 2))
   else
@@ -143,7 +143,7 @@ from the start and document it in comments:
 
 ```yaml
 # All pixi run mojo calls are protected with the 3-attempt exponential-backoff
-# retry pattern (issue #3329, ADR-009) to guard against the Mojo v0.26.1 JIT
+# retry pattern (issue #3329) to guard against the Mojo v0.26.1 JIT
 # crash (libKGENCompilerRTShared.so).
 ```
 

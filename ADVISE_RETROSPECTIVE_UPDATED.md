@@ -11,7 +11,7 @@ Both `/advise` and `/learn` commands have been updated to work with the new flat
 ### /advise Command
 **File**: `plugins/tooling/mnemosyne/commands/advise.md`
 
-#### Key Updates:
+#### Key Updates
 1. **Clone Location**
    - Before: `<ProjectRoot>/build/<PID>/ProjectMnemosyne/` (isolated per session)
    - After: `$HOME/.agent-brain/ProjectMnemosyne/` (shared, single clone)
@@ -32,7 +32,7 @@ Both `/advise` and `/learn` commands have been updated to work with the new flat
 ### /learn Command
 **File**: `plugins/tooling/mnemosyne/commands/learn.md`
 
-#### Key Updates:
+#### Key Updates
 1. **Auto-Generate Filename** (Major Change!)
    - Before: Prompt user for category + skill name
    - After: Auto-generate filename from conversation

@@ -16,7 +16,6 @@ user-invocable: false
 | Objective | | Field | Value | |-------|-------| | **Date** | 2026-01-08 | | **Objective** | Prevent workspace destruction when re-running E2E experiments | |
 | Outcome | Operational |
 
-
 | Field | Value |
 |-------|-------|
 | **Date** | 2026-01-08 |

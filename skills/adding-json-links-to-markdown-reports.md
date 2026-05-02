@@ -16,7 +16,6 @@ user-invocable: false
 | Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-01-08 | | **Objective** | Add links to JSON result files in markdown reports for easy... |
 | Outcome | Operational |
 
-
 | Attribute | Value |
 |-----------|-------|
 | **Date** | 2026-01-08 |

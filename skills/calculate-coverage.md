@@ -18,7 +18,6 @@ tier: 2
 | Objective | Measure code coverage percentage and identify which code paths are untested to ensure comprehensive testing. |
 | Outcome | Operational |
 
-
 Measure code coverage percentage and identify which code paths are untested to ensure comprehensive testing.
 
 ## When to Use

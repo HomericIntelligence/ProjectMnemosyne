@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Run all configured linters to ensure code quality. - Before committing code - CI/CD quality checks - Pre-PR validation |
 | Outcome | Operational |
 
-
 Run all configured linters to ensure code quality.
 
 ## When to Use

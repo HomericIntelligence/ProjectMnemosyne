@@ -15,7 +15,7 @@ user-invocable: false
 |-----------|-------|
 | **Purpose** | Validate `layer_norm_backward` on 4D inputs via central finite differences |
 | **Language** | Mojo v0.26.1 |
-| **Target file** | `tests/shared/core/test_normalization_part3.mojo` |
+| **Target file** | `tests/shared/core/test_normalization.mojo` |
 | **Input shape** | `[2, 2, 2, 4]` (batch=2, channels=2, H=2, W=4) |
 | **Gamma shape** | `[16]` (flattened last 3 dims) |
 | **Tolerances** | `rtol=1e-2`, `atol=1e-5` |
@@ -26,25 +26,18 @@ user-invocable: false
 - A 2D numerical gradient test for `layer_norm_backward` already exists and a 4D follow-up is requested
 - The backward pass uses different indexing/reduction paths depending on input rank
 - Issue explicitly asks for `[2, 2, 2, 4]` shape validation (as in ProjectOdyssey #3813)
-- ADR-009 heap corruption limit allows space (file must stay ≤10 `fn test_` functions)
-
 ## Verified Workflow
 
 ### Quick Reference
 
 ```bash
-# Count existing test functions before adding
-grep -c '^fn test_' tests/shared/core/test_normalization_part3.mojo
-# Must be < 10 to add another (ADR-009 limit)
-
 # Run after adding the test
-just test-group tests/shared/core test_normalization_part3.mojo
+just test-group tests/shared/core test_normalization.mojo
 ```
 
-### Step 1 — Check ADR-009 function count
+### Step 1 — Identify the target file
 
-ADR-009 caps `test_normalization_part3.mojo` at ≤10 `fn test_` functions to avoid
-`libKGENCompilerRTShared.so` heap corruption under high test load. Count before adding.
+Read the normalization test file to understand its structure and existing test count before adding.
 
 ### Step 2 — Choose shape and gamma layout
 
@@ -139,7 +132,7 @@ Insert after the existing 2D gradient test call:
 ### Step 6 — Commit and create PR
 
 ```bash
-git add tests/shared/core/test_normalization_part3.mojo
+git add tests/shared/core/test_normalization.mojo
 git commit -m "test(normalization): add numerical gradient test for layer_norm_backward on 4D inputs
 
 Closes #<issue-number>"
@@ -153,7 +146,7 @@ gh pr merge --auto --rebase
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Using `grad_output=ones` | Uniform all-ones grad_output for simplicity | `sum(grad_output * x_hat) = sum(x_hat) = 0` by normalization identity — last backward term vanishes, masking bugs | Always use non-uniform grad_output for layer norm gradient tests |
-| Creating a new file | Adding a 5th test_normalization file | ADR-009 limit applies per file; existing part3 had room (7→8 fns) | Count existing `fn test_` before deciding to create vs extend |
+| Creating a new file | Adding a 5th test_normalization file | Existing file had room (7→8 fns) | Count existing `fn test_` before deciding to create vs extend |
 | Gamma shape `[C, H, W]` = `[2, 2, 4]` | Using full 3D gamma for 4D input | Implementation convention uses flat `[C*H*W]` = `[16]` for 4D inputs | Verify gamma shape convention matches the implementation, not intuition |
 
 ## Results & Parameters
@@ -172,11 +165,10 @@ atol:           1e-5
 ### File Targeted
 
 ```
-tests/shared/core/test_normalization_part3.mojo
+tests/shared/core/test_normalization.mojo
 ```
 
-ADR-009 comment at top of file: ≤10 `fn test_` functions per file.
-After this addition: 8 functions (within limit).
+After this addition: 8 functions.
 
 ### Imports Required
 

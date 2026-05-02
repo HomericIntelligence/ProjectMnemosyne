@@ -76,7 +76,7 @@ just --list | grep <recipe-name>
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Heredoc with `ENTRY` terminator at column 0 | `cat >> "$OUTPUT" <<ENTRY\n  {...}\nENTRY` | `just` "inconsistent leading whitespace" — terminator at column 0 doesn't match recipe's 4-space indent | `just` validates whitespace of ALL lines in recipe body, including heredoc terminators |
-| Indented heredoc terminator (`    ENTRY`) | Tried indenting the `ENTRY` terminator to match recipe indent | bash heredoc terminators must be at column 0 (or use `<<-` with tab-only indent) — mixing bash and just constraints makes this impossible cleanly | bash and just have conflicting whitespace requirements for heredoc terminators |
+| Indented heredoc terminator (`ENTRY`) | Tried indenting the `ENTRY` terminator to match recipe indent | bash heredoc terminators must be at column 0 (or use `<<-` with tab-only indent) — mixing bash and just constraints makes this impossible cleanly | bash and just have conflicting whitespace requirements for heredoc terminators |
 | `<<-ENTRY` with tabs | Considered using `<<-` (strip leading tabs) with tab-indented body | Recipe already uses spaces throughout; mixing tabs only for the heredoc body creates a maintenance hazard | `printf` is simpler and avoids the bash/just whitespace conflict entirely |
 
 ## Results & Parameters

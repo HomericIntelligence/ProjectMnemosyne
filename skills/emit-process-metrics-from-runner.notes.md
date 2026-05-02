@@ -35,7 +35,7 @@
 ## Design Decisions
 
 ### Why git diff --stat (not git diff --numstat)?
-`--stat` format (` path | 5 ++---`) is more commonly used in the codebase.
+`--stat` format (`path | 5 ++---`) is more commonly used in the codebase.
 `--numstat` gives exact counts but the `++---` marker counting is simpler to parse
 for our purposes (we only need relative weights, not exact counts).
 

@@ -219,7 +219,7 @@ scripts/README.md                  # Replace 17 ```text closing tags, remove sta
 .github/workflows/README.md        # Add 3 missing workflows to table
 CLAUDE.md                          # Add mojo-format compat note
 docs/dev/mojo-glibc-compatibility.md  # Fix Debian 10/11 reference
-tests/shared/test_imports_part1.mojo  # Add ADR-009 header
+tests/shared/test_imports_part1.mojo  # Part 1 of split
 ```
 
 ### Key Learnings

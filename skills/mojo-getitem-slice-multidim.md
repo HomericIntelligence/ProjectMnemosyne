@@ -31,8 +31,7 @@ behaviour where `t[1:3]` on a 2D tensor returns rows 1 and 2.
   preserved.
 - You want to support strided/reverse slicing on multi-dimensional tensors
   without touching the existing `__getitem__(*slices: Slice)` variadic overload.
-- You are writing tests for a Mojo tensor class and need the ADR-009 split
-  (≤10 `fn test_` per file) to avoid heap corruption in Mojo v0.26.1.
+- You are writing tests for a Mojo tensor class and keeping to ≤10 `fn test_` per file.
 
 ## Verified Workflow
 
@@ -44,7 +43,7 @@ behaviour where `t[1:3]` on a 2D tensor returns rows 1 and 2.
 3. Branch on len(self._shape) == 1 vs else
 4. In else: use _strides[0] * dtype_size as slab_bytes; copy per axis-0 index
 5. Result shape: [result_size, shape[1], shape[2], ...]
-6. Create new test file (≤10 fn test_ per ADR-009)
+6. Create new test file (≤10 fn test_ per file)
 ```
 
 ### Step-by-step
@@ -132,7 +131,7 @@ else:
 dimensions except axis 0. This is the number of elements per axis-0 slab and
 is always correct for contiguous tensors.
 
-**4. Write tests — ADR-009 limit of ≤10 `fn test_` per file.**
+**4. Write tests — ≤10 `fn test_` per file.**
 
 Create a new `test_extensor_slicing_multidim.mojo` (do not add to existing
 1D/2D test files). Cover:

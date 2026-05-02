@@ -111,7 +111,7 @@ fn __setitem__(mut self, *indices: Int, value: Float64) raises:
 
 ### 4. Create test file at tests/shared/core/test_extensor_setitem_multidim.mojo
 
-Test groups (18 tests total, split for ADR-009 heap corruption limit):
+Test groups (18 tests total, split across files due to ≤10 fn test_ limit):
 
 **Group A — 2D basic assignment:**
 
@@ -230,6 +230,6 @@ tests/shared/core/test_extensor_setitem_multidim.mojo
 ```
 
 - 18 tests total across 6 groups (A–F)
-- Stays within ADR-009 heap corruption limit of ~15 tests per file
+- Stays within the ≤10 fn test_ per file limit
 - Imports: `from shared.core.extensor import ExTensor, zeros, ones, full`
 - Imports: `from tests.shared.conftest import assert_true, assert_almost_equal, assert_equal`

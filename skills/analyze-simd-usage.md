@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Identify where SIMD (Single Instruction Multiple Data) can improve performance. - Performance-critical tensor operations |
 | Outcome | Operational |
 
-
 Identify where SIMD (Single Instruction Multiple Data) can improve performance.
 
 ## When to Use

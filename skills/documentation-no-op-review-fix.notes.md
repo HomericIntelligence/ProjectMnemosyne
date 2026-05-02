@@ -17,7 +17,7 @@ Implement fixes described in `.claude-review-fix-3150.md` for PR #3338.
 ## What the Fix Plan Said
 The plan explicitly stated:
 - "No fixes required. The PR correctly implements the issue deliverable."
-- ADR-009 row added at `docs/adr/README.md:27` ✅
+- heap corruption workaround ADR row added at `docs/adr/README.md:27` ✅
 - Format matches existing entries ✅
 - CI failures (Core Elementwise, Core Tensors) are pre-existing, not introduced by this PR
 

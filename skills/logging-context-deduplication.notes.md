@@ -24,12 +24,12 @@ When log messages are emitted outside of any tier/subtest scope (e.g., experimen
 ### Fix: composite log_context_tag
 
 Added a computed `log_context_tag` field to `ContextFilter.filter()`:
-- When any context is set: ` [T5/12/1]` (with leading space for formatting)
+- When any context is set: `[T5/12/1]` (with leading space for formatting)
 - When no context is set: `""` (empty string, nothing rendered)
 
 The format string uses `%(log_context_tag)s` instead of the static `[%(tier_id)s/%(subtest_id)s/%(run_num)s]`.
 
-Smart part-omission: if `run_num` is None but `tier_id`/`subtest_id` are set, renders ` [T5/12]` (no trailing slash).
+Smart part-omission: if `run_num` is None but `tier_id`/`subtest_id` are set, renders `[T5/12]` (no trailing slash).
 
 ## Problem 3: Thread ID readability
 

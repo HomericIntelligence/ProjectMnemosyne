@@ -88,21 +88,21 @@ For broader exclusions (test directories, example certs, k8s secret patterns):
 
 ## Results & Parameters
 
-### Minimal exclusion (exact files):
+### Minimal exclusion (exact files)
 
 ```yaml
 - id: detect-private-key
   exclude: '^(k8s/metrics-security\.yaml|tests/unit/test_grpc_tls\.cpp)$'
 ```
 
-### Broad exclusion (directories + patterns):
+### Broad exclusion (directories + patterns)
 
 ```yaml
 - id: detect-private-key
   exclude: '^(tests/|fixtures/|examples/|k8s/.*-secret.*\.yaml|k8s/.*-security.*\.yaml)$'
 ```
 
-### Regex rules for the `exclude:` field:
+### Regex rules for the `exclude:` field
 
 | Pattern | Matches |
 |---------|---------|
@@ -112,7 +112,7 @@ For broader exclusions (test directories, example certs, k8s secret patterns):
 | `^k8s/.*-secret.*\.yaml$` | Any k8s YAML with `-secret` in the name |
 | `^k8s/.*-security.*\.yaml$` | Any k8s YAML with `-security` in the name |
 
-### Typical PEM patterns that trigger false positives in test files:
+### Typical PEM patterns that trigger false positives in test files
 
 ```
 -----BEGIN CERTIFICATE-----

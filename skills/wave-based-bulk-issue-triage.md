@@ -372,7 +372,7 @@ actual code defects. All fixed in subsequent CI re-runs.
 | 6b | #959 | Update 3 phantom doc paths | #1052 | 0 |
 | 6c | #920 | 1-char .gitignore fix | #1053 | 0 |
 | 6d | #1042 | New filter_audit.py script + pixi.toml update | #1055 | 0 |
-| 7a | #985 | 8 tests for _move_to_failed + _commit_test_config | #1056 | 8 |
+| 7a | #985 | 8 tests for _move_to_failed +_commit_test_config | #1056 | 8 |
 | 7b | #986 | 5 tests for _run_subtest_in_process_safe | #1057 | 5 |
 | 7c | #987 | 6 tests for CursesUI._refresh_display | #1058 | 6 |
 | 7d | #898 | 3 integration tests for --update roundtrip | #1059 | 3 |

@@ -1,6 +1,6 @@
 ---
 name: fix-ci-compilation-and-test-failures
-description: "Use when: (1) CI fails with Mojo compilation error (unknown declaration, deprecated syntax), (2) markdownlint blocks pre-commit (MD051, MD037, MD031, MD040, MD026, MD013), (3) Mojo test assertion errors from edge cases, (4) CI segfaults from UnsafePointer access through copied structs, (5) all PR CI runs fail because of broken plugins on main (missing plugin.json or YAML frontmatter), (6) Dockerfile GID/UID collisions on Ubuntu 24.04, (7) pre-commit bash -c hooks silently lose filenames, (8) Mojo --Werror unused return value errors, (9) split test files referenced in CI workflows, (10) tests pass locally but fail due to symlinks or mock bypass, (11) invalid pinned action SHAs in workflows, (12) need to identify required vs optional CI checks before fixing"
+description: "Use when: (1) CI fails with Mojo compilation error (unknown declaration, deprecated syntax), (2) markdownlint blocks pre-commit (MD051, MD037, MD031, MD040, MD026, MD013), (3) Mojo test assertion errors from edge cases, (4) CI segfaults from UnsafePointer access through copied structs, (5) all PR CI runs fail because of broken plugins on main (missing plugin.json or YAML frontmatter), (6) Dockerfile GID/UID collisions on Ubuntu 24.04, (7) pre-commit bash -c hooks silently lose filenames, (8) Mojo --Werror unused return value errors, (9) CI workflow references a renamed or missing test file, (10) tests pass locally but fail due to symlinks or mock bypass, (11) invalid pinned action SHAs in workflows, (12) need to identify required vs optional CI checks before fixing"
 category: ci-cd
 date: 2026-03-29
 version: 3.0.0
@@ -16,7 +16,7 @@ tags: []
 | Date | 2026-03-29 |
 | Objective | Consolidated CI failure fix patterns: compilation errors, lint failures, test assertion edge cases, memory safety crashes, and broken main-branch plugins |
 | Outcome | Merged from 5 source skills |
-| v3.0.0 | Absorbed ci-cd-failure-fix-patterns.md: Dockerfile GID/UID, bash -c args, invalid SHA, ADR-009 split tests, --Werror unused return, symlinks/mocks, rebase, required vs optional checks |
+| v3.0.0 | Absorbed ci-cd-failure-fix-patterns.md: Dockerfile GID/UID, bash -c args, invalid SHA, split tests, --Werror unused return, symlinks/mocks, rebase, required vs optional checks |
 
 ## When to Use
 
@@ -35,7 +35,7 @@ tags: []
 - Pre-commit `bash -c` hooks scan entire repo instead of only matched files
 - GitHub Actions workflows fail with "invalid SHA" or "unknown action" errors
 - Mojo compilation fails with `unused return value` under `--Werror`
-- CI workflow runs `just test-group` but the referenced test file was split (ADR-009)
+- CI workflow runs `just test-group` but the referenced test file was renamed or moved
 - Tests fail due to absolute symlinks or mock bypass issues
 - Test assertion values need updating after source code behavior changes
 - Branch needs rebase after fixes were made
@@ -95,7 +95,7 @@ Common failure categories:
 - Pre-commit hook scans whole repo instead of matched files → Step 8
 - `Error: Could not find actions/<action>@<sha>` → Step 9
 - `error: unused return value` in Mojo benchmarks/tests → Step 10
-- CI references `test_foo.mojo` but file was split into `test_foo_part1.mojo` → Step 11
+- CI references `test_foo.mojo` but file was renamed or moved → Step 11
 - Test passes locally but fails in CI with symlink errors or mock not intercepting → Step 12
 - Test assertion value no longer matches after implementation change → Step 13
 - Branch behind main after fixes were made → Step 14
@@ -430,9 +430,9 @@ grep -n "sgd_step\|adam_step\|fn.*-> Tuple" tests/shared/benchmarks/
 sed -i 's/^    sgd_step/    _ = sgd_step/g' <file>
 ```
 
-### Step 11: Fix Split Test Files (ADR-009)
+### Step 11: Fix CI Referencing a Missing or Renamed Test File
 
-**Symptom**: CI workflow runs `just test-group "path" "test_foo.mojo"` but the file was split into `test_foo_part1.mojo` and `test_foo_part2.mojo`.
+**Symptom**: CI workflow runs `just test-group "path" "test_foo.mojo"` but the file no longer exists at that path.
 
 **Fix locations** (must update all three):
 
@@ -441,7 +441,7 @@ sed -i 's/^    sgd_step/    _ = sgd_step/g' <file>
    # Before
    just test-group "tests/path/samplers" "test_sequential.mojo"
    # After
-   just test-group "tests/path/samplers" "test_sequential_part1.mojo test_sequential_part2.mojo"
+   just test-group "tests/path/samplers" "test_sequential_new.mojo"
    ```
 
 2. `run_all_tests.mojo` imports:
@@ -449,7 +449,7 @@ sed -i 's/^    sgd_step/    _ = sgd_step/g' <file>
    # Before
    from tests.shared.data.samplers.test_sequential import (...)
    # After
-   from tests.shared.data.samplers.test_sequential_part1 import (...)
+   from tests.shared.data.samplers.test_sequential_new import (...)
    ```
 
 3. `comprehensive-tests.yml` matrix (if applicable)
@@ -572,7 +572,7 @@ git add <files> && git commit -m "fix: ..." && git push
 | bash -c hook scans all files | `bash -c 'echo "$@"' -- Dockerfile` (test) | Add `--` sentinel to hook entry |
 | Invalid action SHA | `grep -r "actions/checkout@" .github/` | Cross-reference confirmed SHAs |
 | Unused return value | `grep -n "sgd_step" tests/shared/benchmarks/` | Add `_ =` prefix |
-| Split test file | Check `.github/workflows/comprehensive-tests.yml` | Update all 3 locations |
+| Missing/renamed test file | Check `.github/workflows/comprehensive-tests.yml` | Update all 3 locations |
 | Absolute symlink in CI | `ls -la tests/fixtures/config/models/` | Re-create as relative symlink |
 | Ruff line too long | `ruff check <file>` | Split lines |
 

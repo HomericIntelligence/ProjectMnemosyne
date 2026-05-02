@@ -24,7 +24,6 @@ created: 2025-12-30
 | Objective | | Field | Value | |-------|-------| | Date | 2025-12-30 | | Objective | Fix test failures caused by randn() ignoring its seed parameter | |
 | Outcome | Operational |
 
-
 | Field | Value |
 |-------|-------|
 | Date | 2025-12-30 |

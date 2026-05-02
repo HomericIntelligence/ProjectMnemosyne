@@ -132,7 +132,7 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 ```text
 execute_backward_tests_merge.py  — one-time branch merge, already merged
 merge_backward_tests.py          — duplicate merge approach
-bisect_heap_test.py              — git bisect artifact (ADR-009 heap issue)
+bisect_heap_test.py              — git bisect artifact (heap corruption investigation)
 run_bisect_heap.sh               — wrapper for bisect_heap_test.py
 fix-build-errors.py              — one-time autonomous repair
 batch_planning_docs.py           — one-time batch doc generation

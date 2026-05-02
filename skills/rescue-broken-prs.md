@@ -267,7 +267,6 @@ Copy-paste ready configurations and expected outputs.
 |---------|-------|------------|
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
-
 ### ❌ Failed: Using `git reset --hard` Without Checking State
 
 **What happened:** Tried to sync branch with remote using `git reset --hard origin/branch`

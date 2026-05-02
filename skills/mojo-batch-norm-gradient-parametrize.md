@@ -26,7 +26,7 @@ user-invocable: false
 - Implementing pytest-style parametrize patterns in Mojo (Mojo has no native `@parametrize` decorator)
 - Covering the `batch_size=1` degenerate edge case where training-mode batch norm collapses variance to zero
 - Extending an existing `test_normalization_part*.mojo` file set with a new part
-- Any gradient check test that needs to vary a shape dimension while keeping ADR-009 constraints (≤10 `fn test_` functions per file)
+- Any gradient check test that needs to vary a shape dimension (≤10 `fn test_` functions per file)
 
 ## Verified Workflow
 
@@ -146,10 +146,9 @@ fn test_batch_norm2d_backward_grad_beta_batch_sizes() raises:
     print("✓ Batch norm backward grad_beta validated for batch_sizes [1, 2, 4]")
 ```
 
-### Step 4: Verify ADR-009 compliance and CI discoverability
+### Step 4: Verify test count and CI discoverability
 
-ADR-009 requires ≤10 `fn test_` functions per `.mojo` file to avoid heap corruption from
-`libKGENCompilerRTShared.so` under high test load. The pattern above uses 3 public test
+Keep ≤10 `fn test_` functions per `.mojo` file. The pattern above uses 3 public test
 functions (well within the limit) with all parametrization inside private helpers.
 
 The file naming convention `test_normalization_part4.mojo` is auto-discovered by CI via
@@ -170,16 +169,13 @@ the glob pattern `test_normalization*.mojo` — no workflow changes needed.
 | Use uniform grad_output=ones for grad_input check | Set `grad_output = ones_like(output)` for all batch sizes | For symmetric inputs, the analytical gradient is near-zero (sum(x_hat)=0 cancellation), making the test insensitive to bugs | Always use non-uniform grad_output to break symmetry; see `batch-norm-backward-gradient-analysis` skill |
 | Apply full numerical gradient check for batch_size=1 | Called `compute_numerical_gradient` with epsilon=1e-3 for batch_size=1 | When variance≈0, the denominator `sqrt(eps_bn)≈0.00316` is much smaller than the finite difference step, causing catastrophic amplification of perturbations | Bifurcate: finiteness-only assertions for batch_size=1, full check for batch_size≥2 |
 | Use batch_size=1 with varying input to avoid variance=0 | Set non-uniform x values like `Float32(i)*0.1+0.05` | Even with non-uniform values across (H,W)=(2,2), per-channel variance is very small and the backward is still numerically unstable for finite differences | The fundamental issue is batch statistics computed over (N,H,W) with N=1; H×W=4 elements is too few for stable FD |
-| Share a single helper function for all 3 gradient types | One `_check_batch_size(batch_size, grad_type)` with a string parameter | Mojo closures capturing different outer variables (x vs gamma vs beta) require different fn signatures; string dispatch adds complexity | Keep separate helpers per gradient type — simpler and ADR-009 compliant |
+| Share a single helper function for all 3 gradient types | One `_check_batch_size(batch_size, grad_type)` with a string parameter | Mojo closures capturing different outer variables (x vs gamma vs beta) require different fn signatures; string dispatch adds complexity | Keep separate helpers per gradient type — simpler and stays within ≤10 fn test_ limit |
 
 ## Results & Parameters
 
 ### Test file header template
 
 ```mojo
-# ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
-# Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
-# high test load. Split from test_normalization.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
 """Tests for batch normalization backward pass across multiple batch sizes.
 
 Tests cover:

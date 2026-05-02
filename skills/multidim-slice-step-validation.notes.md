@@ -52,6 +52,6 @@ All 6 pass. Existing 2D slicing tests unaffected.
 ## Key Patterns
 
 - `slices[dim].step.or_else(1)` — Mojo `Optional[Int]` default extraction
-- ADR-009 compliance: ≤10 `fn test_` per file due to heap corruption flake
+- ≤10 `fn test_` per file (heap corruption was a known Mojo v0.26.1 flake, now fixed at compiler level)
 - `just test-group <path> <pattern>` — project test runner
 - Fail-fast over full implementation when issue gives the option

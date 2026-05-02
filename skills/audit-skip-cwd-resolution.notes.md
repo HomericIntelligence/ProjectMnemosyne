@@ -6,7 +6,7 @@
 
 ## Issue
 
-#3937 — migrate_odyssey_skills --audit mode uses hardcoded MNEMOSYNE_SKILLS_DIR
+# 3937 — migrate_odyssey_skills --audit mode uses hardcoded MNEMOSYNE_SKILLS_DIR
 
 Follow-up from #3311.
 

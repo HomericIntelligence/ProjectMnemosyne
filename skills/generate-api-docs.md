@@ -18,7 +18,6 @@ tier: 2
 | Objective | Extract docstrings from functions and classes to automatically generate API reference documentation. - Documenting public module interfaces |
 | Outcome | Operational |
 
-
 Extract docstrings from functions and classes to automatically generate API reference documentation.
 
 ## When to Use

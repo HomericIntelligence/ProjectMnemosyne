@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Validate Mojo code for memory safety violations and ownership issues. - Code review focused on memory safety |
 | Outcome | Operational |
 
-
 Validate Mojo code for memory safety violations and ownership issues.
 
 ## When to Use

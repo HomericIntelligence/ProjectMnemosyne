@@ -54,7 +54,7 @@ lines = line.splitlines()
 ```
 
 **Why this matters for `git status --porcelain`**:
-- ` M file` = space at position 0 means "unmodified in index, modified in worktree"
+- `M file` = space at position 0 means "unmodified in index, modified in worktree"
 - The space is *semantically significant* — it encodes the index status
 - `line[3:]` relies on the space being at position 0 to correctly locate the filename
 
@@ -140,7 +140,7 @@ Copy-paste ready configurations and expected outputs.
 The existing tests (multi-line stdout like `"M  file1\nA  file2\n"`) passed because
 `.strip()` only removed the trailing newline — the first line didn't start with a space
 in those cases. The bug only surfaced when a single-line stdout started with a significant
-space (` M ...`).
+space (`M ...`).
 
 **Always test your parsing functions with both single-line and multi-line inputs.**
 

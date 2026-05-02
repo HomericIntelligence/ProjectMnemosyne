@@ -268,7 +268,7 @@ file overlap and can all be dispatched in a single message. Saves ~5 min wall cl
 
 **Issue bundles for shared config files:**
 Multiple issues touching the same config file (e.g. #22 remove pixi.lock, #28 add entries,
-#30 add .env) should be bundled into ONE agent/PR — the file-level conflict is unavoidable anyway.
+# 30 add .env) should be bundled into ONE agent/PR — the file-level conflict is unavoidable anyway.
 
 ## Critical Pitfalls
 

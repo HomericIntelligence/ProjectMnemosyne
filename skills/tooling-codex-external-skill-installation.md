@@ -190,4 +190,3 @@ rg -n "Recommended ProjectHephaestus flow|\\$repo-analyze|\\$advise|\\$learn" AG
 | Project | Context | Details |
 |---------|---------|---------|
 | Radiance | Local Codex setup using ProjectHephaestus skills | Installed 5 skills, added Codex metadata, patched `advise`/`learn`, seeded ProjectMnemosyne, updated repo-local `AGENTS.md` |
-

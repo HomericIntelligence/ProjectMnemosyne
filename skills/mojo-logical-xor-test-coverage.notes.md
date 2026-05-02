@@ -12,7 +12,7 @@
 `logical_xor` was imported in `test_elementwise_part5.mojo` but had zero `fn test_logical_xor_*`
 functions. The gap was revealed during the earlier split of `test_elementwise.mojo` into 5 parts
 (issue #3409 follow-up). The task was to add coverage without touching part5 (already at the
-ADR-009 10-test limit).
+10-test limit).
 
 ## Steps Taken
 
@@ -29,7 +29,7 @@ ADR-009 10-test limit).
 
 ## What Worked
 
-- Mirroring the exact header comment (ADR-009 notice) from part5
+- Mirroring the import structure from part5
 - Using the same import list pattern, trimmed to only what's needed (`assert_almost_equal`,
   `assert_equal`, `assert_true`, `zeros`, `logical_xor`)
 - Truth-table test with 4-element tensor covering all (F,F), (F,T), (T,F), (T,T) combinations
@@ -41,4 +41,4 @@ ADR-009 10-test limit).
 - `zeros(shape, DType.float32)` is the standard way to allocate test tensors
 - `assert_almost_equal` with `tolerance=1e-5` is the standard for float comparisons
 - Each test file must have a `fn main() raises:` that calls all test functions in order
-- The ADR-009 split pattern means: check `grep -c "^fn test_"` before adding to an existing file
+- The split pattern means: check `grep -c "^fn test_"` before adding to an existing file (≤10 limit)

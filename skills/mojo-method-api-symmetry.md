@@ -17,7 +17,7 @@ user-invocable: false
 | **Problem** | Free functions exported from a module but no corresponding `self.method()` API on the struct |
 | **Solution** | Add inline-import delegation methods after the last method in the struct |
 | **Risk** | Low — no logic duplication, methods just call the free function |
-| **Test strategy** | 5-function test file (ADR-009 ≤10 fn limit), symmetry test verifies method == free function |
+| **Test strategy** | 5-function test file (≤10 fn limit), symmetry test verifies method == free function |
 
 ## When to Use
 
@@ -98,14 +98,9 @@ fn split_with_indices(
     return split_with_indices_fn(self, split_indices, axis)
 ```
 
-### Step 4 — Write tests respecting ADR-009
+### Step 4 — Write tests
 
-Mojo v0.26.1 has a heap corruption bug that triggers with >10 `fn test_` functions per file.
-Keep test files to ≤10 functions (ADR-009).
-
-```mojo
-# ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
-```
+Keep test files to ≤10 `fn test_` functions per file.
 
 Key symmetry test pattern — verify method output matches free function:
 

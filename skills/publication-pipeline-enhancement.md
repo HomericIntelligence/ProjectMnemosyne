@@ -286,7 +286,6 @@ Next WP: <Next WP description>
 |---------|-------|------------|
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
-
 ### ❌ Failed: Direct figure module patching in tests
 
 **What we tried:**

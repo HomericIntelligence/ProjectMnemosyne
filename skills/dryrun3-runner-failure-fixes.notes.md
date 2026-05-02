@@ -83,7 +83,7 @@ if code_block:
 Extract the whole block content, then parse normally.
 The brace-matching fallback below handles non-code-block responses.
 
-### Fix 4: stage_finalization.py — _call_judge_with_retry
+### Fix 4: stage_finalization.py —_call_judge_with_retry
 
 New helper extracted to reduce C901 complexity of `stage_execute_judge` and add retry:
 

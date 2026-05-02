@@ -16,7 +16,6 @@ user-invocable: false
 | Objective | | Attribute | Value | |-----------|-------| | **Date** | 2026-02-05 | | **Objective** | Fix test isolation issues by removing mocks and using real ... |
 | Outcome | Operational |
 
-
 | Attribute | Value |
 |-----------|-------|
 | **Date** | 2026-02-05 |

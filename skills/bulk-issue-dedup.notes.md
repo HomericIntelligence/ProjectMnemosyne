@@ -4,8 +4,7 @@
 
 ProjectOdyssey had 363 open GitHub issues. A significant fraction (~30%) were duplicates generated
 by Claude agents over many sessions — each session would independently create issues for
-"Audit test files for ADR-009 compliance", "Add ADR-009 pre-commit hook", etc., resulting in
-50+ near-identical issues asking for the same 3-4 things.
+the same recurring topics, resulting in 50+ near-identical issues asking for the same 3-4 things.
 
 ## Session Objective
 
@@ -18,13 +17,13 @@ by Claude agents over many sessions — each session would independently create 
 
 ### Round 1: Initial audit
 - Used `gh issue list --limit 500 --json number,title` to retrieve all issues
-- Identified 4 major ADR-009 duplicate clusters by visual inspection
+- Identified 4 major duplicate clusters by visual inspection
 - Closed 84 duplicates in batch using for-loop with `gh issue close NUMBER --comment "Duplicate of #CANONICAL"`
 
 ### Round 2: Second-pass duplicates
 - Identified 11 more duplicates across 3 new clusters
 - continue-on-error removal (6 variants → canonical #4100)
-- ADR-009 headers (2 variants → canonical #4097)
+- Test file headers (2 variants → canonical #4097)
 - Backward pass implementations (3 duplicates of existing issues)
 
 ### Round 3: Subsets and near-duplicates

@@ -243,7 +243,7 @@ done
 | Single sequential compilation script | Ran all 498 files in one bash loop | Took >8 hours; each file takes 30-60s to compile | Split into 6 parallel Haiku agents covering ~80 files each |
 | `alias x = val` for unused variable fix | Changed `var x = val` to `alias x = val` | Mojo 0.26.1 reports `alias` is deprecated in function bodies | Use `var x = val; _ = x` or just `_ = val` directly |
 | `for _ in range(...)` with `replace_all` | Tried to replace all loop vars at once | Multiple different variable names; regex too broad | Target specific line numbers from compiler error output |
-| `sed` replacement of method-call patterns | Used sed to add `_ = ` prefix to callback calls | Regex didn't match all variable name patterns | Use Python with exact line numbers from error output |
+| `sed` replacement of method-call patterns | Used sed to add `_ =` prefix to callback calls | Regex didn't match all variable name patterns | Use Python with exact line numbers from error output |
 | Fixing `if True:` with inline scope removal | Simply removed `if True:` block wrapper | Variables created inside still needed to go out of scope for the test to work | Use explicit `_ = var^` ownership drop pattern to manually trigger destruction |
 | Using `except e:` → `_ = e` | Tried to capture the exception in `_` | Mojo syntax doesn't support `except _:` | Use bare `except:` (no binding at all) |
 | `mojo build` for test files | Used build command for all files | Test files use `raises` and test assertions; `mojo` (not build) is correct | Use `mojo --Werror` for test files; `mojo build --Werror` only for examples/scripts with main() |

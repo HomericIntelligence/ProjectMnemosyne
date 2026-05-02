@@ -18,7 +18,6 @@ tier: 2
 | Objective | Analyze code and profile data to recommend optimization strategies for improving performance and resource usage. |
 | Outcome | Operational |
 
-
 Analyze code and profile data to recommend optimization strategies for improving performance and resource usage.
 
 ## When to Use

@@ -1,12 +1,12 @@
 ---
 name: conv2d-gradient-checking-finite-differences
-description: "Use when: (1) conv2d_backward tests only validate shapes but not grad_input/grad_weights values numerically, (2) adding finite-difference gradient checks for standard conv2d across padding=0, padding>0, stride, and multi-channel configurations, (3) verifying transposed convolution correctness, (4) extending gradient checking coverage to all three backward outputs (grad_input, grad_weights, grad_bias), (5) working under ADR-009 Mojo heap-corruption constraint (≤10 tests per file)"
+description: "Use when: (1) conv2d_backward tests only validate shapes but not grad_input/grad_weights values numerically, (2) adding finite-difference gradient checks for standard conv2d across padding=0, padding>0, stride, and multi-channel configurations, (3) verifying transposed convolution correctness, (4) extending gradient checking coverage to all three backward outputs (grad_input, grad_weights, grad_bias), (5) keeping per-file test count under 10"
 category: testing
 date: 2026-03-28
 version: "1.0.0"
 user-invocable: false
 verification: unverified
-tags: [conv2d, gradient-checking, finite-differences, mojo, backward-pass, numerical-gradients, adr-009, padding]
+tags: [conv2d, gradient-checking, finite-differences, mojo, backward-pass, numerical-gradients, padding]
 ---
 ## Overview
 
@@ -17,12 +17,11 @@ tags: [conv2d, gradient-checking, finite-differences, mojo, backward-pass, numer
 | **Key outputs verified** | `grad_input`, `grad_weights`, `grad_bias` |
 | **Configurations covered** | padding=0, padding=1, padding=2, stride=1, stride=2, multi-channel, batched |
 | **Language** | Mojo |
-| **Constraint** | ADR-009: ≤10 `fn test_` per file (Mojo v0.26.1 heap corruption bug) |
 
 ## When to Use
 
 1. `conv2d_backward` tests only verify shapes/bias but not `grad_input` or `grad_weights` numerically
-2. Existing gradient-checking files are at ADR-009 capacity and a new dedicated file is needed
+2. Existing gradient-checking files are at their per-file test limit and a new dedicated file is needed
 3. Adding coverage for specific conv configurations: same-padding (stride=1, padding=1), strided (stride=2, padding=0), multi-channel (in_channels>1, out_channels>1)
 4. Validating boundary handling in transposed convolution for `grad_input` when `padding > 0`
 5. Creating a dedicated file for all three backward outputs across multiple configurations
@@ -36,7 +35,7 @@ tags: [conv2d, gradient-checking, finite-differences, mojo, backward-pass, numer
 grep -c "^fn test_" <test-root>/test_gradient_checking_*.mojo
 grep -c "^fn test_" <test-root>/test_backward_conv_pool.mojo
 
-# Verify new file stays under ADR-009 limit
+# Verify new file stays under per-file test limit
 grep -c "^fn test_" <test-root>/test_gradient_checking_conv2d.mojo
 # Expected: ≤10
 
@@ -66,7 +65,7 @@ Files to target by type:
 - `test_gradient_checking_dtype.mojo` — dtype-specific checks (uses `check_gradients`)
 - `test_gradient_checking_conv2d.mojo` — dedicated conv2d file when others are full
 
-### Step 2: Count existing tests (ADR-009)
+### Step 2: Count existing tests
 
 ```bash
 grep -c "^fn test_" <test-root>/test_gradient_checking_dtype.mojo
@@ -75,9 +74,6 @@ grep -c "^fn test_" <test-root>/test_gradient_checking_dtype.mojo
 If adding 3+ tests would breach the ≤10 limit, create a new file. Required header for all files:
 
 ```mojo
-# ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
-# Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
-# high test load. See docs/adr/ADR-009-heap-corruption-workaround.md
 ```
 
 ### Step 3: Add grad_input numerical check (padding=0)
@@ -241,7 +237,7 @@ Mojo format is enforced in CI via Docker where GLIBC >= 2.32.
 | Add tests to new file prematurely | Creating `test_gradient_checking_conv2d.mojo` before checking existing capacity | Existing file had only 5 tests — 3 more would fit | Check `grep -c "^fn test_"` before creating new files |
 | Using `check_gradient` (no s) | `from shared.testing import check_gradient` | Different API: `check_gradient` requires explicit `grad_output`; `check_gradients` computes internally | Match the API to the test file — check existing imports |
 | Using `just test` locally | `just test` command | `just` not installed on the host | Use `pixi run mojo test` directly or rely on CI |
-| Checking for existing `test_backward.mojo` | Expected tests in single file | File was split into `test_backward_conv_pool.mojo`, `test_backward_linear.mojo`, etc. due to ADR-009 | Always `Glob` for all backward test files before assuming location |
+| Checking for existing `test_backward.mojo` | Expected tests in single file | File was split into `test_backward_conv_pool.mojo`, `test_backward_linear.mojo`, etc. | Always `Glob` for all backward test files before assuming location |
 
 ## Results & Parameters
 
@@ -268,7 +264,7 @@ for i in range(9):
 
 Uniform values (`full(..., 0.5)` input, `full(..., 0.1)` kernel) are sufficient for non-padded tests since conv2d does not have the sum-cancellation problem of normalization layers.
 
-### ADR-009 test count budget
+### Per-file test count budget
 
 ```
 test_gradient_checking_basic.mojo:  ≤10 tests  (activations, arithmetic, edge cases)

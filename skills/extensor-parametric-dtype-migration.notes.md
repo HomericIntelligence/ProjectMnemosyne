@@ -43,7 +43,7 @@ Autograd: tape_types
 Data: _datasets_core
 Training: accuracy, confusion_matrix
 Tests: test_backward_linear, test_backward_losses, test_backward_conv_pool, test_shape_part3, test_setitem_view, test_extensor_setitem
-Docs: ADR-009
+Docs: heap corruption workaround ADR (fixed broken blog link)
 
 ## Sub-Agent Strategy
 

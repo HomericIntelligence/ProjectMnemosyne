@@ -18,7 +18,6 @@ tier: 2
 | Objective | Load, preprocess, and validate datasets for machine learning model training including normalization and augmentation. |
 | Outcome | Operational |
 
-
 Load, preprocess, and validate datasets for machine learning model training including normalization and augmentation.
 
 ## When to Use

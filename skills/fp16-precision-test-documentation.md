@@ -53,14 +53,14 @@ user-invocable: false
 | Max safe accumulations | ~100-200 for FP-representable inputs |
 | Risk threshold | >300 multiplications per output element |
 
-### Multiplication counts by layer type:
+### Multiplication counts by layer type
 - Conv (K×K kernel, C_in channels): `K² × C_in` multiplications per output
 - Conv1 AlexNet (11×11, 3ch): 363 — exceeds safe range
 - Conv2 AlexNet (5×5, 64ch): 1,600 — far exceeds safe range
 - FC3 LeNet (84 in_features): 84 — borderline, test runs but accuracy reduced
 - Gradient checking (epsilon=1e-5): requires >5 digits precision — FP16 insufficient
 
-### Mixed-precision training context:
+### Mixed-precision training context
 In real training, convolutions compute in FP32 for numerical stability while storing
 activations/weights in FP16 for memory efficiency. Tests that "use FP32 compute" are
 faithfully modeling this pattern.
@@ -75,7 +75,7 @@ faithfully modeling this pattern.
 
 ## Results & Parameters
 
-### Documentation section template:
+### Documentation section template
 
 ```
 Float16 Precision Limitations
@@ -91,7 +91,7 @@ In practice, mixed-precision training <context about real-world usage>.
 See issue #<tracking-issue> for detailed analysis.
 ```
 
-### Commit message format:
+### Commit message format
 ```
 docs(tests): document Float16 precision limitations in test headers
 

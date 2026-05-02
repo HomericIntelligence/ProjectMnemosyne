@@ -6,19 +6,19 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "1.0.0",
-  "total_plugins": 933,
+  "total_plugins": 981,
   "categories": {
-    "architecture": 113,
-    "ci-cd": 182,
-    "debugging": 100,
-    "documentation": 102,
+    "architecture": 122,
+    "ci-cd": 198,
+    "debugging": 115,
+    "documentation": 105,
     "evaluation": 67,
-    "optimization": 18,
-    "testing": 150,
-    "tooling": 195,
+    "optimization": 19,
+    "testing": 144,
+    "tooling": 205,
     "training": 6
   },
-  "last_updated": "2026-04-08T04:26:01Z",
+  "last_updated": "2026-05-02T06:10:51Z",
   "plugins": [
     {
       "name": "agent-coverage-check",
@@ -75,6 +75,51 @@
       "source": "./skills/agent-validate-config.md",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "arch-research-doc-lora-review-pattern",
+      "description": "Myrmidon swarm review pattern for AI architecture research documents covering low-rank parameterization, layer pruning/residual gating, complexity analysis, citation verification, and inference benefit claims. Use when: (1) reviewing research/summary docs for ideas involving weight factorization or LoRA-style parameterization, (2) reviewing ideas involving learned layer skipping, residual gating, or static-at-inference pruning, (3) validating Big-O complexity tables in transformer architecture research, (4) auditing inference speedup claims (merged vs unmerged, frozen gates vs model surgery, compute-bound vs bandwidth-bound), (5) verifying that training and inference benefit claims are internally consistent across cases.",
+      "version": "1.1.0",
+      "source": "./skills/arch-research-doc-lora-review-pattern.md",
+      "category": "architecture",
+      "tags": [
+        "arch-research",
+        "lora",
+        "low-rank",
+        "complexity-audit",
+        "citation-verification",
+        "inference",
+        "myrmidon",
+        "swarm-review",
+        "layer-pruning",
+        "residual-gating",
+        "static-inference"
+      ]
+    },
+    {
+      "name": "arch-research-myrmidon-swarm-review",
+      "description": "Parallel AI architecture research review using Myrmidon Swarm pattern: 1 lead agent per idea + 5 parallel sub-agents (citation verifier, complexity auditor, literature gap finder, comparison validator, feasibility checker) + coordinator. Use when: (1) reviewing a corpus of 10+ research documents for correctness, (2) verifying citations, Big-O claims, and baseline comparisons at scale, (3) producing independent review documents that can be cross-checked.",
+      "version": "1.4.0",
+      "source": "./skills/arch-research-myrmidon-swarm-review.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "arch-research-static-inference-model-surgery",
+      "description": "Pattern for analyzing 'static at inference time' claims in architecture research. A frozen gate does NOT produce inference speedup \u2014 only physical model surgery (layer removal) does. Use when: (1) a research doc claims 'static at inference' speedup from frozen gates or gating decisions, (2) validating TPOT/TTFT claims for any idea where layers or operations are 'frozen' after training, (3) auditing whether 'no per-token overhead' is truly achievable from a frozen architectural decision.",
+      "version": "1.0.0",
+      "source": "./skills/arch-research-static-inference-model-surgery.md",
+      "category": "architecture",
+      "tags": [
+        "static-inference",
+        "model-surgery",
+        "frozen-gates",
+        "residual-gating",
+        "layer-pruning",
+        "tpot",
+        "ttft",
+        "speedup-claim"
+      ]
     },
     {
       "name": "architect-review-implementation",
@@ -228,6 +273,22 @@
       ]
     },
     {
+      "name": "architecture-radiance-per-layer-metrics-selected-profile-only",
+      "description": "Use when adding analytical model metrics to a tracing pipeline: (1) exact operator kernels should roll up into per-layer outputs, (2) hardware projection must use a user-selected inline profile rather than a fixed built-in set.",
+      "version": "1.0.0",
+      "source": "./skills/architecture-radiance-per-layer-metrics-selected-profile-only.md",
+      "category": "architecture",
+      "tags": [
+        "radiance",
+        "metrics",
+        "hardware-profile",
+        "operator-kernels",
+        "layer-aggregation",
+        "sol",
+        "roofline"
+      ]
+    },
+    {
       "name": "architecture-rest-api-httpx-integration",
       "description": "Pattern for adding REST API client integration to a Python project using httpx. Use when: (1) adding HTTP client to codebase with no existing HTTP dependency, (2) integrating external REST API with Pydantic config system, (3) wiring optional feature into existing config hierarchy.",
       "version": "2.0.0",
@@ -291,7 +352,7 @@
     {
       "name": "claude-code-settings-config",
       "description": "Configure Claude Code settings.json per test workspace to control thinking mode via API rather than prompt injection. Use when implementing workspace-level configuration for E2E tests.",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "source": "./skills/claude-code-settings-config.md",
       "category": "architecture",
       "tags": []
@@ -372,6 +433,18 @@
       "source": "./skills/constant-centralization.md",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "corpus-surgical-correction-batch",
+      "description": "Surgical batch correction of a large research document corpus (50+ files) after a review pass. Use when: (1) a review process has identified specific errors across many documents that share a common root cause, (2) you need corrections to be traceable (auditable inline markers), (3) stripping correction-narrative text from a document corpus after corrections have been accepted and made permanent, (4) you want to preserve all surrounding text and structure, (5) corrections span multiple independent document groups that can be parallelized.",
+      "version": "1.1.0",
+      "source": "./skills/corpus-surgical-correction-batch.md",
+      "category": "architecture",
+      "tags": [
+        "latex",
+        "narrative-removal",
+        "corpus-edit"
+      ]
     },
     {
       "name": "credential-mount-context-manager",
@@ -470,9 +543,28 @@
       "tags": []
     },
     {
+      "name": "e2e-hermes-hub-remote-myrmidon",
+      "description": "Hub+remote-worker topology for HomericIntelligence E2E: hermes runs full stack (NATS JetStream, Agamemnon, Nestor, Hermes bridge, observability), epimetheus runs only the hello-myrmidon Python worker over Tailscale. Use when: (1) validating cross-host myrmidon dispatch end-to-end, (2) setting up a hub+single-remote-worker topology distinct from the symmetric crosshost split, (3) troubleshooting remote myrmidon NATS connectivity, (4) excluding a compose service via overlay profiles.",
+      "version": "1.0.0",
+      "source": "./skills/e2e-hermes-hub-remote-myrmidon.md",
+      "category": "architecture",
+      "tags": [
+        "e2e",
+        "cross-host",
+        "hermes-hub",
+        "myrmidon",
+        "tailscale",
+        "nats",
+        "compose-overlay",
+        "podman",
+        "homeric-intelligence",
+        "remote-worker"
+      ]
+    },
+    {
       "name": "e2e-homeric-compose-cpp-pipeline",
-      "description": "Wire HomericIntelligence C++20 services into a podman/docker compose E2E stack with NATS JetStream, Prometheus, Grafana. Use when: (1) setting up the full E2E pipeline, (2) adding new C++20 services to the compose stack, (3) debugging multi-container C++ service orchestration, (4) troubleshooting podman vs docker runtime differences, (5) running on hosts without rootlessport or external internet access, (6) debugging Hermes webhook event type mapping (only task.updated/completed/failed/agent.* supported), (7) writing healthchecks compatible with both podman-compose 1.5.0 and Docker Compose (use CMD+sh+-c not CMD-SHELL array).",
-      "version": "1.5.0",
+      "description": "Wire HomericIntelligence C++20 services into a podman/docker compose E2E stack with NATS JetStream, Prometheus, Grafana. Use when: (1) setting up the full E2E pipeline, (2) adding new C++20 services to the compose stack, (3) debugging multi-container C++ service orchestration, (4) troubleshooting podman vs docker runtime differences, (5) running on hosts without rootlessport or external internet access, (6) debugging Hermes webhook event type mapping (only task.updated/completed/failed/agent.* supported), (7) writing healthchecks compatible with podman-compose 1.5.0 and Docker Compose v2+v5 (use YAML string form \u2014 no array; Docker Compose v5 splits array elements on spaces).",
+      "version": "1.6.0",
       "source": "./skills/e2e-homeric-compose-cpp-pipeline.md",
       "category": "architecture",
       "tags": [
@@ -567,8 +659,8 @@
     },
     {
       "name": "extract-method-refactoring",
-      "description": "Skill: extract-method-refactoring. Use when working with extract method refactoring.",
-      "version": "1.0.0",
+      "description": "Decompose large methods and inline closures into focused helper methods. Use when: (1) methods exceed 50-100 LOC or have high cyclomatic complexity, (2) code review requests decomposition, (3) a method defines multiple closures over 3+ variables from the enclosing scope, (4) closures use nonlocal rebinding signaling they should be private methods, or (5) inline closures prevent direct unit testing of guards.",
+      "version": "2.0.0",
       "source": "./skills/extract-method-refactoring.md",
       "category": "architecture",
       "tags": []
@@ -607,6 +699,14 @@
       "description": "Fix judge reruns producing incorrect results due to workspace corruption",
       "version": "1.0.0",
       "source": "./skills/judge-rerun-workspace-corruption.md",
+      "category": "architecture",
+      "tags": []
+    },
+    {
+      "name": "llm-baseline-spec-verification",
+      "description": "Verify LLM baseline model specs from authoritative sources before any quantitative analysis. Use when: (1) starting any research/review task that involves computing KV cache sizes, FLOPs, or memory bandwidth for specific models, (2) using a shared context document with model specs, (3) comparing multiple LLM baselines quantitatively.",
+      "version": "1.0.0",
+      "source": "./skills/llm-baseline-spec-verification.md",
       "category": "architecture",
       "tags": []
     },
@@ -651,8 +751,8 @@
     },
     {
       "name": "module-decomposition-pattern",
-      "description": "Decompose large Python modules (1000+ lines) into focused sub-modules while preserving backward compatibility, updating all import sites, and fixing mock patch targets in tests. Use when a single file has 4+ logical clusters of functions with distinct responsibilities.\n",
-      "version": "1.0.0",
+      "description": "Decompose large Python modules (1000+ lines) into focused sub-modules while preserving backward compatibility, updating all import sites or re-exporting from the original, and fixing mock patch targets in tests. Use when a single file has 4+ logical clusters of functions with distinct responsibilities.\n",
+      "version": "2.0.0",
       "source": "./skills/module-decomposition-pattern.md",
       "category": "architecture",
       "tags": []
@@ -689,8 +789,8 @@
     },
     {
       "name": "mojo-deprecated-alias-removal",
-      "description": "Workflow for removing deprecated Mojo comptime type aliases and replacing usages with canonical types. Use when: removing DEPRECATED-marked comptime aliases from Mojo modules, cleaning up backward-compat test files, updating __init__.mojo exports after alias consolidation.",
-      "version": "1.0.0",
+      "description": "Workflow for removing deprecated Mojo comptime type aliases and replacing usages with canonical types. Use when: removing DEPRECATED-marked comptime aliases from Mojo modules, cleaning up backward-compat test files, updating __init__.mojo exports and layer imports after alias consolidation.",
+      "version": "1.1.0",
       "source": "./skills/mojo-deprecated-alias-removal.md",
       "category": "architecture",
       "tags": []
@@ -702,6 +802,22 @@
       "source": "./skills/mojo-dual-type-tensor-review.md",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "mojo-fp16-simd-upgrade-pattern",
+      "description": "Replace scalar FP16\u2194FP32 conversion loops with SIMD vectorized paths after upgrading to Mojo 0.26.3. Use when: (1) upgrading from Mojo 0.26.1 where FP16 SIMD was unsupported, (2) finding scalar element-by-element conversion loops with comments like 'FP16 SIMD blocked', (3) implementing mixed-precision tensor conversion in Mojo 0.26.3+.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-fp16-simd-upgrade-pattern.md",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "fp16",
+        "simd",
+        "mixed-precision",
+        "vectorization",
+        "upgrade",
+        "float16"
+      ]
     },
     {
       "name": "mojo-getitem-slice-multidim",
@@ -755,7 +871,7 @@
     {
       "name": "mojo-package-level-reexports",
       "description": "Add convenience top-level re-exports to a Mojo package __init__.mojo. Use when: enabling `from shared import X` style imports, activating commented-out import lines after implementation is ready, adding optimizer structs (AdaGrad/RMSprop/AdamW), or extending an existing re-export group with new symbols.",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "source": "./skills/mojo-package-level-reexports.md",
       "category": "architecture",
       "tags": []
@@ -775,28 +891,36 @@
       ]
     },
     {
-      "name": "mojo-python-interop-placeholder-replacement",
-      "description": "Workflow for replacing Mojo stdlib-gap placeholders with Python interop. Use when: a Mojo function has a no-op placeholder body due to missing stdlib support (e.g. os.remove, os.rename), or when callers silently believe work was done when it was not.",
+      "name": "mojo-python-interop-patterns-guide",
+      "description": "Canonical Mojo-Python interop patterns from Modular. Use when: (1) calling Python libraries from Mojo, (2) converting between PythonObject and Mojo types, (3) building Python extension modules in Mojo, (4) exposing Mojo structs to Python.",
       "version": "1.0.0",
-      "source": "./skills/mojo-python-interop-placeholder-replacement.md",
+      "source": "./skills/mojo-python-interop-patterns-guide.md",
       "category": "architecture",
-      "tags": []
+      "tags": [
+        "mojo",
+        "python",
+        "interop",
+        "pythonobject",
+        "extension-module",
+        "modular-upstream"
+      ]
     },
     {
       "name": "mojo-python-interop-to-stdlib",
-      "description": "Replace Python.import_module calls with Mojo native stdlib. Use when: eliminating Python interop for file system ops (os, pathlib, builtins), refactoring load_named_tensors or similar functions, or migrating from Python glob/sorted to native Mojo os.listdir + sort.",
-      "version": "1.0.0",
+      "description": "Replace Python.import_module calls with Mojo native stdlib, bridge filesystem gaps with Python interop, and migrate PythonObject placeholder parameters to native Mojo struct types. Use when: (1) eliminating Python interop for file system ops (os, pathlib, builtins), (2) a Mojo function has a no-op stub body due to missing stdlib (os.remove, os.rename), (3) a function accepts PythonObject as a stopgap while the native struct is now ready, (4) refactoring load_named_tensors or similar functions, (5) migrating from Python glob/sorted to native Mojo os.listdir + sort.",
+      "version": "2.0.0",
       "source": "./skills/mojo-python-interop-to-stdlib.md",
       "category": "architecture",
-      "tags": []
-    },
-    {
-      "name": "mojo-pythonobject-to-native-type-migration",
-      "description": "Migrate Mojo function signatures from PythonObject placeholder parameters to native Mojo struct types. Use when: a function accepts PythonObject as a temporary placeholder pending interop infrastructure, and the native struct is now ready.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-pythonobject-to-native-type-migration.md",
-      "category": "architecture",
-      "tags": []
+      "tags": [
+        "mojo",
+        "python",
+        "interop",
+        "pythonobject",
+        "stdlib",
+        "migration",
+        "placeholder",
+        "dataloader"
+      ]
     },
     {
       "name": "mojo-reexport-chain-wiring",
@@ -829,6 +953,37 @@
       "source": "./skills/mojo-tuple-return-types.md",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "mojo-version-migration-strategy",
+      "description": "Strategy for migrating a large Mojo codebase across versions. Use when: (1) planning a Mojo version upgrade across many files, (2) coordinating multi-agent migration work, (3) deciding fix order for cascading compile errors.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-version-migration-strategy.md",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "migration",
+        "version-upgrade",
+        "agent-coordination",
+        "strategy"
+      ]
+    },
+    {
+      "name": "mojo-writable-write-to-migration",
+      "description": "Migrate Mojo structs from __str__/Stringable to write_to/Writable for Mojo 0.26.3+ conformance. Use when: (1) auditing a codebase for deprecated Stringable/\\_\\_str\\_\\_ patterns in Mojo 0.26.3+, (2) a struct declares Writable in its trait list but implements \\_\\_str\\_\\_ instead of write_to, (3) migrating from Stringable to Writable with optional transitional delegation for backward compatibility.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-writable-write-to-migration.md",
+      "category": "architecture",
+      "tags": [
+        "mojo",
+        "writable",
+        "stringable",
+        "write_to",
+        "__str__",
+        "trait",
+        "migration",
+        "modernization"
+      ]
     },
     {
       "name": "multi-domain-audit-remediation",
@@ -870,7 +1025,7 @@
     {
       "name": "myrmidon-swarm-end-to-end-orchestration-full-workflow",
       "description": "Full end-to-end L0 commander pattern for complex myrmidon orchestration sessions. Use when: (1) task spans 3+ phases (cleanup + rebase + merge + CI + knowledge), (2) 10+ sub-tasks with mixed agent tiers required, (3) cross-repo work requiring /advise and /learn coordination, (4) feedback loops and decision gates are needed before committing to destructive operations, (5) auto-merge assumption cannot be made (CI may fail).",
-      "version": "1.0.0",
+      "version": "1.2.0",
       "source": "./skills/myrmidon-swarm-end-to-end-orchestration-full-workflow.md",
       "category": "architecture",
       "tags": [
@@ -988,6 +1143,27 @@
       "source": "./skills/repo-hygiene-audit-implementation.md",
       "category": "architecture",
       "tags": []
+    },
+    {
+      "name": "research-corpus-audit-parallel-agent-pattern",
+      "description": "Strict 10-dimension quality audit of AI architecture research corpora using parallel agent delegation. Use when: (1) auditing a large set of research/summary docs for structural compliance, (2) enforcing citation standards and TPOT framing conventions across a corpus, (3) grading research output with file:line evidence, (4) reviewing individual idea research docs for KV cache / quantization numerical correctness.",
+      "version": "1.4.0",
+      "source": "./skills/research-corpus-audit-parallel-agent-pattern.md",
+      "category": "architecture",
+      "tags": [
+        "research",
+        "audit",
+        "corpus",
+        "tpot",
+        "citation",
+        "parallel-agents",
+        "myrmidon",
+        "kv-cache",
+        "quantization",
+        "remediation",
+        "wave-based",
+        "terminology-drift"
+      ]
     },
     {
       "name": "resource-manager-pattern",
@@ -1112,19 +1288,16 @@
     },
     {
       "name": "type-alias-consolidation",
-      "description": "Skill: type-alias-consolidation. Use when working with type alias consolidation.",
-      "version": "1.0.0",
+      "description": "Systematic workflow for removing redundant type aliases that shadow domain-specific variant names. Use when multiple modules define TypeName = DomainVariant aliases causing naming confusion.",
+      "version": "2.0.0",
       "source": "./skills/type-alias-consolidation.md",
       "category": "architecture",
-      "tags": []
-    },
-    {
-      "name": "type-alias-removal",
-      "description": "Systematic workflow for removing redundant type aliases and using explicit variant names",
-      "version": "1.0.0",
-      "source": "./skills/type-alias-removal.md",
-      "category": "architecture",
-      "tags": []
+      "tags": [
+        "refactoring",
+        "type-consolidation",
+        "python",
+        "architecture"
+      ]
     },
     {
       "name": "validate-tuple-return",
@@ -1136,8 +1309,8 @@
     },
     {
       "name": "wave-based-bulk-issue-triage",
-      "description": "Fix 5+ independent GitHub issues in parallel waves using Task isolation:worktree. No manual worktree setup \u2014 Claude Code auto-manages isolation. Also covers bulk gh issue create via myrmidon swarm (plain Agent calls, no worktrees needed).",
-      "version": "1.1.0",
+      "description": "Fix 5+ independent GitHub issues in parallel waves using Task isolation:worktree. No manual worktree setup \u2014 Claude Code auto-manages isolation. Also covers bulk gh issue create via myrmidon swarm (plain Agent calls, no worktrees needed). Includes pre-fix classification phase using parallel Explore agents.",
+      "version": "1.3.0",
       "source": "./skills/wave-based-bulk-issue-triage.md",
       "category": "architecture",
       "tags": []
@@ -1157,22 +1330,6 @@
       "source": "./skills/yaml-long-line-refactor.md",
       "category": "architecture",
       "tags": []
-    },
-    {
-      "name": "adr009-ci-pattern-update",
-      "description": "Update CI workflow files when splitting ADR-009 test files. Use when: (1) a Mojo test file split requires updating comprehensive-tests.yml because the CI group uses an explicit filename list, (2) verifying whether a CI group uses glob auto-discovery or explicit filenames before editing the workflow, (3) updating validate_test_coverage.py after a split, (4) splitting files in groups like Core Activations & Types, Core Tensors, or Core Utilities that use explicit filename patterns.",
-      "version": "1.1.0",
-      "source": "./skills/adr009-ci-pattern-update.md",
-      "category": "ci-cd",
-      "tags": [
-        "adr-009",
-        "mojo",
-        "ci",
-        "workflow",
-        "glob",
-        "explicit-pattern",
-        "validate-test-coverage"
-      ]
     },
     {
       "name": "badge-count-drift-prevention",
@@ -1232,16 +1389,16 @@
     },
     {
       "name": "batch-pr-ci-fix-workflow",
-      "description": "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable.",
-      "version": "2.2.0",
+      "description": "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern, (19) just v1.14+ import keyword reservation breaks inline Python heredocs causing all CI Code Quality fails, (20) gitleaks asset URL 404 because uname -s/-m produces wrong case/arch string for download URL, (21) GHA workflow uses manual pixi install instead of composite setup-pixi action causing pixi command not found, (22) bats PATH test for missing tool includes /bin or /usr/bin which pixi activation already polluted, (23) shell script calls companion script via SCRIPT_DIR but unit tests copy only the main script to a temp dir.",
+      "version": "2.9.0",
       "source": "./skills/batch-pr-ci-fix-workflow.md",
       "category": "ci-cd",
       "tags": []
     },
     {
       "name": "batch-pr-rebase-workflow",
-      "description": "Use when: (1) many PRs show DIRTY/CONFLICTING/BLOCKED merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files), (6) delegating mass rebase to a Myrmidon swarm of parallel agents, (7) orphaned branches need PRs created and CI fixed, (8) a PR expanded a pre-commit hook scope causing self-catch failures on pre-existing violations, (9) small batch (2-10) stale branches need rebase with subsume-vs-integrate conflict analysis, (10) GitHub issue backlog (20+ issues) needs triage, batched PRs, and stale worktree/branch cleanup",
-      "version": "2.0.0",
+      "description": "Use when: (1) many PRs show DIRTY/CONFLICTING/BLOCKED merge state after main advances, (2) a major refactor causes mass conflicts across 10-160+ PRs, (3) PRs have inter-dependencies requiring sequential wave merging, (4) CI queue is backed up with 50+ queued runs and PRs need consolidation via cherry-pick, (5) PRs conflict on the same files (pixi.lock, plugin.json, core source files), (6) delegating mass rebase to a Myrmidon swarm of parallel agents, (7) orphaned branches need PRs created and CI fixed, (8) a PR expanded a pre-commit hook scope causing self-catch failures on pre-existing violations, (9) small batch (2-10) stale branches need rebase with subsume-vs-integrate conflict analysis, (10) GitHub issue backlog (20+ issues) needs triage, batched PRs, and stale worktree/branch cleanup, (11) 10+ branches all conflict on the same 3-5 core files and are being merged serially \u2014 take HEAD (origin/main) for all conflicted core files since main already contains the union of all prior merged features, (12) main is advancing rapidly via auto-merge during the rebase session and PRs keep going DIRTY again \u2014 repeat rebase in waves until stable, (13) stale worktrees from a previous session are listed in `git worktree list` as unlinked \u2014 check before removing, they may already be detached with no git state to clean up, (14) a rebase 'succeeds' but the branch tip equals main HEAD \u2014 the commit was silently dropped as empty, recover the original SHA and rebase again keeping the PR's file additions, (15) a rebased PR's tests fail because the PR's own implementation was incomplete \u2014 the commit message described a feature but the actual diff didn't include a critical file (e.g., server route for an endpoint the tests expect)",
+      "version": "2.5.0",
       "source": "./skills/batch-pr-rebase-workflow.md",
       "category": "ci-cd",
       "tags": [
@@ -1265,6 +1422,14 @@
       "description": "Implements multiple automated review plans for PRs, handling OPEN PRs via rebase+push and skipping MERGED PRs with only transient CI failures. Use when: automated implementer generated review-plan-*.md files with phase=failed in review JSON, need to process 10+ stale PR branches at once.",
       "version": "1.0.0",
       "source": "./skills/batch-review-plan-implementation.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "bats-action-version-missing",
+      "description": "Documents that bats-core/bats-action@2 does not exist on the GitHub Actions marketplace. Use when: (1) GHA fails with 'Unable to resolve action bats-core/bats-action@X', (2) merging branches that introduce new uses: action references for bats, (3) setting up BATS shell testing in GitHub Actions.",
+      "version": "1.0.0",
+      "source": "./skills/bats-action-version-missing.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -1301,6 +1466,63 @@
       ]
     },
     {
+      "name": "ci-cd-achaean-fleet-ci-cascade-patterns",
+      "description": "AchaeanFleet Docker infrastructure CI cascade failure sequence and fixes. Use when: (1) running a myrmidon swarm on HomericIntelligence/AchaeanFleet, (2) diagnosing cascading CI failures in a Docker image build pipeline, (3) fixing base-image ENTRYPOINT, OCI multi-arch build, or vendor download URL issues in AchaeanFleet vessels.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-achaean-fleet-ci-cascade-patterns.md",
+      "category": "ci-cd",
+      "tags": [
+        "achaeanfleet",
+        "docker",
+        "ci-cascade",
+        "multi-arch",
+        "oci",
+        "opencode",
+        "goose",
+        "entrypoint",
+        "qemu"
+      ]
+    },
+    {
+      "name": "ci-cd-broken-main-parallel-fix-wave",
+      "description": "Triage and fix broken CI/main across multiple repos simultaneously using Agamemnon task registry + parallel myrmidon fix agents. Use when: (1) 3+ repos have broken main branch CI, (2) need to register tasks in Agamemnon before dispatching agents, (3) CI failures are diverse (conan profile, dependabot config, GitHub Actions auth, BATS helper, Python imports).",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-broken-main-parallel-fix-wave.md",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "broken-main",
+        "agamemnon",
+        "parallel-agents",
+        "myrmidon",
+        "conan",
+        "dependabot",
+        "bats",
+        "github-actions",
+        "fix-wave"
+      ]
+    },
+    {
+      "name": "ci-cd-cascading-dockerfile-ci-failure-remediation",
+      "description": "Diagnose and fix cascading CI failures specific to Docker/compose infrastructure repos. Use when: (1) a Docker infrastructure repo has 10+ open PRs all failing CI, (2) Dockerfile RUN inline comments cause 'unknown instruction' parse errors, (3) Nomad job validator is run against non-job HCL files (vault policies, etc.), (4) BATS tests fail under set -euo pipefail due to unset BUILD_DATE or VCS_REF variables, (5) pixi.lock is stale after adding dependencies causing CI lockfile gate to fail, (6) pytest pin-enforcement checks fail for yarn or pip install invocations, (7) compose service uses bare WORKSPACE_ROOT mount rejected by CI validator, (8) hardcoded service counts in compose validation break when new services are added, (9) base image FROM line lacks SHA256 digest pinning, (10) OCI layout artifact pipeline uses wrong format (tar vs directory), (11) multi-arch buildx fails because QEMU is not set up before buildx initialization.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-cascading-dockerfile-ci-failure-remediation.md",
+      "category": "ci-cd",
+      "tags": [
+        "docker",
+        "dockerfile",
+        "cascading-failures",
+        "compose",
+        "nomad",
+        "bats",
+        "pixi",
+        "multi-arch",
+        "qemu",
+        "oci",
+        "digest-pinning"
+      ]
+    },
+    {
       "name": "ci-cd-codeql-missing-workflow-permissions-fix",
       "description": "Fix CodeQL security alert actions/missing-workflow-permissions by adding an explicit permissions block to GitHub Actions workflows. Use when: (1) a CodeQL code scanning alert flags a workflow for lacking a permissions block, (2) a validate/lint/check workflow only reads code and needs least-privilege access, (3) auditing sibling workflows to determine the correct permission level to assign.",
       "version": "1.0.0",
@@ -1315,34 +1537,103 @@
       ]
     },
     {
-      "name": "ci-cd-failure-diagnosis-log-analysis",
-      "description": "Diagnose CI failures by reading logs, identifying error patterns, and classifying root causes. Use when: (1) CI pipeline fails and you need to understand why, (2) tests pass locally but fail in CI, (3) multiple unrelated checks fail simultaneously, (4) CI retry logic labels failures as JIT crashes, (5) need to distinguish Mojo JIT crashes from real compile/test errors.",
+      "name": "ci-cd-dependabot-conflict-resolution-pattern",
+      "description": "Use when: (1) Dependabot PRs conflict after other Dependabot PRs merge to main, (2) gh pr merge fails with squash or merge-commit (repo enforces rebase-only), (3) multiple Dependabot dependency bumps are open and landing sequentially causes stale PRs, (4) a GitHub issue audit turns up items that may already be resolved, (5) test file ruff E402/E401 import order failures after using conftest.py for sys.path, (6) closing a stale aggregate-audit issue after its sub-issues are resolved.",
       "version": "1.0.0",
-      "source": "./skills/ci-cd-failure-diagnosis-log-analysis.md",
+      "source": "./skills/ci-cd-dependabot-conflict-resolution-pattern.md",
       "category": "ci-cd",
-      "tags": []
+      "tags": [
+        "dependabot",
+        "conflict",
+        "rebase",
+        "merge-policy",
+        "issue-audit",
+        "stale",
+        "ruff",
+        "E402",
+        "conftest",
+        "pytest"
+      ]
     },
     {
-      "name": "ci-cd-failure-fix-patterns",
-      "description": "Concrete patterns for fixing CI failures after root cause is diagnosed. Use when: (1) CI checks fail on PR and root cause is known, (2) need to fix pre-commit/linting failures, (3) Dockerfile GID collisions on Ubuntu 24.04, (4) pre-commit bash -c hooks silently lose filenames, (5) Mojo --Werror unused return value errors, (6) split test files referenced in CI workflows, (7) tests pass locally but fail due to symlinks or mock bypass.",
+      "name": "ci-cd-docker-base-entrypoint-all-bases",
+      "description": "All Docker base images in AchaeanFleet require an ENTRYPOINT instruction or CI verification will fail. Use when: (1) adding a new base Dockerfile to AchaeanFleet, (2) debugging CI failures on 'Verify ENTRYPOINT is set' step, (3) copying an existing base Dockerfile to create a new variant, (4) writing entrypoint scripts that load Docker secrets before exec'ing CMD.",
       "version": "1.0.0",
-      "source": "./skills/ci-cd-failure-fix-patterns.md",
+      "source": "./skills/ci-cd-docker-base-entrypoint-all-bases.md",
       "category": "ci-cd",
-      "tags": []
+      "tags": [
+        "docker",
+        "dockerfile",
+        "entrypoint",
+        "base-image",
+        "ci",
+        "achaeanfleet",
+        "secrets"
+      ]
+    },
+    {
+      "name": "ci-cd-failure-diagnosis-log-analysis",
+      "description": "Diagnose CI failures by reading logs, identifying error patterns, and classifying root causes. Use when: (1) CI pipeline fails and you need to understand why, (2) tests pass locally but fail in CI, (3) multiple unrelated checks fail simultaneously, (4) CI retry logic labels failures as JIT crashes, (5) need to distinguish Mojo JIT crashes from real compile/test errors, (6) CI fails on a PR but PR changes look unrelated to failures, (7) docs-only or cleanup PRs show red CI, (8) multiple batch PRs all show BLOCKED status, (9) need to decide whether to block merge or proceed.",
+      "version": "2.0.0",
+      "source": "./skills/ci-cd-failure-diagnosis-log-analysis.md",
+      "category": "ci-cd",
+      "tags": [
+        "ci-failure",
+        "flaky-tests",
+        "mojo-jit",
+        "batch-pr",
+        "diagnosis",
+        "pre-existing"
+      ]
+    },
+    {
+      "name": "ci-cd-github-api-rate-limit-ci-monitoring",
+      "description": "Avoid and recover from GitHub API rate limit exhaustion (5000/hr) during intensive CI diagnostic loops using gh CLI. Use when: (1) running batch PR investigation across many open PRs, (2) fetching CI job logs in a loop, (3) hitting HTTP 403 rate limit errors from gh CLI during CI monitoring sessions.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-github-api-rate-limit-ci-monitoring.md",
+      "category": "ci-cd",
+      "tags": [
+        "github-api",
+        "rate-limit",
+        "gh-cli",
+        "ci-monitoring",
+        "pr-investigation",
+        "loop"
+      ]
+    },
+    {
+      "name": "ci-cd-karma-playwright-chromium-launcher",
+      "description": "Run Karma Angular tests in GitHub Actions with Playwright-managed Chromium instead of relying on system Chrome. Use when: (1) CI lacks a reliable Chrome binary, (2) you need deterministic Chromium setup for headless Karma jobs.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-karma-playwright-chromium-launcher.md",
+      "category": "ci-cd",
+      "tags": [
+        "ci-cd",
+        "github-actions",
+        "playwright",
+        "karma",
+        "chromium"
+      ]
+    },
+    {
+      "name": "ci-cd-packaged-frontend-functional-asset-validation",
+      "description": "Validate packaged frontend outputs functionally instead of diffing generated bundle names. Use when: (1) CI checks packaged web assets after a rebuild, (2) hashed bundle filenames make git diff gates brittle.",
+      "version": "1.0.0",
+      "source": "./skills/ci-cd-packaged-frontend-functional-asset-validation.md",
+      "category": "ci-cd",
+      "tags": [
+        "ci-cd",
+        "github-actions",
+        "frontend",
+        "packaging",
+        "validation"
+      ]
     },
     {
       "name": "ci-cd-pipeline-maintenance-patterns",
       "description": "Use when: (1) adding or auditing lint/format enforcement jobs to GitHub Actions workflows, (2) cross-repo conflict resolution on rename/refactor PRs, (3) CI-only crashes caused by debug_assert or JIT compilation overhead in Mojo, (4) enforcing required status checks across a GitHub organization, (5) triaging flaky CI failures to separate infrastructure issues from deterministic bugs, (6) fixing justfile build recipes that silently skip library validation, (7) standardizing default branches and fixing broken CI across multiple repos, (8) fixing pre-commit failures from mypy/ruff/coverage issues on cross-Python-version packages, (9) promoting monolithic CI matrix groups to per-subdirectory auto-discovery entries, (10) fixing CI workflows with missing pip dependency installs, (11) optimizing CI wall-clock time via runner pinning, changed-files-only pre-commit, and Dockerfile pixi copy",
       "version": "2.0.0",
       "source": "./skills/ci-cd-pipeline-maintenance-patterns.md",
-      "category": "ci-cd",
-      "tags": []
-    },
-    {
-      "name": "ci-cd-preexisting-failure-triage",
-      "description": "Determine whether CI failures on a PR are pre-existing on main vs introduced by the PR. Use when: (1) CI fails but PR changes look unrelated to failures, (2) deciding whether to block merge on CI failures, (3) docs-only or cleanup PRs show red CI, (4) need to verify a PR is safe to merge despite failing checks, (5) a review plan claims failures are pre-existing and needs confirmation.",
-      "version": "1.0.0",
-      "source": "./skills/ci-cd-preexisting-failure-triage.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -1407,22 +1698,8 @@
       ]
     },
     {
-      "name": "ci-flaky-test-rerun-diagnosis",
-      "description": "Diagnose CI failures across batch PRs, distinguish real failures from flaky Mojo JIT crashes and transient infrastructure issues. Use when: (1) multiple PRs show BLOCKED status with failing checks, (2) need to determine if CI failures are caused by PR changes or pre-existing.",
-      "version": "1.0.0",
-      "source": "./skills/ci-flaky-test-rerun-diagnosis.md",
-      "category": "ci-cd",
-      "tags": [
-        "ci-failure",
-        "flaky-tests",
-        "mojo-jit",
-        "batch-pr",
-        "diagnosis"
-      ]
-    },
-    {
       "name": "ci-glob-pattern-conversion",
-      "description": "Use when: (1) CI test groups have explicit filename lists that miss new ADR-009 split files or silently exclude new test files, (2) a catch-all test_*.mojo pattern is causing timeouts by matching unintended files in a directory with multiple test groups, (3) needing to verify whether a CI pattern is already a wildcard (check before editing), (4) determining if CI needs updating after adding or splitting Mojo test files.",
+      "description": "Use when: (1) CI test groups have explicit filename lists that miss new split test files or silently exclude new test files, (2) a catch-all test_*.mojo pattern is causing timeouts by matching unintended files in a directory with multiple test groups, (3) needing to verify whether a CI pattern is already a wildcard (check before editing), (4) determining if CI needs updating after adding or splitting Mojo test files.",
       "version": "1.0.0",
       "source": "./skills/ci-glob-pattern-conversion.md",
       "category": "ci-cd",
@@ -1430,7 +1707,6 @@
         "ci-cd",
         "github-actions",
         "glob-patterns",
-        "adr-009",
         "test-splitting",
         "comprehensive-tests",
         "wildcard",
@@ -1446,6 +1722,24 @@
       "tags": []
     },
     {
+      "name": "ci-local-reproduction-environment-conditions",
+      "description": "Reproduce CI-only test failures locally by replicating all three CI environment conditions simultaneously: cold pixi cache, UID mismatch, and no-TTY. Use when: (1) tests pass locally 100% but fail in CI, (2) you've ruled out code-level differences, (3) CI uses Podman with pixi and named volumes.",
+      "version": "1.0.0",
+      "source": "./skills/ci-local-reproduction-environment-conditions.md",
+      "category": "ci-cd",
+      "tags": [
+        "ci",
+        "debugging",
+        "flakiness",
+        "podman",
+        "docker",
+        "reproduction",
+        "uid",
+        "tty",
+        "pixi"
+      ]
+    },
+    {
       "name": "ci-matrix-group-management",
       "description": "Use when: (1) a CI matrix group has 30+ files causing long jobs and poor failure isolation and needs splitting, (2) promoting subdirectory-scoped patterns into separate per-subdirectory matrix entries with wildcard auto-discovery, (3) a CI matrix has >20 groups with startup overhead that needs consolidation by merging related groups, (4) CI test files run in multiple jobs due to wildcard overlap (deduplication), (5) disabling or re-enabling flaky test groups while keeping coverage validation in sync, (6) adding inline timeout guidance comments to matrix entries.",
       "version": "1.0.0",
@@ -1457,7 +1751,6 @@
         "test-matrix",
         "auto-discovery",
         "wildcard-patterns",
-        "adr-009",
         "test-splitting",
         "glob-patterns",
         "consolidation",
@@ -1484,6 +1777,19 @@
       ]
     },
     {
+      "name": "ci-package-workflow",
+      "description": "Create GitHub Actions workflows for automated package building and distribution. Use in package phase to automate .mojopkg building and release creation.",
+      "version": "2.0.0",
+      "source": "./skills/ci-package-workflow.md",
+      "category": "ci-cd",
+      "tags": [
+        "ci-cd",
+        "github-actions",
+        "packaging",
+        "release"
+      ]
+    },
+    {
       "name": "ci-pixi-workspace-version-dedup",
       "description": "Remove duplicated project version from pixi.toml [workspace] and add drift detection to an existing version-consistency pre-commit script. Use when: (1) pixi.toml has a version field that duplicates pyproject.toml, (2) extending an existing check script to cover additional config files, (3) preventing accidental re-introduction of removed duplicate fields.",
       "version": "1.0.0",
@@ -1503,6 +1809,14 @@
       "description": "Add a standalone CI step to validate all config files against JSON schemas on every PR, ensuring schema drift is caught even when pre-commit was skipped",
       "version": "1.0.0",
       "source": "./skills/ci-schema-validation-standalone-step.md",
+      "category": "ci-cd",
+      "tags": []
+    },
+    {
+      "name": "ci-shell-grep-case-mismatch",
+      "description": "Skill: ci-shell-grep-case-mismatch. Use when a shell-tests or smoke-check CI workflow fails because a grep -q assertion checks the wrong casing of a string vs the actual content in a source file \u2014 especially with org names or proper nouns.",
+      "version": "1.0.0",
+      "source": "./skills/ci-shell-grep-case-mismatch.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -1531,7 +1845,6 @@
         "github-actions",
         "workflow-files",
         "consolidation",
-        "adr-009",
         "yaml"
       ]
     },
@@ -1566,6 +1879,23 @@
       "source": "./skills/close-issue-via-minimal-pr.md",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "cmake-cxx-warnings-fetchcontent-c-lib",
+      "description": "Scope CMake warning flags to C++ only when using FetchContent C libraries. Use when: (1) a C library pulled via FetchContent fails to compile with -Werror,-Wunused-parameter or -Wunused-function, (2) you see compiler errors in third-party C files you did not author, (3) adding any C library (nats.c, libuv, etc.) to a C++20 project with global -Wall -Wextra -Wpedantic -Werror flags.",
+      "version": "1.0.0",
+      "source": "./skills/cmake-cxx-warnings-fetchcontent-c-lib.md",
+      "category": "ci-cd",
+      "tags": [
+        "cmake",
+        "compiler-warnings",
+        "fetchcontent",
+        "c-library",
+        "generator-expressions",
+        "nats",
+        "werror",
+        "cpp20"
+      ]
     },
     {
       "name": "cmake-library-main-gtest-conflict",
@@ -1638,6 +1968,22 @@
       ]
     },
     {
+      "name": "conan-cmake-toolchain-coverage-scripts",
+      "description": "Coverage scripts in Conan-managed C++ projects must explicitly pass the Conan toolchain file to cmake or find_package() calls will fail. Use when: (1) Code Coverage CI job fails with cmake find_package errors while other CI jobs (tests, benchmarks) pass, (2) generate_coverage.sh or similar scripts invoke cmake without -DCMAKE_TOOLCHAIN_FILE, (3) GTest/other Conan-managed deps are missing only in coverage builds.",
+      "version": "1.0.0",
+      "source": "./skills/conan-cmake-toolchain-coverage-scripts.md",
+      "category": "ci-cd",
+      "tags": [
+        "conan",
+        "cmake",
+        "coverage",
+        "toolchain",
+        "gtest",
+        "ci-cd",
+        "cpp20"
+      ]
+    },
+    {
       "name": "consolidate-pre-commit-excludes",
       "description": "Skill: Consolidate Pre-commit Exclude Patterns",
       "version": "1.0.0",
@@ -1655,8 +2001,8 @@
     },
     {
       "name": "cpp-ci-sanitizer-tsan-data-race-fixes",
-      "description": "Diagnose and fix C++ CI failures from ThreadSanitizer (TSan) data races, hung tests under sanitizers, and MSan build failures. Also covers repo audit methodology and batch issue filing from audit findings. Use when: (1) TSan reports data races in C++ CI, (2) a test hangs indefinitely under TSan causing job timeout, (3) MSan build fails due to uninstrumented stdlib in CMake probing steps, (4) Docker COPY paths are wrong after CMake changes CMAKE_RUNTIME_OUTPUT_DIRECTORY, (5) after fixing CI failures run a strict repo audit, (6) filing batch GitHub issues from audit findings.",
-      "version": "1.1.0",
+      "description": "Diagnose and fix C++ CI failures from ThreadSanitizer (TSan) data races, hung tests under sanitizers, MSan build failures, and ConcurrentQueue false positives. Also covers repo audit methodology and batch issue filing from audit findings. Use when: (1) TSan reports data races in C++ CI, (2) a test hangs indefinitely under TSan causing job timeout, (3) MSan build fails due to uninstrumented stdlib in CMake probing steps, (4) Docker COPY paths are wrong after CMake changes CMAKE_RUNTIME_OUTPUT_DIRECTORY, (5) after fixing CI failures run a strict repo audit, (6) filing batch GitHub issues from audit findings, (7) moodycamel::ConcurrentQueue triggers TSan false positives needing suppression.",
+      "version": "1.2.0",
       "source": "./skills/cpp-ci-sanitizer-tsan-data-race-fixes.md",
       "category": "ci-cd",
       "tags": [
@@ -1669,7 +2015,10 @@
         "cpp20",
         "github-actions",
         "repo-audit",
-        "issue-filing"
+        "issue-filing",
+        "concurrentqueue",
+        "tsan-suppression",
+        "thread-pool"
       ]
     },
     {
@@ -1771,17 +2120,9 @@
     },
     {
       "name": "doc-config-drift-check",
-      "description": "Add a lightweight CI pre-commit script to detect drift between documented metric values (CLAUDE.md, README.md) and authoritative pyproject.toml config sources.",
-      "version": "1.0.0",
+      "description": "Add a lightweight CI pre-commit script to detect drift between documented metric values (CLAUDE.md, README.md) and authoritative pyproject.toml config sources, including coverage threshold, --cov path, and README test count claims.",
+      "version": "2.0.0",
       "source": "./skills/doc-config-drift-check.md",
-      "category": "ci-cd",
-      "tags": []
-    },
-    {
-      "name": "doc-config-drift-test-count-check",
-      "description": "Extend doc/config consistency scripts to validate README.md test count claims against actual pytest --collect-only output, with graceful skip and 10% tolerance",
-      "version": "1.0.0",
-      "source": "./skills/doc-config-drift-test-count-check.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -1794,12 +2135,49 @@
       "tags": []
     },
     {
+      "name": "docker-buildx-multiarch-local-image",
+      "description": "Use when: (1) a multi-arch Docker buildx job fails with 'pull access denied' for a locally-built base image, (2) chaining two buildx multi-arch builds where the second depends on the first's image, (3) using docker-container buildx driver and needing to pass a base image to a downstream build, (4) oci-layout reference fails with 'not a directory' error, (5) arm64 binary check silently passes despite QEMU missing.",
+      "version": "1.1.0",
+      "source": "./skills/docker-buildx-multiarch-local-image.md",
+      "category": "ci-cd",
+      "tags": [
+        "docker",
+        "buildx",
+        "multi-arch",
+        "oci",
+        "local-image",
+        "base-image",
+        "github-actions",
+        "ci",
+        "qemu",
+        "oci-layout"
+      ]
+    },
+    {
       "name": "docker-ci-dead-step-cleanup",
       "description": "Resolve CI workflows referencing non-existent test directories by removing dead steps and documenting deferred testing decisions",
       "version": "1.0.0",
       "source": "./skills/docker-ci-dead-step-cleanup.md",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "docker-mojo-uid-mismatch-crash-fix",
+      "description": "Fix deterministic Mojo runtime crash (exit 134) when container image UID differs from host runner UID. Use when: (1) mojo run crashes before executing any user code with 'filesystem error: status: Permission denied [/home/.../.modular]', (2) CI passes locally (UID 1000) but fails in CI runner (UID 1001+), (3) crash is 100% reproducible \u2014 not a flaky JIT issue, (4) cached CI image was built at a different UID than the current runner's uid, (5) execution crashed with __fortify_fail_abort in libKGENCompilerRTShared.so before any test output.",
+      "version": "1.1.0",
+      "source": "./skills/docker-mojo-uid-mismatch-crash-fix.md",
+      "category": "ci-cd",
+      "tags": [
+        "docker",
+        "mojo",
+        "uid",
+        "permissions",
+        "container",
+        "crash",
+        "modular",
+        "cache-key",
+        "github-actions"
+      ]
     },
     {
       "name": "docker-multistage-build",
@@ -1848,6 +2226,22 @@
       "source": "./skills/dockerfile-extras-validation.md",
       "category": "ci-cd",
       "tags": []
+    },
+    {
+      "name": "dockerfile-from-inline-comment",
+      "description": "Use when: (1) Docker build fails with 'FROM requires either one or three arguments', (2) a Dockerfile FROM line has a comment after the image digest or tag, (3) adding comments to FROM lines in Dockerfiles.",
+      "version": "1.0.0",
+      "source": "./skills/dockerfile-from-inline-comment.md",
+      "category": "ci-cd",
+      "tags": [
+        "docker",
+        "dockerfile",
+        "from",
+        "comment",
+        "parse-error",
+        "sha256",
+        "digest"
+      ]
     },
     {
       "name": "dockerfile-layer-caching",
@@ -1961,8 +2355,8 @@
     },
     {
       "name": "fix-ci-compilation-and-test-failures",
-      "description": "Use when: (1) CI fails with Mojo compilation error (unknown declaration, deprecated syntax), (2) markdownlint blocks pre-commit (MD051, MD037, MD031, MD040, MD026, MD013), (3) Mojo test assertion errors from edge cases, (4) CI segfaults from UnsafePointer access through copied structs, (5) all PR CI runs fail because of broken plugins on main (missing plugin.json or YAML frontmatter)",
-      "version": "2.0.0",
+      "description": "Use when: (1) CI fails with Mojo compilation error (unknown declaration, deprecated syntax), (2) markdownlint blocks pre-commit (MD051, MD037, MD031, MD040, MD026, MD013), (3) Mojo test assertion errors from edge cases, (4) CI segfaults from UnsafePointer access through copied structs, (5) all PR CI runs fail because of broken plugins on main (missing plugin.json or YAML frontmatter), (6) Dockerfile GID/UID collisions on Ubuntu 24.04, (7) pre-commit bash -c hooks silently lose filenames, (8) Mojo --Werror unused return value errors, (9) CI workflow references a renamed or missing test file, (10) tests pass locally but fail due to symlinks or mock bypass, (11) invalid pinned action SHAs in workflows, (12) need to identify required vs optional CI checks before fixing",
+      "version": "3.0.0",
       "source": "./skills/fix-ci-compilation-and-test-failures.md",
       "category": "ci-cd",
       "tags": []
@@ -2040,17 +2434,9 @@
     },
     {
       "name": "fix-ruff-linting-errors",
-      "description": "Fix all CI/CD failures by systematically resolving ruff linting errors (F841, D401, D102, E741, D103, D413) with automation for repetitive fixes",
-      "version": "1.0.0",
+      "description": "Fix all CI/CD failures by systematically resolving ruff linting errors (F841, D401, D102, E741, D103, D413, N806, E501, ruff-format) with automation for repetitive fixes",
+      "version": "2.0.0",
       "source": "./skills/fix-ruff-linting-errors.md",
-      "category": "ci-cd",
-      "tags": []
-    },
-    {
-      "name": "fix-ruff-pre-commit-failures",
-      "description": "Systematically fix ruff pre-commit CI failures (N806, E501, format) on a PR branch. Use when: pre-commit CI is failing with ruff N806/E501/format errors on a PR branch.",
-      "version": "1.0.0",
-      "source": "./skills/fix-ruff-pre-commit-failures.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -2118,11 +2504,46 @@
     },
     {
       "name": "github-actions-ci-patterns",
-      "description": "Use when: (1) setting up GitHub Actions CI for Mojo or Python/pytest projects with pixi, (2) CI pipeline is slow due to broken pixi caching, (3) artifact upload/download fails due to empty directories or special characters in names, (4) migrating manual binary downloads to official actions, (5) adding a build-only gate workflow, (6) securing workflows against command injection via user-controlled inputs",
-      "version": "2.0.0",
+      "description": "Use when: (1) setting up GitHub Actions CI for Mojo or Python/pytest projects with pixi, (2) CI pipeline is slow due to broken pixi caching, (3) artifact upload/download fails due to empty directories or special characters in names, (4) migrating manual binary downloads to official actions, (5) adding a build-only gate workflow, (6) securing workflows against command injection via user-controlled inputs, (7) CI Summary job fails with 'HttpError: Resource not accessible by integration' when posting PR comments \u2014 missing pull-requests:write permission",
+      "version": "2.1.0",
       "source": "./skills/github-actions-ci-patterns.md",
       "category": "ci-cd",
-      "tags": []
+      "tags": [
+        "github-actions",
+        "permissions",
+        "github-token",
+        "pull-requests",
+        "pr-comments"
+      ]
+    },
+    {
+      "name": "github-auto-merge-no-ci-runs",
+      "description": "GitHub auto-merge stalls indefinitely on a CLEAN PR when no CI workflow ever runs on the branch. Use when: (1) PR has mergeStateStatus: CLEAN and auto-merge armed but hasn't merged after hours, (2) gh pr view --json statusCheckRollup returns empty array [], (3) docs-only, pod-spec, or non-code PRs stuck with armed auto-merge, (4) investigating why auto-merge didn't fire on a PR that looks ready.",
+      "version": "1.0.0",
+      "source": "./skills/github-auto-merge-no-ci-runs.md",
+      "category": "ci-cd",
+      "tags": [
+        "auto-merge",
+        "github",
+        "ci-cd",
+        "path-filter",
+        "status-checks",
+        "docs-only"
+      ]
+    },
+    {
+      "name": "github-branch-protection-org-standardize",
+      "description": "Standardize GitHub branch protection rules across all repositories in an org using gh api. Use when: (1) onboarding new repos to a policy baseline, (2) auditing protection drift across an org, (3) applying a gold-standard config from reference repos to the full fleet.",
+      "version": "1.0.0",
+      "source": "./skills/github-branch-protection-org-standardize.md",
+      "category": "ci-cd",
+      "tags": [
+        "github",
+        "branch-protection",
+        "gh-api",
+        "org-admin",
+        "policy-standardization"
+      ]
     },
     {
       "name": "github-ruleset-pr-blocked-diagnose-missing-check-requirements",
@@ -2163,12 +2584,36 @@
       "tags": []
     },
     {
-      "name": "install-workflow",
-      "description": "Create GitHub Actions workflows for automated package building and distribution. Use in package phase to automate .mojopkg building and release creation.",
+      "name": "hatch-vcs-editable-pixi-locked-incompatibility",
+      "description": "Fix CI failures caused by hatch-vcs auto-versioning making pixi.lock perpetually stale. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace' on every push after switching from a hardcoded version to hatch-vcs, (2) all pixi-based CI jobs (lint, pre-commit, security) fail identically while the local editable package uses hatch-vcs, (3) regenerating pixi.lock immediately becomes stale on the next commit.",
       "version": "1.0.0",
-      "source": "./skills/install-workflow.md",
+      "source": "./skills/hatch-vcs-editable-pixi-locked-incompatibility.md",
       "category": "ci-cd",
-      "tags": []
+      "tags": [
+        "hatch-vcs",
+        "pixi",
+        "pixi-lock",
+        "editable-install",
+        "setup-pixi",
+        "locked",
+        "ci-cd"
+      ]
+    },
+    {
+      "name": "hatch-vcs-pyproject-auto-versioning-setup",
+      "description": "Migrate a Python project from hardcoded version in pyproject.toml to hatch-vcs dynamic versioning from git tags. Use when: (1) the version string is hardcoded in pyproject.toml and a CI auto-tag workflow must bump it, (2) you want the version derived automatically from git tags at build/install time with no file edits needed, (3) an auto-tag workflow is creating bot commits on main that trigger infinite CI loops, (4) hatch-vcs is being added to pixi.toml pypi-dependencies unnecessarily.",
+      "version": "1.0.0",
+      "source": "./skills/hatch-vcs-pyproject-auto-versioning-setup.md",
+      "category": "ci-cd",
+      "tags": [
+        "hatch-vcs",
+        "hatchling",
+        "pyproject",
+        "auto-versioning",
+        "git-tags",
+        "dynamic-version",
+        "ci-cd"
+      ]
     },
     {
       "name": "just-recipe-heredoc-fix",
@@ -2195,6 +2640,22 @@
       "tags": []
     },
     {
+      "name": "mojo-0263-stdlib-import-migration",
+      "description": "Mojo 0.26.3 migration: stdlib modules require std. prefix and escaping keyword was removed. Use when: (1) upgrading from Mojo 0.26.1/0.26.2 to 0.26.3, (2) seeing 'module not found' errors for testing/sys/memory imports, (3) seeing 'unknown keyword escaping' errors.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-0263-stdlib-import-migration.md",
+      "category": "ci-cd",
+      "tags": [
+        "mojo",
+        "0.26.3",
+        "stdlib",
+        "migration",
+        "imports",
+        "escaping",
+        "bulk-fix"
+      ]
+    },
+    {
       "name": "mojo-baseline-ci-compilation-fixes",
       "description": "Fix baseline Mojo compilation errors on main that block all open PRs. Use when: CI test groups fail with errors inherited from main branch (unused variable --Werror, full() type mismatch, alias deprecation, missing re-exports).",
       "version": "1.0.0",
@@ -2204,8 +2665,8 @@
     },
     {
       "name": "mojo-escaping-signature-regression",
-      "description": "Fix Mojo escaping fn type parameter regressions in shared libraries. Use when: (1) build fails after removing escaping from shared function signatures, (2) layer_testers.mojo or gradient_checker.mojo callers break with type mismatch errors, (3) closures passed to check_gradients fail to compile.",
-      "version": "1.0.0",
+      "description": "OBSOLETE IN 0.26.3. Fix Mojo escaping fn type parameter regressions (0.26.1 only). In 0.26.3 escaping is removed entirely; use capturing compile-time params instead (see mojo-026-breaking-changes).",
+      "version": "1.1.0",
       "source": "./skills/mojo-escaping-signature-regression.md",
       "category": "ci-cd",
       "tags": [
@@ -2214,7 +2675,8 @@
         "gradient-checker",
         "function-signatures",
         "type-mismatch",
-        "build-failure"
+        "build-failure",
+        "obsolete-026-3"
       ]
     },
     {
@@ -2258,7 +2720,7 @@
     },
     {
       "name": "mojo-retry-pattern-ci-validator",
-      "description": "Detect bare pixi run mojo test/run/build/package calls in GitHub Actions workflows not wrapped in a retry loop. Use when: (1) adding a new mojo workflow file, (2) auditing existing workflows for ADR-009 compliance, (3) CI enforcement after mojo-jit-crash-retry fix.",
+      "description": "Detect bare pixi run mojo test/run/build/package calls in GitHub Actions workflows not wrapped in a retry loop. Use when: (1) adding a new mojo workflow file, (2) auditing existing workflows for retry-loop compliance, (3) CI enforcement after mojo-jit-crash-retry fix.",
       "version": "1.0.0",
       "source": "./skills/mojo-retry-pattern-ci-validator.md",
       "category": "ci-cd",
@@ -2299,7 +2761,7 @@
     {
       "name": "multi-repo-pr-orchestration-swarm-pattern",
       "description": "Orchestrate PR management across all HomericIntelligence repos using myrmidon swarm. Use when: (1) multiple repos have open PRs that need merging, conflict resolution, or CI fixes, (2) Odysseus submodule pins need updating after cross-repo PR merges, (3) coordinating parallel waves of agents across 5+ repos with sequential-within-repo merge ordering.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/multi-repo-pr-orchestration-swarm-pattern.md",
       "category": "ci-cd",
       "tags": [
@@ -2346,14 +2808,6 @@
       "tags": []
     },
     {
-      "name": "parallel-issue-wave-execution",
-      "description": "Pattern for implementing 30+ GitHub issues in parallel waves using isolated git worktrees",
-      "version": "1.1.0",
-      "source": "./skills/parallel-issue-wave-execution.md",
-      "category": "ci-cd",
-      "tags": []
-    },
-    {
       "name": "parallel-pr-worktree-workflow",
       "description": "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput.",
       "version": "1.0.0",
@@ -2394,26 +2848,50 @@
       "tags": []
     },
     {
-      "name": "pixi-cache-true-http400-fix",
-      "description": "Fix prefix-dev/setup-pixi cache:true HTTP 400 failures by replacing with explicit actions/cache@v4. Use when: CI shows HTTP 400 from setup-pixi caching, or a composite action still uses cache:true.",
-      "version": "1.0.0",
-      "source": "./skills/pixi-cache-true-http400-fix.md",
-      "category": "ci-cd",
-      "tags": []
-    },
-    {
       "name": "pixi-cache-true-unreliable",
       "description": "Fixes unreliable Pixi caching caused by setup-pixi's built-in cache: true option. Replace with explicit actions/cache@v5 caching both .pixi and ~/.cache/rattler/cache keyed on pixi.lock. Use when: (1) CI logs show 'Saved cache with ID -1', (2) cache hits are inconsistent despite cache: true, (3) consolidating Pixi setup into a shared composite action.",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "source": "./skills/pixi-cache-true-unreliable.md",
       "category": "ci-cd",
       "tags": []
     },
     {
+      "name": "pixi-ci-shell-tooling-migration",
+      "description": "Migrate GitHub Actions CI for shell-only repos from ad-hoc curl tool installs to pixi-based tooling. Use when: (1) CI installs yq/shellcheck/bats via curl onto ubuntu-latest, (2) tests fail with yq parse errors on valid v4 expressions, (3) PATH shadowing causes tool version mismatches in bats subshells, (4) adding pixi to a repo that has no Python/Mojo (pure shell GitOps).",
+      "version": "1.0.0",
+      "source": "./skills/pixi-ci-shell-tooling-migration.md",
+      "category": "ci-cd",
+      "tags": [
+        "pixi",
+        "yq",
+        "go-yq",
+        "shellcheck",
+        "bats",
+        "github-actions",
+        "shell",
+        "gitops",
+        "path-shadowing"
+      ]
+    },
+    {
       "name": "pixi-lock-rebase-regenerate",
-      "description": "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts.",
-      "version": "1.1.0",
+      "description": "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts, (4) Dependabot PRs fail CI fast (6-12 seconds) because Dependabot only bumps pyproject.toml not pixi.lock, (5) a second rebase of the same branch produces a pixi.lock commit conflict \u2014 skip the stale commit and re-run pixi install, (6) a second commit in the rebase chain patches code that was migrated to an external package \u2014 accept HEAD's version and use git rebase --skip.",
+      "version": "1.3.0",
       "source": "./skills/pixi-lock-rebase-regenerate.md",
+      "category": "ci-cd",
+      "tags": [
+        "dependabot",
+        "pixi",
+        "rebase",
+        "pixi-lock",
+        "ci-cd"
+      ]
+    },
+    {
+      "name": "pixi-pip-audit-cve-pinning",
+      "description": "Fix pip-audit CVE failures in pixi-managed Python projects by pinning minimum versions. Use when: (1) CI pip-audit step fails with known CVEs, (2) indirect dependencies resolve to vulnerable versions.",
+      "version": "1.0.0",
+      "source": "./skills/pixi-pip-audit-cve-pinning.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -2490,23 +2968,9 @@
       "tags": []
     },
     {
-      "name": "pr-review-no-action",
-      "description": "Recognize when a PR review requires no code changes and take the correct minimal action. Use when: (1) a .claude-review-fix-*.md plan explicitly states no fixes are required, (2) a review fix plan concludes \"No problems found\" and CI is already passing, (3) a PR review summary concludes the PR is ready to merge as-is, or (4) you need to avoid creating empty/phantom commits on an already-clean branch.",
-      "version": "2.0.0",
-      "source": "./skills/pr-review-no-action.md",
-      "category": "ci-cd",
-      "tags": [
-        "pr-review",
-        "no-op",
-        "auto-merge",
-        "review-fix",
-        "clean-state"
-      ]
-    },
-    {
       "name": "pr-review-no-action-ci-diagnosis",
       "description": "Use when: (1) a PR review-fix plan concludes no code changes are required, (2) CI failures appear on a PR but changes are unrelated to the failing jobs, (3) CI flakes need to be distinguished from PR-introduced regressions, (4) a fix commit may be local-only and not yet pushed to remote, (5) a stale branch was force-pushed dropping a fix commit, (6) verifying a PR is ready to merge despite red CI",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "source": "./skills/pr-review-no-action-ci-diagnosis.md",
       "category": "ci-cd",
       "tags": []
@@ -2664,6 +3128,22 @@
       "tags": []
     },
     {
+      "name": "ruff-exclude-vs-per-file-ignores-generated-files",
+      "description": "Explains the difference between [tool.ruff] exclude and [tool.ruff.lint.per-file-ignores] for generated files. Use when: (1) ruff format --check still flags a file after adding it to per-file-ignores, (2) a generated file (hatch-vcs _version.py, protobuf, etc.) causes CI lint failures, (3) you want to completely exclude a file from all ruff processing.",
+      "version": "1.0.0",
+      "source": "./skills/ruff-exclude-vs-per-file-ignores-generated-files.md",
+      "category": "ci-cd",
+      "tags": [
+        "ruff",
+        "ruff-format",
+        "ruff-check",
+        "exclude",
+        "per-file-ignores",
+        "generated-files",
+        "lint"
+      ]
+    },
+    {
       "name": "ruff-rule-set-expansion",
       "description": "Workflow for safely expanding ruff lint rule sets (B, SIM, C4, RUF) in an existing Python project",
       "version": "1.0.0",
@@ -2673,8 +3153,8 @@
     },
     {
       "name": "run-precommit",
-      "description": "Run pre-commit hooks locally to validate code quality before committing",
-      "version": "1.0.0",
+      "description": "Run pre-commit hooks locally or in CI to validate code quality before committing. Use when: (1) before committing code, (2) testing if CI will pass, (3) after making code changes, (4) troubleshooting commit failures, (5) setting up CI pre-commit checks.",
+      "version": "2.0.0",
       "source": "./skills/run-precommit.md",
       "category": "ci-cd",
       "tags": []
@@ -2889,6 +3369,22 @@
       "tags": []
     },
     {
+      "name": "yamllint-trailing-blank-lines",
+      "description": "Use when: (1) yamllint CI fails with 'too many blank lines (1 > 0)' at end of file, (2) conflict resolution leaves trailing blank lines in YAML files, (3) ensuring YAML files have exactly one newline at EOF.",
+      "version": "1.0.0",
+      "source": "./skills/yamllint-trailing-blank-lines.md",
+      "category": "ci-cd",
+      "tags": [
+        "yaml",
+        "yamllint",
+        "lint",
+        "trailing-blank-lines",
+        "eof",
+        "ci",
+        "github-actions"
+      ]
+    },
+    {
       "name": "always-retry-infra-failures",
       "description": "Fix retry logic bugs where a flag-gated retry conflates infra crashes with bad-grade results, discarding valid judge results. Use when: removing a retry flag to make behavior unconditional, fixing state machine reset logic that incorrectly resets completed runs, or debugging checkpoint semantics with multiple terminal state meanings.",
       "version": "1.0.0",
@@ -2897,12 +3393,45 @@
       "tags": []
     },
     {
+      "name": "automation-implementer-dryrun-guard",
+      "description": "Guard against dry-run mode leaking into post-implementation steps (PR creation, learn, follow-up). Use when: (1) adding --dry-run to an automation implementer that has distinct Claude-code and PR-creation phases, (2) debugging 'No commits between main and branch' errors in dry-run mode, (3) designing any multi-phase CLI tool where --dry-run should exit early after the simulated phase.",
+      "version": "1.0.0",
+      "source": "./skills/automation-implementer-dryrun-guard.md",
+      "category": "debugging",
+      "tags": [
+        "dry-run",
+        "implementer",
+        "automation",
+        "hephaestus",
+        "worktree",
+        "pr-creation",
+        "early-return"
+      ]
+    },
+    {
       "name": "babylonjs-havok-vite-wasm",
       "description": "When Babylon.js Havok physics fails in Vite dev server with WASM MIME type errors",
       "version": "1.0.0",
       "source": "./skills/babylonjs-havok-vite-wasm.md",
       "category": "debugging",
       "tags": []
+    },
+    {
+      "name": "bash-exit-127-function-recovery",
+      "description": "Diagnose and recover bash shell functions dropped during a merge when a test harness exits with code 127. Use when: (1) a standalone bash test returns exit 127 and all binaries are installed, (2) a sourced shell library was refactored and an old function name was removed or renamed, (3) CI test output shows exit 127 from a raw bash test script rather than from bats.",
+      "version": "1.0.0",
+      "source": "./skills/bash-exit-127-function-recovery.md",
+      "category": "debugging",
+      "tags": [
+        "bash",
+        "exit-127",
+        "shell-function",
+        "test-harness",
+        "merge-regression",
+        "function-recovery",
+        "api-retry",
+        "jq"
+      ]
     },
     {
       "name": "batch-subprocess-signal-hang",
@@ -3013,6 +3542,19 @@
       "tags": []
     },
     {
+      "name": "debugging-blog-bug-validation-methodology",
+      "description": "Methodology for systematically validating that bugs documented in blog posts have been fixed in the codebase. Use when: (1) reviewing blog posts that document bugs, (2) verifying historical bug fixes are still in place, (3) auditing codebase against documented issues.",
+      "version": "1.0.0",
+      "source": "./skills/debugging-blog-bug-validation-methodology.md",
+      "category": "debugging",
+      "tags": [
+        "blog-posts",
+        "bug-validation",
+        "verification",
+        "codebase-audit"
+      ]
+    },
+    {
       "name": "debugging-list-oob-dynamicvector-migration",
       "description": "Fix out-of-bounds List access from DynamicVector\u2192List migration. Use when: (1) execution crashed on List index assignment, (2) DynamicVector(N) was migrated to List[T]() without changing index assignment to append, (3) shape[0]=size on empty list.",
       "version": "1.0.0",
@@ -3040,6 +3582,20 @@
         "dict-mutation",
         "LoggerAdapter",
         "ContextLogger"
+      ]
+    },
+    {
+      "name": "debugging-radiance-graph-load-capture-browser-api-artifacts",
+      "description": "Debug Radiance graph-load hangs by correlating the browser console, `/api/v1/radiance/runs*` endpoints, and persisted run artifacts. Use when: (1) the UI spinner hangs after Analyze/Open, (2) a run reaches `succeeded` but the graph does not render, (3) you need to separate backend graph generation failures from frontend Model Explorer rendering failures.",
+      "version": "1.0.0",
+      "source": "./skills/debugging-radiance-graph-load-capture-browser-api-artifacts.md",
+      "category": "debugging",
+      "tags": [
+        "radiance",
+        "model-explorer",
+        "graph-debugging",
+        "flask",
+        "podman"
       ]
     },
     {
@@ -3290,14 +3846,6 @@
       "tags": []
     },
     {
-      "name": "flaky-ci-crash-diagnosis",
-      "description": "Diagnose whether CI test crashes are caused by code changes or pre-existing flakiness. Use when: widespread 'execution crashed' failures appear on a PR but affect tests unrelated to the changes.",
-      "version": "1.0.0",
-      "source": "./skills/flaky-ci-crash-diagnosis.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
       "name": "git-rebase-over-deletion",
       "description": "Fix CI failure caused by git rebase replaying a deletion commit that over-removes active code. Use when ImportError appears for symbols that should exist after a deprecation-removal commit.",
       "version": "1.0.0",
@@ -3351,6 +3899,21 @@
       ]
     },
     {
+      "name": "liza-state-yaml-timestamp-normalization",
+      "description": "Repair a broken `.liza/state.yaml` after a YAML serializer rewrites RFC3339 timestamps into space-separated datetimes that the Liza CLI cannot parse. Use when: (1) `liza validate`, `liza status`, or `liza resume` fail with `cannot parse ... as \"T\"`, (2) `.liza/state.yaml` was rewritten by PyYAML or another generic YAML emitter, (3) the workspace is otherwise intact but all Liza commands fail on timestamp parsing.",
+      "version": "1.0.0",
+      "source": "./skills/liza-state-yaml-timestamp-normalization.md",
+      "category": "debugging",
+      "tags": [
+        "liza",
+        "yaml",
+        "timestamp",
+        "state",
+        "recovery",
+        "pyyaml"
+      ]
+    },
+    {
       "name": "logging-context-deduplication",
       "description": "Fix duplicated context prefixes in structured logging pipelines. Use when: log lines show the same context twice, or empty context renders as [//].",
       "version": "1.0.0",
@@ -3394,6 +3957,31 @@
       ]
     },
     {
+      "name": "mojo-anytensor-copy-pointer-leak",
+      "description": "UnsafePointer.take_pointee() moves the value out of pointed-to memory but does NOT free the pointer allocation. Must call ptr.free() explicitly after take_pointee(). Use when: (1) implementing copy() methods that use mem_alloc + take_pointee(), (2) debugging ASAN pooled_alloc leaks traced to Mojo struct copy methods.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-anytensor-copy-pointer-leak.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "mojo-anytensor-uint-set-float-bitcast",
+      "description": "AnyTensor.set(UInt32/UInt64) silently drops writes to float32/float64 tensors because _set_int64 has no float handler. Use when: (1) writing raw IEEE 754 bit patterns (NaN, Inf, denormals) into float tensors via set(UInt32/UInt64), (2) test assertions about NaN bit patterns in float tensors silently fail, (3) any UInt32/UInt64 write to a float-dtype AnyTensor appears to have no effect.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-anytensor-uint-set-float-bitcast.md",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "anytensor",
+        "bitcast",
+        "nan",
+        "float32",
+        "float64",
+        "silent-bug",
+        "set"
+      ]
+    },
+    {
       "name": "mojo-asap-destruction-perturbation-loop-fix",
       "description": "Fix Mojo ASAP-destruction crashes in finite-difference perturbation loops where _get_float64/_set_float64 per-element bitcasts on temporary tensors returned by forward_fn trigger heap-use-after-free. Use when: (1) gradient checking tests crash intermittently AFTER printing test output (not before), (2) loop reads temporary tensors element-by-element after a forward pass, (3) same libKGENCompilerRTShared crash signature but crash happens mid-execution.",
       "version": "1.0.0",
@@ -3411,8 +3999,29 @@
       ]
     },
     {
+      "name": "mojo-atomic-spinlock-double-check-lock",
+      "description": "Implement a correct SpinLock in Mojo using the TTAS (Test-and-Test-and-Set) double-check lock pattern when Atomic[DType.int64] lacks compare_exchange. Use when: (1) implementing a spinlock in Mojo without CAS support, (2) seeing counter underflow/overflow from naive fetch_add/fetch_sub lock, (3) thread-safety tests hang or produce wrong counts, (4) Mojo Atomic API only has fetch_add/fetch_sub/load, (5) unlock uses store(0) instead of fetch_add(-1) \u2014 a silent race that causes permanent deadlock under TTAS contention.",
+      "version": "1.1.0",
+      "source": "./skills/mojo-atomic-spinlock-double-check-lock.md",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "atomic",
+        "spinlock",
+        "ttas",
+        "thread-safety",
+        "concurrent",
+        "double-check-lock",
+        "fetch_add",
+        "fetch_sub",
+        "store-zero-race",
+        "deadlock",
+        "memory-pool"
+      ]
+    },
+    {
       "name": "mojo-bitcast-always-inline-crash-fix",
-      "description": "Fix Mojo 0.26.1 UAF crashes from bitcast pointer writes. Use when: (1) libKGENCompilerRTShared.so crash in CI showing 3 fixed frames (0x3cb78b/0x3c93c6/0x3cc397), (2) heap corruption after bitcast writes in dtype conversion functions, (3) ASAP destruction invalidating pointers before write completes, (4) ADR-009 workaround marked Resolved but source still has UAF writes.",
+      "description": "Fix Mojo 0.26.1 UAF crashes from bitcast pointer writes. Use when: (1) libKGENCompilerRTShared.so crash in CI showing 3 fixed frames (0x3cb78b/0x3c93c6/0x3cc397), (2) heap corruption after bitcast writes in dtype conversion functions, (3) ASAP destruction invalidating pointers before write completes, (4) file-splitting workaround marked Resolved but source still has UAF writes.",
       "version": "1.1.0",
       "source": "./skills/mojo-bitcast-always-inline-crash-fix.md",
       "category": "debugging",
@@ -3431,6 +4040,30 @@
       "description": "Debug Mojo UnsafePointer.bitcast use-after-free, create blog PR on separate branch, fix CI from gitignore/test-coverage hooks. Use when: (1) Mojo crashes after allocation churn with bitcast writes, (2) creating doc PRs on separate branches, (3) test artifacts trigger CI hooks.",
       "version": "1.0.0",
       "source": "./skills/mojo-bitcast-uaf-blog-and-ci-fix.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "mojo-bitcast-write-swarm-elimination",
+      "description": "Systematically find and eliminate all tensor._data.bitcast[T]()[i] = val UAF write patterns across a Mojo codebase using parallel agent swarm. Use when: (1) widespread bitcast write patterns need replacing codebase-wide, (2) grep finds >50 files with the pattern, (3) each file can be fixed independently with same safe API replacement.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-bitcast-write-swarm-elimination.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "mojo-closures-capturing-numerical-forward-trait",
+      "description": "Workaround for Mojo 0.26.3: capturing closures cannot be passed to def(T) raises -> T parameters. Use when: (1) a nested def captures outer variables and must be passed to a higher-order function, (2) compiler gives 'capturing nested functions must be declared unified' or 'cannot pass unified closure to escaping parameter', (3) higher-order function takes BOTH forward AND backward function arguments (e.g., check_gradient(fwd, bwd, ...)), (4) need to migrate a large codebase (10+ files) of capturing closures in parallel.",
+      "version": "2.0.0",
+      "source": "./skills/mojo-closures-capturing-numerical-forward-trait.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
+      "name": "mojo-copyinit-double-free",
+      "description": "Fix double-free crashes when Mojo synthesizes shallow __copyinit__ for structs with UnsafePointer fields. Use when: (1) a Copyable struct with UnsafePointer has no explicit __copyinit__, (2) struct is stored in List and crashes on lock/use after append, (3) crash is non-deterministic and follows List reallocation.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-copyinit-double-free.md",
       "category": "debugging",
       "tags": []
     },
@@ -3484,17 +4117,55 @@
     },
     {
       "name": "mojo-jit-crash-retry",
-      "description": "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) adding or refining retry logic in just test-group to distinguish JIT flakiness from real test failures",
-      "version": "2.1.0",
+      "description": "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular, (8) required CI checks are blocked by JIT flakiness and PRs cannot auto-merge, (9) diagnosing which of THREE distinct crash types a CI failure is: bitcast UAF (resolved), fortify_fail HOME permission (CI-only UID mismatch), or JIT volume overflow (intermittent, targeted imports fix)",
+      "version": "3.2.0",
       "source": "./skills/mojo-jit-crash-retry.md",
       "category": "debugging",
       "tags": [
         "mojo",
         "jit",
         "crash",
-        "retry",
+        "repro",
         "ci",
-        "libKGENCompilerRTShared"
+        "libKGENCompilerRTShared",
+        "upstream",
+        "required-checks"
+      ]
+    },
+    {
+      "name": "mojo-kgen-jit-buffer-overflow-diagnostic",
+      "description": "Use when: (1) CI test group crashes with Aborted (core dumped) at libKGENCompilerRTShared.so+0x6d4ab (__fortify_fail_abort) BEFORE any test output, (2) the crash is 100% deterministic on every CI run (same crash address), (3) the crashing file combines std.python import + List[String] struct field + 6+ overloaded constructors + Dict[String, <that struct>], (4) ulimit and max-parallel changes have no effect, (5) you need to write a minimal reproducer to file upstream against modular/modular. Distinct from the UID-mismatch fortify_fail crash (Crash 2 in mojo-jit-crash-retry skill) and from JIT volume overflow (Crash 3).",
+      "version": "1.0.0",
+      "source": "./skills/mojo-kgen-jit-buffer-overflow-diagnostic.md",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "kgen",
+        "jit",
+        "buffer-overflow",
+        "fortify",
+        "libKGENCompilerRTShared",
+        "upstream",
+        "crash",
+        "python-interop",
+        "deterministic"
+      ]
+    },
+    {
+      "name": "mojo-library-import-audit",
+      "description": "Use when: (1) CI required checks crash BEFORE any test output and test-file import audit alone does not stop the crashes, (2) shared library modules (reduction, conv, pooling, matrix, loss_utils, dataset loaders) have heavy module-level imports, (3) multiple test groups that share library modules all crash after fixing test file imports, (4) auditing shared/ for module-level imports that explode JIT compilation volume transitively, (5) an unused module-level import in a test file references a library that pulls in a heavy transitive chain.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-library-import-audit.md",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "jit",
+        "crash",
+        "imports",
+        "library",
+        "ci",
+        "volume-overflow",
+        "required-checks"
       ]
     },
     {
@@ -3562,6 +4233,14 @@
       "tags": []
     },
     {
+      "name": "mojo-set-api-migration-syntax-patterns",
+      "description": "Three syntax error patterns introduced by Mojo bitcast\u2192set() API migration: inline comments inside call parens swallow closing delimiters (Pattern A), empty Float32(()) split across lines (Pattern B), garbled = in call args or orphaned declarations (Pattern C). Use when: (1) mojo compiler reports 'expected ) in call argument list' after a set() migration, (2) 'use of unknown declaration' errors appear after commenting out var declarations, (3) fixing ASAN JIT symbol errors in dtype tests.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-set-api-migration-syntax-patterns.md",
+      "category": "debugging",
+      "tags": []
+    },
+    {
       "name": "mojo-setitem-lvalue-semantics",
       "description": "Documents Mojo subscript assignment semantics: obj[i]=val uses __getitem__ lvalue, not __setitem__. Use when: (1) debugging 'cannot implicitly convert' errors on ExTensor/subscript assignments, (2) designing subscript APIs in Mojo structs, (3) encountering 'cannot call function that may raise' after wrapping subscript assignments.",
       "version": "1.0.0",
@@ -3613,6 +4292,41 @@
       "tags": []
     },
     {
+      "name": "mojo-tuple-destructor-clone-pattern",
+      "description": "Mojo 0.26.x Tuple does not call __del__ on non-trivial element types; Dataset.__getitem__ must return .clone() not .slice() to prevent ASAN memory leaks. Use when: (1) implementing __getitem__ in Dataset structs that return Tuple[AnyTensor, AnyTensor], (2) debugging ASAN pooled_alloc leaks where leak count matches dataset count, (3) refcount elevation survives tuple scope exit.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-tuple-destructor-clone-pattern.md",
+      "category": "debugging",
+      "tags": [
+        "asan",
+        "leak",
+        "tuple",
+        "destructor",
+        "clone",
+        "slice",
+        "refcount",
+        "dataset",
+        "mojo",
+        "getitem"
+      ]
+    },
+    {
+      "name": "mojo-upstream-bug-filing-reproducibility-standard",
+      "description": "Use before filing any Mojo bug or feature request upstream against modular/modular. Enforces reproducibility standard: minimal reproducer, 100% deterministic on current pinned version, verified just-in-time. Prevents wasted effort from filing already-fixed or non-reproducible bugs.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-upstream-bug-filing-reproducibility-standard.md",
+      "category": "debugging",
+      "tags": [
+        "mojo",
+        "upstream",
+        "bug-filing",
+        "reproducibility",
+        "modular",
+        "determinism",
+        "minimal-reproducer"
+      ]
+    },
+    {
       "name": "multidim-slice-step-validation",
       "description": "Fix silent incorrect results when a variadic-slice __getitem__ ignores the step field. Use when: multi-dim tensor slicing silently returns wrong data for step != 1, or you need a fail-fast guard for unimplemented strided access.",
       "version": "1.0.0",
@@ -3635,6 +4349,23 @@
       "source": "./skills/nan-hash-canonicalization.md",
       "category": "debugging",
       "tags": []
+    },
+    {
+      "name": "nats-optional-import-guard-deliver-policy",
+      "description": "Debugging pattern for nats-py optional import guard failures caused by enum conversion. Use when: (1) nats subscriber tests show mock_js.subscribe.call_count == 0, (2) adding an enum/type conversion from nats.js.api inside _subscribe_loop, (3) CI shows 'nats-py is not installed' error when nats IS mocked.",
+      "version": "1.0.0",
+      "source": "./skills/nats-optional-import-guard-deliver-policy.md",
+      "category": "debugging",
+      "tags": [
+        "nats",
+        "optional-dependency",
+        "import-guard",
+        "lazy-import",
+        "DeliverPolicy",
+        "nats-py",
+        "python",
+        "asyncio"
+      ]
     },
     {
       "name": "nats-py-connection-resilience-patterns",
@@ -3810,14 +4541,6 @@
       "tags": []
     },
     {
-      "name": "skill-claude-code-settings-configuration-for-e2e-tests",
-      "description": "Configure Claude Code settings.json for E2E test workspaces to control thinking mode and other workspace-level settings",
-      "version": "1.0.0",
-      "source": "./skills/skill-claude-code-settings-configuration-for-e2e-tests.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
       "name": "skill-e2e-state-machine-bugs",
       "description": "Fix --until off-by-one in advance_to_completion() loops and disconnected terminal signal handlers in manage_experiment.py",
       "version": "1.0.0",
@@ -3882,17 +4605,28 @@
       "tags": []
     },
     {
-      "name": "academic-paper-review-quality-improvement",
-      "description": "Comprehensive academic paper review workflow: data validation, tone formalization, error correction, and reproducibility fixes",
-      "version": "1.0.0",
-      "source": "./skills/academic-paper-review-quality-improvement.md",
+      "name": "academic-paper-myrmidon-swarm-review",
+      "description": "Parallel myrmidon swarm review of academic papers and AI architecture research docs using role-stratified agents for comprehensive, simultaneous coverage. Use when: (1) reviewing a large academic paper with statistical methodology or Vega-Lite figures, (2) reviewing an AI architecture research doc for citation accuracy / complexity / literature gaps / comparison validity / feasibility, (3) need thorough parallel coverage faster than sequential review.",
+      "version": "1.1.0",
+      "source": "./skills/academic-paper-myrmidon-swarm-review.md",
       "category": "documentation",
-      "tags": []
+      "tags": [
+        "academic",
+        "paper-review",
+        "myrmidon",
+        "swarm",
+        "latex",
+        "statistics",
+        "vega-lite",
+        "architecture-research",
+        "kv-cache",
+        "quantization-review"
+      ]
     },
     {
       "name": "academic-paper-validation",
       "description": "Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical methodology verification, LaTeX compilation fixes, and arXiv build preparation",
-      "version": "2.0.0",
+      "version": "3.0.0",
       "source": "./skills/academic-paper-validation.md",
       "category": "documentation",
       "tags": []
@@ -3978,17 +4712,26 @@
       "tags": []
     },
     {
-      "name": "claude-md-doc-consolidation",
-      "description": "Trim duplicate documentation sections in CLAUDE.md by replacing verbose content with a summary + link to canonical docs. Use when: CLAUDE.md has sections duplicating docs/ content, file is too large, or consolidating multiple doc locations.",
+      "name": "citation-verification-arxiv-abstract-fetch",
+      "description": "Verify every numeric claim in a corpus citation against the cited paper's arXiv abstract via parallel WebFetch agents. Use when: (1) a research corpus or technical doc makes numeric claims attributed to specific arXiv papers, (2) pattern-based scrubs have declared the corpus clean but no claim-to-source check has run, (3) the corpus contains post-knowledge-cutoff arXiv IDs where you must distinguish 'fabricated paper' from 'real paper, misquoted', (4) the corpus has blanket 'UNVERIFIED' flags that may be over-cautious, (5) a pre-release citation-hygiene gate before publication.",
       "version": "1.0.0",
-      "source": "./skills/claude-md-doc-consolidation.md",
+      "source": "./skills/citation-verification-arxiv-abstract-fetch.md",
       "category": "documentation",
-      "tags": []
+      "tags": [
+        "citation",
+        "verification",
+        "arxiv",
+        "webfetch",
+        "primary-source",
+        "fabrication-detection",
+        "parallel-agents",
+        "research-corpus"
+      ]
     },
     {
       "name": "claude-md-token-trim",
       "description": "Reduce CLAUDE.md token consumption by replacing verbose/duplicate sections with concise summaries and links. Use when: (1) CLAUDE.md exceeds a line/token budget, (2) sections duplicate content already in shared docs, (3) pre-commit markdownlint MD060 table errors need fixing alongside trimming.",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "source": "./skills/claude-md-token-trim.md",
       "category": "documentation",
       "tags": []
@@ -4128,6 +4871,47 @@
       "source": "./skills/document-normalization-test-gotcha.md",
       "category": "documentation",
       "tags": []
+    },
+    {
+      "name": "documentation-architecture-research-quality-rubric",
+      "description": "6-dimension weighted rubric for auditing AI architecture research documents, with canonical baseline geometry for LLM-scale proposals. Use when: (1) grading research docs for structural compliance, citations, baseline accuracy, TTFT/TPOT tables, TPOT direction honesty, and novelty verdicts, (2) performing corpus-scale quality audits on AI architecture proposals, (3) checking for the A2 KV@32K error (68 GB vs correct 8.59 GB), (4) enforcing D5 TPOT honesty rules for sequential-pass mechanisms, (5) verifying D6 novelty verdict format.",
+      "version": "1.0.0",
+      "source": "./skills/documentation-architecture-research-quality-rubric.md",
+      "category": "documentation",
+      "tags": [
+        "rubric",
+        "grading",
+        "research-docs",
+        "tpot",
+        "novelty-verdict",
+        "baseline-geometry",
+        "kv-cache",
+        "citation",
+        "architecture-research",
+        "audit",
+        "d1-d6"
+      ]
+    },
+    {
+      "name": "documentation-corpus-myrmidon-parallel-remediation",
+      "description": "Myrmidon swarm pattern for remediating a large document corpus in parallel using isolated git worktree agents. Use when: (1) an unpublished research corpus contains change-note prose, correction-history blocks, or backward-compatibility text that must be deleted (not annotated), (2) defects span many files and must be fixed in parallel without file ownership collisions, (3) you need wave-based execution: parallel fixers \u2192 read-only verifier \u2192 merge. Includes citation-verification pass that web-fetches arXiv abstracts to catch fabricated numeric ranges, reversed-polarity claims, and paper-body figures misattributed as abstract-level.",
+      "version": "1.6.0",
+      "source": "./skills/documentation-corpus-myrmidon-parallel-remediation.md",
+      "category": "documentation",
+      "tags": [
+        "myrmidon",
+        "swarm",
+        "parallel",
+        "corpus",
+        "remediation",
+        "worktree",
+        "wave-based",
+        "change-notes",
+        "unpublished",
+        "conflict-partitioning",
+        "citation-verification",
+        "arxiv-abstract-check"
+      ]
     },
     {
       "name": "documentation-ecosystem-role-drift-detection",
@@ -4299,42 +5083,21 @@
       "tags": []
     },
     {
-      "name": "latex-paper-accuracy-review",
-      "description": "Review a LaTeX research paper for factual accuracy against raw experiment data, statistical outputs, and codebase constants before publication",
-      "version": "5.0.0",
-      "source": "./skills/latex-paper-accuracy-review.md",
+      "name": "latex-paper-parallel-assembly",
+      "description": "Assemble a large LaTeX research paper from parallel-agent-written parts. Use when: (1) a single agent cannot hold the full paper in context, (2) you have 20+ ideas/sections to write and want parallel speedup, (3) you need to merge N part files into one compilable .tex, (4) you need post-assembly error remediation (unicode, missing bib entries, tabular column drift, undefined commands), (5) removing inline arXiv hrefs from assembled paper body, (6) consolidating scattered verdict codes into a single Future Work section, (7) deduplicating bib entries introduced by parallel agents writing their own citation stubs.",
+      "version": "1.1.0",
+      "source": "./skills/latex-paper-parallel-assembly.md",
       "category": "documentation",
       "tags": [
         "latex",
-        "paper",
-        "review",
-        "accuracy",
-        "statistics",
-        "data-verification",
-        "publication",
-        "confidence-intervals",
-        "iftex",
-        "rounding",
-        "BCa-bootstrap",
-        "pass-classification",
-        "grading-scale",
-        "majority-vote",
-        "cliffs-delta",
-        "myrmidon-swarm",
-        "causal-language",
-        "H-comparison",
-        "CI-rehabilitation",
-        "cross-reference-rename",
-        "abstract-conclusions-redundancy"
+        "parallel",
+        "assembly",
+        "pdflatex",
+        "bibtex",
+        "cleanup",
+        "citations",
+        "verdicts"
       ]
-    },
-    {
-      "name": "latex-paper-peer-review",
-      "description": "Apply expert peer review corrections to LaTeX research papers with statistical analysis pipelines",
-      "version": "1.0.0",
-      "source": "./skills/latex-paper-peer-review.md",
-      "category": "documentation",
-      "tags": []
     },
     {
       "name": "link-workaround-notes-to-issues",
@@ -4367,6 +5130,22 @@
       "source": "./skills/module-docstring-line-wrap-audit.md",
       "category": "documentation",
       "tags": []
+    },
+    {
+      "name": "mojo-adr-supersession-on-version-upgrade",
+      "description": "Mark ADRs as Superseded after a Mojo version upgrade removes the limitation they document. Use when: (1) bumping the pinned Mojo version in pixi.toml, (2) an ADR describes a compiler limitation or missing feature that may now work, (3) code still carries scalar workarounds that vectorized paths could replace.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-adr-supersession-on-version-upgrade.md",
+      "category": "documentation",
+      "tags": [
+        "mojo",
+        "adr",
+        "superseded",
+        "version-upgrade",
+        "workaround",
+        "fp16",
+        "simd"
+      ]
     },
     {
       "name": "mojo-api-name-reconciliation",
@@ -4537,17 +5316,9 @@
       "tags": []
     },
     {
-      "name": "publication-readiness-check",
-      "description": "publication-readiness-check",
-      "version": "1.0.0",
-      "source": "./skills/publication-readiness-check.md",
-      "category": "documentation",
-      "tags": []
-    },
-    {
       "name": "publication-readiness-review",
       "description": "Comprehensive 10-category GO/NO-GO assessment framework for academic paper publication readiness",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "source": "./skills/publication-readiness-review.md",
       "category": "documentation",
       "tags": []
@@ -4599,6 +5370,41 @@
       "source": "./skills/replace-hardcoded-counts-with-live-commands.md",
       "category": "documentation",
       "tags": []
+    },
+    {
+      "name": "research-corpus-exec-summary-overhead-honesty",
+      "description": "Ensures executive summary tables in research docs surface the dominant overhead metric, not just the smallest one. Use when: (1) writing exec summaries for latency-increasing ideas, (2) auditing comparison tables where FLOPs and TPOT diverge, (3) reviewing AR loop / iterative refinement / diffusion decoder proposals.",
+      "version": "1.0.0",
+      "source": "./skills/research-corpus-exec-summary-overhead-honesty.md",
+      "category": "documentation",
+      "tags": [
+        "research",
+        "corpus",
+        "exec-summary",
+        "overhead",
+        "TPOT",
+        "FLOPs",
+        "latency",
+        "honesty",
+        "audit"
+      ]
+    },
+    {
+      "name": "research-corpus-inline-derivation-standard",
+      "description": "Standard for tagging analytically-derived numeric claims in research corpus documents. Use when: (1) writing or reviewing research docs with numeric claims not backed by a paper, (2) auditing derivation tags for completeness, (3) deciding how to format a first-principles calculation in a table cell or prose.",
+      "version": "1.1.0",
+      "source": "./skills/research-corpus-inline-derivation-standard.md",
+      "category": "documentation",
+      "tags": [
+        "research",
+        "corpus",
+        "derivation",
+        "citation",
+        "inline",
+        "numeric",
+        "documentation",
+        "annotation"
+      ]
     },
     {
       "name": "review-commented-imports",
@@ -5385,6 +6191,25 @@
       "tags": []
     },
     {
+      "name": "mojo-gpu-fundamentals-programming-guide",
+      "description": "GPU programming patterns in Mojo using MAX GPU API. Use when: (1) writing GPU kernels in Mojo, (2) managing GPU memory and data transfer, (3) optimizing compute-bound workloads with GPU parallelism, (4) translating CUDA mental models to Mojo GPU API.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-gpu-fundamentals-programming-guide.md",
+      "category": "optimization",
+      "tags": [
+        "mojo",
+        "gpu",
+        "max-gpu",
+        "kernel",
+        "parallel",
+        "optimization",
+        "modular-upstream",
+        "cuda",
+        "tiletensor",
+        "shared-memory"
+      ]
+    },
+    {
       "name": "mojo-lint-syntax",
       "description": "Validate Mojo syntax against current v0.26.1+ standards. Use to catch syntax errors before compilation.",
       "version": "1.0.0",
@@ -5504,39 +6329,6 @@
       "tags": []
     },
     {
-      "name": "adr009-split-audit",
-      "description": "Audit ADR-009 test file splits to verify no tests were silently dropped, create GitHub issues for violations, and validate coverage. Use when: (1) verifying that all tests from a deprecated/deleted file are present in successor split files, (2) auditing all test files in a family or CI group for ADR-009 compliance, (3) creating GitHub issues for ADR-009 violating files in bulk, (4) investigating whether a prior split omitted any test functions, (5) running a periodic health check on the split test inventory.",
-      "version": "1.1.0",
-      "source": "./skills/adr009-split-audit.md",
-      "category": "testing",
-      "tags": [
-        "adr-009",
-        "mojo",
-        "audit",
-        "testing",
-        "github-issues",
-        "coverage",
-        "dropped-tests"
-      ]
-    },
-    {
-      "name": "adr009-test-file-split-workflow",
-      "description": "OBSOLETE \u2014 ADR-009 has been fixed. Historical reference for Mojo test file splitting and de-splitting. Use when: (1) understanding existing _partN.mojo split files, (2) reversing splits by merging part files back, (3) investigating legacy heap corruption workarounds, (4) auditing for dropped tests, (5) recovering dropped test implementations from git history, (6) diagnosing compile hangs (>120s) from heavyweight backward-pass tests in existing split files, (7) enforcing the ADR-009 per-file test count limit via pre-commit hook on existing files",
-      "version": "2.1.0",
-      "source": "./skills/adr009-test-file-split-workflow.md",
-      "category": "testing",
-      "tags": [
-        "adr-009",
-        "mojo",
-        "test-splitting",
-        "obsolete",
-        "historical",
-        "ci-cd",
-        "pre-commit",
-        "compile-hang"
-      ]
-    },
-    {
       "name": "assert-to-runtime-error-migration",
       "description": "Skill: assert-to-runtime-error-migration. Use when replacing assert guards in production code with explicit RuntimeError raises to eliminate Ruff S101 suppressions.",
       "version": "1.0.0",
@@ -5549,14 +6341,6 @@
       "description": "TRIGGER CONDITIONS: A pytest.mark.parametrize list hardcodes fixture filenames that must be manually updated when new fixtures are added. Use when replacing a hardcoded list with glob-based auto-discovery so new fixtures are picked up automatically.",
       "version": "1.0.0",
       "source": "./skills/auto-discover-parametrize-fixtures.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
-      "name": "badge-drift-after-test-file-split",
-      "description": "Ensure test count badge stays accurate when a large test file is split into multiple parts. Use when: a test file has been split into part1/part2/etc. and the badge-check script must count all parts.",
-      "version": "1.0.0",
-      "source": "./skills/badge-drift-after-test-file-split.md",
       "category": "testing",
       "tags": []
     },
@@ -5682,7 +6466,7 @@
     },
     {
       "name": "conv2d-gradient-checking-finite-differences",
-      "description": "Use when: (1) conv2d_backward tests only validate shapes but not grad_input/grad_weights values numerically, (2) adding finite-difference gradient checks for standard conv2d across padding=0, padding>0, stride, and multi-channel configurations, (3) verifying transposed convolution correctness, (4) extending gradient checking coverage to all three backward outputs (grad_input, grad_weights, grad_bias), (5) working under ADR-009 Mojo heap-corruption constraint (\u226410 tests per file)",
+      "description": "Use when: (1) conv2d_backward tests only validate shapes but not grad_input/grad_weights values numerically, (2) adding finite-difference gradient checks for standard conv2d across padding=0, padding>0, stride, and multi-channel configurations, (3) verifying transposed convolution correctness, (4) extending gradient checking coverage to all three backward outputs (grad_input, grad_weights, grad_bias), (5) keeping per-file test count under 10",
       "version": "1.0.0",
       "source": "./skills/conv2d-gradient-checking-finite-differences.md",
       "category": "testing",
@@ -5693,7 +6477,6 @@
         "mojo",
         "backward-pass",
         "numerical-gradients",
-        "adr-009",
         "padding"
       ]
     },
@@ -5739,7 +6522,7 @@
     },
     {
       "name": "depthwise-conv2d-gradient-checking-tests",
-      "description": "Use when: (1) depthwise_conv2d_backward exists but lacks gradient-correctness tests, (2) adding per-channel finite-difference gradient checking for grad_input, grad_weights, and grad_bias, (3) the kernel shape is (channels,1,kH,kW) not (out_ch,in_ch,kH,kW), (4) working under ADR-009 Mojo heap-corruption constraint (\u22648 tests per file)",
+      "description": "Use when: (1) depthwise_conv2d_backward exists but lacks gradient-correctness tests, (2) adding per-channel finite-difference gradient checking for grad_input, grad_weights, and grad_bias, (3) the kernel shape is (channels,1,kH,kW) not (out_ch,in_ch,kH,kW), (4) keeping per-file test count \u22648",
       "version": "1.0.0",
       "source": "./skills/depthwise-conv2d-gradient-checking-tests.md",
       "category": "testing",
@@ -5748,8 +6531,7 @@
         "gradient-checking",
         "finite-differences",
         "mojo",
-        "backward-pass",
-        "adr-009"
+        "backward-pass"
       ]
     },
     {
@@ -5946,8 +6728,8 @@
     },
     {
       "name": "gradient-checking-test-setup-fixes",
-      "description": "Fix gradient checking test failures caused by pathological test setup. Use when: (1) gradient checks fail with analytical~0 vs numerical~nonzero for normalization layers, (2) any gradient check exceeds tolerance due to large-magnitude gradients, (3) tests use check_gradients() instead of check_gradient().",
-      "version": "2.0.0",
+      "description": "Fix gradient checking test failures caused by pathological test setup. Use when: (1) gradient checks fail with analytical~0 vs numerical~nonzero for normalization layers, (2) any gradient check exceeds tolerance due to large-magnitude gradients, (3) migrating check_gradients() to check_gradient(). Migration is COMPLETE as of v3.0.0.",
+      "version": "3.0.0",
       "source": "./skills/gradient-checking-test-setup-fixes.md",
       "category": "testing",
       "tags": [
@@ -5957,7 +6739,8 @@
         "depthwise-conv2d",
         "float32-precision",
         "test-setup",
-        "tolerance"
+        "tolerance",
+        "migration-complete"
       ]
     },
     {
@@ -6090,17 +6873,9 @@
     },
     {
       "name": "mojo-empty-tensor-hash-test",
-      "description": "Test pattern for verifying Mojo ExTensor __hash__ on 0-element tensors. Use when: adding edge-case hash coverage for zero-element containers, or confirming hash stability when data loop is skipped.",
-      "version": "1.0.0",
+      "description": "Test pattern for verifying Mojo ExTensor __hash__ on 0-element tensors. Use when: (1) adding edge-case hash coverage for zero-element containers, (2) confirming hash stability when data loop is skipped, (3) verifying that empty tensors with different shapes (e.g. [0], [0,0], [0,1]) produce distinct hashes, or (4) following up on empty-tensor hash equality tests with multi-dimensional shape discrimination coverage.",
+      "version": "2.0.0",
       "source": "./skills/mojo-empty-tensor-hash-test.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
-      "name": "mojo-empty-tensor-shape-hash-differ",
-      "description": "Test pattern for verifying that empty Mojo ExTensors with different shapes produce different hashes. Use when: adding hash coverage for multi-dimensional empty tensors, confirming shape dimensions feed into __hash__ when numel=0, or following up on empty-tensor hash equality tests.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-empty-tensor-shape-hash-differ.md",
       "category": "testing",
       "tags": []
     },
@@ -6143,7 +6918,7 @@
     },
     {
       "name": "mojo-logical-xor-test-coverage",
-      "description": "Add logical_xor test coverage for Mojo elementwise operations. Use when: (1) a logical op is imported but untested, (2) ADR-009 10-test file limit requires a new file, (3) binary logical truth-table coverage is missing.",
+      "description": "Add logical_xor test coverage for Mojo elementwise operations. Use when: (1) a logical op is imported but untested, (2) the file is at the per-file test limit and a new file is needed, (3) binary logical truth-table coverage is missing.",
       "version": "1.0.0",
       "source": "./skills/mojo-logical-xor-test-coverage.md",
       "category": "testing",
@@ -6207,17 +6982,9 @@
     },
     {
       "name": "mojo-shape-noncontiguous-value-tests",
-      "description": "TDD regression pattern for verifying element-value correctness of shape ops on non-contiguous Mojo tensors. Use when: adding value-correctness tests for shape ops (reshape, flatten, permute, concatenate, tile, repeat, broadcast_to) on non-contiguous inputs, surfacing flat-index bugs where _get_float64(i) ignores _strides.",
-      "version": "1.0.0",
+      "description": "TDD regression pattern for verifying element-value correctness of shape ops on Mojo tensors. Use when: (1) adding value-correctness tests for shape ops (reshape, flatten, permute, concatenate, tile, repeat, broadcast_to) on non-contiguous inputs, surfacing flat-index bugs where _get_float64(i) ignores _strides; (2) shape tests use assert_numel/assert_dim only and need actual value assertions added; (3) code review flags tests that pass even if operations produce wrong output.",
+      "version": "2.0.0",
       "source": "./skills/mojo-shape-noncontiguous-value-tests.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
-      "name": "mojo-shape-value-assertions",
-      "description": "Add value-correctness assertions to Mojo tensor shape tests. Use when: shape tests only check element counts/dimensions but not actual values, or code review flags tests that pass even if operations produce wrong output.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-shape-value-assertions.md",
       "category": "testing",
       "tags": []
     },
@@ -6231,7 +6998,7 @@
     },
     {
       "name": "mojo-signed-int-bitwise-not",
-      "description": "Pattern for adding bitwise NOT (~) tests for Mojo signed integer types using two's complement semantics. Use when: adding ~ operator tests for Int8/Int16/Int32/Int64, extending unsigned NOT tests to signed types, or implementing ADR-009 compliant test splits.",
+      "description": "Pattern for adding bitwise NOT (~) tests for Mojo signed integer types using two's complement semantics. Use when: adding ~ operator tests for Int8/Int16/Int32/Int64, extending unsigned NOT tests to signed types, or splitting test files when the per-file test limit is reached.",
       "version": "1.0.0",
       "source": "./skills/mojo-signed-int-bitwise-not.md",
       "category": "testing",
@@ -6596,8 +7363,8 @@
     },
     {
       "name": "test-implementation-gap-analysis",
-      "description": "Test-Implementation Gap Analysis",
-      "version": "1.0.0",
+      "description": "Test-Implementation Gap Analysis \u2014 detects gaps between test expectations and implementation, including PR commit message/diff mismatches where a route or feature is described but never added to the relevant source file",
+      "version": "1.1.0",
       "source": "./skills/test-implementation-gap-analysis.md",
       "category": "testing",
       "tags": []
@@ -6736,14 +7503,6 @@
       ]
     },
     {
-      "name": "validate-test-coverage-split-naming",
-      "description": "Verify CI coverage scripts handle split file naming (part1/part2, suffix variants) correctly. Use when: confirming wildcard-based CI group matching covers ADR-009 split files without requiring script changes.",
-      "version": "1.0.0",
-      "source": "./skills/validate-test-coverage-split-naming.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
       "name": "validate-tier-id-filename-consistency",
       "description": "Validate that config field values match their source filename at the aggregation layer to prevent silent key/value disagreement",
       "version": "1.0.0",
@@ -6816,6 +7575,21 @@
       "tags": []
     },
     {
+      "name": "agent-background-task-failure-recovery",
+      "description": "Detect and recover from silent background agent failures caused by API connection errors. Use when: (1) a background agent completes but its result shows 'API Error: Unable to connect to API', (2) files appear untouched after a background agent run, (3) deciding whether to use run_in_background vs foreground for a multi-file task.",
+      "version": "1.0.0",
+      "source": "./skills/agent-background-task-failure-recovery.md",
+      "category": "tooling",
+      "tags": [
+        "background-agent",
+        "run_in_background",
+        "api-error",
+        "connection-refused",
+        "recovery",
+        "foreground-agent"
+      ]
+    },
+    {
       "name": "agent-hooks-pattern",
       "description": "Pattern for agent-scoped lifecycle hooks in Claude Code v2.1.0. Use when implementing custom agents with safety controls or tool restrictions.",
       "version": "1.0.0",
@@ -6830,6 +7604,20 @@
       "source": "./skills/ai-blog-generator.md",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "already-done-issue-detection",
+      "description": "Detect GitHub issues that are already fixed before starting implementation. Use when: (1) starting a batch triage of 10+ open issues, (2) assigned an issue in a repo with active prior automation, (3) audit issues filed weeks/months ago, (4) issue title contains 'missing', 'add', 'fix' for a file or config value.",
+      "version": "1.2.0",
+      "source": "./skills/already-done-issue-detection.md",
+      "category": "tooling",
+      "tags": [
+        "triage",
+        "already-done",
+        "issue-classification",
+        "batch",
+        "audit"
+      ]
     },
     {
       "name": "audit-driven-remediation",
@@ -6879,6 +7667,25 @@
       ]
     },
     {
+      "name": "automation-resilience-label-discovery-dirty",
+      "description": "Three resilience patterns for hephaestus.automation implement/plan pipelines: (1) auto-create missing GitHub labels and retry on label-not-found error, (2) auto-discover open issues when no --issues/--epic CLI arg is given via gh_list_open_issues(), (3) WorktreeDirtyError preserve-and-report pattern that blocks forced removal of dirty worktrees and prints a rerun command. Use when: (1) gh issue create fails with 'could not add label: X not found', (2) implementer/planner needs to process all open issues by default, (3) cleanup_all() should not silently discard in-progress agent worktrees.",
+      "version": "1.0.0",
+      "source": "./skills/automation-resilience-label-discovery-dirty.md",
+      "category": "tooling",
+      "tags": [
+        "automation",
+        "implement-issues",
+        "plan-issues",
+        "github-labels",
+        "gh_list_open_issues",
+        "WorktreeDirtyError",
+        "worktree",
+        "dirty-worktree",
+        "resilience",
+        "hephaestus"
+      ]
+    },
+    {
       "name": "batch-image-to-idx-conversion",
       "description": "Extend a single-image IDX converter to batch mode with --batch flag accepting a directory or glob. Use when: (1) users need to pass a whole directory of images to a Mojo inference pipeline in one shot, (2) extending png-jpeg-to-idx-conversion to multi-image IDX format, (3) the IDX reader expects count>1.",
       "version": "1.0.0",
@@ -6888,8 +7695,8 @@
     },
     {
       "name": "batch-low-difficulty-issue-impl",
-      "description": "Classify, deduplicate, and batch-implement 15-30 low-difficulty GitHub issues (doc edits, text fixes, trivial cleanup) in a single session. Use when: (1) a large backlog of open issues needs triage, (2) many issues are pure doc/text changes, (3) duplicate issues need closing before implementation.",
-      "version": "1.0.0",
+      "description": "Classify, deduplicate, and batch-implement GitHub issues in a large swarm session (24+ waves, 200+ issues). Use when: (1) a large backlog of open issues needs triage, (2) many issues are pure doc/text or infra-only changes, (3) duplicate issues need closing before implementation. Includes worktree-safe grep pattern for ALREADY-DONE verification, correct pre-filter order, ci.yml conflict avoidance, EASY queue exhaustion detection, and Docker inline comment parse error pattern.",
+      "version": "1.4.0",
       "source": "./skills/batch-low-difficulty-issue-impl.md",
       "category": "tooling",
       "tags": []
@@ -6970,22 +7777,6 @@
       "description": "Implementing checkpoint/resume functionality for long-running batch processes with rate limit handling",
       "version": "1.0.0",
       "source": "./skills/checkpoint-recovery.md",
-      "category": "tooling",
-      "tags": []
-    },
-    {
-      "name": "ci-package-workflow",
-      "description": "Create GitHub Actions workflows for automated package building and distribution. Use in package phase to automate .mojopkg building and release creation.",
-      "version": "1.0.0",
-      "source": "./skills/ci-package-workflow.md",
-      "category": "tooling",
-      "tags": []
-    },
-    {
-      "name": "ci-run-precommit",
-      "description": "Run pre-commit hooks locally or in CI to validate code quality before committing. Use to ensure commits meet quality standards and CI will pass.",
-      "version": "1.0.0",
-      "source": "./skills/ci-run-precommit.md",
       "category": "tooling",
       "tags": []
     },
@@ -7147,7 +7938,7 @@
     {
       "name": "config-filename-validation",
       "description": "Skill: Config Filename/ID Validation Pattern",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "source": "./skills/config-filename-validation.md",
       "category": "tooling",
       "tags": []
@@ -7208,18 +7999,26 @@
       "tags": []
     },
     {
+      "name": "cross-repo-python-utility-port",
+      "description": "Use when porting a Python utility (class, module, tests) from one repo to another that already has a related implementation. Covers: (1) diff analysis between source and destination implementations, (2) identifying which features to cherry-pick vs skip, (3) merging test suites without duplication, (4) finding and fixing bugs exposed during porting, (5) creating a re-export shim in the source repo and filing a cleanup issue.",
+      "version": "1.0.0",
+      "source": "./skills/cross-repo-python-utility-port.md",
+      "category": "tooling",
+      "tags": [
+        "porting",
+        "cross-repo",
+        "python",
+        "circuit-breaker",
+        "re-export",
+        "test-merge",
+        "shim"
+      ]
+    },
+    {
       "name": "cytoscape-edge-visibility-optimization",
       "description": "Cytoscape.js DAG visualization bug fixes and performance patterns. Covers edge-at-baseline-hidden pattern, read-only graph config, day-filter phase boundary visibility, and role-complete trajectory highlighting.",
       "version": "1.0.0",
       "source": "./skills/cytoscape-edge-visibility-optimization.md",
-      "category": "tooling",
-      "tags": []
-    },
-    {
-      "name": "defaults-config-filename-validation",
-      "description": "Skill: defaults-config-filename-validation. Use when working with defaults config filename validation.",
-      "version": "1.0.0",
-      "source": "./skills/defaults-config-filename-validation.md",
       "category": "tooling",
       "tags": []
     },
@@ -7248,12 +8047,45 @@
       "tags": []
     },
     {
+      "name": "docker-compose-v5-healthcheck-array-split",
+      "description": "Docker Compose v5 (v2.39+) splits healthcheck test: arrays on spaces, breaking all pipe-based shell healthchecks. Use when: (1) healthchecks fail with CMD array format on Docker Compose v5, (2) containers become unhealthy despite service being responsive, (3) migrating compose files to Docker Compose v5, (4) diagnosing 'sh -c wget' help text in healthcheck logs.",
+      "version": "1.0.0",
+      "source": "./skills/docker-compose-v5-healthcheck-array-split.md",
+      "category": "tooling",
+      "tags": [
+        "docker-compose",
+        "docker-compose-v5",
+        "healthcheck",
+        "busybox",
+        "wget",
+        "podman",
+        "wsl2",
+        "regression"
+      ]
+    },
+    {
       "name": "docker-optional-dep-layer-caching",
       "description": "TRIGGER CONDITIONS: When a Dockerfile uses tomllib to extract pyproject.toml runtime deps for layer caching but omits optional-dependency groups, causing them to be reinstalled on every source change when installed as extras",
       "version": "1.0.0",
       "source": "./skills/docker-optional-dep-layer-caching.md",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "docker-precommit-entrypoint-install",
+      "description": "Pre-commit git hooks must be installed in entrypoint.sh (container startup), not Dockerfile RUN (image build), because .git/ is only accessible after bind-mount volumes are active. Use when: (1) setting up pre-commit in Docker/Podman with a bind-mounted workspace, (2) debugging why git hooks are not running inside containers, (3) pre-commit install appears to succeed during Docker build but hooks don't fire at runtime, (4) `core.hooksPath` git config blocks hook installation with a 'Cowardly refusing' error.",
+      "version": "1.0.0",
+      "source": "./skills/docker-precommit-entrypoint-install.md",
+      "category": "tooling",
+      "tags": [
+        "docker",
+        "podman",
+        "pre-commit",
+        "git-hooks",
+        "bind-mount",
+        "entrypoint",
+        "container"
+      ]
     },
     {
       "name": "dryrun-process-metrics-assertions",
@@ -7372,14 +8204,6 @@
       "description": "Skill: extract-logging-helper. Use when working with extract logging helper.",
       "version": "1.0.0",
       "source": "./skills/extract-logging-helper.md",
-      "category": "tooling",
-      "tags": []
-    },
-    {
-      "name": "extract-method-to-private-methods",
-      "description": "Skill: Extract Closures into Private Methods",
-      "version": "1.0.0",
-      "source": "./skills/extract-method-to-private-methods.md",
       "category": "tooling",
       "tags": []
     },
@@ -7525,27 +8349,9 @@
       "tags": []
     },
     {
-      "name": "git-worktree-cleanup",
-      "description": "Use when: (1) removing merged or stale git worktrees after PRs merge, (2) deleting local and remote branches after parallel wave execution, (3) cleaning generated artifacts (__pycache__, build dirs) from multiple worktrees without losing real changes, (4) cleaning up 20+ mixed worktrees (stale, unreleased, conflict-heavy) using myrmidon swarm wave parallelization, (5) batch-fixing end-of-file newline violations across multiple branches, (6) worktree has uncommitted skill documentation that should become a PR before removal, (7) pre-commit markdownlint rewrites SKILL.md files requiring a 2-commit pattern",
-      "version": "2.0.0",
-      "source": "./skills/git-worktree-cleanup.md",
-      "category": "tooling",
-      "tags": [
-        "worktree",
-        "cleanup",
-        "branches",
-        "artifacts",
-        "post-merge",
-        "myrmidon",
-        "wave-parallelization",
-        "eof",
-        "git"
-      ]
-    },
-    {
       "name": "git-worktree-management-patterns",
-      "description": "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy \u2014 always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents.",
-      "version": "2.3.0",
+      "description": "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy \u2014 always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents, (13) cleaning 20+ mixed worktrees using myrmidon swarm wave parallelization, (14) batch-fixing end-of-file newline violations across multiple branches, (15) worktrees with uncommitted skill documentation requiring a 2-commit markdownlint pattern, (16) removing locked worktrees whose lock holder PID is dead (stale agent lock cleanup).",
+      "version": "2.5.0",
       "source": "./skills/git-worktree-management-patterns.md",
       "category": "tooling",
       "tags": []
@@ -7717,6 +8523,21 @@
       ]
     },
     {
+      "name": "liza-agent-pool-reset-explicit-ids",
+      "description": "Reset a dirty Liza workspace and relaunch a clean agent pool with explicit agent IDs so ghost assignments do not reappear. Use when: (1) tasks retain stale `assigned_to` or `worktree` fields after agent failure, (2) `liza` reports invalid state because one agent is assigned to multiple active tasks, (3) leftover task worktrees and local agent processes keep the queue in a bad state, (4) you want to relaunch planners, reviewers, coders, and the orchestrator deterministically.",
+      "version": "1.0.0",
+      "source": "./skills/liza-agent-pool-reset-explicit-ids.md",
+      "category": "tooling",
+      "tags": [
+        "liza",
+        "agents",
+        "worktree",
+        "recovery",
+        "orchestration",
+        "queue"
+      ]
+    },
+    {
       "name": "logging-stdlib-json-formatter",
       "description": "Build a zero-dependency JSON log formatter using stdlib logging.Formatter. Use when: (1) adding structured JSON logging to a shared library, (2) integrating Python logs with Loki/Promtail/ELK without adding dependencies.",
       "version": "1.0.0",
@@ -7770,12 +8591,23 @@
       "tags": []
     },
     {
-      "name": "module-decomposition-with-reexports",
-      "description": "Skill: Module Decomposition with Backward-Compatible Re-exports",
-      "version": "1.0.0",
-      "source": "./skills/module-decomposition-with-reexports.md",
+      "name": "mojo-026-breaking-changes",
+      "description": "Catalog of Mojo 0.26.3 breaking changes, fixes, and authoritative current syntax reference. Use when: (1) migrating a Mojo codebase from 0.26.1 to 0.26.3, (2) encountering unfamiliar compile errors after a Mojo version bump, (3) auditing code for deprecated APIs, (4) writing new Mojo code and need current syntax corrections.",
+      "version": "3.0.0",
+      "source": "./skills/mojo-026-breaking-changes.md",
       "category": "tooling",
-      "tags": []
+      "tags": [
+        "mojo",
+        "breaking-changes",
+        "migration",
+        "0.26.3",
+        "deprecation",
+        "capturing",
+        "ImplicitlyDestructible",
+        "substr",
+        "syntax",
+        "modular-upstream"
+      ]
     },
     {
       "name": "mojo-glibc-env-awareness",
@@ -7816,14 +8648,6 @@
       "tags": []
     },
     {
-      "name": "mojo-package-reexport",
-      "description": "Add re-exports to Mojo package __init__.mojo files so symbols are accessible at higher-level import paths. Use when: an import audit reveals structs/fns only accessible via full path, or an issue asks to expose symbols at a parent package level.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-package-reexport.md",
-      "category": "tooling",
-      "tags": []
-    },
-    {
       "name": "mojo-runtime-output-pattern-audit",
       "description": "Audit Mojo source files for misleading runtime print() patterns and wire CI enforcement. Use when: extending an existing audit series to cover WARNING:, HACK:, XXX:, or Not implemented in print() calls; adding a grep-style checker script modeled on an existing one; or enforcing runtime output cleanliness in a Mojo project.",
       "version": "1.0.0",
@@ -7838,6 +8662,24 @@
       "source": "./skills/multi-branch-rebase-workflow.md",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "multi-repo-automation-loop-shell-script",
+      "description": "Shell script loop that runs hephaestus planner + implementer across all HomericIntelligence repos with auto-clone. Use when: (1) running hephaestus-plan-issues and hephaestus-implement-issues across 10+ repos in a cron-style loop, (2) repos may not be locally cloned yet (auto-clone via gh), (3) Python automation module is installed in a pixi environment and must be resolved portably.",
+      "version": "1.0.0",
+      "source": "./skills/multi-repo-automation-loop-shell-script.md",
+      "category": "tooling",
+      "tags": [
+        "multi-repo",
+        "automation",
+        "shell",
+        "bash",
+        "pixi",
+        "pythonpath",
+        "gh-cli",
+        "rate-limit",
+        "loop"
+      ]
     },
     {
       "name": "mypy-full-compliance-workflow",
@@ -7898,6 +8740,22 @@
         "hatchling",
         "packaging",
         "typing"
+      ]
+    },
+    {
+      "name": "parallel-issue-wave-execution",
+      "description": "Pattern for implementing 20-35 GitHub issues in parallel waves using isolated git worktrees. Use when: (1) backlog of 20+ issues classified as LOW/MEDIUM, (2) issues are independent and touch different files per wave, (3) need 8-10x speedup via myrmidon swarm Agent(isolation:'worktree') calls, (4) CI must be green on main before launching waves.",
+      "version": "2.2.0",
+      "source": "./skills/parallel-issue-wave-execution.md",
+      "category": "tooling",
+      "tags": [
+        "myrmidon",
+        "swarm",
+        "parallel-agents",
+        "issue-triage",
+        "wave-execution",
+        "worktree",
+        "bulk-pr"
       ]
     },
     {
@@ -8016,7 +8874,7 @@
     {
       "name": "port-reusable-scripts",
       "description": "Port and generalize reusable scripts or full libraries between repositories with proper adaptations, dependency elimination, and Python path setup. Covers both script-level migrations and full installable package ports. Use when migrating utility scripts or libraries from one project to another, deprecating source-repo code after a successful port, or resolving CI failures during cross-repo library migration.",
-      "version": "1.2.0",
+      "version": "1.3.0",
       "source": "./skills/port-reusable-scripts.md",
       "category": "tooling",
       "tags": []
@@ -8181,6 +9039,24 @@
       "tags": []
     },
     {
+      "name": "rebasing-stale-agent-worktree-branches",
+      "description": "Use when: (1) multiple locked `.claude/worktrees/agent-*` worktrees from sub-agent runs need reconciling against main, (2) agent-generated `worktree-agent-*` branches have commits whose work has already been re-done on main with polished wording, (3) `git cherry main <branch>` reports commits as missing even though content is semantically equivalent, (4) plain `git rebase main` produces hundreds of semantic-reword conflict hunks across many branches, (5) you need to determine which agent branches still carry unique content vs. which are redundant duplicates, (6) many agent branches share identical residual diffs and can be collapsed, (7) rebase artifacts (duplicated paragraphs, misplaced sections) need to be distinguished from legitimate unique content",
+      "version": "1.0.0",
+      "source": "./skills/rebasing-stale-agent-worktree-branches.md",
+      "category": "tooling",
+      "tags": [
+        "git",
+        "rebase",
+        "worktree",
+        "agent",
+        "stale",
+        "cleanup",
+        "-X-ours",
+        "residual-diff",
+        "sub-agent"
+      ]
+    },
+    {
       "name": "refactor-code",
       "description": "Restructure code for improved clarity and maintainability. Use when addressing code smells or technical debt.",
       "version": "1.0.0",
@@ -8254,6 +9130,14 @@
       "tags": []
     },
     {
+      "name": "safety-net-rebase-conflict-python-workaround",
+      "description": "Use when: (1) git rebase conflict resolution is blocked by Safety Net (git restore --theirs or git checkout --theirs produce BLOCKED errors), (2) sub-agents need to resolve merge conflicts in an automated rebase wave, (3) Safety Net custom rules cannot whitelist built-in protections.",
+      "version": "1.0.0",
+      "source": "./skills/safety-net-rebase-conflict-python-workaround.md",
+      "category": "tooling",
+      "tags": []
+    },
+    {
       "name": "scan-vulnerabilities",
       "description": "Detect security vulnerabilities in code and dependencies. Use when auditing security.",
       "version": "1.0.0",
@@ -8287,11 +9171,19 @@
     },
     {
       "name": "skill-audit-and-merge",
-      "description": "Systematic audit and consolidation of skills marketplace plugins",
-      "version": "1.0.0",
+      "description": "Use when: (1) skills marketplace has 500+ files with visible duplication noise hurting /advise quality, (2) auditing for near-exact duplicates or high-overlap pairs to delete or merge, (3) consolidating topic clusters spanning 3+ files into a single authoritative skill, (4) running a structured deduplication session that must leave all CI tests green",
+      "version": "2.0.0",
       "source": "./skills/skill-audit-and-merge.md",
       "category": "tooling",
-      "tags": []
+      "tags": [
+        "audit",
+        "deduplication",
+        "merge",
+        "consolidation",
+        "marketplace",
+        "skills",
+        "cleanup"
+      ]
     },
     {
       "name": "skill-experiment-recovery-tools",
@@ -8324,6 +9216,24 @@
       "source": "./skills/stale-script-cleanup.md",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "subprocess-expected-failure-log-suppress",
+      "description": "Suppress logger.error() for expected CalledProcessError in run_subprocess() and git_utils.run() using log_on_error/log_errors=False. Use when: (1) a subprocess call probes for an optional resource (git ref, remote branch) and failure is expected, (2) a first-try cleanup attempt is expected to fail on clean state, (3) callers catch and handle CalledProcessError themselves so ERROR log entries are noise.",
+      "version": "1.0.0",
+      "source": "./skills/subprocess-expected-failure-log-suppress.md",
+      "category": "tooling",
+      "tags": [
+        "subprocess",
+        "logging",
+        "run_subprocess",
+        "log_on_error",
+        "log_errors",
+        "CalledProcessError",
+        "expected-failure",
+        "git-utils",
+        "hephaestus"
+      ]
     },
     {
       "name": "t5-inherit-missing-manifest-fallback",
@@ -8497,6 +9407,39 @@
       ]
     },
     {
+      "name": "tooling-modular-project-setup-wizard",
+      "description": "Set up a new Modular/Mojo/MAX project with correct structure. Use when: (1) creating a new Mojo or MAX project from scratch, (2) initializing pixi or uv environment for Mojo/MAX, (3) choosing between nightly and stable channels.",
+      "version": "1.0.0",
+      "source": "./skills/tooling-modular-project-setup-wizard.md",
+      "category": "tooling",
+      "tags": [
+        "mojo",
+        "max",
+        "project-setup",
+        "pixi",
+        "uv",
+        "scaffolding",
+        "modular-upstream"
+      ]
+    },
+    {
+      "name": "tooling-modular-upstream-skill-selective-porting",
+      "description": "Port skills from Modular's official skills repo (Agent Skills Standard format) into ProjectMnemosyne with Apache 2.0 attribution. Use when: (1) integrating skills from modular/skills or similar Agent Skills Standard repos, (2) adapting directory-per-skill format to Mnemosyne flat-file format, (3) merging upstream content with existing overlapping skills, (4) handling Apache 2.0 attribution requirements for ported skills.",
+      "version": "1.0.0",
+      "source": "./skills/tooling-modular-upstream-skill-selective-porting.md",
+      "category": "tooling",
+      "tags": [
+        "modular",
+        "mojo",
+        "skills",
+        "porting",
+        "apache-2.0",
+        "agent-skills-standard",
+        "modular-upstream",
+        "selective-port"
+      ]
+    },
+    {
       "name": "tooling-multi-repo-governance-file-rollout",
       "description": "Roll out governance files (LICENSE, CODE_OF_CONDUCT.md, SECURITY.md, CONTRIBUTING.md) across multiple GitHub repos in an organization. Use when: (1) onboarding an org's repos to open-source governance standards, (2) adding missing policy files to 10+ repos at once, (3) creating per-repo-customized CONTRIBUTING.md or SECURITY.md at scale.",
       "version": "1.0.0",
@@ -8571,8 +9514,8 @@
     },
     {
       "name": "tooling-skill-deduplication-semver-versioning",
-      "description": "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes.",
-      "version": "1.5.0",
+      "description": "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes, (4) need algorithmic duplicate detection via marketplace.json without reading all files, (5) running at-scale deduplication across 900+ skills with parallel agents.",
+      "version": "1.6.0",
       "source": "./skills/tooling-skill-deduplication-semver-versioning.md",
       "category": "tooling",
       "tags": [
@@ -8675,6 +9618,41 @@
       "source": "./skills/warn-on-existing-dest-subdir.md",
       "category": "tooling",
       "tags": []
+    },
+    {
+      "name": "worktree-agent-plan-mode-avoidance",
+      "description": "Prevent worktree-isolated agents from stopping to plan instead of executing. Use when: (1) Agent(isolation='worktree') returns a plan but no PR URL, (2) launching mechanical tasks like import migrations or config file edits, (3) agents ignore 'complete all steps' instructions and stop after planning.",
+      "version": "1.0.0",
+      "source": "./skills/worktree-agent-plan-mode-avoidance.md",
+      "category": "tooling",
+      "tags": [
+        "worktree",
+        "agent",
+        "plan-mode",
+        "execution",
+        "myrmidon",
+        "haiku"
+      ]
+    },
+    {
+      "name": "worktree-cleanup-user-constraints",
+      "description": "Use when cleaning up worktrees under user-specified constraints: (1) no branch deletion allowed, (2) all destructive ops must go into a reviewable script, (3) uncommitted work in merged-branch worktrees must be analyzed and committed if useful. Covers classification of dirty worktrees (artifact noise vs real work), generating a section-annotated cleanup script, handling files left orphaned in merged-branch working trees, the staged-file two-step (reset HEAD then checkout --) required when worktrees contain staged-only new files (status A), all-clean direct execution, cherry=1 rebase-merge artifact handling, and the remove-worktree-keep-branch pattern for closed-not-merged PRs.",
+      "version": "1.3.0",
+      "source": "./skills/worktree-cleanup-user-constraints.md",
+      "category": "tooling",
+      "tags": [
+        "worktree",
+        "cleanup",
+        "script",
+        "branches",
+        "artifacts",
+        "safety",
+        "merged-branch",
+        "circuit-breaker",
+        "staged-files",
+        "rebase-merge",
+        "closed-pr"
+      ]
     },
     {
       "name": "worktree-lifecycle-create-switch-sync",

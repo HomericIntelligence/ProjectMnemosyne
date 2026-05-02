@@ -17,8 +17,8 @@ Fix 49 failing PRs across 4 HomericIntelligence repos using wave-based haiku sub
 - mojo format parity (comptime parse): ~18 PRs
 - deprecated `List[Int](n)` syntax: ~3 PRs
 - missing CI matrix entry: ~2 PRs
-- ADR-009 JIT crash (transient): ~8 PRs
-- validate-test-file-sizes new hook: ~20 PRs (required file splitting)
+- Transient JIT crash: ~8 PRs
+- validate-test-file-sizes new hook: ~20 PRs (required remediation)
 - `just` not in PATH: 1 PR (#4574)
 
 ## Key Discoveries
@@ -32,9 +32,8 @@ The compat script silently passes (exits 0), so local format is skipped.
 CI's mojo format succeeds. Workaround: copy from already-CI-formatted branch.
 
 ### 3. validate-test-file-sizes new hook
-Introduced in PRs #4741/#4746. Enforces ≤10 tests per .mojo file per ADR-009.
-20 pre-existing files violated this. Required splitting into part1/part2/etc.
-Each split file needs ADR-009 split docstring header.
+Introduced in PRs #4741/#4746. Flags oversized test files.
+20 pre-existing files violated this and required remediation.
 
 ### 4. just not in PATH for pre-commit
 PR #4574 introduced `entry: just check-matmul-calls` which fails in CI because

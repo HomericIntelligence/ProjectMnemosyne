@@ -13,7 +13,7 @@
 
 The module-level docstring example in `shared/training/script_runner.mojo` showed the
 old `run_epoch_with_batches` API which didn't include the `step_fn` parameter. After
-#3284 added `step_fn: fn(ExTensor, ExTensor) raises -> ExTensor` as a required argument,
+# 3284 added `step_fn: fn(ExTensor, ExTensor) raises -> ExTensor` as a required argument,
 the example became stale and misleading.
 
 ### Old docstring example (stale)

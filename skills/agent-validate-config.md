@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Verify agent configurations meet ML Odyssey requirements. - Creating or modifying agent configurations |
 | Outcome | Operational |
 
-
 Verify agent configurations meet ML Odyssey requirements.
 
 ## When to Use

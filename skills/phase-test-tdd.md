@@ -18,7 +18,6 @@ phase: Test
 | Objective | Coordinate test-driven development by writing tests first, then implementing to make them pass. - Creating tests before implementation (TDD workflow) |
 | Outcome | Operational |
 
-
 Coordinate test-driven development by writing tests first, then implementing to make them pass.
 
 ## When to Use

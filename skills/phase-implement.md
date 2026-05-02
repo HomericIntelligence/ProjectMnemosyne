@@ -18,7 +18,6 @@ phase: Impl
 | Objective | Coordinate implementation phase by breaking down work, delegating to engineers, and maintaining quality standards. |
 | Outcome | Operational |
 
-
 Coordinate implementation phase by breaking down work, delegating to engineers, and maintaining quality standards.
 
 ## When to Use

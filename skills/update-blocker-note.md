@@ -46,7 +46,7 @@ user-invocable: false
      ```
    - For inline `# NOTE:` comments: append reference on same or following line
    - For docstring `Note:` sections: append reference as last sentence of the Note paragraph
-   - For `# Blocked:` comments: append ` - see #<issue> (parent: #<parent>)` inline
+   - For `# Blocked:` comments: append `- see #<issue> (parent: #<parent>)` inline
 5. **Verify the diff** with `git diff` — confirm only comment lines changed
 6. **Run pre-commit**:
    ```bash

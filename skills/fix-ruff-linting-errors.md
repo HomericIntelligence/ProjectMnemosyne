@@ -394,7 +394,6 @@ git push origin <branch>
 |---------|-------|------------|
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
-
 ### ❌ Attempt 1: Push fixes without testing locally
 
 **What happened**: Pushed fixes immediately after making changes, before running `pre-commit run --all-files`

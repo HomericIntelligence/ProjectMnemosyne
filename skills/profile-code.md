@@ -18,7 +18,6 @@ tier: 2
 | Objective | Use profiling tools to measure CPU time, memory allocation, and identify performance bottlenecks in code. |
 | Outcome | Operational |
 
-
 Use profiling tools to measure CPU time, memory allocation, and identify performance bottlenecks in code.
 
 ## When to Use

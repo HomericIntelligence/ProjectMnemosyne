@@ -54,7 +54,6 @@ git log --oneline | wc -l
 # (fill in quick reference commands)
 ```
 
-
 1. **Gather development work** - Extract commits, PRs, and metrics from git history
 2. **Extract key events** - Identify main themes and significant events
 3. **Structure narrative** - Organize as "The Plan → Challenges → Solutions → Learnings"
@@ -170,4 +169,3 @@ markdown-compliant, saved to `notes/blog/MM-DD-YYYY.md`.
 ## Results & Parameters
 
 - (fill in key parameters and outcomes)
-

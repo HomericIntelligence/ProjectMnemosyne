@@ -70,7 +70,7 @@ gh pr create --title "..." --body "..." --label "testing"
 gh pr merge --auto --rebase 4826
 ```
 
-## ADR-009 Compliance
+## Test File Limit
 
 - File limit: ≤10 `fn test_` per file
 - This file: 8 tests (20% safety margin)

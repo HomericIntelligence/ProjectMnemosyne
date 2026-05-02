@@ -18,7 +18,6 @@ tier: 1
 | Objective | Create standard starter code templates for new modules, test files, and configuration files to accelerate development. |
 | Outcome | Operational |
 
-
 Create standard starter code templates for new modules, test files, and configuration files to accelerate development.
 
 ## When to Use

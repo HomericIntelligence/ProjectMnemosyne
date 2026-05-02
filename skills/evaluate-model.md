@@ -18,7 +18,6 @@ tier: 2
 | Objective | Measure machine learning model performance using appropriate metrics for the task (classification, regression, etc.). |
 | Outcome | Operational |
 
-
 Measure machine learning model performance using appropriate metrics for the task (classification, regression, etc.).
 
 ## When to Use

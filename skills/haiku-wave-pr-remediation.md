@@ -24,7 +24,7 @@ user-invocable: false
 
 - 40+ PRs failing CI with a mix of failure types across multiple categories
 - Failures span: ruff format, mojo format parity, deprecated Mojo syntax, missing CI matrix entries,
-  `just` not in PATH, ADR-009 JIT crashes
+  `just` not in PATH, transient JIT crashes
 - Need cost-efficient parallel remediation without burning Sonnet/Opus tokens on mechanical fixes
 - Repos involved: ProjectOdyssey (Mojo), ProjectScylla (Python), ProjectMnemosyne (skill plugins),
   ProjectKeystone (infrastructure)
@@ -40,7 +40,7 @@ user-invocable: false
 | `List[Int](n)` deprecated | Replace with `[n]` list literals throughout | haiku agent |
 | Missing CI matrix entry | Add test file glob to `comprehensive-tests.yml` | haiku agent |
 | `just` not in PATH | Change `entry: just X` → `entry: pixi run just X` in pre-commit config | haiku agent |
-| ADR-009 JIT crash | `gh run rerun <run_id> --failed` | rerun, no code change |
+| Transient JIT crash | `gh run rerun <run_id> --failed` | rerun, no code change |
 | Mojo YAML frontmatter missing | Add `---` YAML block at top of SKILL.md | haiku agent |
 | Pre-existing CVE/clang-format | Log as separate issue, skip for now | defer |
 
@@ -66,7 +66,7 @@ Spawn 1 haiku diagnosis agent per distinct failure category (not per PR):
 Agent prompt template:
 "Diagnose the CI failure on PR #<N> in HomericIntelligence/ProjectOdyssey.
 1. gh run view $(gh pr checks <N> | grep fail | grep -oP 'runs/\K[0-9]+' | head -1) --log-failed 2>&1 | head -100
-2. Classify: ruff-format / mojo-format-parity / deprecated-syntax / missing-ci-matrix / just-not-in-path / adr009-jit-crash / pre-existing-unrelated
+2. Classify: ruff-format / mojo-format-parity / deprecated-syntax / missing-ci-matrix / just-not-in-path / transient-jit-crash / pre-existing-unrelated
 3. Report: PR #N — category — specific file/line needing fix"
 ```
 
@@ -78,8 +78,8 @@ Typical distribution across 46 Odyssey PRs:
 | mojo format parity | ~18 | 5 min/PR |
 | deprecated `List[Int]()` syntax | ~3 | 2 min/PR |
 | missing CI matrix entry | ~2 | 5 min/PR |
-| ADR-009 JIT crash (transient) | ~8 | 1 min/PR (rerun) |
-| `validate-test-file-sizes` new hook | ~20 | 15 min/PR (file split) |
+| Transient JIT crash | ~8 | 1 min/PR (rerun) |
+| `validate-test-file-sizes` new hook | ~20 | 15 min/PR |
 | `just` not in PATH | ~1 | 5 min/PR |
 | pre-existing unrelated | ~3 | defer |
 
@@ -193,7 +193,7 @@ run: just check-matmul-calls
 run: pixi run just check-matmul-calls
 ```
 
-#### ADR-009 JIT crash (transient)
+#### Transient JIT crash
 
 ```bash
 # No code change needed — just rerun
@@ -204,13 +204,8 @@ gh run rerun $run_id --failed
 
 #### `validate-test-file-sizes` new hook violations
 
-New hook (introduced in PRs #4741/#4746) enforces ≤10 tests per `.mojo` file (ADR-009).
-Pre-existing violations in 20 files need splitting:
-
-1. Each split file must have an ADR-009 split docstring header (see ADR-009 docs)
-2. Files named `test_foo.mojo` split into `test_foo_part1.mojo`, `test_foo_part2.mojo`, etc.
-3. Each part file gets registered in `comprehensive-tests.yml` matrix
-4. The `validate-adr009-headers` pre-commit hook validates the split docstring format
+New hook (introduced in PRs #4741/#4746) flags oversized `.mojo` test files.
+Pre-existing violations in 20 files need remediation.
 
 This is a large task — delegate to a dedicated haiku agent per file group.
 

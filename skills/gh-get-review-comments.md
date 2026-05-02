@@ -18,7 +18,6 @@ agent: test-engineer
 | Objective | Retrieve and analyze all review comments from a pull request. - Checking for unresolved review feedback |
 | Outcome | Operational |
 
-
 Retrieve and analyze all review comments from a pull request.
 
 ## When to Use
@@ -106,7 +105,6 @@ gh api repos/OWNER/REPO/pulls/PR/comments \
 gh api repos/OWNER/REPO/pulls/PR/comments \
   --jq '.[] | select(.in_reply_to_id == null)'
 ```
-
 
 ## Results & Parameters
 

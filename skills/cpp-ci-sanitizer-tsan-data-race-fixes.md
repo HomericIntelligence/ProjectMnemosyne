@@ -198,13 +198,13 @@ Add a ctest per-test timeout to prevent future hangs. Also add a tunable `CTEST_
 CTEST_TIMEOUT ?= 120
 
 test:
-	cd build && ctest --output-on-failure --timeout $(CTEST_TIMEOUT)
+ cd build && ctest --output-on-failure --timeout $(CTEST_TIMEOUT)
 
 # TSan needs longer timeout due to instrumentation overhead
 %.tsan:
-	TSAN_OPTIONS="suppressions=$(PWD)/tsan.supp:second_deadlock_stack=1" \
-	CTEST_TIMEOUT=600 \
-	$(MAKE) test.$*
+ TSAN_OPTIONS="suppressions=$(PWD)/tsan.supp:second_deadlock_stack=1" \
+ CTEST_TIMEOUT=600 \
+ $(MAKE) test.$*
 ```
 
 **For `ThreadPool::CreateAndDestroy` specifically**: TSan instruments all thread-start and thread-join operations with 5-20x overhead. Even a trivial `ThreadPool(4)` + `~ThreadPool()` can take >600s on CI runners under load. The test has no real assertions beyond `pool.size()` — all other ThreadPool tests cover construction+destruction indirectly. Disable it:
@@ -436,12 +436,12 @@ race:keystone::concurrency::WorkStealingQueue::pop
 CTEST_TIMEOUT ?= 120
 
 %.native:
-	cd build && ctest --output-on-failure --timeout $(CTEST_TIMEOUT)
+ cd build && ctest --output-on-failure --timeout $(CTEST_TIMEOUT)
 
 %.tsan:
-	TSAN_OPTIONS="suppressions=$(PWD)/tsan.supp:second_deadlock_stack=1" \
-	CTEST_TIMEOUT=600 \
-	$(MAKE) $*.native
+ TSAN_OPTIONS="suppressions=$(PWD)/tsan.supp:second_deadlock_stack=1" \
+ CTEST_TIMEOUT=600 \
+ $(MAKE) $*.native
 ```
 
 ### Disabling TSan-Slow Test with GTest DISABLED_ Prefix
@@ -460,7 +460,7 @@ TEST(ThreadPoolTest, DISABLED_CreateAndDestroy) {
 
 ```makefile
 test:
-	cd build && ctest --output-on-failure --timeout 120
+ cd build && ctest --output-on-failure --timeout 120
 ```
 
 ### CI Matrix Without MSan

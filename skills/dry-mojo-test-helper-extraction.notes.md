@@ -27,7 +27,7 @@ and `test_conv2d_backward_grad_weights_numerical` duplicated 25 lines of tensor 
 
 - Mojo tuple return type syntax: `-> (ExTensor, ExTensor, ExTensor)` works correctly in v0.26.1
 - Tuple access is indexed (`tensors[0]`), not destructured (`var (a, b, c) = ...`)
-- ADR-009 cap: file allows ≤10 `fn test_` functions; helper uses `_` prefix so it does NOT count
+- Helper uses `_` prefix so it does NOT count toward the `fn test_` count
 - File had exactly 11 `fn test_` functions before and after — the comment at top of file says ≤10
   but the actual count was already 11; we added no new test functions
 - Pre-commit hooks ran cleanly (mojo format, markdownlint, trailing-whitespace)

@@ -107,7 +107,7 @@ def _get_diff_stat(workspace: Path) -> dict[str, tuple[int, int]]:
 - Return `{}` on any error — never raise
 - Separate parser function `_parse_diff_stat_output()` for testability
 
-**Parser logic** (handles `git diff --stat` format ` path/to/file.py | 5 ++---`):
+**Parser logic** (handles `git diff --stat` format `path/to/file.py | 5 ++---`):
 
 ```python
 def _parse_diff_stat_output(stat_output: str) -> dict[str, tuple[int, int]]:
@@ -317,7 +317,7 @@ def test_weights_sum_to_one_with_multiple_files(self) -> None:
 | `patch("scylla.e2e.stages.detect_rate_limit")` | AttributeError — lazy import in stage function | Patch `scylla.e2e.rate_limit.detect_rate_limit` instead |
 | Using `dataclasses` import without adding it | `dataclasses.asdict()` needed for ProgressStep/ChangeResult serialization | Add `import dataclasses` at top of file |
 | `-> dict` return type annotation | mypy `[type-arg]` error | Use `-> dict[str, Any]` with `from typing import Any` |
-| Counting `+`/`-` from raw stat number | `git diff --stat` shows ` 5 ++---` (marker string) | Count `+` chars in marker string, not parse the integer |
+| Counting `+`/`-` from raw stat number | `git diff --stat` shows `5 ++---` (marker string) | Count `+` chars in marker string, not parse the integer |
 
 ### ❌ Attempt 1: Patching detect_rate_limit at wrong module path
 

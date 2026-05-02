@@ -46,7 +46,7 @@ var max_ndim = max(ndim1, ndim2)
 
 ## PR
 
-#4816 — auto-merge rebase enabled
+# 4816 — auto-merge rebase enabled
 
 ## Date
 

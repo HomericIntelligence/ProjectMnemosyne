@@ -63,20 +63,12 @@ else:
     tensor._set_int64(i, Int(value))
 ```
 
-### Step 3: Create a dedicated test file per ADR-009
+### Step 3: Create a dedicated test file
 
-Per ADR-009 (≤10 `fn test_` per file), create a separate file:
+Create a separate file with ≤10 `fn test_` functions:
 
 ```text
 tests/shared/core/test_creation_bfloat16.mojo
-```
-
-Add the ADR-009 header:
-
-```mojo
-# ADR-009: This file is intentionally limited to ≤10 fn test_ functions.
-# Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
-# high test load. Split from test_creation.mojo. See docs/adr/ADR-009-heap-corruption-workaround.md
 ```
 
 ### Step 4: Write two tests per factory function
@@ -151,7 +143,7 @@ All bfloat16 dtype guard tests passed!
 **Session results** (ProjectOdyssey, 2026-03-15, issue #3906):
 
 - 8 tests in `tests/shared/core/test_creation_bfloat16.mojo`
-- ADR-009 limit: ≤10; actual: 8 (20% safety margin)
+- File limit: ≤10 `fn test_`; actual: 8 (20% safety margin)
 - All 8 tests passed on first run
 - Tolerance used: `1e-2` for bfloat16 value assertions (safe for small integers)
 - Seed used for randn: `42` (deterministic; threshold: ≥40/50 nonzero)
@@ -168,7 +160,6 @@ All bfloat16 dtype guard tests passed!
 **Key config**:
 
 - File: `tests/shared/core/test_creation_bfloat16.mojo`
-- ADR-009 header: required
 - bfloat16 tolerance: `1e-2`
 - randn threshold: `≥40` of 50 non-zero values
 
@@ -182,6 +173,6 @@ All bfloat16 dtype guard tests passed!
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
-| Adding tests to existing part3/part4 files | Append bfloat16 tests directly to `test_creation_part3.mojo` (8 tests) and `test_creation_part4.mojo` (6 tests) | Part3 was at 8 tests — adding would hit ADR-009 limit | Create a new dedicated file per ADR-009 when existing files are near the limit |
+| Adding tests to existing part3/part4 files | Append bfloat16 tests directly to `test_creation_part3.mojo` (8 tests) and `test_creation_part4.mojo` (6 tests) | Part3 was at 8 tests — adding would exceed the ≤10 file limit | Create a new dedicated file when existing files are near the ≤10 fn test_ limit |
 | Using `1e-6` tolerance for bfloat16 | Same tolerance as float32 tests | bfloat16 has only ~2 decimal digits of precision; could cause false failures with non-integer values | Use `1e-2` tolerance for bfloat16; `1e-6` is safe only for float32/float64 |
 | Asserting exact mean/std for randn bfloat16 | Testing distribution statistics (mean≈0, std≈1) like float32 randn tests | bfloat16 precision makes statistical convergence unreliable for small N | Test structural property (non-zero values) instead of distribution statistics |

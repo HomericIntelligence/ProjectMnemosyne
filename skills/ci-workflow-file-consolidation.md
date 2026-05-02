@@ -11,7 +11,6 @@ tags:
   - github-actions
   - workflow-files
   - consolidation
-  - adr-009
   - yaml
 ---
 
@@ -23,7 +22,7 @@ tags:
 |-------|-------|
 | **Date** | 2026-03-28 |
 | **Objective** | Consolidated skill for merging overlapping CI workflow files and adding new CI matrix entry types |
-| **Outcome** | Merged from 2 source skills: consolidate-ci-workflows, adr009-ci-pattern-updates |
+| **Outcome** | Merged from 2 source skills: consolidate-ci-workflows, ci-pattern-updates |
 | **Verification** | unverified |
 
 ## When to Use
@@ -33,7 +32,7 @@ tags:
 - Branch protection status checks are spread across many overlapping workflows
 - CI maintenance burden is high (editing 5 files for one trigger change)
 - Onboarding confusion: contributors can't tell which workflow does what
-- Adding or updating CI matrix entries after ADR-009 test file splits
+- Adding or updating CI matrix entries after test file renames or additions
 - Pre-commit `Validate Test Coverage` hook fails after any test file rename, add, or delete
 
 ## Verified Workflow
@@ -166,15 +165,15 @@ gh pr create --title "ci: consolidate workflows" --body "Closes #ISSUE" --label 
 gh pr merge --auto --rebase
 ```
 
-### B. Updating CI After ADR-009 Test File Splits
+### B. Updating CI After Test File Changes
 
-When splitting Mojo test files, two files always need checking:
+When renaming or reorganizing Mojo test files, two files always need checking:
 
 **Decision tree for CI workflow:**
 
 ```text
 grep the original filename in comprehensive-tests.yml
-+-- Found (hardcoded) → edit workflow to reference both new part files
++-- Found (hardcoded) → edit workflow to reference the new filename(s)
 +-- Not found → check for glob pattern covering the directory
     +-- Glob pattern exists (training/test_*.mojo) → NO workflow edit needed
     +-- No pattern at all → add glob pattern or explicit filenames
@@ -222,32 +221,14 @@ open('.github/workflows/comprehensive-tests.yml', 'w').write(content.replace(old
 
 **Always use `assert old in content`** to verify the text matches before replacing.
 
-**Updating validate_test_coverage.py** after file splits:
+**Updating validate_test_coverage.py** after file renames:
 
 ```python
 # Before
 "tests/shared/training/test_metrics.mojo",
 
-# After
-"tests/shared/training/test_metrics_part1.mojo",
-"tests/shared/training/test_metrics_part2.mojo",
-```
-
-**Split file naming convention** (ADR-009):
-
-```text
-test_rmsprop.mojo (11 tests)
-  -> test_rmsprop_part1.mojo (8 tests)
-  -> test_rmsprop_part2.mojo (3 tests)
-```
-
-Each split file must include the ADR-009 header comment:
-
-```mojo
-# ADR-009: This file is intentionally limited to <=10 fn test_ functions.
-# Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
-# high test load. Split from test_rmsprop.mojo.
-# See docs/adr/ADR-009-heap-corruption-workaround.md
+# After (update to the new filename)
+"tests/shared/training/test_metrics_new.mojo",
 ```
 
 ## Failed Attempts
@@ -294,6 +275,6 @@ Each split file must include the ADR-009 header comment:
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | Issue #3660 | 26 → 13 workflow files consolidation |
-| ProjectOdyssey | Issue #3465, PR #4292 | ADR-009 split with CI and validate_test_coverage.py updates |
+| ProjectOdyssey | Issue #3465, PR #4292 | Test file split with CI and validate_test_coverage.py updates |
 | ProjectOdyssey | CI group splitting | Split Core Utilities (71 files) into 8 groups (A-H) |
-| ProjectOdyssey | ADR-009 rmsprop split | Glob pattern auto-discovered new files |
+| ProjectOdyssey | rmsprop test split | Glob pattern auto-discovered new files |

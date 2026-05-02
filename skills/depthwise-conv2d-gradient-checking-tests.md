@@ -1,12 +1,12 @@
 ---
 name: depthwise-conv2d-gradient-checking-tests
-description: "Use when: (1) depthwise_conv2d_backward exists but lacks gradient-correctness tests, (2) adding per-channel finite-difference gradient checking for grad_input, grad_weights, and grad_bias, (3) the kernel shape is (channels,1,kH,kW) not (out_ch,in_ch,kH,kW), (4) working under ADR-009 Mojo heap-corruption constraint (≤8 tests per file)"
+description: "Use when: (1) depthwise_conv2d_backward exists but lacks gradient-correctness tests, (2) adding per-channel finite-difference gradient checking for grad_input, grad_weights, and grad_bias, (3) the kernel shape is (channels,1,kH,kW) not (out_ch,in_ch,kH,kW), (4) keeping per-file test count ≤8"
 category: testing
 date: 2026-03-28
 version: "1.0.0"
 user-invocable: false
 verification: unverified
-tags: [depthwise-conv2d, gradient-checking, finite-differences, mojo, backward-pass, adr-009]
+tags: [depthwise-conv2d, gradient-checking, finite-differences, mojo, backward-pass]
 ---
 ## Overview
 
@@ -17,13 +17,13 @@ tags: [depthwise-conv2d, gradient-checking, finite-differences, mojo, backward-p
 | **Key outputs verified** | `grad_input`, `grad_weights`, `grad_bias` |
 | **Configurations covered** | stride=1/2, padding=0/1, single-channel, multi-channel |
 | **Language** | Mojo |
-| **ADR-009 limit** | ≤8 `fn test_` per file (stricter than standard conv2d) |
+| **Per-file test limit** | ≤8 `fn test_` per file (stricter than standard conv2d) |
 
 ## When to Use
 
 1. `depthwise_conv2d_backward` has shape tests but no finite-difference gradient checks
 2. Adding tests for all three gradient fields: `grad_input` (perturb x), `grad_weights` (perturb kernel), `grad_bias` (analytical)
-3. Working in a Mojo project with the ADR-009 heap-corruption constraint (≤8 `fn test_` per file)
+3. Working in a Mojo project with a strict per-file test count (≤8 `fn test_` per file)
 4. Tests must cover multiple configurations: stride=1/2, padding=0/1, single-channel, multi-channel
 5. CI workflow uses a matrix `pattern` field listing individual `.mojo` test filenames
 
@@ -60,26 +60,17 @@ Key details:
 - Kernel shape: `(channels, 1, kH, kW)` — one filter per input channel
 - Returns `GradientTriple` with `.grad_input`, `.grad_weights`, `.grad_bias`
 
-### Step 2: Count existing tests (ADR-009 limit is ≤8)
+### Step 2: Count existing tests (limit is ≤8 per file)
 
 ```bash
 grep -c "^fn test_" <test-root>/test_backward_conv_pool.mojo
 ```
 
-ADR-009 limit for depthwise tests: ≤8 `fn test_` per file (stricter than the ≤10 used for some other files). Create new split files when ≥6 tests exist.
+Keep depthwise test files to ≤8 `fn test_` per file (stricter than the ≤10 used for some other files). Create new split files when ≥6 tests exist.
 
 ### Step 3: Create part1 — grad_input checks
 
 File: `<test-root>/test_depthwise_conv_grad_check_part1.mojo`
-
-Required ADR-009 header:
-
-```mojo
-# ADR-009: This file is intentionally limited to ≤8 fn test_ functions.
-# Mojo v0.26.1 heap corruption (libKGENCompilerRTShared.so) triggers under
-# high test load. Split from test_depthwise_conv_grad_check.
-# See docs/adr/ADR-009-heap-corruption-workaround.md
-```
 
 Tests to include (5 total):
 - Shape verification for all three gradient fields
@@ -167,7 +158,7 @@ assert_almost_equal(grads.grad_bias._data.bitcast[Float32]()[1], Float32(-0.3), 
   continue-on-error: true
 ```
 
-### Step 10: Verify ADR-009 compliance
+### Step 10: Verify per-file test count
 
 ```bash
 grep -c "^fn test_" <test-root>/test_depthwise_conv_grad_check_part1.mojo
@@ -181,7 +172,7 @@ grep -c "^fn test_" <test-root>/test_depthwise_conv_grad_check_part2.mojo
 |---------|----------------|---------------|----------------|
 | Using `.grad_kernel` field name | Assumed `depthwise_conv2d_backward` returns `GradientPair` with `.grad_kernel` | Actual return is `GradientTriple` with `.grad_weights` (confirmed from `gradient_types.mojo`) | Always verify field names from `gradient_types.mojo`, not just the function docstring |
 | Using `ones_like(output)` as `grad_output` | Uniform gradient for initial test | Causes sum-to-zero cancellation in symmetric kernel configurations — numerical and analytical gradients both become ~0 | Use `Float32(i % 4) * 0.25 - 0.3` non-uniform pattern |
-| Adding tests to `test_backward_conv_pool.mojo` | Kept tests in one file | File already at or near ADR-009 limit; adding more risks heap corruption in CI | Always check `grep -c "^fn test_"` before adding; create new split files when ≥6 tests exist |
+| Adding tests to `test_backward_conv_pool.mojo` | Kept tests in one file | File already at or near the per-file test limit; adding more risks heap corruption in CI | Always check `grep -c "^fn test_"` before adding; create new split files when ≥6 tests exist |
 | Using `rtol=1e-3, atol=1e-5` (tighter tolerances) | Copied from linear layer tests | Float32 finite differences have O(1e-4) error; tighter tolerances cause false failures | Use `rtol=1e-2, atol=1e-2` for float32 conv gradient checks |
 | Using `assert_almost_equal(a, b, rtol=..., atol=...)` | Passed `rtol`/`atol` keyword args | `assert_almost_equal` takes `tolerance: Float32`, not rtol/atol | Always check the actual Mojo function signature — differs from PyTorch/numpy |
 
@@ -193,7 +184,7 @@ grep -c "^fn test_" <test-root>/test_depthwise_conv_grad_check_part2.mojo
 check_gradient(forward_fn, backward_fn, x, grad_output, rtol=1e-2, atol=1e-2)
 ```
 
-**Test counts per file (ADR-009 compliant):**
+**Test counts per file:**
 
 - Part 1: 5 tests (shape + 4× grad_input across stride/padding/multichannel)
 - Part 2: 4 tests (grad_weights single, grad_bias analytical, grad_weights multichannel, full pipeline)

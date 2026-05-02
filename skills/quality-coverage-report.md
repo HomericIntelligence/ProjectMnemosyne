@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Generate and analyze test coverage reports. - After running tests - Before creating PR - Identifying untested code |
 | Outcome | Operational |
 
-
 Generate and analyze test coverage reports.
 
 ## When to Use

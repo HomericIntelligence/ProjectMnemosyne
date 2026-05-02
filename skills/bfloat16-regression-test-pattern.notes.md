@@ -50,7 +50,7 @@ Three new tests in `test_extensor_getset_float32.mojo`:
   the write path by reading via a different trusted path)
 - Values: 1.0, 1.5, 2.0, 0.5, -1.0 — all exactly representable in bfloat16
 - Tolerance: 1e-2 (bfloat16 has 7-bit mantissa, ~2 decimal digits precision)
-- ADR-009 check: file had 6 tests before, adding 3 = 9 total, well under the ~15 limit
+- Test count check: file had 6 tests before, adding 3 = 9 total
 
 ## PR
 

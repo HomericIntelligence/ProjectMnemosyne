@@ -202,10 +202,10 @@ Makefile target body pattern (no change needed besides variable rename):
 
 ```makefile
 compile:
-	@$(CONTAINER_CHECK) $(CONTAINER_PREFIX) cmake --build --preset $(PRESET) -- -j$(NPROC)
+ @$(CONTAINER_CHECK) $(CONTAINER_PREFIX) cmake --build --preset $(PRESET) -- -j$(NPROC)
 
 test:
-	@$(CONTAINER_CHECK) $(CONTAINER_PREFIX) ctest --preset $(PRESET) --output-on-failure
+ @$(CONTAINER_CHECK) $(CONTAINER_PREFIX) ctest --preset $(PRESET) --output-on-failure
 ```
 
 Also remove the `%.native` pattern rule (the escape hatch entry point):

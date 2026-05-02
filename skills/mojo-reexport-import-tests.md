@@ -16,7 +16,7 @@ user-invocable: false
 | **Category** | testing |
 | **Trigger** | Adding re-exports to `__init__.mojo`, package API verification issues |
 | **Output** | Test functions in `test_imports*.mojo` covering both package and direct import paths |
-| **Constraint** | ADR-009: ≤10 `fn test_` functions per file due to Mojo heap corruption risk |
+| **Constraint** | ≤10 `fn test_` functions per file |
 
 ## When to Use
 
@@ -32,7 +32,7 @@ user-invocable: false
 ```
 1. Check __init__.mojo for existing re-export (often already done)
 2. Verify source module has the struct/fn
-3. Check ADR-009 function count in split test files (≤10 per file)
+3. Check function count in split test files (≤10 per file)
 4. Add test_<type>_imports() to test_imports_part1.mojo (if count ≤9)
 5. Add test_<type>_imports() + test_<type>_direct_imports() to test_imports.mojo
 6. Add both calls to main() in each file
@@ -63,7 +63,7 @@ from shared.<pkg>.<submodule> import (
 grep -n "struct TypeName" shared/<pkg>/<submodule>.mojo
 ```
 
-### Step 3: Check ADR-009 function count
+### Step 3: Check function count
 
 ```bash
 grep -c "^fn test_" tests/shared/test_imports_part1.mojo
@@ -155,7 +155,7 @@ gh pr create --title "test(<pkg>): add import tests for <TypeName> package expor
 |---------|----------------|---------------|----------------|
 | Modifying `__init__.mojo` | Tried to add re-exports from scratch | Export was already present (added in prior work with `# Issue #3851` comment) | Always check `__init__.mojo` first — the re-export is often done, only tests are missing |
 | Callback re-export pattern | Assumed same limitation applied to all types | Callbacks have a specific Mojo v0.26.1 re-export limitation; `DataLoader`/`DataBatch` work fine | Check the docstring in `__init__.mojo` for existing limitation notes before assuming failure |
-| Adding to test_imports.mojo only | Added tests to monolithic file only | ADR-009 split files exist for a reason — part1 also needs coverage for CI split runs | Always update both `test_imports.mojo` AND `test_imports_part1.mojo` |
+| Adding to test_imports.mojo only | Added tests to monolithic file only | Split files exist for a reason — part1 also needs coverage for CI split runs | Always update both `test_imports.mojo` AND `test_imports_part1.mojo` |
 
 ## Results & Parameters
 
@@ -166,14 +166,14 @@ gh pr create --title "test(<pkg>): add import tests for <TypeName> package expor
 - **Types exported**: `DataLoader`, `DataBatch`
 - **Test files modified**: `tests/shared/test_imports.mojo`, `tests/shared/test_imports_part1.mojo`
 - **PR**: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4814
-- **ADR-009 counts after**: part1 = 9 functions (within ≤10 limit)
+- **Test counts after**: part1 = 9 functions (within ≤10 limit)
 
 ### File placement pattern
 
 ```
 tests/shared/
 ├── test_imports.mojo          # Full suite (all packages, 37 fns after)
-├── test_imports_part1.mojo    # Split: Core + Training (9 fns, ≤10 ADR-009 limit)
+├── test_imports_part1.mojo    # Split: Core + Training (9 fns, ≤10 fn test_ limit)
 ├── test_imports_part2.mojo    # Split: additional sections
 └── test_imports_part3.mojo    # Split: additional sections
 ```

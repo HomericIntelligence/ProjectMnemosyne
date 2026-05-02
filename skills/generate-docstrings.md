@@ -18,7 +18,6 @@ tier: 2
 | Objective | Write comprehensive docstrings for functions and classes following standard formats (Google, NumPy, reStructuredText). |
 | Outcome | Operational |
 
-
 Write comprehensive docstrings for functions and classes following standard formats (Google, NumPy, reStructuredText).
 
 ## When to Use

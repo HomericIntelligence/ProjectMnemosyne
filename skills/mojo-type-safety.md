@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Ensure Mojo code follows type safety principles. - Type errors during compilation - Code review for type safety |
 | Outcome | Operational |
 
-
 Ensure Mojo code follows type safety principles.
 
 ## When to Use

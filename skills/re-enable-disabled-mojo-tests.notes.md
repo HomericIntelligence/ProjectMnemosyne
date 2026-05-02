@@ -7,7 +7,7 @@
 HomericIntelligence/ProjectOdyssey
 
 ## Issue
-#3081 - [Cleanup] Enable disabled test_unsigned.mojo tests
+# 3081 - [Cleanup] Enable disabled test_unsigned.mojo tests
 
 ## What Was Done
 
@@ -44,7 +44,7 @@ Replaced the stub with 18 comprehensive test functions covering:
 - Near-boundary arithmetic
 
 ## PR
-#3175 - https://github.com/HomericIntelligence/ProjectOdyssey/pull/3175
+# 3175 - https://github.com/HomericIntelligence/ProjectOdyssey/pull/3175
 
 ## Commands Used
 

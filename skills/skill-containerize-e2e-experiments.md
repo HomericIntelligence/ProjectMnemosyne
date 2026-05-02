@@ -178,7 +178,6 @@ Copy-paste ready configurations and expected outputs.
 |---------|-------|------------|
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
-
 ### ❌ Attempt 1: Nested Container Architecture
 
 **What we tried:**

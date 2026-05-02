@@ -18,7 +18,6 @@ tier: 2
 | Objective | Systematically scan code for security vulnerabilities including unsafe patterns, known CVEs, and potential exploits. |
 | Outcome | Operational |
 
-
 Systematically scan code for security vulnerabilities including unsafe patterns, known CVEs, and potential exploits.
 
 ## When to Use

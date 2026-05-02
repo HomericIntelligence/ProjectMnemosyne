@@ -150,7 +150,7 @@ fn forward_for_grad(inp: ExTensor) raises -> ExTensor:
 
 When adding gradient checks for `batch_norm2d_backward` in inference mode:
 
-1. **Check ADR-009 test count limit** (≤10 `fn test_` per file):
+1. **Check existing test count**:
    ```bash
    grep -c "^fn test_" <file>.mojo
    ```
@@ -216,7 +216,7 @@ SKIP=mojo-format git commit -m "fix(backward): enable backward pass tests"
 | Fix backward formula | Modify grad_input formula to produce non-zero output for uniform grad | The formula IS correct; ~0 for uniform grad is mathematically right | Don't change correct code to pass a bad test |
 | Use epsilon=1e-6 for numerical gradient | Smaller perturbation for numerical gradient | Worsens float32 rounding; analytical vs numerical gap grows | Smaller epsilon increases numerical error in float32 |
 | Non-uniform alternating pattern as final solution | Used `grad_output[i] = (i%4)*0.25 - 0.3` | Works correctly but is ad-hoc, not derived from a loss function | Use a real loss function (`sum(output^2)`) with a known derivative |
-| Reuse existing part3 pattern without running stats | Called `batch_norm2d_backward(grad_output, x, gamma, epsilon=1e-5, training=False)` | Signature requires positional `running_mean`/`running_var` — no defaults exist | Always grep the actual function signature; existing tests in same file may be broken |
+| Reuse existing test pattern without running stats | Called `batch_norm2d_backward(grad_output, x, gamma, epsilon=1e-5, training=False)` | Signature requires positional `running_mean`/`running_var` — no defaults exist | Always grep the actual function signature; existing tests in same file may be broken |
 | Single `epsilon=1e-4` for float32 inference | Same epsilon as training mode tests | Running stat normalization amplifies perturbation sensitivity | Float32 + fixed running stats = larger finite-diff errors; use `epsilon=1e-3` |
 | `full_like` not imported | Used `full_like` without adding it to the import line | Mojo compilation error: `full_like` undefined | Add `full_like` to extensor import before using it |
 | Treating numerical gradient as ground truth | Assumed numerical 0.00894 was correct, analytical 0 was wrong | `sum(batch_norm(x))` with `beta=0` is identically 0, so numerical should also be ~0 | Always verify that the numerical gradient setup is appropriate for the operation being tested |

@@ -39,7 +39,7 @@ Fix: skip lines starting with `echo`/`printf`/`#`.
 docker run --rm ... \
   pixi run mojo test -I . tests/smoke/ || echo "..."
 ```
-The continuation line `  pixi run mojo test ...` (indented) was flagged as a bare call.
+The continuation line `pixi run mojo test ...` (indented) was flagged as a bare call.
 Fix: treat indented `pixi run mojo` lines (where `line != line.lstrip()`) as docker continuation
 arguments, which are exempt.
 

@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Generate visual diagrams showing agent system structure and relationships. - Documenting agent system for team |
 | Outcome | Operational |
 
-
 Generate visual diagrams showing agent system structure and relationships.
 
 ## When to Use

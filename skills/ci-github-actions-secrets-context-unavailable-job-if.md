@@ -9,7 +9,7 @@ verification: verified-local
 tags: [github-actions, secrets, vars, actionlint, job-if, context]
 ---
 
-# GitHub Actions: secrets Context Unavailable in Job-Level if:
+# GitHub Actions: secrets Context Unavailable in Job-Level if
 
 ## Overview
 

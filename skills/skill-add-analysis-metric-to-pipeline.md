@@ -293,7 +293,6 @@ pixi run pytest tests/unit/analysis/ -q
 |---------|-------|------------|
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
-
 ### ❌ Attempt 1: Using 0.0 instead of NaN for edge cases
 
 **What we tried:**

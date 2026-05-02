@@ -21,8 +21,7 @@ Tolerance formula: `|a - b| <= atol + rtol * |b|`
 
 1. Mojo has no NaN/inf literals — use arithmetic: `Float64(0.0) / Float64(0.0)` for NaN,
    `Float64(1.0) / Float64(0.0)` for +inf, `Float64(-1.0) / Float64(0.0)` for -inf
-2. ADR-009: Mojo 0.26.1 has heap corruption after approximately 15 cumulative tests in one file.
-   After adding 9 tests, the file had 19 total — added a NOTE comment warning about this limit.
+2. After adding 9 tests, the file had 19 total — added a NOTE comment about the growing file size.
 3. Issue prompt templates can be misleading (mentioned Python/pytest for a Mojo project). Always
    verify language from the actual codebase files.
 4. Existing tests used `Float32` but the function signature takes `Float64`. Implicit conversion

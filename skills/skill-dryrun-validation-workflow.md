@@ -238,7 +238,6 @@ Copy-paste ready configurations and expected outputs.
 |---------|-------|------------|
 | See detailed notes below | Various approaches tried | Refer to documentation in this section |
 
-
 ### ❌ Attempt 1: Using Short Model Aliases
 
 **What we tried:**

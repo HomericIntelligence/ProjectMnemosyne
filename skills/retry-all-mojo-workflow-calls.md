@@ -163,7 +163,7 @@ pixi run check-yaml .github/workflows/*.yml
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 |---------|----------------|---------------|----------------|
 | Routing benchmark runs through `just test-group` | Tried to use `just test-group` for `simd-benchmarks-weekly.yml` | `test-group` expects test files, not benchmark scripts; output format is different | Benchmarks need inline retry, not `just test-group` routing |
-| Single retry for all call types | Considered using one inline loop pattern everywhere | `|| true` soft-failure semantics must be preserved for paper validation scripts | Soft-failure workflows need the retry loop wrapped with `|| true`, not `exit 1` |
+| Single retry for all call types | Considered using one inline loop pattern everywhere | `|| true` soft-failure semantics must be preserved for paper validation scripts | Soft-failure workflows need the retry loop wrapped with `|| true`, not`exit 1` |
 | Skipping `mojo --version` wrapping | Initially flagged `pixi run mojo --version` for retry | Version check does not invoke the JIT compiler, so it cannot crash this way | Only JIT-compilation calls (`mojo <file>`, `mojo test`, `mojo package`, `mojo build`, `mojo run`) need retry |
 
 ## Results & Parameters

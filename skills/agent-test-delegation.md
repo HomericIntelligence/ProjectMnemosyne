@@ -17,7 +17,6 @@ mcp_fallback: none
 | Objective | Verify agent hierarchy, delegation chains, and escalation paths. - After modifying agent hierarchy - Verifying escalation paths work correctly |
 | Outcome | Operational |
 
-
 Verify agent hierarchy, delegation chains, and escalation paths.
 
 ## When to Use

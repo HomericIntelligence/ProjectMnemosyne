@@ -36,7 +36,7 @@ cross-referenced a normalization section that didn't fully exist yet.
 - `batch_norm2d_backward` returns `Tuple[ExTensor, ExTensor, ExTensor]` (NOT `GradientTriple`)
 - gamma shape for batch_norm2d: `(C,)` — channels only
 - gamma shape for layer_norm: matches feature dimensions
-- N_spatial = batch * height * width (not just batch)
+- N_spatial = batch *height* width (not just batch)
 - Both functions use epsilon default `1e-5`
 - float16 NOT supported by either function
 - Recommended gradient check tolerances: `rtol=1e-2`, `atol=1e-5`

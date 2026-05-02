@@ -44,7 +44,7 @@ git log --oneline -- <file> | head -5
 # 4. Read the plan for expected values
 gh issue view <REFERENCED_ISSUE> --comments
 
-# 5. Count tests in target file (ADR-009: ≤10 per file)
+# 5. Count tests in target file (≤10 per file)
 grep -c "^fn test_" tests/path/to/test_file_part2.mojo
 
 # 6. Validate pre-commit before commit
@@ -77,7 +77,7 @@ Know which branch is exercised before computing expected values.
 |---------|----------------|---------------|----------------|
 | Search for test by exact name | `grep -r "test_contiguous_stride_correct_values" tests/` | Returned no matches — test never existed | Absence of a test is exactly the bug to fix |
 | Checked existing branch for the fix | Expected `4088-fix-as-contiguous` branch to contain the test | Branch had a different change (pre-commit hook), not the regression test | Branch names can be misleading; use `git diff main..<branch> -- <file>` to confirm |
-| Considered adding to original test file | `test_utility.mojo` seemed consistent with issue plan | File had 43 tests — far exceeds ADR-009 10-test limit | Always count tests before adding; use numbered part files |
+| Considered adding to original test file | `test_utility.mojo` seemed consistent with issue plan | File had 43 tests — far exceeds the ≤10 fn test_ limit | Always count tests before adding; use numbered part files |
 | Assumed the fix still needed implementing | Expected the source fix to be missing | Fix was already in `shape.mojo` from a prior commit | Check `git log` for the source file first — fix and test can land separately |
 
 ## Results & Parameters
@@ -120,7 +120,7 @@ fn test_contiguous_stride_correct_values() raises:
     assert_almost_equal(c._get_float64(5), 5.0, 1e-6, "c[1,2] should be 5.0")
 ```
 
-**ADR-009 constraint**: ≤10 `fn test_` functions per `.mojo` file. Check with:
+**Test file constraint**: ≤10 `fn test_` functions per `.mojo` file. Check with:
 
 ```bash
 grep -c "^fn test_" tests/path/to/file.mojo

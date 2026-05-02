@@ -26,7 +26,7 @@ First attempt used `# NOTE[^(]` which seemed correct but failed because:
 ```
 
 `[^(]` means "any character that is not `(`". Space is not `(`, so the pattern matched
-the compliant `# NOTE ` prefix. This caused 7 test failures when the tests correctly
+the compliant `# NOTE` prefix. This caused 7 test failures when the tests correctly
 asserted that compliant lines should not be flagged.
 
 **Fix**: Use negative lookahead `(?!\s*\()` which means "not followed by optional

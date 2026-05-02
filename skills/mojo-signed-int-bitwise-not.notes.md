@@ -15,13 +15,13 @@ Add bitwise NOT (`~`) operator tests for Mojo's signed integer types (`Int8`, `I
 ## Existing Context Found
 
 - `tests/shared/core/test_uint_bitwise_not.mojo` — 16-test reference file for UInt types
-- ADR-009 documents the Mojo 0.26.1 heap corruption bug and ≤10 test per file workaround
+- Each test file must stay at ≤10 `fn test_` functions per file
 - CI workflow `comprehensive-tests.yml` uses explicit filename lists, not globs
 
 ## Implementation Steps
 
 1. Read `test_uint_bitwise_not.mojo` for pattern reference
-2. Read ADR-009 to understand the 10-test file limit and rationale
+2. Noted the ≤10 `fn test_` per file limit
 3. Read `comprehensive-tests.yml` to find where to register new files
 4. Created `test_int_bitwise_not_part1.mojo` (Int8 + Int16, 8 tests)
 5. Created `test_int_bitwise_not_part2.mojo` (Int32 + Int64, 8 tests)

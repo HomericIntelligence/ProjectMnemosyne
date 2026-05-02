@@ -35,9 +35,9 @@ PR #4746 existed for issue #4088 but CI failed on:
 
 The missing piece was the named regression test.
 
-### ADR-009 test file split constraint
+### Test file split constraint
 
-`tests/shared/core/test_utility.mojo` had 43 tests — far exceeding ADR-009's 10-test limit.
+`tests/shared/core/test_utility.mojo` had 43 tests — far exceeding the 10-test limit.
 The fix added 8 tests to `test_utility_part2.mojo` (which had room remaining in its limit).
 
 ### How to find the expected values

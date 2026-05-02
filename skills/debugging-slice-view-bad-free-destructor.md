@@ -40,7 +40,7 @@ pointers that were never returned by `malloc()`.
 - A `slice()`, `view()`, or similar method creates tensors with offset `_data` pointers
 - The destructor calls `free(self._data)` without checking if it's a view
 - CI tests crash "flakily" with `libKGENCompilerRTShared.so` abort after many sequential test functions
-- Split test files pass but monolithic files crash (heap corruption accumulates across functions)
+- Smaller test files pass but large monolithic files crash (heap corruption accumulates across functions)
 - The crash happens even when running the crashing test ALONE (with ASAN)
 
 ## Verified Workflow
@@ -197,7 +197,7 @@ if not self._is_view:
 | Without ASAN, 1 test | Usually passes (heap corruption too minor to trigger abort) |
 | Without ASAN, 15+ tests | Crashes ~50-80% of the time (corruption accumulates) |
 | Without ASAN, different CI runner | Different heap layout = different crash threshold |
-| Split test files (ADR-009) | Usually pass (fewer tests = less corruption per file) |
+| Smaller test files | Usually pass (fewer tests = less corruption per file) |
 
 ### Three Bugs, One Crash Signature
 
@@ -206,7 +206,7 @@ All three produce identical `libKGENCompilerRTShared.so+0x3cb78b` crash output:
 | Bug | Root Cause | ASAN Report | Our Code? |
 |-----|-----------|-------------|-----------|
 | Day 53 bitcast UAF | ASAP destruction frees tensor before bitcast write | heap-use-after-free | No (Mojo compiler bug) |
-| ADR-009 "heap corruption" | Same bitcast UAF with more churn | heap-use-after-free | No (same Mojo bug) |
+| Mojo "heap corruption" | Same bitcast UAF with more churn | heap-use-after-free | No (same Mojo bug) |
 | This bug (slice view) | __del__ frees offset _data pointer from slice() | bad-free (attempting free on non-malloc'd address) | **Yes (our bug)** |
 
 ## Verified On

@@ -16,7 +16,6 @@ version: 1.0.0
 | Objective | Post structured documentation to GitHub issues following ML Odyssey standards. - Starting work on a GitHub issue |
 | Outcome | Operational |
 
-
 Post structured documentation to GitHub issues following ML Odyssey standards.
 
 ## When to Use
