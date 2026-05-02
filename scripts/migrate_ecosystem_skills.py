@@ -287,13 +287,7 @@ def add_missing_sections(body: str, skill_name: str) -> str:
             # Insert Quick Reference right after ## Verified Workflow heading
             body = re.sub(
                 r"(^## Verified Workflow\b.*?\n)",
-                (
-                    r"\1\n"
-                    "### Quick Reference\n\n"
-                    "```bash\n"
-                    "# (fill in quick reference commands)\n"
-                    "```\n\n"
-                ),
+                (r"\1\n" "### Quick Reference\n\n" "```bash\n" "# (fill in quick reference commands)\n" "```\n\n"),
                 body,
                 count=1,
                 flags=re.MULTILINE,
