@@ -19,7 +19,7 @@ tags:
 ## Overview
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Date** | 2026-04-29 |
 | **Objective** | Add a non-browser validation path that can download or resolve a model, run Radiance analysis, and emit graph JSON. |
 | **Outcome** | Successful local implementation: `radiance-graph` console script, reusable `radiance.headless` helper, tests for local/Hugging Face/stdout flows, and README usage. |
@@ -106,7 +106,7 @@ make check
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-|---------|----------------|---------------|----------------|
+| --------- | ---------------- | --------------- | ---------------- |
 | Build a parallel analyzer | Considered adding a CLI that directly calls graph extraction and serializes the result | That would bypass run manifests, graphCollections translation, metrics, and persisted artifact behavior used by the UI | Reuse `TheoreticalRunService` so CLI validation exercises the same pipeline as the browser |
 | Assume raw graph JSON is camelCase | Test expected `nodes[0]["opName"]` in `source-graph` output | The raw dataclass artifact is persisted as snake_case (`op_name`); camelCase labels exist in graphCollections | Distinguish raw internal artifacts from Model Explorer graphCollections payloads |
 | Manually test new console script before reinstall | Ran `.venv/bin/radiance-graph --help` after editing `pyproject.toml` | Existing editable install did not yet expose the new console entrypoint | Run `pip install -e . --no-deps` after adding a script entry |
@@ -161,5 +161,5 @@ make check
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| --------- | --------- | --------- |
 | Radiance | Added `radiance-graph` after strict audit identified the need to validate graph output without a browser | Verified locally with focused tests, Ruff, CLI help, editable install refresh, and full `make check` |
