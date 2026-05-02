@@ -1,0 +1,188 @@
+# architecture-radiance-per-layer-metrics-selected-profile-only - History
+
+## v1.1.0 (2026-04-27)
+
+**Changed by:** Radiance session adding dtype-aware complete SoL coverage, serving estimates, and a Model Explorer performance recompute panel.
+**Verification:** verified-local
+
+### What changed
+- Added complete SoL coverage guidance: every operator/graph node should receive either a modeled row or an explicit unmodeled row with nullable latency/SoL percent and diagnostics.
+- Added dtype-aware modeling guidance for hardware supported dtypes, dtype-specific peak TFLOPs, dtype-dependent storage bytes, and unsupported dtype/operator diagnostics.
+- Added backend serving estimate guidance for TTFT, TPOT/ITL, end-to-end latency, output tokens/sec, KV cache footprint, and decode roofline from `performanceInputs`.
+- Added frontend guidance for the left-side Radiance Perf panel and Update button that launches a recomputed backend run.
+- Added operator-formula corrections for `addmm`, `matmul`, and `embedding`.
+- Added the local verification results from the Radiance implementation session.
+
+### Why
+The v1.0.0 skill covered per-layer analytical metrics and selected hardware projection, but the implementation session exposed gaps that were directly within the same search surface: missing SoL rows for unmodeled nodes, dtype-insensitive projection, missing serving estimates, and no viewer recompute controls. These are incremental architecture findings for the existing Radiance metrics skill, so the existing skill was amended instead of creating a duplicate.
+
+### Previous version (v1.0.0) snapshot
+
+~~~markdown
+---
+name: architecture-radiance-per-layer-metrics-selected-profile-only
+description: "Use when adding analytical model metrics to a tracing pipeline: (1) exact operator kernels should roll up into per-layer outputs, (2) hardware projection must use a user-selected inline profile rather than a fixed built-in set."
+category: architecture
+date: 2026-04-15
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [radiance, metrics, hardware-profile, operator-kernels, layer-aggregation, sol, roofline]
+---
+
+# Radiance Per-Layer Metrics With Selected-Profile Projection
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-15 |
+| **Objective** | Add an extensible analytical metrics system to Radiance that computes per-layer compute, memory, bandwidth, and SoL from exact operator kernels. |
+| **Outcome** | Successful local implementation: new `radiance.metrics` package, one-op-per-file kernels, operator-to-layer aggregation, selected-profile-only hardware projection, docs updated, and backend tests passing. |
+| **Verification** | verified-local — `pytest tests/backend -q` passed locally; CI validation pending. |
+| **Scope** | Route contract, run-service persistence, analytical kernel registry, hardware projector, and contract/docs fixtures. |
+
+## When to Use
+
+- You need per-layer analytical outputs but the only trustworthy formulas live at the operator level.
+- The system already has a user-facing layer graph and you want to preserve it instead of exposing raw operator rows as the primary UI artifact.
+- Hardware modeling must be configurable per run and must not fan out across hardcoded accelerator profiles.
+- You want a plugin-like Python layout where one op lives in one file and unsupported ops stay explicit.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Add tests first for the selected hardwareProfile request contract and layer metrics artifacts
+pytest tests/backend/test_run_routes.py tests/backend/test_theoretical_runs.py tests/backend/test_metrics_engine.py tests/backend/test_hardware_sol_contract.py -q
+
+# 2. Implement an exact-op metrics package
+# radiance/metrics/{models,interfaces,registry,engine,hardware}.py
+# radiance/metrics/ops/<one-op-per-file>.py
+
+# 3. Extract both graphs, not just the layer graph
+# operator_graph: torch_export_adapter / torch_fx_adapter
+# layer_graph: torch_export_layer_adapter / torch_fx_layer_adapter
+
+# 4. Project only the selected inline hardware profile
+pytest tests/backend -q
+```
+
+### Detailed Steps
+
+1. Start from the route and run-service contract, not from the math. Require `hardwareProfile` alongside `sourceId` on `POST /api/v1/radiance/runs`, parse it into a first-class `HardwareProfile`, and thread that object through the run lifecycle.
+2. Keep two structural views during analysis. Extract an operator graph for exact formulas and a layer graph for the persisted/UI-facing scope. Do not try to estimate layer costs directly from layer type.
+3. Create a small `radiance.metrics` package with stable seams:
+   `models.py` for estimate dataclasses, `interfaces.py` for the kernel protocol, `registry.py` for exact-op lookup, `engine.py` for operator analysis plus layer aggregation, `hardware.py` for selected-profile projection, and `ops/` for one kernel file per supported op.
+4. Register kernels explicitly by exact operator name. Support the initial transformer-core slice (`mm`, `matmul`, `bmm`, `addmm`, `linear`, `embedding`, `softmax`, `log_softmax`, `layer_norm`, `rms_norm`, and movement/view ops). Unknown ops should produce uncovered coverage, not guessed values.
+5. Map operator rows back to leaf layers using `module_path` and `module_stack`. Aggregate compute, memory, parameter bytes, input bytes, output bytes, and covered/uncovered counts into `LayerEstimate`.
+6. Compute SoL only for the selected hardware profile. Use peak FLOPs and peak bandwidth from the provided profile object, classify compute-bound vs memory-bound, and persist only that single profile’s projection artifacts for the run.
+7. Persist layer-facing results in the existing run layout:
+   `metrics/metrics.jsonl`, `metrics/coverage.jsonl`, `hardware/profiles.json`, and `hardware/sol.jsonl`.
+   Keep operator-level artifacts as helper/debug outputs rather than the primary public contract.
+8. Update contract fixtures and docs after the code lands so they stop describing a fixed built-in profile set. The architecture should say "user-supplied or persisted hardware profile" and "single selected profile per run."
+9. Verify locally with focused backend tests first, then run the full backend suite to catch contract drift and fixture mismatches.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Start from layer-only graph extraction | Reuse the existing layer graph as the sole source of analytical truth | Layer nodes are the right user-facing scope, but they do not preserve the exact operator semantics needed for FLOPs and memory formulas | Keep operator truth internally and aggregate onto layers afterward |
+| Treat hardware as a fixed built-in catalog | Initial plan referenced preselected accelerator profiles for every run | Product direction changed: hardware must be configurable per request, and computing all profiles adds noise and cost | Make `hardwareProfile` required on run start and project only the selected profile |
+| Hide unsupported operations behind heuristic fallbacks | Could have estimated unknown ops from adjacent layer shape or layer type | That would silently inflate modeled coverage and weaken trust in analytical output | Unsupported ops must stay explicit in coverage and produce no fabricated metric values |
+
+## Results & Parameters
+
+### Files and Structure
+
+```text
+radiance/metrics/
+  models.py
+  interfaces.py
+  registry.py
+  engine.py
+  hardware.py
+  ops/
+    addmm.py
+    bmm.py
+    contiguous.py
+    embedding.py
+    flatten.py
+    layer_norm.py
+    linear.py
+    log_softmax.py
+    matmul.py
+    mm.py
+    permute.py
+    reshape.py
+    rms_norm.py
+    softmax.py
+    transpose.py
+    view.py
+```
+
+### Route Contract
+
+```json
+{
+  "sourceId": "source-mounted-001",
+  "hardwareProfile": {
+    "hardware_id": "nvidia-h200",
+    "display_name": "NVIDIA H200",
+    "vendor": "nvidia",
+    "memory_gib": 141,
+    "peak_fp16_tflops": 989.0,
+    "peak_hbm_gbps": 4800.0
+  }
+}
+```
+
+### Persistence Contract
+
+```text
+metrics/metrics.jsonl
+metrics/coverage.jsonl
+hardware/profiles.json
+hardware/sol.jsonl
+graphs/operators/source_graph.json   # helper/debug artifact
+metrics/layer_summary.json           # helper/debug artifact
+```
+
+### Projection Formula
+
+```python
+compute_latency_ms = (layer.compute_flops / (profile.peak_fp16_tflops * 1e12)) * 1e3
+memory_latency_ms = (layer.memory_bytes / (profile.peak_hbm_gbps * 1e9)) * 1e3
+theoretical_latency_ms = max(compute_latency_ms, memory_latency_ms)
+```
+
+### Verification Commands
+
+```bash
+pytest tests/backend/test_metrics_engine.py \
+  tests/backend/test_run_routes.py \
+  tests/backend/test_theoretical_runs.py \
+  tests/backend/test_hardware_sol_contract.py -q
+
+pytest tests/backend -q
+```
+
+### Observed Result
+
+```text
+113 passed in 4.96s
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| Radiance | Implementing configurable single-profile per-layer analytical metrics and selected-profile SoL persistence | Verified locally with targeted backend tests and full `tests/backend` suite after updating routes, run persistence, docs, and fixtures |
+~~~
+
+---
+
+## v1.0.0 (2026-04-15)
+
+**Initial version.**
