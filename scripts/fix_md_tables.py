@@ -18,8 +18,7 @@ import argparse
 import re
 import sys
 from pathlib import Path
-from typing import List
-
+from typing import List  # noqa: UP006
 
 _SEPARATOR_CELL_RE = re.compile(r"^:?-+:?$")
 
