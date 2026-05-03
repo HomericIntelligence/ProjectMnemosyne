@@ -1,5 +1,13 @@
 # arch-research-myrmidon-swarm-review — History
 
+## v2.0.0 (2026-05-03)
+
+Absorbed: arch-research-doc-lora-review-pattern (v1.1.0), arch-research-static-inference-model-surgery (v1.0.0)
+FA rows merged: 30 (31 unique rows minus 1 dedup: frozen-soft-gates lesson covered by both lora-review and static-inference)
+VO rows merged: 8 (5 canonical + 2 from lora-review + 1 from static-inference; no duplicates)
+
+---
+
 ## v1.4.0 (2026-04-17)
 
 **Changed by:** ArchIdeas session — verdict removal pass on the 39-idea corpus (Phase D)
