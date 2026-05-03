@@ -1,5 +1,17 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.13.0 (2026-05-02)
+
+**Changed by:** ProjectScylla — parallel worktree rebase of PRs #1861/#1862/#1895 (2026-05-02)
+**Verification:** verified-ci
+
+### What changed
+
+- Bumped version 2.12.0 → 2.13.0
+- Added trigger #39: `git checkout --ours <files>` blocked by Safety Net in sub-agent context during rebase — escalate to main conversation
+- Added Failed Attempt: delegated `git checkout --ours` to sub-agent during PR #1895 rebase; Safety Net blocked in sub-agent context
+- Added Verified On row: ProjectScylla, PRs #1861/#1862/#1895, parallel worktree rebase session 2026-05-02
+
 ## v2.12.0 (2026-05-01)
 
 **Changed by:** ProjectMnemosyne — 5+ PRs CONFLICTING after bulk markdown table reformatter (2026-05-01)
