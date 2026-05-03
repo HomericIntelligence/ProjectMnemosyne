@@ -1,15 +1,17 @@
 ---
 name: tooling-pixi-container-env-isolation
-description: "Fix host/container pixi environment collision causing 'Permission denied (os error 13)'
-  when .pixi/envs/default is shared between host and rootless Podman container. Use when:
-  (1) just build fails with Permission denied reading .pixi/envs/default inside a Podman container,
-  (2) rootless Podman UID mapping (host UID 1000 -> container UID 0) corrupts pixi env ownership,
-  (3) a named Docker volume was used to isolate .pixi/ but ownership still breaks after restarts."
+description: "Fix host/container pixi environment collision and pixi binary shadowing in Docker/Podman.
+  Use when: (1) just build fails with Permission denied reading .pixi/envs/default inside a Podman
+  container, (2) rootless Podman UID mapping (host UID 1000 -> container UID 0) corrupts pixi env
+  ownership, (3) a named Docker volume was used to isolate .pixi/ but ownership still breaks after
+  restarts, (4) container fails with 'pixi: command not found' after moving pixi-cache volume
+  mountpoint to ~/.pixi/ (which shadows the pixi binary installed during image build)."
 category: tooling
-date: 2026-05-02
-version: "1.0.0"
+date: 2026-05-03
+version: "2.0.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
+history: tooling-pixi-container-env-isolation.history
 tags:
   - pixi
   - podman
@@ -19,6 +21,7 @@ tags:
   - uid-mapping
   - workspace-collision
   - detached-environments
+  - volume-shadowing
 ---
 
 # Tooling: Pixi Container Environment Isolation
@@ -27,11 +30,13 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-05-02 |
-| **Objective** | Fix `just build` failing with `Permission denied (os error 13)` when the pixi env at `.pixi/envs/default` is shared between host and rootless Podman container |
-| **Outcome** | Successful — `just build` passes after enabling `detached-environments = true` in pixi config |
-| **Verification** | verified-local (CI validation pending on PR #5347) |
-| **Root Cause** | Host and container each have their own pixi env at the same filesystem path (`<workspace>/.pixi/envs/default`). Rootless Podman UID mapping (host UID 1000 → container UID 0) corrupts ownership so the other party cannot read the env. |
+| **Date** | 2026-05-03 |
+| **Objective** | Fix `just build` failing with `Permission denied (os error 13)` when the pixi env at `.pixi/envs/default` is shared between host and rootless Podman container; also fix `pixi: command not found` when the pixi-cache volume is mounted at the wrong path |
+| **Outcome** | Successful — CI passed (AddressSanitizer Tests, Build Validation, Mojo Package Compilation) after both fixes |
+| **Verification** | verified-ci (PR #5347, PR #5348) |
+| **Root Cause 1** | Host and container share the same pixi env path (`<workspace>/.pixi/envs/default`). Rootless Podman UID mapping corrupts ownership. |
+| **Root Cause 2** | After enabling `detached-environments` and removing `workspace-pixi`, the `pixi-cache` volume was still mounted at `~/.pixi/` — shadowing the pixi binary installed at `~/.pixi/bin/pixi` during image build. |
+| **History** | [changelog](./tooling-pixi-container-env-isolation.history) |
 
 ## When to Use
 
@@ -42,6 +47,8 @@ tags:
   container run `pixi install` pointing at the same `.pixi/envs/default/`
 - A named Docker/Podman volume was previously used to shadow `.pixi/` but ownership corruption
   resurfaces after container restarts or volume recreation
+- Container fails with `pixi: command not found` even though pixi was installed during image build
+- The `pixi-cache` named volume is mounted at `~/.pixi/` (wrong) instead of `~/.cache/pixi` (correct)
 - You want to permanently eliminate the path collision rather than work around it
 
 ## Verified Workflow
@@ -59,34 +66,38 @@ tags:
 detached-environments = true
 ```
 
-2. **Remove the `workspace-pixi` named volume** from `docker-compose.yml`:
+2. **Remove the `workspace-pixi` named volume** AND correct the `pixi-cache` mountpoint:
 
 ```yaml
-# BEFORE (named volume approach — fragile with rootless Podman):
+# BEFORE (broken — two problems):
 services:
   myservice:
     volumes:
       - .:/workspace:delegated
-      - workspace-pixi:/workspace/.pixi   # <-- REMOVE THIS
-      - pixi-cache:/home/dev/.pixi
+      - workspace-pixi:/workspace/.pixi   # Problem 1: shadows host .pixi/
+      - pixi-cache:/home/dev/.pixi        # Problem 2: shadows pixi binary!
 
 volumes:
-  workspace-pixi:                          # <-- REMOVE THIS BLOCK
+  workspace-pixi:
     driver: local
   pixi-cache:
     driver: local
 
-# AFTER (detached-environments approach):
+# AFTER (correct):
 services:
   myservice:
     volumes:
       - .:/workspace:delegated
-      - pixi-cache:/home/dev/.pixi         # Keep — caches pixi itself
+      - pixi-cache:/home/dev/.cache/pixi  # CORRECT: mount at PIXI_CACHE_DIR, not ~/.pixi/
 
 volumes:
   pixi-cache:
     driver: local
 ```
+
+**Critical**: Mount `pixi-cache` at `~/.cache/pixi` (the `PIXI_CACHE_DIR`), NOT at `~/.pixi/`.
+Mounting at `~/.pixi/` shadows the pixi binary installed at `~/.pixi/bin/pixi` during image
+build, causing `pixi: command not found` at container startup.
 
 3. **Update `docker/entrypoint.sh`** — replace the mojo binary path check with `pixi info`:
 
@@ -147,7 +158,19 @@ just build                  # Should succeed
    # Same path, now owned by UID 0 (root inside container) or shows EPERM
    ```
 
-2. **Enable `detached-environments`** — create `.pixi/config.toml`:
+2. **Diagnose pixi binary shadowing** — check if pixi-cache is mounted at the wrong path:
+
+   ```bash
+   # Check docker-compose.yml for the wrong mount:
+   grep "pixi-cache" docker-compose.yml
+   # If it shows ~/.pixi  (not ~/.cache/pixi), that's the bug
+
+   # Confirm the binary exists in the image (before volume mount shadows it):
+   podman run --rm <image> ls /home/dev/.pixi/bin/pixi   # Should exist
+   # With the wrong volume mount, it becomes invisible at runtime
+   ```
+
+3. **Enable `detached-environments`** — create `.pixi/config.toml`:
 
    ```bash
    mkdir -p .pixi
@@ -164,19 +187,21 @@ just build                  # Should succeed
    the container cannot follow it to the host's cache dir, so it installs its own env
    under `/home/dev/.cache/pixi/envs/<hash>/` (inside the container's pixi-cache volume).
 
-3. **Remove the `workspace-pixi` named volume** — edit `docker-compose.yml` as shown above.
-   The volume was a workaround; with detached-environments it is no longer needed.
+4. **Remove the `workspace-pixi` named volume** and fix the `pixi-cache` mountpoint —
+   edit `docker-compose.yml` as shown above. The volume must target `~/.cache/pixi`
+   (the `PIXI_CACHE_DIR`), which covers both the pixi package cache and the detached env
+   storage — without hiding the pixi binary.
 
-4. **Update entrypoint.sh** — the old check `[ ! -f .pixi/envs/default/bin/mojo ]` no longer
+5. **Update entrypoint.sh** — the old check `[ ! -f .pixi/envs/default/bin/mojo ]` no longer
    works because the env is no longer at that path. Use `pixi info --json` to locate the
    real env path dynamically.
 
-5. **Add the pre-commit guard** — prevents future contributors from accidentally breaking
+6. **Add the pre-commit guard** — prevents future contributors from accidentally breaking
    the detached-environments config. Note the YAML `>-` block scalar is required when the
    `entry:` value contains a colon (e.g., `echo "ERROR: ..."`); a double-quoted string will
    cause `yaml.scanner.ScannerError: mapping values are not allowed here`.
 
-6. **Handle rebase conflicts** — if workflow files have conflicts over `actions/checkout`
+7. **Handle rebase conflicts** — if workflow files have conflicts over `actions/checkout`
    SHA versions, always take the **newer SHA from `main`** (e.g., v6.0.2 over v6.0.1).
 
 ## Failed Attempts
@@ -189,6 +214,7 @@ just build                  # Should succeed
 | Named Docker volume (`workspace-pixi`) | Shadow `.pixi/` with an empty named volume | Works initially but rootless Podman UID mapping still corrupts ownership after volume recreation; fragile across host/container `pixi install` races | Named volumes solve the bind-mount problem but not the ownership problem under rootless Podman |
 | `entry: "bash -c 'echo ERROR: ...'"` in pre-commit | Double-quoted entry string with colons | `yaml.scanner.ScannerError: mapping values are not allowed here` — colons in YAML values require quoting or block scalars | Use `>-` block scalar for `entry:` values that contain colons or other YAML special chars |
 | `[ -d .pixi/envs ]` in pre-commit hook | Check only for directory existence | Also triggers on the convenience symlink pixi creates; hook fires even after a correct `detached-environments` setup | Always check `[ -d .pixi/envs ] && [ ! -L .pixi/envs ]` to allow the symlink |
+| `pixi-cache:/home/dev/.pixi` volume mount | Mount pixi-cache at `~/.pixi/` to cache pixi data | An empty named volume at `~/.pixi/` at container startup shadows `~/.pixi/bin/pixi` installed during image build, causing `pixi: command not found` in all CI jobs | Mount at `~/.cache/pixi` (the `PIXI_CACHE_DIR`), not `~/.pixi/` — the binary lives at `~/.pixi/bin/pixi` and must not be shadowed |
 
 ## Results & Parameters
 
@@ -199,6 +225,8 @@ just build                  # Should succeed
 | Pixi config file | `.pixi/config.toml` | Committed to repo |
 | Config key | `detached-environments = true` | Under `[detached-environments]` section |
 | Alternative env var | `PIXI_DETACHED_ENVIRONMENTS=true` | Can be set in `docker-compose.yml` instead of config file |
+| Pixi cache volume mount point | `~/.cache/pixi` | `PIXI_CACHE_DIR` — NOT `~/.pixi/` (that shadows the binary!) |
+| Pixi binary location | `~/.pixi/bin/pixi` | Installed by Dockerfile; must not be shadowed by a named volume |
 | Guard hook language | `system` | Not `python` or `script` |
 | Guard hook flags | `always_run: true`, `pass_filenames: false` | Required for repo-wide checks |
 
@@ -212,9 +240,14 @@ Host:
 Container (inside bind-mounted workspace):
   .pixi/envs              → dangling symlink (host cache not accessible)
   /home/dev/.cache/pixi/envs/<hash>/  = actual container pixi env (in pixi-cache volume)
+
+pixi binary (container):
+  ~/.pixi/bin/pixi        = installed by Dockerfile (NOT in pixi-cache volume)
+  ~/.cache/pixi/          = pixi-cache volume (caches packages + detached envs)
 ```
 
 Both sides install their own isolated envs; no path collision, no ownership conflict.
+The pixi binary is not shadowed because the cache volume mounts at `~/.cache/pixi`, not `~/.pixi/`.
 
 ### docker-compose.yml After Fix
 
@@ -223,7 +256,7 @@ services:
   projectodyssey-dev:
     volumes:
       - .:/workspace:delegated
-      - pixi-cache:/home/dev/.pixi        # Cache pixi metadata only
+      - pixi-cache:/home/dev/.cache/pixi  # Cache pixi packages + detached envs (NOT ~/.pixi/)
     entrypoint: ["/usr/local/bin/entrypoint.sh"]
 
 volumes:
@@ -236,7 +269,8 @@ volumes:
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectOdyssey | PR #5347 — `just build` passed locally after fix; CI auto-merge pending | Rootless Podman, host UID 1000, container UID 0, bind-mounted workspace |
+| ProjectOdyssey | PR #5347 — env isolation fix (`detached-environments = true`) | Rootless Podman, host UID 1000, container UID 0, bind-mounted workspace |
+| ProjectOdyssey | PR #5348 — pixi binary shadowing fix (volume mountpoint correction) | `pixi-cache` moved from `~/.pixi/` to `~/.cache/pixi`; all CI jobs passed |
 
 ## References
 
