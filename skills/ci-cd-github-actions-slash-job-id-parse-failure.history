@@ -1,10 +1,29 @@
+# ci-cd-github-actions-slash-job-id-parse-failure — History
+
+## v1.1.0 (2026-05-03)
+
+**Changed by:** ProjectScylla fix session (2026-05-03)
+**Verification:** verified-ci
+
+### What changed
+- Added 2 new "When to Use" triggers: (1) broken repo is claimed to be the "reference implementation" but is the only broken one; (2) org-wide sweep shows N-1 repos emitting all required contexts but 1 repo emits 0
+- Added "Org-wide audit" subsection under Detection with a bash script to find which repos emit 0 of the required contexts vs. all of them
+- Added HomericIntelligence/ProjectScylla to Verified On table (PR #1901, 2026-05-03)
+- Added `history:` frontmatter key pointing to the `.history` file
+- Bumped version to 1.1.0, updated date to 2026-05-03
+
+### Why
+ProjectScylla was erroneously called the "reference implementation" for the org yet was the only repo among 15 emitting 0 of 8 required check contexts. The org-wide audit pattern (loop over all repos, check which emit each required context) is a reliable signal to identify this failure mode quickly. The "reference implementation" false framing is a recurring trap — the fix had already propagated to every other repo during their own setup, leaving only the supposed reference broken.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
 ---
 name: ci-cd-github-actions-slash-job-id-parse-failure
 description: "GitHub Actions silently rejects an entire workflow file when any job ID (the YAML key) contains a forward slash. Zero jobs run, no check contexts are reported, and branch rulesets requiring those checks see them as permanently 'never run' → BLOCKED. Use when: (1) a workflow appears syntactically valid but shows 0 jobs in the Actions UI, (2) PRs are BLOCKED with mergeStateStatus=BLOCKED and all statusCheckRollup entries for the affected workflow are absent, (3) you see job IDs containing '/' in workflow YAML."
 category: ci-cd
-date: 2026-05-03
-version: "1.1.0"
-history: ci-cd-github-actions-slash-job-id-parse-failure.history
+date: 2026-04-29
+version: "1.0.0"
 user-invocable: false
 verification: verified-ci
 tags: [github-actions, job-id, yaml, parse-failure, silent-failure, branch-protection, ruleset, check-context]
@@ -16,7 +35,7 @@ tags: [github-actions, job-id, yaml, parse-failure, silent-failure, branch-prote
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-03 |
+| **Date** | 2026-04-29 |
 | **Objective** | Run CI jobs whose IDs contained slashes (e.g. `security/dependency-scan`) |
 | **Outcome** | GitHub silently rejected the entire workflow at parse time — 0 jobs ever ran |
 | **Verification** | verified-ci — fix confirmed working in HomericIntelligence/ProjectCharybdis PR #50 |
@@ -29,8 +48,6 @@ tags: [github-actions, job-id, yaml, parse-failure, silent-failure, branch-prote
 - Re-triggering CI pushes creates no new runs (GitHub rejects the file before queuing)
 - Auto-merge was armed but never fires because required checks are permanently "never run"
 - A workflow was deployed for days or weeks with 0 jobs ever executing
-- The broken repo is claimed to be the "reference implementation" but is actually the only broken one — other repos that copied from it corrected the error during their own setup
-- An org-wide sweep shows N-1 repos emitting all required check contexts but 1 repo emits 0
 
 ## Root Cause
 
@@ -52,23 +69,6 @@ grep -n "^  [a-zA-Z].*\/.*:" .github/workflows/*.yml
 ```
 
 If this command returns any hits, those job IDs are invalid and will cause silent parse failure.
-
-### Org-wide audit
-
-```bash
-# Org-wide audit: find which repos emit 0 of the required contexts vs. all of them
-REQUIRED=(lint unit-tests integration-tests "security/dependency-scan" "security/secrets-scan" build schema-validation "deps/version-sync")
-for r in $(gh repo list <ORG> --json name,isArchived --limit 100 \
-    --jq '.[] | select(.isArchived==false) | .name'); do
-  SHA=$(gh api "repos/<ORG>/$r/commits/main" --jq .sha 2>/dev/null)
-  emitted=$(gh api "repos/<ORG>/$r/commits/$SHA/check-runs" \
-    --paginate --jq '[.check_runs[].name] | unique | join(",")' 2>/dev/null)
-  for c in "${REQUIRED[@]}"; do
-    [[ ",$emitted," == *",$c,"* ]] || echo "MISS $r $c"
-  done
-done
-# A repo emitting 0 of 8 while 14 others emit all 8 → slash job-id parse failure
-```
 
 **Symptom checklist:**
 
@@ -169,4 +169,10 @@ jobs:
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | HomericIntelligence/ProjectCharybdis | `_required.yml` had `security/dependency-scan`, `security/secrets-scan`, `deps/version-sync` as job IDs | File had been deployed for multiple weeks with 0 jobs ever running; fixed in PR #50 (2026-04-29) |
-| HomericIntelligence/ProjectScylla | PR #1901 (2026-05-03) — `_required.yml` had `security/dependency-scan:`, `security/secrets-scan:`, `deps/version-sync:` as job IDs. Was the supposed "reference implementation" for the org, yet was the only broken repo among 15. Org-wide audit confirmed 14/15 emitting all 8 required contexts; only Scylla emitted 0. | Fixed by renaming 3 job IDs to dashed forms while keeping `name:` values verbatim. |
+```
+
+---
+
+## v1.0.0 (2026-04-29)
+
+**Initial version.**
