@@ -1,0 +1,6 @@
+## v3.0.0 (2026-05-03)
+
+Absorbed: ci-cd-pipeline-maintenance-patterns, ci-cd-dependabot-conflict-resolution-pattern, ci-cd-codeql-missing-workflow-permissions-fix, ci-cd-karma-playwright-chromium-launcher, ci-cd-packaged-frontend-functional-asset-validation
+FA rows merged: 60 (31 deduped from raw 91 across 6 files)
+VO rows merged: 16 (1 deduped from raw 14 across 6 files)
+Code block pairs merged: 80
