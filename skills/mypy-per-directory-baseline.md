@@ -622,6 +622,301 @@ gh pr create --title "feat(mypy): Extend mypy coverage to scripts/ ..." \
 gh pr merge --auto --rebase
 ```
 
+## Living Baseline Setup (from mypy-living-baseline)
+
+### Measure Actual Counts by Error Code
+
+Mypy's `disable_error_code` in `pyproject.toml` suppresses errors; to see the real baseline,
+re-enable all disabled codes:
+
+```bash
+# Get per-code error counts (each flag must be separate)
+pixi run mypy scripts/ scylla/ tests/ \
+  --enable-error-code assignment \
+  --enable-error-code operator \
+  ... \
+  2>&1 | grep 'error:' | grep -oP '\[([a-z][a-z0-9-]*)\]$' | sort | uniq -c | sort -rn
+```
+
+**Critical**: Use `-oP '\[([a-z][a-z0-9-]*)\]$'` (anchored at end-of-line) to avoid counting
+error codes appearing in message text.
+
+### Count Drift After Adding New Files
+
+When you first measure error counts and then add new Python files (e.g., the validation script
+itself), the counts will increase. Always run `--update` after the full implementation is staged:
+
+```bash
+# After writing the validation script itself, re-capture counts
+pixi run python scripts/check_mypy_counts.py --update
+# Commit the updated MYPY_KNOWN_ISSUES.md along with the new script
+```
+
+### Validation Script Pattern (scripts/check_mypy_counts.py)
+
+```python
+DISABLED_ERROR_CODES = ["assignment", "operator", ...]  # matches pyproject.toml
+
+def parse_known_issues_table(md_path: Path) -> dict[str, int]:
+    """Parse markdown table rows matching '| error-code | N | description |'."""
+    ...
+
+def run_mypy_and_count(repo_root: Path) -> dict[str, int]:
+    """Run mypy with all codes re-enabled, count per code (filtered to DISABLED_ERROR_CODES)."""
+    cmd = ["pixi", "run", "mypy"] + MYPY_PATHS
+    for code in DISABLED_ERROR_CODES:
+        cmd += ["--enable-error-code", code]
+    ...
+
+def diff_counts(documented, actual) -> list[str]:
+    """Return human-readable mismatch messages."""
+    ...
+
+def update_table(md_path: Path, actual: dict[str, int]) -> None:
+    """Rewrite count cells and Total row in-place."""
+    ...
+```
+
+**Key regex patterns**:
+- Parse table rows: `r"^\|\s*([a-z][a-z0-9-]+)\s*\|\s*(\d+)\s*\|"` (lowercase codes only, skips `**Total**`)
+- Parse error lines: `r"\berror:.*\[([a-z][a-z0-9-]*)\]$"` (anchored to end of line)
+- Update total row: `r"(\|\s*\*\*Total\*\*\s*\|\s*\*\*)\d+(\*\*\s*\|)"`
+
+### Pre-commit Hook for Baseline Enforcement
+
+```yaml
+- id: check-mypy-counts
+  name: Check Mypy Known Issue Counts
+  description: >-
+    Validate that MYPY_KNOWN_ISSUES.md table counts match actual mypy output.
+    Update the table when fixing type errors by running:
+    python scripts/check_mypy_counts.py --update
+  entry: python scripts/check_mypy_counts.py
+  language: system
+  files: ^(scripts|scylla|tests)/.*\.py$|^MYPY_KNOWN_ISSUES\.md$
+  types_or: [python, markdown]
+  pass_filenames: false
+```
+
+**Note**: Use `types_or` (not `types`) to trigger on both Python files and the markdown file.
+
+### Unit Tests for Validation Script
+
+```python
+from unittest.mock import MagicMock, patch
+
+def test_run_mypy_and_count_parses_output(tmp_path: Path) -> None:
+    mock_result = MagicMock()
+    mock_result.stdout = "scylla/foo.py:10: error: Msg  [arg-type]\n"
+    with patch("subprocess.run", return_value=mock_result):
+        counts = check_mypy_counts.run_mypy_and_count(tmp_path)
+    assert counts["arg-type"] == 1
+```
+
+**Coverage note**: Tests for scripts in `scripts/` do not contribute to `--cov=scylla` coverage.
+Run the full test suite (not just the new file) to verify the coverage threshold is still met.
+
+### Fix Ruff D401 on Fixtures
+
+```python
+# WRONG - D401 violation
+def valid_md(tmp_path: Path) -> Path:
+    """A minimal MYPY_KNOWN_ISSUES.md..."""
+
+# CORRECT
+def valid_md(tmp_path: Path) -> Path:
+    """Create a minimal MYPY_KNOWN_ISSUES.md..."""
+```
+
+## Quick-Win Error Code Fixes (from mypy-quick-win-fixes)
+
+### Identify Actual Violations Before Touching Code
+
+```bash
+pixi run python -m mypy scylla/ \
+  --enable-error-code override \
+  --enable-error-code no-redef \
+  --enable-error-code exit-return \
+  --enable-error-code return-value \
+  --enable-error-code call-overload \
+  2>&1 | grep "error:"
+```
+
+**Critical**: The actual violations may differ from what MYPY_KNOWN_ISSUES.md documented. Always
+re-run mypy to get the ground truth before making changes.
+
+### Fix Each Error Code Pattern
+
+#### `exit-return` — `__exit__` return type
+
+```python
+# WRONG: bool return type triggers exit-return when method always returns False
+def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+    ...
+    return False  # mypy: "bool" is invalid as return type for "__exit__"
+
+# CORRECT: Use None (never suppresses exceptions) or Literal[False]
+def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+    ...
+    # Return None (False-y) to not suppress exceptions
+```
+
+#### `override` — pydantic `model_validate` incompatible override
+
+```python
+# WRONG: Incompatible override of pydantic BaseModel.model_validate
+class MyModel(BaseModel):
+    @classmethod
+    def model_validate(cls, data: dict[str, Any]) -> MyModel:  # override error
+        ...
+
+# CORRECT: Rename to a custom method name
+class MyModel(BaseModel):
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> MyModel:
+        ...
+        return super().model_validate(data)  # still delegates to pydantic
+```
+
+#### `no-redef` — import shadowing a local variable
+
+```python
+# WRONG: 'config' is already a function parameter on line 237
+def my_func(config: ExperimentConfig) -> None:
+    ...
+    from scylla.e2e.models import config  # no-redef: "config" already defined
+    print(config.language)  # actually works but is wrong/confusing
+
+# CORRECT: Remove the erroneous import; use the parameter
+def my_func(config: ExperimentConfig) -> None:
+    ...
+    print(config.language)  # use the parameter directly
+```
+
+#### `return-value` — bare `dict` return annotation
+
+```python
+# WRONG: bare dict is not a valid generic type annotation
+def my_validator(cls, v: Any) -> dict:  # return-value warning
+    return v if v else {}
+
+# CORRECT: Specify generic parameters
+def my_validator(cls, v: Any) -> dict[str, Any]:
+    return v if v else {}
+```
+
+#### `call-overload` in tests — targeted inline ignore
+
+```python
+# When accessing nested dict values typed as Any:
+assert set(my_dict["key"]["subkey"]) == expected  # call-overload: no overload matches "object"
+
+# CORRECT: Add targeted ignore comment
+assert set(my_dict["key"]["subkey"]) == expected  # type: ignore[call-overload]
+```
+
+**Note**: In mypy 1.19, `ignore_errors = true` in `[[tool.mypy.overrides]]` for `tests.*` does NOT
+suppress `call-overload` errors from `Any`-typed dict access. Wrapping in `list()` does NOT help.
+
+### Remove Error Codes from pyproject.toml
+
+```toml
+# Before
+disable_error_code = [
+    ...
+    "override",        # 1 violation - incompatible method override
+    "no-redef",        # 1 violation - name redefinition
+    "exit-return",     # 1 violation - context manager __exit__ return type
+    ...
+    "return-value",    # 1 violation - incompatible return value type
+    "call-overload",   # 1 violation - no matching overload variant
+]
+
+# After (remove the 5 lines)
+disable_error_code = [
+    ...
+    # only remaining codes
+]
+```
+
+### Verify Clean Mypy
+
+```bash
+pixi run python -m mypy scylla/
+# Expected: Success: no issues found in N source files
+```
+
+### Run Full Pre-commit
+
+```bash
+pre-commit run --all-files
+```
+
+## Scripts Coverage Extension (from mypy-scripts-coverage-extension)
+
+### Triage Before Removing Override
+
+```bash
+# Temporarily remove the override from pyproject.toml, then:
+pixi run mypy scripts/ 2>&1
+# If "Success: no issues found" — just commit the removal, no script fixes needed
+# If errors appear — fix them incrementally before removing the override
+```
+
+### Read the Issue and Understand Scope
+
+```bash
+gh issue view 765 --comments
+```
+
+### Find the Override in pyproject.toml
+
+```bash
+grep -n "scripts" pyproject.toml
+# Output: module = "scripts.*"  and  ignore_errors = true
+```
+
+The full block to remove:
+
+```toml
+[[tool.mypy.overrides]]
+module = "scripts.*"
+# Skip type checking for scripts - focus on source code first
+ignore_errors = true
+```
+
+### Remove Override and Triage
+
+```bash
+pixi run mypy scripts/
+```
+
+If the output is `Success: no issues found in N source files`, no script modifications are needed.
+
+### Verify with Pre-commit Hook
+
+```bash
+pre-commit run mypy-check-python --all-files
+# Expected: Passed
+```
+
+### Run the Full Test Suite
+
+```bash
+pixi run python -m pytest tests/ -v
+# Verify: all tests pass, coverage still above threshold (73%)
+```
+
+### Commit and PR
+
+```bash
+git add pyproject.toml pixi.lock
+git commit -m "feat(mypy): Extend mypy coverage to scripts/ by removing blanket override"
+gh pr create --title "feat(mypy): Extend mypy coverage to scripts/ ..." \
+  --body "Closes #765"
+gh pr merge --auto --rebase
+```
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -884,4 +1179,45 @@ def valid_md(tmp_path: Path) -> Path:
 # CORRECT - imperative mood
 def valid_md(tmp_path: Path) -> Path:
     """Create a minimal MYPY_KNOWN_ISSUES.md..."""
+```
+
+### Living Baseline Results (2026-02-20)
+
+```
+Total errors at baseline (2026-02-20): 152
+Files checked: 262 (scripts/, scylla/, tests/)
+Error codes tracked: 15 (matching pyproject.toml disable_error_code list)
+Tests written: 16 (all pass, coverage unchanged at 73.35%)
+Pre-commit hooks: all 13 pass
+```
+
+### Quick-Win Fix Results
+
+```
+Error codes fixed: 5 (override, no-redef, exit-return, return-value, call-overload)
+Suppressed error count: 63 → 58
+Files modified: 6 source files + 3 test files
+Tests: 2396 passed, 74.16% coverage (≥73% threshold)
+Pre-commit: all hooks pass
+Mypy 1.19 (compiled: yes)
+```
+
+### Scripts Coverage Extension Results
+
+```
+Files checked (scripts/): 37 source files
+Mypy result: Success: no issues found
+pyproject.toml lines removed: 4
+Script files modified: 0
+Pre-commit result: Passed
+Tests: 2396 passed, coverage 74.15% (above 73% threshold)
+```
+
+### pyproject.toml Block Removed (scripts coverage)
+
+```toml
+[[tool.mypy.overrides]]
+module = "scripts.*"
+# Skip type checking for scripts - focus on source code first
+ignore_errors = true
 ```
