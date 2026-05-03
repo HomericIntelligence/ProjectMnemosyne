@@ -426,7 +426,28 @@ When reviewing a research doc about KV cache quantization (ideas referencing KIV
 | A2 (32B Dense) | 262K | ~68.7 GB | ~64 GB | ~1.63× | ~4× (kernel only) |
 | B (397B MoE) | 32K | ~1.0 GB | ~34 GB (active) | ~1.02× | ~4× (kernel only) |
 
-### Inline Derivation — Canonical Format
+### Inline Derivation Standard for Numeric Claims
+
+When writing or reviewing research docs with analytically-derived numeric claims (not backed by a cited paper), show the full computation inline. Never use a bare tag alone.
+
+```
+# Correct format — show the full computation inline:
+~5 MB [derived: 512 tokens × 5120 dims × 2 bytes (BF16) = 5,242,880 bytes ≈ 5 MB]
+
+# Wrong format — bare label gives no verifiable information:
+~5 MB [derived from first principles — no direct experimental citation]
+
+# Multi-step derivation — chain the arithmetic:
+~4.10 GB [derived: W_out = V × d × 2 bytes = 250,112 × 8,192 × 2 = 4,097,835,008 bytes ≈ 4.10 GB;
+           LM head fraction = 4.10/145.1 ≈ 2.83% of total model weights]
+
+# Multi-baseline derivation (show per-baseline substitution):
+**Derivation:** KV cache = L × 2 × H_kv × head_dim × s × 2 bytes (BF16).
+A1: 32×2×8×128×32768×2 = 4.29 GB. A2: 64×2×8×128×32768×2 = 8.59 GB.
+A3: 64×2×4×128×32768×2 = 4.29 GB. A4: 64×2×16×128×32768×2 = 17.18 GB.
+```
+
+#### Canonical derivation format
 
 ```
 # Single-step derivation:
@@ -446,7 +467,7 @@ When reviewing a research doc about KV cache quantization (ideas referencing KIV
 <Baseline B>: <substitution> = <result>.
 ```
 
-### Inline Derivation — Real Examples from the ArchIdeas Corpus
+#### Real examples from the ArchIdeas corpus
 
 ```
 # KV cache size:
@@ -469,7 +490,26 @@ A3 (32B MQA, s=32K): 64×2×1×128×32768×2 = 1.07 GB.
 A4 (32B GQA-16, s=32K): 64×2×16×128×32768×2 = 17.18 GB.
 ```
 
-### Exec Summary Overhead — Decision Rule
+### Exec Summary Overhead Honesty (TPOT vs FLOPs Divergence)
+
+When an idea introduces sequential passes (AR loops, iterative refinement, diffusion decoders), TPOT overhead is orders of magnitude larger than FLOPs overhead. The exec summary table MUST surface the dominant metric.
+
+```markdown
+# Pattern: When TPOT >> FLOPs for an idea, the exec summary table MUST include:
+
+| Metric | Baseline | With Idea | Delta |
+|--------|----------|-----------|-------|
+| Params | 32B | 32.06B | +0.18% |
+| FLOPs/token | X TFLOPs | X+Y TFLOPs | +0.18% |
+| **TPOT** | **T ms** | **W x T ms** | **W x 1.5-2.5x** |
+
+> **Warning — TPOT dominates:** Although FLOPs overhead is negligible (+0.18%),
+> this idea introduces W sequential decoding passes per token. Wall-clock TPOT
+> scales as W x 1.5-2.5x because each pass is memory-bandwidth-bound, not
+> compute-bound. The FLOPs row understates the real cost.
+```
+
+#### Decision rule
 
 ```
 IF idea introduces sequential passes (W > 1) per output token:
@@ -480,6 +520,9 @@ IF idea introduces sequential passes (W > 1) per output token:
   → Bold the TPOT row
   → Add warning callout explaining the divergence
 ```
+
+Ideas where this rule applies: in-architecture AR loops, iterative refinement decoders, diffusion-based text decoders, speculative decoding (draft model overhead). Rule does NOT apply when the idea only adds parameters, reduces latency, or adds parallel computation.
+
 
 ## Verified On
 
