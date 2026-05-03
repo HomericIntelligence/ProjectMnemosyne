@@ -1,0 +1,86 @@
+# tooling-pixi-container-env-isolation — History
+
+## v2.0.0 (2026-05-03)
+
+**Changed by:** CI-fixing session on ProjectOdyssey PR #5347/#5348
+**Verification:** verified-ci — AddressSanitizer Tests, Build Validation, Mojo Package Compilation all passed
+
+### What changed
+
+- Fixed critical error in v1.0.0 "AFTER" docker-compose example: `pixi-cache` volume was shown
+  mounted at `~/.pixi/` which **shadows the pixi binary** installed at `~/.pixi/bin/pixi` during
+  image build — causing `pixi: command not found` at container startup
+- Correct mountpoint is `~/.cache/pixi` (the `PIXI_CACHE_DIR`), not `~/.pixi/`
+- Updated `When to Use` to add new trigger: volume mounted at `~/.pixi/` shadowing the pixi binary
+- Added new `Failed Attempts` row: mounting `pixi-cache` at `~/.pixi/` shadows the binary
+- Updated `Verified On` table: PR #5347 CI passed (upgraded from verified-local to verified-ci)
+- Upgraded verification status from `verified-local` to `verified-ci`
+- Reworded Quick Reference step 2 to clarify the critical constraint on pixi-cache mount point
+- Added "Pixi cache volume mount point" to Key Configuration table
+
+### Why
+
+v1.0.0 contained an incorrect `docker-compose.yml` "AFTER" example showing
+`pixi-cache:/home/dev/.pixi`. When `detached-environments = true` is enabled and the
+`workspace-pixi` volume is removed, there is no longer anything protecting `~/.pixi/` from
+being shadowed. The Dockerfile installs pixi at `~/.pixi/bin/pixi` — mounting an empty named
+volume at `~/.pixi/` at container runtime hides the binary, causing all CI jobs to fail with
+`pixi: command not found`. The correct mount target is `~/.cache/pixi` (PIXI_CACHE_DIR).
+
+### Previous version (v1.0.0) snapshot
+
+```
+---
+name: tooling-pixi-container-env-isolation
+description: "Fix host/container pixi environment collision causing 'Permission denied (os error 13)'
+  when .pixi/envs/default is shared between host and rootless Podman container. Use when:
+  (1) just build fails with Permission denied reading .pixi/envs/default inside a Podman container,
+  (2) rootless Podman UID mapping (host UID 1000 -> container UID 0) corrupts pixi env ownership,
+  (3) a named Docker volume was used to isolate .pixi/ but ownership still breaks after restarts."
+category: tooling
+date: 2026-05-02
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - pixi
+  - podman
+  - docker
+  - container
+  - env-isolation
+  - uid-mapping
+  - workspace-collision
+  - detached-environments
+---
+
+# Tooling: Pixi Container Environment Isolation
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-02 |
+| **Objective** | Fix `just build` failing with `Permission denied (os error 13)` when the pixi env at `.pixi/envs/default` is shared between host and rootless Podman container |
+| **Outcome** | Successful — `just build` passes after enabling `detached-environments = true` in pixi config |
+| **Verification** | verified-local (CI validation pending on PR #5347) |
+| **Root Cause** | Host and container each have their own pixi env at the same filesystem path (`<workspace>/.pixi/envs/default`). Rootless Podman UID mapping (host UID 1000 → container UID 0) corrupts ownership so the other party cannot read the env. |
+
+## When to Use
+
+- `just build` (or any pixi command inside the container) fails with `Permission denied (os error 13)`
+  and the path in the error points to `.pixi/envs/default/`
+- Rootless Podman maps the host user (UID 1000) to container root (UID 0), or vice-versa
+- The workspace is bind-mounted into the container (e.g., `.:/workspace`) and both host and
+  container run `pixi install` pointing at the same `.pixi/envs/default/`
+- A named Docker/Podman volume was previously used to shadow `.pixi/` but ownership corruption
+  resurfaces after container restarts or volume recreation
+- You want to permanently eliminate the path collision rather than work around it
+
+[... rest of v1.0.0 content omitted for brevity — see git history for full snapshot]
+```
+
+---
+
+## v1.0.0 (2026-05-02)
+
+**Initial version.**
