@@ -1,0 +1,59 @@
+# markdown-linting-bulk-table-format-fix — History
+
+## v1.1.0 (2026-05-03)
+
+**Changed by:** CI-fixing session on ProjectOdyssey PR #5347/#5348
+**Verification:** verified-ci — markdownlint CI job passed with 0 violations on ProjectOdyssey
+
+### What changed
+
+- Added new `When to Use` trigger: markdownlint v0.40.0 upgrade introduces MD060 and
+  `markdownlint-cli2 --fix` does NOT fix MD060 violations
+- Added new variant workflow: "Scenario B — markdownlint v0.40.0 upgrade adds MD060 with no
+  auto-fix" with two-pass Python script strategy
+- Added `MD060: { style: compact }` config option as alternative to `style: consistent` when
+  all tables must be normalized to compact style
+- Added 2 new `Failed Attempts` rows: `--fix` flag silent no-op on MD060, and single-pass
+  script leaving wide-padded header cells
+- Added ProjectOdyssey to `Verified On` table
+- Updated `description` frontmatter to mention v0.40.0 upgrade scenario
+- Bumped version from `1.0.0` to `1.1.0`
+- Updated date from `2026-05-01` to `2026-05-03`
+- Added `verification` frontmatter field
+
+### Why
+
+v1.0.0 covered the case where `.markdownlint.yaml` was missing (mass failures). A new scenario
+emerged: markdownlint-cli2 v0.40.0 added the MD060 rule. Running `--fix` on ~1079 violations
+across 165 files silently produced 0 modifications — the auto-fixer does not implement MD060.
+The fix requires a two-pass Python script and explicitly setting `MD060: { style: compact }`.
+
+### Previous version (v1.0.0) snapshot
+
+```
+---
+name: markdown-linting-bulk-table-format-fix
+description: "Use when: (1) markdownlint CI fails with 20,000+ errors across hundreds of
+  files due to missing .markdownlint.yaml config, (2) MD060 table style errors flood CI
+  output after a linter config is added or upgraded, (3) you need to bulk-normalize markdown
+  table formatting to compact style across an entire repository"
+category: ci-cd
+date: 2026-05-01
+version: 1.0.0
+user-invocable: false
+tags:
+  - markdownlint
+  - MD060
+  - tables
+  - pre-commit
+  - bulk-fix
+  - ci-unblocking
+---
+[... full v1.0.0 content preserved in git history ...]
+```
+
+---
+
+## v1.0.0 (2026-05-01)
+
+**Initial version.**
