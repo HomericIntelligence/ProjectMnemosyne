@@ -1,0 +1,5 @@
+## v2.0.0 (2026-05-03)
+
+Absorbed: mojo-bitcast-uaf-blog-and-ci-fix (v1.0.0), mojo-bitcast-write-swarm-elimination (v1.0.0)
+FA rows merged: 13 (5 canonical + 6 uaf-blog + 2 write-swarm; 0 deduplicates)
+VO rows merged: 0 (absorbed files had no Verified On rows; canonical VO row retained)

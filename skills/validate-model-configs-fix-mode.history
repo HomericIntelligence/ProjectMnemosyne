@@ -1,0 +1,5 @@
+## v2.0.0 (2026-05-03)
+
+Absorbed: centralize-model-id-constants (v1.0.0), enforce-model-config-consistency-hook (v1.0.0)
+FA rows merged: 3 (one per source skill; all shared "direct approach worked" lesson — kept distinct by context)
+VO rows merged: 0
