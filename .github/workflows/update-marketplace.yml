@@ -7,7 +7,6 @@ on:
     paths:
       - 'skills/**'
       - 'plugins/**'
-      - '!.claude-plugin/marketplace.json'
   workflow_dispatch:
 
 permissions:

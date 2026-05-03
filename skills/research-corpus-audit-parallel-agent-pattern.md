@@ -19,9 +19,10 @@ absorbed: "research-corpus-inline-derivation-standard (v1.1.0), research-corpus-
 |-------|-------|
 | **Date** | 2026-04-17 |
 | **Objective** | Strict evidence-based quality audit of 68-file AI architecture research corpus across 10 dimensions; extended to per-idea numerical correctness review for KV cache quantization papers; inline derivation standard; exec summary overhead honesty |
-| **Outcome** | Absorbed research-corpus-inline-derivation-standard + research-corpus-exec-summary-overhead-honesty on 2026-05-03. Successful — all 10 dimensions graded with file:line evidence; 3 structural issues identified and fixed; overall grade raised from B to A. Per-idea review of TurboQuant (5.1) found 2 critical inherited errors and 3 moderate issues. |
+| **Outcome** | Successful — all 10 dimensions graded with file:line evidence; 3 structural issues identified and fixed; overall grade raised from B to A. Per-idea review of TurboQuant (5.1) found 2 critical inherited errors and 3 moderate issues. |
 | **Verification** | verified-local |
 | **History** | [changelog](./research-corpus-audit-parallel-agent-pattern.history) |
+| **Absorbed** | research-corpus-inline-derivation-standard (v1.1.0), research-corpus-exec-summary-overhead-honesty (v1.0.0) on 2026-05-03 |
 
 ## When to Use
 

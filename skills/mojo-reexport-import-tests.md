@@ -30,7 +30,7 @@ tags:
 | **Trigger** | Adding re-exports to `__init__.mojo`, package API verification, re-export chain wiring, submodule limitation audits |
 | **Output** | Test functions in `test_imports*.mojo`; wired `__init__.mojo` re-export chain; audited submodule docstrings |
 | **Constraint** | ≤10 `fn test_` functions per file |
-| **Merged** | Absorbed: mojo-reexport-chain-wiring (v1.0.0), mojo-reexport-limitation-audit (v1.0.0) on 2026-05-03 |
+| **Absorbed** | mojo-reexport-chain-wiring (v1.0.0), mojo-reexport-limitation-audit (v1.0.0) on 2026-05-03 |
 
 ### Merge History
 

@@ -16,10 +16,9 @@ tags: [github, issues, bulk-update, terminology, migration, myrmidon-swarm, dedu
 | ------- | ------- |
 | **Date** | 2026-04-05 |
 | **Objective** | Purge all deprecated "ai-maestro" references from ~80 open issues across 10 HomericIntelligence repos |
-| **Outcome** | Success — 5 parallel Sonnet agents updated all issues with context-sensitive mapping. Absorbed bulk-issue-filing + bulk-issue-dedup on 2026-05-03 |
+| **Outcome** | Success — 5 parallel Sonnet agents updated all issues with context-sensitive mapping. |
 | **Verification** | verified-local (agents ran and reported success; no CI for issue edits) |
-
-**Absorbed:** bulk-issue-filing (v1.0.0), bulk-issue-dedup (v1.0.0) on 2026-05-03
+| **Absorbed** | bulk-issue-filing (v1.0.0), bulk-issue-dedup (v1.0.0) on 2026-05-03 |
 
 ## When to Use
 
