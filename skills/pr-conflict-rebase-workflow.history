@@ -1,0 +1,10 @@
+## v1.2.0 (2026-05-03)
+**Changed by:** chore/skill-consolidation-2026-05 rebase session
+**Verification:** verified-local (rebase succeeded, PR #1549 passed CI)
+### What changed
+- Added trigger: rebasing consolidation branches with absorbed (deleted) files
+- Added workflow subsection: Absorbed-File Rebase (modify/delete conflicts)
+- Added 2 new Failed Attempts: orphaned conflict markers, mid-rebase marketplace count
+### Why
+Rebasing skill-consolidation-2026-05 onto main (183 commits ahead) produced a
+consistent pattern of UD conflicts not covered by v1.1.0 workflow.

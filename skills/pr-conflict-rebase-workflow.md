@@ -5,11 +5,15 @@ description: 'Rebase conflicting PRs onto main when a merge commit introduces wo
   (2) GitHub Actions workflow files conflict over concurrency/permissions/timeout
   additions, (3) pixi.lock is in a modify/delete conflict during rebase, (4) two
   independent CI fix branches both modified the same workflow file with different
-  approaches — one already merged to main and the other needs rebasing.'
+  approaches — one already merged to main and the other needs rebasing, (5) rebasing
+  a consolidation/merge branch that deleted absorbed files, where those files were
+  subsequently modified on the base branch — produces modify/delete (UD) conflicts
+  on every absorbed file.'
 category: ci-cd
-date: 2026-03-15
-version: 1.1.0
+date: 2026-05-03
+version: 1.2.0
 user-invocable: false
+history: pr-conflict-rebase-workflow.history
 ---
 ## Overview
 
@@ -19,7 +23,7 @@ user-invocable: false
 | **Complexity** | Medium |
 | **Time** | 10–20 min per PR |
 | **Risk** | Low (uses `--force-with-lease`) |
-| **Triggers** | CONFLICTING PRs after a main merge, GitHub Actions workflow conflicts, pixi.lock modify/delete, two CI fix branches with different approaches to same file |
+| **Triggers** | CONFLICTING PRs after a main merge, GitHub Actions workflow conflicts, pixi.lock modify/delete, two CI fix branches with different approaches to same file, consolidation branch with absorbed (deleted) files rebased onto advanced base |
 
 ## When to Use
 
@@ -29,6 +33,7 @@ user-invocable: false
 - A branch has multiple commits, some adding a feature and some reverting it — each rebase step must be resolved independently
 - Two independent CI fix branches both modified the same workflow file with different approaches (e.g., one used `builds/benchmarks/` volume path, the other used `/tmp/` + `podman cp`) — one merged first, now the other needs rebasing
 - You need to push rebased branches without losing the PR auto-merge setting
+- Rebasing a branch that deleted files as part of a consolidation/merge, where those files were subsequently modified on the base branch — produces `modify/delete` conflicts on every absorbed file
 
 ## Verified Workflow
 
@@ -162,7 +167,44 @@ grep -n "^<<<\|^>>>\|^===" <file>
 - Simpler approach wins (fewer moving parts = less CI breakage surface)
 - If one approach requires extra steps (copy commands, temp directories), prefer the approach that avoids them
 
-### Step 6 — Verify and push
+### Step 6 — Absorbed-File Rebase (modify/delete conflicts)
+
+When rebasing a consolidation branch onto an advanced base, absorbed files (deleted by the branch, modified by the base) produce `UD` status entries in `git status --short`.
+
+```bash
+# Check what kind of conflicts you have
+git status --short | grep "^UD"  # UD = deleted by us, modified by them
+
+# For each UD file (absorbed/deleted by branch, modified by base): keep our deletion
+git rm skills/absorbed-file-1.md skills/absorbed-file-1.notes.md
+
+# For UU files (content conflict in canonical): auto-resolve by keeping longer side
+# (the branch version has all absorbed content merged in)
+python3 -c "
+import re
+content = open('skills/canonical-file.md').read()
+def resolve(m):
+    ours, theirs = m.group(1).strip(), m.group(2).strip()
+    return theirs if len(theirs) > len(ours) else ours
+result = re.sub(r'<<<<<<< HEAD\n(.*?)\n=======\n(.*?)\n>>>>>>> [^\n]+', resolve, content, flags=re.DOTALL)
+open('skills/canonical-file.md', 'w').write(result)
+"
+
+# Verify no orphaned conflict markers remain after auto-resolve
+grep -c '^<<<' skills/canonical-file.md  # must return 0
+
+# For marketplace.json: always regenerate — never accept either side
+python3 scripts/generate_marketplace.py .claude-plugin/marketplace.json skills/ plugins/
+git add .claude-plugin/marketplace.json
+
+# Continue rebase
+git add skills/canonical-file.md
+GIT_EDITOR=true git rebase --continue
+```
+
+**Note**: marketplace.json regeneration mid-rebase gives a snapshot count, not the final count. Only validate the final entry count after `git rebase` fully completes.
+
+### Step 7 — Verify and push
 
 ```bash
 # Confirm no conflict markers remain
@@ -178,7 +220,7 @@ pre-commit run --all-files
 git push --force-with-lease origin HEAD:<original-branch-name>
 ```
 
-### Step 7 — Enable auto-merge
+### Step 8 — Enable auto-merge
 
 ```bash
 gh pr merge --auto --rebase <N>
@@ -196,8 +238,16 @@ gh pr list --json number,mergeable,autoMergeRequest
 | `--ours`/`--theirs` for pixi.lock | (Pattern to avoid, not attempted) | Would produce stale SHA256 hashes — CI fails with "lock-file not up-to-date" | Always `rm pixi.lock && git add pixi.lock`, then regenerate with `pixi lock` |
 | Resolving conflict markers without checking orphaned lines | Cleared all `<<<<<<<`/`=======`/`>>>>>>>` markers in `benchmark.yml` but missed lines from the discarded `/tmp/` approach that lived outside the conflict block | `mkdir -p /tmp/benchmark-results` and `podman cp` commands remained in the file after resolution, referencing the discarded approach | After clearing conflict markers, always grep for key identifiers of the losing approach — lines outside markers can survive silently |
 | Rebasing wrong branch | Initially attempted to rebase `fix-ci-root-causes` (already merged to main) before user clarified the intended branch | Branch was already on main; rebase produced empty diff | Confirm the exact branch name with the user before starting; check `gh pr list` to verify the branch is still open |
+| Auto-resolve "keep longer side" consuming the conflict opener | Python regex `re.sub` consumed the `<<<<<<< HEAD` line as part of "ours" content in a zero-length match when conflicts were adjacent | Orphaned `=======` and `>>>>>>>` markers remained in the file after auto-resolve | Always verify `grep -c '^<<<' file` returns 0 after auto-resolve; handle adjacent conflicts manually if markers survive |
+| Validating marketplace.json count mid-rebase | Regenerated marketplace.json during commit 8/11 of rebase and expected the final entry count | Count was 1019 instead of final expected count because not all consolidation commits had been applied yet — correct behavior for a mid-rebase snapshot | Marketplace regen count during rebase reflects the current tree, not the final state; only validate the final count after `git rebase` completes |
 
 ## Results & Parameters
+
+### Session outcome (2026-05-03)
+
+| Branch | Base Distance | Conflict Types | Resolution |
+| -------- | ------------- | -------------- | ---------- |
+| chore/skill-consolidation-2026-05 | 183 commits ahead | ~34 UD (absorbed files) + UU (canonical files) + marketplace.json | `git rm` for UD files; longer-side auto-resolve for UU; regenerate marketplace |
 
 ### Session outcome (2026-03-27)
 
@@ -222,6 +272,9 @@ branch_naming: <original-branch>-rebase  # working branch, push back to original
 pixi_lock_strategy: rm + git add (never --ours/--theirs) + pixi lock
 pre_commit: run --all-files before push
 auto_merge_method: rebase
+absorbed_file_strategy: git rm (keep deletion) for UD conflicts
+canonical_file_strategy: keep-longer-side auto-resolve for UU conflicts
+marketplace_strategy: always regenerate — never accept either side
 ```
 
 ### Conflict resolution decision tree
@@ -229,6 +282,18 @@ auto_merge_method: rebase
 ```
 Is the conflict in pixi.lock?
   YES → rm pixi.lock && git add pixi.lock → pixi lock after rebase
+
+Is this a UD conflict (deleted by us, modified by them)?
+  YES → This is an absorbed/consolidated file — keep the deletion
+        git rm <file> && git add <file>
+
+Is the conflict in a canonical (merged) file with UU status?
+  YES → Use keep-longer-side auto-resolve (branch has absorbed content)
+        THEN verify: grep -c '^<<<' <file> must return 0
+
+Is the conflict in marketplace.json?
+  YES → Always regenerate: python3 scripts/generate_marketplace.py ...
+        Never accept either side
 
 Is the conflict in a GitHub Actions .yml file?
   Are both sides independent CI fixes to the same workflow with DIFFERENT approaches?
