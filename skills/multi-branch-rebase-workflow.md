@@ -7,8 +7,8 @@ description: >-
   rebasing, (3) semantic conflict resolution needed, (4) batch PR creation after rebase,
   (5) rebase conflicts are purely markdown table separator style differences.
 category: tooling
-date: 2026-05-02
-version: 2.1.0
+date: 2026-05-03
+version: 2.2.0
 user-invocable: false
 verification: verified-local
 history: multi-branch-rebase-workflow.history
@@ -18,7 +18,7 @@ history: multi-branch-rebase-workflow.history
 ## Overview
 
 | Attribute | Value |
-| ----------- | ------- |
+| :---------- | :------- |
 | **Objective** | Rebase N branches onto main with semantic conflict resolution |
 | **Approach** | Triage by complexity, parallelize simple rebases, delegate complex merges to sub-agents |
 | **Outcome** | All 8 branches rebased, 6 PRs created with auto-merge enabled |
@@ -68,12 +68,48 @@ commit that landed on main since that pin becomes a potential conflict.
 HEADs had merge conflicts. All were fixable by rebasing onto origin/main, but the
 entire rebase wave was avoidable if branches had been created from origin/main initially.
 
+### Step 0.5: ALWAYS Fetch Before Every Rebase (CRITICAL)
+
+**`git rebase origin/main` without a prior fetch uses a stale local cache of `origin/main`.**
+It can report "Current branch is up to date" even when main has advanced significantly.
+This is a **silent trap** -- no error, no warning, just wrong behavior.
+
+```bash
+# MANDATORY before every rebase -- not just the first one in a session:
+git fetch origin main
+
+# Then rebase:
+git rebase origin/main
+```
+
+**In multi-branch sessions, re-fetch between each branch.** When fixing multiple
+branches sequentially, a branch fixed and pushed earlier may merge to main while you
+are fixing the next. This invalidates `origin/main` again. Always re-fetch:
+
+```bash
+# Correct multi-branch loop pattern:
+for branch in $BRANCHES; do
+  git fetch origin main          # Re-fetch every time -- do not skip
+  git checkout "$branch"
+  git rebase origin/main
+  # ... resolve conflicts, push ...
+done
+```
+
+**Observed failure (2026-05-02, ProjectScylla):** Skipping fetch on the pandas Dependabot
+branch caused a false "already up to date." Only after fetching did we discover main had
+advanced by 10+ commits (including a just-merged pytest-asyncio PR).
+
 ### Quick Reference
 
 ```bash
 # 0. ALWAYS start from origin/main
 git fetch origin main
 git checkout -b my-feature origin/main
+
+# 0.5. ALWAYS fetch before each rebase (even mid-session)
+git fetch origin main
+git rebase origin/main
 
 # 1. Triage branches by complexity
 for branch in $BRANCHES; do
@@ -83,7 +119,7 @@ done
 
 # 2. Simple rebase (skip-only or trivial)
 git worktree add /tmp/rebase-NAME BRANCH
-cd /tmp/rebase-NAME && git rebase main
+cd /tmp/rebase-NAME && git fetch origin main && git rebase origin/main
 git rebase --skip  # if commit already on main
 git push --force-with-lease origin BRANCH
 
@@ -91,7 +127,7 @@ git push --force-with-lease origin BRANCH
 # 4. Batch PR creation
 for branch in $BRANCHES; do
   gh pr create --head $branch --title "..." --body "..."
-  gh pr merge $PR_NUM --auto --rebase
+  gh pr merge $PR_NUM --auto --squash   # use --squash for squash-only repos
 done
 ```
 
@@ -100,7 +136,7 @@ done
 Before rebasing, categorize each branch:
 
 | Category | Description | Strategy |
-| ---------- | ------------- | ---------- |
+| :--------- | :------------ | :--------- |
 | **Empty** | All commits already on main | Rebase + skip, no PR needed |
 | **Trivial** | 1-2 small conflicts (docstrings, imports) | Resolve inline with Edit tool |
 | **Complex** | 20+ conflicts requiring semantic understanding | Delegate to sub-agent |
@@ -111,11 +147,11 @@ Use git worktrees to rebase multiple branches simultaneously:
 
 ```bash
 # Current branch can be rebased in-place
-git rebase main
+git fetch origin main && git rebase origin/main
 
 # Other branches use worktrees
 git worktree add /tmp/rebase-NAME BRANCH
-cd /tmp/rebase-NAME && git rebase main
+cd /tmp/rebase-NAME && git fetch origin main && git rebase origin/main
 ```
 
 Key constraints:
@@ -127,7 +163,7 @@ Key constraints:
 
 **Skip-only (empty branches)**: When main already has the same fix:
 ```bash
-git rebase main  # conflicts appear
+git rebase origin/main  # conflicts appear
 git rebase --skip  # commit becomes empty, skip it
 ```
 
@@ -135,11 +171,11 @@ git rebase --skip  # commit becomes empty, skip it
 
 **Markdown table separator conflicts** (`:---` vs `-------`): When main enforces markdownlint-compliant `:---` separators and branches use plain `-------` dashes, the conflict is purely formatting. Resolution rule:
 - **Always keep main's `:---` style** (it is markdownlint-compliant; `-------` fails CI)
-- This can appear multiple times across separate rebase commits — resolve identically each time
+- This can appear multiple times across separate rebase commits -- resolve identically each time
 - For **content+formatting conflicts** (branch changed real content AND separator style): keep the branch's content data, but use main's `:---` separator style
 
 ```bash
-# Example conflict block — always resolve by keeping HEAD (main) version for separators:
+# Example conflict block -- always resolve by keeping HEAD (main) version for separators:
 # <<<<<<< HEAD
 # | Col A | Col B |
 # | :--- | :--- |
@@ -148,6 +184,26 @@ git rebase --skip  # commit becomes empty, skip it
 # | ------- | ------- |
 # >>>>>>> branch-commit
 # Resolution: use the :--- version from HEAD
+```
+
+**pixi.lock conflict resolution -- use --amend, not a new commit:**
+
+When resolving a pixi.lock conflict with:
+```bash
+rm pixi.lock && git add pixi.lock && git rebase --continue
+```
+...the rebase commit records pixi.lock as deleted. After the rebase, `pixi install`
+regenerates pixi.lock as an **untracked** file. You must fold it back into the correct commit.
+
+```bash
+# WRONG -- creates noise and a misleading commit:
+git add pixi.lock && git commit -m "chore: regenerate pixi.lock"
+
+# CORRECT -- folds the lock back into the right commit cleanly:
+pixi install                              # regenerates pixi.lock
+git add pixi.lock
+git commit --amend --no-edit             # fold into the preceding rebase commit
+git push --force-with-lease origin BRANCH
 ```
 
 **Complex semantic merges (20+ conflicts)**: Delegate to a general-purpose sub-agent with explicit resolution rules per conflict group. Provide:
@@ -169,8 +225,17 @@ Safety Net (and good practice) blocks `--force` to prevent accidental history de
 For branches with commits ahead of main:
 ```bash
 gh pr create --head BRANCH --title "..." --body "Closes #ISSUE ..."
+
+# For squash-only repositories (e.g., ProjectScylla):
+gh pr merge PR_NUM --auto --squash
+
+# For rebase-merge repositories:
 gh pr merge PR_NUM --auto --rebase
 ```
+
+**Note:** `gh pr merge --auto --rebase` fails with "Merge method rebase merging is not allowed
+on this repository" on squash-only repos. Check the repo's merge settings before assuming
+`--rebase` will work. Use `--squash` when in doubt or when the repo enforces squash merges.
 
 Skip PRs for empty branches (0 commits ahead of main).
 
@@ -189,7 +254,7 @@ Note: `git worktree prune` is always safe to run. If no stale worktrees exist it
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
-| --------- | ---------------- | --------------- | ---------------- |
+| :-------- | :-------------- | :------------- | :-------------- |
 | `git push --force` | Force-push after rebase | Safety Net hook blocked it as destructive | Always use `--force-with-lease` for safer force push |
 | `git rebase --continue --no-edit` | Skip editor during rebase continue | `--no-edit` is not a valid git rebase flag | Use `GIT_EDITOR=true git rebase --continue` instead |
 | Parallel worktree for current branch | `git worktree add /tmp/X CURRENT_BRANCH` | Git error: branch already checked out | Rebase current branch in-place, use worktrees only for other branches |
@@ -197,8 +262,11 @@ Note: `git worktree prune` is always safe to run. If no stale worktrees exist it
 | Branched from detached HEAD in submodule | `git checkout -b chore/fix` from detached HEAD at old pin | Branch was based on stale commit, main had 3-10 new commits with governance files and CI fixes | Always `git fetch origin main` then branch from `origin/main` explicitly |
 | Branched from current branch without fetch | `git checkout -b feat/x` on submodule's current branch | Current branch was behind main | Specify `origin/main` as the start point |
 | Assumed main hadn't moved | Didn't fetch before branching | Main had governance files, CI fixes, coverage improvements merged since submodule pin | Always `git fetch origin main` first, even if you think main is up to date |
-| Kept `-------` separator in markdown conflict | Resolved markdown table separator conflict by keeping branch's `-------` style | Fails markdownlint MD055/table rules in CI | Always use main's `:---` separator style — it is the markdownlint-compliant form |
-| Treated 0-commits-ahead branch as needing PR | Rebased branch that turned out to be identical to main | Branch's content was already merged; rebase left 0 commits ahead | Check `git log --oneline origin/main..BRANCH` before creating a PR — skip if empty |
+| Kept `-------` separator in markdown conflict | Resolved markdown table separator conflict by keeping branch's `-------` style | Fails markdownlint MD055/table rules in CI | Always use main's `:---` separator style -- it is the markdownlint-compliant form |
+| Treated 0-commits-ahead branch as needing PR | Rebased branch that turned out to be identical to main | Branch's content was already merged; rebase left 0 commits ahead | Check `git log --oneline origin/main..BRANCH` before creating a PR -- skip if empty |
+| `git rebase origin/main` without fetch | Ran rebase without prior `git fetch origin main` | Local cache of `origin/main` was stale; rebase reported "already up to date" when main had 10+ new commits | ALWAYS run `git fetch origin main` before every rebase, even mid-session |
+| New commit for pixi.lock after rebase | `git add pixi.lock && git commit -m "chore: regenerate pixi.lock"` | Adds noise and a misleading commit separate from the actual change commit | Use `git commit --amend --no-edit` to fold pixi.lock back into the preceding rebase commit |
+| `gh pr merge --auto --rebase` on squash-only repo | Used `--rebase` merge method on ProjectScylla | Repository disallows rebase merging -- command rejected with "Merge method rebase merging is not allowed" | Use `--squash` on ProjectScylla and other squash-only repos |
 
 ## Results & Parameters
 
@@ -248,7 +316,7 @@ final_block:  # 1 large conflict
 ### Markdown Separator Conflict Pattern (2026-05-02 Session)
 
 ```yaml
-# ProjectMnemosyne — 3 branches, all conflicts were markdown table separator style
+# ProjectMnemosyne -- 3 branches, all conflicts were markdown table separator style
 branches_total: 3
 conflict_type: markdown_table_separators  # :--- (main) vs ------- (branch)
 branches_with_formatting_only_conflicts: 2
@@ -258,9 +326,31 @@ worktree_pattern: /tmp/rebase-<slug>  # one per branch, removed after push
 push_strategy: --force-with-lease
 ```
 
+### Dependabot Rebase Pattern (2026-05-03 Session)
+
+```yaml
+# ProjectScylla -- 3 Dependabot branches + 59+ stale branch cleanup
+branches_total: 3
+conflict_type: pixi_lock  # pixi.lock conflict on all 3 branches
+resolution_strategy: rm_lock_then_pixi_install_then_amend
+lock_fix_pattern: |
+  rm pixi.lock
+  git add pixi.lock
+  git rebase --continue
+  pixi install
+  git add pixi.lock
+  git commit --amend --no-edit
+repo_merge_method: squash_only  # ProjectScylla disallows rebase merging
+auto_merge_flag: --squash  # NOT --rebase
+fetch_lesson: re-fetch origin/main between each branch in session
+stale_branches_cleaned: 59
+push_strategy: --force-with-lease
+```
+
 ## Verified On
 
 | Project | Context | Details |
-|---------|---------|---------|
+| :------- | :------- | :------- |
 | ProjectOdyssey | 8 branches, 26-conflict semantic merge, 2026-04-03 | Full semantic rebase including submodule detached HEAD fix |
 | ProjectMnemosyne | 3 branches, markdown separator conflicts only, 2026-05-02 | All conflicts were `:---` vs `-------` table separator style |
+| ProjectScylla | 3 Dependabot branches + 59 stale branch cleanup, 2026-05-03 | pixi.lock conflicts, squash-only repo, fetch-first trap |
