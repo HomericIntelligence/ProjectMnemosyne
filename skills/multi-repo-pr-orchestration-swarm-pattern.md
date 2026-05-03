@@ -1,12 +1,12 @@
 ---
 name: multi-repo-pr-orchestration-swarm-pattern
-description: "Orchestrate PR management across all HomericIntelligence repos using myrmidon swarm. Use when: (1) multiple repos have open PRs that need merging, conflict resolution, or CI fixes, (2) Odysseus submodule pins need updating after cross-repo PR merges, (3) coordinating parallel waves of agents across 5+ repos with sequential-within-repo merge ordering, (4) a PR branch has a duplicate commit that's already on main and needs rebase, (5) mergeStateStatus is BLOCKED but statusCheckRollup is empty — CI may not have started yet."
+description: "Orchestrate PR management across all HomericIntelligence repos using myrmidon swarm. Use when: (1) multiple repos have open PRs that need merging, conflict resolution, or CI fixes, (2) Odysseus submodule pins need updating after cross-repo PR merges, (3) coordinating parallel waves of agents across 5+ repos with sequential-within-repo merge ordering, (4) a PR branch has a duplicate commit that's already on main and needs rebase, (5) mergeStateStatus is BLOCKED but statusCheckRollup is empty — CI may not have started yet, (6) running hephaestus-plan-issues and hephaestus-implement-issues across 10+ repos in a cron-style automation loop, (7) multiple repos have failing PRs that need CI diagnosis and fixing via parallel sub-agents, (8) CI failures share common root causes across repos (org policy, missing images, deprecated syntax, formatting)."
 category: ci-cd
 date: 2026-04-23
-version: "1.2.0"
+version: "2.0.0"
 user-invocable: false
 verification: verified-ci
-tags: [multi-repo, PR, merge, submodule, myrmidon-swarm, cross-repo, orchestration, odysseus, duplicate-commit, pin-audit]
+tags: [multi-repo, PR, merge, submodule, myrmidon-swarm, cross-repo, orchestration, odysseus, duplicate-commit, pin-audit, automation-loop, pixi, pythonpath, gh-cli, rate-limit, ci-triage, org-policy, container-image]
 history: multi-repo-pr-orchestration-swarm-pattern.history
 ---
 
@@ -18,8 +18,9 @@ history: multi-repo-pr-orchestration-swarm-pattern.history
 | ------- | ------- |
 | **Date** | 2026-04-19 |
 | **Objective** | Use myrmidon swarm to scan all HomericIntelligence repos, merge open PRs, resolve conflicts, fix CI failures, and update Odysseus submodule pins -- all in parallel waves |
-| **Outcome** | Successful -- 87 PRs across 8 repos merged, submodule pins updated, Odysseus rebased on main |
+| **Outcome** | Successful -- 87 PRs across 8 repos merged, submodule pins updated, Odysseus rebased on main. Absorbed multi-repo-automation-loop-shell-script + multi-repo-pr-triage on 2026-05-03. |
 | **Verification** | verified-ci |
+| **Absorbed** | multi-repo-automation-loop-shell-script (v1.0.0), multi-repo-pr-triage (v1.0.0) on 2026-05-03 |
 
 ## When to Use
 
@@ -28,6 +29,13 @@ history: multi-repo-pr-orchestration-swarm-pattern.history
 - You need to merge PRs across repos in parallel but sequentially within each repo to avoid conflicts
 - CI failures block merges and need triage/fix agents before PRs can land
 - Coordinating Dependabot, feature, and fix PRs across the full ecosystem in one session
+- Running `hephaestus-plan-issues` + `hephaestus-implement-issues` in a recurring loop across multiple repos
+- Repos may not be locally cloned yet — need dynamic org repo listing and auto-clone logic
+- Python automation is installed in a `pixi` environment (no system `python` on PATH)
+- Need to guard against GitHub GraphQL rate limit exhaustion silently producing empty results
+- Multiple repos have failing PRs that need CI diagnosis and root-cause categorization
+- CI failures share common root causes across repos (missing container images, org policy, deprecated syntax, formatting violations)
+- New repositories need to be cloned as peers before analysis or automation
 
 ## Verified Workflow
 
@@ -273,6 +281,181 @@ gh api repos/HomericIntelligence/<repo>/branches/main --jq '.protection.required
 ```
 
 A non-required check failing does NOT prevent pinning to that commit.
+<<<<<<< HEAD
+=======
+
+### Phase 0 (Supplemental): Automation Loop Across All Repos
+
+For recurring hephaestus-plan-issues + hephaestus-implement-issues runs across all repos:
+
+```bash
+# Resolve Python via pixi (not system python — pixi envs only expose python3)
+HEPHAESTUS_DIR="/path/to/ProjectHephaestus"
+PYTHON="$(cd "$HEPHAESTUS_DIR" && pixi run which python)"
+export PYTHONPATH="$HEPHAESTUS_DIR${PYTHONPATH:+:$PYTHONPATH}"
+
+# Fetch repo list — exclude Odysseus in jq filter
+REPOS=($(gh repo list HomericIntelligence --json name,isArchived \
+  --jq '[.[] | select(.isArchived == false) | select(.name | test("Odysseus"; "i") | not) | .name] | .[]'))
+
+# Guard: empty list = rate limit hit
+if [[ ${#REPOS[@]} -eq 0 ]]; then
+  echo "ERROR: No repos returned — possible GraphQL rate limit" >&2
+  exit 1
+fi
+
+# Auto-clone missing repos
+for repo in "${REPOS[@]}"; do
+  REPO_DIR="$WORKSPACE_DIR/$repo"
+  if [ ! -d "$REPO_DIR" ]; then
+    gh repo clone "HomericIntelligence/$repo" "$REPO_DIR"
+  fi
+done
+
+# Loop N times
+for loop in $(seq 1 "$LOOPS"); do
+  for repo in "${REPOS[@]}"; do
+    ISSUES=$(gh issue list --repo "HomericIntelligence/$repo" --state open --limit 1000 --json number,title,labels)
+    "$PYTHON" -m hephaestus.automation.planner ...
+    "$PYTHON" -m hephaestus.automation.implementer ...
+  done
+done
+
+# Suppress RuntimeWarning noise from -m invocations
+export PYTHONWARNINGS=ignore::RuntimeWarning
+```
+
+**Key rules for automation loops:**
+1. **Resolve Python path via pixi** — Do not use bare `python` or `python3`. Use `pixi run which python` to get the absolute path and store as `$PYTHON`.
+2. **Export PYTHONPATH** — Set `PYTHONPATH="$HEPHAESTUS_DIR:${PYTHONPATH}"` so the `hephaestus` package is importable from any target repo directory.
+3. **Fetch org repo list dynamically** — Use `gh repo list <org> --json name,isArchived` with a jq filter; exclude archived repos and Odysseus. Do not hardcode the list.
+4. **Guard against empty list** — After fetching, check `${#REPOS[@]} -eq 0`. If zero repos returned, exit with error — prevents silent no-op loops when GraphQL quota is exhausted.
+5. **Auto-clone missing repos** — For each repo in the list, check if the local directory exists; if not, run `gh repo clone`.
+6. **Cap loops**: On loop 3+, add `--no-follow-up` to prevent duplicate issue filing.
+
+**Priority resolution for the plan command in `implementer._generate_plan()`:**
+
+```python
+# Priority 1: installed entry point
+plan_cmd = shutil.which("hephaestus-plan-issues")
+if plan_cmd:
+    return [plan_cmd, ...]
+
+# Priority 2: PYTHONPATH module invocation
+if os.environ.get("PYTHONPATH"):
+    return [sys.executable, "-m", "hephaestus.automation.planner", ...]
+
+# Priority 3: legacy fallback for ProjectScylla
+plan_script = repo_dir / "scripts" / "plan_issues.py"
+if plan_script.exists():
+    return [sys.executable, str(plan_script), ...]
+```
+
+**Script invocation options:**
+
+```bash
+# Minimal — dry run only
+./scripts/run_automation_loop.sh --dry-run
+
+# Full production run
+./scripts/run_automation_loop.sh --loops 5 --max-workers 3
+```
+
+**Runtime notes:**
+- Repos fetched dynamically: 14 repos (all HomericIntelligence except Odysseus and archived)
+- GraphQL quota: 5000 requests/hour; 14 repos × prefetch calls exhausts quota in ~1 full run
+- RuntimeWarning on `-m` invocations: `<frozen runpy>:128: RuntimeWarning: 'hephaestus.automation.planner' found in sys.modules after import of package 'hephaestus.automation'` — safe to ignore, suppress with `PYTHONWARNINGS=ignore::RuntimeWarning`
+
+### Phase 4b (Supplemental): CI Triage — Root Cause Categorization
+
+When diagnosing CI failures across multiple repos, categorize before spawning fix agents:
+
+```bash
+# 1. Clone missing repos as peers
+cd /home/mvillmow/Agents/JulIA/
+gh repo clone HomericIntelligence/<missing-repo>
+
+# 2. Enumerate open PRs per repo
+gh pr list --repo HomericIntelligence/<repo> --limit 50
+
+# 3. Check CI failures per PR
+gh pr list --repo HomericIntelligence/<repo> --json number,title,statusCheckRollup
+gh pr checks <number> --repo HomericIntelligence/<repo>
+
+# 4. Launch parallel sub-agents — one per repo with failures
+```
+
+**Common root causes to categorize:**
+- **Missing container image**: CI references `ghcr.io` image that doesn't exist yet (only built on merge to main)
+- **Missing build file**: Containerfile/Dockerfile COPY references file not present (e.g., README.md for hatchling)
+- **Deprecated syntax**: e.g., `alias` → `comptime` in Mojo; `--Werror` treats unused vars as errors
+- **Formatting violations**: clang-format, ruff, markdownlint — always run dry-run to get actual count
+- **Org policy**: GitHub Actions not permitted to create PRs; `default_workflow_permissions: read` overrides YAML
+- **Missing permissions**: workflow YAML lacks needed permissions (and org policy may override anyway)
+
+**Per-PR sub-agent workflow:**
+
+```bash
+# Each sub-agent:
+gh pr checkout <number>
+# Diagnose root cause from CI logs
+gh run view $RUN_ID --log-failed
+# Apply minimal fix, commit, push
+git add <fixed-files>
+git commit -m "fix: resolve CI failures for <description>"
+git push
+# Enable auto-merge if allowed
+gh pr merge --auto --rebase
+```
+
+**Settings-requiring fixes** (flag to user — cannot fix via CLI):
+- GitHub Advanced Security (paid plan, repo settings)
+- "Allow GitHub Actions to create PRs" (org settings → github.com/organizations/\<org\>/settings/actions)
+
+**Containerfile README fix pattern** (when `pyproject.toml` declares `readme = "README.md"` via hatchling):
+
+```dockerfile
+COPY pyproject.toml pixi.toml pixi.lock .pre-commit-config.yaml README.md ./
+```
+
+**Workflow direct-commit pattern** (when PR creation is blocked by org policy):
+
+```yaml
+permissions:
+  contents: write
+steps:
+  - uses: actions/checkout@v4
+    with:
+      token: ${{ secrets.GITHUB_TOKEN }}
+  - name: Commit changes
+    run: |
+      git config user.name "github-actions[bot]"
+      git config user.email "github-actions[bot]@users.noreply.github.com"
+      git add .
+      git diff --staged --quiet || git commit -m "chore: auto-update [skip ci]"
+      git push origin main
+```
+
+**Grandfathering pre-existing test count violations:**
+
+```yaml
+# In .pre-commit-config.yaml
+- id: check-test-count
+  exclude: |
+    (?x)^(
+      tests/path/to/existing_large_file.mojo|
+      tests/path/to/another.mojo
+    )$
+```
+
+**clang-format at scale** (use Docker to match exact CI version):
+
+```bash
+docker run --rm -v $(pwd):/code ghcr.io/...:ci \
+  find /code/src /code/include /code/tests -name "*.cpp" -o -name "*.h" | \
+  xargs clang-format-18 -i
+```
+>>>>>>> 5783bcc7 (chore(skills): consolidate clusters B+G — absorb stale-agent-refs + multi-repo skills (sub-wave 1 remainder))
 
 ### Phase 6: Verification
 
@@ -310,6 +493,16 @@ git status
 | Unlimited CLEAN merges per wave | Attempted to merge all 39 CLEAN Myrmidons PRs in one pass | Each merge advanced main, making all downstream stacked branches DIRTY — cascade caused 24+ PRs to need rebase | Cap at 5 merges per repo per wave; rescan and run Wave 1b rebase before continuing |
 | Resolving conflicts with `git restore --theirs` in sub-agents | Wave 2 Sonnet agents used `git restore --theirs` for Myrmidons shell-script conflicts | Safety Net built-in rule blocks this form; cannot be whitelisted | Use Python subprocess to write `MERGE_HEAD:<path>` content directly (see Phase 3 workaround) |
 | Auto-merge on repos with it disabled | `gh pr merge --auto --rebase` on AchaeanFleet and Myrmidons | Both repos have `enablePullRequestAutoMerge` disabled (GraphQL error) | Detect early with `gh api repos/HomericIntelligence/<repo> --jq '.allow_auto_merge'`; fall back to direct `--rebase` merge once CI passes |
+| Use bare `python` command in automation loop | Called `python -m hephaestus.automation.planner` directly | `python` not on system PATH — pixi only installs `python` inside its virtualenv, not globally | Always resolve Python via `pixi run which python` and cache as `$PYTHON` |
+| Use `python3` in automation loop | Called `python3 -m hephaestus.automation.planner` | `python3` exists on system but lacks the pixi-installed packages | Must use the pixi-managed Python binary, not system Python |
+| Run automation dry-run across 14 repos × 5 loops | Tested full dry-run end-to-end | Exhausted 5000/hour GraphQL quota from issue prefetch calls across 14 repos; took ~1 hour to reset | Dry runs still make real API calls in `prefetch_issue_states`. Rate-limit dry runs to fewer repos or fewer loops |
+| Trust `gh repo list` result without validation in automation loop | Assumed non-empty list = valid | When GraphQL quota was exhausted, `gh repo list` returned an error and jq produced an empty array; loop ran 5 iterations over 0 repos and exited 0 (completely silent) | Add explicit empty-list guard: `if [[ ${#REPOS[@]} -eq 0 ]]; then exit 1; fi` |
+| Implementer used hardcoded `scripts/plan_issues.py` | `_generate_plan()` called `scripts/plan_issues.py` in target repo | Only works for ProjectScylla (legacy layout); fails for all other repos | Fix with priority resolution: (1) `hephaestus-plan-issues` entry point, (2) `sys.executable -m hephaestus.automation.planner`, (3) `scripts/plan_issues.py` legacy fallback |
+| Fix org Actions permissions via API | `gh api` PATCH to org Actions permissions | HTTP 403 — org-level policy requires org admin via web UI | Cannot fix org-level `can_approve_pull_request_reviews` via API; must use web UI at github.com/organizations/\<org\>/settings/actions |
+| Estimate clang-format violations from PR description | Assumed "6 test files" from issue description | Actual violations spanned 30 files across src/, include/, tests/ | Always run `clang-format --dry-run` to get actual count before committing |
+| Assume alias→comptime is the only Mojo blocker | Only searched for `alias` keyword | Other blockers existed: unused var (--Werror), type mismatch (Float64 vs Int) | After fixing the stated issue, run the compiler to discover additional blockers |
+| Add pull-requests: write to workflow YAML | Added permission to "Update Marketplace" workflow | GitHub org policy overrides YAML permissions — `default_workflow_permissions: read` takes precedence | Org-level default_workflow_permissions takes precedence over workflow YAML; switch to direct-commit pattern instead |
+| Reference custom CI container before it's built | Used ghcr.io image in workflows on PR branches | Image only gets built on merge to main, not during PR runs | Don't reference custom CI images in workflows until the image build pipeline is proven to work; check `docker manifest inspect <image>` first |
 
 ## Results & Parameters
 
@@ -397,10 +590,14 @@ gh pr checks $PR_NUM --repo HomericIntelligence/$REPO
 | --------- | --------- | --------- |
 | HomericIntelligence ecosystem | 5 repos (Agamemnon, Nestor, Keystone, Charybdis, Hephaestus) with open PRs, myrmidon swarm orchestration, 2026-04-04 | Wave 1: 4 Haiku agents merged clean PRs; Wave 1b: Sonnet agents fixed conflicts; Wave 1c: Sonnet agent fixed Charybdis CI; Wave 2: Odysseus submodule pins updated |
 | HomericIntelligence ecosystem | 8 repos (AchaeanFleet 50, Myrmidons 45, + 6 others), 87 PRs total, myrmidon swarm orchestration, 2026-04-19 | Wave 1 cap-5 rule critical; ~15% subsumed PRs; Safety Net Python workaround for conflict resolution; auto-merge disabled on AchaeanFleet + Myrmidons |
+| ProjectHephaestus | PR #271 — automation loop dry run across 14 HomericIntelligence repos | Planner dry run confirmed `[DRY RUN] Would plan issue #N` for all repos; implementer dry run blocked by rate limit during second run; pixi Python resolution and PYTHONPATH export patterns validated |
+| ProjectOdyssey | 5 open PRs (alias→comptime, ruff, workflow fixes), CI triage session 2026-03-15 | alias→comptime migration, ruff formatting, workflow inventory fixes, just install step, pre-commit grandfathering |
+| ProjectMnemosyne | Marketplace workflow broken by org policy, CI triage session 2026-03-15 | org-level `can_approve_pull_request_reviews: false` → switched to direct-commit pattern |
+| ProjectScylla | Missing CI container image, CI triage session 2026-03-15 | Removed container blocks from workflows; added README.md to Containerfile COPY |
+| ProjectKeystone | clang-format violations + Dockerfile issues on Dependabot PR, CI triage session 2026-03-15 | Docker clang-format-18 run to format 30 files; removed 3 stale COPY lines; supply-chain-scanning flagged as manual action |
 
 ## References
 
-- [multi-repo-pr-triage](multi-repo-pr-triage.md) -- CI failure diagnosis across repos (complements Phase 1c)
 - [batch-pr-rebase-myrmidon-wave-execution](batch-pr-rebase-myrmidon-wave-execution.md) -- Single-repo wave execution (detailed conflict strategies)
 - [batch-pr-rebase-conflict-resolution-workflow](batch-pr-rebase-conflict-resolution-workflow.md) -- Comprehensive rebase/conflict patterns
 - [tooling-meta-repo-submodule-cleanup-swarm](tooling-meta-repo-submodule-cleanup-swarm.md) -- Submodule cleanup swarm (complements Phase 5)
