@@ -1,0 +1,17 @@
+# ci-cd-dependabot-pixi-lock-drift-fix — History
+
+## v1.0.0 (2026-05-01)
+
+**Changed by:** Initial capture — ProjectOdyssey Dependabot PR session
+**Verification:** verified-local
+
+### What changed
+- Initial skill creation
+- Documented basic pattern: checkout Dependabot branch, run `pixi install`, commit lock, force-push
+- Recorded two failed attempts: rebasing without regenerating, trusting Dependabot's stale lock commit
+- Added worktree isolation pattern for cleaner separation
+
+### Why
+Dependabot PRs that update Python package constraints in pyproject.toml cause pixi.lock to become
+stale. CI fails in 6-12 seconds with `lock-file not up-to-date with the workspace` as a pre-flight
+check. The fix is to regenerate pixi.lock after checking out (and rebasing) the branch.
