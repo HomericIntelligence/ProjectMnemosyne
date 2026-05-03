@@ -3,6 +3,29 @@
 # Each entry records what changed and why; full snapshots for major versions only.
 ---
 
+<<<<<<< HEAD
+=======
+## v2.0.0 (2026-05-03)
+
+Absorbed: multi-repo-automation-loop-shell-script (v1.0.0), multi-repo-pr-triage (v1.0.0)
+FA rows merged: 10 new rows (5 from automation-loop + 5 from pr-triage); 0 deduped; post total = 21
+VO rows merged: 5 new rows (1 from automation-loop + 4 from pr-triage); 0 deduped; post total = 7
+Code blocks added: 10 new blocks (2 from automation-loop + 8 from pr-triage); post total >= 23
+
+### Changes
+- Bumped version 1.2.0 → 2.0.0 (major: absorption merge)
+- Description expanded with 3 new trigger conditions (automation loop, CI triage, org-policy)
+- Tags expanded: added automation-loop, pixi, pythonpath, gh-cli, rate-limit, ci-triage, org-policy, container-image
+- When to Use: 7 new triggers unioned from absorbed files
+- Phase 0 (Supplemental) added: automation loop across all repos (pixi Python resolution, dynamic repo list, auto-clone, GraphQL guard, priority plan-cmd resolution)
+- Phase 4b (Supplemental) added: CI triage root-cause categorization, per-repo sub-agent workflow, org-policy patterns, Containerfile fix, direct-commit workflow pattern, clang-format Docker pattern, pre-commit grandfathering
+- Failed Attempts: 10 new rows added (5 automation-loop + 5 triage), 0 deduped
+- Verified On: 5 new rows added (1 automation-loop + 4 triage), 0 deduped
+- References: removed now-absorbed multi-repo-pr-triage link
+
+---
+
+>>>>>>> 5783bcc7 (chore(skills): consolidate clusters B+G — absorb stale-agent-refs + multi-repo skills (sub-wave 1 remainder))
 ## v1.2.0 — 2026-04-23
 
 **Changed by**: Odysseus issue closeout session (Issues #102, #76, #136)

@@ -1,0 +1,5 @@
+## v2.0.0 (2026-05-03)
+
+Absorbed: mojo-setitem-glibc-hook-skip (v1.0.0), mojo-setitem-test-pattern (v1.0.0)
+FA rows merged: 10 (4 from lvalue-semantics + 4 from glibc-hook-skip + 2 from test-pattern; 0 dedupes)
+VO rows merged: 2 (1 from lvalue-semantics + 0 from glibc-hook-skip + 1 from test-pattern)

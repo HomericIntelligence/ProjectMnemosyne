@@ -1,0 +1,5 @@
+## v2.0.0 (2026-05-03)
+
+Absorbed: mojo-reexport-chain-wiring (v1.0.0), mojo-reexport-limitation-audit (v1.0.0)
+FA rows merged: 7 (1 dedupe applied: just/pixi-run lesson combined from chain-wiring FA2 + limitation-audit FA1)
+VO rows merged: 1

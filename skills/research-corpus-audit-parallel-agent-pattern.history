@@ -1,5 +1,13 @@
 # research-corpus-audit-parallel-agent-pattern — History
 
+## v2.0.0 (2026-05-03)
+
+Absorbed: research-corpus-inline-derivation-standard (v1.1.0), research-corpus-exec-summary-overhead-honesty (v1.0.0)
+FA rows merged: 22 (16 canonical + 3 unique from inline-derivation + 2 from exec-summary; 1 dedup: bare-tag lessons merged)
+VO rows merged: 8 (5 canonical + 2 inline-derivation + 1 exec-summary)
+
+---
+
 ## v1.4.0 (2026-04-18)
 
 **Changed by:** ArchIdeas corpus final remediation pass (39-file strict quality audit, 4 remaining issues fixed)
