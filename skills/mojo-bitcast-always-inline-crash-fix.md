@@ -218,19 +218,15 @@ The variant `tensor._data.bitcast[T]()[] = val` (no index, dereference at offset
 
 #### Why `AnyTensor.store()` / `AnyTensor.set()` Is Safe
 
-The internal `store()` method in `any_tensor.mojo`:
+The internal `store()`/`set()` method in `any_tensor.mojo`:
 
 ```mojo
 fn store[dtype: DType](self, index: Int, value: Scalar[dtype])
-```
-
-Uses `read` convention for `self` — the tensor stays alive through the entire call under Mojo's borrow semantics. The `bitcast` inside `store()` is safe because it operates on a live reference, not a temporary derived from ASAP-eligible value.
-
-The safe replacement `set()` signature:
-
-```mojo
 fn set[dtype: DType](mut self, index: Int, value: Scalar[dtype]) raises
 ```
+
+Uses `read` convention for `self` — the tensor stays alive through the entire call under Mojo's borrow semantics. The `bitcast` inside `store()`/`set()` is safe because it operates on a live reference, not a temporary derived from ASAP-eligible value.
+
 
 #### Discovery: Finding All Instances
 
@@ -494,8 +490,6 @@ grep -rc "\.set(" . --include="*.mojo" | grep -v ":0" | wc -l
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
->>>>>>> 46e270b6 (fix(skills): restore missing code blocks in clusters E, H, L1 — fixer pass)
-=======
 | ProjectOdyssey | shared/tensor/any_tensor.mojo — @always_inline fix, blog PR #4900, fix PR #4897, swarm PRs #5200–#5204 | [notes](./mojo-bitcast-always-inline-crash-fix.notes.md) |
 
 ## Related Skills
