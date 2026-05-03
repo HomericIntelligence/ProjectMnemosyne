@@ -494,8 +494,6 @@ grep -rc "\.set(" . --include="*.mojo" | grep -v ":0" | wc -l
 
 | Project | Context | Details |
 | --------- | --------- | --------- |
->>>>>>> 46e270b6 (fix(skills): restore missing code blocks in clusters E, H, L1 — fixer pass)
-=======
 | ProjectOdyssey | shared/tensor/any_tensor.mojo — @always_inline fix, blog PR #4900, fix PR #4897, swarm PRs #5200–#5204 | [notes](./mojo-bitcast-always-inline-crash-fix.notes.md) |
 
 ## Related Skills
