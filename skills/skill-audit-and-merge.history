@@ -1,5 +1,18 @@
 # skill-audit-and-merge -- History
 
+## v2.1.0 (2026-05-03)
+**Changed by:** 12-cluster Myrmidon swarm consolidation session (PR #1549)
+**Verification:** verified-ci (PR #1549 passed CI and was merged)
+
+### What changed
+- Added Verified On row: PR #1549, 12 clusters, 14 canonicals, ~34 absorbed files
+- Added 4 new Failed Attempts: fixer version regression, Wave B false-FAIL measurement, cherry-pick failure, fence arithmetic floor gap
+
+### Why
+Phase 5 capture after largest-ever consolidation run. Documents failure modes that were not in v2.0.0 and will prevent repetition on future consolidation runs.
+
+---
+
 ## v1.0.0 (2026-03-19)
 
 **Changed by:** Initial skill capture — plugin consolidation session on ProjectMnemosyne
