@@ -1,12 +1,34 @@
+# ci-cd-ruleset-bootstrap-deadlock — History
+
+## v1.1.0 (2026-05-03)
+
+**Changed by:** Live verification on HomericIntelligence/ProjectScylla ruleset ID 15556492, 2026-05-03
+**Verification:** verified-ci
+
+### What changed
+- Option 2 rewritten: the "empty array" approach (`required_status_checks = []`) causes HTTP 422 from the GitHub API and must NOT be used
+- Correct approach documented: remove the entire `required_status_checks` rule entry from the `rules[]` array using a filter, then PUT the modified ruleset; restore original JSON after PR merges
+- Added new Failed Attempts row for the empty-array 422 error
+- Added warning note in the Option 2 block and Results section
+
+### Why
+The previous v1.0.0 Option 2 set `required_status_checks` to `[]` (empty list). The GitHub API
+returns HTTP 422 with "Expected at least 1 elements, got 0" when PUT with an empty array for
+`required_status_checks`. The rule entry must be removed entirely from `rules[]`, not patched to
+an empty list. Confirmed live on ProjectScylla ruleset 15556492: empty-array PUT → 422; remove-rule
+PUT → 200; PR merged successfully.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
 ---
 name: ci-cd-ruleset-bootstrap-deadlock
 description: "Detect and resolve a CI ruleset chicken-and-egg deadlock where a PR introducing a new workflow file is permanently blocked because the ruleset requires check names that only exist in the workflow being added. Use when: (1) a PR adding a new CI workflow shows mergeStateStatus=BLOCKED with zero failing checks, (2) re-triggering CI produces no new runs, (3) auto-merge is armed but never fires despite all existing checks passing."
 category: ci-cd
-date: 2026-05-03
-version: "1.1.0"
+date: 2026-04-28
+version: "1.0.0"
 user-invocable: false
 verification: verified-ci
-history: ci-cd-ruleset-bootstrap-deadlock.history
 tags:
   - github
   - rulesets
@@ -22,11 +44,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-03 |
+| **Date** | 2026-04-28 |
 | **Objective** | Unblock a PR that introduces a new CI workflow whose job names are already in the branch ruleset's required_status_checks |
-| **Outcome** | Successful — confirmed via admin bypass merge and ruleset remove-and-restore approach |
-| **Verification** | verified-ci (confirmed on HomericIntelligence/ProjectCharybdis PRs #4 and #5, 2026-04-28; and HomericIntelligence/ProjectScylla ruleset 15556492, 2026-05-03) |
-| **History** | [changelog](./ci-cd-ruleset-bootstrap-deadlock.history) |
+| **Outcome** | Successful — confirmed via admin bypass merge and ruleset inspection |
+| **Verification** | verified-ci (confirmed on HomericIntelligence/ProjectCharybdis PRs #4 and #5, 2026-04-28) |
 
 ## When to Use
 
@@ -106,41 +127,36 @@ A repository admin uses the GitHub web UI "Merge without waiting for requirement
 ```
 After merge, the workflow exists on main and future PRs will satisfy the ruleset naturally.
 
-**Option 2 — Temporarily remove the required_status_checks rule from the ruleset (safest for automation)**
-
-> **CRITICAL:** Do NOT set `required_status_checks` to an empty array `[]`. The GitHub API returns
-> HTTP 422 "Expected at least 1 elements, got 0". You must **remove the entire rule entry** from
-> `rules[]`, not patch it to an empty list.
+**Option 2 — Temporarily remove check names from ruleset (safest for automation)**
 
 ```bash
-# Fetch and save the original ruleset (needed for restore after merge)
+# Fetch ruleset
 gh api repos/$OWNER/$REPO/rulesets/$RULESET_ID > /tmp/ruleset.json
 
-# Remove the required_status_checks rule entry entirely from rules[]
+# Remove the offending required_status_checks (or all of them temporarily)
 python3 << 'EOF'
 import json
 
 with open("/tmp/ruleset.json") as f:
     ruleset = json.load(f)
 
-# Filter OUT the required_status_checks rule (do NOT set it to [])
-ruleset["rules"] = [
-    rule for rule in ruleset.get("rules", [])
-    if rule.get("type") != "required_status_checks"
-]
+# Remove required_status_checks temporarily
+for rule in ruleset.get("rules", []):
+    if "required_status_checks" in rule.get("parameters", {}):
+        rule["parameters"]["required_status_checks"] = []
 
 with open("/tmp/ruleset_patched.json", "w") as f:
     json.dump(ruleset, f, indent=2)
 EOF
 
-# Apply the patch — ruleset now has no required_status_checks rule
+# Apply the patch
 gh api -X PUT repos/$OWNER/$REPO/rulesets/$RULESET_ID \
   --input /tmp/ruleset_patched.json
 
 # Merge the PR (now unblocked)
 gh pr merge $PR_NUMBER --squash --repo $OWNER/$REPO
 
-# Restore the original ruleset (all checks restored)
+# Restore the required checks
 gh api -X PUT repos/$OWNER/$REPO/rulesets/$RULESET_ID \
   --input /tmp/ruleset.json
 ```
@@ -172,7 +188,6 @@ gh pr create --base main --repo $OWNER/$REPO \
 | Attempt 1 | Re-triggered CI runs manually via `gh workflow run` and `gh pr comment` push triggers | No new workflow runs were created because the workflow file does not exist on the base branch (`main`); GitHub resolves workflow files from the base branch for PR checks | GitHub only runs workflows that exist on the **base branch** of a PR. A workflow added only in the PR branch cannot run against that PR. |
 | Attempt 2 | Enabled auto-merge expecting it to fire once existing checks completed | Auto-merge armed successfully but never fired because `mergeStateStatus` stayed `BLOCKED` due to the ruleset requiring check names that were never emitted | Auto-merge fires only when all required status checks pass; a permanently absent check is treated the same as a permanently failing one — the PR stays blocked indefinitely |
 | Attempt 3 | Checked classic branch protection to understand which checks were required | `GET /repos/{owner}/{repo}/branches/main/protection` returned 404 because the repo uses branch rulesets, not classic protection | When classic branch protection returns 404, always check `/rulesets` and `/rules/branches/{branch}` — the enforcement mechanism is different but equally binding |
-| Attempt 4 | Set `required_status_checks` to `[]` (empty array) and PUT the modified ruleset | HTTP 422 Unprocessable Entity: "Validation Failed: Invalid rule 'required_status_checks': Invalid parameter required_status_checks: Expected at least 1 elements, got 0" | Never set `required_status_checks` to an empty array. Remove the **entire rule entry** from `rules[]` using a list comprehension filter instead. Confirmed on ProjectScylla ruleset 15556492, 2026-05-03. |
 
 ## Results & Parameters
 
@@ -211,16 +226,6 @@ GET /repos/{owner}/{repo}/rules/branches/{branch}
 GET /repos/{owner}/{repo}/branches/{branch}/protection
 ```
 
-**GitHub API behaviour for required_status_checks rule (CRITICAL):**
-
-```text
-PUT with rules[].parameters.required_status_checks = []
-  → HTTP 422: "Expected at least 1 elements, got 0"   ← DO NOT USE
-
-PUT with required_status_checks rule removed entirely from rules[]
-  → HTTP 200: ruleset updated successfully             ← CORRECT APPROACH
-```
-
 **How this differs from related ruleset issues:**
 
 | Issue | Symptom | Root Cause |
@@ -236,7 +241,7 @@ Is mergeStateStatus=BLOCKED AND failing_count=0?
   └─ Yes: Does the workflow exist on main?
        ├─ No (bootstrap deadlock) → Pick resolution:
        │     ├─ Need it merged TODAY?         → Option 1: Admin bypass
-       │     ├─ Have ruleset write access?     → Option 2: Remove rule entry, merge, restore
+       │     ├─ Have ruleset write access?     → Option 2: Temporarily remove checks
        │     └─ Want governance continuity?   → Option 3: Transitional workflow PR
        └─ Yes (different issue) → Check matrix contexts or code scanning config
 ```
@@ -246,4 +251,10 @@ Is mergeStateStatus=BLOCKED AND failing_count=0?
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | HomericIntelligence/ProjectCharybdis | PRs #4 and #5, 2026-04-28 | New `_required.yml` adding granular job names (`lint`, `unit-tests`, `integration-tests`, `security/dependency-scan`); ruleset already required those names; both PRs blocked with 0 failing checks; resolved via admin bypass |
-| HomericIntelligence/ProjectScylla | Ruleset ID 15556492, 2026-05-03 | Empty-array PUT returned HTTP 422; remove-rule PUT succeeded; PR merged; original ruleset with all 8 checks restored successfully |
+```
+
+---
+
+## v1.0.0 (2026-04-28)
+
+**Initial version.**
