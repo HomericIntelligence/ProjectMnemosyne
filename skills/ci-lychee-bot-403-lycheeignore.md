@@ -15,7 +15,7 @@ tags:
   - lychee
   - link-check
   - ci
-  - 403
+  - "403"
   - lycheeignore
   - bot-protection
 ---

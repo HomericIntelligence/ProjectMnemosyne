@@ -18,7 +18,7 @@
     "tooling": 215,
     "training": 6
   },
-  "last_updated": "2026-05-03T23:51:56Z",
+  "last_updated": "2026-05-03T23:52:34Z",
   "plugins": [
     {
       "name": "agent-coverage-check",
@@ -2051,7 +2051,7 @@
         "lychee",
         "link-check",
         "ci",
-        403,
+        "403",
         "lycheeignore",
         "bot-protection"
       ]
