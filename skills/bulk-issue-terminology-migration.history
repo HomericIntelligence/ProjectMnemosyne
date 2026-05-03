@@ -1,5 +1,11 @@
 # bulk-issue-terminology-migration — History
 
+## v2.0.0 (2026-05-03)
+
+Absorbed: bulk-issue-filing (v1.0.0), bulk-issue-dedup (v1.0.0)
+FA rows merged: 11 (6 canonical + 4 dedup + 1 filing, no exact-lesson duplicates)
+VO rows merged: 2 new (ProjectOdyssey bulk-filing, ProjectOdyssey dedup); 1 existing retained
+
 ## v1.1.0 (2026-04-05)
 
 **Changed by:** /learn workflow — post-session amendment from ADR-006 migration
