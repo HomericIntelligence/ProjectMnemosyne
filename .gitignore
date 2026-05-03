@@ -14,5 +14,10 @@ build/
 # Pytest cache
 .pytest_cache/
 
+# Coverage reports
+.coverage
+.coverage.*
+htmlcov/
+
 # Local Claude Code settings (user-specific permissions)
 .claude/settings.local.json
