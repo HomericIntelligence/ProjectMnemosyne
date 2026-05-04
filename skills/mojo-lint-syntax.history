@@ -1,0 +1,20 @@
+# mojo-lint-syntax skill history
+# Format: append-only. Each entry records the previous version snapshot before an amendment.
+
+## v1.0.0 — archived 2026-05-03
+
+```yaml
+name: mojo-lint-syntax
+description: Validate Mojo syntax against current v0.26.1+ standards. Use to catch
+  syntax errors before compilation.
+category: optimization
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+```
+
+### Summary
+
+Initial version. Covered deprecated patterns (`inout self`, `@value`, `DynamicVector`,
+`-> (T1, T2)` tuple syntax), constructor issues, type issues, and ownership issues.
+Did not cover `take`/`owned` argument modifier misuse in `def` functions.

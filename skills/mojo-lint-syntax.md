@@ -3,9 +3,11 @@ name: mojo-lint-syntax
 description: Validate Mojo syntax against current v0.26.1+ standards. Use to catch
   syntax errors before compilation.
 category: optimization
-date: '2026-03-19'
-version: 1.0.0
+date: '2026-05-03'
+version: 1.1.0
 mcp_fallback: none
+verification: verified-local
+history: mojo-lint-syntax.history
 ---
 # Lint Mojo Syntax
 
@@ -61,6 +63,20 @@ grep -r "inout self\|@value\|DynamicVector\|->" *.mojo | grep -v "result\|fn"
 - Wrong parameter type in `__init__` (must be `out self`)
 - Missing trait conformances (`Copyable`, `Movable`)
 - Incorrect initialization order
+- ❌ `take`/`owned` argument modifiers in `def` functions — these are ONLY valid in `fn`
+  - `def __init__(out self, *, take existing: Self)` is a parse error in Mojo 0.26.3
+  - `mojo format` silently strips the space: `take existing` → `takeexisting` (now a single
+    parameter name — compiles but does nothing useful, `existing` field is inaccessible)
+  - Fix: delete the constructor if it has no callers (most common), or convert to
+    `fn __init__(out self, owned existing: Self):` if genuinely needed
+  - Detection:
+
+    ```bash
+    # Find "takeXxx" or "ownedXxx" — space was stripped by formatter
+    grep -rn "\btake[A-Z]\|\bowned[A-Z]" examples/ shared/
+    # Also find the unstripped form before formatting
+    grep -rn "def.*\*, take \|def.*\*, owned " examples/ shared/
+    ```
 
 **Type Issues**:
 
@@ -119,12 +135,14 @@ Before committing Mojo code:
 - [ ] All non-copyable returns use `^` operator
 - [ ] All type annotations present in fn declarations
 - [ ] Zero compiler warnings
+- [ ] No `take`/`owned` argument modifiers in `def` functions (use `fn` or delete if no callers)
 
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 | --------- | ---------------- | --------------- | ---------------- |
-| N/A | Direct approach worked | N/A | Solution was straightforward |
+| `def __init__(out self, *, take existing: Self)` | Used `take` modifier in a `def` function to express ownership transfer | Parse error in Mojo 0.26.3; `take`/`owned` modifiers are only valid in `fn` functions. `mojo format` strips the space, turning `take existing` into `takeexisting` as a single parameter name — compiles silently but `existing` field is inaccessible and the constructor is useless | Delete dead constructors (zero callers) or convert to `fn __init__(out self, owned existing: Self):` if genuinely needed |
+
 ## Results & Parameters
 
 N/A — this skill describes a workflow pattern.
