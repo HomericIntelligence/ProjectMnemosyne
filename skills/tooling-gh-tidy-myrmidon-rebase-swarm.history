@@ -1,0 +1,88 @@
+# tooling-gh-tidy-myrmidon-rebase-swarm — History
+
+## v1.1.0 (2026-05-03)
+
+**Changed by:** ProjectMnemosyne /learn — observed hephaestus-tidy swarm crash on ProjectMnemosyne branches
+**Verification:** verified-local
+
+### What changed
+
+- Added new "When to Use" trigger: `rate_limit_event` crash in agent swarm
+- Added new Failed Attempts row: all agents crash with `Unknown message type: rate_limit_event`
+- Added workaround (parallel `Agent()` calls) to Verified Workflow
+- Added suggested fix (catch `rate_limit_event` in event loop) to Results & Parameters
+- Updated `verification` field from `verified-precommit` to `verified-local` (workaround executed end-to-end)
+- Bumped version 1.0.0 → 1.1.0
+
+### Why
+
+Running `/hephaestus:tidy` on ProjectMnemosyne revealed that the swarm dispatch loop in
+`hephaestus/github/tidy.py` does not handle the `rate_limit_event` message type emitted by
+`claude-code-sdk`. All 10 agents failed in ~4 seconds with
+`Unknown message type: rate_limit_event`. The root issue is in the SDK event loop, not
+actual rate limiting. A workaround using direct parallel `Agent()` calls resolved all 5
+real conflicts successfully.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: tooling-gh-tidy-myrmidon-rebase-swarm
+description: "Use when wrapping the gh-tidy CLI extension to add Myrmidon swarm rebase-conflict resolution. Triggers: (1) developer wants single-repo branch tidy with interactive delete prompts preserved, (2) gh-tidy aborts rebases due to conflicts and you want agents to fix them autonomously, (3) you need a branch-tidying CLI that dispatches per-branch swarm agents without ever deleting branches."
+category: tooling
+date: 2026-04-25
+version: "1.0.0"
+user-invocable: false
+verification: verified-precommit
+tags: [gh-tidy, myrmidon, rebase, swarm, git, worktree, branch, asyncio, claude-code-sdk]
+---
+
+# Skill: gh-tidy + Myrmidon Rebase Swarm
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-25 |
+| **Objective** | Wrap `gh tidy --rebase-all` with a Myrmidon swarm that semantically resolves rebase conflicts gh-tidy aborted, without ever deleting branches |
+| **Outcome** | hephaestus-tidy CLI + /hephaestus:tidy skill built and passing lint/mypy/unit tests; CI pending |
+| **Verification** | verified-precommit — ruff, mypy, 12 unit tests pass locally; CI running on ProjectHephaestus PR #306 |
+
+> **Warning:** This workflow has not been validated end-to-end in CI. Treat as verified-precommit until CI confirms.
+
+## When to Use
+
+- A developer sits in a single repo and wants all local branches rebased onto trunk in one command
+- `gh tidy --rebase-all` works for most branches but aborts some due to conflicts; you want Claude to fix the failures
+- You need to preserve gh-tidy's interactive y/N branch-delete prompts (the tool, not the swarm, deletes branches)
+- You're adding a per-repo rebase-fix CLI to a shared tooling package (e.g., ProjectHephaestus)
+- Conflicts in the failed branches need semantic resolution (not blind `--ours`/`--theirs`)
+
+## Verified Workflow
+
+> **Warning:** This workflow has not been validated end-to-end in CI. Treat as verified-precommit until CI confirms.
+
+### Quick Reference
+
+```bash
+# Run: tidy current repo interactively, then swarm-fix failed rebases
+hephaestus-tidy
+
+# Preview without executing
+hephaestus-tidy --dry-run
+
+# Run gh-tidy only, no swarm
+hephaestus-tidy --no-swarm
+
+# Limit swarm concurrency
+hephaestus-tidy --max-concurrent 3
+```
+
+### gh-tidy Problem Branch Parser
+
+...
+
+[Full v1.0.0 content as committed — see git history for exact text]
+```
+
+---

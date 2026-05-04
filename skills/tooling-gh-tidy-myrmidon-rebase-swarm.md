@@ -1,26 +1,28 @@
 ---
 name: tooling-gh-tidy-myrmidon-rebase-swarm
-description: "Use when wrapping the gh-tidy CLI extension to add Myrmidon swarm rebase-conflict resolution. Triggers: (1) developer wants single-repo branch tidy with interactive delete prompts preserved, (2) gh-tidy aborts rebases due to conflicts and you want agents to fix them autonomously, (3) you need a branch-tidying CLI that dispatches per-branch swarm agents without ever deleting branches."
+description: "Use when wrapping the gh-tidy CLI extension to add Myrmidon swarm rebase-conflict resolution. Triggers: (1) developer wants single-repo branch tidy with interactive delete prompts preserved, (2) gh-tidy aborts rebases due to conflicts and you want agents to fix them autonomously, (3) you need a branch-tidying CLI that dispatches per-branch swarm agents without ever deleting branches, (4) hephaestus-tidy swarm crashes immediately with 'Unknown message type: rate_limit_event' and all branches remain failing."
 category: tooling
-date: 2026-04-25
-version: "1.0.0"
+date: 2026-05-03
+version: "1.1.0"
 user-invocable: false
-verification: verified-precommit
-tags: [gh-tidy, myrmidon, rebase, swarm, git, worktree, branch, asyncio, claude-code-sdk]
+verification: verified-local
+history: tooling-gh-tidy-myrmidon-rebase-swarm.history
+tags: [gh-tidy, myrmidon, rebase, swarm, git, worktree, branch, asyncio, claude-code-sdk, rate-limit-event]
 ---
 
 # Skill: gh-tidy + Myrmidon Rebase Swarm
+
+**History:** [changelog](./tooling-gh-tidy-myrmidon-rebase-swarm.history)
 
 ## Overview
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-04-25 |
+| **Date** | 2026-05-03 |
 | **Objective** | Wrap `gh tidy --rebase-all` with a Myrmidon swarm that semantically resolves rebase conflicts gh-tidy aborted, without ever deleting branches |
-| **Outcome** | hephaestus-tidy CLI + /hephaestus:tidy skill built and passing lint/mypy/unit tests; CI pending |
-| **Verification** | verified-precommit — ruff, mypy, 12 unit tests pass locally; CI running on ProjectHephaestus PR #306 |
-
-> **Warning:** This workflow has not been validated end-to-end in CI. Treat as verified-precommit until CI confirms.
+| **Outcome** | hephaestus-tidy CLI + /hephaestus:tidy skill built; swarm crashes on `rate_limit_event`; workaround via parallel Agent() calls resolves conflicts |
+| **Verification** | verified-local — workaround (parallel Agent() calls) executed and confirmed; swarm bug directly observed on ProjectMnemosyne |
+| **History** | [changelog](./tooling-gh-tidy-myrmidon-rebase-swarm.history) |
 
 ## When to Use
 
@@ -29,10 +31,11 @@ tags: [gh-tidy, myrmidon, rebase, swarm, git, worktree, branch, asyncio, claude-
 - You need to preserve gh-tidy's interactive y/N branch-delete prompts (the tool, not the swarm, deletes branches)
 - You're adding a per-repo rebase-fix CLI to a shared tooling package (e.g., ProjectHephaestus)
 - Conflicts in the failed branches need semantic resolution (not blind `--ours`/`--theirs`)
+- **`hephaestus-tidy` swarm immediately crashes all agents (~4 seconds each) with `Unknown message type: rate_limit_event`** — use the parallel Agent() workaround below
 
 ## Verified Workflow
 
-> **Warning:** This workflow has not been validated end-to-end in CI. Treat as verified-precommit until CI confirms.
+> **Verification level:** verified-local — the parallel Agent() workaround was executed end-to-end on ProjectMnemosyne and resolved all 5 real conflicts. The hephaestus-tidy swarm itself is verified-precommit only (CI pending on ProjectHephaestus PR #306).
 
 ### Quick Reference
 
@@ -48,6 +51,10 @@ hephaestus-tidy --no-swarm
 
 # Limit swarm concurrency
 hephaestus-tidy --max-concurrent 3
+
+# --- WORKAROUND if swarm crashes with rate_limit_event ---
+# Bypass the swarm and use direct parallel Agent() calls per branch
+# (see "Workaround: Direct Parallel Agent() Calls" section below)
 ```
 
 ### gh-tidy Problem Branch Parser
@@ -202,6 +209,64 @@ NOTE: <one sentence summary>
 
 Parse with: `re.search(r"STATUS:\s*(\S+)", text)`
 
+### Workaround: Direct Parallel Agent() Calls (when swarm crashes with rate_limit_event)
+
+If `hephaestus-tidy` swarm crashes with `Unknown message type: rate_limit_event`, bypass
+the swarm entirely and dispatch one `Agent()` call per branch with explicit conflict
+resolution instructions:
+
+```python
+# Example: resolve rebase conflicts on a list of branches via parallel agents
+# (pseudocode — adapt to your agent framework)
+branches_to_fix = ["branch-a", "branch-b", "branch-c"]
+
+for branch in branches_to_fix:
+    Agent(
+        description=f"Resolve rebase conflict on {branch}",
+        prompt=f"""
+        Resolve the rebase conflict on branch {branch} against origin/main.
+
+        Steps:
+        1. git fetch origin
+        2. git switch {branch}
+        3. git rebase origin/main
+        4. For each conflict: examine both sides, apply correct resolution
+        5. git add <resolved-files>
+        6. GIT_EDITOR=true git rebase --continue
+        7. git push --force-with-lease --force-if-includes origin {branch}
+
+        FORBIDDEN: Do not delete any branch or worktree.
+        """
+    )
+```
+
+**Why this works:** Direct `Agent()` calls do not go through the `claude-code-sdk` event
+loop in `tidy.py` that fails to handle `rate_limit_event`. The agent framework handles
+rate limiting internally without crashing.
+
+### Suggested Fix for hephaestus-tidy (ProjectHephaestus)
+
+In `hephaestus/github/tidy.py`, the agent event loop needs to handle `rate_limit_event`
+message type explicitly instead of raising on unknown types:
+
+```python
+# Proposed fix in _run_one() / the query event loop:
+async for message in query(prompt=prompt, options=options):
+    # Handle rate_limit_event — do NOT raise, just wait and continue
+    msg_type = getattr(message, "type", None)
+    if msg_type == "rate_limit_event":
+        await asyncio.sleep(60)  # or use message.retry_after_ms if available
+        continue
+
+    text = getattr(message, "text", None) or str(message)
+    if "STATUS:" in text:
+        m = re.search(r"STATUS:\s*(\S+)", text)
+        if m:
+            status = m.group(1)
+```
+
+**File to fix:** `hephaestus/github/tidy.py` in ProjectHephaestus.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -212,6 +277,8 @@ Parse with: `re.search(r"STATUS:\s*(\S+)", text)`
 | Long strings in f-strings | Multi-part message in single f-string line | E501 line-too-long even after breaking Python line — f-string content counted | Break the string content itself, not just the Python syntax |
 | `type: ignore[import]` on claude_code_sdk | Added ignore comment for missing stubs | mypy had stubs for claude_code_sdk; comment triggered `unused-ignore` error | Remove the comment; if stubs are missing use `import-untyped` not `import` |
 | `assert proc.stdout is not None` without noqa | Asserting Popen's stdout is set after `stdout=PIPE` | ruff S101 flags assert in production code | Add `# noqa: S101` — this assert is justified (Popen with PIPE always sets stdout) |
+| Running `hephaestus-tidy` swarm (cap=5) with 10 conflicting branches | Dispatched full Myrmidon swarm via hephaestus-tidy on ProjectMnemosyne — 10 branches, cap=5 | All 10 agents failed in ~4 seconds each with `ERROR - [<branch>] agent exception: Unknown message type: rate_limit_event`; zero branches resolved | `claude-code-sdk` emits `rate_limit_event` during rate limiting; `tidy.py` event loop treats unrecognized message types as fatal exceptions rather than skipping or waiting |
+| Retrying `hephaestus-tidy` after `rate_limit_event` crash | Assumed crash was transient; re-ran hephaestus-tidy swarm | Same crash on every retry — identical failure mode, not transient | The bug is structural in `tidy.py`: unhandled message types always raise; retrying without a code fix always reproduces |
 
 ## Results & Parameters
 
@@ -236,6 +303,16 @@ hephaestus-tidy [--dry-run] [--trunk BRANCH] [--no-swarm] [--max-concurrent N] [
 | `subsumed` | All commits already on trunk after rebase | Branch still exists; user can delete manually |
 | `conflict-too-complex` | Agent could not confidently resolve | Manual intervention needed |
 | `failed` | Exception or push failure | Manual intervention needed |
+
+### Known Bug: `rate_limit_event` Crash in Swarm
+
+| Property | Value |
+| --------- | ----- |
+| **Symptom** | All swarm agents fail in ~4 seconds with `Unknown message type: rate_limit_event` |
+| **Affected file** | `hephaestus/github/tidy.py` in ProjectHephaestus |
+| **Root cause** | `claude-code-sdk` emits `rate_limit_event` message type; tidy.py event loop does not handle it and raises a fatal exception |
+| **Workaround** | Use direct parallel `Agent()` calls with explicit rebase instructions (see Verified Workflow) |
+| **Suggested fix** | Catch `rate_limit_event` in the `async for message in query(...)` loop; sleep and continue instead of raising |
 
 ### Key Design Decisions
 
@@ -269,3 +346,4 @@ hephaestus-tidy = "hephaestus.github.tidy:main"
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | ProjectHephaestus | PR #306 feat/hephaestus-tidy — ruff + mypy + 12 unit tests pass | verified-precommit; CI pending |
+| ProjectMnemosyne | /hephaestus:tidy run — 10 conflict branches, swarm crashed; parallel Agent() workaround resolved 5 real conflicts | verified-local; rate_limit_event bug directly observed |
