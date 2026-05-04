@@ -1,14 +1,13 @@
+## v1.0.0 — 2026-03-14
+
 ---
 name: just-recipe-heredoc-fix
 description: 'Fix heredoc-in-just-recipe whitespace errors by replacing with printf.
-  Use when: just recipe uses <<EOF heredoc and fails with ''inconsistent leading whitespace''.
-  Also covers parameter alias/normalization patterns enabled by the bash shebang.'
+  Use when: just recipe uses <<EOF heredoc and fails with ''inconsistent leading whitespace''.'
 category: ci-cd
-date: 2026-05-03
-version: "1.1.0"
+date: 2026-03-14
+version: 1.0.0
 user-invocable: false
-verification: verified-local
-history: just-recipe-heredoc-fix.history
 ---
 ## Overview
 
@@ -25,7 +24,6 @@ history: just-recipe-heredoc-fix.history
 - Encountering `"Recipe line has inconsistent leading whitespace"` from `just --list` or `just <recipe>`
 - The heredoc body lines have 2-space indent but the surrounding recipe uses 4-space indent
 - The heredoc terminator appears at column 0 (bare `EOF` or `ENTRY`)
-- Recipe parameter value needs normalization/aliasing (short name → full resource name)
 
 ## Verified Workflow
 
@@ -62,7 +60,6 @@ Replace the entire `cat >> ... <<ENTRY ... ENTRY` block with a `printf` call:
 ```
 
 Key points:
-
 - Keep the same leading whitespace (4 spaces) as the rest of the recipe
 - Use `printf` format string for the fixed text skeleton
 - Use `%s` placeholders for variable values, passed as positional args
@@ -76,41 +73,6 @@ just --list | grep <recipe-name>
 # Should now show the recipe without errors
 ```
 
-### Parameter Alias Pattern
-
-The `#!/usr/bin/env bash` shebang also enables full shell `if` logic for parameter
-normalization — mapping short/alias names to canonical resource names before use.
-
-```just
-train model="lenet_emnist" precision="fp32" epochs="10":
-    #!/usr/bin/env bash
-    MODEL="{{model}}"
-    if [ "$MODEL" = "lenet" ] || [ "$MODEL" = "lenet5" ]; then MODEL="lenet_emnist"; fi
-    echo "Training $MODEL..."
-    just _run "pixi run mojo run -I . examples/$MODEL/run_train.mojo --epochs {{epochs}}"
-```
-
-**Critical pitfall — operator precedence bug:** avoid the bare `&&` form:
-
-```bash
-# WRONG — bash evaluates || and && left-to-right without grouping:
-# [ "lenet" = "lenet" ] → true, short-circuits first ||
-# then: true && MODEL="lenet_emnist" → sets MODEL correctly for first alias
-# BUT: [ "lenet5" = "lenet" ] || [ "lenet5" = "lenet5" ] → true (second ||)
-# then: true && MODEL="lenet_emnist" works here by accident
-# Edge case: any input where first || is true causes short-circuit and && is NOT reached
-[ "$MODEL" = "lenet" ] || [ "$MODEL" = "lenet5" ] && MODEL="lenet_emnist" || true  # BUG
-
-# CORRECT — proper if block eliminates the precedence ambiguity:
-if [ "$MODEL" = "lenet" ] || [ "$MODEL" = "lenet5" ]; then MODEL="lenet_emnist"; fi
-```
-
-The `if ... ; then ... fi` form is unambiguous regardless of how many `||` conditions
-are chained. Always use it when two or more aliases map to the same canonical name.
-
-**Verification (2026-05-03):** `just train lenet fp16 1` and `just train lenet5 fp32 1`
-both resolved to `examples/lenet_emnist/run_train.mojo` and ran end-to-end (CI: PR #5351).
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -118,7 +80,6 @@ both resolved to `examples/lenet_emnist/run_train.mojo` and ran end-to-end (CI: 
 | Heredoc with `ENTRY` terminator at column 0 | `cat >> "$OUTPUT" <<ENTRY\n  {...}\nENTRY` | `just` "inconsistent leading whitespace" — terminator at column 0 doesn't match recipe's 4-space indent | `just` validates whitespace of ALL lines in recipe body, including heredoc terminators |
 | Indented heredoc terminator (`ENTRY`) | Tried indenting the `ENTRY` terminator to match recipe indent | bash heredoc terminators must be at column 0 (or use `<<-` with tab-only indent) — mixing bash and just constraints makes this impossible cleanly | bash and just have conflicting whitespace requirements for heredoc terminators |
 | `<<-ENTRY` with tabs | Considered using `<<-` (strip leading tabs) with tab-indented body | Recipe already uses spaces throughout; mixing tabs only for the heredoc body creates a maintenance hazard | `printf` is simpler and avoids the bash/just whitespace conflict entirely |
-| Bare `&&` alias form | `[ "$M" = "a" ] \|\| [ "$M" = "b" ] && M="full"` | Operator precedence bug: bash evaluates `\|\|` and `&&` left-to-right; when first `\|\|` operand is true it short-circuits and `&&` is skipped, leaving `M` unset | Always use `if [ ... ] \|\| [ ... ]; then ...; fi` — eliminates precedence ambiguity |
 
 ## Results & Parameters
 
