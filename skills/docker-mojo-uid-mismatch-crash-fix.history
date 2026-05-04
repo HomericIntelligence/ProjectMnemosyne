@@ -1,5 +1,59 @@
 # docker-mojo-uid-mismatch-crash-fix — History
 
+## v1.2.0 (2026-05-03)
+
+**Changed by:** Session context — PR #5351, bind-mount subdir ownership fix
+**Verification:** verified-local (build linker writable, datasets/ writable, lenet5_weights/ created; CI pending PR #5351)
+
+### What changed
+
+- Added three new "When to Use" trigger conditions for bind-mount subdir ownership failures:
+  non-recursive chown, plain sudo blocking in non-interactive exec, missing training dirs
+- Added Fix 6: Dockerfile sudoers grant for `mkdir`/`chown`/`chmod` + entrypoint
+  `_ensure_writable` with `sudo -n` (non-interactive), `chown -R` (recursive), and extended
+  dir list (`datasets/`, `lenet5_weights/`, test fixture dirs, `/tmp/mojo-tests`)
+- Added Fix 6 to Quick Reference block
+- Added three new Failed Attempts rows: non-recursive chown, plain sudo without `-n`,
+  missing `mkdir` in sudoers NOPASSWD grant
+- Updated verification note in Verified Workflow to reflect Fix 6 status
+- Added new "Verified On" row for PR #5351
+- Updated overview date to 2026-05-03 and verification to verified-local
+
+### Why
+
+v1.1.0 fixed the HOME/.modular startup crash and CI cache key UID isolation. A separate
+bind-mount ownership problem remained: bind-mounted workspace subdirs stay root:root inside
+the container even after `_ensure_writable` runs. Three root causes compounded: (1) non-recursive
+chown only reclaimed the top-level dir, leaving existing subdirs root:root; (2) plain `sudo`
+blocked for a password in non-interactive `podman compose exec -T` sessions; (3) `/bin/mkdir`
+was not in the NOPASSWD sudoers grant, so `sudo mkdir` silently failed. Training dirs
+(`datasets/`, `lenet5_weights/`) were also missing from the `_ensure_writable` call list.
+
+### Previous version (v1.1.0) snapshot
+
+```markdown
+---
+name: docker-mojo-uid-mismatch-crash-fix
+description: "Fix deterministic Mojo runtime crash (exit 134) when container image UID
+  differs from host runner UID. Use when: (1) mojo run crashes before executing any
+  user code with 'filesystem error: status: Permission denied [/home/.../.modular]',
+  (2) CI passes locally (UID 1000) but fails in CI runner (UID 1001+), (3) crash is
+  100% reproducible — not a flaky JIT issue, (4) cached CI image was built at a
+  different UID than the current runner's uid, (5) execution crashed with
+  __fortify_fail_abort in libKGENCompilerRTShared.so before any test output."
+category: ci-cd
+date: 2026-04-14
+version: "1.1.0"
+user-invocable: false
+verification: verified-precommit
+history: docker-mojo-uid-mismatch-crash-fix.history
+---
+
+[... full v1.1.0 content as committed to main branch ...]
+```
+
+---
+
 ## v1.1.0 (2026-04-14)
 
 **Changed by:** Session context — PR #5252 CI investigation, container UID cache key fix
