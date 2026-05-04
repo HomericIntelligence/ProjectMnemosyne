@@ -1,9 +1,9 @@
 ---
 name: ci-cd-dependabot-pixi-lock-drift-fix
-description: "Use when: (1) a Dependabot PR fails CI with 'lock-file not up-to-date with the workspace', (2) a Dependabot PR updates requirements*.txt or pyproject.toml but pixi.lock was not regenerated, (3) CI on a Dependabot branch completes in 6-12 seconds (pre-flight lock rejection, not a test failure)"
+description: "Use when: (1) a Dependabot PR fails CI with 'lock-file not up-to-date with the workspace', (2) a Dependabot PR updates requirements*.txt or pyproject.toml but pixi.lock was not regenerated, (3) CI on a Dependabot branch completes in 6-12 seconds (pre-flight lock rejection, not a test failure), (4) a prior regeneration commit exists on the branch but CI still fails (main has advanced again), (5) local branch and origin branch have diverged in both directions"
 category: ci-cd
 date: 2026-05-03
-version: "1.1.0"
+version: "1.2.0"
 user-invocable: false
 tags: [pixi, dependabot, lock-file, pip, ci, rebase, squash-merge]
 ---
@@ -25,6 +25,8 @@ tags: [pixi, dependabot, lock-file, pip, ci, rebase, squash-merge]
 - CI job duration is 6–12 seconds (pre-flight `pixi install --locked` rejection — not a test failure)
 - After rebasing a Dependabot branch, CI still fails even though the rebase was clean
 - The Dependabot PR includes a `pixi.lock` update commit but it has gone stale after main advanced further
+- **A prior regeneration commit already exists on the branch, but CI still fails** — main has accumulated more `pyproject.toml`-touching PRs since the last fix; the symptom is identical (6–12s failure); the fix is the same (fetch → rebase → `pixi install`)
+- **Local branch and origin branch have diverged in both directions** (e.g., `local: 2 ahead, origin: 3 ahead`) — a prior session force-pushed a fix to the same Dependabot branch; always start from `git fetch origin` and check out the *remote* state, not a stale local cache
 
 ## Verified Workflow
 
@@ -32,7 +34,7 @@ tags: [pixi, dependabot, lock-file, pip, ci, rebase, squash-merge]
 
 ```bash
 # 1. Fetch first — never skip this; local cache of origin/main may be stale
-git fetch origin main
+git fetch origin
 
 # 2. Check out the Dependabot branch (or use a worktree for isolation)
 git checkout <dependabot-branch>
@@ -60,8 +62,10 @@ SKIP=audit-doc-policy pre-commit run --all-files
 # 7. Force-push to the Dependabot branch
 git push --force-with-lease origin <dependabot-branch>
 
-# 8. Re-enable auto-merge (squash only — rebase merging not allowed)
-gh pr merge <pr-number> --auto --squash
+# 8. Re-enable auto-merge — strategy must match the target repo's merge policy (check CLAUDE.md)
+# --squash vs --rebase depends on repo merge policy (check CLAUDE.md)
+gh pr merge <pr-number> --auto --squash   # for repos that disable rebase merging
+gh pr merge <pr-number> --auto --rebase   # for repos that require rebase merging (e.g. ProjectScylla)
 ```
 
 ### Detailed Steps
@@ -71,12 +75,20 @@ gh pr merge <pr-number> --auto --squash
 
 2. **Always fetch before rebasing** — local `origin/main` may be stale cached data:
    ```bash
-   git fetch origin main
+   git fetch origin
    ```
    Skipping this step causes `git rebase origin/main` to report "Current branch is up to date"
    even when main has actually advanced 10+ commits. After fetching, the rebase sees the real
    divergence (including recently merged PRs that modify `pyproject.toml`, which cause genuine
    pixi.lock conflicts).
+
+   Also check whether the local branch and origin branch have diverged — a prior fix session may
+   have force-pushed to the same Dependabot branch, leaving the local checkout stale:
+   ```bash
+   git status   # or: git log --oneline origin/<branch>..HEAD && git log --oneline HEAD..origin/<branch>
+   ```
+   If local and remote are diverged in both directions, reset to the remote state or start fresh
+   from `origin/<branch>`.
 
 3. Fetch and check out the Dependabot branch locally:
    ```bash
@@ -126,10 +138,11 @@ gh pr merge <pr-number> --auto --squash
    git push --force-with-lease origin <dependabot-branch>
    ```
 
-9. Re-enable auto-merge — GitHub silently clears it on force-push. Use `--squash` (rebase merging
-   is disabled in this repository):
+9. Re-enable auto-merge — GitHub silently clears it on force-push. The merge strategy must match
+   the target repository's policy (check CLAUDE.md for that repo):
    ```bash
-   gh pr merge <pr-number> --auto --squash
+   gh pr merge <pr-number> --auto --squash   # repos that disable rebase merging (e.g. ProjectOdyssey)
+   gh pr merge <pr-number> --auto --rebase   # repos that require rebase merging (e.g. ProjectScylla)
    ```
 
 ### Multi-PR Sequential Fixing
@@ -139,10 +152,10 @@ earlier may merge to main while you're working on the next branch, invalidating 
 
 ```bash
 # Pattern for each PR in sequence:
-git fetch origin main          # always re-fetch before each rebase
+git fetch origin          # always re-fetch before each rebase
 git checkout <next-branch>
 git rebase origin/main
-# ... pixi install, commit, push, gh pr merge --auto --squash ...
+# ... pixi install, commit, push, gh pr merge --auto <--squash|--rebase> ...
 ```
 
 ### Using a Worktree for Isolation
@@ -154,7 +167,7 @@ BRANCH="$(gh pr view <pr-number> --json headRefName --jq '.headRefName')"
 WORKTREE="/tmp/dep-$(echo "$BRANCH" | tr '/' '-')"
 REPO_DIR="<project-root>"
 
-git -C "$REPO_DIR" fetch origin main
+git -C "$REPO_DIR" fetch origin
 git -C "$REPO_DIR" worktree add "$WORKTREE" "origin/$BRANCH"
 cd "$WORKTREE"
 git rebase origin/main
@@ -165,7 +178,7 @@ git commit -m "chore: update pixi.lock for dependabot constraint change"
 # OR: git commit --amend --no-edit  (if pixi.lock was deleted during conflict resolution)
 SKIP=audit-doc-policy pre-commit run --all-files
 git push --force-with-lease origin "HEAD:$BRANCH"
-gh pr merge <pr-number> --auto --squash
+gh pr merge <pr-number> --auto --squash   # or --rebase per repo policy
 git -C "$REPO_DIR" worktree remove "$WORKTREE"
 ```
 
@@ -175,9 +188,11 @@ git -C "$REPO_DIR" worktree remove "$WORKTREE"
 | --------- | ---------------- | --------------- | ---------------- |
 | Rebasing without regenerating `pixi.lock` | Clean `git rebase origin/main` with no conflicts | `pixi.lock` still encodes constraint hashes from before the Dependabot bump; CI immediately rejects it | A clean rebase is not enough — always run `pixi install` after rebasing a Dependabot branch |
 | Relying on Dependabot's included `pixi.lock` commit | Dependabot sometimes regenerates `pixi.lock` in its own commit | That commit goes stale once `main` advances past it; the hash no longer matches | Never trust Dependabot's `pixi.lock` commit after main has moved; always regenerate locally |
-| Skipping `git fetch origin main` before rebase | Ran `git rebase origin/main` directly | Reported "Current branch is up to date" — stale local cache; main had actually advanced 10+ commits including a just-merged pytest-asyncio PR that caused a real pixi.lock conflict | Always run `git fetch origin main` first; the rebase command uses locally cached ref data |
-| `gh pr merge --auto --rebase` | Attempted rebase-style auto-merge | GraphQL error: "Merge method rebase merging is not allowed on this repository" | Use `--squash` instead of `--rebase` for auto-merge in repositories that disable rebase merging |
+| Skipping `git fetch origin` before rebase | Ran `git rebase origin/main` directly | Reported "Current branch is up to date" — stale local cache; main had actually advanced 10+ commits including a just-merged pytest-asyncio PR that caused a real pixi.lock conflict | Always run `git fetch origin` first; the rebase command uses locally cached ref data |
+| `gh pr merge --auto --rebase` in a squash-only repo | Attempted rebase-style auto-merge | GraphQL error: "Merge method rebase merging is not allowed on this repository" | Use `--squash` instead of `--rebase` for auto-merge in repositories that disable rebase merging |
 | Adding a separate commit for pixi.lock after conflict resolution | Ran `git add pixi.lock && git commit -m "..."` after `rm pixi.lock ... git rebase --continue` | Creates an extra commit in history; the rebase commit already recorded pixi.lock as deleted — the regenerated file belongs in that same commit | Use `git commit --amend --no-edit` after `pixi install` when pixi.lock shows as untracked post-conflict |
+| Trusting a prior regeneration commit on the branch | A prior fix session had already committed a regenerated pixi.lock; assumed CI would pass | `origin/main` had accumulated 4 more commits with `pyproject.toml` changes since the prior fix; the lock was stale again with the identical 6–12s CI symptom | A regeneration commit does not stay valid indefinitely — if main advances with more `pyproject.toml` changes, re-fetch and re-regenerate |
+| Not fetching before rebasing due to stale local branch | Local branch appeared to be at the correct commit; skipped `git fetch origin` | Local branch and origin branch had diverged in both directions (local: 2 ahead, origin: 3 ahead) from a prior force-push session; rebasing off stale `origin/main` produced a duplicate-commit history | Always run `git fetch origin` first and verify the local/remote state matches before rebasing |
 
 ## Results & Parameters
 
@@ -193,7 +208,7 @@ This is a pre-flight check — `pixi install --locked` runs before any tests and
 ### Expected Output After Fix
 
 ```
-$ git fetch origin main
+$ git fetch origin
 From https://github.com/<org>/<repo>
  * branch              main       -> FETCH_HEAD
 
@@ -216,6 +231,7 @@ CI will restart and complete the full test matrix (not 6–12 seconds).
 | --------- | --------- | --------- |
 | ProjectOdyssey | Dependabot PR updating Python package constraints in pyproject.toml; CI failed with lock-file not up-to-date; pixi install succeeded; CI pending after force-push | Local verification 2026-05-01 |
 | ProjectScylla | Three sequential Dependabot PRs (pandas, vl-convert-python, matplotlib); pixi.lock conflict during rebase when main had advanced; resolved with rm+add+continue pattern; squash auto-merge used | verified-local 2026-05-02 |
+| ProjectScylla | PR #1861 pandas bump (>=2.0,<3 → >=2.3.3,<3); prior regeneration commit existed but was stale (main had advanced 4 commits); local/origin branches diverged; fetch + rebase + pixi install + amend + force-push; rebase auto-merge (ProjectScylla policy) | verified-precommit 2026-05-03 |
 
 ## References
 

@@ -1,5 +1,82 @@
 # ci-cd-dependabot-pixi-lock-drift-fix — History
 
+## v1.2.0 (2026-05-03)
+
+**Changed by:** ProjectScylla PR #1861 fix session
+**Verification:** verified-precommit
+
+### What changed
+- Added two new "When to Use" triggers:
+  - Prior regeneration commit exists on branch but CI still fails (main has advanced again)
+  - Local branch and origin branch have diverged in both directions (stale local after prior force-push)
+- Added two new Failed Attempts rows:
+  - "Trusting a prior regeneration commit on the branch" — goes stale if main advances with more pyproject.toml changes
+  - "Not fetching before rebasing due to stale local branch" — local/origin diverged in both directions
+- Updated Quick Reference step 8: auto-merge command now shows both `--squash` and `--rebase` variants with a note that the strategy must match the repo's CLAUDE.md policy
+- Updated step 9 detailed text: same policy note; added ProjectScylla as `--rebase` example
+- Updated `git fetch origin main` → `git fetch origin` throughout (broader fetch is more correct)
+- Added divergence-check guidance in Detailed Steps step 2
+- Updated Multi-PR section to use `git fetch origin` and show `<--squash|--rebase>` placeholder
+- Updated Worktree section: `git fetch origin main` → `git fetch origin`; add policy note on merge flag
+- Added ProjectScylla PR #1861 row to Verified On table
+- Updated frontmatter: version 1.1.0 → 1.2.0; verification → verified-precommit; added triggers (4), (5) to description
+
+### Why
+ProjectScylla PR #1861 (pandas bump >=2.0,<3 → >=2.3.3,<3) had a prior regeneration commit from an
+earlier fix session, but `origin/main` had since accumulated 4 more commits with pyproject.toml changes.
+CI still failed with the identical 6–12s symptom. The local branch and origin branch had also diverged
+(2 vs 3 commits) because the prior session had force-pushed. This session confirmed that the fix is
+idempotent — fetch + rebase + pixi install always works regardless of prior fix attempts — and that
+ProjectScylla uses `--rebase` not `--squash` for auto-merge.
+
+### Previous version (v1.1.0) content snapshot
+
+```
+version: "1.1.0"
+date: 2026-05-03
+verification: verified-local (ProjectScylla multi-PR session 2026-05-02)
+
+When to Use (v1.1.0):
+- A Dependabot PR updates requirements*.txt, pyproject.toml, or other Python constraint files
+- CI fails immediately with lock-file not up-to-date with the workspace
+- CI job duration is 6–12 seconds
+- After rebasing a Dependabot branch, CI still fails even though the rebase was clean
+- The Dependabot PR includes a pixi.lock update commit but it has gone stale after main advanced further
+
+Quick Reference step 8 (v1.1.0):
+  # 8. Re-enable auto-merge (squash only — rebase merging not allowed)
+  gh pr merge <pr-number> --auto --squash
+
+Failed Attempts (v1.1.0): 5 rows (no "trusting prior regen commit" or "stale local branch" rows)
+
+Verified On (v1.1.0): 2 rows (ProjectOdyssey, ProjectScylla multi-PR)
+```
+
+---
+
+## v1.1.0 (2026-05-03)
+
+**Changed by:** ProjectScylla multi-PR Dependabot session (2026-05-02)
+**Verification:** verified-local
+
+### What changed
+- Added rebase-first workflow (fetch → rebase → pixi install)
+- Added pixi.lock conflict resolution pattern (rm + git add + rebase --continue)
+- Added `git fetch origin main` as mandatory step before rebasing (stale cache lesson)
+- Added `git commit --amend --no-edit` case for when pixi.lock is untracked post-conflict
+- Added three new Failed Attempts: skipping fetch, `--rebase` in squash-only repo, separate commit post-conflict
+- Added Multi-PR Sequential Fixing section
+- Updated Worktree section to use rebase pattern
+- Added ProjectScylla multi-PR row to Verified On table
+
+### Why
+Three sequential Dependabot PRs in ProjectScylla revealed that the v1.0.0 pattern (just run pixi install
+after checkout) was incomplete: the pixi.lock conflict during rebase needed explicit rm+add+continue
+handling, and the amend strategy was confirmed for the untracked-post-rebase case. The fetch-first
+requirement was reinforced when stale local cache caused "up to date" false reports.
+
+---
+
 ## v1.0.0 (2026-05-01)
 
 **Changed by:** Initial capture — ProjectOdyssey Dependabot PR session
