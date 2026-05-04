@@ -1,5 +1,69 @@
 # History: rebasing-stale-agent-worktree-branches
 
+## v1.2.0 — 2026-05-03
+
+**Changed by:** Session 2026-05-03 — 10 orphaned `worktree-agent-*` branches after `gh tidy` post-pull
+**Verification:** verified-local
+
+### What changed
+- Added trigger conditions (11) and (12) to description: `hephaestus-tidy` orphaned branch conflicts; cherry=1 no-PR decision tree
+- Added tags: `orphan`, `conflict-markers`, `union-merge`, `history-file`
+- Added new pattern recognition sections: "Orphaned agent branch — cherry=1, no PR" and "Orphaned conflict markers"
+- Added Step 0b: Decision tree for orphaned no-PR branches (cherry=1) — file-existence check before rebase or delete
+- Added Step 0c: Scan for orphaned conflict markers in committed files
+- Extended Step 4 with per-branch worktree pattern for manual resolution
+- Added Quick Reference subsection with copy-paste commands for the orphaned-branch workflow
+- Added 3 new Failed Attempts rows: (5) hephaestus-tidy swarm rate-limit crash, (6) `git checkout --` blocked by Safety Net, (7) cherry=1/no-PR delete assumption
+- Added 2026-05-03 session results to Results & Parameters (10 branches: 5 deleted, 5 rebased; 2 orphaned conflict markers fixed)
+- Added new Gotchas: cherry=1/no-PR safety, orphaned markers survive merges, per-branch worktree isolation
+- Added Verified On table
+- Added `history` frontmatter field
+
+### Why
+v1.1.0 covered the squash-merge artifact pattern and pre-flight gate but had no guidance for the case where `hephaestus-tidy` identifies orphaned agent branches after a pull advances main. The new session revealed: (a) a per-branch file-existence check determines whether to delete or rebase; (b) `.history` files need union merge; (c) committed conflict markers from prior PRs can masquerade as rebase artifacts while containing real content; (d) agent swarms hit rate limits on serial rebase operations.
+
+### Previous version (v1.1.0) snapshot
+
+```
+---
+name: rebasing-stale-agent-worktree-branches
+description: "Use when: (1) multiple locked `.claude/worktrees/agent-*` worktrees from sub-agent runs need reconciling against main, (2) agent-generated `worktree-agent-*` branches have commits whose work has already been re-done on main with polished wording, (3) `git cherry main <branch>` reports commits as missing even though content is semantically equivalent, (4) plain `git rebase main` produces hundreds of semantic-reword conflict hunks across many branches, (5) you need to determine which agent branches still carry unique content vs. which are redundant duplicates, (6) many agent branches share identical residual diffs and can be collapsed, (7) rebase artifacts (duplicated paragraphs, misplaced sections) need to be distinguished from legitimate unique content, (8) user says 'rebase all branches' but `gh pr list --state open` returns 0 results — full batch is actually cleanup not rebase, (9) `git branch -vv` shows many branches 'ahead 1, behind N' after a myrmidon swarm session — squash-merge artifact pattern not stale branches needing rebase, (10) all branches with open PRs show the same MERGED PR ID in `gh pr list --head <branch> --state all` — squash-merge wave completed, nothing to rebase"
+category: tooling
+date: 2026-04-25
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+tags: [git, rebase, worktree, agent, stale, cleanup, -X-ours, residual-diff, sub-agent, squash-merge, cherry, pre-flight]
+---
+[Full v1.1.0 content archived — see git history for complete snapshot]
+```
+
+---
+
+## v1.1.0 — 2026-04-25
+
+**Changed by:** Session 2026-04-25 — 57-branch squash-merge cleanup with pre-flight gate
+**Verification:** verified-local
+
+### What changed
+- Added trigger conditions (8), (9), (10) for squash-merge artifact pattern
+- Added "Squash-merge artifact — ahead-1 branches" key pattern recognition section
+- Added Step 0: Pre-flight rebase gate with classification loop
+- Added failed attempt 4: mass rebase without cherry check
+- Added session 2026-04-25 results to Results & Parameters
+- Added "Always check open PRs first" gotcha
+
+### Why
+v1.0.0 assumed branches always needed rebasing. After the 57-branch squash-merge wave it became clear that "ahead N" branches are frequently absorption artifacts — `git cherry origin/main` = 0 for every such branch. A pre-flight gate prevents wasted effort.
+
+### Previous version (v1.0.0) snapshot
+
+```
+[v1.0.0 content — see history entry below]
+```
+
+---
+
 ## v1.0.0 — 2026-04-21
 
 ---
