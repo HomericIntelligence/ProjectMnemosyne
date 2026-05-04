@@ -1,0 +1,57 @@
+# atlas-mesh-bringup-first-run -- History
+
+## v2.0.0 (2026-05-03)
+
+**Changed by:** Full 6-host Tailnet cold-start session (2026-05-03)
+**Verification:** verified-local -- executed end-to-end across 6 Tailnet hosts
+
+### What changed
+- Rewrote description and overview to cover multi-host cold-start (not just epimetheus single-host)
+- Corrected binary names throughout: `ProjectAgamemnon_server` (NOT `agamemnon`), `ProjectNestor_server` (NOT `nestor`)
+- Added NATS binary path fact: `~/.local/bin/nats-server` (not in PATH by default)
+- Added Hermes src-layout requirement: must set `PYTHONPATH=src` before uvicorn
+- Added `-DProjectAgamemnon_ENABLE_CLANG_TIDY=OFF` requirement for pixi conda toolchain builds (artemis)
+- Added multi-host cold-start strategy table covering all 8 known Tailnet hosts with correct per-host method
+- Added podman container build instructions for hosts without Odysseus
+- Added native build flags for hephaestus (`-lz` for OpenSSL zlib dep) and artemis (pixi+clang-tidy off)
+- Added docker path for apollo (Python 3.7 host -- too old for Hermes)
+- Added confirmed Agamemnon API shape: health at `/health`, `{"service":"ProjectAgamemnon","status":"ok"}`, tasks at `POST /v1/teams/<id>/tasks`, completion via `PATCH .../tasks/<id>` (NOT POST .../complete)
+- Added echo-type task clarification: requires external PATCH to complete (no autonomous executor)
+- Added `.team.id` extraction note for team creation response
+- Added Hermes Dockerfile bugs (PR #415): missing `prometheus_client`, wrong default `HERMES_PORT` (8080 vs 8085)
+- Added 12 new Failed Attempts rows (binary names, PYTHONPATH, cmake/pixi, HERMES_PORT, prometheus_client, Python 3.7, fresh clone, -lz)
+- Added 2026-05-03 session metrics and host reachability matrix
+- Updated Verified On table with 2026-05-03 cold-start session
+
+### Why
+The v1.0.0 skill documented the first bringup on a single host (epimetheus) with Odysseus already
+present. The 2026-05-03 multi-host cold-start revealed that:
+1. Binary names are `ProjectAgamemnon_server` and `ProjectNestor_server` (not `agamemnon`/`nestor`)
+2. NATS binary is not in PATH by default on remote hosts
+3. Hermes requires `PYTHONPATH=src` (src-layout repo) and must use `hermes.server:app`
+4. Three of 6 target hosts had no Odysseus clone -- fresh clone required before any service start
+5. Agamemnon `POST .../complete` returns 404; the correct completion path is `PATCH .../tasks/<id>`
+6. Two Hermes Dockerfile bugs (prometheus_client missing, HERMES_PORT default=8080) caused container failures
+
+### Previous version (v1.0.0) snapshot
+
+---
+name: atlas-mesh-bringup-first-run
+description: "Patterns for the first native (non-compose) bringup of the HomericIntelligence mesh on epimetheus, including correct binary paths, Hermes module name, multi-host myrmidon fan-out results per host, and Agamemnon task completion API findings. Use when: (1) bringing up Agamemnon/Nestor/Hermes natively on a new host, (2) launching hello-myrmidon workers on Tailnet hosts, (3) running the Atlas epic implementation session, (4) troubleshooting Agamemnon review wave task completion."
+category: architecture
+date: 2026-04-27
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+
+Documented: Native bringup on epimetheus. Binary paths at `build/debug/agamemnon` and `build/debug/nestor`.
+Hermes: `uvicorn hermes.server:app --port 8085`. NATS monitoring port 8222.
+3-host myrmidon fan-out (epimetheus, apollo, hermes). 4 hosts SSH-failed (sshd disabled).
+Agamemnon task completion: POST .../complete returned 404 in 5/6 cases (root cause unresolved at time of v1.0.0).
+Atlas PR #173. go.mod requires `go 1.23.0` for templ v0.3.1001.
+
+---
+
+## v1.0.0 (2026-04-27)
+
+**Initial version.**
