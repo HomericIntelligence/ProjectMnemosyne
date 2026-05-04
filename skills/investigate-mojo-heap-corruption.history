@@ -1,0 +1,52 @@
+# investigate-mojo-heap-corruption -- History
+
+## v1.1.0 (2026-05-03)
+
+**Changed by:** ProjectOdyssey and ProjectScylla fix session (2026-05-03)
+**Verification:** verified-ci -- `def main()` fix confirmed by CI passing; ADR-009 split pattern confirmed
+
+### What changed
+- Added ADR-009 test file splitting workflow (Phase 5): split oversized files to <=10 functions each
+- Added critical `fn main` -> `def main` deprecation fix (Phase 6): Mojo 0.26.3 deprecated `fn main()`, causing parse errors in all new split files
+- Added CI glob update step (Phase 7): after splitting, update CI glob to `test_*_part*.mojo`
+- Updated description to cover test splitting and fn main deprecation triggers
+- Updated When to Use with 3 new trigger conditions (ADR-009 splitting, parse errors after splitting)
+- Added Quick Reference section showing full split workflow
+- Added 4 new Failed Attempts rows: `fn main()` in split files, missing CI glob update, partial import block, blocking on pre-existing flakes
+- Added ADR-009 Splitting Rules table in Results & Parameters
+- Added Mojo Version Compatibility table
+- Bumped version to 1.1.0
+- Upgraded verification from unverified (v1.0) to verified-ci
+- Added history frontmatter field
+
+### Why
+During ProjectOdyssey issue fixes (2026-05-03), ADR-009 required splitting test files with >15
+functions into part files. All 11 new part files were initially written with `fn main() raises:`
+(copied from the original file template). CI failed immediately with parse errors on every new file:
+`error: 'fn' keyword not valid for 'main'; use 'def' instead`. Mojo 0.26.3 deprecated `fn main()`.
+The fix was a global replace across all 11 files. This is a recurring trap for anyone splitting
+Mojo test files: the original file may use `fn main()` (valid in older Mojo), and that gets
+copied into the new part files, causing CI to fail.
+
+### Previous version (v1.0.0) snapshot
+
+---
+name: investigate-mojo-heap-corruption
+description: Systematic workflow for investigating and fixing Mojo 0.26.1 heap corruption
+  crashes that occur in CI but not locally
+category: debugging
+date: 2026-01-08
+version: 1.0.0
+user-invocable: false
+
+Documented: CI-only heap corruption crashes in libKGENCompilerRTShared.so. Root cause:
+unnecessary Float32->Float64 type conversion in test_fp16_vs_fp32_accuracy() function
+(lines 337-338, test_multi_precision_training.mojo). Fix: replace ._get_float64() with
+._get_float32() for Float32 data. Crash triggers after ~15 cumulative test executions.
+Fixed via PR #3103. Verification: unverified (CI validation was pending at time of capture).
+
+---
+
+## v1.0.0 (2026-01-08)
+
+**Initial version.**
