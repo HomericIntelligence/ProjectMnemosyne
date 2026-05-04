@@ -170,9 +170,6 @@ With the consolidated 4-agent section:
 | Running `just pre-commit-all` | `just: command not found` | `just` not installed on this host | Fall back to `pre-commit run --all-files` directly |
 | Running `npx markdownlint-cli2` directly | `npx: command not found` | Node.js not in PATH outside pixi env | Use `pixi run npx markdownlint-cli2` or rely on pre-commit hook |
 | `pixi run markdownlint-cli2` | `markdownlint-cli2: command not found` | pixi task not registered under that name | Rely on pre-commit hook for linting instead |
-<<<<<<< HEAD
-=======
 | Searching only `.claude/agents/` | Ran grep scoped to `.claude/agents/*.md` | Tracking docs in `docs/dev/` were missed | Always search the full repo, not just the agents directory |
 | Assuming hierarchy.md is the only doc to update | Only checked `agents/hierarchy.md` | Status/tracking docs like `agent-claude4-update-status.md` also list agents by name | Search recursively across all `*.md` files |
 | Replacing agent names without reading context | Applied sed-style bulk replace | Counting labels ("Review Specialists (10)") also need updating | Read surrounding context before editing; update counts too |
->>>>>>> 5783bcc7 (chore(skills): consolidate clusters B+G — absorb stale-agent-refs + multi-repo skills (sub-wave 1 remainder))
