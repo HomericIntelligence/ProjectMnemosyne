@@ -2,8 +2,8 @@
 name: skill-audit-and-merge
 description: "Use when: (1) skills marketplace has 500+ files with visible duplication noise hurting /advise quality, (2) auditing for near-exact duplicates or high-overlap pairs to delete or merge, (3) consolidating topic clusters spanning 3+ files into a single authoritative skill, (4) running a structured deduplication session that must leave all CI tests green"
 category: tooling
-date: '2026-04-13'
-version: 2.0.0
+date: '2026-05-03'
+version: 2.1.0
 verification: verified-ci
 history: skill-audit-and-merge.history
 tags:
@@ -165,6 +165,10 @@ git commit -m "chore: phase N — <description> (X files removed)"
 | Pushing directly to main with branch protection | Used `git push origin main` on a branch-protected repo | Remote accepted but logged "bypassed rule violations" warning | For repos with strict protection, use PR-based workflow even if you have bypass permissions |
 | Reading large files without chunking | Called `Read` on a 19,836-token file (`latex-paper-accuracy-review.md`) | Hit the Read tool token limit; partial content returned silently | For files that might be large, read in chunks: `Read(offset=0, limit=500)` then `Read(offset=500, limit=500)` etc. |
 | Worktree not pruned between sub-agent phases | Sub-agents using `isolation="worktree"` left worktrees behind after success | Next sub-agent batch got "worktree already exists" errors | Run `git worktree prune` between phases when using sub-agent worktree isolation |
+| Fixer agents downgraded canonical versions | Dispatched fixer agents to fix content-deficit clusters (E/H/L1); agents re-wrote canonical files from scratch | Agents reverted canonicals to older versions (E: 2.0.0→1.4.0, H: 2.0.0→1.0.0, L1: 2.0.0→1.1.0) and stripped absorbed metadata/descriptions | Fixer agents must be given explicit version floor constraints; provide the pre-fixer commit SHA so the agent can restore from `git show <commit>:skills/<file>.md` if needed |
+| Wave B verifier false FAIL on 8 clusters | Verifier divided fence counts by 2 to get "block pairs" then compared against raw grep-c counts from Phase-0 (labeled "code blocks" but were raw fence markers) | Unit mismatch reported 8 clusters FAILED when only 2 truly had deficits (H: 24 short, L1: 2 short) | Establish a single unit (raw fence count OR block pairs) in Phase 0 and use it consistently through Wave B — never mix counts and pairs in the same comparison |
+| cherry-pick failed for sub-wave integration | Used `git cherry-pick` to integrate cluster B and G commits from worktrees into the integration branch | Worktrees had diverged from a different base than the integration branch, causing cherry-pick conflicts | Use direct file copy from worktrees (`cp worktree/skills/<file>.md integration/skills/`) and manual stage+commit instead of cherry-pick when worktrees were created off a stale base |
+| Fence arithmetic floor was off by absorbed-file overlap | Pre-merge canonical for L1 had 8 fences; absorbed-1 had 14, absorbed-2 had 20; set floor = 42 | Wave A merge produced 40 — fixer merged `fn store` and `fn set` into one code block instead of keeping them separate, losing 2 fences below floor | Floor arithmetic assumes no consolidation of separate code blocks; Wave B verifier must do a content-level diff (not just count comparison) to catch merged blocks that cross cluster-file boundaries |
 
 ## Results & Parameters
 
@@ -267,6 +271,7 @@ Before creating a new skill:
 | --------- | --------- | --------- |
 | ProjectMnemosyne | PR #22 (v1.0.0) — 43 → 37 plugins, ~1 hour | [notes.md](skill-audit-and-merge.notes.md) |
 | ProjectMnemosyne | 2026-04-12 session (v2.0.0) — 1,667 → 1,625 files, 41 removed, 98 tests passing | 4-phase deduplication, verified-ci |
+| ProjectMnemosyne | PR #1549 — 12-cluster Myrmidon swarm consolidation, May 2026 (14 canonicals, ~34 absorbed, 967→935 entries) | 4 sub-waves of ≤5 parallel agents with `isolation: worktree`; Wave B verifier; marketplace regen in Wave C |
 
 ## References
 
