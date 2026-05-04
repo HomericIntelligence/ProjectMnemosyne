@@ -1,4 +1,31 @@
-# ci-cd-broken-main-parallel-fix-wave — History
+# ci-cd-broken-main-parallel-fix-wave -- History
+
+## v1.3.0 (2026-05-03)
+
+**Changed by:** ProjectScylla issue fixes session (issues #1878, #1868, #1869) -- 2026-05-03
+**Verification:** verified-ci -- fix PRs merged; CI confirmed passing
+
+### What changed
+- Added Pattern 10: Release workflow direct push to `main` -- push to release branch + `gh pr create` + `gh pr merge --auto --rebase`; requires `pull-requests: write` permission
+- Added Pattern 11: Duplicate module re-export -- DeprecationWarning shim re-importing from canonical location
+- Added Pattern 12: Pydantic manual `to_dict()` -- replace 14 field enumerations with `self.model_dump(mode='json')`; special cases for `@property` injection and `exclude=` for ephemeral fields
+- Added 3 new Failed Attempts rows: release.yml direct push, duplicate re-export, manual to_dict()
+- Added 3 new rows to Agent Tier Selection Table (all Haiku -- exact patterns known)
+- Added ProjectScylla 2026-05-03 session to Verified On table
+- Added When to Use bullets for 3 new trigger conditions
+- Updated description and tags
+
+### Why
+ProjectScylla had 3 open issues (2026-05-03):
+1. `release.yml` (#1878) was pushing version bumps directly to `main`, failing branch protection. The fix pattern (release branch + PR + auto-merge) is reusable across any workflow with the same anti-pattern.
+2. `automation/circuit_breaker.py` (#1868) was a full duplicate of `scylla.core.circuit_breaker`, causing maintenance divergence. Converting to a DeprecationWarning shim is the canonical Python approach.
+3. 14 `to_dict()` methods (#1869) manually enumerated model fields, silently omitting new fields. `model_dump(mode='json')` is the correct Pydantic v2 approach and eliminates the drift problem.
+
+### Previous version (v1.2.0) snapshot
+
+See v1.2.0 entry below for full previous content.
+
+---
 
 ## v1.2.0 (2026-05-01)
 

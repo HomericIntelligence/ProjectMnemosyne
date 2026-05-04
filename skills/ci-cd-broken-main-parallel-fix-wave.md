@@ -1,13 +1,13 @@
 ---
 name: ci-cd-broken-main-parallel-fix-wave
-description: "Triage and fix broken CI/main across multiple repos simultaneously using Agamemnon task registry + parallel myrmidon fix agents. Use when: (1) 3+ repos have broken main branch CI, (2) need to register tasks in Agamemnon before dispatching agents, (3) CI failures are diverse (conan profile, dependabot config, GitHub Actions auth, BATS helper, Python imports, clang-format violations, annotated-tag SHA pinning, stale pixi.lock, markdownlint CHANGELOG exclusion)."
+description: "Triage and fix broken CI/main across multiple repos simultaneously using Agamemnon task registry + parallel myrmidon fix agents. Use when: (1) 3+ repos have broken main branch CI, (2) need to register tasks in Agamemnon before dispatching agents, (3) CI failures are diverse (conan profile, dependabot config, GitHub Actions auth, BATS helper, Python imports, clang-format violations, annotated-tag SHA pinning, stale pixi.lock, markdownlint CHANGELOG exclusion, release.yml direct push to main, duplicate module re-export, Pydantic model_dump bypass)."
 category: ci-cd
-date: 2026-05-01
-version: "1.2.0"
+date: 2026-05-03
+version: "1.3.0"
 user-invocable: false
 verification: verified-ci
 history: ci-cd-broken-main-parallel-fix-wave.history
-tags: [ci, broken-main, agamemnon, parallel-agents, myrmidon, conan, dependabot, bats, github-actions, fix-wave, clang-format, monitor, annotated-tags, sha-pinning, pixi-lock, markdownlint, changelog, rebase-onto, transient-vs-reproducible, issue-triage, all-repos]
+tags: [ci, broken-main, agamemnon, parallel-agents, myrmidon, conan, dependabot, bats, github-actions, fix-wave, clang-format, monitor, annotated-tags, sha-pinning, pixi-lock, markdownlint, changelog, rebase-onto, transient-vs-reproducible, issue-triage, all-repos, release-workflow, circuit-breaker, pydantic, model-dump, deprecation-shim]
 ---
 
 # CI Broken-Main Parallel Fix Wave
@@ -16,7 +16,7 @@ tags: [ci, broken-main, agamemnon, parallel-agents, myrmidon, conan, dependabot,
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-01 |
+| **Date** | 2026-05-03 |
 | **Objective** | Use the HomericIntelligence agent mesh to fix broken CI/main across multiple repositories simultaneously — NATS + Agamemnon task registry + parallel Claude Code sub-agents as myrmidon workers |
 | **Outcome** | Successful — all 14 repos triaged, 6 root causes identified across 4 repos, 4 fix PRs opened with auto-merge, 2 issues filed without PRs (non-trivial scope / transient-confirmed network failures) |
 | **Verification** | verified-ci — fix PRs opened and auto-merge armed; patterns verified by reproducing failures locally |
@@ -30,6 +30,9 @@ tags: [ci, broken-main, agamemnon, parallel-agents, myrmidon, conan, dependabot,
 - Want to select agent tier (Haiku vs Sonnet) based on whether the root cause is already known
 - Need to restore green main across the ecosystem before a cross-repo feature push
 - Full 14-repo health sweep needed (e.g. before a large cross-repo release or audit)
+- Release workflow directly pushes version bump to `main` (branch protection violation)
+- Duplicate module re-export causing import conflicts in Python packages
+- Pydantic models using manual `to_dict()` with field enumerations instead of `model_dump()`
 
 ## Verified Workflow
 
@@ -181,6 +184,9 @@ curl -s -X PATCH $AGAMEMNON/v1/teams/$TEAM_ID/tasks/fix-odysseus-conan-profile \
 | `ignorePatterns` in `.markdownlint-cli2.jsonc` alone for CHANGELOG | Added CHANGELOG.md to `ignorePatterns` | CI used markdownlint-cli2 v0.17.2 which did not honor `ignorePatterns`; local v0.22.1 did | Always add `!CHANGELOG.md` to workflow globs directly — most reliable across all CLI versions |
 | `git rebase origin/main` on a branch with already-merged commits | Used direct rebase when branch contained commits already merged to main | Caused conflicts on the duplicate commits | Use `git rebase --onto origin/main <sha-before-first-unique-commit> <branch>` to replay only unique commits |
 | Filing issues without first re-running CI | Filed issues immediately after observing a red CI run | Some failures were transient (network errors, timing); issue was unnecessary | Always re-run the failing job first; only file an issue if the new run also fails |
+| Release workflow direct push to `main` | `release.yml` pushed version bump commit directly to `main` | Branch protection rules block direct pushes; workflow fails with 403 | Push version bump to `release/version-bump-${{ env.VERSION }}` branch and open a PR via `gh pr create` + `gh pr merge --auto --rebase`; add `pull-requests: write` permission to the workflow |
+| Duplicate circuit-breaker re-export | Had `automation/circuit_breaker.py` as a full duplicate of `scylla.core.circuit_breaker` | Import conflicts when both paths are in scope; maintenance burden of two copies | Convert the duplicate to a DeprecationWarning shim that re-imports from the canonical location |
+| Manual `to_dict()` with field enumerations | 14 Pydantic model methods manually enumerated every field in `to_dict()` | Broke when new fields added (silently omitted); no consistency guarantee | Replace manual field enumerations with `self.model_dump(mode='json')`; inject computed `@property` values post-dump; use `exclude=` for ephemeral runtime fields |
 
 ## Results & Parameters
 
@@ -491,6 +497,128 @@ gh label create ci --color 0075ca --repo HomericIntelligence/<repo>
 
 ---
 
+---
+
+#### Pattern 10: Release Workflow Direct Push to Main (ProjectScylla #1878)
+
+**Error**: Release workflow fails with 403 -- branch protection blocks direct push to `main`
+
+**Root cause**: The workflow commits a version bump directly to `main` rather than opening a PR.
+
+**Fix**: Push version bump to a release branch and open a PR with auto-merge:
+
+```yaml
+# In release.yml -- replace direct push with PR flow
+- name: Push version bump
+  run: |
+    git checkout -b release/version-bump-${{ env.VERSION }}
+    git add pyproject.toml
+    git commit -m "chore: bump version to ${{ env.VERSION }}"
+    git push -u origin release/version-bump-${{ env.VERSION }}
+
+- name: Open and auto-merge version bump PR
+  env:
+    GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  run: |
+    gh pr create \
+      --title "chore: bump version to ${{ env.VERSION }}" \
+      --body "Automated version bump from release workflow." \
+      --base main \
+      --head release/version-bump-${{ env.VERSION }}
+    PR_NUM=$(gh pr list --head release/version-bump-${{ env.VERSION }} --json number --jq '.[0].number')
+    gh pr merge "$PR_NUM" --auto --rebase
+```
+
+**Also required**: Add `pull-requests: write` to the workflow permissions block:
+
+```yaml
+permissions:
+  contents: write
+  pull-requests: write  # ADD THIS
+```
+
+**Tag push** (`git push origin "${{ env.VERSION }}"`) is fine to keep as-is -- tags bypass branch protection.
+
+**Agent tier**: Haiku -- exact pattern once the 403 error is identified.
+
+---
+
+#### Pattern 11: Duplicate Module Re-Export (Python -- DeprecationWarning Shim)
+
+**Error**: Two modules export the same class from different paths, causing import conflicts or
+maintenance burden when one is updated.
+
+**Root cause**: `automation/circuit_breaker.py` was a full copy of `scylla.core.circuit_breaker`,
+not a re-export. Updates to the canonical location were not reflected in the duplicate.
+
+**Fix**: Convert the duplicate to a DeprecationWarning shim:
+
+```python
+# automation/circuit_breaker.py  -- shim, not a copy
+import warnings
+from scylla.core.circuit_breaker import CircuitBreaker, CircuitBreakerError  # noqa: F401
+
+warnings.warn(
+    "Import from 'automation.circuit_breaker' is deprecated. "
+    "Use 'scylla.core.circuit_breaker' instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+```
+
+**Rules**:
+- Keep the shim in place for at least one release cycle to avoid breaking callers
+- Only re-export names that are part of the public API (use `__all__` if needed)
+- The canonical location owns the implementation; the shim owns nothing
+
+**Agent tier**: Haiku -- pattern is mechanical once the duplicate is identified.
+
+---
+
+#### Pattern 12: Pydantic model_dump() Replacing Manual to_dict()
+
+**Error**: Manual `to_dict()` methods silently omit new fields when the model grows; consistency
+breaks across the codebase.
+
+**Root cause**: 14 Pydantic model methods manually enumerated every field:
+
+```python
+# Before (brittle):
+def to_dict(self) -> dict:
+    return {
+        "id": self.id,
+        "name": self.name,
+        "status": self.status,
+        # ... 11 more fields, easily forgotten when model grows
+    }
+```
+
+**Fix**: Replace with `model_dump()`:
+
+```python
+# After (complete and consistent):
+def to_dict(self) -> dict:
+    base = self.model_dump(mode='json')
+
+    # Inject computed @property values not in model fields:
+    base["display_name"] = self.display_name
+
+    return base
+```
+
+**Special cases**:
+- Computed `@property` values not stored as model fields: inject post-dump
+- Ephemeral runtime fields that should NOT be serialized: use `exclude={"_lock", "_connection"}`
+
+```python
+base = self.model_dump(mode='json', exclude={"_lock", "_connection"})
+```
+
+**Agent tier**: Haiku -- once the pattern is identified, the replacement is mechanical.
+Use `grep -r "def to_dict" --include="*.py"` to find all instances.
+
+---
+
 ### Monitor Noise Reduction Pattern
 
 When polling CI status for long-running release builds, 30-second poll intervals cause excessive
@@ -528,7 +656,10 @@ Monitor(
 | BATS exit 127 (run_validate not found) | Sonnet | Root cause unknown — requires reading test file + load directives |
 | Python type errors + import failures | Sonnet | Root cause unknown — requires package structure investigation |
 | Pixi cache 400 errors | Sonnet | Environment-dependent, requires cache invalidation + diagnosis |
-| External service HTTP 5xx (schema, registry) | Issue only | Infrastructure dependency — not a code fix |
+| External service HTTP 5xx (schema, registry) | Issue only | Infrastructure dependency -- not a code fix |
+| Release workflow direct push to main (403) | Haiku | Exact PR flow known: release branch + gh pr create + auto-merge |
+| Duplicate module re-export (DeprecationWarning shim) | Haiku | Shim pattern is mechanical once duplicate identified |
+| Manual to_dict() with field enumerations | Haiku | Replace with model_dump(mode='json') -- exact pattern known |
 
 ### Agamemnon Task Registration Template
 
@@ -564,7 +695,8 @@ curl -s -X POST http://localhost:8080/v1/teams/$TEAM_ID/tasks \
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | HomericIntelligence ecosystem | 5 repos with broken main: Odysseus, Myrmidons, ProjectMnemosyne, ProjectArgus, ProjectTelemachy — 2026-04-24 | 5 fix tasks registered in Agamemnon, 5 parallel agents dispatched (3 Haiku + 2 Sonnet); PRs in flight at capture time |
-| HomericIntelligence ecosystem | All 14 repos triaged — 2026-05-01 | 4 repos red, 6 root causes identified, 4 fix PRs opened with auto-merge, 2 issues filed (non-trivial: schema vendoring, transient-confirmed); verified-ci |
+| HomericIntelligence ecosystem | All 14 repos triaged -- 2026-05-01 | 4 repos red, 6 root causes identified, 4 fix PRs opened with auto-merge, 2 issues filed (non-trivial: schema vendoring, transient-confirmed); verified-ci |
+| HomericIntelligence/ProjectScylla | Issues #1878, #1868, #1869 -- 2026-05-03 | release.yml direct-push fix (PR flow + auto-merge); circuit-breaker DeprecationWarning shim; 14 model_dump() replacements; verified-ci |
 
 ## References
 
