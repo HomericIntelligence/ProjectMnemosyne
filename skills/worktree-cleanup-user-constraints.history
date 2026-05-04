@@ -1,5 +1,40 @@
 # worktree-cleanup-user-constraints — Change History
 
+## v1.6.0 — 2026-05-04
+
+**Amendment**: ProjectMnemosyne session — locked worktrees from dead myrmidon swarm sessions; unlock+remove without --force when clean.
+**Verification**: verified-local (executed on 13 worktrees, all `dirty=0`, 2026-05-04)
+
+### What changed
+- Updated `description` frontmatter to mention locked-but-clean worktrees pattern
+- Added `locked-worktree` and `dead-agent` tags
+- Added "When to Use" trigger: locked worktrees with dead agent PIDs from myrmidon swarm sessions
+- Added Phase 0.7 "Handle Locked Worktrees" — split on cleanliness: locked+clean → unlock+remove directly (no --force); locked+dirty → classify files first
+- Updated Quick Reference with locked worktree detection and unlock steps
+- Added new Failed Attempts row: classifying all locked worktrees as KEEP regardless of cleanliness
+- Updated Scale reference table with 13-locked-clean pattern
+- Added ProjectMnemosyne row to Verified On table (13 locked agent worktrees, all dirty=0)
+- Also synced version from 1.4.0 to 1.6.0 in frontmatter (v1.5.0 entry existed in history but frontmatter was not updated)
+
+### Why
+During ProjectMnemosyne cleanup session (2026-05-04), 13 `worktree-agent-<hash>` worktrees
+from dead myrmidon swarm sessions were found in `locked` state (PIDs dead). The previous skill
+recommended classifying locked worktrees as KEEP and printing manual unlock+`--force` commands.
+This was wrong on two counts: (1) clean locked worktrees need no `--force` after unlock;
+(2) `--force` is blocked by the Safety Net hook. Correct pattern: check `git status --short`
+first; if empty → unlock+remove with no flags; if dirty → classify files before unlocking.
+
+### Snapshot of v1.5.0 key state
+
+```yaml
+version: "1.4.0"   # note: frontmatter was not updated from 1.4.0 despite v1.5.0 history entry
+date: 2026-04-25
+```
+
+Key additions in v1.5.0: `[gone]` branch re-push safety check; verify work on main before any re-push.
+
+---
+
 ## v1.5.0 — 2026-04-25
 
 **Amendment**: ProjectTelemachy git hygiene session — `[gone]` branch re-push without checking if work already on main.
