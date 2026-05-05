@@ -1,0 +1,33 @@
+## v1.1.0 — 2026-05-05
+
+**Amendment:** Added trigger condition (5): `rm -rf $VAR` where `$VAR` is a shell variable pointing to a `/tmp/` path is blocked — Safety Net cannot verify the variable's value at hook time; always use `mktemp -d` to get a fresh temp dir.
+
+**Changes:**
+- Updated `description` frontmatter to include trigger condition (5)
+- Updated `date` to `2026-05-05`
+- Added new "When to Use" bullet point for shell variable temp path rm -rf
+- Added new row to "## Failed Attempts" table: rm -rf on shell variable temp path
+- Added "### Workaround: Shell Variable Temp Path Cleanup" section with code examples
+- Added new row to Operations Table for `rm -rf "$VAR"` (var holds `/tmp/` path)
+- Added `history` frontmatter field pointing to this file
+
+**Verification:** verified-local — observed directly when `rm -rf "$HEPH_WORK"` was blocked during a rebase session in ProjectHephaestus.
+
+---
+
+## v1.0.0 — 2026-04-25 (initial)
+
+**Snapshot of v1.0.0 frontmatter:**
+
+```yaml
+name: tooling-safety-net-git-blocked-operations
+description: "Use when: (1) a git or filesystem operation is blocked by the Safety Net hook (cc-safety-net.js) and you need to identify the correct fallback, (2) you need to know which git operations Safety Net blocks vs. allows, (3) a compound bash command fails mid-way due to a Safety Net block, (4) cleaning up locked worktrees in Safety Net-constrained environments."
+category: tooling
+date: 2026-04-25
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: []
+```
+
+**Initial skill documenting Safety Net blocked operations and fallback patterns.** Covered: stash drop, worktree remove --force, rm -rf (literal paths), reset --hard, push --force. Observed live in ProjectHermes session.
