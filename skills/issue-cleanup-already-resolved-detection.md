@@ -1,12 +1,13 @@
 ---
 name: issue-cleanup-already-resolved-detection
-description: "Use when: (1) assigned a cleanup, deletion, or quality-audit issue and the target file/artifact no longer exists or the problem is already resolved, (2) a branch is at the same commit as main with no commits ahead (git log main..HEAD returns nothing), (3) a prior merged PR is referenced in the issue description as having already made the fix."
+description: "Use when: (1) assigned a cleanup, deletion, or quality-audit issue and the target file/artifact no longer exists or the problem is already resolved, (2) a branch is at the same commit as main with no commits ahead (git log main..HEAD returns nothing), (3) a prior merged PR is referenced in the issue description as having already made the fix, (4) an auto-impl worktree branch already has commits ahead of main referencing the issue — prior session may have completed the work."
 category: tooling
 date: 2026-03-28
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: unverified
-tags: [cleanup, deletion, quality-audit, already-done, file-existence, git-log, pr-check]
+tags: [cleanup, deletion, quality-audit, already-done, file-existence, git-log, pr-check, preflight, duplicate-work, already-implemented]
+absorbed: [issue-already-implemented-preflight-check]
 ---
 ## Overview
 
@@ -153,6 +154,76 @@ Once confirmed:
 gh issue comment <number> --body "Issue already implemented in commit <sha> and PR #<pr>. No further action needed."
 ```
 
+## Prior-Session Completed Work (Commits Ahead of Main)
+
+This section covers a **distinct case** from the "no commits ahead" scenario above.
+
+**Key difference**:
+- **No commits ahead** (`git log main..HEAD` empty): The fix was already merged to main by a prior PR. Branch is at the same state as main.
+- **Commits ahead** (`git log main..HEAD` shows commits): A prior session on this branch did the work but the PR is not yet merged. Both cases require preflight — but the action differs.
+
+### 2-Command Minimum Preflight (< 3 seconds)
+
+```bash
+# Run these two commands before reading any source files or planning implementation
+git log --oneline -10
+gh pr list --search "<issue-number>" --state all
+```
+
+**Decision**:
+- `git log` shows `Closes #N` or commit referencing the issue → done; check PR state
+- `gh pr list` shows open PR → confirm auto-merge status, report done
+- Neither → proceed with implementation
+
+### Check PR Auto-Merge Status
+
+```bash
+gh pr view <pr-number> --json autoMergeRequest,state,title
+```
+
+If auto-merge is enabled, no further action is needed. If not:
+
+```bash
+gh pr merge --auto --rebase <PR_NUMBER>
+```
+
+### When git log Shows Prior Work But No PR
+
+```bash
+# Create PR linking to the issue
+gh pr create --title "..." --body "Closes #<issue>"
+gh pr merge --auto --rebase <PR_NUMBER>
+```
+
+### Reporting Template (Prior Session Did the Work)
+
+```
+Status: Already Done
+
+- Commit: <sha> <message>
+- PR: #<number> — <state>, auto-merge: <enabled/disabled>
+- Files changed: <list from git show --stat>
+
+No reimplementation needed.
+PR URL: <url>
+```
+
+### Decision Matrix (Commits-Ahead Case)
+
+| git log has issue commit | git status clean | PR exists | Action |
+| -------------------------- | ----------------- | ----------- | -------- |
+| Yes | Yes | Yes | Verify PR state, confirm auto-merge, report done |
+| Yes | Yes | No | Create PR, enable auto-merge |
+| Yes | No | No | Commit uncommitted work, create PR |
+| No | Yes | No | Issue not yet implemented — proceed with impl |
+| No | Any | Yes | Investigate PR content — unusual state |
+
+**Key insight**: A clean `git status` does NOT mean work hasn't started. Prior commits can have done all the work. Always check `git log` too.
+
+### Why Pre-Created Worktrees Can Be Pre-Populated
+
+In automated pipelines (e.g., ProjectOdyssey), worktrees are created by orchestration agents that may also run an initial implementation pass. When a second agent session opens the same worktree, the work may already be complete. The `.claude-prompt-NNNN.md` file is dropped into the worktree for agent context but does not indicate whether implementation is pending or done.
+
 ## Decision Tree
 
 ```text
@@ -187,6 +258,14 @@ NO -> Check git log for prior commits on branch, proceed as above
 | Starting implementation without checking git log | Read the prompt, planned to search for imports and delete | File was already deleted in HEAD commit | Always run `git log --oneline -3` before any planning |
 | Checking only the directory listing | Confirmed target file was absent | Correct but incomplete — also needed to confirm PR exists | Combine directory check with `gh pr list --head <branch>` |
 | Trusting issue description's claim about current state | Issue said "The issue persists in commit c88692b" | Fix landed at a later commit; file was already clean | Always read the actual file rather than trusting the issue description |
+| Running tests locally before checking git | `pixi run mojo test tests/...` | GLIBC version too old; and work was already done | Check `git log` BEFORE reading issue description or running tests |
+| Reading source files before checking git history | Read `.mojo` files to find patterns | Files had no matches — already fixed | Check `git log` before reading any source files |
+| Assuming clean git status means fresh start | Relied on `git status` showing clean working tree | Clean status just means nothing unstaged — prior commits can have done all the work | `git status` clean != implementation not started |
+| Assuming the worktree always has new work to do | Started planning implementation steps | Wasted tool calls on work already complete | Worktrees created by automation may lag behind main |
+| Jump straight to implementation | Started reading issue and planning without checking git log | Found PR already open and commit had done all the work | Always check `git log --oneline -5` and `gh pr list --head <branch>` before any implementation work |
+| Grep for patterns before checking git | Ran Grep on source files | No matches because prior session already removed/updated | A clean grep with no results is itself a signal the work is done — check branch state first |
+| Starting full reimplementation | Began searching for NOTE comments to update | Files were already updated in prior session | Always check `git log` and `gh pr list` before implementing |
+| Immediately searching for patterns | Searched codebase for `.__matmul__(` before checking git log | Would have found nothing and been confused | Always check git log first — a prior commit may have already done the work |
 
 ## Results & Parameters
 
@@ -224,3 +303,10 @@ gh issue view <number> --json state -q '.state'
 | ProjectOdyssey | Issue #3094, branch `3094-auto-impl`, PR #3213 | Stale NOTE/TrainingLoop trait bounds already removed; PR open with auto-merge |
 | ProjectOdyssey | Issue #3847, PR #4813 | All value assertions already present in main via PR #3845; added 2 missing `assert_numel` calls |
 | ProjectScylla | Issue #1347, branch `1347-auto-impl` | Garbled docstring already fixed in commit `510c93c3`; issue was CLOSED |
+| ProjectOdyssey | Issue #2722, branch `2722-auto-impl`, PR #3161 | All ExTensor utility methods already in commit `20ddaee6` (commits-ahead case) |
+| ProjectOdyssey | Issue #3065, worktree `3065-auto-impl`, PR #3262 | Deprecated type aliases already removed in prior session (commits-ahead case) |
+| ProjectOdyssey | Issue #3076, branch `3076-auto-impl`, PR #3168 | Docs commit `af39dfda` already added all issue references (commits-ahead case) |
+| ProjectOdyssey | Issue #3090, PR #3201 | Branch `3090-auto-impl`; commit `47f87aba` already done (commits-ahead case) |
+| ProjectOdyssey | Issue #3091, PR #3206 | Commit `8c64d500` already documented callback import limitation (commits-ahead case) |
+| ProjectOdyssey | Issue #3093, PR #3217 | Commit `de97cd8a` already addressed commented-out imports (commits-ahead case) |
+| ProjectOdyssey | Issue #3112 | Branch `3112-auto-impl`; commit `86b485a3` already closed the issue (commits-ahead case) |
