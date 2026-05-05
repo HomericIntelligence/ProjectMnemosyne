@@ -3,9 +3,11 @@ name: mojo-hash-testing-patterns
 description: "Use when: (1) implementing or fixing __hash__ on a Mojo tensor/struct with float fields, (2) adding hash collision tests for shape/dtype/value sensitivity, (3) verifying hash stability for edge-case tensors (empty, large values, small values), (4) guarding against dtype regression in __hash__ when numel=0, (5) testing integer-dtype coverage through _get_float64 dispatch path"
 category: testing
 date: 2026-03-29
-version: "2.0.0"
+version: "2.1.0"
 user-invocable: false
 verification: unverified
+absorbed:
+  - mojo-empty-tensor-hash-test
 tags: []
 ---
 # Mojo Hash Testing Patterns
@@ -253,6 +255,111 @@ just test-group "tests/shared/core" "test_hash.mojo"
 
 Note: Mojo tests cannot run locally on hosts with GLIBC < 2.32. Use CI or Docker.
 
+## Empty Tensor Edge Cases
+
+Absorbed from `mojo-empty-tensor-hash-test` (Issues #3384, #4067, PR #4064).
+
+### 0-element tensor shapes: `[0]`, `[0,0]`, `[0,1]`
+
+When `numel=0`, the data loop in `__hash__` is skipped entirely. The hash is determined
+solely by the shape dimensions and the dtype ordinal. Three empty-tensor shapes are
+distinguishable:
+
+| Shape | numel | Shape loop iterations | Data loop iterations | Hash unique? |
+| ------- | ------- | ----------------------- | ---------------------- | -------------- |
+| `[0]` | 0 | 1 (value=0) | 0 | Yes |
+| `[0, 0]` | 0 | 2 (values=0, 0) | 0 | Yes — 2 iterations vs 1 |
+| `[0, 1]` | 0 | 2 (values=0, 1) | 0 | Yes — second dim differs |
+
+### How to create a 0-element tensor in Mojo
+
+Use `shape.append(0)` to add a zero dimension, then construct with `zeros()`:
+
+```mojo
+var shape = List[Int]()
+shape.append(0)
+var a = zeros(shape, DType.float32)  # _numel = 0
+```
+
+### Root cause: data loop is skipped when numel=0
+
+```mojo
+# Hash data
+for i in range(self._numel):   # numel=0 → loop never executes
+    var val = self._get_float64(i)
+    var int_bits = UnsafePointer[Float64](to=val).bitcast[UInt64]()[]
+    hasher.update(int_bits)
+```
+
+Hash is determined solely by shape dimensions and dtype ordinal; without a test this
+edge case can regress silently if hash logic changes.
+
+### Test function: test_hash_empty_tensor
+
+```mojo
+fn test_hash_empty_tensor() raises:
+    """Test __hash__ for 0-element tensor hashes without error and consistently.
+
+    A tensor with shape [0] has _numel=0, so the data loop is skipped.
+    The hash is determined only by shape and dtype, but must still be stable.
+    """
+    var shape = List[Int]()
+    shape.append(0)
+    var a = zeros(shape, DType.float32)
+    var b = zeros(shape, DType.float32)
+
+    # Should not raise - the empty data loop must be safe
+    var hash_a = hash(a)
+    var hash_b = hash(b)
+
+    # Two empty tensors with identical shape and dtype must hash the same
+    assert_equal_int(
+        Int(hash_a),
+        Int(hash_b),
+        "Empty tensors with same shape/dtype should have equal hashes",
+    )
+```
+
+### Test function: test_hash_empty_tensor_shapes_differ
+
+```mojo
+fn test_hash_empty_tensor_shapes_differ() raises:
+    """Test that empty tensors with different shapes produce different hashes."""
+    var shape_1d = List[Int]()
+    shape_1d.append(0)
+    var t1 = zeros(shape_1d, DType.float32)
+
+    var shape_2d_00 = List[Int]()
+    shape_2d_00.append(0)
+    shape_2d_00.append(0)
+    var t2 = zeros(shape_2d_00, DType.float32)
+
+    var shape_2d_01 = List[Int]()
+    shape_2d_01.append(0)
+    shape_2d_01.append(1)
+    var t3 = zeros(shape_2d_01, DType.float32)
+
+    if hash(t1) == hash(t2):
+        raise Error(
+            "Empty tensors [0] and [0,0] should have different hashes"
+        )
+    if hash(t1) == hash(t3):
+        raise Error(
+            "Empty tensors [0] and [0,1] should have different hashes"
+        )
+    if hash(t2) == hash(t3):
+        raise Error(
+            "Empty tensors [0,0] and [0,1] should have different hashes"
+        )
+```
+
+### Verified On (empty tensor edge cases)
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #3384, PR #4064 | Empty tensor hash equality test (`test_hash_empty_tensor`) |
+| ProjectOdyssey | Issue #4067 | Empty tensor shape hash discrimination test (`test_hash_empty_tensor_shapes_differ`) |
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -267,6 +374,10 @@ Note: Mojo tests cannot run locally on hosts with GLIBC < 2.32. Use CI or Docker
 | Adding test after `main()` | Placed function after the `fn main()` block | Mojo sees it as dead code outside any callable | Always place helper test functions before `main()` |
 | `pixi run mojo test` locally | Running tests on host Debian Buster | GLIBC_2.32/2.33/2.34 not found — host OS too old | Mojo tests require Docker or CI environment |
 | `just test-mojo` locally | Running `just` outside Docker | `just` command not found outside container | Use CI to verify test execution |
+| Running empty-tensor tests locally | `pixi run mojo run tests/shared/core/test_utility.mojo` | GLIBC version mismatch — host OS (Debian Buster) too old for the Mojo binary in pixi env (requires GLIBC 2.32+) | Mojo tests can only run inside the Docker CI container; local validation relies on pre-commit hooks passing |
+| Using `empty()` factory for 0-element tensor | Considered using `empty(shape, DType.float32)` for the 0-element tensor | `empty()` leaves data uninitialized; for a deterministic hash consistency test `zeros()` signals intent more clearly | Use `zeros()` for empty-shape tests to maximize clarity; `empty()` would also work since no data is accessed |
+| `assert_not_equal` for hash inequality (empty tensors) | Using `assert_not_equal(hash(t1), hash(t2), ...)` | Function does not exist in the test utility helpers for UInt type | Use `if hash(a) == hash(b): raise Error(...)` — consistent with the existing `test_hash_different_values_differ` pattern |
+| Checking if production code needed changes for empty tensors | Reviewed `extensor.mojo:2840` `__hash__` implementation | No change needed — shape loop already handles all dimensions regardless of numel | Read the `__hash__` implementation before writing a test; confirms test-only change is sufficient |
 
 ## Results & Parameters
 
