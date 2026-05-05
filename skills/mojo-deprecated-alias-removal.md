@@ -3,8 +3,10 @@ name: mojo-deprecated-alias-removal
 description: "Workflow for removing deprecated Mojo comptime type aliases and replacing usages with canonical types. Use when: removing DEPRECATED-marked comptime aliases from Mojo modules, cleaning up backward-compat test files, updating __init__.mojo exports and layer imports after alias consolidation."
 category: architecture
 date: 2026-03-05
-version: 1.1.0
+version: 1.2.0
 user-invocable: false
+absorbed:
+  - mojo-comptime-alias-removal
 ---
 # Mojo Deprecated Alias Removal
 
@@ -86,7 +88,45 @@ Use this workflow when you need to:
    Edit(file, old="LinearNoBiasBackwardResult", new="GradientPair", replace_all=True)
    ```
 
-### Phase 3: Update `__init__.mojo` Exports
+### Phase 3: Update Function Signatures and Bodies in Source File
+
+For each function that uses an alias type, update these three locations individually:
+
+1. **Return type annotation**:
+
+   ```mojo
+   # BEFORE
+   ) raises -> Conv2dBackwardResult:
+
+   # AFTER
+   ) raises -> GradientTriple:
+   ```
+
+2. **Docstring Returns section**:
+
+   ```mojo
+   # BEFORE
+   Returns:
+       Conv2dBackwardResult containing:
+
+   # AFTER
+   Returns:
+       GradientTriple containing:
+   ```
+
+3. **Return statements** (alias constructors become direct type constructors):
+
+   ```mojo
+   # BEFORE
+   return Conv2dBackwardResult(grad_input^, grad_kernel^, grad_bias^)
+
+   # AFTER
+   return GradientTriple(grad_input^, grad_kernel^, grad_bias^)
+   ```
+
+> **Note**: Using `Edit` with `replace_all=True` on PascalCase type names is safe and handles all three locations in one pass.
+
+### Phase 4: Update `__init__.mojo` Exports
 
 Remove the alias names from the module's import/export block:
 
@@ -106,28 +146,59 @@ from shared.core.linear import (
 )
 ```
 
-### Phase 4: Update Layer Imports
+### Phase 5: Update Layer Files That Import Aliases
 
-Remove deprecated aliases from layer file imports:
+Remove deprecated aliases from layer file imports. Handle type annotation presence carefully:
 
 ```mojo
 # Before
 from shared.core.conv import conv2d, conv2d_backward, Conv2dBackwardResult
 
-# After
+# After (if alias is only used in comments, just remove it)
 from shared.core.conv import conv2d, conv2d_backward
 ```
 
-### Phase 5: Update Backward-Compat Test File
+If the alias is used as an actual type annotation (not just in comments), replace it with the
+concrete type and add a direct import:
+
+```mojo
+from shared.core.gradient_types import GradientTriple
+```
+
+> **Key rule**: Only add a concrete-type import if the type is actually used in a type annotation. Comments do not require imports.
+
+### Phase 6: Update Backward-Compat Test File
 
 The `test_backward_compat_aliases.mojo` file may test multiple alias groups:
 
 - **If removing ALL aliases**: Delete the entire test file
-- **If removing SOME aliases**: Remove only the relevant imports, test functions, `main()` calls, and update the test count
+- **If removing SOME aliases (partial removal)**: Remove only the relevant imports, test functions, and `main()` calls, then update the test count:
 
-Also update comments in regular test files that reference deprecated alias names.
+  ```mojo
+  # BEFORE
+  from shared.core import (
+      Conv2dBackwardResult,       # Remove
+      Conv2dNoBiasBackwardResult, # Remove
+      ...
+  )
 
-### Phase 6: Verification
+  fn main() raises:
+      test_conv2d_backward_result_alias()         # Remove
+      test_conv2d_no_bias_backward_result_alias() # Remove
+      print("\n All 8 tests passed\n")  # Update count
+  ```
+
+Also update comments in regular test files that reference deprecated alias names:
+
+```mojo
+# BEFORE
+# NOTE: Backward tests disabled due to ownership issues in Conv2dBackwardResult.
+
+# AFTER
+# NOTE: Backward tests disabled due to ownership issues in GradientTriple.
+```
+
+### Phase 7: Verification
 
 1. **Confirm no alias references remain:**
 
@@ -147,7 +218,7 @@ Also update comments in regular test files that reference deprecated alias names
    just docker-run pixi run mojo build shared
    ```
 
-### Phase 7: Commit & PR
+### Phase 8: Commit & PR
 
 ```bash
 # If using worktrees, copy modified files to worktree first
@@ -159,6 +230,53 @@ gh pr create --title "cleanup(module): remove deprecated X type aliases" \
   --body "Closes #<issue>" --label "cleanup"
 gh pr merge --auto --rebase
 ```
+
+## Phase Detail Reference (Conv Module)
+
+This section captures concrete details from applying the workflow to `shared/core/conv.mojo`
+(Issue #3064, PR #3264) — 6 aliases removed across 5 files.
+
+### Conv Module Aliases (6 total)
+
+| Deprecated Alias | Replacement Type | Module |
+| ------------------------------------------- | ---------------- | ---------------------- |
+| `Conv2dBackwardResult` | `GradientTriple` | `shared/core/conv.mojo` |
+| `Conv2dNoBiasBackwardResult` | `GradientPair` | `shared/core/conv.mojo` |
+| `DepthwiseConv2dBackwardResult` | `GradientTriple` | `shared/core/conv.mojo` |
+| `DepthwiseConv2dNoBiasBackwardResult` | `GradientPair` | `shared/core/conv.mojo` |
+| `DepthwiseSeparableConv2dBackwardResult` | `GradientTriple` | `shared/core/conv.mojo` |
+| `DepthwiseSeparableConv2dNoBiasBackwardResult` | `GradientPair` | `shared/core/conv.mojo` |
+
+### Files Modified (Conv)
+
+```text
+shared/core/conv.mojo              - Remove alias definitions, update 6 functions
+shared/core/__init__.mojo          - Remove 6 alias exports from import block
+shared/core/layers/conv2d.mojo     - Remove alias import, update comment
+tests/shared/core/test_backward_compat_aliases.mojo - Remove 4 test functions + imports (partial removal)
+tests/shared/core/test_conv.mojo   - Update 2 comments
+```
+
+### Conv-Specific Phase 3 Notes
+
+For `conv.mojo`, Phase 3 was applied to 6 functions — each requiring updates to:
+- Return type annotation: `-> Conv2dBackwardResult:` → `-> GradientTriple:`
+- Docstring Returns line: `Conv2dBackwardResult containing:` → `GradientTriple containing:`
+- Return statement: `return Conv2dBackwardResult(...)` → `return GradientTriple(...)`
+
+### Conv-Specific Phase 5 Notes (Layer File)
+
+In `shared/core/layers/conv2d.mojo`, `Conv2dBackwardResult` appeared only in a comment
+(not as an actual type annotation), so no concrete-type import was added — just the alias
+import removed and the comment updated.
+
+### Conv-Specific Phase 6 Notes (Partial Test Removal)
+
+The backward-compat test file tested aliases for both Conv and Linear modules. Since only
+Conv aliases were being removed in PR #3264, the file was partially updated (not deleted):
+- Removed 4 Conv alias test functions and their imports
+- Updated the `main()` runner and test count
+- Linear alias tests were left intact
 
 ## Key Learnings
 
@@ -240,6 +358,8 @@ Closes #<issue-number>
 | Assuming detailed plan means lots of work | Issue plan described removing 8 aliases from 6 files | All source/import changes had already been done by prior sessions; only 1 comment update remained | Always grep for remaining occurrences FIRST before reading the plan |
 | Making changes in main checkout without checking worktree | Edited main checkout directly | Changes don't automatically appear in worktree branch — required manual copy | Always work in the worktree for the PR branch, or explicitly copy changed files |
 | `replace_all` on already-handled aliases | Expected to find usages of `DepthwiseSeparableConv2dBackwardResult` | String not found — prior session had already applied the replacement in worktree | Check worktree branch state before applying changes; some may already be done |
+| Adding `GradientTriple` import to `layers/conv2d.mojo` | Added `from shared.core.gradient_types import GradientTriple` because the old import included `Conv2dBackwardResult` | The type was only referenced in a comment, not in actual code — import was unnecessary | Check whether a type is used as an actual annotation before adding imports; comments don't need imports |
+| Leaving layer file comment unchanged after alias removal | Left "The Conv2dBackwardResult struct is only movable" comment in place | Comment referenced the deleted type, causing confusion for future readers | Update all comments that reference removed type names, not just code usages |
 
 ## Verified On
 
