@@ -3,9 +3,11 @@ name: docker-compose-v5-healthcheck-array-split
 description: "Docker Compose v5 (v2.39+) splits healthcheck test: arrays on spaces, breaking all pipe-based shell healthchecks. Use when: (1) healthchecks fail with CMD array format on Docker Compose v5, (2) containers become unhealthy despite service being responsive, (3) migrating compose files to Docker Compose v5, (4) diagnosing 'sh -c wget' help text in healthcheck logs."
 category: tooling
 date: 2026-04-21
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
+absorbed:
+  - e2e-compose-python-stub-to-cpp-server
 tags:
   - docker-compose
   - docker-compose-v5
@@ -135,6 +137,65 @@ podman inspect nats --format '{{json .Config.Healthcheck}}'
 ```
 
 **Root cause summary:** Docker Compose v5 changed how it serializes the `test:` field when the value is a YAML sequence. It now passes each element of the YAML array as a separate exec argument rather than treating element [3] as a single shell string. This worked correctly in Docker Compose v2.x. The string form of `test:` is immune because Docker Compose has always serialized strings as `CMD-SHELL` with the entire string as a single argument.
+
+## Background: Stub-to-C++ Migration
+
+This skill's healthcheck patterns emerged from an earlier migration (2026-03-31) that replaced
+Python FastAPI stub containers with real C++20 multi-stage Dockerfile services in the Odysseus
+E2E compose stack. Understanding that migration explains **why wget was chosen** as the
+healthcheck tool in the first place.
+
+### Why wget was selected
+
+The C++ runtime images (based on `ubuntu:24.04` slim) do not include Python. The original compose
+healthchecks used `python3 -c "import urllib.request; urllib.request.urlopen(...)"` — which
+worked only because the stub containers were Python images. When the stubs were replaced with
+compiled C++ binaries, Python was no longer available in those containers, so the healthchecks
+were rewritten to use `wget`, which is small, widely available, and installable in a single
+`apt-get` line.
+
+### Migration steps (stub → C++ server)
+
+1. Change `build.context` from `stub/` subdirectory to the repo root where the real `Dockerfile`
+   lives (e.g. `control/ProjectAgamemnon/` instead of `control/ProjectAgamemnon/stub/`).
+2. Replace all `python3 urllib` healthchecks with `wget -qO-` in the compose file.
+3. Ensure the C++ multi-stage `Dockerfile` installs `wget` in the runtime stage:
+   ```dockerfile
+   RUN apt-get update && apt-get install --no-install-recommends wget && rm -rf /var/lib/apt/lists/*
+   ```
+4. Verify environment variable parity between stub and real server (e.g. `NATS_URL`, `PORT`,
+   `NESTOR_PORT`) — stubs may have defaulted values that the real server reads from env.
+5. Delete the stub directory — maintaining both causes drift and architecture confusion.
+
+### Before / After (stub migration)
+
+```yaml
+# BEFORE (Python stub — build context points to stub/, healthcheck uses python3)
+agamemnon:
+  build:
+    context: control/ProjectAgamemnon/stub/
+  healthcheck:
+    test: ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/v1/health')\""]
+
+# AFTER (real C++ server — build context at repo root, healthcheck uses wget)
+agamemnon:
+  build:
+    context: control/ProjectAgamemnon/
+  healthcheck:
+    test: ["CMD-SHELL", "wget -qO- http://localhost:8080/v1/health 2>/dev/null || exit 1"]
+```
+
+> **Note:** The `["CMD-SHELL", "wget -qO- ..."]` array form shown here was the correct form for
+> Docker Compose v2.x at the time of the stub migration. It was later found to be broken by the
+> Docker Compose v5 array-splitting regression — see the Quick Reference above for the v5-safe
+> string form.
+
+### Failed attempts during stub migration
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| `python3 urllib` healthcheck | `python3 -c "import urllib.request; urllib.request.urlopen(...)"` | C++ runtime images don't have Python installed | Use `wget -qO-` for healthchecks in containers running compiled binaries |
+| Keeping stubs alongside C++ | Maintaining both `stub/` dir and real Dockerfile | Stubs drift from real API, cause confusion, violate architecture rules | Delete stubs once real servers exist — single source of truth |
 
 ## Verified On
 
