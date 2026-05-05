@@ -1,0 +1,904 @@
+{
+  "metadata": {
+    "total_fingerprinted": 838,
+    "total_skill_files": 1024,
+    "coverage_pct": 81.8,
+    "clusters_generated": 59,
+    "files_in_clusters": 175,
+    "gap_warning": "Shards 2 and 3 missed ~186 files; clusters may be incomplete for those ranges"
+  },
+  "clusters": [
+    {
+      "id": "C001",
+      "files": [
+        "skills/batch-pr-ci-fix-workflow.md",
+        "skills/batch-pr-rebase-workflow.md",
+        "skills/ci-cd-broken-main-parallel-fix-wave.md",
+        "skills/ci-pixi-lock-check-setup-order.md",
+        "skills/ci-pixi-workspace-version-dedup.md",
+        "skills/ci-precommit-lock-file-stash-conflict.md",
+        "skills/ci-precommit-parity-single-source-of-truth.md",
+        "skills/ci-precommit-ruff-version-mismatch.md"
+      ],
+      "signals": [
+        "heading-overlap:0.62",
+        "heading-overlap:0.83",
+        "heading-overlap:1.00",
+        "prefix2:batch-pr",
+        "prefix2:ci-pixi",
+        "prefix2:ci-precommit",
+        "tag-overlap:ci,myrmidon",
+        "tag-overlap:ci,pixi"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C002",
+      "files": [
+        "skills/ci-cd-achaean-fleet-ci-cascade-patterns.md",
+        "skills/ci-cd-cascading-dockerfile-ci-failure-remediation.md",
+        "skills/ci-cd-dependabot-pixi-lock-drift-fix.md",
+        "skills/ci-cd-docker-base-entrypoint-all-bases.md",
+        "skills/ci-cd-github-actions-bot-protected-branch-push.md",
+        "skills/ci-cd-github-actions-sha-pinning.md",
+        "skills/ci-cd-github-actions-slash-job-id-parse-failure.md",
+        "skills/ci-cd-github-api-rate-limit-ci-monitoring.md"
+      ],
+      "signals": [
+        "heading-overlap:0.62",
+        "heading-overlap:0.67",
+        "heading-overlap:0.71",
+        "heading-overlap:0.75",
+        "heading-overlap:0.86",
+        "heading-overlap:1.00",
+        "prefix2:ci-cd",
+        "prefix3:ci-cd-github"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "near-exact"
+    },
+    {
+      "id": "C003",
+      "files": [
+        "skills/ci-cd-failure-diagnosis-log-analysis.md",
+        "skills/ci-cd-hatchling-force-include-sdist-wheel-break.md",
+        "skills/ci-cd-opencode-asset-arch-naming.md",
+        "skills/ci-cd-pixi-lock-stale-multi-pr-triage.md",
+        "skills/ci-cd-pre-commit-ci-hook-failures.md",
+        "skills/ci-cd-reusable-workflow-required-checks-aggregator.md",
+        "skills/ci-cd-ruleset-bootstrap-deadlock.md",
+        "skills/ci-cd-skill-validation-failed-attempts-inline-html.md"
+      ],
+      "signals": [
+        "heading-overlap:0.67",
+        "heading-overlap:0.75",
+        "heading-overlap:0.86",
+        "heading-overlap:1.00",
+        "prefix2:ci-cd"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C004",
+      "files": [
+        "skills/investigate-mojo-heap-corruption.md",
+        "skills/mojo-always-inline-worsens-jit-crashes.md",
+        "skills/mojo-asap-destruction-perturbation-loop-fix.md",
+        "skills/mojo-bitcast-always-inline-crash-fix.md",
+        "skills/mojo-copyinit-double-free.md",
+        "skills/mojo-jit-crash-retry.md",
+        "skills/mojo-kgen-jit-buffer-overflow-diagnostic.md",
+        "skills/mojo-library-import-audit.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "tag-overlap:always-inline,bitcast,mojo",
+        "tag-overlap:bitcast,mojo",
+        "tag-overlap:heap-corruption,mojo",
+        "tag-overlap:jit,mojo",
+        "trigger-terms:ci,test",
+        "xref"
+      ],
+      "category": "debugging",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C005",
+      "files": [
+        "skills/mojo-026-breaking-changes.md",
+        "skills/mojo-0263-stdlib-import-migration.md",
+        "skills/mojo-escaping-signature-regression.md",
+        "skills/tooling-claude-plugin-third-party-skill-porting.md",
+        "skills/tooling-modular-project-setup-wizard.md",
+        "skills/tooling-modular-upstream-skill-selective-porting.md",
+        "skills/tooling-skill-deduplication-semver-versioning.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:tooling-modular",
+        "tag-overlap:0.26.3,migration,mojo",
+        "tag-overlap:escaping,mojo",
+        "tag-overlap:modular-upstream,mojo",
+        "xref"
+      ],
+      "category": "mixed",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C006",
+      "files": [
+        "skills/precommit-linter-stale-branch-revert.md",
+        "skills/rebase-full-file-rewrite-conflict.md",
+        "skills/rebasing-stale-agent-worktree-branches.md",
+        "skills/tooling-rebase-conflict-semantic-analysis.md",
+        "skills/worktree-agent-plan-mode-avoidance.md",
+        "skills/worktree-cleanup-user-constraints.md",
+        "skills/worktree-lifecycle-create-switch-sync.md"
+      ],
+      "signals": [
+        "tag-overlap:agent,worktree",
+        "tag-overlap:cleanup,worktree",
+        "tag-overlap:conflict,git,merge",
+        "tag-overlap:git,worktree",
+        "tag-overlap:migration,rebase",
+        "tag-overlap:rebase,stale",
+        "trigger-terms:agent,branch,commit",
+        "trigger-terms:agent,worktree"
+      ],
+      "category": "mixed",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C007",
+      "files": [
+        "skills/e2e-framework-crash-recovery-bugs.md",
+        "skills/e2e-resume-restore-run-context.md",
+        "skills/resume-crash-debugging.md",
+        "skills/resume-functionality-tests.md",
+        "skills/until-resume-debugging.md"
+      ],
+      "signals": [
+        "heading-overlap:0.62",
+        "heading-overlap:1.00",
+        "tag-overlap:checkpoint,debugging,e2e",
+        "tag-overlap:checkpoint,e2e,judge",
+        "tag-overlap:checkpoint,e2e,resume",
+        "tag-overlap:checkpoint,resume",
+        "trigger-terms:checkpoint,resume"
+      ],
+      "category": "mixed",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C008",
+      "files": [
+        "skills/hephaestus-plugin-migration.md",
+        "skills/tooling-plugin-cache-stale-skill-sync.md",
+        "skills/tooling-plugin-command-codebase-rename.md",
+        "skills/tooling-plugin-marketplace-hourly-cron.md",
+        "skills/tooling-python-codebase-symbol-rename.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:tooling-plugin",
+        "tag-overlap:claude-code,marketplace,plugin",
+        "tag-overlap:mnemosyne,plugin",
+        "tag-overlap:refactor,rename",
+        "xref"
+      ],
+      "category": "tooling",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C009",
+      "files": [
+        "skills/mojo-circular-import-type-identity-fix.md",
+        "skills/mojo-dual-type-tensor-review.md",
+        "skills/mojo-method-api-symmetry.md",
+        "skills/mojo-method-wrapper-circular-import.md",
+        "skills/mojo-overload-ambiguity-typed-tensor-isolation.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:mojo-method",
+        "xref"
+      ],
+      "category": "architecture",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C010",
+      "files": [
+        "skills/codebase-consolidation.md",
+        "skills/migrate-dataclass-to-pydantic.md",
+        "skills/pydantic-model-dump.md",
+        "skills/type-alias-consolidation.md"
+      ],
+      "signals": [
+        "heading-overlap:0.62",
+        "heading-overlap:1.00",
+        "tag-overlap:pydantic,python",
+        "xref"
+      ],
+      "category": "mixed",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C011",
+      "files": [
+        "skills/crosshost-per-component-launcher-pattern.md",
+        "skills/e2e-crosshost-doctor-prerequisite-checker.md",
+        "skills/e2e-hermes-hub-remote-myrmidon.md",
+        "skills/e2e-homeric-compose-cpp-pipeline.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "tag-overlap:compose,docker,homeric-intelligence",
+        "tag-overlap:cpp20,e2e,homeric-intelligence",
+        "tag-overlap:cross-host,e2e,homeric-intelligence",
+        "tag-overlap:cross-host,homeric-intelligence,nats",
+        "tag-overlap:e2e,homeric-intelligence,nats",
+        "xref"
+      ],
+      "category": "mixed",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C012",
+      "files": [
+        "skills/debug-evaluation-logs.md",
+        "skills/e2e-path-resolution-fix.md",
+        "skills/e2e-rate-limit-detection.md",
+        "skills/e2e-rate-limit-diagnosis-reset.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:e2e-rate",
+        "prefix3:e2e-rate-limit",
+        "xref"
+      ],
+      "category": "debugging",
+      "tier_hint": "near-exact"
+    },
+    {
+      "id": "C013",
+      "files": [
+        "skills/oss-contribution-issue-filing-pattern.md",
+        "skills/repo-audit-count-reconciliation.md",
+        "skills/repo-audit-triage-fix-and-issue-workflow.md",
+        "skills/skill-audit-and-merge.md"
+      ],
+      "signals": [
+        "heading-overlap:0.62",
+        "prefix2:repo-audit",
+        "tag-overlap:audit,ci,triage",
+        "tag-overlap:audit,deduplication"
+      ],
+      "category": "tooling",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C014",
+      "files": [
+        "skills/testing-pytest-asyncio-daemon-coroutine-patch.md",
+        "skills/testing-pytest-asyncio-event-mock-hang.md",
+        "skills/testing-pytest-ini-shadows-pyproject.md",
+        "skills/testing-pytest-timeout-thread-method-asyncio.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:testing-pytest",
+        "prefix3:testing-pytest-asyncio",
+        "tag-overlap:asyncio,hang,pytest",
+        "trigger-terms:ci,pytest,test",
+        "trigger-terms:ci,test",
+        "trigger-terms:pytest,test",
+        "xref"
+      ],
+      "category": "testing",
+      "tier_hint": "near-exact"
+    },
+    {
+      "id": "C015",
+      "files": [
+        "skills/ci-github-actions-pull-request-trigger.md",
+        "skills/ci-github-actions-secrets-context-unavailable-job-if.md",
+        "skills/ci-github-ruleset-matrix-status-context.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:ci-github",
+        "prefix3:ci-github-actions"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "near-exact"
+    },
+    {
+      "id": "C016",
+      "files": [
+        "skills/ci-workflow-file-consolidation.md",
+        "skills/ci-workflow-hardening-checklist.md",
+        "skills/ci-workflow-optimization-phase5.md"
+      ],
+      "signals": [
+        "heading-overlap:0.83",
+        "heading-overlap:1.00",
+        "prefix2:ci-workflow",
+        "trigger-terms:ci,workflow"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C017",
+      "files": [
+        "skills/docker-compose-v5-healthcheck-array-split.md",
+        "skills/dockerfile-healthcheck-pattern.md",
+        "skills/e2e-compose-python-stub-to-cpp-server.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "tag-overlap:compose,dockerfile,healthcheck",
+        "tag-overlap:docker,healthcheck",
+        "tag-overlap:healthcheck,podman"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C018",
+      "files": [
+        "skills/homeric-intelligence-ecosystem-installer.md",
+        "skills/install-odysseus-ecosystem-container-testing.md",
+        "skills/tooling-pixi-container-env-isolation.md"
+      ],
+      "signals": [
+        "heading-overlap:0.83",
+        "heading-overlap:1.00",
+        "tag-overlap:debian,ecosystem,hephaestus",
+        "tag-overlap:pixi,podman",
+        "xref"
+      ],
+      "category": "tooling",
+      "tier_hint": "topic-cluster"
+    },
+    {
+      "id": "C019",
+      "files": [
+        "skills/academic-paper-myrmidon-swarm-review.md",
+        "skills/academic-paper-validation.md"
+      ],
+      "signals": [
+        "heading-overlap:0.83",
+        "prefix2:academic-paper"
+      ],
+      "category": "documentation",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C020",
+      "files": [
+        "skills/additive-resume-integration-tests.md",
+        "skills/tier-state-additive-resume-tests.md"
+      ],
+      "signals": [
+        "trigger-terms:resume,test",
+        "xref"
+      ],
+      "category": "mixed",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C021",
+      "files": [
+        "skills/architecture-odysseus-ai-maestro-integration-gap.md",
+        "skills/architecture-odysseus-ruflo-comparison.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:architecture-odysseus"
+      ],
+      "category": "architecture",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C022",
+      "files": [
+        "skills/automation-resilience-label-discovery-dirty.md",
+        "skills/worktree-parallel-agent-execution.md"
+      ],
+      "signals": [
+        "heading-overlap:0.83",
+        "tag-overlap:automation,worktree"
+      ],
+      "category": "tooling",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C023",
+      "files": [
+        "skills/ci-gitleaks-sarif-false-positive-fix.md",
+        "skills/ci-gitleaks-toml-allowlist-slice-vs-map.md"
+      ],
+      "signals": [
+        "heading-overlap:0.83",
+        "prefix2:ci-gitleaks"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C024",
+      "files": [
+        "skills/claude-code-slash-command-discovery.md",
+        "skills/claude-code-v21-adoption.md"
+      ],
+      "signals": [
+        "prefix2:claude-code"
+      ],
+      "category": "tooling",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C025",
+      "files": [
+        "skills/claude-plugin-format.md",
+        "skills/claude-plugin-marketplace.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:claude-plugin"
+      ],
+      "category": "tooling",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C026",
+      "files": [
+        "skills/close-script-test-gap-cmd-run-repair.md",
+        "skills/split-large-test-file.md"
+      ],
+      "signals": [
+        "heading-overlap:0.67",
+        "xref"
+      ],
+      "category": "testing",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C027",
+      "files": [
+        "skills/complex-agent-eval-task.md",
+        "skills/tier-ablation-testing.md"
+      ],
+      "signals": [
+        "heading-overlap:0.83",
+        "xref"
+      ],
+      "category": "evaluation",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C028",
+      "files": [
+        "skills/e2e-checkpoint-resume.md",
+        "skills/emit-process-metrics-from-runner.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "xref"
+      ],
+      "category": "evaluation",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C029",
+      "files": [
+        "skills/e2e-complete-experiment-rerun-early-exit.md",
+        "skills/e2e-staged-experiment-execution.md"
+      ],
+      "signals": [
+        "heading-overlap:0.67",
+        "tag-overlap:checkpoint,cli-flags,e2e"
+      ],
+      "category": "evaluation",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C030",
+      "files": [
+        "skills/fix-concatenate-noncontiguous-stride-bug.md",
+        "skills/fix-non-contiguous-tensor-stride-access.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "xref"
+      ],
+      "category": "debugging",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C031",
+      "files": [
+        "skills/fix-docker-platform.md",
+        "skills/fix-docker-shell-tty.md"
+      ],
+      "signals": [
+        "prefix2:fix-docker",
+        "trigger-terms:ci,docker"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C032",
+      "files": [
+        "skills/fix-markdown-agent-docs.md",
+        "skills/fix-markdown-fenced-code-blocks.md"
+      ],
+      "signals": [
+        "heading-overlap:0.83",
+        "prefix2:fix-markdown"
+      ],
+      "category": "documentation",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C033",
+      "files": [
+        "skills/fix-mypy-ruff-script-ci.md",
+        "skills/fix-mypy-valid-type-errors.md"
+      ],
+      "signals": [
+        "heading-overlap:0.62",
+        "prefix2:fix-mypy"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C034",
+      "files": [
+        "skills/fix-randn-seed-bug.md",
+        "skills/mojo-setitem-lvalue-semantics.md"
+      ],
+      "signals": [
+        "heading-overlap:0.71",
+        "tag-overlap:mojo,testing"
+      ],
+      "category": "debugging",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C035",
+      "files": [
+        "skills/fix-review-feedback-missing-assertion.md",
+        "skills/fix-review-feedback-runner-path-untested.md"
+      ],
+      "signals": [
+        "prefix3:fix-review-feedback",
+        "trigger-terms:pr review,test"
+      ],
+      "category": "mixed",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C036",
+      "files": [
+        "skills/hadolint-failure-threshold-config.md",
+        "skills/yamllint-trailing-blank-lines.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "tag-overlap:ci,github-actions,lint"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C037",
+      "files": [
+        "skills/hatch-vcs-editable-pixi-locked-incompatibility.md",
+        "skills/hatch-vcs-pyproject-auto-versioning-setup.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:hatch-vcs",
+        "tag-overlap:ci-cd,hatch-vcs"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C038",
+      "files": [
+        "skills/issue-already-implemented-preflight-check.md",
+        "skills/issue-cleanup-already-resolved-detection.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "tag-overlap:git-log,pr-check"
+      ],
+      "category": "tooling",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C039",
+      "files": [
+        "skills/latex-paper-parallel-assembly.md",
+        "skills/latex-table-underscore-escape-missing-dollar.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "tag-overlap:latex,pdflatex"
+      ],
+      "category": "documentation",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C040",
+      "files": [
+        "skills/layer-norm-4d-gradient-test.md",
+        "skills/layer-norm-param-gradient-checks.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:layer-norm"
+      ],
+      "category": "testing",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C041",
+      "files": [
+        "skills/logging-stdlib-json-formatter.md",
+        "skills/tooling-structured-json-logging-stdlib.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "tag-overlap:json,logging,stdlib"
+      ],
+      "category": "tooling",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C042",
+      "files": [
+        "skills/markdown-linting-bulk-table-format-fix.md",
+        "skills/markdownlint-troubleshooting.md"
+      ],
+      "signals": [
+        "heading-overlap:0.83",
+        "xref"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C043",
+      "files": [
+        "skills/model-config-explicit-model-id.md",
+        "skills/model-config-naming-validation.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:model-config"
+      ],
+      "category": "tooling",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C044",
+      "files": [
+        "skills/mojo-adr-supersession-on-version-upgrade.md",
+        "skills/mojo-fp16-simd-upgrade-pattern.md"
+      ],
+      "signals": [
+        "tag-overlap:fp16,mojo,simd",
+        "xref"
+      ],
+      "category": "mixed",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C045",
+      "files": [
+        "skills/mojo-anytensor-copy-pointer-leak.md",
+        "skills/mojo-anytensor-uint-set-float-bitcast.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:mojo-anytensor"
+      ],
+      "category": "debugging",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C046",
+      "files": [
+        "skills/mojo-comptime-alias-removal.md",
+        "skills/mojo-deprecated-alias-removal.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "xref"
+      ],
+      "category": "architecture",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C047",
+      "files": [
+        "skills/mojo-empty-tensor-hash-test.md",
+        "skills/mojo-hash-testing-patterns.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "xref"
+      ],
+      "category": "testing",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C048",
+      "files": [
+        "skills/mojo-format.md",
+        "skills/mojo-lint-syntax.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "xref"
+      ],
+      "category": "optimization",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C049",
+      "files": [
+        "skills/mojo-limitation-note-standardization.md",
+        "skills/mojo-note-to-docstring.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "xref"
+      ],
+      "category": "documentation",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C050",
+      "files": [
+        "skills/mojo-numerical-gradient-test.md",
+        "skills/mojo-param-gradient-check.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "xref"
+      ],
+      "category": "testing",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C051",
+      "files": [
+        "skills/nats-optional-import-guard-deliver-policy.md",
+        "skills/nats-py-connection-resilience-patterns.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "tag-overlap:asyncio,nats,nats-py"
+      ],
+      "category": "debugging",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C052",
+      "files": [
+        "skills/optimization-mojo-simd-nan-inf-vectorization.md",
+        "skills/optimization-simd-gradient-clipping-vectorization.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "tag-overlap:mojo,performance,simd"
+      ],
+      "category": "optimization",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C053",
+      "files": [
+        "skills/pixi-pip-audit-cve-pinning.md",
+        "skills/pixi-pip-audit-severity-filter.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:pixi-pip",
+        "prefix3:pixi-pip-audit",
+        "trigger-terms:audit,ci"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "near-exact"
+    },
+    {
+      "id": "C054",
+      "files": [
+        "skills/podman-rootless-dns-container-resolution.md",
+        "skills/podman-scratch-image-healthcheck-workaround.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "tag-overlap:container,podman"
+      ],
+      "category": "debugging",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C055",
+      "files": [
+        "skills/pr-rebase-pipeline.md",
+        "skills/pr-rebase-stale-plan-fix.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:pr-rebase",
+        "trigger-terms:rebase,stale"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C056",
+      "files": [
+        "skills/pre-commit-detect-private-key-fixture-exclusion.md",
+        "skills/pre-commit-hook-configuration.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:pre-commit",
+        "trigger-terms:commit,hook"
+      ],
+      "category": "ci-cd",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C057",
+      "files": [
+        "skills/python-repo-audit-implementation.md",
+        "skills/python-repo-modernization.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:python-repo"
+      ],
+      "category": "tooling",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C058",
+      "files": [
+        "skills/state-machine-interrupt-handling.md",
+        "skills/state-machine-wiring.md"
+      ],
+      "signals": [
+        "heading-overlap:1.00",
+        "prefix2:state-machine"
+      ],
+      "category": "architecture",
+      "tier_hint": "high-overlap"
+    },
+    {
+      "id": "C059",
+      "files": [
+        "skills/workflow-readme-audit.md",
+        "skills/workflow-readme-migration-sync.md"
+      ],
+      "signals": [
+        "prefix2:workflow-readme"
+      ],
+      "category": "documentation",
+      "tier_hint": "high-overlap"
+    }
+  ]
+}
