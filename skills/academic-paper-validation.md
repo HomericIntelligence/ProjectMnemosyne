@@ -1,10 +1,11 @@
 ---
 name: academic-paper-validation
-description: Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical methodology verification, LaTeX compilation fixes, and arXiv build preparation
+description: "Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical methodology verification, LaTeX compilation fixes, arXiv build preparation, and parallel myrmidon swarm review"
 category: documentation
 date: 2026-04-27
-version: 3.1.0
+version: 3.2.0
 user-invocable: false
+absorbed: [academic-paper-myrmidon-swarm-review]
 ---
 # Academic Paper Validation
 
@@ -625,9 +626,116 @@ Key insight: T0–T4 null results reflect genuinely small effects (power 0.95–
 15. **Causal language in observational studies**: Use "is associated with" not "causes" when design is non-randomized
 16. **Verify build script format globs**: Check packaging script extension patterns match actual figure files
 
+## Parallel Swarm Review Pattern
+
+For large academic papers (>1,000 lines LaTeX) or AI architecture research docs, use a role-stratified
+Myrmidon swarm instead of sequential single-agent review. This catches cross-domain issues faster and
+enables simultaneous coverage of statistical methodology, data accuracy, writing quality, and figure
+verification.
+
+### Swarm Configurations
+
+**Configuration A — Initial review (discovery):**
+
+| Role | Model | Domain | Focus |
+| ------ | ------- | -------- | ------- |
+| Coordinator | Opus | Orchestration | Subdivide, delegate, aggregate, deduplicate |
+| Professor | Opus | Statistical methodology | Test selection, effect size reporting, CIs, alpha |
+| Expert A | Sonnet | Data accuracy | Every number verified against source tables |
+| Expert B | Sonnet | Writing/framing | Rhetoric, hedging, academic tone, overstatement |
+| Student A | Haiku | Line verification | Lines 1–N/2 (typos, wrong numbers, broken refs) |
+| Student B | Haiku | Line verification | Lines N/2+1–N (typos, wrong numbers, broken refs) |
+
+**Configuration B — Go/NoGo audit (verification of corrected paper):**
+
+| Role | Model | Domain | Focus |
+| ------ | ------- | -------- | ------- |
+| Coordinator | Opus | Orchestration | Subdivide, delegate, aggregate, **independently verify any CRITICAL finding** |
+| Agent A | Opus | Abstract/Intro/Conclusions | Interpretive judgment, claim framing, hedging language |
+| Agent B | Sonnet | IRR/Cost Analysis | Statistical claim verification against JSON data files |
+| Agent C | Sonnet | Results tables | Cell-by-cell verification of every table cell against runs.csv |
+| Agent D | Sonnet | IRR methodology/Hypotheses | Subtle interpretive claims, monotonicity checks |
+| Agent E | Sonnet | Cross-references/Bibliography | Verify all \ref targets resolve, all \cite keys exist in .bib |
+
+**Outcome**: v1: caught 4 CRITICAL figure/caption mismatches, 8 missing citations. v2 Go/NoGo: 5-agent swarm verified 100+ numeric claims, 0 data mismatches, caught false "monotonic relationship" claim, coordinator overrode 1 false alarm. CONDITIONAL GO.
+
+### SRH vs KW Statistical Source Files
+
+A recurring source of confusion in paper audits with Scheirer-Ray-Hare and Kruskal-Wallis tests:
+
+| Statistic Type | Source File | Contents |
+| ---------------- | ------------- | ---------- |
+| Omnibus KW (pass_rate, impl_rate, duration) | `statistical_results.json` | Kruskal-Wallis H-statistic and p-value per metric |
+| SRH by factor (tier, experiment, interaction) | `srh_tier_experiment.json` | SRH H-statistic and p-value for each factor, including cost_usd |
+| Per-metric SRH | `srh_tier_experiment.json` | All metrics including cost_usd that are NOT in statistical_results.json |
+
+**Key rule**: If an agent reports a statistical value as "unverifiable," the coordinator must check ALL JSON files before accepting the finding. cost_usd is only in `srh_tier_experiment.json`.
+
+### False Alarm Mitigation Protocol
+
+When any sub-agent raises a CRITICAL finding during a Go/NoGo audit:
+
+1. **Do not act immediately** — the coordinator must independently verify
+2. **Check the actual source file** — agents may search the wrong JSON/CSV
+3. **Cross-reference with the paper's methodology section** — which test was used? which file stores those results?
+4. **Only escalate after independent verification** — false alarms can block publication unnecessarily
+
+### Canonical Architecture Parameters (for AI architecture research doc review)
+
+When reviewing `research_*.md` or `summary_*.md` docs, use 5 Sonnet specialists in parallel:
+
+```
+Wave 1 — 5 Sonnet specialists (all read research_*.md and summary_*.md):
+  A — Citation Verifier:    arXiv IDs, author names, venue, summary faithfulness, fabrications
+  B — Complexity Auditor:   Re-derive KV/FLOPs formulas; check context length labels; dequant overhead
+  C — Literature Gap Finder: Missing papers, underweighted methods, key missing citations
+  D — Comparison Validator: Nx claims, layer fractions, TPOT derivation (include weight bandwidth!)
+  E — Feasibility Checker:  Scope discipline, STE soundness, training stability risks, implementation effort
+
+Each writes to: verification_{id}_{domain}.md
+
+Wave 2 — Lead reviewer synthesizes into: review_{id}_{name}.md
+  8 sections: Citation Verification / Missing Literature / Big-O Verification /
+               Nx Comparison / Feasibility / Quality Analysis / Novelty / Final Verdict
+```
+
+**Canonical architecture parameters** (may differ from SHARED_PRELUDE.md v1):
+- A1 GatedAttn head_dim = 256 (NOT 128); 24Q/4KV (full-attn layers)
+- A2: 8 KV heads, head_dim=128, all 64 layers; context=262,144 (not 32,768)
+- B: 2 KV heads × head_dim=256 (product=512; same footprint as 4×128)
+
+### Figure Caption Verification via VL JSON Spec Parsing
+
+```bash
+# Extract key fields from VL specs to verify captions — ALWAYS read spec before touching captions
+python3 - <<'EOF'
+import json, glob
+
+for path in sorted(glob.glob("docs/arxiv/haiku/figures/*.vl.json")):
+    with open(path) as f:
+        spec = json.load(f)
+    enc = spec.get("encoding", {})
+    print(f"\n=== {path} ===")
+    print(f"  title : {spec.get('title', '(none)')}")
+    print(f"  x     : {enc.get('x', {}).get('field', '?')} ({enc.get('x', {}).get('type', '?')})")
+    print(f"  y     : {enc.get('y', {}).get('field', '?')} ({enc.get('y', {}).get('type', '?')})")
+    print(f"  color : {enc.get('color', {}).get('field', '?')}")
+    print(f"  facet : {spec.get('facet', {}).get('field', '(none)')}")
+EOF
+```
+
+### Common Swarm Pitfalls
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Fix captions before reading VL JSON | Rewrote figure captions based on paper context | Captions were wrong — figures showed different variables than assumed | Always read the `.vl.json` spec before touching a figure caption |
+| Accept BCa bootstrap at n=9 | Reported BCa bootstrap CIs for binary pass-rate data with n=9 per cell | BCa bootstrap unreliable at very small sample sizes for binary data | Prefer Clopper-Pearson exact intervals for binary data at n<=15 |
+| Trust "32K ctx" label in arch research docs | Accepted KV cache figures labeled "32K ctx" without re-deriving | 68.7 GB figure was labeled "32K ctx" but computed with 262,144 tokens | Always re-derive KV cache: `num_layers × 2 × n_KV_heads × head_dim × seq_len × 2` |
+| Agent searched wrong JSON file for cost statistics | Agent searched statistical_results.json for cost_usd p-value | cost_usd statistics live in srh_tier_experiment.json, not statistical_results.json | Coordinator MUST independently verify any agent "CRITICAL" finding before acting |
+| Agent claimed "monotonic" without checking ordering | Paper stated "monotonic relationship" between capability gap and judge agreement | J2-J3 MAD (0.270) > J1-J3 MAD (0.210) despite smaller capability gap — violates monotonicity | When paper claims "monotonic relationship," verify the actual data ordering |
+
 ## Related Skills
 
-- `academic-paper-myrmidon-swarm-review` - Parallel multi-agent review with Opus/Sonnet/Haiku roles for thorough coverage
 - `latex-compilation` - Compiling LaTeX documents with proper error checking
 - `statistical-rigor` - Applying appropriate statistical language for sample sizes
 - `code-review` - Systematic review patterns applicable to paper review
