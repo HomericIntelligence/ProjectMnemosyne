@@ -1,13 +1,16 @@
 ---
 name: fix-markdown-agent-docs
-description: 'Fix common markdown issues in agent hierarchy docs: malformed closing
-  code fences, stale agent counts, and line length violations. Use when: (1) markdownlint
-  fails on agents/hierarchy.md, (2) agent counts in docs diverge from actual .claude/agents/
-  files, (3) closing code fences have language specifiers.'
+description: "Fix common markdown issues in agent hierarchy docs: malformed closing\
+  \ code fences, stale agent counts, and line length violations. Use when: (1) markdownlint\
+  \ fails on agents/hierarchy.md, (2) agent counts in docs diverge from actual .claude/agents/\
+  \ files, (3) closing code fences have language specifiers, (4) markdownlint reports\
+  \ MD040 or MD031 on closing fence line."
 category: documentation
 date: 2026-03-06
-version: 1.0.0
+version: 1.1.0
 user-invocable: false
+absorbed:
+  - fix-markdown-fenced-code-blocks
 ---
 ## Overview
 
@@ -101,6 +104,46 @@ Should output: `Markdown Lint...Passed`
 ```bash
 git add agents/hierarchy.md
 SKIP=mojo-format git commit -m "fix: correct agent counts and markdown in hierarchy.md"
+```
+
+### Markdownlint Quick Reference
+
+| Rule | Name | Fix |
+| ------ | ------ | ----- |
+| MD013 | line-length (max 120) | Wrap at natural clause boundary, indent continuation 2 spaces |
+| MD031 | blanks-around-fences | Ensure blank line before and after fenced block |
+| MD032 | blanks-around-lists | Add blank line before first list item after paragraph/heading |
+| MD040 | fenced-code-language | Opening fences need language; closing fences must be plain ` ``` ` |
+
+**Malformed Closing Fence** — triggers MD040/MD031:
+
+Wrong (closing fence with language tag):
+
+```text
+    └──────────────────────────────────────┘
+```text
+```
+
+Correct:
+
+```text
+    └──────────────────────────────────────┘
+```
+```
+
+**MD013 Line Wrap** — Mojo-specific bullet example:
+
+Wrong (>120 chars):
+
+```markdown
+- **Language Context**: Designs Mojo module structures, leverages Mojo features (SIMD, traits, structs); coordinates review across all code dimensions
+```
+
+Correct:
+
+```markdown
+- **Language Context**: Designs Mojo module structures, leverages Mojo features (SIMD, traits, structs);
+  coordinates review across all code dimensions
 ```
 
 ## Key Patterns
