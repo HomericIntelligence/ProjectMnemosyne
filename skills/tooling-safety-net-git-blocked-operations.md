@@ -1,12 +1,13 @@
 ---
 name: tooling-safety-net-git-blocked-operations
-description: "Use when: (1) a git or filesystem operation is blocked by the Safety Net hook (cc-safety-net.js) and you need to identify the correct fallback, (2) you need to know which git operations Safety Net blocks vs. allows, (3) a compound bash command fails mid-way due to a Safety Net block, (4) cleaning up locked worktrees in Safety Net-constrained environments."
+description: "Use when: (1) a git or filesystem operation is blocked by the Safety Net hook (cc-safety-net.js) and you need to identify the correct fallback, (2) you need to know which git operations Safety Net blocks vs. allows, (3) a compound bash command fails mid-way due to a Safety Net block, (4) cleaning up locked worktrees in Safety Net-constrained environments, (5) rm -rf $VAR where $VAR is a shell variable pointing to a /tmp/ path is blocked — Safety Net cannot verify the variable's value at hook time; always use mktemp -d to get a fresh temp dir."
 category: tooling
-date: 2026-04-25
-version: "1.0.0"
+date: 2026-05-05
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
 tags: []
+history: tooling-safety-net-git-blocked-operations.history
 ---
 
 # Safety Net: Blocked Git Operations and Fallback Pattern
@@ -27,6 +28,7 @@ tags: []
 - You want to know whether a given git operation is safe to run inside the agent harness without triggering Safety Net
 - A compound (`&&`-chained) bash command fails partway through because one segment is blocked
 - You need to clean up locked worktrees (`worktree-agent-*`) created by Claude Code for session isolation
+- You are about to run `rm -rf "$VAR"` where `$VAR` holds a `/tmp/` path — Safety Net blocks this even for clearly temporary directories; use `mktemp -d` instead
 
 ## Verified Workflow
 
@@ -116,6 +118,7 @@ git worktree prune
 | Retry blocked operation | Re-issued the same blocked command hoping for a different result | Safety Net blocks every attempt; the block is deterministic | Never retry blocked commands — pivot to user delegation immediately |
 | `git worktree remove` on locked worktree without `--force` | Called `git worktree remove <path>` on a Claude Code session worktree | Fails with "is locked, use 'git worktree unlock' to unlock it first" — not a Safety Net block, but a git error | Locked worktrees need `--force`; but `--force` is then blocked by Safety Net — must delegate both steps to user |
 | Adding Safety Net allow-rule to bypass built-in protections | Attempted to add `.safety-net.json` rule to whitelist `git stash drop` | Safety Net custom rules can only ADD restrictions, not bypass built-in protections | Use the fallback pattern instead; custom rules cannot unblock built-in protections |
+| rm -rf on shell variable temp path | Used `WORK="/tmp/fixed-name"; rm -rf "$WORK"` to clean up a previous clone before re-cloning | Safety Net blocks rm -rf on any path outside cwd, including /tmp paths stored in variables — it cannot evaluate the variable's value | Use `mktemp -d` for a fresh unique temp dir each time; never pre-clean a fixed path with rm -rf |
 
 ## Results & Parameters
 
@@ -134,6 +137,24 @@ git worktree prune
 | `git stash list` | ALLOWED | Read-only | Run directly |
 | `git diff --stat` | ALLOWED | Read-only | Run directly |
 | `git push --force-with-lease` | ALLOWED | Safer than `--force` | Run directly |
+| `rm -rf "$VAR"` (var holds `/tmp/` path) | BLOCKED | Safety Net cannot evaluate variable values at hook time; treats all `rm -rf` outside cwd as destructive | Use `mktemp -d` for fresh temp dirs; never pre-clean a fixed path |
+
+### Workaround: Shell Variable Temp Path Cleanup
+
+Safety Net blocks `rm -rf "$VAR"` even when `$VAR` clearly points to a `/tmp/` directory created earlier in the same script. The hook cannot evaluate variable values at intercept time.
+
+```bash
+# BLOCKED — Safety Net cannot verify the variable points to a safe temp path
+WORK="/tmp/my-rebase-dir"
+rm -rf "$WORK"
+git clone ... "$WORK"
+
+# CORRECT — always create a fresh unique dir with mktemp
+WORK=$(mktemp -d)
+git clone ... "$WORK"
+# No cleanup needed for one-shot operations; temp dirs are cleaned by OS eventually
+# For explicit cleanup: ask user to run: rm -rf "$WORK"
+```
 
 ### User-Delegation Message Template
 
