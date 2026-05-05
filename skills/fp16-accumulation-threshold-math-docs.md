@@ -6,8 +6,10 @@ description: 'Document Float16 convolution skips in dev testing-strategy guides 
   or writing per-layer accumulation error tables for a dev guide.'
 category: documentation
 date: 2026-03-07
-version: 1.0.0
+version: 1.1.0
 user-invocable: false
+absorbed:
+  - fp16-precision-test-documentation.md
 ---
 ## Overview
 
@@ -151,6 +153,69 @@ Closes #<follow-up-issue>
 - [x] Section inserted at correct location between `### Parameters` and `### Example`
 
 Closes #<follow-up-issue>
+```
+
+## Test File Documentation Pattern
+
+This pattern targets **test file docstring headers** (as opposed to the dev guide subsection
+insertion the main workflow above covers). Use this when a GitHub issue requests reviewing and
+documenting Float16 precision NOTEs scattered across test files.
+
+### Assess Each NOTE First
+
+Before adding any documentation, assess every `# NOTE: Float16 ...` comment in the affected files:
+
+- **Expected limitation**: large kernel accumulations, insufficient mantissa bits for
+  epsilon perturbations — document these in the file header docstring.
+- **Bug candidate**: unexpected NaN/Inf in small kernels, inconsistent behavior across runs —
+  open a separate tracking issue rather than silently documenting.
+
+### Mixed-Precision Training Context
+
+When explaining why tests use "FP32 compute" for Float16 tests, include this context:
+
+In real training, convolutions compute in **FP32 for numerical stability** while storing
+activations and weights in **FP16 for memory efficiency**. Tests that "use FP32 compute" are
+faithfully modeling this mixed-precision pattern — they are not working around Float16 failures.
+
+Float16's ~3.3 decimal digit precision (~11-bit mantissa) is insufficient for:
+- Large-kernel accumulations (K² × C_in > ~100–200 per output element)
+- Finite-difference gradient checking (requires > 5 digits precision)
+
+### Documentation Section Template
+
+Insert using the `=` underline heading style (not `###`) so it renders consistently in
+IDE doc viewers and Mojo docstring parsers:
+
+```
+Float16 Precision Limitations
+==============================
+<Layer/operation type> accumulates <N> multiplications per output element.
+Float16's ~3.3 decimal digit precision (~11-bit mantissa) is insufficient
+for <specific reason: large kernel accumulations / finite-difference epsilon /
+etc.>.
+
+<Additional context about what the test does instead and why it's valid.>
+This is an expected, fundamental limitation of Float16 arithmetic (not a bug).
+In practice, mixed-precision training computes in FP32 while storing in FP16
+for memory efficiency — tests using "FP32 compute" faithfully model this pattern.
+See issue #<tracking-issue> for detailed analysis.
+```
+
+### Commit Message Format
+
+Use the `docs(tests):` prefix with a per-file list in the body:
+
+```
+docs(tests): document Float16 precision limitations in test headers
+
+Add Float16 Precision Limitations sections to test file docstrings for:
+- tests/models/test_X.mojo: <brief explanation>
+- tests/shared/core/test_Y.mojo: <brief explanation>
+
+All limitations reference issue #NNNN for detailed analysis.
+
+Closes #<issue>
 ```
 
 ## Verified On
