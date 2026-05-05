@@ -1,12 +1,20 @@
 ---
 name: mojo-jit-crash-retry
-description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular, (8) required CI checks are blocked by JIT flakiness and PRs cannot auto-merge, (9) diagnosing which of THREE distinct crash types a CI failure is: bitcast UAF (resolved), fortify_fail HOME permission (CI-only UID mismatch), or JIT volume overflow (intermittent, targeted imports fix)"
+description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular, (8) required CI checks are blocked by JIT flakiness and PRs cannot auto-merge, (9) diagnosing which of THREE distinct crash types a CI failure is: bitcast UAF (resolved), fortify_fail HOME permission (CI-only UID mismatch), or JIT volume overflow (intermittent, targeted imports fix), (10) considering @always_inline to fix bitcast crashes (ANTI-PATTERN: worsens crashes), (11) ASAP destruction crash in finite-difference perturbation loops after test output prints, (12) codebase-wide swarm elimination of bitcast UAF writes across 50+ files, (13) KGEN internal buffer overflow with fixed crash address +0x6d4ab from 4-condition trigger combination, (14) shared library modules carry heavy module-level imports that cause JIT volume overflow for all their importers, (15) splitting oversized Mojo test files per ADR-009 (<=10 functions), (16) fn main deprecation parse errors after file splitting in Mojo 0.26.3+"
 category: debugging
 date: 2026-04-14
-version: "3.2.0"
+version: "3.9.0"
 user-invocable: false
 verification: verified-precommit
 history: mojo-jit-crash-retry.history
+absorbed:
+  - investigate-mojo-heap-corruption (ADR-009 test splitting, heap threshold, fn main deprecation)
+  - mojo-always-inline-worsens-jit-crashes (@always_inline anti-pattern guidance)
+  - mojo-asap-destruction-perturbation-loop-fix (post-test-output UAF crash diagnostic)
+  - mojo-bitcast-always-inline-crash-fix (codebase-wide swarm pattern, blog PR workflow)
+  - mojo-copyinit-double-free (synthesized __copyinit__ shallow copy fix)
+  - mojo-kgen-jit-buffer-overflow-diagnostic (4-condition KGEN trigger, upstream issue #6445)
+  - mojo-library-import-audit (module-level library import audit)
 tags:
   - mojo
   - jit
@@ -16,6 +24,17 @@ tags:
   - libKGENCompilerRTShared
   - upstream
   - required-checks
+  - always-inline
+  - asap-destruction
+  - bitcast
+  - uaf
+  - copyinit
+  - double-free
+  - kgen
+  - swarm
+  - test-splitting
+  - adr-009
+  - library-imports
 ---
 # Mojo JIT Crash Diagnosis and Upstream Reporting
 
@@ -597,3 +616,702 @@ for i in range(numel):
     var val = Float32(i % 4) * Float32(0.25) - Float32(0.3)
     grad_output._data.bitcast[Float32]()[i] = val
 ```
+
+## ADR-009 Test File Splitting and fn main Deprecation
+
+> **[Absorbed from `investigate-mojo-heap-corruption` v1.1.0, 2026-05-03]**
+> Use when splitting oversized Mojo test files to resolve heap corruption crashes or when
+> Mojo 0.26.3+ parse errors appear in newly split files.
+
+### Heap Corruption Threshold
+
+Mojo 0.26.x exhibits a heap corruption threshold at approximately **15 cumulative test
+function executions** within a single JIT process session. CI-only crashes that pass locally
+are characteristic because CI runs all integration tests sequentially (cumulative), while
+local runs typically execute a single file.
+
+**Trigger**: Unnecessary type conversions (e.g., `_get_float64()` on Float32 data) combined
+with cumulative test executions exceeding the threshold.
+
+```mojo
+# Before fix (triggers heap corruption at 15+ cumulative tests):
+var original_val = test_data._get_float64(0)      # Float32 -> Float64 (unnecessary)
+
+# After fix (uses native type):
+var original_val = test_data._get_float32(0)      # Native Float32
+```
+
+### ADR-009 Splitting Rules
+
+When a test file has >10 functions, split it into part files:
+
+| Rule | Detail |
+| ---- | ------ |
+| Max functions per file | 10 |
+| Part file naming | `test_<base>_part1.mojo`, `test_<base>_part2.mojo`, ... |
+| Import block | Copy FULL import block verbatim to every part file |
+| main entrypoint | MUST use `def main() raises:` (not `fn main()`) for Mojo 0.26.3+ |
+| CI glob | Update to `test_*_part*.mojo` |
+
+```bash
+# Count functions in a test file
+grep -c "^fn test_\|^def test_" tests/path/to/test_<base>.mojo
+
+# Phase 3: Split oversized test files (ADR-009 -- <=10 functions per file)
+# Copy full import block verbatim to each part file
+# Keep <=10 test functions per file
+# Name parts: test_<base>_part1.mojo, test_<base>_part2.mojo, ...
+```
+
+### CRITICAL: fn main Deprecation (Mojo 0.26.3+)
+
+After splitting, every new part file must have `def main() raises:` not `fn main() raises:`.
+Mojo 0.26.3 deprecated `fn main()` and produces a parse error in CI.
+
+```bash
+# Find all new part files using fn main
+find . -name "test_*_part*.mojo" -exec grep -l "fn main" {} \;
+
+# Fix: global replace in each file
+for f in $(find . -name "test_*_part*.mojo"); do
+  sed -i 's/fn main() raises:/def main() raises:/g' "$f"
+done
+
+# Verify all fixed:
+grep -r "fn main" tests/ --include="*.mojo" | grep "part"
+# Should produce no output
+```
+
+### Mojo Version Compatibility
+
+| Version | `fn main()` | `def main()` |
+| ------- | ----------- | ------------ |
+| 0.26.1 | OK | OK |
+| 0.26.3 | DEPRECATED (parse error in CI) | Required |
+
+### CI Glob Update After Splitting
+
+```yaml
+# Old pattern (misses part files):
+- "tests/**/test_<base>.mojo"
+
+# New pattern (catches all parts):
+- "tests/**/test_<base>_part*.mojo"
+```
+
+**Additional Failed Attempts** (from investigate-mojo-heap-corruption):
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Running test file individually to reproduce crash | Used `pixi run mojo -I . tests/.../test.mojo` | Crash requires 15+ cumulative test executions (heap corruption threshold) | CI-only crashes may need cumulative reproduction — run all integration tests sequentially |
+| `fn main() raises:` in new split files | All split files written with `fn main()` | Mojo 0.26.3 deprecates `fn main()`; CI failed with parse error on every new file | After any file split in Mojo 0.26.3+, globally replace `fn main() raises:` with `def main() raises:` |
+| Not updating CI glob after splitting | Left CI glob as `test_<base>.mojo` | Split files named `test_<base>_part*.mojo` were not discovered by CI | Always update CI glob patterns to `test_*_part*.mojo` when splitting |
+| Partial import block in part files | Only copied some imports to part files | Missing imports cause compile errors in all functions that depend on them | Copy the FULL import block verbatim to every part file when splitting |
+
+## CRITICAL Anti-Pattern: @always_inline Worsens JIT Crashes
+
+> **[Absorbed from `mojo-always-inline-worsens-jit-crashes` v1.0.0, 2026-03-25]**
+> WARNING: Adding `@always_inline` to large branching methods DRAMATICALLY WORSENS Mojo JIT crashes.
+> This is a verified anti-pattern — do not use to fix bitcast crashes.
+
+### The Anti-Pattern
+
+```mojo
+# BAD — causes MORE crashes across ALL test groups:
+@always_inline
+fn _get_float64(self, index: Int) -> Float64:
+    if self._dtype == DType.float16: ...
+    elif self._dtype == DType.bfloat16: ...
+    elif self._dtype == DType.float32: ...
+    elif self._dtype == DType.float64: ...
+    else: ...  # integer fallback
+
+# GOOD — works reliably:
+fn _get_float64(self, index: Int) -> Float64:
+    # same body, no @always_inline
+```
+
+### Why It Fails
+
+Inlining large branching methods (15+ line body, 5+ runtime branches) into every call site
+expands the JIT compilation footprint massively — especially in gradient checking with hundreds
+of calls. This increases JIT memory pressure and triggers MORE `libKGENCompilerRTShared.so`
+crashes than before.
+
+### @always_inline Safety Rules
+
+| Method Characteristics | @always_inline Safe? |
+| ---------------------- | --------------------- |
+| Small body (1-3 lines), compile-time params | Yes |
+| Large body (10+ lines), runtime branching | NO |
+| Called in tight loops (100+ times) | Risky — test thoroughly |
+| Has 5+ if/elif branches | NO |
+
+**Key distinction**:
+- `load[dtype]` / `store[dtype]` — 1 line body, compile-time dtype, safe to inline
+- `_get_float64` — 15+ line body, 5+ runtime branches, unsafe to inline
+
+### Impact Observed (ProjectOdyssey PR #5099)
+
+| Test Group | Before @always_inline | After @always_inline |
+| ------------ | ----------------------- | --------------------- |
+| Models | PASSED | FAILED (ALL crash) |
+| Autograd | PASSED | FAILED (4 crashes) |
+| Core Utilities | PASSED | FAILED |
+| Core Gradient | PASSED | FAILED |
+| Core Activations | PASSED | FAILED (16/17 crash) |
+| Gradient Checking | FAILED (intermittent) | FAILED |
+
+**If CI crashes get worse after a change**, check git diff for `@always_inline` additions.
+
+## ASAP Destruction in Perturbation Loops (Post-Test-Output UAF)
+
+> **[Absorbed from `mojo-asap-destruction-perturbation-loop-fix` v1.0.0, 2026-03-29]**
+> Use when the crash appears AFTER test output (not before) — distinguishes runtime UAF
+> from JIT compilation overflow which always crashes before any output.
+
+### Key Diagnostic: Before vs. After Test Output
+
+| Symptom | Cause | Fix |
+| --------- | ------- | ----- |
+| `execution crashed` appears **before any test output** | JIT compilation buffer overflow — reduce imports | Crash 3 / library import audit in this skill |
+| `execution crashed` appears **after test output** | Runtime memory bug — ASAP destruction UAF | This section |
+| Crash after "Running X tests..." + warning lines | UAF during perturbation loop | This section |
+| Crash after specific assertion failure message | Real test logic bug | Debug the backward pass |
+
+### The Root Cause
+
+Mojo 0.26.1 applies **ASAP (As Soon As Possible) destruction** to local variables. When
+`forward_fn(x)` returns a temporary `AnyTensor`, the compiler may destroy it as soon as it
+appears "used" — but `tensor.numel()` in `range(output_plus.numel())` is the last apparent
+structural use, not the element reads in the loop body. Each subsequent `_get_float64(j)`
+call reads through a dangling pointer → heap corruption → `__fortify_fail_abort`.
+
+The crash is **non-deterministic** because ASLR changes memory layout between runs —
+sometimes the freed region is re-used quickly (crash), sometimes not (pass).
+
+### Fix: Acquire data_ptr Before the Loop
+
+```mojo
+# BEFORE (DANGEROUS — ASAP destruction UAF):
+var output_plus = forward_fn(input_copy_plus)
+var output_minus = forward_fn(input_copy_minus)
+for j in range(output_plus.numel()):
+    var diff = output_plus._get_float64(j) - output_minus._get_float64(j)
+    ...
+
+# AFTER (SAFE — data_ptr derivation keeps tensors alive):
+var output_plus = forward_fn(input_copy_plus)
+var output_minus = forward_fn(input_copy_minus)
+# Acquire typed pointers BEFORE the loop. Deriving data_ptr keeps the
+# tensor alive for the pointer's scope (modular/modular#6187).
+var out_plus_ptr = output_plus.data_ptr[dtype]()
+var out_minus_ptr = output_minus.data_ptr[dtype]()
+for j in range(output_plus.numel()):
+    var diff = Float64(out_plus_ptr[j]) - Float64(out_minus_ptr[j])
+    ...
+```
+
+The fix only works inside dtype-dispatched functions (those with `[dtype: DType]` parameter).
+
+### Audit grep for Perturbation Loop UAF
+
+```bash
+# Find all _get_float64/_set_float64 calls on temporaries in loop bodies
+grep -n "_get_float64\|_set_float64" shared/testing/gradient_checker.mojo
+
+# Pattern to look for (DANGEROUS — temporary tensor in loop):
+# var output_plus = forward_fn(input_copy_plus)
+# for j in range(output_plus.numel()):
+#     var diff = output_plus._get_float64(j) ...  ← UAF risk
+```
+
+### Two Crash Populations With Identical Stack Traces
+
+```text
+Both crashes: libKGENCompilerRTShared.so+0x3cb78b → libc __fortify_fail_abort
+Both crashes: same 4-frame stack trace
+
+Population A (JIT buffer overflow):
+  - Crash BEFORE any test output
+  - Fix: targeted submodule imports (reduce compilation footprint)
+  - Trigger: from shared.core import forces 37K+ line compilation
+
+Population B (ASAP destruction UAF):
+  - Crash AFTER test output (some tests ran successfully)
+  - Fix: data_ptr[dtype]() before inner loop
+  - Trigger: _get_float64 per-element bitcast on temporary from forward_fn
+```
+
+### ASAN Diagnostic Output
+
+```text
+ERROR: AddressSanitizer: heap-use-after-free on address 0x... at pc ...
+READ of size 4 at 0x... thread T0
+    #0 in AnyTensor::_get_float64(int)
+    #1 in _check_gradients_perturb[...]
+    ...
+freed by thread T0 here:
+    #0 in operator delete(void*)
+    #1 in AnyTensor::__del__()
+```
+
+Add ASAN coverage to prevent regression:
+
+```yaml
+# .github/workflows/asan-tests.yml
+- name: Run gradient checking tests under ASAN
+  run: |
+    just test-group-asan "tests/shared/core" "test_gradient_checking_basic.mojo test_gradient_checking_dtype.mojo"
+```
+
+## Codebase-Wide Bitcast UAF Swarm Elimination
+
+> **[Absorbed from `mojo-bitcast-always-inline-crash-fix` v2.0.0, 2026-03-27]**
+> Use when grep returns 50+ files with UAF write patterns — swarm elimination workflow
+> with parallel agents and blog PR workflow.
+
+### The Three-Ingredient UAF Crash Formula
+
+The Mojo bitcast UAF requires ALL three:
+
+1. **Heavy alloc/free churn** — 2+ conv2d+relu in a function
+2. **`UnsafePointer.bitcast` WRITE** — `tensor._data.bitcast[T]()[i] = val`
+3. **`List[Int]`-containing struct** — shape fields as `List[Int]` with temp construction
+
+Missing any one = no crash.
+
+### Discovery: Finding All Instances
+
+```bash
+# Find all bitcast write patterns (indexed form)
+grep -rn "\._data\.bitcast\[.*\]()\[.*\] *=" . --include="*.mojo"
+
+# Find variant: empty-index dereference write
+grep -rn "\._data\.bitcast\[.*\]()[] *=" . --include="*.mojo"
+
+# Combined count (sorted by file)
+grep -rc "\._data\.bitcast\[.*\]()" . --include="*.mojo" | grep -v ":0" | sort -t: -k2 -rn
+```
+
+### Safe Replacement API
+
+Replace `tensor._data.bitcast[T]()[i] = val` with:
+
+```mojo
+tensor.set(i, T(val))
+```
+
+**Signature cascade requirements**: The `mut self` and `raises` on `set()` propagate outward:
+
+```mojo
+# BEFORE
+fn fill_tensor(tensor: AnyTensor):
+
+# AFTER
+fn fill_tensor(mut tensor: AnyTensor) raises:
+```
+
+**Avoid double-wrapping**:
+```mojo
+# WRONG — double-wrap
+tensor.set(i, Float32(Float32(x)))
+# CORRECT
+tensor.set(i, Float32(x))
+```
+
+Use Python regex (not sed) for batch replacements.
+
+### Swarm Partition Workflow (5 Parallel Agents)
+
+```bash
+# Get file list sorted by line count (spread large files evenly)
+grep -rl "\._data\.bitcast\[.*\]()" . --include="*.mojo" | \
+  xargs wc -l 2>/dev/null | sort -rn | grep -v total > /tmp/bitcast_files.txt
+
+# Split into N batches — assign files round-robin by line count
+# Critical constraint: no file in more than one batch (causes merge conflicts)
+```
+
+For each batch (agent 1–5 in parallel):
+
+```bash
+# 1. Create isolated worktree
+git worktree add worktrees/fix-bitcast-batch-N -b fix/bitcast-writes-batch-N
+
+# 2. Apply replacements via Python script
+python3 scripts/fix_bitcast_writes.py --files batch_N_files.txt
+
+# 3. Verify: no bitcast writes remain in assigned files
+grep -n "\._data\.bitcast\[.*\]()\[.*\] *=" <assigned-files>
+
+# 4. Add mut/raises to helper functions as needed
+# 5. Run pre-commit on changed files
+pixi run pre-commit run --files <changed-files>
+
+# 6. Commit and push
+git commit -m "fix(tensor): replace bitcast writes with safe set() in batch N"
+git push -u origin fix/bitcast-writes-batch-N
+
+# 7. Create PR with auto-merge
+gh pr create --title "fix(tensor): eliminate bitcast UAF writes batch N/5" \
+  --body "Replaces tensor._data.bitcast[T]()[i]=val with tensor.set(i,T(val)).
+Batch N of 5: <list files>"
+gh pr merge --auto --rebase
+```
+
+PRs can merge in any order — non-overlapping files prevent rebase conflicts.
+
+### Python Regex Replacement Script
+
+```python
+#!/usr/bin/env python3
+"""Replace tensor._data.bitcast[T]()[i] = val with tensor.set(i, T(val))."""
+import re
+import sys
+from pathlib import Path
+
+BITCAST_INDEXED = re.compile(
+    r'(\w+)\._data\.bitcast\[(\w+)\]\(\)\[([^\]]+)\]\s*=\s*(.+)'
+)
+
+def fix_line(line: str) -> str:
+    m = BITCAST_INDEXED.match(line.strip())
+    if not m:
+        return line
+    tensor, typ, idx, rhs = m.groups()
+    rhs = rhs.rstrip()
+    if rhs.startswith(f"{typ}(") and rhs.endswith(")"):
+        wrapped = rhs
+    else:
+        wrapped = f"{typ}({rhs})"
+    indent = len(line) - len(line.lstrip())
+    return " " * indent + f"{tensor}.set({idx}, {wrapped})\n"
+
+for path in sys.argv[1:]:
+    p = Path(path)
+    lines = p.read_text().splitlines(keepends=True)
+    new_lines = [fix_line(l) for l in lines]
+    p.write_text("".join(new_lines))
+    print(f"Fixed: {path}")
+```
+
+### Blog PR on Separate Branch (While Fix Branch is Active)
+
+```bash
+# 1. Stash current work on fix branch
+git stash --include-untracked
+
+# 2. Create blog branch off main
+git switch -c blog/day-53-investigation main
+
+# 3. Copy artifacts from fix branch (not stash)
+git show fix-branch:path/to/file > path/to/file
+
+# 4. Force-add gitignored test files
+git add -f path/to/test_*.mojo
+
+# 5. Commit, push, create PR with auto-merge
+git push -u origin blog/day-53-investigation
+gh pr create --title "docs: ..." --body "..."
+gh pr merge --auto --rebase
+
+# 6. Switch back and unstash
+git switch fix-branch
+git stash pop
+```
+
+### Renaming test_* Artifacts to Avoid CI Hooks
+
+The `validate-test-coverage` hook triggers on `test_*.mojo`. For blog/debug artifacts:
+
+```bash
+# Rename test_*.mojo → bug_repro_*.mojo.bug
+git mv artifacts/test_lenet5_monolithic.mojo artifacts/bug_repro_lenet5_monolithic.mojo.bug
+```
+
+### .gitignore Subdirectory Over-Matching Fix
+
+```bash
+# BEFORE: matches ANY directory named datasets/ anywhere
+datasets/
+
+# AFTER: matches ONLY top-level datasets/
+/datasets/
+```
+
+Verify: `git check-ignore -v shared/data/datasets/cifar10.mojo` should return nothing.
+
+### Swarm Elimination Results
+
+| Parameter | Value |
+| ----------- | ------- |
+| Files affected | ~50 `.mojo` files (including `DISABLED_*.mojo`) |
+| Total instances | ~1,062 writes |
+| Agents / PRs | 5 parallel |
+| Time to complete | ~2 hours |
+| Verification | `verified-precommit` |
+| Grep pattern | `\._data\.bitcast\[.*\]()\[.*\] *=` |
+| Safe replacement | `tensor.set(i, T(val))` |
+
+### Post-Swarm Verification
+
+```bash
+# After all PRs merge — confirm no bitcast writes remain
+grep -rn "\._data\.bitcast\[.*\]()\[.*\] *=" . --include="*.mojo"
+# Expected: no output
+```
+
+## Synthesized __copyinit__ Double-Free Fix
+
+> **[Absorbed from `mojo-copyinit-double-free` v1.0.0, 2026-04-07]**
+> Use when a Copyable struct with UnsafePointer fields has no explicit __copyinit__
+> and is stored in a List — synthesized shallow copy causes double-free on reallocation.
+
+### How the Bug Arises
+
+From [docs.modular.com/mojo/manual](https://docs.modular.com/mojo/manual):
+
+> "If you don't define `__copyinit__`, Mojo synthesizes one that simply copies each field."
+
+For an `UnsafePointer` field, "copies each field" means copying the **pointer value** — not
+the heap data. `List[T].append()` reallocates (capacity: 0→1→2→4→8→…), copying elements
+via `__copyinit__` then destroying old copies via `__del__`. Shallow copies share the same
+heap allocation → both `__del__` calls `free()` on the same address → **double-free**.
+
+The crash is non-deterministic because it depends on `List` reallocation timing.
+
+### Detection
+
+```bash
+# Find candidate structs: Copyable with UnsafePointer, no explicit __copyinit__
+for f in $(grep -rl "Copyable" . --include="*.mojo"); do
+    if grep -q "UnsafePointer" "$f" && ! grep -q "__copyinit__" "$f"; then
+        echo "CANDIDATE: $f"
+    fi
+done
+```
+
+### Fix: Explicit __copyinit__ and __moveinit__
+
+```mojo
+fn __copyinit__(out self, existing: Self):
+    self._state = alloc[UInt8](8)
+    memcpy(self._state, existing._state, 8)
+
+fn __moveinit__(out self, deinit existing: Self):
+    self._state = existing._state
+    # existing._state is NOT freed — deinit keyword suppresses its __del__
+
+fn __del__(owned self):
+    self._state.free()  # called exactly once — on the current owner
+```
+
+**Always pair `__copyinit__` with `__moveinit__`**: Without explicit `__moveinit__`, Mojo
+synthesizes a shallow move; the source destructor still runs and frees the now-shared pointer.
+
+### Reproducer Test Pattern
+
+```mojo
+fn test_list_realloc() raises:
+    var locks = List[SpinLock]()
+    for _ in range(5):          # forces 0→1→2→4 realloc sequence
+        locks.append(SpinLock())
+    locks[0].lock()             # crash here if double-free occurred
+    locks[0].unlock()
+```
+
+**Additional Failed Attempt** (from mojo-copyinit-double-free):
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Add only `__copyinit__`, not `__moveinit__` | Added deep-copy `__copyinit__` but omitted `__moveinit__` | Without explicit `__moveinit__`, Mojo synthesizes a shallow move — source destructor still runs and frees the now-shared pointer | Always pair `__copyinit__` with `__moveinit__` (using `deinit` parameter) when a struct owns heap memory |
+
+## KGEN JIT Buffer Overflow — 4-Condition Trigger (Upstream #6445)
+
+> **[Absorbed from `mojo-kgen-jit-buffer-overflow-diagnostic` v1.0.0, 2026-04-22]**
+> Warning — verified-precommit: upstream issue filed (modular/modular#6445). CI fix pending.
+> Use when crash address is FIXED `+0x6d4ab` on every run (not ASLR-variable).
+
+### How This Differs from Crash 2 and Crash 3
+
+| Indicator | KGEN Buffer Overflow (this section) | Crash 2: UID Mismatch | Crash 3: JIT Volume |
+| ----------- | ------------------------------------- | ----------------------- | --------------------- |
+| Crash address | Fixed: `+0x6d4ab` every run | Fixed: `+0x6d4ab` or `+0x6a686` | Variable (ASLR) |
+| Determinism | 100% — fails every run | Deterministic given same UID | Non-deterministic |
+| `ulimit -v unlimited` | No effect | No effect | No effect |
+| `max-parallel: 1` | No effect | May reduce | Reduces (but doesn't fix) |
+| Fix | Remove trigger pattern / await Modular fix | Fix UID in Docker cache key + entrypoint HOME-fixup | Targeted submodule imports |
+
+### The 4-Condition Trigger Combination
+
+All four conditions must be present in the same compilation unit:
+
+1. **CPython interop**: `from std.python import Python, PythonObject` at module level
+2. **`List[String]` field**: A struct that has `var <name>: List[String]`
+3. **6+ overloaded `__init__`**: The same struct has six or more `def __init__(out self, ...)`
+4. **`Dict[String, <that struct>]`**: The struct is used as a `Dict` value type
+
+Removing **any one** of the four stops the crash.
+
+### Quick Confirmation Diagnostic
+
+```bash
+# Step 1: Confirm 100% determinism (run 3 times — same offset every run = this pattern)
+for i in 1 2 3; do
+  echo "=== Run $i ==="; pixi run mojo run <crashing_file>.mojo 2>&1 | grep -E "fortify|0x[0-9a-f]+"
+done
+
+# Step 2: Check for the trigger combination
+FILE=<your_file>.mojo
+echo "Python: $(grep -c 'from std.python import' $FILE)"
+echo "List[String]: $(grep -c 'List\[String\]' $FILE)"
+echo "init overloads: $(grep -c 'def __init__(out self' $FILE)"   # needs >= 6
+echo "Dict[String: $(grep -c 'Dict\[String,' $FILE)"
+```
+
+**Key diagnostic**: If `print("If you see this...")` at the start of `main()` never prints
+before the crash, the crash fires at JIT compilation time — confirmed KGEN internal overflow.
+
+### Minimal Reproducer (stdlib-only)
+
+```mojo
+# Reproducer for KGEN JIT buffer overflow
+# Mojo 0.26.3, Ubuntu (GitHub Actions runner)
+# Filed: modular/modular#6445
+from std.python import Python, PythonObject
+struct Value(Copyable, Movable):
+    var list_val: List[String]
+    def __init__(out self, v: Int): self.list_val = List[String]()
+    def __init__(out self, v: Float64): self.list_val = List[String]()
+    def __init__(out self, v: String): self.list_val = List[String]()
+    def __init__(out self, v: Bool): self.list_val = List[String]()
+    def __init__(out self, var v: List[String]): self.list_val = v^
+    def __init__(out self, v: List[Int]): self.list_val = List[String]()
+struct Container(Copyable, Movable):
+    var data: Dict[String, Value]
+    def __init__(out self): self.data = Dict[String, Value]()
+def main() raises:
+    print("If you see this, the KGEN crash did NOT occur.")
+    var c = Container()
+    print("Success")
+```
+
+### Workaround Options
+
+| Option | Trade-off |
+| ------- | ---------- |
+| Move Python interop to a separate compilation unit | Requires restructuring; most correct |
+| Reduce `__init__` overloads from 6 to 5 | Needs bisection; reduces API convenience |
+| Replace `List[String]` field with delimited `String` | Ugly but removes the heap field trigger |
+| Mark CI job advisory + track upstream issue | Temporary until modular/modular#6445 resolves |
+
+- **Upstream issue**: [modular/modular#6445](https://github.com/modular/modular/issues/6445) — filed 2026-04-22
+
+**Additional Failed Attempts** (from mojo-kgen-jit-buffer-overflow-diagnostic):
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| `ulimit -v unlimited` | Set virtual memory limit to unlimited in CI runner | No effect — KGEN internal buffer is not a virtual memory allocation | `ulimit` only affects process virtual address space limits, not KGEN's fixed-size internal codegen buffers |
+| `max-parallel: 1` in GitHub Actions | Reduce concurrent compilation load | Reduces load but single-file overflow still crashes the single job | Overflow is triggered by one file's complexity, not aggregate CI parallelism |
+| Treat as random JIT noise and rerun | Assumed non-deterministic; re-triggered CI | Crash occurred 100% of the time — NOT random flake | 100% determinism is the distinguishing signal — stop retrying and start bisecting |
+| Diagnose as UID mismatch (Crash 2) | Checked Docker image UID, entrypoint HOME-fixup | UID fix already applied; same crash address `+0x6d4ab` seen for Crash 2 as well | Same crash address can come from different root causes; check the trigger combination |
+
+## Library Module Import Audit (Shared Modules, Not Test Files)
+
+> **[Absorbed from `mojo-library-import-audit` v1.0.0, 2026-04-20]**
+> Companion to Crash 3 (JIT Volume Overflow). Use when test-file import audit was already done
+> but crashes persist in multiple CI groups that share a common library module.
+
+### When This Applies (vs. Test-File Audit)
+
+The `mojo-jit-crash-retry` Crash 3 fix converts test files from `from shared.core import` to
+targeted submodule imports. This section covers the complementary case: **shared library
+modules themselves** carry heavy module-level imports that apply to ALL their importers.
+
+Apply both in sequence:
+1. First: convert test files to targeted imports (Crash 3 in this skill)
+2. Then: audit those targeted submodule files for their own module-level imports
+
+### Crash Diagnostic Rule for Library-Level Overflow
+
+```text
+"Running: test_X.mojo"  → crash with NO test output  →  import explosion at MODULE LOAD time
+"Running test_X tests..." → crash                     →  runtime or accumulation issue
+```
+
+The first pattern means JIT is overwhelmed **before the first test function executes** —
+the module import graph (test file + all transitively-imported library modules) exceeds the
+JIT compilation budget.
+
+### Audit Workflow
+
+```bash
+# Step 1: Identify which library modules the crashing test groups import
+grep -rn "^from shared\." tests/shared/core/test_gradient* \
+  tests/shared/integration/ tests/shared/data/ --include="*.mojo" | head -40
+
+# Step 2: Scan those library modules for heavy module-level imports
+for mod in shared/core/reduction.mojo shared/core/conv.mojo \
+    shared/core/pooling.mojo shared/core/matrix.mojo \
+    shared/core/loss_utils.mojo shared/data/datasets/cifar10.mojo; do
+  echo "=== $mod ==="
+  grep -n "^from \.\|^import " "$mod" | head -20
+done
+
+# Step 3: Check module sizes to quantify the cost
+wc -l shared/core/shape.mojo shared/core/elementwise.mojo \
+  shared/core/dtype_dispatch.mojo shared/core/*.mojo | sort -rn | head -20
+
+# Step 4: Check for unused module-level imports in test files
+# (imports that appear only in comments, never in executable code)
+SYMBOL="reduce_sum"
+FILE="tests/shared/core/test_gradient_checking_batch_norm.mojo"
+grep -n "\b$SYMBOL\b" "$FILE"  # If only the import line, it's unused
+```
+
+### Fix: Move Heavy Imports into Per-Function Bodies
+
+```mojo
+# BEFORE (module level — compiled for ALL importers):
+from .shape import as_contiguous
+
+fn my_func(tensor: AnyTensor) -> AnyTensor:
+    return as_contiguous(tensor)
+
+# AFTER (per-function — compiled lazily only when function is called):
+fn my_func(tensor: AnyTensor) -> AnyTensor:
+    from .shape import as_contiguous  # LOCAL import — lazy compilation
+    return as_contiguous(tensor)
+```
+
+### Module Heaviness Reference
+
+| Module | Lines | Impact | Notes |
+| -------- | ------- | -------- | ------- |
+| `shared/core/shape.mojo` | 1371 | HIGH — pulled in by 5+ library modules | Most common transitive culprit |
+| `shared/core/elementwise.mojo` | 1650 | HIGH — pulled in by loss_utils at module level | Fixed by localizing in loss_utils |
+| `shared/core/dtype_dispatch.mojo` | 1520 | CRITICAL — 176+ monomorphizations | Heaviest; never import at module level |
+
+### Lines Saved Per Library Module Fix
+
+| Module Fixed | Heavy Import Removed | Lines Eliminated Per Importer |
+| -------------- | --------------------- | ------------------------------- |
+| `shared/core/reduction.mojo` | `from .shape import as_contiguous` → per-function | 1371 |
+| `shared/core/conv.mojo` | `from .shape import ...` → per-function | 1371 |
+| `shared/core/pooling.mojo` | `from .shape import ...` → per-function | 1371 |
+| `shared/core/loss_utils.mojo` | `from .elementwise import ...` → per-function | 3170 (elementwise + dtype_dispatch) |
+| `shared/data/datasets/cifar10.mojo` | `from shared.core.shape import ...` → per-function | 1371 |
+
+### __init__.mojo Transitive Chain
+
+If `datasets/__init__.mojo` re-exports `cifar10.mojo` which has module-level `from shared.core.shape import ...`,
+then ANY test importing from `shared.data.datasets` pulls in `shape.mojo` transitively.
+Fix: localize the heavy import in `cifar10.mojo` to per-function bodies.
+
+**Additional Failed Attempts** (from mojo-library-import-audit):
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Test-file import audit only | Converted all test files from `from shared.core import` to targeted submodule imports | Crashes persisted in Core Gradient, Core Loss, Integration, and Data groups | Library modules themselves carry module-level imports that apply to ALL their importers — test file audit is necessary but not sufficient |
+| Auditing only direct imports in test files | Checked what test files import, not what those imports import | Transitive chain `cifar10.mojo` → `shape.mojo` was invisible until library module was read | Always trace the full transitive import chain, not just the immediate imports |
