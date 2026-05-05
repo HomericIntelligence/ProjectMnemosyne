@@ -6,19 +6,19 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "1.0.0",
-  "total_plugins": 985,
+  "total_plugins": 981,
   "categories": {
     "architecture": 118,
-    "ci-cd": 216,
-    "debugging": 102,
-    "documentation": 101,
+    "ci-cd": 215,
+    "debugging": 101,
+    "documentation": 100,
     "evaluation": 68,
     "optimization": 17,
     "testing": 145,
     "tooling": 212,
-    "training": 6
+    "training": 5
   },
-  "last_updated": "2026-05-05T01:04:43Z",
+  "last_updated": "2026-05-05T02:09:02Z",
   "plugins": [
     {
       "name": "agent-coverage-check",
@@ -1573,22 +1573,6 @@
         "qemu",
         "oci",
         "digest-pinning"
-      ]
-    },
-    {
-      "name": "ci-cd-dependabot-pixi-lock-drift-fix",
-      "description": "Use when: (1) a Dependabot PR fails CI with 'lock-file not up-to-date with the workspace', (2) a Dependabot PR updates requirements*.txt or pyproject.toml but pixi.lock was not regenerated, (3) CI on a Dependabot branch completes in 6-12 seconds (pre-flight lock rejection, not a test failure), (4) a prior regeneration commit exists on the branch but CI still fails (main has advanced again), (5) local branch and origin branch have diverged in both directions",
-      "version": "1.2.0",
-      "source": "./skills/ci-cd-dependabot-pixi-lock-drift-fix.md",
-      "category": "ci-cd",
-      "tags": [
-        "pixi",
-        "dependabot",
-        "lock-file",
-        "pip",
-        "ci",
-        "rebase",
-        "squash-merge"
       ]
     },
     {
@@ -3286,7 +3270,7 @@
     {
       "name": "pixi-lock-rebase-regenerate",
       "description": "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts, (4) Dependabot PRs fail CI fast (6-12 seconds) because Dependabot only bumps pyproject.toml not pixi.lock, (5) a second rebase of the same branch produces a pixi.lock commit conflict \u2014 skip the stale commit and re-run pixi install, (6) a second commit in the rebase chain patches code that was migrated to an external package \u2014 accept HEAD's version and use git rebase --skip, (7) pixi.toml pins a dependency version but pixi.lock still references old version (CI shows 'Environment is not consistent with the lockfile'), (8) creating a fix branch \u2014 always base off origin/main not local main which may be stale commits behind.",
-      "version": "1.4.0",
+      "version": "1.5.0",
       "source": "./skills/pixi-lock-rebase-regenerate.md",
       "category": "ci-cd",
       "tags": [
@@ -4630,14 +4614,6 @@
       "tags": []
     },
     {
-      "name": "mojo-trait-conformance-fix",
-      "description": "Fix Mojo struct missing trait declaration causing compile-time 'does not conform to trait' errors. Use when: a struct has trait method implementations but is missing the trait in its declaration list.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-trait-conformance-fix.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
       "name": "mojo-tuple-destructor-clone-pattern",
       "description": "Mojo 0.26.x Tuple does not call __del__ on non-trivial element types; Dataset.__getitem__ must return .clone() not .slice() to prevent ASAN memory leaks. Use when: (1) implementing __getitem__ in Dataset structs that return Tuple[AnyTensor, AnyTensor], (2) debugging ASAN pooled_alloc leaks where leak count matches dataset count, (3) refcount elevation survives tuple scope exit.",
       "version": "1.0.0",
@@ -5340,16 +5316,8 @@
     {
       "name": "fp16-accumulation-threshold-math-docs",
       "description": "Document Float16 convolution skips in dev testing-strategy guides using accumulation threshold math. Use when: adding a Float16 limitations subsection to testing-strategy.md, documenting why convolution gradient-checking skips Float16, or writing per-layer accumulation error tables for a dev guide.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/fp16-accumulation-threshold-math-docs.md",
-      "category": "documentation",
-      "tags": []
-    },
-    {
-      "name": "fp16-precision-test-documentation",
-      "description": "Document Float16 precision limitations in ML test file headers. Use when: consolidating inline FP16 precision NOTEs into file-level docstrings, documenting why Float16 tests are skipped or use FP32 compute, or addressing cleanup issues for known numerical precision limitations.",
-      "version": "1.0.0",
-      "source": "./skills/fp16-precision-test-documentation.md",
       "category": "documentation",
       "tags": []
     },
@@ -7320,8 +7288,8 @@
     },
     {
       "name": "mojo-trait-conformance-for-sequential-integration",
-      "description": "Add Module trait conformance to Mojo layers for Sequential container use. Use when: existing layers lack train()/inference() methods, forward() uses self instead of mut self, or layers need to be composed inside Sequential2/Sequential3.",
-      "version": "1.0.0",
+      "description": "Add Module trait conformance to Mojo layers for Sequential container use, and fix missing trait declarations causing compile-time 'does not conform to trait' errors. Use when: (1) existing layers lack train()/inference() methods, (2) forward() uses self instead of mut self, (3) layers need to be composed inside Sequential2/Sequential3, (4) a struct implements trait methods (e.g. __hash__) but is missing the trait in its declaration list.",
+      "version": "1.1.0",
       "source": "./skills/mojo-trait-conformance-for-sequential-integration.md",
       "category": "testing",
       "tags": []
@@ -10302,34 +10270,20 @@
     },
     {
       "name": "baseten-miles-grpo-external-inference",
-      "description": "GRPO training with Miles RL framework using Baseten-hosted vLLM as external inference endpoint. Use when: (1) running GRPO training with a remote OpenAI-compatible inference server, (2) integrating Baseten with Miles bypassing the SGLang router, (3) deploying a model on Baseten for RL training rollouts.",
-      "version": "1.0.0",
+      "description": "GRPO training with Miles RL framework using Baseten-hosted vLLM as external inference endpoint or NVIDIA Dynamo as self-hosted multi-node inference orchestrator. Use when: (1) running GRPO training with a remote OpenAI-compatible inference server, (2) integrating Baseten with Miles bypassing the SGLang router, (3) deploying a model on Baseten for RL training rollouts, (4) running self-hosted distributed inference via Dynamo+SGLang on a Slurm cluster.",
+      "version": "1.1.0",
       "source": "./skills/baseten-miles-grpo-external-inference.md",
       "category": "training",
       "tags": [
         "grpo",
         "baseten",
-        "miles",
-        "vllm",
-        "rl-training",
-        "external-inference",
-        "slurm",
-        "enroot"
-      ]
-    },
-    {
-      "name": "dynamo-miles-grpo-self-hosted-inference",
-      "description": "GRPO training with Miles RL framework using NVIDIA Dynamo as self-hosted multi-node inference orchestrator with SGLang backend. Use when: (1) running GRPO training with self-hosted distributed inference instead of cloud, (2) integrating NVIDIA Dynamo with Miles, (3) deploying multi-node SGLang inference via Dynamo on a Slurm+Enroot cluster.",
-      "version": "1.0.0",
-      "source": "./skills/dynamo-miles-grpo-self-hosted-inference.md",
-      "category": "training",
-      "tags": [
-        "grpo",
         "dynamo",
         "nvidia",
         "miles",
+        "vllm",
         "sglang",
         "rl-training",
+        "external-inference",
         "self-hosted",
         "slurm",
         "enroot",
