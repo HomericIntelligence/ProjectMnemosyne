@@ -3,9 +3,11 @@ name: logging-stdlib-json-formatter
 description: "Build a zero-dependency JSON log formatter using stdlib logging.Formatter. Use when: (1) adding structured JSON logging to a shared library, (2) integrating Python logs with Loki/Promtail/ELK without adding dependencies."
 category: tooling
 date: 2026-03-25
-version: "1.0.0"
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
+absorbed:
+  - tooling-structured-json-logging-stdlib
 tags:
   - logging
   - json
@@ -113,6 +115,7 @@ bound.info("Processing")
 | Use `python-json-logger` package | Considered adding as a dependency | Unnecessary complexity for a shared library that only depends on pyyaml; stdlib `json` + `logging.Formatter` does everything needed | Before adding a dependency, check if stdlib can do the job -- for JSON formatting it absolutely can |
 | Access extra fields via `record.extra` attribute | LogRecord has no `.extra` attribute; extras are set as individual attributes on the record object | `logging.LoggerAdapter.process()` merges extras into `kwargs["extra"]`, but the framework then calls `setattr(record, key, value)` for each | Detect extras by diffing `record.__dict__` against a baseline snapshot of default LogRecord attributes |
 | Use `record.msg` instead of `record.getMessage()` | `record.msg` is the raw format string (e.g. `"hello %s"`); args are not applied | `getMessage()` calls `self.msg % self.args` to produce the final string | Always use `record.getMessage()` in custom formatters to resolve lazy formatting |
+| Setting `format` kwarg on `basicConfig` with `json_format=True` | Passed `format=format_string` to `logging.basicConfig()` even when `json_format=True` | The `format` kwarg overrides handler formatters in some cases | When using custom formatters, set them on handlers explicitly and omit `format` from `basicConfig()` |
 
 ## Results & Parameters
 
@@ -149,6 +152,109 @@ assert parsed["ctx_level"] == "custom"     # collision prefixed
 record = make_record(extra={"obj": CustomClass()})
 parsed = json.loads(formatter.format(record))
 assert parsed["obj"] == str(CustomClass())  # falls back to str()
+```
+
+## Extended Patterns
+
+### Standard Attribute Set with `message`, `msg`, `args`
+
+When pre-computing the baseline `LogRecord` attribute set, include `{"message", "msg", "args"}` explicitly:
+
+```python
+_STANDARD_RECORD_ATTRS = frozenset(
+    logging.LogRecord("", 0, "", 0, "", (), None).__dict__.keys()
+    | {"message", "msg", "args"}
+)
+```
+
+These three keys must be excluded because:
+- `message` is added by `Formatter.format()` after `__init__`, so it does not appear in the dummy record's `__dict__`
+- `msg` and `args` are the raw template and arguments respectively — `getMessage()` resolves them into the final string and they should not be emitted raw
+
+### Alternate Timestamp Format
+
+Some integrations prefer the `logging` default timestamp style instead of UTC isoformat. Use `self.formatTime()` to stay consistent with the configured `datefmt`:
+
+```python
+"timestamp": self.formatTime(record, self.datefmt),
+```
+
+This produces output like `"2026-03-25 14:30:00,123"` (respects `datefmt` when set, falls back to `logging` default otherwise). The canonical skill uses UTC isoformat (`datetime.fromtimestamp(..., tz=timezone.utc).isoformat()`); choose based on your log aggregator's expectations.
+
+### Apply Formatter to ALL Handlers
+
+When `json_format=True`, apply the formatter to every handler (stdout, stderr, file) — do not create handlers first and then set the formatter:
+
+```python
+def setup_logging(..., json_format: bool = False) -> None:
+    formatter = JsonFormatter() if json_format else logging.Formatter(format_string)
+    # Set formatter before adding handlers, or apply to each handler in loop
+    for handler in handlers:
+        handler.setFormatter(formatter)
+```
+
+When `json_format=True`, the `format_string` parameter is effectively ignored — document this in the docstring.
+
+### Exporting from Subpackage
+
+To allow `from hephaestus import JsonFormatter` (or top-level `hephaestus.JsonFormatter` access):
+
+**Subpackage `__init__.py`** — add to `__all__` and import explicitly:
+
+```python
+from .utils import JsonFormatter
+
+__all__ = [..., "JsonFormatter"]
+```
+
+**Top-level lazy imports** — add to `_LAZY_IMPORTS` dict:
+
+```python
+_LAZY_IMPORTS = {
+    ...
+    "JsonFormatter": ("hephaestus.logging.utils", "JsonFormatter"),
+}
+```
+
+This pattern defers the import until first access, keeping top-level import time fast.
+
+### Named Test Cases
+
+Three test cases that fully cover the `JsonFormatter`:
+
+```python
+def test_output_is_valid_json():
+    """Format a LogRecord and assert the output is valid JSON with expected fields."""
+    formatter = JsonFormatter()
+    record = logging.LogRecord(
+        name="test", level=logging.INFO, pathname="", lineno=0,
+        msg="hello world", args=(), exc_info=None
+    )
+    output = formatter.format(record)
+    parsed = json.loads(output)  # raises if not valid JSON
+    assert parsed["level"] == "INFO"
+    assert parsed["message"] == "hello world"
+
+def test_includes_exception():
+    """Verify exception info is included when exc_info is set on the record."""
+    formatter = JsonFormatter()
+    try:
+        raise ValueError("boom")
+    except ValueError:
+        record = logging.LogRecord(
+            name="test", level=logging.ERROR, pathname="", lineno=0,
+            msg="failed", args=(), exc_info=sys.exc_info()
+        )
+    parsed = json.loads(formatter.format(record))
+    assert "exception" in parsed
+    assert "ValueError" in parsed["exception"]
+
+def test_json_format():
+    """Verify that setup_logging(json_format=True) installs JsonFormatter on all handlers."""
+    setup_logging(json_format=True)
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
+        assert isinstance(handler.formatter, JsonFormatter)
 ```
 
 ## Verified On
