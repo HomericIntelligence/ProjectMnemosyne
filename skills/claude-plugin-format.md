@@ -1,11 +1,10 @@
 ---
 name: claude-plugin-format
-description: Official Claude Code plugin format requirements. Use when creating new
-  plugins, debugging "plugin has invalid manifest" errors, or when skills/commands
-  don't appear after installation.
+description: "Official Claude Code plugin format requirements and marketplace registration workflow. Use when creating new plugins, debugging \"plugin has invalid manifest\" errors, registering a marketplace, or when skills/commands don't appear after installation."
 category: tooling
 date: '2026-03-19'
-version: 1.0.0
+version: 1.1.0
+absorbed: [claude-plugin-marketplace]
 ---
 # Claude Code Plugin Format
 
@@ -155,6 +154,66 @@ REQUIRED_PLUGIN_FIELDS = {"name", "version", "description"}
 # category - derived from directory structure
 # date - optional metadata
 # tags - only in marketplace.json, not plugin.json
+```
+
+## Marketplace Registration
+
+After creating valid `plugin.json` and `marketplace.json` files, register and install via these CLI commands:
+
+### Step 1: Register the marketplace
+
+```bash
+# Option A: From GitHub (if auth works)
+claude plugin marketplace add https://github.com/Org/Repo
+
+# Option B: From local path (always works — use for private repos)
+claude plugin marketplace add /absolute/path/to/marketplace
+```
+
+### Step 2: Install plugins
+
+```bash
+# Install specific plugin from registered marketplace
+claude plugin install plugin-name@MarketplaceName
+
+# Multi-plugin install pattern
+claude plugin install skill-1@MarketplaceName
+claude plugin install skill-2@MarketplaceName
+```
+
+### Step 3: Verify installation
+
+```bash
+# Check marketplace is registered
+claude plugin marketplace list
+
+# Check plugins are installed (look in ~/.claude/settings.json)
+cat ~/.claude/settings.json | grep -A5 "plugins"
+```
+
+### Local vs GitHub registration distinction
+
+- **Local path registration**: Always works. Use for private repos or when GitHub auth is unavailable. Pass an absolute path.
+- **GitHub registration**: Requires GitHub auth. Convenient for team-shared marketplaces. URL format: `https://github.com/Org/Repo`.
+
+### Full marketplace directory structure (with `generate_marketplace.py` and `validate_plugins.py`)
+
+```text
+marketplace-repo/
+├── .claude-plugin/
+│   └── marketplace.json      # Required: marketplace index at THIS exact path
+├── plugins/
+│   └── <category>/
+│       └── <skill-name>/
+│           ├── .claude-plugin/
+│           │   └── plugin.json    # Minimal schema only
+│           ├── skills/<skill-name>/
+│           │   └── SKILL.md       # Knowledge document
+│           └── references/
+│               └── notes.md
+└── scripts/
+    ├── generate_marketplace.py   # Regenerate marketplace.json from plugin dirs
+    └── validate_plugins.py       # CI validation — check schema before push
 ```
 
 ## Failed Attempts

@@ -1,11 +1,11 @@
 ---
 name: pr-rebase-pipeline
-description: Fix a systemic CI failure blocking all PRs, then ship fixes in parallel
-  waves using git worktrees
+description: "Fix a systemic CI failure blocking all PRs, then ship fixes in parallel waves using git worktrees. Also covers rebasing a single diverged PR when an automated fix plan has stale state."
 category: ci-cd
 date: 2026-02-23
-version: 1.0.0
+version: 1.1.0
 user-invocable: false
+absorbed: [pr-rebase-stale-plan-fix]
 ---
 # Skill: PR Rebase Pipeline (Bulk Issue Triage)
 
@@ -157,3 +157,112 @@ git worktree add .claude/worktrees/agent-<uuid> <issue-number>-<slug>
 ```
 
 Use `.claude/worktrees/` so they're isolated from project files and easy to bulk-prune.
+
+## Single-PR Rebase: Stale Plan Detection
+
+Use this pattern when rebasing a single diverged PR where an automated fix plan (`.claude-review-fix-*.md`) claims the PR's changes are already merged, or when comment-only merge conflicts arise.
+
+### When to Use
+
+- An automated fix plan claims the PR's branch commit is "already in `main`" but the PR is still open
+- A PR with comment-only or cosmetic changes is blocked by a merge conflict on rebase
+- You need to verify actual git state vs what a stale plan claims
+- A PR needs to be rebased, force-pushed, and auto-merge enabled
+
+**Key Indicators**:
+- Fix plan says "commit `XXXXXXXX` is already in `main` history" but `git log --oneline origin/main | grep XXXXXXXX` returns nothing
+- `git log --oneline origin/main..HEAD` shows the PR's commit is still only on the branch
+- `git rebase origin/main` produces conflicts in files only touched by comments
+
+### 1. Verify Actual State (Don't Trust Stale Plans)
+
+Always verify the actual git state before acting on automated fix plans:
+
+```bash
+# Check if the PR commit is actually in main
+git log --oneline origin/main | grep <short-sha>
+
+# Compare branch vs main
+git log --oneline origin/main..HEAD   # commits in branch not in main
+git log --oneline HEAD..origin/main   # commits in main not in branch
+
+# Check PR state
+gh pr view <PR_NUMBER> --json state,mergedAt,headRefName
+```
+
+If the plan says "already merged" but `origin/main..HEAD` shows the commit, the plan is stale — proceed with rebase.
+
+### 2. Rebase onto Latest Main
+
+```bash
+git fetch origin
+git rebase origin/main
+```
+
+If conflicts occur, check the conflict markers:
+
+```bash
+grep -n "<<<\|>>>\|===" <conflicted-file>
+```
+
+### 3. Resolve Comment-Only Conflicts
+
+For comment-only conflicts (e.g., two branches updated the same comment differently), determine intent:
+
+- **PR's goal**: The PR is adding `# NOTE(#NNNN):` format to issue-reference NOTE tags
+- **Main's version**: May have updated the comment text with more detail
+- **Resolution**: Combine — use the PR's `# NOTE(#NNNN):` format with main's more precise wording
+
+Example conflict:
+```
+<<<<<<< HEAD
+        # NOTE: Python data loader integration blocked by Track 4.
+        # Tracked in #3076 (parent: #3059). Placeholder tensors used until Track 4 is ready.
+=======
+        # NOTE(#3076): Python data loader integration blocked by Track 4.
+        # For now, we create placeholder tensors until Track 4 infrastructure is ready.
+>>>>>>> 1d3afd6b (chore(cleanup): link workaround NOTEs to tracking issues)
+```
+
+Resolution: Take PR's `NOTE(#3076):` format + main's more detailed tracking text:
+```
+        # NOTE(#3076): Python data loader integration blocked by Track 4.
+        # Tracked in #3076 (parent: #3059). Placeholder tensors used until Track 4 is ready.
+```
+
+Then continue rebase:
+```bash
+git add <resolved-file>
+git rebase --continue
+```
+
+### 4. Force-Push and Enable Auto-Merge
+
+```bash
+# Safe force-push (will fail if remote has new commits you haven't seen)
+git push --force-with-lease origin <branch-name>
+
+# Enable auto-merge with rebase strategy
+gh pr merge <PR_NUMBER> --auto --rebase
+
+# Verify auto-merge is set
+gh pr view <PR_NUMBER> --json state,autoMergeRequest | jq '.autoMergeRequest.mergeMethod'
+# Expected: "REBASE"
+```
+
+### Stale Plan Anti-Pattern
+
+**Never trust automated fix plans without independent git verification.**
+
+| Plan Claim | Verification Command | Action if Plan is Wrong |
+| ---------- | ------------------- | ----------------------- |
+| "Commit X is already in main" | `git log --oneline origin/main \| grep <sha>` | Plan is stale — rebase normally |
+| "PR is already merged" | `gh pr view <N> --json state` | If `state == "OPEN"`, ignore plan's merge claim |
+| "No conflicts expected" | `git rebase origin/main` dry-run | Conflicts may still exist for comment-only changes |
+
+Failed attempts absorbed from `pr-rebase-stale-plan-fix`:
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Trusting fix plan's "already merged" claim | Plan said commit `1d3afd6b` was in main; plan said close PR or re-target | `git log origin/main \| grep 1d3afd6b` returned nothing — commit was only on the branch | Always verify git state independently; automated plans can have stale snapshots |
+| Assuming no conflicts for comment-only changes | Expected `git rebase origin/main` to succeed cleanly | Main had also updated the same comment in `trainer_interface.mojo` between branch creation and rebase | Comment-only PRs can still conflict if main updated the same comments independently |

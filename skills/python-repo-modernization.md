@@ -1,10 +1,11 @@
 ---
 name: python-repo-modernization
-description: 'Bring a Python utility package from C+ to production-grade quality in one session: fix package re-exports, raise test coverage to 75%+, create integration smoke tests, harden CI/CD pipeline, and produce an installable wheel. Use when: a shared utility repo is functional but not yet consumable by downstream projects.'
+description: 'Bring a Python utility package from C+ to production-grade quality in one session: fix package re-exports, raise test coverage to 75%+, create integration smoke tests, harden CI/CD pipeline, and produce an installable wheel. Also covers implementing a multi-phase audit plan when an existing audit report has Critical/Major findings. Use when: a shared utility repo is functional but not yet consumable by downstream projects, or an audit report exists with graded findings.'
 category: tooling
 date: 2026-03-13
-version: 1.0.0
+version: 1.1.0
 user-invocable: false
+absorbed: [python-repo-audit-implementation]
 ---
 
 # python-repo-modernization
@@ -311,6 +312,161 @@ branch = true
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | ProjectHephaestus | v0.3.0 modernization — 7 phases in one session | [notes.md](python-repo-modernization.notes.md) |
+
+## Audit-Driven Implementation Phases
+
+Use this workflow when a repo audit report already exists with graded findings (Critical / Major / Minor) and you need to implement all Critical and Major findings systematically.
+
+**Context**: ProjectHephaestus audit score B / 81% before implementation. 9 phases addressed all Critical + Major findings. Tests: 318 unit + 51 integration — all pass. Coverage: 76.22% (threshold: 75%).
+
+### Quick Reference
+
+```bash
+# Phase order (by severity impact):
+# 1. Critical security  — fix HTTP->HTTPS, sanitize inputs
+# 2. DRY: subprocess    — consolidate N wrappers into one enhanced function
+# 3. DRY: constants     — create constants.py, update all callers
+# 4. Dead code          — remove no-ops, stub scripts, unexported functions
+# 5. Error handling     — raise instead of return False
+# 6. API completeness   — fix __init__.py exports
+# 7. CI matrix          — add OS x Python version matrix
+# 8. Packaging          — add [project.scripts] entry points
+# 9. Polish             — .editorconfig, SECURITY.md
+
+# Verify after each phase:
+pixi run pytest tests/unit --override-ini="addopts=" -v --strict-markers \
+  --cov=<package> --cov-fail-under=75
+```
+
+### Phase 1 — Critical Security Fix
+
+Fix insecure URLs and sanitize user-controlled inputs before any other changes.
+
+```python
+# datasets/downloader.py — HTTP to HTTPS
+super().__init__("https://yann.lecun.com/exdb/mnist")  # was http://
+
+# utils/helpers.py — validate package name before passing to subprocess
+import re
+if not re.match(r'^[A-Za-z0-9_\-\.\[\],>=<!\s]+$', package_name):
+    raise ValueError(f"Invalid package name: {package_name!r}")
+```
+
+### Phase 2 — DRY: Subprocess Wrappers
+
+When multiple modules each define their own subprocess wrapper with slightly different APIs, consolidate into one enhanced function. Callers have different needs (timeout, dry_run, check=False) but use the same mechanism. Enhance the primary wrapper to support all call patterns, then update each caller to delegate.
+
+```python
+# utils/helpers.py — enhanced run_subprocess
+def run_subprocess(
+    cmd: list[str],
+    cwd: str | None = None,
+    timeout: int | None = None,
+    check: bool = True,
+    dry_run: bool = False,
+) -> subprocess.CompletedProcess[str]:
+    if dry_run:
+        print(f"[DRY-RUN] $ {' '.join(cmd)}")
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
+                            check=check, timeout=timeout)
+    return result
+```
+
+> **Critical**: Keep `run_subprocess` transparent (returning `CompletedProcess`). Write thin adapter wrappers per-module to handle semantic differences (e.g., `TimeoutExpired` → `(False, "")`, non-raising, dry_run). Don't swallow `TimeoutExpired` inside the main wrapper.
+
+### Phase 3 — DRY: Shared Constants
+
+Create a `constants.py` at the package root for values duplicated across 3+ files.
+
+```python
+# <package>/constants.py
+DEFAULT_EXCLUDE_DIRS: frozenset[str] = frozenset({
+    "node_modules", ".git", "venv", "__pycache__", ".tox", ".pixi",
+    ".pytest_cache", "dist", "build", ".mypy_cache", ".eggs",
+})
+LOG_FORMAT: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+```
+
+Update all callers across the affected modules. Also fix any `save_data()` that duplicates format detection — call `_detect_format()` instead.
+
+### Phase 4 — Dead Code Removal
+
+Remove no-op context managers (e.g., `try: yield finally: pass`), unexported helpers, and stub scripts (files containing only TODO comments). After removing any symbol, grep ALL `__init__.py` files AND test files for the removed name before running tests.
+
+### Phase 5 — Error Handling Fix
+
+Replace silent `return False` with proper exception propagation in I/O functions. Use `logger.warning()` instead of `print()` for import warnings.
+
+### Phase 6 — API Completeness
+
+Fix `__init__.py` exports for any subpackage missing symbols. After module changes are stable, ensure all public symbols are re-exported from the appropriate `__init__.py`.
+
+### Phase 7 — CI Matrix Expansion
+
+```yaml
+# .github/workflows/test.yml
+strategy:
+  matrix:
+    os: [ubuntu-latest, macos-latest, windows-latest]
+    python-version: ["3.10", "3.11", "3.12"]
+    test-type: [unit, integration]
+
+# Upload coverage only for one combination to avoid duplication
+- name: Upload coverage
+  if: matrix.test-type == 'unit' && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+```
+
+Pin release actions to SHA for supply-chain safety.
+
+### Phase 8 — CLI Entry Points
+
+Only add entry points for modules that already have a `main()` function:
+
+```toml
+# pyproject.toml
+[project.scripts]
+<package>-changelog = "<package>.git.changelog:main"
+<package>-merge-prs = "<package>.github.pr_merge:main"
+```
+
+### Phase 9 — Final Polish
+
+Add `.editorconfig` (utf-8, lf, 4-space indent for Python, 2-space for YAML/TOML, no trailing whitespace). Create `SECURITY.md` with email contact, supported versions table, and security considerations (no hardcoded secrets, safe deserialization opt-in, HTTPS-only downloads).
+
+### Phase Ordering Rationale
+
+Order by severity, then dependency (later phases must not break earlier ones):
+
+1. Security — highest risk, smallest diffs, sets baseline
+2. Subprocess DRY — no dependencies on constants yet
+3. Constants — after subprocess; logging changes don't conflict
+4. Dead code — after constants; removed functions not referenced by new constants
+5. Error handling — after dead code; don't change functions about to be deleted
+6. API exports — after module changes are stable
+7. CI — independent; validates all prior changes across matrix
+8. Packaging — independent; additive only
+9. Polish — purely additive, always last
+
+### Estimated Score Impact
+
+| Section | Before | After (est.) |
+| --------- | -------- | -------------- |
+| Security | C+ (72%) | B+ (87%) |
+| Safety & Reliability | C (70%) | B (82%) |
+| Source Code Quality | B- (78%) | B+ (85%) |
+| CI/CD | B+ (86%) | A- (90%) |
+| Packaging | C+ (75%) | B (82%) |
+| **Overall** | **B (81%)** | **B+ (86%)** |
+
+### Audit-Phase Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Force single subprocess signature for all callers | Make `run_subprocess` return `(bool, str)` to match `run_command` API | `git/changelog.py` and `github/pr_merge.py` need different return types | Keep `run_subprocess` returning `CompletedProcess`; write thin adapter wrappers per-module |
+| Remove `log_context` without checking all barrel files | Deleted from `logging/utils.py` and updated `logging/__init__.py` | `hephaestus/__init__.py` and integration tests also imported `log_context` | After removing any symbol, grep ALL `__init__.py` files AND test files for the removed name |
+| Catch `TimeoutExpired` inside `run_subprocess` | Swallow `subprocess.TimeoutExpired` inside the main wrapper | `system/info.py` tests assert `(False, "")` return — timeout swallowed at wrapper level loses the exception for callers wanting to propagate it | Keep `run_subprocess` transparent; handle `TimeoutExpired` in the thin adapter wrapper |
+| Eliminate all 4 subprocess wrappers entirely | Replace all 4 with identical direct calls to `run_subprocess` | Each wrapper had subtly different semantics: one needs dry_run, one needs non-raising, one needs `(bool, str)` | Don't eliminate the wrappers — make them thin delegates that handle semantic differences |
 
 ## References
 

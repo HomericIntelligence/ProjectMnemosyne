@@ -1,12 +1,12 @@
 ---
 name: mojo-trait-conformance-for-sequential-integration
-description: 'Add Module trait conformance to Mojo layers for Sequential container
-  use. Use when: existing layers lack train()/inference() methods, forward() uses
-  self instead of mut self, or layers need to be composed inside Sequential2/Sequential3.'
+description: "Add Module trait conformance to Mojo layers for Sequential container use, and fix missing trait declarations causing compile-time 'does not conform to trait' errors. Use when: (1) existing layers lack train()/inference() methods, (2) forward() uses self instead of mut self, (3) layers need to be composed inside Sequential2/Sequential3, (4) a struct implements trait methods (e.g. __hash__) but is missing the trait in its declaration list."
 category: testing
 date: 2026-03-15
-version: 1.0.0
+version: 1.1.0
 user-invocable: false
+absorbed:
+  - mojo-trait-conformance-fix
 ---
 ## Overview
 
@@ -213,3 +213,46 @@ The following test files fail on this branch due to unrelated missing symbols:
 - `tests/shared/test_imports_part3.mojo` — `TrainingState` missing from `shared.training.loops`
 
 These failures exist on `main` and are NOT introduced by this work.
+
+## Quick Fix Reference
+
+### Missing Trait Declaration (1-line fix)
+
+When a struct implements trait methods but is missing the trait in its declaration, CI will report:
+
+```text
+error: argument type 'X' does not conform to trait 'Y'
+error: no matching function in call to 'hash'
+```
+
+**Root cause**: Implementing `__hash__` alone is not sufficient — `Hashable` must be declared explicitly in the struct header. Same applies to `Comparable`, `Stringable`, and all other traits.
+
+**Fix**: Add the trait to the parenthesized conformance list (one-line change):
+
+```mojo
+# Before
+struct ExTensor(Copyable, ImplicitlyCopyable, Movable, Sized):
+
+# After
+struct ExTensor(Copyable, ImplicitlyCopyable, Movable, Sized, Hashable):
+```
+
+### GLIBC Version Mismatch Workaround
+
+If local Mojo cannot run (host GLIBC 2.31, Mojo requires 2.32+), skip only the `mojo-format` pre-commit hook and let CI verify:
+
+```bash
+SKIP=mojo-format git commit -m "fix: add Hashable trait declaration to ExTensor"
+```
+
+CI runs in a Docker environment with the correct GLIBC version and will enforce formatting and run tests.
+
+### Trait Conformance Debugging Checklist
+
+```text
+[ ] Read the CI error message: "argument type 'X' does not conform to trait 'Y'"
+[ ] Find the struct declaration in the .mojo file (first line, parenthesized list)
+[ ] Add the missing trait name to the parenthesized list
+[ ] If mojo-format hook fails locally due to GLIBC: use SKIP=mojo-format
+[ ] Push and verify CI passes (Docker CI has correct GLIBC)
+```

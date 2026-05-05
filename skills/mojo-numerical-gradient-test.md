@@ -2,11 +2,13 @@
 name: mojo-numerical-gradient-test
 description: 'Add numerical gradient validation for Mojo ML backward passes using
   central finite differences. Use when: adding backward pass gradient tests, avoiding
-  grad_output=ones cancellation, verifying analytical vs numerical gradient agreement.'
+  grad_output=ones cancellation, verifying analytical vs numerical gradient agreement,
+  or testing gradients w.r.t. learnable parameters (gamma, beta) not just input tensors.'
 category: testing
 date: 2026-03-07
-version: 1.0.0
+version: "1.1.0"
 user-invocable: false
+absorbed: [mojo-param-gradient-check]
 ---
 ## Overview
 
@@ -111,6 +113,96 @@ epsilon = 1e-3
 rtol = 2e-2, atol = 1e-4
 ```
 
+## Parameter Gradient Checks (grad_gamma, grad_beta)
+
+This section covers gradient validation for **learnable parameters** (gamma, beta) in
+normalization layers — a distinct case from input gradient (`grad_input`) testing.
+
+The backward pass returns a tuple; index into it for each gradient:
+
+```mojo
+var result_bwd = batch_norm2d_backward(grad_output, x, gamma, ...)
+var grad_gamma = result_bwd[1]   # index 1
+var grad_beta  = result_bwd[2]   # index 2
+```
+
+**When to Use**:
+- A `backward` function returns a tuple: `(grad_input, grad_gamma, grad_beta, ...)`
+  and only `grad_input` is numerically validated.
+- Adding gradient coverage for `gamma` (scale) and `beta` (shift) in batch/layer norm.
+- After any change to the backward pass formula for parameter gradients.
+- PR review reveals partial gradient coverage (only input gradient tested).
+- PR #3807 / Issue #3246 context (batch_norm2d parameter gradients).
+
+### Setup: Non-Uniform grad_output
+
+Use a non-constant `grad_output` to avoid the pathological cancellation case
+where `grad_output=ones` yields analytically-zero gradients (`sum(x_norm)=0`):
+
+```mojo
+var grad_output = zeros_like(output)
+for i in range(output.numel()):
+    grad_output._data.bitcast[Float32]()[i] = Float32(i + 1) * 0.1
+```
+
+### Write Forward Closure Perturbing the Parameter (not x)
+
+The closure must perturb the **parameter** being tested, not the input tensor.
+Perturbing `x` to test `grad_gamma` is wrong — the gradient shape would be `x.shape`,
+not `gamma.shape`:
+
+```mojo
+fn forward_for_gamma(g: ExTensor) raises -> ExTensor:
+    var res = batch_norm2d(x, g, beta, running_mean, running_var,
+                           training=True, epsilon=1e-5)
+    var out = res[0]
+    var weighted = multiply(out, grad_output)
+    var result = weighted
+    while result.dim() > 0:
+        result = reduce_sum(result, axis=0, keepdims=False)
+    return result
+```
+
+### Call compute_numerical_gradient on the Parameter
+
+```mojo
+var numerical_grad_gamma = compute_numerical_gradient(
+    forward_for_gamma, gamma, epsilon=1e-3
+)
+```
+
+### Assert with assert_gradients_close
+
+```mojo
+assert_gradients_close(
+    grad_gamma_analytical,
+    numerical_grad_gamma,
+    rtol=1e-2,
+    atol=1e-4,
+    message="Batch norm gradient w.r.t. gamma",
+)
+```
+
+### Register New Tests in main()
+
+```mojo
+test_batch_norm2d_backward_gradient_gamma()
+print("test_batch_norm2d_backward_gradient_gamma")
+
+test_batch_norm2d_backward_gradient_beta()
+print("test_batch_norm2d_backward_gradient_beta")
+```
+
+### Parameter Gradient Key Parameters
+
+| Parameter | Value | Rationale |
+| ----------- | ------- | ----------- |
+| `epsilon` (finite diff) | `1e-3` | Matches existing grad_input test; stable for float32 |
+| `rtol` | `1e-2` (2%) | Batch norm compounding across normalize/scale/shift |
+| `atol` | `1e-4` | Handles near-zero gradients in outer channels |
+| Tensor shape | `(2, 2, 2, 2)` | Small enough for O(n) finite-diff cost |
+| `grad_output` pattern | `Float32(i + 1) * 0.1` | Non-uniform, breaks channel symmetry |
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -119,3 +211,13 @@ rtol = 2e-2, atol = 1e-4
 | `epsilon = 1e-3` for layer norm | Using same finite-difference step as batch norm | Acceptable but 1e-4 gives tighter numerical gradients for the simpler layer norm structure | Use 1e-4 for layer norm; reserve 1e-3 for batch norm with more intermediate steps |
 | `atol = 1e-4` for layer norm | Matching batch norm tolerance | Layer norm is simpler (fewer intermediate steps) so tighter tolerance 1e-5 is achievable | Match atol to layer complexity: layer norm 1e-5, batch norm 1e-4 |
 | Running tests locally | `pixi run mojo test tests/...` | GLIBC 2.32/2.33/2.34 not available on host OS (Debian 10) | Mojo tests must run in Docker or CI; pre-commit hooks validate syntax locally |
+| `grad_output = ones_like(output)` (param test) | Standard all-ones upstream gradient for parameter gradient test | For batch norm, `sum(x_norm)=0` by construction, so `grad_input` is analytically zero — test passes vacuously with wrong code | Always use non-uniform `grad_output` for batch norm gradient tests |
+| Running mojo tests locally (param test) | `pixi run mojo test tests/...` | GLIBC version mismatch — host has GLIBC 2.31, mojo requires 2.32+ | Mojo tests only run inside the Docker container; rely on pre-commit hooks and CI for validation |
+| Perturbing `x` to test `grad_gamma` | Used `compute_numerical_gradient` on `x` with the `gamma`-perturbing closure | Wrong: the numerical gradient shape would be `x.shape` not `gamma.shape` | Each parameter's gradient must be validated by perturbing that specific parameter, not the input |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #3247 — layer norm gradient test | Numerical gradient check for grad_input with non-uniform grad_output |
+| ProjectOdyssey | Issue #3246, PR #3807 — batch norm parameter gradient tests | Added `test_batch_norm2d_backward_gradient_gamma` and `test_batch_norm2d_backward_gradient_beta` to `tests/shared/core/test_normalization.mojo` |

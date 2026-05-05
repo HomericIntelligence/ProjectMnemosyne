@@ -7,8 +7,10 @@ description: "Convert, condense, and enforce Mojo NOTE comments. Use when: (1) c
   via pre-commit hook and Python audit script."
 category: documentation
 date: 2026-03-05
-version: 2.0.0
+version: 2.1.0
 user-invocable: false
+absorbed:
+  - mojo-limitation-note-standardization
 tags:
   - mojo
   - notes
@@ -366,6 +368,30 @@ shared/utils/file_io.mojo           — NOTE → function docstring Note:
 cleanup(docs): convert implementation constraint NOTEs to docstrings
 ```
 
+### Part A: Standardization Results (Issue #3071, ProjectOdyssey)
+
+Absorbed from `mojo-limitation-note-standardization`. The following files were audited
+for `# NOTE (Mojo vX.Y.Z):` format compliance.
+
+**Files that needed changes** (missing version or non-standard format):
+
+| File | NOTEs | Limitation |
+| ------ | ------- | ------------ |
+| `shared/training/mixed_precision.mojo` | 2 | FP16 SIMD limitation |
+| `shared/utils/file_io.mojo` | 1 | Missing `os.remove()` |
+| `benchmarks/scripts/compare_results.mojo` | 1 | argv parsing |
+| `examples/lenet-emnist/run_infer.mojo` | 1 | image decoding |
+| `shared/training/__init__.mojo` | 1 | Track 4 interop |
+| `shared/training/trainer_interface.mojo` | 1 | Track 4 interop |
+
+**Files already correct** (no changes needed):
+
+- `shared/core/broadcasting.mojo`
+- `shared/__init__.mojo`
+- `shared/training/precision_config.mojo`
+- `tests/shared/core/test_unsigned.mojo`
+- `tests/shared/core/test_conv.mojo`
+
 ### Part B: Concise NOTE Environment (Debian 10 / GLIBC Mismatch)
 
 ```text
@@ -470,3 +496,6 @@ class TestNoteViolationPattern:
 | `# NOTE[^(]` as regex | Used character class negation to exclude `(` | `# NOTE (Mojo v0.26.1):` has a space before `(`, so `# NOTE` matches because space ≠ `(` | Always use negative lookahead `(?!\s*\()` when the separator between keyword and delimiter may vary |
 | `language: pygrep` with `[^(]` pattern | Same pattern in pre-commit hook | Same false-positive: compliant lines were flagged and hook blocked all commits | Negative lookaheads work fine in `language: pygrep` hooks — pre-commit uses Python's `re` module |
 | Checking existing violations manually | Tried to enumerate violations from memory | Missed several files; grep output was the source of truth | Always run `grep -rn "# NOTE[^(]" --include="*.mojo" shared/ tests/ ...` first to get the definitive list |
+| Grepping for all NOTEs broadly (standardization) | Used case-insensitive grep on all `.mojo` files for "NOTE" | Output was 39KB+ with many irrelevant matches (docstring `Note:`, print statements, etc.) | Narrow the grep pattern to `# NOTE` (with hash) to exclude prose and docstrings |
+| Assuming all NOTEs need changes (standardization) | Planned to edit all NOTE occurrences found | Many NOTEs already used correct `# NOTE (Mojo vX.Y.Z):` format — 5 files needed no edits | Always read target lines first; skip already-correct entries |
+| Using `replace_all` on multi-file patterns (standardization) | Considered batch replace across all files | Edit tool requires the file to be read first; `replace_all` is per-file, not cross-file | Read each file individually before editing; do targeted per-file edits |

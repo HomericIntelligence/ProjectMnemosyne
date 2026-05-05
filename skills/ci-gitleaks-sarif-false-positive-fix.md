@@ -7,8 +7,9 @@ description: 'Fix gitleaks SARIF false-positive detection causing security-repor
   security-report is a required status check that never passes.'
 category: ci-cd
 date: 2026-04-25
-version: 1.0.0
+version: 1.1.0
 user-invocable: false
+absorbed: [ci-gitleaks-toml-allowlist-slice-vs-map]
 ---
 # CI Gitleaks SARIF False-Positive Fix
 
@@ -210,3 +211,80 @@ jq '[.runs[].results[].locations[].physicalLocation.artifactLocation.uri] | uniq
    auto-merges — fix it as Phase 0 before any swarm.
 5. Two-stage fix: (a) fix SARIF parsing with `jq`, (b) add `.gitleaks.toml` path allowlist
    for known false-positive files. Both changes belong in the same PR.
+
+## TOML Syntax Pitfall: [[double]] vs [single] Brackets
+
+**Error message** (exact — use to identify this bug):
+
+```
+Failed to load config error="1 error(s) decoding:
+
+* 'Rules[0].AllowList' expected a map, got 'slice'"
+```
+
+### Root Cause: TOML Array-of-Tables vs Map
+
+TOML uses bracket count to determine the data type of a section:
+
+| Syntax | TOML Type | Go type | gitleaks v8 result |
+| --- | --- | --- | --- |
+| `[[rules.allowlist]]` | Array of tables | `[]AllowList` (slice) | **CRASH** — expected a map, got slice |
+| `[allowlist]` | Table (map) | `AllowList{}` | **WORKS** — single map as expected |
+
+Every `[[rules.allowlist]]` block appends to a slice — even if there is only one block, gitleaks v8 receives a slice and cannot decode it into the `AllowList` map field. Multiple `[[rules.allowlist]]` blocks all produce the same slice error.
+
+### When to Use This Fix
+
+- gitleaks fails with `'Rules[0].AllowList' expected a map, got 'slice'` on startup
+- `.gitleaks.toml` uses `[[rules.allowlist]]` (double-bracket) syntax
+- Upgrading gitleaks from v7 to v8 and config suddenly breaks
+- pre-commit gitleaks hook crashes at config load (not a secret detection failure)
+
+### Fix
+
+```toml
+# WRONG — [[double brackets]] = TOML array-of-tables = slice
+[[rules.allowlist]]
+description = "Test fixtures"
+regexes = ["fake-api-key"]
+
+# CORRECT — [single brackets] at top level = map
+[allowlist]
+description = "Test fixtures"
+regexes = ["fake-api-key"]
+paths = ["tests/.*"]
+```
+
+**Key rule**: There is exactly one `[allowlist]` block. All regexes and paths live inside it.
+Do not add a second `[allowlist]` block — TOML will treat it as a re-declaration.
+
+### Full Working `.gitleaks.toml` Example (gitleaks v8)
+
+```toml
+title = "Myrmidons gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures and documentation examples"
+regexes = [
+  '''your-token-here''',
+  '''fake-api-key''',
+  '''test-token''',
+]
+paths = [
+  '''tests/.*''',
+  '''README\.md''',
+  '''CLAUDE\.md''',
+]
+```
+
+### Validate Locally
+
+```bash
+gitleaks detect --source . --no-git -v
+# Should print: "X leaks found" or "No leaks detected" — NOT a config decode error
+```
+
+**gitleaks version**: v8.24.3 (confirmed broken with `[[rules.allowlist]]`; `[allowlist]` works)

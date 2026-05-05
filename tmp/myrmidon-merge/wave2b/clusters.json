@@ -1,0 +1,390 @@
+{
+  "clusters": [
+    {
+      "id": "C060",
+      "files": [
+        "skills/cpp-atomic-posix-socket-adl-collision.md",
+        "skills/cpp-ci-sanitizer-tsan-data-race-fixes.md",
+        "skills/cpp-clang-tidy-deps-header-filter-fix.md",
+        "skills/cpp-coverage-container-pinned-clang-format.md",
+        "skills/cpp-httplib-lambda-capture-ub.md",
+        "skills/cpp-nlohmann-json-value-nullptr-type-error.md",
+        "skills/cpp-pr-stale-duplicate-commit-detection.md",
+        "skills/cpp-scaffold-cmake-test-path-fix.md",
+        "skills/natsc-fetchcontent-cpp20-integration.md"
+      ],
+      "signals": [
+        "prefix-3:c-p-p",
+        "tag-overlap:cmake,cpp20,github-actions",
+        "tag-overlap:cmake,cpp20,ctest",
+        "category:ci-cd+debugging"
+      ],
+      "gap_files": [
+        "skills/cpp-atomic-posix-socket-adl-collision.md",
+        "skills/cpp-ci-sanitizer-tsan-data-race-fixes.md",
+        "skills/cpp-clang-tidy-deps-header-filter-fix.md",
+        "skills/cpp-coverage-container-pinned-clang-format.md",
+        "skills/cpp-httplib-lambda-capture-ub.md",
+        "skills/cpp-nlohmann-json-value-nullptr-type-error.md",
+        "skills/cpp-pr-stale-duplicate-commit-detection.md",
+        "skills/cpp-scaffold-cmake-test-path-fix.md"
+      ]
+    },
+    {
+      "id": "C061",
+      "files": [
+        "skills/file-upstream-feature-request.md",
+        "skills/github-bulk-issue-filing-rate-limit-recovery.md",
+        "skills/github-comment-dedup-across-restarts.md",
+        "skills/github-issues-semantic-branch-rename-gh-edit-graphql-verify.md",
+        "skills/oss-contribution-issue-filing-pattern.md"
+      ],
+      "signals": [
+        "tag-overlap:github,issue-filing,oss",
+        "tag-overlap:bulk-filing,deduplication,github",
+        "category:tooling",
+        "semantic:github-issue-workflows"
+      ],
+      "gap_files": [
+        "skills/file-upstream-feature-request.md",
+        "skills/github-bulk-issue-filing-rate-limit-recovery.md",
+        "skills/github-comment-dedup-across-restarts.md",
+        "skills/github-issues-semantic-branch-rename-gh-edit-graphql-verify.md"
+      ]
+    },
+    {
+      "id": "C062",
+      "files": [
+        "skills/github-actions-ci-patterns.md",
+        "skills/github-branch-protection-org-standardize.md",
+        "skills/github-ruleset-pr-blocked-diagnose-missing-check-requirements.md",
+        "skills/github-ssh-commit-signing-fix-unknown-key-verification.md"
+      ],
+      "signals": [
+        "tag-overlap-same-cat:github,rulesets",
+        "tag-overlap:branch-protection,github-actions,required-checks",
+        "semantic:github-branch-protection-ci"
+      ],
+      "gap_files": [
+        "skills/github-actions-ci-patterns.md",
+        "skills/github-branch-protection-org-standardize.md",
+        "skills/github-ruleset-pr-blocked-diagnose-missing-check-requirements.md",
+        "skills/github-ssh-commit-signing-fix-unknown-key-verification.md"
+      ]
+    },
+    {
+      "id": "C063",
+      "files": [
+        "skills/ci-cd-achaean-fleet-ci-cascade-patterns.md",
+        "skills/ci-cd-cascading-dockerfile-ci-failure-remediation.md",
+        "skills/docker-buildx-multiarch-local-image.md",
+        "skills/docker-mojo-uid-mismatch-crash-fix.md",
+        "skills/docker-precommit-entrypoint-install.md",
+        "skills/docker-to-podman-migration.md",
+        "skills/dockerfile-cargo-free-regression.md",
+        "skills/dockerfile-cargo-to-prebuilt-binary.md"
+      ],
+      "signals": [
+        "tag-overlap:docker,multi-arch,oci,qemu",
+        "semantic-prefix2:dockerfile-cargo",
+        "tag-overlap:docker,dockerfile,podman",
+        "category:ci-cd"
+      ],
+      "gap_files": [
+        "skills/docker-buildx-multiarch-local-image.md",
+        "skills/docker-mojo-uid-mismatch-crash-fix.md",
+        "skills/docker-precommit-entrypoint-install.md",
+        "skills/docker-to-podman-migration.md",
+        "skills/dockerfile-cargo-free-regression.md",
+        "skills/dockerfile-cargo-to-prebuilt-binary.md"
+      ]
+    },
+    {
+      "id": "C064",
+      "files": [
+        "skills/e2e-claude-cli-pipeline-oom-fixes.md",
+        "skills/mesh-dispatch-pipeline-debugging.md",
+        "skills/myrmidon-container-execution-volume-mapping.md",
+        "skills/myrmidon-swarm-end-to-end-orchestration-full-workflow.md"
+      ],
+      "signals": [
+        "tag-overlap:claude-cli,myrmidon,nats,pipeline",
+        "tag-overlap:container,myrmidon,podman,session-resume",
+        "semantic:myrmidon-container-pipeline"
+      ],
+      "gap_files": [
+        "skills/e2e-claude-cli-pipeline-oom-fixes.md",
+        "skills/myrmidon-container-execution-volume-mapping.md",
+        "skills/myrmidon-swarm-end-to-end-orchestration-full-workflow.md"
+      ]
+    },
+    {
+      "id": "C065",
+      "files": [
+        "skills/documentation-architecture-research-quality-rubric.md",
+        "skills/documentation-citation-gap-web-search-workflow.md",
+        "skills/documentation-corpus-myrmidon-parallel-remediation.md",
+        "skills/documentation-latex-paper-audit-methodology.md",
+        "skills/parallel-paper-correctness-audit.md",
+        "skills/research-corpus-audit-parallel-agent-pattern.md"
+      ],
+      "signals": [
+        "tag-overlap:audit,citation,latex,parallel-agents",
+        "tag-overlap:corpus,myrmidon,parallel,wave-based",
+        "category:documentation+architecture",
+        "semantic:parallel-paper-audit-corpus"
+      ],
+      "gap_files": [
+        "skills/documentation-architecture-research-quality-rubric.md",
+        "skills/documentation-citation-gap-web-search-workflow.md",
+        "skills/documentation-corpus-myrmidon-parallel-remediation.md",
+        "skills/documentation-latex-paper-audit-methodology.md"
+      ]
+    },
+    {
+      "id": "C066",
+      "files": [
+        "skills/baseten-miles-grpo-external-inference.md",
+        "skills/dynamo-miles-grpo-self-hosted-inference.md"
+      ],
+      "signals": [
+        "tag-overlap:enroot,grpo,miles,rl-training,slurm",
+        "semantic:grpo-self-hosted-inference"
+      ],
+      "gap_files": [
+        "skills/dynamo-miles-grpo-self-hosted-inference.md"
+      ]
+    },
+    {
+      "id": "C067",
+      "files": [
+        "skills/mojo-0263-stdlib-import-migration.md",
+        "skills/mojo-python-interop-patterns-guide.md",
+        "skills/mojo-python-interop-to-stdlib.md",
+        "skills/mojo-version-migration-strategy.md",
+        "skills/mojo-writable-write-to-migration.md"
+      ],
+      "signals": [
+        "semantic-prefix2:mojo-python",
+        "tag-overlap:migration,mojo,stdlib",
+        "tag-overlap:interop,mojo,python,pythonobject"
+      ],
+      "gap_files": [
+        "skills/mojo-python-interop-patterns-guide.md",
+        "skills/mojo-python-interop-to-stdlib.md",
+        "skills/mojo-version-migration-strategy.md",
+        "skills/mojo-writable-write-to-migration.md"
+      ]
+    },
+    {
+      "id": "C068",
+      "files": [
+        "skills/mojo-trait-conformance-fix.md",
+        "skills/mojo-trait-conformance-for-sequential-integration.md"
+      ],
+      "signals": [
+        "semantic-prefix2:mojo-trait",
+        "semantic:mojo-trait-conformance"
+      ],
+      "gap_files": [
+        "skills/mojo-trait-conformance-fix.md",
+        "skills/mojo-trait-conformance-for-sequential-integration.md"
+      ]
+    },
+    {
+      "id": "C069",
+      "files": [
+        "skills/debugging-slice-view-bad-free-destructor.md",
+        "skills/mojo-tuple-destructor-clone-pattern.md",
+        "skills/mojo-tuple-return-types.md"
+      ],
+      "signals": [
+        "semantic-prefix2:mojo-tuple",
+        "tag-overlap:asan,destructor,mojo,slice"
+      ],
+      "gap_files": [
+        "skills/debugging-slice-view-bad-free-destructor.md",
+        "skills/mojo-tuple-destructor-clone-pattern.md",
+        "skills/mojo-tuple-return-types.md"
+      ]
+    },
+    {
+      "id": "C070",
+      "files": [
+        "skills/mojo-type-alias-cleanup.md",
+        "skills/mojo-type-safety.md"
+      ],
+      "signals": [
+        "semantic-prefix2:mojo-type",
+        "semantic:mojo-type-system"
+      ],
+      "gap_files": [
+        "skills/mojo-type-alias-cleanup.md",
+        "skills/mojo-type-safety.md"
+      ]
+    },
+    {
+      "id": "C071",
+      "files": [
+        "skills/mojo-runtime-crash-bisection.md",
+        "skills/mojo-runtime-output-pattern-audit.md"
+      ],
+      "signals": [
+        "semantic-prefix2:mojo-runtime",
+        "semantic:mojo-runtime-debugging"
+      ],
+      "gap_files": [
+        "skills/mojo-runtime-crash-bisection.md",
+        "skills/mojo-runtime-output-pattern-audit.md"
+      ]
+    },
+    {
+      "id": "C072",
+      "files": [
+        "skills/mojo-deprecated-alias-removal.md",
+        "skills/mojo-deprecated-alias-removal.notes-conv.md"
+      ],
+      "signals": [
+        "semantic-prefix2:mojo-deprecated",
+        "notes-file:mojo-deprecated-alias-removal.notes-conv.md"
+      ],
+      "gap_files": [
+        "skills/mojo-deprecated-alias-removal.notes-conv.md"
+      ]
+    },
+    {
+      "id": "C073",
+      "files": [
+        "skills/conv2d-backward-analytical-value-tests.md",
+        "skills/conv2d-gradient-checking-finite-differences.md",
+        "skills/depthwise-conv2d-gradient-checking-tests.md",
+        "skills/gradient-checking-test-setup-fixes.md"
+      ],
+      "signals": [
+        "tag-overlap:backward-pass,finite-differences,gradient-checking,mojo",
+        "tag-overlap:conv2d,gradient-checking,mojo",
+        "semantic:conv2d-gradient-testing"
+      ],
+      "gap_files": [
+        "skills/conv2d-backward-analytical-value-tests.md",
+        "skills/conv2d-gradient-checking-finite-differences.md",
+        "skills/depthwise-conv2d-gradient-checking-tests.md",
+        "skills/gradient-checking-test-setup-fixes.md"
+      ]
+    },
+    {
+      "id": "C074",
+      "files": [
+        "skills/git-worktree-cleanup-preservation-audit.md",
+        "skills/git-worktree-management-patterns.md",
+        "skills/rebasing-stale-agent-worktree-branches.md"
+      ],
+      "signals": [
+        "semantic-prefix2:git-worktree",
+        "tag-overlap:cherry,cleanup,git,squash-merge,worktree"
+      ],
+      "gap_files": [
+        "skills/git-worktree-cleanup-preservation-audit.md",
+        "skills/git-worktree-management-patterns.md"
+      ]
+    },
+    {
+      "id": "C075",
+      "files": [
+        "skills/ci-cd-dependabot-pixi-lock-drift-fix.md",
+        "skills/cross-repo-dep-pypi-publish-fix.md",
+        "skills/cross-repo-python-utility-port.md",
+        "skills/pixi-lock-rebase-regenerate.md"
+      ],
+      "signals": [
+        "semantic-prefix2:cross-repo",
+        "tag-overlap:dependabot,lock-file,pixi,rebase",
+        "prefix-3:c-r-o"
+      ],
+      "gap_files": [
+        "skills/cross-repo-dep-pypi-publish-fix.md",
+        "skills/cross-repo-python-utility-port.md"
+      ]
+    },
+    {
+      "id": "C076",
+      "files": [
+        "skills/dockerfile-from-inline-comment.md",
+        "skills/dockerfile-version-guard.md"
+      ],
+      "signals": [
+        "tag-overlap-same-cat:digest,dockerfile",
+        "heading-jaccard:0.75"
+      ],
+      "gap_files": [
+        "skills/dockerfile-from-inline-comment.md",
+        "skills/dockerfile-version-guard.md"
+      ]
+    },
+    {
+      "id": "C077",
+      "files": [
+        "skills/fp16-accumulation-threshold-math-docs.md",
+        "skills/fp16-precision-test-documentation.md"
+      ],
+      "signals": [
+        "prefix-3:f-p-1",
+        "heading-jaccard:0.83",
+        "semantic:fp16-precision-documentation"
+      ],
+      "gap_files": [
+        "skills/fp16-accumulation-threshold-math-docs.md",
+        "skills/fp16-precision-test-documentation.md"
+      ]
+    },
+    {
+      "id": "C078",
+      "files": [
+        "skills/documentation-ecosystem-role-drift-detection.md",
+        "skills/documentation-multi-file-ecosystem-sync.md"
+      ],
+      "signals": [
+        "tag-overlap-same-cat:documentation,ecosystem",
+        "heading-jaccard:1.00"
+      ],
+      "gap_files": [
+        "skills/documentation-ecosystem-role-drift-detection.md",
+        "skills/documentation-multi-file-ecosystem-sync.md"
+      ]
+    },
+    {
+      "id": "C079",
+      "files": [
+        "skills/documentation-strict-audit-remediation-workflow.md",
+        "skills/security-md-version-sync.md"
+      ],
+      "signals": [
+        "tag-overlap-same-cat:audit,documentation",
+        "heading-jaccard:1.00"
+      ],
+      "gap_files": [
+        "skills/documentation-strict-audit-remediation-workflow.md"
+      ]
+    },
+    {
+      "id": "C080",
+      "files": [
+        "skills/fix-randn-seed-bug.md",
+        "skills/mojo-upstream-bug-filing-reproducibility-standard.md"
+      ],
+      "signals": [
+        "tag-overlap-same-cat:mojo,reproducibility",
+        "heading-jaccard:0.71"
+      ],
+      "gap_files": [
+        "skills/mojo-upstream-bug-filing-reproducibility-standard.md"
+      ]
+    }
+  ],
+  "meta": {
+    "total_input_rows": 987,
+    "gap_files_count": 205,
+    "clusters_emitted": 21,
+    "files_in_clusters": 75
+  }
+}

@@ -4,11 +4,15 @@ description: "Pattern for handling Ctrl+C/SIGINT interrupts in multi-level state
   \ hierarchies without marking states FAILED. Use when subprocess.run() returns normally\
   \ after SIGINT but you want runs to stay resumable; or when a sentinel exception\
   \ must propagate through 4 state machine levels (run\u2192subtest\u2192tier\u2192\
-  experiment) without triggering FAILED at any level."
+  experiment) without triggering FAILED at any level. Also covers wiring hierarchical\
+  \ state machines (Experiment \u2192 Tier \u2192 Run) into a production runner using\
+  \ closure-based action maps."
 category: architecture
 date: 2026-02-27
-version: 1.0.0
+version: 1.1.0
 user-invocable: false
+absorbed:
+  - state-machine-wiring
 ---
 # State Machine Interrupt Handling (Ctrl+C / SIGINT)
 
@@ -252,3 +256,146 @@ except Exception as e:
 4. **Tier resets to CONFIG_LOADED, not SUBTESTS_RUNNING** — `SUBTESTS_RUNNING` requires results already present; `CONFIG_LOADED` re-enters execution from scratch.
 5. **Safe wrappers swallow all exceptions** — any `ProcessPoolExecutor` safe wrapper must explicitly re-raise the sentinel.
 6. **All four SM levels need handling** — if any level catches `except Exception` without a prior `except ShutdownInterruptedError`, that level will mark FAILED.
+
+## State Machine Architecture Wiring
+
+Absorbed from `state-machine-wiring` (2026-02-22, branch `1008-state-machine-refactor`).
+Outcome: 2676 tests pass, 76.11% coverage, all hooks pass.
+
+### Ephemeral Config Fields for `--until-*` Controls
+
+Add to your config dataclass (excluded from serialization/hash):
+
+```python
+# Ephemeral --until controls (not saved to experiment.json / not in config_hash)
+until_run_state: RunState | None = None
+until_tier_state: TierState | None = None
+until_experiment_state: ExperimentState | None = None
+```
+
+Exclude in `to_dict()` by simply not including these fields.
+
+### Pre-Seeding Mutable State Before Building Action Map
+
+**Critical**: If resuming from a state where the setup action was already executed,
+pre-seed shared mutable state BEFORE building the action map:
+
+```python
+_current_exp_state = ExperimentState.INITIALIZING
+if self.checkpoint:
+    try:
+        _current_exp_state = ExperimentState(self.checkpoint.experiment_state)
+    except ValueError:
+        pass
+
+_resume_states = {
+    ExperimentState.TIERS_RUNNING,
+    ExperimentState.TIERS_COMPLETE,
+    ExperimentState.REPORTS_GENERATED,
+}
+scheduler: Any  # Single annotation before if/else to avoid duplicate-annotation mypy error
+if _current_exp_state in _resume_states:
+    self._validate_filesystem_on_resume(_current_exp_state)
+    scheduler = self._setup_workspace_and_scheduler()
+else:
+    scheduler = None
+```
+
+### Closure-Based Action Map Construction
+
+```python
+def _build_experiment_actions(
+    self,
+    tier_groups: list[list[TierID]],
+    scheduler: Any,
+    tier_results: dict,
+    start_time: datetime,
+) -> dict:
+    def action_initializing() -> None:
+        # INITIALIZING -> DIR_CREATED: no-op, setup done before this call
+        pass
+
+    def action_dir_created() -> None:
+        nonlocal scheduler
+        scheduler = self._setup_workspace_and_scheduler()
+
+    def action_tiers_running() -> None:
+        results = self._execute_tier_groups(tier_groups, scheduler)
+        tier_results.update(results)
+
+    return {
+        ExperimentState.INITIALIZING: action_initializing,
+        ExperimentState.DIR_CREATED: action_dir_created,
+        ExperimentState.TIERS_RUNNING: action_tiers_running,
+        # ...
+    }
+```
+
+For tier-level closures with multiple shared variables, use a **namespace dict** to share
+multiple mutable variables across tier closures:
+
+```python
+tier_ns: dict[str, Any] = {}  # shared mutable state across tier closures
+
+def action_pending() -> None:
+    tier_ns["config"] = load_tier_config(tier_id)
+
+def action_config_loaded() -> None:
+    cfg = tier_ns["config"]
+    tier_ns["results"] = run_subtests(cfg)
+```
+
+### Wire State Machine into Runner
+
+```python
+esm = ExperimentStateMachine(self.checkpoint, checkpoint_path)
+actions = self._build_experiment_actions(...)
+esm.advance_to_completion(actions, until_state=self.config.until_experiment_state)
+```
+
+### Extract Utilities to Library Modules with Backward Compatibility
+
+```python
+# <package>/model_validation.py — new home
+def validate_model(model: str, ...) -> bool: ...
+def is_rate_limit_error(output: str) -> tuple[bool, int | None]: ...
+
+# scripts/run_e2e_experiment.py — old home, re-export for compat
+from <package>.model_validation import is_rate_limit_error, validate_model  # noqa: F401
+warnings.warn("deprecated, use manage_experiment.py", DeprecationWarning, stacklevel=1)
+```
+
+**Important**: Place `warnings.warn()` AFTER all imports to avoid E402 ruff errors.
+
+### Replace sys.argv Mutation with Explicit argv Parameter
+
+```python
+# Old (fragile):
+sys.argv = ["run_e2e_batch.py"] + batch_args
+main()
+
+# New (clean):
+def main(argv: list[str] | None = None) -> int:
+    args = parser.parse_args(argv)
+
+# Caller:
+run_e2e_batch.main(["--config", "batch.yaml"])
+```
+
+### Filesystem Cross-Validation on Resume (Warn, Don't Fail)
+
+```python
+def _validate_filesystem_on_resume(self, state: ExperimentState) -> None:
+    if self.experiment_dir and not self.experiment_dir.exists():
+        logger.warning(f"Resuming from {state.value} but experiment_dir missing: {self.experiment_dir}")
+```
+
+### Additional Wiring Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| CamelCase alias for state enum | `from package.models import ExperimentState as _ES` | Triggers ruff N814: `Camelcase 'ExperimentState' imported as constant '_ES'` | Use `ExperimentState` directly — no alias needed |
+| State transition docstrings on inner functions | `"""INITIALIZING -> DIR_CREATED: ..."""` on closures | Triggers D401 (not imperative mood) | Use `# INITIALIZING -> DIR_CREATED: ...` inline comments instead |
+| `warnings.warn()` between imports | Placed warn between stdlib and package imports | Breaks E402 (module-level import not at top) | Move `warnings.warn()` AFTER all imports |
+| Wrong subprocess mock path in tests | `patch("subprocess.run", ...)` | Does not intercept calls when module uses `subprocess` as module object | Use `patch("<package>.model_validation.subprocess.run", ...)` |
+| Duplicate type annotation for `scheduler` | `scheduler: Any = None` then `scheduler: Any = ...` in if-branch | mypy error: duplicate type annotation | Single bare annotation before branches: `scheduler: Any` then assign in branches |

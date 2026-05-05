@@ -4,11 +4,14 @@ description: 'Audit .github/workflows/README.md against actual files on disk, up
   inventory to match reality, and document remaining duplication. Use when: workflows
   were added/deleted but README was not updated, a consolidation pass removed workflows
   still listed, or inline setup steps exist across many workflows needing inventory
-  before extraction.'
+  before extraction. Also covers updating README AFTER a migration is complete to
+  remove stale inline-step references and Remaining Duplication sections.'
 category: documentation
 date: 2026-03-07
-version: 1.0.0
+version: 1.1.0
 user-invocable: true
+absorbed:
+  - workflow-readme-migration-sync
 ---
 # Workflow README Audit
 
@@ -212,3 +215,95 @@ ls .github/workflows/*.yml | wc -l
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | ProjectOdyssey | Issue #3344, PR #3978 | 22 workflows; pre-commit passed (markdownlint, trailing-whitespace, end-of-file-fixer) |
+| ProjectOdyssey | Issue (post-migration), PR #4847 | README-only sync after pixi composite action migration; 26 insertions, 45 deletions |
+
+## Post-Migration README Sync
+
+Absorbed from `workflow-readme-migration-sync` (2026-03-15). Use when a prior consolidation
+pass migrated workflow steps to composite actions but left the README describing the old inline
+pattern. Effort: ~15 min, low-risk (documentation only, no code changes).
+
+**Triggers**:
+
+- A GitHub issue references "deferred documentation" from a prior consolidation pass
+- Workflow files already use the new pattern (e.g. composite action) but README still shows the old inline pattern
+- "Remaining Duplication" or similar stale sections exist in a workflow README
+- "Adding New Workflows" guidance still directs contributors to the old approach
+
+### Quick Reference
+
+```bash
+# 1. Verify migration is complete before touching README
+grep -rn "prefix-dev/setup-pixi" .github/workflows/*.yml | grep -v README
+
+# 2. Find stale prose in README
+grep -n "inline\|Not Yet Migrated\|Remaining Duplication\|no composite action" .github/workflows/README.md
+
+# 3. Run markdownlint after edits
+pixi run pre-commit run markdownlint-cli2 --files .github/workflows/README.md
+```
+
+### Step 1 — Verify the Migration Is Actually Done
+
+Before touching the README, confirm workflows already use the new pattern:
+
+```bash
+# Should return 0 results if migration is complete
+grep -rn "prefix-dev/setup-pixi" .github/workflows/*.yml | grep -v README | wc -l
+
+# Should return results for each migrated workflow
+grep -rn "uses: ./.github/actions/setup-pixi" .github/workflows/*.yml | wc -l
+```
+
+If the inline pattern is still present in `.yml` files, the README update is premature — do the
+workflow migration first.
+
+### Step 2 — Identify All 6 Stale README Locations
+
+```bash
+grep -n "inline\|Not Yet Migrated\|no composite action\|prefix-dev/setup-pixi\|Remaining Duplication" \
+  .github/workflows/README.md
+```
+
+Typical stale locations in a post-migration README:
+
+1. **Individual workflow description bullets** — e.g. "Uses inline `prefix-dev/setup-pixi`"
+2. **"Remaining Duplication" section** — lists workflows as not-yet-migrated
+3. **"Common Patterns > Composite Actions"** — says no composite actions exist
+4. **"Pixi-Based Environment Setup"** — shows old inline YAML snippet
+5. **"Adding New Workflows"** checklist — tells contributors to add to duplication table
+6. **Audit quick-reference commands** — grep command checks for inline usage count
+
+### Step 3 — Apply Targeted Edits
+
+**Workflow description bullets** — use `replace_all: true` when the same phrase appears multiple times:
+
+```
+Before: - Uses inline `prefix-dev/setup-pixi` for Mojo environment
+After:  - Uses `.github/actions/setup-pixi` composite action for Mojo environment
+```
+
+**"Remaining Duplication" section** — replace with a "Composite Actions" section that:
+
+- Names the composite action file
+- Lists migrated workflows in a table
+- Includes a verification command showing expected count = 0
+
+**"Pixi-Based Environment Setup"** — replace old YAML example with the composite action `uses:` line.
+
+**"Adding New Workflows"** — replace "add to Remaining Duplication table" with "use the composite action".
+
+**Audit commands** — update to verify zero inline usage remains.
+
+### Post-Migration Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Editing "Uses inline" bullets one at a time | Used `replace_all: false` for the first bullet | Context string wasn't unique — edit tool reported string not found | When the same phrase appears multiple times, use `replace_all: true` on the first pass |
+| Updating SHA-pinning documentation examples | Considered replacing `prefix-dev/setup-pixi@v0.9.3` in the SHA-pinning examples section | Those lines are intentional documentation of the pinning pattern, not actual workflow steps | Always check whether a reference is in a concept-explaining code example block vs. a step to be migrated |
+
+### Post-Migration Results
+
+- **PR**: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4847
+- **Files changed**: `.github/workflows/README.md` only (26 insertions, 45 deletions)
+- **Validation**: `SKIP=mojo-format pixi run pre-commit run markdownlint-cli2 --files .github/workflows/README.md`

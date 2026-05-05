@@ -4,10 +4,12 @@ description: Validate Mojo syntax against current v0.26.1+ standards. Use to cat
   syntax errors before compilation.
 category: optimization
 date: '2026-05-03'
-version: 1.1.0
+version: 1.2.0
 mcp_fallback: none
 verification: verified-local
 history: mojo-lint-syntax.history
+absorbed:
+  - mojo-format
 ---
 # Lint Mojo Syntax
 
@@ -48,6 +50,21 @@ grep -r "inout self\|@value\|DynamicVector\|->" *.mojo | grep -v "result\|fn"
 ```
 
 **IMPORTANT**: Library files with relative imports CANNOT be validated using `mojo build` - use `mojo package` instead.
+
+### Mojo Format Notes
+
+The formatter is **idempotent** — safe to run multiple times without changing the result. It adjusts
+indentation (4 spaces), line length, and spacing around operators. It does NOT change logic, variable
+names, or comment content; all comments are preserved.
+
+**Common `mojo format` errors**:
+
+| Error | Cause | Solution |
+| ------- | ------- | ---------- |
+| `Syntax error` | Invalid Mojo syntax | Fix syntax before formatting |
+| `File not found` | Wrong path | Verify file exists |
+| `Permission denied` | File permissions | Check `chmod` settings |
+| `Mojo not installed` | Missing Mojo | Install via `pixi` or Magic |
 
 ## Common Syntax Issues
 
