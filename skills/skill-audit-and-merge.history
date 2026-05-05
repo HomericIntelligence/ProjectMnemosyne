@@ -1,5 +1,20 @@
 # skill-audit-and-merge -- History
 
+## v2.2.0 (2026-05-04)
+**Changed by:** 2026-05-04 full-corpus Myrmidon deduplication session (1,659 → 982 files, two passes)
+**Verification:** verified-ci (171/171 tests passing, 982/982 plugins valid)
+
+### What changed
+- Added "Gap Recovery Second Pass" subsection to Verified Workflow (augment-not-replace approach for incomplete Wave 1 coverage)
+- Added 2 new Failed Attempts rows: Explore agents for fingerprinting (read-only, cannot Write JSONL), oversized shards causing silent coverage gaps
+- Added Verified On row for 2026-05-04 session (57 files absorbed across 2 passes)
+- Bumped date to 2026-05-04
+
+### Why
+Gap-recovery second pass and agent-type discipline (general-purpose vs Explore) were the two critical new learnings from the largest corpus dedup run to date. Documents: ≤103-file shard ceiling, `comm -23` gap detection, cluster ID sequencing (C060+), and addendum-not-overwrite pattern for multi-pass audit trails.
+
+---
+
 ## v2.1.0 (2026-05-03)
 **Changed by:** 12-cluster Myrmidon swarm consolidation session (PR #1549)
 **Verification:** verified-ci (PR #1549 passed CI and was merged)

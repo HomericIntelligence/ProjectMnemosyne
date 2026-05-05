@@ -2,8 +2,8 @@
 name: skill-audit-and-merge
 description: "Use when: (1) skills marketplace has 500+ files with visible duplication noise hurting /advise quality, (2) auditing for near-exact duplicates or high-overlap pairs to delete or merge, (3) consolidating topic clusters spanning 3+ files into a single authoritative skill, (4) running a structured deduplication session that must leave all CI tests green"
 category: tooling
-date: '2026-05-03'
-version: 2.1.0
+date: '2026-05-04'
+version: 2.2.0
 verification: verified-ci
 history: skill-audit-and-merge.history
 tags:
@@ -139,6 +139,55 @@ domain modules → exports → dependents → tests
 ```
 This prevents broken intermediate states where a file references deleted content.
 
+### Gap Recovery Second Pass (when Wave 1 fingerprinting is incomplete)
+
+Use this when a large-scale fingerprinting wave (1,000+ files) hits agent output limits and leaves files unfingerprinted.
+
+**Symptoms**: After Phase 1 merges, some surviving files were never fingerprinted (coverage <100%). Gaps concentrate in letter ranges that were in truncated shards.
+
+**Augment-not-replace approach** — preserve existing fingerprint rows, only add missing ones:
+
+1. Compute the gap:
+   ```bash
+   # Generate sorted list of current skill files
+   ls skills/*.md | sed 's|skills/||;s|\.md||' | sort > current_skills_sorted.txt
+   # Extract fingerprinted skill names from your JSONL/CSV output
+   sort fingerprinted.txt > fingerprinted_sorted.txt
+   # Find files that exist but were never fingerprinted
+   comm -23 current_skills_sorted.txt fingerprinted_sorted.txt > gap_files.txt
+   wc -l gap_files.txt   # e.g. 205 missing
+   ```
+
+2. Re-shard ONLY the gap files into smaller shards (empirical ceiling: **≤103 files per shard**):
+   ```bash
+   # Split gap_files.txt into shards of at most 103 lines
+   split -l 103 gap_files.txt gap_shard_
+   ```
+
+3. Dispatch **`general-purpose`** agents (NOT `Explore`) for the new shards — they can use the Write tool to land JSONL directly on disk.
+
+4. Combine existing + gap fingerprints:
+   ```bash
+   # Filter existing rows to only surviving files (removes absorbed files)
+   python3 - <<'EOF'
+   import json, pathlib
+   surviving = set(pathlib.Path('current_skills_sorted.txt').read_text().split())
+   rows = [r for r in open('wave1_fingerprints.jsonl')
+           if json.loads(r)['name'] in surviving]
+   # Append gap rows
+   rows += list(open('gap_fingerprints.jsonl'))
+   pathlib.Path('combined_fingerprints.jsonl').write_text(''.join(rows))
+   EOF
+   ```
+
+5. Re-cluster globally on the combined set, but **emit only clusters containing ≥1 gap file** — avoids re-discovering already-handled clusters.
+
+6. **Start new cluster IDs at C060** (or whatever is first-pass-max + 1) to avoid collision with first-pass cluster IDs.
+
+7. **Append a "Second Pass Addendum"** to the existing audit report — do not overwrite the first-pass audit trail.
+
+**Result from 2026-05-04 run**: 205 gap files recovered, 21 new clusters (C060–C080), 5 additional merges, 3 false matches caught.
+
 ### After Each Phase
 
 ```bash
@@ -169,6 +218,8 @@ git commit -m "chore: phase N — <description> (X files removed)"
 | Wave B verifier false FAIL on 8 clusters | Verifier divided fence counts by 2 to get "block pairs" then compared against raw grep-c counts from Phase-0 (labeled "code blocks" but were raw fence markers) | Unit mismatch reported 8 clusters FAILED when only 2 truly had deficits (H: 24 short, L1: 2 short) | Establish a single unit (raw fence count OR block pairs) in Phase 0 and use it consistently through Wave B — never mix counts and pairs in the same comparison |
 | cherry-pick failed for sub-wave integration | Used `git cherry-pick` to integrate cluster B and G commits from worktrees into the integration branch | Worktrees had diverged from a different base than the integration branch, causing cherry-pick conflicts | Use direct file copy from worktrees (`cp worktree/skills/<file>.md integration/skills/`) and manual stage+commit instead of cherry-pick when worktrees were created off a stale base |
 | Fence arithmetic floor was off by absorbed-file overlap | Pre-merge canonical for L1 had 8 fences; absorbed-1 had 14, absorbed-2 had 20; set floor = 42 | Wave A merge produced 40 — fixer merged `fn store` and `fn set` into one code block instead of keeping them separate, losing 2 fences below floor | Floor arithmetic assumes no consolidation of separate code blocks; Wave B verifier must do a content-level diff (not just count comparison) to catch merged blocks that cross cluster-file boundaries |
+| Explore agents for fingerprinting waves | Used `subagent_type: Explore` for fingerprinting shards 2 and 3 in Wave 1 (1,659-file corpus) | `Explore` is a read-only agent type — cannot call `Write` tool. Agents either echoed JSONL as stdout (lost when context cleared) or required complex workarounds to extract output | Any wave whose output must persist to a file (fingerprints, cluster JSON, report files) MUST use `general-purpose` or another writable agent type. Keep shard size ≤103 files (empirical ceiling before output truncation). |
+| Oversized fingerprinting shards causing silent coverage gaps | Wave 1 used 332-file shards, trusting agents to fingerprint the full shard | Explore agents hit output limits partway through each shard, emitting only 838/1024 fingerprints (81.8% coverage); gaps went undetected until post-Phase-1 file count cross-check | Limit fingerprinting shards to ≤103 files; after Wave 1 completes, always `comm -23` surviving files vs. fingerprinted set to detect unfingerprinted files before clustering |
 
 ## Results & Parameters
 
@@ -272,6 +323,7 @@ Before creating a new skill:
 | ProjectMnemosyne | PR #22 (v1.0.0) — 43 → 37 plugins, ~1 hour | [notes.md](skill-audit-and-merge.notes.md) |
 | ProjectMnemosyne | 2026-04-12 session (v2.0.0) — 1,667 → 1,625 files, 41 removed, 98 tests passing | 4-phase deduplication, verified-ci |
 | ProjectMnemosyne | PR #1549 — 12-cluster Myrmidon swarm consolidation, May 2026 (14 canonicals, ~34 absorbed, 967→935 entries) | 4 sub-waves of ≤5 parallel agents with `isolation: worktree`; Wave B verifier; marketplace regen in Wave C |
+| ProjectMnemosyne | 2026-05-04 full-corpus dedup (v2.2.0) — 1,659 → 982 files, 57 absorbed across 2 passes (52 in pass 1 + 5 in gap-recovery pass 2); 171/171 tests passing | Gap-recovery second pass recovered 205/987 unfingerprinted files; `general-purpose` agents used for all write-capable fingerprinting waves; 21 new clusters (C060–C080) found in second pass |
 
 ## References
 
