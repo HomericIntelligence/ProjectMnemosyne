@@ -1,0 +1,46 @@
+# Amendment History: github-auto-merge-no-ci-runs
+
+## v1.1.0 — 2026-05-05
+
+**Author:** Claude Sonnet 4.6 (via hephaestus:learn)
+**Source:** Bulk auto-merge arming session across 14 HomericIntelligence repos, ~104 open PRs
+
+### Changes
+
+- Updated `description` frontmatter with 5 new trigger conditions (5)–(9)
+- Updated `date` to 2026-05-05
+- Added `history` frontmatter field pointing to this file
+- Added 5 new "When to Use" bullet points:
+  - gh pr list default limit 30 silently omits older PRs; use --limit 200
+  - GraphQL "Pull request is in clean status" error is transient; retry immediately
+  - GraphQL "Pull request is in unstable status" error — retry after a few seconds
+  - Check allow_rebase_merge before arming; squash-only repos require --squash
+  - Scheduled workflow failures (apply.yml) may not reflect required check status
+- Added 3 new rows to "Failed Attempts" table
+- Added 3 new commands to "Key Diagnostic Commands" section
+
+---
+
+## v1.0.0 — 2026-04-23 (initial)
+
+**Author:** Claude Sonnet 4.6 (via hephaestus:learn)
+**Source:** Diagnosis and fix of 11 CLEAN PRs stuck with armed auto-merge in AchaeanFleet
+
+### Frontmatter snapshot
+
+```yaml
+name: github-auto-merge-no-ci-runs
+description: "GitHub auto-merge stalls indefinitely on a CLEAN PR when no CI workflow ever runs on the branch. Use when: (1) PR has mergeStateStatus: CLEAN and auto-merge armed but hasn't merged after hours, (2) gh pr view --json statusCheckRollup returns empty array [], (3) docs-only, pod-spec, or non-code PRs stuck with armed auto-merge, (4) investigating why auto-merge didn't fire on a PR that looks ready."
+category: ci-cd
+date: 2026-04-23
+version: 1.0.0
+user-invocable: false
+verification: verified-ci
+tags:
+  - auto-merge
+  - github
+  - ci-cd
+  - path-filter
+  - status-checks
+  - docs-only
+```
