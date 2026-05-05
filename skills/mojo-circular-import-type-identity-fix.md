@@ -1,9 +1,9 @@
 ---
 name: mojo-circular-import-type-identity-fix
-description: "Fix Mojo 'cannot implicitly convert X to X' errors caused by circular imports that trigger dual type compilation. Use when: (1) Mojo compiler reports 'cannot implicitly convert Type to Type' where both types have the same name, (2) cross-package imports create A->B->A cycles in Mojo, (3) struct operators delegate to external modules that import the struct back, (4) typed dispatch files create reverse dependencies back to the public API package."
+description: "Fix Mojo 'cannot implicitly convert X to X' errors caused by circular imports that trigger dual type compilation. Use when: (1) Mojo compiler reports 'cannot implicitly convert Type to Type' where both types have the same name, (2) cross-package imports create A->B->A cycles in Mojo, (3) struct operators delegate to external modules that import the struct back, (4) typed dispatch files create reverse dependencies back to the public API package, (5) Tensor[dtype] and AnyTensor coexist in the same file causing overload ambiguity, (6) designing dual-type tensor APIs or reviewing parametric struct migrations."
 category: architecture
 date: 2026-03-23
-version: "2.0.0"
+version: "2.4.0"
 user-invocable: false
 tags:
   - mojo
@@ -11,6 +11,14 @@ tags:
   - type-identity
   - operators
   - architecture
+  - tensor
+  - overload-ambiguity
+  - method-wrappers
+absorbed:
+  - mojo-dual-type-tensor-review (2026-03-21)
+  - mojo-method-api-symmetry (2026-03-15)
+  - mojo-method-wrapper-circular-import (2026-03-07)
+  - mojo-overload-ambiguity-typed-tensor-isolation (2026-03-22)
 ---
 
 ## Overview
@@ -232,3 +240,369 @@ Found module-level import from Package A in Package B (reverse dep):
 | --------- | --------- | --------- |
 | ProjectOdyssey | PR #5062 | Phase 1: Moved AnyTensor from shared/core/ to shared/tensor/, inlined operators |
 | ProjectOdyssey | PR #5063 | Phase 2: Deleted 3 fake typed wrappers, extracted _resolve_shape to shared/base, function-scoped imports |
+| ProjectOdyssey | Issue #4998, PRs #5030-5058 | 242 build errors from typed ops, resolved by typed package isolation |
+| ProjectOdyssey | PR #4803 | Thin method wrappers for split/tile/repeat/permute on ExTensor |
+| ProjectOdyssey | PR #3803 | Local-scope import pattern for tile/repeat/permute/split method wrappers |
+
+## Dual-Type Tensor Architecture Design
+
+Absorbed from `mojo-dual-type-tensor-review` (2026-03-21, Epic #4998, Mojo 0.26.1).
+
+### Architecture
+
+```mojo
+trait TensorLike(Copyable, Movable):
+    fn numel(self) -> Int
+    fn shape(self) -> List[Int]
+    fn dtype(self) -> DType
+
+struct Tensor[dtype: DType = DType.float32](TensorLike):
+    var _data: UnsafePointer[Scalar[Self.dtype], origin=MutAnyOrigin]
+    fn __getitem__(self, i: Int) raises -> Scalar[Self.dtype]: ...
+    fn as_any(self) -> AnyTensor: ...
+    fn cast[target: DType](self) raises -> Tensor[target]: ...
+
+struct AnyTensor(TensorLike):
+    var _data: UnsafePointer[UInt8, origin=MutAnyOrigin]
+    var _dtype: DType
+    fn as_tensor[dtype: DType](self) raises -> Tensor[dtype]: ...
+    fn set(mut self, index: Int, value: Float64) raises: ...
+```
+
+Naming convention follows Mojo stdlib (`AnyType`, `AnyOrigin` → `AnyTensor`).
+
+### Quantitative Codebase Audit
+
+Before designing the dual-type system, count all affected sites:
+
+| Metric | Count |
+| ------- | ------- |
+| Functions taking the tensor type | 368 |
+| Functions returning the tensor type | 480 |
+| Runtime dtype branch checks | 351 |
+| Bitcast pointer accesses | 708 |
+
+### Mojo 0.26.1 Parametric Capabilities
+
+| Capability | Works? | Notes |
+| ----------- | ------- | ------- |
+| Parametric struct conforming to trait | YES | |
+| `comptime Alias = OriginalType` for backward compat | YES | |
+| Auto-parameterization for return types | NO (BLOCKER) | `fn relu(t: Tensor) -> Tensor` fails with "failed to infer parameter dtype" |
+| `List[TraitName]` trait objects (existentials) | NO | Mojo 0.26.1 has no existential types |
+| `Variant[TypeA, TypeB]` tagged union | YES | |
+| Multi-param structs `Batch[data_dt, label_dt]` | YES | |
+| Zero-copy bitcast views (ASAP destruction safe) | YES | |
+| Default parameter values | YES | |
+| Chained auto-param function calls | Partial | Requires explicit `[dt: DType]` |
+
+Key constraint: always use explicit `[dt: DType]` on every function returning a parametric type.
+
+```mojo
+# FAILS: auto-param on return type
+fn relu(t: Tensor) -> Tensor
+
+# WORKS: explicit parameter
+fn relu[dt: DType](t: Tensor[dt]) -> Tensor[dt]
+# Call sites still infer dt: relu(my_tensor) works
+```
+
+### Review Findings Summary
+
+```text
+BLOCKERS (2):
+  - Auto-param doesn't work for return types (must use explicit [dt: DType])
+  - lazy_expression.mojo / lazy_eval.mojo missing from migration phases
+
+HIGH (6):
+  - Slice pointer arithmetic double-offset (remove * dtype_size for typed ptr)
+  - I/O boundary underspecified (save via as_any(), load returns AnyTensor)
+  - Phase 3->5 circular dependency (concatenate/stack/split use List[ExTensor])
+  - __str__/__repr__ use _get_float64 (need typed access)
+  - Scope underestimated 30-50% (explicit [dt: DType] on 480 signatures)
+  - Binary bloat risk (eager instantiation, 317 fns x 11 dtypes)
+
+MEDIUM (5):
+  - In-place operator precision bug (pre-existing)
+  - __hash__ precision loss for int types
+  - Hashable not specified in TensorLike trait
+  - SIMD helpers should merge to single parametric version
+  - Circular import in tensor_io.mojo
+
+Bugs found during audit (fixed in PR #5001):
+  - conv2d: no dtype guard on kernel/bias vs input
+  - batch_norm2d: no dtype guard on gamma/beta/running_stats vs input
+  - attention: no dtype guard on mask vs scores
+```
+
+### Performance: Eager Instantiation
+
+- Mojo uses eager instantiation (like C++ templates): N functions x M dtypes = N*M compiled bodies
+- 317 functions x 11 dtypes = 3,487 worst-case instantiations
+- Mitigation: restrict to 3 float types initially (float16/32/64)
+- Memory pool is byte-level, dtype-agnostic — no impact
+
+### Mojo 0.26.1 Documentation References
+
+```text
+Parameters:     github.com/modular/modular/blob/modular/v26.1/mojo/docs/manual/parameters/index.mdx
+Traits:         github.com/modular/modular/blob/modular/v26.1/mojo/docs/manual/traits.mdx
+Types (SIMD):   github.com/modular/modular/blob/modular/v26.1/mojo/docs/manual/types.mdx
+UnsafePointer:  github.com/modular/modular/blob/modular/v26.1/mojo/docs/manual/pointers/unsafe-pointers.mdx
+Lifecycle:      github.com/modular/modular/blob/modular/v26.1/mojo/docs/manual/lifecycle/life.mdx
+```
+
+### Failed Attempts (Dual-Type Design)
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Pure parametric ExTensor | Make ExTensor[dtype] the only type | Heterogeneous collections (List[ExTensor], Dict, Batch) break with no trait objects | Mojo 0.26.1 has no existential types; need a type-erased companion |
+| Auto-parameterization for all functions | Rely on `fn relu(t: Tensor) -> Tensor` auto-inference | Return type auto-param fails: "failed to infer parameter dtype" | Must use explicit `[dt: DType]` on every function returning a parametric type |
+| Change __getitem__ to return Float64 | Wider return type to accept more assignments | Float32 can't implicitly convert to Float64 in Mojo; broke 108 call sites | Mojo has zero implicit numeric conversions between float types |
+| Proxy/reference return type from __getitem__ | Return a mutable proxy that accepts any assignment | "expression must be mutable in assignment" — Mojo ownership prevents mutable references from __getitem__ | Mojo's ownership model doesn't support reference-returning subscript |
+| Single-pass sub-agent migration | Launch 8 agents to fix all files at once | Agents only fixed 60% of errors; missed Float16 paths, arithmetic mismatches, parallelize closures | Sub-agents need explicit error categories and line numbers; plan for 2-3 rounds |
+
+## Typed Tensor Package Isolation (Overload Ambiguity Fix)
+
+Absorbed from `mojo-overload-ambiguity-typed-tensor-isolation` (2026-03-22, Mojo 0.26.1).
+
+### Root Cause
+
+Mojo 0.26.1's overload resolver fails when a file has BOTH:
+- Functions taking/returning `AnyTensor`
+- Functions taking/returning `Tensor[dtype]` (or `Tensor` imported in scope)
+
+The error `cannot implicitly convert 'AnyTensor' value to 'AnyTensor'` is misleading — it means the compiler found multiple candidate overloads and couldn't pick one. Having `Tensor` in scope creates phantom candidates that confuse resolution. Even PRIVATE functions with `Tensor[dtype]` signatures in the same file cause ambiguity.
+
+Key evidence: 188 of 242 errors were this exact "AnyTensor to AnyTensor" message; error count was proportional to the number of `Tensor[dtype]` functions in scope.
+
+### Fix: Extract Typed Code to Isolated Package
+
+```bash
+# BEFORE (broken): shared/core/arithmetic.mojo
+from shared.tensor.tensor import Tensor  # THIS CAUSES THE PROBLEM
+fn _add_typed[dt: DType](a: Tensor[dt], b: Tensor[dt]) -> Tensor[dt]: ...
+fn add(a: AnyTensor, b: AnyTensor) -> AnyTensor: ...  # compiler confused
+
+# AFTER (works): shared/core/arithmetic.mojo — NO Tensor import
+fn add(a: AnyTensor, b: AnyTensor) -> AnyTensor:
+    from shared.tensor.typed.arithmetic import _dispatch_add  # local import
+    return _dispatch_add(a, b)
+
+# shared/tensor/typed/arithmetic.mojo — isolated typed code
+from shared.tensor.tensor import Tensor
+fn _add_typed[dt: DType](a: Tensor[dt], b: Tensor[dt]) -> Tensor[dt]: ...
+fn _dispatch_add(a: AnyTensor, b: AnyTensor) -> AnyTensor: ...
+```
+
+### Isolated Package Architecture
+
+```text
+shared/tensor/typed/          <- ISOLATED: typed implementations
+  arithmetic.mojo               _broadcast_binary_typed[dtype, op]()
+  elementwise.mojo              _unary_typed[dt, op]()
+  activation.mojo               _relu_typed[dt](), _dispatch_relu()
+  matrix.mojo                   _matmul_typed[dt]()
+  reduction.mojo                _sum_typed[dt]()
+
+shared/core/                  <- CLEAN: AnyTensor-only operations
+  arithmetic.mojo               fn add(a: AnyTensor, b: AnyTensor)
+  elementwise.mojo              fn exp(tensor: AnyTensor)
+  activation.mojo               fn relu(tensor: AnyTensor)
+  any_tensor.mojo               struct AnyTensor (keeps Tensor import for as_tensor)
+  layers/linear.mojo            struct Linear[dtype] (keeps Tensor import)
+```
+
+### Files That Legitimately Keep Tensor Import
+
+- `shared/tensor/tensor.mojo` — the struct itself
+- `shared/tensor/factories.mojo` — factory functions
+- `shared/core/any_tensor.mojo` — `as_tensor[dtype]()` method
+- `shared/core/layers/linear.mojo` — `Linear[dtype]` parametric struct
+- `shared/core/layers/conv2d.mojo` — `Conv2dLayer[dtype]` parametric struct
+- `shared/core/layers/batchnorm.mojo` — `BatchNorm2dLayer[dtype]` parametric struct
+
+### Mojo 0.26.1 Type Resolution Rules
+
+```text
+1. Importing Tensor[dtype] in a file pollutes overload resolution for ALL functions
+2. Even private functions with Tensor[dtype] signatures cause ambiguity
+3. .as_any() returning AnyTensor is seen as ambiguous when Tensor is in scope
+4. Local-scope imports (inside function bodies) DO NOT pollute — they're deferred
+5. The error message "cannot convert AnyTensor to AnyTensor" is MISLEADING —
+   it means "multiple overload candidates found, can't pick one"
+```
+
+### Verification Commands
+
+```bash
+# No Tensor import in core operation files (should return NOTHING):
+grep -l "from shared.tensor.tensor import Tensor" \
+  shared/core/arithmetic.mojo shared/core/elementwise.mojo \
+  shared/core/activation.mojo shared/core/matrix.mojo
+
+# Typed files exist:
+ls shared/tensor/typed/*.mojo
+
+# Build passes:
+just package
+```
+
+### Failed Attempts (Overload Ambiguity)
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Public typed wrappers (`add_typed`, `relu_typed`) | Added public `fn add_typed[dt: DType](a: Tensor[dt])` alongside `fn add(a: AnyTensor)` | 242 Mojo overload resolution errors — compiler couldn't disambiguate | Having `Tensor[dtype]` in scope AT ALL (even in private functions) pollutes overload resolution |
+| Removing only public wrappers | Removed `add_typed` etc. but kept internal `_add_typed` and `_dispatch_add` in same file | Same 242 errors persisted | The issue is the `Tensor` TYPE being imported, not function visibility |
+| Renaming typed functions | Different naming conventions to avoid collisions | Errors remained | Mojo's issue is with `Tensor[dtype]` type being in the same compilation scope |
+| Fixing Self.dtype and removing exports | Fixed `dtype` → `Self.dtype`, removed typed exports from `__init__.mojo` | Reduced errors from 242 to ~200 but core ambiguity remained | Cosmetic fixes don't solve fundamental type scope pollution |
+
+## Method Wrappers: Local-Scope Import Pattern
+
+Absorbed from `mojo-method-wrapper-circular-import` (2026-03-07, PR #3803) and
+`mojo-method-api-symmetry` (2026-03-15, PR #4803).
+
+### Pattern Overview
+
+When a struct (`ExTensor`) needs ergonomic method-style wrappers for operations that live in a
+separate module that already imports the struct at module level, use **local-scope imports
+inside each method body** to defer resolution to call time.
+
+```text
+extensor.mojo  --imports-->  (nothing from shape.mojo at module level)
+shape.mojo     --imports-->  ExTensor from extensor.mojo
+
+Adding top-level import would create:
+extensor.mojo  --imports-->  shape.mojo  --imports-->  extensor.mojo  CIRCULAR
+```
+
+### Method Wrapper Template
+
+```mojo
+fn tile(self, reps: List[Int]) raises -> ExTensor:
+    """Tile tensor by repeating along each dimension.
+
+    Delegates to the functional `tile()` in `shared.core.shape`.
+
+    Args:
+        reps: Number of repetitions along each dimension.
+
+    Returns:
+        Tiled tensor with shape[i] = input_shape[i] * reps[i].
+    """
+    from shared.core.shape import tile as _tile   # local-scope import
+    return _tile(self, reps)
+```
+
+Key details:
+- Import is **inside the method body** — never at module level
+- Use `as _alias` to avoid shadowing the method name itself
+- For `List`-returning methods, use `^` transfer operator for ownership:
+
+```mojo
+fn split(self, num_splits: Int, axis: Int = 0) raises -> List[ExTensor]:
+    from shared.core.shape import split as _split
+    return _split(self, num_splits, axis)^   # ^ transfers ownership
+```
+
+### Copy-Paste Method Templates (tile/repeat/permute/split)
+
+```mojo
+fn tile(self, reps: List[Int]) raises -> ExTensor:
+    from shared.core.shape import tile as _tile
+    return _tile(self, reps)
+
+fn repeat(self, n: Int, axis: Int = -1) raises -> ExTensor:
+    from shared.core.shape import repeat as _repeat
+    return _repeat(self, n, axis)
+
+fn permute(self, dims: List[Int]) raises -> ExTensor:
+    from shared.core.shape import permute as _permute
+    return _permute(self, dims)
+
+fn split(self, num_splits: Int, axis: Int = 0) raises -> List[ExTensor]:
+    from shared.core.shape import split as _split
+    return _split(self, num_splits, axis)^
+```
+
+### Placement Rule
+
+Insert wrappers **after** the last existing method they logically extend. For
+`tile/repeat/permute/split`, place after `slice()` — the analogous existing method wrapper
+for a shape operation.
+
+### API Symmetry Audit Workflow
+
+When closing "API symmetry" or "method wrapper" issues:
+
+```bash
+# 1. Find what's exported from the module
+grep -n "split\|tile\|repeat" shared/core/__init__.mojo
+
+# 2. Find what methods already exist on the struct
+grep -n "^    fn " shared/core/extensor.mojo | grep -E "split|tile|repeat"
+
+# 3. Find the last method in the struct (insertion point)
+grep -n "^    fn \|^fn \|^struct " shared/core/extensor.mojo | tail -20
+```
+
+The difference between (1) and (2) is the set of missing wrappers.
+
+### Test Pattern: Symmetry Verification
+
+Keep test files to ≤10 `fn test_` functions per file.
+
+```mojo
+fn test_split_with_indices_method_vs_free_fn() raises:
+    """Verify method output matches free function (symmetry test)."""
+    var a = arange(0.0, 10.0, 1.0, DType.float32)
+    var indices = List[Int]()
+    indices.append(3)
+    indices.append(7)
+
+    var method_parts = a.split_with_indices(indices)
+    var free_parts = split_with_indices(a, indices)
+
+    if len(method_parts) != len(free_parts):
+        raise Error("Method and free function should return same number of parts")
+
+    for i in range(len(method_parts)):
+        if method_parts[i].numel() != free_parts[i].numel():
+            raise Error("Part sizes should match between method and free function")
+```
+
+### Gotcha: assert_value_at message= keyword
+
+The `assert_value_at` signature is `(tensor, index, expected, tolerance, message)`.
+Passing a string as the 4th positional argument fails because Mojo tries to convert it to
+`Float64`. Always use the `message=` keyword:
+
+```mojo
+# WRONG — string interpreted as tolerance: Float64
+assert_value_at(parts[0], 0, 0.0, "should be 0.0")
+
+# CORRECT — message= keyword bypasses the tolerance parameter
+assert_value_at(parts[0], 0, 0.0, message="should be 0.0")
+```
+
+### Running Tests in a Worktree
+
+```bash
+# Use explicit PIXI_PROJECT_MANIFEST when in a worktree
+PIXI_PROJECT_MANIFEST=/path/to/worktree/pixi.toml pixi run mojo tests/shared/core/test_extensor_method_api.mojo
+
+# Commit with SKIP=mojo-format if on incompatible GLIBC host
+SKIP=mojo-format git commit -m "feat(extensor): add split_with_indices method wrapper"
+```
+
+Note: Mojo v0.26.1 has no `mojo test` subcommand — use `pixi run mojo <file>` directly.
+
+### Failed Attempts (Method Wrappers)
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Top-level import | Added `from shared.core.shape import tile, repeat, permute, split` at top of `extensor.mojo` | Creates circular import: `extensor → shape → extensor` | Mojo resolves module-level imports eagerly; circular deps at module level are fatal |
+| Re-implementing logic | Copying implementation from `shape.mojo` into each method | Violates DRY; doubles maintenance burden | Never duplicate logic; use delegation |
+| `alias` trick | Tried using `alias` to defer the import | Alias is compile-time constant, not a deferred import mechanism | Only function-body imports in Mojo can avoid circular resolution |
+| Passing message as 4th positional arg to `assert_value_at` | Called `assert_value_at(tensor, idx, 0.0, "message")` | Mojo tried to convert `StringLiteral` to `Float64` for tolerance parameter | Always use `message=` keyword argument; check function signature before writing tests |
+| Running `pixi run mojo test` | Used `mojo test` subcommand | Mojo v0.26.1 has no `test` subcommand; only `mojo <file>` works | Use `pixi run mojo <file>` directly to run test files |
