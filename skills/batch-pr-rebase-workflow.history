@@ -1,5 +1,43 @@
 # batch-pr-rebase-workflow — Version History
 
+## v2.14.0 (2026-05-05)
+
+**Changed by:** Odysseus meta-agent — 24-PR rebase session (21 Myrmidons + 2 Hephaestus + 1 Keystone) (2026-05-05)
+**Verification:** verified-ci
+
+### What changed
+
+- Bumped version 2.13.0 → 2.14.0
+- Added trigger (40): `.pre-commit-config.yaml` additive conflict — main added `check-xtrace-exposure`, PR added its own hook at the same position; keep BOTH hooks (independent features)
+- Added trigger (41): shell script structural rewrite conflict — main has 6-phase expanded version, PR has 2-phase refactored version; take main's skeleton, apply PR's specific fix
+- Added trigger (42): C++ method conflict where main added a TASK_FAILED exclusion — always take main's version (deliberate bugfix)
+- Added trigger (43): multi-commit PR (14+ commits) produces conflicts in the same file across sequential commits — resolve each individually; rebase stops once per conflicting commit
+- Added trigger (44): `git rebase --continue --no-edit` fails — `--no-edit` is not a valid flag for `git rebase --continue`; use bare `git rebase --continue`
+- Added trigger (45): `rm -rf $FIXED_PATH` blocked by Safety Net even for temp dirs outside workspace; use `mktemp -d` instead
+- Added trigger (46): `gh pr merge --auto --squash` returns "Pull request is in clean status" on first attempt; retry immediately (GitHub API lag)
+- Added trigger (47): silent commit drop "patch contents already upstream" is correct behavior, not data loss
+- Added 9 new When to Use bullets matching triggers 40–47
+- Added 3 new Failed Attempts rows: `git rebase --continue --no-edit`, pre-cleaning fixed temp path, CLEAN status error on first merge attempt
+
+### Why
+
+A 24-PR rebase session across Myrmidons (21 PRs), ProjectHephaestus (2 PRs), and ProjectKeystone (1 PR) revealed new recurring conflict patterns. The `.pre-commit-config.yaml` additive conflict (check-xtrace-exposure vs. each PR's own new hook) appeared in all 21 Myrmidons PRs. Additional new patterns: shell script structural rewrites, C++ method defensive exclusions, multi-commit PR sequential conflicts, Safety Net blocking `rm -rf` on fixed temp paths, GitHub API lag on CLEAN status errors, and silent commit drops for already-upstreamed patches.
+
+### Previous v2.13.0 frontmatter snapshot
+
+```
+name: batch-pr-rebase-workflow
+category: ci-cd
+date: 2026-05-02
+version: "2.13.0"
+user-invocable: false
+verification: verified-ci
+history: batch-pr-rebase-workflow.history
+tags: [git, rebase, pr, parallel, myrmidon, wave, batch, conflict, ci, pixi, mypy, ruff, cherry-pick]
+```
+
+---
+
 ## v2.13.0 (2026-05-02)
 
 **Changed by:** ProjectScylla — parallel worktree rebase of PRs #1861/#1862/#1895 (2026-05-02)
