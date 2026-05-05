@@ -6,19 +6,19 @@
   },
   "description": "Skills marketplace for the HomericIntelligence agentic ecosystem",
   "version": "1.0.0",
-  "total_plugins": 1019,
+  "total_plugins": 985,
   "categories": {
-    "architecture": 126,
-    "ci-cd": 219,
-    "debugging": 112,
-    "documentation": 105,
+    "architecture": 118,
+    "ci-cd": 216,
+    "debugging": 102,
+    "documentation": 101,
     "evaluation": 68,
-    "optimization": 19,
-    "testing": 149,
-    "tooling": 215,
+    "optimization": 17,
+    "testing": 145,
+    "tooling": 212,
     "training": 6
   },
-  "last_updated": "2026-05-03T23:52:34Z",
+  "last_updated": "2026-05-05T01:04:43Z",
   "plugins": [
     {
       "name": "agent-coverage-check",
@@ -318,8 +318,8 @@
     },
     {
       "name": "atlas-mesh-bringup-first-run",
-      "description": "Patterns for the first native (non-compose) bringup of the HomericIntelligence mesh on epimetheus, including correct binary paths, Hermes module name, multi-host myrmidon fan-out results per host, and Agamemnon task completion API findings. Use when: (1) bringing up Agamemnon/Nestor/Hermes natively on a new host, (2) launching hello-myrmidon workers on Tailnet hosts, (3) running the Atlas epic implementation session, (4) troubleshooting Agamemnon review wave task completion.",
-      "version": "1.0.0",
+      "description": "Patterns for bringing up the HomericIntelligence mesh natively or via containers across single or multiple Tailnet hosts from a cold state. Use when: (1) bringing up Agamemnon/Nestor/Hermes natively or via podman on any new host, (2) launching myrmidon workers across Tailnet hosts, (3) running the Atlas epic, (4) troubleshooting Agamemnon task completion API, (5) cold-starting the full 6-host Tailnet mesh.",
+      "version": "2.0.0",
       "source": "./skills/atlas-mesh-bringup-first-run.md",
       "category": "architecture",
       "tags": [
@@ -334,7 +334,10 @@
         "tailscale",
         "multi-host",
         "review-wave",
-        "binary-paths"
+        "binary-paths",
+        "podman",
+        "cold-start",
+        "pixi"
       ]
     },
     {
@@ -416,14 +419,6 @@
       "description": "Decompose a large Python class file (>1000 lines) by extracting cohesive method clusters into dedicated sub-modules with thin delegation wrappers. Use when a class file exceeds 1000 lines and contains 3+ independent method clusters.",
       "version": "1.0.0",
       "source": "./skills/cluster-extraction-to-modules.md",
-      "category": "architecture",
-      "tags": []
-    },
-    {
-      "name": "codebase-consolidation",
-      "description": "Systematic approach to finding and consolidating duplicate code",
-      "version": "1.0.0",
-      "source": "./skills/codebase-consolidation.md",
       "category": "architecture",
       "tags": []
     },
@@ -774,14 +769,6 @@
       ]
     },
     {
-      "name": "migrate-dataclass-to-pydantic",
-      "description": "Migrate Python dataclasses to Pydantic BaseModel with validation",
-      "version": "1.0.0",
-      "source": "./skills/migrate-dataclass-to-pydantic.md",
-      "category": "architecture",
-      "tags": []
-    },
-    {
       "name": "model-id-normalization-resume-fix",
       "description": "Add model ID normalization via Pydantic field_validator to handle legacy dot-notation and short aliases in saved experiment configs. Use when: (1) model IDs with old naming conventions persist in saved experiment configs and cause CLI failures on resume, (2) CLI argument defaults use short aliases with no expansion function.",
       "version": "1.0.0",
@@ -813,8 +800,8 @@
     },
     {
       "name": "mojo-circular-import-type-identity-fix",
-      "description": "Fix Mojo 'cannot implicitly convert X to X' errors caused by circular imports that trigger dual type compilation. Use when: (1) Mojo compiler reports 'cannot implicitly convert Type to Type' where both types have the same name, (2) cross-package imports create A->B->A cycles in Mojo, (3) struct operators delegate to external modules that import the struct back, (4) typed dispatch files create reverse dependencies back to the public API package.",
-      "version": "2.0.0",
+      "description": "Fix Mojo 'cannot implicitly convert X to X' errors caused by circular imports that trigger dual type compilation. Use when: (1) Mojo compiler reports 'cannot implicitly convert Type to Type' where both types have the same name, (2) cross-package imports create A->B->A cycles in Mojo, (3) struct operators delegate to external modules that import the struct back, (4) typed dispatch files create reverse dependencies back to the public API package, (5) Tensor[dtype] and AnyTensor coexist in the same file causing overload ambiguity, (6) designing dual-type tensor APIs or reviewing parametric struct migrations.",
+      "version": "2.4.0",
       "source": "./skills/mojo-circular-import-type-identity-fix.md",
       "category": "architecture",
       "tags": [
@@ -822,30 +809,17 @@
         "circular-imports",
         "type-identity",
         "operators",
-        "architecture"
+        "architecture",
+        "tensor",
+        "overload-ambiguity",
+        "method-wrappers"
       ]
-    },
-    {
-      "name": "mojo-comptime-alias-removal",
-      "description": "Remove deprecated Mojo comptime type aliases and update all usages to direct types. Use when: removing `comptime Alias = Type` backward-compat aliases from Mojo source files.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-comptime-alias-removal.md",
-      "category": "architecture",
-      "tags": []
     },
     {
       "name": "mojo-deprecated-alias-removal",
       "description": "Workflow for removing deprecated Mojo comptime type aliases and replacing usages with canonical types. Use when: removing DEPRECATED-marked comptime aliases from Mojo modules, cleaning up backward-compat test files, updating __init__.mojo exports and layer imports after alias consolidation.",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "source": "./skills/mojo-deprecated-alias-removal.md",
-      "category": "architecture",
-      "tags": []
-    },
-    {
-      "name": "mojo-dual-type-tensor-review",
-      "description": "Documents the dual-type tensor architecture (Tensor[dtype] + AnyTensor) for Mojo ML frameworks, including feasibility review and corner cases. Use when: (1) designing typed vs type-erased tensor APIs in Mojo, (2) reviewing parametric struct migration plans for completeness, (3) understanding Mojo 0.26.1 parametric limitations.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-dual-type-tensor-review.md",
       "category": "architecture",
       "tags": []
     },
@@ -880,39 +854,6 @@
       "source": "./skills/mojo-gradient-type-naming.md",
       "category": "architecture",
       "tags": []
-    },
-    {
-      "name": "mojo-method-api-symmetry",
-      "description": "Add thin method wrappers to Mojo structs to complete API symmetry with free functions. Use when: (1) a free function was exported but no struct method wrapper exists, (2) closing follow-up API symmetry issues after a larger feature PR, (3) auditing a struct for missing parity with module-level functions.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-method-api-symmetry.md",
-      "category": "architecture",
-      "tags": []
-    },
-    {
-      "name": "mojo-method-wrapper-circular-import",
-      "description": "Add ergonomic method wrappers to Mojo structs that delegate to standalone functions, avoiding circular imports via local-scope imports inside method bodies. Use when: adding method-style API alongside existing functional API where the functional module imports the struct.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-method-wrapper-circular-import.md",
-      "category": "architecture",
-      "tags": []
-    },
-    {
-      "name": "mojo-overload-ambiguity-typed-tensor-isolation",
-      "description": "Fix Mojo overload resolution failures when parametric Tensor[dtype] and runtime-typed AnyTensor coexist in the same file. Use when: (1) getting 'cannot implicitly convert AnyTensor to AnyTensor' errors, (2) adding typed Tensor[dtype] overloads alongside AnyTensor functions, (3) Mojo compiler fails to resolve between two function signatures that both accept AnyTensor.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-overload-ambiguity-typed-tensor-isolation.md",
-      "category": "architecture",
-      "tags": [
-        "mojo",
-        "tensor",
-        "dtype",
-        "overload",
-        "ambiguity",
-        "compilation",
-        "architecture",
-        "type-isolation"
-      ]
     },
     {
       "name": "mojo-package-level-reexports",
@@ -1331,17 +1272,9 @@
     },
     {
       "name": "state-machine-interrupt-handling",
-      "description": "Pattern for handling Ctrl+C/SIGINT interrupts in multi-level state machine hierarchies without marking states FAILED. Use when subprocess.run() returns normally after SIGINT but you want runs to stay resumable; or when a sentinel exception must propagate through 4 state machine levels (run\u2192subtest\u2192tier\u2192experiment) without triggering FAILED at any level.",
-      "version": "1.0.0",
+      "description": "Pattern for handling Ctrl+C/SIGINT interrupts in multi-level state machine hierarchies without marking states FAILED. Use when subprocess.run() returns normally after SIGINT but you want runs to stay resumable; or when a sentinel exception must propagate through 4 state machine levels (run\u2192subtest\u2192tier\u2192experiment) without triggering FAILED at any level. Also covers wiring hierarchical state machines (Experiment \u2192 Tier \u2192 Run) into a production runner using closure-based action maps.",
+      "version": "1.1.0",
       "source": "./skills/state-machine-interrupt-handling.md",
-      "category": "architecture",
-      "tags": []
-    },
-    {
-      "name": "state-machine-wiring",
-      "description": "Wire hierarchical state machines (Experiment \u2192 Tier \u2192 Run) into a production runner using closure-based action maps. Use when refactoring a monolithic execution loop into resumable, checkpoint-backed discrete states.",
-      "version": "1.0.0",
-      "source": "./skills/state-machine-wiring.md",
       "category": "architecture",
       "tags": []
     },
@@ -1382,8 +1315,8 @@
     },
     {
       "name": "type-alias-consolidation",
-      "description": "Use when: (1) multiple modules define TypeName = DomainVariant aliases causing naming confusion and you need to remove redundant type aliases that shadow domain-specific variant names; (2) applying the Pydantic inheritance pattern to metrics/judgment/cost types (MetricsInfo, JudgmentInfo) or other evaluation data types; (3) a Pydantic base class lacks frozen=True while its sibling base types all use ConfigDict(frozen=True) and you need an immutability consistency audit.",
-      "version": "3.0.0",
+      "description": "Use when: (1) multiple modules define TypeName = DomainVariant aliases causing naming confusion and you need to remove redundant type aliases that shadow domain-specific variant names; (2) applying the Pydantic inheritance pattern to metrics/judgment/cost types (MetricsInfo, JudgmentInfo) or other evaluation data types; (3) a Pydantic base class lacks frozen=True while its sibling base types all use ConfigDict(frozen=True) and you need an immutability consistency audit; (4) discovering and categorizing duplicate code (true-vs-intentional-variant taxonomy) for codebase-wide consolidation; (5) migrating Python @dataclass classes to Pydantic BaseModel in bulk (24-class checklist, pytest fixture migration); (6) fixing AttributeError from Pydantic v2 .to_dict() vs .model_dump() regression.",
+      "version": "3.1.0",
       "source": "./skills/type-alias-consolidation.md",
       "category": "architecture",
       "tags": [
@@ -1393,7 +1326,11 @@
         "architecture",
         "pydantic",
         "frozen",
-        "immutability"
+        "immutability",
+        "dataclass",
+        "migration",
+        "serialization",
+        "duplicate-discovery"
       ]
     },
     {
@@ -1585,8 +1522,8 @@
     },
     {
       "name": "ci-cd-broken-main-parallel-fix-wave",
-      "description": "Triage and fix broken CI/main across multiple repos simultaneously using Agamemnon task registry + parallel myrmidon fix agents. Use when: (1) 3+ repos have broken main branch CI, (2) need to register tasks in Agamemnon before dispatching agents, (3) CI failures are diverse (conan profile, dependabot config, GitHub Actions auth, BATS helper, Python imports, clang-format violations, annotated-tag SHA pinning, stale pixi.lock, markdownlint CHANGELOG exclusion).",
-      "version": "1.2.0",
+      "description": "Triage and fix broken CI/main across multiple repos simultaneously using Agamemnon task registry + parallel myrmidon fix agents. Use when: (1) 3+ repos have broken main branch CI, (2) need to register tasks in Agamemnon before dispatching agents, (3) CI failures are diverse (conan profile, dependabot config, GitHub Actions auth, BATS helper, Python imports, clang-format violations, annotated-tag SHA pinning, stale pixi.lock, markdownlint CHANGELOG exclusion, release.yml direct push to main, duplicate module re-export, Pydantic model_dump bypass).",
+      "version": "1.3.0",
       "source": "./skills/ci-cd-broken-main-parallel-fix-wave.md",
       "category": "ci-cd",
       "tags": [
@@ -1610,7 +1547,12 @@
         "rebase-onto",
         "transient-vs-reproducible",
         "issue-triage",
-        "all-repos"
+        "all-repos",
+        "release-workflow",
+        "circuit-breaker",
+        "pydantic",
+        "model-dump",
+        "deprecation-shim"
       ]
     },
     {
@@ -1635,8 +1577,8 @@
     },
     {
       "name": "ci-cd-dependabot-pixi-lock-drift-fix",
-      "description": "Use when: (1) a Dependabot PR fails CI with 'lock-file not up-to-date with the workspace', (2) a Dependabot PR updates requirements*.txt or pyproject.toml but pixi.lock was not regenerated, (3) CI on a Dependabot branch completes in 6-12 seconds (pre-flight lock rejection, not a test failure)",
-      "version": "1.1.0",
+      "description": "Use when: (1) a Dependabot PR fails CI with 'lock-file not up-to-date with the workspace', (2) a Dependabot PR updates requirements*.txt or pyproject.toml but pixi.lock was not regenerated, (3) CI on a Dependabot branch completes in 6-12 seconds (pre-flight lock rejection, not a test failure), (4) a prior regeneration commit exists on the branch but CI still fails (main has advanced again), (5) local branch and origin branch have diverged in both directions",
+      "version": "1.2.0",
       "source": "./skills/ci-cd-dependabot-pixi-lock-drift-fix.md",
       "category": "ci-cd",
       "tags": [
@@ -1979,25 +1921,10 @@
     {
       "name": "ci-gitleaks-sarif-false-positive-fix",
       "description": "Fix gitleaks SARIF false-positive detection causing security-report required check to always fail, blocking PR auto-merges. Use when: (1) security-report required check fails on every run even with no real secrets, (2) gitleaks SARIF check uses grep with \\s instead of jq, (3) swarm session is blocked because security-report is a required status check that never passes.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/ci-gitleaks-sarif-false-positive-fix.md",
       "category": "ci-cd",
       "tags": []
-    },
-    {
-      "name": "ci-gitleaks-toml-allowlist-slice-vs-map",
-      "description": "Fix gitleaks config crash: 'Rules[0].AllowList expected a map, got slice'. Use when: (1) gitleaks fails with this error on startup, (2) .gitleaks.toml uses [[rules.allowlist]] (TOML array-of-tables syntax), (3) upgrading gitleaks from v7 to v8 and config suddenly breaks.",
-      "version": "1.0.0",
-      "source": "./skills/ci-gitleaks-toml-allowlist-slice-vs-map.md",
-      "category": "ci-cd",
-      "tags": [
-        "gitleaks",
-        "toml",
-        "allowlist",
-        "config",
-        "secrets-scan",
-        "pre-commit"
-      ]
     },
     {
       "name": "ci-glob-pattern-conversion",
@@ -2563,8 +2490,8 @@
     },
     {
       "name": "docker-mojo-uid-mismatch-crash-fix",
-      "description": "Fix deterministic Mojo runtime crash (exit 134) when container image UID differs from host runner UID. Use when: (1) mojo run crashes before executing any user code with 'filesystem error: status: Permission denied [/home/.../.modular]', (2) CI passes locally (UID 1000) but fails in CI runner (UID 1001+), (3) crash is 100% reproducible \u2014 not a flaky JIT issue, (4) cached CI image was built at a different UID than the current runner's uid, (5) execution crashed with __fortify_fail_abort in libKGENCompilerRTShared.so before any test output.",
-      "version": "1.1.0",
+      "description": "Fix deterministic Mojo runtime crash (exit 134) when container image UID differs from host runner UID. Use when: (1) mojo run crashes before executing any user code with 'filesystem error: status: Permission denied [/home/.../.modular]', (2) CI passes locally (UID 1000) but fails in CI runner (UID 1001+), (3) crash is 100% reproducible \u2014 not a flaky JIT issue, (4) cached CI image was built at a different UID than the current runner's uid, (5) execution crashed with __fortify_fail_abort in libKGENCompilerRTShared.so before any test output, (6) linker fails with 'cannot open output file build/release/X: Permission denied' even after _ensure_writable runs (non-recursive chown left subdirs root:root), (7) sudo chown or sudo mkdir silently failing in entrypoint (plain sudo blocks in podman compose exec -T), (8) training subdirs (datasets/, model weights dir) not writable after container startup.",
+      "version": "1.2.0",
       "source": "./skills/docker-mojo-uid-mismatch-crash-fix.md",
       "category": "ci-cd",
       "tags": [
@@ -2691,21 +2618,6 @@
       "source": "./skills/docstring-fragment-validator.md",
       "category": "ci-cd",
       "tags": []
-    },
-    {
-      "name": "e2e-compose-python-stub-to-cpp-server",
-      "description": "Migrate E2E compose services from Python stub servers to real C++ multi-stage Dockerfiles. Use when: (1) replacing Python FastAPI stubs with compiled C++ servers in compose, (2) healthcheck fails because C++ container lacks Python, (3) compose build context points to missing stub directory.",
-      "version": "1.0.0",
-      "source": "./skills/e2e-compose-python-stub-to-cpp-server.md",
-      "category": "ci-cd",
-      "tags": [
-        "podman",
-        "compose",
-        "e2e",
-        "cpp",
-        "dockerfile",
-        "healthcheck"
-      ]
     },
     {
       "name": "enable-mccabe-complexity-c901",
@@ -3048,8 +2960,8 @@
     },
     {
       "name": "just-recipe-heredoc-fix",
-      "description": "Fix heredoc-in-just-recipe whitespace errors by replacing with printf. Use when: just recipe uses <<EOF heredoc and fails with 'inconsistent leading whitespace'.",
-      "version": "1.0.0",
+      "description": "Fix heredoc-in-just-recipe whitespace errors by replacing with printf. Use when: just recipe uses <<EOF heredoc and fails with 'inconsistent leading whitespace'. Also covers parameter alias/normalization patterns enabled by the bash shebang.",
+      "version": "1.1.0",
       "source": "./skills/just-recipe-heredoc-fix.md",
       "category": "ci-cd",
       "tags": []
@@ -3289,6 +3201,23 @@
       ]
     },
     {
+      "name": "odysseus-multi-branch-submodule-pin-management",
+      "description": "Manage submodule pins across multiple Odysseus branches with rebase, cherry-pick avoidance, and justfile recipe collision resolution. Use when: (1) updating a submodule SHA on a feature branch while main has a different pin, (2) rebasing an Odysseus feature branch onto main after justfile changes on both sides, (3) cherry-picking a submodule pointer update between branches fails with CONFLICT (submodule), (4) CI \"Harden checks\" job fails with justfile recipe redefinition error after rebase, (5) branch-switching causes missing files/directories in the working tree.",
+      "version": "1.0.0",
+      "source": "./skills/odysseus-multi-branch-submodule-pin-management.md",
+      "category": "ci-cd",
+      "tags": [
+        "odysseus",
+        "submodule",
+        "pin",
+        "rebase",
+        "justfile",
+        "multi-branch",
+        "cherry-pick",
+        "force-with-lease"
+      ]
+    },
+    {
       "name": "parallel-pr-worktree-workflow",
       "description": "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput.",
       "version": "1.0.0",
@@ -3418,8 +3347,8 @@
     },
     {
       "name": "pr-conflict-rebase-workflow",
-      "description": "Rebase conflicting PRs onto main when a merge commit introduces workflow changes. Use when: (1) multiple open PRs are CONFLICTING after a main branch merge, (2) GitHub Actions workflow files conflict over concurrency/permissions/timeout additions, (3) pixi.lock is in a modify/delete conflict during rebase, (4) two independent CI fix branches both modified the same workflow file with different approaches \u2014 one already merged to main and the other needs rebasing.",
-      "version": "1.1.0",
+      "description": "Rebase conflicting PRs onto main when a merge commit introduces workflow changes. Use when: (1) multiple open PRs are CONFLICTING after a main branch merge, (2) GitHub Actions workflow files conflict over concurrency/permissions/timeout additions, (3) pixi.lock is in a modify/delete conflict during rebase, (4) two independent CI fix branches both modified the same workflow file with different approaches \u2014 one already merged to main and the other needs rebasing, (5) rebasing a consolidation/merge branch that deleted absorbed files, where those files were subsequently modified on the base branch \u2014 produces modify/delete (UD) conflicts on every absorbed file.",
+      "version": "1.2.0",
       "source": "./skills/pr-conflict-rebase-workflow.md",
       "category": "ci-cd",
       "tags": []
@@ -3434,17 +3363,9 @@
     },
     {
       "name": "pr-rebase-pipeline",
-      "description": "Fix a systemic CI failure blocking all PRs, then ship fixes in parallel waves using git worktrees",
-      "version": "1.0.0",
+      "description": "Fix a systemic CI failure blocking all PRs, then ship fixes in parallel waves using git worktrees. Also covers rebasing a single diverged PR when an automated fix plan has stale state.",
+      "version": "1.1.0",
       "source": "./skills/pr-rebase-pipeline.md",
-      "category": "ci-cd",
-      "tags": []
-    },
-    {
-      "name": "pr-rebase-stale-plan-fix",
-      "description": "Rebase a diverged PR onto main when the automated fix plan has stale state information, resolving comment-only merge conflicts. Use when: automated fix plan claims branch is merged but PR is still open, comment-only changes conflict on rebase, or PR needs force-push + auto-merge after stale assessment.",
-      "version": "1.0.0",
-      "source": "./skills/pr-rebase-stale-plan-fix.md",
       "category": "ci-cd",
       "tags": []
     },
@@ -3457,25 +3378,9 @@
       "tags": []
     },
     {
-      "name": "pre-commit-detect-private-key-fixture-exclusion",
-      "description": "Suppress detect-private-key pre-commit hook false positives on test fixtures, TLS unit tests, and Kubernetes secret manifests by adding an exclude regex. Use when: (1) CI fails on detect-private-key for files that contain fake/test credentials, (2) k8s secret manifests or C++ TLS test files trigger PEM header pattern matches.",
-      "version": "1.0.0",
-      "source": "./skills/pre-commit-detect-private-key-fixture-exclusion.md",
-      "category": "ci-cd",
-      "tags": [
-        "pre-commit",
-        "detect-private-key",
-        "false-positive",
-        "tls",
-        "kubernetes",
-        "test-fixtures",
-        "ci"
-      ]
-    },
-    {
       "name": "pre-commit-hook-configuration",
-      "description": "Use when: (1) ruff or other linter hooks run on hardcoded directories instead of staged files, (2) aligning pre-commit hook versions with pixi-resolved tool versions, (3) updating hook versions with autoupdate, (4) adding a language: pygrep regex hook to catch forbidden patterns, (5) evaluating whether a hook should use pass_filenames: true or false, (6) writing pytest tests to verify pre-commit hook YAML configuration, (7) pre-commit hook uses SCRIPT_DIR/../ to find REPO_ROOT but is installed as .git/hooks/pre-commit in a test repo \u2014 resolves to .git/ not repo root, (8) SKIP_TESTS env var needed to prevent test-suite step from running in temporary test repos, (9) just command finds Justfile in a parent directory instead of the test repo, (10) a Go-based hook (e.g. gitleaks) fails to build from source because the system Go version is too old",
-      "version": "2.2.0",
+      "description": "Use when: (1) ruff or other linter hooks run on hardcoded directories instead of staged files, (2) aligning pre-commit hook versions with pixi-resolved tool versions, (3) updating hook versions with autoupdate, (4) adding a language: pygrep regex hook to catch forbidden patterns, (5) evaluating whether a hook should use pass_filenames: true or false, (6) writing pytest tests to verify pre-commit hook YAML configuration, (7) pre-commit hook uses SCRIPT_DIR/../ to find REPO_ROOT but is installed as .git/hooks/pre-commit in a test repo \u2014 resolves to .git/ not repo root, (8) SKIP_TESTS env var needed to prevent test-suite step from running in temporary test repos, (9) just command finds Justfile in a parent directory instead of the test repo, (10) a Go-based hook (e.g. gitleaks) fails to build from source because the system Go version is too old, (11) detect-private-key hook false-fires on test fixtures, TLS unit tests, or k8s secret manifests containing fake/test PEM headers",
+      "version": "2.3.0",
       "source": "./skills/pre-commit-hook-configuration.md",
       "category": "ci-cd",
       "tags": [
@@ -3487,7 +3392,12 @@
         "test-isolation",
         "gitleaks",
         "golang",
-        "prebuilt-binary"
+        "prebuilt-binary",
+        "detect-private-key",
+        "false-positive",
+        "tls",
+        "kubernetes",
+        "test-fixtures"
       ]
     },
     {
@@ -4186,8 +4096,8 @@
     },
     {
       "name": "e2e-framework-crash-recovery-bugs",
-      "description": "Fix E2E framework crash-recovery bugs including checkpoint thread-safety race conditions, resume state machine AssertionError on tier_config=None, and LLM judge returning conversational text instead of JSON",
-      "version": "1.0.0",
+      "description": "Fix E2E framework crash-recovery bugs including checkpoint thread-safety race conditions, resume state machine AssertionError on tier_config=None, LLM judge returning conversational text instead of JSON, _restore_run_context() missing run_result and judgment loading, progressive resume failures (file path mismatches), and --until stepping bugs (TierState naming confusion). Use when: (1) FileNotFoundError on checkpoint.tmp.*.json, (2) AssertionError tier_ctx.tier_config is not None on resume, (3) judge silently produces no score, (4) Phase 3 resume crashes with run_result must be set, (5) experiment works first time but fails on Nth resume, (6) No sub-test results to select from on --until stepping.",
+      "version": "1.4.0",
       "source": "./skills/e2e-framework-crash-recovery-bugs.md",
       "category": "debugging",
       "tags": [
@@ -4199,7 +4109,12 @@
         "race-condition",
         "e2e",
         "state-machine",
-        "json-parse"
+        "json-parse",
+        "restore-run-context",
+        "file-path-mismatch",
+        "until-stepping",
+        "tier-state",
+        "pytest-fixtures"
       ]
     },
     {
@@ -4242,20 +4157,6 @@
       ]
     },
     {
-      "name": "e2e-resume-restore-run-context",
-      "description": "Fix _restore_run_context() missing run_result and judgment loading on resume past RUN_FINALIZED/JUDGE_COMPLETE. Use when: (1) Phase 3 resume crashes with 'run_result must be set before write_report', (2) checkpoint shows runs at run_finalized/report_written but ctx fields are None on resume.",
-      "version": "1.0.0",
-      "source": "./skills/e2e-resume-restore-run-context.md",
-      "category": "debugging",
-      "tags": [
-        "e2e",
-        "resume",
-        "checkpoint",
-        "state-machine",
-        "judge"
-      ]
-    },
-    {
       "name": "e2e-runner-hang-signal-fixes",
       "description": "Fix E2E experiment runner hanging and ignoring Ctrl+C/Ctrl+Z signals during parallel execution. Use when: manage_experiment.py hangs, signals are ignored, or SIGTSTP does graceful shutdown instead of force kill.",
       "version": "1.0.0",
@@ -4276,14 +4177,6 @@
       "description": "Systematic workflow for fixing Altair/Vega-Lite faceted chart bugs: invisible overlays, data clipping, and domain issues",
       "version": "1.0.0",
       "source": "./skills/fix-altair-facet-layering.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "fix-concatenate-noncontiguous-stride-bug",
-      "description": "Fix the flat-index bug in concatenate() axis-0 non-contiguous path that ignores strides and reads wrong values for transposed/view tensors. Use when: (1) concatenate() produces wrong values for non-contiguous inputs, (2) the axis-0 else-branch calls _get_float64(i) on source tensors, (3) follow-on to fix-non-contiguous-tensor-stride-access for concatenate specifically.",
-      "version": "1.0.0",
-      "source": "./skills/fix-concatenate-noncontiguous-stride-bug.md",
       "category": "debugging",
       "tags": []
     },
@@ -4337,8 +4230,8 @@
     },
     {
       "name": "fix-non-contiguous-tensor-stride-access",
-      "description": "Fix tensor operations that silently produce wrong values for non-contiguous views by replacing flat index offset with stride-based multi-dimensional indexing. Use when: element access uses i*dtype_size instead of strides, as_contiguous or copy functions assume stride-1 layout.",
-      "version": "1.0.0",
+      "description": "Fix tensor operations that silently produce wrong values for non-contiguous views by replacing flat index offset with stride-based multi-dimensional indexing. Use when: element access uses i*dtype_size instead of strides, as_contiguous or copy functions assume stride-1 layout. Also covers the concatenate() axis-0 non-contiguous else-branch flat-index bug and result_elem_offset tracking.",
+      "version": "1.1.0",
       "source": "./skills/fix-non-contiguous-tensor-stride-access.md",
       "category": "debugging",
       "tags": []
@@ -4403,14 +4296,6 @@
       "description": "Improve error visibility in curses UI automation scripts and add granular status updates",
       "version": "1.0.0",
       "source": "./skills/improve-automation-error-visibility.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "investigate-mojo-heap-corruption",
-      "description": "Systematic workflow for investigating and fixing Mojo 0.26.1 heap corruption crashes that occur in CI but not locally",
-      "version": "1.0.0",
-      "source": "./skills/investigate-mojo-heap-corruption.md",
       "category": "debugging",
       "tags": []
     },
@@ -4480,20 +4365,6 @@
       "tags": []
     },
     {
-      "name": "mojo-always-inline-worsens-jit-crashes",
-      "description": "Warning: @always_inline on large branching methods WORSENS Mojo JIT crashes. Use when: (1) considering @always_inline to fix bitcast crashes, (2) debugging libKGENCompilerRTShared.so crashes, (3) CI tests crash after adding @always_inline.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-always-inline-worsens-jit-crashes.md",
-      "category": "debugging",
-      "tags": [
-        "mojo",
-        "always-inline",
-        "jit-crash",
-        "bitcast",
-        "regression"
-      ]
-    },
-    {
       "name": "mojo-anytensor-copy-pointer-leak",
       "description": "UnsafePointer.take_pointee() moves the value out of pointed-to memory but does NOT free the pointer allocation. Must call ptr.free() explicitly after take_pointee(). Use when: (1) implementing copy() methods that use mem_alloc + take_pointee(), (2) debugging ASAN pooled_alloc leaks traced to Mojo struct copy methods.",
       "version": "1.0.0",
@@ -4519,23 +4390,6 @@
       ]
     },
     {
-      "name": "mojo-asap-destruction-perturbation-loop-fix",
-      "description": "Fix Mojo ASAP-destruction crashes in finite-difference perturbation loops where _get_float64/_set_float64 per-element bitcasts on temporary tensors returned by forward_fn trigger heap-use-after-free. Use when: (1) gradient checking tests crash intermittently AFTER printing test output (not before), (2) loop reads temporary tensors element-by-element after a forward pass, (3) same libKGENCompilerRTShared crash signature but crash happens mid-execution.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-asap-destruction-perturbation-loop-fix.md",
-      "category": "debugging",
-      "tags": [
-        "asap-destruction",
-        "bitcast",
-        "gradient-checking",
-        "perturbation-loop",
-        "mojo",
-        "heap-use-after-free",
-        "data_ptr",
-        "forward_fn"
-      ]
-    },
-    {
       "name": "mojo-atomic-spinlock-double-check-lock",
       "description": "Implement a correct SpinLock in Mojo using the TTAS (Test-and-Test-and-Set) double-check lock pattern when Atomic[DType.int64] lacks compare_exchange. Use when: (1) implementing a spinlock in Mojo without CAS support, (2) seeing counter underflow/overflow from naive fetch_add/fetch_sub lock, (3) thread-safety tests hang or produce wrong counts, (4) Mojo Atomic API only has fetch_add/fetch_sub/load, (5) unlock uses store(0) instead of fetch_add(-1) \u2014 a silent race that causes permanent deadlock under TTAS contention.",
       "version": "1.1.0",
@@ -4557,22 +4411,19 @@
       ]
     },
     {
-      "name": "mojo-bitcast-always-inline-crash-fix",
-      "description": "Fix Mojo UnsafePointer.bitcast use-after-free crashes and eliminate UAF write patterns codebase-wide. Use when: (1) libKGENCompilerRTShared.so crash in CI showing 3 fixed frames (0x3cb78b/0x3c93c6/0x3cc397), (2) heap corruption after bitcast writes in dtype conversion functions, (3) ASAP destruction invalidating pointers before write completes, (4) file-splitting workaround marked Resolved but source still has UAF writes, (5) Mojo crashes after allocation churn with bitcast writes, (6) creating doc PRs on separate branches while a fix branch is active, (7) test artifacts trigger CI hooks, (8) widespread bitcast write patterns need replacing codebase-wide via parallel agent swarm.",
-      "version": "2.0.0",
-      "source": "./skills/mojo-bitcast-always-inline-crash-fix.md",
+      "name": "mojo-binary-file-read-bytes-not-string",
+      "description": "Use f.read_bytes() instead of f.read() when reading binary files in Mojo 0.26.3. Use when: (1) reading binary file formats like IDX/MNIST that contain non-UTF-8 bytes, (2) getting 'Cannot construct a String from invalid UTF-8 data' crash on file read, (3) trying to use 'rb' open mode which doesn't exist in Mojo 0.26.3.",
+      "version": "1.0.0",
+      "source": "./skills/mojo-binary-file-read-bytes-not-string.md",
       "category": "debugging",
       "tags": [
         "mojo",
-        "bitcast",
-        "always-inline",
-        "heap-corruption",
-        "asap-destruction",
-        "uaf",
-        "asan",
-        "swarm",
-        "ci-fix",
-        "blog-pr"
+        "binary",
+        "file-io",
+        "idx",
+        "mnist",
+        "utf8",
+        "read_bytes"
       ]
     },
     {
@@ -4580,14 +4431,6 @@
       "description": "Workaround for Mojo 0.26.3: capturing closures cannot be passed to def(T) raises -> T parameters. Use when: (1) a nested def captures outer variables and must be passed to a higher-order function, (2) compiler gives 'capturing nested functions must be declared unified' or 'cannot pass unified closure to escaping parameter', (3) higher-order function takes BOTH forward AND backward function arguments (e.g., check_gradient(fwd, bwd, ...)), (4) need to migrate a large codebase (10+ files) of capturing closures in parallel.",
       "version": "2.0.0",
       "source": "./skills/mojo-closures-capturing-numerical-forward-trait.md",
-      "category": "debugging",
-      "tags": []
-    },
-    {
-      "name": "mojo-copyinit-double-free",
-      "description": "Fix double-free crashes when Mojo synthesizes shallow __copyinit__ for structs with UnsafePointer fields. Use when: (1) a Copyable struct with UnsafePointer has no explicit __copyinit__, (2) struct is stored in List and crashes on lock/use after append, (3) crash is non-deterministic and follows List reallocation.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-copyinit-double-free.md",
       "category": "debugging",
       "tags": []
     },
@@ -4641,8 +4484,8 @@
     },
     {
       "name": "mojo-jit-crash-retry",
-      "description": "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular, (8) required CI checks are blocked by JIT flakiness and PRs cannot auto-merge, (9) diagnosing which of THREE distinct crash types a CI failure is: bitcast UAF (resolved), fortify_fail HOME permission (CI-only UID mismatch), or JIT volume overflow (intermittent, targeted imports fix)",
-      "version": "3.2.0",
+      "description": "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular, (8) required CI checks are blocked by JIT flakiness and PRs cannot auto-merge, (9) diagnosing which of THREE distinct crash types a CI failure is: bitcast UAF (resolved), fortify_fail HOME permission (CI-only UID mismatch), or JIT volume overflow (intermittent, targeted imports fix), (10) considering @always_inline to fix bitcast crashes (ANTI-PATTERN: worsens crashes), (11) ASAP destruction crash in finite-difference perturbation loops after test output prints, (12) codebase-wide swarm elimination of bitcast UAF writes across 50+ files, (13) KGEN internal buffer overflow with fixed crash address +0x6d4ab from 4-condition trigger combination, (14) shared library modules carry heavy module-level imports that cause JIT volume overflow for all their importers, (15) splitting oversized Mojo test files per ADR-009 (<=10 functions), (16) fn main deprecation parse errors after file splitting in Mojo 0.26.3+",
+      "version": "3.9.0",
       "source": "./skills/mojo-jit-crash-retry.md",
       "category": "debugging",
       "tags": [
@@ -4653,43 +4496,18 @@
         "ci",
         "libKGENCompilerRTShared",
         "upstream",
-        "required-checks"
-      ]
-    },
-    {
-      "name": "mojo-kgen-jit-buffer-overflow-diagnostic",
-      "description": "Use when: (1) CI test group crashes with Aborted (core dumped) at libKGENCompilerRTShared.so+0x6d4ab (__fortify_fail_abort) BEFORE any test output, (2) the crash is 100% deterministic on every CI run (same crash address), (3) the crashing file combines std.python import + List[String] struct field + 6+ overloaded constructors + Dict[String, <that struct>], (4) ulimit and max-parallel changes have no effect, (5) you need to write a minimal reproducer to file upstream against modular/modular. Distinct from the UID-mismatch fortify_fail crash (Crash 2 in mojo-jit-crash-retry skill) and from JIT volume overflow (Crash 3).",
-      "version": "1.0.0",
-      "source": "./skills/mojo-kgen-jit-buffer-overflow-diagnostic.md",
-      "category": "debugging",
-      "tags": [
-        "mojo",
+        "required-checks",
+        "always-inline",
+        "asap-destruction",
+        "bitcast",
+        "uaf",
+        "copyinit",
+        "double-free",
         "kgen",
-        "jit",
-        "buffer-overflow",
-        "fortify",
-        "libKGENCompilerRTShared",
-        "upstream",
-        "crash",
-        "python-interop",
-        "deterministic"
-      ]
-    },
-    {
-      "name": "mojo-library-import-audit",
-      "description": "Use when: (1) CI required checks crash BEFORE any test output and test-file import audit alone does not stop the crashes, (2) shared library modules (reduction, conv, pooling, matrix, loss_utils, dataset loaders) have heavy module-level imports, (3) multiple test groups that share library modules all crash after fixing test file imports, (4) auditing shared/ for module-level imports that explode JIT compilation volume transitively, (5) an unused module-level import in a test file references a library that pulls in a heavy transitive chain.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-library-import-audit.md",
-      "category": "debugging",
-      "tags": [
-        "mojo",
-        "jit",
-        "crash",
-        "imports",
-        "library",
-        "ci",
-        "volume-overflow",
-        "required-checks"
+        "swarm",
+        "test-splitting",
+        "adr-009",
+        "library-imports"
       ]
     },
     {
@@ -4983,20 +4801,6 @@
       "tags": []
     },
     {
-      "name": "pydantic-model-dump",
-      "description": "Fix Pydantic v2 model serialization using .model_dump() instead of .to_dict()",
-      "version": "1.0.0",
-      "source": "./skills/pydantic-model-dump.md",
-      "category": "debugging",
-      "tags": [
-        "pydantic",
-        "serialization",
-        "migration",
-        "python",
-        "bug-fix"
-      ]
-    },
-    {
       "name": "pydantic-none-coercion-pattern",
       "description": "Fix Pydantic ValidationError when None flows into non-Optional dict fields via dict.get() with a default value",
       "version": "1.0.0",
@@ -5037,20 +4841,6 @@
       "source": "./skills/repr-truncation-consistency.md",
       "category": "debugging",
       "tags": []
-    },
-    {
-      "name": "resume-crash-debugging",
-      "description": "Pattern for debugging resume crashes in checkpoint-based systems using error tracebacks and file path validation",
-      "version": "1.0.0",
-      "source": "./skills/resume-crash-debugging.md",
-      "category": "debugging",
-      "tags": [
-        "debugging",
-        "resume",
-        "checkpoint",
-        "e2e",
-        "file-path-mismatch"
-      ]
     },
     {
       "name": "retry-transient-errors",
@@ -5117,31 +4907,9 @@
       "tags": []
     },
     {
-      "name": "academic-paper-myrmidon-swarm-review",
-      "description": "Parallel myrmidon swarm review of academic papers and AI architecture research docs using role-stratified agents for comprehensive, simultaneous coverage. Use when: (1) reviewing a large academic paper with statistical methodology or Vega-Lite figures, (2) reviewing an AI architecture research doc for citation accuracy / complexity / literature gaps / comparison validity / feasibility, (3) need thorough parallel coverage faster than sequential review, (4) performing Go/NoGo audit with 100+ quantitative claims to verify against raw data.",
-      "version": "1.2.0",
-      "source": "./skills/academic-paper-myrmidon-swarm-review.md",
-      "category": "documentation",
-      "tags": [
-        "academic",
-        "paper-review",
-        "myrmidon",
-        "swarm",
-        "latex",
-        "statistics",
-        "vega-lite",
-        "architecture-research",
-        "kv-cache",
-        "quantization-review",
-        "false-alarm-risk",
-        "go-nogo-audit",
-        "srh-statistics"
-      ]
-    },
-    {
       "name": "academic-paper-validation",
-      "description": "Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical methodology verification, LaTeX compilation fixes, and arXiv build preparation",
-      "version": "3.1.0",
+      "description": "Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical methodology verification, LaTeX compilation fixes, arXiv build preparation, and parallel myrmidon swarm review",
+      "version": "3.2.0",
       "source": "./skills/academic-paper-validation.md",
       "category": "documentation",
       "tags": []
@@ -5547,17 +5315,9 @@
     },
     {
       "name": "fix-markdown-agent-docs",
-      "description": "Fix common markdown issues in agent hierarchy docs: malformed closing code fences, stale agent counts, and line length violations. Use when: (1) markdownlint fails on agents/hierarchy.md, (2) agent counts in docs diverge from actual .claude/agents/ files, (3) closing code fences have language specifiers.",
-      "version": "1.0.0",
+      "description": "Fix common markdown issues in agent hierarchy docs: malformed closing code fences, stale agent counts, and line length violations. Use when: (1) markdownlint fails on agents/hierarchy.md, (2) agent counts in docs diverge from actual .claude/agents/ files, (3) closing code fences have language specifiers, (4) markdownlint reports MD040 or MD031 on closing fence line.",
+      "version": "1.1.0",
       "source": "./skills/fix-markdown-agent-docs.md",
-      "category": "documentation",
-      "tags": []
-    },
-    {
-      "name": "fix-markdown-fenced-code-blocks",
-      "description": "Fix malformed fenced code block closings and markdownlint violations in markdown files. Use when: closing fences have language tags, line-length violations in docs, or lists lack surrounding blank lines.",
-      "version": "1.0.0",
-      "source": "./skills/fix-markdown-fenced-code-blocks.md",
       "category": "documentation",
       "tags": []
     },
@@ -5729,14 +5489,6 @@
       "tags": []
     },
     {
-      "name": "mojo-limitation-note-standardization",
-      "description": "Standardize Mojo language/compiler limitation NOTEs to use consistent `# NOTE (Mojo vX.Y.Z):` format. Use when: cleaning up docs with inconsistent NOTE formats, auditing Mojo codebases, or implementing cleanup issues requiring NOTE standardization.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-limitation-note-standardization.md",
-      "category": "documentation",
-      "tags": []
-    },
-    {
       "name": "mojo-module-docstring-limitation",
       "description": "Document Mojo re-export limitations in module docstrings when submodule symbols cannot be imported via the parent package. Use when: (1) a NOTE comment exists warning about an import limitation, (2) a GitHub issue asks to document a Mojo import workaround, (3) a module docstring is missing guidance for users who cannot import types from the parent package.",
       "version": "1.0.0",
@@ -5747,7 +5499,7 @@
     {
       "name": "mojo-note-to-docstring",
       "description": "Convert, condense, and enforce Mojo NOTE comments. Use when: (1) converting inline # NOTE: implementation-constraint comments to proper docstring Note: sections, (2) condensing verbose compiler-limitation NOTEs with version + tracking references on GLIBC-mismatched systems, (3) enforcing # NOTE (Mojo vX.Y.Z): format compliance via pre-commit hook and Python audit script.",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "source": "./skills/mojo-note-to-docstring.md",
       "category": "documentation",
       "tags": [
@@ -6083,17 +5835,9 @@
     },
     {
       "name": "workflow-readme-audit",
-      "description": "Audit .github/workflows/README.md against actual files on disk, update inventory to match reality, and document remaining duplication. Use when: workflows were added/deleted but README was not updated, a consolidation pass removed workflows still listed, or inline setup steps exist across many workflows needing inventory before extraction.",
-      "version": "1.0.0",
+      "description": "Audit .github/workflows/README.md against actual files on disk, update inventory to match reality, and document remaining duplication. Use when: workflows were added/deleted but README was not updated, a consolidation pass removed workflows still listed, or inline setup steps exist across many workflows needing inventory before extraction. Also covers updating README AFTER a migration is complete to remove stale inline-step references and Remaining Duplication sections.",
+      "version": "1.1.0",
       "source": "./skills/workflow-readme-audit.md",
-      "category": "documentation",
-      "tags": []
-    },
-    {
-      "name": "workflow-readme-migration-sync",
-      "description": "Update workflow README documentation to reflect completed CI/CD migrations. Use when: a README still describes inline steps replaced by composite actions, deferred documentation work is being closed out, or cross-references in a workflow README are stale after consolidation.",
-      "version": "1.0.0",
-      "source": "./skills/workflow-readme-migration-sync.md",
       "category": "documentation",
       "tags": []
     },
@@ -6765,14 +6509,6 @@
       "tags": []
     },
     {
-      "name": "mojo-format",
-      "description": "Format Mojo code using mojo format command. Use when preparing code for commit or when formatting checks fail.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-format.md",
-      "category": "optimization",
-      "tags": []
-    },
-    {
       "name": "mojo-gpu-fundamentals-programming-guide",
       "description": "GPU programming patterns in Mojo using MAX GPU API. Use when: (1) writing GPU kernels in Mojo, (2) managing GPU memory and data transfer, (3) optimizing compute-bound workloads with GPU parallelism, (4) translating CUDA mental models to Mojo GPU API.",
       "version": "1.0.0",
@@ -6794,7 +6530,7 @@
     {
       "name": "mojo-lint-syntax",
       "description": "Validate Mojo syntax against current v0.26.1+ standards. Use to catch syntax errors before compilation.",
-      "version": "1.0.0",
+      "version": "1.2.0",
       "source": "./skills/mojo-lint-syntax.md",
       "category": "optimization",
       "tags": []
@@ -6833,8 +6569,8 @@
     },
     {
       "name": "optimization-mojo-simd-nan-inf-vectorization",
-      "description": "SIMD-vectorize NaN/Inf detection functions in Mojo for hot-path performance. Use when: (1) optimizing element-wise tensor scanning functions, (2) implementing SIMD early-exit patterns in Mojo, (3) using vectorize[] with lane reduction for counting.",
-      "version": "1.0.0",
+      "description": "SIMD-vectorize NaN/Inf detection and gradient clipping functions in Mojo for hot-path performance. Use when: (1) optimizing element-wise tensor scanning functions, (2) implementing SIMD early-exit patterns in Mojo, (3) using vectorize[] with lane reduction for counting, (4) replacing scalar _get_float64/_set_float64 loops with SIMD, (5) implementing vectorized L2 norm accumulation with Float64 accumulator, (6) SIMD in-place tensor scaling or clamping.",
+      "version": "1.1.0",
       "source": "./skills/optimization-mojo-simd-nan-inf-vectorization.md",
       "category": "optimization",
       "tags": [
@@ -6843,22 +6579,9 @@
         "vectorization",
         "numerical-safety",
         "performance",
-        "nan-detection"
-      ]
-    },
-    {
-      "name": "optimization-simd-gradient-clipping-vectorization",
-      "description": "SIMD-vectorize gradient clipping functions (norm, scale, clamp) in Mojo for 4-8x speedup. Use when: (1) replacing scalar _get_float64/_set_float64 loops with SIMD, (2) implementing vectorized L2 norm accumulation, (3) SIMD in-place tensor scaling or clamping.",
-      "version": "1.0.0",
-      "source": "./skills/optimization-simd-gradient-clipping-vectorization.md",
-      "category": "optimization",
-      "tags": [
-        "mojo",
-        "simd",
-        "vectorization",
+        "nan-detection",
         "gradient-clipping",
         "training",
-        "performance",
         "norm-computation"
       ]
     },
@@ -6904,8 +6627,8 @@
     },
     {
       "name": "additive-resume-integration-tests",
-      "description": "Integration test patterns for stateful additive resume behavior in ProjectScylla \u2014 validates that sequential invocations with expanding --tiers/--max-subtests never reset existing checkpoint state.",
-      "version": "1.0.0",
+      "description": "Integration test patterns for stateful additive resume behavior in ProjectScylla \u2014 validates that sequential invocations with expanding --tiers/--max-subtests never reset existing checkpoint state, including TierStateMachine-level tier_states verification.",
+      "version": "1.1.0",
       "source": "./skills/additive-resume-integration-tests.md",
       "category": "testing",
       "tags": []
@@ -7462,14 +7185,6 @@
       "tags": []
     },
     {
-      "name": "mojo-empty-tensor-hash-test",
-      "description": "Test pattern for verifying Mojo ExTensor __hash__ on 0-element tensors. Use when: (1) adding edge-case hash coverage for zero-element containers, (2) confirming hash stability when data loop is skipped, (3) verifying that empty tensors with different shapes (e.g. [0], [0,0], [0,1]) produce distinct hashes, or (4) following up on empty-tensor hash equality tests with multi-dimensional shape discrimination coverage.",
-      "version": "2.0.0",
-      "source": "./skills/mojo-empty-tensor-hash-test.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
       "name": "mojo-exception-message-assertion",
       "description": "Pattern for asserting exact error message text in Mojo exception tests using 'except e:'. Use when: (1) upgrading bare except: clauses to assert specific error message text, (2) adding message verification to out-of-bounds or error-path tests.",
       "version": "1.0.0",
@@ -7493,7 +7208,7 @@
     {
       "name": "mojo-hash-testing-patterns",
       "description": "Use when: (1) implementing or fixing __hash__ on a Mojo tensor/struct with float fields, (2) adding hash collision tests for shape/dtype/value sensitivity, (3) verifying hash stability for edge-case tensors (empty, large values, small values), (4) guarding against dtype regression in __hash__ when numel=0, (5) testing integer-dtype coverage through _get_float64 dispatch path",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "source": "./skills/mojo-hash-testing-patterns.md",
       "category": "testing",
       "tags": []
@@ -7532,17 +7247,9 @@
     },
     {
       "name": "mojo-numerical-gradient-test",
-      "description": "Add numerical gradient validation for Mojo ML backward passes using central finite differences. Use when: adding backward pass gradient tests, avoiding grad_output=ones cancellation, verifying analytical vs numerical gradient agreement.",
-      "version": "1.0.0",
+      "description": "Add numerical gradient validation for Mojo ML backward passes using central finite differences. Use when: adding backward pass gradient tests, avoiding grad_output=ones cancellation, verifying analytical vs numerical gradient agreement, or testing gradients w.r.t. learnable parameters (gamma, beta) not just input tensors.",
+      "version": "1.1.0",
       "source": "./skills/mojo-numerical-gradient-test.md",
-      "category": "testing",
-      "tags": []
-    },
-    {
-      "name": "mojo-param-gradient-check",
-      "description": "Add numerical gradient validation for learnable parameters (gamma, beta) in Mojo backward passes. Use when: a backward pass returns multiple gradients, only input gradients are tested, or adding gradient checks for normalization layer parameters.",
-      "version": "1.0.0",
-      "source": "./skills/mojo-param-gradient-check.md",
       "category": "testing",
       "tags": []
     },
@@ -7825,20 +7532,6 @@
       "source": "./skills/resolve-blocked-todos.md",
       "category": "testing",
       "tags": []
-    },
-    {
-      "name": "resume-functionality-tests",
-      "description": "Comprehensive test patterns for checkpoint/resume systems covering crash, interrupt, and partial completion scenarios",
-      "version": "1.0.0",
-      "source": "./skills/resume-functionality-tests.md",
-      "category": "testing",
-      "tags": [
-        "testing",
-        "checkpoint",
-        "resume",
-        "crash-recovery",
-        "fixtures"
-      ]
     },
     {
       "name": "rubric-conflict-detection",
@@ -8183,23 +7876,6 @@
       "tags": []
     },
     {
-      "name": "until-resume-debugging",
-      "description": "Debugging and fixing --until checkpoint resume bugs in the E2E state machine pipeline; use when investigating resume errors like 'No sub-test results to select from' or 'agent_result must be set'",
-      "version": "1.0.0",
-      "source": "./skills/until-resume-debugging.md",
-      "category": "testing",
-      "tags": [
-        "e2e",
-        "checkpoint",
-        "resume",
-        "state-machine",
-        "until",
-        "debugging",
-        "runner",
-        "stages"
-      ]
-    },
-    {
       "name": "validate-tier-id-filename-consistency",
       "description": "Validate that config field values match their source filename at the aggregation layer to prevent silent key/value disagreement",
       "version": "1.0.0",
@@ -8514,17 +8190,9 @@
     },
     {
       "name": "claude-plugin-format",
-      "description": "Official Claude Code plugin format requirements. Use when creating new plugins, debugging \"plugin has invalid manifest\" errors, or when skills/commands don't appear after installation.",
-      "version": "1.0.0",
+      "description": "Official Claude Code plugin format requirements and marketplace registration workflow. Use when creating new plugins, debugging \"plugin has invalid manifest\" errors, registering a marketplace, or when skills/commands don't appear after installation.",
+      "version": "1.1.0",
       "source": "./skills/claude-plugin-format.md",
-      "category": "tooling",
-      "tags": []
-    },
-    {
-      "name": "claude-plugin-marketplace",
-      "description": "Set up Claude Code plugin marketplaces. Use when registering skills, fixing schema errors, or installing from private repos.",
-      "version": "1.0.0",
-      "source": "./skills/claude-plugin-marketplace.md",
       "category": "tooling",
       "tags": []
     },
@@ -8749,7 +8417,7 @@
     {
       "name": "docker-compose-v5-healthcheck-array-split",
       "description": "Docker Compose v5 (v2.39+) splits healthcheck test: arrays on spaces, breaking all pipe-based shell healthchecks. Use when: (1) healthchecks fail with CMD array format on Docker Compose v5, (2) containers become unhealthy despite service being responsive, (3) migrating compose files to Docker Compose v5, (4) diagnosing 'sh -c wget' help text in healthcheck logs.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/docker-compose-v5-healthcheck-array-split.md",
       "category": "tooling",
       "tags": [
@@ -9236,25 +8904,32 @@
       "tags": []
     },
     {
-      "name": "issue-already-implemented-preflight-check",
-      "description": "Use when: (1) assigned to implement a GitHub issue and the branch already exists or has prior commits, (2) working in an auto-impl worktree where a prior session may have completed the work, (3) git log shows commits referencing the issue number before any implementation work has started, (4) a PR already exists for the branch.",
+      "name": "install-odysseus-ecosystem-container-testing",
+      "description": "Build and test the Odysseus root-level ecosystem installer (install.sh) against clean Debian/Ubuntu containers. Use when: (1) adding or modifying install.sh in the Odysseus meta-repo, (2) verifying ecosystem installer works on a fresh OS before shipping, (3) debugging phase ordering, PATH propagation, or submodule-depth issues in the installer, (4) testing idempotency (run twice, expect identical 0-failure result), (5) hitting Dockerfile COPY failures with git submodule .git symlinks.",
       "version": "1.0.0",
-      "source": "./skills/issue-already-implemented-preflight-check.md",
+      "source": "./skills/install-odysseus-ecosystem-container-testing.md",
       "category": "tooling",
       "tags": [
-        "preflight",
-        "duplicate-work",
-        "git-log",
-        "pr-check",
-        "already-implemented",
-        "worktree",
-        "auto-impl"
+        "odysseus",
+        "installer",
+        "ecosystem",
+        "container-testing",
+        "podman",
+        "debian",
+        "ubuntu",
+        "submodule",
+        "pixi",
+        "hephaestus",
+        "phase-ordering",
+        "idempotency",
+        "git-clone-dockerfile",
+        "shallow-submodule"
       ]
     },
     {
       "name": "issue-cleanup-already-resolved-detection",
-      "description": "Use when: (1) assigned a cleanup, deletion, or quality-audit issue and the target file/artifact no longer exists or the problem is already resolved, (2) a branch is at the same commit as main with no commits ahead (git log main..HEAD returns nothing), (3) a prior merged PR is referenced in the issue description as having already made the fix.",
-      "version": "1.0.0",
+      "description": "Use when: (1) assigned a cleanup, deletion, or quality-audit issue and the target file/artifact no longer exists or the problem is already resolved, (2) a branch is at the same commit as main with no commits ahead (git log main..HEAD returns nothing), (3) a prior merged PR is referenced in the issue description as having already made the fix, (4) an auto-impl worktree branch already has commits ahead of main referencing the issue \u2014 prior session may have completed the work.",
+      "version": "1.1.0",
       "source": "./skills/issue-cleanup-already-resolved-detection.md",
       "category": "tooling",
       "tags": [
@@ -9264,7 +8939,10 @@
         "already-done",
         "file-existence",
         "git-log",
-        "pr-check"
+        "pr-check",
+        "preflight",
+        "duplicate-work",
+        "already-implemented"
       ]
     },
     {
@@ -9327,7 +9005,7 @@
     {
       "name": "logging-stdlib-json-formatter",
       "description": "Build a zero-dependency JSON log formatter using stdlib logging.Formatter. Use when: (1) adding structured JSON logging to a shared library, (2) integrating Python logs with Loki/Promtail/ELK without adding dependencies.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "source": "./skills/logging-stdlib-json-formatter.md",
       "category": "tooling",
       "tags": [
@@ -9746,17 +9424,9 @@
       "tags": []
     },
     {
-      "name": "python-repo-audit-implementation",
-      "description": "Implements a multi-phase repository audit plan for Python packages. Use when: an audit report exists with Critical/Major findings, bringing a library to production-grade quality, or consolidating duplicate patterns across modules.",
-      "version": "1.0.0",
-      "source": "./skills/python-repo-audit-implementation.md",
-      "category": "tooling",
-      "tags": []
-    },
-    {
       "name": "python-repo-modernization",
-      "description": "Bring a Python utility package from C+ to production-grade quality in one session: fix package re-exports, raise test coverage to 75%+, create integration smoke tests, harden CI/CD pipeline, and produce an installable wheel. Use when: a shared utility repo is functional but not yet consumable by downstream projects.",
-      "version": "1.0.0",
+      "description": "Bring a Python utility package from C+ to production-grade quality in one session: fix package re-exports, raise test coverage to 75%+, create integration smoke tests, harden CI/CD pipeline, and produce an installable wheel. Also covers implementing a multi-phase audit plan when an existing audit report has Critical/Major findings. Use when: a shared utility repo is functional but not yet consumable by downstream projects, or an audit report exists with graded findings.",
+      "version": "1.1.0",
       "source": "./skills/python-repo-modernization.md",
       "category": "tooling",
       "tags": []
@@ -9968,7 +9638,7 @@
     {
       "name": "skill-audit-and-merge",
       "description": "Use when: (1) skills marketplace has 500+ files with visible duplication noise hurting /advise quality, (2) auditing for near-exact duplicates or high-overlap pairs to delete or merge, (3) consolidating topic clusters spanning 3+ files into a single authoritative skill, (4) running a structured deduplication session that must leave all CI tests green",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "source": "./skills/skill-audit-and-merge.md",
       "category": "tooling",
       "tags": [
@@ -10076,14 +9746,6 @@
         "logging",
         "user-experience"
       ]
-    },
-    {
-      "name": "tier-state-additive-resume-tests",
-      "description": "Skill: TierStateMachine-Level Additive Resume Tests",
-      "version": "1.0.0",
-      "source": "./skills/tier-state-additive-resume-tests.md",
-      "category": "tooling",
-      "tags": []
     },
     {
       "name": "tone-matched-documentation",
@@ -10335,6 +9997,23 @@
       ]
     },
     {
+      "name": "tooling-plugin-cache-stale-skill-sync",
+      "description": "Use when a plugin skill is not loading updated content after a merge: (1) /reload-plugins loads old skill content even after origin/main has the new version, (2) a plugin added skills without bumping its semver version string, (3) the plugin cache directory is pinned to an old git SHA. Fix by manually syncing files into the version-keyed cache directory.",
+      "version": "1.0.0",
+      "source": "./skills/tooling-plugin-cache-stale-skill-sync.md",
+      "category": "tooling",
+      "tags": [
+        "plugin",
+        "cache",
+        "stale",
+        "reload-plugins",
+        "skill-sync",
+        "semver",
+        "gitCommitSha",
+        "installed_plugins"
+      ]
+    },
+    {
       "name": "tooling-plugin-command-codebase-rename",
       "description": "Rename a Claude Code plugin directory, commands, and hooks across an entire codebase. Use when: (1) renaming a plugin from one name to another, (2) renaming a slash command, (3) bulk find-and-replace of plugin/command references across 40+ files.",
       "version": "1.0.0",
@@ -10446,21 +10125,6 @@
       ]
     },
     {
-      "name": "tooling-structured-json-logging-stdlib",
-      "description": "Add structured JSON logging to a Python library using only stdlib. Use when: (1) adding json_format parameter to setup_logging(), (2) creating a JsonFormatter subclass of logging.Formatter, (3) filtering extra context fields from LogRecord for JSON output.",
-      "version": "1.0.0",
-      "source": "./skills/tooling-structured-json-logging-stdlib.md",
-      "category": "tooling",
-      "tags": [
-        "python",
-        "logging",
-        "json",
-        "structured-logging",
-        "stdlib",
-        "formatter"
-      ]
-    },
-    {
       "name": "track-implementation-progress",
       "description": "Track implementation progress against plan. Use to monitor component delivery and identify blockers.",
       "version": "1.0.0",
@@ -10554,8 +10218,8 @@
     },
     {
       "name": "worktree-cleanup-user-constraints",
-      "description": "Use when cleaning up worktrees under user-specified constraints: (1) no branch deletion allowed, (2) all destructive ops must go into a reviewable script, (3) uncommitted work in merged-branch worktrees must be analyzed and committed if useful. Covers classification of dirty worktrees (artifact noise vs real work), generating a section-annotated cleanup script, handling files left orphaned in merged-branch working trees, the staged-file two-step (reset HEAD then checkout --) required when worktrees contain staged-only new files (status A), all-clean direct execution, cherry=1 rebase-merge artifact handling, and the remove-worktree-keep-branch pattern for closed-not-merged PRs.",
-      "version": "1.4.0",
+      "description": "Use when cleaning up worktrees under user-specified constraints: (1) no branch deletion allowed, (2) all destructive ops must go into a reviewable script, (3) uncommitted work in merged-branch worktrees must be analyzed and committed if useful. Covers classification of dirty worktrees (artifact noise vs real work), generating a section-annotated cleanup script, handling files left orphaned in merged-branch working trees, the staged-file two-step (reset HEAD then checkout --) required when worktrees contain staged-only new files (status A), all-clean direct execution, cherry=1 rebase-merge artifact handling, the remove-worktree-keep-branch pattern for closed-not-merged PRs, and locked-but-clean worktrees from dead myrmidon agent sessions (unlock+remove without --force).",
+      "version": "1.6.0",
       "source": "./skills/worktree-cleanup-user-constraints.md",
       "category": "tooling",
       "tags": [
@@ -10570,7 +10234,9 @@
         "staged-files",
         "rebase-merge",
         "closed-pr",
-        "gitignore"
+        "gitignore",
+        "locked-worktree",
+        "dead-agent"
       ]
     },
     {
