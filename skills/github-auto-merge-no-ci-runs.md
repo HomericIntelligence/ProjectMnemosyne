@@ -1,11 +1,12 @@
 ---
 name: github-auto-merge-no-ci-runs
-description: "GitHub auto-merge stalls indefinitely on a CLEAN PR when no CI workflow ever runs on the branch. Use when: (1) PR has mergeStateStatus: CLEAN and auto-merge armed but hasn't merged after hours, (2) gh pr view --json statusCheckRollup returns empty array [], (3) docs-only, pod-spec, or non-code PRs stuck with armed auto-merge, (4) investigating why auto-merge didn't fire on a PR that looks ready."
+description: "GitHub auto-merge stalls indefinitely on a CLEAN PR when no CI workflow ever runs on the branch. Use when: (1) PR has mergeStateStatus: CLEAN and auto-merge armed but hasn't merged after hours, (2) gh pr view --json statusCheckRollup returns empty array [], (3) docs-only, pod-spec, or non-code PRs stuck with armed auto-merge, (4) investigating why auto-merge didn't fire on a PR that looks ready, (5) gh pr list returns fewer PRs than expected — default limit is 30 and silently omits older PRs, (6) gh pr merge --auto --squash returns GraphQL 'Pull request is in clean status' error on a CLEAN PR, (7) gh pr merge --auto --squash returns GraphQL 'Pull request is in unstable status' — transient; retry after a few seconds, (8) squash-only repos reject --rebase flag on gh pr merge --auto, (9) scheduled workflow (apply.yml) shows failure on main but required checks all pass."
 category: ci-cd
-date: 2026-04-23
-version: 1.0.0
+date: 2026-05-05
+version: "1.1.0"
 user-invocable: false
 verification: verified-ci
+history: github-auto-merge-no-ci-runs.history
 tags:
   - auto-merge
   - github
@@ -38,6 +39,11 @@ most common victims because no workflow triggers and zero status check events ar
 - Docs-only (`*.md`), pod-spec (`pods/**`), or other non-code PRs stuck with armed auto-merge
 - Investigating why auto-merge didn't fire on a PR that looks ready to merge
 - Multiple PRs all show `CLEAN` + armed auto-merge yet sit unmoved for hours
+- `gh pr list` returns fewer PRs than expected — default limit is 30 and silently omits older PRs in large repos; use `--limit 200` when arming auto-merge across a backlog
+- `gh pr merge --auto --squash` returns GraphQL "Pull request is in clean status" error — transient API lag on CLEAN PRs; retry immediately (second call seconds later succeeds)
+- `gh pr merge --auto --squash` returns GraphQL "Pull request is in unstable status" — retry after a few seconds; state often resolves to UNKNOWN which accepts the arm call
+- Repo rejects `--rebase` flag on `gh pr merge --auto` — check `allow_rebase_merge` before arming; squash-only repos require `--squash`
+- Scheduled workflow (e.g., `apply.yml`) shows `conclusion: failure` on main while all required branch-protection checks pass — verify required checks separately before concluding main is broken
 
 ## Verified Workflow
 
@@ -164,6 +170,9 @@ gh pr list --state open --json number,mergeStateStatus | python3 -c \
 | Checking mergeStateStatus only | Inspected `mergeStateStatus: CLEAN` and assumed merge would proceed | CLEAN means "no conflicts/reviews blocking", not "ready for auto-merge without CI" | Always also check `statusCheckRollup` — empty array is the actual blocker |
 | Re-triggering CI via comment | Added a PR comment hoping to re-trigger a CI run | PR comments do not trigger `push` or `pull_request` CI workflows | Must push a new commit or use `gh workflow run` to trigger a run |
 | Assuming path-filter change would fix existing PRs | Broadened `paths:` filter on main and expected open PRs to auto-merge | Open PR branches had no new commits; no new CI run was triggered | Existing open PRs need a new commit or manual merge after path-filter is fixed |
+| gh pr list without --limit | Listed open PRs with default limit to find unarmed ones | Default limit is 30 — repos with 31+ open PRs silently omit the older ones; armed count appeared correct but 60+ PRs were missed | Always use --limit 200 when arming auto-merge across a repo backlog |
+| gh pr merge --auto --squash on CLEAN PR (first call) | Called `gh pr merge --auto --squash` on a PR with `mergeStateStatus=CLEAN` | GitHub GraphQL returns "Pull request is in clean status" — API internal state hadn't caught up yet | Retry immediately; the second call seconds later succeeds without any other change |
+| gh pr merge --auto --squash on UNSTABLE PR | Called `gh pr merge --auto --squash` on a PR with `mergeStateStatus=UNSTABLE` | GitHub GraphQL returns "Pull request is in unstable status" — auto-merge cannot be armed while checks are actively failing | Wait a few seconds and retry; state often resolves to UNKNOWN which accepts the arm call |
 
 ## Results & Parameters
 
@@ -201,6 +210,15 @@ gh run list --branch "$(gh pr view <PR> --json headRefName --jq '.headRefName')"
 # List all open PRs with CLEAN state and armed auto-merge
 gh pr list --state open --json number,title,mergeStateStatus,autoMergeRequest \
   --jq '.[] | select(.mergeStateStatus=="CLEAN" and .autoMergeRequest!=null)'
+
+# Fetch ALL open PRs (not just the default 30)
+gh pr list -R "$REPO" --state open --limit 200 --json number,mergeStateStatus,autoMergeRequest
+
+# Check allowed merge methods before arming
+gh api repos/$OWNER/$REPO --jq '{rebase: .allow_rebase_merge, squash: .allow_squash_merge, merge: .allow_merge_commit}'
+
+# Distinguish required checks from advisory workflows
+gh run list -R "$REPO" --branch main --limit 5 --json workflowName,conclusion,status --jq '.[] | [.workflowName, .status, .conclusion] | @tsv'
 ```
 
 ### Fix Trade-offs
