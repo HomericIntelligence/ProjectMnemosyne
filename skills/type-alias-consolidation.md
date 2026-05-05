@@ -1,11 +1,17 @@
 ---
 name: type-alias-consolidation
-description: "Use when: (1) multiple modules define TypeName = DomainVariant aliases causing naming confusion and you need to remove redundant type aliases that shadow domain-specific variant names; (2) applying the Pydantic inheritance pattern to metrics/judgment/cost types (MetricsInfo, JudgmentInfo) or other evaluation data types; (3) a Pydantic base class lacks frozen=True while its sibling base types all use ConfigDict(frozen=True) and you need an immutability consistency audit."
+description: "Use when: (1) multiple modules define TypeName = DomainVariant aliases causing naming confusion and you need to remove redundant type aliases that shadow domain-specific variant names; (2) applying the Pydantic inheritance pattern to metrics/judgment/cost types (MetricsInfo, JudgmentInfo) or other evaluation data types; (3) a Pydantic base class lacks frozen=True while its sibling base types all use ConfigDict(frozen=True) and you need an immutability consistency audit; (4) discovering and categorizing duplicate code (true-vs-intentional-variant taxonomy) for codebase-wide consolidation; (5) migrating Python @dataclass classes to Pydantic BaseModel in bulk (24-class checklist, pytest fixture migration); (6) fixing AttributeError from Pydantic v2 .to_dict() vs .model_dump() regression."
 category: architecture
 date: 2026-02-15
-version: 3.0.0
+version: 3.1.0
 user-invocable: false
-tags: [refactoring, type-consolidation, python, architecture, pydantic, frozen, immutability]
+tags: [refactoring, type-consolidation, python, architecture, pydantic, frozen, immutability, dataclass, migration, serialization, duplicate-discovery]
+absorbed:
+- pydantic-type-consolidation-metrics-judgment (v1.0.0, 2026-05-03)
+- pydantic-frozen-consistency (v1.0.0, 2026-05-03)
+- codebase-consolidation (v1.0.0, 2026-05-04)
+- migrate-dataclass-to-pydantic (v1.0.0, 2026-05-04)
+- pydantic-model-dump (v1.0.0, 2026-05-04)
 ---
 # Type Alias Consolidation
 
@@ -18,7 +24,7 @@ tags: [refactoring, type-consolidation, python, architecture, pydantic, frozen, 
 | **Issue** | #679 - Consolidate RunResult Types |
 | **PRs** | #699, #703, #788 (MetricsInfo/JudgmentInfo), #846 (frozen consistency) |
 
-**Absorbed**: pydantic-type-consolidation-metrics-judgment, pydantic-frozen-consistency on 2026-05-03
+**Absorbed**: pydantic-type-consolidation-metrics-judgment, pydantic-frozen-consistency on 2026-05-03; codebase-consolidation, migrate-dataclass-to-pydantic, pydantic-model-dump on 2026-05-04
 
 ## Overview
 
@@ -786,3 +792,384 @@ pre-commit run --all-files
 ## Tags
 
 `#architecture` `#refactoring` `#type-consolidation` `#python` `#pydantic` `#technical-debt` `#explicit-over-implicit`
+
+---
+
+## Duplicate Discovery & Consolidation Taxonomy
+
+*(Absorbed from codebase-consolidation v1.0.0, 2026-01-02)*
+
+Use this sub-workflow when auditing a codebase for duplicate implementations before deciding whether to merge them.
+
+### True Duplicate vs. Intentional Variant
+
+Before merging anything, categorize every duplication candidate:
+
+| Type | Example | Action |
+| ------ | --------- | -------- |
+| True duplicates | Same function in 3 files | Consolidate to single source |
+| Intentional variants | 4 RunResult types for different domains | Document with cross-references |
+
+This taxonomy prevents the most common failure mode: merging types that look identical but have different domain semantics.
+
+### Discovery Grep Patterns
+
+```bash
+# Find duplicate function names
+grep -r "def calculate_mean\|def calculate_median" src/
+
+# Find duplicate class names
+grep -r "class RunResult\|class ExecutionInfo" src/
+
+# Find similar field signatures
+grep -r "tokens_input.*tokens_output" src/
+```
+
+### Issue Planning Template (before coding)
+
+Create a GitHub issue with this structure before any refactor:
+
+```markdown
+## Objective
+Reduce duplication of X by creating unified base types.
+
+## Problem
+### X - N separate definitions:
+| Location | Purpose | Key Fields |
+|----------|---------|------------|
+| file1.py:L-L | Purpose A | field1, field2 |
+| file2.py:L-L | Purpose B | field1, field3 |
+
+## Implementation Plan
+1. Create shared module with base types
+2. Update each file to import from shared module
+3. Add type aliases for backward compatibility
+```
+
+### Dependency-Ordered Execution
+
+Execute consolidations in dependency order (lower deps first):
+
+```
+statistics.py (no deps)
+    ↓
+grading.py (uses statistics)
+    ↓
+aggregator.py (uses grading + statistics)
+    ↓
+pricing.py (used by adapters)
+    ↓
+result types (documentation only)
+```
+
+### Backward-Compatible Alias Patterns
+
+**Type alias for renamed types:**
+```python
+# In the new location
+from scylla.metrics.statistics import Statistics
+
+# In the old location (backward compat)
+from scylla.metrics.statistics import Statistics
+AggregatedStats = Statistics  # Backward-compatible alias
+```
+
+**Function alias for moved functions:**
+```python
+from scylla.metrics.grading import assign_letter_grade
+assign_grade = assign_letter_grade  # Backward-compatible alias
+```
+
+**Cross-reference docstring for intentional variants:**
+```python
+class RunResult:
+    """Result for statistical aggregation.
+
+    This is a simplified result type used for aggregation.
+    For detailed execution results, see:
+    - executor/runner.py:RunResult (execution tracking)
+    - e2e/models.py:RunResult (E2E test results)
+    - reporting/result.py:RunResult (persistence)
+    """
+```
+
+### Standard Grading Thresholds (Industry-Aligned)
+
+```yaml
+grade_scale:
+  S: 1.00   # Amazing - exceptional
+  A: 0.80   # Excellent - production ready
+  B: 0.60   # Good - minor improvements
+  C: 0.40   # Acceptable - functional with issues
+  D: 0.20   # Marginal - significant issues
+  F: 0.00   # Failing
+```
+
+### Pricing Configuration Template
+
+```python
+class ModelPricing(BaseModel):
+    model_id: str
+    input_cost_per_million: float   # Always use per-million
+    output_cost_per_million: float
+    cached_cost_per_million: float = 0.0
+
+MODEL_PRICING: dict[str, ModelPricing] = {
+    "claude-sonnet-4-20250514": ModelPricing(
+        model_id="claude-sonnet-4-20250514",
+        input_cost_per_million=3.0,
+        output_cost_per_million=15.0,
+    ),
+}
+```
+
+### Consolidation Results Reference
+
+| Category | Before | After |
+| ---------- | -------- | ------- |
+| Statistics functions | 3 copies | 1 source + 2 imports |
+| Grade assignment functions | 5 implementations | 1 canonical + aliases |
+| Pricing implementations | 2 (different units) | 1 centralized (per-million) |
+| Result types | 4 undocumented variants | 4 cross-referenced variants |
+
+---
+
+## Dataclass → Pydantic BaseModel Migration
+
+*(Absorbed from migrate-dataclass-to-pydantic v1.0.0, PR #592, 2026-02-13)*
+
+Use this sub-workflow when bulk-migrating `@dataclass` classes to Pydantic `BaseModel` (verified: 24 classes across 8 files).
+
+### Migration Checklist (Per File)
+
+- [ ] Update imports (`dataclass`/`field` → `BaseModel`/`Field`)
+- [ ] Remove `@dataclass` decorators
+- [ ] Convert class to inherit from `BaseModel`
+- [ ] Convert `field(default_factory=...)` → `Field(default_factory=...)`
+- [ ] Add `ConfigDict(arbitrary_types_allowed=True)` if needed (Path/Enum fields)
+- [ ] Convert `__post_init__` to `@model_validator` or `Field(default_factory=...)`
+- [ ] Handle forward references with string annotations + `model_rebuild()`
+- [ ] Keep custom `to_dict()`, `from_dict()`, `@property` methods
+- [ ] Run tests: `<package-manager> python -m pytest tests/unit/<module>/ -v`
+- [ ] Run linters: `pre-commit run --all-files`
+
+### Core Conversion Pattern
+
+```python
+# Before
+from dataclasses import dataclass, field
+
+@dataclass
+class TokenStats:
+    input_tokens: int = 0
+    output_tokens: int = 0
+    items: list[str] = field(default_factory=list)
+
+# After
+from pydantic import BaseModel, ConfigDict, Field
+
+class TokenStats(BaseModel):
+    input_tokens: int = 0
+    output_tokens: int = 0
+    items: list[str] = Field(default_factory=list)
+```
+
+### Add `model_config` for Non-Standard Types
+
+```python
+class ExperimentConfig(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    experiment_id: str
+    task_prompt_file: Path  # Requires arbitrary_types_allowed
+    tiers_to_run: list[TierID] = Field(default_factory=list)
+```
+
+### `__post_init__` Conversion Patterns
+
+**Validation → `@model_validator`:**
+```python
+# Before
+@dataclass
+class RateLimitInfo:
+    source: str
+    def __post_init__(self) -> None:
+        if self.source not in ("agent", "judge"):
+            raise ValueError(f"Invalid source: {self.source}")
+
+# After
+class RateLimitInfo(BaseModel):
+    source: str
+    @model_validator(mode="after")
+    def validate_source(self) -> RateLimitInfo:
+        if self.source not in ("agent", "judge"):
+            raise ValueError(f"Invalid source: {self.source}")
+        return self
+```
+
+**Default init → `Field(default_factory=...)`:**
+```python
+# Before
+@dataclass
+class RerunJudgeStats:
+    per_slot_stats: dict[int, dict[str, int]] = None
+    def __post_init__(self):
+        if self.per_slot_stats is None:
+            self.per_slot_stats = {}
+
+# After
+class RerunJudgeStats(BaseModel):
+    per_slot_stats: dict[int, dict[str, int]] = Field(default_factory=dict)
+```
+
+### Forward Reference Fix
+
+```python
+# In models.py
+class SubTestResult(BaseModel):
+    rate_limit_info: "RateLimitInfo | None" = None
+
+# At end of file
+from scylla.e2e.rate_limit import RateLimitInfo  # noqa: E402
+SubTestResult.model_rebuild()
+```
+
+### Common Issues
+
+**Path serialization in JSON** — use `mode="json"`:
+```python
+# ❌ Fails: Path → PosixPath (not JSON serializable)
+config_dict = config.model_dump()
+json.dumps(config_dict)
+
+# ✅ Works: Path → str
+config_dict = config.model_dump(mode="json")
+json.dumps(config_dict)
+```
+
+**Pydantic requires keyword arguments** (positional args fail):
+```python
+# ❌ Fails with Pydantic
+vote = JudgeVote("01", 0.85, 0.9, "Good")
+
+# ✅ Use keyword arguments
+vote = JudgeVote(subtest_id="01", score=0.85, confidence=0.9, reasoning="Good")
+```
+
+**Keep custom `to_dict()` methods** — `model_dump()` does not handle Enum→value or Path→str:
+```python
+class SubTestConfig(BaseModel):
+    tier_id: TierID
+    claude_md_path: Path | None
+
+    # Keep this for custom serialization
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "tier_id": self.tier_id.value,   # Enum → str
+            "claude_md_path": str(self.claude_md_path) if self.claude_md_path else None,
+        }
+```
+
+### Patterns Preserved Seamlessly
+
+```python
+# ✅ Properties work as-is
+@property
+def total_tokens(self) -> int:
+    return self.input_tokens + self.output_tokens
+
+# ✅ Dunder methods work as-is
+def __add__(self, other: TokenStats) -> TokenStats:
+    return TokenStats(
+        input_tokens=self.input_tokens + other.input_tokens,
+        output_tokens=self.output_tokens + other.output_tokens,
+    )
+
+# ✅ Class methods work as-is
+@classmethod
+def load(cls, path: Path) -> ExperimentConfig:
+    with open(path) as f:
+        data = json.load(f)
+    return cls(**data)
+```
+
+### Pytest Fixture Migration Note
+
+Tests that construct dataclass instances with positional arguments must be updated to keyword arguments. Fixtures that patch or mock dataclasses may also need updating if the fixture relies on `dataclasses.asdict()` — replace with `.model_dump()`.
+
+### Migration Statistics (Reference Run)
+
+| Metric | Value |
+| -------- | ------- |
+| Classes migrated | 24 |
+| Files modified | 10 |
+| Lines changed | +94, -80 |
+| Tests passing | 2,044 (100%) |
+| E2E tests passing | 430 (100%) |
+
+---
+
+## Pydantic v2 `.model_dump()` Quick-Reference Fix
+
+*(Absorbed from pydantic-model-dump v1.0.0, PR #136, 2026-01-04)*
+
+Use when encountering `AttributeError: 'ModelName' object has no attribute 'to_dict'` after a Pydantic v1 → v2 migration.
+
+### Root Cause
+
+Pydantic v2 removed `.dict()` and does not define `.to_dict()`. Code that called `.to_dict()` on a `BaseModel` instance crashes:
+
+```
+AttributeError: 'AdapterTokenStats' object has no attribute 'to_dict'
+```
+
+### Fix Pattern
+
+```python
+# Before (FAILS on Pydantic v2 BaseModel):
+result_data = {
+    "token_stats": result.token_stats.to_dict(),  # ❌
+}
+
+# After (WORKS):
+result_data = {
+    "token_stats": result.token_stats.model_dump(),  # ✅
+}
+```
+
+### Audit Workflow
+
+```bash
+# 1. Find all .to_dict() calls
+grep -r "\.to_dict()" src/
+
+# 2. For each hit, check if the class inherits from BaseModel
+grep -B 5 "class.*BaseModel" src/
+
+# 3. Replace only Pydantic model calls; leave dataclass .to_dict() untouched
+```
+
+Dataclasses with a custom `.to_dict()` method are **fine** — only replace calls on Pydantic `BaseModel` subclasses.
+
+### Verification
+
+```bash
+# Find remaining .to_dict() on Pydantic models
+rg "\.to_dict\(\)" src/ | while read line; do echo "$line"; done
+
+# Run the previously-crashing script
+python scripts/run_e2e_experiment.py
+```
+
+### Key Rules
+
+1. **Always use `.model_dump()`** for Pydantic v2 BaseModel serialization.
+2. **Selective replacement**: Only replace `.to_dict()` on Pydantic models, not dataclasses.
+3. **Audit the whole codebase**: One missed call causes a runtime crash.
+4. **Ruff/mypy can catch these** if properly configured — add to pre-commit.
+
+### Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | PR #136 — E2E runner crash fix | AttributeError on AdapterTokenStats |
