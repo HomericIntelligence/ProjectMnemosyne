@@ -1,0 +1,48 @@
+# academic-paper-validation — History
+
+## v3.3.0 (2026-05-05)
+
+**Changed by:** ProjectScylla paper-revisions-haiku session (PR #1912 — "docs(paper): apply review revisions to haiku paper")
+**Verification:** verified-local (pdflatex builds cleanly to 55 pages, generator smoke tests via `pixi run python` succeed, ruff/format/all pre-commit hooks pass on commit; PR-1912 CI in flight at capture time)
+
+### What changed
+
+Added a new "Phase 7: Post-Review Mechanical Revisions" section covering five batched revision techniques surfaced by a single-author paper review:
+
+1. First-person plural → singular pronoun substitution with URL/email TLD protection
+2. Single-model study table cleanup (drop `Model`/`Agent Models` columns from per-row + experiment-config tables)
+3. Surgical .tex/.md artifact editing fallback when `load_all_experiments` rejects the data layout
+4. Duplicate `\subsubsection{}` heading detection
+5. `\item[…]` description-block deduplication (folding `\emph{Difficulty/Repository/Language/Expected outcome}` into prose)
+
+Added 3 new "Failed Attempts" rows:
+- `scripts/generate_tables.py` rejects flat-timestamp data layout (`<exp>/<timestamp>/` required, but `~/fullruns/haiku-2/` is `<timestamp>-test-NNN`)
+- `pixi run pytest tests/unit/...` broken by Python-3.14 env mismatch (`ImportError: console_main`); fall back to `pixi run python -c` smoke tests
+- `gh pr merge --auto --rebase` rejected by ProjectScylla branch protection (`rebase merging is not allowed`); use `--squash`
+
+Added a "Verified On" row for ProjectScylla PR #1912.
+
+### Why
+
+The post-review revision phase is qualitatively different from earlier validation phases (data accuracy, statistical methodology, arXiv polish): reviewers flag *editorial* defects that need mechanical batch-fixing, but the regeneration pipeline may be unavailable due to data-layout drift. Capturing the in-place .tex/.md surgery pattern alongside the upstream-generator fix preserves both the immediate workaround and the long-term correction.
+
+### Previous version (v3.2.0) snapshot
+
+---
+version: "3.2.0"
+date: 2026-04-27
+---
+
+(Content prior to v3.3.0 amendment — the v3.2.0 file is preserved in the git history at commit `70d8df1a` on branch `main`. To recover, run:
+
+```bash
+git -C ~/.agent-brain/ProjectMnemosyne show 70d8df1a:skills/academic-paper-validation.md > /tmp/academic-paper-validation-v3.2.0.md
+```
+
+Pre-amendment content footprint: 755 lines, absorbed `academic-paper-myrmidon-swarm-review`, covered Phases 0–6 plus Common Swarm Pitfalls.)
+
+---
+
+## v3.2.0 (prior — see git)
+
+(Earlier history not previously captured in a `.history` file; see git log for `skills/academic-paper-validation.md`: commits `70a5058a` Phase 1 migration, `ecf9f486` validation fix, `438bf78c` Phase 3 cluster merge absorbing `latex-paper-peer-review` + `academic-paper-review-quality-improvement` + `latex-paper-accuracy-review`.)
