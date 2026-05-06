@@ -2,8 +2,8 @@
 name: skill-audit-and-merge
 description: "Use when: (1) skills marketplace has 500+ files with visible duplication noise hurting /advise quality, (2) auditing for near-exact duplicates or high-overlap pairs to delete or merge, (3) consolidating topic clusters spanning 3+ files into a single authoritative skill, (4) running a structured deduplication session that must leave all CI tests green"
 category: tooling
-date: '2026-05-04'
-version: 2.2.0
+date: '2026-05-05'
+version: 2.3.0
 verification: verified-ci
 history: skill-audit-and-merge.history
 tags:
@@ -188,6 +188,41 @@ Use this when a large-scale fingerprinting wave (1,000+ files) hits agent output
 
 **Result from 2026-05-04 run**: 205 gap files recovered, 21 new clusters (C060–C080), 5 additional merges, 3 false matches caught.
 
+### Third-Pass Continuation (Wave Nc)
+
+When second-pass merges leave a *further* coverage gap (e.g., files created after the snapshot, or a residual cross-category tail), do a **Wave Nc continuation pass** instead of starting over. Empirically validated 2026-05-04/05 on the same 984-file corpus.
+
+**Continuation mechanics**:
+
+1. Compute the new gap with `comm -23 <current skills sorted> <fingerprinted files sorted>` — only the diff needs new fingerprints.
+2. Reuse the existing fingerprint JSONL schema verbatim — no schema changes between passes.
+3. **Filter prior fingerprints to alive files only** before re-clustering (drop entries for files deleted by prior merges). 2026-05-04 run: 1021 historically fingerprinted, 984 still alive (37 already merged away).
+4. Pass the existing cluster→files map (e.g., C001–C080) to the Wave 2c coordinator so it produces only NEW clusters (C081+) or augmentations to existing clusters — does NOT re-cluster files already triaged.
+
+**Cross-category prefix matches verify as 86% false-match**: After the prior swarm absorbed all single-category prefix2/prefix3 matches, the remaining unclustered tail is dominated by cross-category prefix collisions (e.g., `debugging`+`testing`, `ci-cd`+`tooling`). On the 2026-05-04 run across 786 unclustered files:
+
+- 21 new clusters surfaced (C081–C101), all 2-file pairs.
+- Wave 3c verdicts: **18 false-match (86%), 3 high-overlap, 0 near-exact, 0 topic-cluster**.
+- Pattern: same `prefix2` token (e.g., `pr-review-*`, `python-version-*`, `security-review-*`, `stale-script-*`) but the two files address mutually exclusive operational phases or different deliverables (manual cleanup vs. automated detector; bug fix vs. design pattern; reactive vs. proactive).
+
+**Heuristic for future runs**: weight cross-category 2-file prefix matches as `false-match-likely` by default. Require at least one of these stronger signals to upgrade them to merge-candidate:
+
+- (a) shared tags ≥2,
+- (b) heading-overlap ≥0.75 with same trigger phrases, or
+- (c) explicit `cross_refs` between the two files.
+
+**Notes-file deletion convention**: When deleting an absorbed skill, also delete its `<name>.notes.md` companion. In every 2026-05-04 case (`mojo-boolable-raises-fix.notes.md`, `json-schema-validation-wiring.notes.md`, `config-filename-model-id-audit.notes.md`), the notes file contained raw session timeline + issue/PR numbers + diagnostic process — facts already absorbed (in concentrated form) into the canonical via the Wave 3 unique_content_per_file inventory. Preserving `.notes.md` separately bloats the corpus; the parent skill's "Verified On" section already cites the source PR.
+
+**Diminishing-returns stop rule**: Actionable yield collapses across continuation passes. From the same 984-file corpus:
+
+| Pass | Scope | Clusters | Actionable | Yield |
+| ------ | ------- | ---------- | ------------ | ------- |
+| Wave 3 (first) | full corpus | 59 | 22 high-overlap + 2 near-exact | **41%** |
+| Wave 3b (gap-fill) | 205 gap files | ~21 | 5 confirmed + 3 false-match | **24%** |
+| Wave 3c (cross-cat tail) | 786 unclustered | 21 | 3 high-overlap | **14%** |
+
+**Stop rule**: when a continuation pass yields **<15% actionable**, the corpus is at its de-duplication floor — further passes cost more than they save. Do not run a fourth pass without a new clustering signal (e.g., embedding-based similarity); pure prefix/heading heuristics are exhausted.
+
 ### After Each Phase
 
 ```bash
@@ -220,6 +255,7 @@ git commit -m "chore: phase N — <description> (X files removed)"
 | Fence arithmetic floor was off by absorbed-file overlap | Pre-merge canonical for L1 had 8 fences; absorbed-1 had 14, absorbed-2 had 20; set floor = 42 | Wave A merge produced 40 — fixer merged `fn store` and `fn set` into one code block instead of keeping them separate, losing 2 fences below floor | Floor arithmetic assumes no consolidation of separate code blocks; Wave B verifier must do a content-level diff (not just count comparison) to catch merged blocks that cross cluster-file boundaries |
 | Explore agents for fingerprinting waves | Used `subagent_type: Explore` for fingerprinting shards 2 and 3 in Wave 1 (1,659-file corpus) | `Explore` is a read-only agent type — cannot call `Write` tool. Agents either echoed JSONL as stdout (lost when context cleared) or required complex workarounds to extract output | Any wave whose output must persist to a file (fingerprints, cluster JSON, report files) MUST use `general-purpose` or another writable agent type. Keep shard size ≤103 files (empirical ceiling before output truncation). |
 | Oversized fingerprinting shards causing silent coverage gaps | Wave 1 used 332-file shards, trusting agents to fingerprint the full shard | Explore agents hit output limits partway through each shard, emitting only 838/1024 fingerprints (81.8% coverage); gaps went undetected until post-Phase-1 file count cross-check | Limit fingerprinting shards to ≤103 files; after Wave 1 completes, always `comm -23` surviving files vs. fingerprinted set to detect unfingerprinted files before clustering |
+| Treating cross-category prefix2 matches as merge candidates without secondary signal | Wave 2c surfaced 21 cross-category prefix-collision pairs (e.g., `pr-review-*`, `python-version-*`, `security-review-*`) and queued them all as merge candidates | Wave 3c verified 18/21 (86%) as false-match — same prefix token described mutually exclusive operational phases or different deliverables (manual cleanup vs. automated detector; bug fix vs. design pattern) | Require ≥2 strong signals (shared tags ≥2, heading-overlap ≥0.75 with near-identical trigger phrases, or explicit `cross_refs`) before flagging cross-category prefix matches as merge candidates; default-weight them `false-match-likely` |
 
 ## Results & Parameters
 
