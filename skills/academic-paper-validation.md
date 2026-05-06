@@ -1,9 +1,9 @@
 ---
 name: academic-paper-validation
-description: "Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical methodology verification, LaTeX compilation fixes, arXiv build preparation, and parallel myrmidon swarm review"
+description: "Systematic workflow for validating and improving academic paper quality through data accuracy checks, statistical methodology verification, LaTeX compilation fixes, arXiv build preparation, parallel myrmidon swarm review, and post-review mechanical revisions (pronoun voice changes, single-model table cleanup, in-place .tex/.md surgery, duplicate heading detection, item-block deduplication)"
 category: documentation
-date: 2026-04-27
-version: 3.2.0
+date: 2026-05-05
+version: 3.3.0
 user-invocable: false
 absorbed: [academic-paper-myrmidon-swarm-review]
 ---
@@ -734,11 +734,141 @@ EOF
 | Agent searched wrong JSON file for cost statistics | Agent searched statistical_results.json for cost_usd p-value | cost_usd statistics live in srh_tier_experiment.json, not statistical_results.json | Coordinator MUST independently verify any agent "CRITICAL" finding before acting |
 | Agent claimed "monotonic" without checking ordering | Paper stated "monotonic relationship" between capability gap and judge agreement | J2-J3 MAD (0.270) > J1-J3 MAD (0.210) despite smaller capability gap — violates monotonicity | When paper claims "monotonic relationship," verify the actual data ordering |
 
+## Phase 7: Post-Review Mechanical Revisions (v3.3.0)
+
+When a peer review surfaces a batch of editorial defects (voice/tone, redundant columns, duplicated structure) and you need to apply them quickly, use these five mechanical patterns. They are narrow but high-leverage — every paper-review cycle tends to surface at least one of them.
+
+### 7.1 First-person plural → singular pronoun substitution (URL-safe)
+
+**When to use**: Single-author paper has drifted into "we/our/us" voice and needs first-person-singular conversion. Naive `sed` will corrupt URLs containing `.us`/`.we` TLDs and email addresses.
+
+**Procedure**:
+
+```python
+# 1. Apply mechanical replacement with URL/email protection
+import re
+from pathlib import Path
+
+p = Path("docs/arxiv/<paper>/paper.tex")
+text = p.read_text()
+
+# Protect emails / URLs first
+protected = []
+for m in re.finditer(r'\S+@\S+|https?://\S+', text):
+    sentinel = f"__PROTECTED_{len(protected)}__"
+    protected.append((sentinel, m.group(0)))
+    text = text.replace(m.group(0), sentinel, 1)
+
+for pat, rep in [
+    (r"\bWe\b", "I"), (r"\bwe\b", "I"),
+    (r"\bOur\b", "My"), (r"\bour\b", "my"),
+    (r"\bOurs\b", "Mine"), (r"\bours\b", "mine"),
+    (r"\bus\b", "me"), (r"\bourselves\b", "myself"),
+]:
+    text = re.sub(pat, rep, text)
+
+for sentinel, original in protected:
+    text = text.replace(sentinel, original)
+p.write_text(text)
+```
+
+**Verb conjugation note**: Present-tense verbs are invariant (`we use → I use`); only `we are/were/have` would need conjugation. Guard *before* substitution:
+
+```bash
+grep -nE '\b(we are|we were|we have)\b' paper.tex   # any hits → conjugate manually first
+```
+
+**Verify post-edit**:
+
+```bash
+grep -nE '\b(We|we|Our|our|us)\b' paper.tex   # only protected URL/email hits should remain
+grep -nE '\b(I am|I have|I were)\b' paper.tex  # check for residual verb mismatch ("I were" is wrong)
+```
+
+### 7.2 Single-model study table cleanup
+
+**When to use**: A study uses one agent model but inherited per-row tables include a `Model` column and the experiment-config table includes an `Agent Models` column. Both are pure noise — remove from generators and re-render.
+
+**Sites to edit** (`src/scylla/analysis/tables/detail.py`, both LaTeX and Markdown variants):
+
+- `table07_subtest_detail`:
+  - Drop `"Model"` key from row dict
+  - Remove `Model &` from header rows
+  - Column spec `llrrrrrll` → `lrrrrrll`
+  - `\multicolumn{9}` → `\multicolumn{8}`
+  - Remove `f"{row['Model']} &"` from row format
+- `table09_experiment_config`:
+  - Drop computation of `agent_models` and `"Agent Models"` key
+  - Remove `Models &` from header
+  - Column spec `llrllrrr` → `lrllrrr`
+- Update related unit tests asserting `"Agent Models" in markdown`.
+
+### 7.3 Surgical .tex/.md artifact editing fallback
+
+**When to use**: Generator code is fixed, but `pixi run python -m scripts.generate_tables` fails to regenerate from the current data layout — typically because `load_all_experiments` requires `<data-dir>/<exp-name>/<timestamp>/` nesting and the actual layout is flat (`<data-dir>/<timestamp>-test-NNN/`). Fixing the loader is out of scope for the current PR.
+
+**Workaround**: Edit the generator code (so future runs are correct) AND strip the offending column from already-published `.tex`/`.md` artifacts in place:
+
+```python
+from pathlib import Path
+p = Path("docs/<paper>/tables/tab07_subtest_detail.tex")
+out = []
+for line in p.read_text().splitlines():
+    if line == r"\begin{longtable}{llrrrrrll}":
+        out.append(r"\begin{longtable}{lrrrrrll}")
+    elif line.startswith("Model & Tier"):
+        out.append(line.replace("Model & Tier", "Tier"))
+    elif line.startswith(r"\multicolumn{9}"):
+        out.append(line.replace(r"{9}", r"{8}"))
+    elif line.startswith("<MODEL_NAME> & "):
+        out.append(line[len("<MODEL_NAME> & "):])
+    else:
+        out.append(line)
+p.write_text("\n".join(out) + "\n")
+```
+
+**Verify rebuild**: `pdflatex -interaction=nonstopmode -halt-on-error paper.tex` — expect zero errors and `grep -E '^! |Error' paper.log` to be empty.
+
+### 7.4 Duplicate `\subsubsection{}` heading detection
+
+**When to use**: A long paper accumulated a duplicated `\subsubsection{}` (often a stub heading with empty body left from a refactor). Easy to miss visually.
+
+```bash
+# Per-title check
+grep -c "Consensus Scoring and Signal Loss" paper.tex   # should be 1; if 2 → duplicate
+
+# Whole-paper sweep (find any duplicated subsubsection title)
+awk '/^\\subsubsection\{/ {print NR, $0}' paper.tex | sort -k2- | uniq -d -f1
+```
+
+**Fix**: When the first occurrence is an orphaned heading (the `\subsubsection{...}` line followed by a blank line then unrelated content), delete those two lines — the second occurrence carries all the prose.
+
+### 7.5 `\item[…]` description block deduplication
+
+**When to use**: Reviewer flags a `\begin{description}` block where each `\item[Name]` opens with prose AND closes with redundant `\emph{Difficulty}: …  \emph{Repository}: …  \emph{Language}: …  \emph{Expected outcome}: …` italicized metadata that just restates the prose.
+
+**Fix**: Fold the substantive metadata into the opening prose (e.g., "A trivial Python task in the Hello-World repository requiring …") and delete the four italicized lines.
+
+**Verify**:
+
+```bash
+grep -nE '\\emph\{(Difficulty|Repository|Language|Expected outcome)\}' paper.tex   # expect 0 hits
+```
+
+### Phase 7 Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Regenerate Table 7 via `scripts/generate_tables.py --data-dir ~/fullruns/haiku-2 --output-dir docs/arxiv/haiku/tables` | Standard pipeline regen | `load_all_experiments` requires `<exp>/<timestamp>/` layout; haiku-2 has flat `<timestamp>-test-NNN` dirs, so the loader can't determine `agent_model` and aborts with "Could not determine agent model" | Fix the generator code so future runs are correct, but for the current paper edit the published `.tex`/`.md` artifacts in place with a column-stripping Python script (Phase 7.3) |
+| `pixi run pytest tests/unit/analysis/test_tables.py` | Validate generator change | Pre-existing pixi env breakage: `ImportError: cannot import name 'console_main' from 'pytest'` (env was using Python 3.14 with broken pytest) | Fall back to `pixi run python -c "..."` smoke test that imports the generator function directly and asserts on header/column-spec strings — does not depend on the broken pytest entry point |
+| `gh pr merge 1912 --auto --rebase` | Standard project workflow per ProjectScylla CLAUDE.md | Repository disallows rebase merges: `GraphQL: Merge method rebase merging is not allowed` | Use `--squash` instead; this repo's branch protection requires squash auto-merge despite project docs saying otherwise |
+
 ## Related Skills
 
 - `latex-compilation` - Compiling LaTeX documents with proper error checking
 - `statistical-rigor` - Applying appropriate statistical language for sample sizes
 - `code-review` - Systematic review patterns applicable to paper review
+- `statistical-claim-verification` - Verifying statistical claims from raw CSV before editing
 
 ## Verified On
 
@@ -746,6 +876,7 @@ EOF
 | --------- | --------- | --------- |
 | ProjectScylla | Haiku analysis paper LaTeX build (2026-04-06–08) | v3.0.0: Verified 60+ quantitative claims, caught statistical method naming error, fixed Unicode/table/path issues, built arXiv submission |
 | ProjectScylla | Haiku paper paragraph-level data validation (2026-04-27) | v3.1.0: Fixed tectonic "Missing $ inserted" error in tab04_criteria_performance.tex by escaping underscores in static table AND fixing Python pipeline (`src/scylla/analysis/tables/comparison.py:587`); `pixi run paper-build` succeeds (57 pages, 1,003 KiB), all 3 table04 pytest tests pass |
+| ProjectScylla | Haiku paper post-review revisions (2026-05-05, PR #1912 — `paper-revisions-haiku`) | v3.3.0: Phase 7 captured — first-person-plural→singular pronoun substitution with URL/email protection; dropped `Model`/`Agent Models` columns from Table 7 + Table 9 generators (single-model study); surgical `.tex`/`.md` artifact edit when `load_all_experiments` rejected the flat-timestamp data layout at `~/fullruns/haiku-2/`; detected + fixed duplicate `\subsubsection{Consensus Scoring and Signal Loss}` heading; deduplicated `\item[…]` description blocks by folding `\emph{Difficulty/Repository/Language/Expected outcome}` metadata into prose. `pdflatex` builds cleanly to 55 pages; pre-commit ruff/format/all hooks pass on commit `aa8ca1da` |
 
 ## References
 
