@@ -1,0 +1,49 @@
+# podman-scratch-image-healthcheck-workaround — History
+
+## v1.1.0 (2026-05-05)
+
+**Changed by:** Atlas v0.2.0 distroless image rollout (`ghcr.io/homericintelligence/atlas:v0.2.0`, ~14.9 MB, `gcr.io/distroless/static-debian12:nonroot`)
+**Verification:** verified-local
+
+### What changed
+
+- Renamed scope: applies equally to **podman compose** and **docker compose** — `docker compose` was a separate confirmed reproduction, not just a theoretical extension.
+- Added the four-way audit checklist (Dockerfile `HEALTHCHECK`, compose `healthcheck:`, k8s `livenessProbe`/`readinessProbe` with `exec`, operator runbooks that say "exec into the container") as the Quick Reference. Whenever you switch a service to distroless / scratch / minimal, all four must be audited or they break silently.
+- Added the explicit alternatives table: drop healthcheck (recommended), switch to `distroless/static:debug-nonroot` (~5 MB busybox surface), build a `-healthcheck` flag into the binary (cleanest long-term), sidecar with curl (rejected — defeats single-container simplicity).
+- Added external-probe pattern: rely on Docker's process-up signal + external HTTP probes against `:PORT/livez` (liveness) and `:PORT/readyz` (readiness). The probes live outside the container, where wget/curl exist.
+- Added 1 new Failed Attempts row: `gcr.io/distroless/static-debian12:nonroot` + `wget` healthcheck → `OCI runtime exec failed: ... exec: "wget": executable file not found in $PATH`.
+- Added Atlas v0.2.0 to the Verified On table.
+- Bumped to v1.1.0 (minor — extends scope, adds checklist, adds findings; recommendation unchanged).
+
+### Why
+
+Original v1.0.0 was framed around podman + NATS scratch images. The Atlas v0.2.0 rollout produced an independent confirmation under docker compose with `gcr.io/distroless/static-debian12:nonroot` — same root cause (no shell, no wget, no curl in distroless), same fix (remove the in-container healthcheck and rely on external probes). Generalizing the skill keeps it findable for both podman and docker users, and the four-way audit closes the gap where operators forget to check k8s probes and runbooks even after fixing the compose file.
+
+### Previous version (v1.0.0) snapshot
+
+```yaml
+---
+name: podman-scratch-image-healthcheck-workaround
+description: "Work around healthcheck failures for scratch/distroless container images in podman compose. Use when: (1) NATS or other scratch images fail CMD-SHELL healthchecks, (2) depends_on service_healthy blocks container startup, (3) minimal images have no shell or utilities."
+category: debugging
+date: 2026-03-30
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - podman
+  - healthcheck
+  - scratch
+  - distroless
+  - nats
+  - compose
+---
+```
+
+Body covered: podman compose hangs because NATS scratch healthcheck `wget` fails; remove the healthcheck; change `depends_on: condition: service_healthy` to plain `depends_on: - name`; add connection retry loop in the dependent service. Failed attempts table covered `CMD-SHELL "wget ..."`, `CMD-SHELL "true"`, `CMD ["nats-server", "--help"]`, and `CMD-SHELL "nats-server --help > /dev/null 2>&1"`. Verified on Odysseus E2E compose with `nats:latest`.
+
+---
+
+## v1.0.0 (2026-03-30)
+
+**Initial version.** Documented the podman compose hang caused by NATS scratch images failing wget/sh-based healthchecks. Recommended removing the healthcheck and using start-order-only `depends_on` plus client-side retry loops.
