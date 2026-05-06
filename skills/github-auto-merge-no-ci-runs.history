@@ -1,5 +1,20 @@
 # Amendment History: github-auto-merge-no-ci-runs
 
+## v1.2.0 — 2026-05-05
+
+**Author:** Claude Opus 4.7 (via hephaestus:learn)
+**Source:** Bulk auto-merge sweep across HomericIntelligence/ProjectCharybdis after review-requirement was relaxed (2026-05-05)
+
+### Changes
+
+- Bumped `version` to 1.2.0 and refreshed `date` to 2026-05-05
+- Extended `description` frontmatter with new trigger condition (10): armed auto-merges do not auto-fire after branch protection rules are relaxed (e.g., review requirement removed) — must be nudged with manual `gh pr merge <n> --squash`
+- Added new "When to Use" bullet covering the relaxed-protection nudge pattern
+- Added new "Failed Attempts" row documenting that waiting after relaxing branch protection does not flush armed auto-merges
+- Added new "Verified On" row: HomericIntelligence/ProjectCharybdis 2026-05-05 (23 CLEAN PRs swept; 17 merged cleanly, 6 reported DIRTY due to sibling-induced conflicts)
+
+---
+
 ## v1.1.0 — 2026-05-05
 
 **Author:** Claude Sonnet 4.6 (via hephaestus:learn)
