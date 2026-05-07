@@ -1,21 +1,65 @@
+# History: ci-cd-pre-commit-ci-hook-failures
+
+## v1.1.0 — 2026-05-07
+
+**Type**: minor (additive — new findings appended)
+
+**Source**: ProjectHermes session — PR #598
+
+**Changes**:
+
+1. Added Phase 7: `no-commit-to-branch` Hook Conflict with CI on Main. The hook
+   from `pre-commit/pre-commit-hooks` checks `git symbolic-ref HEAD`, so when CI
+   runs `pre-commit run --all-files` on `push: branches: [main]`, HEAD is
+   genuinely on `main` and the hook fires by design. No `stages:` or `SKIP=`
+   workaround is clean — the verified fix is to remove the hook entirely
+   because GitHub branch protection is the real gate against direct pushes.
+
+2. Added Phase 8: `_required.yml` Lint Job Consolidation Pattern. Mirrors the
+   Odyssey/Scylla pattern with `actions/cache` keyed on `.pre-commit-config.yaml`
+   hash (~30-60s savings per run), `fetch-depth: 0` checkout, and
+   `--show-diff-on-failure` so contributors can see auto-fix diffs in CI logs.
+   Includes guidance on removing the duplicate `Run pre-commit` step from
+   `ci.yml` once the lint job is in branch-protection required checks.
+
+3. Added three Failed Attempts rows covering the unsuccessful workarounds for
+   the `no-commit-to-branch` problem: `stages: [pre-commit]`,
+   `SKIP=no-commit-to-branch` env var, and a custom local hook checking branch
+   name.
+
+4. Added "Use when" triggers (4) and (5) to the description, and corresponding
+   bullets to the `## When to Use` list.
+
+5. Added ProjectHermes row to the Verified On table.
+
+**Verification**: verified-ci (PR #598 + 32 follow-on PRs merged on top of
+fixed main)
+
+---
+
+## v1.0.0 — 2026-05-02
+
+Initial version. Covers diagnosing 4 distinct pre-commit hook failures in CI on
+ProjectOdyssey PR #5347: `no-pixi-env-in-workspace`, `check-print-debug-artifacts`,
+Ruff E402, and Markdownlint MD029. Documents the general pattern of "custom
+hooks fire in CI but are designed for developer machines only" with a
+`${CI:-}` env-var-based bypass, plus rebase-conflict resolution for
+`actions/checkout` SHA pin disagreements.
+
+### Previous version snapshot (v1.0.0)
+
+```markdown
 ---
 name: ci-cd-pre-commit-ci-hook-failures
 description: "Diagnose and fix multiple distinct pre-commit hook failures in CI on a PR
   branch. Use when: (1) CI pre-commit/lint/precommit-benchmark jobs are failing, (2) a
   PR introduces changes that trigger 2+ different hook types simultaneously, (3) custom
-  hooks fire in CI but are designed for developer machines only, (4) `no-commit-to-branch`
-  pre-commit hook fires on push-to-main CI runs because HEAD is genuinely on `main`; the
-  hook is incompatible with `pre-commit run --all-files` in CI by design and cannot be
-  made to 'always run, always pass' — remove the hook (branch protection is the real gate)
-  rather than bypassing, (5) consolidating `pre-commit run --all-files` into a `_required.yml`
-  lint job; mirror the Odyssey/Scylla pattern: `actions/cache` keyed on `.pre-commit-config.yaml`,
-  `fetch-depth: 0` checkout, `--show-diff-on-failure` flag."
+  hooks fire in CI but are designed for developer machines only."
 category: ci-cd
-date: 2026-05-07
-version: "1.1.0"
+date: 2026-05-02
+version: "1.0.0"
 user-invocable: false
 verification: verified-ci
-history: ci-cd-pre-commit-ci-hook-failures.history
 tags: []
 ---
 
@@ -37,9 +81,6 @@ tags: []
 - Ruff reports `E402` (module-level import not at top of file) in test utilities
 - Markdownlint MD029 (ordered list prefix) fails in documentation files
 - A pygrep hook matches `print.*(NOTE|TODO|FIXME)` in example files
-- `no-commit-to-branch` hook is configured with `args: [--branch, main]` AND CI runs `pre-commit run --all-files` on push to main — every push-to-main CI run fails by design
-- Setting up a new `_required.yml` lint job that runs pre-commit; need cache + `--show-diff-on-failure` boilerplate
-- Considering `stages: [pre-commit]` or `SKIP=no-commit-to-branch` to fence the hook to local-only — both are wrong solutions; remove the hook instead
 
 ## Verified Workflow
 
@@ -207,82 +248,6 @@ git push --force-with-lease origin <branch>
 **Do not** write a Python script to resolve conflicts — Edit tool direct edits are
 simpler and easier to review.
 
-### Phase 7: `no-commit-to-branch` Hook Conflict with CI on Main
-
-**Root cause**: The `no-commit-to-branch` hook (from `pre-commit/pre-commit-hooks`) checks
-whether the current `git symbolic-ref HEAD` is on the configured branch (e.g., `main`).
-On developer machines this prevents accidental local commits to main. But when CI
-runs `pre-commit run --all-files` on a `push: branches: [main]` workflow, HEAD is
-genuinely on `main` — the hook fires correctly and exits 1.
-
-**Why bypasses don't work cleanly**:
-
-- `stages: [pre-commit]` — the hook still runs when `pre-commit run --all-files` is invoked (which is what CI does); `stages` only affects which git-hook event triggers it.
-- `SKIP=no-commit-to-branch` env var on the CI step — works mechanically, but introduces special-case logic that drifts (a future contributor adds another hook that needs the SKIP list, or removes the SKIP and re-breaks CI).
-- A custom local hook that checks `git rev-parse --abbrev-ref HEAD != main` — same problem; CI's HEAD is `main` legitimately.
-
-**Verified fix** — remove the hook entirely:
-
-```yaml
-# .pre-commit-config.yaml — DELETE these lines:
-- id: no-commit-to-branch
-  args: [--branch, main]
-```
-
-Rationale: GitHub branch protection (`Settings → Branches → Branch protection rules → Restrict push to matching branches`) is the actual gate. The local hook is redundant ceremony, and trying to keep it produces drift in CI configuration.
-
-If the user accidentally commits to `main`: they fix it themselves (revert / reset). The cost of an occasional human mistake is much lower than the cost of every CI run on main being red.
-
-### Phase 8: `_required.yml` Lint Job Consolidation Pattern
-
-When migrating pre-commit from a separate `ci.yml` step to a unified `_required.yml`
-lint job (matching the Odyssey/Scylla pattern):
-
-```yaml
-# .github/workflows/_required.yml
-jobs:
-  lint:
-    runs-on: ubuntu-24.04
-    steps:
-      - uses: actions/checkout@<sha>          # v4.2.2 or pinned
-        with:
-          fetch-depth: 0                       # pre-commit may need history
-      - uses: prefix-dev/setup-pixi@<version>
-        with:
-          pixi-version: <pinned>
-          cache: true
-      - name: Cache pre-commit environments
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
-          restore-keys: |
-            pre-commit-${{ runner.os }}-
-      - name: Run pre-commit
-        run: pixi run pre-commit run --all-files --show-diff-on-failure
-      - name: Lint
-        run: pixi run lint
-      - name: Type check
-        run: pixi run typecheck
-```
-
-**Key elements**:
-
-| Element | Why |
-|---------|-----|
-| `fetch-depth: 0` | Some hooks (ruff with `--diff` mode, custom git-aware hooks) need full history |
-| `actions/cache` on `~/.cache/pre-commit` | Avoids re-installing every hook env on every CI run; ~30-60s savings |
-| Cache key includes `hashFiles('.pre-commit-config.yaml')` | Cache invalidates only when hooks change |
-| `--show-diff-on-failure` | When auto-fix hooks run (end-of-file, trailing-ws, ruff-format), CI logs show the exact diff; contributors can paste into their checkout |
-| `pixi run pre-commit ...` | Run pre-commit from inside the pixi environment so its tools (mypy, ruff) match local versions |
-
-**When to remove the duplicate `Run pre-commit` step from `ci.yml`**:
-
-After the `_required.yml` lint job is the gate (i.e., listed in branch-protection
-required checks), the `ci.yml` `Run pre-commit` step becomes redundant. Delete it.
-Two pre-commit invocations on every PR is wasted CI minutes and doubles the failure
-surface (a transient hook env download error fails twice).
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -290,9 +255,6 @@ surface (a transient hook env download error fails twice).
 | Pushed without local pre-commit | Pushed the PR branch without running `pixi run pre-commit run --all-files` first | All 4 failures could have been caught locally, wasted 2 CI cycles | **Always run `SKIP=mojo-format pixi run pre-commit run --all-files` before pushing** |
 | Python script for conflict resolution | Wrote a script to parse and resolve git conflict markers | User rejected this approach — wanted direct Edit tool usage | Use Edit tool on conflict marker blocks directly; it is simpler and reviewable |
 | Partial markdown fix | Fixed 42 markdownlint errors (line-length, blank lines, code fences) in one commit | Missed MD029 (ordered list prefix) in the Action Plan section; required a second commit | Run `pixi run npx markdownlint-cli2 <file>` locally after editing; ensure zero errors before committing |
-| Tried `stages: [pre-commit]` to fence `no-commit-to-branch` to local-only | Added `stages: [pre-commit]` field to the hook config | The `pre-commit run --all-files` invocation in CI ignores `stages` (it runs every hook regardless of stage); CI still tripped on push-to-main runs | `stages` controls which git-hook event fires the hook, not whether `--all-files` runs it. The hook fundamentally checks current branch HEAD; only a real bypass (env var SKIP, or removal) works |
-| Tried `SKIP=no-commit-to-branch` env var on the CI pre-commit step | Added `env: { SKIP: no-commit-to-branch }` to the workflow YAML | Worked mechanically but introduced special-case configuration that's easy to drift (a future contributor adds another hook needing SKIP, or removes the env and re-breaks CI on push-to-main) | Bypasses are special cases; the user explicitly didn't want them. Remove the hook instead — branch protection is the real gate |
-| Tried adding a custom local hook checking `git rev-parse --abbrev-ref HEAD` | Wrote a local hook that asserts current branch is not main | Same root problem — CI runs on `main` so the assertion fires correctly; this just renamed the bug | The fundamental incompatibility is between "block commits to main" semantics and "CI on push:branches:[main] runs pre-commit" — no creative reformulation fixes it |
 
 ## Results & Parameters
 
@@ -333,7 +295,6 @@ or blank lines) are treated as distinct lists and must each start at `1`.
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectOdyssey | PR #5347 pre-commit/lint/precommit-benchmark failures | 4 hooks fixed; CI green |
-| ProjectHermes | 2026-05-07: `no-commit-to-branch` hook caused every push-to-main run to fail; PR #598 removed the hook + consolidated pre-commit into `_required.yml` lint job (cache + `--show-diff-on-failure`); 32 PRs subsequently rebased and merged on top of fixed main | verified-ci |
 
 ## References
 
@@ -343,3 +304,4 @@ or blank lines) are treated as distinct lists and must each start at `1`.
 - [fix-ruff-pre-commit-failures](fix-ruff-pre-commit-failures.md)
 - [markdownlint-troubleshooting](markdownlint-troubleshooting.md)
 - [rebase-conflict-resolution-and-hook-exclusions](rebase-conflict-resolution-and-hook-exclusions.md)
+```
