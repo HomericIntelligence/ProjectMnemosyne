@@ -1,11 +1,11 @@
 ---
 name: parallel-pr-worktree-workflow
-description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput."
+description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task."
 category: ci-cd
-date: 2026-03-28
-version: "1.0.0"
+date: 2026-05-06
+version: "1.1.0"
 user-invocable: false
-verification: unverified
+verification: verified-local
 tags: []
 ---
 # Parallel PR Worktree Workflow
@@ -32,6 +32,9 @@ tags: []
 - Issues are interdependent (use sequential PRs from `batch-pr-rebase-conflict-resolution-workflow`)
 - Codebase is unstable (fix stability first)
 - Limited CI resources (parallel PRs can overwhelm CI)
+- Single sub-agent on a short task: the worktree setup overhead isn't worth it; just use the parent repo
+- Sub-agents that are pure-research (no commits): no isolation needed
+- A sub-agent that legitimately needs to read other branches' state: use the parent repo. Worktrees are for write isolation, not read
 
 ## Verified Workflow
 
@@ -153,6 +156,67 @@ Batch 1 agent: tmp-b1-<issue-number>
 Batch 2 agent: tmp-b2-<issue-number>
 Main conversation: tmp-<issue-number>
 ```
+
+#### Sub-Agent Brief Template (Wave Orchestration)
+
+When launching N concurrent sub-agents that each commit and push from the same repo:
+
+```bash
+# Per concurrent sub-agent: create an isolated worktree off the integration base
+git -C <repo> fetch origin
+git -C <repo> worktree add -B <feature-branch> /tmp/<repo-stem>-wt-<task> origin/<integration-base>
+```
+
+Brief the sub-agent with the worktree path explicitly:
+
+```
+Your dedicated working directory is /tmp/<repo-stem>-wt-<task>.
+All git operations must happen inside that directory.
+Do NOT touch <parent-repo-path> or any other /tmp/<repo-stem>-wt-* worktree —
+those are concurrent sub-agents.
+
+Open the PR with: gh pr create --base <integration-base> ...
+Then arm auto-merge: gh pr merge --auto --squash
+```
+
+**Brief sizing**: ~80-120 line prompts per sub-agent work well. Less than ~50 lines and the agent guesses; more than ~150 and it skims. Always include in the brief: explicit worktree path, explicit "do NOT touch other worktrees" warning, the `--base <integration-base>` invocation, the auto-merge command, and the verification commands (test + lint + security scan).
+
+#### Integration Base Branch Pattern
+
+For long PR series (10+ PRs across waves):
+
+1. Establish ONE integration base branch that all parallel PRs target (e.g. `fix/<area>-v0.X.Y-<theme>`).
+2. Each PR opens with `--base <integration-base>` and auto-squash-merges into it.
+3. The integration base merges to `main` once at the end via a single review.
+
+This avoids N separate PRs each requiring their own main rebase as concurrent merges land.
+
+#### Trust-but-Verify Sub-Agent Reports
+
+After every sub-agent reports done, the integrator (parent session) MUST verify against the GitHub API. Sub-agent reports describe intent; the API tells you reality:
+
+```bash
+gh pr view <#> --repo <org/repo> \
+  --json state,mergedAt,baseRefName,additions,deletions,files,mergeable,mergeStateStatus \
+  --jq '{state, mergedAt, base: .baseRefName, mergeable, mergeStateStatus, additions, deletions, files: [.files[].path]}'
+```
+
+This single call confirms scope (no surprise files), merge state, and conflict status. If `mergeable: CONFLICTING`, a concurrently-merged PR rewrote a line your branch also touched. Resolve in the worktree: `cd /tmp/<path> && git rebase origin/<integration-base>`, force-push, re-arm auto-merge.
+
+#### Submodule Wrinkle
+
+`git -C <submodule-path> worktree add` works correctly but `git worktree list` shows the worktree under `.git/modules/<submodule>/...` rather than the visible submodule path. The submodule's `.git` is a `gitdir:` indirection file pointing into the parent's modules dir. This is fine — don't be surprised by the list output, and use the visible submodule path when scripting `git -C` commands.
+
+#### Per-PR Worktree Cleanup
+
+After each PR merges, tear down its worktree:
+
+```bash
+git -C <repo> worktree remove --force /tmp/<repo-stem>-wt-<task>
+git -C <repo> worktree prune
+```
+
+Cleanup is cheap. Re-creating a worktree from `origin/<base>` takes seconds and gives a clean state. Do NOT reuse a worktree path across sub-agents — give each sub-agent its own.
 
 ### Phase 5: Implementation Pattern (Per Worktree)
 
@@ -357,6 +421,11 @@ gh issue close <issue-number> --comment "Fixed in PR #<number>"
 | Grandfathered file list missing entries | Added test-count guard hook with allowlist | Missed `DISABLED_test_batchnorm.mojo` which has 14 tests | When adding validation hooks, run against ALL files first to build a complete allowlist |
 | 1 PR per agent for 13 PRs | Spawned 13 individual agents | Excessive agent spawn overhead; 5-agent-per-wave limit means 3 waves minimum | Batch 3-4 PRs per agent (sequential within agent) — 4 agents handle 13 PRs in 1 wave |
 | Sequential PRs instead of parallel | Processed all PRs one at a time | 3-4x slower than parallel worktree approach | Use git worktrees + auto-merge for 5+ independent fixes |
+| Wave-1 shared tree across two sub-agents | Two sub-agents (CI hygiene + rollback runbook) both ran `git checkout` on the same physical clone | Sub-agent A's `git checkout` reverted sub-agent B's working tree mid-edit. B reported "the working tree was twice reverted to the parent branch's state (a different process switched branches)" and had to commit defensively after each edit, then `git reset --soft HEAD~2 && commit` to merge them | Two `git checkout` operations on the same working tree race. Branch state IS the working tree. Always assign per-sub-agent worktrees, NEVER share |
+| Trusting sub-agent "auto-merge armed" reports without API verification | Took the sub-agent at its word that auto-merge was set | One PR reported "auto-squash armed" but was actually `mergeable: CONFLICTING` because a concurrent PR had rewritten the same lines. The repo also forbids rebase merges; what looked like "armed" was a no-op error | Always `gh pr view <#> --json mergeable,mergeStateStatus,state` after a sub-agent reports done. Sub-agents narrate intent; the API tells you reality. If rebase-merge is forbidden, use `--squash` |
+| Skipping per-PR worktree cleanup | Left worktrees around after PRs merged thinking they'd be reused | Disk usage grew (each worktree is a full ~170-file copy) and stale branch tips accumulated | Cleanup is cheap (`worktree remove --force` + `worktree prune`) and re-creating a worktree from `origin/<base>` takes seconds. Tear down per PR |
+| Brief too short (<50 lines) | Sent compact prompts to sub-agents to "save tokens" | Sub-agent guessed at file paths, branch names, integration base; ~30% rework rate | ~80-120 line briefs hit the sweet spot. Include explicit worktree path, "don't touch other worktrees" warning, exact `--base` flag, auto-merge command, and verification commands |
+| Reusing worktree path across sub-agents | Removed worktree A after agent A finished, gave agent B the same path | Subtle git-state contamination from leftover index/refs even after `worktree remove` | Each sub-agent gets a unique path. The path IS the isolation boundary; the branch is just a label |
 
 ## Results & Parameters
 
@@ -447,3 +516,4 @@ executor: haiku      # Simple rebase, pre-commit fixes
 | ProjectScylla | 9/10 stale PRs fixed in 3 iterative rounds | parallel-pr-rebase-fix source |
 | ProjectScylla | 9 parallel worktrees, 24 fixes, 1,500+ lines removed | parallel-pr-workflow source |
 | ProjectMnemosyne | 30 open skill PRs bulk merged, 2026-03-03 | bulk-skill-pr-merge source |
+| HomericIntelligence/ProjectArgus | Atlas v0.2.1 patch series; 17 PRs landed across 6 waves (PRs #463-#474). Wave-1 used a shared tree and hit working-tree-revert bleed-over; waves 2-6 used per-sub-agent `/tmp/<repo>-wt-<task>` worktrees with zero state interference. 1 mid-flight conflict caught via `gh pr view --json mergeable`; 1 false "auto-merge armed" report caught the same way (rebase forbidden, switched to `--squash`). | Sub-agent PR isolation amendment (v1.1.0) |

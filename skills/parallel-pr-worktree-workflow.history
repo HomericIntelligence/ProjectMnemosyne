@@ -1,0 +1,40 @@
+# parallel-pr-worktree-workflow — History
+
+## v1.1.0 (2026-05-06)
+
+**Changed by:** HomericIntelligence/ProjectArgus Atlas v0.2.1 patch series (PRs #463-#474)
+**Verification:** verified-local
+
+### What changed
+- Expanded `description` with two new triggers:
+  - (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo
+  - (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task
+- Added Phase 4 sub-section "Sub-Agent Brief Template (Wave Orchestration)" with the `/tmp/<repo-stem>-wt-<task>` per-agent path convention
+- Added "Integration Base Branch Pattern" — single integration branch with `--base <integration-base>` per PR, single main merge at end
+- Added "Trust-but-Verify Sub-Agent Reports" with the canonical `gh pr view --json mergeable,mergeStateStatus,state` verification call
+- Added "Submodule Wrinkle" — `.git/modules/<submodule>` indirection in `git worktree list`
+- Added "Per-PR Worktree Cleanup" — tear down per PR; never reuse a path across sub-agents
+- Added 5 new Failed Attempts rows: shared-tree wave-1 collision, false auto-merge-armed report, skipped cleanup disk growth, briefs too short, reused worktree path
+- Added "Do NOT use when" entries: single-agent short task, pure-research agents, agents needing cross-branch reads
+- Added Verified On row for HomericIntelligence/ProjectArgus Atlas v0.2.1 (17 PRs, 6 waves)
+- Bumped `verification` from `unverified` to `verified-local`
+- Bumped version 1.0.0 -> 1.1.0
+- Updated `date` to 2026-05-06
+
+### Why
+A multi-hour Atlas v0.2.1 patch series orchestrated ~17 PRs across 6 waves of parallel Opus sub-agents. Wave-1 used a shared working tree and immediately hit "working tree was twice reverted to the parent branch's state" bleed-over, forcing defensive `git reset --soft && commit` recovery. Switching to per-agent `/tmp/<repo-stem>-wt-<task>` worktrees fixed it cleanly — zero state interference across waves 2-6.
+
+The session also surfaced two GitHub-API-truth lessons not previously captured here:
+1. A sub-agent reported "auto-squash armed" but the PR was actually `mergeable: CONFLICTING` AND the repo forbids rebase merges (the original `--rebase` arming was a silent no-op). Verified via `gh pr view --json mergeable,mergeStateStatus`; switched to `--squash`.
+2. Brief sizing matters: <50 lines and the agent guesses; >150 and it skims; ~80-120 lines is the sweet spot.
+
+### Previous version (v1.0.0) snapshot
+
+```yaml
+name: parallel-pr-worktree-workflow
+description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput."
+category: ci-cd
+date: 2026-03-28
+version: "1.0.0"
+verification: unverified
+```
