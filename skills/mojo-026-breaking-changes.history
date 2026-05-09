@@ -1,5 +1,30 @@
 # mojo-026-breaking-changes — History
 
+## v4.0.0 (2026-05-09)
+
+**Changed by:** ProjectOdyssey Mojo 0.26.x → 1.0.0b2 migration, PR #5353 (merged to main)
+**Verification:** verified-ci — PR #5353 merged with passing CI
+
+### What changed
+
+- Renamed scope: now covers 0.26.x AND 1.0.0b2 (was 0.26.3 only)
+- Added 13 Mojo 1.0.0b2 migration recipes (thin keyword, unified removal, UnsafePointer
+  Optional, mojo test removal, TRAIT_CALL parametric promotion, std.atomic move,
+  DYNAMIC_TRAIT thin-parameter pattern, AnyTensor↔Tensor conversion, byte_length under
+  --Werror, list-iter deref change, docstring punctuation under --Werror)
+- Added migration ordering guidance from PR #5353 (mechanical first, tests last)
+- Added 6 new Failed Attempts entries (Podman race, single-pass --Werror sweep, naive
+  sed, revert proposals, container UID writes, compiler short-circuit awareness)
+- Bumped verification from verified-local to verified-ci
+
+### Why
+
+The 0.26 → 1.0 transition is a major version bump introducing distinct breaking changes
+beyond the 0.26.x catalog. Consolidated into the existing comprehensive catalog rather
+than fragment into a separate skill — agents searching "Mojo migration" find one
+canonical document. Companion skills (`werror-compilation-audit` v2.0.0,
+`fix-podman-rootless-ci`) referenced for specialized sub-procedures.
+
 ## v2.0.0 (2026-04-08)
 
 **Changed by:** Session: fix-ci-root-causes branch, PR #5207 — full 0.26.3 migration confirmed working

@@ -1,30 +1,30 @@
 ---
 name: mojo-026-breaking-changes
-description: "Catalog of Mojo 0.26.3 breaking changes, fixes, and authoritative current syntax reference. Use when: (1) migrating a Mojo codebase from 0.26.1 to 0.26.3, (2) encountering unfamiliar compile errors after a Mojo version bump, (3) auditing code for deprecated APIs, (4) writing new Mojo code and need current syntax corrections."
+description: "Catalog of Mojo 0.26.x AND 1.0.0b2 breaking changes, fixes, and authoritative current syntax reference. Use when: (1) migrating a Mojo codebase from 0.26.x to 1.0.0b2, (2) encountering unfamiliar compile errors after a Mojo version bump, (3) auditing code for deprecated APIs, (4) writing new Mojo code and need current syntax corrections."
 category: tooling
-date: 2026-04-09
-version: "3.0.0"
+date: 2026-05-09
+version: "4.0.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
 history: mojo-026-breaking-changes.history
-tags: [mojo, breaking-changes, migration, 0.26.3, deprecation, capturing, ImplicitlyDestructible, substr, syntax, modular-upstream]
+tags: [mojo, breaking-changes, migration, 0.26.3, 1.0.0b2, deprecation, capturing, unified-removed, thin-keyword, UnsafePointer-Optional, mojo-test-removed, TestSuite, atomic, byte-length, syntax, modular-upstream]
 ---
 
-# Mojo 0.26.3 Breaking Changes Catalog
+# Mojo Breaking Changes Catalog (0.26.x → 1.0.0b2)
 
 ## Overview
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-04-08 |
-| **Objective** | Document all breaking changes and deprecation warnings introduced in Mojo 0.26.3 vs 0.26.1, with exact fixes |
-| **Outcome** | Zero compile errors confirmed locally on ~525 .mojo files / 7807 fn definitions in ProjectOdyssey (PR #5207) |
-| **Verification** | verified-local — zero compile errors confirmed; CI validation in progress |
+| **Date** | 2026-05-09 |
+| **Objective** | Document all breaking changes and deprecation warnings across Mojo 0.26.x and the 1.0.0b2 transition, with exact fixes |
+| **Outcome** | Zero compile errors across ~600+ .mojo files in ProjectOdyssey (PR #5353 merged); Mojo 1.0.0b2 migration operational |
+| **Verification** | verified-ci — PR #5353 merged to main with passing CI |
 | **History** | [changelog](./mojo-026-breaking-changes.history) |
 
 ## When to Use
 
-- Encountering compile errors after upgrading from Mojo 0.26.1 → 0.26.3
+- Encountering compile errors after upgrading from Mojo 0.26.x → 1.0.0b2
 - Need to know if a specific error is a hard error or just a deprecation warning
 - Performing a bulk migration and need a comprehensive checklist of what to fix
 - Reviewing a PR that touches Mojo version-sensitive code
@@ -70,10 +70,170 @@ pixi run mojo package -I . shared -o /tmp/shared.mojopkg 2>&1 | grep ": warning:
 6. Remove broken `__moveinit__` with `deinit other`
 7. Run again to confirm zero errors, then address deprecation warnings
 
+## Mojo 1.0.0b2 Migration Recipes (NEW in v4.0.0)
+
+The 0.26 → 1.0 transition adds a separate set of breaking changes on top of the 0.26.x
+catalog above. Apply these recipes IN ADDITION to the 0.26.x table when bumping past
+0.26.6 → 1.0.0b2. Verified end-to-end in ProjectOdyssey PR #5353 (merged).
+
+| # | Recipe | Severity | Fix |
+| --- | --- | --- | --- |
+| 1 | Parametric `def`-value parameters need `thin` keyword | HARD ERROR | `op: def[T: DType](Scalar[T]) thin -> Scalar[T]` (was implicit in 0.26) |
+| 2 | `unified` keyword removed | HARD ERROR | Use `def foo() {mut}:` or `def foo() capturing[_]:` per-closure capture lists |
+| 3 | `@parameter` on closures inside `def` becomes `@always_inline` | HARD ERROR | Replace `@parameter` with `@always_inline` on nested closures inside `def` functions |
+| 4 | `UnsafePointer` is non-null by design | HARD ERROR | Use `Optional[UnsafePointer[T]]` for nullable pointers; check via `is None`/`is not None`. Remove dead-branch `if self._refcount:` guards. Escape hatch: `UnsafePointer[T](_unsafe_null=())` for FFI sentinels |
+| 5 | `mojo test` subcommand removed | HARD ERROR | Existing `def main()` test files run via `mojo run` (NOT `mojo test`). New idiom: `from std.testing import TestSuite; TestSuite.discover_tests[__functions_in_module()]().run()` in `def main():` |
+| 6 | TRAIT_CALL — bare callable arg → parametric promotion | HARD ERROR | `def foo[FuncType: def() raises -> None](func: FuncType, ...): ...` — wrap callable args as compile-time generic parameters |
+| 7 | `std.os.atomic` → `std.atomic` | HARD ERROR | `from std.atomic import Atomic, Ordering`; rename `Consistency` → `Ordering`, `MONOTONIC` → `RELAXED` |
+| 8 | DYNAMIC_TRAIT — `def`-typed struct fields → compile-time generics | HARD ERROR | Promote callable struct fields to thin-parameter struct pattern: `struct S[F: def(T) thin -> U]: var fn_field: F` |
+| 9 | `AnyTensor` ↔ `Tensor[dtype]` type mismatch | HARD ERROR | Zero-copy conversion: `t.as_tensor[dtype]()` and `tensor.as_any()` |
+| 10 | `String.substr()` removed (re-confirmed in 1.0) | HARD ERROR | `String(s[byte=start:end])` — note `byte=` keyword is REQUIRED |
+| 11 | `String.__len__()` deprecation escalates to error under `--Werror` | DEPRECATION→ERROR | Replace `len(s)` with `s.byte_length()` for String (NOT for List). See companion `werror-compilation-audit` skill |
+| 12 | List iteration deref change | HARD ERROR | `for x in lst: ... x[] ...` → `for x in lst: ... x ...` (no longer auto-derefs to `Pointer`) |
+| 13 | Docstring summary punctuation under `--Werror` | DEPRECATION→ERROR | First non-empty line of docstring must end with `.`, `!`, `?`, or backtick. Append period to fix |
+
+### Recipe 1: `thin` keyword on parametric def-value parameters
+
+```mojo
+# BEFORE (0.26)
+def map[op: def[T: DType](Scalar[T]) -> Scalar[T]](...): ...
+
+# AFTER (1.0.0b2 — `thin` is required, was implicit in 0.26)
+def map[op: def[T: DType](Scalar[T]) thin -> Scalar[T]](...): ...
+```
+
+### Recipe 2-3: `unified` keyword removed; `@parameter` → `@always_inline`
+
+```mojo
+# BEFORE (0.26)
+def outer(mut buf: List[Int]) raises:
+    @parameter
+    def closure() raises unified:
+        buf.append(42)
+    closure()
+
+# AFTER (1.0.0b2)
+def outer(mut buf: List[Int]) raises:
+    @always_inline
+    def closure() {mut buf} raises:    # per-closure capture list
+        buf.append(42)
+    closure()
+```
+
+Alternative: `def closure() capturing[_] raises:` for value-capture.
+
+### Recipe 4: UnsafePointer is non-null
+
+```mojo
+# BEFORE (0.26)
+struct S:
+    var _refcount: UnsafePointer[Int]
+    def is_owned(self) -> Bool:
+        return Bool(self._refcount)        # truthiness check
+
+# AFTER (1.0.0b2)
+struct S:
+    var _refcount: Optional[UnsafePointer[Int]]
+    def is_owned(self) -> Bool:
+        return self._refcount is not None
+# Remove `if self._refcount:` dead-branch guards entirely — they were always-true.
+# FFI escape hatch when you MUST construct a null sentinel:
+# var p = UnsafePointer[T](_unsafe_null=())
+```
+
+### Recipe 5: mojo test subcommand removed
+
+```mojo
+# Old (0.26): top-level `def test_foo():` discovered by `mojo test`
+# New (1.0.0b2): explicit TestSuite in def main()
+from std.testing import TestSuite, assert_equal
+
+def test_basic() raises:
+    assert_equal(1 + 1, 2)
+
+def main() raises:
+    TestSuite.discover_tests[__functions_in_module()]().run()
+```
+
+Existing hand-rolled `def main()` test files continue to run via `mojo run`.
+
+### Recipe 6: TRAIT_CALL parametric promotion
+
+```mojo
+# BEFORE (0.26)
+def run_with_retry(func: def() raises -> None, max: Int) raises: ...
+
+# AFTER (1.0.0b2)
+def run_with_retry[FuncType: def() raises -> None](
+    func: FuncType, max: Int
+) raises: ...
+```
+
+### Recipe 7: atomic module move
+
+```mojo
+# BEFORE
+from std.os.atomic import Atomic, Consistency
+var counter = Atomic[DType.int64](0)
+counter.fetch_add(1, Consistency.MONOTONIC)
+
+# AFTER
+from std.atomic import Atomic, Ordering
+var counter = Atomic[DType.int64](0)
+counter.fetch_add(1, Ordering.RELAXED)
+```
+
+### Recipe 11: byte_length() for String under --Werror
+
+```mojo
+# BEFORE
+var n = len(my_string)
+
+# AFTER
+var n = my_string.byte_length()  # for String
+var m = len(my_list)              # still correct for List, Span, Dict
+```
+
+The compiler stops at the first error per file, so iterative sweeps reveal new sites
+after each batch. See `werror-compilation-audit` skill v2.0.0 for the column-precise
+mechanical-fix pattern.
+
+### Recipe 13: Docstring summary punctuation
+
+```mojo
+# BEFORE — fails under --Werror
+def foo():
+    """Compute something useful"""
+    ...
+
+# AFTER
+def foo():
+    """Compute something useful."""
+    ...
+```
+
+Acceptable terminators: `.`, `!`, `?`, or trailing backtick (for inline-code summaries).
+
+### Migration ordering (lessons from PR #5353)
+
+1. Bump `pixi.toml` to `mojo = "==1.0.0b2"`, run `pixi install` IN A FRESH ENV
+2. Sweep `--Werror` deprecations (Recipe 11, 13) FIRST — they're column-precise and mechanical
+3. Then fix `unified` → per-closure capture lists (Recipe 2)
+4. Then fix `thin` keyword on def-value parameters (Recipe 1)
+5. Then fix UnsafePointer nullability (Recipe 4)
+6. Tests last (Recipe 5) — most projects had hand-rolled `def main()` already
+7. Remember: compiler stops at FIRST error per file. After each fix batch, re-run to surface new errors
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 | --------- | ---------------- | --------------- | ---------------- |
+| `pixi install` from host with mismatched UID | Ran `podman compose up -d` then chmodded workspace | `pixi install` ran inside container entrypoint synchronously, racing the host chmod. Symlinking `.pixi/envs` failed with "Permission denied (os error 13)" | chmod workspace BEFORE `podman compose up`, not after. See companion `fix-podman-rootless-ci` skill |
+| Single-pass `--Werror` sweep on `shared/` | Ran `just ci-build` once, fixed all reported errors, declared done | Tests under `tests/` were excluded by the build sweep; CI red on test files | `--Werror` only fires on the build target. Probe tests separately with `mojo build --Werror -I . <test_file>` |
+| Naive `len(x) → x.byte_length()` regex sweep | sed-replaced all `len()` calls inside .mojo files | Broke `len(my_list)` calls — both String AND List use `len()` | Must check argument type. Mechanical fix only after column-precise compiler diagnostic identifies String args |
+| Reverting Mojo bump when CI flaked | Discussed reverting `pixi.toml` to 0.26.6 | User vetoed (see CLAUDE.md: "No reverting Mojo bumps") | Fix forward: file upstream issue, implement workaround, never revert |
+| Trying to fix from host when files are container-UID-owned | Ran `mojo format` from host; got "Permission denied" writing back | Container created files with UID 1000:1000; host UID differs | `podman exec` to write, or fix UID mapping at compose time |
+| Single-file probe ignored cascading errors | Fixed Recipe 1 sites in one file, declared green | Recipe 4 errors in same file weren't surfaced — compiler short-circuits at first error | After each batch fix, re-probe ALL files; iterate until clean |
 | `fn(AnyTensor) raises capturing -> AnyTensor` as param type | Used `capturing` as type in `[ForwardFn: fn(AnyTensor) raises capturing -> AnyTensor]` | "expected a type, not a value" — wrong ordering | Correct ordering is `fn(AnyTensor) capturing raises -> AnyTensor` with `capturing` BEFORE `raises` |
 | `unified {}` empty capture list | Changed closures to `fn forward(x) raises unified {} -> AnyTensor` | "Could not infer capture convention" | Use `capturing` keyword, not `unified {}` |
 | `unified {mut}` capture list | Changed to `unified {mut}` for outer variable access | "Cannot capture X by mut because value is immutable" | Immutable outer vars cannot use `mut`; use `capturing` which captures by value |
@@ -391,4 +551,5 @@ AnyType
 | Project | Context | Details |
 | --------- | --------- | --------- |
 | ProjectOdyssey | Mojo 0.26.1 → 0.26.3 migration, ~525 .mojo files, PR #5207 | Zero compile errors confirmed locally on branch fix-ci-root-causes |
+| ProjectOdyssey | Mojo 0.26.x → 1.0.0b2 migration, ~600+ .mojo files, PR #5353 (merged) | All 13 recipes applied, CI green on main |
 | (upstream) | Modular official skills repo | Authoritative syntax reference merged in v3.0.0 |
