@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-import yaml
+from skill_utils import parse_frontmatter  # noqa: F401  (re-exported for tests)
 
 SKILLS_DIR = Path("skills")
 VALID_CATEGORIES = {
@@ -47,32 +47,6 @@ def find_plugins() -> List[Path]:
         [f for f in SKILLS_DIR.glob("*.md") if not re.match(r".*\.notes(-\w+)?\.md$", f.name) and f.is_file()]
     )
     return files
-
-
-def parse_frontmatter(content: str) -> Tuple[Dict, str, List[str]]:
-    """
-    Parse YAML frontmatter from markdown.
-    Returns (frontmatter_dict, body, errors).
-    """
-    errors = []
-
-    if not content.startswith("---"):
-        errors.append("File does not start with YAML frontmatter delimiter (---)")
-        return {}, content, errors
-
-    parts = content.split("---", 2)
-    if len(parts) < 3:
-        errors.append("Invalid frontmatter: missing closing ---")
-        return {}, content, errors
-
-    try:
-        frontmatter = yaml.safe_load(parts[1]) or {}
-    except yaml.YAMLError as e:
-        errors.append(f"Invalid YAML frontmatter: {e}")
-        return {}, content, errors
-
-    body = parts[2].lstrip("\n")
-    return frontmatter, body, errors
 
 
 def validate_frontmatter(frontmatter: Dict, filename: str) -> List[str]:
