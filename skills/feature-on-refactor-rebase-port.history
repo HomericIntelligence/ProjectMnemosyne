@@ -1,0 +1,19 @@
+# feature-on-refactor-rebase-port — History
+
+## v1.1.0 (2026-05-10)
+
+**Changed by:** ProjectHephaestus strict-review-then-fix-waves session 2026-05-10 (PRs #394, #397, #398, #399, #400)
+**Verification:** verified-local
+
+### What changed
+- Added "Drop-and-redo: when porting is uneconomic" subsection to the Verified Workflow with the 3-step triage and the "uneconomic to port" predicate (≥3 sibling-rewritten files with substantive rewrites).
+- Added 2 new Failed Attempts rows documenting (a) the `--theirs` shortcut silently losing substantive sibling changes, (b) file-by-file manual merge being uneconomic at N×call-density scale.
+- Extended the description to mention the drop-and-redo case.
+- Added `drop-and-redo` tag to frontmatter.
+- Added Verified On row for the 2026-05-10 ProjectHephaestus session.
+
+### Why
+The v1.0.0 skill assumed the feature commit could always be ported through a sibling refactor. The 2026-05-10 session surfaced the case where the feature commit is itself a wide cross-cutting refactor (276-call f-string conversion across 14 files) and the sibling waves have substantively rewritten those same files. Porting would have taken hours and produced a high-risk PR; the right move was to drop the cross-cutting commit, ship the surgical commits, and re-do the cross-cutting work as a follow-up PR off the post-merge main where it runs mechanically with no conflicts.
+
+### Previous version (v1.0.0) snapshot
+[archived — see git history for full snapshot]
