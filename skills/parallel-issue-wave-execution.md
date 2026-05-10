@@ -6,8 +6,8 @@ description: "Pattern for implementing 20-35 GitHub issues in parallel waves usi
   \ speedup via myrmidon swarm Agent(isolation:'worktree') calls, (4) CI must be green\
   \ on main before launching waves."
 category: tooling
-date: 2026-05-07
-version: 2.6.0
+date: 2026-05-10
+version: 2.7.0
 user-invocable: false
 verification: verified-local
 history: parallel-issue-wave-execution.history
@@ -26,8 +26,8 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| Date | 2026-05-07 |
-| Version | 2.6.0 |
+| Date | 2026-05-10 |
+| Version | 2.7.0 |
 | Objective | Implement 20-35 issues per repo in parallel waves using myrmidon swarm agents, with pre-verification and CI-first strategy |
 | Outcome | SUCCESS — verified across 4 repos and 237 issues: 35 PRs (ProjectScylla), 14 PRs (ProjectMnemosyne), ~34 PRs + 12 closures (ProjectKeystone 180-issue swarm), 17 PRs (ProjectTelemachy per-file mega-agents) |
 
@@ -115,19 +115,55 @@ Send a **single message** with 4-5 `Agent(isolation="worktree")` calls to run tr
 
 ```
 1. gh issue view {N} --comments
-2. git fetch origin && git rebase origin/main  # ALWAYS rebase first (critical for late waves)
+2. git fetch origin && git rebase origin/main  # MANDATORY — worktrees inherit dispatcher HEAD, not origin/main
 3. Read the relevant files, implement the minimal change
 4. pre-commit run --files <changed-files>  # targeted, not --all-files
 5. pixi install && git add pixi.lock  # REQUIRED if pyproject.toml or pixi.toml changed
 6. git add <files> && git commit -m "type(scope): description"
 7. git push -u origin {N}-description
+   # If branch was already pushed (re-run after a conflict fix):
+   # git push --force-with-lease origin {N}-description
+   # Then re-enable auto-merge: gh pr merge <pr-number> --auto --rebase
 8. gh pr create --title "..." --body "Closes #{N}"
 9. gh pr merge --auto --rebase <pr-number>
 ```
 
+**CRITICAL — Step 2 is not optional**: `Agent(isolation="worktree")` creates the worktree
+from the **dispatcher's current branch HEAD**, not from `origin/main`. If the L0 commander
+sits on a long-lived feature branch when dispatching, every agent that skips this step will
+pile the feature branch's commits onto their PR diff. The reviewers see 28+ unrelated files.
+Always run `git fetch origin && git rebase origin/main` as the very first git operation
+inside every wave-agent prompt, before any file reads or edits.
+
 **Note on step 5**: Even non-dependency changes to `pyproject.toml` (e.g. removing a ruff
 ignore rule) change the scylla package SHA in `pixi.lock`. Always run `pixi install` and
 commit the updated `pixi.lock` if `pyproject.toml` was modified.
+
+### Rebase before PR (mandatory)
+
+Every wave-agent prompt MUST include the following rebase step between the last commit and `gh pr create`. This is non-negotiable regardless of how the worktree was created.
+
+```bash
+git fetch origin
+git rebase origin/main
+# Resolve any conflicts semantically (never blindly take one side)
+# STOP and report BLOCKED if conflicts are unresolvable rather than using git rebase --skip or --abort blindly
+git push -u origin <branch>
+# If branch already existed (e.g. re-run after an earlier conflict fix):
+# git push --force-with-lease origin <branch>
+# After any force-push, re-enable auto-merge:
+# gh pr merge <pr-number> --auto --rebase
+gh pr create ...
+```
+
+**Why**: `Agent(isolation="worktree")` creates the worktree from the **dispatcher's current
+branch HEAD**. If the L0 commander is sitting on a feature branch when dispatching, every
+wave-agent inherits that base. PRs then show the feature branch's prior commits on top of
+the wave's diff — reviewers see 28+ unrelated files in what should be a 2-line PR.
+
+Verified across 12 PRs in the 2026-05-10 ProjectHephaestus session:
+- Agents that included the rebase step (W2, W4, W7, W12): PRs cleanly anchored to `origin/main`
+- Agents without the rebase step (W11, W14): PRs piled commits from the carrier branch
 
 ### Phase 4: Parallel Implementation (for worktree batches)
 
@@ -518,6 +554,7 @@ print(f'{len(pending)} PRs with pending/in-progress checks')
 | Runner queue saturation | Opened 28 PRs across 10 waves in ~20 min, each triggering 3 workflows (CI, Security Scanning, Dependency Audit) = ~84+ workflow runs queued simultaneously on a free-tier GitHub org | GitHub free-tier runner pool exhausted; no runs started for 25+ min. Attempted `gh run cancel` (accepted but runs stayed queued) and `gh run rerun` (failed: "This workflow is already running"); manual `gh workflow run` dispatch also immediately queued | Cap total concurrent PRs to ≤8 per wave window; add 2-min inter-wave delay to let runners drain before opening the next batch |
 | Relied on `gh pr merge --auto --rebase` to merge wave PRs once CI passes | Enabled auto-merge on all 5 wave PRs (HomericIntelligence/ProjectScylla 2026-05-07: #1927, #1928, #1929, #1930, #1931). After CI went CLEAN/MERGEABLE on every PR, auto-merge did not fire for ~12+ min. | GitHub's auto-merge worker is best-effort, not real-time. Org-level queue saturation or repository-level branch-protection evaluation can delay it indefinitely. Repository also disallowed rebase-merge, so `--auto --rebase` was silently downgraded by GH but still didn't fire. | Auto-merge is fire-and-forget at best. After CI is CLEAN, run `gh pr merge <N> --squash` (or `--rebase` if allowed) MANUALLY to merge immediately. Use auto-merge only as a fallback for PRs you don't need to land on a known timeline. |
 | Used `Closes #1888` in the PR body (and commit message) and squash-merged the PR | PR #1931 squash-merged into HomericIntelligence/ProjectScylla main with `Closes #1888` in the commit body and PR body. Issue #1888 stayed OPEN. | Squash-merge produces a synthetic commit; GitHub's keyword auto-close only reliably fires from the PR description on certain merge methods, and on squash merges the keyword in the synthesized commit body sometimes does not register. Branch-protection workflows that block immediate merge can also strip the closing-keyword grace window. | After a squash-merge with `Closes #N` in the body, always verify with `gh issue view <N> --json state`. If still OPEN, close manually with `gh issue close <N> --comment 'Resolved by #<PR>'`. Treat issue closure as a separate step, not a side-effect of merging. |
+| Worktree-isolated agents inherit dispatcher HEAD, not origin/main | Trusted `Agent(isolation: 'worktree')` to create worktrees from `origin/main` automatically. L0 commander was sitting on a long-lived feature branch (`review/automation-strict-fixes-2026-05-09`) when dispatching wave agents in ProjectHephaestus. | Worktrees are created from the dispatcher's current branch HEAD, not from `origin/main`. Wave agents that didn't run an explicit `git rebase origin/main` before `gh pr create` produced PRs that piled commits from the carrier branch onto the wave's diff. Reviewers saw 28 unrelated files in PRs that should have been 2. | **Every wave-agent prompt MUST include an explicit `git fetch origin && git rebase origin/main` step between the last commit and `gh pr create`.** The L0 commander cannot rely on harness-level worktree isolation alone. Verified across 12 PRs in the 2026-05-10 ProjectHephaestus session. |
 
 ## Results & Parameters
 
@@ -698,3 +735,4 @@ gh pr close <old-pr> --comment "Superseded by #<new-pr>"
 | ProjectKeystone | 180-issue C++20/NATS swarm: 7 EASY waves (67 issues) + 9 MEDIUM waves (78 issues) + 25 HARD deferred; confirmed MEDIUM cap at 3 for C++ | 2026-04-25 |
 | ProjectTelemachy | 57 issues, per-file mega-agents collapsed 12 waves → 2; 17 PRs merged | 2026-04-25 |
 | ProjectScylla | 5-PR opus wave (3 decomp + 2 observability follow-ups), 2026-05-07; surfaced auto-merge stall + squash-close failure modes | PRs #1927-#1931, all merged within ~30 min after manual `gh pr merge --squash` after CI went CLEAN; issue #1888 had to be closed manually despite `Closes #1888` keyword |
+| ProjectHephaestus | strict-review-then-fix-waves session 2026-05-10; surfaced worktree-isolation rebase trap | PRs #384-#395 across 4 wave rounds + 1 follow-up-policy PR; 25 audit issues + 16 net-new findings; 4 PRs without explicit rebase step stacked on carrier branch, 8 PRs with explicit rebase step landed cleanly on origin/main; verified via `git merge-base --is-ancestor origin/main <pr-head>` |

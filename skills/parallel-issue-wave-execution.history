@@ -1,5 +1,24 @@
 # parallel-issue-wave-execution — History
 
+## v2.7.0 (2026-05-10)
+
+**Changed by:** ProjectHephaestus strict-review-then-fix-waves session 2026-05-10 (PRs #384–#395)
+**Verification:** verified-local
+
+### What changed
+- Added 1 new Failed Attempts row about worktree-isolated agents not auto-rebasing onto origin/main.
+- Added "Rebase before PR (mandatory)" subsection to the Verified Workflow with the explicit `git fetch && git rebase origin/main && git push --force-with-lease` incantation.
+- Updated the per-agent prompt template to embed the rebase step explicitly.
+- Added Verified On row for the 2026-05-10 ProjectHephaestus session.
+
+### Why
+Worktree-isolated swarm dispatch (`Agent(isolation: 'worktree')`) creates worktrees from the dispatcher's current HEAD, not from `origin/main`. In this session the L0 commander sat on a long-lived in-flight branch when dispatching, so wave-agents without an explicit rebase step ended up stacking commits onto the carrier branch. The L0 user explicitly added the rule "make sure everything is always rebased against origin/main before creating a PR" mid-session.
+
+### Previous version (v2.6.0) snapshot
+[archived — see git history for full snapshot]
+
+---
+
 ## v2.6.0 (2026-05-07)
 
 **Changed by:** ProjectScylla 5-PR opus wave session 2026-05-07 (PRs #1927–#1931)
