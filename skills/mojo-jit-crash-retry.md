@@ -1,9 +1,9 @@
 ---
 name: mojo-jit-crash-retry
-description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular, (8) required CI checks are blocked by JIT flakiness and PRs cannot auto-merge, (9) diagnosing which of THREE distinct crash types a CI failure is: bitcast UAF (resolved), fortify_fail HOME permission (CI-only UID mismatch), or JIT volume overflow (intermittent, targeted imports fix), (10) considering @always_inline to fix bitcast crashes (ANTI-PATTERN: worsens crashes), (11) ASAP destruction crash in finite-difference perturbation loops after test output prints, (12) codebase-wide swarm elimination of bitcast UAF writes across 50+ files, (13) KGEN internal buffer overflow with fixed crash address +0x6d4ab from 4-condition trigger combination, (14) shared library modules carry heavy module-level imports that cause JIT volume overflow for all their importers, (15) splitting oversized Mojo test files per ADR-009 (<=10 functions), (16) fn main deprecation parse errors after file splitting in Mojo 0.26.3+, (17) Mojo 1.0.0b2 non-deterministic JIT crash at libKGENCompilerRTShared.so+0x6ef7b/+0x6c156/+0x6fc27 — start with the 4-hypothesis disproof checklist (Tuple destructor UAF, memory pressure, import volume, sequential test-group leak) before opening upstream, (18) launching parallel hypothesis-test sub-agents to root-cause an intermittent crash, (19) using AddressSanitizer / ThreadSanitizer / MemorySanitizer / UndefinedBehaviorSanitizer-instrumented Mojo builds to escalate when local repros fail."
+description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular, (8) required CI checks are blocked by JIT flakiness and PRs cannot auto-merge, (9) diagnosing which of THREE distinct crash types a CI failure is: bitcast UAF (resolved), fortify_fail HOME permission (CI-only UID mismatch), or JIT volume overflow (intermittent, targeted imports fix), (10) considering @always_inline to fix bitcast crashes (ANTI-PATTERN: worsens crashes), (11) ASAP destruction crash in finite-difference perturbation loops after test output prints, (12) codebase-wide swarm elimination of bitcast UAF writes across 50+ files, (13) KGEN internal buffer overflow with fixed crash address +0x6d4ab from 4-condition trigger combination, (14) shared library modules carry heavy module-level imports that cause JIT volume overflow for all their importers, (15) splitting oversized Mojo test files per ADR-009 (<=10 functions), (16) fn main deprecation parse errors after file splitting in Mojo 0.26.3+, (17) Mojo 1.0.0b2 non-deterministic JIT crash at libKGENCompilerRTShared.so+0x6ef7b/+0x6c156/+0x6fc27 — start with the 4-hypothesis disproof checklist (Tuple destructor UAF, memory pressure, import volume, sequential test-group leak) before opening upstream, (18) launching parallel hypothesis-test sub-agents to root-cause an intermittent crash, (19) using AddressSanitizer / ThreadSanitizer / MemorySanitizer / UndefinedBehaviorSanitizer-instrumented Mojo builds to escalate when local repros fail, (20) decoding a stripped libKGENCompilerRTShared.so crash trace via dynsym map + objdump (bucketing offsets against the giant `_ZNSt24uniform_int_distributionImEclISt13random_deviceEEmRT_RKNS0_10param_typeE@@Base` symbol that fronts a 60+KB stripped region), (21) recognizing that the published 3-frame trace is the Crashpad signal-handler chain (NOT the actual fault) and a coredump is required to recover the real frame, (22) cross-version offset comparison across Mojo releases inside the same unsymbolicated region as a STRONG match signal for same-defect-family classification."
 category: debugging
 date: 2026-05-09
-version: "4.0.0"
+version: "4.1.0"
 user-invocable: false
 verification: verified-local
 history: mojo-jit-crash-retry.history
@@ -171,6 +171,138 @@ were still running. Update this section after results land.
    minimal repro, sanitizer reports, and the disproof checklist results.
 7. **Implement local workaround** (test splitting per ADR-009, import audit, file
    reorganization) — never `gh run rerun` to dismiss as flake.
+
+## libKGEN Stripped-Binary Crash Forensics (v4.1.0)
+
+> **[v4.1.0]** Added 2026-05-09 from ProjectOdyssey PR #5363/5364 investigation of the
+> Mojo 1.0.0b2 KGEN +0x6ef7b/+0x6c156/+0x6fc27 crash. **Verification level: verified-local.**
+> The procedure produced the analysis we shared with upstream; the conclusions about the
+> Crashpad signal-handler chain and the unsymbolicated 60+KB region are reproducible on any
+> Mojo 1.0.0b2 install.
+
+### Why the published 3-frame trace lies
+
+When Mojo crashes inside `libKGENCompilerRTShared.so`, the printed trace looks like a
+real stack:
+
+```text
+#0 libKGENCompilerRTShared.so+0x6ef7b
+#1 libKGENCompilerRTShared.so+0x6c156
+#2 libKGENCompilerRTShared.so+0x6fc27
+#3 <unmapped>
+```
+
+It is NOT. Those three frames are Mojo's **Crashpad signal-handler chain** symbolicating
+itself after the fault. The actual fault is in frame 4 (`<unmapped>`) — JIT-emitted code
+or a freed heap region with no debug info. **You cannot diagnose the bug from the
+published trace alone — you need a coredump** (see the `gha-mojo-coredump-capture` skill
+for the CI workflow that captures one).
+
+### Step 1 — Build the dynsym map
+
+`libKGENCompilerRTShared.so` is shipped stripped, but the dynamic symbol table still
+contains entry-point names. Pipe `nm` numerically to get an address-sorted dynsym map:
+
+```bash
+LIBKGEN=$(pixi run -- bash -c 'echo $CONDA_PREFIX/lib/mojo/libKGENCompilerRTShared.so')
+nm -D --numeric-sort "$LIBKGEN" > /tmp/libkgen.dynsym
+wc -l /tmp/libkgen.dynsym  # ~thousands of entries
+```
+
+### Step 2 — Bucket the crash offsets
+
+For each crash offset, find the closest dynsym entry at or below that offset:
+
+```bash
+for off in 0x6ef7b 0x6c156 0x6fc27; do
+  awk -v target=$((off)) '
+    $1 ~ /^[0-9a-f]+$/ {
+      addr = strtonum("0x"$1)
+      if (addr <= target && addr > best) { best = addr; sym = $0 }
+    }
+    END { printf "offset %#x → %s\n", target, sym }
+  ' /tmp/libkgen.dynsym
+done
+```
+
+In Mojo 1.0.0b2 you will almost certainly see all three offsets bucket into the giant
+symbol:
+
+```text
+_ZNSt24uniform_int_distributionImEclISt13random_deviceEEmRT_RKNS0_10param_typeE@@Base
+```
+
+This symbol is **not** actually `std::uniform_int_distribution`. It is the visible
+"previous symbol" for a 60+ KB stripped region of folded-out internal functions
+(LLVM-style identical-code-folding + `--gc-sections` + symbol stripping leaves the
+template instantiation as the last named anchor). The crash is somewhere in the unnamed
+60 KB after it — you cannot resolve it further without DWARF.
+
+### Step 3 — Disassemble each frame with objdump
+
+```bash
+for off in 0x6ef7b 0x6c156 0x6fc27; do
+  echo "=== $off ==="
+  objdump -d --start-address=$((off-0x10)) --stop-address=$((off+0x30)) "$LIBKGEN"
+done
+```
+
+### Frame patterns and what they mean
+
+| Pattern at offset | Meaning | Action |
+| --- | --- | --- |
+| `call backtrace@plt` followed by `mov %eax, ...` and stores into a buffer | Signal handler symbolicating itself — **NOT the fault** | Frame is part of Crashpad chain; ignore for root cause |
+| `call *0x...(%rip)` to a function-pointer table (e.g. `lea rax,[rip+0x...]; call *(rax)`) | Registered crash callback dispatch (Crashpad) | Frame is part of signal pipeline; ignore for root cause |
+| `<unmapped>` in published trace at the next frame | Real fault is in JIT-emitted code or freed heap | **Need a coredump** to recover; see `gha-mojo-coredump-capture` |
+| `__fortify_fail_abort` at `libc.so.6+0x45330` | glibc's `_FORTIFY_SOURCE` detected a buffer overflow / format-string / stack smash in a fortified function (e.g. `memcpy`, `sprintf`) | Look one frame up — caller passed a wrong size to a fortified libc function |
+
+### Cross-version offset comparison — the strongest match signal
+
+When the same defect appears across multiple Mojo versions, the absolute offsets
+**will differ by KB** (the binary is rebuilt; symbol layout shifts). But if both crash
+sites bucket into the **same** unsymbolicated region (e.g. both inside the giant
+`uniform_int_distribution@@Base` 60+KB span), that is a **strong** match signal — same
+defect family. Document this in the upstream issue:
+
+```text
+Mojo 0.26.3:  libKGEN+0x6d4ab → bucket: uniform_int_distribution@@Base + ~3KB
+Mojo 1.0.0b2: libKGEN+0x6ef7b → bucket: uniform_int_distribution@@Base + ~7KB
+                                                                       ^^^^^
+Same anchor symbol, different intra-region offset → same internal function family
+```
+
+This is the **highest-quality fingerprint** the Mojo team can act on without a coredump,
+because it lets them grep their internal codebase for the function whose folded-out
+instantiation lives in that span.
+
+### Quick Reference
+
+```bash
+LIBKGEN=$(pixi run -- bash -c 'echo $CONDA_PREFIX/lib/mojo/libKGENCompilerRTShared.so')
+nm -D --numeric-sort "$LIBKGEN" > /tmp/libkgen.dynsym
+
+# Bucket each crash offset
+for off in <offset1> <offset2> <offset3>; do
+  awk -v t=$((off)) '$1~/^[0-9a-f]+$/{a=strtonum("0x"$1); if(a<=t&&a>b){b=a;s=$0}} END{printf "%#x → %s\n",t,s}' /tmp/libkgen.dynsym
+done
+
+# Disassemble each
+for off in <offset1> <offset2> <offset3>; do
+  objdump -d --start-address=$((off-0x10)) --stop-address=$((off+0x30)) "$LIBKGEN"
+done
+```
+
+### What this DOES NOT do
+
+- It does not give you the real fault site — frame 4 (`<unmapped>`) is unreachable from
+  the printed trace. Capture a coredump (see `gha-mojo-coredump-capture`).
+- It does not let you build Mojo from source to step through the crash — the public
+  `modular/modular` repo only ships the standard library, not the compiler. See the
+  `mojo-binary-closed-source-debugging` skill for what is and is not possible.
+- The `--sanitize=address` build will catch user-code UB but **not** UB inside
+  `libKGEN*` itself (statically linked, not ASAN-instrumented). See the
+  `mojo-sanitizer-support-matrix` skill for what each sanitizer flag actually does in
+  Mojo 1.0.0b2.
 
 ## When to Use
 
@@ -638,6 +770,8 @@ pattern for hook exceptions. Never use `--no-verify`.
 | **Re-add retry when required checks block PRs** | When required checks (`Core Types & Fuzz`, `Integration Tests`) fail non-deterministically on every main run, temptation is to increase `TEST_WITH_RETRY_MAX` from 1 to 2 to absorb double-crash scenarios | Retry absorbs symptoms, not the cause; same crash will recur post-Mojo-upgrade; upstream can't reproduce the issue; RC/CA ADR cannot be written for a masked failure | **Do the import audit (targeted submodule imports) and write the RC/CA ADR instead. Retry is always the wrong answer.** |
 | **Sequential 4-hypothesis investigation for non-deterministic 1.0.0b2 crash** | Investigated Tuple destructor UAF, then memory pressure, then import volume, then sequential leak — one at a time | ~4x wall-clock cost; first 3 hypotheses each took 30+ minutes of local repro before disproving | **Dispatch 4 parallel sub-agents in ONE message, one per hypothesis. Each runs in its own worktree off main. Wall-clock = max(individual runs), not sum.** |
 | **Concluding "Mojo bug" without sanitizer evidence** | After 4 hypotheses returned 0/161+ local repros, proposed filing upstream with just the stack offsets | Modular team can't act on "we can't reproduce locally" reports; they need sanitizer output | **Escalate to ASAN agent + TSAN+MSAN+UBSAN agent before filing upstream. Sanitizers catch UB the fast path optimizes away.** |
+| **Treating the published 3-frame KGEN trace as the real stack** | Tried to root-cause from the 3 frames printed in the CI log (`libKGEN+0x6ef7b/+0x6c156/+0x6fc27`) and matched them against `objdump` output | Those frames are Mojo's Crashpad signal-handler chain symbolicating itself (`call backtrace@plt`, function-pointer dispatch through registered crash callbacks). The actual fault is frame 4 (`<unmapped>`) which the published trace cannot reach | **Capture a coredump in CI (see `gha-mojo-coredump-capture` skill); use the dynsym + objdump procedure only to confirm the published frames are signal-pipeline noise, not to find the bug** |
+| **Reading absolute KGEN offset differences as different bugs** | Compared Mojo 0.26.3 crash at `+0x6d4ab` to Mojo 1.0.0b2 crash at `+0x6ef7b` and concluded "different offset = different bug" | Absolute offsets shift by KB across Mojo rebuilds (binary layout changes); the right comparison is anchor-symbol bucket. Both bucketed into `uniform_int_distribution@@Base + ~few KB` — same 60+ KB stripped region = same defect family | **Compare anchor-symbol buckets, not absolute offsets. Same anchor + small intra-region delta across versions = strong same-defect signal** |
 
 ## Results & Parameters
 

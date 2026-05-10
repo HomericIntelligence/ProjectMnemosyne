@@ -1,5 +1,43 @@
 # mojo-jit-crash-retry Skill History
 
+## v4.1.0 (2026-05-09)
+
+**Changed by:** ProjectOdyssey PR #5363/#5364 forensic investigation of Mojo 1.0.0b2 KGEN crash
+**Verification:** verified-local
+
+### What changed
+
+- **MINOR bump (4.0.0 → 4.1.0):** Added "libKGEN Stripped-Binary Crash Forensics" section
+  documenting the dynsym + objdump procedure
+- New section explains why the published 3-frame trace is the Crashpad signal-handler
+  chain (NOT the actual fault), and what frame patterns mean (`call backtrace@plt`,
+  function-pointer dispatch, `__fortify_fail_abort` at libc +0x45330)
+- Documents the `_ZNSt24uniform_int_distributionImEclISt13random_deviceEEmRT_RKNS0_10param_typeE@@Base`
+  anchor symbol that fronts a 60+KB stripped region of folded-out internal functions
+- Documents cross-version offset comparison: bucketing into the same anchor symbol is a
+  STRONG match signal even when absolute offsets differ by KB across Mojo rebuilds
+- Cross-references three companion skills: `gha-mojo-coredump-capture` (needed because
+  frame 4 is unreachable from the published trace), `mojo-binary-closed-source-debugging`
+  (why you can't build Mojo from source to step through it), `mojo-sanitizer-support-matrix`
+  (which sanitizers actually work in 1.0.0b2)
+- Added 2 Failed Attempts rows: treating Crashpad frames as the real stack; reading
+  absolute offset differences as different bugs
+- Description trigger list extended with conditions 20-22
+
+### Why
+
+The v4.0.0 4-hypothesis disproof methodology established WHAT the crash isn't. v4.1.0
+documents the forensic procedure that produced the analysis shared with upstream: how to
+decode the stripped libKGEN trace, why the printed frames are useless, and how to
+fingerprint defects across Mojo versions. Reproducible on any Mojo 1.0.0b2 install.
+
+### Outstanding (carry into v4.2.0+ amendments)
+
+- Once a coredump is captured via `gha-mojo-coredump-capture` on PR #5364, document the
+  actual frame 4 contents and amend with the resolved root cause
+
+---
+
 ## v4.0.0 (2026-05-09)
 
 **Changed by:** ProjectOdyssey CI investigation of Mojo 1.0.0b2 KGEN +0x6ef7b/+0x6c156/+0x6fc27 crash
