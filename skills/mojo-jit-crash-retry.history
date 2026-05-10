@@ -1,5 +1,48 @@
 # mojo-jit-crash-retry Skill History
 
+## v4.0.0 (2026-05-09)
+
+**Changed by:** ProjectOdyssey CI investigation of Mojo 1.0.0b2 KGEN +0x6ef7b/+0x6c156/+0x6fc27 crash
+**Verification:** verified-local
+
+### What changed
+
+- **MAJOR bump (3.9.0 → 4.0.0):** New crash signature for Mojo 1.0.0b2 added; recommended
+  investigation flow restructured around parallel-hypothesis sub-agent dispatch
+- Added "Mojo 1.0.0b2 Crash 4 — KGEN +0x6ef7b/+0x6c156/+0x6fc27" section
+- Added 4-hypothesis disproof checklist as starter for future non-deterministic JIT crashes:
+  1. Tuple destructor UAF
+  2. Memory pressure
+  3. Import volume
+  4. Sequential test-group leak
+- Added Sanitizer Escalation matrix (ASAN; TSAN+MSAN+UBSAN) for when local hypotheses cannot
+  reproduce the crash
+- Added 7-step Investigation Playbook for any future non-deterministic JIT crash
+- Added 2 Failed Attempts rows: sequential vs parallel hypothesis dispatch (~4x wall-clock
+  cost saved by parallel); filing upstream without sanitizer evidence
+- Description trigger list extended with conditions 17-19 (Mojo 1.0.0b2 crash, parallel
+  hypothesis sub-agents, sanitizer agents)
+- Date bumped to 2026-05-09; verification level: `verified-local` (sanitizer agents still
+  running at amendment time — local 4-hypothesis disproof complete)
+
+### Why
+
+The previous skill (v3.9.0) covered Mojo 0.26.x crash types deterministically. Mojo 1.0.0b2
+introduced a new non-deterministic crash that defeats local repro entirely. The
+parallel-hypothesis-sub-agent methodology proved itself in ProjectOdyssey: 4 agents
+disproved 4 hypotheses simultaneously (0/161+ local repros each), establishing in one
+parallel wave what would have taken hours sequentially. Documenting this as a starting
+checklist accelerates future investigations.
+
+### Outstanding (carry into v4.0.1+ amendments)
+
+- Sanitizer agent results (ASAN; TSAN+MSAN+UBSAN) — running at amendment time, results
+  pending
+- Once sanitizers report, this skill should be amended to `verified-ci` if the upstream
+  fix lands, or with the workaround if root cause is identified
+
+---
+
 ## v3.1.0 (2026-04-12)
 
 **Changed by:** ProjectOdyssey 12-open-PR batch fix session

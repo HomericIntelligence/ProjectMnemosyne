@@ -1,11 +1,11 @@
 ---
 name: mojo-jit-crash-retry
-description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular, (8) required CI checks are blocked by JIT flakiness and PRs cannot auto-merge, (9) diagnosing which of THREE distinct crash types a CI failure is: bitcast UAF (resolved), fortify_fail HOME permission (CI-only UID mismatch), or JIT volume overflow (intermittent, targeted imports fix), (10) considering @always_inline to fix bitcast crashes (ANTI-PATTERN: worsens crashes), (11) ASAP destruction crash in finite-difference perturbation loops after test output prints, (12) codebase-wide swarm elimination of bitcast UAF writes across 50+ files, (13) KGEN internal buffer overflow with fixed crash address +0x6d4ab from 4-condition trigger combination, (14) shared library modules carry heavy module-level imports that cause JIT volume overflow for all their importers, (15) splitting oversized Mojo test files per ADR-009 (<=10 functions), (16) fn main deprecation parse errors after file splitting in Mojo 0.26.3+"
+description: "Use when: (1) CI produces 'execution crashed' (libKGENCompilerRTShared.so) before any test output, (2) multiple unrelated test files crash in the same CI run on unchanged code, (3) a Mojo test file crashes deterministically at the Nth sequential call to a complex function, (4) removing retry workarounds from CI test runners to expose root causes, (5) a Copyable struct with UnsafePointer fields and no explicit __copyinit__ is stored in List, (6) tests crash non-deterministically and the code changes don't touch those test files at all, (7) creating minimal crash reproducers to file upstream issues against modular/modular, (8) required CI checks are blocked by JIT flakiness and PRs cannot auto-merge, (9) diagnosing which of THREE distinct crash types a CI failure is: bitcast UAF (resolved), fortify_fail HOME permission (CI-only UID mismatch), or JIT volume overflow (intermittent, targeted imports fix), (10) considering @always_inline to fix bitcast crashes (ANTI-PATTERN: worsens crashes), (11) ASAP destruction crash in finite-difference perturbation loops after test output prints, (12) codebase-wide swarm elimination of bitcast UAF writes across 50+ files, (13) KGEN internal buffer overflow with fixed crash address +0x6d4ab from 4-condition trigger combination, (14) shared library modules carry heavy module-level imports that cause JIT volume overflow for all their importers, (15) splitting oversized Mojo test files per ADR-009 (<=10 functions), (16) fn main deprecation parse errors after file splitting in Mojo 0.26.3+, (17) Mojo 1.0.0b2 non-deterministic JIT crash at libKGENCompilerRTShared.so+0x6ef7b/+0x6c156/+0x6fc27 — start with the 4-hypothesis disproof checklist (Tuple destructor UAF, memory pressure, import volume, sequential test-group leak) before opening upstream, (18) launching parallel hypothesis-test sub-agents to root-cause an intermittent crash, (19) using AddressSanitizer / ThreadSanitizer / MemorySanitizer / UndefinedBehaviorSanitizer-instrumented Mojo builds to escalate when local repros fail."
 category: debugging
-date: 2026-04-14
-version: "3.9.0"
+date: 2026-05-09
+version: "4.0.0"
 user-invocable: false
-verification: verified-precommit
+verification: verified-local
 history: mojo-jit-crash-retry.history
 absorbed:
   - investigate-mojo-heap-corruption (ADR-009 test splitting, heap threshold, fn main deprecation)
@@ -88,6 +88,89 @@ tags:
 | `execution crashed` BEFORE any test output + variable stack offsets | Crash 3 — volume overflow | Audit imports; convert to targeted submodule imports |
 | `execution crashed` AFTER test output at ~15th test, fixed offsets `+0x3cb78b` | Crash 1 — bitcast UAF | Already resolved by ADR-013; verify bitcast fix was applied |
 | Crash after test output with assertion message | Real test bug | Debug the assertion |
+
+## Mojo 1.0.0b2 Crash 4 — KGEN +0x6ef7b/+0x6c156/+0x6fc27 (v4.0.0)
+
+> **[v4.0.0]** Added 2026-05-09 from ProjectOdyssey CI investigation. New crash signature
+> appearing in Mojo 1.0.0b2 with offsets `libKGENCompilerRTShared.so+0x6ef7b`, `+0x6c156`,
+> `+0x6fc27`. **Verification level: verified-local** — 4 hypotheses disproved via parallel
+> sub-agent dispatch (0/161+ local repros each); sanitizer agents (ASAN, TSAN+MSAN+UBSAN)
+> still running at the time of this amendment.
+
+### Symptoms
+
+- Stack: `libKGENCompilerRTShared.so+0x6ef7b / +0x6c156 / +0x6fc27`
+- Determinism: NON-deterministic in CI, NOT reproducible locally even after 161+ runs
+- Mojo version: 1.0.0b2 (does NOT appear in 0.26.x)
+- Trigger: unknown — appears to require a CI-specific condition (memory pressure? CI cache state?)
+
+### Parallel-Hypothesis Disproof Methodology (the v4.0.0 contribution)
+
+When a JIT crash is non-deterministic and unreproducible locally, **dispatch N parallel
+sub-agents (one per hypothesis) before escalating to upstream**. This is faster than
+sequential investigation because each hypothesis is independent.
+
+**The 4-hypothesis starter checklist for any new KGEN crash signature:**
+
+| # | Hypothesis | How to Test (sub-agent brief) | Disproof Threshold |
+|---|-----------|-------------------------------|--------------------|
+| 1 | **Tuple destructor UAF** — Mojo Tuple.__del__ not called on element fields, leading to use-after-free on AnyTensor / UnsafePointer fields | Construct minimal repro with Tuple containing AnyTensor / UnsafePointer; loop the function 200+ times under valgrind/asan-equivalent | 0 crashes in 200 iterations → DISPROVE |
+| 2 | **Memory pressure** — JIT compilation footprint exceeds RSS limit at certain test counts | Run the suspect test file 100+ times sequentially with `/usr/bin/time -v` to record max RSS; check if crash correlates with RSS spike | 0 crashes in 100 iterations + RSS stable < limit → DISPROVE |
+| 3 | **Import volume** — Module-level imports trigger Crash 3 (JIT volume overflow) at higher import counts in 1.0.0b2 | Audit imports in suspect file; convert package-level → targeted submodule; rerun 100+ times | 0 crashes after import audit → DISPROVE |
+| 4 | **Sequential test-group leak** — JIT state leaks between test functions in the same `mojo run` invocation | Run all tests in the file in 1 invocation 100+ times; compare to N invocations of 1 test each | If 1-test-per-invocation passes but all-tests-per-invocation crashes → CONFIRMED leak; otherwise DISPROVE |
+
+**Dispatch pattern:**
+
+```python
+# In ONE message, launch 4 parallel sub-agents. Each runs in its own worktree off main.
+Task(description="Test Tuple destructor UAF hypothesis", prompt=<hypothesis-1-brief>)
+Task(description="Test memory pressure hypothesis", prompt=<hypothesis-2-brief>)
+Task(description="Test import volume hypothesis", prompt=<hypothesis-3-brief>)
+Task(description="Test sequential test-group leak hypothesis", prompt=<hypothesis-4-brief>)
+```
+
+**ProjectOdyssey result (2026-05-09):** All 4 hypotheses DISPROVED — 0/161+ local repros across
+all four agents. Conclusion: crash requires a CI-specific condition not present locally.
+Escalate to sanitizer-instrumented runs.
+
+### Sanitizer Escalation (when 4-hypothesis disproof returns negative)
+
+If local hypothesis tests cannot reproduce the crash, dispatch sanitizer-instrumented agents.
+Mojo 1.0.0b2 supports ASAN/TSAN/MSAN/UBSAN via the runtime sanitizer flags (when available)
+or via building under a sanitizer-enabled `mojo` toolchain.
+
+**Sanitizer agent matrix:**
+
+| Agent | Sanitizers | What it catches |
+|-------|-----------|------------------|
+| ASAN agent | AddressSanitizer | Heap UAF, buffer overflow, double-free, stack-use-after-return |
+| TSAN+MSAN+UBSAN agent | ThreadSanitizer + MemorySanitizer + UndefinedBehaviorSanitizer | Data races, uninitialized memory reads, signed-overflow, null-deref, alignment violations |
+
+**Dispatch pattern (one agent per sanitizer triplet):**
+
+- Brief each agent to instrument the test file with the chosen sanitizer
+- Run 50-200+ iterations
+- Capture full sanitizer report on first failure
+- File upstream issue with the sanitizer report attached
+
+**Verification status:** As of v4.0.0 (2026-05-09), the 2 sanitizer agents for this crash
+were still running. Update this section after results land.
+
+### Investigation Playbook (use this checklist for every future non-deterministic JIT crash)
+
+1. **Capture the stack offsets.** Different offsets = different crash; reuse this skill ONLY
+   if offsets match a known type or are completely new.
+2. **Try local repro first.** Run the suspect test ≥100 times locally. If it reproduces, skip
+   to step 6.
+3. **If 0 local repros: dispatch the 4-hypothesis disproof sub-agents in parallel.** Each
+   agent's brief must include the disproof threshold and a single-purpose test loop.
+4. **Collect agent results.** If any hypothesis CONFIRMS, fix that root cause; otherwise:
+5. **Dispatch sanitizer agents (ASAN; TSAN+MSAN+UBSAN).** These run slower but catch UB the
+   fast paths cannot.
+6. **File upstream issue against modular/modular** with: stack offsets, Mojo version,
+   minimal repro, sanitizer reports, and the disproof checklist results.
+7. **Implement local workaround** (test splitting per ADR-009, import audit, file
+   reorganization) — never `gh run rerun` to dismiss as flake.
 
 ## When to Use
 
@@ -553,6 +636,8 @@ pattern for hook exceptions. Never use `--no-verify`.
 | **Assume crash = JIT flake** | Closed/retried without investigating root cause | 16 test files crashing had 3 concrete source-code bugs: double-free, broken lock, bitcast UAF | **Check for double-free, broken locks, and bitcast UAF first before concluding JIT instability** |
 | **Add retry logic to CI** | Implemented `scripts/test-with-retry.sh` (88 lines) with `MAX_RETRIES=1` on `execution crashed` | Retry scripts hide real failures: a crash that is retried away cannot be filed upstream, prevents root cause investigation, masks reproducibility | **Delete retry scripts; use direct `pixi run mojo --Werror`; create minimal reproducers and file upstream** |
 | **Re-add retry when required checks block PRs** | When required checks (`Core Types & Fuzz`, `Integration Tests`) fail non-deterministically on every main run, temptation is to increase `TEST_WITH_RETRY_MAX` from 1 to 2 to absorb double-crash scenarios | Retry absorbs symptoms, not the cause; same crash will recur post-Mojo-upgrade; upstream can't reproduce the issue; RC/CA ADR cannot be written for a masked failure | **Do the import audit (targeted submodule imports) and write the RC/CA ADR instead. Retry is always the wrong answer.** |
+| **Sequential 4-hypothesis investigation for non-deterministic 1.0.0b2 crash** | Investigated Tuple destructor UAF, then memory pressure, then import volume, then sequential leak — one at a time | ~4x wall-clock cost; first 3 hypotheses each took 30+ minutes of local repro before disproving | **Dispatch 4 parallel sub-agents in ONE message, one per hypothesis. Each runs in its own worktree off main. Wall-clock = max(individual runs), not sum.** |
+| **Concluding "Mojo bug" without sanitizer evidence** | After 4 hypotheses returned 0/161+ local repros, proposed filing upstream with just the stack offsets | Modular team can't act on "we can't reproduce locally" reports; they need sanitizer output | **Escalate to ASAN agent + TSAN+MSAN+UBSAN agent before filing upstream. Sanitizers catch UB the fast path optimizes away.** |
 
 ## Results & Parameters
 
