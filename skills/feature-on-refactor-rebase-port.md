@@ -1,9 +1,10 @@
 ---
 name: feature-on-refactor-rebase-port
-description: "When a parallel PR wave mixes refactor PRs (decomposition / move-only) with feature PRs that touch the same source files, the feature PR goes DIRTY the moment a refactor merges. Use when: (1) a wave includes both file decomposition and feature wiring on overlapping files, (2) a feature PR conflicts after a sibling refactor merges, (3) you need to port edits from the old monolithic file onto a new sub-package facade structure."
+description: "When a parallel PR wave mixes refactor PRs (decomposition / move-only) with feature PRs that touch the same source files, the feature PR goes DIRTY the moment a refactor merges. Use when: (1) a wave includes both file decomposition and feature wiring on overlapping files, (2) a feature PR conflicts after a sibling refactor merges, (3) you need to port edits from the old monolithic file onto a new sub-package facade structure. Also covers the case where the cross-cutting feature commit becomes uneconomic to port after multiple sibling waves merge — drop-and-redo as a follow-up PR off post-merge main."
 category: ci-cd
-date: 2026-05-07
-version: "1.0.0"
+date: 2026-05-10
+version: "1.1.0"
+history: feature-on-refactor-rebase-port.history
 user-invocable: false
 verification: verified-local
 tags:
@@ -13,6 +14,7 @@ tags:
   - git-worktree
   - recovery-agent
   - move-only-refactor
+  - drop-and-redo
 ---
 
 # Feature-on-Refactor Rebase Port
@@ -21,7 +23,7 @@ tags:
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-05-07 |
+| **Date** | 2026-05-10 (amended; originally 2026-05-07) |
 | **Objective** | Resolve the predictable DIRTY conflict when a feature-wiring PR is force-rebased onto a main branch where a sibling refactor PR has decomposed the feature's target file into a sub-package facade. |
 | **Outcome** | SUCCESS — verified on ProjectScylla #1931 (MetricEmitter wiring) after #1929 (runner.py decomposition) merged. Feature edits ported cleanly; force-pushed; merged. |
 | **Verification** | verified-local |
@@ -77,6 +79,46 @@ gh pr merge <PR> --auto --squash    # auto-merge is silently cleared on force-pu
 7. **Verify.** Run the feature's own tests (the new test file in the commit) and broader unit suites for affected modules. Mypy strict often catches port errors.
 8. **Force-push, re-enable auto-merge.** GitHub silently clears auto-merge on every force-push. `gh pr merge <N> --auto --squash` immediately after.
 
+### Drop-and-redo: when porting is uneconomic
+
+Sometimes a feature PR contains **multiple commits** — a narrow surgical commit (single-file) AND a wide cross-cutting commit (touches many files). If sibling waves have already merged and substantively rewrote the cross-cutting files, porting that commit file-by-file is uneconomic. Use this decision rule:
+
+**Triage steps:**
+
+1. **If sibling waves are still open**: try to port the cross-cutting commit normally (the standard workflow above). The files have not been rewritten yet.
+2. **If sibling waves have already merged AND their changes substantively rewrote the cross-cutting files**: do not attempt to port. Instead:
+   - Reset the PR's branch to `origin/main` (`git reset --keep origin/main`)
+   - Cherry-pick ONLY the surgical (single-file, narrow-blast-radius) commits
+   - Drop the cross-cutting commit entirely from this PR
+   - Update PR body: list which issues are still closed by the surgical commits, and explicitly mark the cross-cutting issue as **deferred to a follow-up PR**
+   - Open a fresh follow-up PR off the post-merge main with ONLY the cross-cutting work — it now runs against the updated code mechanically, with no conflicts
+3. **Predicate for "uneconomic to port"**: the rebase produces conflicts on **≥3 sibling-rewritten files** AND each conflict requires interpreting the sibling's new structure to merge. A `git checkout --theirs` won't work because "theirs" would revert the sibling's substantive changes.
+
+**Drop-and-redo quick reference:**
+
+```bash
+# Identify the surgical vs cross-cutting commits
+git log --oneline HEAD ^origin/main
+
+# Reset to current main
+git reset --keep origin/main
+
+# Cherry-pick ONLY the surgical commit(s)
+git cherry-pick <surgical-commit-sha>
+
+# Verify
+pixi run pytest <relevant tests> -q --no-cov
+git push --force-with-lease origin <branch>
+gh pr merge <N> --auto --squash
+
+# Update PR body to mark cross-cutting issue(s) as deferred
+gh pr edit <N> --body "..."
+
+# Later: open follow-up PR off the now-updated main
+git checkout -b follow-up/<cross-cutting-issue>
+# re-do the cross-cutting change mechanically against the new code
+```
+
 ### Recovery Agent Pattern
 
 The port is a self-contained mechanical task with a clear contract — ideal for delegation. Spawn an Opus sub-agent with explicit context: branch, conflicting commit SHA, refactor PR number, list of clean-vs-conflicted files, and the specific feature delta to port (new imports, new params, new methods, new call sites). The agent runs in the existing branch worktree (no new worktree), produces a self-contained recoverable PR state.
@@ -90,6 +132,8 @@ The port is a self-contained mechanical task with a clear contract — ideal for
 | Trusting `gh pr merge --auto` to retain after force-push | After force-pushing the rebased branch, assumed auto-merge was still set | GitHub silently clears auto-merge on every force-push | Always run `gh pr merge <N> --auto --squash` (or `--rebase`) immediately after `git push --force-with-lease` |
 | Editing the new facade file to "add back" the feature edits | Tried to add the new `emitter` parameter to the public facade in `runner.py` to match the old file's signature | Broke the SOLID/decomposition intent and duplicated code with the actual implementation in `runner_internals/runner_core.py`. The facade's only job is to re-export. | Edit the sub-package modules where the implementation lives; the facade stays a pure re-export module |
 | Waiting for auto-merge after CI went CLEAN | After force-push and CI passing, waited for auto-merge to fire | Took 10+ min and never fired (also documented in parallel-issue-wave-execution v2.6.0) | After CI is CLEAN, `gh pr merge <N> --squash` manually |
+| `git checkout --theirs` for every conflicting file (drop-and-redo scenario) | When the cross-cutting commit (276-call f-string conversion) conflicted on 14 files after sibling waves merged, used `git checkout --theirs <conflicting-file>` for each, then `git rebase --continue` | `--theirs` took the W1 branch's (pre-sibling) version, silently losing the substantive sibling-wave changes — e.g., the entire W15c reviewer-trio idempotency state machine and the W15d typed `ClaudeUsageCapError`. The resulting build appeared to compile, but lost real functionality. | `--theirs` is only safe when the upstream change is incidental (e.g., a one-line copyright bump). When the upstream rewrite is substantive, `--theirs` loses functionality — use the drop-and-redo workflow instead. |
+| File-by-file manual merge of a cross-cutting commit after sibling waves (drop-and-redo scenario) | Attempted to manually merge the 276-call f-string conversion across 14 files, keeping both the sibling wave's substantive rewrites AND applying the f-string conversion on top | 14 files × hundreds of call sites × subtle pattern differences (nested f-strings, format specs, %-style edge cases) — the merge would have taken hours and produced a high-risk PR. The cost of porting a cross-cutting refactor scales as N × call-density; once N≥3 and each file has dozens of touch points the work is prohibitive. | Once the cost exceeds the "re-do" cost (re-running the mechanical transformation on the updated code), drop the commit and open a focused follow-up PR off the post-merge main instead. |
 
 ## Results & Parameters
 
@@ -138,3 +182,4 @@ pixi run mypy <subpackage> <other-changed-source-files>
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectScylla | PR #1931 (MetricEmitter wiring) rebased onto post-#1929 main (runner.py decomposed); 5-PR opus wave 2026-05-07 | Recovery agent ported `emitter` kwarg, `_emit_experiment_metrics` method, and one call-site edit from monolithic `runner.py` (992 LOC) onto `runner_internals/runner_core.py`; `judge_runner.py` and the new test file applied cleanly via `git apply`; force-pushed (commit 22849850 → 660b98d9); merged manually after CI CLEAN |
+| ProjectHephaestus | PR #394 (W1): SRP refactor of `IssueImplementer._implement_issue` + 276-call f-string conversion across 14 `hephaestus/automation/*.py` files; sibling waves #397 (W15a planner), #398 (W15c reviewer trio), #399 (W15d supporting), #400 (W15b ci_driver) merged ahead; strict-review-then-fix-waves session 2026-05-10 | Drop-and-redo applied: reset PR #394's branch to `origin/main`, cherry-picked only the SRP refactor commit (single file: `implementer.py`), dropped the f-string conversion commit entirely. PR #394 merged cleanly with a 1-file diff, CI green. Issue #317 (f-string anti-pattern) deferred to a follow-up PR off post-merge main. Closes #311, #333; #317 tracked separately. (verification: verified-local — follow-up PR for #317 not yet opened in CI) |
