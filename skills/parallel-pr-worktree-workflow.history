@@ -1,5 +1,33 @@
 # parallel-pr-worktree-workflow — History
 
+## v1.2.0 (2026-05-09)
+
+**Changed by:** ProjectOdyssey Phase G EASY-tier swarm consolidation (PR #5363)
+**Verification:** verified-ci
+
+### What changed
+
+- Added Phase 10b "RESCUE — Consolidate Cross-Contaminated Worker PRs into One" — the
+  cherry-pick consolidation recovery pattern when parallel dispatch on distinct branches
+  has produced cross-contamination
+- Added decision matrix: when to consolidate vs re-dispatch
+- Added 1 Failed Attempts row: O(N^2) per-branch cleanup is worse than consolidation
+- Added Verified On row for ProjectOdyssey #5363
+- Added `history` frontmatter field (was missing in v1.1.0)
+- Upgraded verification to `verified-ci`
+- Bumped to 1.2.0 (minor — new phase, new failure, no breaking changes)
+- Description trigger list extended to 7 conditions (added rescue pattern)
+
+### Why
+
+PR #5363 demonstrated that when parallel `Task isolation=worktree` dispatch on N distinct
+branches produces cross-contaminated commits, attempting to salvage each branch
+independently is O(N^2) — fixing one branch breaks another. Cherry-picking each worker's
+intended commit into a single consolidated branch with multiple `Closes #N` lines is the
+correct recovery path; close individual worker PRs with a reference comment.
+
+---
+
 ## v1.1.0 (2026-05-06)
 
 **Changed by:** HomericIntelligence/ProjectArgus Atlas v0.2.1 patch series (PRs #463-#474)

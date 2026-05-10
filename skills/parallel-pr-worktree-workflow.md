@@ -1,11 +1,12 @@
 ---
 name: parallel-pr-worktree-workflow
-description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task."
+description: "Use when: (1) launching 2+ parallel rebase agents that need isolated git state to avoid branch collision, (2) implementing 5+ independent fixes in parallel PRs using git worktrees, (3) bulk-merging skill PRs with CI fixes and conflict resolution, (4) batching 10+ PRs across parallel sub-agents for maximum throughput, (5) launching >=2 concurrent sub-agents that each commit/push to the same git repo, (6) sub-agents report file bleed-over or unexpected `git checkout` reverts mid-task, (7) RESCUE pattern when parallel dispatch across distinct branches has already produced cross-contaminated commits — consolidate worker PRs into ONE branch via cherry-pick and close individual PRs."
 category: ci-cd
-date: 2026-05-06
-version: "1.1.0"
+date: 2026-05-09
+version: "1.2.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
+history: parallel-pr-worktree-workflow.history
 tags: []
 ---
 # Parallel PR Worktree Workflow
@@ -378,6 +379,110 @@ git push
 # Auto-merge will trigger once CI passes
 ```
 
+### Phase 10b (v1.2.0): RESCUE — Consolidate Cross-Contaminated Worker PRs into One
+
+**Use this when** parallel dispatch across N distinct branches (e.g., haiku/sonnet swarm on
+EASY-tier issues) has already produced cross-contaminated commits — multiple agents committed
+to whichever branch the parent repo's working tree had checked out instead of their own
+assigned worktree branch. Symptom: sibling agents report `please run git restore CLAUDE.md`,
+or `git log` on each worker branch shows commits from sibling agents' work.
+
+**Foundation:** ProjectOdyssey Phase G EASY-tier swarm consolidation, PR #5363 (2026-05-09).
+Eight worker PRs (one per EASY-tier issue) collapsed into a single consolidated branch.
+67/68 substantive checks green. Result: 8 issues closed via one PR, individual worker PRs
+closed-not-merged.
+
+**Step 1 — Audit each worker branch's commits:**
+
+```bash
+for pr in <worker-prs>; do
+  branch=$(gh pr view "$pr" --json headRefName --jq '.headRefName')
+  echo "=== PR #$pr ($branch) ==="
+  git fetch origin "$branch" --quiet
+  git log --oneline "origin/$branch" "^origin/main"
+done
+```
+
+Identify which commits belong to which worker. If commits are tangled (worker A's commit
+appears on worker B's branch), pick the commits intended for the consolidated PR.
+
+**Step 2 — Create consolidation branch:**
+
+```bash
+git checkout main && git pull --ff-only
+git checkout -b <epic>-consolidated
+```
+
+**Step 3 — Cherry-pick the intended commits:**
+
+```bash
+for branch in <worker-1-branch> <worker-2-branch> ... <worker-N-branch>; do
+  git fetch origin "$branch" --quiet
+  # Pick the head commit (most workers had a single squashable change)
+  git cherry-pick "origin/$branch"
+  # If conflict: resolve, run pre-commit, git cherry-pick --continue
+done
+```
+
+For workers whose pushed branch contained multiple commits (one good, one accidentally
+from sibling): use `git cherry-pick <specific-sha>` rather than the branch tip.
+
+**Step 4 — Open ONE consolidated PR with all `Closes #N` lines:**
+
+```bash
+gh pr create --title "feat(<epic>): consolidate EASY-tier batch (N issues)" \
+  --body "$(cat <<'EOF'
+## Summary
+
+Consolidates N worker PRs into one branch after parallel-dispatch branch contamination.
+
+Closes #A
+Closes #B
+Closes #C
+Closes #D
+...
+
+## Why one PR
+
+Parallel `Task isolation=worktree` agents on N distinct branches cross-contaminated each
+other's branches via shared parent `.git/index`/`HEAD`. Cherry-picking each worker's
+intended commit into a single consolidated branch is the recovery path.
+
+## Verification
+
+- All N original issue acceptance criteria satisfied (see individual file diffs)
+- pre-commit run --all-files: green
+- CI: <X>/<Y> substantive checks green
+EOF
+)"
+```
+
+**Use separate `Closes #N` lines, not comma-separated** (GitHub only auto-closes the first
+when comma-separated).
+
+**Step 5 — Close individual worker PRs with reference to consolidated PR:**
+
+```bash
+for pr in <worker-prs>; do
+  gh pr close "$pr" --comment "Consolidated into #<consolidated-pr> via cherry-pick. Closing as not-merged."
+done
+```
+
+**Step 6 — Enable auto-merge on the consolidated PR:**
+
+```bash
+gh pr merge <consolidated-pr> --auto --squash
+```
+
+**Decision: when to consolidate vs re-dispatch?**
+
+| Condition | Action |
+|-----------|--------|
+| Worker commits are clean and on correct branches | Merge each worker PR independently |
+| 1-2 workers contaminated, others clean | Force-push corrected branches; merge individually |
+| 3+ workers contaminated OR commits tangled | **Consolidate via cherry-pick** (this phase) |
+| Worker commits are unrecoverable (wrong file edits) | Discard branches, re-dispatch SERIALLY |
+
 ### Phase 11: Cleanup
 
 ```bash
@@ -426,6 +531,7 @@ gh issue close <issue-number> --comment "Fixed in PR #<number>"
 | Skipping per-PR worktree cleanup | Left worktrees around after PRs merged thinking they'd be reused | Disk usage grew (each worktree is a full ~170-file copy) and stale branch tips accumulated | Cleanup is cheap (`worktree remove --force` + `worktree prune`) and re-creating a worktree from `origin/<base>` takes seconds. Tear down per PR |
 | Brief too short (<50 lines) | Sent compact prompts to sub-agents to "save tokens" | Sub-agent guessed at file paths, branch names, integration base; ~30% rework rate | ~80-120 line briefs hit the sweet spot. Include explicit worktree path, "don't touch other worktrees" warning, exact `--base` flag, auto-merge command, and verification commands |
 | Reusing worktree path across sub-agents | Removed worktree A after agent A finished, gave agent B the same path | Subtle git-state contamination from leftover index/refs even after `worktree remove` | Each sub-agent gets a unique path. The path IS the isolation boundary; the branch is just a label |
+| Trying to salvage 8 cross-contaminated worker PRs by force-pushing each branch separately (ProjectOdyssey #5363) | After parallel haiku/sonnet swarm contaminated each other's branches via shared parent `.git/`, attempted per-branch cleanup with selective `git reset` and force-push | Commits were tangled across branches — fixing one branch broke another; cleanup was O(N^2) | Consolidate ALL worker commits into ONE branch via cherry-pick (Phase 10b), open a single PR with multiple `Closes #N` lines, and close worker PRs with a reference comment |
 
 ## Results & Parameters
 
@@ -517,3 +623,4 @@ executor: haiku      # Simple rebase, pre-commit fixes
 | ProjectScylla | 9 parallel worktrees, 24 fixes, 1,500+ lines removed | parallel-pr-workflow source |
 | ProjectMnemosyne | 30 open skill PRs bulk merged, 2026-03-03 | bulk-skill-pr-merge source |
 | HomericIntelligence/ProjectArgus | Atlas v0.2.1 patch series; 17 PRs landed across 6 waves (PRs #463-#474). Wave-1 used a shared tree and hit working-tree-revert bleed-over; waves 2-6 used per-sub-agent `/tmp/<repo>-wt-<task>` worktrees with zero state interference. 1 mid-flight conflict caught via `gh pr view --json mergeable`; 1 false "auto-merge armed" report caught the same way (rebase forbidden, switched to `--squash`). | Sub-agent PR isolation amendment (v1.1.0) |
+| ProjectOdyssey | Phase G EASY-tier 8-issue swarm consolidation, PR #5363 (2026-05-09). Eight cross-contaminated worker PRs collapsed into one consolidation branch via cherry-pick; individual worker PRs closed-not-merged; 67/68 substantive checks green. | Phase 10b RESCUE pattern (v1.2.0) |
