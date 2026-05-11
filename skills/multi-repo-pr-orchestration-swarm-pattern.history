@@ -3,8 +3,43 @@
 # Each entry records what changed and why; full snapshots for major versions only.
 ---
 
-<<<<<<< HEAD
-=======
+## v2.1.0 — 2026-05-10
+
+**Changed by**: Multi-repo CI sweep + easy-issue dispatch session 2026-05-10 (12 repos / 18 PRs / 17 merged auto-squash)
+**Session context**: HomericIntelligence ecosystem-wide sweep (Wave 1 CI fixes + Wave 2 easy-issue dispatch + Wave 3 Odysseus pin bump), 2026-05-10
+
+**Verification**: verified-ci
+
+### What Changed
+
+- Bumped version 2.0.0 → 2.1.0; date updated to 2026-05-10
+- Verified On: appended new entry for 2026-05-10 12-repo / 18-PR sweep
+- Failed Attempts: appended new row for Mnemosyne `Update Marketplace` direct-commit pattern + branch-protection bypass-actor caveat
+- Phase 2 (Wave 1) "Auto-merge disabled detection": corrected stale claim that AchaeanFleet has auto-merge disabled — `allow_auto_merge` is now `true`; only Myrmidons remains disabled in the in-scope set
+- Phase 0 (Supplemental): added empirical ALREADY-DONE closure rate at scale (16/49 = ~33%) from the 2026-05-10 session
+
+### Why
+
+- AchaeanFleet auto-merge status data point in v2.0.0 was stale and contradicted by 2026-05-10 evidence — corrected
+- Direct-commit workflow pattern (Mnemosyne marketplace) needs a branch-protection bypass-actor entry to actually land; v2.0.0 omitted that caveat
+- Phase 0 mentioned the ALREADY-DONE preflight automation but did not quantify its return — 33% session closure rate is verified-effective ROI worth documenting
+
+### v2.0.0 frontmatter snapshot
+
+```yaml
+name: multi-repo-pr-orchestration-swarm-pattern
+version: "2.0.0"
+date: 2026-04-23
+category: ci-cd
+user-invocable: false
+verification: verified-ci
+history: multi-repo-pr-orchestration-swarm-pattern.history
+```
+
+Unchanged sections (Quick Reference, Phase 1, Phase 3 Wave 1b, Phase 4 Wave 1c, Phase 5 Wave 2, Phase 4b CI triage, Phase 6 Verification, Results & Parameters, References) carried forward as-is — see git history at the v2.0.0 tip for the full text. Only the AchaeanFleet sentence in Phase 2, the Phase 0 quantification paragraph, and the Verified On + Failed Attempts tables were modified between v2.0.0 and v2.1.0.
+
+---
+
 ## v2.0.0 (2026-05-03)
 
 Absorbed: multi-repo-automation-loop-shell-script (v1.0.0), multi-repo-pr-triage (v1.0.0)
@@ -25,7 +60,6 @@ Code blocks added: 10 new blocks (2 from automation-loop + 8 from pr-triage); po
 
 ---
 
->>>>>>> 5783bcc7 (chore(skills): consolidate clusters B+G — absorb stale-agent-refs + multi-repo skills (sub-wave 1 remainder))
 ## v1.2.0 — 2026-04-23
 
 **Changed by**: Odysseus issue closeout session (Issues #102, #76, #136)

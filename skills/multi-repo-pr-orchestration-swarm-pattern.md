@@ -2,8 +2,8 @@
 name: multi-repo-pr-orchestration-swarm-pattern
 description: "Orchestrate PR management across all HomericIntelligence repos using myrmidon swarm. Use when: (1) multiple repos have open PRs that need merging, conflict resolution, or CI fixes, (2) Odysseus submodule pins need updating after cross-repo PR merges, (3) coordinating parallel waves of agents across 5+ repos with sequential-within-repo merge ordering, (4) a PR branch has a duplicate commit that's already on main and needs rebase, (5) mergeStateStatus is BLOCKED but statusCheckRollup is empty — CI may not have started yet, (6) running hephaestus-plan-issues and hephaestus-implement-issues across 10+ repos in a cron-style automation loop, (7) multiple repos have failing PRs that need CI diagnosis and fixing via parallel sub-agents, (8) CI failures share common root causes across repos (org policy, missing images, deprecated syntax, formatting)."
 category: ci-cd
-date: 2026-04-23
-version: "2.0.0"
+date: 2026-05-10
+version: "2.1.0"
 user-invocable: false
 verification: verified-ci
 tags: [multi-repo, PR, merge, submodule, myrmidon-swarm, cross-repo, orchestration, odysseus, duplicate-commit, pin-audit, automation-loop, pixi, pythonpath, gh-cli, rate-limit, ci-triage, org-policy, container-image]
@@ -120,7 +120,7 @@ gh api repos/HomericIntelligence/$REPO --jq '.allow_auto_merge'
 # Also check branch protection:
 gh api repos/HomericIntelligence/$REPO/branches/main --jq '.protection.required_status_checks'
 ```
-Repos with auto-merge disabled (e.g., AchaeanFleet, Myrmidons) require direct `gh pr merge --rebase` once CI is green. Do **not** use `gh pr merge --auto --rebase` on these repos — it produces a GraphQL error.
+As of 2026-05-10: AchaeanFleet's `allow_auto_merge` is now `true`; only Myrmidons remains with auto-merge disabled in the in-scope set. Always re-verify per-session — these settings change. Cmd: `gh api repos/HomericIntelligence/<repo> --jq '.allow_auto_merge'`. Repos with auto-merge disabled require direct `gh pr merge --rebase` once CI is green. Do **not** use `gh pr merge --auto --rebase` on those repos — it produces a GraphQL error.
 
 **Model tier selection**:
 - **Haiku**: sufficient for clean merges (mechanical: check status, run `gh pr merge`)
@@ -364,6 +364,13 @@ if plan_script.exists():
 - GraphQL quota: 5000 requests/hour; 14 repos × prefetch calls exhausts quota in ~1 full run
 - RuntimeWarning on `-m` invocations: `<frozen runpy>:128: RuntimeWarning: 'hephaestus.automation.planner' found in sys.modules after import of package 'hephaestus.automation'` — safe to ignore, suppress with `PYTHONWARNINGS=ignore::RuntimeWarning`
 
+**Empirical ALREADY-DONE rate at scale (2026-05-10 session):** Across 49 candidate
+"easy" issues (severity:minor + [Audit] Minor titles) curated for 10 sub-agents,
+16 (33%) were closed as ALREADY-DONE during per-agent verification gates BEFORE
+any code was written. Audit issues filed >2 weeks ago go stale particularly fast
+in this ecosystem; running the `already-done-issue-detection` Quick-Reference checks
+in every dispatch prompt is verified-effective and saves ~33% of agent-budget at scale.
+
 ### Phase 4b (Supplemental): CI Triage — Root Cause Categorization
 
 When diagnosing CI failures across multiple repos, categorize before spawning fix agents:
@@ -500,6 +507,7 @@ git status
 | Assume alias→comptime is the only Mojo blocker | Only searched for `alias` keyword | Other blockers existed: unused var (--Werror), type mismatch (Float64 vs Int) | After fixing the stated issue, run the compiler to discover additional blockers |
 | Add pull-requests: write to workflow YAML | Added permission to "Update Marketplace" workflow | GitHub org policy overrides YAML permissions — `default_workflow_permissions: read` takes precedence | Org-level default_workflow_permissions takes precedence over workflow YAML; switch to direct-commit pattern instead |
 | Reference custom CI container before it's built | Used ghcr.io image in workflows on PR branches | Image only gets built on merge to main, not during PR runs | Don't reference custom CI images in workflows until the image build pipeline is proven to work; check `docker manifest inspect <image>` first |
+| Mnemosyne `Update Marketplace` workflow direct-commit pattern shipped, declared a fix | Workflow now uses `git commit && git push origin main` from `github-actions[bot]` instead of the PR-creation step. Lands cleanly in workflow file but UNTESTED until next `skills/**` or `plugins/**` push triggers it. Branch protection ruleset 15556493 may still reject the direct push because the bot is not in the bypass-actors list | The web-UI bypass-actors list (Settings > Rules > Rulesets > 15556493 > Bypass list) is the authoritative source; YAML `permissions:` and direct-commit pattern do NOT bypass branch-protection rulesets. Cannot be configured via API (HTTP 403) | Whenever you ship the direct-commit pattern as a fix for the org-Actions-PR-creation policy, ALSO open a follow-up to add `github-actions[bot]` to the relevant ruleset's bypass actors via the web UI. Flag to user; do not assume the workflow file change alone is sufficient |
 
 ## Results & Parameters
 
@@ -592,6 +600,7 @@ gh pr checks $PR_NUM --repo HomericIntelligence/$REPO
 | ProjectMnemosyne | Marketplace workflow broken by org policy, CI triage session 2026-03-15 | org-level `can_approve_pull_request_reviews: false` → switched to direct-commit pattern |
 | ProjectScylla | Missing CI container image, CI triage session 2026-03-15 | Removed container blocks from workflows; added README.md to Containerfile COPY |
 | ProjectKeystone | clang-format violations + Dockerfile issues on Dependabot PR, CI triage session 2026-03-15 | Docker clang-format-18 run to format 30 files; removed 3 stale COPY lines; supply-chain-scanning flagged as manual action |
+| HomericIntelligence ecosystem | 12 repos (excl. ProjectOdyssey + ProjectHephaestus), 18 sweep PRs (8 CI fix + 10 easy-issue), Wave 1 + Wave 2 + Wave 3 (Odysseus pin bump), 2026-05-10 | 17/18 PRs auto-squash-merged within ~30min; ProjectCharybdis #219 escalated (Conan/gcc-14 chain) and manually merged by user. ALREADY-DONE preflight closed 16 of 49 candidate issues (~33%) before agents started writing code. AchaeanFleet auto-merge confirmed ENABLED (skill v2.0.0 said disabled — now corrected). Mnemosyne marketplace direct-commit pattern landed but UNTESTED in CI as of session end (no `skills/**` push triggered yet) |
 
 ## References
 
