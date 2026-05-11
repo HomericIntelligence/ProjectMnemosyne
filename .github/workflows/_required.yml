@@ -14,6 +14,58 @@ permissions:
   contents: read
 
 jobs:
+  forbid-suppressions:
+    name: forbid-suppressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: "Reject silent-failure workaround in shell/YAML/Dockerfile/justfile/HCL"
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(git ls-files \
+            -- \
+            '*.sh' '*.bash' '*.yml' '*.yaml' '*.hcl' \
+            'Dockerfile*' '**/Dockerfile*' \
+            'justfile' '**/justfile' 'Justfile' '**/Justfile')
+          declare -a scan_files=()
+          for f in "${files[@]}"; do
+            case "$f" in
+              # Exempt this workflow file (heredoc would otherwise self-match)
+              .github/workflows/_required.yml) continue ;;
+              # Exempt any runbook that documents the rule (if present)
+              docs/runbooks/no-silent-failures.md) continue ;;
+            esac
+            scan_files+=("$f")
+          done
+          if [ "${#scan_files[@]}" -eq 0 ]; then
+            echo "No files to scan"
+            exit 0
+          fi
+          if grep -nE '\|\|[[:space:]]*true([[:space:]]*$|[[:space:]]+#)' "${scan_files[@]}"; then
+            echo ""
+            echo '::error::Found silent-failure workarounds above. Refactor per HomericIntelligence/Odysseus#280.'
+            exit 1
+          fi
+          echo 'OK: no silent-failure workarounds found'
+
+      - name: "Reject continue-on-error workflow opt-out"
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(git ls-files -- '.github/workflows/*.yml' '.github/workflows/*.yaml')
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No workflow files"
+            exit 0
+          fi
+          if grep -nE '^[[:space:]]*continue-on-error:[[:space:]]*true[[:space:]]*$' "${files[@]}"; then
+            echo ""
+            msg='Found "continue-on-error: true" above. Fix root cause per HomericIntelligence/Odysseus#280.'
+            echo "::error::${msg}"
+            exit 1
+          fi
+          echo 'OK: no "continue-on-error: true" found'
+
   lint:
     name: lint
     runs-on: ubuntu-24.04
@@ -210,7 +262,6 @@ jobs:
             gitleaks detect --source . \
               --report-format sarif --report-path gitleaks.sarif --exit-code 0
           fi
-        continue-on-error: true
 
       - name: Upload Gitleaks SARIF
         if: always() && hashFiles('gitleaks.sarif') != ''
@@ -264,8 +315,17 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
       - name: Check marketplace plugin versions are valid semver
         run: |
-          jq -e '.plugins | to_entries[] | .value.version | test("^[0-9]+\\.[0-9]+\\.[0-9]+$")' \
-            .claude-plugin/marketplace.json | grep -v false || true
+          set -euo pipefail
+          bad=$(jq -r '
+            [.plugins[]
+              | select((.version // "") | test("^[0-9]+\\.[0-9]+\\.[0-9]+$") | not)
+              | .name + "=" + (.version // "<missing>")]
+            | .[]' .claude-plugin/marketplace.json)
+          if [ -n "$bad" ]; then
+            echo "::error::Plugins with non-semver versions:"
+            printf '%s\n' "$bad"
+            exit 1
+          fi
           echo "Version format check complete"
       - name: Validate marketplace version field is present on all plugins
         run: |
