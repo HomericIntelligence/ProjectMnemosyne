@@ -3,9 +3,9 @@ name: batch-pr-ci-fix-workflow
 description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern, (19) just v1.14+ import keyword reservation breaks inline Python heredocs causing all CI Code Quality fails, (20) gitleaks asset URL 404 because uname -s/-m produces wrong case/arch string for download URL, (21) GHA workflow uses manual pixi install instead of composite setup-pixi action causing pixi command not found, (22) bats PATH test for missing tool includes /bin or /usr/bin which pixi activation already polluted, (23) shell script calls companion script via SCRIPT_DIR but unit tests copy only the main script to a temp dir, (24) a repo has legacy ci.yml or security.yml alongside _required.yml each with their own secrets-scan job using gitleaks-action@v2 — must grep ALL workflow files per repo, (25) yamllint default config fails on workflow files with lines >80 chars — fix with -d relaxed flag, (26) mypy run on scripts/ tests/ traverses pytest internals causing Python 3.10 pattern matching errors — fix with --no-namespace-packages --python-version 3.11, (27) multi-line python3 -c in run: | blocks breaks YAML parsing when Python code starts at column 1, (28) PR mergeStateStatus lags after force-push — verify via workflow run head_sha directly, (29) cppcheck danglingLifetime error on a global raw pointer that is assigned but never read (dead scaffolding leftover in signal-handler test), (30) coverage job is advisory-only (extras.yml) but failing every PR because threshold is too high — needs threshold lowering and promotion to required (_required.yml), (29) markdownlint-cli2 CI job scans .claude/plugins/ directory which contains XML-like Claude prompt files using <system>, <task>, <section> tags — produces ~12000 false-positive MD013/MD033 violations; fix by adding .markdownlintignore to exclude .claude/, (30) prefix-dev/setup-pixi with cache: true fails with \"Failed to generate cache key\" when pixi.lock is absent, crashing the job before any conditional install step runs; fix by setting cache: false, (31) aquasecurity/trivy-action tag without v prefix (e.g. @0.36.0) causes action not found — always use @v0.36.0, (32) gitleaks/gitleaks-action@v2 on org repos requires paid license — replace with direct binary curl download, (33) prefix-dev/setup-pixi@v0.9.5 does not exist — correct latest is v0.9.4; rolling forward to nonexistent tag breaks pixi setup immediately, (34) markdownlint-cli2-action globs: \"**/*.md\" bypasses .markdownlintignore — explicit glob overrides the ignore file; remove globs: or add explicit exclusion, (35) git push --force-with-lease fails on dependabot branches because GitHub rebases them automatically between fetch and push making the lease stale — use git push --force, (36) yamllint braces rule: {name: \"unit\" path: \"tests/unit\"} must not have space before closing brace — depends on braces forbid-flow-sequences config, (37) pixi.lock must be regenerated after pyproject.toml changes from rebase — pixi lock regenerates it; pixi install --locked fails if SHA changed, (38) schema-validation check-jsonschema fails on boolean default: 'false' (string) — must be default: false (unquoted boolean), (39) some repos allow only squash merge — auto-merge --rebase will fail; always use --squash for Charybdis-style repos, (40) check-jsonschema downloads github-workflow schema from schemastore.org which returns HTTP 503 intermittently — use --builtin-schema vendor.github-workflows instead, (41) required check failing on main itself blocks all PRs from ever satisfying that check — auto-merge deadlock until main is fixed, (42) yamllint indent-sequences: true causes all existing YAML fixtures with sequences at parent-key indent level to fail — use indent-sequences: consistent instead"
 category: ci-cd
 date: 2026-05-11
-version: "2.14.0"
+version: "2.15.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
 history: batch-pr-ci-fix-workflow.history
 tags: []
 ---
@@ -30,6 +30,9 @@ tags: []
 - **[NEW v2.14.0]** Many PRs are red but most share one root-cause check; classify by failed check before assigning branch workers
 - **[NEW v2.14.0]** Launching coding workers for multiple PR branches; each worker needs a branch-specific write scope and must avoid the shared worktree
 - **[NEW v2.14.0]** `gh pr checks` reports no checks after a force-push; treat it as a transient GitHub state and query workflow runs before rewriting code
+- **[NEW v2.15.0]** A stale PR queue is a stack, not a set of independent branches; merge the semantic base PR first, then rebase each dependent branch in order
+- **[NEW v2.15.0]** The repository default branch may be `master`, not `main`; detect it before hard-coding `origin/main`
+- **[NEW v2.15.0]** Some stale PR branches are fully subsumed by base; comment and reset/close them instead of preserving duplicate diffs
 - **[NEW v2.0.0]** You need to distinguish required (blocking) checks from non-required (advisory) checks
 - **[NEW v2.0.0]** Auto-merge was cleared by a force-push and must be re-enabled
 - **[NEW v2.0.0]** A branch conflicts with a src-layout migration and standard rebase fails immediately
@@ -240,6 +243,45 @@ downstream PRs. In Radiance, the shared failure was `pip-audit --requirement
 constraints/python-3.12.txt` finding `urllib3==2.6.3` CVEs fixed by `urllib3==2.7.0`;
 one root-cause PR was enough, while #476 needed a separate frontend serialization fix and #475
 needed only a container-smoke rerun.
+
+### Phase 0.10: [NEW v2.15.0] Rebase Stacked PRs in Dependency Order
+
+When the queue is a stack, do not treat each PR branch as independent. First identify the
+base branch and the semantic dependency chain, then land the lowest-level/root PR before
+rebasing downstream PRs.
+
+```bash
+# Detect the default branch instead of assuming main
+BASE_BRANCH=$(gh repo view OWNER/REPO --json defaultBranchRef --jq '.defaultBranchRef.name')
+git fetch origin "$BASE_BRANCH"
+
+# Inspect unique commits per branch
+git log --oneline "origin/$BASE_BRANCH..origin/<branch>"
+git diff --stat "origin/$BASE_BRANCH..origin/<branch>"
+
+# Rebase one dependent PR onto the already-merged base branch
+git rebase "origin/$BASE_BRANCH"
+
+# If the branch was built on a stale parent commit, replay only its unique commits
+git rebase --onto "origin/$BASE_BRANCH" <old-parent-commit>
+```
+
+Operational rules:
+
+1. Land shared service/API contracts first, then rebase UI and test-only PRs on top of the
+   merged base.
+2. If a branch's diff is already present on base, post a short PR comment and reset/close
+   the branch; do not force another copy of the same patch through CI.
+3. After every force-push, re-arm auto-merge and verify the PR checks are attached to the
+   new head SHA.
+4. Use focused tests for the touched area before the full pre-push suite. For Radiance,
+   focused Angular tests caught DTO/UI regressions faster than rerunning the full suite
+   after every conflict edit.
+
+Radiance verified this pattern on 2026-05-11. PR #468 was the service DTO base; after it
+merged, PRs #470, #471, and #475 rebased cleanly enough to pass CI and auto-merge. PRs
+#464, #469, #473, and #474 were stale/subsumed and were closed or reset instead of being
+kept alive as duplicate work.
 
 ### Phase 1: Fix Root Cause on Main First (When a Common Pattern Exists)
 
@@ -1558,6 +1600,9 @@ hundreds of test fixtures.
 | Treating container-smoke red as code failure | Assigned investigation to PR #475 after `container-smoke` failed | The failed job hit Docker Hub `504 Gateway Time-out` resolving `python:3.12-slim` before repo code ran; rerun passed without code changes | Check whether failure happened before repo-owned commands; rerun infrastructure failures before editing code |
 | Assuming `mergeStateStatus: BLOCKED` plus empty checks means permanent blocker | PR showed no checks after force-push | GitHub can briefly report no checks before CI queues; code investigation at that point wastes time | Wait 30-60 seconds and query workflow runs/head SHA directly before concluding the branch is broken |
 | Spawning a forked sub-agent with explicit worker type | Used `fork_context: true` together with `agent_type: worker` | Full-history forked agents inherit parent type/model/effort and reject explicit type overrides | For typed coding workers, spawn without full-history fork and include the needed context in the prompt |
+| Hard-coding `origin/main` during Radiance rebase cleanup | Fetched and rebased against `origin/main` | Radiance's default branch is `master`, so the ref did not exist | Detect the default branch with `gh repo view --json defaultBranchRef` before any batch rebase |
+| Rebasing dependent UI/test PRs before the service DTO PR merged | Tried to resolve each trusted-code PR independently | Conflict resolution repeated the same service payload edits and stacked PRs stayed noisy | Merge the root contract PR first, then rebase each dependent branch onto the updated base |
+| Preserving stale branches whose content was already on base | Treated every open PR as needing a unique rebase | Several PRs represented already-merged or superseded work and only added noise to the queue | Verify `git diff origin/<base>..origin/<branch>`; if empty/subsumed, comment and reset/close the PR |
 
 ## Results & Parameters
 
@@ -1665,7 +1710,7 @@ fn __hash__[H: Hasher](self, mut hasher: H):
 | ProjectOdyssey | 40+ PRs, mojo format root fix + mass rebase, 2026-03-06/07 | mass-pr-ci-fix source |
 | ProjectMnemosyne | PR #306 JSON fix + 25 PRs auto-merge, 2026-03-05 | bulk-pr-json-repair-and-automerge source |
 | ProjectOdyssey | PR #3189 pre-existing crash fix via rebase, 2026-03-05 | pr-ci-rebase-fix source |
-| LLM360/Radiance | 18 open PRs bucketed by shared `security` failure vs branch-local frontend/e2e/container checks; root-cause PR #479 opened for `urllib3==2.7.0`, PR #476 frontend fix pushed, PR #475 container-smoke confirmed infra-only rerun, 2026-05-11 | v2.14.0 additions; verified locally and by partial CI observations, full queue CI pending |
+| LLM360/Radiance | 18 open PRs bucketed by shared `security` failure vs branch-local frontend/e2e/container checks; root-cause PR #479 updated `urllib3==2.7.0`, branch-local fixes/rebases landed for #468/#470/#471/#475, stale/subsumed PRs #464/#469/#473/#474 were reset or closed, and the open PR queue reached zero, 2026-05-11 | v2.15.0 additions; verified-ci on merged PRs #468, #470, #471, #475, #478, #479, #466, #461, and #462 |
 | ProjectScylla | PRs #1739/#1734 ruff-format + test assertion fixes; PR #1737→#1740 src-layout reconstruction, 2026-03-29 | v2.0.0 additions |
 | ProjectHephaestus | PR #226 caplog r.message fix + env var delimiter fix, 2026-03-31 | v2.2.0 additions |
 | ProjectAgamemnon | PR #3 gcovr 0% coverage → XML parse fix, 2026-03-31 | v2.2.0 additions |
