@@ -279,9 +279,9 @@ Operational rules:
    after every conflict edit.
 
 Radiance verified this pattern on 2026-05-11. PR #468 was the service DTO base; after it
-merged, PRs #470, #471, and #475 rebased cleanly enough to pass CI and auto-merge. PRs
-#464, #469, #473, and #474 were stale/subsumed and were closed or reset instead of being
-kept alive as duplicate work.
+merged, PRs #470, #471, and #475 rebased cleanly enough to pass CI and auto-merge. The
+stale PRs #464, #469, #473, and #474 were closed or reset instead of being kept alive as
+duplicate work.
 
 ### Phase 1: Fix Root Cause on Main First (When a Common Pattern Exists)
 
