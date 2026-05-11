@@ -1,9 +1,9 @@
 ---
 name: git-worktree-management-patterns
-description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents, (13) cleaning 20+ mixed worktrees using myrmidon swarm wave parallelization, (14) batch-fixing end-of-file newline violations across multiple branches, (15) worktrees with uncommitted skill documentation requiring a 2-commit markdownlint pattern, (16) removing locked worktrees whose lock holder PID is dead (stale agent lock cleanup), (17) worktree has modified pyc/__pycache__ or pixi.lock files (build artifacts) blocking rebase — Safety Net blocks git checkout -- and git restore; use git stash + git stash drop as the only agent-safe path."
+description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents, (13) cleaning 20+ mixed worktrees using myrmidon swarm wave parallelization, (14) batch-fixing end-of-file newline violations across multiple branches, (15) worktrees with uncommitted skill documentation requiring a 2-commit markdownlint pattern, (16) removing locked worktrees whose lock holder PID is dead (stale agent lock cleanup), (17) worktree has modified pyc/__pycache__ or pixi.lock files (build artifacts) blocking rebase — Safety Net blocks git checkout -- and git restore; use git stash + git stash drop as the only agent-safe path, (18) writing dispatch prompts for sub-agents that call Read/Edit on a repo where the user has a dirty main checkout — explicit worktree path discipline must be in the prompt."
 category: tooling
-date: 2026-04-25
-version: "2.6.0"
+date: 2026-05-10
+version: "2.7.0"
 user-invocable: false
 verification: unverified
 history: git-worktree-management-patterns.history
@@ -19,7 +19,7 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 | ------- | ------- |
 | Date | 2026-04-06 |
 | Objective | Consolidated skill covering all git worktree creation, use, and cleanup patterns — including branch deletion policy |
-| Outcome | v2.5.0: Added stale-lock cleanup pattern for dead agent PIDs — unlock + remove + prune sequence, with PID liveness check and user-delegated `--force` workaround |
+| Outcome | v2.7.0: Added sub-agent dispatch prompt template enforcing explicit worktree path discipline; new trigger (18) and Failed Attempts row covering bare-repo-path edits in `Agent(isolation="worktree")` sub-agents |
 | Verification | unverified |
 | History | [changelog](./git-worktree-management-patterns.history) |
 
@@ -49,6 +49,7 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 - `git worktree remove <path>` fails with "is locked, use 'git worktree unlock' to unlock it first"
 - After ~N parallel agent waves, repo has 10+ locked worktrees from completed (now dead) agent PIDs
 - Worktree has modified `__pycache__`/`.pyc` or `pixi.lock` files (build artifacts) that prevent rebase — `git checkout --` and `git restore` are both blocked by Safety Net; use `git stash` to park them before rebase, then `git stash drop` after
+- Writing dispatch prompts for `Agent(isolation="worktree")` sub-agents that will call Read/Edit on a repo where the user might have a dirty main checkout — the harness will not enforce that paths stay inside the worktree, so the prompt must explicitly require worktree path discipline
 
 ## Verified Workflow
 
@@ -895,6 +896,7 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 | Assuming all locks are from live processes | Skipped PID liveness check before unlocking | Risked unlocking a worktree still held by a live agent process | Always check `ps aux \| grep <pid> \| grep -v grep` before treating a lock as stale |
 | `git worktree remove --force` on dirty merged-PR worktrees | Attempted force removal of worktrees with artifact files (even though PR was merged) | Safety Net blocks `--force` flag | Unlock first (`git worktree unlock <path>`), then ask the user to run `git worktree remove --force <path>` |
 | `git checkout --` / `git restore` to discard working-tree artifact files in worktree | After user ran `git restore <files>` manually, pyc files showed as `D` (deleted) not `M` (modified); tried `git -C <wt> checkout -- <pycache_dir>` to restore them | Safety Net blocked it; additionally, user's `git restore` had deleted tracked files (status `D`), not restored them — working tree state was worse than before | After a user manually runs `git restore` / `git checkout --` on tracked files, inspect `git status` carefully. `D` means the file was deleted. Use `git stash` to recover a consistent state, or let the rebase proceed (rebase restores files to the correct version per commit). |
+| Sub-agent dispatched with `Agent(isolation="worktree")` used bare `/home/mvillmow/Projects/Odysseus/...` paths in Read/Edit calls instead of the worktree subpath | Read/Edit operated on the user's main checkout; agent realized it later, used `git checkout` on those 4 files in the user's checkout to revert, then re-applied edits inside the actual worktree at `/home/mvillmow/Projects/Odysseus/.claude/worktrees/agent-<id>/` | The Read/Edit tools accept any path; the harness does not enforce that paths stay inside the agent's worktree. Self-detection is possible but costly | Sub-agent dispatch prompts MUST include: "Use the worktree path EXPLICITLY in every Read/Edit call. The worktree is at `<repo>/.claude/worktrees/agent-<id>/` — never use bare `<repo>/...` paths. The harness will not catch this for you." |
 
 ## Results & Parameters
 
@@ -1032,6 +1034,24 @@ git worktree list --porcelain | awk '/^worktree /{path=$2} /^branch / {print pat
 | ProjectMnemosyne | Yes | Yes |
 | ProjectOdyssey | Yes | Yes |
 | ProjectScylla | Yes | Yes |
+
+### Sub-agent dispatch prompt template — worktree path discipline
+
+When dispatching `Agent(isolation="worktree")` against a repo where the user might
+have a dirty local checkout, include this in the prompt:
+
+```text
+The harness creates your worktree at `<repo-path>/.claude/worktrees/agent-<your-id>/`.
+Use that path explicitly in every Read, Write, Edit, and Bash call. NEVER write to
+`<repo-path>/...` (the user's main checkout). The Read/Edit tools accept any path —
+path discipline is YOUR responsibility, not the harness's.
+
+If you accidentally edit the user's main checkout: do NOT keep going. Use
+`git checkout -- <files>` in the user's checkout to revert (preserving any
+pre-existing dirty state on those files), then re-apply your edits in the worktree.
+```
+
+**Source**: Odysseus easy-sweep agent on 2026-05-10 (Wave 2 of multi-repo CI sweep) self-corrected after Read/Edit calls landed on the user's main checkout. Agent successfully shipped PR #278, but mid-task recovery cost real time. Status: verified-local — template is hypothetical until the next sub-agent dispatch validates it in practice.
 
 ## Verified On
 

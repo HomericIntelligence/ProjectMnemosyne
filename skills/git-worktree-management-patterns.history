@@ -1,5 +1,45 @@
 # git-worktree-management-patterns — History
 
+## v2.7.0 (2026-05-10)
+
+**Changed by:** Multi-repo CI sweep 2026-05-10 (Odysseus easy-sweep agent self-corrected wrong-path edit)
+**Verification:** unverified (template is hypothetical until next sub-agent dispatch validates it)
+
+### What changed
+
+- Bumped version 2.6.0 → 2.7.0; updated date to 2026-05-10
+- Added trigger (18) to description and "When to Use" bullet: writing dispatch prompts for `Agent(isolation="worktree")` sub-agents that will call Read/Edit on a repo where the user might have a dirty main checkout — explicit worktree path discipline must be in the prompt
+- Added new Failed Attempts row: sub-agent dispatched with `Agent(isolation="worktree")` used bare repo paths in Read/Edit calls instead of the worktree subpath; agent self-corrected via `git checkout` in user's checkout, then re-applied edits in the worktree
+- Added new Results & Parameters subsection: "Sub-agent dispatch prompt template — worktree path discipline" with a copy-paste-ready prompt block
+- Updated Overview Outcome line to reference v2.7.0 changes
+
+### Why
+
+Sub-agents dispatched via `Agent(isolation="worktree")` can bypass worktree isolation if they use bare repo paths in Read/Edit. The Read/Edit tools accept any path; the harness does not enforce that paths stay inside the agent's worktree. The Odysseus easy-sweep agent on 2026-05-10 hit this exact failure mode mid-task: it issued Read/Edit calls against `/home/mvillmow/Projects/Odysseus/...` instead of the worktree subpath at `/home/mvillmow/Projects/Odysseus/.claude/worktrees/agent-<id>/`. The agent self-detected, ran `git checkout` on the affected files in the user's main checkout to revert, and re-applied its edits inside the actual worktree. PR #278 still shipped successfully, but mid-task recovery is more expensive than prevention. Adding the prompt template as a documented dispatch artifact makes prevention cheap and repeatable.
+
+### Previous version (v2.6.0) snapshot
+
+```yaml
+name: git-worktree-management-patterns
+category: tooling
+date: 2026-04-25
+version: "2.6.0"
+user-invocable: false
+verification: unverified
+history: git-worktree-management-patterns.history
+```
+
+Key state at v2.6.0:
+
+- 17 trigger conditions in description (1) creating worktrees through (17) discarding artifact-file changes via `git stash` before rebase
+- "When to Use" listed 18 bullets covering the trigger conditions plus operational variations
+- Failed Attempts table contained 33 rows, ending with the `git restore` artifact-file recovery row from the v2.6.0 amendment
+- Results & Parameters subsections: nesting patterns, Safety Net interaction, /tmp cleanup, scale references, myrmidon wave session, model tier assignment, artifact patterns, harness-aware operation split, [gone] branch identification, porcelain verification, branch delete flag reference, repo rename matrix
+- Verified Workflow included the Discarding Artifact Changes Before Rebase (Safety Net safe) subsection added in v2.6.0
+- No sub-agent dispatch prompt template; no trigger covering bare-repo-path edits inside `Agent(isolation="worktree")` sub-agents
+
+---
+
 ## v2.6.0 (2026-04-25)
 
 **Changed by:** ProjectTelemachy git hygiene pass — Safety Net blocks on artifact cleanup before rebase (2026-04-25)
