@@ -257,10 +257,10 @@ jobs:
         run: |
           if [ -f .gitleaks.toml ]; then
             gitleaks detect --source . --config .gitleaks.toml \
-              --report-format sarif --report-path gitleaks.sarif --exit-code 0
+              --report-format sarif --report-path gitleaks.sarif --exit-code 1
           else
             gitleaks detect --source . \
-              --report-format sarif --report-path gitleaks.sarif --exit-code 0
+              --report-format sarif --report-path gitleaks.sarif --exit-code 1
           fi
 
       - name: Upload Gitleaks SARIF
