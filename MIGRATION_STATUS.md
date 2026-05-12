@@ -93,7 +93,6 @@ tags: []
 - ❌ `scripts/migrate_to_skills.py` — Old migration tool
 - ❌ `scripts/fix_failed_attempts_tables.py` — One-off fixup
 - ❌ `scripts/fix_validation_warnings.py` — One-off fixup
-- ❌ `scripts/fix_remaining_warnings.py` — One-off fixup
 - ❌ `scripts/add_user_invocable.py` — One-off fixup
 - ❌ `templates/experiment-skill/` — Old nested template
 
