@@ -1,0 +1,25 @@
+# ecosystem-wide-easy-sweep-2026-05-12 — History
+
+## v1.0.0 (2026-05-12)
+
+**Created by:** 2026-05-12 → 2026-05-13 ecosystem-wide easy-sweep session (5 repos: ProjectArgus, ProjectAgamemnon, Myrmidons, ProjectHermes, ProjectCharybdis; 717 issues classified, 51 PRs merged, 78 issues retired)
+**Verification:** verified-local
+
+### What this skill captures
+
+- The verified 7-phase flowchart: Phase-0 classifier swarm → Phase-1 close-batch → Phase-2 3 waves × ~20 agents → Phase-3 CVE-fix-unblock → Phase-4 rebase cascade → Phase-5 CI triage → Phase-6 knowledge capture
+- Per-repo capability quirks table across all 5 repos (squash-only confirmed ecosystem-wide; per-repo CHANGELOG variance; runner-image CVE in Myrmidons; coverage-threshold reality-mismatch in Agamemnon; META mis-classification of Hermes #316)
+- Cross-reference index linking the 10 systemic failure modes surfaced this session to their sibling-skill amendments
+- Aggregate statistics: 65 wave agents, 51 PRs merged, 78 issues retired, 0 broken-main events, 1.2–8% Pass-1 ALREADY_DONE vs 16% Pass-2 additional
+
+### Why a new skill (not an amendment)
+
+This is a session retrospective that captures an ECOSYSTEM-WIDE pattern not present in any
+single sibling skill. The 4 amended sibling skills cover individual failure modes
+(per-agent stale-check, PRECOMMIT_STALL, runner-image CVE, etc.) but none capture the
+end-to-end 5-repo phase ordering as a reusable flowchart. The existing
+`multi-repo-pr-orchestration-swarm-pattern` covers post-merge PR coordination but not
+the classifier → close-batch → waves → CVE-unblock → triage sequence verified here.
+
+This skill is **non-user-invocable** — it's a reference flowchart consulted by L0
+commanders planning the next ecosystem-wide sweep.

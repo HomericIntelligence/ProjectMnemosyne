@@ -1,5 +1,34 @@
 # already-done-issue-detection — History
 
+## v2.1.0 (2026-05-12)
+
+**Changed by:** 2026-05-12 → 2026-05-13 ecosystem-wide easy-sweep session (5 repos: ProjectArgus, ProjectAgamemnon, Myrmidons, ProjectHermes, ProjectCharybdis; 717 issues classified, 65 wave agents)
+**Verification:** verified-local
+
+### What changed
+
+- Added new section **"2-Pass Classification"** documenting Pass-1 coarse classifier + Pass-2 per-wave-agent stale-check pre-action. Includes pattern, evidence table across 5 repos, and the mandatory STALE-CHECK PRE-ACTION prompt block for wave agents.
+- Added 2 new Failed Attempts rows:
+  - Trusting Phase-0 classifier output to close issues blindly (Hermes #316 META-mis-classification — had to be reopened)
+  - Classifier ALREADY_DONE under-detection across the 2026-05-12 5-repo sweep (1.2–8% Pass-1 vs 16% Pass-2 additional)
+- Added Verified On row for the 2026-05-12 ecosystem-wide easy-sweep.
+- Added 2 new tags: `2-pass-classification`, `classifier-under-detection`.
+- Bumped version 2.0.0 → 2.1.0 (minor: new section + 2 new failure modes, no breaking changes to v2.0.0 stale-plan pattern).
+
+### Why
+
+The 2026-05-12 ecosystem-wide easy-sweep tested the existing batch-triage ALREADY-DONE pattern at unprecedented scale (5 parallel classifier agents on 717 issues). Pass-1 classifier ALREADY_DONE rates came in at 1.2–8% per repo — DRAMATICALLY UNDER the historical 10–48% baseline. The cause was not better classification but classifier optimization for throughput: coarse heuristics over title keywords cannot afford the deeper checks (`gh pr list --search`, `git log`, content-grep) that catch the long tail.
+
+Wave agents that ran a per-agent stale-check pre-action between rebase and implementation caught an additional 16% (8 of 50 wave issues). Without Pass 2, those 8 issues would have produced revert-on-merge PRs, polluting reviewer attention and burning compute. The pattern is now mandatory for any multi-repo classifier-based sweep.
+
+Also surfaced the "never `gh issue close` blindly on classifier output" rule via Hermes #316, which the classifier mis-bucketed as ALREADY_DONE but was actually a META tracker — had to be reopened during Phase 1.
+
+### Previous version (v2.0.0) snapshot
+
+[archived — see git history for full snapshot]
+
+---
+
 ## v2.0.0 (2026-05-07)
 
 **Changed by:** ProjectScylla issue #1887 multi-agent dispatch session

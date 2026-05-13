@@ -1,5 +1,41 @@
 # History: batch-low-difficulty-issue-impl
 
+## v1.11.0 (2026-05-12)
+
+**Changed by:** 2026-05-12 → 2026-05-13 ecosystem-wide easy-sweep session (5 repos: ProjectArgus, ProjectAgamemnon, Myrmidons, ProjectHermes, ProjectCharybdis; 717 issues classified, 51 PRs merged, 78 issues retired)
+**Verification:** verified-local
+
+### What changed
+
+- Added new Session row at top (2026-05-12 ecosystem-wide easy-sweep) summarising 5-repo sweep results.
+- Added new "Runner-Image Baseline CVE Pattern" subsection to Results & Parameters with diagnostic + pip-audit allowlist recipe (verified via Myrmidons PR #724 unblocking 9 wave PRs).
+- Added 6 new Failed Attempts rows:
+  - urllib3 CVE-2026-44431 from Ubuntu runner-image baseline blocked Myrmidons wave PRs (vuln in `/usr/lib/python3/dist-packages/urllib3`, not source-tree)
+  - Per-repo CHANGELOG-deleted policy applied ecosystem-wide (memory hint over-generalized to Agamemnon)
+  - Coverage delta regression on new conditional branches (Hermes #626 80% → 79.95%)
+  - PRECOMMIT_STALL on cold worktree (Argus #182 stalled >5 min on pre-commit env install)
+  - Coverage threshold reality-mismatch (Agamemnon #127 lowered 80 → 25)
+  - Classifier hot-file list treated as load-bearing (turned out advisory only)
+- Added Verified On row for the 2026-05-12 ecosystem-wide sweep.
+- Bumped version to 1.11.0 (minor — new failure modes + new subsection, no breaking changes).
+
+### Why
+
+The 2026-05-12 ecosystem-wide easy-sweep was the first 5-repo parallel batch-impl session. It surfaced systemic patterns not visible in single-repo sessions:
+
+1. **Runner-image baseline CVEs**: Source-tree dependency scans flagged CVEs in packages the project doesn't declare. Root cause is the Ubuntu runner-image baseline Python packages. Without an allowlist pattern, every wave PR fails the same gate.
+2. **Memory-hint over-generalization**: Repo-level conventions described in memory hints (e.g. CHANGELOG.md deleted) are NOT automatically ecosystem-wide. Per-repo verification is mandatory.
+3. **Coverage delta regression**: Adding new conditional code without per-branch tests drops absolute coverage past the gate (Hermes #626).
+4. **PRECOMMIT_STALL**: Cold worktrees can hang indefinitely on first-run pre-commit env install with no progress output.
+5. **Aspirational coverage thresholds**: Projects often configure thresholds disconnected from reality, blocking PRs (Agamemnon #127 80% configured vs 25.76% observed).
+6. **Classifier hot-file noise**: Phase-0 classifier extracts file names mentioned anywhere in the issue body; wave agents must do their own contention analysis.
+
+### Previous version (v1.10.0) snapshot
+
+[archived — see git history]
+
+---
+
 ## v1.10.0 (2026-04-26)
 
 **Changed by:** ProjectKeystone PR #451 cleanup — CI cancelled-vs-failure diagnosis

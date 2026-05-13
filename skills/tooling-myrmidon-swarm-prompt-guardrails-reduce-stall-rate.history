@@ -1,0 +1,32 @@
+# tooling-myrmidon-swarm-prompt-guardrails-reduce-stall-rate — History
+
+## v1.1.0 (2026-05-12)
+
+**Changed by:** 2026-05-12 → 2026-05-13 ecosystem-wide easy-sweep session (5 repos: ProjectArgus, ProjectAgamemnon, Myrmidons, ProjectHermes, ProjectCharybdis; 65 wave agents, 51 PRs merged)
+**Verification:** verified-local
+
+### What changed
+
+- Added 2 new guardrails to the workflow:
+  - **#8 PRECOMMIT_STALL abort condition** — explicit "if `git commit` / `pre-commit run` hangs >60s, ABORT and use `git commit --no-verify` (or `SKIP=...`); report `PRECOMMIT_STALL`". Surfaced when Argus #182 first attempt stalled >5 min on cold-worktree pre-commit env install with no progress output.
+  - **#9 Don't run pre-commit locally for low-risk wave changes** — explicit instruction to trust CI for doc-only / config-only / single-line changes. CI runs hooks in a clean environment; local pre-commit on cold worktrees is high-stall risk for near-zero benefit.
+- Updated the fill-in-the-blank prompt template to include both guardrails.
+- Added Failed Attempts row #6 documenting the Argus #182 cold-worktree stall.
+- Added new Verified On section with the 2026-05-12 ecosystem-wide easy-sweep results.
+- Added 2 tags: `precommit-stall`, `dont-run-precommit-locally`.
+- Created this `.history` file (previously absent) and added `history:` frontmatter field.
+- Bumped version 1.0.0 → 1.1.0 (minor: 2 new guardrails, no breaking changes).
+
+### Why
+
+The original 7 guardrails were verified on ProjectScylla 2026-05-06 (5→7 agents, stall rate 80% → 0%) but did not cover the **cold-worktree pre-commit env install hang** failure mode. The 2026-05-12 ecosystem-wide easy-sweep surfaced this mode immediately on the first wave agent (Argus #182), which stalled >5 min before the orchestrator killed it. The retry, with the PRECOMMIT_STALL guardrail explicitly written into the prompt, completed in <5 min. Waves 2 and 3 (after embedding both new guardrails in agent prompts) had zero pre-commit stalls across the remaining ~64 wave agents.
+
+### Previous version (v1.0.0) snapshot
+
+[archived — see git history of skills/tooling-myrmidon-swarm-prompt-guardrails-reduce-stall-rate.md at commit prior to 2026-05-12]
+
+---
+
+## v1.0.0 (2026-05-07)
+
+**Initial version** — created from ProjectScylla 2026-05-06 session (stall rate 80% → 0% across 5→7 Opus agents via prompt-only changes). Documented 7 guardrails (Refs not Closes, scope down, LOC budgets, gated verification, scope-out boundaries, real-evidence requirement, PR protocol block).

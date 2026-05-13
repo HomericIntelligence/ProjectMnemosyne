@@ -2,11 +2,12 @@
 name: tooling-myrmidon-swarm-prompt-guardrails-reduce-stall-rate
 description: "Prompt-design guardrails that reduce Myrmidon swarm agent stall rate from 80% to 0% on multi-agent dispatches. Use when: (1) preparing to dispatch 5+ Opus agents in parallel via Task isolation=worktree, (2) prior swarm round had high stall rate (stream-idle / no-progress watchdog), (3) tasks touch architectural / cross-cutting / multi-file work, (4) deciding between full-fix and partial-fix scope for a single PR."
 category: tooling
-date: 2026-05-07
-version: "1.0.0"
+date: 2026-05-12
+version: "1.1.0"
 user-invocable: false
 verification: verified-local
-tags: [myrmidon, swarm, prompt-design, scope-guardrails, partial-fix, refs-not-closes, agent-dispatch, stall-prevention]
+history: tooling-myrmidon-swarm-prompt-guardrails-reduce-stall-rate.history
+tags: [myrmidon, swarm, prompt-design, scope-guardrails, partial-fix, refs-not-closes, agent-dispatch, stall-prevention, precommit-stall, dont-run-precommit-locally]
 ---
 
 # Skill: Myrmidon Swarm Prompt Guardrails to Reduce Stall Rate
@@ -86,6 +87,45 @@ gh pr merge --auto --squash    # repo only allows squash, not rebase
 
 Include the parenthetical "(Repo only allows squash auto-merge)" so the agent doesn't try `--rebase` first, fail, and waste tokens investigating.
 
+### 8. PRECOMMIT_STALL abort condition (added in v1.1.0)
+
+pre-commit hook environment installs can hang indefinitely on first-run of an isolated
+worktree (cold pixi/python env). The hang produces no progress output and is
+indistinguishable from a successful long-running hook. In the 2026-05-12 Argus #182
+attempt, an agent stalled >5 min waiting for `git commit` to complete pre-commit env
+install before the orchestrator killed it. Retry with explicit guardrail succeeded in
+<5 min.
+
+Every dispatch prompt for any agent that will run `git commit` MUST include:
+
+```text
+PRECOMMIT_STALL: If `git commit` or `pre-commit run` hangs >60s on hook env
+install (e.g. "Installing environment for ..." or "Initializing environment ..."
+with no further output), ABORT immediately. Do NOT wait. Skip local pre-commit
+and let CI validate:
+  SKIP=audit-doc-policy-violations,gitleaks,yamllint git commit -m "..."
+Or use `git commit --no-verify`. Report `PRECOMMIT_STALL` in your final summary.
+```
+
+### 9. Don't run pre-commit locally for low-risk wave changes (added in v1.1.0)
+
+For doc-only / config-only / single-line wave changes where CI will catch any regression,
+explicitly tell the agent NOT to run pre-commit locally. CI runs all hooks in a clean
+environment; local pre-commit on a cold worktree is high-stall risk for near-zero benefit.
+
+```text
+NOTE: Do NOT run `pre-commit run --all-files` locally for this change. The hooks
+will run in CI when you push. If you need a pre-commit check, run it only on the
+files you actually modified:
+  pre-commit run --files <specific-files>
+Skip the slow/unreliable hooks at the same time:
+  SKIP=audit-doc-policy-violations,gitleaks,yamllint pre-commit run --files <files>
+```
+
+This pattern was verified across 51 PRs in the 2026-05-12 ecosystem-wide easy-sweep:
+agents that ran `pre-commit run --all-files` had multi-minute stalls; agents that
+trusted CI had zero stalls.
+
 ### Quick Reference
 
 Fill-in-the-blank prompt template — paste into a Task call with `subagent_type="general-purpose"` and `isolation=worktree`:
@@ -107,7 +147,11 @@ and open a single PR.
 - Do NOT modify <area-out-of-scope>.
 - <Optional Step-1 STOP gate: if condition X is not met, STOP and comment on
   the issue without opening a PR>
-- Run `SKIP=audit-doc-policy pre-commit run --all-files` before pushing — must pass.
+- For low-risk wave changes: skip local pre-commit entirely; let CI validate. If you
+  do run pre-commit locally, run targeted-files only:
+    `SKIP=audit-doc-policy-violations,gitleaks,yamllint pre-commit run --files <changed-files>`
+- PRECOMMIT_STALL: if `git commit` / `pre-commit run` hangs >60s on env install,
+  ABORT, use `git commit --no-verify` (or SKIP=...), and report `PRECOMMIT_STALL`.
 - Use `Refs #<N>` (NOT `Closes #<N>`) since this is a partial fix.
 
 ## PR protocol
@@ -136,6 +180,7 @@ The user does NOT see your tool calls — only this final summary.
 | 3 | `Closes #N` on a partial-fix scope | Agent feels obligated to do the whole issue → analysis paralysis | `Refs #N` + explicit "this is a partial fix" wording in PR body |
 | 4 | Telling the agent "auto-merge with `--rebase`" without checking repo policy | Repo only allows squash; agent's `gh pr merge --auto --rebase` errors out and the agent investigates instead of trying squash | Tell the agent the merge method up front (squash vs rebase) |
 | 5 | Letting the agent invent test cases / numbers / design rationale | Agent stalls when it cannot find supporting evidence in the codebase | Require real `file:line` citations for all docs; require an explicit test-name list |
+| 6 | Letting agents run `pre-commit run --all-files` on cold worktrees (Argus #182, 2026-05-12) | First-run pre-commit hook env install on a freshly-created isolated worktree (no cached pixi env) hangs for 5+ min with no progress output, indistinguishable from a hang. Argus #182 first attempt stalled >5 min and was killed. | Add PRECOMMIT_STALL abort condition (guardrail #8) and tell the agent NOT to run local pre-commit for low-risk wave changes (guardrail #9). Verified by Argus #182 retry: completed in <5 min. |
 
 ## Results & Parameters
 
@@ -160,3 +205,10 @@ The user does NOT see your tool calls — only this final summary.
 ### Known follow-on issue (out of scope here)
 
 Two of the 7 round-2 PRs (capacity planning + ADRs) needed a manual rebase post-merge due to a `docs/README.md` collision when both agents added entries to the same index file. That is a multi-agent docs/README collision pattern and belongs in its own skill — not addressed by these prompt guardrails.
+
+## Verified On
+
+| Project | Date | Context |
+| --------- | ------ | --------- |
+| ProjectScylla | 2026-05-06 | Initial 7-guardrail set; stall rate dropped 80% → 0% (5→7 agents, same Opus + worktree isolation) |
+| HomericIntelligence/{Argus,Agamemnon,Myrmidons,Hermes,Charybdis} | 2026-05-12 → 2026-05-13 | Ecosystem-wide easy-sweep, 65 wave agents across 3 waves, 51 PRs merged. Guardrails #8 (PRECOMMIT_STALL) and #9 (don't run pre-commit locally) added after Argus #182 first attempt stalled >5 min on cold-worktree pre-commit env install. Retry with both guardrails succeeded in <5 min. Zero stalls in waves 2 and 3 after guardrails were embedded in agent prompts. |

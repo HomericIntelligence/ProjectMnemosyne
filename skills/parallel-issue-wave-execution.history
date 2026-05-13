@@ -1,5 +1,38 @@
 # parallel-issue-wave-execution — History
 
+## v2.8.0 (2026-05-12)
+
+**Changed by:** 2026-05-12 → 2026-05-13 ecosystem-wide easy-sweep session (5 repos: ProjectArgus, ProjectAgamemnon, Myrmidons, ProjectHermes, ProjectCharybdis; 65 wave agents, 51 PRs merged, 78 issues retired)
+**Verification:** verified-local
+
+### What changed
+
+- Added 2 new mandatory wave-agent prompt guardrails after the existing rebase step:
+  - **Per-agent stale-check pre-action** (between rebase and edit): every agent runs `gh issue view`, `gh pr list --search "<N>"`, and content-level ls/grep to catch ALREADY_DONE issues that classifier missed. Phase-0 classifiers reported 1.2–8% ALREADY_DONE, wave-agent inline stale-checks caught an additional 16% (8 of 50). 2-pass classification is now mandatory.
+  - **PRECOMMIT_STALL abort condition**: if `git commit` / `pre-commit run` hangs >60s on hook env install, ABORT and commit with `SKIP=...` env or `--no-verify`. Surfaced when Argus #182 first attempt stalled >5 min on cold-worktree pre-commit env install.
+- Added new Critical Pitfalls section: **Coverage Delta Regression on New Code Branches** with COVERAGE DELTA guardrail (Hermes #626 dropped 80% → 79.95% by adding `_reconnect_loop` branches without tests).
+- Added 7 new Failed Attempts rows covering: PRECOMMIT_STALL, classifier under-detection, per-repo CHANGELOG-deleted variance (memory-hint over-generalization), coverage delta regression, classifier hot-file lists as advisory only, squash-only ecosystem-wide enforcement, classifier META-vs-ALREADY_DONE mis-bucketing (Hermes #316 had to be reopened).
+- Hardcoded `gh pr merge --auto --squash` in the agent prompt template (all 5 HomericIntelligence repos in 2026-05-12 sweep had rebase merge DISABLED — confirmed ecosystem-wide policy).
+- Added Verified On row for the 2026-05-12 ecosystem-wide sweep (5 repos, 717 issues classified, 51 PRs merged, 78 issues retired, 0 broken-main events).
+- Updated Overview outcome to include 5-repo sweep results.
+
+### Why
+
+The 2026-05-12 ecosystem-wide easy-sweep was the first 5-repo parallel session of its kind: 5 classifier agents (Phase 0) → batch close (Phase 1) → 3 waves × ~20 agents (Phase 2) → CVE-fix-unblock (Phase 3) → rebase-cascade + CI triage (Phase 4). Several systemic failure modes surfaced that were not covered by prior single-repo skills:
+
+1. Classifier prompts ALONE are insufficient — they need a wave-agent stale-check companion to catch the additional ~15% of ALREADY_DONE issues that require deep code inspection (pr-list, file-existence, content grep).
+2. Cold worktrees can stall pre-commit env install with no progress output, indistinguishable from a hang — PRECOMMIT_STALL guardrail eliminates this.
+3. Adding new code branches without coverage tests regresses the coverage gate even when absolute coverage is high (Hermes #626).
+4. Memory hints describing repo-level conventions are NOT automatically ecosystem-wide (CHANGELOG-deleted hint over-applied to Agamemnon).
+5. All HomericIntelligence repos are now squash-only — `--auto --rebase` is dead code in this ecosystem.
+6. Classifier output cannot be trusted to close issues blindly (Hermes #316 META mis-classification).
+
+### Previous version (v2.7.0) snapshot
+
+[archived — see git history for full snapshot]
+
+---
+
 ## v2.7.0 (2026-05-10)
 
 **Changed by:** ProjectHephaestus strict-review-then-fix-waves session 2026-05-10 (PRs #384–#395)

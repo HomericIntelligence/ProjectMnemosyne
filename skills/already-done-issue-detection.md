@@ -2,12 +2,12 @@
 name: already-done-issue-detection
 description: "Detect GitHub issues that are already fixed (or partially fixed) before starting implementation. Use when: (1) starting a batch triage of 10+ open issues, (2) assigned an issue in a repo with active prior automation, (3) audit issues filed weeks/months ago, (4) issue title contains 'missing', 'add', 'fix' for a file or config value, (5) BEFORE dispatching multi-agent implementation on any open issue — check if recent merged PRs have invalidated the plan (stale-plan / scope-drift detection)."
 category: tooling
-date: 2026-05-07
-version: 2.0.0
+date: 2026-05-12
+version: 2.1.0
 user-invocable: false
 verification: verified-ci
 history: already-done-issue-detection.history
-tags: [triage, already-done, issue-classification, batch, audit, stale-plan, preflight, scope-drift, multi-agent-dispatch]
+tags: [triage, already-done, issue-classification, batch, audit, stale-plan, preflight, scope-drift, multi-agent-dispatch, 2-pass-classification, classifier-under-detection]
 ---
 
 # Already-Done Issue Detection
@@ -111,6 +111,82 @@ git diff --name-only origin/main...<branch>
 9. **Close with specific evidence** — always include the file path and the current value in the closing comment so the reporter understands what was fixed and when.
 
 10. **For partial fixes** (e.g., CONTRIBUTING.md exists but CHANGELOG.md does not): leave the issue open with a comment explaining which part is done and which remains.
+
+## 2-Pass Classification (added in v2.1.0)
+
+The 2026-05-12 ecosystem-wide easy-sweep (5 repos, 717 issues, 65 wave agents) revealed
+that **classifier prompts ALONE are insufficient** for ALREADY-DONE detection. Phase-0
+classifier agents reported only 1.2–8% ALREADY_DONE per repo — well below the historical
+10–48% baseline. Wave agents that included a per-agent stale-check pre-action
+inline-detected an **additional ~15%** (8 of 50 wave issues = 16% additional). Skipping
+the per-wave stale-check would have produced ~8 unnecessary PRs that revert-on-merge.
+
+### Pattern
+
+```text
+PASS 1 (coarse) — Phase-0 classifier agents:
+  - Read issue title + body
+  - Apply quick heuristics (governance ls, defaultBranchRef, parent-framing)
+  - Bucket into EASY / MEDIUM / HARD / META / ALREADY_DONE
+  - Expected ALREADY_DONE rate: 1–10% (UNDER-DETECTS by design — fast, coarse)
+
+PASS 2 (deep, per-wave-agent) — embedded in EVERY wave-agent prompt as a pre-action:
+  - Run gh issue view {N} --comments | tail -50
+  - Run gh pr list --search "{N} in:title OR {N} in:body" --state all --limit 10
+  - For each file/feature mentioned in the issue:
+      - ls <file> 2>&1
+      - grep -n "<pattern>" <file> 2>&1
+      - git log --oneline -5 -- <file>
+  - If already done: gh issue close {N} --comment "Verified ALREADY-DONE: ..."
+                     then STOP and report ALREADY_DONE. Do NOT create a PR.
+  - Expected additional ALREADY_DONE rate: 10–20% on top of Pass 1
+```
+
+### Why a single pass is not enough
+
+Phase-0 classifiers are optimized for throughput across 100+ issues per repo. They cannot
+afford to run `gh pr list --search` + `git log` + content-grep for every issue — that would
+take hours. They use coarse heuristics that miss cases where:
+
+- A recent PR (last 1–7 days) implemented the fix but the issue title wasn't updated.
+- The fix is in a sibling/related file that doesn't match the issue's title keywords.
+- The implementation differs from what the issue title described (different design choice).
+- The issue is a META tracker or parent-framing — needs deep read of body for sub-issue refs.
+
+Wave agents have full context (a single issue, no throughput pressure) and can afford the
+deeper check. Pass 2 catches what Pass 1 missed.
+
+### Evidence
+
+| Repo (2026-05-12) | Pass-1 ALREADY_DONE % | Pass-2 additional ALREADY_DONE | Total |
+| --- | --- | --- | --- |
+| ProjectArgus | ~5% (10 DUPLICATE + 1 ALREADY_DONE on ~200 issues) | several wave-agent inline closes | ~15% |
+| ProjectAgamemnon | 1.2% (1 of ~80) | wave-agent inline closes including #127 reality-mismatch | additional |
+| Myrmidons | low single digits | several wave-agent inline closes | additional |
+| ProjectHermes | ~5% (7 CHANGELOG-policy ALREADY_DONE + 1 wrongly-closed META #316) | wave-agent inline closes incl. #577 (pre-existing validator) | additional |
+| ProjectCharybdis | 8% | wave-agent inline closes | additional |
+| **Aggregate** | **1.2–8%** | **8 of 50 wave issues = 16% additional** | **realistic 10–25%** |
+
+### Embedding Pass 2 into wave-agent prompts
+
+Every wave-agent prompt MUST include this pre-action between the rebase step (always run
+`git fetch origin && git rebase origin/main` first) and the implementation step:
+
+```text
+STALE-CHECK PRE-ACTION (mandatory):
+1. gh issue view {N} --comments | tail -50
+2. gh pr list --search "{N} in:title OR {N} in:body" --state all --limit 10
+3. For each file/feature referenced in the issue:
+   - ls <file> 2>&1
+   - grep -n "<key-pattern>" <file> 2>&1
+   - git log --oneline -5 -- <file>
+4. If the change is already on origin/main: run
+     gh issue close {N} --comment "Verified ALREADY-DONE: <evidence>"
+   then STOP and report `ALREADY_DONE` as your final output. Do NOT create a PR.
+5. If the issue is a META / parent-framing tracker (body references multiple sub-issues),
+   report `META` and STOP. Do NOT close, do NOT implement.
+6. Only proceed to implementation if both checks above pass.
+```
 
 ## Stale-Plan Scope Drift (sibling pattern — preflight before multi-agent dispatch)
 
@@ -216,6 +292,8 @@ git log origin/main..HEAD  # any new commits since plan was assembled?
 | Trusting audit findings as the work definition | Sized the plan off F19/F20 from the strict audit doc embedded in a parent issue | Audit findings represent state at audit time; four PRs landed between audit and dispatch | Use audit findings as initial framing only, then verify against current commits with `gh pr list --search "<N> in:title"` and `git log origin/main` |
 | Trusting plan-agent file-existence assumptions | Plan agents proposed creating `src/scylla/observability/tracing.py` based on their exploration of the codebase | Exploration was correct AT EXPLORATION TIME; commits landed during the planning window | Between plan approval and agent dispatch, do a final `git fetch && git log origin/main..HEAD` and `find` for each file the plan plans to create |
 | Skipping `gh pr list` preflight before launching agents | Relied on the in-plan ALREADY-DONE grep (which runs once agents start) instead of running `gh pr list --search "<N> in:title" --state merged --limit 20` BEFORE any compute is spent | The grep would have caught duplicates but only after worktrees were created and agents began work — wasting tokens on revert-on-merge changes | Make `gh pr list --search "<issue> in:title" --state merged --limit 20` line 1 of every multi-agent dispatch script — runs in seconds, catches scope drift before any agent compute |
+| Trusting Phase-0 classifier output to close issues blindly (Hermes #316, 2026-05-12) | Phase-1 manual sweep ran `gh issue close` on the classifier's ALREADY_DONE bucket without reading issue bodies. Hermes #316 was bucketed as ALREADY_DONE but was actually a META tracker epic referencing multiple sub-issues. Issue had to be reopened. | Classifier agents bucket on coarse heuristics (title keywords); they cannot reliably distinguish META trackers from ALREADY_DONE issues when titles look similar. | Never trust classifier ALREADY_DONE output to `gh issue close` blindly. Always run `gh issue view N` and read the body before closing. If body contains issue-number references (`#NNN`) suggesting parent-framing, reclassify as META. |
+| Classifier ALREADY_DONE under-detection (2026-05-12 ecosystem-wide easy-sweep, 5 repos / 717 issues) | Treated Phase-0 classifier ALREADY_DONE buckets (1.2–8% per repo) as the complete set; wave agents ran without a per-agent stale-check pre-action. | Phase-0 classifiers are optimized for throughput and use coarse heuristics — they miss ~15% of additional ALREADY_DONE issues that require `gh pr list --search`, `git log`, or content-level grep. Without per-wave stale-check, those 8 issues would have produced revert-on-merge PRs. | Use 2-pass classification (see "2-Pass Classification" section above): Pass 1 = Phase-0 classifier coarse buckets; Pass 2 = mandatory per-wave-agent stale-check pre-action with `gh issue view`, `gh pr list --search`, file-existence + grep. Verified across 5 repos / 50 wave issues — caught 8 additional ALREADY_DONE (16%). |
 
 ## Results & Parameters
 
@@ -286,6 +364,7 @@ git log origin/main..HEAD  # any new commits since plan was assembled?
 | ProjectArgus | 2026-04-23 | myrmidon-swarm triage of 23 open issues | 11/23 (48%) |
 | ProjectTelemachy | 2026-04-25 | myrmidon-swarm triage of 57 open issues | 6/57 (10.5%) |
 | ProjectScylla | 2026-05-07 | Stale-plan preflight on issue #1887 caught 4 merged PRs (#1921, #1922, #1928, #1931) before opus sub-agent dispatch | ~70% of plan obsolete; corrected scope shipped as #1932 + #1933 (green) |
+| HomericIntelligence/{Argus,Agamemnon,Myrmidons,Hermes,Charybdis} | 2026-05-12 → 2026-05-13 | 2-pass classification verified across ecosystem-wide easy-sweep: 5 parallel classifiers (Phase 0) reported 1.2–8% ALREADY_DONE; per-wave stale-check (Pass 2) caught 8 additional of 50 wave issues (16%). Hermes #316 META-mis-classification surfaced "never close-blindly" rule (had to reopen). | Pass-1 ALREADY_DONE: 1.2–8% per repo; Pass-2 additional: 16% (8/50). Realistic combined rate: 10–25%. |
 
 ## Prior Sessions
 
