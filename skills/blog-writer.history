@@ -1,0 +1,51 @@
+# blog-writer — History
+
+## v2.0.0 (2026-05-13)
+
+**Changed by:** ProjectOdyssey Day-187 blog-writing session (PR #5402 — `notes/blog/05-12-2026/README.md`, "The AVX-512 Phantom in the Hypervisor", 6,814 words)
+**Verification:** verified-local (methodology applied end-to-end to PR #5402; markdownlint passed on the file when linted explicitly; auto-merge squash enabled; CI in flight at amendment time)
+
+### What changed
+
+Full rewrite of the v1.0.0 template into a populated, verified-local methodology for episodic story-arc blog posts. Key additions:
+
+1. **Episodic Day numbering** anchored to a known-good prior post (ProjectOdyssey baseline: 2025-11-07). Day 165 = 2026-04-20; Day 187 = 2026-05-12.
+2. **Standard frontmatter** — H1 `Day [N spelled out]: [Subtitle]`, bold metadata block (Project / Date / Branch / Tags), horizontal rule, italic Note blockquote.
+3. **Story-arc structure** — root cause moves from the top to chapter ~10 of ~14; cold-open is the moment of pivot, not the answer; TL;DR is journey-preview not technical answer.
+4. **Every rejected hypothesis = full paragraph** (~250–300 words) with belief → evidence → decisive observation → reshape.
+5. **Self-contained narrative** — verbatim probe outputs, register-file primers, mechanism explanations inlined in the post body; external links are reference only.
+6. **Claude session log mining** via `~/.claude/projects/<encoded-path>/*.jsonl` with grep/jq filtering (never full reads — files are 2–7 MB).
+7. **Upstream comment URLs as numbered milestones** — cited inline with full URL but never load-bearing for comprehension.
+8. **Mermaid diagrams** in fenced code blocks (post-v1 enhancement).
+9. **"Reproduce It Yourself"** self-contained command sequence chapter near the end.
+10. **Precision-of-claims rule** — constructive scope phrasing over sweeping editorial claims.
+11. **Token-budget transparency** chapter when an investigation was expensive.
+12. **Lessons Learned + organized References** closing pattern.
+13. **14-chapter outline** documenting the refined Day-187 structure.
+
+Added 8 "Failed Attempts" rows capturing the methodology pitfalls discovered while writing the prior five posts in the series.
+
+Added "Verified On" row for ProjectOdyssey PR #5402.
+
+Frontmatter changes: `version 1.0.0 → 2.0.0`, `date 2026-03-25 → 2026-05-13`, `verification unverified → verified-local`, `tags [] → [blog, narrative, documentation, retrospective, story-arc]`. `description` rewritten to surface the episodic / story-arc / self-contained methodology rather than the generic "informal cycle format" wording from v1.
+
+### Why
+
+v1.0.0 was a template — empty Overview, generic Plan→Challenges→Solutions→Learnings workflow, no real examples, `verification: unverified`. Writing the prior four posts (03-16, 03-24, 03-25, 04-20) plus the Day 187 capstone surfaced a much richer methodology that the template could not capture. The Plan→Challenges→Solutions→Learnings shape in particular kills story arc by leading with the answer; the new 14-chapter outline puts the root cause near the end where readers can earn it.
+
+### Previous version (v1.0.0) snapshot
+
+---
+version: "1.0.0"
+date: 2026-03-25
+verification: unverified
+---
+
+(Content prior to v2.0.0 amendment is preserved in the git history at the commit prior to this amendment on branch `main`. To recover:
+
+```bash
+git -C ~/.agent-brain/ProjectMnemosyne log --oneline -- skills/blog-writer.md
+git -C ~/.agent-brain/ProjectMnemosyne show <pre-v2-commit>:skills/blog-writer.md > /tmp/blog-writer-v1.0.0.md
+```
+
+Pre-amendment footprint: 172 lines, template-only with generic Plan/Challenges/Solutions/Learnings structure.)
