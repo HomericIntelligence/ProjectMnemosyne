@@ -1,9 +1,9 @@
 ---
 name: batch-pr-ci-fix-workflow
-description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern, (19) just v1.14+ import keyword reservation breaks inline Python heredocs causing all CI Code Quality fails, (20) gitleaks asset URL 404 because uname -s/-m produces wrong case/arch string for download URL, (21) GHA workflow uses manual pixi install instead of composite setup-pixi action causing pixi command not found, (22) bats PATH test for missing tool includes /bin or /usr/bin which pixi activation already polluted, (23) shell script calls companion script via SCRIPT_DIR but unit tests copy only the main script to a temp dir, (24) a repo has legacy ci.yml or security.yml alongside _required.yml each with their own secrets-scan job using gitleaks-action@v2 — must grep ALL workflow files per repo, (25) yamllint default config fails on workflow files with lines >80 chars — fix with -d relaxed flag, (26) mypy run on scripts/ tests/ traverses pytest internals causing Python 3.10 pattern matching errors — fix with --no-namespace-packages --python-version 3.11, (27) multi-line python3 -c in run: | blocks breaks YAML parsing when Python code starts at column 1, (28) PR mergeStateStatus lags after force-push — verify via workflow run head_sha directly, (29) cppcheck danglingLifetime error on a global raw pointer that is assigned but never read (dead scaffolding leftover in signal-handler test), (30) coverage job is advisory-only (extras.yml) but failing every PR because threshold is too high — needs threshold lowering and promotion to required (_required.yml), (29) markdownlint-cli2 CI job scans .claude/plugins/ directory which contains XML-like Claude prompt files using <system>, <task>, <section> tags — produces ~12000 false-positive MD013/MD033 violations; fix by adding .markdownlintignore to exclude .claude/, (30) prefix-dev/setup-pixi with cache: true fails with \"Failed to generate cache key\" when pixi.lock is absent, crashing the job before any conditional install step runs; fix by setting cache: false, (31) aquasecurity/trivy-action tag without v prefix (e.g. @0.36.0) causes action not found — always use @v0.36.0, (32) gitleaks/gitleaks-action@v2 on org repos requires paid license — replace with direct binary curl download, (33) prefix-dev/setup-pixi@v0.9.5 does not exist — correct latest is v0.9.4; rolling forward to nonexistent tag breaks pixi setup immediately, (34) markdownlint-cli2-action globs: \"**/*.md\" bypasses .markdownlintignore — explicit glob overrides the ignore file; remove globs: or add explicit exclusion, (35) git push --force-with-lease fails on dependabot branches because GitHub rebases them automatically between fetch and push making the lease stale — use git push --force, (36) yamllint braces rule: {name: \"unit\" path: \"tests/unit\"} must not have space before closing brace — depends on braces forbid-flow-sequences config, (37) pixi.lock must be regenerated after pyproject.toml changes from rebase — pixi lock regenerates it; pixi install --locked fails if SHA changed, (38) schema-validation check-jsonschema fails on boolean default: 'false' (string) — must be default: false (unquoted boolean), (39) some repos allow only squash merge — auto-merge --rebase will fail; always use --squash for Charybdis-style repos, (40) check-jsonschema downloads github-workflow schema from schemastore.org which returns HTTP 503 intermittently — use --builtin-schema vendor.github-workflows instead, (41) required check failing on main itself blocks all PRs from ever satisfying that check — auto-merge deadlock until main is fixed, (42) yamllint indent-sequences: true causes all existing YAML fixtures with sequences at parent-key indent level to fail — use indent-sequences: consistent instead"
+description: "Use when: (1) multiple PRs have failing CI checks (formatting, pre-commit, broken links, broken JSON, mypy), (2) a common CI failure pattern affects many PRs and needs a root-cause fix before rebasing, (3) PRs need batch auto-merge after fixes, (4) JSON files are bulk-corrupted and must be repaired before merging, (5) identifying required vs non-required checks, (6) recovering auto-merge after force-push, (7) reconstructing a branch that conflicts with a src-layout migration, (8) pytest caplog test failures with LogRecord.message, (9) gcovr coverage reports 0% in CI, (10) ruff F841 unused variable not auto-fixable, (11) dependabot PR blocked by pre-existing main-branch workflow bug, (12) check-yaml fails on duplicate GHA job keys, (13) small-batch rebase-then-resolve in a worktree, (14) git restore --theirs or git checkout --theirs blocked by Safety Net during automated rebase waves, (15) C library via FetchContent causing global -Werror CI failures, (16) coverage script missing Conan toolchain, (17) clang-format version mismatch with multi-line lambda formatting, (18) diagnosing all-5-required-checks failing vs benchmarks/coverage skipped pattern, (19) just v1.14+ import keyword reservation breaks inline Python heredocs causing all CI Code Quality fails, (20) gitleaks asset URL 404 because uname -s/-m produces wrong case/arch string for download URL, (21) GHA workflow uses manual pixi install instead of composite setup-pixi action causing pixi command not found, (22) bats PATH test for missing tool includes /bin or /usr/bin which pixi activation already polluted, (23) shell script calls companion script via SCRIPT_DIR but unit tests copy only the main script to a temp dir, (24) a repo has legacy ci.yml or security.yml alongside _required.yml each with their own secrets-scan job using gitleaks-action@v2 — must grep ALL workflow files per repo, (25) yamllint default config fails on workflow files with lines >80 chars — fix with -d relaxed flag, (26) mypy run on scripts/ tests/ traverses pytest internals causing Python 3.10 pattern matching errors — fix with --no-namespace-packages --python-version 3.11, (27) multi-line python3 -c in run: | blocks breaks YAML parsing when Python code starts at column 1, (28) PR mergeStateStatus lags after force-push — verify via workflow run head_sha directly, (29) cppcheck danglingLifetime error on a global raw pointer that is assigned but never read (dead scaffolding leftover in signal-handler test), (30) coverage job is advisory-only (extras.yml) but failing every PR because threshold is too high — needs threshold lowering and promotion to required (_required.yml), (29) markdownlint-cli2 CI job scans .claude/plugins/ directory which contains XML-like Claude prompt files using <system>, <task>, <section> tags — produces ~12000 false-positive MD013/MD033 violations; fix by adding .markdownlintignore to exclude .claude/, (30) prefix-dev/setup-pixi with cache: true fails with \"Failed to generate cache key\" when pixi.lock is absent, crashing the job before any conditional install step runs; fix by setting cache: false, (31) aquasecurity/trivy-action tag without v prefix (e.g. @0.36.0) causes action not found — always use @v0.36.0, (32) gitleaks/gitleaks-action@v2 on org repos requires paid license — replace with direct binary curl download, (33) prefix-dev/setup-pixi@v0.9.5 does not exist — correct latest is v0.9.4; rolling forward to nonexistent tag breaks pixi setup immediately, (34) markdownlint-cli2-action globs: \"**/*.md\" bypasses .markdownlintignore — explicit glob overrides the ignore file; remove globs: or add explicit exclusion, (35) git push --force-with-lease fails on dependabot branches because GitHub rebases them automatically between fetch and push making the lease stale — use git push --force, (36) yamllint braces rule: {name: \"unit\" path: \"tests/unit\"} must not have space before closing brace — depends on braces forbid-flow-sequences config, (37) pixi.lock must be regenerated after pyproject.toml changes from rebase — pixi lock regenerates it; pixi install --locked fails if SHA changed, (38) schema-validation check-jsonschema fails on boolean default: 'false' (string) — must be default: false (unquoted boolean), (39) some repos allow only squash merge — auto-merge --rebase will fail; always use --squash for Charybdis-style repos, (40) check-jsonschema downloads github-workflow schema from schemastore.org which returns HTTP 503 intermittently — use --builtin-schema vendor.github-workflows instead, (41) required check failing on main itself blocks all PRs from ever satisfying that check — auto-merge deadlock until main is fixed, (42) yamllint indent-sequences: true causes all existing YAML fixtures with sequences at parent-key indent level to fail — use indent-sequences: consistent instead, (43) a PR with ≥10 simultaneous CI failures across the build/test/sanitizer/coverage matrix indicates a real API/build regression (often local-vs-CI toolchain mismatch hiding the regression locally) — close-and-defer rather than rebase; <5 failures concentrated in one job family → rebase or root-cause fix"
 category: ci-cd
 date: 2026-05-11
-version: "2.15.0"
+version: "2.16.0"
 user-invocable: false
 verification: verified-ci
 history: batch-pr-ci-fix-workflow.history
@@ -901,6 +901,62 @@ gh run view <run-id> --log-failed | head -100
 (Test asan, lsan, ubsan, Benchmarks, Coverage), the root cause is a **build failure**, not a
 test failure. The build error is usually in a dependency (e.g., `_deps/natsc-src/`) that inherits
 the project's global `-Werror` flags.
+
+### Phase 0.11: [NEW v2.16.0] Cascading Failure Signal — Close-and-Defer vs Rebase
+
+When triaging a queue of open PRs after a wave, the **breadth of CI failure** is a fast
+classifier between "rebase or fix" and "close and defer":
+
+| Failure Breadth | Diagnosis | Action |
+| ----------------- | ----------- | -------- |
+| **≥10 simultaneous failures** across build/test/sanitizer/coverage matrix (e.g., `ubuntu-{gcc,clang}-{debug,release}` + Coverage + CodeQL + ASAN+UBSAN + TSan + integration-tests + clang-tidy + docker-build + typecheck) | **Real API/build regression** — the change broke a public ABI, broke build configuration, or introduced an undefined symbol. The agent's local validation was insufficient (often due to a sanitizer/toolchain version mismatch between local pixi env and CI runner). | **Close the PR with a follow-up note; do NOT rebase.** Let the originating issue stay open for retry as a higher-difficulty PR (e.g., promote EASY → MEDIUM). Rebasing will not fix a real regression — the same matrix will fail post-rebase. |
+| **<5 failures concentrated in one job family** (e.g., 3 yamllint runs, 2 markdownlint runs) | **Job-family-specific fix** — same pre-commit hook or one shared dependency | Fix via existing Phase 1-8 recipes (root-cause on main, or per-PR rebase if the fix already landed) |
+| **All 5 required checks SKIPPED or QUEUED** for >25 min | **Runner queue saturation** (see existing "GitHub Actions Runner Queue Saturation" pitfall in parallel-issue-wave-execution) | Rate-limit PR creation; rebase + force-push to retrigger after queue drains |
+
+**Diagnostic command**:
+
+```bash
+# Count failing checks across the open PR queue
+gh pr list --state open --json number,title,statusCheckRollup --author "@me" \
+  | python3 -c "
+import json, sys
+prs = json.load(sys.stdin)
+for pr in prs:
+    checks = pr.get('statusCheckRollup', [])
+    fails = [c for c in checks
+             if c.get('state', c.get('conclusion', '')) in ('FAILURE', 'ERROR')]
+    if len(fails) >= 10:
+        print(f'CASCADING: PR #{pr[\"number\"]} has {len(fails)} simultaneous failures — close-and-defer')
+    elif len(fails) > 0:
+        families = set()
+        for f in fails:
+            name = f.get('name', '')
+            families.add(name.split('/')[0].split('(')[0].strip())
+        if len(families) <= 2:
+            print(f'FIXABLE: PR #{pr[\"number\"]} has {len(fails)} failures in {len(families)} family — rebase or root-cause fix')
+        else:
+            print(f'AMBIGUOUS: PR #{pr[\"number\"]} has {len(fails)} failures across {len(families)} families')
+"
+```
+
+**Concrete case (Charybdis PR #231, 2026-05-13)**: Timeout-constructor refactor for issue #81
+produced 17 failed checks: `ubuntu-24.04-{gcc,clang}-{debug,release}`, Coverage, CodeQL, ASAN+UBSAN,
+TSan, integration-tests, clang-tidy, docker-build, typecheck. Root cause: the constructor
+parameter refactor changed the public ABI of `HttpTestClient` in a way that broke callers
+across the test matrix. The agent's local validation reported "pass" because:
+
+1. pixi's clang-tidy v22 didn't match CI's v18 (different lint rule set);
+2. the local build couldn't compile `test_store_concurrent.cpp` due to a missing
+   `<barrier>` include (the agent ignored this as a "pre-existing local issue");
+3. the agent never ran the full sanitizer matrix locally.
+
+**Rebase would not have fixed this**: the matrix fails *because of* the public-API change, not
+because of a merge conflict. The correct call was to close PR #231 with a follow-up note and
+leave issue #81 OPEN for retry as a MEDIUM-difficulty PR (with explicit prompt: "this is an
+ABI-breaking change; verify all callers compile against the new signature").
+
+**Heuristic**: ≥10 simultaneous CI failures across build/test/sanitizer matrix → close-and-defer.
+The agent's local validation was insufficient and the public API change needs deeper review.
 
 ### Phase 17: [NEW v2.7.0] Fix C Library via FetchContent Failing with -Werror
 

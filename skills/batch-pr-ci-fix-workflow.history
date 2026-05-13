@@ -1,5 +1,23 @@
 # batch-pr-ci-fix-workflow — History
 
+## v2.16.0 (2026-05-13)
+
+**Changed by:** Charybdis PR #231 triage incident (timeout-constructor refactor for issue #81, 17 simultaneous CI failures across full build/test/sanitizer matrix, 2026-05-13)
+**Verification:** verified-local
+
+### What changed
+
+- Added new Verified Workflow subsection: **Phase 0.11 — Cascading Failure Signal**. Provides a 3-tier breadth classifier (≥10 simultaneous matrix failures → close-and-defer; <5 failures concentrated in one job family → rebase/fix; all 5 required SKIPPED/QUEUED >25 min → runner saturation), a Python diagnostic over `gh pr list --json statusCheckRollup`, and the Charybdis #231 case study (17 failed checks: ubuntu-24.04 {gcc,clang} × {debug,release}, Coverage, CodeQL, ASAN+UBSAN, TSan, integration-tests, clang-tidy, docker-build, typecheck).
+- Added entry (43) to the description list summarizing the new heuristic.
+
+### Why
+
+Prior versions of this skill assume PR failures are fixable via the existing Phase 1-19 recipes (root-cause-on-main, rebase, force-push). Charybdis PR #231 exposed a fourth class: a public-ABI-breaking refactor that produced a regression invisible to local validation due to local-vs-CI toolchain mismatch (pixi clang-tidy v22 vs CI v18, missing `<barrier>` include locally). Rebasing would not have fixed it; the right call was to close the PR and let the issue be retried as a MEDIUM-difficulty change. The new Phase 0.11 makes the close-vs-rebase decision explicit and fast (breadth count from `statusCheckRollup` alone).
+
+### Previous version (v2.15.0) snapshot
+
+See PR #1699 (merged 2026-05-13 06:03 UTC) was a different skill; for the v2.15.0 content of this skill, see the prior commit history in `git log -- skills/batch-pr-ci-fix-workflow.md` before this PR. The v2.16.0 diff is contained to the new Phase 0.11 subsection and the new description entry (43); no existing content modified.
+
 ## v2.15.0 (2026-05-11)
 
 **Changed by:** Radiance stacked PR rebase and final CI cleanup session
