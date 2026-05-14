@@ -43,6 +43,7 @@ tags:
 | **Root Cause** | `libAsyncRTMojoBindings.so` calls `std::filesystem::status("$HOME/.modular")` at startup. When container UID ≠ home dir owner UID, `filesystem_error: Permission denied` propagates to `std::terminate` → `abort()`. Also triggered when CI image cache is keyed without runner UID, causing a UID-1000 cached image to run as UID-1001. |
 | **Exit Code** | 134 (SIGABRT) |
 | **History** | [changelog](./docker-mojo-uid-mismatch-crash-fix.history) |
+| **Upstream Status (2026-05-13)** | `getAcceleratorArchOrEmpty()` startup crash (modular/modular#6412) is **fixed** in `mojo==1.0.0b2.dev2026050805+`. See `[[validate-upstream-mojo-fix-hostile-home-matrix]]` for the hostile-`$HOME` validation matrix and the confirmation comment. The bind-mount `_ensure_writable` portion of this skill (Fix 6) remains load-bearing regardless. |
 
 ## When to Use
 
