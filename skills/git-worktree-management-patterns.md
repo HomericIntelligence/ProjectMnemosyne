@@ -1,11 +1,11 @@
 ---
 name: git-worktree-management-patterns
-description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents, (13) cleaning 20+ mixed worktrees using myrmidon swarm wave parallelization, (14) batch-fixing end-of-file newline violations across multiple branches, (15) worktrees with uncommitted skill documentation requiring a 2-commit markdownlint pattern, (16) removing locked worktrees whose lock holder PID is dead (stale agent lock cleanup), (17) worktree has modified pyc/__pycache__ or pixi.lock files (build artifacts) blocking rebase — Safety Net blocks git checkout -- and git restore; use git stash + git stash drop as the only agent-safe path, (18) writing dispatch prompts for sub-agents that call Read/Edit on a repo where the user has a dirty main checkout — explicit worktree path discipline must be in the prompt."
+description: "Use when: (1) creating isolated git worktrees for parallel development on multiple issues, (2) switching between worktrees without stashing, (3) syncing feature branches with main, (4) cleaning up single or multiple stale worktrees after PRs merge, (5) removing all worktrees in bulk after parallel development sessions, (6) fixing file edits that landed in the wrong worktree, (7) parsing git worktree list --porcelain output programmatically, (8) fixing worktree creation failures due to stale origin/HEAD or missing origin/main, (9) fixing branch name collisions in parallel E2E test runs, (10) enforcing branch deletion policy — always defer branch deletion to user, (11) avoiding repeated permission prompts in sandboxed harnesses by running git from inside the worktree instead of driving every command through `git -C <path>`, (12) cleaning stale /tmp/mnemosyne-skill-* worktree directories before parallel /learn sub-agents, (13) cleaning 20+ mixed worktrees using myrmidon swarm wave parallelization, (14) batch-fixing end-of-file newline violations across multiple branches, (15) worktrees with uncommitted skill documentation requiring a 2-commit markdownlint pattern, (16) removing locked worktrees whose lock holder PID is dead (stale agent lock cleanup), (17) worktree has modified pyc/__pycache__ or pixi.lock files (build artifacts) blocking rebase — Safety Net blocks git checkout -- and git restore; use git stash + git stash drop as the only agent-safe path, (18) writing dispatch prompts for sub-agents that call Read/Edit on a repo where the user has a dirty main checkout — explicit worktree path discipline must be in the prompt, (19) refactoring an end-of-script worktree cleanup sweep into inline cleanup within a per-branch rebase loop — requires CWD-out-before-remove, gh-failure-safe open-PR gate, and post-removal directory-existence guards on later checks."
 category: tooling
-date: 2026-05-10
-version: "2.7.0"
+date: 2026-05-14
+version: "2.8.0"
 user-invocable: false
-verification: unverified
+verification: verified-local
 history: git-worktree-management-patterns.history
 tags: []
 ---
@@ -19,8 +19,8 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 | ------- | ------- |
 | Date | 2026-04-06 |
 | Objective | Consolidated skill covering all git worktree creation, use, and cleanup patterns — including branch deletion policy |
-| Outcome | v2.7.0: Added sub-agent dispatch prompt template enforcing explicit worktree path discipline; new trigger (18) and Failed Attempts row covering bare-repo-path edits in `Agent(isolation="worktree")` sub-agents |
-| Verification | unverified |
+| Outcome | v2.8.0: Added inline worktree cleanup pattern with safety-gated `maybe_remove_worktree` helper; new trigger (19) and 4 Failed Attempts rows covering CWD-in-removed-directory, `gh pr list` failure preservation, post-removal dirty-check guards, and redundant end-of-script sweep |
+| Verification | verified-local |
 | History | [changelog](./git-worktree-management-patterns.history) |
 
 ## When to Use
@@ -50,6 +50,7 @@ Consolidated skill for all git worktree patterns: creation, switching, syncing, 
 - After ~N parallel agent waves, repo has 10+ locked worktrees from completed (now dead) agent PIDs
 - Worktree has modified `__pycache__`/`.pyc` or `pixi.lock` files (build artifacts) that prevent rebase — `git checkout --` and `git restore` are both blocked by Safety Net; use `git stash` to park them before rebase, then `git stash drop` after
 - Writing dispatch prompts for `Agent(isolation="worktree")` sub-agents that will call Read/Edit on a repo where the user might have a dirty main checkout — the harness will not enforce that paths stay inside the worktree, so the prompt must explicitly require worktree path discipline
+- Refactoring a `rebase-all-branches`-style bash script that has both a per-branch loop AND a separate end-of-script "stale worktree" cleanup sweep — collapse the sweep into inline calls so each branch is cleaned up under the same safety gates the script already proved it satisfied (rebased+pushed clean, or already up-to-date)
 
 ## Verified Workflow
 
@@ -785,6 +786,99 @@ printf '  - %s\n' "${SAFE_TO_DELETE_BRANCHES[@]}"
 echo "Review each, then: git branch -d <branch>  (or -D for rebase-merged PRs)"
 ```
 
+### Inline Worktree Cleanup Inside a Per-Branch Rebase Loop
+
+When a script (e.g. `rebase-all-branches.sh`) iterates branches, `cd`s into each
+worktree to rebase, and previously had a duplicate end-of-script "stale worktree"
+sweep, fold the cleanup into the loop using a single safety-gated helper. The
+helper below is the verified pattern from ProjectOdyssey
+`scripts/rebase-all-branches.sh` (PR #5408).
+
+```bash
+# CLEANED_WORKTREES collects branches whose worktree was removed inline.
+CLEANED_WORKTREES=()
+
+maybe_remove_worktree() {
+    local branch="$1"
+    local wt_path="$2"
+
+    # Guard 1: empty path → nothing to do.
+    [ -z "$wt_path" ] && return 0
+    # Guard 2: never remove the main worktree.
+    [ "$wt_path" = "$MAIN_REPO_ROOT" ] && return 0
+    # Guard 3: already gone (e.g. removed earlier in this run).
+    [ ! -d "$wt_path" ] && return 0
+
+    # Guard 4: refuse if the worktree is dirty.
+    if [ -n "$(git -C "$wt_path" status --porcelain 2>/dev/null)" ]; then
+        return 0
+    fi
+
+    # Guard 5: an open PR means the branch is still in flight — preserve it.
+    # IMPORTANT: a `gh` failure (unauthenticated, offline, rate-limited) must
+    # PRESERVE the worktree, not destroy it. Capture into the variable inside
+    # the `if` so a non-zero exit returns immediately.
+    local open_prs
+    if ! open_prs=$(gh pr list --head "$branch" --state open --json number 2>/dev/null); then
+        return 0
+    fi
+    if [ -n "$open_prs" ] && [ "$open_prs" != "[]" ]; then
+        return 0
+    fi
+
+    # All gates passed: remove the worktree, record the branch.
+    if git worktree remove "$wt_path" 2>/dev/null; then
+        CLEANED_WORKTREES+=("$branch")
+    fi
+    # Intentionally do NOT delete the branch — deferred to user
+    # (see Branch Deletion Policy).
+}
+```
+
+**Caller pattern — CWD discipline matters:**
+
+```bash
+for branch in "${BRANCHES[@]}"; do
+    WORK_DIR=$(...)   # resolve worktree path for this branch
+
+    cd "$WORK_DIR"
+    git rebase origin/main || { cd "$MAIN_REPO_ROOT"; continue; }
+    git push --force-with-lease origin "$branch"
+
+    # CRITICAL: cd OUT of $WORK_DIR before calling the helper. If the helper
+    # removes the directory we are currently sitting in, every subsequent
+    # command in this loop iteration fails with "No such file or directory"
+    # even though `git worktree remove` itself succeeded.
+    cd "$MAIN_REPO_ROOT"
+    maybe_remove_worktree "$branch" "$WORK_DIR"
+
+    # CRITICAL: any later "is this worktree still dirty?" check must guard
+    # for the directory possibly having just been removed. Use `[ -d ... ]`
+    # AND prefer `git -C "$WORK_DIR"` over relying on the shell CWD.
+    if [ -d "$WORK_DIR" ] && [ -n "$(git -C "$WORK_DIR" status --porcelain 2>/dev/null)" ]; then
+        echo "Worktree $WORK_DIR still dirty after rebase"
+    fi
+done
+
+# End of script: a single prune + summary replaces the old separate sweep.
+git worktree prune
+echo "Inline worktree removals: ${#CLEANED_WORKTREES[@]}"
+printf '  - %s\n' "${CLEANED_WORKTREES[@]}"
+```
+
+**Why inline beats end-of-script sweep:**
+
+- Every branch the script positively confirmed as "done" (rebased+pushed cleanly,
+  or already up-to-date with main) is already cleaned under the same gates a
+  separate sweep would re-evaluate.
+- A separate sweep has to re-derive state (re-query `gh`, re-check dirtiness)
+  for branches the loop already classified — duplicated work and a second
+  failure surface.
+- The sweep can race with concurrent edits in long-running loops; inline
+  cleanup happens while the loop already owns the branch's state.
+- Replace the sweep with one `git worktree prune` plus a printed summary of
+  inline removals.
+
 ### Fixing Stale origin/HEAD and Missing origin/main
 
 **Symptoms**: `git worktree add -b <name> <path> origin/main` fails with exit 128; `WorktreeManager` logs "Could not auto-detect base branch"; repos renamed from `master` to `main` on GitHub but local clone only tracks `origin/master`.
@@ -897,6 +991,10 @@ _setup_workspace(..., experiment_id=self.config.experiment_id)
 | `git worktree remove --force` on dirty merged-PR worktrees | Attempted force removal of worktrees with artifact files (even though PR was merged) | Safety Net blocks `--force` flag | Unlock first (`git worktree unlock <path>`), then ask the user to run `git worktree remove --force <path>` |
 | `git checkout --` / `git restore` to discard working-tree artifact files in worktree | After user ran `git restore <files>` manually, pyc files showed as `D` (deleted) not `M` (modified); tried `git -C <wt> checkout -- <pycache_dir>` to restore them | Safety Net blocked it; additionally, user's `git restore` had deleted tracked files (status `D`), not restored them — working tree state was worse than before | After a user manually runs `git restore` / `git checkout --` on tracked files, inspect `git status` carefully. `D` means the file was deleted. Use `git stash` to recover a consistent state, or let the rebase proceed (rebase restores files to the correct version per commit). |
 | Sub-agent dispatched with `Agent(isolation="worktree")` used bare `/home/mvillmow/Projects/Odysseus/...` paths in Read/Edit calls instead of the worktree subpath | Read/Edit operated on the user's main checkout; agent realized it later, used `git checkout` on those 4 files in the user's checkout to revert, then re-applied edits inside the actual worktree at `/home/mvillmow/Projects/Odysseus/.claude/worktrees/agent-<id>/` | The Read/Edit tools accept any path; the harness does not enforce that paths stay inside the agent's worktree. Self-detection is possible but costly | Sub-agent dispatch prompts MUST include: "Use the worktree path EXPLICITLY in every Read/Edit call. The worktree is at `<repo>/.claude/worktrees/agent-<id>/` — never use bare `<repo>/...` paths. The harness will not catch this for you." |
+| `git worktree remove "$WORK_DIR"` from inside a loop that had just `cd "$WORK_DIR"`-ed there | The remove succeeded, but every subsequent command in that loop iteration failed with "No such file or directory" because the shell's CWD was the deleted directory | The removal command itself returns 0, masking the breakage; failures cascade silently into later iterations | Always `cd "$MAIN_REPO_ROOT"` BEFORE calling `git worktree remove`; never trust shell CWD after removal — use `git -C <path>` for any subsequent checks |
+| `OPEN_PRS=$(gh pr list --head "$branch" --state open --json number 2>/dev/null); [ -z "$OPEN_PRS" ] && git worktree remove "$wt"` | When `gh` is unauthenticated, offline, or rate-limited, the command failed but `$OPEN_PRS` was empty — script then treated "gh failed" as "no open PR" and destroyed the worktree of an in-flight branch | The destructive default on `gh` failure is exactly backwards: a failure to learn the state must preserve, not remove | Capture into the variable INSIDE the `if`: `if ! open_prs=$(gh pr list ... 2>/dev/null); then return 0; fi` — a `gh` failure exits the helper without touching the worktree |
+| End-of-loop "is the worktree still dirty?" check via `cd "$WORK_DIR"; git diff-index --quiet HEAD` after inline removal earlier in the same iteration | When the inline removal succeeded the `cd` failed silently and `git diff-index` ran in `$MAIN_REPO_ROOT` (or wherever the previous CWD pointed) — either crashed or, worse, reported the wrong branch's status | Combining CWD-based git with possibly-removed directories yields false negatives or wrong-tree results | Guard with `[ -d "$WORK_DIR" ]` first, AND use `git -C "$WORK_DIR" status --porcelain` instead of relying on shell CWD; do not chain `cd` after the worktree might be gone |
+| Keeping a separate end-of-script "stale worktree" cleanup sweep AFTER also doing inline cleanup in the loop | The sweep re-queried `gh`, re-checked dirtiness, and re-ran the same gates on branches the loop had already classified as clean — pure duplication, doubled `gh` API calls, and a second silent-failure surface | The branches the script positively confirmed as "done" are already gone by the time the sweep runs; the sweep can only either no-op or operate on branches the loop chose to preserve | Replace the sweep with a single `git worktree prune` and a printed summary of `CLEANED_WORKTREES`; keep all state-aware removal decisions inside the per-branch loop |
 
 ## Results & Parameters
 
