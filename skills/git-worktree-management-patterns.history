@@ -1,5 +1,42 @@
 # git-worktree-management-patterns — History
 
+## v2.8.0 (2026-05-14)
+
+**Changed by:** ProjectOdyssey PR #5408 — refactor `scripts/rebase-all-branches.sh` to do inline worktree cleanup
+**Verification:** verified-local (script syntax checked with `bash -n`; PR #5408 CI green on all completed checks at time of writing, mojo build still in-progress; PR merging via auto-merge. End-to-end behavior on a real multi-branch worktree set not yet observed by the user.)
+
+### What changed
+
+- Bumped version 2.7.0 → 2.8.0; updated date to 2026-05-14
+- Added trigger (19) to description and "When to Use" bullet: refactoring an end-of-script worktree cleanup sweep into inline cleanup within a per-branch rebase loop — requires CWD-out-before-remove, gh-failure-safe open-PR gate, and post-removal directory-existence guards
+- Added a new Verified Workflow subsection `### Inline Worktree Cleanup Inside a Per-Branch Rebase Loop` containing the copy-paste-ready `maybe_remove_worktree` helper, caller pattern with `cd "$MAIN_REPO_ROOT"` discipline, and the rationale for replacing an end-of-script sweep with one `git worktree prune` + summary
+- Added 4 new Failed Attempts rows:
+  - `git worktree remove "$WORK_DIR"` from inside a loop that had `cd "$WORK_DIR"`-ed there → CWD-in-removed-directory hazard; always `cd "$MAIN_REPO_ROOT"` before removal
+  - Naive `OPEN_PRS=$(gh pr list ...)` followed by `[ -z "$OPEN_PRS" ]` → unauthenticated/offline `gh` falsely reported "no open PR" and destroyed in-flight worktrees; correct pattern captures inside `if !` and returns 0 on `gh` failure
+  - End-of-loop "is worktree dirty?" check via `cd` + `git diff-index` after possible inline removal → crashes / wrong-tree results; guard with `[ -d "$WORK_DIR" ]` and prefer `git -C "$WORK_DIR"`
+  - Keeping a separate end-of-script "stale worktree" cleanup sweep AFTER also doing inline cleanup → pure duplication; replace with `git worktree prune` + summary
+- Updated Overview Outcome line to reference v2.8.0 changes
+- Bumped Verification metadata to `verified-local` (was `unverified` at v2.7.0)
+- No triggers removed; no Failed Attempts rows removed; no deprecations
+- Branch deletion policy unchanged: the helper removes the worktree only; `git branch -d` stays deferred to the user (consistent with v2.7.0 policy)
+
+### Why
+
+`scripts/rebase-all-branches.sh` previously had a per-branch rebase loop AND a separate end-of-script "stale worktree" cleanup block. The end-of-script block re-derived state (re-queried `gh`, re-checked dirtiness) for branches the loop had already positively classified as clean and pushed. During the PR #5408 refactor we hit several non-obvious failure modes that aren't documented anywhere else:
+
+1. **CWD-in-removed-directory**: a `git worktree remove` from inside the very directory you just `cd`-ed to succeeds, but every subsequent command in that loop iteration silently fails. The fix is to `cd "$MAIN_REPO_ROOT"` BEFORE calling the removal.
+2. **`gh pr list` failure-destroys-data**: `OPEN_PRS=$(gh pr list ... 2>/dev/null); [ -z "$OPEN_PRS" ]` will treat an unauthenticated or rate-limited `gh` as "no open PR" and remove the worktree. The correct pattern captures the variable inside `if ! ...; then return 0; fi`, so a `gh` failure preserves the worktree.
+3. **Post-removal dirty-check**: any later "is the worktree still dirty?" check that uses shell CWD will crash or produce wrong-tree results if the worktree was just removed inline. Guard with `[ -d "$WORK_DIR" ]` and prefer `git -C "$WORK_DIR"`.
+4. **Redundant sweep**: every branch the loop confirmed as done was already cleaned under the same gates the sweep would re-evaluate. The sweep can only no-op or operate on branches the loop deliberately preserved — making it pure duplication and a second silent-failure surface.
+
+These gotchas are not obvious until you hit them; documenting the `maybe_remove_worktree` helper and the caller-side `cd "$MAIN_REPO_ROOT"` rule turns them into a copy-paste-safe pattern for future scripts.
+
+### Previous version (v2.7.0) snapshot
+
+The v2.7.0 skill body (sub-agent dispatch prompt template, trigger 18, 33-row Failed Attempts table) is preserved verbatim in the prior entry of this history file (see `## v2.7.0 (2026-05-10)` below) and on disk at git SHA `b2316caa` (the commit immediately preceding v2.8.0) in this repo. v2.8.0 is purely additive: it does not modify or remove any v2.7.0 content.
+
+---
+
 ## v2.7.0 (2026-05-10)
 
 **Changed by:** Multi-repo CI sweep 2026-05-10 (Odysseus easy-sweep agent self-corrected wrong-path edit)
