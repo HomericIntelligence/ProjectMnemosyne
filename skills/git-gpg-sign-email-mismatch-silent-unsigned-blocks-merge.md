@@ -1,11 +1,12 @@
 ---
 name: git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge
-description: "Diagnose and fix the silent failure mode where commit.gpgsign=true plus a user.email that does not match any UID on the GPG signing key produces UNSIGNED commits with no error, causing PRs to be BLOCKED at merge time by required_signatures even when all CI checks are green. Use when: (1) a PR shows mergeStateStatus BLOCKED but mergeable MERGEABLE with all CI green, (2) gh api .../commits returns verification.reason=no_user, (3) dispatching sub-agents that override user.email to a bot identity while keeping a personal GPG key, (4) auditing multi-repo sweeps for invisible signing failures."
+description: "Diagnose and fix silent GPG-signing failure modes that BLOCK PR merge under required_signatures even with green CI. Covers: (a) commit.gpgsign=true plus user.email that does not match any UID on the GPG signing key producing UNSIGNED commits with no error (reason=no_user); (b) GraphQL pullRequest.commits.signature.state lagging 10+ minutes behind reality so commits appear UNSIGNED in `gh pr view --json commits` while REST /commits/<sha> confirms verified=true; (c) sub-agent shells inheriting commit.gpgsign=true but silently failing to sign because gpg-agent was not pre-warmed (needs GPG_TTY + a priming gpg --batch call). Use when: (1) PR shows mergeStateStatus BLOCKED with mergeable MERGEABLE and all CI green, (2) gh api .../commits returns verification.reason=no_user, (3) dispatching sub-agents that override user.email to a bot identity while keeping a personal GPG key, (4) auditing multi-repo sweeps for invisible signing failures, (5) `gh pr view --json commits` shows signature.state=null for newly-pushed commits, (6) sub-agent push produces unsigned commits despite global commit.gpgsign=true config."
 category: ci-cd
-date: 2026-05-11
-version: "1.0.0"
+date: 2026-05-16
+version: "2.0.0"
 user-invocable: false
 verification: verified-ci
+history: git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge.history
 tags:
   - git
   - gpg
@@ -15,6 +16,8 @@ tags:
   - pull-requests
   - agent-dispatch
   - silent-failure
+  - graphql-lag
+  - gpg-agent
 ---
 
 # Git GPG Signing: Email Mismatch Silently Produces Unsigned Commits, Blocks PR Merge
@@ -36,6 +39,8 @@ tags:
 - You are dispatching sub-agents (Myrmidon swarm workers, code-review fixers, etc.) that override `user.email` to a bot identity while inheriting a personal GPG key from `~/.gitconfig`
 - You are auditing a multi-repo / multi-agent sweep where a small fraction of agents may have local config overrides that desync `user.email` from the GPG key UID
 - You see commits in `git log --pretty=format:'%G?'` with status `N` (no signature) when you expected `G` (good signature)
+- `gh pr view --json commits` shows `signature.state=null` (or `UNSIGNED`) for newly-pushed commits — the GraphQL field lags reality by 10+ minutes; always cross-check via REST `/commits/<sha>` before taking remediation action
+- A sub-agent push produces unsigned commits despite global `commit.gpgsign=true` config — root cause is usually a non-pre-warmed `gpg-agent` in the non-interactive subshell, not config propagation
 
 ## Verified Workflow
 
@@ -161,6 +166,54 @@ gh api repos/<O>/<R>/pulls/<N>/commits \
     fi
     ```
 
+### GraphQL Lag — Use REST for Verification
+
+The GraphQL field `pullRequest.commits.nodes.commit.signature.state` (exposed via
+`gh pr view --json commits --jq '.commits[].signature.state'`) returns `null` or
+`UNSIGNED` for several MINUTES TO HOURS after a push, even when the commit IS
+signed and IS verified by GitHub. The REST endpoint is authoritative and updates
+within seconds:
+
+```bash
+# Authoritative single-commit verification (use this, not GraphQL)
+gh api repos/<owner>/<repo>/commits/<sha> \
+  --jq '.commit.verification | "verified=\(.verified) reason=\(.reason)"'
+# Returns immediately: verified=true reason=valid
+```
+
+```bash
+# Authoritative PR-wide verification
+gh api repos/<owner>/<repo>/pulls/<N>/commits \
+  --jq '[.[] | {sha: .sha[0:7], verified: .commit.verification.verified, reason: .commit.verification.reason}]'
+```
+
+Diagnostic rule: **before taking any remediation action based on GraphQL UNSIGNED,
+poll the REST API on one representative commit.** If REST reports `verified=true`,
+the commits are fine — wait 10+ minutes and GraphQL will catch up. Do NOT re-upload
+the GPG key, do NOT force-push, do NOT rebase — those are no-ops at best and
+destructive at worst when the underlying signature is already valid.
+
+### Pre-Warm gpg-agent in Sub-Agent Shells
+
+When `commit.gpgsign=true` is set globally and the GPG key is on the GitHub account,
+sub-agent shells DO inherit the config and DO sign correctly — but a non-interactive
+subshell needs `GPG_TTY` set and a pre-warmed `gpg-agent` to actually produce a
+signature. If pre-warming is skipped, the commit silently fails to sign (no error,
+just no signature). Combined with the GraphQL lag above, this is indistinguishable
+from "config didn't propagate" — always diagnose by checking the REST API state, not
+by changing config.
+
+**Pre-warm idiom (run once per sub-agent shell before the first `git commit -S`):**
+
+```bash
+export GPG_TTY=$(tty 2>/dev/null || echo /dev/null)
+echo "test" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback \
+  -as -o /dev/null 2>&1 | tail -1 || true
+```
+
+After this, `git commit` (with `commit.gpgsign=true` inherited from global config)
+will sign correctly. Verify with the same `%G?` tripwire from step 11.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -171,6 +224,8 @@ gh api repos/<O>/<R>/pulls/<N>/commits \
 | Attempt 4 | Used `git commit --amend -S` on just the tip commit | Only the tip commit got signed. The other 6 commits in the PR were still unsigned, so the PR remained `BLOCKED`. `required_signatures` requires EVERY commit in the PR to be verified | Use `git rebase origin/main --exec 'git commit --amend --no-edit --reset-author -S'` to re-sign every commit in the range |
 | Attempt 5 | Ran the rebase --exec without `--reset-author` | `git log --pretty=format:'%G?'` still showed `N` for re-authored commits because the author email was still the bot identity, so GPG still found no matching UID and produced no signature | `--reset-author` is mandatory — it updates the author/committer fields to the current `user.email`/`user.name`, which is what GPG checks against the signing key UIDs |
 | Attempt 6 | Checked PR mergeability without first verifying the diff was byte-identical to before the rebase | Risk: a poorly-configured rebase (e.g. rerere artifacts, autosquash side-effects, gitattribute clean filter changes) could silently rewrite content. If pushed, it would lose work | After any rewriting rebase, ALWAYS run `git diff <old-HEAD> <new-HEAD>` and confirm it is empty bytes before force-pushing |
+| Attempt 7 | Trusted `gh pr view --json commits --jq '.commits[].signature.state'` GraphQL output of `UNSIGNED` as authoritative and began remediation | GraphQL field lags 10+ min after push, even when commits ARE verified by GitHub. Verified via REST `/commits/<sha>` returning `verified=true reason=valid` while GraphQL still showed `null`/`UNSIGNED` for 31 commits across Argus #520, Scylla #1978, Agamemnon #382. ~30 min wasted on the 2026-05-16 sweep | Always poll REST `gh api repos/<O>/<R>/commits/<sha>` for signature state; treat GraphQL `signature.state` as advisory only. Cross-check one commit via REST before any remediation |
+| Attempt 8 | Re-sign commits by uploading the GPG key (again) to GitHub on the assumption it was missing | Existing key was already registered on the account; `gh gpg-key add` returned HTTP 422 "subkey already exists". Confirmed by `gh api user/gpg_keys` showing the key present and active. The underlying issue was GraphQL lag (Attempt 7), not key registration | Before re-uploading a GPG key, query REST commit verification on a single test commit; if `verified=true`, the issue is GraphQL lag (not key registration) and the correct action is to wait, not to re-upload |
 
 ## Results & Parameters
 
@@ -244,6 +299,26 @@ echo "Verified: $VERIFIED / $TOTAL"
 |-------|-----------|----------|------|-------|
 | 2026-05-11 HomericIntelligence ecosystem easy-issue sweep | 11 | 1 (Keystone PR #552) | ~9% | One agent had local `user.email` override to bot identity; the other 10 agents inherited keyring-default identity that matched the GPG key UID |
 
+**Authoritative signature verification (REST, NOT GraphQL):**
+
+```bash
+# Single commit
+gh api repos/<owner>/<repo>/commits/<sha> \
+  --jq '.commit.verification | "verified=\(.verified) reason=\(.reason)"'
+
+# Whole PR
+gh api repos/<owner>/<repo>/pulls/<N>/commits \
+  --jq '[.[] | {sha: .sha[0:7], verified: .commit.verification.verified, reason: .commit.verification.reason}]'
+```
+
+**Sub-agent gpg-agent pre-warm idiom (run once per non-interactive subshell):**
+
+```bash
+export GPG_TTY=$(tty 2>/dev/null || echo /dev/null)
+echo "test" | gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback \
+  -as -o /dev/null 2>&1 | tail -1 || true
+```
+
 **Critical config invariant for any signing agent:**
 
 ```bash
@@ -270,3 +345,4 @@ git config --get user.email | xargs -I{} gpg --list-keys "$(git config --get use
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectKeystone | 2026-05-11 ecosystem-wide easy-issue sweep, PR #552 | Re-authored 7 commits with `--reset-author -S` rebase, byte-identical content diff confirmed (0 bytes), force-pushed; GitHub flipped all 7 commits from `verified: false reason: "no_user"` to `verified: true reason: "valid"`; `mergeStateStatus` flipped from `BLOCKED` to `CLEAN`; pre-armed auto-merge fired immediately |
+| ProjectArgus / ProjectScylla / ProjectAgamemnon | 2026-05-16 org-wide PR sweep — Argus #520, Scylla #1978, Agamemnon #382 | 31 commits across the three PRs showed `signature.state=null`/`UNSIGNED` via `gh pr view --json commits` (GraphQL) for 10+ minutes after push. REST `gh api repos/.../commits/<sha>` returned `verified=true reason=valid` for every commit immediately. Attempted `gh gpg-key add` returned HTTP 422 "subkey already exists" (key was already registered). Resolution: wait for GraphQL to catch up; no remediation needed. Lesson codified as Attempts 7 and 8 in this skill |

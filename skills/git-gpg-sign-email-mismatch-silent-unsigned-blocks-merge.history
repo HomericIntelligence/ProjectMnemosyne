@@ -1,0 +1,89 @@
+# git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge — History
+
+## v2.0.0 (2026-05-16)
+
+**Changed by:** 2026-05-16 HomericIntelligence org-wide PR sweep (Argus #520, Scylla #1978, Agamemnon #382)
+**Verification:** verified-ci
+
+### What changed
+
+- Expanded `description:` to mention GraphQL signature lag and gpg-agent pre-warming
+- Added two new "When to Use" triggers:
+  - `gh pr view --json commits` shows `signature.state=null` for newly-pushed commits
+  - sub-agent push produces unsigned commits despite global `commit.gpgsign=true`
+- Added new Verified Workflow subsection "GraphQL Lag — Use REST for Verification"
+- Added new Verified Workflow subsection "Pre-Warm gpg-agent in Sub-Agent Shells"
+- Added two Failed Attempts rows (trust GraphQL UNSIGNED as authoritative; re-upload GPG key)
+- Added canonical REST-API one-liner and gpg pre-warm idiom to Results & Parameters
+- Added 2026-05-16 entry to Verified On
+- Bumped to v2.0.0
+
+### Why
+
+During the 2026-05-16 PR sweep I encountered two new failure modes that share the same
+search surface as v1.0.0 (PR-merge-blocked due to signing issues) but had distinct root
+causes:
+
+1. **GraphQL signature.state lag.** `gh pr view --json commits` returned UNSIGNED for
+   31 commits across three PRs (Argus #520, Scylla #1978, Agamemnon #382) for 10+
+   minutes after push, even though the REST `/commits/<sha>` endpoint immediately
+   reported `verified=true reason=valid`. I wasted 30 minutes trying to re-upload the
+   GPG key (which was already on the account — `gh gpg-key add` returned HTTP 422
+   "subkey already exists") before realizing GraphQL was just lagging.
+
+2. **gpg-agent pre-warm requirement in sub-agent shells.** I had initially assumed
+   sub-agents needed explicit `-S` because GraphQL showed UNSIGNED. Actual root cause
+   was the GraphQL lag (Learning A), but the investigation revealed that
+   `commit.gpgsign=true` global config DOES propagate into sub-agent shells. The real
+   gotcha is that sub-agent non-interactive subshells need `GPG_TTY` set AND a
+   pre-warmed gpg-agent, or the signature silently fails to produce — indistinguishable
+   from "config didn't propagate" when combined with the GraphQL lag.
+
+Both learnings are diagnosed via the REST API, not by changing config.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: git-gpg-sign-email-mismatch-silent-unsigned-blocks-merge
+description: "Diagnose and fix the silent failure mode where commit.gpgsign=true plus a user.email that does not match any UID on the GPG signing key produces UNSIGNED commits with no error, causing PRs to be BLOCKED at merge time by required_signatures even when all CI checks are green. Use when: (1) a PR shows mergeStateStatus BLOCKED but mergeable MERGEABLE with all CI green, (2) gh api .../commits returns verification.reason=no_user, (3) dispatching sub-agents that override user.email to a bot identity while keeping a personal GPG key, (4) auditing multi-repo sweeps for invisible signing failures."
+category: ci-cd
+date: 2026-05-11
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - git
+  - gpg
+  - commit-signing
+  - required-signatures
+  - branch-protection
+  - pull-requests
+  - agent-dispatch
+  - silent-failure
+---
+
+# Git GPG Signing: Email Mismatch Silently Produces Unsigned Commits, Blocks PR Merge
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-11 |
+| **Objective** | Diagnose and remediate the invisible failure mode where `commit.gpgsign=true` combined with a `user.email` that has no matching UID on the GPG secret key produces an unsigned commit with no error, blocking PR merge under `required_signatures` rulesets despite green CI |
+| **Outcome** | Successful — re-authored 7 commits on ProjectKeystone PR #552 with the GPG-key-owner identity, re-signed with `--reset-author -S`, force-pushed, and GitHub flipped every commit to `verified: true` (PR unblocked, auto-merge fired) |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- A PR's `gh pr view --json mergeStateStatus` returns `BLOCKED` but `mergeable` returns `MERGEABLE` and every CI check is `SUCCESS`
+- Direct merge attempt fails with `the base branch policy prohibits the merge`
+- `gh api repos/<O>/<R>/pulls/<N>/commits --jq '.[].commit.verification'` shows `verified: false, reason: "no_user"` on every commit
+- You are dispatching sub-agents (Myrmidon swarm workers, code-review fixers, etc.) that override `user.email` to a bot identity while inheriting a personal GPG key from `~/.gitconfig`
+- You are auditing a multi-repo / multi-agent sweep where a small fraction of agents may have local config overrides that desync `user.email` from the GPG key UID
+- You see commits in `git log --pretty=format:'%G?'` with status `N` (no signature) when you expected `G` (good signature)
+
+(v1.0.0 body: see prior commit history before 2026-05-16 amendment for full Verified Workflow,
+Failed Attempts, Results & Parameters, and Verified On sections. v2.0.0 retains all v1.0.0
+content additively.)
+```
