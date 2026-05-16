@@ -18,12 +18,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import yaml
-
 try:
     import tomllib  # Python 3.11+
 except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
     import tomli as tomllib  # type: ignore[no-redef]
+
+# Use the canonical skill_utils helpers instead of duplicating logic here.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from skill_utils import find_skill_files, parse_frontmatter  # noqa: E402
 
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -45,24 +47,19 @@ def _load_project_version() -> str:
 
 
 def load_skill_metadata(skill_file: Path) -> Optional[Dict[str, Any]]:
-    """Load metadata from a flat skill file's YAML frontmatter."""
+    """Load metadata from a flat skill file's YAML frontmatter.
+
+    Thin wrapper around skill_utils.parse_frontmatter to keep call-sites
+    in this module unchanged while reusing the canonical implementation.
+    """
     try:
         with open(skill_file, "r") as f:
             content = f.read()
     except IOError:
         return None
 
-    # Extract YAML frontmatter
-    if not content.startswith("---"):
-        return None
-
-    parts = content.split("---", 2)
-    if len(parts) < 3:
-        return None
-
-    try:
-        frontmatter = yaml.safe_load(parts[1]) or {}
-    except yaml.YAMLError:
+    frontmatter, _body, errors = parse_frontmatter(content)
+    if errors:
         return None
 
     # Add path relative to repo root
@@ -70,20 +67,9 @@ def load_skill_metadata(skill_file: Path) -> Optional[Dict[str, Any]]:
     return frontmatter
 
 
-def find_skills() -> List[Path]:
-    """Find all flat skill files (skills/*.md, exclude *.notes.md)."""
-    skills_dir = Path("skills")
-
-    if not skills_dir.exists():
-        return []
-
-    files = sorted([f for f in skills_dir.glob("*.md") if not f.name.endswith(".notes.md") and f.is_file()])
-    return files
-
-
 def generate_marketplace() -> Dict[str, Any]:
     """Generate marketplace index from flat skill files."""
-    skills = find_skills()
+    skills = find_skill_files()
     plugin_entries = []
     seen_names: set = set()
 
