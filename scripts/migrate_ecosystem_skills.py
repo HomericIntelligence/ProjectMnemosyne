@@ -186,11 +186,36 @@ def frontmatter_to_yaml(frontmatter: dict) -> str:
 
 
 def _format_yaml_value(key: str, val) -> str:
-    """Format a single YAML key-value pair."""
+    """Format a single YAML key-value pair.
+
+    Lists are emitted as a flow-style sequence (``[a, b, c]``) so that list
+    values such as ``tags:`` are not silently discarded (see #1462). Items
+    that look like they need quoting are quoted; otherwise they are emitted
+    bare.
+    """
     if val is None:
         return f"{key}:"
     if isinstance(val, list):
-        return f"{key}: []"
+        if not val:
+            return f"{key}: []"
+        items = []
+        for item in val:
+            item_str = str(item)
+            needs_quote = (
+                ":" in item_str
+                or "#" in item_str
+                or "," in item_str
+                or item_str.startswith("{")
+                or item_str.startswith("[")
+                or item_str.lower() in ("true", "false", "null", "yes", "no")
+                or not item_str
+            )
+            if needs_quote and not (item_str.startswith('"') and item_str.endswith('"')):
+                escaped = item_str.replace('"', '\\"')
+                items.append(f'"{escaped}"')
+            else:
+                items.append(item_str)
+        return f"{key}: [{', '.join(items)}]"
     val_str = str(val)
     # Quote strings that contain special chars or look like they need quoting
     needs_quote = (
