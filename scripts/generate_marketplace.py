@@ -132,9 +132,28 @@ def main() -> int:
     # Ensure output directory exists
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
-    # Write output
-    with open(output_file, "w") as f:
-        json.dump(marketplace, f, indent=2)
+    # Write output atomically: write to temp file in same directory, then os.replace().
+    # Prevents leaving marketplace.json corrupt or truncated if the process is killed
+    # mid-write (see #1458).
+    import os
+    import tempfile
+
+    fd, tmp_path = tempfile.mkstemp(
+        prefix=output_file.name + ".",
+        suffix=".tmp",
+        dir=str(output_file.parent),
+    )
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(marketplace, f, indent=2)
+        os.replace(tmp_path, output_file)
+    except Exception:
+        # Best-effort cleanup of the temp file on failure.
+        try:
+            os.unlink(tmp_path)
+        except FileNotFoundError:
+            pass
+        raise
 
     print(f"Generated {output_file}")
     print(f"  Total skills: {marketplace['total_plugins']}")
