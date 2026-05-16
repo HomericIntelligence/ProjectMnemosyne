@@ -1,5 +1,56 @@
 # pre-commit-hook-configuration — History
 
+## v2.4.0 (2026-05-16)
+
+**Changed by:** Swarm rollout adding pre-push signed-commit enforcement across HomericIntelligence repos (2026-05-16)
+**Verification:** verified-ci (pilot Mnemosyne #1718 + 10 repo PRs merged)
+
+### What changed
+- Bumped version 2.3.0 → 2.4.0; updated date to 2026-05-16
+- Extended `description` to cover pre-push stage for signed-commit enforcement and the `---` YAML document-marker edge case in patchers
+- Added 2 new "When to Use" conditions:
+  - Enforcing GPG/SSH-signed commits locally via a pre-push hook + `default_install_hook_types`
+  - Patching `.pre-commit-config.yaml` files that start with `---` YAML document marker
+- Added new subsection `### Enforcing Signed Commits at Push Time` under Verified Workflow with:
+  - Rationale for `pre-push` over `pre-commit` stage (commit doesn't exist yet at pre-commit time)
+  - Verbatim hook YAML block with `git log -1 --format='%G?'` per-commit verification
+  - `%G?` status code legend (G/U/B/R/X/Y/N/E)
+  - `default_install_hook_types: [pre-commit, pre-push]` framework wiring requirement
+  - Rollout pattern: 1 pilot PR + 10 swarm PRs across HomericIntelligence ecosystem
+  - `git push --no-verify` bypass documentation
+- Added new subsection `### Idempotent Patcher for .pre-commit-config.yaml` under Verified Workflow with:
+  - Python snippet handling both leading `---` document marker and bare-config cases
+  - `yaml.safe_load()` validation step
+  - Reference to AchaeanFleet fixup commit (3569a29) that triggered the discovery
+- Added 2 new Failed Attempts rows: (a) pre-commit stage for signature check; (b) prepending directive above `---` marker
+- Updated Results & Parameters with canonical hook YAML and patcher Python as copy-paste blocks
+- Updated Verified On with 2026-05-16 swarm rollout details
+
+### Why
+A swarm rollout enforced cryptographically signed commits across all HomericIntelligence repos. Two non-obvious failure modes surfaced:
+1. The first attempt used the `pre-commit` hook stage, which runs before the commit is written — there's no signature to verify at that point. The correct stage is `pre-push`, which reads `<local_ref> <local_sha> <remote_ref> <remote_sha>` from stdin and can iterate `git rev-list` to check each commit via `%G?`.
+2. The first AchaeanFleet rollout shipped invalid YAML because the patcher prepended `default_install_hook_types: [pre-commit, pre-push]` above the existing `---` document marker line, accidentally creating a two-document YAML file. Required a fixup commit (3569a29) and a patcher fix to detect leading `---` and insert the directive AFTER it.
+
+### Previous version (v2.3.0) snapshot
+
+<details>
+<summary>v2.3.0 frontmatter and key sections (pre-amendment)</summary>
+
+- version: 2.3.0
+- date: 2026-04-27
+- verification: verified-ci
+- description scope: pass_filenames, version alignment, autoupdate, pygrep, REPO_ROOT resolution, SKIP_TESTS, just Justfile guard, Go-based hook prebuilt binary, detect-private-key fixture exclusion
+- Steps 1–8 covered: pass_filenames fix, intent evaluation, version alignment, autoupdate, pygrep hook, pytest hook-config tests, REPO_ROOT_HOOK pattern, Go prebuilt-binary conversion
+- Hook-Specific Patterns: detect-private-key fixture exclusion (TLS tests, k8s secret manifests)
+- Verified On: Myrmidons shellcheck-warnings swarm (2026-04-24), ProjectScylla gitleaks (2026-04-27)
+- absorbed: [pre-commit-detect-private-key-fixture-exclusion]
+
+Full content available in git history at commit prior to v2.4.0 amendment.
+
+</details>
+
+---
+
 ## v2.1.0 (2026-04-24)
 
 **Changed by:** Myrmidons shellcheck-warnings session — pre-commit hook REPO_ROOT resolution in test repos (2026-04-24)

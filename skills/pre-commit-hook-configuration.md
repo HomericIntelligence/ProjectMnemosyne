@@ -1,12 +1,12 @@
 ---
 name: pre-commit-hook-configuration
-description: "Use when: (1) ruff or other linter hooks run on hardcoded directories instead of staged files, (2) aligning pre-commit hook versions with pixi-resolved tool versions, (3) updating hook versions with autoupdate, (4) adding a language: pygrep regex hook to catch forbidden patterns, (5) evaluating whether a hook should use pass_filenames: true or false, (6) writing pytest tests to verify pre-commit hook YAML configuration, (7) pre-commit hook uses SCRIPT_DIR/../ to find REPO_ROOT but is installed as .git/hooks/pre-commit in a test repo — resolves to .git/ not repo root, (8) SKIP_TESTS env var needed to prevent test-suite step from running in temporary test repos, (9) just command finds Justfile in a parent directory instead of the test repo, (10) a Go-based hook (e.g. gitleaks) fails to build from source because the system Go version is too old, (11) detect-private-key hook false-fires on test fixtures, TLS unit tests, or k8s secret manifests containing fake/test PEM headers"
+description: "Use when: (1) ruff or other linter hooks run on hardcoded directories instead of staged files, (2) aligning pre-commit hook versions with pixi-resolved tool versions, (3) updating hook versions with autoupdate, (4) adding a language: pygrep regex hook to catch forbidden patterns, (5) evaluating whether a hook should use pass_filenames: true or false, (6) writing pytest tests to verify pre-commit hook YAML configuration, (7) pre-commit hook uses SCRIPT_DIR/../ to find REPO_ROOT but is installed as .git/hooks/pre-commit in a test repo — resolves to .git/ not repo root, (8) SKIP_TESTS env var needed to prevent test-suite step from running in temporary test repos, (9) just command finds Justfile in a parent directory instead of the test repo, (10) a Go-based hook (e.g. gitleaks) fails to build from source because the system Go version is too old, (11) detect-private-key hook false-fires on test fixtures, TLS unit tests, or k8s secret manifests containing fake/test PEM headers, (12) enforcing GPG/SSH-signed commits locally via a pre-push hook stage (NOT pre-commit, which runs before the commit exists) plus default_install_hook_types wiring, (13) patching .pre-commit-config.yaml files that start with a --- YAML document marker without accidentally producing a multi-document YAML file"
 category: ci-cd
-date: 2026-04-27
-version: 2.3.0
+date: 2026-05-16
+version: 2.4.0
 user-invocable: false
 verification: verified-ci
-tags: [pre-commit, hooks, bats, shell-testing, repo-root, test-isolation, gitleaks, golang, prebuilt-binary, detect-private-key, false-positive, tls, kubernetes, test-fixtures]
+tags: [pre-commit, hooks, bats, shell-testing, repo-root, test-isolation, gitleaks, golang, prebuilt-binary, detect-private-key, false-positive, tls, kubernetes, test-fixtures, pre-push, signed-commits, gpg, ssh-signing, yaml-document-marker, idempotent-patcher]
 history: pre-commit-hook-configuration.history
 absorbed: [pre-commit-detect-private-key-fixture-exclusion]
 ---
@@ -15,9 +15,9 @@ absorbed: [pre-commit-detect-private-key-fixture-exclusion]
 
 | Field | Value |
 | ------- | ------- |
-| Date | 2026-03-29 |
-| Objective | Consolidated pre-commit hook configuration patterns: pass_filenames, version alignment, pygrep hooks, maintenance, config testing, and REPO_ROOT resolution in test repos |
-| Outcome | v2.1.0: Added REPO_ROOT resolution fix for hooks installed in .git/hooks/ of test repos; all 332 unit tests pass, CI green. v2.2.0: Added Go-based hook build failure workaround using pre-built binary downloads |
+| Date | 2026-05-16 |
+| Objective | Consolidated pre-commit hook configuration patterns: pass_filenames, version alignment, pygrep hooks, maintenance, config testing, REPO_ROOT resolution in test repos, Go-based hook prebuilt binaries, signed-commit enforcement via pre-push stage, and idempotent YAML patching around `---` document markers |
+| Outcome | v2.1.0: REPO_ROOT_HOOK fix. v2.2.0: Go-based hook prebuilt binary. v2.3.0: detect-private-key fixture exclusion. v2.4.0: pre-push signed-commit hook + `default_install_hook_types` wiring + idempotent patcher for `.pre-commit-config.yaml` files starting with `---` (pilot Mnemosyne #1718 + 10 ecosystem PRs) |
 | Verification | verified-ci |
 | History | [changelog](./pre-commit-hook-configuration.history) |
 
@@ -39,6 +39,8 @@ absorbed: [pre-commit-detect-private-key-fixture-exclusion]
 - `SKIP_TESTS=1` env var pattern needed to allow bats tests to invoke the hook without triggering the test-suite step inside the hook
 - A Go-based pre-commit hook (e.g., gitleaks) fails to build from source because the system Go version is too old for the hook's `go.mod` requirement
 - `pre-commit` with `language: golang` reports "invalid go version" or Go compilation errors for a hook that worked previously
+- Enforcing GPG/SSH-signed commits locally via a `pre-push` hook + `default_install_hook_types` (NOT a `pre-commit` hook — at that stage the commit isn't yet written and there is no signature to verify)
+- Patching `.pre-commit-config.yaml` files that start with a `---` YAML document marker — naive prepending creates two YAML documents and breaks the framework
 
 ## Verified Workflow
 
@@ -56,6 +58,9 @@ absorbed: [pre-commit-detect-private-key-fixture-exclusion]
 | `just` finds Justfile in parent dir during hook test | Guard with `command -v just && [[ -f "${REPO_ROOT_HOOK}/Justfile" ]]` |
 | bats tests trigger hook's test-suite step | Set `SKIP_TESTS=1` in bats test before invoking hook |
 | Go-based hook fails to build from source (old Go) | Convert to `repo: local` hook that downloads pre-built binary |
+| Enforce signed commits before push | Use `pre-push` stage hook iterating `git rev-list "$remote_sha..$local_sha"` + `git log -1 --format='%G?'` |
+| `pre-commit install` doesn't create pre-push hook | Add `default_install_hook_types: [pre-commit, pre-push]` at top of `.pre-commit-config.yaml`, re-run `pre-commit install` |
+| Patcher breaks `.pre-commit-config.yaml` starting with `---` | Detect leading `---` and insert directive AFTER it, not before |
 
 ### Step 1: Fix pass_filenames for Ruff (and Other Linters)
 
@@ -438,6 +443,114 @@ pre-commit run gitleaks --all-files
 
 **This pattern applies to any Go-based hook** where the system Go is too old and upgrading Go is not feasible (e.g., constrained CI environments, conda-forge only providing old Go versions).
 
+### Step 9: Enforcing Signed Commits at Push Time
+
+**Why pre-push, not pre-commit**: The `pre-commit` stage runs BEFORE the commit object is written, so the signature has not happened yet. At that stage you can only check INTENT (e.g., `git config commit.gpgsign`), not the actual signature of the commit. The `pre-push` stage runs AFTER commits exist; pre-commit framework feeds it `<local_ref> <local_sha> <remote_ref> <remote_sha>` lines on stdin, and the hook can iterate `git rev-list "$remote_sha..$local_sha"` and verify each commit with `git log -1 --format="%G?"`.
+
+**`%G?` status codes**:
+
+| Code | Meaning |
+| ------ | --------- |
+| `G` | Good signature |
+| `U` | Good signature, key not in local trust DB (still acceptable) |
+| `B` | Bad signature |
+| `R` | Revoked key |
+| `X` | Expired signature |
+| `Y` | Signed by an expired key |
+| `N` | No signature |
+| `E` | Cannot check (missing key, etc.) |
+
+The conventional accept-set for enforcement is `{G, U}`.
+
+**Framework wiring** — `pre-commit install` only installs the stages declared in `default_install_hook_types`. The default is `[pre-commit]`. To get the pre-push hook installed, add at the very top of `.pre-commit-config.yaml`:
+
+```yaml
+default_install_hook_types: [pre-commit, pre-push]
+```
+
+After this lands, each developer must re-run `pre-commit install` once — the framework does NOT auto-install on config change.
+
+**Canonical hook YAML** (insert into `repo: local`):
+
+```yaml
+- repo: local
+  hooks:
+    - id: require-signed-commits
+      name: Require signed commits before push
+      description: >-
+        Reject pushes containing unsigned commits. Reads pre-push stdin
+        (<local_ref> <local_sha> <remote_ref> <remote_sha>), iterates the
+        commit range, and verifies each commit's signature via `%G?`.
+      entry: bash -c '
+        set -euo pipefail
+        accept="GU"
+        fail=0
+        while read -r local_ref local_sha remote_ref remote_sha; do
+          [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
+          if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+            range="$local_sha"
+            commits=$(git rev-list --max-count=100 "$range")
+          else
+            range="$remote_sha..$local_sha"
+            commits=$(git rev-list "$range")
+          fi
+          for c in $commits; do
+            status=$(git log -1 --format="%G?" "$c")
+            case "$status" in
+              [$accept]) : ;;
+              *)
+                echo "UNSIGNED OR BAD SIGNATURE: $c ($status)" >&2
+                fail=1
+                ;;
+            esac
+          done
+        done
+        exit "$fail"
+      '
+      language: system
+      stages: [pre-push]
+      pass_filenames: false
+      always_run: true
+```
+
+**Bypass** — `git push --no-verify` is the documented escape hatch for legitimate fixup pushes where the signing environment is unavailable (e.g., CI fixup worktrees without gpg-agent).
+
+**Rollout pattern**: 1 pilot PR in the canonical/reference repo (Mnemosyne) followed by a swarm of mechanical PRs across every other repo — typically 10 follow-up PRs for the HomericIntelligence ecosystem. Land the directive + hook simultaneously so the framework picks up both on the next `pre-commit install`.
+
+### Step 10: Idempotent Patcher for `.pre-commit-config.yaml`
+
+**Problem**: Some repos' `.pre-commit-config.yaml` files start with `---` (a YAML document-start marker). Naively prepending `default_install_hook_types: [pre-commit, pre-push]` above the `---` line creates two YAML documents — `yaml.safe_load_all` reads them separately, and `pre-commit run` sees an invalid single-document config. Visible symptom: "pre-commit config invalid" CI failure on the first push.
+
+**Correct patcher** (idempotent — safe to re-run, handles both leading-marker and bare-config cases):
+
+```python
+from pathlib import Path
+p = Path(".pre-commit-config.yaml")
+src = p.read_text()
+DIRECTIVE = "default_install_hook_types: [pre-commit, pre-push]"
+if "default_install_hook_types" not in src:
+    if src.lstrip().startswith("---"):
+        # Insert AFTER the document marker, not before
+        lines = src.split("\n", 2)
+        # lines[0] is "---"; insert directive on a new line right after, then a blank line
+        src = lines[0] + "\n" + DIRECTIVE + "\n\n" + (lines[1] if len(lines) > 1 else "")
+        if len(lines) > 2:
+            src += "\n" + lines[2]
+    else:
+        src = DIRECTIVE + "\n\n" + src
+else:
+    # Ensure pre-push is in the list
+    import re
+    m = re.search(r"^default_install_hook_types:\s*\[(.*?)\]", src, re.M)
+    if m and "pre-push" not in m.group(1):
+        src = src.replace(m.group(0), m.group(0).replace("]", ", pre-push]"))
+p.write_text(src)
+# Validate
+import yaml; yaml.safe_load(open(".pre-commit-config.yaml"))  # raises if multi-doc broken
+```
+
+**Discovery context**: AchaeanFleet's first swarm rollout commit (2026-05-16) inserted the directive above the `---` line, producing invalid YAML. Required fixup commit `3569a29` and a patcher fix to handle the document-marker case. Always run `yaml.safe_load()` against the post-patch file to catch multi-document breakage before pushing.
+
 ## Hook-Specific Patterns
 
 ### detect-private-key: Excluding Test Fixtures
@@ -523,6 +636,8 @@ These appear in TLS unit tests (`test_grpc_tls.cpp`, `test_tls_*.py`) and Kubern
 | `pixi search gitleaks` for pre-built binary | Tried to install gitleaks via conda-forge | Not available on conda-forge | Go-based security tools are rarely packaged for conda; use pre-built GitHub release binaries |
 | Checking if pixi provides newer Go | Ran `pixi search go` | Only Go 1.15 available via system/conda | Cannot rely on conda-forge for up-to-date Go; use pre-built binaries for Go-based hooks |
 | Pinning to older gitleaks version | Considered downgrading gitleaks to a version with lower Go requirement | All recent gitleaks versions (v8.18+) require Go 1.22+ which is still newer than system Go 1.15 | The Go version gap is too large to bridge by downgrading the hook; pre-built binary is the only viable path |
+| Use pre-commit stage to enforce signed commits | Tried checking `git config commit.gpgsign` at pre-commit stage | Pre-commit runs BEFORE the commit is written — signature hasn't happened yet; can only check intent, not actual signature | Use pre-push stage which sees the actual commits via stdin range `<local_ref> <local_sha> <remote_ref> <remote_sha>` and verify each with `git log -1 --format='%G?'` |
+| Prepend directive above `---` YAML doc marker | Patcher inserted `default_install_hook_types: [pre-commit, pre-push]` above the `---` line in AchaeanFleet's config | Created two YAML documents — invalid for pre-commit framework which expects single doc; CI failed with "pre-commit config invalid" | Detect leading `---` and insert directive AFTER it; validate with `yaml.safe_load()` after patching |
 
 ## Results & Parameters
 
@@ -606,6 +721,73 @@ SKIP_TESTS=1 run "${REPO_ROOT}/.git/hooks/pre-commit"
 assert_success
 ```
 
+### Canonical Pre-Push Signed-Commit Hook (copy-paste)
+
+```yaml
+# At top of .pre-commit-config.yaml:
+default_install_hook_types: [pre-commit, pre-push]
+
+# In a repo: local block:
+- repo: local
+  hooks:
+    - id: require-signed-commits
+      name: Require signed commits before push
+      description: >-
+        Reject pushes containing unsigned commits. Reads pre-push stdin
+        and verifies each commit's signature via `%G?`.
+      entry: bash -c '
+        set -euo pipefail
+        accept="GU"
+        fail=0
+        while read -r local_ref local_sha remote_ref remote_sha; do
+          [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
+          if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+            commits=$(git rev-list --max-count=100 "$local_sha")
+          else
+            commits=$(git rev-list "$remote_sha..$local_sha")
+          fi
+          for c in $commits; do
+            status=$(git log -1 --format="%G?" "$c")
+            case "$status" in
+              [$accept]) : ;;
+              *) echo "UNSIGNED OR BAD SIGNATURE: $c ($status)" >&2; fail=1 ;;
+            esac
+          done
+        done
+        exit "$fail"
+      '
+      language: system
+      stages: [pre-push]
+      pass_filenames: false
+      always_run: true
+```
+
+After landing, each developer must re-run `pre-commit install` once.
+
+### Idempotent `.pre-commit-config.yaml` Patcher (copy-paste)
+
+```python
+from pathlib import Path
+p = Path(".pre-commit-config.yaml")
+src = p.read_text()
+DIRECTIVE = "default_install_hook_types: [pre-commit, pre-push]"
+if "default_install_hook_types" not in src:
+    if src.lstrip().startswith("---"):
+        lines = src.split("\n", 2)
+        src = lines[0] + "\n" + DIRECTIVE + "\n\n" + (lines[1] if len(lines) > 1 else "")
+        if len(lines) > 2:
+            src += "\n" + lines[2]
+    else:
+        src = DIRECTIVE + "\n\n" + src
+else:
+    import re
+    m = re.search(r"^default_install_hook_types:\s*\[(.*?)\]", src, re.M)
+    if m and "pre-push" not in m.group(1):
+        src = src.replace(m.group(0), m.group(0).replace("]", ", pre-push]"))
+p.write_text(src)
+import yaml; yaml.safe_load(open(".pre-commit-config.yaml"))  # validate
+```
+
 ### Verification Commands
 
 ```bash
@@ -626,3 +808,4 @@ gh run view <run-id> --log-failed
 | --------- | --------- | --------- |
 | Myrmidons | shellcheck-warnings swarm; 332 unit tests pass, CI green; REPO_ROOT_HOOK pattern, SKIP_TESTS guard, Justfile guard, `\|\| true` fix (2026-04-24) | verified-ci |
 | ProjectScylla | gitleaks v8.30.1 Go build failure; converted from `language: golang` to pre-built binary download in `.pre-commit-config.yaml` (2026-04-27) | verified-local |
+| Ecosystem swarm rollout (2026-05-16) | Pre-push signed-commit enforcement + YAML doc-marker patcher fix. Pilot: ProjectMnemosyne #1718. Follow-ups: AchaeanFleet #660 (fixup `3569a29` for `---` marker), ProjectArgus #521, ProjectHermes #641, ProjectAgamemnon #383, ProjectNestor #79, ProjectTelemachy #242, ProjectKeystone #556, ProjectProteus #140, ProjectCharybdis #251, Odysseus #285 | verified-ci |
