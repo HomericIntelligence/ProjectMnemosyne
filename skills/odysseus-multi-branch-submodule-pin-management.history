@@ -1,0 +1,37 @@
+# Amendment History — odysseus-multi-branch-submodule-pin-management
+
+## v1.0.0 — 2026-05-04
+
+Initial skill capturing the verified-local workflow for managing submodule pins across multiple Odysseus branches: rebase, cherry-pick avoidance, justfile recipe collision resolution, and force-with-lease workflows. Verified on Odysseus `feat/issue-22-ci-hardening` (2026-05-04).
+
+### Snapshot (v1.0.0)
+
+```yaml
+---
+name: odysseus-multi-branch-submodule-pin-management
+description: >-
+  Manage submodule pins across multiple Odysseus branches with rebase, cherry-pick avoidance,
+  and justfile recipe collision resolution. Use when: (1) updating a submodule SHA on a feature
+  branch while main has a different pin, (2) rebasing an Odysseus feature branch onto main after
+  justfile changes on both sides, (3) cherry-picking a submodule pointer update between branches
+  fails with CONFLICT (submodule), (4) CI "Harden checks" job fails with justfile recipe
+  redefinition error after rebase, (5) branch-switching causes missing files/directories in the
+  working tree.
+category: ci-cd
+date: 2026-05-04
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - odysseus
+  - submodule
+  - pin
+  - rebase
+  - justfile
+  - multi-branch
+  - cherry-pick
+  - force-with-lease
+---
+```
+
+Body covered: Quick Reference, 6 detailed steps (branch confirmation, avoid cherry-pick of submodule pointers, detect justfile recipe collisions, rebase, force-with-lease, wait for GitHub re-evaluation), 5 Failed Attempts, Results & Parameters (submodule pin facts, Harden checks CI scope, justfile conflict resolution, rename collision pattern), Verified On Odysseus 2026-05-04.

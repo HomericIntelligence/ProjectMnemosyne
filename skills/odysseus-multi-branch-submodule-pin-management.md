@@ -7,12 +7,15 @@ description: >-
   justfile changes on both sides, (3) cherry-picking a submodule pointer update between branches
   fails with CONFLICT (submodule), (4) CI "Harden checks" job fails with justfile recipe
   redefinition error after rebase, (5) branch-switching causes missing files/directories in the
-  working tree.
+  working tree, (6) running `git submodule update --remote <path>` produces unexpected
+  modifications to OTHER submodules in `git status` (the selective-vs-all foot-gun), (7) doing
+  a partial pin bump where only some submodules are eligible because others have open PRs.
 category: ci-cd
-date: 2026-05-04
-version: "1.0.0"
+date: 2026-05-16
+version: "1.1.0"
 user-invocable: false
-verification: verified-local
+verification: verified-ci
+history: odysseus-multi-branch-submodule-pin-management.history
 tags:
   - odysseus
   - submodule
@@ -22,6 +25,8 @@ tags:
   - multi-branch
   - cherry-pick
   - force-with-lease
+  - submodule-update-remote
+  - selective-pin-bump
 ---
 
 # Odysseus Multi-Branch Submodule Pin Management
@@ -30,10 +35,10 @@ tags:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-04 |
-| **Objective** | Fix CI on feat/issue-22-ci-hardening; manage 13+ submodule pins across branches; resolve justfile recipe collisions; handle rebases onto a moving main branch |
-| **Outcome** | Successful — branch rebased, recipe collisions renamed, submodule pins updated, PR force-pushed and re-evaluated by GitHub |
-| **Verification** | verified-local — all steps executed locally; CI validation in progress |
+| **Date** | 2026-05-16 (v1.1.0); originally 2026-05-04 (v1.0.0) |
+| **Objective** | Manage submodule pins across Odysseus branches: rebase, cherry-pick avoidance, justfile recipe collisions, AND safe selective `--remote` pin bumps on long-lived clones |
+| **Outcome** | Successful — original 2026-05-04 CI hardening shipped; 2026-05-16 partial pin-bump PR #284 shipped with EXACTLY the 5 intended bumps (8 unintended rewinds caught) |
+| **Verification** | verified-ci — Odysseus PR #284 (2026-05-16) shipped via this procedure; original v1.0.0 verified-local on 2026-05-04 |
 
 ## When to Use
 
@@ -43,6 +48,8 @@ tags:
 - CI "Harden checks" fails with `Recipe 'X' first defined on line N is redefined on line M`
 - Switching branches in the same Odysseus worktree causes `ls tests/install/` or similar to fail with "no such file or directory"
 - You need to force-push a rebased branch without clobbering concurrent remote changes
+- Running `git submodule update --remote <path>` and seeing unexpected modifications to OTHER submodules in `git status` (the selective-vs-all foot-gun)
+- Partial pin bumps (some submodules have open PRs blocking the bump; only bumping the ones with empty queues)
 
 ## Verified Workflow
 
@@ -151,6 +158,54 @@ After a force-push, GitHub shows `mergeStateStatus: DIRTY` for 10-30 seconds whi
 sleep 15 && gh pr view <PR-number> --repo HomericIntelligence/Odysseus --json mergeable,mergeStateStatus
 ```
 
+### Safe Selective Pin Bump
+
+When bumping a SUBSET of submodule pins in a meta-repo (e.g., only the submodules whose bundle PRs have merged; deferring others that still have open PRs), `git submodule update --remote <path1> <path2>` is NOT safely selective on a long-lived working clone. Other submodules whose working-tree HEADs have drifted from their pinned SHAs (from prior session work, fetches, or branch checkouts) will surface as modified in `git status` — and `--remote` may initialize them as a side effect, producing unintended pin rewinds if blindly staged.
+
+**The 6-step verified-safe procedure** (used successfully on Odysseus PR #284, 2026-05-16):
+
+```bash
+cd ~/Odysseus
+git fetch origin main
+git checkout -b chore/refresh-pins-partial-<date> origin/main
+
+# 1. Reset ALL submodules to the meta-repo's pinned SHAs FIRST.
+#    This puts the working clone in a known state before --remote touches anything.
+git submodule update --init --recursive
+
+# 2. Run --remote ONLY on the submodules you intend to bump.
+for sub in infrastructure/ProjectHermes control/ProjectNestor provisioning/ProjectKeystone provisioning/ProjectTelemachy shared/ProjectMnemosyne; do
+  git submodule update --remote "$sub"
+done
+
+# 3. Confirm git status shows EXACTLY the submodules you bumped (and nothing else).
+git status --short
+
+# 4. If status shows other submodules modified (foot-gun!), reset them individually
+#    — NEVER `git add .` to hide the surprise.
+for unintended in <list>; do
+  git submodule update --init "$unintended"
+done
+
+# 5. Verify each bumped pin is on origin/main of the target submodule.
+for sub in infrastructure/ProjectHermes control/ProjectNestor ...; do
+  sha=$(git -C "$sub" rev-parse HEAD)
+  git -C "$sub" branch -r --contains "$sha" | grep -E "origin/main$" || echo "FAIL: $sub not on origin/main"
+done
+
+# 6. Stage + commit ONLY the intended paths — never `git add .`.
+git add control/ProjectNestor infrastructure/ProjectHermes provisioning/ProjectKeystone provisioning/ProjectTelemachy shared/ProjectMnemosyne
+git status --short  # confirm only those are staged
+git commit -m "chore(submodules): refresh pins ..."
+```
+
+**Critical rules:**
+
+1. **ALWAYS** `git submodule update --init --recursive` BEFORE `--remote` on a long-lived clone — never trust the working tree to be on pinned SHAs.
+2. **ALWAYS** inspect `git status --short` before staging — if you see modified entries you didn't intend to bump, reset them individually.
+3. **NEVER** `git add .` for submodule bumps. Always stage explicit paths.
+4. Cross-reference [[multi-repo-pr-orchestration-swarm-pattern]] for the broader guardrail: do NOT bump a submodule pin while that submodule has an open PR in flight (defer it).
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -160,6 +215,8 @@ sleep 15 && gh pr view <PR-number> --repo HomericIntelligence/Odysseus --json me
 | Using `install` as justfile recipe name | Named ecosystem installer recipe `install` | Existing justfile already had `install PREFIX` (cmake binary install recipe) — CI "Harden checks" caught the collision | Check `just --list` for name collisions first; use namespaced prefix like `ecosystem-install` |
 | Assuming branch is stable during background tasks | Ran background `podman build` while performing git operations in the foreground | Git checkout in the foreground changed working tree; subsequent `ls tests/install/` failed with "no such file" because the branch switched away | Always run `git checkout <branch>` before any branch-specific file operations; treat the working tree as volatile during multi-branch git sessions |
 | Checking GitHub merge status immediately after force-push | `gh pr view --json mergeable` right after `git push --force-with-lease` | Shows `CONFLICTING` / `DIRTY` for 10-30 seconds while GitHub re-evaluates | `sleep 15 && gh pr view <PR> --json mergeable,mergeStateStatus` |
+| Trust `git submodule update --remote <path1> <path2>` to be selective | Ran `git submodule update --remote infrastructure/ProjectHermes control/ProjectNestor ...` on a long-lived working clone; expected only the 5 listed submodules to show modified in `git status` | 8 OTHER submodules showed modified because their working-tree HEADs had drifted from pinned SHAs in prior session work; `--remote` (and the implicit `--init`) surfaced/advanced them as a side effect | ALWAYS run `git submodule update --init --recursive` to reset the working clone FIRST, then `--remote` only on intended paths; inspect `git status --short` before staging |
+| `git add .` after `git submodule update --remote` | Staged everything visible in `git status` after bumping pins, including unintended submodule rewinds | Would have shipped 8 incorrect pin downgrades in the Odysseus PR #284 pin-bump (caught only by manual inspection) | NEVER `git add .` for submodule bumps — always `git add <explicit-path-1> <explicit-path-2> ...` and re-run `git status --short` to confirm only intended paths staged |
 
 ## Results & Parameters
 
@@ -204,3 +261,4 @@ ecosystem-install:
 | Project | Context | Details |
 |---------|---------|---------|
 | Odysseus | feat/issue-22-ci-hardening — CI hardening PR with justfile extensions and submodule updates | Session 2026-05-04 |
+| Odysseus | PR #284 — partial pin bump sweep (5 of 10 in-scope submodules bumped: Nestor, Hermes, Keystone, Telemachy, Mnemosyne; 5 deferred because their bundle PRs were still open). Caught 8 unintended pin rewinds via manual `git status` inspection before staging. | Session 2026-05-16 — verified the 6-step Safe Selective Pin Bump procedure |
