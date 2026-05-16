@@ -138,10 +138,15 @@ These are **pre-existing issues** from the old format. The flat migration preser
 
 ### Recommended
 1. ✅ Test CI workflows (validate and marketplace generation)
-2. 📋 Implement retrospective command updates (clone to $HOME/.agent-brain/)
-3. 📋 Implement advise command updates (direct file reading from flat files)
-4. 📋 Address validation errors in skills (gradually improve quality)
-5. 📋 Update retrospective plugin hook to use new workflow
+2. 📋 Implement retrospective command updates (clone to $HOME/.agent-brain/) — tracked in #1470
+3. 📋 Implement advise command updates (direct file reading from flat files) — tracked in #1470
+4. 📋 Address validation errors in skills (gradually improve quality) — tracked in #1470
+5. 📋 Update retrospective plugin hook to use new workflow — tracked in #1470
+
+> **Note:** The four "📋" items above are open work items that previously
+> lacked tracking issues. They are now consolidated under #1470. File a
+> dedicated issue per item before starting work; #1470 itself is closed
+> once each line above has its own ticket (or is removed).
 
 ### Optional (Quality Improvement)
 - Fix invalid categories in 291 skills
