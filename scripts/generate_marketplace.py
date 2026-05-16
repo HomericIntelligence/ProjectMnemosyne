@@ -16,7 +16,7 @@ import sys
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 try:
     import tomllib  # Python 3.11+
@@ -26,7 +26,6 @@ except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
 # Use the canonical skill_utils helpers instead of duplicating logic here.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from skill_utils import find_skill_files, parse_frontmatter  # noqa: E402
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
