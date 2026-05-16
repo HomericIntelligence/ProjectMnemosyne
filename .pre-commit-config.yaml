@@ -1,3 +1,5 @@
+default_install_hook_types: [pre-commit, pre-push]
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
@@ -39,3 +41,72 @@ repos:
         entry: '^\s*continue-on-error:\s*true\s*$'
         files: ^\.github/workflows/.*\.ya?ml$
         pass_filenames: true
+      - id: require-signed-commits
+        name: "require gpg/ssh-signed commits on push"
+        description: >
+          Verify every commit being pushed is GPG/SSH signed. Runs at pre-push
+          stage so it catches the full range of new commits in one pass. Use
+          `git push --no-verify` to bypass intentionally. To fix: re-sign with
+          `git rebase --exec 'git commit --amend --no-edit -S' <base>`.
+        language: system
+        entry: |
+          bash -c '
+            set -e
+            # pre-commit pre-push hook passes refs on stdin as: <local_ref> <local_sha> <remote_ref> <remote_sha>
+            # If invoked without stdin (e.g. via "pre-commit run --hook-stage pre-push" manually),
+            # fall back to verifying every commit since merge-base with origin/HEAD.
+            range=""
+            if read -r local_ref local_sha remote_ref remote_sha; then
+              if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+                exit 0  # deleting a remote ref; nothing to verify
+              fi
+              if [ "$remote_sha" = "0000000000000000000000000000000000000000" ]; then
+                # New branch on remote — verify everything new on this branch since merge-base with default
+                default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed "s|refs/remotes/||" || echo origin/main)
+                base=$(git merge-base "$local_sha" "$default" 2>/dev/null || git rev-list --max-parents=0 "$local_sha" | tail -1)
+                range="$base..$local_sha"
+              else
+                range="$remote_sha..$local_sha"
+              fi
+            else
+              # Manual invocation — check unpushed commits on current branch
+              upstream=$(git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null || true)
+              if [ -n "$upstream" ]; then
+                range="$upstream..HEAD"
+              else
+                default=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed "s|refs/remotes/||" || echo origin/main)
+                base=$(git merge-base HEAD "$default" 2>/dev/null || git rev-list --max-parents=0 HEAD | tail -1)
+                range="$base..HEAD"
+              fi
+            fi
+            commits=$(git rev-list "$range")
+            if [ -z "$commits" ]; then
+              exit 0
+            fi
+            failed=""
+            for sha in $commits; do
+              # %G? prints: G (good), B (bad), U (good but unknown trust), X (good but expired key),
+              # Y (good signed by expired key), R (good but revoked), E (cannot check), N (no signature)
+              status=$(git log -1 --format="%G?" "$sha")
+              case "$status" in
+                G|U) ;;
+                *)   failed="$failed $sha($status)" ;;
+              esac
+            done
+            if [ -n "$failed" ]; then
+              echo "ERROR: unsigned or invalid-signature commits in push range:" >&2
+              echo "$failed" | tr " " "\n" | sed "/^$/d; s/^/  /" >&2
+              echo "" >&2
+              echo "Fix by re-signing the range:" >&2
+              echo "  git rebase --exec '"'"'git commit --amend --no-edit -S --no-verify'"'"' $(echo "$range" | cut -d. -f1)" >&2
+              echo "  git push --force-with-lease" >&2
+              echo "" >&2
+              echo "Or, if you intentionally need to bypass (e.g. CI fixup), use:" >&2
+              echo "  git push --no-verify" >&2
+              exit 1
+            fi
+            exit 0
+          '
+        always_run: true
+        pass_filenames: false
+        stages: [pre-push]
