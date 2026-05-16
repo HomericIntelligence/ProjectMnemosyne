@@ -131,7 +131,7 @@ rm -rf /tmp/fake-home /tmp/fake-home2 /tmp/fake-home3 /tmp/hello /tmp/hello.mojo
 
 1. **Verify the version premise first.** A prior `/advise` call in this session
    accepted the user's claim that the version had been bumped; it had not. Always
-   run `grep '^mojo' pixi.toml && git log --oneline -- pixi.toml | head` before
+   run `grep '^mojo' pixi.toml && git log --oneline -- pixi.toml \| head` before
    declaring anything about an upstream fix. If the pinned version predates the
    upstream-fix-shipped date in the issue, validation is meaningless — open a
    version-bump PR first.
@@ -180,7 +180,7 @@ rm -rf /tmp/fake-home /tmp/fake-home2 /tmp/fake-home3 /tmp/hello /tmp/hello.mojo
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
 | --------- | ---------------- | --------------- | ---------------- |
-| 1 | Trusted user's claim that the Mojo version had been bumped, ran validation immediately | The version had not actually been bumped yet — earlier `/advise` accepted the premise without checking, then validation gave a meaningless answer | Always `grep '^mojo' pixi.toml && git log --oneline -- pixi.toml | head` before validating any claim about an upstream fix landing. The version premise IS the validation; without it, the rest is theater. |
+| 1 | Trusted user's claim that the Mojo version had been bumped, ran validation immediately | The version had not actually been bumped yet — earlier `/advise` accepted the premise without checking, then validation gave a meaningless answer | Always `grep '^mojo' pixi.toml && git log --oneline -- pixi.toml \| head` before validating any claim about an upstream fix landing. The version premise IS the validation; without it, the rest is theater. |
 | 2 | `sudo -n rm -rf /tmp/fake-home && sudo -n chown root:root /tmp/fake-home` to set up a HOME owned by a different UID | Rootless container's NOPASSWD sudoers grant covers `mkdir/chown/chmod` for `_ensure_writable` paths only — not arbitrary `rm` or `chown` on `/tmp/...` | Skip true UID-mismatch repro inside rootless dev containers. Use mode-000 dirs owned by self instead — they trigger the same `std::filesystem::status` throw path on EACCES, which is the only thing that matters for the `filesystem_error` code path. |
 | 3 | `setpriv --reuid=65534 --regid=65534 -- /tmp/hello` to drop to `nobody` for a real UID-mismatch test | `setresuid: Operation not permitted` — rootless podman containers lack `CAP_SETUID` regardless of sudoers config | In-container UID switching needs privileged mode or `--cap-add=SETUID` at container start. CI is the only authoritative confirmation for true cross-UID. Document this caveat in the upstream comment. |
 | 4 | `sudo -n -u nobody /tmp/hello` as a setpriv alternative | sudoers NOPASSWD grant is `runas=root` only, no `runas=nobody` entry | Same lesson as row 2/3. Permission-shape proxies (mode 000, mode 700+ missing .modular) are the substitute we have. |

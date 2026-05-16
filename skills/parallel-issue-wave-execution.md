@@ -318,7 +318,7 @@ merges, requiring a rebase.
 redaction), and #513 (syslog redaction) were each in a different wave but all touched
 `configs/promtail.yml`. The first two merged cleanly; #511 then went DIRTY because the
 redaction stages added by #509 and #513 conflicted with #511's stage. Resolution: rebase
-#511 onto `origin/main` and force-push (then re-enable auto-merge per the existing
+PR #511 onto `origin/main` and force-push (then re-enable auto-merge per the existing
 "Auto-merge Cleared on Force-Push" rule).
 
 **Detection rule for the L0 commander**: before dispatching wave N, run a hot-file overlap

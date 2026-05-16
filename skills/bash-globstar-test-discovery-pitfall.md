@@ -17,7 +17,7 @@ tags: [bash, globstar, test-discovery, find, mapfile, justfile, recursive-glob, 
 |-------|-------|
 | **Date** | 2026-05-11 |
 | **Objective** | Prevent test runners from silently skipping files at depth >=3 when iterating with `dir/**/*.ext` |
-| **Outcome** | Success — replaced glob with `find | mapfile`; coverage went from 41/298 tests (~14%) to 298/298 (100%) |
+| **Outcome** | Success — replaced glob with `find \| mapfile`; coverage went from 41/298 tests (~14%) to 298/298 (100%) |
 | **Verification** | verified-ci |
 
 ## When to Use
@@ -82,7 +82,7 @@ done
 |---------|----------------|---------------|----------------|
 | `for f in tests/**/*.mojo` (no shopt) | Used `**` directly assuming bash recurses by default | Bash treats `**` as `*` without `shopt -s globstar`; only matches depth 2 (`tests/<file>`). Silent — produces some matches, so the loop "works" | `**` is opt-in in bash; never assume it recurses |
 | `shopt -s globstar` at top of recipe | Enabled globstar then iterated `tests/**/*.mojo` | Functional in that recipe, but introduces a footgun: future contributors copy the loop pattern elsewhere without copying the shopt and silently regress | Encode the recursion in the command (`find`), not in shell state |
-| `find ... | while read f; do ...; done` | Piped find output into a while-read loop | The `|` creates a subshell — counters incremented inside (`(( count++ ))`) don't propagate to the parent; per-file exit codes are masked by the pipe's exit status | Use `mapfile -t arr < <(find ...)` with process substitution so iteration stays in the parent shell |
+| `find ... \| while read f; do ...; done` | Piped find output into a while-read loop | The `\|` creates a subshell — counters incremented inside (`(( count++ ))`) don't propagate to the parent; per-file exit codes are masked by the pipe's exit status | Use `mapfile -t arr < <(find ...)` with process substitution so iteration stays in the parent shell |
 | `for f in $(find ...)` | Command substitution into unquoted loop | Splits on IFS — breaks on paths containing spaces or special characters | `mapfile` + `"${arr[@]}"` is whitespace-safe |
 
 ## Results & Parameters

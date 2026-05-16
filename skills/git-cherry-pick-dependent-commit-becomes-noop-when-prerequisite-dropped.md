@@ -104,17 +104,17 @@ PR #5382 was rejected but contained portable improvements. Two `justfile` commit
 --- a/justfile
 +++ b/justfile
 @@ -76,7 +76,16 @@ _run cmd:
--			podman compose exec -e USER_ID={{USER_ID}} -e GROUP_ID={{GROUP_ID}} -T {{podman_service}} bash -c "$HOME_FIXUP {{cmd}}"
-+			# Forward CI/coredump env vars into the container. Without these
-+			# -e passthroughs, MOJO_TEST_UNDER_GDB / CRASH_BUNDLE_DIR set on
-+			# the GHA runner are NOT visible to the bash recipe inside the
-+			# container, so the gdb wrapper would be silently skipped.
-+			podman compose exec \
-+				-e USER_ID={{USER_ID}} -e GROUP_ID={{GROUP_ID}} \
-+				-e MOJO_TEST_UNDER_GDB \
-+				-e MOJO_UNDER_GDB \
-+				-e CRASH_BUNDLE_DIR \
-+				-T {{podman_service}} bash -c "$HOME_FIXUP {{cmd}}"
+-            podman compose exec -e USER_ID={{USER_ID}} -e GROUP_ID={{GROUP_ID}} -T {{podman_service}} bash -c "$HOME_FIXUP {{cmd}}"
++            # Forward CI/coredump env vars into the container. Without these
++            # -e passthroughs, MOJO_TEST_UNDER_GDB / CRASH_BUNDLE_DIR set on
++            # the GHA runner are NOT visible to the bash recipe inside the
++            # container, so the gdb wrapper would be silently skipped.
++            podman compose exec \
++                -e USER_ID={{USER_ID}} -e GROUP_ID={{GROUP_ID}} \
++                -e MOJO_TEST_UNDER_GDB \
++                -e MOJO_UNDER_GDB \
++                -e CRASH_BUNDLE_DIR \
++                -T {{podman_service}} bash -c "$HOME_FIXUP {{cmd}}"
 ```
 
 **Commit `133e6b56` "fix(ci): use explicit -e KEY=VAL for env passthrough (docker-compose compat)"** — converted the bare passthroughs to an EXTRA_ENV array:
@@ -123,21 +123,21 @@ PR #5382 was rejected but contained portable improvements. Two `justfile` commit
 --- a/justfile
 +++ b/justfile
 @@ -80,11 +80,17 @@ _run cmd:
-+			#
-+			# NOTE: docker-compose (cli-plugin) rejects bare `-e VARNAME`
-+			# (without `=value`) with "badly formed, must be key=value" — we
-+			# must build the args conditionally with explicit values.
-+			EXTRA_ENV=()
-+			if [ -n "${MOJO_TEST_UNDER_GDB-}" ]; then EXTRA_ENV+=(-e "MOJO_TEST_UNDER_GDB=${MOJO_TEST_UNDER_GDB}"); fi
-+			if [ -n "${MOJO_UNDER_GDB-}" ];      then EXTRA_ENV+=(-e "MOJO_UNDER_GDB=${MOJO_UNDER_GDB}"); fi
-+			if [ -n "${CRASH_BUNDLE_DIR-}" ];    then EXTRA_ENV+=(-e "CRASH_BUNDLE_DIR=${CRASH_BUNDLE_DIR}"); fi
- 			podman compose exec \
- 				-e USER_ID={{USER_ID}} -e GROUP_ID={{GROUP_ID}} \
--				-e MOJO_TEST_UNDER_GDB \
--				-e MOJO_UNDER_GDB \
--				-e CRASH_BUNDLE_DIR \
-+				"${EXTRA_ENV[@]}" \
- 				-T {{podman_service}} bash -c "$HOME_FIXUP {{cmd}}"
++            #
++            # NOTE: docker-compose (cli-plugin) rejects bare `-e VARNAME`
++            # (without `=value`) with "badly formed, must be key=value" — we
++            # must build the args conditionally with explicit values.
++            EXTRA_ENV=()
++            if [ -n "${MOJO_TEST_UNDER_GDB-}" ]; then EXTRA_ENV+=(-e "MOJO_TEST_UNDER_GDB=${MOJO_TEST_UNDER_GDB}"); fi
++            if [ -n "${MOJO_UNDER_GDB-}" ];      then EXTRA_ENV+=(-e "MOJO_UNDER_GDB=${MOJO_UNDER_GDB}"); fi
++            if [ -n "${CRASH_BUNDLE_DIR-}" ];    then EXTRA_ENV+=(-e "CRASH_BUNDLE_DIR=${CRASH_BUNDLE_DIR}"); fi
+             podman compose exec \
+                 -e USER_ID={{USER_ID}} -e GROUP_ID={{GROUP_ID}} \
+-                -e MOJO_TEST_UNDER_GDB \
+-                -e MOJO_UNDER_GDB \
+-                -e CRASH_BUNDLE_DIR \
++                "${EXTRA_ENV[@]}" \
+                 -T {{podman_service}} bash -c "$HOME_FIXUP {{cmd}}"
 ```
 
 ### Analysis

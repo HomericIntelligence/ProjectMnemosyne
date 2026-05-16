@@ -102,9 +102,9 @@ gh run view "$RUN_ID" --json jobs --jq '
   | select(.name | test("SBOM|Export"))
   | "\(.conclusion)\t\(.name)"'
 # Expected (post-fix):
-# success	Export image for SBOM
-# success	Generate SBOM
-# success	Upload SBOM
+# success    Export image for SBOM
+# success    Generate SBOM
+# success    Upload SBOM
 ```
 
 ## Failed Attempts
@@ -159,9 +159,9 @@ $ gh workflow run container-publish.yml --ref main
 ✓ Created workflow_dispatch event for container-publish.yml at main
 
 $ gh run view 25900780342 --json jobs --jq '...'
-success	Export image for SBOM
-success	Generate SBOM
-success	Upload SBOM
+success    Export image for SBOM
+success    Generate SBOM
+success    Upload SBOM
 ```
 
 ## Verified On

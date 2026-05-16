@@ -88,7 +88,7 @@ If your instinct on a red PR is "just rerun" or "revert the bump," stop and re-r
 
 ### Step 4 — Resolve
 
-- **Systemic main failure**: leave the surface PR's failure as-is, link the existing tracking PR/issue (e.g. PR #5382 for the gdb-capture workaround, modular#6413 for the upstream). Mention in PR comment: "This failure also occurs on `main` — see <link>; addressed separately."
+- **Systemic main failure**: leave the surface PR's failure as-is, link the existing tracking PR/issue (e.g. PR #5382 for the gdb-capture workaround, modular#6413 for the upstream). Mention in PR comment: "This failure also occurs on `main` — see `<link>`; addressed separately."
 - **Infrastructure flake**: do nothing. The next push for any reason will trigger a fresh run; the flake will not persist.
 - **PR-introduced**: fix the PR.
 

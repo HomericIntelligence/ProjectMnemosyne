@@ -1,0 +1,43 @@
+# Gitleaks configuration for ProjectMnemosyne
+#
+# ProjectMnemosyne is a skills knowledge-base repository. Skill documentation
+# files include illustrative example tokens (e.g. `sk_live_1234567890`,
+# `msk_test_123456789`) inside fenced code blocks to teach engineers what a
+# leaked secret looks like. These are NOT real credentials.
+#
+# This config extends the default gitleaks ruleset and narrowly allowlists
+# the well-known dummy tokens that recur in our skill files. We do NOT
+# disable any rule globally — each entry below is scoped to a specific
+# regex/path pair so that real secrets in those same files would still be
+# flagged.
+#
+# See: skills/ci-gitleaks-sarif-false-positive-fix.md
+
+[extend]
+# Pull in the upstream default ruleset (gitleaks >= 8.x)
+useDefault = true
+
+[allowlist]
+description = "Documentation example tokens used in skill knowledge-base files"
+
+# Files known to contain illustrative (non-secret) example tokens.
+# Keep this list as narrow as possible — add new paths only when a CI run
+# confirms the flagged token is documentation, never a real secret.
+paths = [
+  '''skills/ci-gitleaks-sarif-false-positive-fix\.md''',
+  '''skills/quality-security-scan\.md''',
+  '''skills/ci-workflow-hardening-checklist\.md''',
+  '''plugins/uncategorized/skills/quality-security-scan/SKILL\.md''',
+  '''plugins/architecture/quality-security-scan/skills/quality-security-scan/SKILL\.md''',
+]
+
+# Dummy/example token literals that recur in documentation. Listing them
+# explicitly (rather than only relying on path scoping) means a future
+# real Stripe key dropped into one of those files would still be caught
+# unless it matched one of these placeholder patterns exactly.
+regexes = [
+  '''sk_live_1234567890''',
+  '''sk_test_1234567890''',
+  '''msk_live_1234567890''',
+  '''msk_test_123456789''',
+]

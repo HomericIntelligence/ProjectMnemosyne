@@ -288,13 +288,13 @@ W_j = max(len(content_ij)) for all rows i (header + data)
 ```
 
 `len(content_ij)` is the character count of cell content **without** the surrounding spaces
-or pipes (i.e. what sits between `| ` and ` |`).
+or pipes (i.e. what sits between the leading `|` + space and the trailing space + `|`).
 
 ##### Step C2 — Rewrite the table with consistent widths
 
-- **Header row**:    `| ` + content padded to `W_j` with trailing spaces + ` |` per column.
-- **Separator row**: `| ` + `'-' * W_j`                                + ` |` per column.
-- **Data rows**:     `| ` + content padded to `W_j` with trailing spaces + ` |` per column.
+- **Header row**:    `|` + space + content padded to `W_j` with trailing spaces + space + `|` per column.
+- **Separator row**: `|` + space + `'-' * W_j`                                + space + `|` per column.
+- **Data rows**:     `|` + space + content padded to `W_j` with trailing spaces + space + `|` per column.
 
 Single space padding on each side; every column's separator dash count must equal `W_j`
 (not `W_j - 2`, not "approximately" `W_j` — exactly `W_j`).
