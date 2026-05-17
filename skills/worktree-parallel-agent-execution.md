@@ -1,9 +1,9 @@
 ---
 name: worktree-parallel-agent-execution
-description: "Use when: (1) resolving 3+ independent GitHub issues simultaneously with sub-agents, (2) mass-rebasing many PR branches in parallel without collision, (3) triaging issues by complexity then executing LOW items in a single parallel wave, (4) avoiding merge conflicts when multiple agents work on the same repo, (5) splitting ONE multi-part GitHub issue into N independent parallel sub-tasks with hot-file ownership coordination, (6) `Task isolation=worktree` agents reporting they see stat-cache differences from sibling agents (`please run git restore CLAUDE.md`), (7) parallel haiku/sonnet swarm dispatch on EASY-tier batches where agents commit to the parent repo's checked-out branch instead of their own worktree branch, (8) writing Mnemosyne `/learn` skill amendments in parallel (serialize instead — branch contamination is possible), (9) parallel worktree agents pushing to overlapping remote branch refs even with correct `isolation: \"worktree\"` — different agents racing on similar branch names produce a single union branch under one PR rather than N separate PRs."
+description: "Use when: (1) resolving 3+ independent GitHub issues simultaneously with sub-agents, (2) mass-rebasing many PR branches in parallel without collision, (3) triaging issues by complexity then executing LOW items in a single parallel wave, (4) avoiding merge conflicts when multiple agents work on the same repo, (5) splitting ONE multi-part GitHub issue into N independent parallel sub-tasks with hot-file ownership coordination, (6) `Task isolation=worktree` agents reporting they see stat-cache differences from sibling agents (`please run git restore CLAUDE.md`), (7) parallel haiku/sonnet swarm dispatch on EASY-tier batches where agents commit to the parent repo's checked-out branch instead of their own worktree branch, (8) writing Mnemosyne `/learn` skill amendments in parallel (serialize instead — branch contamination is possible), (9) parallel worktree agents pushing to overlapping remote branch refs even with correct `isolation: \"worktree\"` — different agents racing on similar branch names produce a single union branch under one PR rather than N separate PRs, (10) PARTIAL contamination — one stray commit from sibling agent's branch leaks into your branch's history (distinct from full collapse in (9)); detect via `git log origin/<branch> ^origin/main --oneline` showing N+1 commits when N expected, recovery is `git reset --hard origin/main && cherry-pick <own-shas> && push --force-with-lease`."
 category: tooling
-date: 2026-05-16
-version: "1.3.0"
+date: 2026-05-17
+version: "1.4.0"
 user-invocable: false
 verification: verified-ci
 history: worktree-parallel-agent-execution.history
@@ -210,6 +210,85 @@ The orchestrator must diagnose why the branch already exists before proceeding.
 **Success verification:** After applying v1.3.0 hardening, four parallel Sonnet MEDIUM-Wave-1
 agents (issues #177, #182+189, #185, #331) produced four distinct PRs (#387, #388, #389, #390)
 with zero branch collisions or PR merges.
+
+### Partial contamination variant (v1.4.0) — one stray commit leaks into another agent's branch
+
+**Distinct from full collapse (v1.3.0).** v1.3.0 covers the failure mode where N parallel
+agents' branches collapse onto a single remote ref under one PR. The partial variant is more
+subtle: each agent's branch survives as its own PR, but ONE branch's history contains an extra
+commit that originated from a sibling agent's work. The diff of the offending PR shows unrelated
+changes alongside its intended ones.
+
+**Foundation:** ProjectAgamemnon PR #398 (2026-05-17). Two parallel Haiku bundle agents (#398
+and #401) launched with `isolation: "worktree"`. PR #398's intended scope was markdownlint
+fixes; the diff included an unrelated `nats_client.cpp` change that actually belonged to
+PR #401. Detected by reading the PR diff during review and confirmed via:
+
+```bash
+# Show commits on the PR branch beyond main:
+git log origin/<branch> ^origin/main --oneline
+# Expected N commits (one per intended fix); observed N+1 with one commit touching files
+# the agent never declared in scope.
+```
+
+**Likely root cause:** A stray `git pull` inside the contaminated worktree (or a branch-pointer
+race against the shared origin during near-simultaneous pushes) pulled in a single commit from
+the sibling's branch. Unlike (v1.3.0) full collapse, the rest of the branch history was intact.
+
+**Detection signals:**
+
+- PR diff shows files outside the agent's declared scope
+- `git log origin/<branch> ^origin/main --oneline` returns more commits than the agent reports
+  having authored
+- Author/date of the stray commit matches a different in-flight PR's commit
+- `git cherry origin/main origin/<other-pr-branch>` shows your branch contains a `+` for
+  a commit that belongs to the other PR
+
+**Recovery workflow (verified-ci on PR #398, force-pushed, CI re-ran clean, auto-squash merged):**
+
+```bash
+# Inside the contaminated worktree:
+
+# 1. Identify the agent's OWN commits (the ones it intended to make)
+git fetch origin main
+OWN_SHAS=$(git log origin/main..HEAD --format=%H -- <files-agent-actually-touched>)
+# Sanity-check the list: each SHA's `git show --stat` should ONLY touch declared files
+
+# 2. Hard-reset to a clean main
+git reset --hard origin/main
+
+# 3. Re-apply ONLY the agent's own commits, oldest-first
+echo "$OWN_SHAS" | tac | xargs -I {} git cherry-pick {}
+
+# 4. Force-push with lease (acceptable: the contaminated state was already wrong)
+git push --force-with-lease origin <branch-name>
+
+# 5. Re-trigger CI and verify the PR diff now shows ONLY the intended changes
+gh pr view <pr-number> --json files --jq '.files[].path'
+```
+
+**Why `--force-with-lease` not `--force`:** prevents clobbering a legitimate concurrent push
+from another agent or human. If the lease fails, STOP and investigate before retrying.
+
+**Failed recovery attempts (don't bother):**
+
+| Attempt | Why It Fails |
+|---------|---------------|
+| `git revert <stray-sha>` | Leaves the stray commit in history plus a noisy revert commit; PR diff still pollutes review and `gh pr view` still lists the wrong files |
+| `git rebase --onto origin/main <stray-sha>~ HEAD` | Works in theory but fragile: if the stray isn't a clean parent boundary, rebase produces conflicts or silently keeps the wrong commit |
+| Closing the PR and re-running the agent | Wastes the agent's existing good work; recovery is cheaper than re-execution |
+
+**Prevention (forward-looking):**
+
+- Same v1.3.0 hardening applies — issue-suffixed branch names + `git ls-remote` collision check
+- Additionally: tell each agent to NEVER run `git pull` inside its worktree. Use
+  `git fetch origin main && git rebase origin/main` instead, and only when explicitly needed.
+- Have the agent verify its own diff scope before push:
+  ```bash
+  EXPECTED_FILES="<list>"
+  ACTUAL_FILES=$(git diff --name-only origin/main..HEAD)
+  diff <(echo "$EXPECTED_FILES") <(echo "$ACTUAL_FILES") || { echo "FATAL: out-of-scope files in diff — STOP"; exit 1; }
+  ```
 
 ### Phase 0: Splitting a Single Issue with Shared Docs/Config Files (v1.1.0)
 
@@ -562,6 +641,7 @@ pixi run mypy <package>/
 | Parallel `Task isolation=worktree` on 8 EASY-tier branches (ProjectOdyssey #5363) | Dispatched 8 haiku/sonnet agents simultaneously, each assigned a distinct issue branch | Multiple agents committed to whichever branch the parent repo's working tree had checked out; sibling agents reported `please run git restore CLAUDE.md` from stat-cache deltas | `Task isolation=worktree` is path-isolated but NOT branch/index-isolated when N agents target N distinct branches sharing parent `.git/`. For EASY-tier batches, serialize OR consolidate via cherry-pick into ONE branch (see Phase 0a) |
 | Parallel Mnemosyne `/learn` skill amendments | Launched 5 parallel sub-agents to amend 5 different skills on shared `~/.agent-brain/ProjectMnemosyne` clone | Same branch-namespace contamination pattern as ProjectOdyssey #5363; agents wrote to wrong skill files / wrong branches | Serialize `/learn` invocations OR ensure each agent uses a TRULY independent clone (not just a worktree off the shared clone) |
 | Parallel Haiku bundle agents (4-7) with `isolation: "worktree"`, no branch-name uniqueness guarantee | Four agents used `isolation: "worktree"` correctly; each pushed its own local worktree branch named `bundle/simple-sweep-N-2026-05-16` | 26 commits from 4 distinct branches collapsed onto a single remote branch `bundle/simple-sweep-7-2026-05-16` under one PR (#386); PR body listed only one bundle's issues, leaving 16 silently fixed-but-unclosed | Worktree isolation guarantees no LOCAL state contamination but does NOT guarantee REMOTE branch uniqueness. Always use issue-number-suffixed names + `git ls-remote --exit-code --heads origin <branch>` collision check before push. |
+| Parallel Haiku bundle agents (PR #398 + #401) — PARTIAL contamination variant | Two `isolation: "worktree"` agents; PR #398's branch acquired one extra commit from #401's branch (likely stray `git pull` or branch-pointer race during near-simultaneous push) | PR #398's diff showed unrelated `nats_client.cpp` changes alongside its intended markdownlint fixes; `git log origin/<branch> ^origin/main --oneline` returned N+1 commits | Recovery: `git reset --hard origin/main && cherry-pick <own-shas> && push --force-with-lease`. Do NOT try `git revert` (noisy, leaves stray in history) or `git rebase --onto` (fragile). Prevent by forbidding `git pull` in agent worktrees and validating diff scope against an expected-files list before push. See "Partial contamination variant (v1.4.0)" section. |
 
 ## Results & Parameters
 
@@ -620,3 +700,4 @@ This ensures agents cannot push directly to main.
 | ProjectScylla | Issue #1887 (JSON-logging/tracing/metrics) split into PRs #1932 (squash-merged green, 22 checks) and #1933 (~24 checks after markdownlint fix) | 2026-05-07 — verified-ci foundation for v1.1.0 split-issue pattern |
 | ProjectOdyssey | Phase G EASY-tier 8-issue swarm contamination (PR #5363, 67/68 substantive checks green); recovery via cherry-pick consolidation; close individual worker PRs | 2026-05-09 — verified-ci foundation for v1.2.0 Phase 0a branch-namespace contamination warning |
 | ProjectAgamemnon | 2026-05-16 swarm session (PRs #386 collision recovery + #387-#390 success after fix) | — |
+| ProjectAgamemnon | 2026-05-17 — PR #398 partial contamination recovery (stray commit from PR #401's branch removed via `git reset --hard origin/main && cherry-pick <own-shas> && push --force-with-lease`); CI re-ran clean, PR auto-squash merged | verified-ci foundation for v1.4.0 Partial contamination variant |

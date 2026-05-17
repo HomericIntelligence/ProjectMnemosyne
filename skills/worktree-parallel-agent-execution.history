@@ -1,5 +1,46 @@
 # worktree-parallel-agent-execution — History
 
+## v1.4.0 (2026-05-17)
+
+**Changed by:** ProjectAgamemnon PR #398 partial-contamination recovery (Haiku bundle pair #398 + #401)
+**Verification:** verified-ci
+
+### What changed
+
+- Added new subsection "Partial contamination variant (v1.4.0)" inside "Verified Workflow"
+  documenting the case where ONE stray commit leaks from a sibling agent's branch (distinct
+  from v1.3.0's full collapse of N branches onto one ref)
+- Added recovery workflow: `git reset --hard origin/main && cherry-pick <own-shas> && push --force-with-lease`
+- Added detection technique: `git log origin/<branch> ^origin/main --oneline` → N+1 commits
+- Added 1 new Failed Attempts row covering the PR #398/#401 contamination
+- Added 1 new Verified On row for ProjectAgamemnon PR #398 (2026-05-17)
+- Extended frontmatter `description` with trigger (10) describing the partial-contamination
+  detection signal
+- Documented two failed recovery approaches (`git revert <stray>` and `git rebase --onto`)
+  and why reset+cherry-pick is preferred
+- Added prevention rules: forbid `git pull` inside agent worktrees, validate diff scope
+  against expected-files list before push
+- Bumped version to 1.4.0 (minor — new section + new failure mode, no breaking changes)
+
+### Why
+
+v1.3.0 covered the visible failure (4 branches collapse onto 1 ref under 1 PR). The
+partial-contamination variant is more dangerous because each PR still appears to be its own
+branch — the bug is only visible when someone reads the diff and notices out-of-scope files.
+Detected on ProjectAgamemnon PR #398: agent's diff contained an unrelated `nats_client.cpp`
+change that originated from PR #401's branch. Recovery via `git reset --hard origin/main`
++ cherry-pick of own commits + `push --force-with-lease` rebuilt a clean branch; CI re-ran
+green and the PR auto-squash merged. Documenting this as a separate variant so future
+sessions can distinguish "wrong PR has my commit" (v1.4.0) from "all commits collapsed to
+one PR" (v1.3.0) and apply the correct recovery.
+
+### Previous version (v1.3.0) snapshot
+
+See git history for full v1.3.0 file content at commit prior to this amendment, or the prior
+v1.3.0 entry below for change context.
+
+---
+
 ## v1.3.0 (2026-05-16)
 
 **Changed by:** ProjectAgamemnon Myrmidon-swarm 2026-05-16 (PRs #386 collision recovery + #387-#390 success)
