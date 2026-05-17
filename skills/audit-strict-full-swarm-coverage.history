@@ -1,0 +1,48 @@
+# audit-strict-full-swarm-coverage — History
+
+## v1.1.0 (2026-05-17)
+
+**Changed by:** ProjectAgamemnon 2026-05-17 audit session
+**Verification:** verified-local
+
+### What changed
+
+- Added second project verification entry: ProjectAgamemnon 2026-05-17 (B- 78% CONDITIONAL GO; 1 critical / 19 major / ~15 minor).
+- Added new Failed Attempt row: choosing `feature-dev:code-reviewer` subagent type fails because it lacks Bash (cannot run `find`, `gh`, `git log` for evidence gathering). Must use `subagent_type: general-purpose`.
+- Added new Failed Attempt row: running the audit as a single sequential agent overflows context partway through Section 8 — the per-section swarm is the only working approach.
+- Added Step 3 note: when the swarm runtime allows it, all 15 sections can be dispatched in a single message (one parallel batch); 3 waves of 5 remain the conservative fallback when concurrency caps apply.
+- Added Step 4 note: subagent type must be `general-purpose` (read-only review subagents like `feature-dev:code-reviewer` lack the Bash tool needed for evidence gathering).
+- Confirmed strict rubric prevents grade inflation on a second project (Agamemnon's B- matches Scylla's pattern).
+
+### Why
+
+The original v1.0.0 was verified on a single project (ProjectScylla). Re-running the
+methodology on ProjectAgamemnon surfaced two new gotchas that would otherwise be
+re-discovered the hard way: (a) sequential single-agent attempts blow context, and
+(b) `feature-dev:code-reviewer` is the wrong subagent type despite being a natural
+first guess. Both lessons are now captured in Failed Attempts.
+
+### Previous version (v1.0.0) snapshot
+
+```
+---
+name: audit-strict-full-swarm-coverage
+description: "Methodology for running a strict, full-coverage repository audit by dispatching one swarm agent per audit section in waves of 5. Use when: (1) running /hephaestus:repo-analyze-strict-full or equivalent full-coverage audit on a repo with >500 files, (2) bug-finding completeness matters and sampling is unsafe, (3) you need pre-release readiness review with strict grading (default F, evidence required), (4) single-agent audits are overflowing context or producing shallow results."
+category: tooling
+date: 2026-05-07
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [audit, repo-analyze, swarm, myrmidon, strict-grading, full-coverage, wave-dispatch, bucketing, go-no-go]
+---
+
+(Body identical to v1.0.0 — see git history at commit f890f900 for full text.
+ProjectScylla verification: 1821 files, 168 src .py; B- (82%); CONDITIONAL GO;
+3 critical / 19 major / 3 grouped minor; issues #1934-#1959.)
+```
+
+---
+
+## v1.0.0 (2026-05-07)
+
+**Initial version.** Verified on ProjectScylla.
