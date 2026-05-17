@@ -8,6 +8,9 @@ worktrees/
 # build artifacts
 build/
 
+# Temporary files
+tmp/
+
 # Pixi environment
 .pixi/
 
@@ -21,3 +24,7 @@ htmlcov/
 
 # Local Claude Code settings (user-specific permissions)
 .claude/settings.local.json
+
+# Agentic automation sessions
+.worktrees/
+.issue_implementer/
