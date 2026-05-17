@@ -1,13 +1,13 @@
 ---
 name: pixi-lock-rebase-regenerate
-description: "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts, (4) Dependabot PRs fail CI fast (6-12 seconds) because Dependabot only bumps pyproject.toml not pixi.lock, (5) a second rebase of the same branch produces a pixi.lock commit conflict — skip the stale commit and re-run pixi install, (6) a second commit in the rebase chain patches code that was migrated to an external package — accept HEAD's version and use git rebase --skip, (7) pixi.toml pins a dependency version but pixi.lock still references old version (CI shows 'Environment is not consistent with the lockfile'), (8) creating a fix branch — always base off origin/main not local main which may be stale commits behind, (9) MULTIPLE PR branches all fail CI with 'lock-file not up-to-date' simultaneously after a recent merge to main — main itself is likely broken; verify with `git checkout main && pixi install --locked` before per-branch fixups, (10) a recently-merged PR that touched `pyproject.toml`'s `[project.dependencies]` (or any field that contributes to the local-package SHA hash) without regenerating `pixi.lock` — fix on main with a 1-line hotfix PR; then re-rebase all open PRs to inherit the fixed lock, (11) per-branch `pixi install` regeneration produces only a single-line diff (the local-package `sha256:`) and CI keeps failing — confirms the bug is upstream on main, not on the branch, (12) a comment-only or metadata-only edit to `pyproject.toml`/`pixi.toml` invalidates the local-package SHA256 in `pixi.lock` and CI fails with `pixi install --locked rejected: <package> SHA256 mismatch` — use `pixi install` NOT `pixi update` (install regenerates only the affected SHA; update re-resolves the entire dep graph and produces a ~50-line diff)."
+description: "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts, (4) Dependabot PRs fail CI fast (6-12 seconds) because Dependabot only bumps pyproject.toml not pixi.lock, (5) a second rebase of the same branch produces a pixi.lock commit conflict — skip the stale commit and re-run pixi install, (6) a second commit in the rebase chain patches code that was migrated to an external package — accept HEAD's version and use git rebase --skip, (7) pixi.toml pins a dependency version but pixi.lock still references old version (CI shows 'Environment is not consistent with the lockfile'), (8) creating a fix branch — always base off origin/main not local main which may be stale commits behind, (9) MULTIPLE PR branches all fail CI with 'lock-file not up-to-date' simultaneously after a recent merge to main — main itself is likely broken; verify with `git checkout main && pixi install --locked` before per-branch fixups, (10) a recently-merged PR that touched `pyproject.toml`'s `[project.dependencies]` (or any field that contributes to the local-package SHA hash) without regenerating `pixi.lock` — fix on main with a 1-line hotfix PR; then re-rebase all open PRs to inherit the fixed lock, (11) per-branch `pixi install` regeneration produces only a single-line diff (the local-package `sha256:`) and CI keeps failing — confirms the bug is upstream on main, not on the branch, (12) a comment-only or metadata-only edit to `pyproject.toml`/`pixi.toml` invalidates the local-package SHA256 in `pixi.lock` and CI fails with `pixi install --locked rejected: <package> SHA256 mismatch` — use `pixi install` NOT `pixi update` (install regenerates only the affected SHA; update re-resolves the entire dep graph and produces a ~50-line diff), (13) developer's local pixi binary is NEWER than CI's pinned `prefix-dev/setup-pixi` version (e.g., local v0.67.2, CI v0.39.5); developer regenerates `pixi.lock` locally and CI rejects it with a schema/lockfile-version/format mismatch error even though `pixi install --frozen` passes locally — diagnosis is pixi-binary-version skew, fix is to install CI's exact pinned pixi version locally and regenerate (NOT bump CI, which cascades to other repos)."
 category: ci-cd
-date: 2026-05-11
-version: "1.7.0"
+date: 2026-05-17
+version: "1.8.0"
 user-invocable: true
 verification: verified-ci
 history: pixi-lock-rebase-regenerate.history
-tags: [dependabot, pixi, rebase, pixi-lock, ci-cd, pixi-install, pixi-update]
+tags: [dependabot, pixi, rebase, pixi-lock, ci-cd, pixi-install, pixi-update, pixi-version-skew, lock-format-drift]
 absorbed:
   - ci-cd-dependabot-pixi-lock-drift-fix.md
 ---
@@ -17,10 +17,10 @@ absorbed:
 
 | Field | Value |
 | ------- | ------- |
-| **Date** | 2026-05-11 |
-| **Objective** | Correctly resolve `pixi.lock` staleness after `git rebase`, main-branch advancement, or comment-only manifest edits without producing an invalid lock file or broadening the diff scope |
-| **Outcome** | Eliminates `lock-file not up-to-date` CI failures; multi-branch parallel fix completes 5 PRs in ~1 minute; SHA-only fixes stay 1-line via `pixi install` (not `pixi update`) |
-| **Verification** | verified-ci (v1.7.0) |
+| **Date** | 2026-05-17 |
+| **Objective** | Correctly resolve `pixi.lock` staleness after `git rebase`, main-branch advancement, comment-only manifest edits, or pixi-binary-version drift between developer and CI — without producing an invalid lock file or broadening the diff scope |
+| **Outcome** | Eliminates `lock-file not up-to-date` and lockfile-format-rejection CI failures; multi-branch parallel fix completes 5 PRs in ~1 minute; SHA-only fixes stay 1-line via `pixi install` (not `pixi update`); format-drift fixes regenerate against CI's pinned pixi version |
+| **Verification** | verified-ci (v1.8.0) |
 | **History** | [changelog](./pixi-lock-rebase-regenerate.history) |
 
 ## When to Use
@@ -40,6 +40,7 @@ absorbed:
 - **The 1-line diff after `pixi install` is on the local package's `sha256:` field** — the bug is upstream on main; a per-branch regeneration cannot help because every rebase pulls in main's stale lock.
 - **Symptom: a "fix-up" wave on multiple branches doesn't help** — each branch's CI keeps failing the same way after per-branch regeneration; this confirms main itself ships an inconsistent `pyproject.toml`/`pixi.lock` pair.
 - **Comment-only or metadata-only edit to `pyproject.toml`/`pixi.toml` invalidates the local-package SHA256** — CI fails with `pixi install --locked rejected: <package> SHA256 mismatch`. Fix with `pixi install` (NOT `pixi update`); see Phase 3f.
+- **Developer's local pixi binary is newer than CI's pinned `prefix-dev/setup-pixi` version** — developer regenerates `pixi.lock` locally with a newer pixi (e.g., v0.67.2) and CI rejects it with a schema/lockfile-version/format complaint even though `pixi install --frozen` succeeds locally. The newer pixi writes lockfile fields/structure the older CI pixi cannot parse. Fix is to install CI's exact pinned pixi version locally and regenerate; see Phase 3g.
 
 **Do NOT use `--ours` or `--theirs`** to resolve a `pixi.lock` conflict — either side will be stale
 relative to the rebased branch's actual `pixi.toml`.
@@ -440,6 +441,82 @@ fix-wave agent first tried `pixi update`, observed the broad diff (~50 lines inc
 ruff/mypy bumps), reverted, then used `pixi install` and produced a 1-line SHA fix that landed
 cleanly as PR #368.
 
+### Phase 3g: Pixi Binary Version Skew Causing Lock-Format Drift
+
+**Pattern (distinct from Phase 3f, which is a SHA-mismatch).** Developer's local
+`pixi --version` is newer than the version CI uses (the `pixi-version:` input to the
+`prefix-dev/setup-pixi@vX.Y.Z` action). The developer regenerates `pixi.lock` with the newer
+binary. Locally, `pixi install --frozen` succeeds — the newer binary happily reads its own
+lock format. CI fails with a schema, lockfile-version, or format-rejection error because the
+older pinned pixi cannot parse the newer fields/structure.
+
+**Diagnostic signals:**
+
+- CI fails on `pixi install` or `pixi run <task>` with a schema/format complaint (e.g.,
+  "lockfile version mismatch", "unknown field", or similar parse error)
+- Local `pixi install --frozen` succeeds against the same `pixi.lock`
+- `git log -p pixi.lock` shows the lock was regenerated recently
+- `pixi --version` locally is **newer** than the `pixi-version:` pinned in
+  `.github/workflows/*.yml`
+
+**Why this is NOT the SHA-mismatch case (Phase 3f):** SHA mismatches happen because the
+*content* hash of the local editable package drifted (often from a metadata edit). Format
+drift happens because the *serialization* of the lockfile changed between pixi binary
+versions — the dependency graph itself is fine. The fix shape is identical (regenerate with
+the right pixi version), but the diagnosis path is different: in Phase 3f, the diff is a
+1-line SHA; in Phase 3g, the diff can be structural (new fields, restructured tables).
+
+**Fix (verified workflow):**
+
+```bash
+# 1. Identify CI's pinned pixi version from workflow files
+grep -rE "prefix-dev/setup-pixi|pixi-version" .github/workflows/ | head -10
+# Look for a line like:  pixi-version: v0.39.5
+
+# 2. Install that EXACT version locally to a per-shell location
+PIXI_VERSION=0.39.5
+INSTALL_DIR="$HOME/.tmp/pixi-${PIXI_VERSION}"
+curl -fsSL https://pixi.sh/install.sh | PIXI_VERSION="v${PIXI_VERSION}" \
+  bash -s -- "$INSTALL_DIR"
+# Verify:
+"$INSTALL_DIR/bin/pixi" --version   # should print 0.39.5
+
+# 3. Delete the contaminated lock and regenerate with CI's pixi
+rm pixi.lock
+"$INSTALL_DIR/bin/pixi" install --manifest-path ./pixi.toml
+
+# 4. Commit only the regenerated lock
+git add pixi.lock
+git commit -m "fix(ci): regenerate pixi.lock with pixi v${PIXI_VERSION}"
+git push
+
+# 5. Watch CI — should pass on the next run
+```
+
+**Why NOT just bump CI to the developer's newer pixi version?** Bumping the pinned
+`pixi-version:` cascades to every repo using the same shared workflow / composite action.
+A single-repo lock-format fix is a local change; a CI version bump is an ecosystem-wide
+change that needs separate coordination. Prefer regenerating with CI's pinned version
+unless the bump is a planned, ecosystem-wide upgrade.
+
+**Long-term mitigations (not applied per-fix; track separately):**
+
+- Bump the CI pinned pixi version to match developers' default (do this ecosystem-wide)
+- Add a pre-commit hook that re-pins to CI's pixi before regenerating `pixi.lock`
+- Document the CI-pinned pixi version in `CONTRIBUTING.md` so new contributors install it
+  from day one
+
+**Empirical case:** ProjectAgamemnon on 2026-05-17. Developer's local pixi was v0.67.2; CI
+was pinned to v0.39.5 via `prefix-dev/setup-pixi`. Two `pixi.lock` files had been
+regenerated locally and pushed: root `pixi.lock` (PR #390) and `clients/python/pixi.lock`
+(PR #391). Both failed CI with format-rejection errors. Fix: installed v0.39.5 locally,
+regenerated both lock files, pushed; CI passed.
+
+**Failed approach worth flagging:** `pixi install --frozen` run locally as a "smoke test"
+silently passed — the local newer pixi happily reads its own lock format. This is NOT a
+substitute for CI verification. To reproduce CI's failure locally, you must invoke CI's
+pinned pixi binary, not the local default.
+
 ### Phase 4: Verify
 
 ```bash
@@ -468,6 +545,8 @@ done
 | Trusted "already-clean" reports from per-branch agents | 4 agents each reported some branches "fixed" and others "already-clean (pixi install produced no change)" | The "already-clean" reports were correct — the BRANCH'S pyproject.toml/pixi.lock pair was self-consistent. The bug was that main itself shipped an inconsistent pair from a recently-merged PR. CI ran with main as the base, hit the broken lock, failed | Test the symptom on main directly before delegating per-branch repair work; "already-clean" can mean "branch is fine, but main isn't" |
 | `pixi update --manifest-path <dir>/pixi.toml` for a comment-only manifest edit | Used `pixi update` to regenerate `pixi.lock` after a header comment was added to `clients/python/pyproject.toml` (ProjectAgamemnon issue #104) | `pixi update` re-resolved the entire dependency graph against the latest available versions, bumping ruff, mypy, and ~10 transitive packages — diff went from the expected 1 line to ~50 lines, risking unrelated breakage in CI for changes that had nothing to do with the original fix | For SHA-only or metadata-only invalidations, ALWAYS use `pixi install` (not `pixi update`). `pixi install` reproduces the lockfile from the current manifest with minimal change; `pixi update` re-resolves against latest versions and broadens scope. Revert the broad diff with `git checkout pixi.lock` and re-run `pixi install` instead. |
 | Used latest pixi (newer than CI's pinned version) to regenerate `pixi.lock` | Ran the system-installed pixi without checking what version CI actually uses | Newer pixi writes lockfile fields that the older pixi version pinned in CI rejects as "out of date" — CI fails with the same error after the fix is pushed | Always pin to the exact `pixi-version:` from `.github/workflows/`. Install per-shell to `$HOME/.tmp/pixi-<version>/` to avoid polluting global pixi. See user memory `feedback_pixi_lock_version_pin`. |
+| `pixi install --frozen` locally as a "smoke test" to validate the regenerated lock before pushing | Assumed that if `--frozen` accepts the lock locally, CI would too | The local pixi binary (newer, e.g. v0.67.2) happily reads the lock format it just wrote — `--frozen` only checks consistency against the manifest, NOT cross-version readability. CI's older pinned pixi (v0.39.5) still rejects the format on its end. | `pixi install --frozen` locally is NOT a substitute for CI verification when there is pixi-binary-version skew. To reproduce CI failure locally, run CI's pinned pixi binary explicitly (e.g., `$HOME/.tmp/pixi-0.39.5/bin/pixi install --locked`). |
+| Considered bumping CI's pinned `pixi-version:` to match the developer's newer pixi (v0.67.2) | Would have made CI accept the lock format the developer already produced — one-line workflow edit | Rejected because the `pixi-version:` value is shared across many repos via the composite action / pinned setup-pixi version; changing it for one repo cascades to the entire HomericIntelligence ecosystem and needs separate coordination. A per-repo lock regeneration with CI's existing pixi is the local, low-blast-radius fix. | Treat CI's pinned `pixi-version:` as ecosystem state. Single-repo lock-format fixes should regenerate with the CI version; ecosystem-wide pixi upgrades are a separate, planned change. |
 
 ## Results & Parameters
 
@@ -574,3 +653,4 @@ repo uses `--squash`, not `--rebase`.
 | ProjectScylla | PR #1861 pandas bump; prior regeneration commit existed but stale (main advanced 4 commits); local/origin branches diverged; fetch + rebase + pixi install + amend + force-push; rebase auto-merge (ProjectScylla policy), 2026-05-03 | v1.5.0 |
 | ProjectHermes | 2026-05-07: PR #593 added [project.dependencies] without regenerating pixi.lock; main's local-package SHA went stale; 17 open PR branches all failed CI simultaneously; hotfix PR #599 (1-line lock SHA fix) unblocked the entire queue | verified-ci |
 | ProjectAgamemnon | 2026-05-11 ecosystem-wide easy-issue sweep: issue #104 added a header comment to `clients/python/pyproject.toml`, invalidating the editable-package SHA256 in `clients/python/pixi.lock`; all 4 required CI checks failed at `pixi install --locked`; fix-wave agent first tried `pixi update` (saw ~50-line diff, reverted), then used `pixi install` with CI's pinned pixi v0.39.5 → 1-line SHA fix landed cleanly as PR #368 | v1.7.0 verified-ci |
+| ProjectAgamemnon | 2026-05-17: developer regenerated `pixi.lock` locally with pixi v0.67.2; CI (pinned to v0.39.5 via `prefix-dev/setup-pixi`) rejected both root `pixi.lock` and `clients/python/pixi.lock` with lockfile-format complaints; `pixi install --frozen` locally had passed and gave a false-green signal. Fix: installed v0.39.5 to `$HOME/.tmp/pixi-0.39.5/`, deleted and regenerated both locks, pushed as PR #390 (root) and PR #391 (clients/python). CI passed on both. | v1.8.0 verified-ci |

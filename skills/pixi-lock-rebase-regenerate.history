@@ -1,5 +1,56 @@
 # pixi-lock-rebase-regenerate — History
 
+## v1.8.0 (2026-05-17)
+
+**Changed by:** ProjectAgamemnon PRs #390 (root `pixi.lock`) and #391 (`clients/python/pixi.lock`), 2026-05-17
+**Verification:** verified-ci
+
+### What changed
+
+- Added new "When to Use" trigger (13) covering pixi-binary-version skew between developer
+  and CI causing lockfile-format rejection (distinct from SHA-mismatch / Phase 3f)
+- Added new Phase 3g section: **"Pixi Binary Version Skew Causing Lock-Format Drift"**
+  with copy-paste workflow (find CI's pinned `pixi-version:`, install locally to per-shell
+  dir, delete + regenerate lock, push)
+- Explicitly contrasted Phase 3f (SHA-mismatch, 1-line diff) vs Phase 3g (format drift,
+  potentially structural diff) — both fix shapes look similar but have different diagnostic
+  signals
+- Added 2 new Failed Attempts rows:
+  - `pixi install --frozen` locally giving false-green signal (local newer pixi reads its
+    own lock format fine; does NOT prove CI compatibility)
+  - Considered bumping CI's pinned `pixi-version:` but rejected (cascades ecosystem-wide)
+- Added new `pixi-version-skew` and `lock-format-drift` tags
+- Added Verified On row for ProjectAgamemnon PRs #390/#391
+
+### Why
+
+Previous v1.7.0 documented the SHA-mismatch case (Phase 3f) and even mentioned "newer pixi
+may write fields that older pixi versions reject" in passing — but only as a sub-bullet
+inside Phase 3f. ProjectAgamemnon hit the format-drift case twice on 2026-05-17 (PR #390
+and PR #391) with developer running v0.67.2 against CI's v0.39.5. The pattern is distinct
+enough from a SHA-mismatch (different diagnostic signals, different failure messages,
+different diff shape) that it warrants its own phase rather than a sub-bullet.
+
+Critically, the v1.7.0 guidance assumed the agent would discover the format-drift case
+while diagnosing a SHA-mismatch. In practice, agents reach for `pixi install --frozen`
+locally as a smoke test, see it pass, and conclude the fix is correct — only to have CI
+fail again with the same format error. The new Phase 3g calls this out explicitly and
+provides a per-shell pixi installation recipe that reproduces the CI failure locally.
+
+### Previous version (v1.7.0) snapshot
+
+See the previous v1.7.0 entry below for the full pre-amendment description, frontmatter,
+and Verified Workflow content. Key v1.7.0 frontmatter was:
+
+```yaml
+date: 2026-05-11
+version: "1.7.0"
+verification: verified-ci
+tags: [dependabot, pixi, rebase, pixi-lock, ci-cd, pixi-install, pixi-update]
+```
+
+---
+
 ## v1.7.0 (2026-05-11)
 
 **Changed by:** ProjectAgamemnon PR #368 (2026-05-11 ecosystem-wide easy-issue sweep)
