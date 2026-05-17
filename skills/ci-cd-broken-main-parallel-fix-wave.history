@@ -1,5 +1,32 @@
 # ci-cd-broken-main-parallel-fix-wave -- History
 
+## v1.4.0 (2026-05-17)
+
+**Changed by:** ProjectAgamemnon downstream-PR-queue triage session -- 2026-05-17
+**Verification:** verified-ci -- fix-main PR #393 merged; 14 downstream PRs unblocked after rebase
+
+### What changed
+- Added new failed-attempt row: "Single-repo broken main not detected before rebasing downstream PRs" -- pre-flight `gh run list --branch main` check required before any rebase
+- Added new subsection under Results & Parameters: "Single-Repo Application (Agamemnon 2026-05-17)" with pre-flight check command and 6-step recovery sequence
+- Added ProjectAgamemnon 2026-05-17 session to Verified On table
+
+### Why
+ProjectAgamemnon had 6 open PRs (#387-#392) all showing `mergeStateStatus: BLOCKED`. The initial
+hypothesis was "PRs need rebase to retrigger CI", but after rebasing all 6 onto a fresh
+`origin/main` the CI re-ran and they failed identically. Root cause: `main` itself had been
+broken since PR #286 merged (find_package(OpenSSL) + clang-tidy `modernize-use-nodiscard` /
+`misc-include-cleaner` on `circuit_breaker.cpp/.hpp` + missing `MockGitHubClient::fail_list_on_label`
+field). Every downstream PR's matrix inherited the failure. The recovery required a dedicated
+`fix-ci-*` PR merged FIRST, then rebasing downstream PRs (also re-arming auto-merge after each
+force-push). The pre-flight `gh run list --branch main` check would have detected the broken
+main immediately and avoided the wasted rebase cycle.
+
+### Previous version (v1.3.0) snapshot
+
+See v1.3.0 entry below for full previous content.
+
+---
+
 ## v1.3.0 (2026-05-03)
 
 **Changed by:** ProjectScylla issue fixes session (issues #1878, #1868, #1869) -- 2026-05-03

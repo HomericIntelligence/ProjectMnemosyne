@@ -1,13 +1,13 @@
 ---
 name: ci-cd-broken-main-parallel-fix-wave
-description: "Triage and fix broken CI/main across multiple repos simultaneously using Agamemnon task registry + parallel myrmidon fix agents. Use when: (1) 3+ repos have broken main branch CI, (2) need to register tasks in Agamemnon before dispatching agents, (3) CI failures are diverse (conan profile, dependabot config, GitHub Actions auth, BATS helper, Python imports, clang-format violations, annotated-tag SHA pinning, stale pixi.lock, markdownlint CHANGELOG exclusion, release.yml direct push to main, duplicate module re-export, Pydantic model_dump bypass)."
+description: "Triage and fix broken CI/main across multiple repos simultaneously using Agamemnon task registry + parallel myrmidon fix agents. Use when: (1) 3+ repos have broken main branch CI, (2) need to register tasks in Agamemnon before dispatching agents, (3) CI failures are diverse (conan profile, dependabot config, GitHub Actions auth, BATS helper, Python imports, clang-format violations, annotated-tag SHA pinning, stale pixi.lock, markdownlint CHANGELOG exclusion, release.yml direct push to main, duplicate module re-export, Pydantic model_dump bypass), (4) single-repo downstream PR queue is BLOCKED -- check whether main itself is broken BEFORE rebasing downstream PRs."
 category: ci-cd
-date: 2026-05-03
-version: "1.3.0"
+date: 2026-05-17
+version: "1.4.0"
 user-invocable: false
 verification: verified-ci
 history: ci-cd-broken-main-parallel-fix-wave.history
-tags: [ci, broken-main, agamemnon, parallel-agents, myrmidon, conan, dependabot, bats, github-actions, fix-wave, clang-format, monitor, annotated-tags, sha-pinning, pixi-lock, markdownlint, changelog, rebase-onto, transient-vs-reproducible, issue-triage, all-repos, release-workflow, circuit-breaker, pydantic, model-dump, deprecation-shim]
+tags: [ci, broken-main, agamemnon, parallel-agents, myrmidon, conan, dependabot, bats, github-actions, fix-wave, clang-format, monitor, annotated-tags, sha-pinning, pixi-lock, markdownlint, changelog, rebase-onto, transient-vs-reproducible, issue-triage, all-repos, release-workflow, circuit-breaker, pydantic, model-dump, deprecation-shim, single-repo-pr-queue, pre-flight-main-check, fix-main-first]
 ---
 
 # CI Broken-Main Parallel Fix Wave
@@ -187,6 +187,7 @@ curl -s -X PATCH $AGAMEMNON/v1/teams/$TEAM_ID/tasks/fix-odysseus-conan-profile \
 | Release workflow direct push to `main` | `release.yml` pushed version bump commit directly to `main` | Branch protection rules block direct pushes; workflow fails with 403 | Push version bump to `release/version-bump-${{ env.VERSION }}` branch and open a PR via `gh pr create` + `gh pr merge --auto --rebase`; add `pull-requests: write` permission to the workflow |
 | Duplicate circuit-breaker re-export | Had `automation/circuit_breaker.py` as a full duplicate of `scylla.core.circuit_breaker` | Import conflicts when both paths are in scope; maintenance burden of two copies | Convert the duplicate to a DeprecationWarning shim that re-imports from the canonical location |
 | Manual `to_dict()` with field enumerations | 14 Pydantic model methods manually enumerated every field in `to_dict()` | Broke when new fields added (silently omitted); no consistency guarantee | Replace manual field enumerations with `self.model_dump(mode='json')`; inject computed `@property` values post-dump; use `exclude=` for ephemeral runtime fields |
+| Single-repo broken main not detected before rebasing downstream PRs | Rebased 6 in-flight PRs onto stale broken main; CI re-ran and failed identically | All downstream PRs inherit main's failure when CI matrix runs against the new HEAD. Rebase doesn't fix main. | Before rebasing any PR, check `gh run list --branch main --limit 5 --json conclusion`. If main's "Build and Test" or "Static Analysis" is `failure`, fix main FIRST via a dedicated `fix-ci-*` PR with auto-merge=SQUASH, wait for it to merge, THEN rebase downstream PRs. |
 
 ## Results & Parameters
 
@@ -619,6 +620,50 @@ Use `grep -r "def to_dict" --include="*.py"` to find all instances.
 
 ---
 
+### Single-Repo Application (Agamemnon 2026-05-17)
+
+When a single repo's downstream PR queue all shows `mergeStateStatus: BLOCKED` with identical
+CI failure tallies (e.g. `FAILURE:13, SUCCESS:6`), the most common root cause is NOT "PRs need
+rebase" -- it is that `main` itself is silently red. Rebasing onto a broken main wastes a full
+CI cycle.
+
+**Pre-flight check (run BEFORE rebasing any downstream PR):**
+
+```bash
+gh run list --branch main --limit 5 --json conclusion,status,name,createdAt
+# If any of: "Build and Test", "Static Analysis", "Code Coverage" show conclusion=failure
+# -> main is broken; downstream PRs cannot pass until a fix-main PR is merged FIRST
+```
+
+**Recovery sequence (verified-ci on ProjectAgamemnon 2026-05-17):**
+
+1. Create `fix-ci-<symptom>-<date>` branch from `origin/main` (e.g. `fix-ci-circuit-breaker-clang-tidy-2026-05-17`).
+2. Apply minimal fix to the broken files (typical: add `[[nodiscard]]`, add missing
+   `#include <cstdint>` / `<chrono>`, add a missing mock member field).
+3. Also fix any TEST failures unique to main that are NOT present on the downstream PRs.
+   Examples from the Agamemnon session: `RoutesTaskTest.PatchTaskWithInvalidStatus` missing
+   `require_enum` validation; `RateLimitedRouteTest` using `RateLimiter{2, 1e9}` where the
+   second arg is `burst_capacity = 1 billion tokens`, not window-ns -- the test's request
+   budget was effectively infinite.
+4. Open the PR and arm `gh pr merge <N> --auto --squash`.
+5. After the fix-main PR merges, rebase all downstream PRs onto the new green main:
+
+   ```bash
+   for pr in 387 388 389 390 391 392; do
+     gh pr checkout "$pr"
+     git rebase origin/main
+     git push --force-with-lease
+     gh pr merge "$pr" --auto --squash  # force-push clears auto-merge -- MUST re-arm
+   done
+   ```
+
+6. **Critical**: every force-push clears the auto-merge state, so `gh pr merge --auto --squash`
+   must be re-armed for each rebased PR.
+
+**Session result**: 1 fix-main PR (#393) merged; 14 downstream PRs unblocked.
+
+---
+
 ### Monitor Noise Reduction Pattern
 
 When polling CI status for long-running release builds, 30-second poll intervals cause excessive
@@ -697,6 +742,7 @@ curl -s -X POST http://localhost:8080/v1/teams/$TEAM_ID/tasks \
 | HomericIntelligence ecosystem | 5 repos with broken main: Odysseus, Myrmidons, ProjectMnemosyne, ProjectArgus, ProjectTelemachy — 2026-04-24 | 5 fix tasks registered in Agamemnon, 5 parallel agents dispatched (3 Haiku + 2 Sonnet); PRs in flight at capture time |
 | HomericIntelligence ecosystem | All 14 repos triaged -- 2026-05-01 | 4 repos red, 6 root causes identified, 4 fix PRs opened with auto-merge, 2 issues filed (non-trivial: schema vendoring, transient-confirmed); verified-ci |
 | HomericIntelligence/ProjectScylla | Issues #1878, #1868, #1869 -- 2026-05-03 | release.yml direct-push fix (PR flow + auto-merge); circuit-breaker DeprecationWarning shim; 14 model_dump() replacements; verified-ci |
+| HomericIntelligence/ProjectAgamemnon | Single-repo downstream PR queue blocked by silently-red main -- 2026-05-17 | 6 open PRs (#387-#392) all BLOCKED with identical CI failures; root cause was broken main since PR #286 (clang-tidy `modernize-use-nodiscard` / `misc-include-cleaner` on `circuit_breaker.cpp/.hpp` + missing `MockGitHubClient::fail_list_on_label` + 2 unique-to-main test failures); fix-main PR #393 merged then 14 downstream PRs rebased and unblocked; verified-ci |
 
 ## References
 
