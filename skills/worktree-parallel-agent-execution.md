@@ -1,9 +1,9 @@
 ---
 name: worktree-parallel-agent-execution
-description: "Use when: (1) resolving 3+ independent GitHub issues simultaneously with sub-agents, (2) mass-rebasing many PR branches in parallel without collision, (3) triaging issues by complexity then executing LOW items in a single parallel wave, (4) avoiding merge conflicts when multiple agents work on the same repo, (5) splitting ONE multi-part GitHub issue into N independent parallel sub-tasks with hot-file ownership coordination, (6) `Task isolation=worktree` agents reporting they see stat-cache differences from sibling agents (`please run git restore CLAUDE.md`), (7) parallel haiku/sonnet swarm dispatch on EASY-tier batches where agents commit to the parent repo's checked-out branch instead of their own worktree branch, (8) writing Mnemosyne `/learn` skill amendments in parallel (serialize instead — branch contamination is possible), (9) parallel worktree agents pushing to overlapping remote branch refs even with correct `isolation: \"worktree\"` — different agents racing on similar branch names produce a single union branch under one PR rather than N separate PRs, (10) PARTIAL contamination — one stray commit from sibling agent's branch leaks into your branch's history (distinct from full collapse in (9)); detect via `git log origin/<branch> ^origin/main --oneline` showing N+1 commits when N expected, recovery is `git reset --hard origin/main && cherry-pick <own-shas> && push --force-with-lease`."
+description: "Use when: (1) resolving 3+ independent GitHub issues simultaneously with sub-agents, (2) mass-rebasing many PR branches in parallel without collision, (3) triaging issues by complexity then executing LOW items in a single parallel wave, (4) avoiding merge conflicts when multiple agents work on the same repo, (5) splitting ONE multi-part GitHub issue into N independent parallel sub-tasks with hot-file ownership coordination, (6) `Task isolation=worktree` agents reporting they see stat-cache differences from sibling agents (`please run git restore CLAUDE.md`), (7) parallel haiku/sonnet swarm dispatch on EASY-tier batches where agents commit to the parent repo's checked-out branch instead of their own worktree branch, (8) writing Mnemosyne `/learn` skill amendments in parallel (serialize instead — branch contamination is possible), (9) parallel worktree agents pushing to overlapping remote branch refs even with correct `isolation: \"worktree\"` — different agents racing on similar branch names produce a single union branch under one PR rather than N separate PRs, (10) PARTIAL contamination — one stray commit from sibling agent's branch leaks into your branch's history (distinct from full collapse in (9)); detect via `git log origin/<branch> ^origin/main --oneline` showing N+1 commits when N expected, recovery is `git reset --hard origin/main && cherry-pick <own-shas> && push --force-with-lease`, (11) tempted to tell N parallel Sonnet `general-purpose` impl agents to 'work directly in the main workdir, no worktree, no isolation' because their FILES are disjoint — DON'T; parallel `git checkout` operations in the same workdir clobber each other's HEAD mid-flight, causing stash/checkout/cherry-pick recovery cycles and silent commit-leak between branches (companion to swarm-branch-collision skill for the LOCAL same-workdir case)."
 category: tooling
-date: 2026-05-17
-version: "1.4.0"
+date: 2026-05-18
+version: "1.5.0"
 user-invocable: false
 verification: verified-ci
 history: worktree-parallel-agent-execution.history
@@ -15,9 +15,9 @@ tags: [parallel-agents, worktree, wave-execution, batch, rebase, issue-triage, a
 
 | Field | Value |
 | ------ | ----------- |
-| **Date** | 2026-05-07 |
+| **Date** | 2026-05-18 |
 | **Objective** | Launch N parallel sub-agents in isolated worktrees for parallel issue/PR execution AND single-issue splitting |
-| **Outcome** | verified-ci (PRs #1932, #1933 merged from #1887 split); consolidates 5 prior skills |
+| **Outcome** | verified-ci (PRs #1932, #1933 merged from #1887 split); consolidates 5 prior skills; v1.5.0 adds "no-worktree-at-all" anti-pattern from ProjectAgamemnon F-phase (PR #407/#409/#410) |
 | **Verification** | verified-ci |
 | **History** | [changelog](./worktree-parallel-agent-execution.history) |
 
@@ -289,6 +289,105 @@ from another agent or human. If the lease fails, STOP and investigate before ret
   ACTUAL_FILES=$(git diff --name-only origin/main..HEAD)
   diff <(echo "$EXPECTED_FILES") <(echo "$ACTUAL_FILES") || { echo "FATAL: out-of-scope files in diff — STOP"; exit 1; }
   ```
+
+### No-worktree-at-all anti-pattern (v1.5.0) — same workdir, N agents, HEAD-flip contamination
+
+**Companion to** `[[feedback-swarm-branch-collision]]` (full-branch collapse during parallel REMOTE
+push). This section covers the LOCAL same-workdir variant: same machine, same checkout, different
+agents, NO remote race needed.
+
+**Failure foundation:** ProjectAgamemnon F-phase remediation, 2026-05-18. Three parallel Sonnet
+`general-purpose` impl agents were dispatched to implement disjoint features (F-1 PR #407, F-2 PR
+#409, F-3 PR #410). Because their FILES were disjoint, the dispatch prompt instructed all three:
+"work directly in the main workdir, no worktree, no isolation." Two of three agents reported
+HEAD-flipping contamination mid-execution; one agent self-rescued by moving to its own
+`/tmp/agamemnon-<phase>` worktree mid-flight.
+
+**Symptoms observed:**
+
+> "The main worktree's HEAD was being concurrently flipped by other agents during the entire
+> session (jumping between refactor/orchestration-single-source, fix/dead-code-wiring,
+> fix/api-contract-drift). I worked around this with frequent stash/checkout/cherry-pick cycles."
+
+> "Had to repeatedly stash, switch back, and replay commits. At one point another agent's commit
+> leaked onto this branch and was then reset off, which also wiped 3 of my commits — I recovered
+> them via `git reflog` and replayed onto the correct tip."
+
+**Why "no worktree" feels right but is WRONG for parallel dispatch:**
+
+The instinct to skip worktrees came from two prior known-bad patterns:
+
+1. The harness `isolation: "worktree"` flag creates a SEPARATE CLONE (not a worktree), losing
+   visibility into sibling agents' pushed branches and adding setup latency.
+2. Parallel-worktree branch collision is a known failure mode (v1.3.0 above).
+
+Both are real, but the alternative — N agents running `git checkout <my-branch>` in the SAME
+working tree — is strictly worse: silent HEAD-flip + commit-leak + reset cycles that require
+`git reflog` archaeology to recover. The disjoint-files property does NOT protect against shared
+`.git/HEAD` and `.git/index` contention.
+
+**Verified workflow (right way to parallelize Sonnet impl agents):**
+
+```bash
+# In EACH parallel agent's prompt — explicit per-agent worktree path:
+git worktree add /tmp/agamemnon-f1 -b fix/<branch-1> origin/main
+cd /tmp/agamemnon-f1
+# ...do work, commit, push...
+# Cleanup at end:
+git worktree remove --force /tmp/agamemnon-f1
+```
+
+**Hard rules for the dispatch prompt template:**
+
+```text
+1. Use isolated worktree at /tmp/<project>-<phase>. NEVER work in the main workdir.
+2. Create the worktree with: git worktree add /tmp/<project>-<phase> -b <branch> origin/main
+3. cd into it FIRST before any other git operation.
+4. At end of session: git worktree remove --force /tmp/<project>-<phase>
+5. Do NOT use the harness `isolation: "worktree"` flag — it creates a separate clone, costs
+   setup time, and prevents cross-referencing sibling agents' pushed branches if you need to
+   cherry-pick a pattern from a sibling PR.
+```
+
+**Decision matrix — workdir strategy by agent type:**
+
+| Scenario | Strategy | Why |
+|----------|----------|-----|
+| 2+ parallel Sonnet `general-purpose` impl agents (multi-commit, >5min work) | **Explicit `git worktree add /tmp/<name>` in each prompt** | Disjoint files do NOT protect shared `.git/HEAD`; HEAD-flip cycles waste ~15min/agent |
+| Single Haiku fix-agent, <5min, single commit, no other concurrent agents | Main workdir OK | Cost of worktree setup exceeds risk; no concurrency to contend with |
+| Multiple agents needing cross-reference to each other's PUSHED branches | Local `git worktree add` (NOT harness `isolation: "worktree"`) | Harness flag creates separate clone — agents lose visibility into sibling branches |
+| EASY-tier swarm (8+ Haiku agents, distinct branches) | Serialize OR consolidate-via-cherry-pick | See Phase 0a (v1.2.0) — index/HEAD contention even with `isolation: "worktree"` |
+
+**Detection signals during the run:**
+
+- Agent reports running `git stash` more than once per session
+- Agent reports `git checkout` returning to a branch it didn't create
+- `git reflog` shows HEAD jumping between branches the current agent doesn't own
+- Sibling-agent SHAs appear in `git log HEAD --author=...` output that should be empty
+
+**Recovery if contamination has already happened mid-flight:**
+
+```bash
+# 1. Identify your own commits via reflog:
+git reflog | grep '<commit-msg-prefix-you-wrote>'
+
+# 2. Hard-reset to clean main:
+git reset --hard origin/main
+
+# 3. Cherry-pick your own commits oldest-first onto a fresh branch:
+git checkout -b <correct-branch> origin/main
+for sha in <your-shas-oldest-first>; do git cherry-pick "$sha"; done
+
+# 4. Then DO move into an isolated worktree before any further work:
+git worktree add /tmp/<project>-<phase> -b <correct-branch>-iso HEAD
+cd /tmp/<project>-<phase>
+```
+
+**Why this is "verified-ci":** All three ProjectAgamemnon F-phase PRs (#407, #409, #410) merged
+cleanly to main on 2026-05-18 — but only after each agent independently discovered the
+contamination and worked around it (one by moving to its own `/tmp/agamemnon-<phase>` worktree
+mid-execution). Total wasted wall-clock: ~15 min/agent. On a subsequent round following these
+rules, no contamination occurred.
 
 ### Phase 0: Splitting a Single Issue with Shared Docs/Config Files (v1.1.0)
 
@@ -642,6 +741,8 @@ pixi run mypy <package>/
 | Parallel Mnemosyne `/learn` skill amendments | Launched 5 parallel sub-agents to amend 5 different skills on shared `~/.agent-brain/ProjectMnemosyne` clone | Same branch-namespace contamination pattern as ProjectOdyssey #5363; agents wrote to wrong skill files / wrong branches | Serialize `/learn` invocations OR ensure each agent uses a TRULY independent clone (not just a worktree off the shared clone) |
 | Parallel Haiku bundle agents (4-7) with `isolation: "worktree"`, no branch-name uniqueness guarantee | Four agents used `isolation: "worktree"` correctly; each pushed its own local worktree branch named `bundle/simple-sweep-N-2026-05-16` | 26 commits from 4 distinct branches collapsed onto a single remote branch `bundle/simple-sweep-7-2026-05-16` under one PR (#386); PR body listed only one bundle's issues, leaving 16 silently fixed-but-unclosed | Worktree isolation guarantees no LOCAL state contamination but does NOT guarantee REMOTE branch uniqueness. Always use issue-number-suffixed names + `git ls-remote --exit-code --heads origin <branch>` collision check before push. |
 | Parallel Haiku bundle agents (PR #398 + #401) — PARTIAL contamination variant | Two `isolation: "worktree"` agents; PR #398's branch acquired one extra commit from #401's branch (likely stray `git pull` or branch-pointer race during near-simultaneous push) | PR #398's diff showed unrelated `nats_client.cpp` changes alongside its intended markdownlint fixes; `git log origin/<branch> ^origin/main --oneline` returned N+1 commits | Recovery: `git reset --hard origin/main && cherry-pick <own-shas> && push --force-with-lease`. Do NOT try `git revert` (noisy, leaves stray in history) or `git rebase --onto` (fragile). Prevent by forbidding `git pull` in agent worktrees and validating diff scope against an expected-files list before push. See "Partial contamination variant (v1.4.0)" section. |
+| 3 parallel Sonnet `general-purpose` impl agents with "work directly here, NO worktree" (ProjectAgamemnon F-phase, 2026-05-18) | Dispatch prompt told all three agents to operate in the main workdir on the assumption that disjoint FILES = safe parallelism | All 3 agents reported workdir HEAD-flipping contamination from sibling `git checkout` operations; one agent's commits leaked into another's branch and had to be recovered via `git reflog`; agents spent ~15 min each in stash/checkout/cherry-pick recovery cycles | Disjoint files do NOT protect shared `.git/HEAD` and `.git/index`. Every parallel impl agent MUST work in its own worktree. Prompt template MUST say "Use isolated worktree at `/tmp/<project>-<phase>`. NEVER work in the main workdir." See v1.5.0 "No-worktree-at-all anti-pattern" section. |
+| Harness `isolation: "worktree"` flag for impl agents needing cross-reference visibility | Set `Task(isolation="worktree")` on parallel Sonnet agents who needed to cherry-pick patterns from sibling PRs | Harness flag creates a separate CLONE (not a git worktree), so agents lose visibility into sibling agents' pushed branches; also slower setup | For agents that need to see each other's pushed branches, use explicit `git worktree add /tmp/<name>` inside the prompt instead of the harness flag |
 
 ## Results & Parameters
 
@@ -701,3 +802,4 @@ This ensures agents cannot push directly to main.
 | ProjectOdyssey | Phase G EASY-tier 8-issue swarm contamination (PR #5363, 67/68 substantive checks green); recovery via cherry-pick consolidation; close individual worker PRs | 2026-05-09 — verified-ci foundation for v1.2.0 Phase 0a branch-namespace contamination warning |
 | ProjectAgamemnon | 2026-05-16 swarm session (PRs #386 collision recovery + #387-#390 success after fix) | — |
 | ProjectAgamemnon | 2026-05-17 — PR #398 partial contamination recovery (stray commit from PR #401's branch removed via `git reset --hard origin/main && cherry-pick <own-shas> && push --force-with-lease`); CI re-ran clean, PR auto-squash merged | verified-ci foundation for v1.4.0 Partial contamination variant |
+| ProjectAgamemnon | 2026-05-18 — F-phase remediation dispatch (PR #407, #409, #410). 3 parallel Sonnet `general-purpose` agents told "no worktree, work in main workdir"; 2/3 reported HEAD-flip contamination; one self-rescued by moving to its own `/tmp/agamemnon-<phase>` worktree mid-flight. All 3 PRs eventually merged after ~15 min/agent of recovery cycles | verified-ci foundation for v1.5.0 "No-worktree-at-all anti-pattern" section |

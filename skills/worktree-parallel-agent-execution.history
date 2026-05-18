@@ -1,5 +1,45 @@
 # worktree-parallel-agent-execution — History
 
+## v1.5.0 (2026-05-18)
+
+**Changed by:** ProjectAgamemnon F-phase remediation dispatch (PRs #407, #409, #410) — 3 parallel Sonnet `general-purpose` impl agents told "no worktree, work in main workdir"
+**Verification:** verified-ci
+
+### What changed
+
+- Added new subsection "No-worktree-at-all anti-pattern (v1.5.0) — same workdir, N agents, HEAD-flip contamination" inside "Verified Workflow"
+- Documents the failure mode where parallel impl agents are explicitly told to skip worktrees because their files are disjoint, and the resulting silent HEAD-flip + commit-leak between branches
+- Added verified workflow: explicit `git worktree add /tmp/<project>-<phase>` per-agent in the dispatch prompt
+- Added decision matrix for workdir strategy by agent type (Sonnet impl vs Haiku fix-agent vs cross-reference needs vs EASY-tier swarm)
+- Added recovery workflow using `git reflog` when contamination has happened mid-flight
+- Added 2 new Failed Attempts rows: "3 parallel Sonnet impl agents with 'no worktree'" and "Harness `isolation: \"worktree\"` flag for cross-reference agents"
+- Added 1 new Verified On row for ProjectAgamemnon F-phase (2026-05-18)
+- Extended frontmatter `description` with trigger (11) covering the no-worktree-at-all anti-pattern
+- Cross-referenced sibling skill `feedback-swarm-branch-collision` as the REMOTE-race companion to this LOCAL same-workdir variant
+- Updated Overview date to 2026-05-18 and Outcome line to mention v1.5.0 foundation PRs
+- Bumped version to 1.5.0 (minor — new section + new failure mode + 2 failed-attempt rows; no breaking changes)
+
+### Why
+
+The existing skill covered three contamination variants: (a) `isolation: "worktree"` index/HEAD
+contention across distinct branches (Phase 0a, v1.2.0), (b) remote branch-namespace collapse onto
+one ref (v1.3.0), (c) partial stray-commit leak (v1.4.0). All three assume agents ARE using some
+form of worktree isolation. The new failure mode is a step earlier in the decision tree: the
+orchestrator deliberately told agents to skip worktrees entirely because their files were disjoint.
+This produces a strictly worse failure than worktree-based contamination — silent HEAD-flipping in
+the shared workdir requires `git reflog` archaeology to recover, where worktree-based contamination
+at least leaves clean branch boundaries. Verified on ProjectAgamemnon F-phase 2026-05-18 across
+PRs #407, #409, #410: all three merged after each agent independently discovered the contamination
+(~15min/agent wasted wall-clock). The lesson: parallel Sonnet dispatch ≠ parallel-safe filesystem
+access. Make explicit `git worktree add` a HARD RULE in the prompt template, not a suggestion.
+
+### Previous version (v1.4.0) snapshot
+
+See git history at commit prior to this amendment for the full v1.4.0 file content, or the
+v1.4.0 entry below for the prior change context.
+
+---
+
 ## v1.4.0 (2026-05-17)
 
 **Changed by:** ProjectAgamemnon PR #398 partial-contamination recovery (Haiku bundle pair #398 + #401)
