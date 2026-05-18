@@ -1,5 +1,29 @@
 # tooling-sub-agent-pr-trust-but-verify — History
 
+## v1.2.0 (2026-05-18)
+
+**Changed by:** ProjectMnemosyne skill-clustering Myrmidon swarm session — caught three sub-agent confabulations in a single dispatch round
+**Verification:** verified-local
+
+### What changed
+
+- Added new "When to Use" triggers (#4 artifact-producing work, #5 low-token-budget / cross-task notification leakage)
+- Added new section "Verifying Non-PR Artifacts (Files, Reports, Commits, Issues)" enumerating the three failure shapes (confabulated completion, hallucinated tool restriction, tool-capability blindness) with per-artifact-type verification commands and pre-dispatch hygiene
+- Added three Failed Attempts rows for the three concrete 2026-05-18 instances (ci-cd shard-01 confabulation, arch-shard-01 fake "TEXT ONLY constraint", Explore-profile false Write claim)
+- Added ProjectMnemosyne 2026-05-18 entry to "Verified On"
+- Extended description with triggers (4) and (5)
+- Bumped to v1.2.0
+
+### Why
+
+v1.1.0 covered two failure modes: GitHub-state mismatch (v1.0.0) and commit-content corruption during rebase (v1.1.0). Both were PR-specific. The 2026-05-18 ProjectMnemosyne session surfaced a broader, PR-independent class: sub-agents producing **prose summaries describing artifacts that do not exist on disk**, or claiming tool invocations their profile cannot perform. The root causes — tight token budgets and cross-task notification leakage — generalize across any orchestrated-agent workflow, not just PR pipelines. The skill needed to expand from "verify the PR" to "verify the artifact."
+
+### Previous version (v1.1.0) snapshot
+
+See v1.1.0 entry below; the v1.1.0 body retained the original v1.0.0 snapshot as well, so all prior versions remain reconstructible from this file.
+
+---
+
 ## v1.1.0 (2026-05-07)
 
 **Changed by:** ProjectHermes 31-PR rebase swarm session (caught a Haiku agent corrupting PR #452's content)
