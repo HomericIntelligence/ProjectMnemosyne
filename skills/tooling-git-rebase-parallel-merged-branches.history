@@ -1,0 +1,75 @@
+# tooling-git-rebase-parallel-merged-branches — History
+
+## v1.1.0 (2026-05-17)
+
+**Changed by:** HomericIntelligence/Myrmidons 4-PR stack cleanup (PRs #730, #731, #732, #733 — charter enforcement)
+**Verification:** verified-local
+
+### What changed
+
+- Added a new "Cause B: Stacked-PR squash-merge absorbs ancestors" section to the
+  Detection Signals decision tree, distinguishing it from the original Cause A
+  (parallel/squash-merge of independently authored work).
+- Added the "Stacked PR squash absorption" subsection documenting the rebase-chain
+  mechanism: each branch in a local-rebase chain (C1→C2→C3) carries its ancestors'
+  commits in its history, so a squash-merge of any branch in the chain produces a
+  single commit containing the full diff vs the merge base — absorbing every
+  ancestor PR's diff into that one squash.
+- Added a "Superseded stacked PR" outcome path: when every commit drops as "patch
+  contents already upstream" and `git log origin/main..HEAD` is empty, the PR is
+  fully absorbed and the correct action is `gh pr close <N> --comment "..."` —
+  do NOT re-push.
+- Added two Failed Attempts rows documenting (a) re-pushing the no-op rebase and
+  (b) opening a merge commit to "restore" the absorbed content (both wrong).
+- Updated the description with new trigger conditions (8) and (9) for the
+  stacked-PR squash absorption scenario.
+
+### Why
+
+The v1.0.0 skill covered the case where independently authored work was merged
+upstream via a separate PR (parallel-merge). The Myrmidons cleanup session
+exposed a second, distinct cause of the same rebase signal: stacked PRs created
+via local rebase chain, where the LATER PR squash-merges first and its squash
+diff (vs main) absorbs all ancestor PRs' content. The detection signal is
+identical (every commit drops as "patch contents already upstream") but the
+correct remediation is to CLOSE the absorbed PRs as superseded — not to
+re-push them, not to resolve any conflicts. Without this section, an operator
+seeing the drop signal might try to force-push the no-op rebase or add a merge
+commit, both of which are footguns.
+
+### Previous version (v1.0.0) snapshot
+
+```yaml
+---
+name: tooling-git-rebase-parallel-merged-branches
+description: "Use when: (1) git rebase shows multiple 'dropping <sha> ... patch contents already upstream' messages interleaved with add/add conflicts, (2) a feature branch has been parallel-merged via a separate squash/rewrite PR causing nearly-identical files on both sides, (3) need to batch-rebase many local branches and reconcile with squash-merged history on origin/main, (4) local main is N ahead and M behind origin/main where the N local commits were independently merged upstream via PR, (5) add/add conflicts appear on files that differ only in trivial ways (file mode 100644 vs 100755, slight refinements upstream), (6) `git checkout --ours` is blocked by safety hooks during rebase and you need stage-index extraction (`git show :2:file`) instead, (7) confused about which side of a rebase conflict is 'ours' vs 'theirs' — during rebase ours = HEAD = upstream/rebase-base, theirs = the commit being replayed = your branch's commit (inverted vs merge)."
+category: tooling
+date: 2026-05-06
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - git
+  - rebase
+  - parallel-merge
+  - upstream
+  - drop
+  - supersede
+  - conflicts
+  - add-add
+  - automation
+  - batch
+---
+```
+
+(Full v1.0.0 body covered the parallel-merge case only — no stacked-PR squash
+absorption material. See git history of `tooling-git-rebase-parallel-merged-branches.md`
+at commit prior to this amendment for the full content.)
+
+---
+
+## v1.0.0 (2026-05-06)
+
+**Initial version.** Documented the parallel-merge rebase reconciliation pattern
+(patch-contents-already-upstream + add/add conflicts) verified across 30+ branches
+in ProjectHephaestus.
