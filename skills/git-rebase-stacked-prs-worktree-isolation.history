@@ -1,0 +1,61 @@
+# git-rebase-stacked-prs-worktree-isolation — History
+
+## v1.1.0 (2026-05-17)
+
+**Changed by:** HomericIntelligence/Myrmidons cascade-rebase session — silent stale-local-branch pickup during `git worktree add`
+**Verification:** verified-local (issue diagnosed and fix applied within the session; CI later confirmed the corrected push was valid)
+
+### What changed
+
+- Added explicit "stale local branch" pitfall to **Failed Attempts** (the bare local-branch form of `git worktree add` silently picked up a stale tip and the subsequent rebase dropped a fix-up commit that lived only on `origin`).
+- Added a **Quick Reference** callout: always pass `origin/<branch> --detach`, never the bare local branch name, and always `git fetch origin --prune` first.
+- Added a **post-rebase detection signal**: `git diff --name-status origin/<base>..HEAD` should show expected file deletions; if missing, the worktree started from a stale ref.
+- Bumped version `1.0.0` → `1.1.0`, updated date to 2026-05-17.
+- Added `history: git-rebase-stacked-prs-worktree-isolation.history` frontmatter field.
+
+### Why
+
+The v1.0.0 Quick Reference already used `origin/$branch --detach` and was correct, but it did
+not explain *why* the bare local branch form is unsafe. A real session in Myrmidons used
+`git worktree add /tmp/wt cleanup/c3-remove-reconciler` (bare local branch). The local branch
+was stale relative to `origin/cleanup/c3-remove-reconciler` (a fix-up commit had been pushed
+but the local pointer was never updated). The rebase "succeeded" but replayed only the stale
+commits, and a `--force-with-lease` push then erased the fix-up commit from the remote. The
+failure took ~15 minutes to detect — only caught by noticing expected file deletions were
+missing from the rebased branch.
+
+Explicitly documenting the pitfall and the post-rebase content check makes the v1.0.0
+workflow's correct-by-construction `origin/<branch> --detach` pattern self-explanatory and
+prevents future regressions.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: git-rebase-stacked-prs-worktree-isolation
+description: "Use git worktrees to rebase a stack of sibling PRs in parallel without cross-iteration corruption. Use when: (1) batch-rebasing many sibling branches onto main after their shared base advanced, (2) a naive in-place rebase loop fails with 'src refspec does not match any' or 'you need to resolve your current index first', (3) parallelizing conflict resolution across sub-agents (one worktree per agent), (4) a force-push pushed a half-rebased branch because exit-code check was masked by a piped tail/grep."
+category: tooling
+date: 2026-05-05
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - git
+  - rebase
+  - worktree
+  - pr-stack
+  - parallelism
+  - conflict-resolution
+---
+
+# Git Rebase Stacked PRs with Worktree Isolation
+
+(See git history for full v1.0.0 body — Quick Reference already used `origin/$branch --detach`,
+but did not document the stale-local-branch failure mode that prompted v1.1.0.)
+```
+
+---
+
+## v1.0.0 (2026-05-05)
+
+**Initial version.** Verified on ProjectCharybdis: 14 sibling auto-impl branches rebased + force-pushed across 5 parallel sub-agents.
