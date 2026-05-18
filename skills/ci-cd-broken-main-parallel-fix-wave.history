@@ -1,5 +1,27 @@
 # ci-cd-broken-main-parallel-fix-wave -- History
 
+## v1.5.0 (2026-05-18)
+
+**Changed by:** ProjectMnemosyne 5-PR markdownlint triage session -- 2026-05-18
+**Verification:** verified-local -- fix-at-root PR #1755 opened against main; once merged, 5 downstream PRs rebase clean. Will graduate to verified-ci after PR #1755 merges and downstream PR rebases pass.
+
+### What changed
+- Added two Failed Attempts rows capturing the ProjectMnemosyne 2026-05-18 triage:
+  1. "Considered rebasing each PR individually" — wasted effort when all 5 PRs show identical file/line failure on an unrelated file.
+  2. "Considered adding markdownlint-disable comments to each PR's skills" — masks the bug across N branches instead of fixing it at source.
+- Added new subsection under Results & Parameters: "Triage Checklist: Same Failure Across Unrelated PRs (ProjectMnemosyne 2026-05-18)" — 3-step `git log -- <file>` + `gh pr diff` check that detects broken-main even when the failing job is lint, not build/test.
+- Added ProjectMnemosyne 2026-05-18 row to the Verified On table.
+- Extended tags with `identical-failure-across-unrelated-prs`, `md056`, `table-pipe-escape`, `fix-at-root`.
+
+### Why
+Five unrelated open PRs in ProjectMnemosyne (#1751 / #1752 / #1753 / #1754 dependabot / #1724 — three skill amendments, one new skill, one dependabot bump) all failed only on the `markdownlint` job. Initial reflex would have been per-PR rebase or per-branch `markdownlint-disable` comments. Correct triage: observe the failure is IDENTICAL across unrelated PRs, drill into the log, confirm the offending file/line is on `main` and untouched by any open PR. `git log --oneline -5 -- skills/ci-cd-gated-debug-instrumentation-workflow-dispatch.md` showed the file landed via PR #1741 (commit 342c0e1d). Right fix: one PR against main (`fix/markdownlint-table-pipe-escape`, PR #1755). This generalizes the v1.4.0 ProjectAgamemnon C++/clang-tidy lesson to lint-only failures and to non-build job classes.
+
+### Previous version (v1.4.0) snapshot
+
+See v1.4.0 entry below for full previous content.
+
+---
+
 ## v1.4.0 (2026-05-17)
 
 **Changed by:** ProjectAgamemnon downstream-PR-queue triage session -- 2026-05-17

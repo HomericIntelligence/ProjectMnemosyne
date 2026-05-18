@@ -3,11 +3,11 @@ name: ci-cd-broken-main-parallel-fix-wave
 description: "Triage and fix broken CI/main across multiple repos simultaneously using Agamemnon task registry + parallel myrmidon fix agents. Use when: (1) 3+ repos have broken main branch CI, (2) need to register tasks in Agamemnon before dispatching agents, (3) CI failures are diverse (conan profile, dependabot config, GitHub Actions auth, BATS helper, Python imports, clang-format violations, annotated-tag SHA pinning, stale pixi.lock, markdownlint CHANGELOG exclusion, release.yml direct push to main, duplicate module re-export, Pydantic model_dump bypass), (4) single-repo downstream PR queue is BLOCKED -- check whether main itself is broken BEFORE rebasing downstream PRs."
 category: ci-cd
 date: 2026-05-17
-version: "1.4.0"
+version: "1.5.0"
 user-invocable: false
 verification: verified-ci
 history: ci-cd-broken-main-parallel-fix-wave.history
-tags: [ci, broken-main, agamemnon, parallel-agents, myrmidon, conan, dependabot, bats, github-actions, fix-wave, clang-format, monitor, annotated-tags, sha-pinning, pixi-lock, markdownlint, changelog, rebase-onto, transient-vs-reproducible, issue-triage, all-repos, release-workflow, circuit-breaker, pydantic, model-dump, deprecation-shim, single-repo-pr-queue, pre-flight-main-check, fix-main-first]
+tags: [ci, broken-main, agamemnon, parallel-agents, myrmidon, conan, dependabot, bats, github-actions, fix-wave, clang-format, monitor, annotated-tags, sha-pinning, pixi-lock, markdownlint, changelog, rebase-onto, transient-vs-reproducible, issue-triage, all-repos, release-workflow, circuit-breaker, pydantic, model-dump, deprecation-shim, single-repo-pr-queue, pre-flight-main-check, fix-main-first, identical-failure-across-unrelated-prs, md056, table-pipe-escape, fix-at-root]
 ---
 
 # CI Broken-Main Parallel Fix Wave
@@ -188,6 +188,8 @@ curl -s -X PATCH $AGAMEMNON/v1/teams/$TEAM_ID/tasks/fix-odysseus-conan-profile \
 | Duplicate circuit-breaker re-export | Had `automation/circuit_breaker.py` as a full duplicate of `scylla.core.circuit_breaker` | Import conflicts when both paths are in scope; maintenance burden of two copies | Convert the duplicate to a DeprecationWarning shim that re-imports from the canonical location |
 | Manual `to_dict()` with field enumerations | 14 Pydantic model methods manually enumerated every field in `to_dict()` | Broke when new fields added (silently omitted); no consistency guarantee | Replace manual field enumerations with `self.model_dump(mode='json')`; inject computed `@property` values post-dump; use `exclude=` for ephemeral runtime fields |
 | Single-repo broken main not detected before rebasing downstream PRs | Rebased 6 in-flight PRs onto stale broken main; CI re-ran and failed identically | All downstream PRs inherit main's failure when CI matrix runs against the new HEAD. Rebase doesn't fix main. | Before rebasing any PR, check `gh run list --branch main --limit 5 --json conclusion`. If main's "Build and Test" or "Static Analysis" is `failure`, fix main FIRST via a dedicated `fix-ci-*` PR with auto-merge=SQUASH, wait for it to merge, THEN rebase downstream PRs. |
+| Considered rebasing each ProjectMnemosyne PR individually when 5 unrelated PRs (#1751, #1752, #1753, #1754, #1724) all failed only on `markdownlint` | Initial instinct was per-PR rebase + CI rerun on 3 skill amendments + 1 new skill + 1 dependabot bump | All 5 failures pointed to the SAME file/line (`skills/ci-cd-gated-debug-instrumentation-workflow-dispatch.md:107`, MD056 table-pipe-escape) which none of the PRs touched. `git log --oneline -5 -- <file>` showed the file landed via PR #1741 (commit 342c0e1d) on main. Rebasing copies the broken file into the branch — failure persists. | When the SAME job fails on UNRELATED PRs with the SAME file/line, treat it as broken-main even if the failure is "just" lint, not build/test. Fix at root with ONE PR against main; downstream PRs clear automatically after rebase. |
+| Considered adding markdownlint `markdownlint-disable MD056` comments to each PR's skill files | Hoping per-branch suppression would unblock auto-merge faster than waiting on a main fix | Masks the actual bug (unescaped pipes inside table cells) without fixing it; replicates the suppression across 5 branches; future skill additions inherit the broken table as a template; PR diffs become misleading (the suppression isn't related to what the PR actually changes). | Always fix the broken markdown at the source file on main. Per-PR suppression of a root-cause failure is technical debt across N branches. |
 
 ## Results & Parameters
 
@@ -664,6 +666,35 @@ gh run list --branch main --limit 5 --json conclusion,status,name,createdAt
 
 ---
 
+### Triage Checklist: "Same Failure Across Unrelated PRs" (ProjectMnemosyne 2026-05-18)
+
+Even when the failing job is lint (not build/test), the broken-main pattern still applies. Use
+this fast triage when N>=2 unrelated PRs go red on the same job at the same time:
+
+1. **Same job failing on multiple unrelated PRs?** (e.g. `markdownlint` red on a dependabot PR,
+   a new-skill PR, AND three skill-amendment PRs).
+2. **`gh run view --job <id> --log-failed` points to the same file and same line on every PR?**
+   (e.g. `skills/ci-cd-gated-debug-instrumentation-workflow-dispatch.md:107 MD056`).
+3. **Is that file present on `main` and untouched by each PR's diff?**
+
+   ```bash
+   git log --oneline -5 -- skills/<offending-file>.md   # shows when file landed on main
+   gh pr diff <num> -- skills/<offending-file>.md       # empty → PR did not touch it
+   ```
+
+4. **If all three are YES → fix at root.** One PR against `main` (e.g.
+   `fix/markdownlint-table-pipe-escape`) with auto-merge armed. Rebase the N downstream PRs once
+   the fix-main PR merges.
+
+**Session example (ProjectMnemosyne, 2026-05-18)**: 5 unrelated open PRs (#1751, #1752, #1753,
+#1754, #1724) all failed only on `markdownlint`. All pointed to
+`skills/ci-cd-gated-debug-instrumentation-workflow-dispatch.md:107` (MD056, unescaped pipe in
+table cell). `git log --oneline -5 -- <file>` showed the file landed via PR #1741 (commit
+342c0e1d); none of the 5 open PRs touched it. Fix: `fix/markdownlint-table-pipe-escape` (PR
+#1755) escaped the offending pipes; downstream PRs cleared after rebase.
+
+---
+
 ### Monitor Noise Reduction Pattern
 
 When polling CI status for long-running release builds, 30-second poll intervals cause excessive
@@ -743,6 +774,7 @@ curl -s -X POST http://localhost:8080/v1/teams/$TEAM_ID/tasks \
 | HomericIntelligence ecosystem | All 14 repos triaged -- 2026-05-01 | 4 repos red, 6 root causes identified, 4 fix PRs opened with auto-merge, 2 issues filed (non-trivial: schema vendoring, transient-confirmed); verified-ci |
 | HomericIntelligence/ProjectScylla | Issues #1878, #1868, #1869 -- 2026-05-03 | release.yml direct-push fix (PR flow + auto-merge); circuit-breaker DeprecationWarning shim; 14 model_dump() replacements; verified-ci |
 | HomericIntelligence/ProjectAgamemnon | Single-repo downstream PR queue blocked by silently-red main -- 2026-05-17 | 6 open PRs (#387-#392) all BLOCKED with identical CI failures; root cause was broken main since PR #286 (clang-tidy `modernize-use-nodiscard` / `misc-include-cleaner` on `circuit_breaker.cpp/.hpp` + missing `MockGitHubClient::fail_list_on_label` + 2 unique-to-main test failures); fix-main PR #393 merged then 14 downstream PRs rebased and unblocked; verified-ci |
+| HomericIntelligence/ProjectMnemosyne | 5 unrelated PRs all failed only on `markdownlint` -- 2026-05-18 | PRs #1751, #1752, #1753, #1754, #1724 (three skill amendments, one new skill, one dependabot bump) all red on the same job, pointing to the same file/line (`skills/ci-cd-gated-debug-instrumentation-workflow-dispatch.md:107`, MD056). File landed on main via PR #1741 (342c0e1d); untouched by any open PR. Fix-at-root PR `fix/markdownlint-table-pipe-escape` (#1755) escaped offending pipes; 5 downstream PRs clear after rebase. Validates the "identical-failure-across-unrelated-PRs → broken main" triage even when the failure is lint, not build/test. |
 
 ## References
 
