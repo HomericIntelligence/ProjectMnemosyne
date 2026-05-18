@@ -3,9 +3,10 @@ name: mojo-build-package
 description: Build Mojo packages (.mojopkg files) for distribution. Use when creating
   distributable libraries or during packaging phase.
 category: optimization
-date: '2026-03-19'
-version: 1.0.0
+date: '2026-05-18'
+version: 1.1.0
 mcp_fallback: none
+history: mojo-build-package.history
 ---
 # Mojo Build Package Skill
 
@@ -75,3 +76,11 @@ N/A — this skill describes a workflow pattern.
 
 - `.claude/shared/mojo-guidelines.md` - Function definition patterns
 - Package metadata template: `templates/package_toml.toml`
+
+## See Also
+
+- **`architecture-shipping-mojo-package-prefix-dev`** — Covers the full distribution story
+  (idiomatic `src/<pkg>/` layout, `conda.recipe/recipe.yaml` via rattler-build, publishing
+  to `modular-community` on prefix.dev, optional Python wheel). This skill (`mojo-build-package`)
+  covers only the `mojo package` CLI mechanics that produce the `.mojopkg` artifact; combine
+  with the shipping skill when planning to publish.

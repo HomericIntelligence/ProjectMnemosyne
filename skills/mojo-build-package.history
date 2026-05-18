@@ -1,0 +1,47 @@
+# mojo-build-package — History
+
+## v1.1.0 (2026-05-18)
+
+**Changed by:** Session creating `architecture-shipping-mojo-package-prefix-dev` (ProjectOdyssey distribution plan)
+**Verification:** unverified
+
+### What changed
+
+- Added a "See Also" cross-reference to the new
+  `architecture-shipping-mojo-package-prefix-dev` skill, which covers the full
+  distribution story (layout, recipe, prefix.dev publish, optional wheel).
+- Bumped `version` from `1.0.0` to `1.1.0` (minor — additive only, no
+  behavior or workflow change).
+- Refreshed `date` to 2026-05-18.
+
+### Why
+
+A new skill documents the end-to-end shipping workflow (conda recipe,
+modular-community PR, optional Python wheel). `mojo-build-package` covers only
+the lower-layer `mojo package` CLI. Without the cross-reference, agents
+searching for "how to build a Mojo package" would land here and miss the
+distribution context.
+
+### Previous version (v1.0.0) snapshot
+
+```yaml
+---
+name: mojo-build-package
+description: Build Mojo packages (.mojopkg files) for distribution. Use when creating
+  distributable libraries or during packaging phase.
+category: optimization
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+---
+```
+
+Body unchanged through v1.0.0 → v1.1.0 except for the new "See Also" section
+appended at the end.
+
+---
+
+## v1.0.0 (2026-03-19)
+
+**Initial version.** Documents the `mojo package` CLI workflow for building
+`.mojopkg` artifacts.
