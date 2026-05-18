@@ -1,0 +1,218 @@
+# ci-failure-triage-and-diagnosis — History
+
+## v1.0.0 (2026-05-18) — Merge of 14 skills
+
+**Changed by:** Skill-merge swarm (Phase B Wave 1, M5 / #1779)
+**Verification:** verified-local
+
+### What changed
+
+Consolidated 14 CI-failure-triage and diagnosis skills into a single canonical skill.
+
+---
+
+## Superseded from ci-cd-coredump-capture-container-namespace-fix
+
+```yaml
+name: ci-cd-coredump-capture-container-namespace-fix
+description: "GHA workflow capturing core dumps from a process that crashes inside a Podman/Docker container must use a path that exists in BOTH host and container mount namespaces, AND must always write metadata + symbols even when no cores exist."
+category: ci-cd
+date: 2026-05-10
+version: "1.0.0"
+verification: verified-precommit
+```
+
+GHA workflow capturing core dumps from a process that crashes inside a Podman/Docker container must use a path that exists in BOTH host and container mount namespaces. Four failure modes: (1) core_pattern set to host CWD not visible inside container, (2) collect step exiting on empty cores skipping metadata, (3) if-no-files-found: ignore hiding broken capture, (4) ulimit -c applied only to a transient exec not the crashing exec. Verified on ProjectOdyssey PRs #5378/#5380.
+
+---
+
+## Superseded from gha-mojo-coredump-capture
+
+```yaml
+name: gha-mojo-coredump-capture
+description: "Use when investigating a CI-only Mojo crash whose published trace ends in <unmapped> at frame 4."
+category: ci-cd
+date: 2026-05-09
+version: "1.0.0"
+verification: verified-ci
+```
+
+Host-side GHA infrastructure for capturing Mojo JIT crash coredumps: kernel core_pattern, systemd-coredump stop, artifact bundling. Covers two trust domains (GHA runner host root-capable vs test container unprivileged). Library filter to libKGEN*/libAsync*/libMojo*/libMSupport* keeps artifact under 1 GB GHA ceiling. Verified on ProjectOdyssey PRs #5363, #5364.
+
+---
+
+## Superseded from modular-6433-vs-6413-failure-triage
+
+```yaml
+name: modular-6433-vs-6413-failure-triage
+description: "Distinguish modular#6433 (OOM, fixed) from modular#6413 (libKGEN JIT crash, open) when verifying upstream fixes."
+category: ci-cd
+date: 2026-05-11
+version: "1.0.0"
+verification: verified-ci
+```
+
+Bash triage script + decision matrix mapping log signature to action. OOM keywords = #6433; libKGENCompilerRTShared.so+0x = #6413. Exit code 137 is NOT a discriminator — both crash types can produce it. Correctly classified all 7 failed jobs on ProjectOdyssey PR #5381 as #6413 (no revert needed).
+
+---
+
+## Superseded from ci-mojo-podman-root-cause-fixes
+
+```yaml
+name: ci-mojo-podman-root-cause-fixes
+description: "Fix four distinct CI root-cause classes: mkdocs --strict broken relative links, Podman container PermissionError, Mojo ASAN builds, Mojo circular imports."
+category: ci-cd
+date: 2026-03-28
+version: "1.0.0"
+```
+
+Four CI failure root causes in Mojo/Podman projects: (1) mkdocs strict broken relative links — path exits docs tree; (2) Podman PermissionError — write to /tmp inside container then podman cp; (3) Mojo ASAN via justfile + libasan8; (4) circular imports fixed by extracting shared constants to zero-dependency leaf module. Verified on ProjectOdyssey PR #5178.
+
+---
+
+## Superseded from ci-cd-broken-main-parallel-fix-wave
+
+```yaml
+name: ci-cd-broken-main-parallel-fix-wave
+description: "Triage and fix broken CI/main across multiple repos simultaneously using Agamemnon task registry + parallel myrmidon fix agents."
+category: ci-cd
+date: 2026-05-17
+version: "1.5.0"
+verification: verified-ci
+history: ci-cd-broken-main-parallel-fix-wave.history
+```
+
+Full ecosystem broken-main triage pattern: org-wide CI sweep, transient vs reproducible triage, Agamemnon task registration, agent-tier selection (Haiku for known-fix, Sonnet for unknown root cause). 13 known fix patterns documented. Critical: check main BEFORE rebasing downstream PRs. Identical failure across N unrelated PRs = broken-main even for lint failures. Verified across 14 HomericIntelligence repos, multiple sessions 2026-04-24 through 2026-05-18.
+
+---
+
+## Superseded from symbolicate-mojo-cores-inside-container
+
+```yaml
+name: symbolicate-mojo-cores-inside-container
+description: "Post-mortem symbolication of Mojo JIT crash cores must run INSIDE the pixi container via podman compose exec."
+category: ci-cd
+date: 2026-05-12
+version: "1.0.0"
+verification: verified-ci
+```
+
+Symbolication of captured Mojo JIT crash cores must run inside the container because the mojo binary and pixi env are only visible in the container's mount namespace. Key: heredoc quoting — host-expanded variables bare, container-expanded with single backslash, gdb -ex strings with three backslashes. Always emit info all-registers (surfaces zmm/k-register AVX-512 state). Identified 6 distinct AVX-512 instruction sites across 10+ symbolicated cores confirming ISA-feature-mismatch bug (modular/modular#6413). Verified on ProjectOdyssey PR #5399.
+
+---
+
+## Superseded from ci-cd-pixi-lock-stale-multi-pr-triage
+
+```yaml
+name: ci-cd-pixi-lock-stale-multi-pr-triage
+description: "Use when multiple PR branches failing CI with 'lock-file not up-to-date' or pixi.lock stale errors."
+category: ci-cd
+date: 2026-04-24
+version: "1.0.0"
+verification: verified-local
+```
+
+Cross-repo CI triage and stale pixi.lock remediation: bulk PR status query, SHA mismatch detection, gh run rerun --failed (empty commits don't reliably trigger CI with concurrency cancel-in-progress). Platform-specific bats-core deps, LRU-cached FastAPI settings in tests, Protocol method missing. Verified across 7 repos / 42 open PRs.
+
+---
+
+## Superseded from ci-cd-gated-debug-instrumentation-workflow-dispatch
+
+```yaml
+name: ci-cd-gated-debug-instrumentation-workflow-dispatch
+description: "Use when debug-only CI instrumentation adds latency or noise to every PR/push run."
+category: ci-cd
+date: 2026-05-17
+version: "1.0.0"
+verification: verified-ci
+```
+
+Gate always-on debug CI instrumentation behind a workflow_dispatch boolean input defaulting to false. Key: always combine github.event_name == 'workflow_dispatch' with inputs.X in the ternary (bare inputs.X is ambiguous when null on non-dispatch triggers); place env var at job-level not step-level. Applied to 6 CI jobs in ProjectOdyssey PR #5411.
+
+---
+
+## Superseded from ci-cd-required-context-never-posts-pr-blocked
+
+```yaml
+name: ci-cd-required-context-never-posts-pr-blocked
+description: "Diagnose a PR with mergeStateStatus BLOCKED but zero failing checks."
+category: ci-cd
+date: 2026-05-15
+version: "1.0.0"
+verification: verified-ci
+```
+
+Two mechanisms for BLOCKED PR with 0 FAILUREs: (1) workflow paths: filter excludes PR's files so workflow never triggers; (2) whole-job if: skip on event type shows as MISSING to branch protection (not success). Diagnosis: diff required-vs-present contexts via protection API + statusCheckRollup. Do NOT admin-merge as fix — it's systemic. Verified on ProjectOdyssey PR #5382 → fixed in PRs #5406/#5407.
+
+---
+
+## Superseded from ci-cd-github-api-rate-limit-ci-monitoring
+
+```yaml
+name: ci-cd-github-api-rate-limit-ci-monitoring
+description: "Avoid and recover from GitHub API rate limit exhaustion (5000/hr) during intensive CI diagnostic loops."
+category: ci-cd
+date: 2026-04-24
+version: "1.0.0"
+verification: verified-local
+```
+
+Rate limit budget management for batch CI investigations: always check before starting (gh api rate_limit), prefer bulk endpoints (gh pr list --json over per-PR calls), gate log fetching (stop at remaining < 500), calculate exact reset time for sleep. Observed exhaustion in under 2 hours on AchaeanFleet 13-PR session.
+
+---
+
+## Superseded from e2e-runner-hang-signal-fixes
+
+```yaml
+name: e2e-runner-hang-signal-fixes
+description: "Fix E2E experiment runner hanging and ignoring Ctrl+C/Ctrl+Z signals during parallel execution."
+category: debugging
+date: 2026-03-18
+version: 1.0.0
+```
+
+Six hang/signal bugs fixed: (1) as_completed() + future.result() → wait(timeout=2.0, FIRST_COMPLETED); (2) proc.communicate(timeout=3600) → polling helper with shutdown check; (3) stdin=subprocess.DEVNULL to prevent inherited stdin hangs; (4) shutdown check in rate limit sleep loop; (5) timeout on _resume_event.wait(); (6) SIGTSTP removed from generic signal installer. Key: communicate(timeout=N) does NOT consume partial output on TimeoutExpired — safe to call in a loop. Verified on ProjectScylla PR #1515; 4924 tests pass, 77.74% coverage.
+
+---
+
+## Superseded from python-subprocess-terminal-corruption
+
+```yaml
+name: python-subprocess-terminal-corruption
+description: "Fix terminal corruption from Python subprocess management and None-safe error handling patterns."
+category: debugging
+date: 2026-02-13
+version: 1.0.0
+```
+
+Three bugs: (1) subprocess.run without stdin=subprocess.DEVNULL allows child (e.g. Node.js CLI) to alter terminal settings then crash without restoring; (2) dict.get("key", "default") returns None when key exists with None value — use or coalescing; (3) code reading flat JSON keys when actual JSON is nested. Fix: stdin=subprocess.DEVNULL + _restore_terminal() in finally, or coalescing, match actual JSON structure.
+
+---
+
+## Superseded from cross-cpu-survey-gha-only-crash
+
+```yaml
+name: cross-cpu-survey-gha-only-crash
+description: "Fan a GHA-extracted container image out across a tailnet of physical machines to narrow a 'GHA-only crash' bug class."
+category: debugging
+date: 2026-05-12
+version: "1.0.0"
+verification: verified-local
+```
+
+Multi-host CPU survey to falsify GHA-only crash hypotheses. Key: rsync tar to jumphost, fan out via ssh from jumphost (not from laptop), run 50 iterations per host for statistical confidence, capture /proc/cpuinfo atomically with the result. Critical finding: Hyper-V on AMD Zen 4 masks AVX-512 CPUID bits while LLVM may emit AVX-512 based on CPU-name fingerprinting — explaining why GHA Azure runners crash while all surveyed non-AVX-512 Intel CPUs run clean. Verified on ProjectOdyssey modular/modular#6413 bisect.
+
+---
+
+## Superseded from debugging-mojo-jit-crash-capture-gdb-wrapper
+
+```yaml
+name: debugging-mojo-jit-crash-capture-gdb-wrapper
+description: "Use when Mojo 1.0 runtime crashes but kernel core_pattern + ulimit -c unlimited produce no core because libKGENCompilerRTShared.so installs an in-process signal handler."
+category: debugging
+date: 2026-05-10
+version: "1.0.0"
+verification: verified-ci
+```
+
+Reusable wrapper scripts/mojo-under-gdb.sh: runs mojo under gdb via pixi run, uses Python gdb.events.stop filtered to SignalEvent (not hook-stop which fires on exit in gdb 15.1), writes exit code to temp file (--return-child-result unreliable in batch mode), handles SIGILL in addition to SIGABRT/SIGSEGV (Mojo os.abort() lowers to llvm.trap → SIGILL). Captured 7 real ELF cores on ProjectOdyssey CI run 25649843238 that bare ulimit approach missed entirely.
