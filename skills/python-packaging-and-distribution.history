@@ -1,0 +1,2444 @@
+# python-packaging-and-distribution — History
+
+## v1.0.0 (2026-05-18) — Merge of 24 skills
+
+**Changed by:** Skill-merge swarm (Phase B Wave 1, M14 / #1773)
+**Verification:** verified-local
+
+### What changed
+
+Consolidated 24 python-packaging skills into one canonical skill.
+
+---
+
+## Superseded from `ci-cd-hatchling-force-include-sdist-wheel-break`
+
+```yaml
+name: ci-cd-hatchling-force-include-sdist-wheel-break
+description: "Fix hatchling CI build failures caused by force-include paths breaking the sdist→wheel two-step build. Use when: (1) CI build job fails with FileNotFoundError on a force-include path, (2) wheel builds from source work locally but fail in CI using python -m build --no-isolation, (3) hatchling force-include paths cannot be resolved inside an unpacked sdist directory."
+category: ci-cd
+date: 2026-05-03
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [hatchling, force-include, sdist, wheel, python-build, pyproject, packaging, ci-cd]
+```
+
+
+# Hatchling force-include Breaks sdist→Wheel Build
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-03 |
+| **Objective** | Fix CI `build` job failure caused by `force-include` paths not resolving inside the unpacked sdist |
+| **Outcome** | Success — removed `force-include` entirely; wheel build went from failure to success |
+| **Verification** | verified-ci (Scylla PR #1905 merged; build job passed) |
+
+## When to Use
+
+- CI fails with `FileNotFoundError: Forced include not found: src/<pkg>/...`
+- `python -m build --no-isolation` passes locally but fails in CI
+- A `[tool.hatch.build.targets.wheel.force-include]` section exists in `pyproject.toml`
+- The build uses the standard two-step sequence: sdist first, then wheel from the sdist
+- Directories listed in `force-include` already live under a package path in `packages`
+
+## Verified Workflow
+
+### Quick Reference
+
+```toml
+# BEFORE (breaks sdist→wheel builds):
+[tool.hatch.build.targets.wheel]
+packages = ["src/scylla"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/scylla/analysis/schemas" = "scylla/analysis/schemas"
+
+# AFTER (correct — packages already includes all subdirs recursively):
+[tool.hatch.build.targets.wheel]
+packages = ["src/scylla"]
+```
+
+```bash
+# Verify the fix locally before pushing
+python -m build --no-isolation
+ls dist/*.whl  # should exist and contain the previously-missing paths
+```
+
+### Detailed Steps
+
+1. **Identify the error** — look for this pattern in CI logs:
+   ```
+   FileNotFoundError: Forced include not found: src/<pkg>/<subpath>
+   ```
+
+2. **Understand the build sequence** — `python -m build --no-isolation` runs:
+   - Step 1: `python -m build --sdist` → produces `.tar.gz`
+   - Step 2: builds wheel **from the unpacked sdist**, NOT from the repo root
+
+3. **Recognize the path resolution mismatch** — hatchling resolves `force-include` paths relative
+   to the directory where the build command runs. During the wheel-from-sdist step, that directory
+   is the unpacked sdist, not the repo root. Paths like `src/scylla/analysis/schemas` do not exist
+   there.
+
+4. **Check if the path is already covered by `packages`** — `packages = ["src/scylla"]` causes
+   hatchling to recursively include **all** contents of `src/scylla/`, including every
+   subdirectory. If the `force-include` target lives inside a listed package, it is redundant.
+
+5. **Remove the `force-include` section entirely** from `pyproject.toml`.
+
+6. **Update any tests asserting `force-include` config** — if a packaging test checks for the
+   `force-include` key, update it to check `packages` instead:
+   ```python
+   # Old (checks force-include):
+   force_include = wheel.get("force-include", {})
+   assert "src/scylla/py.typed" in force_include
+
+   # New (checks packages):
+   packages: list[str] = wheel.get("packages", [])
+   assert any("scylla" in pkg for pkg in packages)
+   ```
+
+7. **Verify locally**:
+   ```bash
+   python -m build --no-isolation
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `ci-cd-pip-audit-ignore-vuln-allowlist-with-tracking-issue`
+
+```yaml
+name: ci-cd-pip-audit-ignore-vuln-allowlist-with-tracking-issue
+description: "Allowlist specific pip-audit CVE findings inline via repeated `--ignore-vuln <ID>` flags with a tracking issue + planned review date. Use when: (1) pip-audit step is being flipped from advisory (`|| echo \"::warning::\"`, `--exit-code 0`, or wrapped in `if !`) to fail-fast and real CVE findings surface, (2) findings are in baseline runner-image packages (pip, setuptools, urllib3, etc.) that the repo doesn't directly control, (3) findings are in transitive deps with no upstream fix yet, (4) need a documented allowlist mechanism that's clearly NOT `|| true`/`::warning::`/`--exit-zero` (per the no-silent-failures policy), (5) replacing `pixi-pip-audit-cve-pinning` (bump deps) or `pixi-pip-audit-severity-filter` (filter by severity) — those work when you control the dep version; this skill is for when you don't."
+category: ci-cd
+date: 2026-05-11
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - pip-audit
+  - cve
+  - allowlist
+  - ignore-vuln
+  - tracking-issue
+  - fail-fast
+  - security-scan
+  - baseline-runner-cve
+  - transitive-deps
+```
+
+
+# ci-cd-pip-audit-ignore-vuln-allowlist-with-tracking-issue
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-11 |
+| **Objective** | Allowlist specific pip-audit CVE findings via `--ignore-vuln` flags with a tracking issue, so a fail-fast `pip-audit` step in CI doesn't block PRs on known-and-tracked findings that the repo can't immediately fix. |
+| **Outcome** | Used in 3 PRs (Myrmidons#712, AchaeanFleet#656, ProjectOdyssey#5387) — total 107 CVEs allowlisted with 3 tracking issues (Myrmidons#713, AchaeanFleet#655, ProjectOdyssey#5386). All three PRs' `security/dependency-scan` checks went green. |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- pip-audit step is being flipped from advisory mode to fail-fast (per `ci-cd-forbid-suppressions-pygrep-lint-guard` v2.0.0 Bucket F)
+- CVE findings surface that are in the runner image's baseline Python packages (pip, setuptools, requests, urllib3, jinja2, cryptography, etc.) — the repo itself declares zero or minimal PyPI deps
+- CVE findings are in transitive deps where no upstream fix exists yet (e.g., pip 25.3 CVE-2026-3219, mistune CVE-2026-44708)
+- You explicitly want a documented, reviewable allowlist mechanism rather than `pixi-pip-audit-severity-filter`'s blanket severity reduction
+- The repo cannot easily bump the affected dep version (vs. `pixi-pip-audit-cve-pinning` which works when you can)
+
+## Verified Workflow
+
+### 1. Confirm fail-fast first
+
+The whole point of this skill is to keep pip-audit in fail-fast mode. Don't read this skill if you're keeping `|| true`/`::warning::` wrappers — fix that first per `ci-cd-forbid-suppressions-pygrep-lint-guard`.
+
+### 2. Surface the actual finding set
+
+Locally:
+
+```bash
+pip-audit --desc --strict 2>&1 | tee /tmp/pip-audit-findings.log
+```
+
+Or from CI (preferred — runner-image differs from local):
+
+```bash
+gh run list --repo HomericIntelligence/<repo> --branch <PR branch> --workflow=<workflow file> --limit 5
+gh run view <run-id> --repo HomericIntelligence/<repo> --log-failed 2>&1 | grep -E "ID:|GHSA-|CVE-|PYSEC-" | head -200
+```
+
+### 3. Classify each finding
+
+- **(A) Own-dep finding** (in `pixi.toml [pypi-dependencies]` or `requirements*.txt`) → bump the dep version. Use `pixi-pip-audit-cve-pinning` skill. Don't allowlist.
+- **(B) Runner-baseline finding** (pip, setuptools, requests, etc., from the runner image's Python env, NOT in the repo's deps) → allowlist with this skill's pattern.
+- **(C) Transitive-dep finding with no upstream fix yet** → allowlist with this skill's pattern AND note in the tracking issue that the upstream is unresolved.
+
+### 4. Open a tracking issue
+
+```bash
+gh issue create --repo HomericIntelligence/<repo> \
+  --title "pip-audit: <runner-image|transitive-deps> CVEs allowlist (review YYYY-MM-DD)" \
+  --body "$(cat <<EOF
+Tracking issue for the <type> CVEs surfaced by the fail-fast pip-audit step in PR #<N>.
+
+Per the no-silent-failures policy (HomericIntelligence/Odysseus#280, #282), pip-audit runs in fail-fast mode. These CVEs are <runner-baseline / transitive-with-no-upstream-fix>; the repo's own deps don't include them <or: include them via X transitive>.
+
+Review date: $(date -d '+90 days' +%Y-%m-%d)
+
+Findings (from CI run <id>):
+- GHSA-XXXX-XXXX-XXXX: <package version> — <brief description>
+- CVE-YYYY-NNNNN:     <package version> — <brief description>
+- PYSEC-YYYY-NNN:     <package version> — <brief description>
+...
+
+Resolution path:
+- [ ] On <review-date>, re-check whether the runner image refresh / upstream fix has landed
+- [ ] If yes: remove the corresponding --ignore-vuln flag and verify pip-audit still passes
+- [ ] If no: bump the review date by another 90 days and document why
+EOF
+)"
+```
+
+Capture the issue number — you'll reference it in the workflow.
+
+### 5. Add `--ignore-vuln` flags with tracking comment
+
+Edit the pip-audit step in the workflow:
+
+```yaml
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `ci-pixi-lock-check-setup-order`
+
+```yaml
+name: ci-pixi-lock-check-setup-order
+description: "Fix GitHub Actions workflows that run pixi commands before pixi is installed, causing 'pixi: command not found'. Use when: (1) a workflow fails with 'pixi: command not found' on any pixi command, (2) adding a new workflow that uses pixi but forgot to install it first, (3) a lock-check or dependency-verification workflow runs pixi install --locked without a prior pixi setup step."
+category: ci-cd
+date: 2026-04-25
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [pixi, ci, github-actions, setup-order, lock-check, command-not-found, setup-pixi, composite-action]
+```
+
+
+# CI Pixi Setup Order: Install Pixi Before Running Pixi Commands
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-25 |
+| **Objective** | Fix a `lock-check.yml` workflow that ran `pixi install --locked` without first installing pixi |
+| **Outcome** | Successful — workflow fixed by adding `.github/actions/setup-pixi` composite action before pixi commands |
+| **Verification** | verified-local — fix applied to ProjectMyrmidons PR #350 and merged; lock-check workflow pattern is correct and standard |
+
+## When to Use
+
+- A GitHub Actions workflow fails with `pixi: command not found` on any step
+- Adding a new workflow that runs `pixi install`, `pixi run`, or any other pixi command
+- A `lock-check.yml` or similar dependency-verification workflow was added but does not install pixi first
+- Auditing existing workflows to verify pixi is installed before any pixi commands are run
+
+## Verified Workflow
+
+### Quick Reference
+
+```yaml
+# BROKEN: pixi commands without pixi installation
+jobs:
+  lock-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies (locked)
+        run: pixi install --locked   # FAILS: pixi not installed
+
+# FIXED: use repo's composite action first
+jobs:
+  lock-check:
+    name: Verify pixi.lock is in sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pixi   # installs pixi + caches env
+      - name: Install dependencies (locked)
+        run: pixi install --locked
+```
+
+### Detailed Steps
+
+1. **Identify the failure**: Look for `pixi: command not found` in the CI log. This means any step is running `pixi` before it is installed.
+
+2. **Check if the repo has a composite action**:
+
+   ```bash
+   ls .github/actions/setup-pixi/action.yml
+   ```
+
+3. **If `setup-pixi` composite action exists** — add it before the first pixi command:
+
+   ```yaml
+   steps:
+     - uses: actions/checkout@v4
+     - uses: ./.github/actions/setup-pixi    # must come AFTER checkout (composite actions need the repo on disk)
+     - name: Install dependencies (locked)
+       run: pixi install --locked
+   ```
+
+4. **If no composite action exists** — use the official `prefix-dev/setup-pixi` action:
+
+   ```yaml
+   steps:
+     - uses: actions/checkout@v4
+     - uses: prefix-dev/setup-pixi@v0.8.1
+       with:
+         pixi-version: v0.63.2
+     - name: Install dependencies (locked)
+       run: pixi install --locked
+   ```
+
+5. **Audit all workflows** for pixi commands without prior setup:
+
+   ```bash
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `committed-pixi-venv-poisons-ruff-and-pixi-install`
+
+```yaml
+name: committed-pixi-venv-poisons-ruff-and-pixi-install
+description: "Diagnose simultaneous ruff F403 (on stdlib paths) and pixi install --locked failures caused by an accidentally-committed `.pixi/envs/` directory. Use when: (1) ruff reports F403 / undefined-import errors at paths like `.pixi/envs/default/lib/python*/ast.py`, `_ast`, `__future__`, or other Python stdlib files, (2) `pixi install --locked` fails with `Querying Python at .../.pixi/envs/default/bin/python* failed with exit status 1` while the env directory still exists on disk, (3) both ruff and pixi/poetry/uv errors appear in the same CI run with no obvious connection — symptoms point at lock-file drift but the real bug is a tracked venv, (4) you find yourself regenerating pixi.lock repeatedly with no effect, (5) `git ls-files <pkg>/.pixi/` or `git ls-files <pkg>/.venv/` returns ANY paths, (6) a recent commit added thousands of files under `**/.pixi/envs/` or `**/.venv/`."
+category: debugging
+date: 2026-05-18
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - pixi
+  - venv
+  - ruff
+  - f403
+  - git-rm-cached
+  - ci-cd
+  - gitignore
+  - stdlib-scan
+```
+
+
+# Committed Pixi Venv Poisons Ruff and Pixi Install
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-18 |
+| **Objective** | Recognize and recover from an accidentally-committed pixi (or generic) virtualenv directory that simultaneously breaks ruff and `pixi install --locked` with misleading symptoms |
+| **Outcome** | Verified fix: `git rm -r --cached` the venv path, add to `.gitignore`, re-push. Ruff stops scanning stdlib; pixi reclaims ownership of the env. |
+| **Verification** | verified-ci (ProjectAgamemnon PR #400 commit `29ee393`, 2026-05-18 — ruff F403 and `pixi install --locked` both cleared on next CI run) |
+
+## When to Use
+
+Trigger this skill IMMEDIATELY (before any lock-file rabbit holes) when you see ANY of:
+
+- Ruff errors at paths inside `**/.pixi/envs/**` or `**/.venv/**` (e.g., `.pixi/envs/default/lib/python3.14/ast.py`)
+- Ruff F403 (`from X import *`) errors that reference Python stdlib modules: `_ast`, `__future__`, `builtins`, `typing`, `collections.abc`, `_collections_abc`, `os.path`, `posixpath`
+- `pixi install --locked` failing with `Querying Python at .../.pixi/envs/.../bin/python* failed with exit status 1`
+- A single PR/commit shows thousands of added files (`git show --stat | wc -l` > 1000)
+- Both ruff AND pixi/poetry/uv fail in the same CI run with no shared dependency
+- You've already tried regenerating `pixi.lock` and the lock-file errors keep coming back
+- A previous agent in the session committed something and you don't remember reviewing the file list
+
+If even one of these triggers fires, run the 2-line diagnostic in Quick Reference BEFORE doing anything else.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. DIAGNOSE: does the venv live in git? (one of these returning lines = bug found)
+git ls-files '**/.pixi/' | head -5
+git ls-files '**/.venv/' | head -5
+# Adjust the glob for your repo, e.g.:
+git ls-files clients/python/.pixi/ | head -5
+
+# 2. FIX: untrack the directory (keeps files on disk so dev environment is preserved)
+git rm -r --cached clients/python/.pixi    # adjust path to match your repo
+
+# 3. PREVENT: ensure gitignore covers it
+grep -qxF '.pixi/' .gitignore || echo '.pixi/' >> .gitignore
+grep -qxF '.venv/' .gitignore || echo '.venv/' >> .gitignore
+git add .gitignore
+
+# 4. COMMIT: expect thousands of deletions — this is correct
+git commit -S -m "fix(ci): untrack accidentally-committed .pixi/envs/ virtualenv"
+
+# 5. PUSH and verify CI: ruff stops scanning stdlib, pixi install --locked succeeds
+git push --force-with-lease
+```
+
+### Detailed Steps
+
+1. **Halt the lock-file rabbit hole.** If you've already tried regenerating `pixi.lock`, restoring it from `origin/main`, bumping pixi versions, or `ruff check --fix`, STOP. None of those address a tracked venv.
+
+2. **Run the diagnostic.** From the repo root:
+
+   ```bash
+   git ls-files | grep -E '(^|/)\.pixi/envs/' | head -10
+   git ls-files | grep -E '(^|/)\.venv/' | head -10
+   ```
+
+   ANY output means the venv is tracked. The number of tracked files will typically be in the thousands (a Python 3.14 stdlib alone is ~7,000+ files).
+
+3. **Confirm scale of the bug.** Count the tracked entries — this informs the commit message and reviewers:
+
+   ```bash
+   git ls-files | grep -cE '(^|/)\.pixi/envs/'
+   ```
+
+4. **Untrack with `git rm -r --cached`** (NOT plain `git rm` — that would delete the files on disk and break your local dev env):
+
+   ```bash
+   git rm -r --cached clients/python/.pixi    # adjust the path
+   ```
+
+5. **Patch `.gitignore`.** Add both `.pixi/` and `.venv/` — agents often hit the same bug with whichever tool is in vogue:
+
+   ```bash
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `conan-ci-github-actions-missing-install`
+
+```yaml
+name: conan-ci-github-actions-missing-install
+description: "Add conan install step to GitHub Actions CI when cmake --preset fails with missing conan_toolchain.cmake. Use when: (1) CI fails at cmake configure with 'Could not find toolchain file: build/*/conan_toolchain.cmake', (2) adding CI to a CMake+Conan project for the first time, (3) CI installs ninja but skips conan, (4) build-test, static-analysis, and code-coverage workflows all fail at configure step."
+category: ci-cd
+date: 2026-04-07
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - conan
+  - cmake
+  - github-actions
+  - cmake-presets
+  - cpp
+  - toolchain
+```
+
+
+# Conan Install Missing in GitHub Actions CI
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-07 |
+| **Objective** | Fix GitHub Actions CI failing at `cmake --preset` because `conan_toolchain.cmake` was never generated |
+| **Outcome** | All 4 matrix builds (gcc/clang × debug/release) pass CI after adding conan install step |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- CI fails at cmake configure step with "Could not find toolchain file: build/*/conan_toolchain.cmake"
+- Adding CI to a C++ project that uses CMakePresets.json with Conan toolchain
+- Existing CI installs `ninja-build` but has no conan step
+- All three workflow types (build-test, static-analysis, code-coverage) fail at configure
+- Project uses `CMAKE_TOOLCHAIN_FILE` pointing to a Conan-generated path
+
+## Verified Workflow
+
+### Quick Reference
+
+```yaml
+# Add these steps before "Configure" in any GitHub Actions CI job:
+- name: Install dependencies
+  run: |
+    sudo apt-get install -y ninja-build
+    pip install conan
+    conan profile detect --force
+
+# For matrix builds with dynamic build_type (debug/release):
+- name: Install Conan dependencies
+  env:
+    BUILD_TYPE: ${{ matrix.build_type }}
+  run: |
+    BUILD_TYPE_CAP=$(echo "$BUILD_TYPE" | sed 's/./\u&/')
+    conan install . --build=missing -s build_type="$BUILD_TYPE_CAP" \
+      --output-folder "build/$BUILD_TYPE"
+
+# For fixed build type (static-analysis/coverage):
+- name: Install Conan dependencies
+  run: |
+    conan install . --build=missing -s build_type=Debug \
+      --output-folder build/debug
+```
+
+### Detailed Steps
+
+1. In the "Install dependencies" step, add `pip install conan` and `conan profile detect --force` after apt-get installs
+2. Add a new "Install Conan dependencies" step immediately before the "Configure" step
+3. For matrix workflows: capitalize the build_type with `sed 's/./\u&/'` because cmake uses lowercase (`debug`) but Conan requires title case (`Debug`)
+4. Set `--output-folder` to match the path in CMakePresets.json (typically `build/$BUILD_TYPE`)
+5. Apply this pattern to all three workflow files: `build-test.yml`, `static-analysis.yml`, `code-coverage.yml`
+6. For coverage workflows, use the coverage preset output folder (e.g., `build/coverage`)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| cmake --preset without conan | Ran `cmake --preset debug` directly after checkout | CMake exits: "Could not find toolchain file: build/debug/conan_toolchain.cmake" | conan_toolchain.cmake must be generated by `conan install` before cmake configure |
+| Using lowercase build_type directly | `conan install . -s build_type="$BUILD_TYPE"` with `BUILD_TYPE=debug` | Conan rejects lowercase: expects `Debug` not `debug` | Capitalize with `sed 's/./\u&/'` before passing to `-s build_type=` |
+| Only fixing build-test.yml | Fixed build-test.yml but left static-analysis.yml and code-coverage.yml | Static analysis and coverage workflows still fail at configure | All three workflow files need the conan install step |
+
+## Results & Parameters
+
+```yaml
+# Confirmed working matrix (HomericIntelligence/ProjectAgamemnon):
+matrix:
+  os: [ubuntu-24.04]
+  compiler: [gcc, clang]
+  build_type: [debug, release]
+
+# Conan install command pattern:
+conan install . --build=missing -s build_type=Debug --output-folder build/debug
+conan install . --build=missing -s build_type=Release --output-folder build/release
+
+# Conanfile.py must exist at repo root for `conan install .` to work
+# CMakePresets.json must reference: CMAKE_TOOLCHAIN_FILE=build/{preset}/conan_toolchain.cmake
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `conan-cmake-toolchain-coverage-scripts`
+
+```yaml
+name: conan-cmake-toolchain-coverage-scripts
+description: "Coverage scripts in Conan-managed C++ projects must explicitly pass the Conan toolchain file to cmake or find_package() calls will fail. Use when: (1) Code Coverage CI job fails with cmake find_package errors while other CI jobs (tests, benchmarks) pass, (2) generate_coverage.sh or similar scripts invoke cmake without -DCMAKE_TOOLCHAIN_FILE, (3) GTest/other Conan-managed deps are missing only in coverage builds."
+category: ci-cd
+date: 2026-04-23
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - conan
+  - cmake
+  - coverage
+  - toolchain
+  - gtest
+  - ci-cd
+  - cpp20
+```
+
+
+# Conan CMake Toolchain Required in Coverage Scripts
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-23 |
+| **Objective** | Fix `Code Coverage` CI job failing with `Could NOT find GTest` when Conan 2 manages dependencies |
+| **Outcome** | Success — Coverage CI passed after adding `-DCMAKE_TOOLCHAIN_FILE` to coverage script cmake invocation |
+| **Verification** | verified-ci |
+| **History** | N/A (initial version) |
+
+## When to Use
+
+- `Code Coverage` CI job fails with cmake `find_package` errors (e.g. `Could NOT find GTest (missing: GTEST_LIBRARY GTEST_INCLUDE_DIR GTEST_MAIN_LIBRARY)`)
+- Other CI jobs (tests, benchmarks, sanitizers) pass — meaning deps ARE available via Conan toolchain
+- Project uses Conan 2 with `conan_toolchain.cmake` for dependency management
+- A shell script (`generate_coverage.sh`, `run_coverage.sh`, etc.) invokes cmake directly without inheriting the Makefile/preset build context
+- CI coverage job does two phases: (1) build+test via Makefile, (2) invoke a coverage shell script
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Locate the Conan toolchain (standard Conan 2 output location)
+CONAN_TOOLCHAIN="$PROJECT_ROOT/build/conan-deps/conan_toolchain.cmake"
+
+# WRONG — missing toolchain:
+cmake -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug -G Ninja "$PROJECT_ROOT"
+
+# CORRECT — pass toolchain conditionally:
+CMAKE_ARGS=(-DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug -G Ninja)
+if [[ -f "$CONAN_TOOLCHAIN" ]]; then
+    CMAKE_ARGS+=(-DCMAKE_TOOLCHAIN_FILE="$CONAN_TOOLCHAIN")
+fi
+cmake "${CMAKE_ARGS[@]}" "$PROJECT_ROOT"
+```
+
+### Detailed Steps
+
+1. Identify the failing CI job — look for `find_package` errors mentioning Conan-managed deps (GTest, Catch2, etc.)
+
+2. Locate the coverage script invoked by CI (e.g. `scripts/generate_coverage.sh`, `tools/coverage.sh`)
+
+3. Find the cmake invocation in that script:
+   ```bash
+   grep -n "cmake " scripts/generate_coverage.sh
+   ```
+
+4. Check if `-DCMAKE_TOOLCHAIN_FILE` is present. If not, this is the bug.
+
+5. Find the standard Conan toolchain path for the project:
+   ```bash
+   find build/ -name "conan_toolchain.cmake" 2>/dev/null
+   # Typically: build/conan-deps/conan_toolchain.cmake
+   ```
+
+6. Patch the script to pass the toolchain conditionally (so it also works in environments without Conan):
+   ```bash
+   CONAN_TOOLCHAIN="$PROJECT_ROOT/build/conan-deps/conan_toolchain.cmake"
+   CMAKE_ARGS=(-DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug -G Ninja)
+   if [[ -f "$CONAN_TOOLCHAIN" ]]; then
+       CMAKE_ARGS+=(-DCMAKE_TOOLCHAIN_FILE="$CONAN_TOOLCHAIN")
+   fi
+   cmake "${CMAKE_ARGS[@]}" "$PROJECT_ROOT"
+   ```
+
+7. Also check: does the script use `..` as the cmake source directory after `cd "$BUILD_DIR"`?
+   - `..` resolves to the build parent, which may not be `$PROJECT_ROOT` in all CI environments
+   - Use `"$PROJECT_ROOT"` as an explicit absolute path instead
+
+8. Commit the fix and push. The CI coverage job should find all Conan-managed dependencies.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Bare cmake invocation | `cmake -DENABLE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug -G Ninja "$PROJECT_ROOT"` | Conan toolchain not passed; `find_package(GTest)` cannot locate Conan-installed GTest | Shell scripts don't inherit cmake preset or Makefile context — toolchain must be explicit |
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `conan-hybrid-cpp20-turnkey-packaging`
+
+```yaml
+name: conan-hybrid-cpp20-turnkey-packaging
+description: "Hybrid Conan 2.x + FetchContent packaging for C++20 CMake repos with E2E install validation. Use when: (1) migrating a FetchContent-only project to Conan, (2) some deps aren't on ConanCenter so you need both, (3) integrating Conan with CMakePresets.json, (4) validating installed packages work end-to-end across a multi-repo ecosystem."
+category: tooling
+date: 2026-04-07
+version: "1.2.0"
+user-invocable: false
+verification: verified-local
+history: conan-hybrid-cpp20-turnkey-packaging.history
+tags:
+  - conan
+  - cmake
+  - fetchcontent
+  - cpp20
+  - packaging
+  - e2e
+  - pip
+  - docker
+```
+
+
+# Hybrid Conan 2.x + FetchContent for C++20 CMake Projects
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-07 |
+| **Objective** | Migrate C++20 CMake repos from pure FetchContent to hybrid Conan + FetchContent, then validate installed packages work end-to-end |
+| **Outcome** | Successful — 4 C++ repos (Agamemnon, Nestor, Charybdis, Keystone) build and test with hybrid deps; E2E install validation scripts created |
+| **Verification** | verified-local |
+| **History** | [changelog](./conan-hybrid-cpp20-turnkey-packaging.history) |
+
+## When to Use
+
+- Migrating a C++20 CMake project from FetchContent-only to Conan for binary caching and faster rebuilds
+- A dependency is not reliably on ConanCenter (e.g., nats.c, cista) but others are (cpp-httplib, nlohmann_json, gtest, spdlog, concurrentqueue)
+- Integrating Conan 2.x with CMakePresets.json (v8) — getting the toolchainFile path right
+- Complex FetchContent migration with 6+ deps where some must stay as FetchContent
+- Validating that Conan-exported packages can be consumed by downstream projects
+- Building a meta-repo `just install` that deploys all C++ binaries/libraries to a prefix
+- Creating E2E Docker compose stacks that build C++ services from source alongside Python services
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Single repo: build with Conan
+conan install . --output-folder=build/debug --profile=conan/profiles/debug --build=missing
+cmake --preset debug
+cmake --build --preset debug
+ctest --preset debug
+
+# Meta-repo: build all + install
+just build
+just install PREFIX=/tmp/staging
+
+# E2E validation
+just e2e-conan-validate   # Conan export → consumer → cmake install
+just e2e-pip-validate     # Python packages in clean venvs
+just e2e-full             # Docker E2E + Conan + pip
+```
+
+### Step 1: Create conanfile.py (Conan deps only)
+
+```python
+from conan import ConanFile
+from conan.tools.cmake import CMakeToolchain, CMakeDeps
+
+class ProjectFooConan(ConanFile):
+    name = "projectfoo"
+    version = "0.1.0"
+    settings = "os", "compiler", "build_type", "arch"
+
+    def requirements(self):
+        self.requires("cpp-httplib/0.18.3")
+        self.requires("nlohmann_json/3.11.3")
+
+    def build_requirements(self):
+        self.test_requires("gtest/1.14.0")
+
+    def generate(self):
+        CMakeDeps(self).generate()
+        CMakeToolchain(self).generate()
+```
+
+For repos with optional features (e.g., gRPC), use Conan options:
+
+```python
+class ProjectKeystoneConan(ConanFile):
+    options = {"with_grpc": [True, False]}
+    default_options = {"with_grpc": False}
+
+    def requirements(self):
+        self.requires("spdlog/1.12.0")
+        self.requires("concurrentqueue/1.0.4")
+        if self.options.with_grpc:
+            self.requires("yaml-cpp/0.8.0")
+
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `conan-validate-script-cmake-version-mismatch`
+
+```yaml
+name: conan-validate-script-cmake-version-mismatch
+description: "Fix validate-conan-install.sh failing on hosts with CMake < 3.20, and fix IPC test runner T4 port override bug. Use when: (1) conan package export succeeds but consumer CMake configure fails with 'CMake 3.20 or higher required', (2) validate-conan-install.sh works on CI but fails on Debian 11 or Ubuntu 20.04 hosts, (3) adding conan validation to older distros where system CMake is 3.16-3.19, (4) IPC test runner ignores --port override and binds to wrong port."
+category: tooling
+date: 2026-04-06
+version: "1.1.0"
+history: conan-validate-script-cmake-version-mismatch.history
+user-invocable: false
+verification: verified-local
+tags:
+  - conan
+  - cmake
+  - validation
+  - e2e
+  - debian
+  - pixi
+  - ipc
+  - test-runner
+  - port
+  - homeric-intelligence
+```
+
+
+# Conan validate-conan-install.sh CMake Version Mismatch and IPC Test Runner T4 Port Override Bug
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-06 |
+| **Objective** | Run `validate-conan-install.sh` on epimetheus (Debian 11, CMake 3.18.4) and fix IPC test runner T4 port override |
+| **Outcome** | Packages export + consumer install PASS; consumer build FAIL (CMake version gate); IPC T4 test binds wrong port when --port flag is ignored |
+| **Verification** | verified-local |
+
+## When to Use
+
+- `validate-conan-install.sh` fails with "CMake 3.20 or higher required, found 3.18.4"
+- Running conan validation on Debian 11 / Ubuntu 20.04 (both ship CMake 3.18)
+- Adding conan E2E validation to a host where system CMake is below 3.20
+- CI passes but local validation fails on an older distro
+- IPC test runner T4 test fails with connection refused or wrong port bound
+- `--port` argument passed to IPC test runner is silently ignored
+
+## Verified Workflow
+
+### Quick Reference
+```bash
+# --- Issue 1: CMake version mismatch ---
+
+# Diagnosis: what CMake version is active?
+cmake --version
+pixi run cmake --version  # conda-forge provides 3.20+
+
+# Fix option 1: use pixi cmake in the validate script
+# In validate-conan-install.sh, replace `cmake` with `pixi run cmake`
+# (pixi.toml declares cmake >= 3.20 via conda-forge)
+
+# Fix option 2: lower cmake_minimum_required in consumer test project
+# In the conan-consumer test dir used by validate-conan-install.sh:
+# Change: cmake_minimum_required(VERSION 3.20)
+# To:     cmake_minimum_required(VERSION 3.18)
+# (toolchain file is passed explicitly, no CMakePresets needed)
+
+# --- Issue 2: IPC test runner T4 port override bug ---
+
+# Diagnosis: confirm the runner binds wrong port despite --port flag
+./ipc_test_runner --port 9100 &
+ss -tlnp | grep ipc_test_runner   # shows wrong port (e.g. default 9000)
+
+# Fix: ensure argparse/CLI parser processes --port BEFORE socket bind
+# Pattern: parse args → extract port → bind socket (never use a hardcoded default after bind)
+```
+
+### Confirmed Fixes (Committed to Odysseus main 2026-04-06)
+
+Both proposed fixes from v1.0.0 have been committed to Odysseus main:
+
+1. **cmake_minimum_required lowered 3.20 → 3.16** in `e2e/conan-consumer/CMakeLists.txt`
+   — This is Option B from the Quick Reference. Lowering to 3.16 (the minimum with full toolchain-file support) allows the consumer build phase to succeed on Debian 11 (CMake 3.18.4), Ubuntu 20.04 (CMake 3.16), and any host in the 3.16–3.19 range without requiring pixi's conda-forge cmake.
+
+2. **T4 port override fixed via `else` branch in `e2e/lib/topology.sh` `topology_wait_healthy()`**
+   — The function now sets `AGAMEMNON_PORT` to `8080` and `NATS_MONITOR_PORT` to `8222` in an explicit `else` branch when no override is provided, instead of relying on an unset variable default that was silently clobbered before the caller's `--port` flag could take effect.
+
+### Detailed Steps — Issue 1: CMake Version Mismatch
+
+1. Run `bash e2e/validate-conan-install.sh` and observe the CMake version error:
+   ```
+   CMake Error at CMakeLists.txt:1 (cmake_minimum_required):
+     CMake 3.20 or higher is required.  You are running version 3.18.4.
+   ```
+2. Confirm `pixi run cmake --version` shows 3.20+ (conda-forge pin).
+3. Choose one of:
+   - **Option A** — Modify `e2e/validate-conan-install.sh`: replace bare `cmake` invocations with `pixi run cmake`.
+   - **Option B** — In `e2e/conan-consumer/CMakeLists.txt`, lower `cmake_minimum_required(VERSION 3.20)` to `cmake_minimum_required(VERSION 3.18)`.
+4. Re-run validate script. All 3 phases should PASS:
+   - Phase 1: conan export all C++ packages
+   - Phase 2: conan install consumer (deps resolved from cache)
+   - Phase 3: cmake configure + build consumer binary
+
+### Detailed Steps — Issue 2: IPC Test Runner T4 Port Override Bug
+
+1. Identify where the IPC test runner parses CLI arguments relative to where it binds the socket.
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `cpp-prometheus-conan-pull-target-missing-with-pull-false`
+
+```yaml
+name: cpp-prometheus-conan-pull-target-missing-with-pull-false
+description: "Fix CMake error 'target prometheus-cpp::pull was not found' when Conan sets with_pull=False. Use when: (1) CMake configure fails with missing prometheus-cpp::pull or ::core target, (2) setting up Prometheus metrics in a C++ project with Conan, (3) deciding which prometheus-cpp CMake target to link based on conanfile options."
+category: ci-cd
+date: 2026-05-10
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [cpp, cmake, conan, prometheus, metrics]
+```
+
+
+# cpp-prometheus-conan-pull-target-missing-with-pull-false
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-10 |
+| **Objective** | Add Prometheus metrics to a C++ project using Conan without the embedded HTTP pull server |
+| **Outcome** | Successful — PR #292 (ProjectAgamemnon Prometheus metrics) went green after fix |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- CMake configure error: `target prometheus-cpp::pull was not found`
+- CMake configure error: `target prometheus-cpp::core was not found`
+- Setting up Prometheus metrics in a C++ project that uses Conan
+- Conan + CMake + `prometheus-cpp` library integration
+- Choosing between `prometheus-cpp::core`, `prometheus-cpp::pull`, or `prometheus-cpp::push` targets
+- Working with Conan's `with_pull` / `with_push` / `with_compression` options
+
+## Verified Workflow
+
+### Quick Reference
+
+```cmake
+# CMakeLists.txt — link the right component
+
+# For emitting text/openmetrics output only (most common case, GET /metrics):
+target_link_libraries(${PROJECT_NAME} PUBLIC prometheus-cpp::core)
+
+# If you need the embedded HTTP pull server (pull model), ensure conanfile.py has:
+# self.options["prometheus-cpp"].with_pull = True
+# Then link:
+# target_link_libraries(${PROJECT_NAME} PRIVATE prometheus-cpp::pull)
+```
+
+```python
+# conanfile.py — ensure options match what CMakeLists.txt links
+def configure(self):
+    self.options["prometheus-cpp"].with_pull = False   # no embedded HTTP server
+    self.options["prometheus-cpp"].with_push = False   # no pushgateway client
+    self.options["prometheus-cpp"].with_compression = False
+```
+
+### Detailed Steps
+
+1. Identify the error: CMake configure fails with `target prometheus-cpp::pull was not found`.
+2. Check `conanfile.py` `configure()` method — note whether `with_pull` is `True` or `False`.
+3. Check `CMakeLists.txt` — find all `target_link_libraries` calls that reference `prometheus-cpp::*`.
+4. Apply the fix: if `with_pull=False`, replace every `prometheus-cpp::pull` reference with `prometheus-cpp::core`.
+5. Use `PUBLIC` (not `PRIVATE`) on the library target so that consumers (test fixtures, other libs) that transitively include the metrics headers automatically get the dependency propagated.
+6. Check every CMake target that includes the metrics header (directly or transitively). Each one must eventually link `prometheus-cpp::core` — either directly or through a `PUBLIC` transitive dependency.
+7. Run `conan install` + `cmake ..` to confirm no more missing-target errors.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| 1 | Linked `prometheus-cpp::pull` in CMakeLists.txt while conanfile had `with_pull=False` | Conan only generates a CMake target for components whose matching `with_*` option is enabled. With `with_pull=False`, the `pull` target is never written to the generated `*Targets.cmake` file. CMake configure fails immediately. | Each `prometheus-cpp::*` CMake target depends on the matching `with_*` Conan option. Mismatch → configure error before any compilation. |
+| 2 | Linked only `prometheus-cpp::pull` in the main library but omitted it from test fixtures | Test fixtures that include `metrics.hpp` transitively (via `store.hpp`) had no prometheus-cpp in their link graph. Compile error: Prometheus headers not found. | Header dependencies are transitive. Every CMake target that includes a Prometheus type needs the dep in its link tree — either directly or via a `PUBLIC` link from an upstream target. |
+| 3 | Switched all callers to use text serializer (correct approach) but still linked `prometheus-cpp::pull` | Build still failed — `pull` target does not exist when option is off, regardless of which symbols you use | The text-format serializer (`TextSerializer`) lives in `prometheus-cpp::core`, not `::pull`. Linking `::pull` to access `::core` symbols doesn't work when `::pull` is absent. |
+
+## Results & Parameters
+
+### Component / Option / Target Mapping
+
+| Goal | Conan option | CMake target |
+|------|--------------|--------------|
+| Emit metrics as text (GET /metrics, most common) | `with_pull=False` (or any) | `prometheus-cpp::core` |
+| Embedded HTTP pull server | `with_pull=True` | `prometheus-cpp::pull` |
+| Push to Prometheus pushgateway | `with_push=True` | `prometheus-cpp::push` |
+| gzip compression of metrics output | `with_compression=True` | `prometheus-cpp::core` (still core) |
+
+### Diagnosing Which Target Contains a Symbol
+
+```bash
+# Find which prometheus-cpp CMake targets expose a given symbol/header
+find $CONAN_HOME/data/prometheus-cpp -name "*Targets.cmake" -exec grep -l "<symbol>" {} \;
+
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `cross-repo-dep-pypi-publish-fix`
+
+```yaml
+name: cross-repo-dep-pypi-publish-fix
+description: "Fix CI failures in consumer repos caused by a shared dependency not yet published to PyPI. Use when: (1) pixi install --locked fails because a new version of an internal package isn't on PyPI yet, (2) PRs import from a dependency at a path dep or unpublished version, (3) need to publish a shared library, then fix lock files and import paths across multiple dependent PRs, (4) concurrent PRs on a consumer repo all fail because the shared dep version bump wasn't released."
+category: ci-cd
+date: 2026-03-31
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - pypi
+  - pixi
+  - cross-repo
+  - dependency
+  - lock-file
+  - rebase
+  - shellcheck
+```
+
+
+# Cross-Repo Dependency: Publish then Fix Consumer PRs
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-31 |
+| **Objective** | Multiple ProjectScylla PRs were failing CI because they depended on `homericintelligence-hephaestus>=0.6.0` which wasn't published to PyPI (only on Hephaestus `main`). Goal: publish, then fix all dependent PRs. |
+| **Outcome** | All 4 PRs (1741–1744) merged. Published Hephaestus v0.6.0 via OIDC tag push; fixed pixi.toml/pyproject.toml across 3 branches; resolved rebase conflicts; fixed ShellCheck issues. |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- Consumer repo PRs fail with `lock-file not up-to-date with the workspace` or `ModuleNotFoundError`
+- A shared utility library (`hephaestus`, `keystone`, etc.) has new code on `main` but isn't tagged/published
+- PRs use a path dep (`{ path = "../ProjectHephaestus", editable = true }`) that won't work in CI
+- Multiple concurrent PRs all reference a version that hasn't been released yet
+- Need to retroactively tag an old commit for a previous release
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Step 1: Publish the shared library via git tag (OIDC trusted publishing)
+cd /path/to/shared-lib
+git tag v0.6.0
+git push origin v0.6.0
+# Wait for release.yml workflow to complete (~2 min)
+gh run list --workflow release.yml --limit 3
+
+# Step 2: For each dependent PR — fix pixi.toml
+# In [pypi-dependencies] section:
+# homericintelligence-hephaestus = ">=0.6.0,<1"
+
+# Step 3: Fix pyproject.toml if it declared a lower version
+# dependencies = ["homericintelligence-hephaestus>=0.6.0,<1", ...]
+
+# Step 4: Regenerate lock file
+pixi lock
+
+# Step 5: Remove any incompatible API usage (check published API vs branch API)
+# e.g. retry_with_backoff doesn't have max_delay in v0.6.0 → remove it
+
+# Step 6: Rebase and force-push
+git fetch origin main
+git rebase origin/main
+git push origin HEAD:BRANCH --force-with-lease
+
+# Step 7: Enable auto-merge
+gh pr merge PRNUM --auto --rebase --repo ORG/REPO
+```
+
+### Detailed Steps
+
+1. **Diagnose root cause**: Check `pixi install --locked` failure — is the version on PyPI?
+   ```bash
+   pip index versions homericintelligence-hephaestus 2>&1 | head -3
+   ```
+
+2. **Publish the shared lib**: Push the `vX.Y.Z` tag to trigger the OIDC release workflow.
+   - Verify `pyproject.toml` version matches the tag before pushing
+   - Wait for GitHub Actions `release.yml` to complete
+   - Confirm on PyPI: `pip install homericintelligence-hephaestus==X.Y.Z --dry-run`
+
+3. **Fix each dependent PR** (use git worktrees for parallel isolation):
+   ```bash
+   # Create worktree per PR
+   cd ~/.agent-brain/ProjectScylla
+   git fetch origin
+   git worktree add .claude/worktrees/pr-NNNN BRANCH_NAME
+   ```
+
+4. **Replace path deps with PyPI version** in `pixi.toml`:
+   ```toml
+   # BEFORE (path dep — won't work in CI)
+   homericintelligence-hephaestus = { path = "../ProjectHephaestus", editable = true }
+   # AFTER
+   homericintelligence-hephaestus = ">=0.6.0,<1"
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `fix-incomplete-pydantic-migration`
+
+```yaml
+name: fix-incomplete-pydantic-migration
+description: Fix CI test failures from incomplete Pydantic v2 migrations with bandaid
+  approach
+category: tooling
+date: 2026-02-13
+version: 1.0.0
+user-invocable: false
+```
+
+# Fix Incomplete Pydantic Migration
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-02-13 |
+| **Objective** | Fix CI test failures from incomplete Pydantic v2 migration |
+| **Outcome** | ✅ All tests passing, PR merged successfully |
+| **Context** | PR #588 failed CI - partial migration left dataclasses with `.to_dict()` while tests called `.model_dump()` |
+
+## When to Use
+
+Use this skill when you encounter:
+
+- **Error signature**: `AttributeError: 'ClassName' object has no attribute 'model_dump'`
+- CI test failures after Pydantic migration commits
+- Mixed codebase with both Pydantic BaseModel and Python dataclasses
+- Need to unblock PR merge without completing full migration
+
+## Problem Pattern
+
+**Symptom**: Tests fail with `AttributeError` on `.model_dump()` after partial Pydantic migration
+
+**Root Cause**:
+- Some classes migrated to Pydantic BaseModel (use `.model_dump()`)
+- Other classes still Python dataclasses (use `.to_dict()`)
+- Test code uniformly calls `.model_dump()` assuming all classes are Pydantic
+
+**Example Error**:
+```
+AttributeError: 'ExperimentConfig' object has no attribute 'model_dump'
+```
+
+## Verified Workflow
+
+### 1. Identify Migration Status
+
+Check which classes are Pydantic vs dataclasses:
+
+```bash
+# Find Pydantic BaseModel classes
+grep -r "class.*BaseModel" scylla/
+
+# Find dataclasses
+grep -r "@dataclass" scylla/
+```
+
+### 2. Locate Problematic Calls
+
+Find all `.model_dump()` calls in failing tests:
+
+```bash
+grep -r "\.model_dump()" tests/
+```
+
+### 3. Apply Bandaid Fix
+
+For classes that are **still dataclasses**, revert `.model_dump()` → `.to_dict()`:
+
+```python
+# BEFORE (fails if ExperimentConfig is dataclass)
+config_dict = config.model_dump()
+
+# AFTER (works with dataclass)
+config_dict = config.to_dict()
+```
+
+### 4. Fix Test Assertions
+
+If tests have brittle assertions (exact equality), make them more resilient:
+
+```python
+# BEFORE (brittle - fails if optional fields added)
+assert len(volumes) == 3
+
+# AFTER (resilient - allows optional items)
+assert len(volumes) >= 3
+assert len(volumes) <= 4
+```
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `hatch-vcs-editable-pixi-locked-incompatibility`
+
+```yaml
+name: hatch-vcs-editable-pixi-locked-incompatibility
+description: "Fix CI failures caused by hatch-vcs auto-versioning making pixi.lock perpetually stale. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace' on every push after switching from a hardcoded version to hatch-vcs, (2) all pixi-based CI jobs (lint, pre-commit, security) fail identically while the local editable package uses hatch-vcs, (3) regenerating pixi.lock immediately becomes stale on the next commit."
+category: ci-cd
+date: 2026-04-21
+version: "1.0.0"
+user-invocable: true
+verification: verified-precommit
+tags: [hatch-vcs, pixi, pixi-lock, editable-install, setup-pixi, locked, ci-cd]
+```
+
+# Hatch-VCS Editable Install / Pixi Lock Incompatibility
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-21 |
+| **Objective** | Fix perpetual `lock-file not up-to-date with the workspace` CI failures caused by `hatch-vcs` editable installs invalidating `pixi.lock` on every commit |
+| **Outcome** | All CI jobs pass without requiring a new lock-file commit on each push; external dependencies remain reproducibly pinned |
+| **Verification** | verified-precommit (v1.0.0) |
+
+## When to Use
+
+- CI fails with `lock-file not up-to-date with the workspace` on **every** push after adding `hatch-vcs`
+- The project uses an editable path dependency in `pixi.toml`: `mypackage = { path = ".", editable = true }`
+- Regenerating `pixi.lock` fixes CI once but the very next commit breaks it again
+- All pixi-based CI jobs (lint, pre-commit, security, test) fail at the `setup-pixi` / `pixi install --locked` step
+- The package version in the lock file shows a dev version like `0.7.1.dev15+g4980b19`
+
+## Root Cause
+
+`hatch-vcs` derives the editable package version from the current git commit SHA:
+
+```text
+0.7.1.dev15+g4980b19
+```
+
+When pixi builds the local editable install, it hashes the built wheel and records that hash in
+`pixi.lock`. Every new git commit produces a new SHA → new dev version → new wheel hash →
+`pixi.lock` is instantly stale on the next push.
+
+`setup-pixi@v0.9.5` (and earlier versions) run `pixi install --locked` by default, which rejects
+any workspace that does not exactly match the recorded hashes. This creates an infinite cycle:
+
+```text
+commit → new SHA → new dev version → new wheel hash → pixi.lock stale → CI fails
+```
+
+**Why regenerating the lock file is not a solution**: Each commit that regenerates the lock file
+produces a new SHA, which immediately invalidates the newly-written lock file on the commit that
+includes the regeneration. There is no way to regenerate `pixi.lock` into a state that will
+survive the next commit.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Find all setup-pixi steps missing locked: false
+grep -rn "setup-pixi" .github/workflows/ | grep -v "locked: false"
+
+# Fix: add locked: false to every setup-pixi step in every workflow file
+# Then verify no step was missed:
+grep -rn "setup-pixi" .github/workflows/ | grep -v "locked: false"
+# Should produce no output
+
+# Confirm lock file is still consistent for external deps
+pixi install --locked  # will fail only if external deps are also stale
+```
+
+### Phase 1: Diagnose — Confirm It Is hatch-vcs / Editable Hash Staleness
+
+```bash
+# Check the failing CI job log for the lock error
+gh run view <run-id> --log-failed | grep "lock-file"
+
+# Confirm the project uses hatch-vcs
+grep -r "hatch-vcs\|hatch_vcs" pyproject.toml pixi.toml
+
+# Confirm an editable local path dependency exists in pixi.toml
+grep -A2 "path.*editable" pixi.toml
+
+# Check if the version contains a dev+git SHA suffix
+pixi run python -c "import importlib.metadata; print(importlib.metadata.version('<package-name>'))"
+# If output looks like "0.7.1.dev15+g4980b19", this is the root cause
+```
+
+**Confirming signals:**
+
+- Error: `lock-file not up-to-date with the workspace`
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `pip-cve-fix-requires-override-of-upstream-hard-pin`
+
+```yaml
+name: pip-cve-fix-requires-override-of-upstream-hard-pin
+description: "Fix Trivy/pip-audit HIGH/CRITICAL CVEs flagged in transitive pip deps that an upstream package hard-pins with `==`. Bumping the upstream alone does NOT clear the CVEs because the new upstream still hard-pins the same vulnerable transitive versions. Force-override the transitive deps using a TWO-PASS pip install: pass 1 installs the upstream from `requirements.txt` (resolver satisfied), pass 2 installs `requirements-security-overrides.txt` with `--upgrade` (separate resolver invocation deliberately replaces the transitive pins). **Escalation rule (v2.1.0):** cap override attempts at ~3 deps per upstream — if the scanner keeps surfacing new HIGH CVEs in *different* transitive deps from the same upstream after 3 override lines, the upstream's dep tree is the problem; disable the vessel out of CI (gated `if: false` / matrix removal) and open a tracking issue rather than chase the chain indefinitely. Use when: (1) Trivy/pip-audit reports CVEs in transitive deps of a plain pip-installed package (no pixi solver in play), (2) `pip show <upstream> | grep Requires` or PyPI `requires_dist` shows `==` hard-pins on the flagged transitive deps, (3) bumping the upstream alone closes zero or fewer CVEs than expected, (4) `.trivyignore` is undesirable because the CVEs are remotely exploitable or the team has a no-suppressions policy."
+category: ci-cd
+date: 2026-05-18
+version: "2.1.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - trivy
+  - pip-audit
+  - cve
+  - requirements-txt
+  - hard-pin
+  - upstream-dep
+  - transitive-dep
+  - aider-chat
+  - GitPython
+  - Pillow
+  - urllib3
+  - vulnerability-scan
+  - force-override
+  - two-pass-install
+  - ResolutionImpossible
+  - escalation-policy
+  - disable-vessel-tracking
+```
+
+
+# pip-cve-fix-requires-override-of-upstream-hard-pin
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-17 |
+| **Objective** | Clear Trivy/pip-audit HIGH/CRITICAL CVEs flagged against transitive pip dependencies that an upstream package hard-pins with `==`, when bumping the upstream alone does not close the CVEs. |
+| **Outcome** | Success — splitting the upstream pin and the security overrides into two separate files and running pip install **twice** (a second `--upgrade` pass for the overrides) cleanly replaces the vulnerable transitive deps, clearing the CVEs. A single-file approach is **not viable** because pip's resolver raises `ResolutionImpossible` on the conflicting `==` vs `>=` constraints. |
+| **Verification** | verified-ci — applied to `vessels/aider/` on HomericIntelligence/AchaeanFleet PR #662, signed commit `210735b`. Full CI watched green (Trivy filesystem scan, `security/dependency-scan`, build-and-push). |
+
+## When to Use
+
+- Trivy or pip-audit reports HIGH/CRITICAL CVEs against a transitive pip dependency pulled in by some upstream package in a plain `requirements.txt` (no pixi solver). For pixi projects use `pixi-pip-audit-cve-pinning` instead.
+- You bumped the upstream package to its latest version and the CVE count did not drop (or dropped by less than expected).
+- `pip show <upstream> | grep -i Requires` shows `==` hard-pins on the flagged transitive deps. Same info via PyPI:
+  ```bash
+  curl -s https://pypi.org/pypi/<upstream>/json | jq '.info.requires_dist' | grep -iE '<dep1>|<dep2>'
+  ```
+- You explicitly do NOT want to use `.trivyignore` (CVEs are remotely exploitable, or per-CVE rationale rot is unacceptable). For genuinely unfixable CVEs, see `ci-cd-pip-audit-ignore-vuln-allowlist-with-tracking-issue`.
+- Common targets: AI/ML tooling that pins aggressively (aider-chat, langchain, llama-index, certain HuggingFace tooling).
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Confirm upstream hard-pins the flagged transitive deps
+curl -s https://pypi.org/pypi/<upstream>/json | jq '.info.requires_dist' \
+  | grep -iE '<dep1>|<dep2>|<dep3>'
+# Expect to see lines like "GitPython==3.1.46", "pillow==12.1.1", "urllib3==2.6.3"
+
+# 2. Split requirements into TWO files:
+#    requirements.txt — only the upstream pin (resolver-satisfiable on its own)
+cat > requirements.txt <<'EOF'
+<upstream>==<latest>
+EOF
+
+#    requirements-security-overrides.txt — only the upgrade-only overrides
+cat > requirements-security-overrides.txt <<'EOF'
+# Security overrides applied AFTER <upstream> install (two-pass pattern).
+# <upstream> hard-pins these transitive deps at vulnerable versions; pip's
+# resolver cannot satisfy both pins simultaneously, so we install them in
+# a second --upgrade pass that deliberately overwrites the transitive pins.
+GitPython>=<fixed>     # CVE-XXXX-XXXXX, CVE-XXXX-YYYYY
+Pillow>=<fixed>        # CVE-XXXX-ZZZZZ
+urllib3>=<fixed>       # CVE-XXXX-WWWWW
+EOF
+
+# 3. Install in TWO separate pip invocations (two resolver passes)
+pip install --no-cache-dir -r requirements.txt
+pip install --no-cache-dir --upgrade -r requirements-security-overrides.txt
+
+# 4. Smoke-test the upstream still runs (catches override-induced breakage)
+<binary> --version   # e.g. `aider --version`
+
+# 5. Re-run the scanner; CVEs against the overridden deps should be cleared
+trivy fs --severity HIGH,CRITICAL .
+```
+
+### Dockerfile snippet (verified on AchaeanFleet `vessels/aider/`)
+
+```dockerfile
+COPY vessels/aider/requirements.txt /tmp/requirements.txt
+COPY vessels/aider/requirements-security-overrides.txt /tmp/requirements-security-overrides.txt
+
+# Pass 1: install aider-chat with its own pin set satisfied
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+# Pass 2: deliberately upgrade transitive deps with CVE patches.
+# This is a SEPARATE resolver invocation — pip will replace the pins
+# from pass 1 because --upgrade is explicit user intent.
+RUN pip install --no-cache-dir --upgrade -r /tmp/requirements-security-overrides.txt
+
+# Smoke check: if the override broke aider, fail the build now (not at runtime)
+RUN aider --version
+```
+
+### Detailed Steps
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `pixi-ci-shell-tooling-migration`
+
+```yaml
+name: pixi-ci-shell-tooling-migration
+description: "Migrate GitHub Actions CI for shell-only repos from ad-hoc curl tool installs to pixi-based tooling. Use when: (1) CI installs yq/shellcheck/bats via curl onto ubuntu-latest, (2) tests fail with yq parse errors on valid v4 expressions, (3) PATH shadowing causes tool version mismatches in bats subshells, (4) adding pixi to a repo that has no Python/Mojo (pure shell GitOps)."
+category: ci-cd
+date: 2026-04-23
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - pixi
+  - yq
+  - go-yq
+  - shellcheck
+  - bats
+  - github-actions
+  - shell
+  - gitops
+  - path-shadowing
+```
+
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-23 |
+| **Objective** | Migrate a shell-only GitOps repo (Myrmidons) from ad-hoc `curl` tool installs on ubuntu-latest to pixi-managed tooling, eliminating PATH shadowing and silent version mismatches |
+| **Outcome** | Operational — 51/51 unit tests pass, 44/44 harness tests pass, shellcheck clean |
+| **Verification** | verified-local (CI validation pending first push) |
+| **Project** | HomericIntelligence/Myrmidons — shell-only GitOps, no Python/Mojo |
+
+## When to Use
+
+- A GitHub Actions CI workflow installs `yq`, `shellcheck`, or `bats` via ad-hoc `curl` onto an ubuntu-latest runner
+- Tests fail with yq parse errors like `invalid input text 'tostring)'` despite the expression being valid yq v4
+- A bats test resolves a different tool binary than the runner's main shell (subshell PATH ordering differs)
+- Adding pixi to a repo that contains only shell scripts (no Python, no Mojo) — pure GitOps tooling
+- Migrating from `[project]` to `[workspace]` block in `pixi.toml` (pixi 0.63+ deprecation)
+- Wanting a composite action pattern for CI tool setup matching the ProjectScylla/Odyssey standard
+
+## Verified Workflow
+
+### Quick Reference
+
+```toml
+# pixi.toml — shell-only repo
+[workspace]
+name = "myrmidons"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+go-yq = ">=4.44"          # CRITICAL: NOT "yq" — that installs python-yq v3
+shellcheck = ">=0.10"
+jq = ">=1.7"
+curl = ">=8"
+bats-core = ">=1.11"
+
+[feature.lint.dependencies]
+shellcheck = ">=0.10"
+yamllint = ">=1.35"
+
+[feature.lint.tasks]
+lint-shell = "shellcheck scripts/*.sh scripts/**/*.sh"
+lint-yaml = "yamllint agents/ fleets/"
+
+[tasks]
+test-unit = "bats tests/unit/"
+test-schema = "bats tests/schema/"
+test-integration = "bats tests/integration/ || true"
+```
+
+```yaml
+# .github/actions/setup-pixi/action.yml — composite action
+name: Set Up Pixi Environment
+description: Install Pixi and restore the cached Myrmidons tool environment.
+
+inputs:
+  environment:
+    description: Pixi environment to activate
+    required: false
+    default: default
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Pixi
+      uses: prefix-dev/setup-pixi@ba3bb36eb2066252b2363392b7739741bb777659  # v0.8.1
+      with:
+        pixi-version: v0.39.5
+        cache: true
+```
+
+### Detailed Steps
+
+#### Step 1: Add `pixi.toml` to the repo root
+
+Use `[workspace]` (not `[project]`) for pixi 0.63+. The critical dependency name:
+
+```toml
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `pixi-lock-rebase-regenerate`
+
+```yaml
+name: pixi-lock-rebase-regenerate
+description: "Correctly resolve pixi.lock staleness after git rebase or when main advances. Use when: (1) CI fails with 'lock-file not up-to-date with the workspace', (2) multiple PRs all fail identical CI jobs after a version bump on main, (3) git rebase causes pixi.lock conflicts, (4) Dependabot PRs fail CI fast (6-12 seconds) because Dependabot only bumps pyproject.toml not pixi.lock, (5) a second rebase of the same branch produces a pixi.lock commit conflict — skip the stale commit and re-run pixi install, (6) a second commit in the rebase chain patches code that was migrated to an external package — accept HEAD's version and use git rebase --skip, (7) pixi.toml pins a dependency version but pixi.lock still references old version (CI shows 'Environment is not consistent with the lockfile'), (8) creating a fix branch — always base off origin/main not local main which may be stale commits behind, (9) MULTIPLE PR branches all fail CI with 'lock-file not up-to-date' simultaneously after a recent merge to main — main itself is likely broken; verify with `git checkout main && pixi install --locked` before per-branch fixups, (10) a recently-merged PR that touched `pyproject.toml`'s `[project.dependencies]` (or any field that contributes to the local-package SHA hash) without regenerating `pixi.lock` — fix on main with a 1-line hotfix PR; then re-rebase all open PRs to inherit the fixed lock, (11) per-branch `pixi install` regeneration produces only a single-line diff (the local-package `sha256:`) and CI keeps failing — confirms the bug is upstream on main, not on the branch, (12) a comment-only or metadata-only edit to `pyproject.toml`/`pixi.toml` invalidates the local-package SHA256 in `pixi.lock` and CI fails with `pixi install --locked rejected: <package> SHA256 mismatch` — use `pixi install` NOT `pixi update` (install regenerates only the affected SHA; update re-resolves the entire dep graph and produces a ~50-line diff), (13) developer's local pixi binary is NEWER than CI's pinned `prefix-dev/setup-pixi` version (e.g., local v0.67.2, CI v0.39.5); developer regenerates `pixi.lock` locally and CI rejects it with a schema/lockfile-version/format mismatch error even though `pixi install --frozen` passes locally — diagnosis is pixi-binary-version skew, fix is to install CI's exact pinned pixi version locally and regenerate (NOT bump CI, which cascades to other repos)."
+category: ci-cd
+date: 2026-05-17
+version: "1.8.0"
+user-invocable: true
+verification: verified-ci
+history: pixi-lock-rebase-regenerate.history
+tags: [dependabot, pixi, rebase, pixi-lock, ci-cd, pixi-install, pixi-update, pixi-version-skew, lock-format-drift]
+absorbed:
+  - ci-cd-dependabot-pixi-lock-drift-fix.md
+```
+
+# Pixi Lock Rebase Regenerate
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-17 |
+| **Objective** | Correctly resolve `pixi.lock` staleness after `git rebase`, main-branch advancement, comment-only manifest edits, or pixi-binary-version drift between developer and CI — without producing an invalid lock file or broadening the diff scope |
+| **Outcome** | Eliminates `lock-file not up-to-date` and lockfile-format-rejection CI failures; multi-branch parallel fix completes 5 PRs in ~1 minute; SHA-only fixes stay 1-line via `pixi install` (not `pixi update`); format-drift fixes regenerate against CI's pinned pixi version |
+| **Verification** | verified-ci (v1.8.0) |
+| **History** | [changelog](./pixi-lock-rebase-regenerate.history) |
+
+## When to Use
+
+- CI fails with `lock-file not up-to-date with the workspace` on one or more PRs
+- Multiple open PRs all fail identical CI jobs (lint, pre-commit, dep-scan) after a version bump landed on main
+- Running `git rebase` on a branch that includes `pixi.lock` and a conflict occurs
+- The branch modifies `pixi.toml` (adds/removes dependencies or tasks)
+- All test matrix jobs pass but infrastructure jobs (lock-check, pre-commit, dep-scan) uniformly fail
+- **Dependabot PRs fail CI very fast (6–12 seconds)**: Dependabot bumps `pyproject.toml` version bounds but does NOT regenerate `pixi.lock`. CI runs `pixi install --locked` which rejects the stale lock immediately — hence the fast failure. Fix is the same: rebase + `pixi install` + commit pixi.lock.
+- A branch that previously had a pixi.lock-fix commit is rebased a second time and the old pixi.lock commit conflicts with the freshly-rebased state. Resolution: `git rebase --skip` the conflicting commit, then re-run `pixi install` fresh.
+- **Second commit in the rebase chain patches code migrated to an external package**: A branch has Commit A (structural change, e.g., pixi.toml restructure) and Commit B (follow-on fix to local scripts that have since been rewritten as thin wrapper stubs delegating to an external package). Commit A applies cleanly; Commit B conflicts because the functions it patches no longer exist. Accept `HEAD`'s version of all conflicted files and use `git rebase --skip` (not `--continue`) to drop the now-empty commit.
+
+- **pixi.toml pins a dependency version** (e.g., `shellcheck = "0.10.0.*"`) but `pixi.lock` still references the old version — CI shows `"Environment is not consistent with the lockfile"`. Fix: run `pixi install` locally to regenerate the lock.
+- **Creating a fix branch for lock drift**: always base off `origin/main` (not local `main` which may be stale): `git checkout origin/main -b fix/my-branch` — local `main` may be dozens of commits behind, causing push conflicts.
+- **3+ PR branches simultaneously fail CI with "lock-file not up-to-date"** after a known recent merge — main itself may be broken; test main directly before delegating per-branch fixups.
+- **The 1-line diff after `pixi install` is on the local package's `sha256:` field** — the bug is upstream on main; a per-branch regeneration cannot help because every rebase pulls in main's stale lock.
+- **Symptom: a "fix-up" wave on multiple branches doesn't help** — each branch's CI keeps failing the same way after per-branch regeneration; this confirms main itself ships an inconsistent `pyproject.toml`/`pixi.lock` pair.
+- **Comment-only or metadata-only edit to `pyproject.toml`/`pixi.toml` invalidates the local-package SHA256** — CI fails with `pixi install --locked rejected: <package> SHA256 mismatch`. Fix with `pixi install` (NOT `pixi update`); see Phase 3f.
+- **Developer's local pixi binary is newer than CI's pinned `prefix-dev/setup-pixi` version** — developer regenerates `pixi.lock` locally with a newer pixi (e.g., v0.67.2) and CI rejects it with a schema/lockfile-version/format complaint even though `pixi install --frozen` succeeds locally. The newer pixi writes lockfile fields/structure the older CI pixi cannot parse. Fix is to install CI's exact pinned pixi version locally and regenerate; see Phase 3g.
+
+**Do NOT use `--ours` or `--theirs`** to resolve a `pixi.lock` conflict — either side will be stale
+relative to the rebased branch's actual `pixi.toml`.
+
+**Do NOT use `pixi update`** to fix a stale lock — see Phase 3f for the critical
+`pixi install` vs `pixi update` distinction. `pixi update` re-resolves the entire dependency
+graph and bumps unrelated packages.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Triage: confirm lock staleness across multiple PRs
+gh run view <run-id> --log-failed | grep "lock-file"
+
+# Single-branch fix
+git fetch origin
+git rebase origin/main          # clean rebase (no pixi.lock conflict? run pixi install anyway)
+pixi install                    # regenerates pixi.lock in place
+git add pixi.lock
+git commit -m "fix(deps): regenerate pixi.lock after rebase on main"
+git push --force-with-lease origin <branch>
+gh pr merge <pr-number> --auto --rebase
+
+# Multi-branch parallel fix (5 PRs simultaneously)
+REPO_DIR="/path/to/local/repo"
+BRANCHES=(branch1 branch2 branch3 branch4 branch5)
+git -C "$REPO_DIR" fetch origin
+for branch in "${BRANCHES[@]}"; do
+  dir="/tmp/fix-pr-${branch}"
+  git -C "$REPO_DIR" worktree remove "$dir" --force 2>/dev/null || rm -rf "$dir"
+  git -C "$REPO_DIR" worktree add "$dir" "origin/${branch}"
+  (cd "$dir" && git rebase origin/main && pixi install && git add pixi.lock && \
+   git commit -m "fix(deps): regenerate pixi.lock after rebase" && \
+   git push --force-with-lease "origin/${branch}" && \
+   PR=$(gh pr list --head "${branch}" --json number --jq '.[0].number') && \
+   gh pr merge "$PR" --auto --rebase && echo "Done: ${branch}") &
+done
+wait
+```
+
+### Detection: Is It Main or Is It the Branch?
+
+When `lock-file not up-to-date` shows up on multiple PR CIs at once:
+
+```bash
+# Step 1: check main itself
+git fetch origin main
+git checkout main
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `pixi-pip-audit-cve-pinning`
+
+```yaml
+name: pixi-pip-audit-cve-pinning
+description: "Fix pip-audit CVE failures in pixi-managed Python projects by pinning minimum versions. Use when: (1) CI pip-audit step fails with known CVEs, (2) indirect dependencies resolve to vulnerable versions."
+category: ci-cd
+date: 2026-04-22
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: []
+```
+
+
+# pixi-pip-audit-cve-pinning
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-22 |
+| **Objective** | Fix CI pip-audit failures caused by vulnerable direct or indirect PyPI dependencies in pixi-managed projects |
+| **Outcome** | Success — pinning lower-bound versions in `pixi.toml` resolves CVE failures; `pixi install` regenerates the lockfile with patched versions |
+| **Verification** | verified-local (pixi install succeeded, `pip show pytest` showed 9.0.3) |
+
+## When to Use
+
+- CI pip-audit step fails with reported CVEs (e.g., pygments CVE-2026-4539, pytest CVE-2025-71176)
+- An indirect dependency (not directly imported by the project) is flagged by pip-audit
+- `pixi.toml` uses wildcard constraints like `pytest = "*"` and pip-audit finds a vulnerable resolved version
+- Multiple PRs are failing on the same CVE(s) with no fix applied
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Identify vulnerable packages from CI pip-audit output
+# 2. Add explicit minimum version pins to pixi.toml
+# 3. Regenerate lockfile
+pixi install
+# 4. Verify no CVEs remain
+pixi run pip-audit
+# 5. Commit both files
+git add pixi.toml pixi.lock
+git commit -m "fix(deps): bump <pkg>>=<version> to resolve pip-audit CVE-XXXX-XXXXX"
+```
+
+### Detailed Steps
+
+1. **Identify CVEs from CI logs** — Check the failing pip-audit CI output for lines like:
+   ```
+   pygments 2.19.2  CVE-2026-4539  fix in 2.20.0
+   pytest   9.0.2   CVE-2025-71176 fix in 9.0.3
+   ```
+   Note the package name, current version, and minimum fixed version.
+
+2. **Locate the correct `pixi.toml` section** — Pin lower bounds in `[feature.dev.pypi-dependencies]`
+   (or whichever feature environment runs your test/lint pipeline). Use `>=<fixed-version>`:
+
+   ```toml
+   [feature.dev.pypi-dependencies]
+   pytest = ">=9.0.3"
+   pygments = ">=2.20.0"
+   ```
+
+   For packages not previously listed (indirect dependencies), add a new entry. pixi will
+   honour the constraint even if the package is pulled in transitively.
+
+3. **Regenerate the lockfile**:
+   ```bash
+   pixi install
+   ```
+   pixi resolves the environment against the updated constraints and rewrites `pixi.lock`.
+
+4. **Verify locally before pushing**:
+   ```bash
+   pixi run pip-audit
+   # Should exit 0 with no CVEs reported
+   pip show pytest    # confirm resolved version meets the floor
+   pip show pygments  # confirm resolved version meets the floor
+   ```
+
+5. **Commit both `pixi.toml` and `pixi.lock`**:
+   ```bash
+   git add pixi.toml pixi.lock
+   git commit -m "fix(deps): bump pytest>=9.0.3, pygments>=2.20.0 to resolve CVE-2025-71176, CVE-2026-4539"
+   ```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `pixi-pip-audit-severity-filter`
+
+```yaml
+name: pixi-pip-audit-severity-filter
+description: Configure pip-audit in pixi CI to fail only on HIGH/CRITICAL severity
+  vulnerabilities using pixi task definitions
+category: ci-cd
+date: 2026-02-22
+version: 1.0.0
+user-invocable: false
+```
+
+# Skill: pixi-pip-audit-severity-filter
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-02-22 |
+| Objective | Configure pip-audit in pixi CI to fail only on HIGH/CRITICAL severity vulnerabilities |
+| Outcome | Success — pixi task definition approach avoids workflow YAML changes |
+| Project | ProjectScylla |
+| Issue | #874 |
+
+## When to Use
+
+Use this skill when:
+- A pixi-based project uses `pip-audit` in CI and you need to filter by severity
+- CI is blocking on LOW/MEDIUM vulnerabilities that have no available fix
+- You want to apply pip-audit flags without modifying GitHub Actions workflow YAML
+- pip-audit is invoked via `pixi run --environment <env> pip-audit`
+
+## Verified Workflow
+
+### 1. Bump pip-audit to >=2.8 in pixi.toml
+
+`--min-severity` flag was added in pip-audit 2.8. Update the pypi-dependency:
+
+```toml
+[feature.lint.pypi-dependencies]
+pip-audit = ">=2.8"
+```
+
+### 2. Add a named task in the feature's tasks section
+
+The key insight: define the task in `[feature.<name>.tasks]` so that
+`pixi run --environment <name> pip-audit` automatically applies severity filtering
+without any changes to the GitHub Actions workflow YAML:
+
+```toml
+[feature.lint.tasks]
+pip-audit = "pip-audit --min-severity high"
+```
+
+### 3. Verify the task resolves correctly
+
+```bash
+pixi run --environment lint pip-audit --version
+# Output: ✨ Pixi task (pip-audit in lint): pip-audit --min-severity high --version
+# pip-audit 2.10.0
+```
+
+The `✨ Pixi task` line confirms flags are baked in correctly.
+
+### 4. (Optional) Add the workflow file to its own path triggers
+
+```yaml
+on:
+  pull_request:
+    paths:
+      - "pixi.toml"
+      - "pixi.lock"
+      - ".github/workflows/security.yml"  # add this
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### pixi.toml snippet (copy-paste ready)
+
+```toml
+[feature.lint.pypi-dependencies]
+pip-audit = ">=2.8"
+
+[feature.lint.tasks]
+pip-audit = "pip-audit --min-severity high"
+```
+
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `pixi-toml-dep-dedup`
+
+```yaml
+name: pixi-toml-dep-dedup
+description: Reconcile duplicate package version specs between [dependencies] and
+  [feature.dev.dependencies] in pixi.toml. Use when a package appears in both sections
+  with conflicting constraints, or when a quality audit flags dependency ambiguity.
+category: ci-cd
+date: 2026-03-03
+version: 1.0.0
+user-invocable: true
+```
+
+# Pixi TOML Dependency Deduplication
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-03-03 |
+| **Objective** | Reconcile conflicting package version specs in `pixi.toml` |
+| **Outcome** | Single authoritative constraint per package; `pixi install` succeeds cleanly |
+
+## When to Use This Skill
+
+Use this pattern whenever:
+- A package appears in both `[dependencies]` and `[feature.dev.dependencies]` with different constraints
+- A quality audit flags "conflicting pytest version specifications" or similar
+- Lower bound in `[feature.dev.dependencies]` is looser than `[dependencies]` (e.g., `>=7.0` vs `>=9.0.2,<10`)
+- Missing upper bound in dev section could allow a major-version bump (e.g., no `<10`)
+
+**Symptom example** (pixi.toml):
+```toml
+[dependencies]
+pytest = ">=9.0.2,<10"       # restrictive, correct
+pytest-cov = ">=7.0.0,<8"
+
+[feature.dev.dependencies]
+pytest = ">=7.0"              # looser lower bound, no upper bound — ambiguous!
+pytest-cov = ">=4.0"
+```
+
+## Root Cause
+
+pixi merges `[dependencies]` and activated feature dependencies at solve time. When the
+same package appears in both with conflicting constraints:
+
+1. The solver takes the **intersection** of both ranges — but this is implicit and easy to miss
+2. A loose `>=7.0` in dev with no upper bound could allow `>=10` if the base constraint
+   were ever removed or if a dev-only environment activated without `[dependencies]`
+3. The authoritative constraint in `[dependencies]` is the one verified by CI; the dev
+   duplicate adds noise and maintenance risk
+
+## Verified Workflow
+
+### Step 1: Identify duplicates
+
+```bash
+grep -n "pytest\|<package-name>" pixi.toml
+```
+
+Look for the same package name appearing under both `[dependencies]` and
+`[feature.dev.dependencies]`.
+
+### Step 2: Determine authoritative constraint
+
+- The `[dependencies]` spec is the authoritative one — it is active in all environments
+  and is what CI validates
+- `[feature.dev.dependencies]` overrides should only exist when dev genuinely needs a
+  **different** (typically looser) constraint than production (rare for test runners)
+
+### Step 3: Remove the duplicate from [feature.dev.dependencies]
+
+If the dev spec is weaker or redundant, delete it entirely:
+
+```toml
+# BEFORE
+[feature.dev.dependencies]
+pytest = ">=7.0"
+pytest-cov = ">=4.0"
+pre-commit = ">=3.0"
+
+# AFTER — duplicates removed
+[feature.dev.dependencies]
+pre-commit = ">=3.0"
+```
+
+### Step 4: Verify
+
+```bash
+pixi install
+pixi run pytest --version   # confirm resolved version matches [dependencies] constraint
+```
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `pypi-trusted-publishing-setup`
+
+```yaml
+name: pypi-trusted-publishing-setup
+description: "Configure PyPI trusted publishing (OIDC) with GitHub Actions for namespace packages. Use when: (1) setting up OIDC trusted publishing for a new PyPI project, (2) debugging 403/400 errors during PyPI upload, (3) publishing namespace packages like Org-Project to PyPI."
+category: ci-cd
+date: 2026-03-22
+version: "1.0.0"
+user-invocable: false
+```
+
+
+# PyPI Trusted Publishing Setup
+
+## Overview
+
+| Date | Objective | Outcome |
+| ------ | ----------- | --------- |
+| 2026-03-22 | Configure OIDC trusted publishing for HomericIntelligence-Hephaestus | Successfully published v0.4.0 after fixing distribution name, environment, and pending publisher |
+
+## When to Use
+
+- Setting up OIDC trusted publishing for a **new** PyPI project
+- Debugging `403 Forbidden` or `400 Non-user identities cannot create new projects` during PyPI upload
+- Migrating from `secrets.PYPI_API_TOKEN` to trusted publishing
+- Publishing namespace packages (e.g., `OrgName-ProjectName`) to PyPI
+- Changing a PyPI distribution name while keeping the Python import name unchanged
+
+## Verified Workflow
+
+### Quick Reference
+
+```yaml
+# .github/workflows/release.yml
+permissions:
+  contents: write
+  id-token: write  # REQUIRED for OIDC
+
+jobs:
+  build-and-publish:
+    environment: pypi  # Must match PyPI trusted publisher config
+    steps:
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true  # Enable during setup, disable after confirmed working
+```
+
+### Step 1: Configure pyproject.toml
+
+The `name` field MUST exactly match the PyPI project name:
+
+```toml
+[project]
+name = "OrgName-ProjectName"  # Distribution name on PyPI
+
+[tool.hatch.build.targets.wheel]
+packages = ["projectname"]  # Python import name (can differ)
+```
+
+Wheel filenames are normalized to lowercase: `orgname_projectname-*.whl` (PEP 625).
+
+### Step 2: Configure GitHub Environment
+
+Repository Settings → Environments → create `pypi`:
+- Deployment branches and tags: "Selected branches and tags", add `v*` tag pattern
+- Required reviewers (optional): Add reviewer for manual approval gate
+
+### Step 3: Workflow permissions
+
+Must have `id-token: write` at top level of workflow.
+
+### Step 4: Register on PyPI
+
+**For NEW projects** (doesn't exist on PyPI yet): Add a **pending publisher** at https://pypi.org/manage/account/publishing/ — OIDC cannot create new projects.
+
+**For EXISTING projects**: Add trusted publisher at project settings → Publishing.
+
+### Step 5: Update dependent files
+
+When changing distribution name, also update:
+- `pixi.toml` pypi-dependencies key (lowercase)
+- Regenerate `pixi.lock`
+- Integration test wheel globs (must be lowercase)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Hardcoded SHA for pypi-publish | `pypa/gh-action-pypi-publish@76f52bc...` | SHA was invalid/not found | Use `@release/v1` branch ref |
+| Protected branches only on env | GitHub env `protected_branches: true` | Tags are not protected branches | Use "Selected branches and tags" with `v*` pattern |
+| Distribution name mismatch | `pyproject.toml` name `hephaestus`, PyPI project `HomericIntelligence` | `403 OIDC scoped token not valid for project` | Distribution name must EXACTLY match PyPI project |
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `refactor-code`
+
+```yaml
+name: refactor-code
+description: Restructure code for improved clarity and maintainability. Use when addressing
+  code smells or technical debt.
+category: tooling
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+```
+
+# Refactor Code
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Apply systematic refactoring techniques to improve code clarity, maintainability, and performance without changing functionality. |
+| Outcome | Operational |
+
+Apply systematic refactoring techniques to improve code clarity, maintainability, and performance without changing functionality.
+
+## When to Use
+
+- Addressing code smells identified in reviews
+- Reducing cyclomatic complexity
+- Extracting methods and classes
+- Improving naming and organization
+
+### Quick Reference
+
+```python
+# Common refactoring patterns
+
+# Extract method
+# BEFORE: Long function with multiple responsibilities
+def process_data(data):
+    result = validate(data)
+    formatted = format_data(result)
+    return save(formatted)
+
+# AFTER: Clear single responsibility
+def process_data(data):
+    validated = _validate_and_format(data)
+    return save(validated)
+
+def _validate_and_format(data):
+    return format_data(validate(data))
+```
+
+## Verified Workflow
+
+1. **Identify refactoring targets**: From code review or analysis tools
+2. **Plan changes**: Document what will change and why
+3. **Apply refactoring**: Use IDE refactoring tools or manual changes
+4. **Run tests**: Verify all tests still pass
+5. **Verify performance**: Check no performance regression
+
+## Output Format
+
+Refactoring report:
+
+- Issues addressed
+- Refactoring techniques applied
+- Metrics before/after (complexity, lines of code)
+- Test coverage status
+- Performance impact
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `detect-code-smells` skill for identifying issues
+- See CLAUDE.md > SOLID principles for refactoring goals
+- See `run-tests` skill for verification
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `t5-inherit-missing-manifest-fallback`
+
+```yaml
+name: t5-inherit-missing-manifest-fallback
+description: "Skill: T5 Inheritance Fallback for Missing config_manifest.json"
+category: tooling
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+```
+
+# Skill: T5 Inheritance Fallback for Missing config_manifest.json
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-05 |
+| Project | ProjectScylla |
+| Objective | Fix T5 crash when parent tier's best subtest has no `config_manifest.json` |
+| Outcome | Success — PR #1426 merged, 4437 tests pass, 75.26% unit coverage |
+| PR | HomericIntelligence/ProjectScylla#1426 |
+
+## When to Use
+
+Use this skill when:
+- `build_merged_baseline()` raises `ValueError: Cannot inherit from <tier>/<subtest>: config_manifest.json not found`
+- A T5 run with `--retry-errors` crashes on inheritance from a tier where all subtests scored 0.0
+- Diagnosing failures where tiebreaker selection picks a subtest whose runs failed early (before manifest was written)
+
+## Root Cause
+
+`build_merged_baseline()` in `scylla/e2e/tier_manager.py` assumed the best subtest always had `config_manifest.json`. When all subtests score 0.0, the tiebreaker (alphabetical) picks the first subtest. If that subtest's run failed before `_save_resource_manifest()` executed, no manifest exists — and the old code raised `ValueError` unconditionally.
+
+## Verified Workflow
+
+### Fix in `build_merged_baseline()` (~line 738)
+
+Replace the hard `raise ValueError` with a two-stage fallback:
+
+```python
+manifest_file = (
+    experiment_dir / tier_id.value / best_subtest_id / "config_manifest.json"
+)
+if not manifest_file.exists():
+    # Best subtest failed before manifest was written — find an alternative
+    tier_dir = experiment_dir / tier_id.value
+    alternative = None
+    for subdir in sorted(tier_dir.iterdir()):
+        candidate = subdir / "config_manifest.json"
+        if subdir.is_dir() and candidate.exists():
+            alternative = candidate
+            logger.warning(
+                f"Best subtest {tier_id.value}/{best_subtest_id} has no "
+                f"config_manifest.json; falling back to "
+                f"{tier_id.value}/{subdir.name}"
+            )
+            break
+    if alternative is None:
+        logger.warning(
+            f"No subtest in {tier_id.value} has config_manifest.json; "
+            f"skipping inheritance from {tier_id.value}"
+        )
+        continue
+    manifest_file = alternative
+```
+
+### Logger Setup
+
+`tier_manager.py` had no logger. Add at module level:
+
+```python
+import logging
+# ... other imports ...
+logger = logging.getLogger(__name__)
+```
+
+### Unit Tests
+
+Add to `tests/unit/e2e/test_tier_manager.py` in `TestBuildMergedBaseline`:
+
+1. **Fallback to sibling** — `best_subtest.json` points to `02` (no manifest); `00` has one → merged from `00`
+2. **Skip entire tier** — no subtest has a manifest → returns `{}`
+3. **Skip only failing tier** — T1 has no manifests, T0 does → T0 resources present, T1 skipped
+
+## Key Implementation Details
+
+- `sorted(tier_dir.iterdir())` ensures deterministic fallback (lowest-numbered subtest wins)
+- Use `continue` (not `return`) so other tiers in `inherit_from_tiers` still contribute
+- The fallback is silent from the caller's perspective — only warnings logged, no exception
+
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `tooling-python-codebase-symbol-rename`
+
+```yaml
+name: tooling-python-codebase-symbol-rename
+description: "Rename Python symbols (functions, classes, constants, CLI flags, enum variants, filenames) across an entire Python codebase. Use when: (1) renaming a concept across src/, tests/, and scripts/ Python files, (2) renaming a CLI flag with dashes to match a new convention, (3) renaming enum variants to match a renamed operation phase."
+category: tooling
+date: 2026-03-28
+version: "1.0.0"
+user-invocable: false
+verification: verified-precommit
+tags:
+  - rename
+  - python
+  - refactor
+  - symbol-rename
+  - file-rename
+  - enum
+  - cli
+```
+
+
+# Python Codebase Symbol Rename
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-28 |
+| **Objective** | Rename `retrospective` concept to `learn` across ProjectScylla's Python automation pipeline |
+| **Outcome** | All Python symbols renamed, files renamed with `git mv`, PR HomericIntelligence/ProjectScylla#1734 created |
+| **Verification** | verified-precommit (pre-commit hooks pass; CI pending at time of capture) |
+
+> **Note:** This skill covers renaming Python-level symbols. For renaming plugin directories,
+> slash commands, and markdown-based skill references, see
+> [tooling-plugin-command-codebase-rename](tooling-plugin-command-codebase-rename.md).
+
+## When to Use
+
+- Renaming a concept across multiple Python files in `src/`, `tests/`, `scripts/`
+- Renaming function names (e.g., `run_retrospective()` → `run_learn()`)
+- Renaming constants (e.g., `RETROSPECTIVE_TIMEOUT` → `LEARN_TIMEOUT`)
+- Renaming enum variants (e.g., `ImplementationPhase.RETROSPECTIVE` → `LEARN`)
+- Renaming CLI flags (e.g., `--no-retrospective` → `--no-learn`)
+- Renaming module files (e.g., `retrospective.py` → `learn.py`) while preserving git history
+- Distinguishing "symbol renames" (change code) from "prose renames" (leave natural language as-is)
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Discover all affected files
+grep -rn "<old_name>" src/ tests/ scripts/ --include="*.py" -l
+
+# 2. File renames — use git mv to preserve history
+git mv src/pkg/automation/old_name.py src/pkg/automation/new_name.py
+git mv tests/unit/automation/test_old_name.py tests/unit/automation/test_new_name.py
+
+# 3. Symbol renames in each file — use replace_all: true in Edit tool
+#    (or sed -i for each pattern if working in bash)
+for f in src/ tests/ scripts/; do
+  sed -i 's/old_symbol_name/new_symbol_name/g' $(grep -rl "old_symbol_name" $f --include="*.py")
+done
+
+# 4. Verify only prose remains (natural language comments are OK to leave)
+grep -rn "old_name" src/ tests/ scripts/ --include="*.py"
+# Expected: only comments/docstrings with natural language ("run a retrospective")
+
+# 5. Stage and commit
+git add src/ tests/ scripts/
+git status  # Confirm renames show as R  old.py -> new.py
+git commit -m "refactor: rename <old> to <new> across Python codebase"
+git push -u origin <branch>
+gh pr create --repo <org>/<repo> ...
+```
+
+### Detailed Steps
+
+**Phase 1: Discover all affected files**
+
+1. Find all Python files containing the old name (symbols only — check both snake_case and
+   UPPER_CASE and kebab-case for CLI flags):
+
+   ```bash
+   grep -rn "retrospective\|RETROSPECTIVE" src/ tests/ scripts/ --include="*.py" -l
+   ```
+
+2. Review each hit to distinguish:
+   - **Symbol references** (function calls, class names, constants, enum variants, imports,
+     CLI flags, log file names) → MUST rename
+   - **Prose comments/docstrings** ("run a retrospective", "the retrospective phase") → OK to leave
+
+**Phase 2: Rename files with `git mv`**
+
+Use `git mv` for file renames — git detects rename by content similarity (~50% threshold),
+so the rename appears in `git log --follow` and `git diff` as `R  old.py -> new.py`:
+
+```bash
+git mv src/pkg/automation/retrospective.py src/pkg/automation/learn.py
+git mv tests/unit/automation/test_retrospective.py tests/unit/automation/test_learn.py
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `tooling-shared-scripts-pypi-centralization`
+
+```yaml
+name: tooling-shared-scripts-pypi-centralization
+description: "Workflow for auditing cross-repo script duplication and centralizing shared Python validation scripts into a PyPI package with CLI entry points. Use when: (1) multiple repos have duplicated scripts/check_*.py or scripts/validate_*.py files, (2) planning to consolidate shared tooling into a library package, (3) porting standalone scripts to library modules with testable APIs."
+category: tooling
+date: 2026-03-22
+version: "1.0.0"
+user-invocable: false
+tags:
+  - pypi
+  - deduplication
+  - validation-scripts
+  - cli-entry-points
+  - cross-repo
+```
+
+
+# Centralizing Shared Python Scripts into a PyPI Package
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-22 |
+| **Objective** | Audit all HomericIntelligence repos for duplicated Python validation scripts and port them into ProjectHephaestus as first-class library modules with CLI entry points, published to PyPI |
+| **Outcome** | Successfully ported 9 validation modules from ProjectScylla/Hephaestus scripts/ into `hephaestus.validation.*`, added 9 CLI entry points, bumped to v0.5.0. Filed tracking issues against 2 repos with duplicated code. |
+
+## When to Use
+
+- Multiple repositories contain duplicated `scripts/check_*.py` or `scripts/validate_*.py` files
+- Standalone scripts need to become importable library modules with testable public APIs
+- A shared PyPI package needs new modules with optional dependency extras
+- Planning a cross-repo deduplication effort with tracking issues
+- Converting scripts that use `sys.exit()` directly into testable functions that return structured data
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Audit repos for duplicated scripts
+gh repo list <org> --limit 50 --json name,description
+# Clone each, compare scripts/ directories
+
+# 2. For each script, create a library module:
+#    - Testable function returning structured data (tuple/dict)
+#    - main() function that calls sys.exit() for CLI
+#    - argparse with --repo-root, --verbose
+
+# 3. Add CLI entry points to pyproject.toml:
+# [project.scripts]
+# hephaestus-check-foo = "hephaestus.validation.foo:main"
+
+# 4. Add optional dependency extras:
+# [project.optional-dependencies]
+# toml = ["tomli>=2.0,<3;python_version<'3.11'"]
+# schema = ["jsonschema>=4.0,<5"]
+
+# 5. File tracking issues against repos with duplicated code
+gh issue create --repo <org>/<repo> --title "chore: Replace duplicated scripts with <package>>=X.Y"
+```
+
+### Detailed Steps
+
+1. **Audit phase**: Clone all ecosystem repos, list all `scripts/*.py` files, identify duplicates by comparing functionality (not just filenames — implementations may differ)
+
+2. **Design module API**: Each script becomes a module with:
+   - Public functions returning structured results (tuples, dicts) — NOT calling `sys.exit()`
+   - A `main()` function that wraps the public API with argparse and `sys.exit()`
+   - Reuse existing package utilities (e.g., `get_repo_root()`) instead of inline helpers
+
+3. **Handle optional dependencies** with guarded imports:
+   ```python
+   try:
+       import tomllib
+   except ModuleNotFoundError:
+       try:
+           import tomli as tomllib
+       except ModuleNotFoundError:
+           tomllib = None
+   ```
+   Print clear install instructions when optional deps are missing.
+
+4. **Implementation order matters**: Build standalone modules first (no new deps), then dep-dependent modules, then enhance existing modules, then integration
+
+5. **Tests with `pytest.importorskip`**: For optional-dep-dependent tests, use `pytest.importorskip("jsonschema")` inside each test method rather than class-level decorators
+
+6. **File tracking issues** against repos with duplicated code before implementation — reference the planned version. Update issues after publishing.
+
+7. **Merge divergent implementations**: When two repos have different scripts for the same purpose, merge the best parts. E.g., Hephaestus checked pyproject.toml internal consistency (regex), Scylla checked pyproject.toml vs Dockerfile (tomllib). The merged module does both.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Class-level `@pytest.mark.skipif` with `pytest.importorskip` | Used `@pytest.mark.skipif(not pytest.importorskip(...))` on test class | `pytest.importorskip` raises `Skipped` exception at collection time, causing the entire module to be skipped (0 tests collected) | Use `pytest.importorskip()` inside individual test methods, not at class/module level |
+
+*(truncated — full body in absorbed skill PR history)*
+
+---
+
+## Superseded from `wheel-only-build`
+
+```yaml
+name: wheel-only-build
+description: "Skill: wheel-only-build"
+category: ci-cd
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+```
+
+# Skill: wheel-only-build
+
+## Overview
+
+| Field | Value |
+| ----------- | ---------------------------------------------------------------- |
+| Date | 2026-02-19 |
+| Issue | #746 |
+| PR | #804 |
+| Objective | Configure hatchling to produce wheel-only distributions |
+| Outcome | Success — single 2-line addition resolved the issue |
+| Category | tooling |
+
+## When to Use
+
+Trigger this skill when:
+
+- A pyproject.toml using hatchling builds both sdist and wheel by default and you want wheel-only output
+- Issue asks to "make distribution binary-only" or "exclude sdist from default build"
+- `hatch build` produces both `.tar.gz` and `.whl` files and only `.whl` is desired
+- You need to reduce distribution surface area or pre-compilation focus
+
+## Verified Workflow
+
+### 1. Identify the build backend
+
+Confirm the project uses `hatchling`:
+
+```toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+```
+
+### 2. Add the `[tool.hatch.build]` targets restriction
+
+Insert **above** the existing `[tool.hatch.build.targets.wheel]` section:
+
+```toml
+[tool.hatch.build]
+targets = ["wheel"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["scylla"]
+```
+
+The `targets` key tells hatchling which build targets to produce by default. Setting it to `["wheel"]` suppresses sdist generation unless explicitly requested.
+
+### 3. Verify sdist is still accessible explicitly
+
+```bash
+hatch build -t sdist   # still works on demand
+hatch build            # now produces only wheel
+```
+
+### 4. Run pre-commit and tests
+
+```bash
+pre-commit run --files pyproject.toml
+pixi run python -m pytest tests/ -v
+```
+
+No test changes needed — this is a build configuration change only.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Minimal diff to `pyproject.toml`
+
+```diff
++[tool.hatch.build]
++targets = ["wheel"]
++
+ [tool.hatch.build.targets.wheel]
+ packages = ["scylla"]
+```
+
+*(truncated — full body in absorbed skill PR history)*
+
