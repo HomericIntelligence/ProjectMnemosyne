@@ -338,7 +338,7 @@ def _load_existing_comment_ids(issue_number: int) -> None:
 | Trusting agent-reported PR numbers | Accepted agent output ("PR #403") for wave reconciliation | Agents report stale in-flight views; 3/16 waves had wrong PR numbers | Always verify with `gh pr list --author "@me" --state all --limit 50` after every wave |
 | Haiku agents for 40+ issue filing batches | Haiku paces faster, sent more requests | Hit GitHub secondary rate limits (403 BCE2) faster than Sonnet | Use Sonnet for large filing batches; Sonnet's natural pace is more rate-limit resilient |
 | Two agents touching the same hot file in the same sub-wave | `scripts/apply.sh` modified by agents for issues #187 and #195 | Merge conflict on same function block | Hot-file serialization: at most one agent per hot file per sub-wave |
-| `gh search issues "term"` for body-text scanning | Used GitHub search API for issue body matching | Returns false positives from repo names and README text | Use `gh issue list --json body | jq 'select(.body | test("term"))'` per-repo instead |
+| `gh search issues "term"` for body-text scanning | Used GitHub search API for issue body matching | Returns false positives from repo names and README text | Use `gh issue list --json body \| jq 'select(.body \| test("term"))'` per-repo instead |
 | Mechanical string replace for terminology migration | `sed 's/old-term/new-term/g'` across all issue bodies | Inverted-semantic flags (SKIP_VERIFY vs TLS_VERIFY) get wrong boolean values; context-specific class renames lost | Use Sonnet agents with explicit terminology mapping table; flag inverted-semantic pairs in mapping |
 
 ## Results & Parameters
