@@ -1,13 +1,13 @@
 ---
 name: ci-cd-achaean-fleet-ci-cascade-patterns
-description: "AchaeanFleet Docker infrastructure CI cascade failure sequence and fixes. Use when: (1) running a myrmidon swarm on HomericIntelligence/AchaeanFleet, (2) diagnosing cascading CI failures in a Docker image build pipeline, (3) fixing base-image ENTRYPOINT, OCI multi-arch build, vendor download URL, YAML column-0, caddy overlay, or branch-protection push issues in AchaeanFleet vessels."
+description: "AchaeanFleet Docker infrastructure CI cascade failure sequence and fixes. Use when: (1) running a myrmidon swarm on HomericIntelligence/AchaeanFleet, (2) diagnosing cascading CI failures in a Docker image build pipeline, (3) fixing base-image ENTRYPOINT, OCI multi-arch build, vendor download URL, YAML column-0, caddy overlay, branch-protection push, or required-signatures ruleset / signed-commit merge-block issues in AchaeanFleet vessels."
 category: ci-cd
-date: 2026-04-25
-version: "2.0.0"
+date: 2026-05-18
+version: "2.1.0"
 history: ci-cd-achaean-fleet-ci-cascade-patterns.history
 user-invocable: false
 verification: verified-ci
-tags: [achaeanfleet, docker, ci-cascade, multi-arch, oci, opencode, goose, entrypoint, qemu, caddy, yaml, branch-protection]
+tags: [achaeanfleet, docker, ci-cascade, multi-arch, oci, opencode, goose, entrypoint, qemu, caddy, yaml, branch-protection, required-signatures, branch-rulesets, signed-commits, force-with-lease, auto-merge-disarm]
 ---
 
 # CI/CD: AchaeanFleet CI Cascade Patterns
@@ -62,6 +62,11 @@ grep "|| true" vessels/*/Dockerfile
 
 # 7. Check all compose commands include caddy overlay
 grep "docker compose" .github/workflows/ci.yml | grep -v "docker-compose.caddy.yml"
+
+# 8. When a PR is mergeStateStatus=BLOCKED but all checks pass, inspect rulesets
+#    (legacy branch-protection endpoint will look empty — misleading)
+gh api repos/HomericIntelligence/AchaeanFleet/rules/branches/main \
+  --jq '[.[] | {type, parameters}]'
 ```
 
 ### Detailed Steps
@@ -321,6 +326,96 @@ Even bot users (`github-actions[bot]`) cannot bypass branch protection with a di
 
 **Do NOT use `continue-on-error: true`** — that bypasses the problem rather than solving it.
 
+#### Level 10: Required-Signatures Ruleset Blocks Merge of Branches with Unsigned Historical Commits
+
+After commit `77b74ad` ("chore(pre-commit): require GPG/SSH-signed commits on push") landed on
+main on 2026-05-16, AchaeanFleet's repository ruleset began enforcing
+`required_signatures` plus `pull_request.required_review_thread_resolution: true` on `main`.
+Any PR whose branch contains commits authored **before** that date will have unsigned commits
+in its history and will be blocked at merge time — even when every status check is green.
+
+The failure mode is especially confusing because the `gh` CLI does not name the failing rule
+and the legacy branch-protection endpoint shows no required checks or reviewers.
+
+**Symptoms:**
+
+- `gh pr view N --json mergeStateStatus` returns `BLOCKED` even though `mergeable=MERGEABLE`
+  and all status checks are `SUCCESS`.
+- `gh pr merge N --squash` (without `--admin` / `--auto`) fails with the generic message:
+  `Pull request HomericIntelligence/AchaeanFleet#N is not mergeable: the base branch policy
+  prohibits the merge.`
+- Legacy `gh api repos/.../branches/main/protection` shows zero required checks and zero
+  required reviews — misleading; the actual rule is in the **new rulesets API**.
+- The real source of truth is `gh api repos/HomericIntelligence/AchaeanFleet/rules/branches/main`
+  which shows a `required_signatures` ruleset plus a `pull_request` ruleset with
+  `required_review_thread_resolution: true`.
+
+**Diagnosis steps (verified-ci):**
+
+```bash
+# 1. Confirm legacy branch protection is NOT the blocker
+gh api repos/HomericIntelligence/AchaeanFleet/branches/main/protection \
+  --jq '{required_checks: .required_status_checks.contexts,
+         required_reviews: .required_pull_request_reviews}'
+
+# 2. Inspect rulesets (this is where required_signatures lives)
+gh api repos/HomericIntelligence/AchaeanFleet/rules/branches/main \
+  --jq '[.[] | {type, parameters}]'
+
+# 3. Check each commit's signature verification on GH
+#    (gh pr view's .commits[].signature field is unreliable — always null)
+gh pr view N --json commits --jq '.commits[] | .oid[0:7]' | while read sha; do
+  v=$(gh api repos/HomericIntelligence/AchaeanFleet/commits/$sha \
+        --jq '.commit.verification.verified')
+  echo "$sha verified=$v"
+done
+```
+
+**Verified fix — sign every commit in the PR via rebase --exec:**
+
+```bash
+# Switch to the PR branch
+git checkout <branch>
+
+# Find merge-base with main
+BASE=$(git merge-base HEAD origin/main)
+
+# Sign every commit in the PR (--amend --no-edit -S applied to each commit)
+git rebase --exec 'git commit --amend --no-edit -S' "$BASE"
+
+# Verify all commits are signed locally
+# (G = good signature, U = good signature with unknown trust — both acceptable)
+git log --format='%h %G? %s' "$BASE"..HEAD
+
+# Force-push — ALWAYS use --force-with-lease, NEVER --force
+git push --force-with-lease
+
+# Confirm GH sees verified=true on every commit
+git log --format='%h' "$BASE"..HEAD | while read sha; do
+  gh api repos/<owner>/<repo>/commits/$sha --jq '.commit.verification.verified'
+done
+```
+
+**Critical gotcha — force-pushing disarms `gh pr merge --auto`:**
+
+GitHub revokes the auto-merge arming on any history rewrite (the head SHA changes). After
+**every** force-push to a PR that previously had auto-merge enabled, re-arm it:
+
+```bash
+gh pr merge N --squash --auto --repo <owner>/<repo>
+```
+
+If you skip this step, the PR will sit indefinitely after CI goes green, because nothing is
+listening for the merge trigger anymore.
+
+**Why this is needed:** AchaeanFleet adopted a pre-commit hook requiring signed commits
+(commit `77b74ad` on main, "chore(pre-commit): require GPG/SSH-signed commits on push") on
+2026-05-16. PRs whose branches contain commits from before that date have unsigned commits
+in their history. The `required_signatures` ruleset checks **all commits in the PR branch**,
+not just the merge commit — so even though squash-merge would produce a single signed commit
+on main, the ruleset still blocks at the merge button. The only remediation is to rewrite the
+PR branch so every commit is signed.
+
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -335,6 +430,10 @@ Even bot users (`github-actions[bot]`) cannot bypass branch protection with a di
 | `continue-on-error: true` on changelog push step | Silence the branch protection failure in changelog workflow | Hides the error but CHANGELOG never actually updates — bot can't push directly either way | Fix by having the bot create a PR + auto-merge instead |
 | Python source at column 0 inside `run: \|` | Wrote multi-line `python3 -c "..."` with Python source at column 0 | YAML parser interprets column-0 lines as new mapping keys; `ScannerError: could not find expected ':'` | All lines inside a YAML literal block scalar must be indented to at least the block's indentation level |
 | `docker compose config` without caddy overlay | Called `docker compose -f docker-compose.claude-only.yml config` directly | Fails: `service "hi-eris" depends on undefined service "caddy"` because caddy is defined only in docker-compose.caddy.yml | Always prepend `-f compose/docker-compose.caddy.yml` before any claude-only or mesh compose command |
+| Trust `gh pr view`'s `.commits[].signature` field | Ran `gh pr view N --json commits --jq '.commits[].signature'` to determine which commits were unsigned | The field returns `null` even for actually-signed commits — it is unreliable | Always cross-check signing via `gh api repos/.../commits/<sha> --jq .commit.verification.verified` |
+| Check `branches/main/protection` only | Inspected the legacy branch-protection API and saw "no required checks, no reviews" | Modern repository rulesets are NOT exposed via the legacy protection endpoint — they live at `/rules/branches/main` | When merge is BLOCKED but legacy protection looks empty, always check the rulesets endpoint |
+| `gh pr merge N --squash` without `--admin` on a branch with unsigned commits | Tried plain squash-merge expecting it to produce a single signed commit on main | Same generic error: "base branch policy prohibits the merge" — no hint about which rule is failing | The CLI does not name the failing rule; you must inspect rulesets manually and rewrite branch history to sign every commit |
+| Forget to re-arm `--auto` after force-pushing the signed branch | Assumed `gh pr merge --auto` survives a force-push | GitHub disarms auto-merge whenever the head SHA changes via force-push | After every force-push to a PR with auto-merge enabled, re-run `gh pr merge N --squash --auto` |
 
 ## Results & Parameters
 
@@ -376,3 +475,4 @@ documented in `batch-low-difficulty-issue-impl`.
 | --------- | --------- | --------- |
 | HomericIntelligence/AchaeanFleet | Multi-session myrmidon swarm 2026-04 | 13 PRs → 0, cascade sequence fully mapped |
 | HomericIntelligence/AchaeanFleet | Follow-up session 2026-04-25 | Level 6 corrected; Levels 1.5, 4.5, 9 added from new cascade failures |
+| HomericIntelligence/AchaeanFleet | Required-signatures session 2026-05-18 | Level 10 added. PR #661 (`chore/easy-sweep-bundle-round2-2026-05-16`) — 6 of 7 commits unsigned, blocked with BLOCKED+no-failures pattern. `git rebase --exec 'git commit --amend --no-edit -S' "$BASE"` on commits `2a1f1c5..9ada664` made all 7 `verified=true` on GH; PR auto-merged after re-arming `--auto` and new CI passing. Same procedure applied to PR #664 (single commit `7b06242` → `5ab76a9`). |

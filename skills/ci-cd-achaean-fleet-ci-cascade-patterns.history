@@ -1,3 +1,38 @@
+## v2.1.0 — 2026-05-18
+
+Amendment (minor bump) adding **Level 10: Required-signatures ruleset blocks merge of
+branches with unsigned historical commits**.
+
+### What changed vs v2.0.0
+
+- New cascade level documented: branch-protection ruleset enforcing `required_signatures` +
+  `required_review_thread_resolution: true` on `main`. Triggered on PRs whose branches
+  contain commits authored before AchaeanFleet's `77b74ad` pre-commit signing hook landed
+  (2026-05-16).
+- Documented the misleading failure mode: `mergeStateStatus=BLOCKED` while all checks
+  succeed; `gh pr merge --squash` returns the generic "base branch policy prohibits the
+  merge" with no rule name; legacy `branches/main/protection` endpoint looks empty.
+- Diagnosis recipe: cross-check `rules/branches/main` rulesets endpoint and verify each
+  commit via `gh api repos/.../commits/<sha> --jq .commit.verification.verified`
+  (the `gh pr view --json commits` `.signature` field is unreliable).
+- Verified fix: `git rebase --exec 'git commit --amend --no-edit -S' "$BASE"` followed by
+  `git push --force-with-lease`.
+- **Critical gotcha** captured: force-pushing disarms `gh pr merge --auto` — must re-arm
+  after every history rewrite.
+- Quick Reference gained an `gh api .../rules/branches/main` diagnosis one-liner.
+- Failed Attempts table gained 4 new rows (unreliable `.signature` field, legacy-protection-only
+  inspection, plain `gh pr merge --squash`, forgetting to re-arm `--auto`).
+- Verified On gained a 2026-05-18 row covering PRs #661 and #664.
+- Frontmatter: `version: "2.1.0"`, `date: 2026-05-18`, expanded description to mention
+  rulesets/signing, added tags: `required-signatures`, `branch-rulesets`, `signed-commits`,
+  `force-with-lease`, `auto-merge-disarm`.
+
+### Prior content reference
+
+The full v2.0.0 skill content is preserved in git history. See the file at sha
+`0fd24f50e1a83c709566ff451063c32858eaabd7`
+(`git show 0fd24f50e1a83c709566ff451063c32858eaabd7:skills/ci-cd-achaean-fleet-ci-cascade-patterns.md`).
+
 ## v1.0.0 — 2026-04-24
 
 ---
