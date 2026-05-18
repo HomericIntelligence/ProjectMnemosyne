@@ -1,0 +1,78 @@
+# pr-merge-conflict-resolution — History
+
+## v1.1.0 (2026-05-17)
+
+**Changed by:** Myrmidons session — cascade-rebase of 13 stacked PRs onto main, each hitting identical trivial conflicts created by `end-of-file-fixer` pre-commit hook on `.github/workflows/_required.yml`, `.github/workflows/test.yml`, and a single-line `pixi.toml` drift (removal of `test-standalone`).
+**Verification:** verified-local (applied to 13 rebases; all subsequent CI green)
+
+### What changed
+
+- Added a new "When to Use" trigger for the stacked-PR end-of-file-fixer cascade pattern.
+- Added a new section/subsection: `### Pattern C: Auto-resolve trivial whitespace conflicts in a rebase loop` under the Verified Workflow, with a full sed-based auto-resolver helper script.
+- Added an explicit SAFETY CONDITIONS block (whitespace-only / HEAD proven correct / short blocks) — the pattern is NOT a blanket "always take HEAD".
+- Added two new rows to Failed Attempts: (a) manual resolution at 13×3 scale was tedious/error-prone, (b) `git checkout --ours <file>` conflicts with Safety Net hooks and doesn't continue the rebase loop.
+- Added a Results & Parameters entry for the helper script with its preconditions.
+- Added `verification` and `history` frontmatter fields; bumped version to 1.1.0.
+
+### Why
+
+The v1.0.0 skill documented bulk sed patterns for YAML frontmatter conflicts but did not cover the very common case where a `pre-commit end-of-file-fixer` hook touches the same files across many branches in a stacked-PR cascade, producing 30+ identical trivial conflicts. The new section documents a verified loop that resolves all such conflicts and continues the rebase, with strict safety conditions so the technique does not get misapplied to semantic conflicts.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: pr-merge-conflict-resolution
+description: Systematic workflow for rebasing PRs and resolving merge conflicts. Use
+  when PR branch is behind main with conflicts.
+category: tooling
+date: '2026-03-19'
+version: 1.0.0
+user-invocable: false
+---
+# PR Merge Conflict Resolution
+
+Workflow for rebasing pull request branches and resolving merge conflicts efficiently.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-01-08 |
+| Objective | Rebase ProjectOdyssey PR #3097 with 23 merge conflicts |
+| Outcome | Successfully rebased and force-pushed with all conflicts resolved |
+| Time | ~15 minutes for 23 conflicts |
+
+## When to Use
+
+- PR branch is behind main with merge conflicts
+- Bulk-fixing similar conflicts across many files (e.g., YAML frontmatter)
+- Resolving conflicts between new field additions and existing fields
+- Need to merge changes from two competing feature branches
+
+## Verified Workflow
+
+(see v1.0.0 file in git history — section preserved here would duplicate the file; consult `git show <prev-sha>:skills/pr-merge-conflict-resolution.md`)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+(see v1.0.0 file)
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | PR #3097 - user-invocable field | 23 conflicts, 74 files changed |
+```
+
+---
+
+## v1.0.0 (2026-03-19)
+
+**Initial version.** Documented systematic rebase + bulk-sed conflict resolution for YAML frontmatter, validated on ProjectOdyssey PR #3097 (23 conflicts, 74 files).
