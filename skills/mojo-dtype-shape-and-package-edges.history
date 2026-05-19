@@ -1,0 +1,610 @@
+# mojo-dtype-shape-and-package-edges — History
+
+## v1.0.0 (2026-05-18) — Merge of 49 skills (M3 sub-PR 4/4 — FINAL)
+
+**Changed by:** Skill-merge swarm (Phase D, M3 dtype-shape-package sub-cluster / #1772)
+**Verification:** verified-local
+
+### What changed
+
+Consolidated 49 Mojo dtype/shape/package edge-case skills as the final
+(4th) sub-PR for M3 (Mojo mega-cluster). With this PR, M3 is complete
+and #1772 can be closed.
+
+---
+
+## Superseded from mojo-026-breaking-changes
+
+```yaml
+name: mojo-026-breaking-changes
+description: "Catalog of Mojo 0.26.3 breaking changes, fixes, and authoritative current syntax reference."
+category: tooling
+date: 2026-04-09
+version: "3.0.0"
+verification: verified-local
+tags: [mojo, breaking-changes, migration, 0.26.3, deprecation, capturing, ImplicitlyDestructible, substr, syntax, modular-upstream]
+```
+
+---
+
+## Superseded from mojo-as-contiguous-stride-verification
+
+```yaml
+name: mojo-as-contiguous-stride-verification
+description: "TDD pattern for verifying stride-aware memory remapping in Mojo tensor as_contiguous()."
+category: testing
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-assert-close-float-tests
+
+```yaml
+name: mojo-assert-close-float-tests
+description: "Documents patterns for comprehensive assert_close_float tests in Mojo."
+category: testing
+date: 2026-03-15
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-atomic-spinlock-double-check-lock
+
+```yaml
+name: mojo-atomic-spinlock-double-check-lock
+description: "Implement a correct SpinLock in Mojo using the TTAS double-check lock pattern when Atomic[DType.int64] lacks compare_exchange."
+category: debugging
+date: 2026-04-22
+version: "1.1.0"
+verification: verified-precommit
+tags: [mojo, atomic, spinlock]
+```
+
+---
+
+## Superseded from mojo-batch-norm-gradient-parametrize
+
+```yaml
+name: mojo-batch-norm-gradient-parametrize
+description: "Parametrize Mojo batch norm backward gradient checks across batch sizes [1, 2, 4]."
+category: testing
+date: 2026-03-15
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-binary-file-read-bytes-not-string
+
+```yaml
+name: mojo-binary-file-read-bytes-not-string
+description: "Use f.read_bytes() instead of f.read() when reading binary files in Mojo 0.26.3."
+category: debugging
+date: 2026-05-03
+version: "1.0.0"
+verification: verified-local
+tags: [mojo, binary, file-io, idx, mnist, utf8, read_bytes]
+```
+
+---
+
+## Superseded from mojo-bounds-test-pattern
+
+```yaml
+name: mojo-bounds-test-pattern
+description: "Pattern for adding symmetric boundary condition tests in Mojo by mirroring existing analogous tests."
+category: testing
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-broadcast-edge-case-fix
+
+```yaml
+name: mojo-broadcast-edge-case-fix
+description: "Fix and test broadcast_to edge cases in Mojo tensor libraries."
+category: testing
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-confusion-matrix-integration-tests
+
+```yaml
+name: mojo-confusion-matrix-integration-tests
+description: "Pattern for adding ConfusionMatrix integration tests to a Mojo ValidationLoop test file."
+category: testing
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-dataloader-deferral-resolution
+
+```yaml
+name: mojo-dataloader-deferral-resolution
+description: "Resolve PythonObject interop deferral placeholders in Mojo training loops."
+category: training
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-depthwise-conv-backward-shapes
+
+```yaml
+name: mojo-depthwise-conv-backward-shapes
+description: "Pattern for adding shape-verification tests for depthwise conv backward passes in Mojo."
+category: testing
+date: 2026-03-15
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-dirpath-trailing-slash-normalization
+
+```yaml
+name: mojo-dirpath-trailing-slash-normalization
+description: "Fix double-slash path construction in Mojo when dirpath has a trailing slash."
+category: debugging
+date: 2026-03-15
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-exception-message-assertion
+
+```yaml
+name: mojo-exception-message-assertion
+description: "Pattern for asserting exact error message text in Mojo exception tests using 'except e:'."
+category: testing
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-expose-internal-state-testability
+
+```yaml
+name: mojo-expose-internal-state-testability
+description: "Refactor Mojo structs to expose internally-constructed state as fields for integration testing."
+category: testing
+date: 2026-03-25
+version: 1.0.0
+verification: verified-local
+```
+
+---
+
+## Superseded from mojo-extensor-implementation-patterns
+
+```yaml
+name: mojo-extensor-implementation-patterns
+description: "Use when: implementing or fixing utility methods on ExTensor (dunder methods, type conversions, hash, bool, setitem, getitem), fixing silent dtype failures in bfloat16 I/O paths, adding stride-view methods."
+category: debugging
+date: 2026-03-29
+version: "2.0.0"
+```
+
+---
+
+## Superseded from mojo-format-non-blocking
+
+```yaml
+name: mojo-format-non-blocking
+description: "Use when: mojo-format pre-commit hook crashes on new Mojo syntax and CI is blocked; making a pre-commit hook advisory (non-blocking)."
+category: ci-cd
+date: 2026-03-13
+version: 2.0.0
+```
+
+---
+
+## Superseded from mojo-getitem-slice-multidim
+
+```yaml
+name: mojo-getitem-slice-multidim
+description: "Pattern for extending a rank-restricted Mojo __getitem__(Slice) to N-D tensors with axis-0 semantics."
+category: architecture
+date: 2026-03-15
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-gpu-fundamentals-programming-guide
+
+```yaml
+name: mojo-gpu-fundamentals-programming-guide
+description: "GPU programming patterns in Mojo using MAX GPU API."
+category: optimization
+date: 2026-04-09
+version: "1.0.0"
+tags: [mojo, gpu, max-gpu, kernel, parallel, optimization, modular-upstream, cuda, tiletensor, shared-memory]
+```
+
+---
+
+## Superseded from mojo-hash-testing-patterns
+
+```yaml
+name: mojo-hash-testing-patterns
+description: "Use when: implementing or fixing __hash__ on a Mojo tensor/struct with float fields, adding hash collision tests for shape/dtype/value sensitivity."
+category: testing
+date: 2026-03-29
+version: "2.1.0"
+```
+
+---
+
+## Superseded from mojo-logical-xor-test-coverage
+
+```yaml
+name: mojo-logical-xor-test-coverage
+description: "Add logical_xor test coverage for Mojo elementwise operations."
+category: testing
+date: 2026-03-15
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-moveinit-list-corruption
+
+```yaml
+name: mojo-moveinit-list-corruption
+description: "Diagnose Mojo 0.26.1 bug where ^ transfer of List in __moveinit__ corrupts in-place-mutated values."
+category: debugging
+date: 2026-03-06
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-multidim-setitem-tests
+
+```yaml
+name: mojo-multidim-setitem-tests
+description: "Implement variadic-Int __setitem__ on ExTensor and corresponding multi-dim tests."
+category: testing
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-narrowing-cast-tests
+
+```yaml
+name: mojo-narrowing-cast-tests
+description: "Documents how to add narrowing conversion tests in Mojo following the if/raise pattern."
+category: testing
+date: 2026-03-15
+version: 1.1.0
+```
+
+---
+
+## Superseded from mojo-nd-slice-copy-semantics
+
+```yaml
+name: mojo-nd-slice-copy-semantics
+description: "Fix Mojo multi-dimensional tensor slicing bugs caused by pointer-offset view approach on non-contiguous data."
+category: debugging
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-nd-slice-fast-path
+
+```yaml
+name: mojo-nd-slice-fast-path
+description: "Add a contiguous-memcpy fast-path for N-D tensor slices where only the first axis is non-trivially sliced."
+category: optimization
+date: 2026-03-15
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-noncontiguous-reshape-fix
+
+```yaml
+name: mojo-noncontiguous-reshape-fix
+description: "Fix flat-index bugs in Mojo tensor ops that ignore strides on non-contiguous inputs."
+category: debugging
+date: 2026-03-15
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-note-to-docstring
+
+```yaml
+name: mojo-note-to-docstring
+description: "Convert, condense, and enforce Mojo NOTE comments."
+category: documentation
+date: 2026-03-05
+version: 2.1.0
+```
+
+---
+
+## Superseded from mojo-numerical-gradient-test
+
+```yaml
+name: mojo-numerical-gradient-test
+description: "Add numerical gradient validation for Mojo ML backward passes using central finite differences."
+category: testing
+date: 2026-03-07
+version: "1.1.0"
+absorbed: [mojo-param-gradient-check]
+```
+
+---
+
+## Superseded from mojo-run-epoch-with-batches
+
+```yaml
+name: mojo-run-epoch-with-batches
+description: "Test run_epoch_with_batches() in Mojo training scripts using a real DataLoader and named step_fn."
+category: testing
+date: 2026-03-15
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-setitem-lvalue-semantics
+
+```yaml
+name: mojo-setitem-lvalue-semantics
+description: "Documents Mojo subscript assignment semantics and ExTensor __setitem__ implementation."
+category: debugging
+date: 2026-03-21
+version: "2.0.0"
+tags: [mojo, type-errors, subscript, setitem, getitem, lvalue, ExTensor, glibc, pre-commit, testing]
+```
+
+---
+
+## Superseded from mojo-shallow-copy-tensor-hazard
+
+```yaml
+name: mojo-shallow-copy-tensor-hazard
+description: "Fix Mojo tensor mutation caused by shallow copy sharing _data pointer."
+category: debugging
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-shape-noncontiguous-value-tests
+
+```yaml
+name: mojo-shape-noncontiguous-value-tests
+description: "TDD regression pattern for verifying element-value correctness of shape ops on Mojo tensors."
+category: testing
+date: 2026-03-15
+version: 2.0.0
+```
+
+---
+
+## Superseded from mojo-shared-test-helper-extraction
+
+```yaml
+name: mojo-shared-test-helper-extraction
+description: "Move duplicated Mojo test helper functions from local test files into shared testing libraries."
+category: testing
+date: 2026-03-15
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-signed-int-bitwise-not
+
+```yaml
+name: mojo-signed-int-bitwise-not
+description: "Pattern for adding bitwise NOT (~) tests for Mojo signed integer types using two's complement semantics."
+category: testing
+date: 2026-03-15
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-simd-optimize
+
+```yaml
+name: mojo-simd-optimize
+description: "Apply SIMD optimizations to Mojo code for parallel computation."
+category: optimization
+date: 2026-03-19
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-slice-negative-step
+
+```yaml
+name: mojo-slice-negative-step
+description: "Fix negative-step slice bugs in Mojo __getitem__(Slice)."
+category: debugging
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-stride-manipulation-for-noncontiguous-tests
+
+```yaml
+name: mojo-stride-manipulation-for-noncontiguous-tests
+description: "Technique for testing non-contiguous tensor behavior in Mojo by directly manipulating _strides fields."
+category: testing
+date: 2026-03-05
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-tensor-multidim-setitem
+
+```yaml
+name: mojo-tensor-multidim-setitem
+description: "Add multi-dimensional mutable indexing to Mojo ExTensor via List[Int] __setitem__ overload."
+category: architecture
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-transpose-view-contiguity
+
+```yaml
+name: mojo-transpose-view-contiguity
+description: "Add stride-based transpose_view() to Mojo ExTensor for testing contiguity contracts."
+category: testing
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-tuple-destructor-clone-pattern
+
+```yaml
+name: mojo-tuple-destructor-clone-pattern
+description: "Mojo 0.26.x Tuple does not call __del__ on non-trivial element types; Dataset.__getitem__ must return .clone() not .slice() to prevent ASAN memory leaks."
+category: debugging
+date: 2026-04-09
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-tuple-return-types
+
+```yaml
+name: mojo-tuple-return-types
+description: "Correct Mojo v0.26.1 syntax for multi-value returns from fn methods."
+category: debugging
+date: 2026-03-05
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-unsafepointer-bitcast-fix
+
+```yaml
+name: mojo-unsafepointer-bitcast-fix
+description: "Fix Mojo compile error where UnsafePointer.address_of() is used but the constructor form UnsafePointer[T](to=val) is required."
+category: debugging
+date: 2026-04-09
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-unsigned-wrapping-tests
+
+```yaml
+name: mojo-unsigned-wrapping-tests
+description: "Document and verify wrapping arithmetic semantics for Mojo unsigned integer types."
+category: testing
+date: 2026-03-15
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-upstream-bug-filing-reproducibility-standard
+
+```yaml
+name: mojo-upstream-bug-filing-reproducibility-standard
+description: "Use before filing any Mojo bug or feature request upstream against modular/modular. Enforces reproducibility standard."
+category: debugging
+date: 2026-04-08
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-val-accuracy-behavioral-test
+
+```yaml
+name: mojo-val-accuracy-behavioral-test
+description: "Add a behavioral test asserting metrics.val_accuracy is updated after ValidationLoop.run()."
+category: testing
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-validation-loop-accuracy-tracking
+
+```yaml
+name: mojo-validation-loop-accuracy-tracking
+description: "Fix a Mojo ValidationLoop that hardcodes accuracy=0.0 in metrics updates by accumulating per-batch correct counts."
+category: debugging
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-value-verification-tests
+
+```yaml
+name: mojo-value-verification-tests
+description: "Add value-correctness assertions to Mojo shape operation tests that only check numel/dim."
+category: testing
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from mojo-view-semantics-test
+
+```yaml
+name: mojo-view-semantics-test
+description: "Add Mojo tests asserting view/shared-memory semantics for tensor slicing."
+category: testing
+date: 2026-03-07
+version: 1.0.0
+```
+
+---
+
+## Superseded from noncontiguous-tensor-guard
+
+```yaml
+name: noncontiguous-tensor-guard
+description: "Add as_contiguous() guards to Mojo flat-buffer kernels so non-contiguous tensors don't produce wrong results silently."
+category: debugging
+date: 2026-03-15
+version: 1.0.0
+```
