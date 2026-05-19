@@ -1,0 +1,1464 @@
+# github-bulk-issue-and-pr-operations — History
+
+## v1.0.0 (2026-05-18) — Merge of 33 skills
+
+**Changed by:** Skill-merge swarm (Phase B Wave 1, M6 / #1782)
+**Verification:** verified-local
+
+### What changed
+Consolidated 33 bulk-gh-operation skills.
+
+## Superseded from `batch-low-difficulty-issue-impl`
+
+```yaml
+name: batch-low-difficulty-issue-impl
+description: 'Classify, deduplicate, and batch-implement GitHub issues in a large swarm
+  session (24+ waves, 200+ issues). Use when: (1) a large backlog of open issues needs
+  triage, (2) many issues are pure doc/text or infra-only changes, (3) duplicate issues
+  need closing before implementation. Includes worktree-safe grep pattern for ALREADY-DONE
+  verification, correct pre-filter order, ci.yml conflict avoidance, EASY queue exhaustion
+  detection, Docker inline comment parse error pattern, parallel-agent add/add rebase
+  conflict resolution when multiple agents create the same package independently,
+  pre-launch repo-capability checks (autoMergeAllowed, lockfile, pre-commit config),
+  hot-file serialization for shared scripts (apply.sh/reconcile.sh), pre-swarm
+  existing-PR audit, close-before-delegate pattern, and C++20/Conan/pixi-specific
+  guards (libssl-dev, TSan+concurrentqueue blocker, enable_shared_from_this diamond
+  inheritance, CMakeLists.txt single-agent anchor, asyncio_mode auto decorator check).'
+category: tooling
+date: 2026-05-12
+version: "1.12.0"
+user-invocable: false
+verification: verified-local
+history: batch-low-difficulty-issue-impl.history
+```
+
+# Batch Low-Difficulty Issue Implementation
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-25 |
+| **Objective** | Classify, deduplicate, and batch-implement low-difficulty GitHub issues using worktree-isolated agents |
+| **Outcome** | Verified: worktree isolation works correctly; correct pre-filter order; ALREADY-DONE grep must exclude worktrees; pre-launch repo-capability checks required; C++20/Conan/pixi-specific guards required for C++ projects |
+| **Verification** | verified-local |
+| **History** | [changelog](./batch-low-difficulty-issue-impl.history) |
+
+### Session (2026-05-12) — Ecosystem-Wide Easy-Sweep (5 Repos)
+
+| Date | Objective | Outcome |
+| ------ | ----------- | --------- |
+| 2026-05-12 → 2026-05-13 | Batch-implement EASY issues across 5 HomericIntelligence repos (ProjectArgus, ProjectAgamemnon, Myrmidons, ProjectHermes, ProjectCharybdis) using 5 parallel Phase-0 classifiers + 3 waves × ~20 agents | 717 issues classified, 51 PRs merged, 78 issues retired across 5 repos in <24h. Surfaced: urllib3 CVE from Ubuntu runner-image baseline (not source-tree) blocked 9 Myrmidons PRs until pip-audit allowlist landed; per-repo CHANGELOG-deleted variance (Agamemnon retained, others deleted); classifier ALREADY_DONE under-detection by ~15% relative to wave-agent inline stale-checks; coverage delta regression on Hermes #626 new conditional branches; PRECOMMIT_STALL on cold worktrees; squash-only enforcement confirmed across all 5 repos. |
+
+### Session (2026-04-25) — ProjectKeystone 180-Issue C++20 Swarm
+
+| Date | Objective | Outcome |
+| ------ | ----------- | --------- |
+| 2026-04-25 | Implement 180 open ProjectKeystone issues (C++20 transport library) using 7 EASY waves + 9 MEDIUM waves | 7 new C++20/Conan/pixi-specific failure modes discovered; libssl-dev missing in Dockerfile blocked builds; TSan+concurrentqueue classified as hard blocker; CMakeLists.txt double-agent conflict despite grouping rules; enable_shared_from_this diamond inheritance trap |
+
+### Session (2026-04-24) — Myrmidons shellcheck-warnings Swarm
+
+---
+
+## Superseded from `bulk-issue-terminology-migration`
+
+```yaml
+name: bulk-issue-terminology-migration
+description: "Update all GitHub issues across a multi-repo org to remove deprecated terminology references, bulk-create issues from code markers (TODO/FIXME/DEPRECATED/NOTE), and deduplicate noisy issue trackers. Use when: (1) an ADR or architectural decision deprecates a component name that appears in many open issues, (2) doing a mass rename (e.g., ai-maestro → Agamemnon) across 5+ repos with 50+ issues, (3) need to purge all traces of deprecated terminology from issue tracker, (4) systematically filing GitHub issues from code markers (357+ markers in a codebase), (5) issue count has grown 3x+ with duplicate clusters and sprint planning is blocked."
+category: tooling
+date: 2026-04-05
+version: "2.0.0"
+user-invocable: false
+verification: verified-local
+tags: [github, issues, bulk-update, terminology, migration, myrmidon-swarm, dedup, bulk-filing, code-markers]
+```
+
+# Skill: Bulk Issue Terminology Migration
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-05 |
+| **Objective** | Purge all deprecated "ai-maestro" references from ~80 open issues across 10 HomericIntelligence repos |
+| **Outcome** | Success — 5 parallel Sonnet agents updated all issues with context-sensitive mapping. |
+| **Verification** | verified-local (agents ran and reported success; no CI for issue edits) |
+| **Absorbed** | bulk-issue-filing (v1.0.0), bulk-issue-dedup (v1.0.0) on 2026-05-03 |
+
+## When to Use
+
+- An ADR or architectural decision deprecates a component and many open issues still reference the old name
+- Need to do a mass terminology rename (e.g., `ai-maestro` → `Agamemnon`) across 5+ repos
+- Want to purge all traces of deprecated terminology from the issue tracker
+- 50+ issues need updating — manual editing is impractical
+- You have many TODO/FIXME/DEPRECATED/NOTE markers to track systematically
+- You want to systematically address technical debt with GitHub visibility
+- You need to create a master tracking issue with child issues
+- Issue count has grown 3x+ from organic development (agents repeatedly creating similar issues)
+- Sprint planning is blocked by noisy issue list
+- ADR or standard has generated 10+ near-identical follow-up issues
+- Before classifying issues by complexity, want to remove obvious duplicates first
+
+---
+
+## Superseded from `issue-triage-workflow`
+
+```yaml
+name: issue-triage-workflow
+description: "Use when: (1) large backlog of GitHub issues (10+) needs triage and resolution, (2) many independent low-complexity fixes can be parallelized across worktree-isolated agents, (3) issues may be stale or already implemented and need verification before coding, (4) bulk issue closure with wave-based parallel execution is needed"
+category: tooling
+date: 2026-03-29
+version: "2.0.0"
+user-invocable: false
+verification: unverified
+tags: []
+```
+
+
+# Issue Triage Workflow
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-29 |
+| Objective | Consolidated workflow for bulk GitHub issue triage: verify before implementing, classify by complexity, and execute in parallel waves using worktree-isolated agents |
+| Outcome | Merged from 3 skills covering bulk triage+fix, verification before implementation, and wave-based parallel execution |
+| Verification | unverified |
+
+## When to Use
+
+- 10+ open GitHub issues that may be simple one-file fixes
+- Issues were auto-generated as follow-ups and many may be duplicates or already resolved
+- Issue references prior work or sub-issues that may have already been implemented
+- Issue says "implement **or document status**" — verify current state before coding
+- Large backlog (20+ issues) needs classification and batch resolution to minimize wall-clock time
+- Each fix is independent (no cross-issue dependencies)
+
+## Verified Workflow
+
+### Quick Reference
+
+
+---
+
+## Superseded from `github-bulk-issue-filing-rate-limit-recovery`
+
+```yaml
+name: github-bulk-issue-filing-rate-limit-recovery
+description: "Patterns for filing 40+ GitHub issues reliably across multiple repos: handling secondary rate limits (403 BCE2), org monthly API usage limits, duplicate detection/cleanup, and pagination truncation in verification. Use when: (1) filing 200+ issues across 10+ repos in a single session, (2) hitting GitHub 403 errors mid-batch, (3) verifying issue counts after multi-wave filing with retry runs."
+category: tooling
+date: 2026-04-28
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [github, issues, rate-limit, bulk-filing, epic, deduplication, pagination]
+```
+
+
+# GitHub Bulk Issue Filing: Rate Limit Recovery
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-28 |
+| **Objective** | File 680 GitHub issues across 15 repos (one Epic + per-finding child issues per repo) reliably without duplicates |
+| **Outcome** | Successful — 15 Epics + 680 child issues filed; required one org-limit recovery cycle and a duplicate cleanup pass |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Filing 40+ issues per repo, or 200+ issues across a session
+- Using multiple retry agents that may overlap with previous filing runs
+- Verifying issue counts after a multi-wave, multi-retry session
+- Recovering from GitHub secondary rate limits (403 BCE2) or org monthly usage limits
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Test org limit before dispatching batch
+
+---
+
+## Superseded from `bulk-fix-orphan-quick-reference`
+
+```yaml
+name: bulk-fix-orphan-quick-reference
+description: 'Bulk-fix SKILL.md files with orphaned top-level ## Quick Reference sections
+  alongside ## Verified Workflow. Use when: validate_plugins.py reports Quick Reference
+  warnings across many files.'
+category: tooling
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+# Bulk-Fix Orphaned Quick Reference Sections
+
+Demote top-level `## Quick Reference` headings to `### Quick Reference` subsections
+inside `## Verified Workflow` across an entire skills directory in one pass.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Name | bulk-fix-orphan-quick-reference |
+| Category | tooling |
+| Trigger | validate_plugins.py warns about orphaned Quick Reference sections |
+| Script | `scripts/fix_quick_reference_batch.py` |
+| Scope | Any directory containing SKILL.md files (recursive) |
+
+## When to Use
+
+- `validate_plugins.py skills/ plugins/` emits warnings about `## Quick Reference` being a top-level section
+- A batch migration (e.g., `migrate_odyssey_skills.py`) produced files that kept `## Quick Reference` at h2 level
+- Post-migration cleanup pass needed before merging a skill import PR
+- `fix_remaining_warnings.py` `main()` hardcoded list does not cover all affected files
+
+## Verified Workflow
+
+### Quick Reference
+
+---
+
+## Superseded from `tooling-bulk-resolved-issue-closure`
+
+```yaml
+name: tooling-bulk-resolved-issue-closure
+description: "Efficiently close multiple GitHub issues that are already resolved. Use when: (1) auditing open issues reveals items already addressed, (2) batch-closing stale issues after a cleanup sprint, (3) verifying file existence before closing file-related issues."
+category: tooling
+date: 2026-03-24
+version: "1.0.0"
+user-invocable: false
+tags: [github, issues, cleanup, batch-operations, gh-cli]
+```
+
+
+# Bulk Closure of Already-Resolved GitHub Issues
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-24 |
+| **Objective** | Close multiple GitHub issues that were already resolved by prior work (file removals, config additions) without requiring new code changes. |
+| **Outcome** | Successfully closed 3 issues (#1524, #1531, #1533) with explanatory comments and rate-limited API calls. |
+
+## When to Use
+
+- Open issue backlog contains items already addressed by merged PRs or prior cleanup
+- Audit reveals files requested by issues already exist in the repository (e.g., CODEOWNERS, dependabot.yml)
+- Batch-closing issues after verifying their deliverables are present in the codebase
+- Issue references a file that was already removed (cleanup issues)
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Pattern: comment + close with rate limiting between API calls
+gh issue comment <NUMBER> --repo <OWNER>/<REPO> --body "<explanation>"
+
+---
+
+## Superseded from `already-done-issue-detection`
+
+```yaml
+name: already-done-issue-detection
+description: "Detect GitHub issues that are already fixed (or partially fixed) before starting implementation. Use when: (1) starting a batch triage of 10+ open issues, (2) assigned an issue in a repo with active prior automation, (3) audit issues filed weeks/months ago, (4) issue title contains 'missing', 'add', 'fix' for a file or config value, (5) BEFORE dispatching multi-agent implementation on any open issue — check if recent merged PRs have invalidated the plan (stale-plan / scope-drift detection)."
+category: tooling
+date: 2026-05-12
+version: 2.1.0
+user-invocable: false
+verification: verified-ci
+history: already-done-issue-detection.history
+tags: [triage, already-done, issue-classification, batch, audit, stale-plan, preflight, scope-drift, multi-agent-dispatch, 2-pass-classification, classifier-under-detection]
+```
+
+
+# Already-Done Issue Detection
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-07 |
+| **Objective** | Detect GitHub issues that are already fixed (fully or partially) before spending time implementing them — covers two related patterns: (A) full ALREADY-DONE issues in batch triage, and (B) stale-plan scope-drift where a multi-agent dispatch is about to re-implement work that merged during planning |
+| **Outcome** | Verified: 11/23 open issues (48%) were ALREADY-DONE in ProjectArgus; 6/57 (10.5%) in ProjectTelemachy. ProjectScylla (issue #1887): preflight caught 4 merged PRs (#1921, #1922, #1928, #1931) that obsoleted ~70% of an approved plan — corrected scope shipped as PRs #1932 and #1933 (both merged green). |
+| **Verification** | verified-ci |
+| **History** | [changelog](./already-done-issue-detection.history) |
+
+## When to Use
+
+- Starting a batch triage of 10+ open issues on any HomericIntelligence repo
+- Assigned an issue about a "missing" file (LICENSE, SECURITY.md, CONTRIBUTING.md, pixi.lock, .dockerignore)
+- Issue was filed by an automated audit (repo-analyze, repo-analyze-strict) — these go stale within weeks
+- Issue title contains: "missing", "add", "fix", "pin", "rename", "update", "change X to Y"
+- A prior automation pass (`auto-impl` branches, batch PRs) may have already addressed the issue
+- Issue title is a "parent framing" of other open issues (e.g., "No tests for X or Y") — likely a duplicate tracker covering multiple sub-issues; close as meta
+- Issue title references a branch trigger (e.g., "Fix CI targeting master") — always verify actual default branch before implementing
+- Issue is a meta/grade tracker (`[Audit] Overall Grade: D+`) — never directly implementable, always close as meta
+- **About to dispatch multi-agent implementation** on any open issue — even if the plan was approved 30 seconds ago, run a stale-plan preflight first (see "Stale-Plan Scope Drift" section below). Commits land during planning.
+- **Plan agents reference files that may have just been created** (e.g., `src/<pkg>/observability/tracing.py`, `JsonFormatter`, scaffolds) — verify those files don't already exist on `origin/main` before re-creating them.
+
+---
+
+## Superseded from `gh-batch-merge-by-labels`
+
+```yaml
+name: gh-batch-merge-by-labels
+description: Batch merge multiple PRs by label matching
+category: tooling
+date: 2025-12-30
+version: 1.0.0
+```
+
+# Batch Merge PRs by Label
+
+Merge multiple PRs at once based on label matching.
+
+## Overview
+
+| Date | Objective | Outcome |
+| ------ | ----------- | --------- |
+| 2025-12-30 | Automate merging of multiple ready PRs | Reduced manual merge overhead |
+
+## When to Use
+
+- (1) Multiple PRs are ready for merge with same status label
+- (2) End-of-sprint or release batch merges needed
+- (3) Automating merge of dependent chain of PRs
+- (4) Reducing manual merge overhead across team
+
+## Verified Workflow
+
+1. **Query PRs**: Find all PRs with target label
+2. **Verify each**: Check CI status and approvals for each PR
+3. **Check dependencies**: Ensure no conflicts between PRs to merge
+4. **Sort by order**: Merge in dependency order if applicable
+5. **Execute merges**: Merge each PR in sequence
+6. **Verify success**: Confirm all PRs merged successfully
+
+---
+
+## Superseded from `issue-cleanup-already-resolved-detection`
+
+```yaml
+name: issue-cleanup-already-resolved-detection
+description: "Use when: (1) assigned a cleanup, deletion, or quality-audit issue and the target file/artifact no longer exists or the problem is already resolved, (2) a branch is at the same commit as main with no commits ahead (git log main..HEAD returns nothing), (3) a prior merged PR is referenced in the issue description as having already made the fix, (4) an auto-impl worktree branch already has commits ahead of main referencing the issue — prior session may have completed the work."
+category: tooling
+date: 2026-03-28
+version: "1.1.0"
+user-invocable: false
+verification: unverified
+tags: [cleanup, deletion, quality-audit, already-done, file-existence, git-log, pr-check, preflight, duplicate-work, already-implemented]
+absorbed: [issue-already-implemented-preflight-check]
+```
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Trigger** | Cleanup/deletion/quality-audit issue where the target artifact may already be gone |
+| **Goal** | Avoid re-doing work already completed via a prior merge or commit |
+| **Outcome** | Either confirm the fix is in place (report and stop), or find a minimal gap and close the issue with a real commit |
+| **Time Saved** | Full implementation session if already resolved; prevents no-op duplicate commits |
+
+## When to Use
+
+- Issue asks to delete a file, remove deprecated code, remove a NOTE/TODO marker, or fix a code quality problem
+- Working in an auto-impl worktree (`<issue-number>-auto-impl`)
+- The target file is not found in the working tree (file deletion tasks)
+- The stale marker referenced in the issue body is absent from the current file
+- `git log main..HEAD` returns no output (branch is at same point as main)
+- The issue description notes "recurring" or "prior fix attempted" or references a prior PR
+- A quality audit issue references a specific prior commit or PR that "fixed" the problem
+
+**Key difference from generic preflight check**: This skill handles the case where the branch may have NO commits ahead of main — the fix was already merged to main. It also covers the case where a minimal gap must be found to create a real commit to formally close the issue.
+
+## Verified Workflow
+
+### Quick Reference
+
+
+---
+
+## Superseded from `gh-cli-graphql-rate-limit-detection`
+
+```yaml
+name: gh-cli-graphql-rate-limit-detection
+description: "Detect GitHub `gh` CLI rate-limit errors from GraphQL endpoints, whose message format (`GraphQL: API rate limit already exceeded for user ID NNNN`) differs from the REST CLI form (`Limit reached … resets 2:30pm (America/Los_Angeles)`). REST-only regexes silently miss GraphQL errors and burn retries 1s apart against an hour-long window. Use when: (1) automation calls `gh api graphql`, `gh issue list --json …`, `gh issue view`, `gh pr list --json …`, or `gh search` at scale, (2) you see `GraphQL: API rate limit already exceeded for user ID NNNN` in retry storms, (3) your retry loop only knows the REST CLI message format, (4) `gh` exits 0 but stdout JSON contains `errors[].type == \"RATE_LIMITED\"`."
+category: tooling
+date: 2026-05-15
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - gh-cli
+  - github-api
+  - graphql
+  - rate-limit
+  - secondary-limit
+  - retry-storm
+  - regex
+  - error-detection
+  - python
+  - subprocess
+  - automation
+  - http-200-errors
+```
+
+
+# gh CLI GraphQL Rate-Limit Detection
+
+## Overview
+
+| Field | Value |
+| ----- | ----- |
+| **Date** | 2026-05-15 |
+| **Objective** | Stop ProjectHephaestus automation loop from burning retry budget on `gh issue list --json …` calls that hit GraphQL rate limits but whose error format the existing REST-only detector ignored |
+| **Outcome** | Added `GRAPHQL_RATE_LIMIT_RE`, `gh_rate_limit_reset_epoch()` (cached `gh api rate_limit` probe), and `_check_graphql_errors` / `_extract_reset_epoch` / `_handle_rate_limit_attempt` helpers; dedicated `GitHubRateLimitError` for clean batch-driver exit; pre-flight budget probe in shell wrapper |
+| **Verification** | verified-ci — ProjectHephaestus PR #412, 2255 unit tests pass, coverage 82.73%, ruff + mypy clean |
+| **Repo / PR** | `HomericIntelligence/ProjectHephaestus` PR #412 |
+
+## When to Use
+
+- Building automation that calls `gh api graphql`, `gh issue list --json …`, `gh issue view`, `gh pr list --json …`, or `gh search` at scale.
+- You see `GraphQL: API rate limit already exceeded for user ID NNNN` in retry storms (most commonly on stderr from `gh issue list`/`gh issue view`).
+- Your retry logic looks like `for attempt in range(max_retries): … detect_rate_limit(stderr)` and only knows the REST CLI message format.
+- `gh` exits 0 but stdout JSON contains `{"errors": [{"type": "RATE_LIMITED", "message": "..."}]}` — exit-code checks miss this entirely.
+- A shell driver fans out N parallel `gh` processes that each hold their own per-thread throttle — in-process throttles do not coordinate across processes.
+
+**Key indicator**: retry loop logs `transient error, retrying in 1s…` repeatedly for an hour, with stderr containing `GraphQL: API rate limit already exceeded for user ID NNNN` that the detector never matches.
+
+## Verified Workflow
+
+
+---
+
+## Superseded from `automation-resilience-label-discovery-dirty`
+
+```yaml
+name: automation-resilience-label-discovery-dirty
+description: "Three resilience patterns for hephaestus.automation implement/plan pipelines: (1) auto-create missing GitHub labels and retry on label-not-found error, (2) auto-discover open issues when no --issues/--epic CLI arg is given via gh_list_open_issues(), (3) WorktreeDirtyError preserve-and-report pattern that blocks forced removal of dirty worktrees and prints a rerun command. Use when: (1) gh issue create fails with 'could not add label: X not found', (2) implementer/planner needs to process all open issues by default, (3) cleanup_all() should not silently discard in-progress agent worktrees."
+category: tooling
+date: 2026-04-22
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - automation
+  - implement-issues
+  - plan-issues
+  - github-labels
+  - gh_list_open_issues
+  - WorktreeDirtyError
+  - worktree
+  - dirty-worktree
+  - resilience
+  - hephaestus
+```
+
+
+# Automation Resilience: Labels, Discovery, and Dirty Worktrees
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-22 |
+| **Objective** | Fix five failure modes in implement_issues.py / plan_issues.py pipeline |
+| **Outcome** | Success — 1403 tests pass, PR #301 merged |
+| **Verification** | verified-ci |
+| **Project** | ProjectHephaestus, PR #301 (branch: port-circuit-breaker-success-threshold) |
+
+## When to Use
+
+- `gh issue create` fails with `could not add label: '<name>' not found` in stderr
+- You want to run the implementer/planner against ALL open issues without specifying `--issues` explicitly
+- `cleanup_all()` in `worktree_manager.py` is forcibly removing dirty worktrees that contain in-progress agent work
+- You need the cleanup summary to tell the user which issues still need rerunning and how to force-discard if desired
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+
+---
+
+## Superseded from `tooling-gh-pr-auto-merge-rebase-squash-fallback`
+
+```yaml
+name: tooling-gh-pr-auto-merge-rebase-squash-fallback
+description: "EVERY HomericIntelligence repo (verified org-wide as of 2026-05-11) rejects `gh pr merge --auto --rebase` with the GraphQL error 'rebase merging is not allowed on this repository (enablePullRequestAutoMerge)'. Default to `--auto --squash` for any HomericIntelligence repo. Use when: (1) opening PRs on any HomericIntelligence repo and arming auto-merge, (2) writing skills/agents/hooks that call `gh pr merge --auto`, (3) you observe a repo's UI lets you manually rebase-merge but auto-merge with rebase fails, (4) you want a single command pattern that works across all HomericIntelligence repos without per-repo branching, (5) updating stale skills (e.g. multi-repo-pr-orchestration-swarm-pattern v2.2.0) that still scope rebase rejection to specific repos like Myrmidons."
+category: tooling
+date: 2026-05-17
+version: "2.1.0"
+user-invocable: false
+verification: verified-ci
+history: tooling-gh-pr-auto-merge-rebase-squash-fallback.history
+tags:
+  - gh-cli
+  - auto-merge
+  - rebase
+  - squash
+  - github
+  - pr-automation
+  - fallback-pattern
+  - homericintelligence-org-policy
+```
+
+
+# Skill: gh pr merge --auto on HomericIntelligence — Default to --squash
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-11 |
+| **Objective** | Make `gh pr merge --auto` reliably arm auto-merge on every HomericIntelligence repo. As of 2026-05-11 the entire org has rebase auto-merge disabled at the repo settings level — there is no longer a "some repos" caveat. |
+| **Outcome** | Two recommended patterns: (a) for HomericIntelligence callers, use `--auto --squash` unconditionally — saves a round-trip per PR; (b) for portable skills that may run against non-HomericIntelligence repos, use the `--rebase`-first-then-fall-back-on-specific-error pattern from v1.0.0. The 2026-05-11 ecosystem-wide easy-issue sweep produced 11 PRs across 11 repos — all 11 rejected `--rebase`, all 11 accepted `--squash`. |
+| **Verification** | verified-ci — 11 PRs across 11 distinct HomericIntelligence repos in a single sweep, unanimous behavior. Each PR's CI completed and the auto-merge armed cleanly with `--squash`. |
+| **History** | [changelog](./tooling-gh-pr-auto-merge-rebase-squash-fallback.history) |
+
+## When to Use
+
+- You are about to run `gh pr merge --auto` against any HomericIntelligence repo (org-wide finding — no per-repo check needed)
+- You ran `gh pr merge <PR> --auto --rebase` and got:
+  > `GraphQL: Merge method rebase merging is not allowed on this repository (enablePullRequestAutoMerge)`
+- You are writing a skill, hook, or agent that calls `gh pr merge --auto` across multiple HomericIntelligence repos
+- A repo's web UI lets you manually rebase-merge a PR, yet `gh pr merge --auto --rebase` is still rejected — `enablePullRequestAutoMerge` is a separate setting from the merge methods exposed to the UI
+- You are auditing a skill that asserts rebase auto-merge "works on most repos except X" (e.g. `multi-repo-pr-orchestration-swarm-pattern` v2.2.0 currently lists Myrmidons / AchaeanFleet) — that scoping is stale; this skill supersedes it
+- A project's `CLAUDE.md` prescribes `gh pr merge --auto --rebase` as the standard workflow (e.g. HomericIntelligence/ProjectOdyssey as of 2026-05-17) — project-level docs are out of sync with org-level branch protection; trust this skill over the project doc and use `--squash`
+- You want the fallback to be precise — only fall through on the *specific* method-not-allowed error, not on auth/network errors that should bubble up
+
+## Verified Workflow
+
+---
+
+## Superseded from `gh-cli-github-token-shadow-unset-required`
+
+```yaml
+name: gh-cli-github-token-shadow-unset-required
+description: "Sub-agent gh CLI and git push calls fail with 'Resource not accessible by personal access token' or '403 denied' because ambient GITHUB_TOKEN/GH_TOKEN env vars shadow the keyring gho_* token from ~/.config/gh/hosts.yml. Fix: chain `unset GITHUB_TOKEN GH_TOKEN &&` BEFORE every gh/git push call in the SAME shell invocation (each Bash tool call is a fresh shell — the unset does not persist). Run `gh auth setup-git` so git push (not just gh) also uses the keyring token. Use when: (1) gh issue close --comment fails with 'Resource not accessible by personal access token', (2) gh pr create / gh pr merge returns 403 in a sub-agent but works interactively, (3) git push fails with 'denied to <user>' inside an agent, (4) a fine-grained PAT lacks the scopes the keyring OAuth token has, (5) authoring sub-agent prompts that perform any GitHub write operation."
+category: tooling
+date: 2026-05-11
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - gh-cli
+  - github-token
+  - gh-token
+  - keyring
+  - hosts-yml
+  - oauth
+  - pat
+  - personal-access-token
+  - sub-agent
+  - bash-tool
+  - shell-isolation
+  - claude-code
+  - cursor
+  - git-push
+  - auth-setup-git
+```
+
+
+# gh CLI: GITHUB_TOKEN Shadows Keyring Token in Sub-Agents — Unset Must Be Chained Per Call
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-11 |
+| **Objective** | Stop sub-agent `gh` and `git push` failures caused by ambient `GITHUB_TOKEN`/`GH_TOKEN` shadowing the keyring `gho_*` OAuth token. |
+| **Outcome** | Operational. Chaining `unset GITHUB_TOKEN GH_TOKEN &&` before every gh/git push call eliminated 100% of "Resource not accessible by personal access token" failures across 17 agents in the 2026-05-11 sweep. |
+| **Verification** | verified-ci — observed across 12 implementation agents and 5 fix-wave agents in the 2026-05-11 ecosystem-wide easy-issue sweep across HomericIntelligence repos (12 repos, 11 PRs, 213 issues moved). |
+
+## When to Use
+
+- A sub-agent's `gh issue close --comment` returns `Resource not accessible by personal access token` even though the same command works interactively in the user's shell.
+- `gh pr create`, `gh pr merge`, or `gh pr comment` returns HTTP 403 inside an agent.
+- `git push` fails with `remote: Permission to <org>/<repo>.git denied to <user>` or `403` inside an agent, but works for the same user from a manual terminal.
+- The agent has a fine-grained PAT exported as `GITHUB_TOKEN` whose scopes do not match the broader OAuth scopes stored by `gh auth login` in `~/.config/gh/hosts.yml`.
+- You are authoring a sub-agent prompt that will perform any GitHub write operation (issues, PRs, releases, dispatch).
+- A previous "one-time `unset GITHUB_TOKEN`" instruction at the top of the agent prompt did not stop the failures from happening on later tool calls.
+
+## Verified Workflow
+
+### Quick Reference
+
+
+---
+
+## Superseded from `gh-implement-issue`
+
+```yaml
+name: gh-implement-issue
+description: End-to-end implementation workflow for a GitHub issue from planning through
+  PR creation. Use when starting work on an issue from scratch.
+category: tooling
+date: '2026-03-19'
+version: 1.0.0
+```
+
+# Implement GitHub Issue
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Complete workflow for implementing a GitHub issue from start to finish. - Starting work on a new issue |
+| Outcome | Operational |
+
+Complete workflow for implementing a GitHub issue from start to finish.
+
+## When to Use
+
+- Starting work on a new issue
+- Need structured workflow from branch to PR
+- Want to follow best practices end-to-end
+- Working on assigned GitHub issue
+
+### Quick Reference
+
+> **Note:** `<skill-dir>` is the absolute path to this skill's directory.
+> Resolve it with: `SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"`
+> or use the skill's installed path directly.
+
+
+---
+
+## Superseded from `gh-read-issue-context`
+
+```yaml
+name: gh-read-issue-context
+description: Read context from GitHub issue including body and comments
+category: tooling
+date: 2025-12-30
+version: 1.0.0
+```
+
+# Read Issue Context
+
+Retrieve all context from a GitHub issue before starting work.
+
+## Overview
+
+| Date | Objective | Outcome |
+| ------ | ----------- | --------- |
+| 2025-12-30 | Gather full context before implementation | Informed decisions based on prior work |
+
+## When to Use
+
+- (1) Before starting implementation work
+- (2) When prior context is needed from earlier work
+- (3) Resuming work after a break and need to understand decisions
+- (4) Checking if issue has been partially addressed
+
+## Verified Workflow
+
+1. **Get issue details**: `gh issue view <number>`
+2. **Read all comments**: `gh issue view <number> --comments`
+3. **Check linked PRs**: `gh pr list --search "issue:<number>"`
+4. **Note key context**: Design decisions, blockers, acceptance criteria
+
+## Results
+
+---
+
+## Superseded from `gh-get-review-comments`
+
+```yaml
+name: gh-get-review-comments
+description: Retrieve all review comments from a pull request using the GitHub API.
+  Use when you need to see what feedback has been provided on a PR.
+category: tooling
+date: '2026-03-19'
+version: 1.0.0
+user-invocable: false
+agent: test-engineer
+```
+
+# Get PR Review Comments
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Retrieve and analyze all review comments from a pull request. - Checking for unresolved review feedback |
+| Outcome | Operational |
+
+Retrieve and analyze all review comments from a pull request.
+
+## When to Use
+
+- Checking for unresolved review feedback
+- Analyzing reviewer feedback before fixing
+- Verifying all comments have been addressed
+- Getting comment IDs for replies
+
+### Quick Reference
+
+```bash
+# Get all review comments
+gh api repos/OWNER/REPO/pulls/PR/comments
+
+
+---
+
+## Superseded from `gh-reply-review-comment`
+
+```yaml
+name: gh-reply-review-comment
+description: Reply to PR review comments using the correct GitHub API endpoint. Use
+  when responding to inline code review feedback (not gh pr comment).
+category: tooling
+date: '2026-03-19'
+version: 1.0.0
+user-invocable: false
+agent: test-engineer
+```
+
+# Reply to Review Comments
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Reply to PR review comments using the correct GitHub API. - Responding to inline code review feedback |
+| Outcome | Operational |
+
+Reply to PR review comments using the correct GitHub API.
+
+## When to Use
+
+- Responding to inline code review feedback
+- Addressing specific review comments
+- Confirming fixes have been implemented
+- Updating reviewers on progress
+
+## Critical: Two Types of Comments
+
+**DO NOT confuse these**:
+
+1. **PR-level comments** (general timeline): `gh pr comment`
+2. **Review comment replies** (inline code): GitHub API (see below)
+
+---
+
+## Superseded from `gh-cli-proactive-per-thread-throttle`
+
+```yaml
+name: gh-cli-proactive-per-thread-throttle
+description: "Add proactive per-thread token-bucket throttling at the single `gh` CLI invocation chokepoint to prevent GitHub secondary rate limits before they trigger. Use when: (1) a Python codebase wraps `gh` and bursts requests during fan-out (e.g. one `gh issue view` per discovered issue), (2) reactive rate-limit handling exists but secondary limits still fire, (3) a `ThreadPoolExecutor` fans out work and per-worker pacing is needed without global coordination, (4) deciding the architectural layer for a throttle (answer: at the per-call chokepoint, not the per-phase orchestrator)."
+category: tooling
+date: 2026-05-11
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - gh-cli
+  - github-api
+  - rate-limit
+  - secondary-limit
+  - throttle
+  - token-bucket
+  - threadpoolexecutor
+  - per-thread
+  - proactive
+  - python
+  - subprocess
+```
+
+
+# gh CLI Proactive Per-Thread Throttle
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-11 |
+| **Objective** | Stop tripping GitHub secondary rate limits during the 6-phase Hephaestus automation loop, where the planner phase fires 30+ `gh issue view` calls back-to-back per run |
+| **Outcome** | Successful — 5 req/sec/thread proactive cap added at the `_gh_call()` chokepoint; reactive rate-limit handler kept as safety net; 427/427 automation unit tests pass |
+| **Verification** | verified-local |
+| **Repo / PR** | `HomericIntelligence/ProjectHephaestus` PR #404, branch `feat/automation-loop-6phase-knobs`, commit `ec771f1` |
+
+## When to Use
+
+- A Python codebase wraps the `gh` CLI (or any other rate-limited CLI) and a single phase fans out many calls (e.g. one `gh issue view` per discovered issue).
+- The codebase already has reactive rate-limit handling (parses "Limit reached" / 429 from stderr, sleeps until reset) but is *still* tripping GitHub's secondary rate limits.
+- A `ThreadPoolExecutor` (or other worker pool) fans out work; you want per-worker pacing without inter-thread coordination overhead.
+- You are deciding **where** to insert a throttle. The answer for codebases that route every CLI invocation through a single helper is: at that helper, **not** at the per-call sites and **not** at the per-phase orchestrator.
+- An operator needs an env-var escape hatch (e.g. `GH_RATE_LIMIT_PER_SEC=0`) to disable throttling for tests or one-off scripts.
+
+## Verified Workflow
+
+### Quick Reference
+
+
+---
+
+## Superseded from `github-comment-dedup-across-restarts`
+
+```yaml
+name: github-comment-dedup-across-restarts
+description: "Prevent duplicate GitHub issue comments when a pipeline worker restarts by lazily loading existing comment IDs from the GitHub API. Use when: (1) a long-running pipeline posts stage-progress comments to GitHub issues, (2) an in-memory comment-ID cache is lost on process restart causing duplicate comments, (3) you need idempotent PATCH-or-POST logic for issue comments keyed by stage name and iteration number, (4) using gh CLI to paginate issue comments efficiently."
+category: tooling
+date: 2026-04-05
+version: "1.0.0"
+user-invocable: false
+tags:
+  - github
+  - api
+  - comment
+  - deduplication
+  - nats
+  - pipeline
+  - myrmidon
+  - gh-cli
+  - idempotent
+```
+
+
+# GitHub Comment Dedup Across Restarts
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-05 |
+| **Objective** | Prevent duplicate GitHub issue comments when claude-myrmidon pipeline worker restarts |
+| **Outcome** | Successful -- `_load_existing_comment_ids()` repopulates in-memory cache from GitHub API on first use per issue, enabling idempotent PATCH-or-POST |
+| **Verification** | verified-local (syntax checked, no runtime test) |
+
+## When to Use
+
+- A long-running pipeline worker posts `## Stage: <name>` comments to GitHub issues and uses an in-memory dict to track comment IDs for PATCH updates
+- Process restarts cause the in-memory `_comment_ids` dict to be empty, resulting in duplicate comments instead of updating existing ones
+- You need to lazily hydrate a comment-ID cache from the GitHub API on first access per issue
+- You want to minimize API payload by fetching only the first 80 characters of each comment body (enough to capture the `## Stage:` header)
+
+## Verified Workflow
+
+### Quick Reference
+
+| Step | What to do |
+| ------ | ----------- |
+
+---
+
+## Superseded from `github-pr-auto-close-requires-closes-n-per-issue`
+
+```yaml
+name: github-pr-auto-close-requires-closes-n-per-issue
+description: "GitHub only auto-closes issues from a PR when each issue has its own closing keyword (`Closes #N`) in the PR body or merge-commit message. Comma-list, markdown-table, and bullet-list formats fail silently — issues stay open after merge. Use when: (1) writing a bundle PR that closes many issues, (2) auditing why issues didn't close after a merged PR, (3) writing a PR-body template for sub-agents, (4) explaining why `closes #A, #B, #C` only closed #A."
+category: tooling
+date: 2026-05-16
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [github, pull-requests, issue-management, bundle-pr, closing-keywords]
+```
+
+
+# GitHub PR Auto-Close Requires `Closes #N` Per Issue
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-16 |
+| **Objective** | Ensure bundle PRs that claim to close many issues actually trigger GitHub's auto-close on merge |
+| **Outcome** | Use period-separated `Closes #N. Closes #M.` footer at top of PR body; never rely on comma-lists, markdown tables, or bullet lists |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- Writing a bundle PR body that lists many closing issues
+- Auditing why issues remained open after a merged PR claimed to close them
+- Writing a PR-body template for sub-agents / Myrmidon swarm output
+- Explaining why `closes #A, #B, #C` only closed `#A`
+- Reviewing a PR before merge to confirm GitHub will actually close the referenced issues
+
+## Verified Workflow
+
+### Quick Reference
+
+```markdown
+
+---
+
+## Superseded from `tooling-github-gist-binary-upload-via-git-push`
+
+```yaml
+name: tooling-github-gist-binary-upload-via-git-push
+description: 'Upload large binary files (up to 100 MB each) to a GitHub Gist by treating
+  the gist as a git repo and pushing blobs directly. Use when: you need a permanent URL
+  for a binary artifact (core dumps, compressed datasets, CI outputs) and `gh gist create`
+  fails because it only accepts text content, and GitHub Actions artifacts have expired
+  or will expire.'
+category: tooling
+date: 2026-05-10
+version: 1.0.0
+user-invocable: false
+```
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Goal** | Attach large binary blobs to a permanent GitHub Gist URL for inclusion in issues, bug reports, or external sharing |
+| **Context** | `gh gist create` REST API rejects binary content; GitHub Actions artifacts expire after 14 days by default |
+| **Trigger** | Need to share a binary (core dump, compressed archive, dataset) that exceeds Actions artifact retention or text-only gist limits |
+| **Output** | A public gist URL with binary file(s) downloadable via raw URLs, suitable for permanent reference in upstream bug reports |
+
+## When to Use
+
+1. Attaching a multi-MB core dump to an upstream issue tracker (e.g., `modular/mojo`) where you need a permanent link beyond the 14-day Actions artifact expiry
+2. Archiving CI artifacts (logs, binaries, captures) past the default GitHub Actions retention window
+3. Sharing compressed datasets or reproducers with collaborators outside the org without a tagged release
+4. Posting a follow-up to a bug report where the original Actions artifact has already expired
+5. Need a lower-overhead alternative to GitHub Releases (which require tagging the source repo) for one-off binary sharing
+
+**Do NOT use when:**
+
+- The data is sensitive — gists are public-by-default when shared via URL even with `--secret`
+- A single file exceeds **100 MB after compression** — git push to gist hard-fails at that limit
+- The artifact is regenerable and a future CI run would suffice — prefer re-running the workflow
+
+## Verified Workflow
+
+
+---
+
+## Superseded from `tooling-gh-pr-checkout-deleted-branch-footgun`
+
+```yaml
+name: tooling-gh-pr-checkout-deleted-branch-footgun
+description: "Use when: (1) about to run `gh pr checkout <num>` to start work on an existing PR, (2) `gh pr checkout` printed `fatal: couldn't find remote ref refs/heads/<branch>` but a chained `&&` command continued anyway, (3) a commit landed on local `main` instead of a PR branch and was rejected by branch protection on push, (4) the PR's head branch was deleted from origin while the PR is still OPEN (or recently MERGED), (5) you need a way to fetch a PR's head commit even when its branch has been deleted from the remote — use `git fetch origin pull/<num>/head:pr-<num>`."
+category: tooling
+date: 2026-05-16
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: []
+```
+
+
+# `gh pr checkout` Footgun: Deleted Head Branch Lands Commits on `main`
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-16 |
+| **Objective** | Document the silent-ish failure mode of `gh pr checkout <num>` when the PR's head branch has been deleted from origin, and the safe recovery procedure when an accidental commit lands on local `main` |
+| **Outcome** | Successful — footgun reproduced live in ProjectHephaestus PR #417; recovery via `git update-ref` confirmed; commit successfully removed from local `main` without `git reset --hard` (which is blocked by Safety Net) |
+| **Verification** | verified-local (reproduced live, recovery executed successfully; no CI test exists for this scenario) |
+
+## When to Use
+
+- About to run `gh pr checkout <num>` and want to confirm the head branch still exists
+- `gh pr checkout` printed `fatal: couldn't find remote ref refs/heads/<branch>` and `failed to run git: exit status 128`
+- Chained shell line (`gh pr checkout N && git commit ...`) continued past a failed checkout — exit-code propagation was insufficient to abort the chain in your harness
+- A commit landed on local `main` accidentally and the subsequent push was rejected by branch protection (`! [remote rejected] main -> main (push declined due to repository rule violations)`)
+- The PR's head branch was deleted from origin (auto-delete on merge, manual cleanup, `gh tidy`) but the PR is still OPEN or only recently MERGED
+- You need to fetch the PR's head commit anyway, even though its branch is gone — use `pull/<num>/head` ref
+
+## Verified Workflow
+
+### Quick Reference
+
+
+---
+
+## Superseded from `oss-contribution-issue-filing-pattern`
+
+```yaml
+name: oss-contribution-issue-filing-pattern
+description: "Strict OSS contribution workflow: audit an upstream repo, triage findings into critical bugs vs. quality improvements, check for duplicate issues, then file individual issues with embedded patches for each critical bug and a single omnibus issue for non-critical improvements. Use when: (1) performing a full repo audit before contributing to a project you don't maintain, (2) deciding which findings warrant individual issues vs. a bundled backlog issue, (3) filing bug reports with complete patches so the maintainer can accept without back-and-forth, (4) asking the maintainer which non-critical improvements they want before opening PRs."
+category: tooling
+date: 2026-04-28
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [oss, github, upstream, issue-filing, audit, deduplication, patch, bug-report, omnibus, triage, gh-tidy, shellcheck, bats, ci]
+```
+
+
+# OSS Contribution: Audit, Triage, and Issue Filing Pattern
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-28 |
+| **Objective** | Audit `HaywardMorihara/gh-tidy`, triage findings into critical vs. non-critical, deduplicate against existing issues, then file individual issues for critical bugs (with patches) and one omnibus issue for non-critical improvements |
+| **Outcome** | Issues #70 (branch_exists_locally bug), #71 (bats-core tests), #72 (GitHub Actions CI — references maintainer's own #28), #73 (12-item omnibus quality backlog) filed successfully |
+| **Verification** | verified-local — `gh issue create` calls returned valid GitHub URLs for all 4 issues |
+| **Source** | gh-tidy contribution session (second portion, after `bash-upstream-pr-review-traps` v2.0.0 covered the PR/fix side) |
+
+## When to Use
+
+- Performing a formal audit of an upstream OSS repo before contributing
+- You have a mix of critical bugs (safety/correctness) and quality improvements (docs, style, CI)
+- You want to avoid filing duplicate issues (checking what already exists before filing)
+- You need to file bug reports that give the maintainer everything to merge with zero back-and-forth
+- You want to propose a bundle of quality improvements but don't know which ones the maintainer wants
+- The upstream repo already has an open question-issue (e.g., "Should we add CI?") that you want to address concretely
+
+## Core Principles
+
+### 1. Check Before File (Deduplication Gate)
+
+---
+
+## Superseded from `git-submodule-gh-cli-explicit-repo-flag`
+
+```yaml
+name: git-submodule-gh-cli-explicit-repo-flag
+description: "Always pass --repo <owner/submodule-repo> to every gh invocation when working on a git submodule from inside a parent meta-repo, and use git -C <submodule-path> for git operations. The gh CLI auto-detects repos from CWD/origin (which resolves to the parent meta-repo, not the submodule), and Bash tool calls do not preserve CWD between invocations so `cd submodule && gh pr create` silently targets the parent. Use when: (1) working on a git submodule from inside its parent meta-repo, (2) gh pr create fails with 'No commits between' or 'Base ref must be a branch', (3) gh pr view returns 'no pull requests found' for a PR you just opened, (4) git status from the parent shows a submodule as modified after submodule branch ops, (5) stacked PR workflows in submodule repos, (6) Bash-tool environments where CWD does not persist between calls (Claude Code, Cursor, etc.)."
+category: tooling
+date: 2026-05-05
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - submodule
+  - meta-repo
+  - gh-cli
+  - github-cli
+  - bash-cwd
+  - explicit-repo-flag
+  - stacked-prs
+  - claude-code
+  - cursor
+```
+
+
+# Git Submodule + gh CLI: Always Pass --repo Explicitly
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-05 |
+| **Objective** | Eliminate the silent wrong-repo footgun where `gh pr create` (and every other `gh` subcommand) auto-detects the parent meta-repo instead of the submodule when the working directory's `origin` remote resolves to the parent. |
+| **Outcome** | Successful. After adopting the explicit `--repo` rule, the Atlas v0.2.0 ship cycle (PRs #444, #445, #446, #447, #448, #456 in ProjectArgus and #272 in Odysseus) had zero further wrong-repo errors. |
+| **Verification** | verified-ci — applied to a 7-PR release cycle across two repositories, all PRs landed on the correct repo. |
+
+## When to Use
+
+- You are working on a git submodule from inside its parent meta-repo (e.g., `Odysseus/infrastructure/ProjectArgus/`)
+- `gh pr create` fails with a confusing error like `No commits between <base> and <head>`, `Base ref must be a branch`, or `Head sha can't be blank`
+- `gh pr view <num>` returns `no pull requests found` immediately after you "successfully" opened one
+- `gh run view`, `gh pr checks`, `gh api repos/...` all return data that does not match what you just pushed
+- `git status` from the parent meta-repo shows the submodule as `modified` after you run any branch op inside the submodule
+- You are in a Bash-tool harness (Claude Code, Cursor, Aider, etc.) where each shell command runs in a fresh subshell and CWD does **not** persist between calls
+- Stacked PR workflows: rebasing `feat/B` onto `feat/A` after `feat/A` was squash-merged
+
+## Verified Workflow
+
+### Quick Reference
+
+---
+
+## Superseded from `review-pr-changes`
+
+```yaml
+name: review-pr-changes
+description: "Review PR changes with a structured checklist, strict GitHub review posting, inline comments, per-file grading, and GO/NO-GO release readiness summary. Use when: (1) reviewing PRs before approval, (2) asked for a strict review, (3) asked to add review comments, (4) needing REQUEST_CHANGES with actionable inline findings."
+category: tooling
+date: 2026-05-13
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: review-pr-changes.history
+tags: [github, pr-review, strict-review, request-changes, inline-comments, per-file-grading]
+```
+
+
+# Review PR Changes with Checklist
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-13 |
+| **Objective** | Perform structured PR review, attach actionable GitHub review comments, and publish a strict per-file GO/NO-GO summary |
+| **Outcome** | Operational; PR288 review was submitted as `CHANGES_REQUESTED` with five inline comments and API readback verification |
+| **Verification** | verified-local - live GitHub review workflow executed on `LLM360/RL360#288`; ProjectMnemosyne validation pending |
+| **History** | [changelog](./review-pr-changes.history) |
+
+## When to Use
+
+- Reviewing a PR before approving or merging
+- Performing a strict review with release-readiness grading
+- Adding GitHub review comments directly to changed lines
+- Requesting changes with an overall `GO`, `Conditional Go`, or `NO-GO` verdict
+- Producing a per-file grade table for reviewers or maintainers
+- Checking standards compliance, test coverage, security exposure, or architectural impact
+- Verifying that comments attach to the intended PR head SHA and diff lines
+
+## Verified Workflow
+
+
+---
+
+## Superseded from `pr-review-automation-workflow`
+
+```yaml
+name: pr-review-automation-workflow
+description: "Use when: (1) building a PRReviewer class on top of implement_issues.py patterns, (2) implementing a two-phase Claude workflow (read-only analysis then full-tools fix) for automated PR remediation, (3) adding new Enum/State/Options models to an automation models.py, (4) running --review mode end-to-end in a live environment, (5) debugging nested Claude Code session failures caused by CLAUDECODE env var"
+category: tooling
+date: 2026-03-29
+version: "2.0.0"
+user-invocable: false
+verification: unverified
+tags: []
+```
+
+# pr-review-automation-workflow
+
+Implements and operates the `--review` mode in `implement_issues.py` and the `PRReviewer` class for automating PR fix cycles in ProjectScylla. Documents the two-phase Claude workflow, PR discovery strategies, context gathering, SRP-clean class design, and live integration operational patterns.
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-29 |
+| Objective | Consolidated skill covering PRReviewer class implementation and live integration test results |
+| Outcome | Success — two-phase review automation with CLAUDECODE env fix, 31 tests passing |
+| Verification | unverified |
+
+## When to Use
+
+- Building a new automation class on top of the existing `IssueImplementer` patterns
+- Implementing a two-phase Claude workflow (read-only analysis → full-tools fix)
+- Adding new CLI flags to `scripts/implement_issues.py` that branch to a new orchestrator
+- Adding `Enum/State/Options` trios to an automation `models.py`
+- Gathering GitHub PR context (diff, CI logs, review comments) programmatically
+- Running `--review` mode for the first time against a new environment
+- Debugging why the review script fails when launched from inside Claude Code (CLAUDECODE env var)
+- Understanding expected phase durations to set timeouts
+- Choosing which PR to pick for testing (unit-tests-only failures are cleanest)
+
+
+---
+
+## Superseded from `merged-pr-noop-detection`
+
+```yaml
+name: merged-pr-noop-detection
+description: 'Detect when a fix-PR workflow targets an already-merged PR and safely
+  short-circuit. Use when: fix plans say ''no fixes needed'', PR state is MERGED,
+  or automated scripts generate tasks for closed PRs.'
+category: tooling
+date: 2026-03-06
+version: 1.0.0
+user-invocable: false
+```
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Skill** | merged-pr-noop-detection |
+| **Category** | tooling |
+| **Trigger** | Fix plan file contains "No fixes needed", "PR is merged", or similar no-op signals |
+| **Outcome** | Safely exit without making changes, without committing, without running tests |
+
+## When to Use
+
+- A `.claude-review-fix-<issue>.md` file was generated by automation but the plan body says the PR is already merged
+- An orchestration script invokes a fix workflow with a stale fix-plan targeting a merged PR
+- CI automation creates fix tasks for PRs in `MERGED` or `CLOSED` state
+- The fix plan explicitly states "No fixes needed" or "No problems found"
+
+## Verified Workflow
+
+1. **Read the fix plan file** — look for the "Fix Plan:" section in the `.claude-review-fix-*.md` file
+2. **Check for no-op indicators** — scan for phrases like:
+   - "No fixes needed"
+   - "PR is already merged"
+   - "No problems found"
+   - `gh pr view <N> --json state` returning `"MERGED"`
+3. **Confirm PR state via CLI** (optional validation):
+
+---
+
+## Superseded from `gh-pr-review-workflow`
+
+```yaml
+name: gh-pr-review-workflow
+description: "GitHub PR review workflow"
+category: tooling
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+```
+
+
+# Get PR Review Comments
+
+Retrieve and analyze all review comments from a pull request.
+
+## Overview
+
+| Date | Objective | Outcome |
+| ------ | ----------- | --------- |
+| 2025-12-30 | Fetch and parse PR review comments | Structured feedback for efficient fixes |
+
+## When to Use
+
+- (1) Checking for unresolved review feedback
+- (2) Analyzing reviewer feedback before fixing
+- (3) Verifying all comments have been addressed
+- (4) Getting comment IDs for replies
+
+## Verified Workflow
+
+1. **Fetch comments**: Use API to list all comments
+2. **Parse output**: Extract IDs and feedback
+3. **Analyze feedback**: Understand what needs fixing
+4. **Plan fixes**: Decide how to address each comment
+5. **Apply fixes**: Make the requested changes
+
+---
+
+## Superseded from `gh-review-pr`
+
+```yaml
+name: gh-review-pr
+description: "Comprehensively review a GitHub pull request, post inline review comments, and handle self-authored PR review limitations. Use when: (1) asked to review a PR, (2) adding review comments with gh api, (3) a strict review needs Go/No-Go output, (4) GitHub rejects request-changes on the authenticated user's own PR."
+category: tooling
+date: 2026-05-13
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: gh-review-pr.history
+tags: [github, pull-request, review, gh-cli, review-comments]
+```
+
+
+# GitHub PR Review Workflow
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-13 |
+| **Objective** | Evaluate PR quality, provide structured findings, and post review comments through GitHub. |
+| **Outcome** | Operational. A self-authored PR cannot receive a `REQUEST_CHANGES` review from the same authenticated user, but a `COMMENT` review can still carry inline comments plus an explicit No-Go verdict in the body. |
+| **Verification** | verified-local. Executed against Eval360-V2 PR #268 with live GitHub API calls; CI validation is not applicable to this operational workflow. |
+| **History** | [changelog](./gh-review-pr.history) |
+
+## When to Use
+
+- Reviewing a PR before merge.
+- Evaluating code quality, tests, CI status, documentation, or security risk.
+- Posting inline review comments with exact file and line anchors.
+- Adding per-file grading and a Go/No-Go review summary.
+- Reviewing a PR authored by the authenticated GitHub user, where `REQUEST_CHANGES` may be rejected by GitHub.
+
+## Verified Workflow
+
+Verified locally only - CI validation is pending/not applicable because this is a GitHub CLI/API operating procedure.
+
+
+---
+
+## Superseded from `github-email-privacy-noreply-push-fix`
+
+```yaml
+name: github-email-privacy-noreply-push-fix
+description: "Fix GitHub push rejections (email-privacy / GH007) caused by an agent committing with the user's real email. Use when: (1) push rejected with 'push declined due to email privacy restrictions', (2) push rejected with 'GH007: Your push would publish a private email address', (3) dispatching sub-agents that will commit and push on the user's behalf, (4) configuring orchestrator/swarm prompts that override git author email, (5) deciding whether to override `-c user.email` at all in a worktree."
+category: tooling
+date: 2026-05-17
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: github-email-privacy-noreply-push-fix.history
+tags:
+  - github
+  - push
+  - email-privacy
+  - noreply
+  - gh007
+  - agent-dispatch
+  - swarm
+  - commit
+  - worktree
+```
+
+
+# GitHub Email Privacy: Use Noreply Form for Agent Pushes
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-17 |
+| **Objective** | Prevent GitHub from rejecting pushes when an orchestrator or sub-agent commits on behalf of a user whose GitHub account has email-privacy or "block command line pushes that expose my email" (GH007) enabled |
+| **Outcome** | Successful — overriding `user.email` to the GitHub noreply form (`<USER_ID>+<USERNAME>@users.noreply.github.com`) and amending the commit lets the push succeed. **Preferred:** don't override `user.email` at all unless the inherited config is wrong (e.g. fresh worktrees that didn't inherit). |
+| **Verification** | verified-local |
+| **History** | [changelog](./github-email-privacy-noreply-push-fix.history) |
+
+## When to Use
+
+- A `git push` is rejected with `push declined due to email privacy restrictions`
+- A `git push` is rejected with `remote: error: GH007: Your push would publish a private email address` (the "Block command line pushes that expose my email" account setting — sibling toggle to email-privacy, same fix)
+- The remote message references `https://github.com/settings/emails`
+- You are about to dispatch a sub-agent (Myrmidon swarm worker, code-review fixer, etc.) that will commit and push on the user's behalf
+- You are writing or editing an orchestrator prompt template that controls agent commit author identity
+- Local commits work fine but the first push from a fresh agent dispatch fails
+- You are about to add `-c user.email=...` to a `git commit` invocation — pause and decide whether the override is actually needed (see Step 0 below)
+
+## Verified Workflow
+
+
+---
+
+## Superseded from `github-issues-semantic-branch-rename-gh-edit-graphql-verify`
+
+```yaml
+name: github-issues-semantic-branch-rename-gh-edit-graphql-verify
+description: "Semantically rename default-branch references across GitHub issue titles, bodies, and authored comments using gh. Use when: (1) a repository default branch changed and existing issues still mention the old branch, (2) search results include ambiguous English uses that must not be blindly replaced, (3) you need to edit an existing issue comment you authored."
+category: tooling
+date: 2026-04-03
+version: "1.0.1"
+user-invocable: false
+verification: verified-local
+tags:
+  - github
+  - gh
+  - issues
+  - graphql
+  - branch-rename
+```
+
+
+# GitHub Issues: Semantic Branch Rename via gh
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-03 |
+| **Objective** | Rename stale branch-name references in GitHub issues without corrupting unrelated natural-language uses of the same word |
+| **Outcome** | Successful — updated live issue titles, bodies, and one authored comment in a real repository while leaving ordinary-English `main` references untouched |
+| **Verification** | verified-local |
+
+## When to Use
+
+- A repository default branch changed, for example `main` to `master`, and issue text still references the old branch
+- `gh search issues <term> --match title,body,comments` returns both true branch references and false positives like "main roadmap" or "main shell"
+- You need to update an existing issue comment you authored, not just an issue title/body
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+gh repo view --repo <OWNER>/<REPO> --json nameWithOwner,defaultBranchRef,url
+
+
+---
+
+## Superseded from `pr-cleanup`
+
+```yaml
+name: pr-cleanup
+description: Handle PR cleanup operations including commit squashing, rebasing, conflict resolution, and pre-merge verification. Ensures PR is merge-ready with clean history and passing CI. Use for PR finalization and cleanup.
+category: tooling
+date: 2026-03-25
+version: 1.0.0
+user-invocable: "false"
+verification: unverified
+tags: []
+```
+
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-03-25 |
+| **Objective** | (fill in objective) |
+| **Outcome** | (fill in outcome) |
+
+# PR Cleanup Skill
+
+Prepare pull requests for merge by organizing commits, resolving conflicts, and verifying
+all pre-merge requirements are met.
+
+## When to Use
+
+- After PR review feedback has been addressed
+- When commits need squashing or reorganization
+- When PR has conflicts with main branch
+- Before requesting final merge approval
+- Verifying PR has clean commit history
+
+### Quick Reference
+
+```bash
+
+---
+
+## Superseded from `close-issue-via-minimal-pr`
+
+```yaml
+name: close-issue-via-minimal-pr
+description: 'Close a GitHub issue when all code already exists on main but the issue
+  is still open. Use when: (1) a verification/CI-check issue has no outstanding code
+  changes, (2) the feature branch has zero diff from main, (3) you need a minimal
+  commit to create a PR that triggers CI and closes the issue, (4) a merged PR did
+  not auto-close the issue because the commit keyword was wrong, (5) a batch sweep
+  PR closes 10+ ALREADY-DONE issues at once and each one needs its own Closes #N
+  keyword in the PR body.'
+category: ci-cd
+date: 2026-05-11
+version: 1.2.0
+user-invocable: false
+verification: verified-ci
+history: close-issue-via-minimal-pr.history
+```
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | Issue is still open but all code changes already landed on main; branch has no diff from main |
+| **Pattern** | Minimal docstring update in the primary file to create a substantive commit |
+| **Trigger** | `git diff main..HEAD` is empty; issue asks for "CI verification" of existing code |
+| **PR outcome** | CI runs against existing code; `Closes #N` in commit or PR body closes the issue |
+| **Verification** | verified-ci |
+| **History** | [changelog](./close-issue-via-minimal-pr.history) |
+
+## When to Use
+
+- Issue title contains "verify", "run in CI", "confirm passes", "check CI"
+- Branch was created with `git checkout -b <N>-auto-impl` but has no code to add — all work was done in a previous PR
+- `git status` shows only untracked files (e.g., `.claude-prompt-N.md`), no modified tracked files
+- `git diff origin/main` is empty
+- The issue is a follow-up from a prior issue ("Follow-up from #XXXX")
+- CI glob pattern already covers the relevant test files (confirmed via `grep` on workflow YAML)
+- A PR already merged but the issue remained open because the closing keyword was wrong (e.g., "Closes part of #N")
+- A batch sweep PR (chore/easy-sweep, ecosystem-wide audit) closes ≥10 ALREADY-DONE issues in a single PR body — each issue MUST have its own `Closes #N` line; bare bullet lists like `- #N: <evidence>` do NOT auto-close
+- Reviewing a sweep agent's PR before merge — count `Closes #` matches in the PR body and verify it equals (Implemented + ALREADY-DONE) issue count to detect a CLOSES_GAP
+
+## Verified Workflow
+
+
+---
+
