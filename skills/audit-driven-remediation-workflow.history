@@ -1,0 +1,347 @@
+# audit-driven-remediation-workflow — History
+
+## v1.0.0 (2026-05-18) — Merge of 14 skills
+
+**Changed by:** Skill-merge swarm (Phase B Wave 1, M8 / #1777)
+**Verification:** verified-local
+
+### What changed
+
+Consolidated 14 audit-and-remediation skills spanning tooling, architecture, and documentation
+categories into one canonical end-to-end workflow skill.
+
+**Absorbed skills (14):**
+- codebase-quality-plan-execution
+- quality-audit-workflow
+- repo-audit-count-reconciliation
+- cleanup-issue-detection
+- manage-experiment-audit
+- skill-audit-and-merge
+- audit-implementation
+- quality-coverage-report
+- repo-hygiene-audit-implementation
+- implementation-alignment-validation
+- backward-compat-removal
+- documentation-strict-audit-remediation-workflow
+- documentation-corpus-myrmidon-parallel-remediation
+- documentation-architecture-research-quality-rubric
+
+**Kept as worked examples (not absorbed):**
+- code-quality-audit-principles
+- repo-audit-triage-fix-and-issue-workflow
+- audit-driven-remediation
+- architect-review-implementation
+- ecosystem-audit-remediation
+- multi-domain-audit-remediation
+
+---
+
+## Superseded from codebase-quality-plan-execution
+
+```yaml
+name: codebase-quality-plan-execution
+description: Execute a pre-analyzed codebase improvement plan. Applies categorized
+  fixes (type safety, dead code, error handling, performance, frontend bugs) across
+  multiple files with continuous test verification.
+category: tooling
+date: '2026-03-19'
+version: 1.0.0
+```
+
+Key content absorbed: dependency-order fix sequencing (dataclass → parser → builder → tests),
+run tests after each category not at end, grep for all consumers before removing any field,
+hidden consumer patterns (`Match.aes_url`, `FollowOnEdge.target_slot`), deferred ranking-end
+bug pattern, TaskCreate-before-coding discipline.
+
+---
+
+## Superseded from quality-audit-workflow
+
+```yaml
+name: quality-audit-workflow
+description: "Use when: (1) implementing findings from a comprehensive code quality audit by creating tracking issues and fixing HIGH priority items, (2) converting audit findings into tracked GitHub issues with epics, (3) a quality audit flags a module docstring as a sentence fragment but the docstring is grammatically complete"
+category: tooling
+date: 2026-03-29
+version: "2.0.0"
+user-invocable: false
+verification: unverified
+tags: []
+```
+
+Key content absorbed: label validation before issue creation, issue number extraction from URL,
+docstring false-positive fix pattern (relative clause restructure), batch issue creation via
+sequential shell script, tracking issue timing (create before final batch), phase gates, PR
+with auto-merge, label strategy table, 38-min timing reference for 24 issues.
+
+---
+
+## Superseded from repo-audit-count-reconciliation
+
+```yaml
+name: repo-audit-count-reconciliation
+description: 'Reconcile count mismatches across documentation files after a repository
+  audit. Use when: counts in CLAUDE.md/README/hierarchy docs differ, audit reveals
+  stale agent or skill counts, or on-disk file counts don''t match any documented
+  number.'
+category: tooling
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+```
+
+Key content absorbed: `ls .claude/agents/*.md | wc -l` (not bare `ls` — excludes dirs), grep
+all docs for count claims, verify each listed entity exists on disk before trusting subtotals,
+update ALL count-claiming docs (CLAUDE.md + README + hierarchy + skills-architecture.md).
+Session result: 42→31 agents, 82→58 skills, 12 non-existent agent stubs removed from README.
+
+---
+
+## Superseded from cleanup-issue-detection
+
+```yaml
+name: cleanup-issue-detection
+description: 'Detect when a cleanup issue has already been implemented before starting
+  work. Use when: implementing a cleanup/removal issue, checking if a branch already
+  has the fix, or verifying prior auto-implementation state.'
+category: tooling
+date: 2026-03-05
+version: 1.0.0
+user-invocable: false
+```
+
+Key content absorbed: `git log main..HEAD --oneline` as first step before any exploration,
+remote branch state check, existing PR check, issue line numbers are approximate (search by
+pattern not line number), push rejection handling when remote already has the fix.
+
+---
+
+## Superseded from manage-experiment-audit
+
+```yaml
+name: manage-experiment-audit
+description: "Audit and fix manage_experiment.py CLI"
+category: tooling
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+```
+
+Key content absorbed: batch-vs-single-path arg parity checklist (--from wiring, checkpoint
+reset block), mock patching for local imports (patch source module not importer),
+TestFixture.from_directory prompt.md requirement, correct yaml keys for run_one_test fallback,
+--filter-judge-slot incomplete feature documentation pattern, unified CLI audit checklist
+(6 items: arg parity, reset logic parity, error handling, stale artifacts, stale docs,
+incomplete features).
+
+---
+
+## Superseded from skill-audit-and-merge
+
+```yaml
+name: skill-audit-and-merge
+description: "Use when: (1) skills marketplace has 500+ files with visible duplication noise hurting /advise quality, (2) auditing for near-exact duplicates or high-overlap pairs to delete or merge, (3) consolidating topic clusters spanning 3+ files into a single authoritative skill, (4) running a structured deduplication session that must leave all CI tests green"
+category: tooling
+date: '2026-05-05'
+version: 2.3.0
+verification: verified-ci
+history: skill-audit-and-merge.history
+tags: [audit, deduplication, merge, consolidation, marketplace, skills, cleanup]
+```
+
+Key content absorbed: 4-tier triage matrix (near-exact/high-overlap/topic-cluster/distinct),
+prefix-clustering script, phase gates (pytest + validate_plugins.py after each phase),
+gap-recovery second-pass mechanics (`comm -23` to find unfingerprinted files), third-pass
+continuation and diminishing-returns stop rule (<15% actionable = floor), cross-category
+false-match heuristic (86% false-match rate, require ≥2 strong signals), notes-file deletion
+convention, fixer-agent version-floor constraint, Wave B verifier false-positive patterns,
+`general-purpose` vs `Explore` for write-capable waves, ≤103 files per fingerprinting shard,
+cherry-pick vs narrow-patch approach, fence arithmetic floor issues.
+
+Verified: 1,667→1,625 files (41 removed, 4-phase); 982 files after 2026-05-04 full-corpus
+dedup (677 removed); 967→935 entries in 12-cluster Myrmidon swarm consolidation.
+
+---
+
+## Superseded from audit-implementation
+
+```yaml
+name: audit-implementation
+description: 'Implements repository audit findings as concrete fixes via PRs. Use
+  when: audit report needs actionable implementation, triage of findings into fix
+  vs defer.'
+category: tooling
+date: 2026-03-17
+version: 1.0.0
+user-invocable: false
+```
+
+Key content absorbed: 6-category triage table (quick fix / pragmatic improvement / verify
+first / needs separate PR / external blocker / admin setting), verify-before-implementing
+discipline, batch compatible fixes (different files, independently correct, common theme),
+continue-on-error pragmatic handling (keep for Semgrep SARIF), defer documentation in PR
+body, triage decision YAML (include vs defer criteria), PR template.
+
+---
+
+## Superseded from quality-coverage-report
+
+```yaml
+name: quality-coverage-report
+description: Generate test coverage reports showing which code paths are tested. Use
+  to identify untested code and improve test coverage.
+category: tooling
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+```
+
+Key content absorbed: pytest --cov commands, coverage goals table (line ≥80%/90%/100%,
+branch ≥70%/85%/95%), coverage report format, CI integration yaml snippet, error handling
+table.
+
+---
+
+## Superseded from repo-hygiene-audit-implementation
+
+```yaml
+name: repo-hygiene-audit-implementation
+description: 'Workflow for implementing repository hygiene audit fixes. Use when:
+  (1) an automated audit surfaces actionable code quality issues, (2) migrating Pydantic
+  to_dict() to model_dump(), (3) adding debug logging to silent exception catches.'
+category: architecture
+date: 2026-03-13
+version: 1.0.0
+user-invocable: false
+```
+
+Key content absorbed: verified-issue-table pattern (Audit Finding vs Actual Status),
+model_dump() candidacy check (safe only when fields map 1:1, no Path→str/Enum→value/computed
+props/nested calls), exception logging level guide (debug/warning/error), noqa BLE001 check
+against ruff select list, pixi.lock staging before commit when pip-audit hook has run,
+HomericIntelligence push-one-branch-at-a-time gotcha (max 2 refs per push).
+
+Session: 3 PRs, 1548 tests passing; 1/11 to_dict() methods safe to migrate (9%).
+
+---
+
+## Superseded from implementation-alignment-validation
+
+```yaml
+name: implementation-alignment-validation
+description: Systematic workflow for validating implementation code against research
+  documentation and fixing discrepancies
+category: architecture
+date: 2026-04-07
+version: 1.1.0
+```
+
+Key content absorbed: 7-phase workflow (gather docs → map implementation → alignment matrix →
+prioritize → fix with tests first → update docs if intentionally different → verify full suite),
+status legend (aligned/partial/missing), priority levels (critical/important/minor),
+checklist template, example discrepancy (composite score 50/50 vs 70/30 weights),
+files created/modified tracking.
+
+Session: 14 items aligned, 5 gaps fixed, 892 tests passing.
+
+---
+
+## Superseded from backward-compat-removal
+
+```yaml
+name: backward-compat-removal
+description: Systematically remove deprecated backward compatibility code and tests
+category: architecture
+date: 2026-02-13
+version: 1.0.0
+user-invocable: false
+```
+
+Key content absorbed: 6-phase removal workflow (identify → remove shims → remove deprecated
+tests → rename misleading tests → update docs → verify), criteria for test deletion (ONLY
+tests that exercised deprecated path), rename pattern (function + docstring + variables),
+two-PR strategy (docs cleanup vs code refactoring), common shim patterns, anti-patterns
+(orphaned comments, disabled tests, mixing unrelated changes).
+
+Session: 135 lines removed, 9 files modified, 65 tests passing; 5 functions deleted,
+1 renamed. PRs #577 (docs) and #578 (code).
+
+---
+
+## Superseded from documentation-strict-audit-remediation-workflow
+
+```yaml
+name: documentation-strict-audit-remediation-workflow
+description: "Workflow for running strict repo audits and fixing documentation findings. Use when: (1) performing comprehensive repository quality audits, (2) remediating documentation issues found in audits."
+category: documentation
+date: 2026-03-22
+version: "1.0.0"
+user-invocable: false
+tags: [audit, documentation, quality, strict-grading, remediation]
+```
+
+Key content absorbed: `/repo-analyze-strict` as audit trigger, documentation issues span
+multiple audit sections (not just §Documentation), stale SECURITY.md version table fix,
+misleading code comment fix, COMPATIBILITY.md creation for v0.x projects (key sections:
+v0.x stability expectations, breaking vs non-breaking, deprecation policy, v1.0 guarantee),
+CHANGELOG grep for referenced-but-missing docs, `pixi run ruff check` verification.
+
+Session: ProjectHephaestus strict audit B+ (87%); 3 doc issues fixed.
+Common findings table: stale SECURITY.md (§8 MINOR), misleading comments (§4 NITPICK),
+missing referenced docs (§12 MINOR), no ADRs (§2 MINOR), no API auto-gen (§2 MINOR).
+
+---
+
+## Superseded from documentation-corpus-myrmidon-parallel-remediation
+
+```yaml
+name: documentation-corpus-myrmidon-parallel-remediation
+description: "Myrmidon swarm pattern for remediating a large document corpus in parallel using isolated git worktree agents. Use when: (1) an unpublished research corpus contains change-note prose, correction-history blocks, or backward-compatibility text that must be deleted (not annotated), (2) defects span many files and must be fixed in parallel without file ownership collisions, (3) you need wave-based execution: parallel fixers → read-only verifier → merge. Includes citation-verification pass that web-fetches arXiv abstracts to catch fabricated numeric ranges, reversed-polarity claims, and paper-body figures misattributed as abstract-level."
+category: documentation
+date: 2026-04-20
+version: "1.6.0"
+user-invocable: false
+verification: verified-local
+history: documentation-corpus-myrmidon-parallel-remediation.history
+tags: [myrmidon, swarm, parallel, corpus, remediation, worktree, wave-based, change-notes, unpublished, conflict-partitioning, citation-verification, arxiv-abstract-check]
+```
+
+Key content absorbed: WATCH/GO conflict-partitioning protocol, Wave A/B/C architecture
+(parallel fixers → read-only verifier → narrow-patch merge), R1–R6 repair class taxonomy,
+8-pass expanded scrub pattern list (literal-phrase / bibliography-suffix / semantic-judgment /
+authorial-review / frontmatter-process-metadata / support-doc-changelog / citation-verification /
+arithmetic-cross-check), mandatory Wave A post-completion verification (`merge-base --is-ancestor`),
+`git apply --3way` conflict marker gate (`grep -rnE "^<<<<<<<"`), Wave B verdict uniqueness
+check (per-section not per-file), dual-template verification gates (Standard §8 vs Thematic),
+agent count by corpus size table, narrow-patch cherry-pick when worktree base diverged,
+foreground-only for long-running agents (no run_in_background), fold R6 into WATCH-file agents,
+`--amend` HEAD verification requirement, bibliography change-note sub-classes, fabricated
+numeric range detection via arXiv WebFetch.
+
+Sessions: ArchIdeas 39-file corpus across 5 runs (2026-04-18 through 2026-04-20), v1.0.0→v1.6.0.
+
+---
+
+## Superseded from documentation-architecture-research-quality-rubric
+
+```yaml
+name: documentation-architecture-research-quality-rubric
+description: "6-dimension weighted rubric for auditing AI architecture research documents, with canonical baseline geometry for LLM-scale proposals. Use when: (1) grading research docs for structural compliance, citations, baseline accuracy, TTFT/TPOT tables, TPOT direction honesty, and novelty verdicts, (2) performing corpus-scale quality audits on AI architecture proposals, (3) checking for the A2 KV@32K error (68 GB vs correct 8.59 GB), (4) enforcing D5 TPOT honesty rules for sequential-pass mechanisms, (5) verifying D6 novelty verdict format."
+category: documentation
+date: 2026-04-18
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [rubric, grading, research-docs, tpot, novelty-verdict, baseline-geometry, kv-cache, citation, architecture-research, audit, d1-d6]
+```
+
+Key content absorbed: 6-dimension weighted rubric (D1 Structure 25% / D2 Citations 20% /
+D3 Baselines 15% / D4 TTFT/TPOT tables 15% / D5 TPOT direction honesty 15% / D6 Novelty
+verdict 10%), scoring bands (A≥90 / B≥80 / C≥70 / D≥60 / F<60), GO/WATCH/NO-GO verdicts,
+canonical baseline geometry table (A1/A2/B/C with KV formula and correct KV@32K values),
+A2 KV@32K common error (68 GB vs correct 8.59 GB — root cause: using H_q=64 instead of
+H_kv=8), D5 TPOT direction honesty rule for sequential-pass mechanisms (`↓* (⚠ upper bound,
+unverified)`), D6 canonical novelty verdict format (EXISTS/PARTIAL/NOVEL with rationale),
+corpus-scale 6-agent partition by file range, scorecard template, grade conversion table,
+remediation priority order.
+
+Session: rubric applied to 39 documents; all passed after remediation.
