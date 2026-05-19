@@ -55,7 +55,7 @@ version: "1.0.0"
 ...
 ```
 
-<full body of skill-a verbatim>
+`<full body of skill-a verbatim>`
 
 ---
 
@@ -66,14 +66,14 @@ name: skill-b
 ...
 ```
 
-<full body of skill-b verbatim>
+`<full body of skill-b verbatim>`
 
 ---
 EOF
 
 # 2. Reference .history from the canonical's frontmatter
-# Add to skills/<canonical-name>.md YAML frontmatter:
-# history: <canonical-name>.history
+# Add to skills/`<canonical-name>`.md YAML frontmatter
+# history: `<canonical-name>`.history
 
 # 3. Sweep-delete the absorbed skills (skip-missing-safe)
 for f in $(jq -r '.absorbed_skills[]' manifest.json); do
@@ -142,25 +142,25 @@ verification: <level>
 tags: []
 ```
 
-#### Overview
+### Overview
 
-<paste original Overview table>
+`<paste original Overview table>`
 
-#### When to Use
+### When to Use
 
-<paste original When to Use bullets>
+`<paste original When to Use bullets>`
 
-#### Verified Workflow
+### Verified Workflow
 
-<paste original workflow content>
+`<paste original workflow content>`
 
-#### Failed Attempts
+### Failed Attempts
 
-<paste original Failed Attempts table>
+`<paste original Failed Attempts table>`
 
-#### Results & Parameters
+### Results & Parameters
 
-<paste original Results & Parameters content>
+`<paste original Results & Parameters content>`
 
 ---
 ```
