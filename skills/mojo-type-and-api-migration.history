@@ -1,0 +1,851 @@
+# mojo-type-and-api-migration — History
+
+## v1.0.0 (2026-05-18) — Merge of 40 skills (M3 sub-PR 2/4)
+
+**Changed by:** Skill-merge swarm (Phase D, M3 type-api-migration sub-cluster / #1772)
+**Verification:** verified-local
+
+### What changed
+
+Consolidated 40 Mojo type/API migration skills as the second of 4
+sequential M3 (Mojo mega-cluster) sub-PRs. Covers: stdlib import
+qualification, parametric dtype migration, trait conformance (Boolable,
+Writable, ImplicitlyCopyable, Module), API name reconciliation, overload
+disambiguation, `escaping` keyword removal, circular import resolution,
+Python interop → stdlib migration, FP16 SIMD upgrade, sequential parametric
+containers, set() API migration patterns, and version migration strategy.
+
+---
+
+## Superseded from `mojo-0263-stdlib-import-migration`
+
+```yaml
+name: mojo-0263-stdlib-import-migration
+description: "Mojo 0.26.3 migration: stdlib modules require std. prefix and escaping keyword was removed. Use when: (1) upgrading from Mojo 0.26.1/0.26.2 to 0.26.3, (2) seeing 'module not found' errors for testing/sys/memory imports, (3) seeing 'unknown keyword escaping' errors."
+category: ci-cd
+date: 2026-04-09
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [mojo, 0.26.3, stdlib, migration, imports, escaping, bulk-fix]
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-adr-supersession-on-version-upgrade`
+
+```yaml
+name: mojo-adr-supersession-on-version-upgrade
+description: "Mark ADRs as Superseded after a Mojo version upgrade removes the limitation they document. Use when: (1) bumping the pinned Mojo version in pixi.toml, (2) an ADR describes a compiler limitation or missing feature that may now work, (3) code still carries scalar workarounds that vectorized paths could replace."
+category: documentation
+date: 2026-04-11
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [mojo, adr, superseded, version-upgrade, workaround, fp16, simd]
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-anytensor-copy-pointer-leak`
+
+```yaml
+name: mojo-anytensor-copy-pointer-leak
+description: "UnsafePointer.take_pointee() moves the value out of pointed-to memory but does NOT free the pointer allocation. Must call ptr.free() explicitly after take_pointee(). Use when: (1) implementing copy() methods that use mem_alloc + take_pointee(), (2) debugging ASAN pooled_alloc leaks traced to Mojo struct copy methods."
+category: debugging
+date: 2026-04-10
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: []
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-anytensor-uint-set-float-bitcast`
+
+```yaml
+name: mojo-anytensor-uint-set-float-bitcast
+description: "AnyTensor.set(UInt32/UInt64) silently drops writes to float32/float64
+  tensors because _set_int64 has no float handler. Use when: (1) writing raw IEEE 754
+  bit patterns (NaN, Inf, denormals) into float tensors via set(UInt32/UInt64), (2)
+  test assertions about NaN bit patterns in float tensors silently fail, (3) any
+  UInt32/UInt64 write to a float-dtype AnyTensor appears to have no effect."
+category: debugging
+date: '2026-04-07'
+version: "1.0.0"
+user-invocable: false
+tags:
+  - mojo
+  - anytensor
+  - bitcast
+  - nan
+  - float32
+  - float64
+  - silent-bug
+  - set
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-api-name-reconciliation`
+
+```yaml
+name: mojo-api-name-reconciliation
+description: 'Reconcile planned API names in Mojo test placeholders and documentation
+  comments with actual implemented names after an import audit. Use when: placeholder
+  tests use old planned names, __init__.mojo docs are stale, or following up on import
+  audit issues.'
+category: documentation
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-api-signature-test-fix`
+
+```yaml
+name: mojo-api-signature-test-fix
+description: 'Fix Mojo test files when API signatures change (missing required positional
+  args, positional/keyword conflicts). Use when: tests fail with ''missing required
+  positional arguments'' or ''argument passed both as positional and keyword operand''.'
+category: testing
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-bfloat16-factory-dtype-guards`
+
+```yaml
+name: mojo-bfloat16-factory-dtype-guards
+description: 'Add bfloat16 dtype guard tests to Mojo tensor factory functions. Use
+  when: a factory function routes float16/float32/float64 to a float path but is missing
+  bfloat16, causing silent int-truncation of bfloat16 values.'
+category: testing
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-boolable-raises-fix`
+
+```yaml
+name: mojo-boolable-raises-fix
+description: 'Fix Mojo test compile errors from Bool(t) on structs whose __bool__
+  has raises, preventing Boolable trait conformance. Use when: CI fails with ''does
+  not conform to trait Boolable'', __bool__ is defined with raises, or you need to
+  test raising __bool__ without Boolable.'
+category: testing
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-boolable-trait-conformance`
+
+```yaml
+name: mojo-boolable-trait-conformance
+description: 'Split a raising __bool__ into a non-raising Boolable-conformant __bool__
+  plus bool_strict(). Use when: a struct has fn __bool__(self) raises -> Bool preventing
+  Boolable trait conformance, you want Bool(t) syntax to work without try/except,
+  or you need NumPy-style silent False for multi-element containers alongside PyTorch-style
+  strict raising.'
+category: architecture
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-circular-import-type-identity-fix`
+
+```yaml
+name: mojo-circular-import-type-identity-fix
+description: "Fix Mojo 'cannot implicitly convert X to X' errors caused by circular imports that trigger dual type compilation. Use when: (1) Mojo compiler reports 'cannot implicitly convert Type to Type' where both types have the same name, (2) cross-package imports create A->B->A cycles in Mojo, (3) struct operators delegate to external modules that import the struct back, (4) typed dispatch files create reverse dependencies back to the public API package, (5) Tensor[dtype] and AnyTensor coexist in the same file causing overload ambiguity, (6) designing dual-type tensor APIs or reviewing parametric struct migrations."
+category: architecture
+date: 2026-03-23
+version: "2.4.0"
+user-invocable: false
+tags:
+  - mojo
+  - circular-imports
+  - type-identity
+  - operators
+  - architecture
+  - tensor
+  - overload-ambiguity
+  - method-wrappers
+absorbed:
+  - mojo-dual-type-tensor-review (2026-03-21)
+  - mojo-method-api-symmetry (2026-03-15)
+  - mojo-method-wrapper-circular-import (2026-03-07)
+  - mojo-overload-ambiguity-typed-tensor-isolation (2026-03-22)
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-closures-capturing-numerical-forward-trait`
+
+```yaml
+name: mojo-closures-capturing-numerical-forward-trait
+description: "Workaround for Mojo 0.26.3: capturing closures cannot be passed to def(T) raises -> T parameters. Use when: (1) a nested def captures outer variables and must be passed to a higher-order function, (2) compiler gives 'capturing nested functions must be declared unified' or 'cannot pass unified closure to escaping parameter', (3) higher-order function takes BOTH forward AND backward function arguments (e.g., check_gradient(fwd, bwd, ...)), (4) need to migrate a large codebase (10+ files) of capturing closures in parallel."
+category: debugging
+date: 2026-04-09
+version: "2.0.0"
+history: mojo-closures-capturing-numerical-forward-trait.history
+user-invocable: false
+verification: verified-local
+tags: []
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-deprecated-alias-removal`
+
+```yaml
+name: mojo-deprecated-alias-removal
+description: "Workflow for removing deprecated Mojo comptime type aliases and replacing usages with canonical types. Use when: removing DEPRECATED-marked comptime aliases from Mojo modules, cleaning up backward-compat test files, updating __init__.mojo exports and layer imports after alias consolidation."
+category: architecture
+date: 2026-03-05
+version: 1.2.0
+user-invocable: false
+absorbed:
+  - mojo-comptime-alias-removal
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-docstring-format-precommit`
+
+```yaml
+name: mojo-docstring-format-precommit
+description: 'Enrich sparse Mojo test function docstrings to accurately describe what
+  the test validates, pre-formatted to pass mojo format without producing a diff.
+  Use when: (1) a one-liner docstring needs detail after feature support is added,
+  (2) a split file got a minimal docstring, (3) stale placeholder language needs replacing
+  in a test fn.'
+category: documentation
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-dtype-partial-support-guard`
+
+```yaml
+name: mojo-dtype-partial-support-guard
+description: 'Diagnose and guard against partially-supported Mojo DTypes where the
+  type exists but runtime value operations silently fail. Use when: CI shows ''Element
+  0 = 0.0, expected N.N'' after enabling a previously-skipped dtype test, or DType.bfloat16
+  tensors return zeros despite explicit value assignment.'
+category: debugging
+date: 2026-03-05
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-escaping-signature-regression`
+
+```yaml
+name: mojo-escaping-signature-regression
+description: "OBSOLETE IN 0.26.3. Fix Mojo escaping fn type parameter regressions (0.26.1 only). In 0.26.3 escaping is removed entirely; use capturing compile-time params instead (see mojo-026-breaking-changes)."
+category: ci-cd
+date: 2026-03-20
+version: "1.1.0"
+user-invocable: false
+tags: [mojo, escaping, gradient-checker, function-signatures, type-mismatch, build-failure, obsolete-026-3]
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-float-literal-overload-fix`
+
+```yaml
+name: mojo-float-literal-overload-fix
+description: 'Fix Mojo type errors where float literals fail to match Float64 overloads
+  by adding a Float32 overload. Use when: CI fails with ''no matching method in call
+  to __setitem__'' for float literals, or when Mojo APIs only have Float64 overloads
+  but user code uses bare float literals.'
+category: debugging
+date: 2026-03-06
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-fp16-simd-upgrade-pattern`
+
+```yaml
+name: mojo-fp16-simd-upgrade-pattern
+description: "Replace scalar FP16↔FP32 conversion loops with SIMD vectorized paths after upgrading to Mojo 0.26.3. Use when: (1) upgrading from Mojo 0.26.1 where FP16 SIMD was unsupported, (2) finding scalar element-by-element conversion loops with comments like 'FP16 SIMD blocked', (3) implementing mixed-precision tensor conversion in Mojo 0.26.3+."
+category: architecture
+date: 2026-04-11
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [mojo, fp16, simd, mixed-precision, vectorization, upgrade, float16]
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-gradient-type-naming`
+
+```yaml
+name: mojo-gradient-type-naming
+description: 'Fix naming inconsistency between generic gradient containers and domain-specific
+  backward pass results in Mojo ML code. Use when: backward functions return GradientPair
+  with opaque grad_a/grad_b fields but callers know the semantic meaning (e.g. input
+  vs kernel gradients).'
+category: architecture
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-hyphenated-dir-rename-for-imports`
+
+```yaml
+name: mojo-hyphenated-dir-rename-for-imports
+description: 'Rename hyphenated directories to underscores so Mojo can import from
+  them. Use when: (1) Mojo import fails from a hyphenated directory, (2) test files
+  cannot import from examples/ with hyphens, (3) renaming directories with many
+  cross-codebase references.'
+category: tooling
+date: 2026-03-27
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - mojo
+  - imports
+  - directory-rename
+  - hyphenated
+  - examples
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-if-true-scope-fix`
+
+```yaml
+name: mojo-if-true-scope-fix
+description: 'Replace Mojo ''if True:'' constant condition anti-patterns with named
+  helper functions. Use when: Mojo --Werror reports constant condition warnings on
+  if True: blocks used for scope-based destructor testing.'
+category: testing
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-lint-syntax`
+
+```yaml
+name: mojo-lint-syntax
+description: Validate Mojo syntax against current v0.26.1+ standards. Use to catch
+  syntax errors before compilation.
+category: optimization
+date: '2026-05-03'
+version: 1.2.0
+mcp_fallback: none
+verification: verified-local
+history: mojo-lint-syntax.history
+absorbed:
+  - mojo-format
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-missing-function-from-test-import`
+
+```yaml
+name: mojo-missing-function-from-test-import
+description: 'Debug Mojo test import failures where a function exists in tests but
+  not in the source module. Use when: (1) Mojo test imports a function that causes
+  compilation errors, (2) CI tests are skipped due to package compilation failure,
+  (3) investigating why a Mojo test file was added without the corresponding implementation.'
+category: debugging
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-module-docstring-limitation`
+
+```yaml
+name: mojo-module-docstring-limitation
+description: 'Document Mojo re-export limitations in module docstrings when submodule
+  symbols cannot be imported via the parent package. Use when: (1) a NOTE comment
+  exists warning about an import limitation, (2) a GitHub issue asks to document a
+  Mojo import workaround, (3) a module docstring is missing guidance for users who
+  cannot import types from the parent package.'
+category: documentation
+date: 2026-03-04
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-nested-fn-capture-fix`
+
+```yaml
+name: mojo-nested-fn-capture-fix
+description: 'Fix Mojo fieldwise init synthesis failure when nested fn captures non-copyable
+  struct. Use when: getting ''cannot synthesize fieldwise init because field has non-copyable
+  and non-movable type'' errors.'
+category: debugging
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-overload-disambiguation-with-is-defined`
+
+```yaml
+name: mojo-overload-disambiguation-with-is-defined
+description: 'Pattern for adding auto-detecting 1-arg overloads in Mojo 0.26.1 without
+  ambiguity. Use when: (1) adding a convenience overload that auto-detects a parameter
+  via compile-time is_defined[], (2) hitting ''ambiguous call'' errors with two overloads
+  sharing leading parameters with defaults, (3) detecting Apple Silicon or platform
+  traits at compile time.'
+category: training
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-param-method-collision`
+
+```yaml
+name: mojo-param-method-collision
+description: "Fix Mojo v0.26.1 struct parameter-method name collision where a parametric struct's type parameter and a trait method share the same name. Use when: (1) CI fails with 'invalid redefinition' on a parametric struct method, (2) a trait requires fn dtype() but the struct has [dtype: DType] parameter, (3) typed overloads create 'no matching function' ambiguity with existing untyped functions."
+category: debugging
+date: 2026-03-22
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-parametric-dtype-migration`
+
+```yaml
+name: mojo-parametric-dtype-migration
+description: "Pattern for migrating a Mojo runtime-typed struct to a parametric compile-time typed struct with backward-compat alias and parallel sub-agent workflow. Use when: (1) splitting a runtime-typed Mojo struct into parametric + type-erased pair, (2) orchestrating large-scale codebase renames with parallel agents in worktrees, (3) resolving circular imports between parametric and type-erased Mojo types."
+category: architecture
+date: 2026-03-22
+version: 1.0.0
+user-invocable: false
+tags:
+  - mojo
+  - parametric
+  - refactoring
+  - parallel-agents
+  - worktrees
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-promote-constants-to-public-api`
+
+```yaml
+name: mojo-promote-constants-to-public-api
+description: 'Promote module-scoped Mojo constants to the package public API via __init__.mojo
+  re-exports. Use when: (1) constants are alias/comptime in one module but needed
+  across test files, (2) an issue asks to export constants from the public API, (3)
+  callers must import the entire module just to access one constant.'
+category: documentation
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-public-api-table-update`
+
+```yaml
+name: mojo-public-api-table-update
+description: 'Update the public API comment table in a Mojo __init__.mojo to distinguish
+  available-now exports from pending-implementation symbols. Use when: (1) live exports
+  were added but the API table still lists them as pending, (2) a flat pending list
+  needs splitting into available-now vs pending sections, (3) a newly-added symbol
+  is missing from the ASCII table of top-level exports.'
+category: documentation
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-python-interop-patterns-guide`
+
+```yaml
+name: mojo-python-interop-patterns-guide
+description: "Canonical Mojo-Python interop patterns from Modular. Use when: (1) calling Python libraries from Mojo, (2) converting between PythonObject and Mojo types, (3) building Python extension modules in Mojo, (4) exposing Mojo structs to Python."
+category: architecture
+date: 2026-04-09
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: [mojo, python, interop, pythonobject, extension-module, modular-upstream]
+*Adapted from [modular/skills](https://github.com/modular/skills) under Apache License 2.0.
+Copyright (c) Modular Inc.*
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-python-interop-to-stdlib`
+
+```yaml
+name: mojo-python-interop-to-stdlib
+description: 'Replace Python.import_module calls with Mojo native stdlib, bridge filesystem
+  gaps with Python interop, and migrate PythonObject placeholder parameters to native
+  Mojo struct types. Use when: (1) eliminating Python interop for file system ops
+  (os, pathlib, builtins), (2) a Mojo function has a no-op stub body due to missing
+  stdlib (os.remove, os.rename), (3) a function accepts PythonObject as a stopgap
+  while the native struct is now ready, (4) refactoring load_named_tensors or similar
+  functions, (5) migrating from Python glob/sorted to native Mojo os.listdir + sort.'
+category: architecture
+date: 2026-03-07
+version: "2.0.0"
+user-invocable: false
+tags: [mojo, python, interop, pythonobject, stdlib, migration, placeholder, dataloader]
+
+### Part B: Bridge Stdlib Gaps with Python Interop
+
+When Mojo stdlib does not yet support an operation (e.g., `os.remove`, `os.rename`), bridge the
+gap using `Python.import_module("os")` rather than leaving a no-op placeholder.
+
+#### Step 1: Find the Placeholder
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-sequential-parametric-containers`
+
+```yaml
+name: mojo-sequential-parametric-containers
+description: 'Pattern for implementing Sequential neural network module containers
+  in Mojo using parametric compile-time types. Use when: composing Module-conforming
+  layers into a chain, hitting ImplicitlyCopyable/UnsafePointer errors from List[Trait]
+  usage, or designing reusable containers that propagate train/eval modes.'
+category: architecture
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-set-api-migration-syntax-patterns`
+
+```yaml
+name: mojo-set-api-migration-syntax-patterns
+description: "Three syntax error patterns introduced by Mojo bitcast→set() API migration: inline comments inside call parens swallow closing delimiters (Pattern A), empty Float32(()) split across lines (Pattern B), garbled = in call args or orphaned declarations (Pattern C). Use when: (1) mojo compiler reports 'expected ) in call argument list' after a set() migration, (2) 'use of unknown declaration' errors appear after commenting out var declarations, (3) fixing ASAN JIT symbol errors in dtype tests."
+category: debugging
+date: 2026-04-07
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: []
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-silent-noop-int8-dtype-fix`
+
+```yaml
+name: mojo-silent-noop-int8-dtype-fix
+description: 'Fix silent no-op writes in Mojo dtype dispatch functions missing integer
+  branches. Use when: a _set_float* function silently discards writes for int8, a
+  dtype chain has no integer branch, or a test documents a known no-op instead of
+  asserting correct truncation.'
+category: debugging
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-subpackage-import-tests`
+
+```yaml
+name: mojo-subpackage-import-tests
+description: 'Add tests verifying Mojo sub-package import paths work (e.g. from shared.training.callbacks
+  import EarlyStopping). Use when: an issue requests confirming a direct sub-module
+  import works, or when only parent-package re-export imports are tested but not the
+  canonical sub-package path.'
+category: testing
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-trait-conformance-for-sequential-integration`
+
+```yaml
+name: mojo-trait-conformance-for-sequential-integration
+description: "Add Module trait conformance to Mojo layers for Sequential container use, and fix missing trait declarations causing compile-time 'does not conform to trait' errors. Use when: (1) existing layers lack train()/inference() methods, (2) forward() uses self instead of mut self, (3) layers need to be composed inside Sequential2/Sequential3, (4) a struct implements trait methods (e.g. __hash__) but is missing the trait in its declaration list."
+category: testing
+date: 2026-03-15
+version: 1.1.0
+user-invocable: false
+absorbed:
+  - mojo-trait-conformance-fix
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-type-alias-cleanup`
+
+```yaml
+name: mojo-type-alias-cleanup
+description: 'Fix Mojo compilation errors caused by non-existent type aliases introduced
+  when removing deprecated type aliases. Use when: CI fails with unknown type errors
+  after removing deprecated aliases.'
+category: ci-cd
+date: 2026-03-06
+version: 1.0.0
+user-invocable: false
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-type-safety`
+
+```yaml
+name: mojo-type-safety
+description: Validate type safety in Mojo code including parametric types and trait
+  constraints. Use during code review or when type errors occur.
+category: optimization
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-version-migration-strategy`
+
+```yaml
+name: mojo-version-migration-strategy
+description: "Strategy for migrating a large Mojo codebase across versions. Use when: (1) planning a Mojo version upgrade across many files, (2) coordinating multi-agent migration work, (3) deciding fix order for cascading compile errors."
+category: architecture
+date: 2026-04-08
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags: [mojo, migration, version-upgrade, agent-coordination, strategy]
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
+## Superseded from `mojo-writable-write-to-migration`
+
+```yaml
+name: mojo-writable-write-to-migration
+description: "Migrate Mojo structs from __str__/Stringable to write_to/Writable for Mojo 0.26.3+ conformance.
+  Use when: (1) auditing a codebase for deprecated Stringable/\\_\\_str\\_\\_ patterns in Mojo 0.26.3+,
+  (2) a struct declares Writable in its trait list but implements \\_\\_str\\_\\_ instead of write_to,
+  (3) migrating from Stringable to Writable with optional transitional delegation for backward compatibility."
+category: architecture
+date: 2026-04-10
+version: "1.0.0"
+user-invocable: false
+verification: verified-precommit
+tags: [mojo, writable, stringable, write_to, __str__, trait, migration, modernization]
+```
+
+<details>
+<summary>Body excerpt</summary>
+
+
+</details>
+
