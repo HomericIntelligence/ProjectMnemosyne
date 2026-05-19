@@ -1,0 +1,487 @@
+# checkpoint-state-machine-resume — History
+
+## v1.0.0 (2026-05-18) — Merge of 5 skills
+
+**Changed by:** Skill-merge swarm (Phase B Wave 1, M13 / #1771)
+**Verification:** verified-local
+
+### What changed
+
+Consolidated 5 checkpoint/resume skills into one canonical skill.
+Snapshots of all absorbed skills are preserved below.
+
+---
+
+## Superseded from `until-resume-past-state-fix`
+
+```yaml
+name: until-resume-past-state-fix
+description: "Skill: Fix `--until` Resume Bug — Runs Past Target State Not Skipped"
+category: tooling
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+```
+
+# Skill: Fix `--until` Resume Bug — Runs Past Target State Not Skipped
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-02-25 |
+| Category | debugging |
+| Objective | Fix crash when resuming with `--until` on runs already past the target state |
+| Outcome | Success — 3172 tests pass, no regressions |
+| Project | ProjectScylla |
+
+## When to Use
+
+Apply this pattern when:
+- A state machine has an `--until TARGET_STATE` early-stop feature
+- The state machine can be resumed from a checkpoint
+- Runs may have progressed **past** the target state before resumption
+- An equality check (`==`) is used to detect "already at the target" — this misses "already past it"
+
+Symptoms of the bug:
+- Crash with "X must be set before Y" during resume
+- Context/data not restored from disk because the run was expected to be at an earlier state
+- Only manifests on resume when runs are past the `--until` target, not on fresh runs
+
+## Verified Workflow
+
+### 1. Audit All `--until` Check Sites
+
+Search for every place that checks `current_state == until_state` or equivalent:
+
+```python
+# BAD: misses runs already past the target
+if current_run_state == self.config.until_run_state:
+    continue  # skip
+
+# BAD: in-loop break misses runs already past target
+if until_state is not None and new_state == until_state:
+    break
+```
+
+### 2. Add an Index Map for O(1) Ordering
+
+At module load time, precompute the index of each state in the normal sequence:
+
+```python
+# In state_machine.py, after _RUN_STATE_SEQUENCE definition:
+_RUN_STATE_INDEX: dict[RunState, int] = {
+    state: idx for idx, state in enumerate(_RUN_STATE_SEQUENCE)
+}
+
+def is_at_or_past_state(current: RunState, target: RunState) -> bool:
+    """Return True if current is at or past target in the run sequence.
+
+    States not in the normal sequence (FAILED, RATE_LIMITED) return False.
+    """
+    cur_idx = _RUN_STATE_INDEX.get(current)
+    tgt_idx = _RUN_STATE_INDEX.get(target)
+    if cur_idx is None or tgt_idx is None:
+        return False
+    return cur_idx >= tgt_idx
+```
+
+**Key insight**: Using `.get()` returning `None` for non-sequence states (FAILED, RATE_LIMITED) naturally handles the "not in sequence = don't skip" semantic — no explicit special-casing needed.
+
+### 3. Add Early-Return Guard in `advance_to_completion()`
+
+Before the `while` loop, add:
+
+```python
+def advance_to_completion(self, tier_id, subtest_id, run_num, actions, until_state=None):
+    # Early return if already at or past the --until target state
+    if until_state is not None:
+        current = self.get_state(tier_id, subtest_id, run_num)
+        if is_at_or_past_state(current, until_state):
+            logger.info(
+                f"[{tier_id}/{subtest_id}/run_{run_num:02d}] "
+                f"Already at or past --until target state: {until_state.value} "
+                f"(current: {current.value})"
+            )
+            return current
+
+    # ... existing while loop ...
+```
+
+This guard is critical: without it, a run at `diff_captured` with `until_state=replay_generated` enters the while loop, calls `advance()` from `diff_captured`, and crashes because context (agent_result, etc.) was never restored.
+
+### 4. Fix the Pre-Loop Skip Check
+
+```python
+# Before (exact equality — misses past states):
+if current_run_state == self.config.until_run_state:
+    logger.debug(f"Skipping ... already at --until state: ...")
+    continue
+
+# After (ordering check — catches past states too):
+from scylla.e2e.state_machine import is_at_or_past_state
+if is_at_or_past_state(current_run_state, self.config.until_run_state):
+    logger.debug(
+        f"Skipping ... already at or past --until state: "
+        f"{self.config.until_run_state.value} "
+        f"(current: {current_run_state.value})"
+    )
+    continue
+```
+
+### 5. Write the Regression Test
+
+Create an integration test that pre-seeds a checkpoint with a run **past** the target:
+
+```python
+def test_until_skips_run_already_past_target(self, tmp_path: Path) -> None:
+    cp = make_checkpoint(
+        run_states={"T0": {"00": {"1": RunState.DIFF_CAPTURED.value}}},
+    )
+    cp_path = tmp_path / "checkpoint.json"
+    save_checkpoint(cp, cp_path)
+
+    sm = _build_run_sm(cp, cp_path)
+    actions_called: list[RunState] = []
+
+    def tracking_action(state: RunState) -> Callable[[], None]:
+        def _action() -> None:
+            actions_called.append(state)
+        return _action
+
+    actions = {s: tracking_action(s) for s in RunState if not is_terminal_state(s)}
+
+    # Resume with --until replay_generated on a run already at diff_captured (past the target)
+    final = sm.advance_to_completion(
+        "T0", "00", 1, actions, until_state=RunState.REPLAY_GENERATED
+    )
+
+    assert final == RunState.DIFF_CAPTURED  # unchanged
+    assert actions_called == []              # nothing ran
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+### Files Modified
+
+| File | Change |
+| ------ | -------- |
+| `scylla/e2e/state_machine.py` | Add `_RUN_STATE_INDEX`, `is_at_or_past_state()`, early-return guard in `advance_to_completion()` |
+| `scylla/e2e/subtest_executor.py` | Change `==` to `is_at_or_past_state()` in pre-loop skip check |
+| `tests/unit/e2e/test_state_machine.py` | 6 tests for `is_at_or_past_state` + 1 for early-return guard |
+| `tests/integration/e2e/test_until_from_stepping.py` | 1 regression test for skip-past-target behavior |
+
+### Test Results
+
+- 3172 tests pass
+- Coverage: 78.29% (threshold: 75%)
+- Pre-commit: all hooks pass
+
+### Key Design Decisions
+
+1. **Why `_RUN_STATE_INDEX` at module load?** Avoids repeated O(n) `list.index()` calls in hot paths. The sequence is static so precomputing is safe.
+
+2. **Why does `is_at_or_past_state` return `False` for FAILED/RATE_LIMITED?** These are terminal states outside the normal sequence. A run that is FAILED or RATE_LIMITED should not be skipped by the `--until` logic — it is already terminal and handled separately by `is_complete()`.
+
+3. **Why add the early-return guard AND fix the pre-loop check?** Defense in depth. The pre-loop check in `subtest_executor.py` is the first line of defense (avoids even building `RunContext`). The early-return in `advance_to_completion()` is the second (handles any caller that bypasses the pre-loop check).
+
+---
+
+## Superseded from `skill-experiment-recovery-tools`
+
+```yaml
+name: skill-experiment-recovery-tools
+description: 'Skill: Experiment Recovery Tools'
+category: tooling
+date: 2026-01-29
+version: 1.0.0
+user-invocable: false
+```
+
+# Skill: Experiment Recovery Tools
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-01-29 |
+| Objective | Build scripts to selectively re-run failed/incomplete agents and judges in E2E experiments |
+| Outcome | Operational — `rerun_agents.py` and `rerun_judges.py` with 5-status classification system |
+
+## When to Use This Skill
+
+Use this approach when building tools for:
+
+1. **Recovering from interrupted experiments** - Resume from where you left off
+2. **Selective re-execution** - Re-run only failed/incomplete runs, not entire experiments
+3. **Status-based filtering** - Different actions based on run completion state
+4. **Regenerating missing metadata** - Rebuild files from existing logs without re-execution
+
+## Verified Workflow
+
+### 1. Status Classification System
+
+**Agent Status (RunStatus)**: `completed`, `results`, `failed`, `partial`, `missing`
+
+**Judge Status (JudgeStatus)**: `complete`, `missing`, `failed`, `partial`, `agent_failed`
+
+### 2. File-Based Classification Logic
+
+```python
+def _classify_run_status(run_dir: Path) -> RunStatus:
+    if not run_dir.exists():
+        return RunStatus.MISSING
+
+    agent_dir = run_dir / "agent"
+    agent_output = agent_dir / "output.txt"
+    agent_result = agent_dir / "result.json"  # CRITICAL: Must check this!
+    agent_timing = agent_dir / "timing.json"
+    agent_command_log = agent_dir / "command_log.json"
+    run_result = run_dir / "run_result.json"
+
+    if (agent_output.exists() and agent_output.stat().st_size > 0
+        and agent_result.exists() and run_result.exists()):
+        return RunStatus.COMPLETED
+
+    if (agent_output.exists() and agent_output.stat().st_size > 0
+        and agent_timing.exists() and agent_command_log.exists()
+        and (not run_result.exists() or not agent_result.exists())):
+        return RunStatus.RESULTS
+```
+
+### 3. CLI Design Pattern
+
+```bash
+--dry-run / --status <status> / --tier <tier> / --subtest <subtest> / --runs <nums> / -v
+```
+
+### 4. Regenerating Missing Files
+
+```python
+stdout = (agent_dir / "stdout.log").read_text()
+stdout_json = json.loads(stdout.strip())
+usage = stdout_json.get("usage", {})
+result_data = {
+    "exit_code": cmd_log["commands"][0]["exit_code"],
+    "token_stats": {"input_tokens": usage.get("input_tokens", 0), ...},
+    "cost_usd": stdout_json.get("total_cost_usd", 0.0),
+    "api_calls": 1,
+}
+with open(agent_dir / "result.json", "w") as f:
+    json.dump(result_data, f, indent=2)
+```
+
+1,130 files in ~4 seconds — pure JSON I/O.
+
+### 5. Integration
+
+```python
+# Agent re-runs
+executor = SubTestExecutor(config, tier_id, tier_config, ...)
+run_result = executor._execute_single_run(subtest_config, run_number)
+
+# Judge re-runs
+from scylla.e2e.regenerate import regenerate_experiment
+regen_stats = regenerate_experiment(experiment_dir=experiment_dir, rejudge=True, judge_model=...)
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Classification without `agent/result.json` | Only checked `output.txt`, `timing.json`, `run_result.json` | 1,091 runs appeared complete but lacked metadata | Always verify ALL required files |
+| `config.judge_model` (singular) | Accessed attribute directly | `ExperimentConfig` uses `judge_models` (plural list) | Check data model evolution; singular → plural requires codebase-wide audit |
+| `regenerate_experiment(rejudge=True)` for `results` status | Used broad-scope function | Ran full judge pipeline, not just file creation | Inline targeted operations to avoid side effects |
+| Verbose status names | `agent-complete-missing-results`, `never-started` | Confusing and verbose to type | Single-word names: `results`, `missing`, `partial`, `failed`, `completed` |
+
+---
+
+## Superseded from `housekeeping-all-done-verification`
+
+```yaml
+name: housekeeping-all-done-verification
+description: 'Verify external state for pure housekeeping issues where all cleanup may already be complete.'
+category: tooling
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+```
+
+# Housekeeping All Done Verification
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-07 |
+| Objective | Implement GitHub issue #3377 — clean up `issue-2722` worktree/branch after PR #3372 merged |
+| Outcome | All cleanup already complete; created verification comment + empty commit + PR to close issue |
+| Root Cause | Housekeeping was done out-of-band; issue just needed formal closure |
+
+## When to Use
+
+Use when an issue describes **pure housekeeping** with no code deliverables:
+- Delete a git branch or remove a worktree
+- Close another GitHub issue
+- Verify a PR was merged and artifacts cleaned up
+
+## Verified Workflow
+
+```bash
+# Confirm PR merged
+gh pr view <PR-number> --json state,mergedAt,mergeCommit
+
+# Check artifacts
+git worktree list | grep <issue-name>
+git branch -a | grep <branch-name>
+git ls-remote --heads origin <branch-name>
+gh issue view <issue-number> --json state
+
+# Cleanup remaining artifacts
+git worktree remove .worktrees/<name> && git worktree prune
+git push origin --delete <branch-name>
+gh issue close <number> --comment "..."
+
+# Post verification comment
+gh issue comment <issue-number> --body "## Cleanup Verification ..."
+
+# Empty commit + PR
+git commit --allow-empty -m "chore(cleanup): verify <description>
+Refs #<issue-number>"
+git push -u origin <branch-name>
+gh pr create --title "chore(cleanup): ..." --body "..."
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Searching for code to change | Looked for source files to modify | No code changes needed | Read issue category first; "clean up worktree/branch" = no code |
+| Delete branch locally first | `git branch -d issue-2722` | Branch didn't exist locally — already gone | Check `git branch -a` AND `git ls-remote` for both local + remote |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #3377, branch `3377-auto-impl`, PR #4044 | Verifying cleanup of `issue-2722` worktree/branch after PR #3372 merged |
+
+---
+
+## Superseded from `issue-completion-verification`
+
+```yaml
+name: issue-completion-verification
+description: Verify and properly close GitHub issues when PR automation fails to auto-close
+category: tooling
+date: 2026-02-15
+version: 1.0.0
+user-invocable: false
+```
+
+# Issue Completion Verification
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| Date | 2026-02-15 |
+| Objective | Verify GitHub issue completion and manually close when PR auto-close automation fails |
+| Outcome | Success — Issue #594 properly closed after detecting completed work |
+
+## When to Use
+
+1. Prompt file indicates work on an issue (`.claude-prompt-<N>.md`)
+2. Branch name suggests issue number (`<N>-auto-impl`)
+3. Work may already be completed but issue is still open
+4. Issue status doesn't match actual completion state
+
+## Verified Workflow
+
+```bash
+# 1. Read issue context
+gh issue view <number> --comments
+
+# 2. Check git history
+git log --oneline -10
+git log origin/main --oneline --grep="<number>" -5
+
+# 3. Check merged PRs
+gh pr list --search "<number>" --state all --limit 10 --json number,title,state,mergedAt
+gh pr view <PR> --json body,closingIssuesReferences
+
+# 4. Verify and close
+gh issue view <number> --json state,closedAt
+gh issue close <number> --comment "<summary of completed work>"
+
+# 5. Cleanup
+rm .claude-prompt-<number>.md
+```
+
+`closingIssuesReferences` confirms GitHub detected "Closes #N" even when automation failed.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+---
+
+## Superseded from `technical-debt-tracker`
+
+```yaml
+name: technical-debt-tracker
+description: Track and resolve FIXME/TODO comments via GitHub issues
+category: tooling
+date: 2025-12-30
+version: 1.0.0
+```
+
+# Technical Debt Tracker
+
+## Overview
+
+| Date | Objective | Outcome |
+| ------ | ----------- | --------- |
+| 2025-12-30 | Track and resolve all FIXME/TODO comments referencing closed issues | Created 8 category issues + 1 Epic, updated 20+ source files |
+
+## When to Use
+
+- Auditing codebase for FIXME/TODO comments referencing closed issues
+- Creating structured issues for each debt category
+- Updating stale issue references in source code
+
+## Verified Workflow
+
+```bash
+# Discovery
+grep -rn "FIXME\|TODO" --include="*.py" --include="*.mojo" --exclude-dir='.*' .
+grep -oP "FIXME\(#\K\d+" --include="*.mojo" --exclude-dir='.*' -r . | sort -u
+gh issue view <number> --json state -q '.state'
+
+# Create issues (check labels first!)
+gh label list --limit 50
+gh issue create --title "[Category] Description" --body "..." --label "existing-label"
+
+# Create Epic
+gh issue create --title "[Epic] Technical Debt Resolution" --body "..."
+
+# Bulk update references
+# Use replace_all: true — FIXME(#OLD) -> FIXME(#NEW)
+
+# Verify
+grep -rn "#OLD_NUMBER" --include="*.mojo" --exclude-dir='.*' .
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Use arbitrary label names | Created issues with labels not in repo | `gh issue create` fails: label not found | Run `gh label list --limit 50` first |
+| N/A for others | Direct approach worked | N/A | Solution was straightforward |
