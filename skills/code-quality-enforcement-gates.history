@@ -1,0 +1,266 @@
+# code-quality-enforcement-gates — History
+
+## v1.0.0 (2026-05-18) — Merge of 8 skills
+
+**Changed by:** Skill-merge swarm (Phase B Wave 1, M12 / #1786)
+**Verification:** verified-local
+
+### What changed
+
+Consolidated 8 quality-gate skills into a single canonical reference covering
+complexity thresholds (ruff C901), mypy strictness modes (check_untyped_defs,
+disallow_untyped_defs), deprecation removal enforcement, markdown rule tuning
+(MD024 siblings_only), mypy override narrowing, batch fix coordination,
+placeholder code CI failures, and regression-guard test broadening.
+
+---
+
+## Superseded from batch-fix-implementation
+
+```yaml
+name: batch-fix-implementation
+description: Implement coordinated batch fixes across multiple files using minimal edits.
+category: ci-cd
+date: 2026-03-14
+version: 1.0.0
+user-invocable: false
+```
+
+Implement coordinated batch fixes across multiple files using minimal edits. Use when fixing
+multiple low-complexity issues in a single PR.
+
+Key findings:
+- Read ALL files before making any edits to prevent context-switching errors.
+- Use Python `re.sub()` with MULTILINE flag for 10+ identical replacements in one file.
+- Use Edit tool for code changes (not sed/awk); Python scripts for structural changes.
+- Always run `git diff` to verify pre-existing lint issues vs. changes introduced.
+- Create round-specific branch names to avoid PR conflicts on continuation batches.
+
+Failed attempts: Using `sed -i` for multi-file edits lost context nuances; starting edits before
+reading files caused missed imports; manually adding blank lines via Edit created overlapping edits.
+
+---
+
+## Superseded from ci-deprecation-enforcement
+
+```yaml
+name: ci-deprecation-enforcement
+description: Promote a CI grep warning into a hard exit-1 enforcement gate for deprecated symbols
+category: ci-cd
+date: 2026-02-20
+version: 1.0.0
+user-invocable: false
+```
+
+Promote a CI `::warning::` grep step to `::error::` + `exit 1` enforcement gate.
+Issue #786, PR #834.
+
+Key findings:
+- Count MUST be 0 before switching to exit 1.
+- Two distinct grep-v patterns needed: `grep -v "# deprecated"` (standalone comment lines) AND
+  `grep -v "(deprecated)"` (inline docstring annotations) — neither alone is sufficient.
+- Re-export `__init__.py` files need their own `grep -v` exclusion path.
+- Diagnostic grep block inside the `if` must mirror all new exclusions.
+- Step name must change from "Track..." to "Enforce..." to signal intent.
+- Only `.github/workflows/test.yml` changes required — no Python source changes.
+
+Failed attempts: None — direct approach worked when count was confirmed 0 first.
+
+---
+
+## Superseded from enable-mypy-check-untyped-defs
+
+```yaml
+name: enable-mypy-check-untyped-defs
+description: Enable mypy --check-untyped-defs for full Python body type coverage and fix surfaced errors.
+category: ci-cd
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+```
+
+Enable mypy `--check-untyped-defs` for full Python body type coverage. Verified on
+ProjectOdyssey issue #3370, PR #4036.
+
+Key findings:
+- Always run `pixi run mypy <dir>/ --check-untyped-defs` MANUALLY before committing config changes.
+- `defaultdict` in untyped bodies needs explicit `defaultdict[str, int]` annotation.
+- Empty lists need explicit `list[str] = []` annotation.
+- Pillow 10+ deprecated module-level aliases: use `Image.Resampling.LANCZOS` not `Image.LANCZOS`;
+  `Image.Transpose.TRANSPOSE` not `Image.TRANSPOSE`.
+- Both `pyproject.toml` and `.pre-commit-config.yaml` hook args must be updated.
+
+Triage command: `pixi run mypy <source-dir>/ --check-untyped-defs --exclude <excluded-dir>/`
+
+pyproject.toml reference:
+```toml
+[tool.mypy]
+disallow_untyped_defs = true
+check_untyped_defs = true
+```
+
+Failed attempts: None — triage-first approach worked without surprises.
+
+---
+
+## Superseded from fix-placeholder-code-ci
+
+```yaml
+name: fix-placeholder-code-ci
+description: Fix CI failures caused by partially commented placeholder code and dtype migration assertion mismatches
+category: testing
+date: 2025-12-31
+version: 1.0.0
+```
+
+Fix CI failures from partially commented placeholder code and dtype migration assertion
+mismatches. ProjectOdyssey PR #3017 — 58 CI checks passing.
+
+Key findings:
+- When commenting out a function call, comment out ALL code that uses its return value.
+- After type migration (aliased → native), update all test assertions to match the new native type.
+- After any rebase, always run pre-commit locally before pushing — never wait for CI with conflicts.
+- Merge conflicts can leave orphaned `Returns:` docstring lines causing parse errors.
+- Fix: add `_ = a` to suppress unused variable warnings from placeholder removal.
+
+Triage commands:
+```bash
+gh run view <run_id> --repo <owner>/<repo> --log-failed 2>&1 | head -200
+gh run view <run_id> --repo <owner>/<repo> --log-failed 2>&1 | grep -A 50 "error:\|FAILED"
+```
+
+---
+
+## Superseded from markdownlint-md024-siblings-only-for-changelogs
+
+```yaml
+name: markdownlint-md024-siblings-only-for-changelogs
+description: "Fix markdownlint MD024/no-duplicate-heading false positives on Keep-a-Changelog CHANGELOG.md files by setting siblings_only: true."
+category: tooling
+date: 2026-05-17
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [markdownlint, MD024, changelog, keep-a-changelog, duplicate-heading, siblings_only]
+```
+
+Stop MD024 false positives on Keep-a-Changelog CHANGELOG.md without renaming headings or
+disabling the rule globally. Verified on ProjectAgamemnon PR #404 (2026-05-17) — 14 violations
+to 0 violations after a 3-line config change; CHANGELOG.md unchanged.
+
+Config fix:
+```yaml
+# .markdownlint.yaml
+MD024:
+  siblings_only: true
+```
+
+Failed attempts:
+1. Renaming headings `### Added in 0.2.0` — breaks release-drafter and auto-changelog tooling
+   that expects literal `### Added` / `### Fixed`. Convention is load-bearing for tooling.
+2. `MD024: false` globally — too permissive, real same-parent duplicates silently pass.
+3. Inline `<!-- markdownlint-disable MD024 -->` per release block — verbose, must be added for
+   every new release, easy to forget, disables real duplicate detection within each block.
+
+---
+
+## Superseded from narrow-mypy-override-subset
+
+```yaml
+name: narrow-mypy-override-subset
+description: Narrow a broad mypy module glob override to an explicit list when a subset of subdirs is fully annotated.
+category: testing
+date: 2026-03-02
+version: 1.0.0
+user-invocable: false
+```
+
+Narrow a broad `tests.unit.*` mypy override glob to an explicit list when one subdir is fully
+annotated. ProjectScylla PR #1316, issue #1287.
+
+Key insight: The annotation task may already be complete. Always triage before touching files:
+```bash
+pixi run mypy tests/unit/<subdir>/ --disallow-untyped-defs
+# "Success: no issues found" → skip test file edits, only change pyproject.toml
+```
+
+In the reference session, `tests/unit/scripts/` (9 files, 192 tests) had zero mypy errors from
+the start. Only `pyproject.toml` changed: broad `tests.unit.*` glob → 14-entry explicit list.
+
+Find remaining subdirs needing suppression:
+```bash
+pixi run mypy tests/unit/ --disallow-untyped-defs --no-error-summary 2>&1 \
+  | grep "error:" | sed 's|tests/unit/||;s|/.*||' | sort -u
+```
+
+Note: mypy `[[tool.mypy.overrides]]` accepts a `module` array as of mypy 0.930+.
+
+Failed attempts: None — direct approach worked.
+
+---
+
+## Superseded from ruff-c901-mccabe-complexity
+
+```yaml
+name: ruff-c901-mccabe-complexity
+description: "Skill: ruff-c901-mccabe-complexity"
+category: tooling
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+```
+
+Enable C901 McCabe complexity rule in ruff with a pragmatic threshold. Issue #1377 (follow-up
+from #1356). 65 violations at threshold 10; 0 violations after threshold 12 + annotated noqa.
+
+Threshold decision: Accept complexity 11–12 (22 functions) for orchestration/CLI code;
+suppress complexity >12 (43 functions) with rationale via `# noqa: C901`.
+
+Critical: noqa comment MUST be on the `def` line, not on the return-type line. Ruff silently
+ignores noqa on any line other than the `def` line for multi-line function signatures.
+
+pyproject.toml config:
+```toml
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "D", "UP", "S101", "B", "SIM", "C4", "C901", "RUF"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+```
+
+Results: 4434 tests passed, 1 skipped; 75.23% coverage; 29 source files with noqa suppressions.
+
+---
+
+## Superseded from testing-regression-guard-syntax-vs-property-assertion
+
+```yaml
+name: testing-regression-guard-syntax-vs-property-assertion
+description: "Refactor regression-guard tests that assert on the exact literal text of a suppression mechanism to instead assert the underlying property."
+category: testing
+date: 2026-05-11
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [meta-tests, regression-guard, syntax-pinning, property-assertion, ecosystem-sweep]
+```
+
+Refactor regression-guard tests from syntax-pinning to property assertions before ecosystem sweeps.
+Verified on ProjectScylla PR #1968 and ProjectOdyssey PR #5385 / #5387.
+
+Pre-sweep grep:
+```bash
+grep -rn "continue-on-error\|or-true\|::warning::" tests/ .github/ \
+  --include="*.py" --include="*.sh" --include="*.bats" --include="*.yml" --include="*.yaml"
+```
+
+Fix in a predecessor PR before the sweep, or every sweep PR's CI will fail on meta-test brittleness.
+
+Failed attempts:
+1. Running sweep first, fixing meta-tests after CI broke — reviewers confused real regressions
+   with test brittleness; CI ran twice per PR.
+2. Replacing pinned literal with new mechanism's literal — broke again on the next sweep iteration.
+3. Runtime property check via `gh workflow run` — too slow for pre-merge fast-feedback.
+4. `re.search()` over raw workflow file text — false positives from other steps' commented code.
+5. Smoke-test error message containing `::warning::` triggered `forbid-advisory-warnings` hook
+   on the test file itself. Fix: exclude via `exclude:` in `.pre-commit-config.yaml`.
