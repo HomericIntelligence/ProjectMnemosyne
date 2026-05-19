@@ -1,0 +1,303 @@
+# config-validation-and-schema-alignment — History
+
+## v1.0.0 (2026-05-18) — Merge of 16 skills
+
+**Changed by:** Skill-merge swarm (Phase C Wave 2, M10 / #1784)
+**Verification:** verified-local
+
+### What changed
+
+Consolidated 16 config-validation/schema-alignment skills spanning tooling (14),
+architecture (3), and testing (3) categories.
+
+### Absorbed skills
+
+---
+
+## Superseded from config-linter-yaml-false-positive-fix
+
+```yaml
+name: config-linter-yaml-false-positive-fix
+description: "Fix line-level YAML linter false positives by replacing a narrow key regex with an allowlist of valid YAML constructs and block scalar state tracking."
+category: tooling
+date: 2026-03-25
+version: "1.0.0"
+verification: verified-local
+```
+
+Fix YAML linter false-positive "Possible malformed key" warnings by replacing
+`^\s*[\w\-]+:` with an allowlist covering quoted keys, flow mappings, list items,
+timestamps, block scalars, and document separators. Add block scalar state tracking
+(`in_block_scalar` + `block_scalar_indent`) to skip multi-line string contents.
+Extract helpers to satisfy Ruff C901 complexity ≤10.
+
+---
+
+## Superseded from config-filename-validation
+
+```yaml
+name: config-filename-validation
+description: "Skill: Config Filename/ID Validation Pattern"
+category: tooling
+date: 2026-03-19
+version: "2.0.0"
+```
+
+`validate_filename_tier_consistency()` / `validate_filename_model_id_consistency()` pattern:
+skip `_`-prefixed fixtures, emit warnings (not errors), call after dataclass construction.
+For configs with no ID field use stem-only check; document why field-level check is skipped.
+Covers Issues #733 (tier), #806 (defaults stem-only); PRs #795, #941.
+
+---
+
+## Superseded from json-schema-from-pydantic-models
+
+```yaml
+name: json-schema-from-pydantic-models
+description: "Skill: json-schema-from-pydantic-models"
+category: tooling
+date: 2026-03-19
+version: "1.0.0"
+```
+
+Derive JSON schemas from Pydantic models: read `models.py` first (authoritative), then
+YAML config files (reality check). Use `oneOf` for nullable fields, `additionalProperties: false`
+throughout, `examples` arrays for IDE support. Name test helper `check_schema` not `validate`.
+Three schemas created: `defaults.schema.json`, `tier.schema.json`, `model.schema.json`.
+38 tests. PR HomericIntelligence/ProjectScylla#1376, Issue #1357.
+
+---
+
+## Superseded from validate-config-name-family
+
+```yaml
+name: validate-config-name-family
+description: "Skill: validate-config-name-family"
+category: tooling
+date: 2026-03-19
+version: "1.0.0"
+```
+
+`validate_name_model_family_consistency()` — checks `name` field contains the model
+family (sonnet/haiku/opus) implied by the YAML filename. `KNOWN_FAMILIES: frozenset`,
+`extract_model_family()` splits on `-`. Skip unknown families to avoid false positives
+for non-Anthropic models. Loosen `== 1` → `>= 1` in tests when a new validator adds
+extra warnings. Issue #775, PR #821; 30 tests, 2239 total passing.
+
+---
+
+## Superseded from model-config-naming-validation
+
+```yaml
+name: model-config-naming-validation
+description: "Skill: model-config-naming-validation"
+category: tooling
+date: 2026-03-19
+version: "1.0.0"
+```
+
+`scripts/validate_model_configs.py` — CI/pre-commit script; skip `_`-prefixed fixtures,
+allow version suffix pattern (`stem` is prefix of `model_id`). Add `scripts/__init__.py`
+for mypy module resolution. Pre-commit hook with `pass_filenames: false`. 28 tests.
+Issue #682, PR #769.
+
+---
+
+## Superseded from python-version-alignment
+
+```yaml
+name: python-version-alignment
+description: "Align Python version across pyproject.toml, pixi.toml, Dockerfile, and CI test matrix."
+category: tooling
+date: 2026-03-25
+version: "3.0.0"
+verification: verified-local
+```
+
+Three-part workflow: (A) Dockerfile alignment — update `FROM` and site-packages path;
+(B) CI matrix expansion — replace pixi with `setup-python + pip install -e ".[dev]"`,
+restrict coverage upload to one version; (C) Add new Python stable release to matrix.
+Critical: pixi ignores `actions/setup-python`; matrix expansion alone has no effect.
+Verified: ProjectHephaestus #44/#75, #58/#112; ProjectScylla #1118/#1166.
+
+---
+
+## Superseded from validator-python-env-pyyaml-mismatch
+
+```yaml
+name: validator-python-env-pyyaml-mismatch
+description: "Run a Python validation script when python3 fails with ModuleNotFoundError: No module named 'yaml'."
+category: tooling
+date: 2026-04-03
+version: "1.0.1"
+verification: verified-local
+```
+
+`which -a python python3` to check interpreter divergence; `python3 -c 'import sys; print(sys.executable)'`
+to identify which binary is failing. Use the conda-backed `python` when `python3` is Homebrew.
+Never blindly install packages — align interpreter first.
+
+---
+
+## Superseded from tooling-safety-net-git-blocked-operations
+
+```yaml
+name: tooling-safety-net-git-blocked-operations
+description: "Use when a git or filesystem operation is blocked by the Safety Net hook."
+category: tooling
+date: 2026-05-16
+version: "1.2.0"
+verification: verified-local
+```
+
+Blocked: `git stash drop`, `git worktree remove --force`, `rm -rf`, `git reset --hard`,
+`git push --force`. Allowed: `git worktree remove` (unlocked), `git worktree prune`,
+`git branch -D`, `git push --force-with-lease`, `git update-ref refs/heads/<b> <ref>`.
+Substitute for `git reset --hard`: `git checkout origin/main && git update-ref refs/heads/main refs/remotes/origin/main`.
+Safety Net blocks `rm -rf "$VAR"` even for `/tmp/` paths — use `mktemp -d`.
+Verified: ProjectHermes (live session), ProjectHephaestus PR #417.
+
+---
+
+## Superseded from tooling-plugin-cache-stale-skill-sync
+
+```yaml
+name: tooling-plugin-cache-stale-skill-sync
+description: "Use when a plugin skill is not loading updated content after a merge."
+category: tooling
+date: 2026-05-04
+version: "1.0.0"
+verification: verified-local
+```
+
+Plugin cache keyed by semver version string, not git SHA. When skills merge without
+version bump: (1) `git show origin/main:<path>` into cache dir, (2) sync `marketplace.json`,
+(3) update `gitCommitSha` in `installed_plugins.json`, (4) `/reload-plugins`.
+Verified: ProjectMnemosyne 2026-05-04, cache `3.0.0/`, PR #308.
+
+---
+
+## Superseded from validate-model-configs-fix-mode
+
+```yaml
+name: validate-model-configs-fix-mode
+description: "Use when: (1) adding --fix mode to a validation script; (2) centralizing hardcoded model-ID literals; (3) promoting runtime warning to pre-commit gate."
+category: tooling
+date: 2026-01-01
+version: 2.0.0
+```
+
+Three parts: (A) `--fix` mode for `validate_model_configs.py` — collision guard,
+`[y/N]` confirmation, exit codes 0/1/2; (B) `scylla/config/constants.py` — stdlib-only,
+no circular imports, `DEFAULT_AGENT_MODEL`/`DEFAULT_JUDGE_MODEL`, exported from
+`scylla/config/__init__.py`, 9 functional replacements across 11 files; (C)
+`check-model-config-consistency` pre-commit hook — thin wrapper calling existing
+`validate_filename_model_id_consistency()`, `pixi run python ...` required.
+Issues #776, #792, #851; PRs #823, #837, #974.
+
+---
+
+## Superseded from config-env-double-underscore-nesting
+
+```yaml
+name: config-env-double-underscore-nesting
+description: "Fix ambiguous env var to config key mapping by using __ as nesting delimiter."
+category: architecture
+date: 2026-03-25
+version: "1.0.0"
+verification: verified-local
+```
+
+Replace `.replace("_", ".")` with `.split("__")`. `__` = nesting delimiter; single `_`
+preserved as literal character in key segment. Convention matches Django/Flask patterns.
+Issue HomericIntelligence/ProjectHephaestus#29, PR #67; 389 unit tests pass.
+
+---
+
+## Superseded from config-loader-schema-validation
+
+```yaml
+name: config-loader-schema-validation
+description: "TRIGGER CONDITIONS: Fixing a config loader method that bypasses schema validation by calling _load_yaml() directly."
+category: architecture
+date: 2026-03-07
+version: 1.0.0
+```
+
+`load()` aggregation method called `_load_yaml()` on `defaults.yaml` directly, bypassing
+`load_defaults()` (which applies Pydantic validation, filename checks, JSON schema checks).
+Fix: route through `load_defaults()`; replace manual dict mapping with typed attribute access.
+Test `TestLoadMergedConfigSchemaValidation` verifies validation now participates in merge path.
+Issue #1436, PR #1462; ProjectScylla 4566 unit tests, 75.84% coverage.
+
+---
+
+## Superseded from config-dir-consolidation
+
+```yaml
+name: config-dir-consolidation
+description: "Move config files from a dedicated config/ directory into tests/ when config is only consumed by test infrastructure."
+category: architecture
+date: 2026-02-19
+version: 1.0.0
+```
+
+Ten-step workflow: audit, create stripped YAML at new location, refactor loader class,
+update auto-detection paths, remove prompt injection from adapters/runners, update model
+classes, update tests, delete old directory with `git rm -r`, update docs/scripts, verify.
+18 files deleted, 15 modified, 2202 tests passing. Pre-existing bug discovered during
+E2E dry run (`TierConfig` missing `language` field — unrelated to consolidation).
+
+---
+
+## Superseded from json-schema-validation-wiring
+
+```yaml
+name: json-schema-validation-wiring
+description: Wire JSON schema validation into config loader methods (load_test, load_rubric).
+category: testing
+date: 2026-03-19
+version: 1.0.0
+```
+
+Audit fixtures vs schema before updating (check field names, ID patterns). Wire
+`_validate_schema()` after `_load_yaml()` before Pydantic construction; use `_`-prefix
+guard consistently. Updated `test.schema.json` (added `language` required, `tiers` optional,
+broadened `id` pattern) and `rubric.schema.json` (added `categories` alternative, optional
+fields). 18 new tests. PR #1465, Issue #1438.
+
+---
+
+## Superseded from config-filename-model-id-audit
+
+```yaml
+name: config-filename-model-id-audit
+description: Audit and fix YAML config files where filename stems mismatch model_id fields
+category: testing
+date: 2026-02-19
+version: 1.0.0
+```
+
+Run `ConfigLoader('.').load_all_models()` (pass project root, not `'config'`) to discover
+mismatches. Rename with `git mv` (preserves history). Grep for stale short-form IDs in
+source. Write `TestLoadAllModels` regression class with `caplog` for warning assertions.
+3 files renamed, 9 tests added, 2214 total passing. Issue #732, follow-up from #692.
+
+---
+
+## Superseded from wire-schema-validation
+
+```yaml
+name: wire-schema-validation
+description: "TRIGGER CONDITIONS: Wiring JSON schema validation into a config loader that already parses YAML into dataclass/Pydantic models."
+category: testing
+date: 2026-03-04
+version: 1.0.0
+```
+
+`_SCHEMAS_DIR` and `_validate_schema()` must be placed **after all imports** in `loader.py`
+(ruff-format reorders import blocks; helpers placed between stdlib and local imports leave
+`ConfigurationError` undefined at definition time). Wire after `_load_yaml()`, before Pydantic
+construction; guard with `if not name.startswith("_"):`. Fix Pydantic alias mismatches in
+fixtures (YAML key must be the `alias=` value). 15 new tests in `TestSchemaValidation`.
+PR #1424, Issue #1380.
