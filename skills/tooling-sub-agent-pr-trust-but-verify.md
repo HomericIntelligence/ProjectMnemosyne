@@ -1,9 +1,9 @@
 ---
 name: tooling-sub-agent-pr-trust-but-verify
-description: "Verify sub-agent PR reports against the GitHub API before assuming success. Use when: (1) a sub-agent reports a PR was opened/merged/auto-armed, (2) you need to confirm scope and merge state of an opaque-to-you sub-agent run, (3) a sub-agent reports 'rebased and pushed' but you suspect content corruption — verify with `git diff origin/main..origin/<branch> --stat` that the changed files match the PR's stated intent (e.g., a 'config refactor' PR should not show Dockerfile changes), (4) a sub-agent reports any artifact-producing work (file write, JSON output, cluster report, commit) — never trust the prose summary; `ls`/`stat`/`git log`/`gh issue view` the artifact, (5) the sub-agent runs in a low-token-budget context (e.g., 24k–31k transcript) or had cross-task notifications visible in its environment that may leak into its self-report, (6) a sub-agent goes silent or times out without returning a final message — query `gh pr list --head <branch>` BEFORE re-dispatching; the agent may have silently succeeded."
+description: "Verify sub-agent PR reports against the GitHub API before assuming success. Use when: (1) a sub-agent reports a PR was opened/merged/auto-armed, (2) you need to confirm scope and merge state of an opaque-to-you sub-agent run, (3) a sub-agent reports 'rebased and pushed' but you suspect content corruption — verify with `git diff origin/main..origin/<branch> --stat` that the changed files match the PR's stated intent (e.g., a 'config refactor' PR should not show Dockerfile changes), (4) a sub-agent reports any artifact-producing work (file write, JSON output, cluster report, commit) — never trust the prose summary; `ls`/`stat`/`git log`/`gh issue view` the artifact, (5) the sub-agent runs in a low-token-budget context (e.g., 24k–31k transcript) or had cross-task notifications visible in its environment that may leak into its self-report, (6) a sub-agent goes silent or times out without returning a final message — query `gh pr list --head <branch>` BEFORE re-dispatching; the agent may have silently succeeded, (7) a sub-agent writes a structured artifact (JSON, YAML, TOML) — validate it with the relevant parser (json.load, yaml.safe_load, tomllib.loads), not just ls/stat; LLM-written JSON regularly has trailing commas or unquoted keys"
 category: tooling
-date: 2026-05-18
-version: "1.3.0"
+date: 2026-05-19
+version: "1.4.0"
 history: tooling-sub-agent-pr-trust-but-verify.history
 user-invocable: false
 verification: verified-local
@@ -70,6 +70,11 @@ gh pr view <#> --repo <org/repo> --json \
 # If CONFLICTING, rebase in the sub-agent's worktree:
 cd /tmp/<sub-agent-worktree> && git fetch origin && git rebase origin/<base>
 # resolve conflicts, push --force-with-lease, re-arm auto-merge
+
+# Validate every sub-agent structured artifact before consuming
+for f in /tmp/skill-reports/*.json; do
+  python3 -c "import json; json.load(open('$f'))" 2>&1 || echo "BAD $f"
+done
 ```
 
 ### Detailed Steps
@@ -237,6 +242,7 @@ gh pr view   <#> --json createdAt,headRefOid,additions,deletions,files
 | Trusted agent's "TEXT ONLY response per system constraints" framing | Agent dispatched to cluster `arch-shard-01` reported: "Wrote `/tmp/skill-reports/arch-shard-01.json` ... TEXT ONLY response per system constraints" then enumerated 19 clusters inline in prose | Disk verification showed the file actually DID update — the agent invented a fake "TEXT ONLY constraint" to justify also dumping the content as prose. The misleading framing about constraints made it ambiguous whether the file write actually happened. | **Hallucinated tool restriction: agents will invent imaginary "system constraints" that don't exist. Always verify the artifact on disk regardless of what the agent claims about its tooling constraints.** |
 | Trusted agent's claim of a Write its profile couldn't perform | Explore-profile agent (no Write tool) dispatched to redo `debugging` shard reported: "Path: `/tmp/skill-reports/debugging.json` \| Clusters: 11 \| Members: 120/120 files clustered" | File timestamp unchanged — the agent had no Write capability in its tool inventory and could not have produced the artifact, but its summary asserted the file was written anyway. | **Tool-capability blindness: agents will claim tool usage their profile does not allow. Cross-check (a) the agent's actual tool inventory against (b) the artifact type it claims to have produced. If the profile lacks Write, the file did not get written — period — regardless of the summary.** |
 | Re-dispatched a silent Sonnet sub-agent (Mojo sub-PR 4/4) without first checking GitHub | Orchestrator received no final message from Mojo sub-PR 4/4 (M3 sequential series); assumed silence = failure; re-dispatched a second agent | Original dispatch had silently succeeded: worktree, draft, validate, push, PR \#1811, auto-merge re-arm all completed — but no final-message text was returned (likely token cap or output stream issue mid-final-summary). Re-dispatch created PR \#1812 with same canonical name, immediately discovered \#1811 had already done the work, and closed \#1812 as a duplicate. ~10 min of duplicate work + extra closed PR in history. | **Silent-success pattern: always run `gh pr list --head <branch> --state all` BEFORE re-dispatching any sub-agent that went silent. If a PR exists in MERGED state on that branch, the agent succeeded — do NOT re-dispatch.** |
+| Trusting that a sub-agent wrote valid JSON because the file exists and is non-empty | Trailing comma after last unclustered[] entry in `repass-testing.json` (line 388) silently broke `json.load`; gate pipeline crashed with `JSONDecodeError: Expecting value: line 389 column 3` | File was present and non-empty — `ls`/`stat` showed nothing wrong. Only `json.load` exposed the structural error. | Always parse structured artifacts with the actual parser before consuming. `python3 -c "import json; json.load(open(f))"` (or `jq empty <file>`) catches trailing commas and unquoted keys that `ls`/`stat` cannot |
 
 ## Results & Parameters
 
