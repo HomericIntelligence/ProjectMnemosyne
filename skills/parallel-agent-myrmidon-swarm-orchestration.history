@@ -1,0 +1,771 @@
+# parallel-agent-myrmidon-swarm-orchestration — History
+
+## v1.0.0 (2026-05-18) — Merge of 20 skills
+
+**Changed by:** Skill-merge swarm (Phase C Wave 2, M9 / #1781)
+**Verification:** verified-local
+
+### What changed
+
+Consolidated 20 parallel-agent / Myrmidon orchestration skills.
+Meta-skill substrate (worktree-parallel-agent-execution,
+myrmidon-swarm-end-to-end-orchestration-full-workflow, etc.) was
+deliberately NOT absorbed — see canonical's "Dependencies" note.
+
+---
+
+## Superseded from `parallel-remediation-file-disjointness-check`
+
+```yaml
+name: parallel-remediation-file-disjointness-check
+description: "Before dispatching new parallel remediation work atop N in-flight PRs, verify the proposed cluster's files are DISJOINT from every open PR's diff. File-overlap is the only reliable proxy for merge-conflict risk. Use when: (1) >=5 PRs already in flight with auto-merge waiting on green CI, (2) about to dispatch a new swarm wave or remediation cluster mid-cascade, (3) deciding whether work can safely run in parallel or must queue, (4) prior dispatch produced rebase chaos from same-file collisions."
+category: tooling
+date: 2026-05-17
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - parallel-pr
+  - merge-cascade
+  - disjoint-files
+  - remediation-phasing
+  - swarm-conflict-avoidance
+  - in-flight-prs
+  - dispatch-gate
+  - file-overlap
+```
+
+
+# Parallel Remediation — File Disjointness Check Against In-Flight PRs
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-17 |
+| **Objective** | Codify a pre-dispatch gate that prevents parallel remediation work from colliding with PRs already in the merge cascade |
+| **Outcome** | On ProjectAgamemnon 2026-05-17, Phase F-1 cluster (OpenAPI + Python SDK + `routes.cpp` enum constants) was selected against 14 in-flight PRs after file-level disjointness verification — zero overlap confirmed before dispatch |
+| **Verification** | verified-local — disjointness check verified manually; PR dispatch not yet observed end-to-end through merge |
+| **History** | n/a (initial version) |
+
+## When to Use
+
+- About to dispatch a new remediation cluster while >=5 PRs sit open in the cascade
+- Auto-merge is enabled on in-flight PRs and they are waiting on CI green
+- Choosing between several candidate remediation clusters and need a tiebreaker
+- Prior parallel attempt on the same file produced a rebase storm (lesson: same-file = serialize)
+- Companion check after applying the runner-pool concurrency cap (`github-actions-runner-pool-saturation-swarm-concurrency-cap`)
+
+---
+
+## Superseded from `tooling-myrmidon-swarm-stall-recovery-from-worktree`
+
+```yaml
+name: tooling-myrmidon-swarm-stall-recovery-from-worktree
+description: "Recover Myrmidon swarm agents that fail with 'stream idle timeout' or 'no progress for 600s (stream watchdog did not recover)' by inspecting their worktree state, finishing partial work manually, and pushing. Use when: (1) a background agent task-notification reports status=failed with watchdog wording (different from API connection errors), (2) the worktree shows partial diffs/staged files but no commits, (3) restarting the agent would re-burn tokens for partial work that's salvageable, (4) deciding whether to recover-and-finish vs restart-from-scratch."
+category: tooling
+date: 2026-05-07
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [myrmidon, swarm, stall, watchdog, stream-timeout, recovery, worktree, partial-state, manual-finish]
+```
+
+
+# Myrmidon Swarm Stall Recovery from Worktree
+
+## Overview
+
+When Myrmidon swarm agents stall mid-task — either due to a stream-idle timeout or
+the no-progress watchdog tripping after 600 seconds — their worktree is left in a
+partial state. The standard reflex (re-dispatch a fresh agent) wastes tokens for work
+that's often half-done already. This skill captures the verified workflow for
+inspecting a stalled agent's worktree, classifying its state, finishing partial work
+in-place, and pushing through the normal PR pipeline.
+
+This is **distinct** from `agent-background-task-failure-recovery`, which covers
+**API ConnectionRefused** errors where the task-notification reports
+`status=completed`. Watchdog stalls report `status=failed` and require a different
+recovery procedure.
+
+## When to Use
+
+Use this skill when **all** of the following are true:
+
+---
+
+## Superseded from `audit-strict-full-swarm-coverage`
+
+```yaml
+name: audit-strict-full-swarm-coverage
+description: "Methodology for running a strict, full-coverage repository audit by dispatching one swarm agent per audit section in waves of 5. Use when: (1) running /hephaestus:repo-analyze-strict-full or equivalent full-coverage audit on a repo with >500 files, (2) bug-finding completeness matters and sampling is unsafe, (3) you need pre-release readiness review with strict grading (default F, evidence required), (4) single-agent audits are overflowing context or producing shallow results."
+category: tooling
+date: 2026-05-17
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: audit-strict-full-swarm-coverage.history
+tags: [audit, repo-analyze, swarm, myrmidon, strict-grading, full-coverage, wave-dispatch, bucketing, go-no-go]
+```
+
+
+# Audit: Strict Full-Coverage Swarm Methodology
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-17 |
+| **Objective** | Run a strict, evidence-based full-coverage repository audit by bucketing files per audit section and dispatching one swarm agent per section (in waves of 5 if concurrency is capped, or all 15 in parallel if not). |
+| **Outcome** | Verified on two projects. ProjectScylla 2026-05-07: B- (82%), CONDITIONAL GO, 3 critical / 19 major / 3 grouped minor (issues #1934-#1959). ProjectAgamemnon 2026-05-17: B- (78%), CONDITIONAL GO, 1 critical (triple-copy Python orchestration) / 19 major / ~15 minor, all with file:line citations. Wall-clock ~10-15 min when 15 agents run in parallel. |
+| **Verification** | verified-local |
+| **History** | [changelog](./audit-strict-full-swarm-coverage.history) |
+
+## When to Use
+
+- A repo audit where bug-finding completeness matters (sampling-based audits would miss bugs)
+- Repos > 500 files where a single agent would overflow context
+- Pre-release / pre-merge readiness reviews where every file must be inspected
+- Strict grading is required: default F, A reserved for 0 critical + 0 major + ≤2 minor
+- You are running `/hephaestus:repo-analyze-strict-full`, `/hephaestus:repo-analyze-full`, or equivalent
+
+---
+
+## Superseded from `tooling-meta-repo-submodule-cleanup-swarm`
+
+```yaml
+name: tooling-meta-repo-submodule-cleanup-swarm
+description: "Clean up dirty submodule state across a meta-repo using a myrmidon swarm of parallel agents in multiple waves. Use when: (1) many submodules have untracked generated files, stale checkouts, or WIP changes, (2) cleanup requires per-submodule branches/commits/PRs, (3) dependent work (pin updates) must wait for independent work (gitignore, commits) to complete."
+category: tooling
+date: 2026-04-03
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [meta-repo, submodules, myrmidon-swarm, git-worktrees, multi-wave, cleanup]
+```
+
+
+# Tooling: Meta-Repo Submodule Cleanup Swarm
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-03 |
+| **Objective** | Clean up dirty submodule state across 15 submodules in the Odysseus meta-repo using a myrmidon swarm of 8 agents in 2 waves |
+| **Outcome** | 5 PRs created across 5 repos, 1 merged immediately, 2 worktrees removed, 2 submodule pins updated |
+| **Verification** | verified-local (all agents completed successfully; PRs pushed and CI/merge pending) |
+
+## When to Use
+
+- A meta-repo's `git status` shows many submodules as dirty (modified, untracked content, or new commits)
+- Dirty state falls into distinct categories requiring different handling: untracked generated files, real WIP changes, stale local checkouts
+- Cleanup work is parallelizable across submodules but some tasks depend on others (e.g., pin updates depend on PR merges)
+- You need to avoid pinning submodules to non-main commits from unmerged feature branches
+
+## Verified Workflow
+
+---
+
+## Superseded from `agent-hooks-pattern`
+
+```yaml
+name: agent-hooks-pattern
+description: Pattern for agent-scoped lifecycle hooks in Claude Code v2.1.0. Use when
+  implementing custom agents with safety controls or tool restrictions.
+category: tooling
+date: '2026-03-19'
+version: 1.0.0
+user-invocable: false
+```
+
+# Agent-Scoped Hooks Pattern
+
+Pattern for adding lifecycle hooks directly to agent frontmatter in Claude Code v2.1.0+.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-01-08 |
+| Objective | Document agent-scoped hooks pattern from Claude Code v2.1.0 |
+| Outcome | Verified pattern for PreToolUse, PostToolUse, and Stop hooks in agent frontmatter |
+| Source | Claude Code CHANGELOG v2.1.0 |
+
+## When to Use
+
+- Implementing custom agents with tool access restrictions
+- Adding safety controls to junior/trainee agents (block dangerous commands)
+- Creating read-only review agents (block Edit, Write, Bash)
+- Enforcing agent-specific workflows with lifecycle hooks
+- Adding once-per-session initialization hooks to agents
+
+---
+
+## Superseded from `validate-agent-tools-content`
+
+```yaml
+name: validate-agent-tools-content
+description: "Skill: validate-agent-tools-content"
+category: tooling
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+```
+
+# Skill: validate-agent-tools-content
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-02-20 |
+| Issue | #780 |
+| PR | #825 |
+| Category | tooling |
+| Outcome | Success — 2209 tests pass, pre-commit passes |
+
+Objective: Upgrade the bash agent validation script to check individual tool names against a known valid set, catching misconfigured agent files that reference non-existent tools.
+
+## When to Use
+
+- Adding content validation to a bash YAML field validator
+- Upgrading format-only validation (`[...]` check) to per-item content validation
+- Synchronizing a `VALID_*` array across bash and Python validators
+- Any time a bash validator has a declared-but-unused constant array
+
+---
+
+## Superseded from `liza-agent-pool-reset-explicit-ids`
+
+```yaml
+name: liza-agent-pool-reset-explicit-ids
+description: "Reset a dirty Liza workspace and relaunch a clean agent pool with explicit agent IDs so ghost assignments do not reappear. Use when: (1) tasks retain stale `assigned_to` or `worktree` fields after agent failure, (2) `liza` reports invalid state because one agent is assigned to multiple active tasks, (3) leftover task worktrees and local agent processes keep the queue in a bad state, (4) you want to relaunch planners, reviewers, coders, and the orchestrator deterministically."
+category: tooling
+date: 2026-04-07
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - liza
+  - agents
+  - worktree
+  - recovery
+  - orchestration
+  - queue
+```
+
+
+# Liza Agent Pool Reset With Explicit IDs
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-07 |
+| **Objective** | Clear stale task claims, worktrees, and local Liza processes, then relaunch a deterministic agent pool |
+| **Outcome** | Successful -- recovered leftover tasks, removed task worktrees/branches, killed orphaned local `liza` processes, validated state, and resumed the workspace cleanly |
+| **Verification** | verified-local |
+
+## When to Use
+
+- `liza status` or the TUI reports invalid state such as one planner assigned to multiple active tasks
+- Tasks still show `assigned_to`, `reviewing_by`, or `worktree` long after the worker died
+- `git worktree list` still contains `github-issue-*` task worktrees after the queue should be idle
+- You need to restart the worker fleet and want to avoid anonymous `code-planner-*` reuse
+
+## Verified Workflow
+
+---
+
+## Superseded from `agent-to-skill-conversion`
+
+```yaml
+name: agent-to-skill-conversion
+description: 'Convert agent configurations to skills when tasks are fixed/predictable.
+  Use when: (1) agent performs repeatable automation steps without adaptive reasoning,
+  (2) reducing agent count to simplify hierarchy, (3) moving fixed-step workflows
+  to the right abstraction layer.'
+category: architecture
+date: 2026-03-05
+version: 1.0.0
+user-invocable: false
+```
+
+# Agent-to-Skill Conversion
+
+Convert Claude Code agent configurations to skills when the task matches the skill pattern
+(fixed steps, automation) rather than the agent pattern (adaptive reasoning, exploration).
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-05 |
+| Objective | Convert blog-writer and pr-cleanup agents to skills (ProjectOdyssey issue #3145) |
+| Outcome | 2 agents removed, 2 skills created, all references updated, PR #3320 created |
+
+## When to Use
+
+- Agent performs fixed, predictable, repeatable steps with no branching logic
+- Agent does not require exploration, discovery, or adaptive decision-making
+- Agent acts as automation wrapper rather than a reasoning entity
+- Goal is to reduce agent count and put functionality at the right abstraction layer
+
+
+---
+
+## Superseded from `agent-coverage-check`
+
+```yaml
+name: agent-coverage-check
+description: Check agent configuration coverage across hierarchy levels and phases.
+  Use to ensure complete agent system coverage.
+category: architecture
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+```
+
+# Agent Coverage Check
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Verify complete agent system coverage across all dimensions. - After adding new agents to system - Validating agent system completeness |
+| Outcome | Operational |
+
+Verify complete agent system coverage across all dimensions.
+
+## When to Use
+
+- After adding new agents to system
+- Validating agent system completeness
+- Finding gaps in coverage
+- Ensuring all development phases covered
+
+## Verified Workflow
+
+---
+
+## Superseded from `agent-test-delegation`
+
+```yaml
+name: agent-test-delegation
+description: Test agent delegation patterns to verify hierarchy and escalation paths.
+  Use after modifying agent structure.
+category: architecture
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+```
+
+# Agent Delegation Testing
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Verify agent hierarchy, delegation chains, and escalation paths. - After modifying agent hierarchy - Verifying escalation paths work correctly |
+| Outcome | Operational |
+
+Verify agent hierarchy, delegation chains, and escalation paths.
+
+## When to Use
+
+- After modifying agent hierarchy
+- Verifying escalation paths work correctly
+- Troubleshooting delegation issues
+- CI/CD validation before merge
+
+## Verified Workflow
+
+---
+
+## Superseded from `agent-hierarchy-diagram`
+
+```yaml
+name: agent-hierarchy-diagram
+description: Generate visual hierarchy diagrams of agent system showing levels and
+  delegation. Use for documentation or onboarding.
+category: architecture
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+```
+
+# Agent Hierarchy Diagram
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Generate visual diagrams showing agent system structure and relationships. - Documenting agent system for team |
+| Outcome | Operational |
+
+Generate visual diagrams showing agent system structure and relationships.
+
+## When to Use
+
+- Documenting agent system for team
+- Understanding delegation structure
+- Onboarding new contributors
+- Visualizing agent relationships for presentations
+
+## Verified Workflow
+
+---
+
+## Superseded from `agent-run-orchestrator`
+
+```yaml
+name: agent-run-orchestrator
+description: Run section orchestrators to coordinate multi-component workflows. Use
+  when starting work on a section.
+category: architecture
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+```
+
+# Run Orchestrator
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Invoke section orchestrators to coordinate complex development workflows. - Starting work on new section |
+| Outcome | Operational |
+
+Invoke section orchestrators to coordinate complex development workflows.
+
+## When to Use
+
+- Starting work on new section
+- Coordinating multiple parallel components
+- Managing complex workflows
+- Need hierarchical task coordination
+
+## Verified Workflow
+
+---
+
+## Superseded from `architecture-hierarchical-agent-command-creation`
+
+```yaml
+name: architecture-hierarchical-agent-command-creation
+description: "Create a Claude Code custom command that orchestrates hierarchical multi-agent
+  workflows with model tier assignments. Use when: (1) building a reusable /command
+  that spawns sub-agents at different model tiers (Opus/Sonnet/Haiku), (2) integrating
+  ProjectOdyssey's 6-level agent hierarchy into a portable command, (3) implementing
+  wave-based parallel agent execution with approval gates."
+category: architecture
+date: 2026-03-25
+version: 1.0.0
+user-invocable: false
+verification: verified-local
+tags:
+  - claude-code
+  - agent-hierarchy
+  - model-tiers
+  - custom-command
+  - orchestration
+```
+
+
+# Hierarchical Agent Command Creation
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-25 |
+| **Objective** | Create a reusable Claude Code custom command (`/myrmidon-swarm`) that decomposes complex tasks into hierarchical agent trees with automatic model tier assignment (Opus for orchestrators, Sonnet for specialists, Haiku for executors) |
+| **Outcome** | Success - 387-line command file installed at `~/.claude/commands/myrmidon-swarm.md`, immediately discoverable in Claude Code autocomplete |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Building a Claude Code custom command that spawns sub-agents at different model tiers
+- Porting ProjectOdyssey's 6-level agent hierarchy (L0-L5) into a portable, repo-agnostic command
+- Implementing wave-based parallel agent execution with mandatory user approval gates
+- Integrating ProjectMnemosyne `/advise` auto-invocation into a workflow command
+- Creating commands that follow the XML-structured prompt pattern from `repo-analyze.md`
+
+
+---
+
+## Superseded from `strict-review-with-audit-epic-exclusion`
+
+```yaml
+name: strict-review-with-audit-epic-exclusion
+description: "Strict architectural review of a multi-phase pipeline that already has a tracked audit epic. Builds an exclusion list from open issues + parent epic FIRST, then dispatches parallel Explore sub-agents sliced by phase (not by file), then spot-verifies every concrete claim before writing the plan. Use when: (1) reviewing code that has an existing audit epic with N findings already filed, (2) reviewing a multi-phase pipeline where phases are natural agent boundaries, (3) running myrmidon-swarm fan-out for code review and need to filter noise from already-tracked findings, (4) producing a strict review document where the deliverable is a plan file (not ExitPlanMode), (5) implementing 15+ findings in one PR with grouped commits."
+category: architecture
+date: 2026-05-09
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [strict-review, audit-epic, exclusion-list, parallel-explore, spot-verification, defence-in-depth, pipeline-review, myrmidon-swarm]
+```
+
+
+# Strict Review with Audit-Epic Exclusion + Parallel Fan-Out
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-09 |
+| **Objective** | Run a strict architectural review of a 6-phase automation pipeline that already had a tracked audit epic (#310, 26 findings), without re-flagging anything already tracked. Surface ONLY net-new findings with file:line citations. |
+| **Outcome** | Successful — 21 net-new findings (6 MAJOR / 10 MINOR / 5 NITPICK) surfaced, ~26 audit-epic findings filtered out, plan file shipped, then implemented as one PR (23 files, +665 / -1377, 1 commit). PR #367 in ProjectHephaestus. |
+| **Verification** | verified-local (ruff/mypy/2042 pytests passed locally; verified-ci pending PR #367 merge) |
+
+## When to Use
+
+- A repo has an open **audit epic** with N findings already filed and the user asks for a "strict review" of the same code area. Without filtering, ~70% of new findings duplicate the epic.
+- The code under review is a **multi-phase pipeline** where each phase has clear inputs/outputs and 1-3 owning files. Phases are natural agent boundaries.
+- You have access to `myrmidon-swarm` / Explore sub-agents and want **parallel fan-out** to be quality-additive rather than just speed-additive.
+- The user phrasing is "do a strict review", "ignore items already tracked", "use the swarm to analyze in parallel", "give me an architectural description AND a strict review".
+- The deliverable is a **plan/review document**, not an implementation. (If the user later says "implement it", group everything into one branch with one commit.)
+
+
+---
+
+## Superseded from `wave-based-bulk-issue-triage`
+
+```yaml
+name: wave-based-bulk-issue-triage
+description: "Fix 5+ independent GitHub issues in parallel waves using Task isolation:worktree.\
+  \ No manual worktree setup \u2014 Claude Code auto-manages isolation. Also covers\
+  \ bulk gh issue create via myrmidon swarm (plain Agent calls, no worktrees needed).\
+  \ Includes pre-fix classification phase using parallel Explore agents."
+category: architecture
+date: 2026-04-25
+version: 1.4.0
+user-invocable: false
+verification: verified-local
+history: wave-based-bulk-issue-triage.history
+```
+
+# Skill: Wave-Based Bulk Issue Triage
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-02-22 |
+| **Objective** | Fix 8 GitHub issues (2 waves × 4 PRs) — simple fixes + test additions |
+| **Outcome** | ✅ Success — 8 PRs created in parallel, auto-merge enabled |
+| **Key Innovation** | `Task(isolation="worktree")` — zero manual worktree management |
+
+## When to Use
+
+Use this skill when:
+
+1. **Backlog of 5+ independent issues** to clear in one session
+2. **Issues fall into categories** — e.g., simple doc/config fixes vs. test additions
+3. **Issues modify different files** — no shared file conflicts
+4. **Want maximum parallelism** with minimal orchestration overhead
+5. **Filing 10+ GitHub issues from an audit or walkthrough report** — use myrmidon swarm (plain Agent calls, no worktrees needed)
+6. **Large backlog (20+ issues) requiring classification first** — run parallel Explore agents before fix waves
+
+
+---
+
+## Superseded from `myrmidon-swarm-resume-drain-in-flight-prs-first`
+
+```yaml
+name: myrmidon-swarm-resume-drain-in-flight-prs-first
+description: "When resuming a stalled myrmidon swarm session, drain all in-flight PRs (CI fix loop, rebases, merges) BEFORE dispatching new waves. New work atop unresolved PRs cascades rebase chaos. Use when: (1) starting a session that finds N open PRs from a prior session, (2) prior session ended mid-CI-fix-loop, (3) `gh pr list --state open --author @me` returns 3+ PRs in BLOCKED/DIRTY state."
+category: architecture
+date: 2026-05-17
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [myrmidon, swarm, resume, in-flight-prs, ci-fix-loop, phase-a, drain-queue, rebase-cascade, session-handoff, orchestration]
+```
+
+
+# Myrmidon Swarm Resume — Drain In-Flight PRs First
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| Date | 2026-05-17 |
+| Objective | Codify the Phase A "drain queue first" rule for resumed swarm sessions |
+| Outcome | Verified — drained 6 stale PRs + 1 fix-main PR before dispatching B/C/D waves prevented hours of rebase chaos |
+| Verification | verified-ci |
+
+When an L0 commander resumes a myrmidon swarm session that ended mid-flight,
+the strongest temptation is to dispatch new waves immediately. **Do not.**
+New work atop unresolved PRs inherits broken state, saturates the GitHub
+runner pool, and forces cascading rebases across every PR in the fleet.
+
+The verified rule: **Phase A (drain) must complete to 0 in-flight PRs
+before Phase B/C/D (new waves) begin.**
+
+
+---
+
+## Superseded from `atlas-dashboard-epic-mesh-review-wave`
+
+```yaml
+name: atlas-dashboard-epic-mesh-review-wave
+description: "Design and file a GitHub Epic + child issues for a new service, then run a multi-dimension Myrmidon review wave (arch/code/security/ux/ops/docs) against the plan. Use when: (1) starting a new HomericIntelligence service from scratch and need a fully filed epic with milestones and labels, (2) running a parallel 6-agent review wave against an architecture plan before implementation begins, (3) tracking and resolving critical findings from a multi-dimension agent review."
+category: architecture
+date: 2026-04-25
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - atlas
+  - dashboard
+  - github-epic
+  - mesh-review
+  - nats
+  - htmx
+  - go
+  - templ
+  - sse
+  - tailscale
+  - grafana
+  - mnemosyne
+```
+
+
+# Atlas Dashboard: GitHub Epic Filing + 6-Agent Mesh Review Wave
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-25 |
+| **Objective** | Design the Atlas unified operator dashboard (Go + Chi + templ + htmx + NATS, port 3002), file Epic #151 + 20 child issues across 6 milestones on HomericIntelligence/Odysseus, run 6-dimension Myrmidon review wave, resolve all 8 critical findings |
+| **Outcome** | Successful — Epic + 20 issues filed; 6/6 review dimensions ran; 8 critical findings resolved; corrections posted to relevant issues |
+| **Verification** | verified-local (review wave ran, issues filed; implementation not started yet) |
+
+## When to Use
+
+- Starting a new service in the HomericIntelligence ecosystem and need a complete epic + child issues in GitHub
+- Running a 6-dimension parallel review (arch/code/security/ux/ops/docs) against a plan before implementation
+- Filing GitHub milestones and labels at scale (20+ issues, 6 milestones, 24 labels) via CLI
+- Verifying NATS subject schema, compose topology, and justfile integration before implementation
+- Auditing a plan for port constants, compose DNS service names, crypto API safety, iframe sandbox escape risks, env var prefix consistency, and SSE concurrency patterns
+
+
+---
+
+## Superseded from `corpus-surgical-correction-batch`
+
+```yaml
+name: corpus-surgical-correction-batch
+description: "Surgical batch correction of a large research document corpus (50+ files) after a review pass. Use when: (1) a review process has identified specific errors across many documents that share a common root cause, (2) you need corrections to be traceable (auditable inline markers), (3) stripping correction-narrative text from a document corpus after corrections have been accepted and made permanent, (4) you want to preserve all surrounding text and structure, (5) corrections span multiple independent document groups that can be parallelized."
+category: architecture
+date: 2026-04-14
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: corpus-surgical-correction-batch.history
+tags: [latex, narrative-removal, corpus-edit]
+```
+
+
+# Corpus Surgical Correction: Batch Parallel Pattern
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-13 |
+| **Objective** | Apply corrections identified by a review pass to 62 research/summary documents and 4 synthesis documents — without rewriting sections or losing provenance |
+| **Outcome** | All 66 files corrected across 8 parallel batches; every change marked with `[corrected: ...]` inline notes |
+| **Verification** | verified-local |
+| **History** | [changelog](./corpus-surgical-correction-batch.history) |
+
+## When to Use
+
+- Post-review correction pass on 20+ documents
+- Multiple documents share the same root-cause error (e.g., wrong constant propagated from a shared context)
+- You need corrections to be auditable (reviewable by humans without re-reading the full doc)
+- Document groups are independent and can be processed in parallel
+- You want to preserve original structure, prior art classifications, and verdict text
+
+---
+
+## Superseded from `haiku-wave-pr-remediation`
+
+```yaml
+name: haiku-wave-pr-remediation
+description: 'Fix 40+ failing PRs across multiple repos using wave-based haiku sub-agents
+  in worktrees. Use when: many PRs fail CI across heterogeneous categories (ruff/mojo-format/deprecated-syntax/missing-ci-matrix/JIT-crash),
+  wave-0 diagnosis identifies per-cluster root causes, parallel haiku agents in isolated
+  worktrees are needed.'
+category: ci-cd
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Purpose** | Fix 49+ failing PRs across 4 repos with parallel haiku sub-agents |
+| **Primary trigger** | 40+ PRs failing CI with heterogeneous failure types |
+| **Key insight** | Wave-0 diagnosis first; never spawn fix agents until root cause per cluster is known |
+| **Model** | haiku (cost-efficient for bulk mechanical fixes) |
+| **Isolation** | `git worktree add /tmp/fix-<pr>` per agent |
+| **Session date** | 2026-03-15 (46 Odyssey + 3 non-Odyssey PRs) |
+
+## When to Use
+
+- 40+ PRs failing CI with a mix of failure types across multiple categories
+- Failures span: ruff format, mojo format parity, deprecated Mojo syntax, missing CI matrix entries,
+  `just` not in PATH, transient JIT crashes
+- Need cost-efficient parallel remediation without burning Sonnet/Opus tokens on mechanical fixes
+- Repos involved: ProjectOdyssey (Mojo), ProjectScylla (Python), ProjectMnemosyne (skill plugins),
+  ProjectKeystone (infrastructure)
+
+
+---
+
+## Superseded from `parallel-test-fix-orchestration`
+
+```yaml
+name: parallel-test-fix-orchestration
+description: 'Orchestrate mass parallel test fixes using worktree-isolated agents
+  with one PR per fix. Use when: CI has many independent test failures that need systematic
+  resolution.'
+category: ci-cd
+date: 2026-03-18
+version: 1.0.0
+user-invocable: false
+```
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Scope** | Mass CI test failure resolution |
+| **Scale** | 10-50+ failing test files per session |
+| **Parallelism** | Up to 10 concurrent worktree agents |
+| **Output** | One PR per failing test file, auto-merge enabled |
+| **Duration** | 5-15 minutes for 45 agents (wall clock) |
+
+## When to Use
+
+- CI comprehensive test suite has 10+ failing test files
+- Failures span multiple categories (compile errors, runtime errors, permission issues)
+- Each test file can be fixed independently (no shared source file conflicts)
+- You want clean, reviewable, single-purpose PRs rather than one mega-PR
+- Test failures are caused by API drift, not fundamental architectural issues
+
+## Verified Workflow
+
+
+---
+
