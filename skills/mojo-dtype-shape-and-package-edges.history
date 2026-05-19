@@ -1,0 +1,307 @@
+# mojo-dtype-shape-and-package-edges — History
+
+## v1.0.0 (2026-05-18) — Merge of 49 skills (M3 sub-PR 4/4 — FINAL)
+
+**Changed by:** Skill-merge swarm (Phase D, M3 dtype-shape-package sub-cluster / issue-1772 — re-dispatch)
+**Verification:** verified-local
+
+### What changed
+
+Consolidated 49 Mojo dtype/shape/package edge-case skills as the final
+(4th) sub-PR for M3 (Mojo mega-cluster). With this PR, M3 is complete.
+
+---
+
+## Superseded from mojo-026-breaking-changes
+
+(already removed)
+
+---
+
+## Superseded from mojo-as-contiguous-stride-verification
+
+(already removed)
+
+---
+
+## Superseded from mojo-assert-close-float-tests
+
+(already removed)
+
+---
+
+## Superseded from mojo-atomic-spinlock-double-check-lock
+
+(already removed)
+
+---
+
+## Superseded from mojo-batch-norm-gradient-parametrize
+
+(already removed)
+
+---
+
+## Superseded from mojo-binary-file-read-bytes-not-string
+
+(already removed)
+
+---
+
+## Superseded from mojo-bounds-test-pattern
+
+(already removed)
+
+---
+
+## Superseded from mojo-broadcast-edge-case-fix
+
+(already removed)
+
+---
+
+## Superseded from mojo-confusion-matrix-integration-tests
+
+(already removed)
+
+---
+
+## Superseded from mojo-dataloader-deferral-resolution
+
+(already removed)
+
+---
+
+## Superseded from mojo-depthwise-conv-backward-shapes
+
+(already removed)
+
+---
+
+## Superseded from mojo-dirpath-trailing-slash-normalization
+
+(already removed)
+
+---
+
+## Superseded from mojo-exception-message-assertion
+
+(already removed)
+
+---
+
+## Superseded from mojo-expose-internal-state-testability
+
+(already removed)
+
+---
+
+## Superseded from mojo-extensor-implementation-patterns
+
+(already removed)
+
+---
+
+## Superseded from mojo-format-non-blocking
+
+(already removed)
+
+---
+
+## Superseded from mojo-getitem-slice-multidim
+
+(already removed)
+
+---
+
+## Superseded from mojo-gpu-fundamentals-programming-guide
+
+(already removed)
+
+---
+
+## Superseded from mojo-hash-testing-patterns
+
+(already removed)
+
+---
+
+## Superseded from mojo-logical-xor-test-coverage
+
+(already removed)
+
+---
+
+## Superseded from mojo-moveinit-list-corruption
+
+(already removed)
+
+---
+
+## Superseded from mojo-multidim-setitem-tests
+
+(already removed)
+
+---
+
+## Superseded from mojo-narrowing-cast-tests
+
+(already removed)
+
+---
+
+## Superseded from mojo-nd-slice-copy-semantics
+
+(already removed)
+
+---
+
+## Superseded from mojo-nd-slice-fast-path
+
+(already removed)
+
+---
+
+## Superseded from mojo-noncontiguous-reshape-fix
+
+(already removed)
+
+---
+
+## Superseded from mojo-note-to-docstring
+
+(already removed)
+
+---
+
+## Superseded from mojo-numerical-gradient-test
+
+(already removed)
+
+---
+
+## Superseded from mojo-run-epoch-with-batches
+
+(already removed)
+
+---
+
+## Superseded from mojo-setitem-lvalue-semantics
+
+(already removed)
+
+---
+
+## Superseded from mojo-shallow-copy-tensor-hazard
+
+(already removed)
+
+---
+
+## Superseded from mojo-shape-noncontiguous-value-tests
+
+(already removed)
+
+---
+
+## Superseded from mojo-shared-test-helper-extraction
+
+(already removed)
+
+---
+
+## Superseded from mojo-signed-int-bitwise-not
+
+(already removed)
+
+---
+
+## Superseded from mojo-simd-optimize
+
+(already removed)
+
+---
+
+## Superseded from mojo-slice-negative-step
+
+(already removed)
+
+---
+
+## Superseded from mojo-stride-manipulation-for-noncontiguous-tests
+
+(already removed)
+
+---
+
+## Superseded from mojo-tensor-multidim-setitem
+
+(already removed)
+
+---
+
+## Superseded from mojo-transpose-view-contiguity
+
+(already removed)
+
+---
+
+## Superseded from mojo-tuple-destructor-clone-pattern
+
+(already removed)
+
+---
+
+## Superseded from mojo-tuple-return-types
+
+(already removed)
+
+---
+
+## Superseded from mojo-unsafepointer-bitcast-fix
+
+(already removed)
+
+---
+
+## Superseded from mojo-unsigned-wrapping-tests
+
+(already removed)
+
+---
+
+## Superseded from mojo-upstream-bug-filing-reproducibility-standard
+
+(already removed)
+
+---
+
+## Superseded from mojo-val-accuracy-behavioral-test
+
+(already removed)
+
+---
+
+## Superseded from mojo-validation-loop-accuracy-tracking
+
+(already removed)
+
+---
+
+## Superseded from mojo-value-verification-tests
+
+(already removed)
+
+---
+
+## Superseded from mojo-view-semantics-test
+
+(already removed)
+
+---
+
+## Superseded from noncontiguous-tensor-guard
+
+(already removed)
+
+---
