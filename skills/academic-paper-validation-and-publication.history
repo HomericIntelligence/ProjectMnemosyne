@@ -1,0 +1,150 @@
+# academic-paper-validation-and-publication — History
+
+## v1.0.0 (2026-05-18) — Merge of 7 skills
+
+**Changed by:** Skill-merge swarm (Phase C Wave 2, M16 / #1778)
+**Verification:** verified-local
+
+### What changed
+Consolidated 7 academic-paper validation and publication skills into a single canonical skill
+covering the full paper lifecycle: data accuracy checks, iterative review, GO/NO-GO publication
+assessment, LaTeX architecture sections with TikZ, directory consolidation for arXiv, and
+multi-issue epic management.
+
+---
+
+## Superseded from paper-readiness-epic
+
+```yaml
+name: paper-readiness-epic
+description: 'Skill: paper-readiness-epic. Use when working with paper readiness epic.'
+category: documentation
+date: 2026-01-01
+version: 1.0.0
+user-invocable: false
+```
+
+Covered: Managing 6-issue epic (#330) for research paper preparation — priority ordering,
+systematic branch workflow, implementing statistical tests (pytest.approx migration,
+simulation-based power analysis, Scheirer-Ray-Hare interaction tests), pipeline integration.
+
+Key configs: bootstrap n_resamples=10000, power_analysis n_simulations=10000, adequate_power_threshold=0.80.
+
+---
+
+## Superseded from paper-revision-workflow
+
+```yaml
+name: paper-revision-workflow
+description: 'Systematic workflow for revising research papers: data validation, structural improvements, and tone unification'
+category: documentation
+date: 2026-02-01
+version: 1.0.0
+user-invocable: false
+```
+
+Covered: Multi-phase document revision — planning with line-number fix categories, parallel
+data source reading, atomic edits, structural trimming (100-line Q&A sections → 13-line
+conversational prose), tone unification from academic to first-person conversational.
+
+Key lesson: Front-load verification. Read all data sources first, create verification table, then execute fixes.
+
+---
+
+## Superseded from paper-validation-workflow
+
+```yaml
+name: paper-validation-workflow
+description: Paper Validation Workflow
+category: documentation
+date: 2026-02-07
+version: 1.0.0
+user-invocable: false
+```
+
+Covered: 4-phase LaTeX paper validation — cross-validation against raw data (50+ numerical
+claims), identifying systematic issues (methodology consistency, typos, broken references),
+implementing fixes with Read-before-Edit discipline, final compilation verification.
+
+Copy-paste checklist with 4 phases included in canonical skill.
+
+---
+
+## Superseded from paper-iterative-accuracy-review
+
+```yaml
+name: paper-iterative-accuracy-review
+description: 'Second-pass review after initial paper fixes: catch internal inconsistencies introduced by edits, verify statistical effect-size labels against defined thresholds, clarify ambiguous table headers, explain counter-intuitive results, and add missing pricing context'
+category: documentation
+date: 2026-02-22
+version: 1.0.0
+user-invocable: false
+```
+
+Covered: Post-fix second-pass review — verifying prior fixes still correct, cross-referencing
+internal descriptions of partial experiments, validating effect-size labels against paper's
+own Romano (2006) threshold table (no composite labels like "medium-large"), clarifying
+ambiguous table column headers, adding explanatory sentences for counter-intuitive metrics,
+adding cache read pricing footnote when cache% ≥ 90%.
+
+Verified on: ProjectScylla branch 1048-haiku-analysis-paper.
+
+---
+
+## Superseded from publication-readiness-review
+
+```yaml
+name: publication-readiness-review
+description: Comprehensive 10-category GO/NO-GO assessment framework for academic paper publication readiness
+category: documentation
+date: 2026-02-07
+version: 2.0.0
+user-invocable: false
+```
+
+Covered: 10-category GO/NO-GO framework — Numerical Accuracy, Internal Consistency,
+Clarity, Grammar, LaTeX Formatting, Citations, Reproducibility, Figures/Tables, Scientific
+Rigor, Completeness. Citation completeness check (comm between cited.txt and bibitems.txt),
+reproducibility checklist, arXiv tarball verification via build.sh.
+
+Key lesson: BibTeX only checks syntax, not semantic correctness. Manual URL verification required.
+
+---
+
+## Superseded from paper-consolidation-skill
+
+```yaml
+name: paper-consolidation-skill
+description: Consolidate scattered LaTeX paper files into unified directory structure with publication readiness fixes
+category: documentation
+date: 2026-02-07
+version: 1.0.0
+user-invocable: false
+```
+
+Covered: Directory restructuring using `git mv` to preserve history, updating internal
+`\graphicspath` and `\input` paths, applying batch publication fixes (arXiv `\pdfoutput=1`
+directive, content corrections, terminology standardization with `replace_all=true`).
+
+Final structure: `docs/arxiv/dryrun/{figures,tables,data,raw,archives}`. 808 files changed
+(mostly renames). Output: 32 pages, ~494-505 KB PDF.
+
+---
+
+## Superseded from skill-adding-architecture-sections-to-latex-academic-papers
+
+```yaml
+name: skill-adding-architecture-sections-to-latex-academic-papers
+description: Add architecture sections to academic LaTeX papers with TikZ diagrams, including fixing common TikZ syntax errors and managing arxiv builds
+category: documentation
+date: 2026-02-07
+version: 1.0.0
+user-invocable: false
+```
+
+Covered: TikZ package imports, font-command-after-`\\` brace wrapping (prevents "missing
+\item" error), stacked block diagrams vs complex DAGs, long path overflow with itemize,
+dual build management (paper.tex + arxiv main.tex via build_arxiv_paper.py), cross-reference
+discipline (label every table/figure immediately).
+
+TikZ style templates included in canonical skill Results section.
