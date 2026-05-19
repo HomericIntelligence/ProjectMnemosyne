@@ -1,0 +1,339 @@
+# stale-documentation-audits-and-sync — History
+
+## v1.0.0 (2026-05-18) — Merge of 12 skills
+
+**Changed by:** Skill-merge swarm (Phase C Wave 2, M17 / #1780)
+**Verification:** verified-local
+
+### What changed
+
+Consolidated 12 stale-doc audit and sync skills into this canonical skill.
+Covers: Future Improvements drift, stale numeric counts, metric discrepancy fixes,
+agent/file count drift, ecosystem role drift detection, multi-file ecosystem sync,
+workflow README audits, doc contradiction resolution, cross-doc citation drift defenses,
+and implementation-lag doc sync.
+
+---
+
+## Superseded from doc-stale-future-improvements-audit
+
+```yaml
+name: doc-stale-future-improvements-audit
+description: Systematically audit design docs for Future Improvements sections that
+  describe features already implemented in source code.
+category: documentation
+date: 2026-02-22
+version: 1.0.0
+user-invocable: true
+```
+
+Systematically audit all design docs for "Future Improvements" sections listing features
+already implemented in source code. Five-phase workflow: discover candidate sections (grep),
+cross-reference against source (ls + head), categorize findings, apply fixes, commit and PR.
+
+Key observations: ASCII diagrams go stale faster than tables; "implemented but not integrated"
+is a valid intermediate state; raw run archives are not design docs.
+
+Verified on: ProjectScylla Issue #880 (follow-up from #759), PR #989.
+
+---
+
+## Superseded from sync-stale-future-improvements
+
+```yaml
+name: sync-stale-future-improvements
+description: Sync stale Future Improvements sections with actual implementation.
+category: documentation
+date: 2026-02-20
+version: 1.0.0
+user-invocable: false
+```
+
+Six-step workflow: confirm implementation exists (grep), read stale docs, add proper
+documented section near the component, remove stale numbered list item, scan remaining
+Future Improvements systematically, commit and PR.
+
+Key insight: when issue asks to check other Future Improvements for staleness, do it
+systematically — grep every item in source before concluding it's still future work.
+
+Verified on: ProjectScylla Issue #759, PR #877.
+
+---
+
+## Superseded from fix-doc-metric-discrepancies
+
+```yaml
+name: fix-doc-metric-discrepancies
+description: Fix stale or incorrect metric values in documentation (test counts, coverage
+  thresholds, command paths) that drift from actual codebase state.
+category: documentation
+date: 2026-02-27
+version: 1.0.0
+user-invocable: true
+```
+
+Four-phase workflow: audit actual values (pytest --collect-only, grep fail_under),
+cross-reference against CLAUDE.md / README / pyproject.toml, apply minimal targeted fixes
+(Edit tool, exact string replacement), verify and commit.
+
+Key observations: worktree branches may already have partial fixes (always read before
+editing); use `+` suffix for forward-compatibility on counts; exact subtest counts
+should not have `+`; `--cov` path must match installed package name.
+
+Verified on: ProjectScylla Issue #1112, PR #1150 (3,185 tests, 78.36% coverage).
+
+---
+
+## Superseded from stale-doc-count-audit
+
+```yaml
+name: stale-doc-count-audit
+description: Fixing stale numeric counts in documentation (figures, tables, sub-tests,
+  source files). Use when a code registry or pipeline changes size but docs still
+  reference old counts.
+category: documentation
+date: 2026-03-13
+version: 1.0.0
+user-invocable: false
+```
+
+Five-step workflow: verify actual count from code (not from docs), fix primary file
+with replace_all, search ALL markdown files project-wide, run exploration agent for
+cascading staleness, use separate commits for separate fixes.
+
+Critical step: project-wide grep after fixing primary file catches occurrences in
+`docs/analysis-prompt.md`, `references/notes.md`, `docs/arxiv-submission.md`.
+
+Verified on: ProjectScylla PR #1477 (27→34 figures across 3 files + 1 subtest count).
+
+---
+
+## Superseded from stale-agent-count-fix
+
+```yaml
+name: stale-agent-count-fix
+description: Fix stale agent count references in documentation after agents are deleted
+  or converted to skills.
+category: documentation
+date: 2026-03-06
+version: 1.0.0
+user-invocable: false
+```
+
+Eight-step workflow: verify actual count (ls .claude/agents/*.md | wc -l), find all
+stale count references (grep), update CLAUDE.md in two places (Quick Links + Agent
+Hierarchy sections), annotate tracking docs with strikethrough, verify no stale refs,
+run pre-commit, run agent validation, commit.
+
+Key parameters: Files to check (CLAUDE.md, agents/hierarchy.md, agents/README.md, docs/dev/*.md);
+use Edit tool not sed/awk; strikethrough annotation not deletion; validation command
+`python3 tests/agents/validate_configs.py .claude/agents/`.
+
+Failed: `just pre-commit-all` (not in PATH) → use `pre-commit run --all-files`;
+mojo-format fails due to GLIBC (pre-existing, not doc-change-caused).
+
+Verified on: ProjectOdyssey PR #3320 (issue #3145), 44→42 agents.
+
+---
+
+## Superseded from docs-status-fix
+
+```yaml
+name: docs-status-fix
+description: "Skill: docs-status-fix"
+category: documentation
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+```
+
+Four-step workflow: read issue (gh issue view), read relevant CLAUDE.md section,
+apply single Edit replacing old status line(s), commit with `fix(docs):` conventional
+format. Pre-commit hooks run automatically for markdown validation.
+
+Notes: worktree CLAUDE.md and root CLAUDE.md are separate — check both. Always read
+file before editing (Edit tool rejects changes on unread files).
+
+Verified on: ProjectScylla Issue #753, PR #810.
+
+---
+
+## Superseded from documentation-ecosystem-role-drift-detection
+
+```yaml
+name: documentation-ecosystem-role-drift-detection
+description: Reconcile stale ecosystem role descriptions with actual implementation.
+category: documentation
+date: 2026-03-25
+version: "1.0.0"
+user-invocable: false
+tags: [documentation, ecosystem, drift-detection, ablation, reconciliation]
+```
+
+Five-step workflow: build alignment matrix (audit every role-mentioning file), decide
+update-docs vs add-code (update docs when zero implementation exists for stale claim),
+make minimal doc fix (often only ONE bullet), create ADR in docs/dev/adr/, add
+parametrized drift-detection pytest (18 cases: 5 forbidden patterns × 3 docs + 3
+canonical checks), file cross-repo issues for external docs.
+
+Decision rule: Does codebase have ANY code for stale claim? → If zero, update docs.
+Is codebase purpose-built for current role? → Update docs to match reality.
+
+Failed: no failed approaches; decision was straightforward (69K lines ablation code,
+zero chaos code).
+
+Verified on: ProjectScylla Issue #1503, PR #1547.
+
+---
+
+## Superseded from documentation-multi-file-ecosystem-sync
+
+```yaml
+name: documentation-multi-file-ecosystem-sync
+description: Synchronize ecosystem repository listings across multiple documentation
+  files using GitHub API as source of truth.
+category: documentation
+date: 2026-03-25
+version: "1.0.0"
+user-invocable: false
+verification: verified-precommit
+tags: [documentation, ecosystem, multi-file-sync, github-api]
+```
+
+Five-step workflow: verify repo list against GitHub org API (gh api orgs/\<ORG\>/repos
+--paginate), locate all ecosystem listing sites (grep across CLAUDE.md, README, docs,
+.claude/agents/), build canonical table (alphabetical, under 80 chars per cell), apply same
+table to all locations with consistent column headers, run pre-commit.
+
+Consistency rules: same column headers (`Repository | Role`), same descriptions per repo,
+mark current project with "(this project)" suffix.
+
+Failed: Edit .claude/agents/ in worktree (permission denied) → note for follow-up;
+Edit before Read → always Read target files first.
+
+Verified on: ProjectScylla Issue #1507, PR #1551 (3→12 repos).
+
+---
+
+## Superseded from workflow-readme-audit
+
+```yaml
+name: workflow-readme-audit
+description: Audit .github/workflows/README.md against actual files on disk,
+  update inventory to match reality, and document remaining duplication.
+category: documentation
+date: 2026-03-07
+version: 1.1.0
+user-invocable: true
+absorbed: [workflow-readme-migration-sync]
+```
+
+Six-phase workflow: establish ground truth (ls .github/workflows/*.yml), read each
+undocumented workflow (first 20 lines for name:/on:/paths:), audit inline duplication
+(grep -rl), rewrite README summary table with shell verification command, fix markdownlint
+failures (MD031/MD040 closing fences, MD013 line length, MD029 ordered list numbering),
+commit and PR.
+
+Post-migration sync (absorbed from workflow-readme-migration-sync): verify migration
+complete before touching README; identify all 6 stale README locations; apply targeted
+edits to description bullets, "Remaining Duplication" section, pattern examples,
+"Adding New Workflows" checklist, and audit commands.
+
+Failed: `pixi run npx markdownlint-cli2` (npx not in PATH; takes >2 min) → use
+`git commit` to trigger pre-commit hook; closing fences with `text` on same line
+→ use bare ` ``` `; `replace_all: false` for repeated phrases → use `replace_all: true`.
+
+Verified on: ProjectOdyssey Issue #3344, PR #3978 (22 workflows); Issue (post-migration),
+PR #4847.
+
+---
+
+## Superseded from doc-contradiction-resolution
+
+```yaml
+name: doc-contradiction-resolution
+description: "Skill: Resolve Documentation Contradictions Between Project Files"
+category: documentation
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+```
+
+Six-step workflow: identify contradiction (grep both files), determine canonical policy
+(CLAUDE.md > .claude/shared/ > CONTRIBUTING.md), check all related files, make minimal
+fix (only edit wrong file; never modify canonical source), verify no regressions, commit
+and PR.
+
+Key insight: always check `.claude/shared/pr-workflow.md` as a third possible location
+for contradictions; in this case it was already clean.
+
+Pre-commit behavior for Markdown-only changes: Python/YAML/Shell linters skipped;
+Markdown Lint, Trailing Whitespace, End of Files, Large Files, Mixed Line Endings pass.
+
+Verified on: ProjectScylla Issue #758, PR #871.
+
+---
+
+## Superseded from cross-doc-citation-drift-defenses
+
+```yaml
+name: cross-doc-citation-drift-defenses
+description: Procedural and audit defenses against section-numbering drift and
+  arXiv ID-to-title swaps in inter-citing markdown corpora.
+category: documentation
+date: 2026-05-12
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [citation, cross-reference, section-numbering, stale-reference, arxiv,
+  primary-source, authoring-discipline, multi-document-corpus, citation-drift,
+  reorganization-discipline]
+```
+
+Two failure modes covered:
+
+A) Section-numbering drift: when doc Y is reorganized but its citers (doc X) are not
+   updated. Defense A.1: global mapping table at moment of reorganization, applied via
+   global find-replace in one commit. Defense A.2: use `§` glyph prefix in headings
+   (grep-auditable). Defense A.3: cross-corpus reviewer subagent.
+
+B) arXiv ID-to-title swap in multi-author corpora: survives multiple per-file review
+   cycles because each entry looks plausible in isolation. Defense B.1: WebFetch every
+   arXiv ID against abs page during initial drafting. Defense B.2: full titles in every
+   citation entry (no genre-tag shorthand as locator). Defense B.3: `[ASSUMPTION — to
+   validate]` marker for borderline citations. Defense B.4: both procedural AND
+   verification-based defenses (not either alone).
+
+Failed: 8 stale §-references (§6.x.x dangling after ALGORITHM flattened to §1-§7);
+2 arXiv-ID-to-title swaps in Millidge PC paper corpus survived two prior reviewer cycles;
+genre-tag shorthand made swaps invisible; pattern scrubs cannot detect structural drift.
+
+Verified on: mvillmow/Random — Predictive-Coding-in-Mojo Phase 0.
+
+---
+
+## Superseded from doc-sync-existing-impl
+
+```yaml
+name: doc-sync-existing-impl
+description: Sync documentation when an issue's fix is already implemented but docs
+  lag behind.
+category: documentation
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+```
+
+Five-step workflow: confirm fix already exists (ls wrapper script, grep pre-commit
+config entry, ls dev docs), find stale doc text (grep CLAUDE.md for old behavior),
+make targeted edits (2 Edit calls typically sufficient), verify no markdown lint issues
+(awk 'length > 120'), commit and PR.
+
+Trigger symptoms: issue says "investigate/document" rather than "implement";
+`.pre-commit-config.yaml` entry disagrees with CLAUDE.md description; existing
+`docs/dev/` file already covers the problem completely.
+
+Failed: skill invocation for commit (permission denied) → fall back to manual
+`git add && git commit && git push && gh pr create`.
+
+Verified on: ProjectOdyssey Issue #3365, PR #4894.
