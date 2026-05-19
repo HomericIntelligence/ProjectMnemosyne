@@ -1,3 +1,26 @@
+## v1.7.0 (2026-05-18)
+
+**Changed by:** 2026-05-18 skill-corpus consolidation (17 clusters, 1,100→690 skills); Mojo mega-cluster split session
+**Verification:** verified-ci
+
+### What changed
+- Added new subsection `### Variant: per-namespace sequential dispatch (intra-cluster split)` under Verified Workflow
+- Added 1 new Failed Attempts row: parallel dispatch on shared `mojo-*` namespace (sub-PRs #1808-#1811)
+- Added Verified On row: HomericIntelligence/ProjectMnemosyne 2026-05-18 consolidation, tracking issue #1813
+- Bumped version 1.6.0 → 1.7.0; updated date to 2026-05-18
+
+### Why
+Running a 114-member Mojo mega-cluster as a single PR was infeasible. Splitting into 4 sub-PRs
+by theme was required. Attempting parallel dispatch on the shared `mojo-*` namespace would have
+caused race conditions on branch refs and auto-merge cascade rebases. Sequential dispatch took
+~50 min for all 4 sub-PRs with zero conflicts. Pattern is reusable for any cluster with a
+shared filename prefix.
+
+### Previous version (v1.6.0) snapshot
+[archived — see git history for full snapshot]
+
+---
+
 ## v1.6.0 (2026-04-28)
 
 **Changed by:** Ecosystem-wide strict audit session (15 HomericIntelligence repos)

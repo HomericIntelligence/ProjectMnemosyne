@@ -2,8 +2,8 @@
 name: myrmidon-swarm-end-to-end-orchestration-full-workflow
 description: "Full end-to-end L0 commander pattern for complex myrmidon orchestration sessions. Use when: (1) task spans 3+ phases (cleanup + rebase + merge + CI + knowledge), (2) 10+ sub-tasks with mixed agent tiers required, (3) cross-repo work requiring /advise and /learn coordination, (4) feedback loops and decision gates are needed before committing to destructive operations, (5) auto-merge assumption cannot be made (CI may fail)."
 category: architecture
-date: 2026-04-28
-version: "1.6.0"
+date: 2026-05-18
+version: "1.7.0"
 user-invocable: false
 verification: verified-ci
 history: myrmidon-swarm-end-to-end-orchestration-full-workflow.history
@@ -79,6 +79,55 @@ gh issue create --repo <owner>/<repo> --title "$TITLE" \
 # Count file mentions across issue bodies to find contended files
 # Files with 6+ → per-file Sonnet mega-agent; branch: bundle-<file>-<issues>
 ```
+
+### Variant: per-namespace sequential dispatch (intra-cluster split)
+
+Use this variant when a single logical cluster grows too large for one PR and its members share a common file-name prefix (e.g., `mojo-*`, `e2e-*`, `pre-commit-*`). Parallel sub-PRs on overlapping namespaces race on branch refs and auto-merge cascade rebases; sequential dispatch eliminates all conflicts.
+
+**Detection heuristic:**
+
+```bash
+# Count skills in cluster manifest
+jq '.absorbed_skills | length' cluster-M3.json   # If > ~30, consider splitting
+
+# Check for shared prefix (all files start with same token)
+jq -r '.absorbed_skills[]' cluster-M3.json | sed 's/-.*//' | sort -u
+# Single output token → namespace collision risk → split required
+```
+
+**Split pattern:**
+
+1. Subcluster the manifest by theme. Example: a 114-member Mojo mega-cluster split into 4 subclusters — `jit-crash-retry` (13), `type-api-migration` (40), `sanitizer-build-flags` (8), `dtype-shape-package` (49).
+2. Extract each subcluster into its own manifest: `M3-jit-crash-retry.json`, `M3-type-api-migration.json`, etc.
+3. Dispatch sub-PRs **sequentially** — wait for each to merge before starting the next.
+4. Each sub-PR references the parent epic with `Refs #<parent-epic>` (NOT `Closes`) until the final sub-PR.
+5. Each sub-PR deletion sweep must be skip-missing-safe because earlier sub-PRs may have already removed overlapping files:
+
+```bash
+# Safe deletion — skip files already removed by prior sub-PR
+for f in "${FILES[@]}"; do
+  [ -f "skills/$f.md" ] && git rm "skills/$f.md" || true
+done
+```
+
+6. After the FINAL sub-PR merges, close the parent epic with a comment listing all sub-PR numbers:
+
+```bash
+gh issue comment <parent-epic> --body "All sub-PRs merged: #1808, #1809, #1810, #1811. Closing."
+gh issue close <parent-epic>
+```
+
+**Why parallel fails:** per `worktree-parallel-agent-execution`, parallel agents on overlapping file namespaces can clobber each other's git operations even in isolated worktrees, because branch deletions race when the sub-PRs share a `Refs` parent and the auto-merge cascade triggers rebases on overlapping branches.
+
+**Timing reference (2026-05-18 Mojo mega-cluster split):**
+
+| Sub-PR | Theme | Skills | Time |
+| ------- | ----- | ------ | ---- |
+| \#1808 | jit-crash-retry | 13 | ~10 min |
+| \#1809 | type-api-migration | 40 | ~15 min |
+| \#1810 | sanitizer-build-flags | 8 | ~8 min |
+| \#1811 | dtype-shape-package | 49 | ~17 min |
+| **Total** | | **110** | **~50 min sequential** |
 
 ### Phase 1: Exploration (Sonnet Sub-Agent)
 
@@ -431,6 +480,7 @@ Total session (typical):                                         ~1.5-3 hours
 | Write tool blocked in worktree agents | Audit agents couldn't write `report.md` to their worktree ("Subagents should return findings as text") | L0 received inline content but no file was written; subsequent filer agents had no input file | Instruct audit agents to print the full report as their final message; L0 orchestrator uses Write tool to save it to the scratch dir |
 | Parallel filer agents on same repo | Multiple filer agent retries filed against the same repo concurrently | Created exact-title duplicate issues; required a cleanup pass to close ~119 duplicates | Run exactly one filer agent per repo; use idempotency check (label search) before any filing; never retry by spawning a parallel agent |
 | Closing duplicate Epics (lower number first) | Assumed the lower-numbered Epic was the canonical one | Child issues referenced the higher-numbered Epic via "Part of #N"; closing lower Epic was correct but required verifying which number the child bodies referenced | Before closing a duplicate Epic, check which issue number the child bodies contain in "Part of #N" — that is the canonical one to keep |
+| Dispatched 4 Mojo sub-PRs in parallel | Planned to run all 4 Mojo mega-cluster sub-PRs simultaneously since each touched a disjoint theme subset | Parallel dispatch on a shared `mojo-*` namespace would race on branch refs and on auto-merge cascade rebases — earlier sub-PR merges trigger rebase events that collide with in-flight parallel agents | Use per-namespace sequential dispatch: detect shared filename prefix, split manifest by theme, dispatch sub-PRs one-at-a-time. Sequential took ~50 min for 4 sub-PRs (#1808-#1811) with zero conflicts. |
 
 ## Results & Parameters
 
@@ -542,6 +592,7 @@ Total session (typical):                                         ~1.5-3 hours
 | ProjectTelemachy | 57 issues → 6 remaining (89% closure), 17 PRs, ~2.5h wall clock, 2026-04-25 | Python/pixi repo; deterministic classification from file-contention counts; per-file Sonnet mega-agents (Wave D+E); Waves 0+A+B dispatched simultaneously (12 agents in one message) |
 | HomericIntelligence/Odysseus | Atlas Epic issue #152 scaffold, PR #173, 2026-04-27 | Direct worktree approach (not myrmidon-multi) for precision scaffold; branch forked from wrong base; cherry-pick fix onto clean main fork |
 | HomericIntelligence/Odysseus | 2026-04-28 ecosystem-wide strict audit (15 repos, 680 findings, 15 Epics + child issues) | verified-local |
+| HomericIntelligence/ProjectMnemosyne | 2026-05-18 skill-corpus consolidation (17 clusters, 1,100→690 skills) | tracking issue \#1813; Mojo mega-cluster sub-PRs \#1808-\#1811 |
 
 ## References
 
