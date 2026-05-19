@@ -1,13 +1,29 @@
+# skill-merge-manifest-enumeration-from-cluster-examples — History
+
+## v2.0.0 (2026-05-19)
+
+**Changed by:** Second-pass skill-corpus consolidation session (epic #1823)
+**Verification:** verified-local
+
+### What changed
+- Extended scope from first-pass to first-or-second-pass enumeration
+- Added `## Second-Pass Variant` section with prompt addendum and two-bucket JSON schema
+- Added 2 trigger conditions (4) and (5) to description
+- Added Failed Attempts row documenting the duplicate-canonical proposal failure
+
+### Why
+The original v1.0.0 skill only covered first-pass enumeration. A second-pass session (post-M1–M17, with 20 existing canonicals) revealed that without explicit existing-canonicals input + two-bucket output, agents propose new clusters whose names collide with existing canonicals (observed: documentation shard's C1/C2 both duplicated M16/M17 canonicals; 27 members had to be re-routed at gate stage).
+
+### Previous version (v1.0.0) snapshot
 ---
 name: skill-merge-manifest-enumeration-from-cluster-examples
-description: "Use when consolidating many narrow skills into canonical ones using cluster examples. Triggers: (1) issue body lists 3 example members per cluster but NOT the full member list, (2) merge agents stall or drift scope because they lack a definitive skill list, (3) running bulk skill consolidation across 10+ clusters, (4) running a *second-pass* consolidation after an earlier merge wave produced canonicals — agents must be told about them or they will propose duplicates, (5) building a swarm where each sub-agent should choose between 'new cluster' and 'absorb into existing'."
+description: "Use when consolidating many narrow skills into canonical ones using cluster examples. Triggers: (1) issue body lists 3 example members per cluster but NOT the full member list, (2) merge agents stall or drift scope because they lack a definitive skill list, (3) running bulk skill consolidation across 10+ clusters."
 category: tooling
-date: 2026-05-19
-version: "2.0.0"
+date: 2026-05-18
+version: "1.0.0"
 user-invocable: false
 verification: verified-local
-history: skill-merge-manifest-enumeration-from-cluster-examples.history
-tags: [skill-merge, consolidation, manifest, enumeration, cluster, swarm, bulk, second-pass, absorb-into-canonical]
+tags: [skill-merge, consolidation, manifest, enumeration, cluster, swarm, bulk]
 ---
 
 # Skill-Merge Manifest Enumeration from Cluster Examples
@@ -20,7 +36,7 @@ tags: [skill-merge, consolidation, manifest, enumeration, cluster, swarm, bulk, 
 | **Objective** | Reliably enumerate every skill belonging to each merge cluster when the issue body only provides 3 example members |
 | **Outcome** | Successful — decoupled enumeration from merge, eliminating stall and scope-drift in a 17-cluster, 1100-skill consolidation |
 | **Verification** | verified-local |
-| **History** | [v1.0.0 → v2.0.0](skill-merge-manifest-enumeration-from-cluster-examples.history) |
+| **History** | N/A (initial version) |
 
 ## When to Use
 
@@ -92,56 +108,6 @@ MANIFEST=$(cat /tmp/skill-merge-manifests/<cluster_id>.json)
    - Escape `\|` inside backtick code-spans in table cells (avoids MD056)
    - Escape `\#` at the start of lines referencing PR numbers (avoids MD018)
 
-## Second-Pass Variant
-
-When a prior merge wave has already produced canonicals (e.g., M1–M17), enumeration agents
-in the next pass must be told about those canonicals or they will propose new clusters that
-duplicate existing ones.
-
-### Prompt Addendum (inject into every second-pass enumeration agent)
-
-```text
-EXISTING CANONICALS (DO NOT propose new clusters with these names):
-- <name1> — <one-line theme>
-- <name2> — <one-line theme>
-...
-
-For each input skill, choose ONE of:
-  (a) absorb_into_canonical: <name> — if the skill clearly belongs in an existing canonical
-  (b) new_cluster_candidate — if the skill is narrow AND not covered by any existing canonical
-
-Output two arrays in your JSON: `clusters[]` (new only) AND `absorb_into_canonical[]`.
-```
-
-### JSON Output Schema Additions
-
-Second-pass manifests extend the base schema with an `absorb_into_canonical` array:
-
-```json
-"absorb_into_canonical": [
-  {"name":"<skill>","canonical":"<one-of-existing>","why":"<one-line>"}
-]
-```
-
-The `clusters[]` array contains **only genuinely new** clusters whose names do not match any
-existing canonical. The orchestrator gate must validate this constraint before launching any
-merge agents — reject any `clusters[]` entry whose `canonical_name` matches an existing
-canonical and re-route its members into `absorb_into_canonical[]` automatically.
-
-### Gate Stage Validation (second-pass)
-
-```bash
-# Check no proposed cluster name collides with an existing canonical
-EXISTING_CANONICALS=("canonical-name-1" "canonical-name-2")  # fill from prior wave
-jq -r '.clusters[].canonical_name' /tmp/skill-merge-manifests/*.json | while read name; do
-  for existing in "${EXISTING_CANONICALS[@]}"; do
-    if [[ "$name" == "$existing" ]]; then
-      echo "COLLISION: $name already exists — re-route to absorb_into_canonical"
-    fi
-  done
-done
-```
-
 ## Failed Attempts
 
 | Attempt | What Was Tried | Why It Failed | Lesson Learned |
@@ -152,7 +118,6 @@ done
 | Skipping Gate 1 duplicate check | Manifests shipped directly to merge agents | Same skill appeared in two merge PRs, causing conflicts and double-deletion | Gate 1 duplicate detection is mandatory before any merge launches |
 | Trusting catch-all cluster to self-bound | No extra strictness instruction for catch-all | Catch-all absorbed 82 candidates; most were wrong cluster | For catch-all clusters, instruct enumerator to be EXTRA strict |
 | Overflow above 100 skills per manifest | No cap enforced | Merge agent timeout / PR too large to review | Cap at 100; set `overflow_warning: true` and split into sub-PRs |
-| Running second-pass clustering without supplying the existing-canonicals list | Documentation-shard agent proposed C1=`academic-paper-validation-and-publication` and C2=`stale-documentation-audits-and-sync` as NEW clusters — both were already canonicals from M16/M17. 27 members had to be re-routed at the gate stage | Always pass the existing-canonicals list + 1-line themes as agent input; require a two-bucket output (clusters[] + absorb_into_canonical[]); validate at gate stage that no proposed cluster name matches an existing canonical |
 
 ## Results & Parameters
 
@@ -229,3 +194,5 @@ cat /tmp/skill-merge-manifests/duplicates.txt
 | Project | Context | Details |
 |---------|---------|---------|
 | ProjectMnemosyne | 17-cluster, 1100-skill consolidation session | Manifest-first enumeration decoupled from merge phase |
+
+---
