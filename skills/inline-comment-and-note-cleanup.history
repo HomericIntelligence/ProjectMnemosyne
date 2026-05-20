@@ -1,0 +1,2851 @@
+## Superseded from audit-runtime-note-prints
+
+---
+name: audit-runtime-note-prints
+description: 'Audit example scripts for ambiguous runtime NOTE/TODO/FIXME print statements
+  and replace with plain status messages. Use when: following up after a partial fix
+  of NOTE prints, auditing all examples/ scripts for misleading runtime output, or
+  converting Note: prefixes to factual plain text.'
+category: documentation
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Category** | documentation |
+| **Trigger** | Follow-up audit after partial NOTE/TODO/FIXME print cleanup in examples/ |
+| **Outcome** | Zero `print.*NOTE\|TODO\|FIXME` matches in examples/; all pre-commit hooks pass |
+| **Files Touched** | examples/*/train.mojo, examples/*/infer.mojo, examples/*/inference.mojo |
+
+## When to Use
+
+- A previous issue (e.g., #3084) fixed NOTE prints in a subset of files but may have missed others
+- You need to audit all `examples/*/train.mojo` and `examples/*/infer.mojo` for runtime NOTE/TODO/FIXME
+- Runtime `print("Note: ...")` statements exist that could confuse users into thinking something is broken
+- Cleanup issue asks to convert misleading NOTE-prefixed prints to plain factual messages
+
+## Verified Workflow
+
+1. **Read the issue plan** via `gh issue view <number> --comments` — the plan may already list all affected files
+2. **Run the audit grep** to find all candidates:
+   ```bash
+   grep -rn 'print.*NOTE\|print.*TODO\|print.*FIXME' examples/
+   # Also run case-insensitive to catch "Note:" variants:
+   # Use Grep tool with -i flag on examples/ glob *.mojo
+   ```
+3. **Cross-check against the plan** — the issue plan may reference files already partially fixed. Read current file state before editing (the plan can be stale).
+4. **For each match**, apply one of these patterns:
+   - **Redundant with existing STATUS block**: remove the NOTE line(s) entirely
+   - **Misleading "broken" implication**: reword to a plain factual statement (remove `Note:` prefix)
+   - **Two-line Note + detail**: merge into single factual line
+5. **Verify zero matches** after edits:
+   ```
+   Grep pattern: print.*NOTE|print.*TODO|print.*FIXME|print.*Note:
+   path: examples/  glob: *.mojo  -i: true
+   ```
+6. **Run pre-commit**:
+   ```bash
+   pixi run pre-commit run --all-files
+   ```
+7. **Commit, push, create PR** linked to the issue with `Closes #<number>`
+
+## Key Patterns
+
+### Before (alarming)
+```mojo
+print("Note: Training requires batch_norm2d_backward implementation.")
+print("See GAP_ANALYSIS.md for details.")
+```
+
+### After (factual)
+```mojo
+print("Training requires batch_norm2d_backward (see GAP_ANALYSIS.md).")
+```
+
+### Before (misleading prefix)
+```mojo
+print("\nNote: This implementation demonstrates the inference structure.")
+```
+
+### After (plain)
+```mojo
+print("\nThis implementation demonstrates the inference structure.")
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Trusting the issue plan line numbers | Used plan's line numbers directly to edit files | Files were partially fixed already; line numbers had shifted | Always read the actual file state before editing — issue plans can be stale |
+| Case-sensitive grep only | Used `print.*NOTE` without `-i` flag | Missed `Note:` (mixed case) variants in inference.mojo files | Use case-insensitive grep (`-i`) or include `\| print.*Note:` in pattern |
+
+## Results & Parameters
+
+**Grep command (case-insensitive, catches all variants)**:
+```
+Pattern: print.*NOTE|print.*TODO|print.*FIXME|print.*Note:
+Tool: Grep with -i: true, output_mode: content, glob: *.mojo
+Path: examples/
+```
+
+**Files changed in issue #3194**:
+- `examples/resnet18-cifar10/inference.mojo` — merged two-line Note into one factual statement
+- `examples/lenet-emnist/inference.mojo` — removed `Note:` prefix
+- `examples/alexnet-cifar10/train_new.mojo` — removed `Note:` prefixes (×2)
+
+**Files already fixed (not touched)**:
+- `examples/resnet18-cifar10/train.mojo` — already used `STATUS:` from #3084
+- `examples/mobilenetv1-cifar10/train.mojo` — already used `STATUS:` from prior work
+- `examples/googlenet-cifar10/train.mojo` — already used `STATUS:` from prior work
+
+**Pre-commit command**:
+```bash
+pixi run pre-commit run --all-files
+```
+
+### Notes
+
+# Session Notes: audit-runtime-note-prints
+
+## Session Context
+
+- **Date**: 2026-03-07
+- **Issue**: #3194 — Audit all example scripts for other ambiguous NOTE/TODO prints
+- **Follow-up from**: #3084 (fixed NOTE prints in 3 specific files)
+- **Repo**: HomericIntelligence/ProjectOdyssey
+- **Branch**: 3194-auto-impl
+- **PR created**: #3701
+
+## Objective
+
+Audit all `examples/*/train.mojo` and `examples/*/infer.mojo` files for runtime
+`print("NOTE: ...")`, `print("TODO: ...")`, `print("FIXME: ...")` statements that
+confuse users into thinking something is broken. Convert or remove them.
+
+## Steps Taken
+
+1. Read `.claude-prompt-3194.md` to understand task
+2. Read issue #3194 comments — found detailed implementation plan already written
+3. Ran case-insensitive grep on `examples/` for `print.*NOTE|TODO|FIXME` in *.mojo files
+4. Found 4 matches (not 7 as in plan — files were partially fixed already):
+   - `examples/resnet18-cifar10/inference.mojo:308`
+   - `examples/alexnet-cifar10/train_new.mojo:427`
+   - `examples/alexnet-cifar10/train_new.mojo:457`
+   - `examples/lenet-emnist/inference.mojo:266`
+5. Read actual file content around each match to verify current state
+6. Made 4 edits (all parallel):
+   - `inference.mojo:308` → merged two Note lines into one factual line
+   - `train_new.mojo:427` → removed `Note:` prefix
+   - `train_new.mojo:457` → removed `Note:` prefix
+   - `inference.mojo:266` → removed `\nNote:` prefix
+7. Verified zero matches with post-edit grep
+8. Ran `pixi run pre-commit run --all-files` — all 14 hooks passed
+9. Committed, pushed, created PR #3701 with `Closes #3194`
+10. Enabled auto-merge with `gh pr merge --auto --rebase`
+
+## Key Learnings
+
+- The issue plan listed 7 matches across 6 files, but the actual grep found only 4 matches
+  across 3 files — some files were already fixed between plan creation and implementation
+- Always read actual file content before editing, not just plan line numbers
+- Case-insensitive grep (`-i`) is essential — `Note:` (mixed case) appears in inference files
+  while `NOTE:` (uppercase) appears in train files; a case-sensitive grep would miss some
+- The issue plan's grep command used `print.*NOTE\|print.*TODO\|print.*FIXME` (case-sensitive)
+  which would have missed `Note:` variants — the actual grep needed `-i` flag
+- Pre-commit with `pixi run pre-commit run --all-files` works; `just pre-commit-all` does not
+  (just not installed in PATH in this environment)
+
+## Parameters Used
+
+```
+Grep pattern: print.*NOTE|print.*TODO|print.*FIXME|print.*Note:
+-i: true (case-insensitive)
+glob: *.mojo
+path: examples/
+output_mode: content
+```
+
+## Files Changed
+
+- `examples/resnet18-cifar10/inference.mojo`
+- `examples/lenet-emnist/inference.mojo`
+- `examples/alexnet-cifar10/train_new.mojo`
+
+---
+
+## Superseded from batchnorm-epsilon-audit
+
+---
+name: batchnorm-epsilon-audit
+description: 'Audit backward-pass tester methods for undocumented epsilon/tolerance
+  magic numbers and apply structured NOTE comment pattern. Use when: following up
+  a backward-pass epsilon audit, or when BatchNorm/Pooling backward testers lack gradient-checking
+  constant documentation.'
+category: documentation
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Skill** | batchnorm-epsilon-audit |
+| **Category** | documentation |
+| **Scope** | `shared/testing/layer_testers.mojo` |
+| **Issue** | #3208 (follow-up from #3090) |
+| **Outcome** | Structured NOTE comments added to `test_batchnorm_layer_backward` |
+
+This skill captures the pattern for auditing ML layer tester methods that use hardcoded epsilon and
+tolerance values in gradient checking, and upgrading vague placeholder comments to structured NOTE
+comments that document rationale and cross-reference related issues.
+
+## When to Use
+
+- A follow-up issue asks to audit backward-pass tester methods not covered in a prior sweep
+- A tester method has a vague comment like "Epsilon and tolerance values will be dtype-specific when gradient checking is added" without specifying the actual values or rationale
+- You need to apply the same constant-extraction pattern as conv2d/linear/activation backward testers to BatchNorm or Pooling testers
+- A method's gradient checking is not yet implemented but the planned constants should be documented for future implementers
+
+## Verified Workflow
+
+1. **Read the issue and prior work**: `gh issue view <N> --comments` — understand what #3090 established (epsilon aliases, tolerance rationale, issue #2704 cross-reference)
+
+2. **Search for target methods**: Grep `layer_testers.mojo` for `test_batchnorm_layer_backward`, `NOTE.*epsilon`, `NOTE.*tolerance`, and known magic numbers (`3e-4`, `1e-3`, `1e-1`, `0\.10`)
+
+3. **Read surrounding context**: Read the existing comment block at the site to understand what placeholder language is present
+
+4. **Apply the structured NOTE pattern**: Replace vague placeholders with comments that include:
+   - Planned `epsilon` values per dtype (float32 → `GRADIENT_CHECK_EPSILON_FLOAT32` = `3e-4`; other dtypes → `GRADIENT_CHECK_EPSILON_OTHER` = `1e-3`)
+   - Planned `tolerance` value with rationale (BatchNorm accumulates division errors across N×H×W, so use `1e-1` = 10%, same as conv2d)
+   - Issue cross-references (`#2704` for matmul precision, `#3090` for the audit pattern)
+
+5. **Check for pooling tester**: Grep for any `test_pool*_backward` or `test_maxpool*_backward` — confirm absent (nothing to audit)
+
+6. **Run pre-commit hooks**: `pixi run pre-commit run --all-files` — verify Mojo Format, markdownlint, trailing whitespace all pass
+
+7. **Commit, push, PR**: Conventional commit `docs(layer_testers): document planned epsilon/tolerance for BatchNorm backward`, include `Closes #<N>` and enable auto-merge
+
+## Results & Parameters
+
+### Epsilon/Tolerance Constants (from #3090)
+
+```mojo
+# float32 matmul-heavy layers
+alias GRADIENT_CHECK_EPSILON_FLOAT32: Float64 = 3e-4
+
+# Non-float32 dtypes
+alias GRADIENT_CHECK_EPSILON_OTHER: Float64 = 1e-3
+```
+
+### Tolerance values by layer type
+
+| Layer | Tolerance | Rationale |
+| ------- | ----------- | ----------- |
+| Conv2d backward | `1e-1` (10%) | Accumulated matmul errors |
+| Linear backward | `0.10` wide + `0.01` abs | Matrix op accumulated errors, see #2704 |
+| Activation backward | `1e-2` float32, `1e-1` other | Elementwise, less accumulation |
+| **BatchNorm backward** | `1e-1` (10%) all dtypes | Normalization divides across N×H×W, same regime as conv2d |
+
+### NOTE Comment Pattern Applied
+
+```mojo
+# Note: Actual BatchNorm backward gradient checking will be implemented
+# when BatchNorm forward pass is available.
+# NOTE: When adding gradient checking, use epsilon=3e-4 for float32 to avoid
+# precision loss in normalization ops (consistent with conv2d/linear, see #2704).
+# BatchNorm accumulates division errors across N*H*W elements, so use
+# tolerance=1e-1 (10%) for all dtypes — same as conv2d backward (see #3090).
+# NOTE: For other dtypes use epsilon=1e-3, tolerance=1e-1 (same pattern as #3090).
+# For now, we validate that we can compute numerical gradients on the input.
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Looking for pooling backward tester | Searched for `test_pool*_backward` methods in `layer_testers.mojo` | No such method exists in the file | Always confirm scope first — issue says "if they also use hardcoded epsilon"; absence means nothing to audit |
+| Assuming BatchNorm tolerance matches activation | Initially considered `1e-2` (activation pattern) for BatchNorm float32 | BatchNorm normalization accumulates division errors across all N×H×W elements, making it closer to conv2d than elementwise ops | Match tolerance to the accumulation regime of the operation, not to its layer category |
+
+### Notes
+
+# Session Notes: batchnorm-epsilon-audit
+
+## Date
+2026-03-07
+
+## Session Objective
+Issue #3208 (follow-up from #3090): Audit remaining backward-pass tester methods in
+`shared/testing/layer_testers.mojo` for undocumented epsilon/tolerance magic numbers.
+Specifically `test_batchnorm_layer_backward` and any pooling backward testers.
+
+## Repository
+HomericIntelligence/ProjectOdyssey — worktree: `.worktrees/issue-3208`, branch: `3208-auto-impl`
+
+## What Was Audited
+
+### Methods checked
+- `test_conv_layer_backward` — already addressed in #3090 (has `GRADIENT_CHECK_EPSILON_FLOAT32`, `GRADIENT_CHECK_EPSILON_OTHER`, tolerance `1e-1`)
+- `test_linear_layer_backward` — already addressed in #3090
+- `test_activation_layer_backward` — already addressed in #3090
+- `test_batchnorm_layer_backward` — **needed upgrade** (had vague 4-line placeholder comment)
+- Pooling backward tester — **does not exist** in the file
+
+### File location
+`shared/testing/layer_testers.mojo`, lines 1085–1164 (BatchNorm section)
+
+## Change Made
+
+**Before** (lines 1150–1153):
+```
+# Note: Actual BatchNorm backward gradient checking would be implemented
+# when BatchNorm forward pass is available
+# Epsilon and tolerance values will be dtype-specific when gradient checking is added
+# For now, we validate that we can compute numerical gradients on the input
+```
+
+**After** (lines 1150–1157):
+```mojo
+# Note: Actual BatchNorm backward gradient checking will be implemented
+# when BatchNorm forward pass is available.
+# NOTE: When adding gradient checking, use epsilon=3e-4 for float32 to avoid
+# precision loss in normalization ops (consistent with conv2d/linear, see #2704).
+# BatchNorm accumulates division errors across N*H*W elements, so use
+# tolerance=1e-1 (10%) for all dtypes — same as conv2d backward (see #3090).
+# NOTE: For other dtypes use epsilon=1e-3, tolerance=1e-1 (same pattern as #3090).
+# For now, we validate that we can compute numerical gradients on the input.
+```
+
+## Tools/Commands Used
+- `Grep` — searched for existing epsilon/tolerance patterns, known magic numbers, method signatures
+- `Read` — read context around the target comment block
+- `Edit` — single targeted edit to upgrade the comment
+- `pixi run pre-commit run --all-files` — all 14 hooks passed
+
+## PR Created
+- PR #3718: https://github.com/HomericIntelligence/ProjectOdyssey/pull/3718
+- Auto-merge enabled
+
+## Key Insight
+The scope check (grepping for all backward tester methods and magic numbers) is essential before
+making any changes. The issue said "if they also use hardcoded epsilon" — confirming absence of
+pooling backward tester meant scope was only BatchNorm.
+
+For BatchNorm, the tolerance should match conv2d (10%) not activation (1%/10%) because normalization
+divides across N×H×W spatial positions, accumulating floating-point errors similarly to matmul.
+
+---
+
+## Superseded from document-magic-number-constants
+
+---
+name: document-magic-number-constants
+description: 'Extract inline magic-number NOTE comments into named module-level constants
+  with full rationale. Use when: (1) a value is used with a NOTE comment referencing
+  an issue, (2) the same magic number appears in multiple locations, (3) a cleanup
+  issue asks to convert inline NOTEs to docstrings.'
+category: documentation
+date: 2026-03-04
+version: 1.0.0
+user-invocable: false
+---
+# Document Magic Number Constants
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-03-04 |
+| **Objective** | Replace inline `NOTE:` magic-number comments with named module-level constants that carry the full rationale |
+| **Outcome** | Three `NOTE:` comments in `shared/testing/layer_testers.mojo` replaced with `GRADIENT_CHECK_EPSILON_FLOAT32` / `GRADIENT_CHECK_EPSILON_OTHER` aliases; PR #3201 created |
+| **Related Issues** | ProjectOdyssey #3090 (cleanup), #2704 (precision analysis) |
+
+## When to Use This Skill
+
+Use this skill when:
+
+- A file has inline `NOTE: value=X for <reason> (see #NNNN)` comments that are hard to discover
+- The same magic number appears in 2+ locations with the same comment copy-pasted
+- A cleanup issue explicitly asks to "convert NOTEs to docstrings" or "add constants for epsilon values"
+- A number was chosen after careful analysis (documented in a linked issue) and that context should be preserved
+
+**Triggers:**
+
+- Issue title contains "document epsilon", "document tolerance", "convert NOTE comments", "extract constants"
+- File has `# NOTE: epsilon=` or `# NOTE: tolerance=` inline comments
+- Multiple lines share an identical `# NOTE:` comment
+- The NOTE references a GitHub issue number for context
+
+## Verified Workflow
+
+### Phase 1: Read the Issue and Identify All Affected Sites
+
+```bash
+gh issue view <number> --comments
+```
+
+Note the exact file paths and line numbers listed in the issue.
+Read each site to understand the context around the NOTE.
+
+### Phase 2: Verify the Value Is Still Appropriate
+
+Before creating constants, confirm the value is correct:
+
+- Check that the referenced issue (e.g., `#2704`) documents why the value was chosen
+- Look at the epsilon assignment to confirm no drift since the NOTE was written
+- If multiple sites share the value, confirm they use it identically
+
+### Phase 3: Add Named Constants
+
+Add module-level constants **before** the first struct definition (Mojo) or at module scope (Python):
+
+**Mojo pattern:**
+
+```mojo
+# ============================================================================
+# Gradient Checking Constants
+# ============================================================================
+
+# Epsilon for float32 gradient checking in matmul-heavy layers (conv2d, linear).
+# Using 1e-5 causes ~56% precision loss; 1e-4 gives 3.3% error (above tolerance).
+# 3e-4 gives 1.2% error, within the 1.5% tolerance threshold.
+# See issue #NNNN (<description>) for full analysis.
+alias GRADIENT_CHECK_EPSILON_FLOAT32: Float64 = 3e-4
+
+# Epsilon for non-float32 dtypes (BF16, FP16) in gradient checking.
+alias GRADIENT_CHECK_EPSILON_OTHER: Float64 = 1e-3
+```
+
+**Python pattern:**
+
+```python
+# Epsilon for float32 gradient checking in matmul-heavy operations.
+# See issue #NNNN for precision analysis; 3e-4 gives 1.2% error (within tolerance).
+GRADIENT_CHECK_EPSILON_FLOAT32: float = 3e-4
+GRADIENT_CHECK_EPSILON_OTHER: float = 1e-3
+```
+
+Rules:
+- Put ALL rationale in the constant definition comment, not at usage sites
+- Include concrete alternatives that were tried and rejected (quantified)
+- Reference the issue number where the analysis lives
+
+### Phase 4: Replace the NOTE Comments at Each Usage Site
+
+Replace the inline `NOTE:` comments with a single-line reference to the constant:
+
+```mojo
+# Before
+# NOTE: epsilon=3e-4 for float32 prevents precision loss in matmul (see #2704)
+var epsilon = 3e-4 if dtype == DType.float32 else 1e-3
+
+# After
+# Epsilon for gradient checking: float32 uses GRADIENT_CHECK_EPSILON_FLOAT32 (3e-4)
+# to avoid precision loss in matmul operations. See issue #2704 for full analysis.
+var epsilon = GRADIENT_CHECK_EPSILON_FLOAT32 if dtype == DType.float32 else GRADIENT_CHECK_EPSILON_OTHER
+```
+
+Key principle: the usage-site comment says "why this constant exists and where to look", not "what the value is and why". The constant definition carries the full context.
+
+### Phase 5: Update Module Docstring (if applicable)
+
+If the module-level docstring mentions tolerances, update it to reference the constant:
+
+```mojo
+# Before
+# - Tolerances adjusted per dtype (1e-2 for float32)
+
+# After
+# - Tolerances adjusted per dtype (1e-2 for float32)
+# - Epsilon for float32 gradient checking: GRADIENT_CHECK_EPSILON_FLOAT32 (3e-4),
+#   chosen to avoid precision loss in matmul operations (see issue #NNNN)
+```
+
+### Phase 6: Commit and PR
+
+```bash
+git add <changed-file>
+git commit -m "$(cat <<'EOF'
+docs(<scope>): document epsilon values in gradient checking
+
+Add GRADIENT_CHECK_EPSILON_FLOAT32 and GRADIENT_CHECK_EPSILON_OTHER
+module-level constants. Replace inline NOTE comments with proper
+documented references to the constants and issue #NNNN.
+
+Closes #<issue>
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+EOF
+)"
+git push -u origin <branch>
+gh pr create \
+  --title "docs(<scope>): document epsilon values in gradient checking" \
+  --body "Closes #<issue>"
+gh pr merge --auto --rebase
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Adding `alias` inside the struct body | Tried to put the constants as struct-level aliases | Mojo `alias` inside a struct is scoped to the struct; usage sites inside methods can still reference them, but they become struct members rather than module-level names | Place aliases at module scope before the struct for clearest discoverability |
+| Keeping long rationale at usage sites | Left the detailed "Using 1e-5 causes 56% loss..." comment at each usage | Creates duplication — if the constant's value ever changes, all three sites need updating | Move all rationale to the constant definition; keep usage-site comments brief |
+| Using `/commit-commands:commit-push-pr` skill | Attempted to invoke the skill tool | Skill tool may not be available in all execution modes | Fall back to direct `git add/commit/push` + `gh pr create` |
+
+## Results & Parameters
+
+| Parameter | Value | Notes |
+| ----------- | ------- | ------- |
+| Constant name | `GRADIENT_CHECK_EPSILON_FLOAT32` | Descriptive: includes dtype and use case |
+| Constant value | `3e-4` | Unchanged from original magic number |
+| Alias type | `Float64` | Match the type expected by `compute_numerical_gradient` |
+| Companion constant | `GRADIENT_CHECK_EPSILON_OTHER = 1e-3` | For non-float32 dtypes |
+| Usage sites updated | 3 | All in `shared/testing/layer_testers.mojo` |
+| Commit type | `docs(testing):` | No functional change — only documentation |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #3090, PR #3201 | Branch `3090-auto-impl`; pre-commit passed |
+
+### Notes
+
+# Session Notes: document-magic-number-constants
+
+## Raw Session Details
+
+**Date**: 2026-03-04
+**Project**: ProjectOdyssey
+**Issue**: #3090 [Cleanup] Document epsilon values in gradient checking
+**Branch**: `3090-auto-impl`
+**PR**: #3201
+
+## Objective
+
+Issue #3090 asked to:
+1. Verify epsilon values are still appropriate
+2. Convert inline NOTEs to proper docstrings
+3. Reference #2704 in docstrings for context
+4. Consider adding constants for epsilon values
+
+## Affected File
+
+`shared/testing/layer_testers.mojo`
+
+Three locations with nearly identical NOTE comments:
+- Line 597: `# NOTE: epsilon=3e-4 for float32 to avoid precision loss in matmul (see #2704)`
+- Line 758: `# NOTE: epsilon=3e-4 for float32 prevents precision loss in matmul (see #2704)`
+- Line 920: `# NOTE: epsilon=3e-4 for float32 prevents precision loss (see #2704)`
+
+All three assigned: `var epsilon = 3e-4 if dtype == DType.float32 else 1e-3`
+
+## What Was Done
+
+1. Added a new section before `LayerTester` struct (line ~86):
+
+   ```mojo
+   # ============================================================================
+   # Gradient Checking Constants
+   # ============================================================================
+
+   # Epsilon for float32 gradient checking in matmul-heavy layers (conv2d, linear).
+   # Using 1e-5 causes ~56% precision loss; 1e-4 gives 3.3% error (above tolerance).
+   # 3e-4 gives 1.2% error, within the 1.5% tolerance threshold.
+   # See issue #2704 (Floating-point precision loss in matmul) for full analysis.
+   alias GRADIENT_CHECK_EPSILON_FLOAT32: Float64 = 3e-4
+
+   # Epsilon for non-float32 dtypes (BF16, FP16) in gradient checking.
+   alias GRADIENT_CHECK_EPSILON_OTHER: Float64 = 1e-3
+   ```
+
+2. At each of the three usage sites, replaced the `NOTE:` comment with a reference to the
+   constant and the issue number. Changed the assignment to use the named constants.
+
+3. Updated the module-level docstring to mention the epsilon constants.
+
+## Key Decisions
+
+- **Module-scope `alias` vs struct-member `alias`**: chose module scope for discoverability
+- **`Float64` type annotation**: matches the type expected by `compute_numerical_gradient`
+- **Kept value 3e-4 unchanged**: the issue said to verify the value, not change it
+- **`GRADIENT_CHECK_EPSILON_OTHER`**: added companion constant for the `1e-3` value used for
+  non-float32 dtypes, even though it wasn't in the issue's explicit list, since it appeared
+  in all three assignments alongside `GRADIENT_CHECK_EPSILON_FLOAT32`
+
+## CI/Pre-commit
+
+The commit passed pre-commit hooks (no Mojo syntax errors; only documentation changes).
+`git push` succeeded and PR #3201 was created with `gh pr merge --auto --rebase`.
+
+---
+
+## Superseded from link-workaround-notes-to-issues
+
+---
+name: link-workaround-notes-to-issues
+description: 'Link temporary workaround NOTE comments in source code to tracking GitHub
+  issues. Use when: performing NOTE/TODO cleanup sprints, auditing untracked workarounds,
+  or ensuring every temporary hack has a tracking issue.'
+category: documentation
+date: 2026-03-05
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Objective** | Update bare `# NOTE:` comments to `# NOTE(#NNNN):` format linking to GitHub tracking issues |
+| **Trigger** | Cleanup issues requiring all workaround NOTEs to be traceable |
+| **Output** | Modified source files with issue references; no logic changes |
+| **Scope** | Source files only — comment text changes, no functional code edits |
+
+## When to Use
+
+- A cleanup issue asks to "link workaround NOTEs to tracking issues"
+- Running a NOTE/TODO/FIXME audit sprint (e.g. part of a master cleanup epic)
+- CI or code review flags untracked temporary workarounds
+- You need to ensure every `# NOTE:` that describes a limitation has a traceable issue number
+
+## Verified Workflow
+
+### Step 1: Discovery
+
+Grep all `# NOTE:` markers (uppercase only to focus on structured markers):
+
+```bash
+grep -rn "# NOTE:" --include="*.mojo" .
+```
+
+Filter out already-linked NOTEs:
+
+```bash
+grep -rn "# NOTE:" --include="*.mojo" . | grep -v "tracked in #\|#[0-9]\{4,\}"
+```
+
+### Step 2: Categorize by Root Cause
+
+Group NOTEs into clusters with a shared root cause before creating issues — avoids creating duplicate or overlapping tracking issues:
+
+| Group | Root Cause | Files |
+| ------- | ----------- | ------- |
+| A | Python interop blocked | trainer_interface.mojo, __init__.mojo |
+| B | FP16 SIMD compiler limitation | mixed_precision.mojo (x2) |
+| C | Image loading external deps | run_infer.mojo |
+| D | Mojo stdlib missing os.remove() | file_io.mojo |
+| E | BF16 aliased to FP16 | precision_config.mojo |
+| F | Conv backward disabled (ownership) | test_conv.mojo |
+| G | Model backward not implemented | googlenet-cifar10/train.mojo |
+
+### Step 3: Find or Create Tracking Issues
+
+For each group, search before creating:
+
+```bash
+gh issue list --label "cleanup" --state open --search "Python Mojo interop"
+gh issue list --state open --search "FP16 SIMD"
+```
+
+If no existing issue covers it, create one:
+
+```bash
+gh issue create \
+  --title "[Workaround] <short description>" \
+  --body "## Objective
+Track temporary workaround.
+
+## Affected Files
+- \`path/to/file.mojo:LINE\`
+
+## Resolution
+Implement when <blocker> is resolved.
+
+Part of #<parent-issue>" \
+  --label "cleanup,technical-debt"
+```
+
+Record the issue number for each group.
+
+### Step 4: Update NOTE Comments
+
+Change `# NOTE:` to `# NOTE(#NNNN):` — no other text changes:
+
+```
+Before:
+    # NOTE: Python data loader integration blocked by Track 4 (Python↔Mojo interop).
+
+After:
+    # NOTE(#3076): Python data loader integration blocked by Track 4 (Python↔Mojo interop).
+```
+
+For multi-line NOTEs where the issue is referenced in the body (not the opening line), the NOTE is already linked — skip it.
+
+For NOTEs that already follow the `# NOTE(#NNNN):` pattern or have `(tracked in #NNNN)` — skip them.
+
+### Step 5: Verify Coverage
+
+```bash
+# Should return empty output if all NOTEs are linked
+grep -rn "# NOTE:" --include="*.mojo" . | grep -v "#[0-9]\{4,\}"
+```
+
+### Step 6: Pre-commit and PR
+
+```bash
+pixi run pre-commit run --all-files
+git add <changed files>
+git commit -m "chore(cleanup): link workaround NOTEs to tracking issues (#NNNN)"
+gh pr create --title "chore(cleanup): link workaround NOTEs to tracking issues" \
+  --body "Closes #NNNN" --label "cleanup"
+gh pr merge --auto --rebase
+```
+
+## Key Patterns Learned
+
+### What Already Has Tracking (Skip These)
+
+- `# NOTE(#NNNN):` — already linked (opening line)
+- Multi-line NOTE where `#NNNN` appears in body text (e.g. "Tracked in project issue #3015") — already linked
+- NOTEs that are purely informational (not workarounds) — skip
+
+### What Needs Linking (Update These)
+
+- `# NOTE: <limitation description>` with no issue reference anywhere in the NOTE block
+- The fix is minimal: change `# NOTE:` to `# NOTE(#NNNN):` only
+
+### Issue Search Before Creating
+
+Always search `gh issue list` before creating — many cleanup issues already exist for common root causes (FP16 SIMD, Python interop, BF16, missing stdlib functions). Creating duplicates wastes tracking capacity.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Linking all NOTEs | Tried to add issue refs to all `# NOTE:` lines including informational ones | Created unnecessary issue noise | Only link NOTEs that describe temporary workarounds or blocked features |
+| Creating new issues for all groups | Started creating new tracking issues for each group without searching first | Would have created duplicates of existing cleanup issues (#3076, #3087, etc.) | Always `gh issue list --search` before creating |
+| Modifying multi-line NOTE body | Considered adding `(tracked in #NNNN)` to body lines that already had `#NNNN` in them | No change needed — body reference is sufficient | If `#NNNN` appears anywhere in the NOTE block, it's already linked |
+
+## Results & Parameters
+
+### Session Stats
+
+- 6 files updated (comment text only)
+- 3 NOTEs already had issue references (skipped)
+- 0 new tracking issues created (all mapped to existing issues)
+- Pre-commit: all hooks passed
+
+### Issue Mapping Reference
+
+| Pattern | Typical Tracking Issue Category |
+| --------- | -------------------------------- |
+| Python↔Mojo interop blocked | Python interop / Track 4 |
+| FP16/BF16 compiler limitation | Mojo compiler limitation |
+| Missing stdlib function | Mojo stdlib gap |
+| External library required | External dependency |
+| Struct ownership issue prevents tests | Type system / ownership |
+| Model backward pass not implemented | Implementation debt |
+
+### Notes
+
+# Session Notes: link-workaround-notes-to-issues
+
+## Session Context
+
+- **Date**: 2026-03-05
+- **Repo**: HomericIntelligence/ProjectOdyssey
+- **Branch**: 3073-auto-impl
+- **Issue**: #3073 [Cleanup] Track temporary workaround NOTEs
+- **PR**: #3286
+
+## Objective
+
+Issue #3073 required all temporary workaround `# NOTE:` comments in `.mojo` files to be linked
+to tracking GitHub issues so they could be found, prioritized, and eventually resolved.
+
+## Discovery Command
+
+```bash
+grep -rn "# NOTE:" --include="*.mojo" .
+```
+
+Found ~25 NOTEs total. Filtered to temporary workarounds (not informational notes).
+
+## NOTE Inventory
+
+| File | Line | Status | Action |
+| ------ | ------ | -------- | -------- |
+| shared/training/trainer_interface.mojo | 391 | Unlinked | Updated to NOTE(#3076) |
+| examples/lenet-emnist/run_infer.mojo | 340 | Unlinked | Updated to NOTE(#3087) |
+| shared/utils/file_io.mojo | 671 | Unlinked | Updated to NOTE(#3071) |
+| shared/training/precision_config.mojo | 225 | Unlinked | Updated to NOTE(#3088) |
+| tests/shared/core/test_conv.mojo | 602 | Unlinked | Updated to NOTE(#3085) |
+| examples/googlenet-cifar10/train.mojo | 97 | Unlinked | Updated to NOTE(#3084) |
+| shared/training/__init__.mojo | 410 | Already NOTE(#3092) | Skipped |
+| shared/training/mixed_precision.mojo | 283 | Already refs #3015 in body | Skipped |
+| shared/training/mixed_precision.mojo | 353 | Already refs #3015 in body | Skipped |
+| examples/resnet18-cifar10/train.mojo | 272 | Already NOTE(#3013) | Skipped |
+
+## Issue Mapping
+
+All 6 updated NOTEs mapped to pre-existing cleanup issues — no new issues needed to be created:
+
+- #3076: Python interop blocker NOTEs
+- #3087: Image loading external dependency
+- #3071: Mojo language limitation NOTEs (os.remove)
+- #3088: BF16 type alias limitation
+- #3085: Enable disabled Conv2D backward tests
+- #3084: Track backward pass implementation NOTEs in examples
+
+## Pre-commit Result
+
+All hooks passed:
+- mojo format: Passed
+- markdownlint: Passed
+- trailing-whitespace: Passed
+- end-of-file-fixer: Passed
+- check-yaml: Passed
+- check-added-large-files: Passed
+
+---
+
+## Superseded from note-comment-cleanup
+
+---
+name: note-comment-cleanup
+description: 'Systematically review and clean up NOTE/Note comment inconsistencies:
+  remove stale markers, convert docstring NOTEs to prose, normalize casing. Use when:
+  auditing code comments for a cleanup issue, standardizing NOTE vs Note casing, or
+  removing outdated reference markers.'
+category: documentation
+date: 2026-03-05
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Skill** | note-comment-cleanup |
+| **Category** | documentation |
+| **Language** | Mojo / Python / any |
+| **Trigger** | Cleanup issue targeting NOTE/Note comments |
+| **Outcome** | Consistent `# NOTE:` casing, stale markers removed, docstring NOTEs converted to prose |
+
+## When to Use
+
+- A GitHub cleanup issue asks to audit "miscellaneous NOTE comments"
+- Codebase has mixed `# Note:` and `# NOTE:` usage in the same modules
+- Stale "X removed" or "See issue #N" NOTEs reference closed issues or deleted code
+- Docstrings contain `NOTE:` prefixes that should be plain prose
+
+## Verified Workflow
+
+### 1. Discovery — find all NOTE variants
+
+```bash
+# Find all NOTE/Note/note patterns across Mojo files
+grep -rn "# NOTE:\|# Note:\|# note:" shared/ --include="*.mojo"
+
+# Find stale "removed" markers
+grep -rn "removed\|deprecated\|See issue #" scripts/ --include="*.py"
+```
+
+Use the Grep tool (`output_mode: content`, `-n: true`) for each variant separately.
+Run the full codebase grep first, then targeted reads for context.
+
+### 2. Categorize NOTEs into dispositions
+
+| Category | Action |
+| ---------- | -------- |
+| Stale "X removed" markers | **Remove** — changelog noise once code is gone |
+| Reference to closed GitHub issue | **Update** — remove issue number or reword |
+| NOTE inside a docstring | **Convert to prose** — strip `NOTE:` prefix |
+| Mixed casing (`# Note:` in `shared/`) | **Normalize** — `# Note:` → `# NOTE:` |
+| Mojo language limitation notes | **Keep** — still accurate, explains constraints |
+| Precision/epsilon justifications | **Keep** — critical for correctness |
+| Open issue/tracker references | **Keep** — still actionable |
+
+### 3. Verify referenced issues are actually closed
+
+```bash
+gh issue view <N> --json state,title
+```
+
+Only remove/update NOTEs referencing closed issues if they add no standalone value.
+
+### 4. Make edits
+
+- Use `Edit` tool with `replace_all: false` for unique strings
+- Use `replace_all: true` only for exact duplicates (e.g., same NOTE in multiple methods)
+- Read each file before editing (required by Edit tool)
+- Docstring NOTE conversion: remove `NOTE:` prefix, adjust capitalization if needed
+
+### 5. Handle mojo-format hook failure (GLIBC incompatibility)
+
+On older Linux machines, the `mojo` binary requires GLIBC >= 2.32 which may not be present:
+
+```bash
+# Skip only the mojo-format hook; run all others
+SKIP=mojo-format pixi run pre-commit run --all-files
+```
+
+The `mojo-format` hook will pass in CI (Docker has correct GLIBC). All other hooks
+(ruff, markdownlint, trailing-whitespace, end-of-file-fixer, check-yaml) must pass locally.
+
+### 6. Check for ruff auto-formatting
+
+The first pre-commit run may auto-reformat Python files (ruff-format). Check git status
+after pre-commit and stage any reformatted files before committing:
+
+```bash
+git status  # Look for modified Python files
+git add <ruff-reformatted-file>
+```
+
+### 7. Commit with conventional format
+
+```
+cleanup(comments): review and clean up miscellaneous reference NOTEs
+
+- Remove N stale "X removed" marker comments from scripts/
+- Update NOTE referencing closed issue #N
+- Convert M inline NOTE: prefixes inside docstrings to plain prose
+- Normalize all # Note: → # NOTE: in shared/ source files (K files)
+
+Closes #<issue>
+Part of #<parent>
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Running pre-commit in background and waiting | Used `run_in_background=True` then `TaskOutput` to poll | TaskOutput `block` and `timeout` params require JSON types not strings; polling was unclear | Run pre-commit synchronously with explicit timeout; check output file directly via Bash if background |
+| Running `just pre-commit-all` | Called `just` command directly | `just` not on PATH in this environment | Use `pixi run pre-commit run --all-files` instead |
+| Running multiple pre-commit hooks by name in one call | `pixi run pre-commit run trailing-whitespace end-of-file-fixer` | pre-commit CLI doesn't accept multiple hook IDs as positional args | Run `--all-files` or one hook at a time with `--hook-stage` |
+| Editing without reading | Attempted Edit on files not yet read in session | Edit tool requires prior Read in the conversation | Always Read before Edit; batch reads in parallel for efficiency |
+
+## Results & Parameters
+
+**Session stats (issue #3074):**
+
+- Files modified: 23
+- Lines removed (stale): 8
+- NOTEs converted (docstring → prose): 6 locations across 3 files
+- NOTEs normalized (`# Note:` → `# NOTE:`): ~20 occurrences across 17 files
+- All non-mojo hooks: PASS
+- `mojo-format`: SKIP (GLIBC incompatibility on host; passes in CI Docker)
+
+**Grep patterns used:**
+
+```bash
+# Primary discovery
+grep -rn "# NOTE:\|# Note:" shared/ --include="*.mojo"
+
+# Stale markers
+grep -rn "removed\|get_plan_dir" scripts/ --include="*.py"
+
+# Verify nothing remains
+grep -rn "# Note:" shared/ --include="*.mojo"  # Should return 0 matches
+```
+
+**Key NOTEs to always keep (do not remove):**
+
+- FP16 SIMD vectorization blocked by compiler limitation
+- `epsilon=3e-4` precision justifications referencing issue #2704
+- Track 4 (Python↔Mojo interop) blocker references
+- Mojo language limitation notes (`no __all__`, `no os.remove()`, BF16 alias)
+
+### Notes
+
+# Session Notes: note-comment-cleanup
+
+## Session Context
+
+- **Date**: 2026-03-05
+- **Issue**: HomericIntelligence/ProjectOdyssey #3074
+- **Branch**: `3074-auto-impl`
+- **PR**: HomericIntelligence/ProjectOdyssey #3288
+
+## What Was Done
+
+Implemented GitHub issue #3074: "[Cleanup] Review miscellaneous reference NOTEs".
+
+The issue plan (from `gh issue view 3074 --comments`) specified:
+
+1. Remove 2 stale `get_plan_dir() removed` markers from `scripts/common.py` and `scripts/regenerate_github_issues.py`
+2. Update `shared/__init__.mojo` NOTE referencing closed issue #49 (verified closed via `gh issue view 49`)
+3. Convert 6 `NOTE:` prefixes inside docstrings to plain prose:
+   - `shared/training/trainer.mojo` (3 locations)
+   - `shared/training/trainer_interface.mojo` (1 location)
+   - `shared/utils/config.mojo` (2 locations)
+4. Normalize `# Note:` → `# NOTE:` in all `shared/` source files
+
+## Discovery Process
+
+Started with broad grep across all .mojo files:
+
+```
+Grep pattern: "# NOTE:|# Note:|# note:|# NOTE "
+Path: worktree root
+Glob: **/*.mojo
+```
+
+Got ~100+ matches. Then read the issue comments to get the plan which pre-categorized
+the dispositions. This saved significant analysis time.
+
+## Files Modified
+
+```
+scripts/common.py
+scripts/regenerate_github_issues.py
+shared/__init__.mojo
+shared/autograd/__init__.mojo
+shared/core/__init__.mojo
+shared/core/activation_simd.mojo
+shared/core/attention.mojo
+shared/data/__init__.mojo
+shared/data/_datasets_core.mojo
+shared/testing/layer_testers.mojo
+shared/training/__init__.mojo
+shared/training/callbacks.mojo
+shared/training/checkpoint.mojo
+shared/training/optimizers/adamw.mojo
+shared/training/schedulers/lr_schedulers.mojo
+shared/training/trainer.mojo
+shared/training/trainer_interface.mojo
+shared/utils/__init__.mojo
+shared/utils/config.mojo
+shared/utils/file_io.mojo
+shared/utils/profiling.mojo
+shared/utils/toml_loader.mojo
+shared/utils/training_args.mojo
+```
+
+## Pre-Commit Behavior
+
+- `mojo-format`: FAILS with GLIBC version errors (local machine has GLIBC < 2.32, mojo requires >= 2.32)
+- `ruff-format-python`: Auto-reformatted 1 file on first run (this was in the background task that completed after commit)
+- All other hooks: PASS
+
+The GLIBC issue is a known environment limitation. CI runs in Docker with correct GLIBC.
+
+## Tooling Notes
+
+- `just` is NOT on PATH in this environment — use `pixi run pre-commit run --all-files`
+- `TaskOutput` with `block: true` requires boolean type; polling requires waiting and re-reading output file
+- Background pre-commit tasks write to `/tmp/claude-1000/<worktree-hash>/tasks/<task-id>.output`
+- Edit tool requires file to have been Read in the current conversation session
+
+---
+
+## Superseded from note-variant-canonical-audit
+
+---
+name: note-variant-canonical-audit
+description: 'Audit Mojo production files for non-canonical # NOTE variants: wrong
+  issue/version order, missing version tag, or TODO-style notes masquerading as limitation
+  notes. Use when: follow-up cleanup after a prior audit, grep shows mixed ordering,
+  or limitation NOTEs lack version tags.'
+category: documentation
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Skill** | note-variant-canonical-audit |
+| **Category** | documentation |
+| **Language** | Mojo |
+| **Trigger** | Follow-up cleanup issue auditing production `shared/` files for `# NOTE` canonical format |
+| **Outcome** | All `# NOTE` markers use canonical format; TODO-style notes converted to `# TODO:` |
+
+## When to Use
+
+- A follow-up GitHub issue (e.g., "Audit remaining # NOTE variants in shared/ production files")
+  targets production files explicitly excluded from a prior cleanup issue
+- Grep reveals mixed ordering: some notes use `# NOTE (Mojo v0.26.1, #3076):` (version-first)
+  while the canonical standard is `# NOTE(#NNNN, Mojo v0.26.1):` (issue-first)
+- Limitation NOTEs in `trainer_interface.mojo` or similar files have `# NOTE(#NNNN):` but no version tag
+- A NOTE comment describes future work ("could be added here if needed") rather than an actual
+  language/compiler limitation
+
+## Canonical Format Reference
+
+```mojo
+# Plain limitation note (no issue ref):
+# NOTE (Mojo v0.26.1): <description of limitation>
+
+# Limitation note with issue reference (issue number FIRST):
+# NOTE(#NNNN, Mojo v0.26.1): <description of limitation>
+
+# Wrong — version before issue:
+# NOTE (Mojo v0.26.1, #3076): ...   ← swap to # NOTE(#3076, Mojo v0.26.1):
+
+# Wrong — issue but no version:
+# NOTE(#3076): ...                  ← add , Mojo v0.26.1
+
+# Wrong — TODO-style disguised as limitation note:
+# NOTE (Mojo v0.26.1): X could be added if needed  ← convert to # TODO: Add X if needed
+```
+
+## Verified Workflow
+
+### Quick Reference
+
+| Change Type | Detection Pattern | Action |
+| ------------- | ------------------ | -------- |
+| Inverted order | `# NOTE (Mojo v0.26.1, #` | Swap to `# NOTE(#NNNN, Mojo v0.26.1):` |
+| Missing version | `# NOTE(#\d+):` without `, Mojo` | Add `, Mojo v0.26.1` after issue ref |
+| TODO-style | `# NOTE.*could be added\|if needed\|will be implemented` (future tense prose) | Convert to `# TODO:` |
+| Already canonical | `# NOTE(#\d+, Mojo v` or `# NOTE (Mojo v` | No change |
+
+### 1. Read the issue plan
+
+```bash
+gh issue view <number> --comments
+```
+
+The plan comment typically contains a disposition table per file — use it as the
+authoritative checklist rather than re-deriving dispositions from scratch.
+
+### 2. Full discovery grep
+
+```bash
+grep -r "# NOTE" shared/ --include="*.mojo" -n
+```
+
+Count occurrences per file. Cross-check against the plan's disposition table.
+
+### 3. Read each affected file before editing
+
+The Edit tool requires a prior Read in the same conversation. Batch reads in parallel:
+
+```
+Read shared/training/__init__.mojo (lines around target)
+Read shared/training/trainer_interface.mojo (lines around target)
+Read shared/utils/toml_loader.mojo (lines around target)
+```
+
+Use `offset` and `limit` to read only the relevant lines (e.g., `offset: 440, limit: 6`).
+
+### 4. Apply targeted edits
+
+For each non-canonical marker, use Edit with `replace_all: false`:
+
+**Inverted order fix:**
+
+```
+old: # NOTE (Mojo v0.26.1, #3076): Batch iteration blocked...
+new: # NOTE(#3076, Mojo v0.26.1): Batch iteration blocked...
+```
+
+**Missing version tag fix:**
+
+```
+old: # NOTE(#3076): Python data loader integration blocked...
+new: # NOTE(#3076, Mojo v0.26.1): Python data loader integration blocked...
+```
+
+**TODO-style NOTE conversion:**
+
+```
+old: # NOTE (Mojo v0.26.1): List handling could be added here if needed
+new: # TODO: Add list handling if needed
+```
+
+### 5. Post-edit verification grep
+
+```bash
+grep -r "# NOTE" shared/ --include="*.mojo" -n
+```
+
+Confirm the count is stable (no new variants introduced) and all remaining
+markers match a canonical pattern.
+
+### 6. Run pre-commit
+
+```bash
+SKIP=mojo-format pixi run pre-commit run --all-files
+```
+
+These are comment-only changes — no compilation impact. Skip `mojo-format` only
+if the local GLIBC version is incompatible (Mojo requires >= 2.32).
+
+### 7. Commit and push
+
+```bash
+git add shared/training/__init__.mojo shared/training/trainer_interface.mojo shared/utils/toml_loader.mojo
+git commit -m "cleanup(shared): normalize # NOTE format in production files
+
+Closes #<issue>"
+git push -u origin <branch>
+```
+
+### 8. Create PR with auto-merge
+
+```bash
+gh pr create --title "cleanup(shared): normalize # NOTE format in production files" \
+  --body "Closes #<issue>"
+gh pr merge --auto --rebase <pr-number>
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Deriving dispositions from grep alone | Ran grep and tried to classify all 23 occurrences from scratch | Slow and error-prone — many occurrences look similar without file context | Read the issue plan comment first; it contains a pre-computed disposition table per file |
+| Using the Skill tool for commit | Called `commit-commands:commit` skill | Denied in don't-ask permission mode | Fall back to direct `git commit` with HEREDOC message format |
+
+## Results & Parameters
+
+**Session stats (ProjectOdyssey issue #3883):**
+
+- Total `# NOTE` occurrences audited: 23 across 14 files
+- Changes required: **3** (the other 20 were already canonical)
+- Pre-commit result: All hooks PASS (`SKIP=mojo-format`)
+- Compilation impact: None (comment-only changes)
+
+**The 3 actual changes:**
+
+| File | Line | Change Type | Detail |
+| ------ | ------ | ------------- | -------- |
+| `shared/training/__init__.mojo` | 443 | Inverted order | `(Mojo v0.26.1, #3076)` → `(#3076, Mojo v0.26.1)` |
+| `shared/training/trainer_interface.mojo` | 385 | Missing version | `# NOTE(#3076):` → `# NOTE(#3076, Mojo v0.26.1):` |
+| `shared/utils/toml_loader.mojo` | 115 | TODO-style | `# NOTE (Mojo v0.26.1): List handling could be added` → `# TODO: Add list handling if needed` |
+
+**Files confirmed already canonical (no changes needed):**
+
+- `shared/data/_datasets_core.mojo` (5 occurrences)
+- `shared/training/callbacks.mojo`, `shared/training/checkpoint.mojo`
+- `shared/core/__init__.mojo`, `shared/core/broadcasting.mojo`, `shared/core/activation_simd.mojo`
+- `shared/data/__init__.mojo`, `shared/__init__.mojo`
+- `shared/utils/training_args.mojo`, `shared/utils/file_io.mojo`, `shared/utils/profiling.mojo`
+- `shared/utils/__init__.mojo`, `shared/utils/toml_loader.mojo` (line 96)
+- `shared/testing/layer_testers.mojo` (2 occurrences)
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #3883, PR #4821 | [notes.md](../references/notes.md) |
+
+### Notes
+
+# Session Notes — note-variant-canonical-audit
+
+## Context
+
+- **Issue**: ProjectOdyssey #3883 — "Audit remaining # NOTE variants in shared/ production files"
+- **Follow-up from**: #3289 (which targeted test/example/script files only)
+- **Branch**: `3883-auto-impl`
+- **PR**: #4821
+
+## Session Transcript Summary
+
+1. Read `.claude-prompt-3883.md` to understand scope.
+2. Ran `grep -r "# NOTE" shared/ --include="*.mojo" -n` — found 23 occurrences across 14 files.
+3. Read issue plan via `gh issue view 3883 --comments` — plan had a pre-computed disposition
+   table classifying all 23 occurrences. Only 3 required changes.
+4. Read target lines with `Read` tool (offset+limit) before editing.
+5. Applied 3 edits in parallel.
+6. Post-edit verification grep confirmed count stable at 23 (toml_loader line 115 converted
+   to `# TODO:` so no longer matches `# NOTE`).
+7. `SKIP=mojo-format pixi run pre-commit run --all-files` — all hooks PASS.
+8. `git commit` + `git push` + `gh pr create` + `gh pr merge --auto --rebase`.
+
+## Key Observations
+
+- The issue plan did all the hard work of classifying occurrences. Always check issue
+  comments before doing discovery analysis from scratch.
+- Inverted `(Mojo vX.Y.Z, #NNNN)` order is easy to miss visually; grep alone doesn't
+  surface it — need to read each hit carefully.
+- "Could be added if needed" / future tense = TODO, not a limitation note. The NOTE prefix
+  was misleading because no Mojo limitation prevents list handling; the author just hadn't
+  implemented it yet.
+- The Skill tool for commit was blocked in don't-ask mode — direct git commit works fine.
+
+## Grep Commands Used
+
+```bash
+# Discovery
+grep -r "# NOTE" shared/ --include="*.mojo" -n
+
+# Targeted verification after edits (same command)
+grep -r "# NOTE" shared/ --include="*.mojo" -n
+```
+
+## Files Modified
+
+```
+shared/training/__init__.mojo          | 2 +-
+shared/training/trainer_interface.mojo | 2 +-
+shared/utils/toml_loader.mojo          | 2 +-
+3 files changed, 3 insertions(+), 3 deletions(-)
+```
+
+---
+
+## Superseded from placeholder-note-to-status-tracking
+
+---
+name: placeholder-note-to-status-tracking
+description: 'Clarify ambiguous NOTE: runtime print statements as intentional placeholders
+  by converting them to STATUS: messages with GitHub tracking issue links. Use when:
+  (1) example/demo scripts print confusing NOTE messages during execution, (2) cleanup
+  issues require disambiguating placeholder code from bugs.'
+category: documentation
+date: 2026-03-04
+version: 1.0.0
+user-invocable: false
+---
+# Skill: placeholder-note-to-status-tracking
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-04 |
+| Objective | Resolve GitHub issue #3084 — clarify backward pass NOTEs in ML example training scripts |
+| Outcome | Success — 3 files updated, 3 GitHub tracking issues created, PR #3189 merged |
+| Category | documentation |
+
+## When to Use
+
+Use this skill when:
+
+- Example or demo scripts contain `print("NOTE: ...")` statements at runtime that imply
+  something is broken or incomplete, but the behavior is actually intentional
+- A cleanup issue (e.g., `[Cleanup] Track backward pass NOTEs`) asks you to disambiguate
+  placeholder code from unimplemented code
+- In-docstring `# NOTE:` comments are appropriate, but runtime `print("NOTE: ...")` calls
+  are not — the latter run during execution and confuse users
+- The fix strategy is to *clarify* (not implement) — i.e., the backward passes are
+  intentional simplifications, not bugs
+
+**Key distinction**: `# NOTE:` in docstrings is fine (documentation). `print("NOTE: ...")` at runtime
+is confusing because it appears as if something failed during execution.
+
+## Verified Workflow
+
+### 1. Read issue context first
+
+```bash
+gh issue view <number> --comments
+```
+
+The issue comments often contain a fully detailed implementation plan (see issue #3084).
+Read it before starting — it specifies which lines to change and what approach to take.
+
+### 2. Triage the NOTE occurrences
+
+Enumerate all occurrences across affected files. Classify each as:
+
+- **In-docstring** `# NOTE:` — appropriate; leave as-is
+- **Runtime `print("NOTE: ...")`** — confusing; replace with `STATUS:` + issue link
+
+For issue #3084, the affected files were:
+
+| File | Line | Type | Action |
+| ------ | ------ | ------ | -------- |
+| `examples/resnet18-cifar10/train.mojo` | 313 | Runtime print | Replace |
+| `examples/googlenet-cifar10/train.mojo` | 97 | Docstring | Leave |
+| `examples/googlenet-cifar10/train.mojo` | 436 | Runtime print | Replace |
+| `examples/mobilenetv1-cifar10/train.mojo` | 65 | Docstring | Leave |
+| `examples/mobilenetv1-cifar10/train.mojo` | 215 | Runtime print | Replace |
+
+### 3. Create GitHub tracking issues first
+
+Before editing files, create one tracking issue per model/component:
+
+```bash
+gh issue create \
+  --title "[Implementation] Full backward pass for <Model> training script" \
+  --body "$(cat <<'EOF'
+## Objective
+Implement the full backward pass...
+
+## Estimated Scope
+~N lines
+
+## Dependencies
+- Depends on #<parent>
+- Tracked in #<cleanup-issue>
+EOF
+)" \
+  --label "implementation"
+```
+
+Record the issue numbers returned. These go into the STATUS prints and README links.
+
+### 4. Replace runtime NOTE prints with STATUS prints
+
+Pattern:
+
+```mojo
+# Before (confusing — implies something is broken):
+print("NOTE: Full backward pass implementation would require ~3500 lines.")
+print("      This is a placeholder showing the structure.")
+print(
+    "      For actual training, consider using automatic differentiation."
+)
+
+# After (clear — explains intent and points to tracking issue):
+print("STATUS: Backward pass shown above is a documented placeholder (~3500 lines for full impl).")
+print("        Full implementation tracked in GitHub issue #3184.")
+print("        For actual training, consider using automatic differentiation.")
+```
+
+Key changes:
+- `NOTE:` → `STATUS:` (communicates information, not warning)
+- Add "documented placeholder" language (explicit that this is intentional)
+- Add GitHub issue number so users know where to follow progress
+- Remove the multi-line `print(...)` style in favor of plain `print("...")` for consistency
+
+### 5. Update README Implementation Status sections
+
+For each affected model's README, add a `### Pending (Intentional Placeholder)` section:
+
+```markdown
+### Pending (Intentional Placeholder)
+
+- [ ] **Full backward pass**: ~N lines — tracked in [GitHub issue #XXXX](URL)
+  - The training script demonstrates the structure but uses a placeholder backward pass
+  - For actual training, consider using automatic differentiation
+```
+
+Place this section between the completed items list and `### Future Enhancements`.
+
+### 6. Run pre-commit hooks
+
+```bash
+pixi run pre-commit run --all-files
+```
+
+All hooks should pass. Changes are string replacements only — no logic changes.
+
+### 7. Commit and PR
+
+```bash
+git add examples/*/train.mojo examples/*/README.md
+git commit -m "docs(examples): clarify backward pass NOTEs as intentional placeholders
+
+Replace ambiguous NOTE print statements with STATUS messages that
+clearly communicate these are documented placeholders, not bugs.
+Update README files to link to tracking issues.
+
+Closes #<issue>
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+git push -u origin <branch>
+gh pr create --title "..." --body "..." --label "documentation,cleanup"
+gh pr merge --auto --rebase
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Changing in-docstring `# NOTE:` comments | Considered replacing `# NOTE:` at lines 97 (googlenet) and 65 (mobilenetv1) | These are appropriate documentation comments; changing them adds no value | In-docstring NOTEs are fine — only runtime `print("NOTE: ...")` calls confuse users |
+| Generic STATUS message without issue link | Drafting "This is a documented placeholder" without a GitHub issue number | Users have no way to track when the implementation will happen | Always create tracking issues *before* editing prints so you can include the issue number in the message |
+| Implementing the backward passes | Considered actually writing ~2000-3500 lines of backward pass code | Out of scope for a `[Cleanup]` issue; issue explicitly says "If not needed: update NOTEs to clarify" | Cleanup issues ask for documentation clarity, not full implementations |
+
+## Results & Parameters
+
+### Issue Numbers (for ProjectOdyssey)
+
+| Model | Tracking Issue | Lines |
+| ------- | --------------- | ------- |
+| ResNet-18 | #3181 | ~2000 |
+| GoogLeNet | #3184 | ~3500 |
+| MobileNetV1 | #3187 | ~2000 |
+
+### Files Changed
+
+```text
+examples/resnet18-cifar10/train.mojo     (line 313)
+examples/googlenet-cifar10/train.mojo    (lines 436-438)
+examples/mobilenetv1-cifar10/train.mojo  (lines 215-219)
+examples/resnet18-cifar10/README.md      (Implementation Status section)
+examples/googlenet-cifar10/README.md     (Implementation Status section)
+examples/mobilenetv1-cifar10/README.md   (Implementation Status section)
+```
+
+### Commit Message Template
+
+```text
+docs(examples): clarify backward pass NOTEs as intentional placeholders
+
+Replace ambiguous NOTE print statements with STATUS messages that
+clearly communicate these are documented placeholders, not bugs.
+Update README files to link to tracking issues.
+
+- examples/<model>/train.mojo: NOTE -> STATUS with issue #XXXX
+- Created GitHub tracking issues for full backward pass impl
+- README.md: added Pending section with tracking issue links
+
+Closes #<cleanup-issue>
+```
+
+### Notes
+
+# Session Notes: placeholder-note-to-status-tracking
+
+## Session Summary
+
+- **Date**: 2026-03-04
+- **Issue**: ProjectOdyssey #3084 — [Cleanup] Track backward pass implementation NOTEs in examples
+- **Branch**: 3084-auto-impl
+- **PR**: #3189
+
+## Conversation Flow
+
+### Step 1: Read issue context
+Ran `gh issue view 3084 --comments` — found a detailed implementation plan in the comments
+specifying exact lines to change, the triage strategy (docstring vs runtime print), and the
+decision to clarify rather than implement.
+
+### Step 2: Read affected files in parallel
+Read all three `train.mojo` files at the relevant line ranges simultaneously to verify
+the exact current state before proposing edits.
+
+Also read README files with grep to find the Implementation Status sections.
+
+### Step 3: Created GitHub tracking issues
+Before editing any code, created three GitHub issues:
+- `gh issue create` for ResNet-18 → #3181
+- `gh issue create` for GoogLeNet → #3184
+- `gh issue create` for MobileNetV1 → #3187
+
+Labels: `implementation`. Body follows project GitHub issue template with Objective,
+Deliverables, Estimated Scope, Dependencies, Notes.
+
+### Step 4: Updated runtime print statements
+Used `Edit` tool with `old_string`/`new_string` for exact replacements.
+
+Key pattern: `NOTE:` → `STATUS:` + "documented placeholder" + issue number reference.
+
+For googlenet and mobilenetv1, also collapsed the multi-line `print(\n    "..."\n)` format
+into single-line prints for consistency.
+
+### Step 5: Updated README files
+- ResNet-18: Added one bullet under existing `### Pending (Blocked)` section
+- GoogLeNet: Added new `### Pending (Intentional Placeholder)` section between Planned and Future Enhancements
+- MobileNetV1: Same new section pattern as GoogLeNet
+
+### Step 6: Pre-commit validation
+Ran `pixi run pre-commit run --all-files`. All 12 hooks passed on first try.
+(Note: mojo format errors appeared in stderr but these are GLIBC version compatibility
+warnings on this host — the mojo format hook itself passed.)
+
+### Step 7: Commit and PR
+```
+git add examples/*/train.mojo examples/*/README.md
+git commit -m "docs(examples): clarify backward pass NOTEs..."
+git push -u origin 3084-auto-impl
+gh pr create --label "documentation,cleanup"
+gh pr merge --auto --rebase
+```
+
+## Key Observations
+
+1. **Issue comments are the plan** — The implementation plan was fully specified in the
+   issue comments, not just the body. Always run `gh issue view <N> --comments`.
+
+2. **Triage before editing** — Classify each NOTE occurrence as docstring vs runtime print
+   before touching anything. Only runtime prints are the problem.
+
+3. **Create tracking issues before edits** — You need the issue numbers to include in the
+   STATUS messages. Creating them first means you can write the full reference in one pass.
+
+4. **Cleanup ≠ implementation** — The issue explicitly chose the "clarify" path over the
+   "implement" path. Don't scope creep into writing 3500 lines of backward pass code.
+
+5. **Multi-line print() → single-line** — The existing `print(\n    "long string"\n)` style
+   was inconsistent with the surrounding code style. Collapsed to `print("...")` which also
+   removes a black/ruff formatting concern.
+
+---
+
+## Superseded from remove-shipped-feature-placeholders
+
+---
+name: remove-shipped-feature-placeholders
+description: 'Remove stale ''feature not yet supported'' comments, TODO placeholders,
+  and disabled test stubs from source code once the underlying feature ships natively.
+  Use when: an issue asks to document a dtype/language feature that was aliased or
+  stubbed, code has ''X aliases to Y until Z is supported'' comments, or tests are
+  disabled with pass-placeholder and TODO.'
+category: documentation
+date: 2026-03-04
+version: 1.0.0
+user-invocable: false
+---
+# Skill: remove-shipped-feature-placeholders
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-04 |
+| Objective | Remove stale BF16 alias/placeholder comments from Mojo training code after DType.bfloat16 shipped natively |
+| Outcome | Success — 4 files cleaned, stale NOTE/TODO comments removed, disabled test enabled, PR #3197 created |
+| Category | documentation |
+
+## When to Use
+
+Use this skill when:
+
+- An issue says to "document" or "verify support status" of a feature that was previously unsupported (dtype, API, language feature)
+- Source code has comments like `# NOTE: X aliases to Y until <language> supports X`
+- Source code has comments like `# Will use X when available`
+- Tests have `pass  # Placeholder — feature not yet supported in runtime` stubs with commented-out assertions
+- Tests have `# TODO(#N): Uncomment when <language> adds X` blocks
+- Docstrings say "Currently uses Y as X is not natively supported" when X is now available
+
+## Verified Workflow
+
+### 1. Verify the feature actually shipped
+
+Before removing any comments, confirm native support exists:
+
+```bash
+# For Mojo dtypes: grep for the comptime/alias definition
+grep -r "bfloat16_dtype\|DType.bfloat16" shared/ --include="*.mojo"
+```
+
+Look for `comptime bfloat16_dtype = DType.bfloat16` (or equivalent). If the alias still
+points to the fallback (e.g., `DType.float16`), the feature has NOT shipped — do not remove comments.
+
+### 2. Search exhaustively for all stale references
+
+Use multiple grep patterns to find every affected location:
+
+```bash
+# Pattern 1: Explicit alias notes
+grep -rn "aliases to.*until.*supports\|until.*supports.*alias" . --include="*.mojo"
+
+# Pattern 2: "when available" future-tense comments
+grep -rn "Will use.*when available\|when.*is available" . --include="*.mojo"
+
+# Pattern 3: Currently-uses fallback docstrings
+grep -rn "Currently uses.*as.*not.*supported\|not natively supported" . --include="*.mojo"
+
+# Pattern 4: Commented-out test blocks with TODO
+grep -rn "TODO.*Uncomment when\|pass.*Placeholder.*not yet supported" . --include="*.mojo"
+```
+
+Typical affected file types:
+- Core dtype/config modules (`dtype_utils.mojo`, `precision_config.mojo`)
+- Integration tests (`test_multi_precision_training.mojo`)
+- Unit test utilities (`test_special_values.mojo`)
+
+### 3. Apply the fixes
+
+For each location:
+
+**Case A — Alias NOTE comment above return statement**: Delete the comment line entirely.
+
+```mojo
+# Before
+# NOTE: bfloat16_dtype aliases to float16_dtype until Mojo supports BF16
+return PrecisionConfig(...)
+
+# After
+return PrecisionConfig(...)
+```
+
+**Case B — "Will use X when available" inline comment**: Remove the comment, keep the code as-is
+(if the code still uses the fallback for other reasons like hardware compatibility, that's correct
+and the comment becomes misleading):
+
+```mojo
+# Before
+return DType.float16  # Will use bfloat16_dtype when available
+
+# After
+return DType.float16
+```
+
+**Case C — Docstring "Currently uses Y as X not natively supported"**: Replace with accurate text
+describing current behavior. Include any real limitations (e.g., Apple Silicon):
+
+```mojo
+# Before
+Note:
+    Currently uses FP16 as BF16 is not natively supported in Mojo v0.26.1.
+    When Mojo adds native BF16 support, this will automatically use it.
+
+# After
+Note:
+    Uses native DType.bfloat16 via bfloat16_dtype in dtype_utils.mojo.
+    Not supported on Apple Silicon hardware (use FP16 instead).
+```
+
+**Case D — Disabled test with `pass` placeholder**: Enable the test by uncommenting the
+assertions and removing the long TODO docstring:
+
+```mojo
+# Before
+fn test_dtypes_bfloat16() raises:
+    """Test special values work with bfloat16.
+
+    NOTE: BF16 is a custom type... not yet integrated...
+    TODO(#3015): Enable BF16 DType support testing
+    ...
+    """
+    # TODO(#3015): Uncomment when Mojo adds DType.bfloat16
+    # var tensor = create_special_value_tensor([2, 2], DType.bfloat16, 1.0)
+    # assert_dtype(tensor, DType.bfloat16, "Should be bfloat16")
+    pass  # Placeholder - BFloat16 DType not yet supported
+
+# After
+fn test_dtypes_bfloat16() raises:
+    """Test special values work with bfloat16.
+
+    Uses native DType.bfloat16 available in current Mojo.
+
+    Note:
+        DType.bfloat16 is not supported on Apple Silicon hardware.
+    """
+    var tensor = create_special_value_tensor([2, 2], DType.bfloat16, 1.0)
+    assert_dtype(tensor, DType.bfloat16, "Should be bfloat16")
+    verify_special_value_invariants(tensor, 1.0)
+```
+
+### 4. Verify no stale references remain
+
+```bash
+grep -rn "aliases to.*until\|Will use.*when available\|not natively supported\|BFloat16 DType not yet\|Uncomment when Mojo adds" . --include="*.mojo"
+# Should return: No matches found
+```
+
+### 5. Run pre-commit hooks
+
+```bash
+pixi run pre-commit run --all-files
+```
+
+All hooks must pass. Common hooks that run on `.mojo` files: `mojo format`, `trailing-whitespace`,
+`end-of-file-fixer`.
+
+### 6. Commit and create PR
+
+```bash
+git add <affected files>
+git commit -m "cleanup(<scope>): remove stale <feature> alias/placeholder comments
+
+<Feature> is now natively supported. Remove outdated comments
+claiming it was aliased or unsupported, and enable the previously
+disabled test.
+
+- <file1>: <what was changed>
+- <file2>: <what was changed>
+
+Closes #<issue-number>"
+
+git push -u origin <branch>
+gh pr create --title "cleanup(<scope>): ..." --body "Closes #<number>" --label "cleanup"
+gh pr merge --auto --rebase
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Running `mojo build` locally | Tried to verify no syntax errors with `pixi run mojo build` | GLIBC version mismatch on host (needs 2.32/2.33/2.34, host has older version) | Mojo compilation only works in Docker CI on this host. Pre-commit hooks suffice for local validation. |
+| Searching only `precision_config.mojo` | Initial grep focused on the file named in the issue | Missed 3 other files with stale comments (`dtype_utils.mojo`, 2 test files) | Always grep the entire repo with multiple patterns, not just the issue-cited file. |
+
+## Results & Parameters
+
+| Parameter | Value |
+| ----------- | ------- |
+| Files changed | `shared/training/precision_config.mojo`, `shared/training/dtype_utils.mojo`, `tests/shared/testing/test_special_values.mojo`, `tests/shared/integration/test_multi_precision_training.mojo` |
+| Lines removed | 37 lines of stale comments/placeholder code |
+| Lines added | 12 lines of accurate documentation |
+| Pre-commit hooks | All passed |
+| PR | https://github.com/HomericIntelligence/ProjectOdyssey/pull/3197 |
+| Issue | #3088 (part of #3059 cleanup epic) |
+| Branch | `3088-auto-impl` |
+| Commit message convention | `cleanup(<scope>): ...` |
+
+## Key Insights
+
+1. **Issue-cited file is rarely the only affected file**: The issue pointed to `precision_config.mojo:225`
+   but 3 other files also had stale references. Always search the whole repo.
+
+2. **"Will use X when available" comments are different from "X aliases to Y"**: The former
+   are in code that still correctly uses the fallback (for reasons unrelated to feature support),
+   while the latter are explicit workaround markers. Both need removal when the feature ships,
+   but the code behavior may not need to change.
+
+3. **Disabled tests with `pass` are the most valuable part**: Re-enabling test coverage is the
+   actual quality improvement. The comment removal is cosmetic; the test enablement validates behavior.
+
+4. **Verify native support before removing**: `comptime bfloat16_dtype = DType.bfloat16` in
+   `dtype_utils.mojo` confirmed BF16 was already native. If it had been `DType.float16`, removal
+   would have been wrong.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #3088, cleanup epic #3059 | [notes.md](../references/notes.md) |
+
+### Notes
+
+# Session Notes: remove-shipped-feature-placeholders
+
+## Session Context
+
+- **Date**: 2026-03-04
+- **Repository**: ProjectOdyssey
+- **Issue**: #3088 [Cleanup] Document BF16 type alias limitation
+- **Branch**: `3088-auto-impl`
+- **PR**: https://github.com/HomericIntelligence/ProjectOdyssey/pull/3197
+
+## Original Issue
+
+The issue asked to:
+1. Verify current Mojo BF16 support status
+2. If Mojo now supports BF16: implement proper BF16 dtype
+3. If not supported: ensure documentation is clear about the limitation
+4. Update tests to handle BF16 correctly when available
+
+Key file cited: `/shared/training/precision_config.mojo:225`
+Key marker: `NOTE: bfloat16_dtype aliases to float16_dtype until Mojo supports BF16`
+
+## Investigation
+
+Checked `dtype_utils.mojo` line 63:
+
+```mojo
+comptime bfloat16_dtype = DType.bfloat16
+```
+
+This confirmed BF16 is natively supported. The alias comment was stale — the code
+already used `DType.bfloat16` directly.
+
+## Files Changed
+
+### `shared/training/precision_config.mojo`
+
+- Removed `# NOTE: bfloat16_dtype aliases to float16_dtype until Mojo supports BF16`
+- Updated docstring from "Currently uses FP16 as BF16 is not natively supported in Mojo v0.26.1" to reflect native support and Apple Silicon limitation
+
+### `shared/training/dtype_utils.mojo`
+
+- Removed two `# Will use bfloat16_dtype when available` inline comments from `recommend_precision_dtype()`
+- The function still returns `DType.float16` for these cases (hardware recommendation logic unchanged)
+
+### `tests/shared/testing/test_special_values.mojo`
+
+- Replaced ~25 lines of TODO-heavy placeholder docstring + `pass` body
+- Enabled actual test assertions using `DType.bfloat16`
+
+### `tests/shared/integration/test_multi_precision_training.mojo`
+
+- Removed stale comment "BF16 currently aliases to FP16 in Mojo / When native BF16 is available..."
+- Simplified assertion message from "Compute dtype should be bfloat16 (or alias)" to "Compute dtype should be bfloat16"
+
+## Environment Constraints
+
+- Mojo cannot be run locally: GLIBC mismatch (host has older glibc, Mojo requires 2.32+)
+- Validation done via pre-commit hooks only
+- CI (Docker) will run actual Mojo compilation and tests
+
+## Grep Patterns Used
+
+```bash
+grep -rn "bfloat16_dtype" . --include="*.mojo"
+grep -rn "aliases to.*until\|Will use.*when available\|not natively supported\|BFloat16 DType not yet\|Uncomment when Mojo adds\|BF16 currently aliases" . --include="*.mojo"
+```
+
+---
+
+## Superseded from remove-unimplemented-mojo-placeholder
+
+---
+name: remove-unimplemented-mojo-placeholder
+description: 'Remove no-op placeholder tests and NOTE comments for unimplemented Mojo
+  features. Use when: a test contains only a NOTE comment and pass, or a feature needs
+  stdlib APIs not available in the current Mojo version.'
+category: documentation
+date: 2026-03-04
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Category** | documentation |
+| **Mojo version** | v0.26.1+ |
+| **Trigger** | Cleanup issue with NOTE: ... not yet implemented in a test file |
+| **Outcome** | Placeholder test function and its call removed; all pre-commit hooks pass |
+
+## When to Use
+
+- A GitHub cleanup issue references a `NOTE: <Feature> not yet implemented` comment in a Mojo test file.
+- The test function body consists entirely of comments and `pass` (zero assertions).
+- The feature requires Mojo stdlib capabilities that do not exist in the current version (e.g., file-size stat, regex, subprocess output capture).
+- The decision has been made to **remove** rather than implement (feature not needed now).
+
+## Verified Workflow
+
+1. **Read the issue** to understand the feature and decision required.
+
+   ```bash
+   gh issue view <number> --comments
+   ```
+
+2. **Locate the placeholder** in the test file (typically flagged by line number in the issue body).
+
+3. **Check the test function** — confirm it is a no-op (body is only comments + `pass`, no assertions).
+
+4. **Decide: implement or remove** — for features requiring unavailable stdlib APIs, choose remove.
+
+5. **Remove the function definition** using the Edit tool:
+   - Delete from `fn test_<feature>():` through the closing `pass` line.
+   - Delete the blank line separator before the next function.
+
+6. **Remove the call** from `main()`:
+   - Delete the `test_<feature>()` call line.
+
+7. **Verify no references remain**:
+
+   ```bash
+   grep -n "FeatureName\|test_feature_name" path/to/test_file.mojo
+   ```
+
+8. **Run pre-commit hooks**:
+
+   ```bash
+   pixi run pre-commit run --all-files 2>&1 | tail -20
+   ```
+
+   All hooks should show `Passed`. GLIBC version warnings from Mojo binary are cosmetic — ignore them.
+
+9. **Commit** with conventional commits format including `Closes #<issue>`.
+
+10. **Push and create PR** with `gh pr create`, then enable auto-merge with `gh pr merge --auto --rebase`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Keeping the placeholder | Leaving `pass`-only test in place | Does not satisfy "Either implemented or test removed" success criterion | A no-op test with zero assertions provides no value and should be removed |
+| Implementing RotatingFileHandler | Considered full implementation | Mojo v0.26.1 lacks file-size stat (`os.stat`) and rename/rotation APIs in stdlib | Check stdlib availability before committing to implementation; removal is valid |
+
+## Results & Parameters
+
+**Environment**: Mojo v0.26.1, pixi environment, Linux (GLIBC 2.28 — older than required 2.32+)
+
+**GLIBC warning handling**: The Mojo binary emits GLIBC version warnings on older systems during pre-commit. These are warnings from the binary loader, not hook failures. All hooks still report `Passed`. Safe to proceed.
+
+**Commit message template**:
+
+```text
+cleanup(<scope>): remove unimplemented <Feature> placeholder
+
+Remove test_<feature>() function and its call from main().
+<Feature> requires <missing stdlib capability> not available in
+Mojo v0.26.1's stdlib. The test body was already a no-op (pass
+with no assertions), so removing it eliminates dead code without
+losing test coverage.
+
+Closes #<issue-number>
+```
+
+**PR label**: `cleanup`
+
+**Auto-merge**: Always enable with `gh pr merge --auto --rebase <pr-number>` after creation.
+
+### Notes
+
+# Session Notes: Remove Unimplemented Mojo Placeholder
+
+## Session Context
+
+- **Date**: 2026-03-04
+- **Issue**: ProjectOdyssey #3083 — [Cleanup] Implement RotatingFileHandler in logging
+- **Branch**: 3083-auto-impl
+- **PR**: ProjectOdyssey #3182
+
+## Objective
+
+Resolve a cleanup issue that flagged a no-op placeholder test `test_rotating_file_handler()`
+in `tests/shared/utils/test_logging.mojo:206-214`. The test contained only a `NOTE:` comment
+and `pass` — zero assertions, zero value.
+
+## Steps Taken
+
+1. Read `.claude-prompt-3083.md` to understand the issue.
+2. Searched for `logging.mojo` using Glob to confirm the implementation file exists.
+3. Read `test_logging.mojo` around line 208 to confirm the test was a no-op.
+4. Searched for all references to `test_rotating_file_handler` and `RotatingFileHandler`.
+5. Removed the function definition (9 lines including blank separator).
+6. Removed the call from `main()`.
+7. Verified no references remained with grep.
+8. Ran `pixi run pre-commit run --all-files` — all hooks passed.
+9. Committed and pushed to `3083-auto-impl`.
+10. Created PR #3182 with label `cleanup`, enabled auto-merge.
+
+## Decision Rationale
+
+**Remove, not implement.** RotatingFileHandler requires:
+- `os.stat()` or equivalent to check file size — not in Mojo v0.26.1 stdlib
+- File rename/rotation syscalls — not exposed in Mojo v0.26.1 stdlib
+
+The test was already `pass` with no assertions, so removal loses zero test coverage.
+
+## Environment Details
+
+- Mojo v0.26.1 in pixi environment
+- Linux with GLIBC 2.28 (older than Mojo's required 2.32+)
+- GLIBC warnings appear during pre-commit from Mojo binary but don't block hooks
+
+## Key Observations
+
+- GLIBC warnings during pre-commit are cosmetic on this host — all hooks still `Passed`
+- `just` command was not available; used `pixi run pre-commit run --all-files` directly
+- Removing both the function definition AND its call in `main()` is required
+- The blank line between the removed function and the next function was also removed
+
+---
+
+## Superseded from strip-note-prefix-comments
+
+---
+name: strip-note-prefix-comments
+description: 'Strip NOTE: prefix variants from plain comments in Mojo files without
+  functional changes. Use when: a follow-up cleanup issue targets # NOTE: markers
+  in test/example/script files, files contain # NOTE(#N): or # NOTE (version): variants,
+  or scope must be verified against actual file state before editing.'
+category: documentation
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+---
+# Skill: strip-note-prefix-comments
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Skill** | strip-note-prefix-comments |
+| **Category** | documentation |
+| **Language** | Mojo |
+| **Trigger** | Follow-up cleanup issue stripping `# NOTE:` prefix from test/example/script files |
+| **Outcome** | Success — 9 markers stripped across 6 files, all pre-commit hooks passed, PR created |
+| **Related** | Follow-up from issue #3072; see also `note-comment-cleanup` skill |
+
+## When to Use
+
+- A GitHub issue is a follow-up from a prior `# NOTE:` cleanup pass that left test/example files untouched
+- Issue lists specific files and line numbers but they may have already been partially fixed
+- Files contain variant patterns: `# NOTE(#N):`, `# NOTE (Mojo vX.Y):`, `# NOTE:` (bare)
+- Changes are comment-only (no functional impact) and must pass `mojo format` pre-commit hook
+
+## Verified Workflow
+
+### 1. Verify actual state before editing
+
+The issue description may be stale — some files may have already been cleaned in previous sessions.
+Always grep first; do NOT trust the line numbers in the issue body.
+
+```bash
+grep -rn "# NOTE" tests/ examples/ shared/ benchmarks/ scripts/ --include="*.mojo"
+```
+
+This catches all variants:
+
+- `# NOTE: text`
+- `# NOTE(#3084): text`
+- `# NOTE (Mojo v0.26.1): text`
+
+Compare results against the issue's file list. Files with zero hits are already done — skip them.
+
+### 2. Categorize variant patterns
+
+| Pattern | Conversion |
+| --------- | ----------- |
+| `# NOTE: text` | `# text` |
+| `# NOTE(#N): text` | `# text (#N):` — preserve issue reference at end |
+| `# NOTE (Mojo vX.Y): text` | `# text (Mojo vX.Y).` — preserve version context inline |
+
+The version/issue context is valuable — move it inline rather than dropping it.
+
+### 3. Edit in parallel
+
+All edits are independent. Use parallel Edit tool calls for all files. Each call targets
+the exact multi-line block (including the continuation line) to avoid ambiguity.
+
+### 4. Verify
+
+```bash
+grep -rn "# NOTE" <all scoped files> --include="*.mojo"
+```
+
+Expected: zero output.
+
+### 5. Stage only the modified files (never `git add -A`)
+
+```bash
+git add tests/models/... examples/... shared/__init__.mojo benchmarks/... scripts/...
+```
+
+### 6. Commit — all pre-commit hooks should pass
+
+Comment-only Mojo edits pass `mojo format`, `trailing-whitespace`, and `end-of-file-fixer`.
+No compilation or test execution needed locally (CI is authoritative for Mojo builds).
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Trusting issue line numbers | Read files at the exact lines from the issue body | Several files had no `# NOTE` at those lines — already cleaned | Always grep first to discover actual state |
+| Searching only `# NOTE:` (colon) | `grep -n "# NOTE:"` | Missed `# NOTE(#3084):` and `# NOTE (Mojo v0.26.1):` variants | Use `# NOTE` (no colon) to catch all variants |
+| Dropping issue/version context | `# NOTE(#3084): text` → `# text` | Loses traceability to the referenced issue | Move context inline: `# text (#3084)` |
+
+## Results & Parameters
+
+```text
+Files modified: 6
+NOTE markers removed: 9
+Variants encountered:
+  # NOTE:            — 6 occurrences (bare, test/init/script files)
+  # NOTE(#N):        — 1 occurrence (googlenet train.mojo)
+  # NOTE (Mojo vX):  — 2 occurrences (run_infer.mojo, compare_results.mojo)
+Pre-commit hooks: all passed (mojo format, trailing-whitespace, end-of-file-fixer)
+PR: created with auto-merge enabled
+```
+
+### Grep command to scope work
+
+```bash
+grep -rn "# NOTE" tests/ examples/ shared/ benchmarks/ scripts/ --include="*.mojo"
+```
+
+### Edit pattern for `# NOTE (Mojo vX.Y): text`
+
+```text
+old: # NOTE (Mojo v0.26.1): PNG/JPEG image loading requires external image processing libraries.
+new: # PNG/JPEG image loading requires external image processing libraries (Mojo v0.26.1).
+```
+
+### Notes
+
+# Session Notes: strip-note-prefix-comments
+
+## Session Details
+
+- **Date**: 2026-03-07
+- **Issue**: HomericIntelligence/ProjectOdyssey #3289
+- **Branch**: 3289-auto-impl
+- **PR**: #3882
+
+## Objective
+
+Convert remaining `# NOTE:` markers in test, example, `__init__`, benchmark, and script
+files to plain comments. Follow-up from #3072 which handled production source files.
+
+## Files in Issue Scope
+
+| File | Lines (issue) | Actual state |
+| ------ | --------------- | -------------- |
+| tests/models/test_alexnet_layers.mojo | 1101, 1114, 1128 | Had markers at 1119, 1132, 1146 (shifted) |
+| tests/shared/core/test_conv.mojo | 602 | No NOTE marker found |
+| examples/lenet-emnist/run_infer.mojo | 340 | Had `# NOTE (Mojo v0.26.1):` at 340 |
+| examples/googlenet-cifar10/train.mojo | 97 | Had `# NOTE(#3084):` at 97 |
+| shared/__init__.mojo | 52, 127 | Had markers at 51, 128 |
+| tests/shared/training/test_training_loop.mojo | 39 | Already clean |
+| tests/shared/utils/test_logging.mojo | 208 | Already clean |
+| benchmarks/scripts/compare_results.mojo | 595 | Had `# NOTE (Mojo v0.26.1):` at 595 |
+| scripts/verify_installation.mojo | 42 | Had marker at 42 |
+
+## Key Observations
+
+1. Issue line numbers were approximate — actual lines differed by a few due to edits since filing.
+2. Three files from the issue (`test_conv.mojo`, `test_training_loop.mojo`, `test_logging.mojo`)
+   had no remaining NOTE markers — already cleaned in an earlier session.
+3. Two files used `# NOTE (Mojo v0.26.1):` format (with space before paren).
+4. One file used `# NOTE(#3084):` format (issue reference, no space).
+5. All were appropriate as plain comments — none needed docstring `Note:` conversion.
+
+## Commit Message Used
+
+```text
+fix(comments): remove NOTE: prefix from test/example comment markers
+
+Converts remaining # NOTE: markers in test, example, __init__,
+benchmark, and script files to plain comments by stripping the
+NOTE:/NOTE(...): prefix. No functional changes.
+
+Files changed:
+- tests/models/test_alexnet_layers.mojo (3 NOTEs)
+- examples/lenet-emnist/run_infer.mojo (1 NOTE)
+- examples/googlenet-cifar10/train.mojo (1 NOTE)
+- shared/__init__.mojo (2 NOTEs)
+- benchmarks/scripts/compare_results.mojo (1 NOTE)
+- scripts/verify_installation.mojo (1 NOTE)
+
+Closes #3289
+Follow-up from #3072
+```
+
+---
+
+## Superseded from update-blocker-note
+
+---
+name: update-blocker-note
+description: 'Update blocked feature NOTE comments with issue tracking references
+  and resolution path. Use when: a NOTE comment lacks a tracking issue number, a blocker
+  needs a resolution path, cleanup issues require linking NOTEs to parent tracking
+  issues, or pre-commit mojo-format fails due to GLIBC incompatibility.'
+category: documentation
+date: 2026-04-07
+version: 1.1.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Skill** | update-blocker-note |
+| **Category** | documentation |
+| **Trigger** | Cleanup issue for a NOTE/FIXME/TODO comment that references a blocker |
+| **Output** | Updated comment with issue number + resolution path line |
+| **Scope** | Single-file or multi-file comment-only change |
+
+## When to Use
+
+- A GitHub cleanup issue asks you to "link to Track N tracking" for a NOTE comment
+- A NOTE comment says "blocked by X" but has no issue number for traceability
+- A parent tracking issue (e.g. `#3076`) collects all interop blocker NOTEs
+- The success criteria include "NOTE updated with tracking reference"
+- A GitHub issue asks to "clean up" or "update" NOTE comments that document blocked features
+- NOTEs reference an unresolved initiative (e.g., "Track 4", "Phase 2") without an issue number
+- The blocking initiative is still active — action is to track, not implement
+- Pre-commit `mojo-format` hook fails with GLIBC version errors (environment limitation)
+
+## Verified Workflow
+
+1. **Read the issue** — `gh issue view <number> --comments` to get the full plan including file/line locations and related parent issue
+2. **Search for all NOTEs** — `Grep` for `NOTE.*Track 4` / `NOTE.*blocked` across `*.mojo` files to confirm count and locations:
+   ```bash
+   gh issue list --search "Track 4 interop" --state open --limit 10
+   ```
+3. **Read each target file** at the specified line range to see exact comment text before editing
+4. **Apply edits** with `Edit` tool — make targeted changes:
+   - Add `(#<issue-number>)` to the `NOTE:` marker → `NOTE(#3092):`
+   - Append a tracking line referencing the parent issue and resolution condition:
+     ```
+     # Track resolution via #<parent>. Implement when <condition>.
+     ```
+   - For inline `# NOTE:` comments: append reference on same or following line
+   - For docstring `Note:` sections: append reference as last sentence of the Note paragraph
+   - For `# Blocked:` comments: append `- see #<issue> (parent: #<parent>)` inline
+5. **Verify the diff** with `git diff` — confirm only comment lines changed
+6. **Run pre-commit**:
+   ```bash
+   pixi run pre-commit run --all-files
+   # If mojo-format fails with GLIBC errors:
+   SKIP=mojo-format pixi run pre-commit run --all-files
+   ```
+   GLIBC incompatibility is a pre-existing infrastructure issue, not caused by comment changes. All other hooks (markdownlint, ruff, trailing-whitespace) must pass.
+7. **Commit** with `fix(scope): update NOTE with tracking reference` or `docs(scope): add issue references` format
+8. **Push + PR** linked to the cleanup issue with "Closes #N" and optionally `--label cleanup`
+9. **Enable auto-merge**: `gh pr merge --auto --rebase`
+10. **Post completion comment** to the issue with before/after diff
+
+## Edit Patterns
+
+### Inline NOTE Comment
+
+Before:
+```mojo
+# NOTE: Batch iteration blocked by Track 4 (Python↔Mojo interop).
+# The data_loader is currently a PythonObject, but step() requires ExTensor.
+# Once Track 4 data loading infrastructure is ready, integrate batching here.
+```
+
+After:
+```mojo
+# NOTE(#3092): Batch iteration blocked by Track 4 (Python↔Mojo interop).
+# The data_loader is currently a PythonObject, but step() requires ExTensor.
+# Once Track 4 data loading infrastructure is ready, integrate batching here.
+# Track resolution via #3076. Implement when Python↔Mojo interop is available.
+```
+
+### Docstring Note Section
+
+```mojo
+# Before
+Note:
+    data_loader remains PythonObject until Track 4 implements
+    Mojo data loading infrastructure.
+
+# After
+Note:
+    data_loader remains PythonObject until Track 4 implements
+    Mojo data loading infrastructure. Tracked in #3076 (parent: #3059).
+```
+
+### Blocked Comment
+
+```mojo
+# Before
+# Blocked: Track 4 (Python↔Mojo interop)
+
+# After
+# Blocked: Track 4 (Python↔Mojo interop) - see #3076 (parent: #3059)
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Edit without Read | Called Edit tool directly on the file | Tool requires file to be read first in the conversation | Always Read the target file before Edit, even if you already saw its content from a sibling file |
+| Reading main repo copy | Read `/home/mvillmow/Odyssey2/shared/training/__init__.mojo` | Worktree has its own copy at `.worktrees/issue-3092/` path | Always edit the worktree path, not the main repo path |
+| Running `just pre-commit-all` | Used `just` command runner | `just` not in PATH in this environment | Use `pixi run pre-commit run --all-files` directly |
+| Running mojo-format hook normally | Let all pre-commit hooks run | GLIBC_2.32/2.33/2.34 not found on host; mojo binary incompatible with older Linux | Skip mojo-format with `SKIP=mojo-format` — comment-only changes don't need formatting |
+| Implementing the blocked feature | Tried to implement Python data loader integration | Track 4 is still active; implementation blocked | When blocker is unresolved, update comments with issue refs only — do NOT implement |
+
+## Results & Parameters
+
+### Commit message format
+
+```
+fix(training): update NOTE with Track 4 tracking reference
+
+Add issue #<N> to the NOTE comment for <feature> blocked by Track 4
+to improve traceability. Also document resolution path via #<parent>.
+
+Closes #<N>
+Part of #<parent-epic>
+```
+
+```
+docs(training): add issue references to Track 4 Python interop NOTEs
+
+Updates N blocked NOTEs in shared/<module>/ to reference tracking
+issues #<issue> and #<parent>. <Initiative> remains active;
+no functional changes made.
+
+Closes #<issue>
+```
+
+### PR body format
+
+```markdown
+## Summary
+- Updated NOTE comment in `<file>:<line>` to reference issue #<N>
+- Added tracking line referencing #<parent> as the resolution path
+- No logic changes — comment-only update
+```
+
+### Pre-commit command (with GLIBC workaround)
+
+```bash
+SKIP=mojo-format pixi run pre-commit run --all-files
+```
+
+### Success criteria checklist
+
+- Linked to Track 4 tracking (via parent issue reference in comment)
+- Workaround documented (existing `_ = var` or equivalent noted)
+- NOTE updated with issue number in marker: `NOTE(#N):`
+
+### Notes
+
+# Session Notes: update-blocker-note
+
+## Session Context
+
+- **Date**: 2026-03-04
+- **Issue**: HomericIntelligence/ProjectOdyssey#3092
+- **Branch**: 3092-auto-impl
+- **PR**: HomericIntelligence/ProjectOdyssey#3205
+
+## Objective
+
+Implement GitHub issue #3092: update a `NOTE` comment in
+`shared/training/__init__.mojo:411` to include issue tracking references
+for a batch iteration blocker tied to Track 4 (Python-Mojo interop).
+
+## Steps Taken
+
+1. Read `.claude-prompt-3092.md` to get issue context
+2. Read `shared/training/__init__.mojo` at offset 400 to see the NOTE
+3. Searched for Track 4 tracking issue via `gh issue list`
+4. Found that #3076 is the parent "Python interop blocker NOTEs" issue
+5. Attempted Edit without reading worktree file first — got tool error
+6. Read the worktree copy at `.worktrees/issue-3092/shared/training/__init__.mojo`
+7. Applied edit: added `(#3092)` to NOTE marker and appended tracking line
+8. Verified diff, committed, pushed, created PR, enabled auto-merge
+9. Posted completion comment to issue #3092
+
+## Key Learnings
+
+- The Edit tool requires you to have Read the exact file path in this conversation — reading a sibling copy (main repo vs worktree) does NOT count
+- Worktree file path is `.worktrees/issue-3092/<relative-path>`, not the main repo path
+- These cleanup "track blocker NOTE" issues are minimal: 2 comment lines changed, no logic
+- Pattern: `NOTE(#N):` for the marker + one new line `# Track resolution via #parent. Implement when <condition>.`
+- `gh issue list --search "..."` is fast for finding the parent tracking issue number
+
+## Parameters
+
+- File: `shared/training/__init__.mojo`
+- Line: 411
+- Marker before: `NOTE:`
+- Marker after: `NOTE(#3092):`
+- Parent tracking issue: #3076
+- Epic: #3059
+
+---
+
+## Superseded from generator-template-placeholder-cleanup
+
+---
+name: generator-template-placeholder-cleanup
+description: 'Review TODO comments in code generator scripts and reclassify as TEMPLATE:
+  markers or actual work items. Use when: cleaning up generator scripts, distinguishing
+  template scaffolding from implementation gaps, or working on TODO-review issues.'
+category: documentation
+date: 2026-03-04
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Category** | documentation |
+| **Effort** | Low (mechanical substitution) |
+| **Languages** | Python (generator scripts), any generated language |
+| **Project Type** | Projects with code generation scripts that output scaffolded files |
+
+## When to Use
+
+- A GitHub cleanup issue asks to "review TODOs" in generator scripts
+- Generator scripts contain `# TODO:` comments inside template string literals
+- You need to distinguish intentional scaffolding (template placeholders) from actual implementation gaps
+- Pre-commit hooks or linters flag TODO comments in code
+
+## Key Insight: Two Kinds of TODOs in Generator Scripts
+
+Generator scripts contain TODOs in two distinct locations:
+
+1. **In Python logic** (the generator itself) — may be actual implementation gaps
+2. **In Mojo/target-language template strings** — always intentional placeholders for generated output
+
+The classification step is critical: read each TODO in context to determine which category it falls into.
+
+## Verified Workflow
+
+1. **Read all affected generator scripts** in parallel using the Read tool
+2. **Classify each TODO** — check if it is inside a template string literal vs. Python code
+3. **For template placeholders**: replace `# TODO:` with `# TEMPLATE:` in-place
+4. **For actual work items**: create separate GitHub issues and link them
+5. **For outdated items**: remove them
+6. **Update script docstrings**: add a `Template Placeholders:` section to each script's module docstring explaining the `TEMPLATE:` convention
+7. **Verify** with `grep "# TODO:" scripts/generators/` — should return no matches
+8. **Run pre-commit** to confirm formatting/linting passes
+9. **Commit, push, create PR** with `Closes #<issue>`
+
+## Classification Decision Tree
+
+```
+Is the TODO inside a Python string literal (template body)?
+├─ YES → TEMPLATE: placeholder — replace with # TEMPLATE:
+└─ NO (bare Python code) → Is it needed for the script to work?
+    ├─ YES, missing implementation → Create separate issue
+    └─ NO, outdated → Remove it
+```
+
+## Results & Parameters
+
+**Session results** (issue #3080, ProjectOdyssey):
+
+- 4 generator scripts reviewed: `generate_tests.py`, `generate_model.py`, `generate_layer.py`, `generate_dataset.py`
+- 31 TODOs found across all scripts
+- 31/31 classified as template placeholders (0 actual work items, 0 outdated)
+- All `# TODO:` → `# TEMPLATE:` substitutions made
+- All 4 script docstrings updated with `Template Placeholders:` section
+- Pre-commit hooks passed: ruff format, ruff check, markdownlint, trailing-whitespace, yaml
+
+**Commit message format used**:
+```
+cleanup(generators): mark template placeholders with TEMPLATE: prefix
+
+Review all TODO comments in generator scripts and classify each as an
+intentional template placeholder. Replace all # TODO: markers with
+# TEMPLATE: markers in generated Mojo output, and add Template Placeholders
+documentation sections to each script's module docstring.
+
+Closes #<issue>
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Batch-replace all TODOs at once | Considered using `replace_all=True` on a single Edit call per file | TODOs had slightly different surrounding context, making single-pattern replacement fragile | Use individual targeted Edit calls per TODO for precision |
+| Running full test suite | Ran `pixi run python -m pytest tests/ -v` expecting generator tests | No `tests/scripts/generators/` directory exists; generator scripts have no pytest tests | Check for test coverage before assuming tests exist; pre-commit is sufficient validation here |
+
+## Notes
+
+- The `# TEMPLATE:` convention is already established in this project (prior commit `e21e00b9` introduced it)
+- When no `# TODO:` remain in generator scripts, grep confirms completeness: `grep -r "# TODO:" scripts/generators/` returns empty
+- GLIBC errors from `mojo format` in pre-commit are a pre-existing environment issue (not caused by these changes) — all Python-targeted hooks still pass
+
+### Notes
+
+# Session Notes: generator-template-placeholder-cleanup
+
+## Session Context
+
+- **Date**: 2026-03-04
+- **Project**: ProjectOdyssey
+- **Issue**: #3080 — [Cleanup] Review generator script TODOs
+- **Branch**: `3080-auto-impl`
+- **PR**: #3176
+
+## Objective
+
+Review 31 TODO comments across 4 generator Python scripts and determine whether each is:
+1. An intentional template placeholder (keep, mark with TEMPLATE:)
+2. An actual implementation gap (create separate issue)
+3. Outdated (remove)
+
+## Files Affected
+
+| File | TODOs | Classification |
+| ------ | ------- | ---------------- |
+| `scripts/generators/generate_tests.py` | 14 | All template placeholders |
+| `scripts/generators/generate_model.py` | 5 | All template placeholders (3 in Mojo template strings, 2 in Python fallback strings) |
+| `scripts/generators/generate_layer.py` | 4 | All template placeholders |
+| `scripts/generators/generate_dataset.py` | 8 | All template placeholders |
+
+## Key Discovery
+
+The generator scripts produce Mojo source code by interpolating Python template strings.
+TODOs inside those template strings are intentional scaffolding in the *output* — they
+signal to the developer that after running the generator, they must fill in module-specific
+logic. They are not gaps in the generator Python code itself.
+
+Two TODOs in `generate_model.py` appear in Python code (lines 266, 293) but are inside
+string return values that get embedded in generated output — also template placeholders.
+
+## Steps Taken
+
+1. Read all 4 scripts in parallel
+2. Classified all 31 TODOs as template placeholders
+3. Made individual Edit calls to replace each `# TODO:` with `# TEMPLATE:`
+4. Added `Template Placeholders:` docstring section to all 4 script module docstrings
+5. Verified with grep: no remaining `# TODO:` in scripts/generators/
+6. Ran pre-commit: all Python hooks passed (mojo format skipped due to GLIBC environment issue)
+7. Committed: `cleanup(generators): mark template placeholders with TEMPLATE: prefix`
+8. Pushed branch, created PR #3176, enabled auto-merge
+
+## Validation
+
+```bash
+# Confirm no TODOs remain
+grep -r "# TODO:" scripts/generators/  # returns empty
+
+# Pre-commit result
+Ruff Format Python.......Passed
+Ruff Check Python........Passed
+Validate Test Coverage...Passed
+Markdown Lint............Passed
+Trim Trailing Whitespace.Passed
+Fix End of Files.........Passed
+Check YAML...............Passed
+```
+
+---
+
+## Superseded from review-commented-imports
+
+---
+name: review-commented-imports
+description: 'Review and resolve commented-out imports in module init files by auditing
+  which are implemented, misnamed, or pending. Use when: cleaning up Mojo/Python __init__
+  files with placeholder NOTEs, auditing API surface post-implementation, or documenting
+  name mismatches between planned and actual symbols.'
+category: documentation
+date: 2026-03-04
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Objective** | Audit commented-out imports in a module `__init__` file to determine status of each |
+| **Language** | Mojo (applies to Python too) |
+| **Trigger** | Module init has `# NOTE: commented out until implementation` blocks |
+| **Output** | Uncommented implemented imports, annotated pending imports, updated module docstring |
+
+## When to Use
+
+- A `__init__.mojo` or `__init__.py` has large blocks of commented imports with `NOTE:` markers
+- Post-implementation cleanup: verifying which symbols are now available
+- API surface audit: identifying planned names that were implemented under different names
+- Documenting language limitations (e.g., Mojo's lack of `__all__` support)
+
+## Verified Workflow
+
+### Step 1: Read the init file
+
+Read the target file to understand the full import structure and NOTE comments.
+
+### Step 2: Audit submodule exports in parallel
+
+For each commented import group, grep the corresponding submodule:
+
+```bash
+# Check if struct/fn exists with exact name
+grep -rn "^struct Linear\b\|^fn relu\b" shared/core/
+
+# Check what the submodule's __init__ actually exports
+grep -n "^from\|^struct\|^fn" shared/core/__init__.mojo | head -30
+
+# Find actual name if known-alias exists
+grep -rn "^struct Conv" shared/core/layers/
+```
+
+### Step 3: Categorize each import
+
+For each commented import, determine:
+
+| Status | Action |
+| -------- | -------- |
+| Implemented with matching name | Uncomment with corrected path |
+| Implemented under different name | Add comment mapping old→new name |
+| Not yet implemented | Keep commented, add `# NOT YET IMPLEMENTED (see Issue #N)` |
+| Wrong module path | Fix path typo (e.g., `activations` → `activation`) |
+| Language limitation | Document in module docstring |
+
+### Step 4: Update module docstring
+
+Move language-limitation NOTEs from inline comments into the module docstring:
+
+```mojo
+"""
+...
+Note:
+    Mojo v0.26.1+ does not support ``__all__`` module-level assignments.
+    All public symbols are automatically exported. The convenience re-exports
+    below are uncommented as implementations reach stable naming conventions.
+
+    Name mismatches from original plan:
+    - Conv2D -> Conv2dLayer (shared.core.layers.conv2d)
+    - ReLU -> ReLULayer (shared.core.layers.relu)
+
+    Not yet implemented (see Issue #49):
+    - Sequential, MaxPool2D, AdamW
+"""
+```
+
+### Step 5: Apply changes
+
+For implemented imports, uncomment and fix paths:
+
+```mojo
+# Before:
+# from .core.activations import relu, sigmoid, tanh, softmax
+
+# After (fixed module name typo):
+from shared.core.activation import relu, sigmoid, tanh, softmax
+```
+
+For unimplemented imports, annotate:
+
+```mojo
+# NOT YET IMPLEMENTED (see Issue #49): Tensor, zeros, ones, randn
+# Use: from shared.core.extensor import ExTensor
+```
+
+### Step 6: Remove redundant comment blocks
+
+If a `# Public API` or `# NOTE:` comment block restates what is now in the docstring,
+remove it to avoid duplication.
+
+### Step 7: Commit to feature branch
+
+Use `SKIP=mojo-format` if the Mojo formatter cannot run due to GLIBC incompatibility
+on the local host (will run correctly in CI via Docker):
+
+```bash
+SKIP=mojo-format git commit -m "fix(shared): review commented-out imports in __init__.mojo
+
+- Uncomment implemented imports: Linear, relu/sigmoid/tanh/softmax, Module, ...
+- Fix module path typo: 'activations' -> 'activation'
+- Annotate unimplemented imports with Issue #N references
+- Document __all__ Mojo limitation and name mismatches in module docstring
+- Remove redundant NOTE block from Public API section
+
+Closes #NNNN"
+```
+
+## Key Patterns Discovered
+
+### Worktree vs Main Repo File Paths
+
+When working in a git worktree, always edit files in the **worktree directory**, not the
+main repo directory. They are separate working trees even though they share the git repo:
+
+```
+/repo/                          # main checkout (on branch 'main')
+/repo/.worktrees/issue-N/       # worktree checkout (on branch 'N-feature')
+```
+
+Editing `/repo/shared/__init__.mojo` affects `main`, not the feature branch.
+Edit `/repo/.worktrees/issue-N/shared/__init__.mojo` instead.
+
+### Committing from a Worktree
+
+```bash
+# Stage and commit from within the worktree:
+git -C /repo/.worktrees/issue-N add shared/__init__.mojo
+git -C /repo/.worktrees/issue-N commit -m "..."
+git -C /repo/.worktrees/issue-N push -u origin N-feature
+```
+
+### Mojo Module Path Conventions
+
+Mojo uses absolute paths from the project root, not relative imports:
+- Use `from shared.core.activation import relu` (absolute)
+- NOT `from .core.activations import relu` (relative, wrong module name)
+
+### GLIBC Incompatibility Skip
+
+When `mojo-format` hook fails due to GLIBC version mismatch on the host:
+
+```bash
+SKIP=mojo-format git commit -m "..."
+```
+
+This is valid since the hook runs correctly in CI Docker containers where GLIBC >= 2.34.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Edit main repo file | Edited `/repo/shared/__init__.mojo` directly | File is tracked by `main` branch, not the worktree branch `3093-auto-impl` | Always edit the worktree copy at `/repo/.worktrees/issue-N/shared/__init__.mojo` |
+| Commit from main repo | `git add shared/__init__.mojo` from `/repo/` | Branch `3093-auto-impl` is checked out in worktree, not main repo | Use `git -C /repo/.worktrees/issue-N` prefix for all git commands |
+| Relative import paths | Used `from .core.activation import ...` | Mojo `__init__` files require absolute import paths | Always use `from shared.core.X import Y` in Mojo init files |
+
+## Results & Parameters
+
+### Session: Issue #3093 - Review commented-out imports in shared/__init__.mojo
+
+**File audited**: `shared/__init__.mojo` (153 lines → 127 lines)
+
+**Imports uncommented** (9 symbols):
+- `Linear` from `shared.core.layers.linear`
+- `relu, sigmoid, tanh, softmax` from `shared.core.activation` (fixed path typo)
+- `Module` from `shared.core.module`
+- `StepLR, CosineAnnealingLR` from `shared.training.schedulers`
+- `EarlyStopping, ModelCheckpoint` from `shared.training.callbacks`
+- `Logger` from `shared.utils.logging`
+- `plot_training_curves` from `shared.utils.visualization`
+
+**Imports left commented with tracking** (Issue #49):
+- `Tensor/zeros/ones/randn` → `ExTensor`
+- `Conv2D/ReLU/Dropout` → `Conv2dLayer/ReLULayer/DropoutLayer`
+- `Sequential, MaxPool2D, Flatten, AdamW`
+- `train_epoch, validate_epoch`
+- `TensorDataset, ImageDataset, DataLoader, ToTensor`
+
+**PR**: https://github.com/HomericIntelligence/ProjectOdyssey/pull/3217
+
+### Notes
+
+# Session Notes: review-commented-imports
+
+**Date**: 2026-03-04
+**Issue**: HomericIntelligence/ProjectOdyssey#3093
+**Branch**: 3093-auto-impl
+**PR**: https://github.com/HomericIntelligence/ProjectOdyssey/pull/3217
+
+## Task
+
+Review commented-out imports in `shared/__init__.mojo` (lines 55 and 130 had NOTE markers).
+
+## Approach
+
+1. Read target file to understand structure
+2. Grep submodule __init__ files for actual exports
+3. Grep source files for struct/fn definitions matching planned names
+4. Categorize: implemented/misnamed/pending
+5. Edit file: uncomment working imports, annotate pending ones
+6. Move language-limitation notes to module docstring
+
+## Key Discovery: Worktree File Path Bug
+
+Made a critical mistake: edited `/home/mvillmow/Odyssey2/shared/__init__.mojo` (main repo)
+instead of `/home/mvillmow/Odyssey2/.worktrees/issue-3093/shared/__init__.mojo` (worktree).
+
+The `git status` in the worktree showed no changes because I edited the wrong file.
+Had to revert the main repo file and re-apply changes to the worktree.
+
+Fix: always confirm which directory you're working in before editing. The worktree has its
+own full copy of every file.
+
+## GLIBC Hook Failure
+
+The `mojo-format` pre-commit hook fails on this host:
+```
+/lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.32' not found
+```
+
+This is an environment issue, not a code issue. GLIBC 2.32/2.33/2.34 required but system
+has an older version. Runs correctly in Docker CI containers.
+
+Workaround: `SKIP=mojo-format git commit -m "..."`
+
+Per CLAUDE.md: "Valid alternatives to --no-verify: Use SKIP=hook-id for specific broken hooks
+(must document reason)"
+
+## Import Audit Results
+
+### Implemented with correct name (uncommented)
+- `shared.core.layers.linear.Linear`
+- `shared.core.activation.relu/sigmoid/tanh/softmax` (path was `activations` - typo)
+- `shared.core.module.Module` (it's a trait, not struct - still importable)
+- `shared.training.schedulers.StepLR/CosineAnnealingLR`
+- `shared.training.callbacks.EarlyStopping/ModelCheckpoint`
+- `shared.utils.logging.Logger`
+- `shared.utils.visualization.plot_training_curves`
+
+### Name mismatches (commented with mapping notes)
+- Conv2D -> Conv2dLayer
+- ReLU -> ReLULayer
+- Dropout -> DropoutLayer
+- Tensor -> ExTensor
+- Accuracy -> AccuracyMetric
+
+### Not yet implemented (commented with Issue #49 reference)
+- Sequential, MaxPool2D, Flatten as structs
+- AdamW optimizer
+- train_epoch, validate_epoch
+- TensorDataset, ImageDataset
+- DataLoader (partial stub only)
+- ToTensor transform
+
+### Language limitation documented in docstring
+- Mojo v0.26.1+ lacks `__all__` support
+- All public symbols auto-exported
+
+---
