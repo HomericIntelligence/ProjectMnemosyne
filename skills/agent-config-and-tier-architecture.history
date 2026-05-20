@@ -1,0 +1,1243 @@
+# agent-config-and-tier-architecture — History
+
+Superseded members absorbed into canonical skill `agent-config-and-tier-architecture` on 2026-05-19 (epic #1834, cluster M28).
+
+## Superseded from agent-tier-consolidation
+
+---
+name: agent-tier-consolidation
+description: 'Pattern for merging a redundant junior agent tier into its parent level.
+  Use when: a lowest-level junior tier duplicates the parent scope with simpler tasks
+  and the distinction adds configuration overhead without meaningful value.'
+category: architecture
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Category** | Architecture |
+| **Effort** | Low (30 min) |
+| **Risk** | Low |
+| **Scope** | Agent config files + documentation |
+
+Consolidating a junior agent tier into its parent removes redundant hierarchy levels
+without losing capability. The parent absorbs the junior's scope, the junior's config
+file is deleted, and all downstream references are updated atomically.
+
+## When to Use
+
+- A junior (lowest-level) agent tier exists whose responsibilities are a strict subset of the parent level's
+- The junior and parent use the same model (e.g. both haiku) making the split artificial
+- The total agent count needs to be reduced for maintainability
+- A prior consolidation (e.g. junior implementation/test) established the pattern and documentation engineers should follow suit
+
+## Verified Workflow
+
+1. **Read all three tiers** — specialist (L3), engineer (L4), junior (L5) — to understand scope overlap
+2. **Expand the parent (L4) config**: absorb junior description, scope items, workflow steps, skills, and constraints into the engineer agent file; set `delegates_to: []`
+3. **Update the specialist (L3) config**: remove junior from its `delegates_to` list
+4. **Delete the junior config file** (`git rm` or plain `rm`)
+5. **Update documentation files** — search for every reference to the junior agent name:
+   - `agents/hierarchy.md`: remove from L5 diagram box; update L5 narrative count
+   - `agents/README.md`: remove entry; update Level 5 agent count in heading
+   - `agents/docs/agent-catalog.md`: remove full section; update total counts; update delegation references; update Quick Reference table row
+   - `agents/docs/onboarding.md`: remove list entry; update "N agents" link text
+6. **Verify no stale references**: `grep -r "junior-<domain>-engineer" .claude/agents/ agents/ CLAUDE.md`
+7. **Run agent validation tests**: `python3 tests/agents/validate_configs.py .claude/agents/` — must be 0 failures
+8. **Commit all changes atomically** with a `refactor(agents):` conventional commit message
+
+## Results & Parameters
+
+### What to absorb into the parent (L4) engineer agent
+
+```yaml
+# Before (documentation-engineer.md)
+description: "Select for code documentation work..."
+delegates_to: [junior-documentation-engineer]
+
+# After
+description: "Select for code documentation work... Also handles simple tasks: fills docstring
+  templates, formats documentation, generates changelog entries, checks links."
+delegates_to: []
+```
+
+Add to Scope list: all junior scope items (template filling, formatting, changelog, link checking).
+
+Add to Workflow: junior steps (format consistently, check for typos, validate markdown).
+
+Add to Skills table: junior skills (`quality-fix-formatting`, `gh-check-ci-status`).
+
+Add to Constraints: junior DO/DO NOT rules (use templates, format consistently, validate markdown).
+
+### Count updates required
+
+| File | Old value | New value |
+| ------ | ----------- | ----------- |
+| `agents/hierarchy.md` L5 narrative | "3 types (Implementation, Test, Documentation)" | "2 types (Implementation, Test)" |
+| `agents/README.md` Level 5 heading | "(2 agents)" | "(1 agent)" |
+| `agents/docs/agent-catalog.md` overview | "44 agents" | "43 agents" |
+| `agents/docs/agent-catalog.md` footer | "44 ... 3 L5" | "43 ... 2 L5" |
+| `agents/docs/onboarding.md` junior count | "3 junior types" | "2 junior types" |
+| `agents/docs/onboarding.md` browse link | "44 agents" | "43 agents" |
+
+### Commit message template
+
+```
+refactor(agents): consolidate <domain> engineer tiers from 3 to 2
+
+Merge junior-<domain>-engineer (L5) into <domain>-engineer (L4),
+consistent with the rationale in #<prior-issue> for junior tier consolidation.
+
+Changes:
+- Absorb junior scope into <domain>-engineer.md; set delegates_to: []
+- Remove junior from <domain>-specialist delegates_to list
+- Delete .claude/agents/junior-<domain>-engineer.md
+- Update agents/hierarchy.md, README.md, agent-catalog.md, onboarding.md
+
+All agent validation tests pass (0 errors).
+
+Closes #<issue>
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Searching for count updates by number alone | `grep -n "44\|31\|3 L5"` across docs | Multiple unrelated occurrences of these numbers; hard to target | Search for the full count phrase, e.g. "3 junior types" or "44 agents" |
+| Assuming hierarchy.md table already correct | Skipped table check because it showed 31 | L5 narrative ("3 types") was still wrong even though table count was right | Always check both the table AND the narrative prose separately |
+| Updating catalog Quick Reference table row | Tried to remove the Junior Documentation Engineer row without context | `old_string` not unique without surrounding rows | Include both flanking rows in `old_string` for uniqueness |
+| Assuming config file needs deletion | Tried `git rm .claude/agents/junior-implementation-engineer.md` | File was already absent from the worktree (prior consolidation removed it) | Always check with `ls .claude/agents/junior-*` before attempting config changes |
+
+## Results & Parameters (Consolidation)
+
+### Consolidation from ProjectOdyssey issue #3146
+
+**Before**: 4 implementation tiers
+
+```text
+implementation-specialist (L3)
+  → senior-implementation-engineer (L4)
+  → implementation-engineer (L4)
+  → junior-implementation-engineer (L5)
+  → implementation-specialist (L3, also receives)
+```
+
+**After**: 2 tiers
+
+```text
+implementation-specialist (L3)
+  → implementation-engineer (L4, full spectrum)
+```
+
+**Agent count delta**: 44 → 42
+
+**Key merge decisions**:
+
+- Added `mojo-simd-optimize`, `mojo-memory-check` skills from senior tier
+- Added `quality-fix-formatting`, `gh-check-ci-status` skills from junior tier
+- Added performance-profiling workflow steps from senior tier
+- Added anti-pattern reference and escalation rules from junior tier
+- Kept two concrete examples: one standard, one performance-critical
+- Removed `hooks.PreToolUse` Bash block (junior-only restriction, not needed for consolidated agent)
+
+### Validation output
+
+```text
+Total files: 42
+Passed: 42
+Failed: 0
+Total errors: 0
+```
+
+### Hierarchy counts to update
+
+| Section | Before | After |
+| --------- | -------- | ------- |
+| Level 4 count line | "6 agents" | "5 agents" |
+| Level 5 count line | "3 types" | "2 types" |
+| Agent Count table L4 | 6 | 5 |
+| Agent Count table L5 | 3 | 2 |
+| Total | 44 | 42 |
+| Diagram box L4 | Lists senior + regular | Lists only regular |
+| Diagram box L5 | Lists 3 juniors | Lists 2 juniors |
+
+### Consolidation from ProjectOdyssey issue #3332 (junior-only variant)
+
+**Before**: 3 test tiers
+
+```text
+test-specialist (L3)
+  → test-engineer (L4)
+  → junior-test-engineer (L5)
+```
+
+**After**: 2 tiers
+
+```text
+test-specialist (L3)
+  → test-engineer (L4, handles all complexity)
+```
+
+**Agent count delta**: 31 → 30
+
+**Key differences from implementation consolidation**:
+
+- No senior tier to merge — only junior-to-middle merge needed
+- `test-engineer.md` already had `Bash` tool access (unlike junior which blocked it via hook)
+- Removed `hooks.PreToolUse` Bash block from junior; test-engineer retained Bash access
+- Cross-references in `agents/hierarchy.md`, `agents/README.md`, `agents/docs/agent-catalog.md`,
+  `scripts/agents/setup_agents.sh`, and `docs/dev/agent-claude4-update-status.md` all needed updating
+- `test-specialist.md` `delegates_to` changed from `[test-engineer, junior-test-engineer]` to `[test-engineer]`
+
+**Validation output**:
+
+```text
+Total files: 30
+Passed: 30
+Failed: 0
+Total errors: 0
+```
+
+### Consolidation from ProjectOdyssey issue #3963 (docs-only variant)
+
+**Before**: 2 implementation tiers at L4/L5
+
+```text
+implementation-specialist (L3)
+  → implementation-engineer (L4, full spectrum)
+  → junior-implementation-engineer (L5, docs-only stub)
+```
+
+**After**: 1 tier
+
+```text
+implementation-specialist (L3)
+  → implementation-engineer (L4, full spectrum)
+```
+
+**Agent count delta**: 31 → 30
+
+**Key difference — the junior agent file was already absent**:
+
+The `.claude/agents/junior-implementation-engineer.md` config file did not exist in the
+worktree. Only documentation files (`agents/hierarchy.md`, `agents/README.md`,
+`agents/docs/agent-catalog.md`, `agents/docs/onboarding.md`) still referenced it.
+This means the task was **documentation cleanup only** — no config changes were needed.
+
+**Documentation-only cleanup checklist**:
+
+- `agents/hierarchy.md` — remove from L5 diagram box, Level 5 narrative, count table, detailed
+  spec section, "Use Level 5" quick ref, and `Top-Down` delegation flow
+- `agents/README.md` — update Level 5 description text; update total agent count in prose
+- `agents/docs/agent-catalog.md` — remove table row; remove entire Junior Implementation
+  Engineer section; update routing entries (`"Generate boilerplate"` → Implementation Engineer;
+  `"Simple Mojo"` → Implementation Engineer)
+- `agents/docs/onboarding.md` — replace junior impl engineer Level 5 section and code
+  example with junior test engineer content; update delegation flow example
+
+**What to watch for when the config is already deleted**:
+
+The `implementation-specialist.md` `delegates_to` field already listed only
+`[implementation-engineer]` — no change needed. Similarly `implementation-engineer.md`
+already had `delegates_to: []`. No `.claude/agents/` file changes were required.
+
+**Validation output**:
+
+```text
+# No agent validation test changes needed — config files were already correct
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #3146 — implementation engineer tier consolidation (3→2 tiers) | See Results above |
+| ProjectOdyssey | Issue #3332 — test engineer tier consolidation (junior-only variant) | See Results above |
+| ProjectOdyssey | Issue #3963 — implementation engineer docs-only cleanup (config already absent) | See Results above |
+
+## Superseded from agent-validate-config
+
+---
+name: agent-validate-config
+description: Validate agent YAML frontmatter and configuration. Use before committing
+  agent changes or in CI.
+category: architecture
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+---
+# Agent Configuration Validation
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Verify agent configurations meet ML Odyssey requirements. - Creating or modifying agent configurations |
+| Outcome | Operational |
+
+Verify agent configurations meet ML Odyssey requirements.
+
+## When to Use
+
+- Creating or modifying agent configurations
+- Before committing agent config changes
+- CI/CD validation before merge
+- Troubleshooting agent loading issues
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Validate all agents
+python3 tests/agents/validate_configs.py .claude/agents/
+
+# Validate single agent
+./scripts/validate_agent.sh .claude/agents/agent-name.md
+```
+
+## Validation Checklist
+
+Required YAML frontmatter fields:
+
+```yaml
+---
+name: agent-name              # kebab-case identifier
+description: "Brief desc"     # One sentence purpose
+mcp_fallback: none
+category: architecture               # Classification
+level: 0-5                    # Hierarchy level
+phase: Plan|Test|Implementation|Package|Cleanup
+---
+```
+
+Validation includes:
+
+- YAML syntax correctness
+- All required fields present
+- Correct field types and values
+- Valid tool names (Read, Write, Bash, Grep, Glob)
+- Valid agent references in delegates_to/escalates_to
+- Correct directory structure
+
+## Error Handling
+
+| Error | Fix |
+| ------- | ----- |
+| No YAML frontmatter | Ensure file starts/ends with `---` |
+| Invalid phase value | Use: Plan, Test, Implementation, Package, Cleanup |
+| Delegation target not found | Verify agent name or create referenced agent |
+| Duplicate keys | Remove duplicate entries in frontmatter |
+| Wrong level type | Must be integer 0-5, not string |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- `/agents/templates/` - Agent configuration templates
+- `.claude/agents/` - All agent configurations
+- `CLAUDE.md` - Agent system guidelines
+
+## Superseded from consolidate-review-agents
+
+---
+name: consolidate-review-agents
+description: 'Merge overlapping review specialist agents into a single general-review-specialist.
+  Use when: (1) multiple review agents have overlapping scopes, (2) project complexity
+  doesn''t justify 10+ specialists, (3) you want to reduce total agent count while
+  keeping full review coverage.'
+category: architecture
+date: 2026-03-05
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Pattern** | Agent consolidation — many-to-one specialist merge |
+| **When Applicable** | Early-stage projects with premature specialization |
+| **Effort** | ~30 min (read 10 files, write 1, update 2 references) |
+| **Risk** | Low — review coverage preserved, only file count changes |
+| **Result (ProjectOdyssey)** | 13 review specialists → 5, total agents 44 → 35 |
+
+## When to Use
+
+Trigger this skill when:
+
+1. Agent count for a single concern (e.g., code review) has grown to 10+
+2. Most specialists share identical YAML frontmatter (same tools, model, level, phase, hooks)
+3. Specialists cross-reference each other in "What I do NOT review" sections, creating circular scope
+4. The project is still in planning/early implementation phase — premature specialization adds overhead
+5. An orchestrator's `delegates_to` list has more than 5–6 entries for the same concern
+
+## Verified Workflow
+
+### Step 1: Identify candidates for merging
+
+Read all candidate files. Look for:
+- Same `tools`, `model`, `level`, `phase`, and `hooks` in YAML frontmatter
+- Scope definitions that explicitly exclude each other ("→ Implementation Specialist", "→ Algorithm Specialist")
+- Small, focused review checklists (5–10 items each)
+
+Agents to **keep separate** if they have genuinely unique requirements:
+- Mojo-language-specific agents (special syntax knowledge)
+- Security agents (distinct attack-vector expertise)
+- Test agents (coverage metrics, assertions)
+- Orchestrators (coordination role, different tools)
+
+### Step 2: Create `general-review-specialist.md`
+
+Create `.claude/agents/general-review-specialist.md` with:
+
+```yaml
+---
+name: general-review-specialist
+description: "Reviews code for [list all merged dimensions]. Select for any general code review dimension not covered by [remaining specialists]."
+level: 3
+phase: Cleanup
+tools: Read,Grep,Glob
+model: sonnet
+delegates_to: []
+receives_from: [code-review-orchestrator]
+hooks:
+  PreToolUse:
+    - matcher: "Edit"
+      action: "block"
+      reason: "Review specialists are read-only - cannot modify files"
+    - matcher: "Write"
+      action: "block"
+      reason: "Review specialists are read-only - cannot create files"
+    - matcher: "Bash"
+      action: "block"
+      reason: "Review specialists are read-only - cannot run commands"
+---
+```
+
+Body structure:
+- One `## Scope` section with subsections per merged domain
+- Merged review checklists (one per domain)
+- Representative example review per domain (keep 3–4, skip redundant ones)
+- Coordinates With pointing to remaining specialists
+
+### Step 3: Delete the merged files
+
+```bash
+git rm .claude/agents/algorithm-review-specialist.md \
+       .claude/agents/architecture-review-specialist.md \
+       # ... (all 10)
+```
+
+### Step 4: Update the orchestrator
+
+In `code-review-orchestrator.md`, update:
+- `delegates_to` list: replace 10 entries with `general-review-specialist`
+- Delegation decision matrix: merge 10 rows into one catch-all row
+- Routing dimensions table: collapse to 4 rows
+- "Delegates To" section: 13 items → 4 items
+- Body text mentioning "13 specialists" → "4 specialists"
+
+### Step 5: Update hierarchy documentation
+
+In `agents/hierarchy.md`, update:
+- Level 3 specialist count in the ASCII diagram
+- Level 3 agent count in the "Level Summaries" section
+- Agent Count table (Level 3 row + Total row)
+- Level 3 Breakdown bullet list
+
+### Step 6: Validate
+
+```bash
+python3 tests/agents/validate_configs.py .claude/agents/
+pixi run pre-commit run --all-files
+```
+
+All hooks should pass. The mojo GLIBC errors on older Linux systems are pre-existing
+environment issues unrelated to agent file changes.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Using `Edit` tool without prior `Read` | Tried to edit `code-review-orchestrator.md` directly after reading it via `bash sed` | Tool requires `Read` tool call in conversation history | Always call `Read` tool explicitly before `Edit`, even if you saw file contents via Bash |
+| Single `git rm` with wildcard | `git rm .claude/agents/*-review-specialist.md` excluding some files | Shell glob would also match files to keep (mojo, security, test) | List each file explicitly in `git rm` |
+
+## Results & Parameters
+
+**ProjectOdyssey outcome**:
+
+```
+Before: 13 review specialists (algorithm, architecture, data-engineering,
+        dependency, documentation, implementation, mojo-language, paper,
+        performance, research, safety, security, test)
+
+After: 5 review agents (general, mojo-language, security, test, orchestrator)
+
+Files changed: -10 deleted, +1 created, +2 updated
+Lines changed: -1063 insertions, +297 deletions (net -766 lines)
+Total agents: 44 → 35
+```
+
+**Which specialists to keep separate (decision criteria)**:
+
+| Keep Separate | Reason |
+| --------------- | -------- |
+| `mojo-language-review-specialist` | Language-specific: SIMD patterns, ownership semantics, v0.26.1+ syntax |
+| `security-review-specialist` | Domain expertise: CVEs, attack vectors, auth flows |
+| `test-review-specialist` | Metrics-driven: coverage thresholds, assertion quality, test isolation |
+| `code-review-orchestrator` | Coordinator role: different tools (`Task`), different level (2 vs 3) |
+
+**Key insight**: When 10 agents all have identical `tools: Read,Grep,Glob`, `model: sonnet`,
+`level: 3`, `phase: Cleanup`, and identical `hooks` blocks, they are structurally identical.
+The only difference is the review checklist — which can live as subsections in one file.
+
+## Superseded from fix-resource-prompt-consistency
+
+---
+name: fix-resource-prompt-consistency
+description: Workflow for fixing inconsistent root-level field mapping in tier configurations
+  and enhancing resource prompt suffixes
+category: architecture
+date: 2026-01-04
+version: 1.0.0
+tags:
+- tier-config
+- prompt-engineering
+- resource-mapping
+- testing
+---
+# Fix Resource Prompt Consistency
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-01-04 |
+| **Objective** | Fix inconsistent root-level field mapping in tier configurations and enhance resource prompt suffixes to encourage maximum usage |
+| **Outcome** | ✅ Successfully mapped root-level `tools`, `agents`, and `skills` to resources dict; enhanced all prompt messages to use "Maximize usage" wording for multiple items |
+| **Files Modified** | `src/scylla/e2e/tier_manager.py`, `tests/unit/e2e/test_tier_manager.py` (new) |
+| **Tests Added** | 12 comprehensive unit tests, all passing |
+
+## When to Use This Skill
+
+Use this skill when:
+
+1. **Discovering inconsistent configuration handling** - Some root-level fields are mapped to resources while others aren't
+2. **Adding new resource types** - Need to ensure consistent handling across all resource types (tools, skills, MCP servers, agents)
+3. **Enhancing prompt engineering** - Want to change wording to encourage specific agent behaviors (e.g., "maximize usage" vs "use")
+4. **Configuration schema changes** - Supporting both nested and root-level configuration formats
+
+**Context clues:**
+- User asks "is this already implemented?"
+- Configuration files use inconsistent patterns (some `mcp_servers:` at root, some under `resources:`)
+- Different resource types generate different prompt formats
+- Need to handle `enabled: all` configuration format
+
+## Verified Workflow
+
+### Phase 1: Investigate Existing Implementation
+
+1. **Search for existing functionality** using parallel Explore agents:
+   ```
+   Agent 1: Search for prompt generation code
+   Agent 2: Search for tier configuration structure
+   ```
+
+2. **Read key implementation files**:
+   - `src/scylla/e2e/tier_manager.py` - Focus on `build_resource_suffix()` and `_discover_subtests()`
+   - Test fixture configs to understand usage patterns
+
+3. **Identify the gap**:
+   - Found: `mcp_servers` at root level WAS being mapped (lines 143-146)
+   - Missing: `tools`, `agents`, `skills` at root level NOT mapped
+   - Missing: `tools: {enabled: all}` format not handled
+
+### Phase 2: Design the Fix
+
+**Pattern to follow** (from existing `mcp_servers` handling):
+
+```python
+# In _discover_subtests() after line 141:
+resources = config_data.get("resources", {})
+
+# Map root-level fields into resources
+field_name = config_data.get("field_name", default)
+if field_name:
+    resources["field_name"] = field_name
+```
+
+**Two changes needed**:
+1. Add root-level mapping for `tools`, `agents`, `skills` (lines 148-161)
+2. Enhance `build_resource_suffix()` to handle multiple items and `enabled: all`
+
+### Phase 3: Implementation
+
+**File: `src/scylla/e2e/tier_manager.py`**
+
+**Change 1: Add root-level field mapping** (after line 146):
+
+```python
+# Map tools at root level
+tools = config_data.get("tools", {})
+if tools:
+    resources["tools"] = tools
+
+# Map agents at root level
+agents = config_data.get("agents", {})
+if agents:
+    resources["agents"] = agents
+
+# Map skills at root level
+skills = config_data.get("skills", {})
+if skills:
+    resources["skills"] = skills
+```
+
+**Change 2: Enhance prompt messages** (lines 463-530):
+
+For each resource type, add count-based logic:
+
+```python
+if len(resource_names) > 1:
+    prefix = "Maximize usage of the following [type]s to complete this task:"
+else:
+    prefix = "Use the following [type] to complete this task:"
+suffixes.append(f"{prefix}\n{bullet_list}")
+```
+
+For `tools: {enabled: all}`:
+
+```python
+if tools_spec.get("enabled") == "all":
+    suffixes.append("Maximize usage of all available tools to complete this task.")
+```
+
+### Phase 4: Add Comprehensive Tests
+
+**File: `tests/unit/e2e/test_tier_manager.py` (new)**
+
+Create two test classes:
+
+1. **`TestBuildResourceSuffix`** - Test prompt generation:
+   - `test_tools_enabled_all()` - Verify "Maximize usage of all available tools"
+   - `test_tools_with_names()` - Verify multiple tools use "Maximize usage"
+   - `test_single_tool()` - Verify single tool uses "Use"
+   - `test_mcp_servers()` - Verify MCP server handling
+   - `test_single_mcp_server()` - Verify singular handling
+   - `test_no_resources()` - Verify fallback message
+   - `test_multiple_resource_types()` - Verify combined resources
+
+2. **`TestDiscoverSubtestsRootLevelMapping`** - Test field mapping:
+   - `test_root_level_tools_mapped()`
+   - `test_root_level_mcp_servers_mapped()`
+   - `test_root_level_agents_mapped()`
+   - `test_root_level_skills_mapped()`
+   - `test_resources_field_takes_precedence()`
+
+**Key testing pattern** (using `tmp_path` fixture):
+
+```python
+def test_root_level_tools_mapped(self, tmp_path: Path) -> None:
+    # Create tier directory structure
+    tier_dir = tmp_path / "t5"
+    tier_dir.mkdir()
+    subtest_dir = tier_dir / "01-test"
+    subtest_dir.mkdir()
+
+    # Write config with root-level tools
+    config_file = subtest_dir / "config.yaml"
+    config_file.write_text(yaml.safe_dump({
+        "name": "Test Tools",
+        "tools": {"enabled": "all"}
+    }))
+
+    # Discover subtests
+    manager = TierManager(tmp_path)
+    subtests = manager._discover_subtests(TierID.T5, tier_dir)
+
+    # Verify mapping
+    assert "tools" in subtests[0].resources
+```
+
+### Phase 5: Verify and Commit
+
+1. **Run tests**:
+   ```bash
+   pixi run pytest tests/unit/e2e/test_tier_manager.py -v
+   ```
+   Result: 12 passed
+
+2. **Run full test suite**:
+   ```bash
+   pixi run pytest tests/unit/e2e/ -v
+   ```
+   Result: 82 passed
+
+3. **Run pre-commit hooks**:
+   ```bash
+   pre-commit run --files src/scylla/e2e/tier_manager.py tests/unit/e2e/test_tier_manager.py
+   ```
+   Result: All checks passed
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Prompt Message Patterns (Copy-Paste Ready)
+
+**For multiple items**:
+```python
+if len(items) > 1:
+    prefix = "Maximize usage of the following [type]s to [action]:"
+else:
+    prefix = "Use the following [type] to [action]:"
+```
+
+**For enabled: all**:
+```python
+if spec.get("enabled") == "all":
+    message = "Maximize usage of all available [type]s to [action]."
+```
+
+### Configuration Formats Supported
+
+**Root-level format** (now works):
+```yaml
+tools:
+  enabled: all
+
+mcp_servers:
+  - name: filesystem
+  - name: git
+
+agents:
+  levels: [2, 3]
+
+skills:
+  categories: [github, mojo]
+```
+
+**Resources format** (always worked):
+```yaml
+resources:
+  tools:
+    names: [Read, Write, Bash]
+  mcp_servers:
+    - filesystem
+  agents:
+    levels: [2]
+  skills:
+    names: [gh-create-pr-linked]
+```
+
+### Expected Prompt Outputs
+
+| Configuration | Output |
+| --------------- | -------- |
+| `tools: {enabled: all}` | "Maximize usage of all available tools to complete this task." |
+| `tools: {names: [Read, Write]}` | "Maximize usage of the following tools to complete this task:\n- Read\n- Write" |
+| `tools: {names: [Read]}` | "Use the following tool to complete this task:\n- Read" |
+| `mcp_servers: [fs, git]` | "Maximize usage of the following MCP servers to complete this task:\n- fs\n- git" |
+| No resources | "Complete this task using available tools and your best judgment." |
+
+### Test Coverage Summary
+
+```
+tests/unit/e2e/test_tier_manager.py::TestBuildResourceSuffix::test_tools_enabled_all PASSED
+tests/unit/e2e/test_tier_manager.py::TestBuildResourceSuffix::test_tools_with_names PASSED
+tests/unit/e2e/test_tier_manager.py::TestBuildResourceSuffix::test_mcp_servers PASSED
+tests/unit/e2e/test_tier_manager.py::TestBuildResourceSuffix::test_no_resources PASSED
+tests/unit/e2e/test_tier_manager.py::TestBuildResourceSuffix::test_single_tool PASSED
+tests/unit/e2e/test_tier_manager.py::TestBuildResourceSuffix::test_single_mcp_server PASSED
+tests/unit/e2e/test_tier_manager.py::TestBuildResourceSuffix::test_multiple_resource_types PASSED
+tests/unit/e2e/test_tier_manager.py::TestDiscoverSubtestsRootLevelMapping::test_root_level_tools_mapped PASSED
+tests/unit/e2e/test_tier_manager.py::TestDiscoverSubtestsRootLevelMapping::test_root_level_mcp_servers_mapped PASSED
+tests/unit/e2e/test_tier_manager.py::TestDiscoverSubtestsRootLevelMapping::test_root_level_agents_mapped PASSED
+tests/unit/e2e/test_tier_manager.py::TestDiscoverSubtestsRootLevelMapping::test_root_level_skills_mapped PASSED
+tests/unit/e2e/test_tier_manager.py::TestDiscoverSubtestsRootLevelMapping::test_resources_field_takes_precedence PASSED
+
+12 passed in 0.12s
+```
+
+## Key Takeaways
+
+1. **Search before implementing** - Use Task tool with Explore agents to find existing implementations
+2. **Follow existing patterns** - When `mcp_servers` mapping existed, copy that pattern for other fields
+3. **Test with realistic data** - Don't assume filesystem structures exist in test environments
+4. **Singular vs plural matters** - Different wording for single vs multiple items improves clarity
+5. **Comprehensive testing pays off** - 12 tests caught edge cases and verified all scenarios
+
+## Related Skills
+
+- `mnemosyne:advise` - Search for prior learnings before starting
+- Test-first development for configuration changes
+- Parallel agent usage for faster exploration
+
+## Superseded from automation-claude-model-per-phase
+
+---
+name: automation-claude-model-per-phase
+description: "Route each phase of a Claude-CLI automation pipeline to its own model tier (Opus for planning, Haiku for implementation, Sonnet for review) via a centralized module with HEPH_<PHASE>_MODEL env-var overrides, while leaving --resume sites unflagged so they inherit the originating session's model. Use when: (1) a multi-phase Claude-CLI pipeline (planner -> reviewer -> implementer -> CI driver) is dying with HTTP 429 on one tier while another tier's quota is untouched, (2) every `claude` invocation in the pipeline runs without `--model` and silently picks up the user's default, (3) you need an operator escape hatch to flip a phase to a cheaper model without code changes when one tier exhausts, (4) you are wiring `--model` into a pipeline that also has `--resume` sites and need to know which sites must NOT pass the flag."
+category: architecture
+date: 2026-05-05
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - claude-cli
+  - model-selection
+  - opus
+  - haiku
+  - sonnet
+  - automation
+  - planner
+  - implementer
+  - resume
+  - cost-optimization
+  - hephaestus
+---
+
+# Per-Phase Claude Model Selection in CLI Automation Pipelines
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-05 |
+| **Project** | ProjectHephaestus (`HomericIntelligence/ProjectHephaestus`) |
+| **Branch** | `feat/hephaestus-tidy` |
+| **Objective** | Stop a multi-phase `claude` CLI pipeline from dying on HTTP 429 when one tier's quota exhausts, by routing each phase to a model that matches its cognitive demands. |
+| **Outcome** | Success — 9 invocation sites across 7 modules now pass `--model`; resume sites correctly omit it; all 1990 unit tests pass locally with 83.04% coverage. |
+| **Verification** | verified-local (CI run pending — work is on a feature branch not yet pushed) |
+| **Category** | architecture |
+| **Related** | [automation-6phase-issue-pr-pipeline](./automation-6phase-issue-pr-pipeline.md) — the pipeline whose phases are being routed |
+
+## When to Use
+
+- A multi-phase Claude-CLI pipeline (planner -> reviewer -> implementer -> CI driver) dies on HTTP 429 within seconds of launch even though only ONE tier's quota is exhausted.
+- Every `claude` invocation in the pipeline runs without `--model` and silently inherits the user's terminal default (typically Opus).
+- You want each phase to spend the right tier of compute: high-reasoning small-token work on Opus, mechanical long tool-use loops on Haiku, middle-ground review on Sonnet.
+- You need an operator escape hatch: flip one phase to a cheaper model without a code change when its tier exhausts.
+- You are wiring `--model` into a pipeline that ALSO uses `claude --resume <session_id>` and need a clear rule for which sites must NOT pass `--model`.
+- Your codebase already uses Pydantic options classes for runtime knobs and you want to know whether to thread model selection through them or use a different mechanism.
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# hephaestus/automation/claude_models.py — single source of truth
+import os
+
+OPUS = "claude-opus-4-7"
+SONNET = "claude-sonnet-4-6"
+HAIKU = "claude-haiku-4-5"
+
+
+def planner_model() -> str:
+    return os.environ.get("HEPH_PLANNER_MODEL", OPUS)
+
+
+def implementer_model() -> str:
+    return os.environ.get("HEPH_IMPLEMENTER_MODEL", HAIKU)
+
+
+def reviewer_model() -> str:
+    return os.environ.get("HEPH_REVIEWER_MODEL", SONNET)
+
+
+def advise_model() -> str:
+    return os.environ.get("HEPH_ADVISE_MODEL", SONNET)
+
+
+def learn_model() -> str:
+    return os.environ.get("HEPH_LEARN_MODEL", SONNET)
+```
+
+```python
+# At every claude-CLI invocation site that CREATES a new session:
+from hephaestus.automation.claude_models import implementer_model
+
+argv = ["claude", "--model", implementer_model(), "--print", prompt]
+
+# At every claude-CLI invocation site that RESUMES a session:
+# DO NOT pass --model. The model is locked by the original session.
+argv = ["claude", "--resume", session_id, "--print", prompt]
+```
+
+```bash
+# Operator escape hatch when one tier exhausts mid-run:
+HEPH_PLANNER_MODEL=claude-haiku-4-5 \
+HEPH_IMPLEMENTER_MODEL=claude-haiku-4-5 \
+  pixi run python -m hephaestus.automation.implementer
+```
+
+### Detailed Steps
+
+1. **Map phases to model tiers by token shape, not by intuition:**
+
+   | Phase | Token shape | Tier | Why |
+   |-------|-------------|------|-----|
+   | Planner | Small input, high reasoning, low total tokens | Opus | This is the right place to spend Opus quota |
+   | Implementer | Long mechanical tool-use loop, many turns, high token volume | Haiku | This is the right place to save cost |
+   | Reviewer / plan-reviewer / PR-reviewer | Middle ground (read code, produce structured feedback) | Sonnet | Default to Sonnet for everything that isn't clearly planner or implementer |
+   | Advise / learn (knowledge-base ops) | Middle ground | Sonnet | Same as reviewer |
+
+2. **Create a single module `claude_models.py` exporting per-phase functions, not constants:**
+   - Functions (not constants) so env-var lookup happens at call time, not import time.
+   - Each function reads `HEPH_<PHASE>_MODEL` and falls back to a tier constant.
+   - Keep `OPUS = "claude-opus-4-7"`, `SONNET = "claude-sonnet-4-6"`, `HAIKU = "claude-haiku-4-5"` as module-level constants so callers can import them directly when they need a specific tier (e.g. tests).
+
+3. **Wire `--model <id>` into every site that CREATES a Claude session:**
+   - In ProjectHephaestus this was 9 sites across `planner.py`, `implementer.py`, `reviewer.py`, `plan_reviewer.py`, `pr_reviewer.py`, `address_review.py`, `ci_driver.py`.
+   - Pattern: `argv = ["claude", "--model", implementer_model(), "--print", prompt]`.
+   - Verify with `grep -n '"claude"' hephaestus/automation/*.py | grep -v test` — every line that opens a fresh session should be near a `--model` flag.
+
+4. **Do NOT pass `--model` at sites that RESUME a session:**
+   - When invoking `claude --resume <session_id>`, the model is locked to whatever the original session used. Passing `--model` alongside `--resume` is at best ignored and at worst rejected by the CLI.
+   - In ProjectHephaestus, the deliberately-unflagged sites are: `learn.py`, `follow_up.py`, and the `--resume` branches of `address_review.py` and `ci_driver.py`.
+   - **Invariant to enforce:** the phase that creates a session dictates the model for every resume of that session. So picking the implementer's model is doubly important — it locks in the model for the entire downstream chain (address-review, /learn, follow-up, CI fix iterations).
+
+5. **Add unit tests for the model module:**
+   - Default values: assert `planner_model() == OPUS`, `implementer_model() == HAIKU`, etc., when env is clean.
+   - Env override: `monkeypatch.setenv("HEPH_PLANNER_MODEL", "x"); assert planner_model() == "x"`.
+   - Reimport stability: monkeypatching the env then reimporting the module must NOT mutate the constants.
+
+6. **Add argv assertions in pipeline tests:**
+   - In `test_planner.py` and similar, assert that `--model` appears in the argv list passed to `subprocess.run` (or whatever the test harness uses), and assert it does NOT appear in resume-branch tests.
+
+7. **Run local verification:**
+
+   ```bash
+   pixi run ruff check hephaestus/ tests/
+   pixi run mypy
+   pixi run pytest tests/unit
+   ```
+
+   Expected: ruff clean, mypy clean, all tests passing. If a test was previously asserting `subprocess.run(["claude", "--print", ...])` exactly, update it to expect `--model <id>` between `claude` and `--print`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Run pipeline with no per-phase model flag | Every `claude` invocation just inherited the user's terminal default (Opus). | When Opus quota exhausted, every issue died with HTTP 429 in ~3 seconds even though Haiku quota was completely untouched. Single-tier failure became total-pipeline failure. | A multi-tier subscription is wasted on a pipeline that pins everything to one tier by accident. Always pass `--model` explicitly at session-creating sites. |
+| Thread model selection through every `PlannerOptions` / `ImplementerOptions` Pydantic class as a CLI flag | Considered as a "more typed" approach since the codebase already had options classes. | Adds noise to every options class and every CLI parser; doesn't compose well across the 9 invocation sites; doesn't give an operator escape hatch (CLI flags don't propagate to subprocess invocations launched by orchestration code). | A module + env vars matches the codebase's existing pattern for runtime knobs (cf. the `CLAUDECODE` env var already read in `planner.py`). Use the pattern that's already there. |
+| Place a small helper function between import groups | Tried putting the tier constants and `_get_model()` helper in the middle of the imports for visual grouping. | `ruff` raised E402 (module-level import not at top of file). | Helpers go BELOW all imports, never between. This is non-negotiable in projects that enforce E402. |
+| Pass `--model` at `claude --resume` sites for symmetry with the create sites | Initially considered passing `--model` everywhere uniformly so no site is special. | The Claude CLI locks the model to the originating session when `--resume` is used. Passing `--model` alongside `--resume` is at best ignored and at worst rejected, and creates a misleading audit trail (test argv shows a model that isn't actually being used). | Resume sites must deliberately NOT pass `--model`. Document this as an invariant in the calling code. |
+
+## Results & Parameters
+
+### Verified parameters (exact constants used)
+
+```python
+# hephaestus/automation/claude_models.py
+OPUS = "claude-opus-4-7"
+SONNET = "claude-sonnet-4-6"
+HAIKU = "claude-haiku-4-5"
+
+# Env-var overrides (one per phase):
+# HEPH_PLANNER_MODEL
+# HEPH_IMPLEMENTER_MODEL
+# HEPH_REVIEWER_MODEL
+# HEPH_ADVISE_MODEL
+# HEPH_LEARN_MODEL
+```
+
+### Phase -> default model mapping
+
+| Phase | Default | Env-var override |
+|-------|---------|------------------|
+| Planner | `claude-opus-4-7` (OPUS) | `HEPH_PLANNER_MODEL` |
+| Implementer | `claude-haiku-4-5` (HAIKU) | `HEPH_IMPLEMENTER_MODEL` |
+| Reviewer (plan / PR / address) | `claude-sonnet-4-6` (SONNET) | `HEPH_REVIEWER_MODEL` |
+| Advise (knowledge search) | `claude-sonnet-4-6` (SONNET) | `HEPH_ADVISE_MODEL` |
+| Learn (skill capture) | `claude-sonnet-4-6` (SONNET) | `HEPH_LEARN_MODEL` |
+
+### Operator escape hatch
+
+```bash
+# Flip both planner and implementer to Haiku when Opus is exhausted:
+HEPH_PLANNER_MODEL=claude-haiku-4-5 \
+HEPH_IMPLEMENTER_MODEL=claude-haiku-4-5 \
+  pixi run python -m hephaestus.automation.implementer
+
+# Flip review tier to Haiku to save cost during a no-stakes batch:
+HEPH_REVIEWER_MODEL=claude-haiku-4-5 \
+  pixi run python -m hephaestus.automation.pr_reviewer
+```
+
+### Key invariants
+
+1. **Session-creating site:** MUST pass `--model <id>` where `<id>` comes from the appropriate `*_model()` function.
+2. **Session-resuming site (`--resume`):** MUST NOT pass `--model`. The originating session's model is inherited.
+3. **The implementer's model determines the entire downstream chain** because address-review, /learn, follow-up, and CI fix iterations all `--resume` the implementer's session.
+4. **Env-var override at call time, not import time** — use functions, not module-level constants, so a process started before the env var is set still picks it up if the env var is set later (e.g. by a test fixture).
+
+### Files modified
+
+| File | Change |
+|------|--------|
+| `hephaestus/automation/claude_models.py` | NEW — module with `planner_model()`, `implementer_model()`, `reviewer_model()`, `advise_model()`, `learn_model()` and tier constants |
+| `hephaestus/automation/planner.py` | Added `--model` to `claude` argv |
+| `hephaestus/automation/implementer.py` | Added `--model` to `claude` argv |
+| `hephaestus/automation/reviewer.py` | Added `--model` to `claude` argv |
+| `hephaestus/automation/plan_reviewer.py` | Added `--model` to `claude` argv |
+| `hephaestus/automation/pr_reviewer.py` | Added `--model` to `claude` argv |
+| `hephaestus/automation/address_review.py` | Added `--model` to create-session branch; `--resume` branch deliberately unchanged |
+| `hephaestus/automation/ci_driver.py` | Added `--model` to create-session branch; `--resume` branch deliberately unchanged |
+| `hephaestus/automation/learn.py` | Deliberately unchanged — uses `--resume` |
+| `hephaestus/automation/follow_up.py` | Deliberately unchanged — uses `--resume` |
+| `tests/unit/automation/test_claude_models.py` | NEW — env override + reimport stability tests |
+| `tests/unit/automation/test_planner.py` | Added argv assertions verifying `--model` is present |
+
+### Test results
+
+| Metric | Value |
+|--------|-------|
+| Tests passing | 1990 |
+| Tests skipped (pre-existing) | 7 |
+| Coverage | 83.04% |
+| `ruff check` | clean |
+| `mypy` | clean |
+| CI status | pending (feature branch not yet pushed at time of skill capture) |
+
+### Cross-reference
+
+The widening of rate-limit detection (which initially had a bug where `or`-chaining detectors masked legitimate `0` epoch returns) is captured in a parallel skill — see the rate-limit detection skill (created in the same session as this one). That work is independent of model selection but was triggered by the same incident.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | Multi-phase issue/PR automation pipeline (`hephaestus.automation`) on branch `feat/hephaestus-tidy`. Verified locally: 1990 tests pass, ruff and mypy clean. CI run pending — work is on a feature branch not yet pushed. | |
+
+## Superseded from architecture-rest-api-httpx-integration
+
+---
+name: architecture-rest-api-httpx-integration
+description: "Pattern for adding REST API client integration to a Python project using httpx. Use when: (1) adding HTTP client to codebase with no existing HTTP dependency, (2) integrating external REST API with Pydantic config system, (3) wiring optional feature into existing config hierarchy."
+category: architecture
+date: 2026-03-25
+version: "2.0.0"
+user-invocable: false
+verification: verified-ci
+history: architecture-rest-api-httpx-integration.history
+tags:
+  - httpx
+  - rest-api
+  - pydantic
+  - config-integration
+  - http-client
+---
+
+# REST API Client Integration with httpx
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-25 |
+| **Objective** | Add AI Maestro REST API integration to ProjectScylla - HTTP client, Pydantic models, error hierarchy, config wiring, and tests |
+| **Outcome** | Successful - 31 tests pass, 96.6% coverage on new module, all pre-commit hooks pass |
+| **Verification** | verified-ci |
+| **History** | [changelog](./architecture-rest-api-httpx-integration.history) |
+
+## When to Use
+
+- Adding a new HTTP client to a Python project that has no existing HTTP dependency
+- Integrating an external REST API into a Pydantic-based configuration system
+- Creating an optional feature that must be backwards-compatible with existing configs
+- Building a self-contained module with client, models, and error hierarchy
+- Wiring a new config section through a multi-level config loader (defaults > model > test)
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Add httpx dependency
+# pixi.toml [pypi-dependencies]:
+httpx = ">=0.27,<1"
+# pyproject.toml [project] dependencies:
+"httpx>=0.27,<1"
+
+# 2. Create module structure
+mkdir -p scylla/<module>/
+# errors.py -> models.py -> client.py -> __init__.py
+
+# 3. Wire config (optional field, None = disabled)
+# In config/models.py:
+maestro: MaestroConfig | None = Field(default=None)
+
+# 4. Install and test
+pixi install
+pixi run python -m pytest tests/unit/<module>/ -v
+```
+
+### Detailed Steps
+
+1. **Add dependency to both \`pixi.toml\` and \`pyproject.toml\`** - pixi.toml controls the dev environment, pyproject.toml controls the package. Both need httpx.
+
+2. **Create error hierarchy first** (\`errors.py\`):
+   - Base exception (e.g., \`MaestroError\`)
+   - Connection error subclass for network/timeout failures
+   - API error subclass with \`status_code\` and \`response_body\` attributes
+
+3. **Create Pydantic models** (\`models.py\`):
+   - Config model with \`enabled: bool = False\` (opt-in pattern)
+   - Request/response models for API payloads
+   - Use \`Field(default_factory=dict)\` for dict fields (Pydantic None coercion safety)
+
+4. **Create HTTP client** (\`client.py\`):
+   - Context manager support (\`__enter__\`/\`__exit__\`)
+   - Central \`_request()\` helper that maps httpx exceptions to custom errors
+   - Health check returns \`None\` on failure (never raises)
+   - Other methods raise on failure
+   - Use \`response.json() or {}\` to guard against null JSON responses
+
+5. **Create \`__init__.py\`** with explicit re-exports using \`import X as X\` pattern (required when \`implicit_reexport=false\` in mypy)
+
+6. **Wire into config system**:
+   - Import in \`config/models.py\` using \`from module import Class as Class\` for re-export
+   - Add optional field to both \`DefaultsConfig\` and \`ScyllaConfig\`
+   - Pass through in \`config/loader.py\` merge logic
+   - Export from \`config/__init__.py\` and add to \`__all__\`
+
+7. **Update JSON schema** (\`defaults.schema.json\`) with new property
+
+8. **Write comprehensive tests** using \`unittest.mock.patch\` on \`httpx.Client\`
+
+### Key Pattern: Mocking httpx in Tests
+
+```python
+@patch("scylla.maestro.client.httpx.Client")
+def test_success(self, mock_client_cls, config):
+    mock_http = mock_client_cls.return_value
+    mock_http.request.return_value = _mock_response(json_data={"status": "ok"})
+
+    client = MaestroClient(config)
+    client._client = mock_http  # Replace the real client
+    result = client.health_check()
+    assert result is not None
+```
+
+### Key Pattern: Explicit Re-export for Strict Mypy
+
+```python
+# In config/models.py - with implicit_reexport=false
+from scylla.maestro.models import MaestroConfig as MaestroConfig  # as X pattern
+
+# In __init__.py
+from scylla.maestro.client import MaestroClient as MaestroClient
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| \`type: ignore[arg-type]\` on Pydantic int fields | Added \`# type: ignore[arg-type]\` to test calls like \`MaestroConfig(timeout_seconds=0)\` | Mypy flagged them as \`unused-ignore\` because \`0\` and \`301\` are valid \`int\` types - Pydantic validates at runtime, not type level | Don't add \`type: ignore\` for Pydantic runtime validators on correctly-typed fields; the validation is runtime, not type-level |
+| Plain import for re-export | \`from scylla.maestro.models import MaestroConfig\` in \`config/models.py\` | Mypy \`implicit_reexport=false\` setting means plain imports are not re-exported from the module | Always use \`import X as X\` pattern when a symbol needs to be importable from the importing module |
+| \`# noqa: SLF001\` on private attribute access in tests | Added noqa comments on \`client._client = mock_http\` lines | A linter automatically removed these comments | The linter configuration allows private access in test files via per-file-ignores |
+
+## Results & Parameters
+
+### Module Structure Created
+
+```
+scylla/maestro/
+  __init__.py    # Public API re-exports
+  errors.py      # MaestroError, MaestroConnectionError, MaestroAPIError
+  models.py      # MaestroConfig, FailureSpec, HealthResponse, InjectionResult
+  client.py      # MaestroClient (httpx-based)
+
+tests/unit/maestro/
+  __init__.py
+  conftest.py    # Shared fixtures
+  test_client.py # 17 tests
+  test_models.py # 14 tests
+```
+
+### Config Integration Points
+
+```python
+# DefaultsConfig and ScyllaConfig both get:
+maestro: MaestroConfig | None = Field(
+    default=None,
+    description="AI Maestro REST API configuration (None = disabled)",
+)
+
+# ConfigLoader.load() passes through:
+config_data["maestro"] = defaults.maestro
+```
+
+### Coverage Results
+
+| Module | Coverage |
+| -------- | ---------- |
+| \`scylla/maestro/errors.py\` | 100% |
+| \`scylla/maestro/models.py\` | 100% |
+| \`scylla/maestro/client.py\` | 96.6% |
+| **Total** | **31 tests, 0 failures** |
+
+### Full Suite Verification
+
+| Metric | Value |
+| -------- | ------- |
+| Total tests | 4,921 passed, 2 skipped |
+| Total coverage | 77.49% |
+| CI checks | CodeQL + Analyze (actions, python) all pass |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | Issue #1504 - Add AI Maestro REST API integration | PR #1548, CI passed (CodeQL + unit/integration), 4921 tests pass, 77.49% total coverage |
+
+---
+
+## Prior history from architecture-rest-api-httpx-integration.history
+
+# architecture-rest-api-httpx-integration — History
+
+## v1.0.0 (2026-03-25)
+
+**Initial version.**
+
+Created from ProjectScylla issue #1504 session — adding AI Maestro REST API integration.
+Covered: httpx client pattern, Pydantic config integration, error hierarchy, test mocking patterns.
+Missing `verification` frontmatter field (added in v2.0.0).
+
+### Previous version (v1.0.0) snapshot
+
+```yaml
+---
+name: architecture-rest-api-httpx-integration
+description: "Pattern for adding REST API client integration to a Python project using httpx. Use when: (1) adding HTTP client to codebase with no existing HTTP dependency, (2) integrating external REST API with Pydantic config system, (3) wiring optional feature into existing config hierarchy."
+category: architecture
+date: 2026-03-25
+version: "1.0.0"
+user-invocable: false
+tags:
+  - httpx
+  - rest-api
+  - pydantic
+  - config-integration
+  - http-client
+---
+```
+
+Sections: Overview, When to Use, Verified Workflow (Quick Reference + Detailed Steps + Key Patterns), Failed Attempts (3 entries), Results & Parameters, Verified On.
