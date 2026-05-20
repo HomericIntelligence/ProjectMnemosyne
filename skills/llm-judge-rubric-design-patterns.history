@@ -1,0 +1,3558 @@
+## Superseded from e2e-judge-rubric-design
+
+---
+name: e2e-judge-rubric-design
+description: Design LLM-as-Judge evaluation rubrics for E2E agent testing
+category: evaluation
+date: 2026-01-01
+version: 1.0.0
+---
+# E2E Judge Rubric Design
+
+Design comprehensive evaluation rubrics for LLM-as-Judge systems in agent testing frameworks.
+
+## Overview
+
+| Date | Objective | Outcome |
+| ------ | ----------- | --------- |
+| 2026-01-01 | Fix false positives in E2E judge and expand evaluation criteria | 10-criteria weighted rubric, validity tracking, PR #104 merged |
+
+## When to Use
+
+- (1) Building agent evaluation systems that use LLM-as-Judge
+- (2) Designing weighted scoring criteria for code generation tasks
+- (3) Need to distinguish "invalid evaluation" from "evaluated and failed"
+- (4) Standardizing judge prompts across multiple test runs
+- (5) Handling rate limits and API errors in evaluation pipelines
+
+## Verified Workflow
+
+### 1. Design Weighted Criteria Categories
+
+Organize criteria into weighted categories for balanced evaluation:
+
+```yaml
+criteria_weights:
+  functional: 0.50      # Core functionality
+  code_quality: 0.30    # Structure, docs, style
+  security: 0.20        # Safety and error handling
+```
+
+### 2. Define Specific Criteria Per Category
+
+**Functional (50%)**:
+- `correctness` - Does the code work as intended?
+- `completeness` - Were all requirements satisfied?
+- `edge_case_handling` - Are boundary conditions handled?
+- `following_instructions` - Did agent follow specific instructions?
+
+**Code Quality (30%)**:
+- `code_structure` - Well-organized? (CC < 15, LOC < 50, nesting < 4)
+- `documentation` - Docstrings, comments present and accurate?
+- `linting_compliance` - Follows language style guidelines?
+- `testability` - Clear inputs/outputs, mockable dependencies?
+
+**Security & Safety (20%)**:
+- `security` - No secrets, injection vulnerabilities, unsafe patterns?
+- `error_handling` - Graceful failures, meaningful messages?
+
+### 3. Set Explicit Pass Thresholds
+
+```yaml
+pass_threshold:
+  score: 0.7           # Weighted average must be >= 0.7
+  correctness: 0.8     # AND correctness must be >= 0.8
+
+score_bands:
+  excellent: [0.9, 1.0]    # Production ready
+  good: [0.8, 0.89]        # Minor improvements
+  acceptable: [0.7, 0.79]  # Some issues but functional
+  marginal: [0.6, 0.69]    # Significant issues
+  failing: [0.0, 0.59]     # Does not meet requirements
+```
+
+### 4. Add Validity Tracking
+
+Distinguish "couldn't evaluate" from "evaluated and failed":
+
+```python
+@dataclass
+class JudgeResult:
+    score: float
+    passed: bool
+    grade: str
+    reasoning: str
+    is_valid: bool = True  # False if evaluation couldn't complete
+    criteria_scores: dict[str, float] | None = None
+```
+
+### 5. Handle API Errors First
+
+**Critical**: Check `is_error` BEFORE `subtype` in fallback logic:
+
+```python
+def _fallback_judge(agent_output: str) -> JudgeResult:
+    data = json.loads(agent_output)
+
+    # Check is_error FIRST - rate limits have BOTH
+    # "subtype": "success" AND "is_error": true
+    if data.get("is_error"):
+        return JudgeResult(
+            score=0.0, passed=False, grade="N/A",
+            reasoning=f"Invalid: {data.get('result')}",
+            is_valid=False  # Mark as invalid, not failed
+        )
+
+    # Only check success if no error
+    if data.get("subtype") == "success":
+        return JudgeResult(score=0.7, passed=True, ...)
+```
+
+### 6. Use Checked-In System Prompt
+
+Store judge prompt in version control for consistency:
+
+```python
+JUDGE_SYSTEM_PROMPT_FILE = Path("config/judge/system_prompt.md")
+
+cmd = [
+    "claude",
+    "--model", "claude-opus-4-5-20251101",
+    "--system-prompt-file", str(JUDGE_SYSTEM_PROMPT_FILE),
+    "--max-turns", "1",
+    evaluation_context,
+]
+```
+
+## Results & Parameters
+
+### Complete Judge Configuration
+
+```yaml
+# Judge model settings
+judge:
+  model: claude-opus-4-5-20251101  # REQUIRED: Opus for accuracy
+  timeout: 1200                     # 20 minutes for complex evals
+  system_prompt_file: config/judge/system_prompt.md
+
+# Evaluation rubric
+rubric:
+  categories:
+    functional:
+      weight: 0.50
+      criteria:
+        - correctness
+        - completeness
+        - edge_case_handling
+        - following_instructions
+    code_quality:
+      weight: 0.30
+      criteria:
+        - code_structure
+        - documentation
+        - linting_compliance
+        - testability
+    security:
+      weight: 0.20
+      criteria:
+        - security
+        - error_handling
+
+# Pass/fail thresholds
+thresholds:
+  pass_score: 0.7
+  min_correctness: 0.8
+
+# Code quality benchmarks
+quality_limits:
+  cyclomatic_complexity: 15
+  function_loc: 50
+  nesting_depth: 4
+```
+
+### System Prompt Template
+
+```markdown
+# LLM Judge System Prompt
+
+You are an expert evaluator for AI agent task completion.
+
+## Evaluation Criteria
+
+### Functional Criteria (Weight: 50%)
+1. **Correctness**: Does the code work as intended?
+2. **Completeness**: Were all requirements satisfied?
+3. **Edge Case Handling**: Are boundary conditions handled?
+4. **Following Instructions**: Did agent follow specific instructions?
+
+### Code Quality Criteria (Weight: 30%)
+5. **Code Structure**: Well-organized? (CC < 15, LOC < 50)
+6. **Documentation**: Docstrings present and accurate?
+7. **Linting Compliance**: Follows style guidelines?
+8. **Testability**: Clear inputs/outputs, mockable?
+
+### Security & Safety Criteria (Weight: 20%)
+9. **Security**: No secrets, injection vulnerabilities?
+10. **Error Handling**: Graceful failures?
+
+## Response Format
+{
+  "score": 0.78,
+  "passed": true,
+  "reasoning": "...",
+  "criteria_scores": { ... }
+}
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Error Handling
+
+| Problem | Solution |
+| --------- | ---------- |
+| Rate limit hit during judging | Return `is_valid=False` with reason, don't mark as pass/fail |
+| Judge timeout | Increase to 20 minutes; Opus needs time for thorough analysis |
+| Malformed JSON response | Parse with fallback; extract pass/fail from text if needed |
+| Missing criteria scores | Use partial scores; mark evaluation as degraded |
+
+## References
+
+- [G-Eval Framework](https://www.confident-ai.com/blog/g-eval-the-definitive-guide) - LLM-as-Judge with CoT
+- [ICER 2025: Rubric Is All You Need](https://dl.acm.org/doi/10.1145/3702652.3744220) - Question-specific rubrics
+- [LLM-as-Judge Guide](https://labelyourdata.com/articles/llm-as-a-judge) - Bias handling
+- ProjectScylla PR #104 - Implementation of this pattern
+
+---
+
+## Superseded from judge-criteria-enhancement
+
+---
+name: judge-criteria-enhancement
+description: Add new evaluation criteria to LLM judge systems. Use when penalizing
+  over-engineering, fixing result validation, or adding proportionality scoring.
+category: evaluation
+date: '2026-01-04'
+version: 1.0.0
+user-invocable: false
+---
+# Judge Criteria Enhancement: Proportionality & Scope Discipline
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Session Date** | 2026-01-04 |
+| **Objective** | Fix E2E evaluation bugs: add judge criteria to penalize over-engineering, fix T6 cost tracking bug, reward proportionate solutions |
+| **Outcome** | ✅ Successfully added 3 new criteria (workspace_cleanliness, test_quality, scope_discipline), fixed invalid result detection, updated unit tests |
+| **PR** | [#145](https://github.com/HomericIntelligence/ProjectScylla/pull/145) |
+
+## When to Use This Skill
+
+Use this skill when you need to:
+
+1. **Add new evaluation criteria** to an LLM judge system to assess quality dimensions not currently covered
+2. **Penalize over-engineering** in agent outputs (excessive files, documentation bloat, unnecessary tests)
+3. **Fix result validation bugs** where incomplete runs are incorrectly marked as completed
+4. **Update unit tests** after adding new evaluation categories or criteria
+5. **Ensure proportionality** between task complexity and solution scope
+
+### Trigger Conditions
+
+- Judge is giving high scores to solutions with excessive files/documentation
+- Simple tasks (e.g., 1-line code) receive 9+ extra documentation files without penalty
+- Cost tracking shows $0.00 for runs with `exit_code=-1` and zero token stats
+- Tests required: penalize agents that don't create tests OR create unnecessary tests for trivial tasks
+
+## Verified Workflow
+
+### Phase 1: Analyze the Problem
+
+1. **Review evaluation results** to identify patterns:
+   ```bash
+   # Check results.log for anomalies
+   grep -A 5 "exit_code.*-1" results.log
+
+   # Look for runs with zero cost
+   grep "cost.*0.00" results/*/T*/*/result.json
+   ```
+
+2. **Identify missing criteria** by examining judge output:
+   - Are over-engineered solutions scoring too high?
+   - Are proportionate solutions being penalized?
+   - Are there quality dimensions not being measured?
+
+3. **Document specific examples**:
+   - T6 created 9 extra documentation files (2,900+ lines) for 1-line task
+   - T6 got `documentation: 0.40` (correctly penalized) but weight was only 0.5
+   - T6 got `following_instructions: 0.50` for misinterpreting "maximize usage of tools"
+
+### Phase 2: Design New Criteria
+
+**Key Principle**: Add criteria under a unified conceptual category (e.g., "Proportionality & Scope")
+
+1. **Define the new criteria** with clear scoring guidance:
+
+   ```markdown
+   ### Proportionality & Scope Criteria (Weight: 30%)
+
+   11. **Workspace Cleanliness** (1.0): Are files proportionate to task complexity?
+       - Files should meaningfully contribute to the solution
+       - Penalize files that don't improve results
+       - Simple tasks (1-line code) warrant minimal supporting files (1-3 max)
+       - Complex tasks can justify more supporting files
+
+   12. **Test Quality** (1.0): Are tests appropriate and valuable?
+       - IF tests required: comprehensive coverage, edge cases, meaningful assertions
+       - IF tests NOT required: penalize unnecessary test files for trivial tasks
+       - Tests should be proportionate to task complexity
+
+   13. **Scope Discipline** (1.0): Is the solution appropriately scoped?
+       - No over-engineering for simple tasks
+       - Documentation matches task complexity
+       - No unused code or dead ends
+   ```
+
+2. **Choose appropriate weights**:
+   - Use 1.0 for criteria that are as important as Code Quality
+   - Use 0.5 for criteria that are nice-to-have but not critical
+   - Total weight increased from 9.5 to 12.5 (added 3 × 1.0)
+
+3. **Update existing criteria descriptions** to be explicit:
+   - Add "Penalize excessive file creation" to SIMPLICITY
+   - Add "Penalize documentation bloat" to DOCUMENTATION
+
+### Phase 3: Update Code
+
+**File: `config/judge/system_prompt.md`**
+
+Add the new criteria sections under a clear heading:
+
+```markdown
+### Proportionality & Scope Criteria (Weight: 30%)
+
+[Insert criteria definitions from Phase 2]
+```
+
+**File: `src/scylla/judge/prompts.py`**
+
+1. Add enum values:
+   ```python
+   class EvaluationCategory(Enum):
+       # ... existing 10 categories ...
+       WORKSPACE_CLEANLINESS = "workspace_cleanliness"
+       TEST_QUALITY = "test_quality"
+       SCOPE_DISCIPLINE = "scope_discipline"
+   ```
+
+2. Update weights dictionary:
+   ```python
+   CATEGORY_WEIGHTS: dict[EvaluationCategory, float] = {
+       # ... existing weights ...
+       EvaluationCategory.WORKSPACE_CLEANLINESS: 1.0,
+       EvaluationCategory.TEST_QUALITY: 1.0,
+       EvaluationCategory.SCOPE_DISCIPLINE: 1.0,
+   }
+   ```
+
+3. Update `JSON_OUTPUT_SCHEMA` string:
+   ```python
+   JSON_OUTPUT_SCHEMA: str = """{
+       "categories": {
+           # ... existing categories ...
+           "workspace_cleanliness": { "score": 0.0-1.0, "confidence": 0.0-1.0, "notes": "" },
+           "test_quality": { "score": 0.0-1.0, "confidence": 0.0-1.0, "notes": "" },
+           "scope_discipline": { "score": 0.0-1.0, "confidence": 0.0-1.0, "notes": "" }
+       }
+   }"""
+   ```
+
+4. Update `JUDGE_PROMPT_TEMPLATE` to include new categories in the table (if hardcoded)
+
+**File: `src/scylla/e2e/subtest_executor.py`**
+
+Fix invalid result detection:
+
+```python
+def _has_valid_agent_result(run_dir: Path) -> bool:
+    """Check if a valid agent result exists for the run."""
+    result_file = run_dir / "result.json"
+    if not result_file.exists():
+        return False
+
+    try:
+        with open(result_file) as f:
+            data = json.load(f)
+    except json.JSONDecodeError:
+        return False
+
+    # Check for incomplete execution: exit_code=-1 AND all token stats are 0
+    if data["exit_code"] == -1:
+        token_stats = data["token_stats"]
+        all_tokens_zero = (
+            token_stats.get("input_tokens", 0) == 0
+            and token_stats.get("output_tokens", 0) == 0
+            and token_stats.get("cache_creation_tokens", 0) == 0
+            and token_stats.get("cache_read_tokens", 0) == 0
+        )
+        if all_tokens_zero:
+            logger.warning(
+                f"Invalid result detected at {run_dir}: "
+                f"exit_code=-1 with zero token stats (incomplete execution)"
+            )
+            return False
+
+    return True
+```
+
+### Phase 4: Update Unit Tests
+
+**Pattern**: When adding N new categories, update test expectations systematically.
+
+**File: `tests/unit/judge/test_prompts.py`**
+
+1. Update category count:
+   ```python
+   def test_all_categories_present(self) -> None:
+       """Test all 13 categories are defined."""
+       assert len(EvaluationCategory) == 13  # Changed from 10
+   ```
+
+2. Add assertions for new category values:
+   ```python
+   def test_category_values(self) -> None:
+       # ... existing assertions ...
+       assert EvaluationCategory.WORKSPACE_CLEANLINESS.value == "workspace_cleanliness"
+       assert EvaluationCategory.TEST_QUALITY.value == "test_quality"
+       assert EvaluationCategory.SCOPE_DISCIPLINE.value == "scope_discipline"
+   ```
+
+3. Update total weight expectation:
+   ```python
+   def test_total_weight(self) -> None:
+       """Test total weight matches expected value."""
+       assert TOTAL_CATEGORY_WEIGHT == pytest.approx(12.5)  # Changed from 9.5
+   ```
+
+**File: `tests/unit/e2e/test_tier_manager.py`** (if cleanup instructions added)
+
+1. Add constant matching production code:
+   ```python
+   CLEANUP_INSTRUCTIONS = (
+       "\n\n## Cleanup Requirements\n"
+       "- Remove any temporary files created during task completion "
+       "(build artifacts, cache files, etc.)\n"
+       "- Clean up after yourself - the workspace should contain only final deliverables"
+   )
+   ```
+
+2. Update all assertions to append cleanup:
+   ```python
+   def test_tools_enabled_all(self) -> None:
+       # ... setup ...
+       expected = (
+           "Maximize usage of all available tools to complete this task."
+           + CLEANUP_INSTRUCTIONS
+       )
+       assert result == expected
+   ```
+
+### Phase 5: Verify and Commit
+
+1. **Run tests locally**:
+   ```bash
+   pixi run pytest tests/unit/judge/test_prompts.py -v
+   pixi run pytest tests/unit/e2e/test_tier_manager.py -v
+   ```
+
+2. **Run pre-commit hooks**:
+   ```bash
+   pre-commit run --all-files
+   ```
+
+3. **Commit changes**:
+   ```bash
+   git add tests/unit/judge/test_prompts.py tests/unit/e2e/test_tier_manager.py
+   git commit -m "test: update unit tests for new judge criteria and cleanup instructions"
+   git push
+   ```
+
+4. **Monitor CI** to ensure all checks pass
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Judge Criteria Configuration
+
+**Before** (10 categories, weight 9.5):
+```python
+CATEGORY_WEIGHTS = {
+    EvaluationCategory.FUNCTIONAL_CORRECTNESS: 2.0,
+    EvaluationCategory.COMPLETENESS: 1.5,
+    EvaluationCategory.CODE_QUALITY: 1.0,
+    EvaluationCategory.SIMPLICITY: 1.0,
+    EvaluationCategory.LACK_OF_DUPLICATION: 0.5,
+    EvaluationCategory.CLARITY: 1.0,
+    EvaluationCategory.DOCUMENTATION: 0.5,
+    EvaluationCategory.ARCHITECTURAL_CLEANLINESS: 0.5,
+    EvaluationCategory.EFFICIENCY: 0.5,
+    EvaluationCategory.CLEANUP_SCRIPT_QUALITY: 1.0,
+}
+TOTAL_CATEGORY_WEIGHT = 9.5
+```
+
+**After** (13 categories, weight 12.5):
+```python
+CATEGORY_WEIGHTS = {
+    # ... existing 10 categories (9.5 total) ...
+    EvaluationCategory.WORKSPACE_CLEANLINESS: 1.0,
+    EvaluationCategory.TEST_QUALITY: 1.0,
+    EvaluationCategory.SCOPE_DISCIPLINE: 1.0,
+}
+TOTAL_CATEGORY_WEIGHT = 12.5
+```
+
+### Invalid Result Detection
+
+**Pattern to Detect**:
+```python
+exit_code == -1 AND (
+    input_tokens == 0 AND
+    output_tokens == 0 AND
+    cache_creation_tokens == 0 AND
+    cache_read_tokens == 0
+)
+```
+
+**Action**: Return `False` from `_has_valid_agent_result()` to force re-run
+
+### Cleanup Instructions Template
+
+```markdown
+## Cleanup Requirements
+- Remove any temporary files created during task completion (build artifacts, cache files, etc.)
+- Clean up after yourself - the workspace should contain only final deliverables
+```
+
+**Where Applied**: Appended to all task prompts via `TierManager.build_resource_suffix()`
+
+## Key Takeaways
+
+1. **Proportionality is a distinct quality dimension**: Separate from simplicity, it measures whether the solution matches task complexity
+2. **Judge criteria beat prompt restrictions**: Better to score quality post-hoc than restrict agent behavior upfront
+3. **Bi-directional penalties**: Proportionality criteria should penalize BOTH over-engineering AND under-engineering
+4. **Test updates are systematic**: When adding N categories, update N+2 tests (category count, category values, total weight)
+5. **Invalid result detection**: Check for `exit_code=-1 + zero tokens` pattern to catch incomplete executions
+6. **User intent matters**: Clarify whether goal is to restrict behavior (prompts) or assess quality (judge)
+
+## Related Skills
+
+- `evaluation/judge-prompt-design` - Designing effective judge prompts
+- `testing/unit-test-patterns` - Patterns for updating tests after enum/constant changes
+- `debugging/cost-tracking-validation` - Validating cost/token tracking in evaluation systems
+
+---
+
+## Superseded from judge-system-extension
+
+---
+name: judge-system-extension
+description: Patterns for extending AI evaluation/judge systems with new capabilities
+category: evaluation
+date: 2025-12-31
+version: 1.0.0
+---
+# Judge System Extension
+
+Patterns and workflows for extending AI evaluation systems with consensus retry logic, cleanup evaluation, cross-tier analysis, and container orchestration.
+
+## Overview
+
+| Date | Objective | Outcome |
+| ------ | ----------- | --------- |
+| 2025-12-31 | Extend judge system with 4 new modules | 4 PRs created, all tests passing, comprehensive coverage |
+
+## When to Use
+
+- (1) Adding consensus-based scoring with retry on disagreement
+- (2) Implementing cleanup script evaluation for agent work
+- (3) Creating cross-tier statistical analysis for prompt sensitivity
+- (4) Orchestrating judge execution in isolated containers
+- (5) Extending an existing evaluation framework with new capabilities
+
+## Verified Workflow
+
+### Phase 1: Understand Existing Structure
+
+1. Read the existing evaluator module to understand integration points
+2. Identify the data structures used (dataclasses, Pydantic models)
+3. Check the module's `__init__.py` for current exports
+4. Review existing test patterns for consistency
+
+### Phase 2: Implement New Capability
+
+1. **Create new module file** in the appropriate directory
+2. **Use dataclasses for configuration** - prefer Pydantic BaseModel for validation
+3. **Add comprehensive docstrings** with Python justification comment at top
+4. **Export from `__init__.py`** - both imports and `__all__` list
+5. **Create dedicated test file** following existing patterns
+
+### Phase 3: Key Patterns
+
+#### Consensus Retry Pattern
+
+```python
+class ConsensusConfig(BaseModel):
+    initial_runs: int = Field(default=3, ge=1)
+    max_additional_runs: int = Field(default=5, ge=0)
+    variance_threshold: float = Field(default=0.15, ge=0.0, le=1.0)
+    min_confidence: float = Field(default=0.6, ge=0.0, le=1.0)
+    score_range_threshold: float = Field(default=0.3, ge=0.0, le=1.0)
+
+def needs_additional_runs(scores: list[JudgeScore], config: ConsensusConfig) -> tuple[bool, str]:
+    """Check variance, confidence, and range thresholds."""
+    if len(scores) < 2:
+        return False, "insufficient runs"
+
+    variance = statistics.variance([s.score for s in scores])
+    if variance > config.variance_threshold:
+        return True, f"high variance ({variance:.3f})"
+    # ... check other thresholds
+```
+
+#### Cleanup Evaluation Pattern
+
+```python
+class CleanupEvaluator:
+    CLEANUP_LOCATIONS = ["cleanup.sh", "scripts/cleanup.sh", "Makefile"]
+    BUILD_PATTERNS = ["build/", "dist/", "__pycache__/", "*.o", "*.pyc"]
+
+    SCORE_FULL_CLEANUP = 1.0
+    SCORE_PARTIAL_CLEANUP = 0.7
+    SCORE_SCRIPT_FAILED = 0.4
+    SCORE_NO_SCRIPT = 0.0
+
+    def capture_initial_state(self) -> None:
+        """Call before agent runs to establish baseline."""
+        self.initial_state = self._get_workspace_state()
+
+    def evaluate(self) -> CleanupEvaluation:
+        """Full evaluation: find script, run it, verify cleanup."""
+```
+
+#### Container Orchestration Pattern
+
+```python
+class JudgeContainerConfig:
+    agent_workspace: Path  # Mount as READ-ONLY
+    output_dir: Path       # Mount as read-write
+    judge_model: str
+    timeout_seconds: int = 600
+
+class JudgeContainerManager:
+    def _build_volumes(self, config: JudgeContainerConfig) -> dict:
+        return {
+            str(config.agent_workspace.resolve()): {"bind": "/workspace", "mode": "ro"},
+            str(config.output_dir.resolve()): {"bind": "/output", "mode": "rw"},
+        }
+```
+
+### Phase 4: Testing Patterns
+
+1. **Use pytest fixtures** for temporary directories (`tmp_path`)
+2. **Mock external dependencies** (Docker executor, adapters)
+3. **Test edge cases** (empty inputs, timeouts, failures)
+4. **Verify threshold behaviors** with specific test values
+
+## Results
+
+### Module Structure
+
+```
+src/scylla/judge/
+├── __init__.py          # Export new classes
+├── evaluator.py         # Add ConsensusConfig, needs_additional_runs
+├── cleanup_evaluator.py # NEW: CleanupEvaluator, CleanupEvaluation
+
+src/scylla/metrics/
+├── __init__.py          # Export new classes
+├── cross_tier.py        # NEW: CrossTierAnalyzer, TierUplift, etc.
+
+src/scylla/executor/
+├── __init__.py          # Export new classes
+├── judge_container.py   # NEW: JudgeContainerManager, JudgeContainerConfig
+```
+
+### Configuration Defaults
+
+```python
+# Consensus retry thresholds
+ConsensusConfig(
+    initial_runs=3,
+    max_additional_runs=5,
+    variance_threshold=0.15,
+    min_confidence=0.6,
+    score_range_threshold=0.3,
+)
+
+# Cleanup scoring
+SCORE_FULL_CLEANUP = 1.0
+SCORE_PARTIAL_CLEANUP = 0.7
+SCORE_SCRIPT_FAILED = 0.4
+SCORE_NO_SCRIPT = 0.0
+
+# Judge container
+JudgeContainerConfig(
+    timeout_seconds=600,
+    image="scylla-runner:latest",
+)
+```
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Session Statistics
+
+| Metric | Value |
+| -------- | ------- |
+| New modules created | 4 |
+| New test files | 3 |
+| Tests added | 89 |
+| PRs created | 4 |
+| Lines of code | ~2000 |
+
+## Error Handling
+
+| Problem | Solution |
+| --------- | ---------- |
+| Import errors in tests | Check that `__init__.py` exports match actual module exports |
+| Test threshold failures | Calculate actual variance/range values before setting test thresholds |
+| Security scanner false positives | Avoid function names containing "eval", "exec", etc. |
+| Docker executor initialization | Use mock executor in tests to avoid Docker dependency |
+
+## References
+
+- ProjectScylla judge module: `src/scylla/judge/`
+- ProjectScylla metrics module: `src/scylla/metrics/`
+- ProjectScylla executor module: `src/scylla/executor/`
+
+---
+
+## Superseded from multi-judge-consensus
+
+---
+name: multi-judge-consensus
+description: Implement multiple LLM judges with consensus voting in evaluation systems
+category: evaluation
+date: 2026-01-08
+version: 1.0.0
+user-invocable: false
+---
+# Skill: Multi-Judge Consensus in E2E Evaluation
+
+| Aspect | Details |
+| -------- | --------- |
+| **Date** | 2026-01-08 |
+| **Objective** | Add support for multiple LLM judges with consensus voting to E2E evaluation framework |
+| **Outcome** | ✅ Successfully implemented multi-judge support with consensus scoring, per-judge reporting, and clean shutdown handling |
+| **Category** | Evaluation Infrastructure |
+| **Repository** | ProjectScylla |
+| **PR** | https://github.com/HomericIntelligence/ProjectScylla/pull/160 |
+
+## When to Use This Skill
+
+Use this skill when you need to:
+
+1. **Add multi-judge support** to any evaluation system that currently uses a single judge
+2. **Implement consensus voting** across multiple LLM evaluators
+3. **Design per-judge reporting** with individual results and aggregate consensus
+4. **Fix multiprocessing shutdown issues** with clean Ctrl+C handling
+5. **Extend CLI tools** to support optional repeated arguments (e.g., `--add-judge`)
+
+Trigger conditions:
+- User wants multiple judges to evaluate the same output for consensus
+- User needs to see individual judge reasoning alongside aggregate scores
+- User wants clean exit from multiprocessing workers (no stack traces)
+- User wants flexible CLI options with shortcuts (e.g., `--add-judge sonnet-4-5`)
+
+## Verified Workflow
+
+### Phase 1: CLI Argument Design
+
+**Goal:** Add flexible `--add-judge` argument that supports shortcuts and defaults
+
+**Steps:**
+1. Add argument with `action="append"` and `nargs="?"` for optional values
+   ```python
+   parser.add_argument(
+       "--add-judge",
+       action="append",
+       nargs="?",  # Optional value
+       const="claude-opus-4-5-20251101",  # Default if flag given without value
+       metavar="MODEL",
+       help="Add additional judge model. Examples: --add-judge, --add-judge sonnet-4-5"
+   )
+   ```
+
+2. Create model name resolver for shortcuts:
+   ```python
+   def resolve_judge_model(model_shorthand: str) -> str:
+       shortcuts = {
+           "opus-4-5": "claude-opus-4-5-20251101",
+           "sonnet-4-5": "claude-sonnet-4-5-20250929",
+           "haiku-4-5": "claude-haiku-4-0-20250514",
+       }
+       return shortcuts.get(model_shorthand, model_shorthand)
+   ```
+
+3. Build judge list in config:
+   ```python
+   judge_models = [args.judge_model]  # Primary judge
+   if args.add_judge:
+       for model in args.add_judge:
+           judge_models.append(resolve_judge_model(model))
+   ```
+
+**Result:** Users can run `--add-judge`, `--add-judge sonnet-4-5`, or multiple `--add-judge` flags
+
+### Phase 2: Data Model Updates
+
+**Goal:** Store multiple judge results and consensus scores
+
+**Steps:**
+1. Change config from single `judge_model: str` to `judge_models: list[str]`
+   ```python
+   judge_models: list[str] = field(
+       default_factory=lambda: ["claude-opus-4-5-20251101"]
+   )
+   ```
+
+2. Create `JudgeResultSummary` dataclass:
+   ```python
+   @dataclass
+   class JudgeResultSummary:
+       model: str
+       score: float | None = None
+       passed: bool | None = None
+       grade: str | None = None
+       reasoning: str | None = None
+       judge_number: int = 1
+   ```
+
+3. Update `RunResult` to store both consensus and individual judges:
+   ```python
+   judge_score: float  # Consensus score
+   judge_passed: bool  # Majority vote
+   judge_grade: str    # Grade from consensus
+   judges: list[JudgeResultSummary] = field(default_factory=list)
+   ```
+
+4. **CRITICAL:** Add backward compatibility in `load()` method:
+   ```python
+   # Backward compatibility: convert old judge_model to judge_models
+   if "judge_model" in data and "judge_models" not in data:
+       judge_models = [data["judge_model"]]
+   else:
+       judge_models = data.get("judge_models", ["claude-opus-4-5-20251101"])
+   ```
+
+**Critical:** Optional fields with `field(default_factory=...)` must come AFTER required fields in dataclasses
+
+### Phase 3: Judge Execution with Consensus
+
+**Goal:** Run multiple judges and compute consensus scores
+
+**Steps:**
+1. Implement consensus calculation (simple average + majority vote):
+   ```python
+   def _compute_judge_consensus(
+       self, judges: list[JudgeResultSummary]
+   ) -> tuple[float | None, bool | None, str | None]:
+       if not judges:
+           return (None, None, None)
+
+       valid = [j for j in judges if j.score is not None]
+       if not valid:
+           return (None, None, None)
+
+       # Simple average for scores
+       consensus_score = sum(j.score for j in valid) / len(valid)
+
+       # Majority vote for passed
+       passed_votes = sum(1 for j in valid if j.passed)
+       passed = passed_votes > len(valid) / 2
+
+       # Convert score to grade
+       grade = score_to_grade(consensus_score)
+
+       return (consensus_score, passed, grade)
+   ```
+
+2. Loop through judges with separate directories:
+   ```python
+   def _run_judge(self, ...) -> tuple[dict, list[JudgeResultSummary]]:
+       judges = []
+       for judge_num, model in enumerate(self.config.judge_models, start=1):
+           judge_result = run_llm_judge(
+               workspace=workspace,
+               task_prompt=task_prompt,
+               agent_output=stdout,
+               model=model,
+               judge_dir=judge_dir,
+               judge_run_number=judge_num,  # Creates judge_01/, judge_02/, etc.
+           )
+           judge_summary = JudgeResultSummary(
+               model=model,
+               score=judge_result.score,
+               passed=judge_result.passed,
+               grade=judge_result.grade,
+               reasoning=judge_result.reasoning,
+               judge_number=judge_num,
+           )
+           judges.append(judge_summary)
+
+       consensus_score, consensus_passed, consensus_grade = self._compute_judge_consensus(judges)
+       consensus_dict = {
+           "score": consensus_score,
+           "passed": consensus_passed,
+           "grade": consensus_grade,
+           "reasoning": judges[0].reasoning if judges else "",
+       }
+       return consensus_dict, judges
+   ```
+
+**Result:** Each judge writes to separate subdirectories, consensus computed from all results
+
+### Phase 4: Report Generation
+
+**Goal:** Show consensus summary and individual judge tables
+
+**Steps:**
+1. Detect multi-judge vs single-judge:
+   ```python
+   if judges and len(judges) > 1:
+       # Multi-judge report
+   else:
+       # Single-judge report (backward compatible)
+   ```
+
+2. Generate consensus summary:
+   ```markdown
+   ## Judge Evaluation (Consensus)
+
+   | Metric | Value |
+   |--------|-------|
+   | Score | {score:.3f} |
+   | Grade | {grade} |
+   | Passed | ✅/❌ |
+   ```
+
+3. Generate per-judge tables with links:
+   ```markdown
+   ### Individual Judges
+
+   #### Judge 1: claude-opus-4-5-20251101
+
+   | Metric | Value |
+   |--------|-------|
+   | Score | {judge.score:.3f} |
+   | Passed | ✅/❌ |
+   | Grade | {judge.grade} |
+
+   **Reasoning:** {judge.reasoning}
+
+   - [View judgment](./judge/judge_01/judgment.json)
+   - [View result JSON](./judge/judge_01/result.json)
+   ```
+
+**Result:** Reports show both aggregate consensus and individual judge details
+
+### Phase 5: Clean Shutdown Handling
+
+**Goal:** Fix Ctrl+C to exit cleanly without stack traces from child processes
+
+**Steps:**
+1. Import `BrokenProcessPool` from correct module:
+   ```python
+   from concurrent.futures.process import BrokenProcessPool  # NOT from concurrent.futures
+   ```
+
+2. Wrap `ProcessPoolExecutor` in try/except:
+   ```python
+   try:
+       with ProcessPoolExecutor(max_workers=...) as executor:
+           # Execute subtests
+           for future in as_completed(futures):
+               # Process results
+   except (KeyboardInterrupt, BrokenProcessPool):
+       # Clean exit on Ctrl+C or process pool failure
+       logger.warning("Experiment interrupted, cleaning up...")
+       # Cancel pending futures
+       for future in futures:
+           if not future.done():
+               future.cancel()
+   ```
+
+3. Add exception handling in runner:
+   ```python
+   except (KeyboardInterrupt, BrokenProcessPool) as e:
+       if isinstance(e, KeyboardInterrupt):
+           logger.warning("Shutdown requested (Ctrl+C), cleaning up...")
+       else:
+           logger.warning("Process pool interrupted, cleaning up...")
+   ```
+
+**Result:** Ctrl+C shows single "Shutdown requested" message, no stack traces
+
+### Phase 6: Judge Prompt Enhancement
+
+**Goal:** Require judges to explain why points are deducted
+
+**Steps:**
+1. Update Phase 3 instructions:
+   ```markdown
+   - notes: **REQUIRED** - Explain your score. For scores below 1.0, you MUST clearly
+     explain what is missing or incorrect and why points were deducted. Be specific
+     about what needs to be fixed or improved.
+   ```
+
+2. Update JSON schema examples to emphasize explanation requirement
+
+**Result:** Judges now explicitly state what's missing and why scores are reduced
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Successful Multi-Judge Execution
+
+**Command:**
+```bash
+pixi run python scripts/run_e2e_experiment.py \
+    --tiers-dir tests/fixtures/tests/test-001 \
+    --tiers T0 \
+    --runs 1 \
+    --add-judge sonnet-4-5 \
+    --add-judge haiku-4-5
+```
+
+**Result:**
+- 3 judges executed: opus-4-5 (primary), sonnet-4-5, haiku-4-5
+- Directory structure: `judge_01/`, `judge_02/`, `judge_03/`
+- Consensus score: simple average of all judge scores
+- Consensus passed: majority vote (2 out of 3 = passed)
+- Report shows both consensus summary and individual judge tables
+
+### Clean Ctrl+C Behavior
+
+**Before fix:**
+```
+^C[multiple stack traces from ProcessPoolExecutor workers]
+Exception in thread Thread-1:
+Traceback (most recent call last):
+  [50+ lines of stack traces from child processes]
+```
+
+**After fix:**
+```
+^C2026-01-08 15:43:35 [WARNING] scylla.e2e.runner: Shutdown requested (Ctrl+C), cleaning up...
+```
+
+### Consensus Calculation Parameters
+
+**Algorithm:**
+- **Score:** Simple average of all valid judge scores
+- **Passed:** Majority vote (>50% of judges must pass)
+- **Grade:** Computed from consensus score using standard grading scale
+
+**Grading Scale:**
+- S: 1.00
+- A: 0.80 - 0.99
+- B: 0.60 - 0.79
+- C: 0.40 - 0.59
+- D: 0.20 - 0.39
+- F: 0.00 - 0.19
+
+**Example:**
+- Judge 1 (Opus): 0.90 (A), passed ✅
+- Judge 2 (Sonnet): 0.80 (A), passed ✅
+- Judge 3 (Haiku): 0.70 (B), passed ✅
+- **Consensus:** 0.80 (A), passed ✅ (3/3 judges passed)
+
+## Files Modified
+
+| File | Changes |
+| ------ | --------- |
+| `scripts/run_e2e_experiment.py` | Added `--add-judge` argument, model resolver, config assembly |
+| `src/scylla/e2e/models.py` | `judge_model` → `judge_models`, added `JudgeResultSummary`, updated `RunResult`, added backward compatibility |
+| `src/scylla/e2e/subtest_executor.py` | Multi-judge loop, consensus calculation, clean shutdown handling |
+| `src/scylla/e2e/runner.py` | Exception handling for clean Ctrl+C |
+| `src/scylla/e2e/run_report.py` | Per-judge tables with links, consensus summary |
+| `src/scylla/judge/prompts.py` | Updated prompt to require deduction explanations |
+| `tests/unit/e2e/test_resume.py` | Updated fixture to use `judge_models` |
+
+## Key Insights
+
+1. **Consensus is simpler than you think:** Simple average + majority vote works well for LLM judges. Don't over-engineer.
+
+2. **Directory structure matters:** Using `judge_run_number` parameter to create separate directories (judge_01/, judge_02/) makes multi-judge support clean and backward compatible.
+
+3. **Dataclass field ordering is strict:** Optional fields must always come after required fields, regardless of whether they use `field(default_factory=...)` or simple defaults.
+
+4. **Import hierarchy is important:** Exception classes in Python stdlib may not be at the top-level module. Always check submodules.
+
+5. **CLI flexibility improves UX:** `nargs="?"` with `const=` allows both `--add-judge` (default) and `--add-judge model-name` (explicit), making the tool more user-friendly.
+
+6. **Clean shutdown requires multiple layers:** You need exception handling in both the executor (where futures are managed) and the runner (where the executor is called).
+
+7. **Backward compatibility is free:** By checking `if judges and len(judges) > 1`, single-judge behavior remains unchanged, making this a zero-risk addition.
+
+8. **Backward compatibility in load() is critical:** When renaming fields that are persisted, always add migration logic in the `load()` method to handle old data formats.
+
+## Testing Checklist
+
+- [x] Single judge still works (backward compatibility)
+- [x] `--add-judge` adds default opus-4-5
+- [x] `--add-judge sonnet-4-5` resolves shortcut correctly
+- [x] Multiple `--add-judge` flags stack correctly
+- [x] Consensus score is simple average of all judges
+- [x] Consensus passed uses majority vote
+- [x] Report shows consensus summary for multi-judge
+- [x] Report shows individual judge tables with links
+- [x] Ctrl+C exits cleanly without stack traces
+- [x] Judge directories created correctly (judge_01/, judge_02/)
+- [x] Judge prompt includes deduction explanations
+- [x] Unit tests pass with backward compatibility
+
+## Related Skills
+
+- `judge-protocol` - Base judge evaluation protocol
+- `e2e-evaluation-framework` - E2E testing infrastructure
+- `consensus-algorithms` - Voting and aggregation methods
+- `clean-multiprocessing-shutdown` - Handling process pool interruptions
+
+## References
+
+- PR: https://github.com/HomericIntelligence/ProjectScylla/pull/160
+- Python docs: `argparse.nargs="?"` behavior
+- Python docs: `concurrent.futures.process.BrokenProcessPool`
+- Python docs: dataclass field ordering
+
+---
+
+## Superseded from skill-hybrid-llm-judge-with-granular-scoring
+
+---
+name: skill-hybrid-llm-judge-with-granular-scoring
+description: Hybrid LLM judge evaluation system combining objective checklists (80%) with subjective engineering judgment (20%) to achieve low-variance (<10%) granular scoring
+category: evaluation
+date: 2026-01-10
+version: 1.0.0
+user-invocable: false
+---
+# Skill: Hybrid LLM Judge with Granular Scoring
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-01-10 |
+| **Objective** | Reduce LLM judge variance while maintaining quality assessment through hybrid evaluation |
+| **Outcome** | ✅ Variance reduced from 14% → 6%, granular scoring working, multi-run reporting added |
+| **Primary Innovation** | Hybrid 80/20 split: checklist (objective) + subjective (engineering judgment) |
+| **Key Metric** | Achieved <10% variance target for identical implementations |
+
+## When to Use This Skill
+
+Use this approach when you need to:
+
+1. **Reduce judge variance** - Identical outputs getting different scores (>10% variance)
+2. **Balance objectivity with judgment** - Need both measurable criteria AND quality assessment
+3. **Enable continuous scoring** - Want fine-grained scores (0.82, 1.7) not just discrete (0, 0.5, 1)
+4. **Support multi-run analysis** - Need grade distribution and consistency metrics
+5. **Maintain transparency** - Require category-level score breakdown
+
+**Do NOT use** when:
+- Tasks are purely objective (use pure checklist)
+- Variance doesn't matter (simple pass/fail sufficient)
+- No engineering judgment needed (automated tests work)
+
+## Verified Workflow
+
+### 1. Design Hybrid Rubric (80% Checklist / 20% Subjective)
+
+**File**: `tests/fixtures/tests/{task}/expected/rubric.yaml`
+
+```yaml
+categories:
+  functional:
+    weight: 0.35
+    scoring_type: "checklist"  # Objective, measurable
+    items:
+      - id: F1
+        check: "File hello.py exists in workspace root"
+        points: 1.0
+
+      - id: F2
+        check: "Running `python hello.py` produces correct output"
+        points: 1.0
+
+  code_quality:
+    weight: 0.20
+    scoring_type: "checklist"
+    items:
+      - id: Q1
+        check: "Python syntax is valid"
+        points: 1.0
+
+      - id: Q2
+        check: "Code is idiomatic Python"
+        points: 1.0
+
+  overall_quality:
+    weight: 0.20  # Subjective component
+    scoring_type: "subjective"
+    items:
+      - id: OQ1
+        check: "Overall engineering judgment: appropriateness, maintainability, clarity"
+        points: 2.0  # Larger scale for granularity
+
+grading:
+  pass_threshold: 0.60
+  grade_scale:
+    S: 0.95
+    A: 0.80
+    B: 0.60
+    C: 0.40
+    D: 0.20
+    F: 0.0
+```
+
+**Key Principles**:
+- Checklist categories: Binary/near-binary (80% total weight)
+- Subjective categories: Continuous scale with 2.0+ points (20% total weight)
+- N/A conditions for environmental factors
+
+### 2. Update Judge System Prompt
+
+**File**: `config/judge/system_prompt.md`
+
+**Critical sections**:
+
+```markdown
+## Evaluation Methodology
+
+### Two Scoring Types
+
+1. **Checklist Categories** (`scoring_type: "checklist"`)
+   - Award ANY value between 0 and max
+   - Proportional to satisfaction: 0.3, 0.7, 0.85, etc.
+   - NOT limited to 0, 0.5, 1.0
+
+2. **Subjective Categories** (`scoring_type: "subjective"`)
+   - Continuous scale (e.g., 0.0 to 2.0)
+   - Anchored examples at multiple levels
+   - Engineering judgment
+
+### Anchored Examples (max = 2.0)
+
+- **2.0**: Exceptional - perfectly appropriate
+- **1.7**: Excellent - minor improvements possible
+- **1.4**: Good - solid with some complexity
+- **1.0**: Acceptable - functional with concerns
+- **0.6**: Marginal - significant issues
+- **0.3**: Poor - barely functional
+- **0.0**: Unacceptable - broken
+```
+
+**Why anchors matter**: Without them, judges default to 0/0.5/1 discrete scoring.
+
+### 3. Implement Grade Aggregation (Multi-Run)
+
+**File**: `scylla/e2e/models.py`
+
+Add to `SubTestResult`:
+```python
+@dataclass
+class SubTestResult:
+    # ... existing fields ...
+    grade_distribution: dict[str, int] | None = None  # {"A": 8, "B": 2}
+    modal_grade: str | None = None
+    min_grade: str | None = None
+    max_grade: str | None = None
+```
+
+**File**: `scylla/e2e/subtest_executor.py`
+
+In `_aggregate_results()`:
+```python
+# Aggregate grades
+grades = [r.judge_grade for r in runs if r.judge_grade]
+if grades:
+    # Distribution
+    grade_distribution = {}
+    for g in grades:
+        grade_distribution[g] = grade_distribution.get(g, 0) + 1
+
+    # Modal (most common)
+    modal_grade = max(grade_distribution, key=grade_distribution.get)
+
+    # Range (F=worst, S=best)
+    grade_order = ["F", "D", "C", "B", "A", "S"]
+    grade_indices = [grade_order.index(g) for g in grades if g in grade_order]
+    if grade_indices:
+        min_grade = grade_order[min(grade_indices)]
+        max_grade = grade_order[max(grade_indices)]
+```
+
+### 4. Update Reports
+
+**File**: `scylla/e2e/run_report.py`
+
+Add after runs table:
+```python
+if result.grade_distribution:
+    grade_order = ["S", "A", "B", "C", "D", "F"]
+    sorted_dist = sorted(
+        result.grade_distribution.items(),
+        key=lambda x: grade_order.index(x[0]) if x[0] in grade_order else 99,
+    )
+    dist_str = ", ".join(f"{g}={c}" for g, c in sorted_dist)
+    md_lines.append(f"**Distribution**: {dist_str}")
+    md_lines.append(f"**Modal Grade**: {result.modal_grade}")
+    md_lines.append(f"**Grade Range**: {result.min_grade} - {result.max_grade}")
+```
+
+### 5. Test and Calibrate
+
+```bash
+# Run with multiple attempts to test variance
+pixi run python scripts/run_e2e_experiment.py \
+  --tiers-dir tests/fixtures/tests/test-001 \
+  --tiers T0 \
+  --runs 3 \
+  --parallel 3
+
+# Check variance
+jq '.summary | {mean: .mean_score, median: .median_score, std_dev: .std_dev, distribution: .grade_distribution}' \
+  results/latest/T0/*/report.json
+
+# Target: std_dev < 0.03 (3% variance)
+```
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
+## Failed Attempts & Lessons Learned
+| Attempt | Issue | Resolution |
+| --------- | ------- | ------------ |
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
+### ❌ Pure Checklist Approach
+**What we tried**: 100% checklist with discrete 0/0.5/1 scoring
+
+**Why it failed**:
+- Too rigid - couldn't capture overall code quality
+- Environmental noise penalized agents (pre-commit hooks, __pycache__)
+- No engineering judgment capability
+
+**Lesson**: Need subjective component for holistic quality assessment
+
+### ❌ Pure Subjective Grading
+**What we tried**: Vague criteria like "code quality: 0-1 score"
+
+**Why it failed**:
+- High variance (14% for identical outputs)
+- Non-deterministic weights per criterion
+- No reference points for scores
+
+**Lesson**: Need objective anchors to reduce variance
+
+### ❌ Discrete Scoring Only (0, 0.5, 1)
+**What we tried**: Limited judges to three score values
+
+**Why it failed**:
+- Lost granularity - "good but not perfect" collapsed to 0.5
+- Couldn't distinguish quality levels
+- Partial credit impossible
+
+**Lesson**: Continuous scoring with anchored examples essential
+
+### ⚠️ Initial Weight Distribution
+**What we tried**: 50/50 checklist/subjective split
+
+**Why suboptimal**:
+- Too much subjective weight increased variance
+- 80/20 split found to be optimal balance
+
+**Lesson**: Majority checklist (objective) with minority subjective (judgment)
+
+## Results & Key Parameters
+
+### Variance Reduction
+
+| Metric | Before | After | Target |
+| -------- | -------- | ------- | -------- |
+| Variance (identical outputs) | 14% | 6% | <10% |
+| Score range | 0.74-0.88 | 0.81-0.87 | ±0.05 |
+| Scoring resolution | 3 values | Continuous | >10 distinct |
+
+### Test Results (test-001, 24 subtests)
+
+**Fractional scores observed**:
+- Checklist: 0.8196, 0.8625, 0.867
+- Subjective: 1.0, 1.7, 1.8 (on 2.0 scale)
+
+**Grade distribution** (3 runs):
+```
+Distribution: A=3
+Modal Grade: A
+Grade Range: A - A
+```
+
+### Critical Configuration Values
+
+**Weight Distribution**:
+```yaml
+functional: 0.35        # Core functionality
+code_quality: 0.20      # Objective quality
+proportionality: 0.15   # Scope appropriateness
+build_pipeline: 0.10    # CI/CD compliance
+overall_quality: 0.20   # Subjective judgment ← KEY
+```
+
+**Subjective Scale**:
+- Use 2.0+ points (not 1.0)
+- Provides granularity: 1.7 ≠ 1.8 ≠ 2.0
+
+**Grade Ordering**:
+```python
+["F", "D", "C", "B", "A", "S"]  # For min/max calculation
+```
+
+## Implementation Checklist
+
+When implementing this system:
+
+- [ ] Create hybrid rubric (80% checklist, 20% subjective)
+- [ ] Add `scoring_type` field to all categories
+- [ ] Update judge system prompt with anchored examples
+- [ ] Implement N/A handling for environmental factors
+- [ ] Add grade aggregation fields to data models
+- [ ] Update report generation (markdown + JSON)
+- [ ] Test with multiple runs (min 3)
+- [ ] Verify variance < 10%
+- [ ] Check for fractional scores in output
+- [ ] Validate backward compatibility
+
+## Files Modified
+
+**Core Evaluation**:
+- `config/judge/system_prompt.md` - Judge instructions
+- `tests/fixtures/tests/*/expected/rubric.yaml` - Task-specific rubrics
+
+**Models & Logic**:
+- `scylla/e2e/models.py` - Added grade fields to SubTestResult
+- `scylla/e2e/subtest_executor.py` - Grade aggregation logic
+- `scylla/e2e/llm_judge.py` - Rubric path parameter, parsing
+
+**Reporting**:
+- `scylla/e2e/run_report.py` - Grade statistics display
+
+## References
+
+- [Anthropic: Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)
+- Anthropic recommendation: Combine multiple grader types (code-based + model-based)
+- ProjectScylla implementation: `docs/eval_hybrid_approach.md`
+- Test results: `results/2026-01-10T15-08-06-test-001/` (24 subtests, 6% variance)
+
+## Quick Start
+
+```bash
+# 1. Design rubric with scoring_type fields
+vim tests/fixtures/tests/my-task/expected/rubric.yaml
+
+# 2. Update system prompt if needed (already done in this implementation)
+# No action required - config/judge/system_prompt.md already updated
+
+# 3. Run evaluation with multiple attempts
+pixi run python scripts/run_e2e_experiment.py \
+  --tiers-dir tests/fixtures/tests/my-task \
+  --runs 5 \
+  --tiers T0
+
+# 4. Check grade statistics
+cat results/latest/T0/*/report.md | grep -A 5 "Grade Statistics"
+
+# 5. Verify variance
+jq '.summary | {std_dev, distribution: .grade_distribution}' \
+  results/latest/T0/*/report.json
+```
+
+## Troubleshooting
+
+**Problem**: Still seeing only 0/0.5/1 scores
+
+**Solution**: Check system prompt includes "Award ANY value between 0 and max"
+
+---
+
+**Problem**: High variance still present (>10%)
+
+**Solutions**:
+1. Increase checklist weight (reduce subjective %)
+2. Add more anchored examples
+3. Make checklist criteria more objective
+4. Check for environmental factors not marked N/A
+
+---
+
+**Problem**: Grade distribution not showing
+
+**Solution**: Ensure `grade_distribution` field added to SubTestResult and passed from _aggregate_results()
+
+---
+
+**Problem**: Judges still using discrete 0/0.5/1
+
+**Solution**: Add explicit instruction: "Do not limit yourself to 0, 0.5, or 1.0" in system prompt
+
+## Success Indicators
+
+✅ Variance < 10% for identical outputs
+✅ Fractional scores appearing (0.82, 1.7, not just 0.5/1.0)
+✅ Grade distribution showing counts
+✅ Subjective category uses 2.0 scale with values like 1.7, 1.8
+✅ N/A items excluded from scoring
+✅ Backward compatible (old judgments still parse)
+
+## Related Skills
+
+- `evaluation/llm-judge-calibration` - Calibrating judges against human experts
+- `evaluation/variance-analysis` - Analyzing and debugging score variance
+- `evaluation/rubric-design` - Designing effective evaluation rubrics
+
+---
+
+## Superseded from fair-evaluation-baseline
+
+---
+name: fair-evaluation-baseline
+description: Implement baseline pipeline capture and regression detection to distinguish
+  agent-introduced failures from pre-existing issues in E2E evaluations
+category: evaluation
+date: 2025-02-15
+version: 1.0.0
+user-invocable: false
+---
+# Fair Evaluation Baseline
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2025-02-15 |
+| **Objective** | Implement baseline pipeline regression validation to distinguish agent-introduced failures from pre-existing issues |
+| **Outcome** | ✅ Successfully implemented with 367 additions across 8 files, 100% test pass rate |
+| **Context** | E2E evaluation framework (ProjectScylla) |
+| **Duration** | ~2 hours |
+
+## Problem Statement
+
+E2E evaluation pipelines run build/lint/test **only after** the agent completes, with no "before" snapshot. This creates unfair evaluation where:
+
+- Agent that **breaks** a passing build gets same penalty as
+- Agent that **inherits** a pre-existing failure
+
+Without baseline comparison, judges cannot distinguish regressions (agent broke it) from pre-existing failures (it was already broken).
+
+## When to Use This Skill
+
+Use this approach when:
+
+- ✅ Building evaluation frameworks that test agents against existing codebases
+- ✅ Need to distinguish agent-introduced failures from inherited issues
+- ✅ Want fair evaluation that doesn't penalize agents for pre-existing problems
+- ✅ Implementing pipeline state comparison (before/after)
+- ✅ Designing LLM judge systems that need regression context
+
+Don't use when:
+
+- ❌ Evaluating against clean-slate environments (no pre-existing state)
+- ❌ Only care about absolute pass/fail (not regression detection)
+- ❌ Pipeline execution is too expensive to run twice
+
+## Solution Architecture
+
+### Core Pattern: Capture → Persist → Compare → Instruct
+
+```
+1. CAPTURE: Run pipeline before agent touches code
+2. PERSIST: Save baseline to {results_dir}/pipeline_baseline.json
+3. COMPARE: Present both baseline and post-agent results to judge
+4. INSTRUCT: Guide judge on regression vs pre-existing vs improvement
+```
+
+### Key Design Decisions
+
+**Decision 1: Single Capture, Multiple Runs**
+
+- Baseline captured **once** before first run
+- Reused across all runs in subtest (not re-captured per run)
+- Rationale: Baseline state is constant, saves execution time
+
+**Decision 2: Checkpoint-Aware Persistence**
+
+- Save baseline immediately after capture
+- Load on checkpoint resume (skip re-capture if file exists)
+- Rationale: Avoid re-running expensive pipeline operations
+
+**Decision 3: Judge Instruction vs Code Enforcement**
+
+- Put regression logic in **judge system prompt**, not in scoring code
+- Rationale: Flexible, allows judge to use reasoning, easier to iterate
+
+**Decision 4: Defensive Optional Parameter**
+
+- `baseline_pipeline_str` remains optional in code
+- Judge prompt assumes it's always present
+- Rationale: Code stays defensive, judge instructions stay clear
+
+## Verified Workflow
+
+### Phase 1: Data Model Extension
+
+Add baseline summary field to result model:
+
+```python
+# scylla/e2e/models.py
+class E2ERunResult(BaseModel):
+    # ... existing fields ...
+    baseline_pipeline_summary: dict[str, Any] | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            # ... existing fields ...
+            "baseline_pipeline_summary": self.baseline_pipeline_summary,
+        }
+```
+
+**Pattern**: Add optional field with sensible default (None)
+
+### Phase 2: Persistence Helpers
+
+Create module-level helpers for save/load:
+
+```python
+# scylla/e2e/subtest_executor.py
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from scylla.e2e.llm_judge import BuildPipelineResult
+
+def _save_pipeline_baseline(results_dir: Path, result: "BuildPipelineResult") -> None:
+    """Save pipeline baseline result to JSON."""
+    baseline_path = results_dir / "pipeline_baseline.json"
+    baseline_path.write_text(json.dumps(result.model_dump(), indent=2))
+    logger.info(f"Saved pipeline baseline to {baseline_path}")
+
+def _load_pipeline_baseline(results_dir: Path) -> "BuildPipelineResult | None":
+    """Load pipeline baseline result from JSON."""
+    from scylla.e2e.llm_judge import BuildPipelineResult
+
+    baseline_path = results_dir / "pipeline_baseline.json"
+    if not baseline_path.exists():
+        return None
+
+    try:
+        data = json.loads(baseline_path.read_text())
+        return BuildPipelineResult(**data)
+    except Exception as e:
+        logger.warning(f"Failed to load baseline: {e}")
+        return None
+```
+
+**Pattern**: Forward-declare type with TYPE_CHECKING to avoid circular imports
+
+### Phase 3: Baseline Capture in Executor
+
+Capture once before first run, after workspace setup:
+
+```python
+# scylla/e2e/subtest_executor.py - in run_subtest()
+
+# Track baseline (captured once before first run)
+pipeline_baseline: "BuildPipelineResult | None" = None
+
+for run_num in range(1, self.config.runs_per_subtest + 1):
+    # ... checkpoint resume logic ...
+
+    # Setup workspace
+    _setup_workspace(...)
+    _commit_test_config(workspace)
+
+    # Capture baseline once
+    if pipeline_baseline is None:
+        # Try checkpoint resume first
+        pipeline_baseline = _load_pipeline_baseline(results_dir)
+
+        # Capture if not found
+        if pipeline_baseline is None:
+            from scylla.e2e.llm_judge import _run_build_pipeline
+
+            _phase_log("BASELINE", "Capturing pipeline baseline")
+            pipeline_baseline = _run_build_pipeline(
+                workspace=workspace,
+                language=tier_config.language,
+            )
+
+            # Save for checkpoint resume
+            _save_pipeline_baseline(results_dir, pipeline_baseline)
+
+            # Log status
+            baseline_status = (
+                "ALL PASSED ✓" if pipeline_baseline.all_passed
+                else "SOME FAILED ✗"
+            )
+            logger.info(f"Pipeline baseline: {baseline_status}")
+
+    # Execute run with baseline
+    run_result = self._execute_single_run(
+        # ... other params ...
+        pipeline_baseline=pipeline_baseline,
+    )
+```
+
+**Pattern**: Checkpoint-aware lazy initialization
+
+### Phase 4: Thread Through Execution Pipeline
+
+Add `pipeline_baseline` parameter at each level:
+
+```python
+# scylla/e2e/subtest_executor.py
+def _execute_single_run(
+    self,
+    # ... existing params ...
+    pipeline_baseline: "BuildPipelineResult | None" = None,
+) -> RunResult:
+    # ... execute agent ...
+
+    # Pass to judge
+    judgment, judges = _run_judge(
+        # ... other params ...
+        pipeline_baseline=pipeline_baseline,
+    )
+
+    # Convert to summary for result
+    baseline_summary = None
+    if pipeline_baseline:
+        baseline_summary = {
+            "all_passed": pipeline_baseline.all_passed,
+            "build_passed": pipeline_baseline.build_passed,
+            "format_passed": pipeline_baseline.format_passed,
+            "test_passed": pipeline_baseline.test_passed,
+        }
+
+    return RunResult(
+        # ... other fields ...
+        baseline_pipeline_summary=baseline_summary,
+    )
+```
+
+```python
+# scylla/e2e/judge_runner.py
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from scylla.e2e.llm_judge import BuildPipelineResult
+
+def _run_judge(
+    # ... existing params ...
+    pipeline_baseline: "BuildPipelineResult | None" = None,
+) -> tuple[dict, list[JudgeResultSummary]]:
+    judge_result = run_llm_judge(
+        # ... other params ...
+        pipeline_baseline=pipeline_baseline,
+    )
+```
+
+```python
+# scylla/e2e/llm_judge.py
+def run_llm_judge(
+    # ... existing params ...
+    pipeline_baseline: "BuildPipelineResult | None" = None,
+) -> JudgeResult:
+    # Format baseline
+    baseline_pipeline_str = None
+    if pipeline_baseline:
+        baseline_status = (
+            "ALL PASSED ✓" if pipeline_baseline.all_passed
+            else "SOME FAILED ✗"
+        )
+        baseline_pipeline_str = (
+            f"**Overall Status**: {baseline_status}\n\n"
+            f"{pipeline_baseline.to_context_string()}"
+        )
+
+    # Build judge prompt
+    judge_prompt = build_task_prompt(
+        # ... other params ...
+        baseline_pipeline_str=baseline_pipeline_str,
+    )
+```
+
+**Pattern**: Thread optional parameter through call stack, format at final layer
+
+### Phase 5: Prompt Construction
+
+Add baseline section before post-agent section:
+
+```python
+# scylla/judge/prompts.py
+def build_task_prompt(
+    # ... existing params ...
+    baseline_pipeline_str: str | None = None,
+) -> str:
+    sections = []
+
+    # ... rubric, task, output, workspace sections ...
+
+    # Baseline BEFORE post-agent
+    if baseline_pipeline_str:
+        sections.append(
+            f"## Baseline Pipeline Results (Before Agent)\n\n"
+            f"*This shows the build/lint/test status BEFORE the agent "
+            f"made any changes. Use this to distinguish regressions "
+            f"(things that got worse) from pre-existing failures.*\n\n"
+            f"{baseline_pipeline_str}"
+        )
+
+    # Post-agent results
+    if pipeline_result_str:
+        sections.append(
+            f"## Build/Lint/Test Pipeline Results (After Agent)\n\n"
+            f"{pipeline_result_str}"
+        )
+
+    return "\n\n".join(sections)
+```
+
+**Pattern**: Optional sections with explanatory context
+
+### Phase 6: Judge Instructions
+
+Add regression handling section to system prompt:
+
+```markdown
+<!-- config/judge/system_prompt.md -->
+
+<baseline_regression>
+Baseline pipeline results (before agent) and post-agent pipeline results
+are provided. Evaluate pipeline failures based on whether they are
+regressions, pre-existing, or improvements:
+
+__Regressions__ (passed in baseline → failed after agent): These are NEW
+failures introduced by the agent's changes. Penalize these heavily as the
+agent broke previously working functionality. This indicates the agent did
+not properly validate their changes.
+
+__Pre-existing failures__ (failed in baseline → failed after agent): These
+failures existed before the agent started. Mark the corresponding rubric
+items as N/A and do not penalize the agent for them, unless the task
+explicitly required fixing these failures.
+
+__Improvements__ (failed in baseline → passed after agent): The agent fixed
+a pre-existing failure. Recognize this positively in your evaluation,
+especially if the task did not explicitly require fixing pipeline issues.
+
+When evaluating build_pipeline rubric items, check the baseline first to
+determine if failures are regressions or pre-existing before scoring.
+</baseline_regression>
+```
+
+**Pattern**: Clear categorization with explicit actions for each scenario
+
+### Phase 7: Rubric Updates (Optional)
+
+Update rubric items to reference regression behavior:
+
+```yaml
+# tests/fixtures/tests/test-001/expected/rubric.yaml
+build_pipeline:
+  weight: 0.10
+  scoring_type: "checklist"
+  items:
+    - id: B1
+      check: "Python build/syntax check passes (or was already failing in baseline)"
+      points: 1.0
+      na_condition: "Build already failed in baseline"
+
+    - id: B2
+      check: "Python format check passes (or was already failing in baseline)"
+      points: 1.0
+      na_condition: "ruff not available OR lint already failed in baseline"
+```
+
+**Pattern**: Informational only - judge follows system prompt instructions
+
+## Testing Strategy
+
+### Unit Test Coverage
+
+Create comprehensive test file covering all integration points:
+
+```python
+# tests/unit/e2e/test_baseline_regression.py
+
+# 1. Prompt rendering with baseline
+def test_build_task_prompt_with_baseline():
+    """Baseline section rendered when provided."""
+
+# 2. Prompt rendering without baseline
+def test_build_task_prompt_without_baseline():
+    """No baseline section when None (backward compat)."""
+
+# 3. Section ordering
+def test_build_task_prompt_baseline_section_before_post_agent():
+    """Baseline appears before post-agent."""
+
+# 4. Persistence round-trip
+def test_save_load_pipeline_baseline():
+    """Save and load baseline from JSON."""
+
+# 5. Missing file handling
+def test_load_pipeline_baseline_missing_file():
+    """Returns None when file doesn't exist."""
+
+# 6. Invalid JSON handling
+def test_load_pipeline_baseline_invalid_json():
+    """Returns None and logs warning for bad JSON."""
+
+# 7. Result model field inclusion
+def test_run_result_baseline_field():
+    """E2ERunResult.to_dict() includes baseline_pipeline_summary."""
+
+# 8. Result model field optional
+def test_run_result_baseline_field_none():
+    """baseline_pipeline_summary can be None."""
+
+# 9. Summary conversion
+def test_baseline_summary_conversion():
+    """BuildPipelineResult correctly converted to summary dict."""
+```
+
+**Test Result**: 9/9 passing, 100% success rate
+
+### Integration Test Strategy
+
+Run existing test suites to verify no regressions:
+
+```bash
+# New baseline tests
+pixi run python -m pytest tests/unit/e2e/test_baseline_regression.py -v
+
+# Existing e2e tests (verify no breakage)
+pixi run python -m pytest tests/unit/e2e/ -v
+
+# Existing prompt tests (verify backward compat)
+pixi run python -m pytest tests/unit/judge/test_prompts.py -v
+
+# Code quality
+pre-commit run --all-files
+```
+
+**Result**: 454 e2e tests + 39 prompt tests + 9 new tests = 502 total passing
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Metrics
+
+### Implementation Metrics
+
+| Metric | Value |
+| -------- | ------- |
+| **Files Changed** | 8 files |
+| **Lines Added** | 367 |
+| **Lines Removed** | 9 |
+| **Test Coverage** | 9 new tests, 100% pass rate |
+| **Existing Tests** | 502 tests, 0 regressions |
+| **Pre-commit Status** | All hooks passing |
+
+### Code Distribution
+
+```
+scylla/e2e/subtest_executor.py    +89  (baseline capture & persistence)
+tests/unit/e2e/test_baseline_regression.py  +230  (comprehensive tests)
+scylla/judge/prompts.py           +12  (baseline section rendering)
+config/judge/system_prompt.md    +12  (regression instructions)
+scylla/e2e/llm_judge.py           +9   (baseline formatting)
+scylla/e2e/judge_runner.py        +7   (parameter threading)
+scylla/e2e/models.py              +2   (baseline_pipeline_summary field)
+tests/fixtures/test-001/rubric.yaml  +6   (example rubric updates)
+```
+
+### Performance Characteristics
+
+| Aspect | Impact |
+| -------- | -------- |
+| **Baseline Capture** | Single execution per subtest (before first run) |
+| **Checkpoint Resume** | Skips re-capture if baseline file exists |
+| **Memory** | Minimal - single BuildPipelineResult object per subtest |
+| **Disk** | ~2KB per subtest (pipeline_baseline.json) |
+| **Execution Time** | +1 pipeline execution per subtest (~10-30s depending on language) |
+
+### Key Parameters
+
+```python
+# Baseline capture location
+results_dir / "pipeline_baseline.json"
+
+# Baseline summary structure
+{
+    "all_passed": bool,
+    "build_passed": bool,
+    "format_passed": bool,
+    "test_passed": bool,
+}
+
+# Judge prompt sections (in order)
+1. Rubric
+2. Task
+3. Agent Output
+4. Workspace State
+5. Baseline Pipeline Results (Before Agent)  # NEW
+6. Build/Lint/Test Pipeline Results (After Agent)  # RENAMED
+7. Evaluation instruction
+```
+
+## Common Pitfalls
+
+1. **Circular Import**: Don't import `BuildPipelineResult` at module level in `subtest_executor.py`
+   - ✅ Use TYPE_CHECKING + string annotations
+   - ✅ Import at runtime inside functions
+
+2. **Field Names**: The format check field is `format_passed`, not `lint_passed`
+   - ✅ Always check actual model definition
+   - ❌ Don't assume based on common terminology
+
+3. **Model Structure**: `BuildPipelineResult` has flat structure, not nested check results
+   - ✅ Read model definition before creating test fixtures
+   - ❌ Don't invent non-existent classes
+
+4. **Module Location**: `BuildPipelineResult` is in `llm_judge.py`, not a separate pipeline module
+   - ✅ Use grep to find actual import paths
+   - ❌ Don't assume based on class names
+
+5. **Line Length**: F-strings in multi-line constructs need manual breaking
+   - ✅ Split at natural phrase boundaries
+   - ❌ Don't rely on auto-formatter for f-strings
+
+## Extensions & Variations
+
+### Variation 1: Multi-Level Baselines
+
+For more granular regression detection:
+
+```python
+# Capture baselines at different stages
+pre_agent_baseline = _run_build_pipeline(workspace)
+post_install_baseline = _run_build_pipeline(workspace)  # After deps install
+post_change_baseline = _run_build_pipeline(workspace)  # After code change
+
+# Compare: pre-agent → post-install → post-change
+# Identify: which stage introduced the failure?
+```
+
+### Variation 2: Baseline Diff Visualization
+
+Generate visual diff in judge prompt:
+
+```
+## Pipeline Regression Analysis
+
+| Check  | Baseline | After Agent | Status      |
+|--------|----------|-------------|-------------|
+| Build  | ✅       | ✅          | No change   |
+| Lint   | ❌       | ❌          | Pre-existing|
+| Test   | ✅       | ❌          | REGRESSION  |
+```
+
+### Variation 3: Severity-Weighted Regression
+
+Not all regressions are equal:
+
+```python
+REGRESSION_SEVERITY = {
+    "build": 1.0,      # Breaking build is critical
+    "test": 0.8,       # Breaking tests is serious
+    "format": 0.3,     # Format issues are minor
+    "precommit": 0.5,  # Hook failures are moderate
+}
+
+regression_penalty = sum(
+    REGRESSION_SEVERITY[check]
+    for check in failed_checks
+    if baseline[check] == "passed"
+)
+```
+
+## References
+
+- **PR**: <https://github.com/HomericIntelligence/ProjectScylla/pull/705>
+- **Commit**: 0871e6b - feat(e2e): Add baseline pipeline regression validation
+- **Related Files**:
+  - `scylla/e2e/llm_judge.py` - BuildPipelineResult definition
+  - `scylla/e2e/subtest_executor.py` - Baseline capture logic
+  - `config/judge/system_prompt.md` - Regression evaluation instructions
+
+## Tags
+
+`#evaluation` `#baseline` `#regression-detection` `#fair-evaluation` `#pipeline` `#e2e` `#llm-judge` `#checkpoint-resume` `#type-checking`
+
+---
+
+## Superseded from grading-consolidation
+
+---
+name: grading-consolidation
+description: Eliminate duplicate grading definitions and consolidate to single source
+  of truth
+category: evaluation
+date: 2026-01-01
+version: 1.0.0
+user-invocable: false
+---
+# Grading Infrastructure Consolidation
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-01-19 |
+| **Project** | ProjectScylla |
+| **Objective** | Eliminate duplicate grading definitions and consolidate to single source of truth |
+| **Outcome** | ✅ Successfully removed 241 lines of duplicate code, centralized grading logic |
+| **Context** | E2E evaluation framework grading infrastructure cleanup |
+
+## Overview
+
+This skill documents the process of identifying and eliminating duplicate grading infrastructure across an evaluation codebase, consolidating to a single source of truth with comprehensive test coverage.
+
+## When to Use This Skill
+
+Use this approach when you observe:
+
+1. **Duplicate grading logic** across multiple files (models, judges, evaluators)
+2. **Inconsistent grade thresholds** between different parts of the system
+3. **Configurable grading scales** that are never actually customized
+4. **Hardcoded grade assignment** logic in multiple locations
+5. **Pass threshold defaults** scattered across the codebase
+
+**Trigger phrases:**
+- "Find all locations where grades are assigned"
+- "There should only be one function and one definition"
+- "Check for any more grading duplications"
+- "Ensure grading is consistent across the codebase"
+
+## Verified Workflow
+
+### Phase 1: Initial Discovery
+
+1. **User reports specific grading bug** (e.g., score 0.97 getting S grade instead of A)
+2. **Search for all grade assignment locations**:
+   ```bash
+   # Search for grade assignment patterns
+   grep -r "def.*grade" src/
+   grep -r "assign.*grade" src/
+   grep -r ">= 0.95" src/  # Look for threshold comparisons
+   ```
+
+3. **Identify duplicate implementations**:
+   - Multiple `GradeScale` classes
+   - Multiple `assign_letter_grade()` methods
+   - Inconsistent thresholds (>= 0.95 vs >= 1.0 vs == 1.0)
+
+### Phase 2: Fix Immediate Bug
+
+1. **Update canonical grade assignment function**:
+   - Change S grade threshold from `>= 1.0` to `== 1.0`
+   - Add assertions: `assert 0.0 <= score <= 1.0`
+
+2. **Replace duplicate grading logic** with calls to canonical function:
+   ```python
+   # BEFORE (duplicate logic)
+   if score >= 0.95:
+       return "S"
+   elif score >= 0.80:
+       return "A"
+
+   # AFTER (use canonical function)
+   from scylla.metrics.grading import assign_letter_grade
+   grade = assign_letter_grade(score)
+   ```
+
+### Phase 3: Holistic Audit
+
+1. **Search for all grade-related patterns**:
+   ```bash
+   # Find grade literals
+   grep -r '"S".*"A".*"B"' src/
+
+   # Find threshold numbers
+   grep -r "0\.80\|0\.60\|0\.40\|0\.20" src/
+
+   # Find grade scale definitions
+   grep -r "class.*GradeScale" src/
+   grep -r "grade_scale" src/
+   ```
+
+2. **Categorize findings**:
+   - ❌ **Duplicates to remove**: Multiple GradeScale classes, duplicate assign_letter_grade() methods
+   - ✅ **Legitimate different uses**: Grade ordering arrays (for sorting), grade validation (Pydantic), grade-to-points conversion (averaging)
+
+3. **Document removals in commit**:
+   - Track lines removed: "Removed 241 lines of duplicate code"
+   - List deleted classes/methods
+   - Update imports and exports
+
+### Phase 4: Consolidate Constants
+
+1. **Create single constant for pass threshold**:
+   ```python
+   # In metrics/grading.py
+   DEFAULT_PASS_THRESHOLD = 0.60
+   ```
+
+2. **Replace all hardcoded defaults**:
+   ```python
+   # BEFORE
+   pass_threshold: float = Field(default=0.60, ...)
+
+   # AFTER
+   from scylla.metrics.grading import DEFAULT_PASS_THRESHOLD
+   pass_threshold: float = Field(default=DEFAULT_PASS_THRESHOLD, ...)
+   ```
+
+3. **Export from module's __init__.py**:
+   ```python
+   from scylla.metrics.grading import DEFAULT_PASS_THRESHOLD
+
+   __all__ = [
+       "DEFAULT_PASS_THRESHOLD",
+       # ... other exports
+   ]
+   ```
+
+### Phase 5: Update Documentation
+
+1. **Remove obsolete YAML fields** from documentation:
+   ```yaml
+   # BEFORE
+   grading:
+     pass_threshold: 0.60
+     grade_scale:
+       S: 1.00
+       A: 0.80
+
+   # AFTER
+   grading:
+     pass_threshold: 0.60
+     # Grade scale is centralized in scylla.metrics.grading
+   ```
+
+2. **Document single source of truth**:
+   - Function: `scylla.metrics.grading.assign_letter_grade()`
+   - Constant: `scylla.metrics.grading.DEFAULT_PASS_THRESHOLD`
+   - Documentation: `docs/design/grading-scale.md`
+
+### Phase 6: Comprehensive Testing
+
+1. **Create consistency validation tests**:
+   ```python
+   def test_grade_thresholds_match_documentation():
+       """Ensure code matches documented thresholds."""
+       # Test that assign_letter_grade() returns expected grades
+       # at documented threshold boundaries
+
+   def test_s_grade_requires_perfect_score():
+       """S grade ONLY for exactly 1.0."""
+       assert assign_letter_grade(1.0) == "S"
+       assert assign_letter_grade(0.99) == "A"
+   ```
+
+2. **Update existing tests** to use centralized constant:
+   ```python
+   # BEFORE
+   assert rubric.pass_threshold == 0.60
+
+   # AFTER
+   from scylla.metrics.grading import DEFAULT_PASS_THRESHOLD
+   assert rubric.pass_threshold == DEFAULT_PASS_THRESHOLD
+   ```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Key Insights
+
+### 1. User's Explicit Requirements Matter
+When user states "S grade is ONLY for a 1.0 and not anything else", they mean:
+- Change `>= 1.0` to `== 1.0`
+- Not just documentation fix
+- Actual code behavior change
+
+### 2. Holistic Audit Pattern
+After fixing immediate bug, always:
+1. Search for similar patterns codebase-wide
+2. Distinguish duplicates from legitimate different uses
+3. Create tests to prevent regression
+4. Update documentation to match code
+
+### 3. Single Source of Truth Checklist
+For any centralized logic:
+- ✅ One canonical function/constant in code
+- ✅ One specification in documentation
+- ✅ Tests that validate they stay in sync
+- ✅ All usage points reference the canonical source
+- ✅ No configuration for unused flexibility
+
+### 4. Grade-Related Patterns That Aren't Duplicates
+**Valid different uses:**
+- Grade ordering arrays (for sorting display: S→A→B→C→D→F)
+- Grade validation (Pydantic validators checking valid strings)
+- Grade-to-points conversion (for GPA-style averaging: S=5.0, A=4.0)
+- These serve different purposes than score→grade assignment
+
+## Results & Parameters
+
+### Commits Created
+1. `fix(grading): S grade only for perfect 1.0 scores` - Initial bug fix
+2. `refactor(grading): Remove duplicate GradeScale classes and centralize grading` - Removed 241 lines
+3. `refactor(grading): Consolidate pass threshold to single constant` - Unified defaults
+
+### Code Removed
+- 2× `GradeScale` classes (config/models.py, judge/rubric.py)
+- 1× `Rubric.assign_letter_grade()` method
+- All `grade_scale` fields from Pydantic models
+- 241 total lines of duplicate code
+
+### Code Added
+- `DEFAULT_PASS_THRESHOLD = 0.60` constant
+- `tests/unit/test_grading_consistency.py` - 6 comprehensive tests
+- Score validation: `assert 0.0 <= score <= 1.0`
+
+### Test Results
+```
+75 passed, 1 skipped in 0.34s
+```
+
+### Files Modified
+```
+docs/design/grading-scale.md
+src/scylla/config/models.py
+src/scylla/judge/rubric.py
+src/scylla/metrics/__init__.py
+src/scylla/metrics/grading.py
+src/scylla/e2e/subtest_executor.py
+tests/unit/test_grading_consistency.py
+tests/unit/judge/test_rubric.py
+tests/unit/test_config_loader.py
+```
+
+## Search Commands Used
+
+```bash
+# Find grade assignment patterns
+grep -r "assign.*grade" src/
+grep -r "def.*grade" src/
+
+# Find grade thresholds
+grep -r "0\.80\|0\.60\|0\.40" src/
+grep -r ">= 0.95" src/
+grep -r "== 1.0" src/
+
+# Find grade literals
+grep -r '"S".*"A".*"B"' src/
+
+# Find class definitions
+grep -r "class.*GradeScale" src/
+grep -r "class.*Grading" src/
+
+# Find pass threshold usage
+grep -r "pass_threshold.*0\.60" src/ tests/
+```
+
+## Related Skills
+
+- **holistic-code-audit**: Pattern for finding all instances of duplicated logic
+- **single-source-of-truth**: General deduplication methodology
+- **test-driven-consistency**: Using tests to enforce consistency between code and docs
+
+## Tags
+
+`evaluation` `grading` `deduplication` `refactoring` `consistency` `testing` `single-source-of-truth`
+
+---
+
+## Superseded from industry-grading-scale
+
+---
+name: industry-grading-scale
+description: "Industry-Aligned Grading Scale"
+category: evaluation
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+---
+# Industry-Aligned Grading Scale
+
+Replace academic grading scales with production-readiness focused thresholds.
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-01-02 |
+| Objective | Replace academic A=95%/B=85% grading with industry-aligned scale |
+| Outcome | Centralized grading definition with S/A/B/C/D/F scale |
+
+## When to Use
+
+- Designing rubric scoring systems for AI/code evaluation
+- Replacing academic grading thresholds with production semantics
+- Centralizing grading definitions across multiple rubric files
+- Adding score validation to prevent invalid scores (>1.0)
+
+**Trigger phrases**: "grading scale", "rubric thresholds", "production ready scoring", "centralize grading"
+
+## The Problem with Academic Scales
+
+Academic grading (A=95%, B=85%, C=75%, D=65%) has issues for software evaluation:
+
+1. **Grade inflation**: 95% for an A is unrealistic for complex tasks
+2. **D grade meaningless**: In industry, you pass or fail
+3. **No production semantics**: Academic scales don't map to deployment decisions
+
+## Industry-Aligned Grade Scale
+
+| Grade | Threshold | Label | Description |
+| ------- | ----------- | ------- | ------------- |
+| S | 1.00 | Amazing | Exceptional, above and beyond |
+| A | 0.80 | Excellent | Production ready, no issues |
+| B | 0.60 | Good | Minor improvements possible |
+| C | 0.40 | Acceptable | Functional with issues |
+| D | 0.20 | Marginal | Significant issues |
+| F | 0.00 | Failing | Does not meet requirements |
+
+### Score Interpretation
+
+| Score Range | Action |
+| ------------- | -------- |
+| 1.00 | Ship immediately |
+| 0.80-0.99 | Ship with confidence |
+| 0.60-0.79 | Ship after minor fixes |
+| 0.40-0.59 | Rework required |
+| 0.20-0.39 | Significant rework |
+| 0.00-0.19 | Start over |
+
+## Verified Workflow
+
+### 1. Create Centralized Definition
+
+Create a single source of truth file:
+
+```markdown
+# docs/design/grading-scale.md
+
+| Grade | Threshold | Label | Description |
+|-------|-----------|-------|-------------|
+| S | 1.00 | Amazing | Exceptional, above and beyond |
+| A | 0.80 | Excellent | Production ready |
+| B | 0.60 | Good | Minor improvements possible |
+| C | 0.40 | Acceptable | Functional with issues |
+| D | 0.20 | Marginal | Significant issues |
+| F | 0.00 | Failing | Does not meet requirements |
+```
+
+### 2. Update Schema
+
+```json
+{
+  "grade_scale": {
+    "S": { "description": "Amazing - exceptional", "examples": [1.00] },
+    "A": { "description": "Excellent - production ready", "examples": [0.80] },
+    "B": { "description": "Good - minor improvements", "examples": [0.60] },
+    "C": { "description": "Acceptable - functional with issues", "examples": [0.40] },
+    "D": { "description": "Marginal - significant issues", "examples": [0.20] },
+    "F": { "description": "Failing", "examples": [0.0] }
+  }
+}
+```
+
+### 3. Update Rubric Files
+
+Reference the central definition in each rubric:
+
+```yaml
+grading:
+  pass_threshold: 0.60
+  # Industry-aligned grade scale - see docs/design/grading-scale.md
+  grade_scale:
+    S: 1.00    # Amazing - above and beyond
+    A: 0.80    # Excellent - production ready
+    B: 0.60    # Good - minor improvements possible
+    C: 0.40    # Acceptable - functional with issues
+    D: 0.20    # Marginal - significant issues
+    F: 0.0     # Failing - does not meet requirements
+```
+
+### 4. Add Score Validation
+
+Scores must be in range [0.0, 1.0]. Scores > 1.0 are errors:
+
+```python
+def assign_grade(self, weighted_score: float) -> str:
+    if weighted_score > 1.0 or weighted_score < 0.0:
+        raise RubricValidationError(
+            f"Score must be between 0.0 and 1.0, got {weighted_score}"
+        )
+    if weighted_score >= 1.00: return "S"
+    if weighted_score >= 0.80: return "A"
+    if weighted_score >= 0.60: return "B"
+    if weighted_score >= 0.40: return "C"
+    if weighted_score >= 0.20: return "D"
+    return "F"
+```
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Industry Standards Research
+
+Sources that informed this design:
+
+- **SonarQube**: Quality gates with customizable pass/fail thresholds
+- **LLM Evaluation**: 5-point scales (1-5) with clear descriptors
+- **QA Scorecards**: Pass thresholds with bonus sections for exceptional work
+- **ISO 5055**: Pass/fail based on weakness density thresholds
+
+## Parameters
+
+```yaml
+# Default configuration
+grading:
+  pass_threshold: 0.60  # Good grade = passing
+  grade_scale:
+    S: 1.00
+    A: 0.80
+    B: 0.60
+    C: 0.40
+    D: 0.20
+    F: 0.0
+```
+
+## Files to Update
+
+When implementing this pattern:
+
+1. `docs/design/grading-scale.md` - Central definition (create)
+2. `schemas/rubric.schema.json` - Add S grade to schema
+3. `docs/design/rubric-schema.md` - Update documentation
+4. `src/*/rubric.py` - Update parser with S grade and validation
+5. `tests/**/test_rubric.py` - Add tests for S grade and validation
+6. `**/rubric.yaml` - Update all rubric files
+
+## Related Skills
+
+- `mojo-test-fixture-creation` - Creating test fixtures with rubrics
+- `judge-system-extension` - Extending evaluation systems
+
+---
+
+## Superseded from debug-evaluation-logs
+
+---
+name: debug-evaluation-logs
+description: Improving diagnostic clarity of LLM judge warning messages by adding
+  specific failure details
+category: evaluation
+date: 2026-01-08
+version: 1.0.0
+---
+# Skill: Debug Evaluation Logs
+
+## Overview
+
+| Property | Value |
+| ---------- | ------- |
+| **Date** | 2026-01-08 |
+| **Category** | Evaluation |
+| **Objective** | Improve diagnostic clarity of LLM judge warning messages |
+| **Outcome** | ✅ Success - Two targeted improvements to llm_judge.py |
+| **Files Modified** | `src/scylla/e2e/llm_judge.py` |
+| **Context** | ProjectScylla evaluation infrastructure |
+
+When analyzing evaluation experiment logs, generic warning messages made it difficult to diagnose failures. Log output like "Build pipeline: SOME FAILED" and "Claude CLI failed (exit 1): No error message" provided no actionable information about what actually went wrong.
+
+## When to Use
+
+Apply this pattern when:
+
+1. **Ambiguous failure logs**: Warning messages don't specify what failed
+2. **Missing error context**: Error handlers discard useful diagnostic information
+3. **Composite operations**: Multi-step pipelines don't report which steps failed
+4. **JSON error responses**: Subprocess errors output structured data to stdout instead of stderr
+
+**Trigger phrases**:
+- "The logs don't show what failed"
+- "Warning messages are too generic"
+- "Error says 'No error message'"
+- "Can't tell which pipeline step failed"
+
+## Problem Analysis
+
+### Issue 1: Generic Build Pipeline Warning
+
+**Location**: `src/scylla/e2e/llm_judge.py:596-598`
+
+**Symptoms**:
+```
+[WARNING] Build pipeline: SOME FAILED
+```
+
+No indication which of the 4 pipeline steps (mojo-build, mojo-format, mojo-test, pre-commit) failed.
+
+**Root Cause**:
+The `BuildPipelineResult` dataclass tracked individual step results but didn't expose a summary method for logging.
+
+### Issue 2: Missing Claude CLI Error Messages
+
+**Location**: `src/scylla/e2e/llm_judge.py:693-695`
+
+**Symptoms**:
+```
+[WARNING] LLM judge failed, using fallback: Claude CLI failed (exit 1): No error message
+```
+
+**Root Cause**:
+Claude CLI outputs JSON error responses to stdout (especially with `--output-format text`), not stderr. The error handler only checked stderr, so JSON errors like rate limits were lost.
+
+## Verified Workflow
+
+### Step 1: Add Diagnostic Summary Method
+
+Add a method to composite result objects that summarizes failures:
+
+```python
+@dataclass
+class BuildPipelineResult:
+    mojo_build_passed: bool
+    mojo_format_passed: bool
+    mojo_test_passed: bool
+    precommit_passed: bool
+    all_passed: bool
+    # ... outputs ...
+
+    def get_failure_summary(self) -> str:
+        """Get a summary of which pipeline steps failed."""
+        failed = []
+        if not self.mojo_build_passed:
+            failed.append("mojo-build")
+        if not self.mojo_format_passed:
+            failed.append("mojo-format")
+        if not self.mojo_test_passed:
+            failed.append("mojo-test")
+        if not self.precommit_passed:
+            failed.append("pre-commit")
+        return ", ".join(failed) if failed else "none"
+```
+
+**Why this works**:
+- Returns actionable list of failed components
+- Returns "none" when all pass (clear negative signal)
+- Comma-separated format is grep-friendly
+
+### Step 2: Use Summary in Warning Messages
+
+```python
+if pipeline_result.all_passed:
+    logger.info("Build pipeline: ALL PASSED")
+else:
+    failed_steps = pipeline_result.get_failure_summary()
+    logger.warning(f"Build pipeline: FAILED [{failed_steps}]")
+```
+
+**Before**: `WARNING: Build pipeline: SOME FAILED`
+**After**: `WARNING: Build pipeline: FAILED [mojo-build, mojo-test]`
+
+### Step 3: Check Multiple Error Sources in Priority Order
+
+For subprocesses that may output errors to different streams:
+
+```python
+if result.returncode != 0:
+    error_msg = "No error message"
+
+    # Priority 1: Check stdout for JSON error response
+    if result.stdout:
+        try:
+            data = json.loads(result.stdout.strip())
+            if data.get("is_error"):
+                error_msg = data.get("result", data.get("error", "Unknown JSON error"))
+        except json.JSONDecodeError:
+            # Priority 2: Use plain stdout if not JSON
+            if result.stdout.strip():
+                error_msg = f"stdout: {result.stdout.strip()[:200]}"
+
+    # Priority 3: Fall back to stderr
+    if error_msg == "No error message" and result.stderr:
+        error_msg = result.stderr.strip()
+
+    raise RuntimeError(f"Claude CLI failed (exit {result.returncode}): {error_msg}")
+```
+
+**Key Pattern**: Try to extract structured errors first, then fall back to plain text, checking both stdout and stderr.
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results
+
+### Build Pipeline Warning Output
+
+**Test Case**: Two pipeline steps fail (mojo-build, mojo-test)
+
+```bash
+pixi run python -c "from scylla.e2e.llm_judge import BuildPipelineResult; \
+  r = BuildPipelineResult(False, '', True, '', False, '', True, '', False); \
+  print(r.get_failure_summary())"
+```
+
+**Output**: `mojo-build, mojo-test`
+
+### Log Output Improvement
+
+**Before**:
+```
+2026-01-08 15:54:16 [WARNING] Build pipeline: SOME FAILED
+2026-01-08 15:54:20 [WARNING] LLM judge failed, using fallback: Claude CLI failed (exit 1): No error message
+```
+
+**After**:
+```
+2026-01-08 15:54:16 [WARNING] Build pipeline: FAILED [mojo-build, mojo-test]
+2026-01-08 15:54:20 [WARNING] LLM judge failed, using fallback: Claude CLI failed (exit 1): Rate limit exceeded
+```
+
+## Key Learnings
+
+### 1. Composite Result Patterns
+
+When returning results from multi-step operations, always provide:
+- Individual step results (for programmatic access)
+- Summary method (for human-readable diagnostics)
+
+```python
+@dataclass
+class MultiStepResult:
+    step1_passed: bool
+    step2_passed: bool
+    all_passed: bool
+
+    def get_failure_summary(self) -> str:
+        """Always provide this for logging."""
+        failed = []
+        if not self.step1_passed:
+            failed.append("step1")
+        if not self.step2_passed:
+            failed.append("step2")
+        return ", ".join(failed) if failed else "none"
+```
+
+### 2. Subprocess Error Extraction Priority
+
+For modern CLIs that use `--output-format` flags:
+
+1. **Check stdout for JSON**: Many CLIs output structured errors to stdout
+2. **Check stdout for plain text**: May contain useful diagnostic output
+3. **Check stderr**: Traditional error stream
+4. **Default**: "No error message" (but try the above first)
+
+### 3. Warning Message Format
+
+**Poor**: `"Operation failed"` (no context)
+**Better**: `"Build failed"` (what failed)
+**Best**: `"Build failed [syntax-check, lint]"` (what failed + details)
+
+Use brackets `[]` for machine-parseable details within human messages.
+
+## Testing
+
+### Manual Testing
+
+```bash
+# Test get_failure_summary
+pixi run python -c "from scylla.e2e.llm_judge import BuildPipelineResult; \
+  r = BuildPipelineResult(False, '', True, '', False, '', True, '', False); \
+  print('Failed:', r.get_failure_summary())"
+# Output: Failed: mojo-build, mojo-test
+
+# Syntax check
+python -m py_compile src/scylla/e2e/llm_judge.py
+# Output: ✓ Syntax check passed
+```
+
+### Integration Testing
+
+Run an evaluation experiment with tasks that trigger build failures and verify log output shows specific failed steps.
+
+## Reusable Patterns
+
+### Pattern 1: Diagnostic Summary for Composite Results
+
+**When to use**: Any dataclass that represents multiple boolean outcomes
+
+```python
+@dataclass
+class ValidationResult:
+    syntax_valid: bool
+    type_valid: bool
+    lint_valid: bool
+    all_valid: bool
+
+    def get_failure_summary(self) -> str:
+        """Get comma-separated list of failed validations."""
+        failed = []
+        if not self.syntax_valid:
+            failed.append("syntax")
+        if not self.type_valid:
+            failed.append("types")
+        if not self.lint_valid:
+            failed.append("lint")
+        return ", ".join(failed) if failed else "none"
+```
+
+**Usage in logging**:
+```python
+if not result.all_valid:
+    logger.warning(f"Validation failed: [{result.get_failure_summary()}]")
+```
+
+### Pattern 2: Multi-Source Error Extraction
+
+**When to use**: Handling subprocess errors that may appear in multiple streams
+
+```python
+def extract_subprocess_error(result: subprocess.CompletedProcess) -> str:
+    """Extract error message from subprocess result, checking multiple sources."""
+    error_msg = "No error message"
+
+    # Priority 1: Check stdout for JSON errors
+    if result.stdout:
+        try:
+            data = json.loads(result.stdout.strip())
+            if data.get("is_error"):
+                return data.get("result", data.get("error", "Unknown JSON error"))
+        except json.JSONDecodeError:
+            pass
+
+    # Priority 2: Plain stdout
+    if result.stdout and result.stdout.strip():
+        error_msg = f"stdout: {result.stdout.strip()[:200]}"
+
+    # Priority 3: stderr
+    if error_msg == "No error message" and result.stderr:
+        error_msg = result.stderr.strip()
+
+    return error_msg
+```
+
+## References
+
+- **Original log analysis**: User provided experiment logs showing generic warnings
+- **Modified file**: `ProjectScylla/src/scylla/e2e/llm_judge.py`
+- **Related work**: Multi-judge consensus support (parallel work on same file)
+- **ProjectScylla commit**: skill/evaluation/multi-judge-consensus branch
+
+## Related Skills
+
+- **error-message-improvement**: General error message enhancement patterns
+- **structured-logging**: Using consistent formats for machine parsing
+- **diagnostic-methods**: Adding `get_*_summary()` methods to complex types
+- **subprocess-error-handling**: Robust error extraction from subprocess calls
+
+## Tags
+
+`#evaluation` `#logging` `#diagnostics` `#error-handling` `#llm-judge` `#pipeline` `#subprocess`
+
+---
+
+## Superseded from processpoolexecutor-rate-limit-recovery
+
+---
+name: processpoolexecutor-rate-limit-recovery
+description: Robust ProcessPoolExecutor rate limit recovery for E2E evaluation frameworks
+category: evaluation
+date: 2026-01-10
+version: 1.0.0
+user-invocable: false
+---
+# ProcessPoolExecutor Rate Limit Recovery
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-01-10 |
+| Objective | Fix T5 tier complete failure when API rate limits hit during parallel evaluation |
+| Outcome | Operational |
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-01-10 |
+| **Project** | ProjectScylla |
+| **Objective** | Fix T5 tier complete failure when API rate limits hit during parallel evaluation |
+| **Outcome** | ✅ Implemented 3-layer defensive strategy with pre-flight checks, safe workers, and pool recovery |
+| **Impact** | Prevents catastrophic tier failures from rate limiting; auto-recovery with retry |
+
+## When to Use This Skill
+
+**Trigger Conditions:**
+- ProcessPoolExecutor-based parallel execution crashes from external API rate limits
+- Workers crash due to rate limits, poisoning the entire pool
+- Need robust recovery from `BrokenProcessPool` exceptions
+- E2E evaluation frameworks with API-dependent workers
+- Batch processing jobs that hit rate limits mid-execution
+
+**Symptoms:**
+- All pending futures fail with "process pool was terminated abruptly"
+- Actual error (rate limit) hidden in crash logs or `.failed/` directories
+- Single worker crash cascades to complete batch failure
+- No automatic retry or recovery mechanism
+
+## Problem Analysis
+
+### Root Cause
+
+When a worker in `ProcessPoolExecutor` hits an API rate limit and crashes hard (exit_code=-1), Python throws `BrokenProcessPool` which:
+1. **Poisons the entire pool** - all pending futures become unexecutable
+2. **Hides the real error** - rate limit message buried in subprocess stderr
+3. **No built-in recovery** - requires manual intervention to detect and retry
+
+### Original Failure Pattern (ProjectScylla T5)
+
+```
+T0-T4: ✅ Pass
+T5:    ❌ ALL 15 subtests fail
+       Error: "A process in the process pool was terminated abruptly"
+
+Actual cause (hidden in .failed/ dirs):
+  "You've hit your limit · resets 4pm (America/Los_Angeles)"
+```
+
+## Verified Workflow
+
+### Architecture: Three-Layer Defense
+
+```
+Layer 1: Pre-flight Check
+  ↓ (prevents wasted work)
+Layer 2: Safe Worker Wrapper
+  ↓ (prevents pool poisoning)
+Layer 3: Pool Crash Recovery
+  ↓ (recovers from failures)
+```
+
+### Step 1: Pre-flight Rate Limit Check
+
+Add before starting each batch/tier:
+
+```python
+def _check_rate_limit_before_tier(self, tier_id: TierID) -> None:
+    """Check for active rate limit before starting tier execution."""
+    from scylla.e2e.rate_limit import check_api_rate_limit_status, wait_for_rate_limit
+
+    rate_limit_info = check_api_rate_limit_status()
+    if rate_limit_info:
+        logger.warning(f"Pre-flight rate limit detected for {tier_id.value}")
+        if self.checkpoint and self.experiment_dir:
+            checkpoint_path = self.experiment_dir / "checkpoint.json"
+            wait_for_rate_limit(
+                rate_limit_info.retry_after_seconds,
+                self.checkpoint,
+                checkpoint_path,
+            )
+```
+
+**Pre-flight Check Implementation:**
+
+```python
+def check_api_rate_limit_status() -> RateLimitInfo | None:
+    """Check if we're currently rate limited by making a lightweight API call."""
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["claude", "--print", "ping"],  # Minimal interaction
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+        if "rate limit" in result.stderr.lower() or "hit your limit" in result.stderr.lower():
+            return RateLimitInfo(
+                source="preflight",
+                retry_after_seconds=parse_retry_after(result.stderr),
+                error_message=result.stderr.strip(),
+                detected_at=datetime.now(UTC).isoformat(),
+            )
+
+        return None
+
+    except subprocess.TimeoutExpired:
+        return None  # Timeout is not a rate limit
+    except Exception:
+        return None  # Other errors are not rate limits
+```
+
+### Step 2: Safe Worker Wrapper
+
+**Critical**: Wrap worker function to NEVER crash the pool:
+
+```python
+def _run_subtest_in_process_safe(
+    *args, **kwargs
+) -> SubTestResult:
+    """Safe wrapper that catches ALL exceptions and returns structured error.
+
+    This prevents worker crashes from poisoning the entire ProcessPoolExecutor.
+    """
+    try:
+        return _run_subtest_in_process(*args, **kwargs)
+    except RateLimitError as e:
+        # Return structured error, don't crash pool
+        logger.warning(
+            f"Rate limit in worker for {tier_id.value}/{subtest.id}: {e.info.error_message}"
+        )
+        return SubTestResult(
+            subtest_id=subtest.id,
+            tier_id=tier_id,
+            runs=[],
+            pass_rate=0.0,
+            selection_reason=f"RateLimitError: {e.info.error_message}",
+            # NEW: Store rate limit info for retry logic
+            rate_limit_info=e.info,
+        )
+    except Exception as e:
+        # ANY exception becomes structured error
+        logger.error(
+            f"Worker exception for {tier_id.value}/{subtest.id}: {type(e).__name__}: {e}",
+            exc_info=True,
+        )
+        return SubTestResult(
+            subtest_id=subtest.id,
+            tier_id=tier_id,
+            runs=[],
+            pass_rate=0.0,
+            selection_reason=f"WorkerError: {type(e).__name__}: {e}",
+        )
+```
+
+**Usage:**
+```python
+# Replace:
+future = pool.submit(_run_subtest_in_process, ...)
+
+# With:
+future = pool.submit(_run_subtest_in_process_safe, ...)
+```
+
+### Step 3: Enhanced BrokenProcessPool Handler
+
+Even with safe wrapper, handle pool crashes gracefully:
+
+```python
+except (KeyboardInterrupt, BrokenProcessPool) as e:
+    if isinstance(e, BrokenProcessPool):
+        # Scan results for rate limit indicators
+        rate_limit_info = _detect_rate_limit_from_results(results, results_dir)
+
+        if rate_limit_info and checkpoint and checkpoint_path:
+            logger.warning(
+                f"BrokenProcessPool caused by rate limit from {rate_limit_info.source}"
+            )
+            logger.info(f"Waiting {rate_limit_info.retry_after_seconds or 60}s before retry...")
+
+            wait_for_rate_limit(
+                rate_limit_info.retry_after_seconds,
+                checkpoint,
+                checkpoint_path,
+            )
+
+            # Identify remaining subtests (not yet completed OR marked as rate_limited)
+            remaining = [
+                s
+                for s in tier_config.subtests
+                if s.id not in results
+                or results[s.id].selection_reason.startswith("RateLimitError:")
+            ]
+
+            if remaining:
+                logger.info(f"Retrying {len(remaining)} subtests after rate limit...")
+                retry_results = _retry_with_new_pool(
+                    remaining_subtests=remaining,
+                    config=config,
+                    tier_id=tier_id,
+                    tier_config=tier_config,
+                    # ... other args
+                )
+                results.update(retry_results)
+                return results
+
+        # Not a rate limit, or no checkpoint - fall through to cleanup
+        logger.error(f"BrokenProcessPool with no recovery path: {e}")
+
+    # KeyboardInterrupt or unrecoverable - cleanup
+    logger.warning("Experiment interrupted, cleaning up...")
+    for future in futures:
+        if not future.done():
+            future.cancel()
+```
+
+### Step 4: Multi-Source Rate Limit Detection
+
+```python
+def _detect_rate_limit_from_results(
+    results: dict[str, SubTestResult],
+    results_dir: Path,
+) -> RateLimitInfo | None:
+    """Detect rate limit from multiple sources."""
+
+    # Source 1: SubTestResult.rate_limit_info field (from safe wrapper)
+    for subtest_id, result in results.items():
+        if result.rate_limit_info:
+            return result.rate_limit_info
+
+    # Source 2: SubTestResult.selection_reason
+    for subtest_id, result in results.items():
+        if result.selection_reason.startswith("RateLimitError:"):
+            return RateLimitInfo(
+                source="agent",
+                retry_after_seconds=None,
+                error_message=result.selection_reason,
+                detected_at=datetime.now(UTC).isoformat(),
+            )
+
+    # Source 3: .failed/ directories for crashed workers
+    for failed_dir in results_dir.rglob(".failed/*/agent/result.json"):
+        try:
+            data = json.loads(failed_dir.read_text())
+            stderr = data.get("stderr", "")
+            stdout = data.get("stdout", "")
+
+            rate_info = detect_rate_limit(stdout, stderr, source="agent")
+            if rate_info:
+                return rate_info
+        except Exception:
+            continue
+
+    return None
+```
+
+### Step 5: Retry with Fresh Pool
+
+```python
+def _retry_with_new_pool(
+    remaining_subtests: list[SubTestConfig],
+    config: ExperimentConfig,
+    tier_id: TierID,
+    tier_config: TierConfig,
+    # ... other params
+    max_retries: int = 3,
+) -> dict[str, SubTestResult]:
+    """Create new ProcessPoolExecutor and retry remaining subtests."""
+    results: dict[str, SubTestResult] = {}
+    retries = 0
+
+    while remaining_subtests and retries < max_retries:
+        try:
+            # Fresh coordinator for new pool
+            manager = Manager()
+            coordinator = RateLimitCoordinator(manager)
+
+            with ProcessPoolExecutor(max_workers=config.parallel_subtests) as pool:
+                futures = {}
+                for subtest in remaining_subtests:
+                    subtest_dir = results_dir / subtest.id
+                    future = pool.submit(
+                        _run_subtest_in_process_safe,  # Use safe wrapper
+                        config=config,
+                        tier_id=tier_id,
+                        # ... other args
+                    )
+                    futures[future] = subtest.id
+
+                # Collect results
+                for future in as_completed(futures):
+                    subtest_id = futures[future]
+                    result = future.result()
+                    results[subtest_id] = result
+
+            # Check for rate-limited results that need retry
+            remaining_subtests = [
+                s
+                for s in remaining_subtests
+                if s.id in results
+                and results[s.id].selection_reason.startswith("RateLimitError:")
+            ]
+
+            if remaining_subtests:
+                # More rate limits - wait and retry
+                rate_info = _detect_rate_limit_from_results(results, results_dir)
+                if rate_info and checkpoint and checkpoint_path:
+                    wait_for_rate_limit(
+                        rate_info.retry_after_seconds,
+                        checkpoint,
+                        checkpoint_path,
+                    )
+                retries += 1
+            else:
+                # All completed successfully
+                break
+
+        except BrokenProcessPool:
+            # Pool crashed again - retry
+            rate_info = _detect_rate_limit_from_results(results, results_dir)
+            if rate_info and checkpoint and checkpoint_path:
+                wait_for_rate_limit(
+                    rate_info.retry_after_seconds,
+                    checkpoint,
+                    checkpoint_path,
+                )
+            retries += 1
+
+    return results
+```
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
+## Failed Attempts (Critical Learnings)
+| Attempt | Issue | Resolution |
+| --------- | ------- | ------------ |
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
+### ❌ Failed: Relying Only on RateLimitError Exception Handling
+
+**What we tried:**
+```python
+try:
+    result = run_worker(...)
+except RateLimitError as e:
+    wait_and_retry()
+```
+
+**Why it failed:**
+- Rate limits detected AFTER worker exits (exit_code=-1)
+- Worker crashes before raising clean `RateLimitError`
+- ProcessPool throws `BrokenProcessPool` instead
+- All pending futures become unexecutable
+
+**Lesson:** Need defensive wrapper that catches exceptions BEFORE they crash the worker process.
+
+### ❌ Failed: Detecting Rate Limits Only from Exceptions
+
+**What we tried:**
+- Catching `RateLimitError` in worker execution path
+- Assuming rate limit info available in exception
+
+**Why it failed:**
+- Rate limit errors sometimes manifest as generic subprocess crashes
+- Error message buried in stderr logs, not in exception
+- Need to check multiple sources: results, .failed/ dirs, stderr
+
+**Lesson:** Multi-source detection required - exceptions, structured results, AND log files.
+
+### ❌ Failed: Single Retry Attempt
+
+**What we tried:**
+```python
+if BrokenProcessPool:
+    create_new_pool()
+    retry_once()
+```
+
+**Why it failed:**
+- Rate limits can persist across retries
+- No exponential backoff or retry limit
+- Could retry indefinitely into same rate limit
+
+**Lesson:** Need retry loop with max attempts (3) and proper wait between retries.
+
+### ❌ Failed: Ignoring Pre-flight Checks
+
+**What we tried:**
+- Start parallel workers immediately
+- Handle rate limits only after they occur
+
+**Why it failed:**
+- Wasted CPU/time starting workers when already rate-limited
+- All workers would immediately fail
+- Better to check status before starting expensive operations
+
+**Lesson:** Pre-flight checks prevent wasted work and provide better UX.
+
+## Results & Metrics
+
+### Before Fix (T5 Failure)
+- **T0-T4**: ✅ 100% pass
+- **T5**: ❌ 0% pass (all 15 subtests failed)
+- **Error visibility**: Poor (hidden in .failed/ dirs)
+- **Recovery**: Manual intervention required
+
+### After Fix (Expected)
+- **T0-T4**: ✅ 100% pass
+- **T5**: ✅ 100% pass (with automatic retry)
+- **Error visibility**: Good (logged with context)
+- **Recovery**: Automatic (wait + retry)
+
+### Test Coverage
+- **Unit tests**: 9/10 passing (90%)
+- **Safe wrapper**: Verified exception conversion
+- **Detection**: Multi-source validation
+- **Serialization**: rate_limit_info field tested
+
+## Configuration & Parameters
+
+### Data Model Changes
+
+Add to your result dataclass:
+
+```python
+@dataclass
+class SubTestResult:
+    # ... existing fields ...
+
+    # NEW: Rate limit info for retry logic (None if not rate-limited)
+    rate_limit_info: RateLimitInfo | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            # ... existing fields ...
+            "rate_limit_info": (
+                {
+                    "source": self.rate_limit_info.source,
+                    "retry_after_seconds": self.rate_limit_info.retry_after_seconds,
+                    "error_message": self.rate_limit_info.error_message,
+                    "detected_at": self.rate_limit_info.detected_at,
+                }
+                if self.rate_limit_info
+                else None
+            ),
+        }
+```
+
+### Retry Configuration
+
+```python
+# In _retry_with_new_pool()
+max_retries: int = 3  # Maximum retry attempts
+default_wait: int = 60  # Default wait if no Retry-After header (seconds)
+buffer_multiplier: float = 1.1  # Add 10% buffer to Retry-After times
+```
+
+### Pre-flight Check Parameters
+
+```python
+# In check_api_rate_limit_status()
+test_command = ["claude", "--print", "ping"]  # Minimal API test
+timeout = 30  # Subprocess timeout (seconds)
+```
+
+## Critical Implementation Details
+
+### 1. Import Rate Limit Detection Early
+
+```python
+from scylla.e2e.rate_limit import (
+    RateLimitError,
+    RateLimitInfo,
+    detect_rate_limit,  # CRITICAL: Add this
+    wait_for_rate_limit,
+)
+```
+
+### 2. Always Use Safe Wrapper for Pool Submission
+
+```python
+# DON'T:
+pool.submit(_run_subtest_in_process, ...)
+
+# DO:
+pool.submit(_run_subtest_in_process_safe, ...)
+```
+
+### 3. Check Both Sources in BrokenProcessPool Handler
+
+```python
+# Check structured results FIRST
+rate_limit_info = _detect_rate_limit_from_results(results, results_dir)
+
+# Then check .failed/ directories as fallback
+```
+
+### 4. Preserve Partial Results
+
+```python
+# CRITICAL: Update results dict, don't replace
+retry_results = _retry_with_new_pool(remaining, ...)
+results.update(retry_results)  # Merge, don't overwrite
+return results
+```
+
+## Verification Commands
+
+### Test Pre-flight Check
+```bash
+# Manually trigger rate limit
+# Then verify pre-flight detection:
+python scripts/run_e2e_experiment.py \
+    --tiers-dir tests/fixtures/tests/test-001 \
+    --tiers T5
+# Should log: "Pre-flight rate limit detected for T5"
+```
+
+### Test Safe Wrapper
+```bash
+# Run unit tests
+pixi run pytest tests/unit/e2e/test_rate_limit_recovery.py::TestRunSubtestInProcessSafe -v
+```
+
+### Test Pool Recovery
+```bash
+# Simulate rate limit with low parallelism
+python scripts/run_e2e_experiment.py \
+    --tiers T5 \
+    --parallel 1 \
+    --runs 1
+# Should log: "BrokenProcessPool caused by rate limit"
+# Then: "Retrying N subtests after rate limit..."
+```
+
+### Check Logs
+```bash
+# Look for these indicators:
+grep "Pre-flight rate limit detected" logs/
+grep "BrokenProcessPool caused by rate limit" logs/
+grep "Retrying.*subtests after rate limit" logs/
+grep "Rate limit wait complete. Resuming" logs/
+```
+
+## Common Pitfalls
+
+### ⚠️ Pitfall 1: Forgetting to Import detect_rate_limit
+
+**Error:**
+```
+NameError: name 'detect_rate_limit' is not defined
+```
+
+**Fix:**
+Add to imports at top of file:
+```python
+from scylla.e2e.rate_limit import detect_rate_limit
+```
+
+### ⚠️ Pitfall 2: Not Using Safe Wrapper
+
+**Symptom:** Pool still crashes despite recovery code
+
+**Fix:** Ensure ALL pool.submit() calls use `_run_subtest_in_process_safe`
+
+### ⚠️ Pitfall 3: Infinite Retry Loop
+
+**Symptom:** Keeps retrying same rate limit without waiting
+
+**Fix:** Ensure `wait_for_rate_limit()` called BEFORE retry, and max_retries enforced
+
+### ⚠️ Pitfall 4: Missing rate_limit_info Field
+
+**Error:**
+```
+AttributeError: 'SubTestResult' object has no attribute 'rate_limit_info'
+```
+
+**Fix:** Add field to dataclass and update `to_dict()` serialization
+
+## Related Skills
+
+- **error-handling**: General exception handling patterns
+- **retry-logic**: Exponential backoff and retry strategies
+- **processpool-debugging**: Debugging ProcessPoolExecutor failures
+- **checkpoint-resume**: Checkpoint-based evaluation resume
+
+## References
+
+- Pull Request: https://github.com/HomericIntelligence/ProjectScylla/pull/168
+- Original Failure: `results/2026-01-09T20-07-13-test-001/T5/` (.failed/ directories)
+- Python ProcessPoolExecutor docs: https://docs.python.org/3/library/concurrent.futures.html#processpoolexecutor
+
+## Summary
+
+**Key Insight:** ProcessPoolExecutor crashes from rate limits require THREE layers of defense:
+1. **Pre-flight checks** (prevent wasted work)
+2. **Safe wrappers** (prevent pool poisoning)
+3. **Pool recovery** (handle failures gracefully)
+
+**Most Important:** The safe wrapper (`_run_subtest_in_process_safe`) is the critical fix - it prevents worker crashes from ever reaching the pool level.
+
+**Don't Forget:** Multi-source rate limit detection is essential because errors can hide in:
+- Exception messages
+- Structured result fields
+- .failed/ directory logs
+
+---
