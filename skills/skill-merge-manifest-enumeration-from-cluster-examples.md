@@ -152,7 +152,7 @@ done
 | Skipping Gate 1 duplicate check | Manifests shipped directly to merge agents | Same skill appeared in two merge PRs, causing conflicts and double-deletion | Gate 1 duplicate detection is mandatory before any merge launches |
 | Trusting catch-all cluster to self-bound | No extra strictness instruction for catch-all | Catch-all absorbed 82 candidates; most were wrong cluster | For catch-all clusters, instruct enumerator to be EXTRA strict |
 | Overflow above 100 skills per manifest | No cap enforced | Merge agent timeout / PR too large to review | Cap at 100; set `overflow_warning: true` and split into sub-PRs |
-| Running second-pass clustering without supplying the existing-canonicals list | Documentation-shard agent proposed C1=`academic-paper-validation-and-publication` and C2=`stale-documentation-audits-and-sync` as NEW clusters — both were already canonicals from M16/M17. 27 members had to be re-routed at the gate stage | Always pass the existing-canonicals list + 1-line themes as agent input; require a two-bucket output (clusters[] + absorb_into_canonical[]); validate at gate stage that no proposed cluster name matches an existing canonical |
+| Running second-pass clustering without supplying the existing-canonicals list | Documentation-shard agent proposed C1=`academic-paper-validation-and-publication` and C2=`stale-documentation-audits-and-sync` as NEW clusters — both were already canonicals from M16/M17. 27 members had to be re-routed at the gate stage | Always pass the existing-canonicals list + 1-line themes as agent input; require a two-bucket output (clusters[] + absorb_into_canonical[]); validate at gate stage that no proposed cluster name matches an existing canonical | |
 
 ## Results & Parameters
 
