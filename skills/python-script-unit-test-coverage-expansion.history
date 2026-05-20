@@ -1,0 +1,1379 @@
+<!-- markdownlint-disable MD024 -->
+<!-- Superseded skill snapshots for python-script-unit-test-coverage-expansion (M53) -->
+
+## Superseded from add-unit-tests-for-existing-script
+
+```markdown
+---
+name: add-unit-tests-for-existing-script
+description: 'Add comprehensive pytest unit tests for an existing Python script with
+  no coverage. Use when: a script has no tests, bugs were found during implementation,
+  or a follow-up issue requests test coverage.'
+category: testing
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+---
+# add-unit-tests-for-existing-script
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Name | add-unit-tests-for-existing-script |
+| Category | testing |
+| Description | Add comprehensive pytest unit tests for an existing Python script that has no tests |
+| Language | Python / pytest |
+| Pattern | Class-grouped tests by function, sys.path.insert import, tmp_path fixtures |
+
+## When to Use
+
+- A Python script in `scripts/` has been identified as having zero test coverage
+- Bugs were discovered during manual use that unit tests would have caught
+- A follow-up GitHub issue explicitly requests tests for specific public functions
+- You need to retrofit tests onto existing code without modifying the script itself
+
+## Verified Workflow
+
+1. **Read the script** thoroughly before writing a single test — understand all public functions, their signatures, return types, and edge cases
+2. **Explore function behavior interactively** with quick `python3 -c` one-liners to verify assumptions before encoding them as assertions
+3. **Check the existing test file** (if any) — avoid duplicating tests that already exist; extend the file rather than creating a new one
+4. **Add `sys.path.insert`** at the top of the test file to allow direct imports from `scripts/`:
+   ```python
+   import sys
+   from pathlib import Path
+   sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
+   from my_script import func_a, func_b
+   ```
+5. **Group tests into classes** — one `TestClassName` per public function, following `tests/scripts/` precedents
+6. **Use `tmp_path` fixtures** for any file I/O; never write to real directories
+7. **Cover edge cases first**: empty input, missing files, unclosed delimiters, unknown keys, None arguments
+8. **Run tests** with `python3 -m pytest tests/scripts/test_<script>.py -v` — use direct `python3` not `pixi run` to avoid slow env activation during development
+9. **Fix pre-commit auto-fixes**: ruff may auto-remove unused imports; re-stage and commit again
+10. **Commit only the test file** — never stage `.pyc`, prompt files, or build directories
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Running tests via `pixi run python -m pytest` | Used pixi for test execution during development | Command timed out (>2 min env activation) | Use `python3 -m pytest` directly for fast iteration; only use pixi for final validation |
+| Running background pytest task | Launched pytest as a background task to avoid blocking | Output file was empty for minutes | Background tasks don't stream output — run pytest synchronously in foreground |
+| Importing unused constant in tests | Imported `SKILL_CATEGORY_OVERRIDE` for documentation but never asserted on it | Ruff auto-removed it, causing first commit to fail | Only import symbols you actually use in assertions; ruff-check runs in pre-commit |
+| Extending file without reading it | Attempted to write new test classes without reading existing file content | Edit tool rejected the change (file not read first) | Always `Read` the target file before any `Edit` — required by tool policy |
+
+## Results & Parameters
+
+### Import Pattern (preferred)
+
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "scripts"))
+from my_script import func_a, func_b, CONSTANT_A
+```
+
+### Dynamic Loader (for tests needing module-level patching)
+
+```python
+import importlib.util
+SCRIPT_PATH = Path(__file__).parent.parent.parent / "scripts" / "my_script.py"
+
+def load_module():
+    spec = importlib.util.spec_from_file_location("my_script", SCRIPT_PATH)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+@pytest.fixture
+def mod():
+    return load_module()
+```
+
+Use `unittest.mock.patch.object(mod, "GLOBAL_CONSTANT", fake_value)` to override
+module-level constants (e.g., hardcoded paths) in tests.
+
+### Class Grouping Template
+
+```python
+class TestMyFunction:
+    def test_happy_path(self) -> None: ...
+    def test_empty_input(self) -> None: ...
+    def test_missing_file_returns_false(self, tmp_path: Path) -> None: ...
+    def test_edge_case_colon_in_value(self) -> None: ...
+```
+
+### Quick Behavior Exploration
+
+```bash
+python3 -c "
+import sys; sys.path.insert(0, 'scripts')
+from my_script import parse_frontmatter
+fm, rest = parse_frontmatter('---\nname: foo\n---\nBody')
+print('fm:', fm)
+print('rest:', repr(rest))
+"
+```
+
+### Pre-Commit Fix Pattern
+
+If `ruff-check-python` fails with "files were modified by this hook":
+```bash
+git add tests/scripts/test_my_script.py  # re-stage after auto-fix
+git commit -m "..."                       # commit again — will pass this time
+```
+```
+
+---
+
+## Superseded from extend-script-test-coverage
+
+```markdown
+---
+name: extend-script-test-coverage
+description: Pattern for systematically adding mock-only unit tests to previously untested Python scripts — prioritizing by testability × impact to reach a coverage threshold
+category: testing
+date: 2026-03-03
+version: 1.0.0
+user-invocable: false
+---
+# Extend Script Test Coverage to 50%+
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-03 |
+| Objective | Raise tested script count from 10/34 (29%) to ≥17/34 (≥50%) with mock-only pytest tests |
+| Outcome | ✅ 22/34 scripts with tests (65%) — exceeded goal; 453 new tests across 13 files |
+| Context | ProjectScylla issue #1162 — follow-up to #1113 which closed the manage_experiment.py gap |
+
+## When to Use This Skill
+
+Use this pattern when:
+
+1. **A repo has many scripts with zero test coverage** and you need to close the gap systematically
+2. **A coverage threshold audit** reveals that scripts/ folder is under-tested vs. the threshold
+3. **A follow-up issue** extends a previous partial fix (e.g., "add tests for the remaining 17 scripts")
+4. **You need to pick the highest-ROI test targets** when you can't test everything at once
+
+**Trigger phrases**:
+- "X% of scripts lack unit tests"
+- "add tests for the remaining untested scripts"
+- "script test coverage audit"
+- "follow-up to close the test gap"
+
+## Verified Workflow
+
+### Step 1: Audit the Test Gap
+
+Enumerate all scripts and existing test files to identify the gap:
+
+```bash
+# List all testable scripts (exclude shell scripts, __init__.py, README)
+ls scripts/*.py scripts/**/*.py | grep -v __init__
+
+# List existing test files for scripts
+ls tests/unit/scripts/
+
+# Compute: scripts without corresponding test file = gap
+```
+
+**Key output**: A ranked list of untested scripts.
+
+### Step 2: Rank Scripts by Testability × Impact
+
+Score each untested script on two axes and multiply:
+
+| Axis | High (3) | Medium (2) | Low (1) |
+| ------ | ---------- | ----------- | --------- |
+| **Testability** | Pure functions, no subprocess | Some mocking needed | Subprocess-heavy, no helpers |
+| **Impact** | Entry point / pre-commit hook | Frequently invoked | Rarely used utility |
+
+Highest scores get tested first. Minimum viable target = half the total scripts.
+
+### Step 3: Choose the Mock-Only Pattern
+
+For every new test file:
+- **No real filesystem writes** — use `tmp_path` or `io.StringIO` for in-memory content
+- **No network calls** — mock `requests`, `urllib`, `gh` subprocess
+- **No subprocess execution** — patch `subprocess.run`, `subprocess.check_output`
+- **Import the module directly** — call functions, assert on return values
+
+Example fixture for a script with a file-reading function:
+
+```python
+def test_parse_file(tmp_path):
+    f = tmp_path / "input.txt"
+    f.write_text("content")
+    result = parse_file(str(f))
+    assert result == expected_value
+```
+
+### Step 4: Test Helper Functions, Not Just `main()`
+
+Each script's internal helper functions carry the highest test value. Structure:
+
+```python
+class TestHelperFunction:
+    """Tests for the_helper_function() pure logic."""
+
+    def test_happy_path(self):
+        assert the_helper_function("valid input") == expected
+
+    def test_edge_case(self):
+        assert the_helper_function("") == default_value
+
+    @pytest.mark.parametrize("inp,expected", [
+        ("case1", "result1"),
+        ("case2", "result2"),
+    ])
+    def test_parametrized(self, inp, expected):
+        assert the_helper_function(inp) == expected
+```
+
+### Step 5: Handle Class-Based Scripts (e.g., MarkdownFixer)
+
+For scripts that define a class, instantiate it in a fixture:
+
+```python
+@pytest.fixture
+def fixer():
+    return MarkdownFixer()
+
+class TestMarkdownFixer:
+    def test_fix_trailing_spaces(self, fixer):
+        result = fixer.fix_trailing_spaces("line   \n")
+        assert result == "line\n"
+```
+
+### Step 6: Handle Subprocess-Invoking Scripts (e.g., merge_prs.py)
+
+Patch `subprocess.run` at the module level where it is imported:
+
+```python
+from unittest.mock import patch, MagicMock
+
+def test_merge_pr_success():
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    mock_result.stdout = "Merged"
+
+    with patch("scripts.merge_prs.subprocess.run", return_value=mock_result):
+        result = merge_pr("123")
+
+    assert result is True
+```
+
+### Step 7: Handle Agent Subdirectory Scripts
+
+If the repo has `scripts/agents/*.py`, create a parallel subdirectory:
+
+```
+tests/unit/scripts/agents/__init__.py
+tests/unit/scripts/agents/test_agent_utils.py
+tests/unit/scripts/agents/test_validate_agents.py
+```
+
+Make sure the `__init__.py` exists to allow pytest discovery.
+
+### Step 8: Run and Verify
+
+```bash
+pixi run python -m pytest tests/unit/scripts/ -v --tb=short
+```
+
+All tests should pass. Check that no test calls real external services.
+
+### Step 9: Count and Report
+
+```
+Tested scripts before: N
+Tested scripts after:  N+K
+Total scripts:         M
+Coverage:              (N+K)/M * 100%
+Goal met:              YES / NO
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+### Priority Matrix Used (2026-03-03)
+
+| Priority | Script | Testability | Impact | Score |
+| ---------- | -------- | ------------- | -------- | ------- |
+| 1 | `generate_changelog.py` | 3 | 3 | 9 |
+| 2 | `check_type_alias_shadowing.py` | 3 | 3 | 9 |
+| 3 | `validate_links.py` | 3 | 2 | 6 |
+| 4 | `fix_markdown.py` | 3 | 2 | 6 |
+| 5 | `check_readmes.py` | 3 | 2 | 6 |
+| 6 | `merge_prs.py` | 2 | 3 | 6 |
+| 7 | `check_coverage.py` | 2 | 2 | 4 |
+| 8 | `check_tier_config_consistency.py` | 2 | 2 | 4 |
+| 9 | `agents/agent_utils.py` | 3 | 3 | 9 |
+| 10 | `agents/validate_agents.py` | 2 | 2 | 4 |
+| 11 | `fix_table_underscores.py` | 3 | 1 | 3 |
+| 12 | `common.py` | 3 | 1 | 3 |
+
+### Test Count per File
+
+| Test File | Script | Tests |
+| ----------- | -------- | ------- |
+| `test_generate_changelog.py` | `generate_changelog.py` | 29 |
+| `test_check_type_alias_shadowing.py` | `check_type_alias_shadowing.py` | 29 |
+| `test_validate_links.py` | `validate_links.py` | 19 |
+| `test_fix_markdown.py` | `fix_markdown.py` | 24 |
+| `test_check_coverage.py` | `check_coverage.py` | 15 |
+| `test_check_readmes.py` | `check_readmes.py` | 19 |
+| `test_merge_prs.py` | `merge_prs.py` | 17 |
+| `test_check_tier_config_consistency.py` | `check_tier_config_consistency.py` | ~20 |
+| `agents/test_agent_utils.py` | `agents/agent_utils.py` | 348-line file |
+| `agents/test_validate_agents.py` | `agents/validate_agents.py` | 290-line file |
+| `test_fix_table_underscores.py` | `fix_table_underscores.py` | ~15 |
+| `test_common.py` | `common.py` | ~10 |
+
+### Coverage Impact
+
+| Metric | Before | After |
+| -------- | -------- | ------- |
+| Scripts with tests | 10/34 (29%) | 22/34 (65%) |
+| New test files | 0 | 13 |
+| New tests added | 0 | 453 |
+| Total suite tests | ~3500 | ~3953 |
+| Goal (≥50%) | ❌ | ✅ |
+
+## Verified On
+
+- ProjectScylla (2026-03-03): issue #1162, PR #1343
+- Python 3.10+, pytest 7+, pixi environment
+```
+
+---
+
+## Superseded from script-test-coverage-pattern
+
+```markdown
+---
+name: script-test-coverage-pattern
+description: "Patterns for adding mock-only unit tests to Python utility scripts — covering subprocess-heavy, filesystem-heavy, and pure-function scripts in ProjectScylla. Raises scripts/ test coverage from 29% to 65% (10/34 → 22/34 scripts tested)."
+category: testing
+date: '2026-03-19'
+version: 1.0.0
+---
+# Skill: script-test-coverage-pattern
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-03 |
+| Project | ProjectScylla |
+| Objective | Extend unit test coverage from 10/34 to ≥17/34 scripts (≥50% goal) using mock-only pattern |
+| Outcome | 22/34 scripts tested (65%), 453 new tests across 13 new test files |
+| PR | HomericIntelligence/ProjectScylla#1343 |
+| Issue | HomericIntelligence/ProjectScylla#1162 |
+
+## When to Use
+
+Use this skill when:
+- Adding tests to Python utility scripts that have no existing tests
+- Scripts heavily use `subprocess.run`, filesystem operations, or external tools (gh CLI, git)
+- You need to bring a scripts/ directory from low (<50%) to high (>50%) test coverage
+- Scripts contain pure functions mixed with I/O-heavy entry points
+- You want to test only the logic without actually running git/gh/network calls
+
+## Key Insight: Test Strategy by Script Type
+
+### Pure Functions (easiest)
+Scripts like `fix_table_underscores.py`, `generate_changelog.py` contain pure functions:
+- Import the function directly, call it, assert on the result
+- No mocking needed at all
+
+```python
+from fix_table_underscores import fix_table_underscores
+
+def test_escapes_bare_underscore():
+    content = "column_name & value\n"
+    result = fix_table_underscores(content)
+    assert r"column\_name" in result
+```
+
+### Subprocess-Heavy Scripts (mock subprocess.run)
+Scripts like `merge_prs.py`, `generate_changelog.py` call git/gh CLI:
+- Mock `subprocess.run` at the module level, not at the stdlib level
+- Return a `MagicMock` with `.returncode` and `.stdout` set
+
+```python
+from unittest.mock import MagicMock, patch
+
+def test_successful_merge_returns_true():
+    mock_result = MagicMock()
+    mock_result.returncode = 0
+    with patch("merge_prs.subprocess.run", return_value=mock_result):
+        result = merge_pr(42)
+    assert result is True
+```
+
+### Filesystem-Heavy Scripts (use tmp_path fixture)
+Scripts like `validate_links.py`, `check_readmes.py`, `check_type_alias_shadowing.py`:
+- Use pytest's built-in `tmp_path` fixture
+- Create real temp files/dirs for testing; pytest cleans up automatically
+
+```python
+def test_detects_violation_in_file(tmp_path: Path) -> None:
+    f = tmp_path / "test.py"
+    f.write_text("Result = DomainResult\n")
+    violations = detect_shadowing(f)
+    assert len(violations) == 1
+```
+
+### Class-Based Scripts (instantiate and test methods)
+Scripts with classes like `MarkdownFixer` in `fix_markdown.py`:
+- Instantiate the class with test parameters (verbose=False, dry_run=True)
+- Test each method individually
+- Use dry_run=True to avoid writing to disk
+
+```python
+def test_dry_run_does_not_write(tmp_path: Path) -> None:
+    md = tmp_path / "test.md"
+    original = "# Heading:\n\n\ncontent\n"
+    md.write_text(original)
+    f = MarkdownFixer(dry_run=True)
+    f.fix_file(md)
+    assert md.read_text() == original  # unchanged
+```
+
+### Subdirectory Scripts with Package Imports
+Scripts in `scripts/agents/` (a sub-package with `__init__.py`):
+- `scripts` is in `pythonpath` in `pyproject.toml`, so `agents` is importable as a package
+- Import as `from agents.agent_utils import ...`
+- Tests go in `tests/unit/scripts/agents/` with an `__init__.py`
+
+```python
+# tests/unit/scripts/agents/test_agent_utils.py
+from agents.agent_utils import AgentInfo, extract_frontmatter_raw
+```
+
+## Verified Workflow
+
+### 1. Audit Which Scripts Lack Tests
+
+```bash
+# List all script test files
+ls tests/unit/scripts/test_*.py tests/unit/scripts/agents/test_*.py
+
+# Compare against scripts/
+ls scripts/*.py scripts/agents/*.py
+```
+
+### 2. Prioritize by Complexity + Testability
+
+Prioritize scripts with:
+1. Pure functions (no I/O) — easiest wins
+2. Class-based design — test each method
+3. Functions with simple mocked I/O
+4. Avoid: scripts that are 90%+ argparse wiring with no testable logic
+
+### 3. Check pyproject.toml for pythonpath
+
+```toml
+[tool.pytest.ini_options]
+pythonpath = [".", "scripts"]
+```
+
+This means:
+- Top-level scripts: `from generate_changelog import parse_commit`
+- Sub-packages: `from agents.agent_utils import extract_frontmatter_raw`
+- Full package path also works: `from scripts.check_unit_test_structure import find_violations`
+
+### 4. Understand Script Behavior Before Writing Tests
+
+Read the script's actual implementation to understand edge cases:
+- What does the regex actually match? (e.g., `_fix_md040_code_language` modifies closing fences too)
+- Does the function return a success value or raise?
+- What are the error paths (missing file, bad YAML, non-zero returncode)?
+
+### 5. Write Tests by Logical Function Group (not top-to-bottom)
+
+```
+class TestParseCommit:       # Unit test pure parsing
+class TestCategorizeCommits: # Unit test business logic
+class TestRunGitCommand:     # Mock subprocess
+class TestGenerateChangelog: # Integration of the above
+```
+
+### 6. Use parametrize for Mapping Tables
+
+Many scripts have `type → category` or `cmd → flag` mappings. Use `@pytest.mark.parametrize`:
+
+```python
+@pytest.mark.parametrize("commit_type,category", [
+    ("feat", "Features"),
+    ("fix", "Bug Fixes"),
+    ("perf", "Performance"),
+    ...
+])
+def test_type_to_category_mapping(self, commit_type, category):
+    result = categorize_commits([f"abc|{commit_type}: msg|Author"])
+    assert category in result
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+### Final Coverage Numbers
+
+| Metric | Before | After |
+| -------- | -------- | ------- |
+| Scripts tested | 10/34 (29%) | 22/34 (65%) |
+| New test files | 0 | 13 |
+| New tests | 0 | 453 |
+| Total unit tests | ~3507 | 3960 |
+
+### Scripts Covered in This Session
+
+| Script | Test File | Test Count | Technique |
+| -------- | ----------- | ----------- | ----------- |
+| `generate_changelog.py` | `test_generate_changelog.py` | 29 | Mock subprocess + pure functions |
+| `check_type_alias_shadowing.py` | `test_check_type_alias_shadowing.py` | 29 | tmp_path filesystem |
+| `validate_links.py` | `test_validate_links.py` | 19 | tmp_path filesystem |
+| `fix_markdown.py` | `test_fix_markdown.py` | 24 | Class methods + tmp_path |
+| `check_coverage.py` | `test_check_coverage.py` | 15 | Mock + tmp_path XML |
+| `check_readmes.py` | `test_check_readmes.py` | 19 | tmp_path filesystem |
+| `merge_prs.py` | `test_merge_prs.py` | 10 | Mock subprocess.run |
+| `common.py` | `test_common.py` | 7 | Patch get_repo_root |
+| `fix_table_underscores.py` | `test_fix_table_underscores.py` | 13 | Pure function, no mocking |
+| `check_tier_config_consistency.py` | `test_check_tier_config_consistency.py` | 14 | tmp_path YAML + mock |
+| `agents/agent_utils.py` | `agents/test_agent_utils.py` | 29 | In-memory strings |
+| `agents/validate_agents.py` | `agents/test_validate_agents.py` | 21 | In-memory strings |
+
+### pyproject.toml pythonpath Configuration
+
+```toml
+[tool.pytest.ini_options]
+pythonpath = [".", "scripts"]
+```
+
+This enables both:
+- `from generate_changelog import parse_commit` (top-level scripts)
+- `from agents.agent_utils import AgentInfo` (sub-packages)
+- `from scripts.check_unit_test_structure import find_violations` (full path)
+```
+
+---
+
+## Superseded from script-unit-test-coverage
+
+```markdown
+---
+name: script-unit-test-coverage
+description: 'TRIGGER CONDITIONS: Use when adding unit tests for scripts/ that lack
+  test files, following the ProjectScylla pattern of mocked I/O with pytest class-based
+  tests.'
+category: testing
+date: 2026-03-03
+version: 1.0.0
+user-invocable: false
+---
+# script-unit-test-coverage
+
+How to systematically add unit test coverage for Python scripts that use subprocess, file I/O, and complex external dependencies, using mocking to keep tests fast and hermetic.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-03 |
+| Objective | Add tests for 12 untested scripts in scripts/ (40% coverage gap) |
+| Outcome | Success — 130 new tests across 12 files, all passing, pre-commit clean |
+
+## When to Use
+
+- You need to add tests for scripts that call `subprocess.run`, touch the filesystem, or import heavy scylla modules
+- You have scripts with `main()` functions and argparse CLI arguments that need validation
+- You need to mock module-level constants like `_REPO_ROOT` or `_SCRIPT_DIR` that are set at import time
+- You want to test a registry/dispatch dict (like `FIGURES`) without invoking any heavy dependencies
+
+## Verified Workflow
+
+### Step 1 — Understand the script's testable surface
+
+Read each script to find:
+1. Pure functions with no side effects (test directly, no mocking needed)
+2. Functions that call `subprocess.run` (mock `<module>.subprocess.run`)
+3. `main()` functions controlled by `argparse` (mock `sys.argv`)
+4. Module-level constants that affect behavior (mock with `patch("<module>._REPO_ROOT", ...)`)
+
+### Step 2 — Follow the ProjectScylla test file pattern
+
+```python
+"""Tests for scripts/<script_name>.py."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from <script_name> import <function_to_test>
+
+
+class Test<FunctionName>:
+    """Tests for <function_name>()."""
+
+    def test_happy_path(self, tmp_path: Path) -> None:
+        """<Description of what passes>."""
+        # Arrange, Act, Assert
+
+    def test_error_case(self) -> None:
+        """<Description of error path>."""
+        ...
+```
+
+Key conventions:
+- `from __future__ import annotations` always first
+- Class-based test grouping (one class per function/feature)
+- Docstrings on every test method
+- `tmp_path` fixture for filesystem operations
+- `pytest.CaptureFixture[str]` (not `object`) for capsys
+
+### Step 3 — Patch module-level constants correctly
+
+When a script sets `_REPO_ROOT = Path(__file__).parent.parent` at module level,
+patch it as a module attribute:
+
+```python
+with patch("check_defaults_filename._REPO_ROOT", tmp_path):
+    result = main()
+```
+
+The patched tmp_path must replicate the exact subdirectory structure the function
+expects. For `config/defaults.yaml`, create:
+
+```python
+config_dir = tmp_path / "config"
+config_dir.mkdir()
+(config_dir / "defaults.yaml").write_text("key: value\n")
+```
+
+### Step 4 — Mock subprocess.run with side_effect for sequential calls
+
+When a function makes multiple subprocess calls, use `side_effect` with a list:
+
+```python
+mock_total = MagicMock()
+mock_total.returncode = 0
+mock_total.stdout = "10\n"
+
+mock_open_result = MagicMock()
+mock_open_result.returncode = 0
+mock_open_result.stdout = "3\n"
+
+with patch("get_stats.subprocess.run", side_effect=[mock_total, mock_open_result]):
+    result = get_issues_stats("2026-01-01", "2026-01-31", None, "owner/repo")
+```
+
+### Step 5 — Test registry/dispatch dicts directly
+
+For scripts that expose a module-level registry dict (e.g., `FIGURES`), test the
+dict structure without calling any generators:
+
+```python
+from generate_figures import FIGURES
+
+class TestFiguresRegistry:
+    def test_figures_functions_are_callable(self) -> None:
+        for name, (_category, fn) in FIGURES.items():
+            assert callable(fn)
+```
+
+### Step 6 — Run and fix pre-commit issues
+
+Pre-commit will apply ruff formatting automatically on first fail. Re-stage
+and re-commit. Common issues to fix before the second attempt:
+
+1. **F841 unused variables** — Remove `as mock_fh` from `with patch(...)` when you don't assert on the mock
+2. **var-annotated** — Add type annotation for dicts assigned to plain `config = {}` variables: `config: dict[str, object] = {}`
+3. **capsys type** — Use `pytest.CaptureFixture[str]` not `object` as the capsys parameter type
+
+### Step 7 — Verify all tests pass
+
+```bash
+pixi run python -m pytest tests/unit/scripts/ -v
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+**Test counts by script:**
+
+| Script | Tests | Key technique |
+| -------- | ------- | --------------- |
+| `check_defaults_filename.py` | 4 | patch `_REPO_ROOT`, `validate_defaults_filename` |
+| `docker_build_timing.py` | 13 | Pure functions — no mocking needed |
+| `export_data.py` | 8 | patch `shapiro_wilk`; pandas DataFrame in tests |
+| `generate_all_results.py` | 7 | patch `subprocess.run` + `terminal_guard` + `sys.argv` |
+| `generate_figures.py` | 7 | FIGURES registry structural checks only |
+| `generate_tables.py` | 3 | patch all 10 table generators + `load_all_experiments` |
+| `get_stats.py` | 6 | `side_effect=[mock1, mock2]` for sequential subprocess calls |
+| `implement_issues.py` | 7 | `parse_args` + `setup_logging` with `sys.argv` mock |
+| `lint_configs.py` | 14 | `ConfigLinter` class methods tested directly |
+| `migrate_skills_to_mnemosyne.py` | 14 | Pure utility functions tested directly |
+| `plan_issues.py` | 10 | `parse_args` + `main()` return codes with `Planner` mock |
+| `validation.py` | 17 | Filesystem functions + regex helpers with `tmp_path` |
+
+**pyproject.toml pytest config (important for imports):**
+```toml
+[tool.pytest.ini_options]
+pythonpath = [".", "scripts"]
+```
+This allows `from <script_name> import ...` without any path manipulation.
+
+**Total: 130 tests, all passing**
+
+## Verified On
+
+- ProjectScylla (Python 3.10+, pytest, pixi environment)
+- 12 scripts covered in one session
+- Pre-commit: ruff, mypy, black all pass
+```
+
+---
+
+## Superseded from unit-tests-untested-modules
+
+```markdown
+---
+name: unit-tests-untested-modules
+description: Workflow for adding unit tests to previously untested source modules.
+  Use when a quality audit identifies modules with no test file, coverage threshold
+  is at risk, or an issue requests tests for specific untested modules.
+category: testing
+date: 2026-02-22
+version: 1.0.0
+user-invocable: true
+---
+# Skill: Unit Tests for Untested Source Modules
+
+## Overview
+
+| Property | Value |
+| ---------- | ------- |
+| **Date** | 2026-02-22 |
+| **Objective** | Add unit tests for source modules with no test file |
+| **Outcome** | 133 new tests added, all pass; coverage 74.93% (threshold 73%) |
+| **Context** | Quality audit identified modules with zero test coverage; 2 were HIGH priority core execution paths |
+
+## When to Use This Skill
+
+Use this skill when:
+- A quality audit identifies source modules with no corresponding test file
+- Coverage threshold is at risk because of missing test files
+- An issue requests adding unit tests for a list of specific modules
+- Execution path modules (agents, judges, executors) lack test coverage
+
+**Key Indicators**:
+- `tests/unit/e2e/` or `tests/unit/<module>/` directory exists but no `test_<name>.py`
+- Coverage report shows 0% for a source file
+- Issue body lists specific modules with a Priority column
+
+## Verified Workflow
+
+### 1. Audit What Already Exists
+
+Before writing anything, check the test directory for existing files:
+
+```bash
+ls tests/unit/e2e/
+ls tests/unit/config/
+ls tests/unit/automation/
+```
+
+**Critical**: Some files listed in the issue may already have partial test files.
+- If `test_workspace_setup.py` already exists → extend it, don't replace it
+- If `test_validation.py` already exists → add new test classes at the bottom
+
+### 2. Read Source Files Before Writing Tests
+
+Read each source module fully before writing tests. Key things to capture:
+
+- **Function signatures** — exact parameter names, types, defaults
+- **Return types** — what does the function return on success vs failure?
+- **Error conditions** — what raises? what returns False/None?
+- **Dependencies** — what does the function call internally? (subprocess, json, Path)
+- **Constants** — `RESULT_FILE`, `AGENT_DIR`, `JUDGE_DIR` from `paths.py`
+
+```bash
+# Also check the path constants
+cat <project-root>/e2e/paths.py
+```
+
+### 3. Decide Mock Strategy Per Module
+
+| Module Type | Mock Strategy |
+| ------------ | --------------- |
+| File I/O (save/load) | Use `tmp_path` pytest fixture — write real files |
+| Subprocess calls | `patch("subprocess.run")` with `MagicMock(returncode=0)` |
+| External API calls | `patch("module.function_name", return_value=mock_result)` |
+| multiprocessing.Manager | Use real `Manager()` in a `with Manager() as mgr:` context |
+| curses | `patch("curses.wrapper")`, `patch("curses.endwin")` |
+
+**Rule**: Prefer real filesystem I/O with `tmp_path` over `mock_open`. It's more reliable and tests the actual serialization.
+
+### 4. Check If Existing Test File Needs Extending
+
+```python
+# If test_validation.py exists but is missing functions:
+# 1. Read the existing file to understand current imports
+# 2. Add the missing functions to the import line
+# 3. Append new test classes at the bottom
+```
+
+**NEVER replace an existing test file.** Extend it.
+
+### 5. Write Tests in Priority Order
+
+Start with HIGH priority modules. For each function:
+
+1. **Happy path** — valid inputs produce expected output
+2. **Error path 1** — missing file / malformed data
+3. **Error path 2** — specific invalid state (e.g., exit_code=-1 + zero tokens)
+4. **Parametrized edge cases** — boundary conditions
+
+```python
+class TestHasValidAgentResult:
+    """Tests for _has_valid_agent_result()."""
+
+    def test_returns_false_when_no_result_file(self, tmp_path: Path) -> None:
+        """False when result.json does not exist."""
+        ...
+
+    def test_returns_false_for_incomplete_execution(self, tmp_path: Path) -> None:
+        """False for exit_code=-1 with all-zero token stats."""
+        ...
+
+    @pytest.mark.parametrize("missing_field", ["exit_code", "token_stats", "cost_usd"])
+    def test_returns_false_for_each_missing_required_field(
+        self, tmp_path: Path, missing_field: str
+    ) -> None:
+        ...
+```
+
+### 6. Handle multiprocessing.Manager Tests Carefully
+
+`RateLimitCoordinator` uses `multiprocessing.Manager` for shared state. Do NOT mock it — use a real manager:
+
+```python
+def test_not_paused_initially(self) -> None:
+    with Manager() as mgr:
+        coordinator = RateLimitCoordinator(mgr)
+        assert coordinator.check_if_paused() is False
+```
+
+**Critical**: `check_if_paused()` blocks if the pause event is set and the resume event is not set. Always set the resume event before triggering the pause in tests:
+
+```python
+# WRONG — will block forever
+coordinator.signal_rate_limit(info)
+result = coordinator.check_if_paused()
+
+# RIGHT — pre-set resume to unblock
+coordinator._resume_event.set()
+coordinator.signal_rate_limit(info)
+```
+
+### 7. Handle Timing-Sensitive Thread Tests
+
+Thread lifecycle tests (CursesUI start/stop) are prone to race conditions when curses.wrapper is mocked (it returns instantly, so `running` becomes False before assertions):
+
+```python
+# WRONG — race condition: thread may finish before second start() call
+def test_start_is_idempotent(self) -> None:
+    ui.start()
+    first_thread = ui.thread
+    ui.start()  # thread may already be done
+    assert first_thread is ui.thread  # may fail
+
+# RIGHT — manually set state to avoid timing dependency
+def test_start_does_not_start_second_thread_when_already_running(self) -> None:
+    ui.running = True
+    ui.thread = threading.Thread(target=lambda: None)
+    first_thread = ui.thread
+    ui.start()  # no-op since running=True
+    assert first_thread is ui.thread
+```
+
+### 8. Fix Patch Targets for Imported Functions
+
+When a module does `from scylla.utils.terminal import restore_terminal`, patch the source, not the importer:
+
+```python
+# WRONG
+patch("<package>.automation.curses_ui.restore_terminal")
+
+# RIGHT — patch where the function is defined
+patch("<package>.utils.terminal.restore_terminal")
+```
+
+### 9. Run Tests and Fix Pre-commit Issues
+
+```bash
+# Run only new tests first
+<package-manager> run python -m pytest <test-path>/test_agent_runner.py -v --no-cov
+
+# Run full suite with coverage check
+<package-manager> run python -m pytest tests/unit/ -q
+
+# Fix formatting/linting
+pre-commit run --files <new_test_files>
+```
+
+**Common pre-commit issue**: Docstrings > 100 chars trigger `E501`. Shorten them.
+
+### 10. Commit and PR
+
+```bash
+git add <test-files>
+git commit -m "test(unit): Add unit tests for N untested source modules"
+git push -u origin <branch>
+gh pr create --title "..." --body "Closes #<issue>"
+gh pr merge --auto --rebase <pr-number>
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+### Test Count by Module
+
+| Module | Test File | Tests |
+| -------- | ----------- | ------- |
+| `agent_runner.py` | `test_agent_runner.py` | 23 |
+| `judge_runner.py` | `test_judge_runner.py` | 27 |
+| `parallel_executor.py` | `test_parallel_executor.py` | 14 |
+| `config/validation.py` | `test_validation.py` (extended) | +22 |
+| `automation/curses_ui.py` | `test_curses_ui.py` | 20 |
+| **Total new** | | **106** |
+
+### Coverage Results
+
+```
+Before: ~73% (at threshold boundary)
+After:  74.93% (threshold: 73%)
+Tests:  2535 passed, 0 failed, 8 warnings
+```
+
+### Mock Pattern for File I/O Modules
+
+```python
+def _write_result_json(agent_dir: Path, data: dict) -> None:
+    """Write result.json to agent_dir."""
+    agent_dir.mkdir(parents=True, exist_ok=True)
+    (agent_dir / RESULT_FILE).write_text(json.dumps(data))
+
+def test_returns_true_for_valid_success_result(self, tmp_path: Path) -> None:
+    agent_dir = tmp_path / AGENT_DIR
+    agent_dir.mkdir(parents=True)
+    _write_result_json(agent_dir, {
+        "exit_code": 0,
+        "token_stats": {"input_tokens": 100, "output_tokens": 50},
+        "cost_usd": 0.01,
+    })
+    assert _has_valid_agent_result(tmp_path) is True
+```
+
+### Mock Pattern for RateLimitCoordinator
+
+```python
+def test_signal_rate_limit_sets_pause(self) -> None:
+    with Manager() as mgr:
+        coordinator = RateLimitCoordinator(mgr)
+        info = RateLimitInfo(source="agent", retry_after_seconds=60.0,
+                             error_message="rate limited", detected_at="...")
+
+        # Pre-set resume so check_if_paused doesn't block
+        coordinator._resume_event.set()
+        coordinator.signal_rate_limit(info)
+
+        assert coordinator._pause_event.is_set()
+```
+
+## Key Takeaways
+
+1. **Always check if test file already exists** before creating a new one — extend, don't replace
+2. **Read source before writing tests** — especially to find path constants
+3. **Use `tmp_path` for file I/O tests** — real files are more reliable than `mock_open`
+4. **multiprocessing.Manager: use a real one** — don't mock it, use `with Manager() as mgr:`
+5. **Pre-set blocking events before triggering them** — avoid deadlocks in coordinator tests
+6. **Thread timing tests are fragile** — simulate state directly rather than relying on thread scheduling
+7. **Patch at the definition site** — `from X import Y` means patch `X.Y`, not the importer
+8. **Docstrings must be ≤100 chars** — ruff E501 will fail on long docstrings
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | Issue #850, PR #975 — 133 tests added, coverage 74.93% | [notes.md](../../references/notes.md) |
+```
+
+---
+
+## Superseded from test-coverage-audit
+
+```markdown
+---
+name: test-coverage-audit
+description: 'Audit existing test files before adding new tests to avoid duplicating
+  coverage. Use when: an issue requests adding tests for a method, investigating whether
+  a test coverage gap is real, or consolidating test suites.'
+category: testing
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Trigger** | Issue asks to add tests for a method or feature |
+| **Risk** | Low — read-only audit before any writes |
+| **Payoff** | Avoids wasted effort duplicating existing tests |
+| **Language** | Any (Mojo, Python, etc.) |
+
+## When to Use
+
+- Issue says "add test coverage for `__hash__`" (or any method)
+- Issue says "add any missing cases" — implies audit first
+- You're about to write tests and haven't verified what exists
+- Multiple test files exist and coverage may be split across them
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Search all test files for the method name
+grep -rn "__hash__\|hash(" tests/ --include="*.mojo" --include="*.py"
+
+# List files that match
+grep -rl "__hash__" tests/
+
+# Read matching sections to verify coverage
+```
+
+### Step 1: Search for existing tests
+
+Use `Grep` to find all test files containing the method name (case-insensitive):
+
+```
+pattern: hash|__hash__
+path: tests/
+glob: *.mojo  (or *.py)
+output_mode: files_with_matches
+```
+
+### Step 2: Map issue requirements to tests
+
+For each requirement in the issue, find the corresponding test function:
+
+| Requirement | Search pattern |
+| ------------- | --------------- |
+| "identical X produce equal Y" | `test_.*immutable\|test_.*equal\|assert_equal.*hash` |
+| "differing by shape" | `test_.*shape` |
+| "differing by dtype" | `test_.*dtype` |
+| "differing by value" | `test_.*value.*differ\|test_.*different_val` |
+
+### Step 3: Read the test sections
+
+Read the relevant lines around each match to verify the test actually covers the requirement
+(not just mentions the keyword).
+
+### Step 4: Build a coverage matrix
+
+| Requirement | Covered? | Test function | File |
+| ------------- | ---------- | --------------- | ------ |
+| Identical → equal hash | ✅ | `test_hash_immutable` | `test_utility.mojo:672` |
+| Different shape → diff hash | ✅ | `test_hash_different_shapes_differ` | `test_utility.mojo:748` |
+| Different dtype → diff hash | ✅ | `test_hash_different_dtypes_differ` | `test_utility.mojo:728` |
+| Different value → diff hash | ✅ | `test_hash_different_values_differ` | `test_utility.mojo:684` |
+
+### Step 5: Add only what's missing
+
+- If all cases are covered: add a coverage comment mapping requirements to tests,
+  then close the issue via PR.
+- If cases are missing: write the missing test functions following the existing patterns.
+
+### Step 6: Add coverage comment (when no new tests needed)
+
+Insert a comment block above the test section documenting the coverage mapping:
+
+```mojo
+# ============================================================================
+# Test __hash__
+# Coverage (issue #NNNN):
+#   (1) identical tensors produce equal hashes      -> test_hash_immutable
+#   (2) different shape produces different hash     -> test_hash_different_shapes_differ
+#   (3) different dtype produces different hash     -> test_hash_different_dtypes_differ
+#   (4) different element value produces diff hash  -> test_hash_different_values_differ
+# ============================================================================
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Writing tests immediately | Started drafting test functions before searching | Would have duplicated 8+ existing tests | Always grep first |
+| Single-file search | Only searched `test_utility.mojo` | Missed `test_hash.mojo` with 15 additional NaN-stability tests | Search all files in `tests/` |
+| Trusting issue title | Assumed "add tests" meant tests were missing | All 4 required cases already existed in main | Issue wording "add any missing cases" implies audit |
+
+## Results & Parameters
+
+**Session outcome**: Issue #4051 closed with a 6-line coverage comment, no new test functions needed.
+
+**Key metrics**:
+- Files searched: 5 (via `grep -rl hash tests/`)
+- Existing hash tests found: 23 functions across 2 files
+- New tests written: 0
+- Coverage comment lines added: 6
+
+**Commit format used**:
+
+```
+docs(test): document __hash__ coverage mapping for issue #NNNN
+
+Audit confirmed all four required hash test cases are already present.
+Added coverage comment mapping each requirement to its test function.
+
+Closes #NNNN
+```
+```
+
+---
+
+## Superseded from close-script-test-gap-cmd-run-repair
+
+```markdown
+---
+name: close-script-test-gap-cmd-run-repair
+description: Pattern for extending existing CLI test files to cover command-handler argument flow and repair edge cases using mocks only
+category: testing
+date: 2026-02-27
+version: 1.0.0
+user-invocable: false
+---
+# Close Script Test Gap: cmd_run() and cmd_repair() Edge Cases
+
+## Overview
+
+| Aspect | Details |
+| -------- | --------- |
+| **Date** | 2026-02-27 |
+| **Objective** | Close 87.5% script test gap by adding `cmd_run()` and `cmd_repair()` unit tests to `manage_experiment.py` test file |
+| **Outcome** | ✅ 5 new tests added, 119 total passing, 78.36% project coverage (above 75% threshold) |
+| **Context** | ProjectScylla issue #1113 — `scripts/manage_experiment.py` (1,515 lines) lacked tests for its two primary command handlers despite 114 existing parser tests |
+
+## When to Use This Skill
+
+Use this pattern when:
+
+1. **An existing test file covers parser/argument parsing** but not the actual command handler functions
+2. **You need to verify CLI argument → config flow** (e.g., `--tiers`, `--max-subtests`, `--until`)
+3. **A repair/recovery function has an "if existing" skip path** that needs testing
+4. **Exception handling paths in loops** need coverage (e.g., corrupt JSON continue)
+5. **The script is the primary entry point** for a system with no dedicated handler tests
+
+**Trigger phrases**:
+- "tests only cover argument parsing, not what the command actually does"
+- "the repair function has an `if existing is None` branch that's not tested"
+- "need to verify `--flag` actually flows through to the config object"
+- "command handler exception path not covered"
+
+## Verified Workflow
+
+### Step 1: Audit Existing Coverage
+
+Read the existing test file's module docstring — it lists what IS covered. Compare against
+the actual command handler to find genuine gaps:
+
+```bash
+grep -n "^class Test" tests/unit/e2e/test_manage_experiment.py
+# Identify: parser tests, validation tests, flow tests
+# Look for: missing tiers_to_run, max_subtests, "if existing" branches
+```
+
+**Key questions**:
+- Does any test assert on `config.tiers_to_run`?
+- Does any test assert on `config.max_subtests`?
+- Is there a test where `completed_runs` already has an entry and repair is called?
+- Is there a test with corrupt JSON in a result file?
+
+### Step 2: Identify the Correct Patch Path
+
+The patch path must match the `from ... import` inside the command handler function, **not**
+where the function is defined:
+
+```python
+# In manage_experiment.py cmd_run():
+from scylla.e2e.runner import run_experiment   # → patch at "scylla.e2e.runner.run_experiment"
+from scylla.e2e.model_validation import validate_model  # → "scylla.e2e.model_validation.validate_model"
+```
+
+Wrong path = mock silently ignored, test calls real code.
+
+### Step 3: Capture the Config Object
+
+Use a closure to capture what config was passed to the mocked function:
+
+```python
+captured_configs: list[Any] = []
+
+def mock_run_experiment(config, tiers_dir, results_dir, fresh):
+    captured_configs.append(config)
+    return {"T0": {}}
+
+with patch("scylla.e2e.runner.run_experiment", side_effect=mock_run_experiment):
+    result = cmd_run(args)
+
+assert captured_configs[0].tiers_to_run == [TierID.T0, TierID.T2]
+assert captured_configs[0].max_subtests == 3
+```
+
+### Step 4: Test the "Skip Existing" Path in Repair
+
+To test that `cmd_repair()` does NOT overwrite an existing entry:
+
+```python
+# Checkpoint already has "passed" for run 1
+completed_runs={"T0": {"00-empty": {"1": "passed"}}}
+
+# run_result.json says "failed"
+(run_dir / "run_result.json").write_text(json.dumps({"judge_passed": False}))
+
+# After repair, must still be "passed" (not overwritten)
+assert updated.completed_runs["T0"]["00-empty"][1] == "passed"
+```
+
+### Step 5: Test the Exception-Continue Path
+
+Write invalid JSON to trigger the `except Exception` branch:
+
+```python
+(run_dir / "run_result.json").write_text("{ not valid json }")
+result = cmd_repair(args)
+assert result == 0               # Must not crash
+assert updated.completed_runs == {}  # No entry added
+```
+
+### Step 6: Use `--skip-judge-validation` for cmd_run Tests
+
+All `cmd_run()` tests that don't test model validation should pass
+`--skip-judge-validation` to avoid needing to mock the model validation path:
+
+```python
+args = parser.parse_args([
+    "run", "--config", str(config_dir),
+    "--tiers", "T0", "T2",
+    "--skip-judge-validation",   # ← eliminates validate_model mock requirement
+])
+```
+
+### Step 7: Append to End of Existing Test File
+
+Since the file is large (4000+ lines), append new classes rather than inserting:
+
+```bash
+cat >> tests/unit/e2e/test_manage_experiment.py << 'PYTHON_EOF'
+
+class TestCmdRunTiersAndMaxSubtests:
+    ...
+
+class TestCmdRepairEdgeCases:
+    ...
+PYTHON_EOF
+```
+
+Also update the module docstring at the top to document new coverage.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+### Test Classes Added
+
+```python
+class TestCmdRunTiersAndMaxSubtests:
+    """3 tests: tiers flow, max_subtests flow, default tiers non-empty"""
+    # Patch: "scylla.e2e.runner.run_experiment"
+    # Use: --skip-judge-validation to avoid second mock
+
+class TestCmdRepairEdgeCases:
+    """2 tests: skip-existing entry, corrupt JSON continue"""
+    # No mocks needed — uses real checkpoint load/save with tmp_path
+```
+
+### Minimal Test Directory Fixture
+
+```python
+def _make_test_dir(self, path: Path) -> None:
+    import yaml
+    path.mkdir(parents=True, exist_ok=True)
+    (path / "test.yaml").write_text(yaml.dump({
+        "task_repo": "https://github.com/test/repo",
+        "task_commit": "abc123",
+        "experiment_id": "test-exp",
+        "timeout_seconds": 3600,
+        "language": "python",
+    }))
+    (path / "prompt.md").write_text("test prompt")
+```
+
+### Minimal Checkpoint Fixture
+
+```python
+def _make_checkpoint_file(self, path, run_states, completed_runs):
+    data = {
+        "version": "3.1", "experiment_id": "test-exp",
+        "experiment_dir": str(path), "config_hash": "abc123",
+        "started_at": "2024-01-01T00:00:00+00:00",
+        "last_updated_at": "2024-01-01T00:00:00+00:00",
+        "status": "interrupted",
+        "run_states": run_states, "completed_runs": completed_runs,
+    }
+    cp = path / "checkpoint.json"
+    cp.write_text(json.dumps(data))
+    return cp
+```
+
+### Coverage Impact
+
+| Metric | Before | After |
+| -------- | -------- | ------- |
+| Tests in file | 114 | 119 |
+| Full suite tests | 3185 | 3190 |
+| Project coverage | ~78% | 78.36% |
+| cmd_run() flow coverage | gaps | tiers + max_subtests verified |
+| cmd_repair() branch coverage | missing | skip-existing + corrupt-JSON covered |
+```
