@@ -1,0 +1,1262 @@
+## Superseded from resumable-state-machine-until-halt
+
+---
+name: resumable-state-machine-until-halt
+description: 'Fix --until semantics in resumable state machines: sentinel exception
+  that transitions state before stopping, additive CLI tier merging, ephemeral CLI
+  arg preservation. Use when advance() leaves subtest/tier stuck at prior state because
+  sentinel exception fires before the state update.'
+category: architecture
+date: 2026-02-25
+version: 1.0.0
+user-invocable: false
+---
+# Resumable State Machine: --until Halt Semantics
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-02-25 |
+| Branch | `1067-additive-cli-args-checkpoint` |
+| Objective | Fix `--until` re-execution bug; additive CLI tiers; `in_progress` run display |
+| Outcome | SUCCESS — 3108 tests pass, 78.27% coverage, all hooks pass |
+
+## When to Use
+
+- A state machine's `advance()` method updates checkpoint state **after** executing the action
+- You have a sentinel exception (`UntilHaltError`) raised from inside an action to signal "stop here"
+- After raising the sentinel, the subtest/tier is stuck in the **from_state** instead of **to_state**
+- You want `--until` to stop cleanly but leave state resumable (not FAILED)
+- CLI `--tiers` / `--until` flags must survive a config reload from checkpoint on resume
+- Previously-complete work should be detected and skipped; new work should be added additively
+
+## The Core Bug: Sentinel Exception Before State Update
+
+In a typical state machine `advance()`:
+
+```python
+action = actions.get(current_state)
+if action is not None:
+    action()                          # ← sentinel raised HERE
+    # ...
+# State update — NEVER REACHED when exception propagates
+self.checkpoint.set_state(transition.to_state.value)
+save_checkpoint(...)
+```
+
+When `UntilHaltError` is raised from the PENDING action, `set_state` is never called.
+The subtest stays at PENDING, not RUNS_IN_PROGRESS. On the next resume, the action
+runs again, causing re-execution and potential failure cascades.
+
+## Verified Workflow
+
+### 1. Define `UntilHaltError` in the state machine module (not the executor)
+
+To avoid circular imports, put the sentinel class in the same module as the state machine:
+
+```python
+# scylla/e2e/subtest_state_machine.py
+class UntilHaltError(Exception):
+    """Sentinel raised when --until stops run execution before runs reach a terminal state.
+
+    SubtestStateMachine.advance_to_completion catches this and leaves the subtest
+    in RUNS_IN_PROGRESS (preserving state for future resume) without marking FAILED.
+    """
+```
+
+In the executor (which imports from the state machine), use a lazy import:
+
+```python
+# scylla/e2e/subtest_executor.py
+def _run_loop_and_save_manifest(self, ...):
+    ...
+    from scylla.e2e.subtest_state_machine import UntilHaltError
+    raise UntilHaltError(f"--until stopped runs at {until_run_state.value}")
+```
+
+### 2. Catch `UntilHaltError` in `advance()` and STILL perform the state transition
+
+The key fix: catch the sentinel, do the state update, then re-raise:
+
+```python
+def advance(self, tier_id, subtest_id, actions):
+    current = self.get_state(tier_id, subtest_id)
+    transition = get_next_subtest_transition(current)  # e.g. PENDING → RUNS_IN_PROGRESS
+
+    halt_error: UntilHaltError | None = None
+    action = actions.get(current)
+    if action is not None:
+        _t0 = time.monotonic()
+        try:
+            action()
+        except UntilHaltError as _e:
+            # Still transition the state so we land in RUNS_IN_PROGRESS (resumable)
+            # rather than staying at PENDING.
+            halt_error = _e
+        _elapsed = time.monotonic() - _t0
+        logger.info(f"[{tier_id}/{subtest_id}] {current.value} -> {transition.to_state.value}: ...")
+
+    # Update state (even if UntilHaltError was raised)
+    self.checkpoint.set_subtest_state(tier_id, subtest_id, transition.to_state.value)
+    save_checkpoint(self.checkpoint, self.checkpoint_path)
+
+    if halt_error is not None:
+        raise halt_error   # re-raise so advance_to_completion can stop the loop
+
+    return transition.to_state
+```
+
+### 3. Catch `UntilHaltError` in `advance_to_completion()` to stop without FAILED
+
+```python
+def advance_to_completion(self, tier_id, subtest_id, actions, until_state=None):
+    try:
+        while not self.is_complete(tier_id, subtest_id):
+            new_state = self.advance(tier_id, subtest_id, actions)
+            if until_state is not None and new_state == until_state:
+                break
+    except UntilHaltError as e:
+        # --until stopped runs before they reached a terminal state.
+        # Leave the subtest in RUNS_IN_PROGRESS so it can be resumed later.
+        # Do NOT mark as FAILED — this is intentional early termination.
+        logger.info(f"[{tier_id}/{subtest_id}] {e}")
+    except Exception:
+        self.checkpoint.set_subtest_state(tier_id, subtest_id, SubtestState.FAILED.value)
+        save_checkpoint(self.checkpoint, self.checkpoint_path)
+        raise
+
+    return self.get_state(tier_id, subtest_id)
+```
+
+### 4. Skip runs already at `until_run_state` in the run loop
+
+Prevents re-execution on resume when `_run_loop_and_save_manifest` is called again:
+
+```python
+def _run_loop(self, ...):
+    for run_num in range(1, runs_per_subtest + 1):
+        if sm and self.config.until_run_state is not None:
+            current_run_state = sm.get_state(tier_id.value, subtest.id, run_num)
+            if current_run_state == self.config.until_run_state:
+                continue  # already at --until state, skip
+        # ... execute run
+```
+
+### 5. Raise `UntilHaltError` after `_run_loop` when non-terminal runs remain
+
+```python
+def _run_loop_and_save_manifest(self, tier_id, subtest, ...):
+    self._run_loop(tier_id, subtest, ...)
+    self._save_manifest(...)
+
+    if self.config.until_run_state is not None and ssm is not None:
+        from scylla.e2e.models import RunState
+        from scylla.e2e.state_machine import is_terminal_state
+        from scylla.e2e.subtest_state_machine import UntilHaltError
+
+        run_map = ssm.checkpoint.run_states.get(tier_id.value, {}).get(subtest.id, {})
+        any_non_terminal = any(
+            not is_terminal_state(RunState(s))
+            for s in run_map.values()
+            if s in {e.value for e in RunState}
+        )
+        if any_non_terminal:
+            raise UntilHaltError(
+                f"--until stopped runs before terminal state in "
+                f"{tier_id.value}/{subtest.id}"
+            )
+```
+
+### 6. Restore ephemeral CLI args after config reload from checkpoint
+
+Config reload overwrites `self.config`. Capture CLI-only fields before and re-apply after:
+
+```python
+def _initialize_or_resume_experiment(self):
+    # STEP 1: Capture CLI tiers and ephemeral args before overwrite
+    _cli_tiers = list(self.config.tiers_to_run)
+    _cli_ephemeral = {
+        "until_run_state": self.config.until_run_state,
+        "until_tier_state": self.config.until_tier_state,
+        "until_experiment_state": self.config.until_experiment_state,
+        "max_subtests": self.config.max_subtests,
+    }
+
+    # STEP 2: Load checkpoint + config (overwrites self.config)
+    _load_checkpoint_and_config(...)
+
+    # Restore ephemeral args (only if non-None, so saved config wins when CLI omits)
+    non_none_ephemeral = {k: v for k, v in _cli_ephemeral.items() if v is not None}
+    if non_none_ephemeral:
+        self.config = self.config.model_copy(update=non_none_ephemeral)
+```
+
+### 7. Merge CLI tiers additively and detect tiers needing execution
+
+Move tier-merge OUT of the `failed/interrupted` block so it fires for all checkpoint states:
+
+```python
+    # STEP 4: Merge CLI tiers + detect incomplete runs
+    existing_tier_ids = {t.value for t in self.config.tiers_to_run}
+    new_tiers = [t for t in _cli_tiers if t.value not in existing_tier_ids]
+    if new_tiers:
+        self.config = self.config.model_copy(
+            update={"tiers_to_run": self.config.tiers_to_run + new_tiers}
+        )
+        self._save_config()
+        self.checkpoint.config_hash = compute_config_hash(self.config)
+
+    needs_execution = self._check_tiers_need_execution(_cli_tiers)
+
+    if needs_execution and self.checkpoint.experiment_state in (
+        "complete", "tiers_complete", "reports_generated"
+    ):
+        self.checkpoint.experiment_state = "tiers_running"
+        for tier_id_str in needs_execution:
+            existing_tier_state = self.checkpoint.tier_states.get(tier_id_str)
+            if existing_tier_state in ("complete", "subtests_complete", ...):
+                self.checkpoint.tier_states[tier_id_str] = "subtests_running"
+                for sub_id, sub_state in self.checkpoint.subtest_states.get(tier_id_str, {}).items():
+                    if sub_state == "aggregated":
+                        if self._subtest_has_incomplete_runs(tier_id_str, sub_id):
+                            self.checkpoint.subtest_states[tier_id_str][sub_id] = "runs_in_progress"
+```
+
+### 8. Exclude `tiers_to_run` from config hash
+
+Prevents hash mismatches when tiers change between invocations:
+
+```python
+# scylla/e2e/checkpoint.py — compute_config_hash()
+config_dict = self.config.model_dump()
+config_dict.pop("tiers_to_run", None)  # Tiers are additive across resumes
+```
+
+### 9. Add `in_progress` as a third run display status
+
+For runs stopped mid-sequence by `--until`:
+
+```python
+_RUN_TERMINAL_STATES = frozenset({"worktree_cleaned", "failed", "rate_limited"})
+
+def _derive_run_result(checkpoint, tier_id, subtest_id, run_num_int, run_state_raw) -> str:
+    stored: str | None = checkpoint.get_run_status(tier_id, subtest_id, run_num_int)
+    if stored is not None:
+        return stored                        # pass / fail / agent_complete
+    if run_state_raw in ("pending", ""):
+        return ""                            # not started
+    if run_state_raw in _RUN_TERMINAL_STATES:
+        return run_state_raw                 # terminal non-pass state
+    return "in_progress"                     # mid-sequence (e.g. replay_generated)
+```
+
+## Failed Attempts (Critical)
+
+| Attempt | Why It Failed | Fix |
+| --------- | --------------- | ----- |
+| Define `UntilHaltError` in `subtest_executor.py` | Circular import: `subtest_executor` imports `subtest_state_machine`, which would need to import `subtest_executor` | Define in `subtest_state_machine.py`; use lazy import in `subtest_executor.py` |
+| Test expects `RUNS_IN_PROGRESS` after `UntilHaltError` from PENDING action | `advance()` updates state AFTER `action()` returns; exception prevents the update; state stays at PENDING | Fix `advance()` to catch `UntilHaltError`, still update state, re-raise |
+| Tier-merge only inside `if experiment_state in ("failed", "interrupted")` | CLI tiers not merged when experiment was previously `"complete"` | Move tier-merge outside the failed/interrupted block |
+| Remove `# type: ignore[arg-type]` before testing | After fix, mypy no longer needs the suppression; leaving it causes `unused-ignore` mypy error | Remove suppressions after fix |
+| `--retry-errors` resets ALL failed runs globally | User only wants retries scoped to CLI-requested tiers | Pass `tier_filter=cli_tiers` to `reset_runs_for_from_state()` |
+| Bare `results_dir / experiment_id` path for `--from` | Runner creates timestamp-prefixed dirs (`2026-02-25T06-12-39-test-001`); bare path never matches | Use `_find_checkpoint_path(results_dir, experiment_id)` with `*-{experiment_id}` glob |
+
+## Results & Parameters
+
+| Metric | Value |
+| -------- | ------- |
+| Tests | 3108 passed |
+| Coverage | 78.27% (threshold: 75%) |
+| Pre-commit | All hooks pass |
+| New tests added | 14 (UntilHaltError×3, DeriveRunResult×5, FindCheckpointPath×3, RetryScoped×1, Runner×3) |
+| Files modified | 5 (runner.py, checkpoint.py, subtest_state_machine.py, subtest_executor.py, manage_experiment.py) |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | PR #1107 — additive CLI args + --until fix | [notes.md](../references/notes.md) |
+
+## Key Invariants
+
+1. **Sentinel exception must transition state**: Any sentinel that signals "stop here but don't fail" must trigger the state update before propagating — otherwise the machine is stuck in the prior state and will re-execute on resume.
+2. **Ephemeral fields = fields excluded from config hash**: Only fields not persisted to `experiment.json` should be restored from CLI; persistent fields (`runs_per_subtest`, `model`) must stay from saved config.
+3. **Additive means merge, not replace**: New tiers go into `tiers_to_run`; already-complete tiers are detected and skipped by `_check_tiers_need_execution()`.
+4. **Skip-already-at logic prevents re-execution**: In the run loop, check if a run is already at `until_run_state` before executing it.
+
+## Superseded from state-machine-interrupt-handling
+
+---
+name: state-machine-interrupt-handling
+description: "Pattern for handling Ctrl+C/SIGINT interrupts in multi-level state machine\
+  \ hierarchies without marking states FAILED. Use when subprocess.run() returns normally\
+  \ after SIGINT but you want runs to stay resumable; or when a sentinel exception\
+  \ must propagate through 4 state machine levels (run\u2192subtest\u2192tier\u2192\
+  experiment) without triggering FAILED at any level. Also covers wiring hierarchical\
+  \ state machines (Experiment \u2192 Tier \u2192 Run) into a production runner using\
+  \ closure-based action maps."
+category: architecture
+date: 2026-02-27
+version: 1.1.0
+user-invocable: false
+absorbed:
+  - state-machine-wiring
+---
+# State Machine Interrupt Handling (Ctrl+C / SIGINT)
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-02-27 |
+| Branch | `fix-resume-issues-triple-bug` |
+| Objective | When Ctrl+C kills a subprocess, leave runs at their last good state (not FAILED) so they can be retried cleanly on the next invocation |
+| Outcome | SUCCESS — 3121 tests pass, 78.10% coverage. Ctrl+C leaves runs at `REPLAY_GENERATED` (not `AGENT_COMPLETE` with broken output) |
+
+## When to Use
+
+- You use `subprocess.run()` to launch a child process, and Ctrl+C sends SIGINT to the OS process group — `subprocess.run()` returns **normally** (no Python exception) with a signal exit code
+- Your state machine only advances the checkpoint state **after** a stage completes — so an incomplete stage should leave the run at the prior state
+- You have a multi-level hierarchy (e.g. run→subtest→tier→experiment) and each level has `except Exception` that marks states `FAILED`
+- You want `Ctrl+C` interrupts to be resumable (not permanently failed), while genuine errors still mark `FAILED`
+- You use `ProcessPoolExecutor` with a safe wrapper that converts all exceptions to structured results — you need the interrupt to propagate through the wrapper instead
+
+## The Core Problem: subprocess.run() Doesn't Raise on SIGINT
+
+When Ctrl+C is pressed, the OS sends SIGINT to all processes in the process group. The agent subprocess dies, but from Python's perspective:
+
+```python
+result = subprocess.run(["bash", "replay.sh"], ...)
+# ↑ Returns NORMALLY with result.returncode = -2 (SIGINT)
+# No exception is raised — the caller continues!
+```
+
+The stage function sees a non-zero exit code and treats it as a normal (possibly failed) agent result, advancing state to `AGENT_COMPLETE` with empty/broken output. On the next resume, the run appears "complete" but is actually broken.
+
+## Verified Workflow
+
+### 1. Define `ShutdownInterruptedError` as a sentinel exception
+
+Place it in the module that owns the shutdown flag (e.g., `runner.py`), not in a low-level module, to avoid circular imports:
+
+```python
+# <package>/runner.py
+class ShutdownInterruptedError(Exception):
+    """Raised when an in-progress stage is interrupted by a shutdown signal (Ctrl+C).
+
+    Unlike a generic Exception, this is caught separately by StateMachine.advance_to_completion()
+    so the run is NOT marked as FAILED.  The run state stays at its last successfully
+    checkpointed value, allowing clean resume on the next invocation.
+    """
+
+_shutdown_requested = False
+
+def is_shutdown_requested() -> bool:
+    return _shutdown_requested
+
+def request_shutdown() -> None:
+    global _shutdown_requested
+    _shutdown_requested = True
+```
+
+### 2. Check shutdown flag after subprocess.run() returns
+
+In the stage that runs the subprocess, check `is_shutdown_requested()` immediately after `subprocess.run()` returns:
+
+```python
+def stage_execute_agent(ctx: RunContext) -> None:
+    agent_start = datetime.now(timezone.utc)
+    try:
+        result = subprocess.run(
+            ["bash", str(replay_script.resolve())],
+            capture_output=True,
+            text=True,
+            timeout=adapter_config.timeout,
+            cwd=ctx.workspace.resolve(),
+        )
+
+        # KEY: subprocess.run() returns normally even when the process was killed by SIGINT.
+        # Check shutdown flag here before treating the result as a real agent completion.
+        from <package>.runner import ShutdownInterruptedError, is_shutdown_requested
+
+        if is_shutdown_requested():
+            raise ShutdownInterruptedError(
+                f"Shutdown requested during agent execution for run {ctx.run_number}"
+            )
+
+        # ... parse result, set ctx.agent_result ...
+
+    except Exception as e:
+        from <package>.runner import ShutdownInterruptedError
+        if isinstance(e, ShutdownInterruptedError):
+            raise  # Don't catch — let it propagate without setting agent_result
+
+        # Handle other exceptions as before (e.g., timeout)
+        agent_result = AdapterResult(exit_code=-1, stderr=str(e), ...)
+
+    # Only reached if no exception — ctx.agent_result is set here
+    ctx.agent_result = agent_result
+```
+
+### 3. Catch `ShutdownInterruptedError` in run-level StateMachine before `except Exception`
+
+```python
+def advance_to_completion(self, tier_id, subtest_id, run_num, actions, until_state=None):
+    from <package>.rate_limit import RateLimitError
+    from <package>.runner import ShutdownInterruptedError
+
+    try:
+        while not self.is_complete(tier_id, subtest_id, run_num):
+            new_state = self.advance(tier_id, subtest_id, run_num, actions)
+            if until_state is not None and new_state == until_state:
+                break
+    except RateLimitError:
+        self.checkpoint.set_run_state(..., RunState.RATE_LIMITED.value)
+        save_checkpoint(...)
+        raise
+    except ShutdownInterruptedError:
+        # Run stays at its last successfully checkpointed state — NOT FAILED.
+        current = self.get_state(tier_id, subtest_id, run_num)
+        logger.warning(f"Shutdown interrupted at {current.value} — run left resumable")
+        raise  # Re-raise so upper levels can also handle cleanly
+    except Exception as e:
+        # Genuine failures — mark FAILED
+        self.checkpoint.set_run_state(..., RunState.FAILED.value)
+        save_checkpoint(...)
+        raise
+```
+
+**Critical**: `ShutdownInterruptedError` must be caught BEFORE `except Exception` since it IS an `Exception`. The run state is NOT updated — it stays wherever it was before the interrupted stage began.
+
+### 4. Handle at subtest level — re-raise without marking FAILED
+
+```python
+# SubtestStateMachine.advance_to_completion()
+except UntilHaltError as e:
+    logger.info(f"[{tier_id}/{subtest_id}] {e}")  # don't fail
+except ShutdownInterruptedError:
+    current = self.get_state(tier_id, subtest_id)
+    logger.warning(f"[{tier_id}/{subtest_id}] Shutdown interrupted at {current.value} — resumable")
+    raise  # propagate without setting FAILED
+except Exception:
+    self.checkpoint.set_subtest_state(..., SubtestState.FAILED.value)
+    save_checkpoint(...)
+    raise
+```
+
+### 5. Handle at tier level — reset to CONFIG_LOADED (not FAILED)
+
+The tier should be reset to a resumable state (the state that triggers subtest execution) rather than `FAILED`:
+
+```python
+# TierStateMachine.advance_to_completion()
+except Exception as e:
+    from <package>.runner import ShutdownInterruptedError
+
+    if isinstance(e, ShutdownInterruptedError):
+        # Reset to CONFIG_LOADED so the next invocation re-enters subtest execution
+        self.checkpoint.set_tier_state(tier_id, TierState.CONFIG_LOADED.value)
+        save_checkpoint(...)
+        raise  # propagate
+
+    # All other errors → FAILED
+    self.checkpoint.set_tier_state(tier_id, TierState.FAILED.value)
+    save_checkpoint(...)
+    raise
+```
+
+### 6. Handle at experiment level — mark INTERRUPTED (resumable), not FAILED
+
+```python
+# ExperimentStateMachine.advance_to_completion()
+except Exception as e:
+    from <package>.rate_limit import RateLimitError
+    from <package>.runner import ShutdownInterruptedError
+
+    if isinstance(e, (RateLimitError, ShutdownInterruptedError)):
+        # Both rate limits and Ctrl+C interrupts are resumable
+        self.checkpoint.experiment_state = ExperimentState.INTERRUPTED.value
+    else:
+        self.checkpoint.experiment_state = ExperimentState.FAILED.value
+
+    save_checkpoint(...)
+    raise
+```
+
+### 7. Re-raise from ProcessPoolExecutor safe wrapper
+
+If you have a `_run_subtest_in_process_safe()` wrapper that converts ALL exceptions to structured results, you must carve out `ShutdownInterruptedError`:
+
+```python
+def _run_subtest_in_process_safe(...) -> SubTestResult:
+    try:
+        return _run_subtest_in_process(...)
+    except RateLimitError as e:
+        return SubTestResult(selection_reason=f"RateLimitError: {e.info.error_message}", ...)
+    except Exception as e:
+        from <package>.runner import ShutdownInterruptedError
+        if isinstance(e, ShutdownInterruptedError):
+            raise  # Do NOT convert to SubTestResult — let it propagate to pool manager
+        return SubTestResult(selection_reason=f"WorkerError: {type(e).__name__}: {e}", ...)
+```
+
+Also in the `as_completed` loop:
+
+```python
+except Exception as e:
+    from <package>.runner import ShutdownInterruptedError
+    if isinstance(e, ShutdownInterruptedError):
+        raise  # Let pool manager shut down cleanly
+    # Otherwise create error result...
+```
+
+## Failed Attempts (Critical)
+
+| Attempt | Why It Failed | Fix |
+| --------- | --------------- | ----- |
+| Catch `KeyboardInterrupt` in the state machine | Signal handler sets `_shutdown_requested = True` rather than raising `KeyboardInterrupt` in Python; `subprocess.run()` returns normally, not via exception | Check `is_shutdown_requested()` after `subprocess.run()` returns instead |
+| Raise `ShutdownInterruptedError` and rely on `except Exception` catching it at the run level | The `except Exception` clause marks the run as `FAILED` — exactly what we want to avoid | Add a dedicated `except ShutdownInterruptedError` clause BEFORE `except Exception` in every `advance_to_completion()` |
+| Let `ShutdownInterruptedError` propagate through `_run_subtest_in_process_safe` | The safe wrapper's `except Exception` converts it to a `WorkerError SubTestResult`, swallowing the signal | Add `if isinstance(e, ShutdownInterruptedError): raise` in the wrapper |
+| Reset tier to `SUBTESTS_RUNNING` on interrupt | `SUBTESTS_RUNNING` is the "select best subtest" phase — it expects aggregated results to already be present. Resuming there causes "No sub-test results to select from" error | Reset to `CONFIG_LOADED` which re-enters subtest execution from the beginning |
+| Put `ShutdownInterruptedError` in `state_machine.py` | Causes circular import: `state_machine.py` would need to import `runner.py`; `runner.py` already imports `state_machine.py` | Define in `runner.py` (which owns the shutdown flag); use lazy imports in `state_machine.py` |
+
+## Results & Parameters
+
+| Metric | Value |
+| -------- | ------- |
+| Tests | 3121 passed |
+| Coverage | 78.10% (threshold: 75%) |
+| New tests | 4 (one per state machine level) |
+| Files modified | 7 (runner.py, stages.py, state_machine.py, subtest_state_machine.py, tier_state_machine.py, experiment_state_machine.py, parallel_executor.py) |
+| Behavior after fix | Ctrl+C leaves run at `REPLAY_GENERATED`; next resume re-executes agent cleanly |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | PR #1109 — Ctrl+C interrupt handling | [notes.md](../../references/notes.md) |
+
+## Key Invariants
+
+1. **`subprocess.run()` does NOT raise on SIGINT** — always check `is_shutdown_requested()` explicitly after it returns.
+2. **Sentinel exception must be caught BEFORE `except Exception`** — since `ShutdownInterruptedError` IS an `Exception`, ordering matters.
+3. **State machine only advances AFTER action completes** — the interrupted action never completes, so the run state stays at the pre-action state automatically.
+4. **Tier resets to CONFIG_LOADED, not SUBTESTS_RUNNING** — `SUBTESTS_RUNNING` requires results already present; `CONFIG_LOADED` re-enters execution from scratch.
+5. **Safe wrappers swallow all exceptions** — any `ProcessPoolExecutor` safe wrapper must explicitly re-raise the sentinel.
+6. **All four SM levels need handling** — if any level catches `except Exception` without a prior `except ShutdownInterruptedError`, that level will mark FAILED.
+
+## State Machine Architecture Wiring
+
+Absorbed from `state-machine-wiring` (2026-02-22, branch `1008-state-machine-refactor`).
+Outcome: 2676 tests pass, 76.11% coverage, all hooks pass.
+
+### Ephemeral Config Fields for `--until-*` Controls
+
+Add to your config dataclass (excluded from serialization/hash):
+
+```python
+# Ephemeral --until controls (not saved to experiment.json / not in config_hash)
+until_run_state: RunState | None = None
+until_tier_state: TierState | None = None
+until_experiment_state: ExperimentState | None = None
+```
+
+Exclude in `to_dict()` by simply not including these fields.
+
+### Pre-Seeding Mutable State Before Building Action Map
+
+**Critical**: If resuming from a state where the setup action was already executed,
+pre-seed shared mutable state BEFORE building the action map:
+
+```python
+_current_exp_state = ExperimentState.INITIALIZING
+if self.checkpoint:
+    try:
+        _current_exp_state = ExperimentState(self.checkpoint.experiment_state)
+    except ValueError:
+        pass
+
+_resume_states = {
+    ExperimentState.TIERS_RUNNING,
+    ExperimentState.TIERS_COMPLETE,
+    ExperimentState.REPORTS_GENERATED,
+}
+scheduler: Any  # Single annotation before if/else to avoid duplicate-annotation mypy error
+if _current_exp_state in _resume_states:
+    self._validate_filesystem_on_resume(_current_exp_state)
+    scheduler = self._setup_workspace_and_scheduler()
+else:
+    scheduler = None
+```
+
+### Closure-Based Action Map Construction
+
+```python
+def _build_experiment_actions(
+    self,
+    tier_groups: list[list[TierID]],
+    scheduler: Any,
+    tier_results: dict,
+    start_time: datetime,
+) -> dict:
+    def action_initializing() -> None:
+        # INITIALIZING -> DIR_CREATED: no-op, setup done before this call
+        pass
+
+    def action_dir_created() -> None:
+        nonlocal scheduler
+        scheduler = self._setup_workspace_and_scheduler()
+
+    def action_tiers_running() -> None:
+        results = self._execute_tier_groups(tier_groups, scheduler)
+        tier_results.update(results)
+
+    return {
+        ExperimentState.INITIALIZING: action_initializing,
+        ExperimentState.DIR_CREATED: action_dir_created,
+        ExperimentState.TIERS_RUNNING: action_tiers_running,
+        # ...
+    }
+```
+
+For tier-level closures with multiple shared variables, use a **namespace dict** to share
+multiple mutable variables across tier closures:
+
+```python
+tier_ns: dict[str, Any] = {}  # shared mutable state across tier closures
+
+def action_pending() -> None:
+    tier_ns["config"] = load_tier_config(tier_id)
+
+def action_config_loaded() -> None:
+    cfg = tier_ns["config"]
+    tier_ns["results"] = run_subtests(cfg)
+```
+
+### Wire State Machine into Runner
+
+```python
+esm = ExperimentStateMachine(self.checkpoint, checkpoint_path)
+actions = self._build_experiment_actions(...)
+esm.advance_to_completion(actions, until_state=self.config.until_experiment_state)
+```
+
+### Extract Utilities to Library Modules with Backward Compatibility
+
+```python
+# <package>/model_validation.py — new home
+def validate_model(model: str, ...) -> bool: ...
+def is_rate_limit_error(output: str) -> tuple[bool, int | None]: ...
+
+# scripts/run_e2e_experiment.py — old home, re-export for compat
+from <package>.model_validation import is_rate_limit_error, validate_model  # noqa: F401
+warnings.warn("deprecated, use manage_experiment.py", DeprecationWarning, stacklevel=1)
+```
+
+**Important**: Place `warnings.warn()` AFTER all imports to avoid E402 ruff errors.
+
+### Replace sys.argv Mutation with Explicit argv Parameter
+
+```python
+# Old (fragile):
+sys.argv = ["run_e2e_batch.py"] + batch_args
+main()
+
+# New (clean):
+def main(argv: list[str] | None = None) -> int:
+    args = parser.parse_args(argv)
+
+# Caller:
+run_e2e_batch.main(["--config", "batch.yaml"])
+```
+
+### Filesystem Cross-Validation on Resume (Warn, Don't Fail)
+
+```python
+def _validate_filesystem_on_resume(self, state: ExperimentState) -> None:
+    if self.experiment_dir and not self.experiment_dir.exists():
+        logger.warning(f"Resuming from {state.value} but experiment_dir missing: {self.experiment_dir}")
+```
+
+### Additional Wiring Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| CamelCase alias for state enum | `from package.models import ExperimentState as _ES` | Triggers ruff N814: `Camelcase 'ExperimentState' imported as constant '_ES'` | Use `ExperimentState` directly — no alias needed |
+| State transition docstrings on inner functions | `"""INITIALIZING -> DIR_CREATED: ..."""` on closures | Triggers D401 (not imperative mood) | Use `# INITIALIZING -> DIR_CREATED: ...` inline comments instead |
+| `warnings.warn()` between imports | Placed warn between stdlib and package imports | Breaks E402 (module-level import not at top) | Move `warnings.warn()` AFTER all imports |
+| Wrong subprocess mock path in tests | `patch("subprocess.run", ...)` | Does not intercept calls when module uses `subprocess` as module object | Use `patch("<package>.model_validation.subprocess.run", ...)` |
+| Duplicate type annotation for `scheduler` | `scheduler: Any = None` then `scheduler: Any = ...` in if-branch | mypy error: duplicate type annotation | Single bare annotation before branches: `scheduler: Any` then assign in branches |
+
+## Superseded from resource-manager-pattern
+
+---
+name: resource-manager-pattern
+version: 1.0.0
+description: "Replace global mutable semaphores with a dependency-injected ResourceManager class using context managers. Use when: concurrent threads share global locks/semaphores, semaphore leaks cause hangs, or shutdown signals bypass finally blocks."
+category: architecture
+date: 2026-03-22
+user-invocable: false
+---
+
+# ResourceManager Pattern: Replacing Global Semaphores
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | Global mutable semaphores leak on crash/shutdown, causing permanent capacity reduction and hangs |
+| **Pattern** | Dependency-injected ResourceManager with context-manager-based acquire/release |
+| **Language** | Python (threading.Semaphore, threading.Lock, contextlib) |
+| **Codebase** | ProjectScylla E2E experiment runner |
+| **Impact** | Eliminated 5 synchronization bugs that caused machine crashes |
+
+## When to Use
+
+- Module-level `threading.Semaphore` or `threading.Lock` globals with acquire in one function and release in another
+- Semaphore acquire/release split across many stages (e.g., acquire in stage 2, release in stage 15)
+- `global` keyword needed to initialize semaphores (PLW0603 violations)
+- `configure_X()` functions that are "no-op after first call" — state persists between test runs
+- Processes hang after Ctrl+C because semaphore was acquired but never released
+- Two threads racing to initialize the same global semaphore object
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# Before (broken): global semaphores with split acquire/release
+_workspace_semaphore: threading.Semaphore | None = None
+
+def configure_resource_limits():
+    global _workspace_semaphore  # PLW0603!
+    if _workspace_semaphore is None:  # Race condition!
+        _workspace_semaphore = threading.Semaphore(N)
+
+def stage_create_worktree():
+    _workspace_semaphore.acquire()  # No timeout, no finally!
+
+def stage_cleanup_worktree():  # 14 stages later...
+    _workspace_semaphore.release()  # Skipped on ShutdownInterruptedError!
+
+# After (fixed): ResourceManager with context managers
+class ResourceManager:
+    def __init__(self, max_workspaces, max_agents):
+        self._workspace_sem = threading.Semaphore(max_workspaces)
+        self._agent_sem = threading.Semaphore(max_agents)
+        self._pipeline_lock = threading.Lock()
+
+    @contextlib.contextmanager
+    def workspace_slot(self, timeout=300):
+        if not self._workspace_sem.acquire(timeout=timeout):
+            raise TimeoutError("No workspace slots available")
+        try:
+            yield
+        finally:
+            self._workspace_sem.release()  # GUARANTEED on any exception
+```
+
+### Step 1: Create ResourceManager class
+
+Create a new module (`resource_manager.py`) with:
+- Constructor takes limits as parameters (no globals)
+- Context managers for each resource type (`workspace_slot`, `agent_slot`, `pipeline_slot`)
+- Timeouts on acquire to prevent infinite hangs
+- `finally` blocks guarantee release on ANY exception
+
+### Step 2: Add to context/config dataclass
+
+Add `resource_manager: ResourceManager | None = None` to your shared context (e.g., `RunContext`). Use `TYPE_CHECKING` import to avoid circular deps.
+
+### Step 3: Create once, pass to all
+
+Create `ResourceManager` in the entry point (e.g., `_run_batch()` or `runner.run()`), pass it through to all executors via the context. Do NOT use globals.
+
+### Step 4: Wrap stages with context managers
+
+For stages that spawn subprocesses (agent execution, judge execution):
+```python
+def _agent_with_slot():
+    if ctx.resource_manager:
+        with ctx.resource_manager.agent_slot():
+            stage_execute_agent(ctx)
+    else:
+        stage_execute_agent(ctx)
+```
+
+For long-lived resources (worktrees spanning many stages), wrap the entire run execution:
+```python
+ws_ctx = (
+    resource_manager.workspace_slot()
+    if resource_manager
+    else contextlib.nullcontext()
+)
+with ws_ctx:
+    sm.advance_to_completion(...)
+```
+
+### Step 5: Add checkpoint write lock
+
+If multiple threads save checkpoints, add a module-level `_checkpoint_write_lock = threading.Lock()` around the serialize+write operation to prevent concurrent writes from losing state.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Global semaphores with `configure_resource_limits()` | Module-level `_workspace_semaphore` initialized by function | No reset between runs, race in init, no-op after first call, PLW0603 | Never use mutable module-level globals for concurrency primitives |
+| Acquire in stage_create_worktree, release in stage_cleanup_worktree | Split acquire/release across 14 stages | ShutdownInterruptedError bypassed release, leaking slot permanently | Always pair acquire/release in the same scope (context manager) |
+| `finally` block after try/except in stage_execute_agent | Manual `_agent_sem_acquired` flag + conditional release | ShutdownInterruptedError re-raised before reaching the post-except code | Context managers are more reliable than manual try/finally for semaphore lifecycle |
+| `from scylla.e2e.stages import _workspace_semaphore` in stage_finalization.py | Import global from another module to release it | If global was reassigned, the import gets a stale reference | Pass resources via dependency injection (constructor/context), not module imports |
+| Atomic checkpoint writes without lock | PID+TID temp files + atomic rename | Two threads serialize simultaneously, last rename wins — first thread's state lost | Atomic rename prevents corruption but doesn't prevent data loss from concurrent serialization |
+
+## Results & Parameters
+
+### ResourceManager Defaults
+
+```python
+# For 16GB WSL2 machine with --threads 15
+ResourceManager(
+    max_workspaces=cpu_count * 2,  # e.g., 16 for 8-core
+    max_agents=min(threads, cpu_count),  # e.g., 8 for 8-core, 15 threads
+    threads=15,
+)
+```
+
+### Context Manager Timeouts
+
+```python
+workspace_slot(timeout=300)   # 5 min — worktree creation is fast
+agent_slot(timeout=600)       # 10 min — agent execution can queue
+pipeline_slot()               # No timeout — Lock() blocks until available
+```
+
+### Key Files (ProjectScylla)
+
+| File | Purpose |
+| ------ | --------- |
+| `scylla/e2e/resource_manager.py` | ResourceManager class (new) |
+| `scylla/e2e/stages.py` | RunContext.resource_manager field; agent/judge slot wrappers in build_actions_dict() |
+| `scylla/e2e/stage_finalization.py` | Removed global semaphore imports |
+| `scylla/e2e/subtest_executor.py` | workspace_slot() wraps entire run execution |
+| `scylla/e2e/checkpoint.py` | _checkpoint_write_lock for thread-safe saves |
+| `scylla/e2e/runner.py` | Creates ResourceManager, passes to TierActionBuilder |
+
+### Anti-Patterns to Avoid
+
+```python
+# BAD: Global mutable semaphore
+_sem: threading.Semaphore | None = None
+
+# BAD: "Configure once" function with global keyword
+def configure():
+    global _sem
+    if _sem is None:
+        _sem = threading.Semaphore(N)
+
+# BAD: Split acquire/release across functions
+def start(): _sem.acquire()
+def end(): _sem.release()  # What if exception between start() and end()?
+
+# BAD: Import global from another module to release it
+from other_module import _sem
+_sem.release()  # Stale reference if _sem was reassigned
+```
+
+## Superseded from credential-mount-context-manager
+
+---
+name: credential-mount-context-manager
+description: 'TRIGGER CONDITIONS: Temp credential dirs leaking in home after Docker
+  runs; silent rmtree failures in finally blocks on WSL2; need to safely mount host
+  credentials into Docker containers with guaranteed cleanup.'
+category: architecture
+date: 2026-02-22
+version: 1.0.0
+user-invocable: false
+---
+# credential-mount-context-manager
+
+Extract Docker credential temp-dir lifecycle into a context manager with retry
+cleanup to fix silent resource leaks caused by Docker mount-release race conditions on WSL2.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-02-22 |
+| Objective | Fix `.scylla-temp-creds-*` directory leak — 498 credential copies accumulating in `~/` |
+| Outcome | ✅ Success — 0 leaked dirs after fix; 498 existing dirs cleaned up via recovery utility |
+
+## When to Use
+
+- Directories like `~/.app-temp-creds-<uuid>` or `~/.app-temp-<uuid>` accumulate in home after container runs
+- `shutil.rmtree()` in a `finally` block silently fails (bare `except Exception: pass`) for temp dirs used as Docker volumes
+- On WSL2, Docker may hold mount references briefly after container exit, causing `rmtree()` to race
+- A temp credential/config dir is created before `_run_with_volumes()` but the gap between creation and the `finally` block is not covered by `try`
+- Multiple container managers duplicate the same temp-dir creation + cleanup pattern
+
+## Verified Workflow
+
+### Phase 1: Identify the Leak Pattern
+
+Look for this anti-pattern:
+
+```python
+# ANTI-PATTERN: temp dir created in _build_volumes(), cleaned in _run_with_volumes() finally
+def _build_volumes(self, config):
+    temp_dir = Path.home() / f".app-temp-creds-{uuid.uuid4().hex[:8]}"
+    temp_dir.mkdir()
+    volumes[str(temp_dir)] = {
+        "bind": "/mnt/creds",
+        "mode": "ro",
+        "temp_cleanup": str(temp_dir),   # sentinel — fragile
+    }
+    return volumes
+
+def _run_with_volumes(self, config, volumes):
+    temp_dirs = [v["temp_cleanup"] for v in volumes.values() if "temp_cleanup" in v]
+    try:
+        ...
+    finally:
+        for d in temp_dirs:
+            try:
+                shutil.rmtree(d)
+            except Exception:
+                pass  # SILENT FAILURE — leak source
+```
+
+**Why it leaks on WSL2**: Docker's `--rm` flag removes the container but kernel mount references
+may linger a few hundred ms. `rmtree()` races against that release and loses, silently.
+
+**Second leak source**: If an exception occurs between `_build_volumes()` (line N) and the `try`
+in `_run_with_volumes()` (line N+7), the temp dir is created but never covered by any `finally`.
+
+### Phase 2: Create `credential_mount.py` Module
+
+```python
+# <project-root>/<package>/executor/credential_mount.py
+import contextlib
+import logging
+import shutil
+import time
+import uuid
+from collections.abc import Generator
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+
+@contextlib.contextmanager
+def temporary_credential_mount() -> Generator[Path | None, None, None]:
+    """Context manager for temporary credential directory lifecycle.
+
+    Creates a temp dir with credentials, yields its path for volume mounting,
+    and ensures cleanup with retry logic to handle Docker mount release delays.
+
+    Yields:
+        Path to the temporary credential directory, or None if no credentials
+        file exists at ~/.claude/.credentials.json.
+    """
+    credentials_path = Path.home() / ".claude" / ".credentials.json"
+    if not credentials_path.exists():
+        yield None
+        return
+
+    temp_dir = Path.home() / f".scylla-temp-creds-{uuid.uuid4().hex[:8]}"
+    temp_dir.mkdir(exist_ok=True)
+    temp_dir.chmod(0o755)
+
+    temp_creds = temp_dir / ".credentials.json"
+    temp_creds.write_text(credentials_path.read_text())
+    temp_creds.chmod(0o644)
+
+    try:
+        yield temp_dir
+    finally:
+        _cleanup_temp_dir(temp_dir)
+
+
+def _cleanup_temp_dir(temp_dir: Path, retries: int = 3, delay: float = 0.5) -> None:
+    """Clean up temp dir with retry for Docker mount release race."""
+    for attempt in range(retries):
+        try:
+            shutil.rmtree(temp_dir)
+            return
+        except OSError:
+            if attempt < retries - 1:
+                time.sleep(delay)
+            else:
+                logger.warning(
+                    "Failed to clean up temp credentials dir after %d attempts: %s",
+                    retries,
+                    temp_dir,
+                )
+
+
+def cleanup_stale_credential_dirs() -> int:
+    """Remove any leftover temp cred dirs from home. Returns count removed."""
+    count = 0
+    for path in Path.home().glob(".scylla-temp-creds-*"):
+        if path.is_dir():
+            shutil.rmtree(path, ignore_errors=True)
+            count += 1
+    return count
+```
+
+Adapt the glob pattern to match your project's temp dir naming convention.
+
+### Phase 3: Update Container Managers
+
+**Before** (each manager creates + cleans up its own temp dir):
+
+```python
+def run(self, config):
+    volumes = self._build_volumes(config)   # creates temp dir internally
+    return self._run_with_volumes(config, volumes)  # cleans up in finally
+```
+
+**After** (context manager owns the lifecycle):
+
+```python
+def run(self, config):
+    with temporary_credential_mount() as creds_dir:
+        volumes = self._build_volumes(config, creds_dir=creds_dir)
+        return self._run_with_volumes(config, volumes)
+        # context manager cleans up temp dir here — inside the with block
+```
+
+Update `_build_volumes()` signature:
+
+```python
+def _build_volumes(self, config, creds_dir: Path | None = None):
+    volumes = { ... }  # existing mounts
+    if creds_dir is not None:
+        volumes[str(creds_dir)] = {"bind": "/mnt/claude-creds", "mode": "ro"}
+    return volumes
+```
+
+Remove from `_run_with_volumes()`:
+- The `temp_dirs` collection loop
+- The `finally` cleanup block
+- The `"temp_cleanup"` sentinel dict key
+
+### Phase 4: Add Tests
+
+```python
+# tests/unit/<module>/test_credential_mount.py
+
+def test_temporary_credential_mount_creates_and_cleans_up(home_with_credentials):
+    with patch("...Path.home", return_value=home_with_credentials):
+        with temporary_credential_mount() as creds_dir:
+            assert creds_dir is not None
+            assert creds_dir.exists()
+        assert not creds_dir.exists()   # cleaned up
+
+def test_temporary_credential_mount_no_credentials(fake_home):
+    with patch("...Path.home", return_value=fake_home):
+        with temporary_credential_mount() as creds_dir:
+            assert creds_dir is None
+
+def test_cleanup_retries_on_failure(tmp_path):
+    # mock rmtree to fail twice then succeed
+    ...
+
+def test_cleanup_logs_warning_on_final_failure(tmp_path):
+    # mock rmtree to always fail, verify logger.warning called
+    ...
+
+def test_cleanup_stale_credential_dirs(fake_home):
+    # create 2 stale dirs + 1 unrelated, verify count=2 and correct dirs removed
+    ...
+
+def test_context_manager_cleans_up_on_exception(home_with_credentials):
+    # verify temp dir removed even when exception raised inside with block
+    ...
+```
+
+### Phase 5: Recovery Cleanup (One-Time)
+
+```python
+from <package>.executor.credential_mount import cleanup_stale_credential_dirs
+count = cleanup_stale_credential_dirs()
+print(f"Cleaned up {count} stale credential directories")
+```
+
+Or via shell:
+
+```bash
+rm -rf ~/.scylla-temp-creds-*  # adapt glob to your naming convention
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Retry Parameters (Tuned for WSL2 Docker)
+
+```python
+retries: int = 3      # 3 attempts covers typical mount release window
+delay: float = 0.5    # 0.5s between attempts = max 1s extra latency on failure
+```
+
+### File Permissions for Container Access
+
+```python
+temp_dir.chmod(0o755)           # directory: world-readable+executable
+temp_creds.chmod(0o644)         # file: world-readable
+```
+
+These permissions allow the container user (often a non-root UID) to read the credentials.
+
+### Pattern for Multiple Managers
+
+When multiple container managers (e.g., `agent_container.py`, `judge_container.py`) share the same
+credential mounting need, extract to a single shared module — don't copy-paste into each manager.
+One module → one context manager → imported by all managers.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | PR #1010 — Fixed 498 leaked `.scylla-temp-creds-*` dirs | [notes.md](../references/notes.md) |
+
+## References
+
+- Python `contextlib.contextmanager` docs: https://docs.python.org/3/library/contextlib.html#contextlib.contextmanager
+- Related skills: `debugging/pydantic-none-coercion-pattern` (similar silent-failure pattern)
+
+## Superseded from multiprocess-to-multithread-conversion
+
+---
+name: multiprocess-to-multithread-conversion
+description: 'Converting ProcessPoolExecutor to ThreadPoolExecutor for Python 3.14t
+  compatibility. Use when: multiprocessing hangs on free-threaded Python, or workers
+  run external subprocesses making threads sufficient.'
+category: architecture
+date: 2026-03-18
+version: 1.0.0
+user-invocable: false
+---
+# MultiProcess to MultiThread Conversion
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | `ProcessPoolExecutor` hangs on Python 3.14t (free-threaded) |
+| **Root Cause** | `forkserver` serializes arguments; `Manager().Semaphore()` proxies contain `AuthenticationString` that refuses serialization |
+| **Solution** | Convert to `ThreadPoolExecutor` with `threading.Semaphore`/`Event`/`dict` |
+| **Scope** | 10 source files, 4 test files, ~600 lines of dead code removed |
+| **Risk Level** | Medium — requires careful identification of all cross-process patterns |
+
+## When to Use
+
+- Python 3.14t (free-threaded) `ProcessPoolExecutor` hangs silently on `pool.submit()`
+- Workers primarily run external CLI subprocesses via `subprocess.run()`/`Popen()` (GIL released during I/O)
+- `multiprocessing.Manager()` proxies fail serialization with `forkserver` start method
+- Checkpoint disk-merge logic exists solely to handle forked process state divergence
+
+## Verified Workflow
+
+### Quick Reference
+
+1. **Core conversion**: `ProcessPoolExecutor` -> `ThreadPoolExecutor`, `Manager().Semaphore/Event/dict` -> `threading.Semaphore/Event/dict`
+2. **Dead code removal**: Delete process-reconstruction code (`from_existing()`, `_retry_with_new_pool`, disk-merge in `save_checkpoint`)
+3. **Parameter simplification**: Remove `Manager` param from schedulers/coordinators, pass parent objects directly instead of primitives
+4. **Test cleanup**: Remove `Manager()` fixtures, update mock targets for renamed functions
+5. **Comment cleanup**: "child process" -> "worker thread", "cross-process" -> "cross-thread"
+
+### Step 1: Identify the Conversion Boundary
+
+Map all files that reference `ProcessPoolExecutor`, `Manager()`, `BrokenProcessPool`, or `SyncManager`:
+
+```bash
+grep -rn "ProcessPoolExecutor\|from multiprocessing import Manager\|BrokenProcessPool\|SyncManager" src/
+```
+
+### Step 2: Core Conversion (Imports + Primitives)
+
+Replace in each file:
+- `from concurrent.futures import ProcessPoolExecutor` -> `ThreadPoolExecutor`
+- `from concurrent.futures.process import BrokenProcessPool` -> remove
+- `from multiprocessing import Manager` -> `import threading`
+- `manager.Event()` -> `threading.Event()`
+- `manager.Semaphore(n)` -> `threading.Semaphore(n)`
+- `manager.dict()` -> `{}` (threads share memory)
+
+### Step 3: Remove Process-Reconstruction Code
+
+With threads, workers share the parent's objects directly. Remove:
+- `from_existing()` classmethods that recreated managers in child processes
+- Primitive parameter decomposition (passing `tiers_dir`, `base_repo`, `repo_url` instead of parent objects)
+- `BrokenProcessPool` exception handling and retry-with-new-pool logic
+
+### Step 4: Remove Disk-Merge Logic
+
+Forked processes had stale checkpoint copies, requiring read-modify-write merges. With threads sharing one checkpoint object:
+- Remove `save_checkpoint()` disk-merge (read existing -> deep-merge -> write)
+- Remove `checkpoint_merge_lock` from action builders
+- Remove disk-reload in `mark_checkpoint_completed()`
+- Keep atomic write pattern (temp file + rename) for crash safety
+
+### Step 5: Update Tests
+
+- Remove `multiprocessing.Manager()` fixtures
+- Update function references (`_run_subtest_in_process_safe` -> `_run_subtest_safe`)
+- Update mock targets (`parallel_executor._run_subtest_in_process` -> `_run_subtest`)
+- Delete tests for removed functions (`TestWorkspaceManagerFromExisting`, disk-merge tests)
+- Update call signatures in test helpers (pass `tier_manager`/`workspace_manager` instead of primitives)
+
+### Step 6: Semantic Rebase Strategy
+
+When the final commit subsumes earlier incremental fixes:
+1. Resolve the current conflict by merging both sides
+2. Edit `.git/rebase-merge/git-rebase-todo` to `drop` superseded intermediate commits
+3. Keep only the defense-in-depth commit + final conversion commit
+4. Resolve any remaining conflicts from the final commit
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Incremental lock fixes | Added `filelock.FileLock` for pipeline serialization, then removed it | Each fix addressed a symptom, not the root cause (processes themselves) | When you are fixing serialization issues in multiprocessing, consider whether threads would eliminate the entire problem class |
+| Keeping `_checkpoint_write_lock` | Kept a threading.Lock for checkpoint writes after converting to threads | Unnecessary — threads sharing one checkpoint object don't need merge locks | Identify which synchronization primitives exist solely because of process boundaries |
+| Rebase with all intermediate commits | Tried to rebase all 7 commits onto main | Created cascading conflicts since each commit partially undid the previous one | When commits form a superseding chain, drop intermediates and keep only the final result |
+| Making scheduler serializable | Made scheduler serializable for `forkserver` | Still failed because `Manager().Semaphore()` proxies in the coordinator could not be serialized | The real fix is switching to threads, not making everything serializable |
+
+## Results & Parameters
+
+### Files Changed (Source)
+
+| File | Change |
+| ------ | -------- |
+| `parallel_executor.py` | Core conversion + delete 3 functions (~400 lines removed) |
+| `scheduler.py` | `Manager.Semaphore` -> `threading.Semaphore` |
+| `runner.py` | Remove `Manager`, `BrokenProcessPool`, `checkpoint_merge_lock` |
+| `workspace_manager.py` | Delete `from_existing()` classmethod |
+| `checkpoint_finalizer.py` | Remove disk-merge from `mark_checkpoint_completed` |
+| `tier_action_builder.py` | Remove `checkpoint_merge_lock` + disk-reload block |
+| `checkpoint.py` | Remove read-modify-write merge from `save_checkpoint` |
+| `subtest_executor.py` | Update lazy import proxy for renamed functions |
+| `stages.py` | Update comments: "child process" -> "worker thread" |
+
+### Key Decision: Why Threads Are Sufficient
+
+Workers run external CLI subprocesses (`claude` CLI, `git`, `pytest`) via `subprocess.run()`/`Popen()`. The GIL is released during:
+- `subprocess.Popen.communicate()` (waiting for child process I/O)
+- `subprocess.run()` (blocking on external process)
+- File I/O operations
+
+CPU-bound Python code is minimal — the real work happens in external processes.
+
+### Verification Commands
+
+```bash
+pixi run python -m pytest tests/unit/e2e/ -x -q     # E2E unit tests
+pixi run python -m pytest tests/unit/ -x -q          # All unit tests
+pixi run pre-commit run --all-files                   # Linting + type checks
+```
