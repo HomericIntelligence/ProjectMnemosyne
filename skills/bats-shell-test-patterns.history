@@ -1,0 +1,879 @@
+<!-- markdownlint-disable MD024 -->
+## Superseded from bats-shell-testing
+
+```markdown
+---
+name: bats-shell-testing
+description: 'Skill: bats-shell-testing. Use when working with bats shell testing.'
+category: testing
+date: 2026-01-01
+version: 1.0.0
+user-invocable: false
+---
+# Skill: bats-shell-testing
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-02-21 |
+| PR | #900 |
+| Objective | Add BATS (Bash Automated Testing System) test suite for `preflight_check.sh` covering 5 behavioral edge cases, with mocked `gh`/`git` commands to avoid live API calls |
+| Outcome | Success — 5/5 tests pass, pre-commit hooks pass, CI workflow added |
+| Category | testing |
+
+## When to Use
+
+Trigger this skill when:
+
+- A shell script (`.sh`) has no automated tests and edge cases have been identified in review/issues
+- Tests must avoid live external calls (API, git remotes) — requiring mock stubs
+- The script uses `set -uo pipefail` and you need to verify `grep`/`jq` exit-code behavior in combination
+- You need a runnable BATS suite integrated with `pixi run` and triggered from GitHub Actions CI
+- Edge cases include: different exit codes (0 vs 1), warning vs critical paths, empty vs populated command output
+
+## Results & Parameters
+
+### Directory Layout
+
+```
+tests/shell/
+└── skills/github/gh-implement-issue/   # mirror the script's location under tests/claude-code/
+    ├── helpers/
+    │   └── common.bash                 # setup_mocks() + clean_state()
+    ├── mocks/
+    │   ├── gh                          # stub for gh CLI
+    │   └── git                         # stub for git
+    └── test_preflight_check.bats       # 5 test cases
+```
+
+### Mock Pattern
+
+Mock stubs live in `mocks/` and are injected via PATH prepend. Each stub reads environment variables:
+
+```bash
+# mocks/gh — behavior controlled by env vars
+case "$1 $2" in
+    "issue view")
+        if [[ "${*}" == *"--json"* ]]; then
+            echo "${GH_MOCK_ISSUE_STATE:-{...default open state...}}"
+        else
+            echo "${GH_MOCK_ISSUE_COMMENTS:-}"
+        fi
+        ;;
+    "pr list")
+        echo "${GH_MOCK_PR_JSON:-[]}"
+        ;;
+esac
+```
+
+```bash
+# mocks/git — behavior controlled by env vars
+case "$1" in
+    log)      echo "${GIT_MOCK_LOG:-}"      ;;
+    worktree) echo "${GIT_MOCK_WORKTREE:-}" ;;
+    branch)   echo "${GIT_MOCK_BRANCH:-}"   ;;
+    *)        exit 0 ;;
+esac
+```
+
+### Helper Pattern
+
+```bash
+# helpers/common.bash
+_HELPERS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_MOCKS_DIR="${_HELPERS_DIR}/../mocks"
+
+setup_mocks() { export PATH="${_MOCKS_DIR}:${PATH}"; }
+
+clean_state() {
+    unset GH_MOCK_ISSUE_STATE GH_MOCK_PR_JSON GH_MOCK_ISSUE_COMMENTS \
+          GIT_MOCK_LOG GIT_MOCK_WORKTREE GIT_MOCK_BRANCH || true
+}
+```
+
+### pixi.toml Integration
+
+```toml
+[tasks]
+test-shell = "bats tests/shell/ --recursive"
+
+[feature.dev.dependencies]
+bats-core = ">=1.11.0"   # available on conda-forge
+```
+
+### CI Workflow (`.github/workflows/shell-test.yml`)
+
+```yaml
+on:
+  pull_request:
+    paths:
+      - "**/*.sh"
+      - "tests/shell/**"
+      - ".github/workflows/shell-test.yml"
+  push:
+    branches: [main]
+
+jobs:
+  bats:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: prefix-dev/setup-pixi@v0.8.1
+      - run: pixi run test-shell
+```
+
+### Test Case Pattern
+
+```bats
+@test "<scenario description>" {
+    export GH_MOCK_ISSUE_STATE='{"state":"CLOSED","title":"Done","closedAt":"2024-01-01T00:00:00Z"}'
+    # set other env vars as needed...
+
+    run bash "$SCRIPT" 800
+
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"[STOP]"* ]]
+}
+```
+
+## Verified Workflow
+
+### 1. Identify the script and its external dependencies
+
+Read the script under test. Note every external command call (`gh`, `git`, `jq`, etc.):
+
+- Commands that hit the network or filesystem need mocking
+- Pure utilities already on the system (`jq` was available system-wide here) can be left real
+- Note which env vars or arguments control behavior
+
+### 2. Create the directory structure
+
+```bash
+mkdir -p tests/shell/skills/<category>/<skill>/mocks
+mkdir -p tests/shell/skills/<category>/<skill>/helpers
+```
+
+Mirror the path structure under `tests/shell/` that parallels `tests/claude-code/` for discoverability.
+
+### 3. Write mock stubs (chmod +x)
+
+One stub per external command. Use `case "$1"` or `case "$1 $2"` for subcommand dispatch.
+Default each env var with `${VAR:-default}` so tests that don't set it get a safe no-op.
+
+```bash
+chmod +x tests/shell/.../mocks/gh tests/shell/.../mocks/git
+```
+
+### 4. Write the BATS helper
+
+Keep `common.bash` minimal — just `setup_mocks()` and `clean_state()`. Compute the mocks path
+relative to the helper using `${BASH_SOURCE[0]}` so it works regardless of CWD.
+
+### 5. Compute the correct relative path to the script under test
+
+Use Python to compute the relative path from the test file's directory to the target script:
+
+```python
+import os
+test_dir = os.path.dirname("tests/shell/.../test_foo.bats")
+target   = "tests/claude-code/.../scripts/foo.sh"
+print(os.path.relpath(target, test_dir))
+# -> ../../../../claude-code/.../scripts/foo.sh
+```
+
+Set this in the test file using `$BATS_TEST_FILENAME`:
+
+```bats
+SCRIPT="$(cd "$(dirname "$BATS_TEST_FILENAME")" && pwd)/../../../../claude-code/.../foo.sh"
+```
+
+### 6. Write test cases following the 5-scenario template
+
+For each scenario:
+- `setup()` calls `setup_mocks` + `clean_state`
+- Export only the env vars needed for this scenario
+- Use `run bash "$SCRIPT" <issue-number>`
+- Assert `$status` and key strings in `$output`
+
+### 7. Run locally before committing
+
+```bash
+bats tests/shell/ --recursive
+```
+
+All tests must pass before staging.
+
+### 8. Add bats-core to pixi.toml
+
+```toml
+[feature.dev.dependencies]
+bats-core = ">=1.11.0"
+```
+
+Verify it's on conda-forge first: `pixi search 'bats*'`
+
+### 9. Add CI workflow (shell-test.yml)
+
+Trigger only on `.sh` file changes and `tests/shell/**` for fast CI.
+
+### 10. Commit, push, PR, auto-merge
+
+```bash
+git add pixi.toml .github/workflows/shell-test.yml tests/shell/
+git commit -m "feat(tests): Add BATS test suite for <script>.sh\n\nCloses #<issue>"
+git push -u origin <branch>
+gh pr create --title "feat(tests): ..." --body "Closes #<issue>"
+gh pr merge --auto --rebase
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Related Skills
+
+- `shellcheck-scope-templates` — ShellCheck integration patterns
+- `add-shell-log-level` — Shell script structured logging
+- `git-worktree-collision-fix` — E2E testing with worktree isolation
+```
+
+## Superseded from docker-entrypoint-bats
+
+```markdown
+---
+name: docker-entrypoint-bats
+description: 'Skill: docker-entrypoint-bats. Use when adding BATS tests for Docker
+  entrypoint scripts that handle credential chains, environment validation, and command
+  dispatch.'
+category: testing
+date: 2026-03-03
+version: 1.0.0
+user-invocable: false
+---
+# Skill: docker-entrypoint-bats
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-03 |
+| PR | ProjectScylla #1341 |
+| Issue | ProjectScylla #1159 |
+| Objective | Add BATS test coverage for `docker/entrypoint.sh` (457 lines, 0% shell coverage) covering env validation, credential chain, and command dispatch |
+| Outcome | Success — 57 new tests pass (22 validate_env, 10 credentials, 25 commands); all 3799 Python tests unaffected |
+| Category | testing |
+
+## When to Use
+
+Trigger this skill when:
+
+- A Docker entrypoint shell script needs BATS test coverage
+- The script validates environment variables with complex regex patterns
+- The script has a credential lookup chain (multiple file paths with priority ordering)
+- The script dispatches to sub-commands (`--run-agent`, `--run-judge`, `--run`, etc.)
+- Tests must avoid writing to root-owned paths (`/workspace`, `/output`, `/prompt`, `/mnt/...`)
+- System-level credential files (e.g. `/tmp/host-creds/.credentials.json`) may exist on the test machine and pollute auth-failure tests
+- The script uses `set -euo pipefail` with `((errors++))` — only the first error is ever reported (early exit from arithmetic returning 1)
+
+## Results & Parameters
+
+### Directory Layout
+
+```
+tests/shell/
+└── docker/entrypoint/       # mirrors docker/entrypoint.sh path
+    ├── helpers/
+    │   └── common.bash      # setup_mocks() + clean_state()
+    ├── mocks/
+    │   ├── claude            # stub for claude CLI
+    │   ├── timeout           # stub for timeout (supports exit-code injection)
+    │   ├── git               # stub for git (clone creates target dir)
+    │   ├── python            # stub for python
+    │   └── python3 -> python # symlink
+    ├── test_validate_env.bats    # 22 tests: validate_env()
+    ├── test_credentials.bats     # 10 tests: ensure_clean_claude_environment()
+    └── test_commands.bats        # 25 tests: main() dispatch
+```
+
+### Key Mock Patterns
+
+**claude mock** — exits with `${CLAUDE_MOCK_EXIT:-0}`, prints `"claude 1.0.0-mock"` for `--version`:
+```bash
+#!/usr/bin/env bash
+case "$1" in
+    --version) echo "claude 1.0.0-mock"; exit 0 ;;
+    *)         echo "mock agent output"; exit "${CLAUDE_MOCK_EXIT:-0}" ;;
+esac
+```
+
+**timeout mock** — shifts away duration, passes through or exits with `${TIMEOUT_MOCK_EXIT}`:
+```bash
+#!/usr/bin/env bash
+shift  # remove timeout duration
+if [[ -n "${TIMEOUT_MOCK_EXIT:-}" ]]; then exit "${TIMEOUT_MOCK_EXIT}"; fi
+exec "$@"
+```
+
+**git mock** — `clone` creates the target directory so downstream `ls -A` checks don't fail:
+```bash
+#!/usr/bin/env bash
+case "$1" in
+    clone)
+        _target="${!#}"  # last argument = destination path
+        mkdir -p "$_target" 2>/dev/null || true
+        exit "${GIT_MOCK_CLONE_EXIT:-0}"
+        ;;
+    *) exit 0 ;;
+esac
+```
+
+### HOME Override Pattern
+
+Each test overrides `$HOME` to a temp dir so credential file operations don't pollute the real home:
+
+```bash
+setup() {
+    setup_mocks
+    clean_state
+    _TMPDIR="$(mktemp -d)"
+    export HOME="${_TMPDIR}/home"
+    mkdir -p "${HOME}/.claude"
+}
+
+teardown() {
+    rm -rf "${_TMPDIR}"
+}
+```
+
+### System Credential Contamination Guard
+
+Pre-existing `/tmp/host-creds/.credentials.json` on the test machine causes auth-failure tests to
+see "credentials found" instead of the no-auth path. Back it up in `setup()` and restore in `teardown()`:
+
+```bash
+setup() {
+    # ... HOME setup ...
+    _HOST_CREDS_BACKUP=""
+    if [[ -f /tmp/host-creds/.credentials.json ]]; then
+        _HOST_CREDS_BACKUP="$(cat /tmp/host-creds/.credentials.json)"
+        rm -f /tmp/host-creds/.credentials.json
+    fi
+}
+
+teardown() {
+    if [[ -n "${_HOST_CREDS_BACKUP:-}" ]]; then
+        mkdir -p /tmp/host-creds
+        echo "${_HOST_CREDS_BACKUP}" > /tmp/host-creds/.credentials.json
+    fi
+    rm -rf "${_TMPDIR}"
+}
+```
+
+### Root-Path Skip Pattern
+
+Scripts hard-coding `/workspace`, `/output`, `/prompt`, `/mnt/claude-creds` can't be tested on
+non-root machines. Skip gracefully:
+
+```bash
+@test "--run-agent success path writes result.json" {
+    if ! mkdir -p /workspace /output /prompt 2>/dev/null; then
+        skip "Cannot create /workspace|/output|/prompt (not running as root)"
+    fi
+    echo "test task" > /prompt/task.md
+    # ...
+}
+```
+
+These tests WILL run on CI where the container runs as root.
+
+### Credential Function Invocation
+
+`ensure_clean_claude_environment()` is called by `python`, `python3`, `bash`, `sh`, `--run-agent`,
+`--run-judge`, `--run`, and unknown commands — but NOT by `--validate`.
+
+To test credential behavior without running a full agent/judge, use python passthrough:
+
+```bash
+_run_cred_check() {
+    run bash "$SCRIPT" python --version
+}
+```
+
+This calls `ensure_clean_claude_environment` then `exec`s the mock python which exits 0.
+
+### `set -e` with `((errors++))` — Only First Error Reported
+
+When `validate_env()` uses `((errors++))` to count errors, bash's `set -e` exits the script
+when `errors` increments from 0 to 1 (arithmetic returns exit code 1). This means:
+
+- Only the first validation error is ever logged
+- "Validation failed with N error(s)" is NEVER printed to stdout (the script exits before reaching it)
+- Tests must NOT assert `[[ "$output" == *"Validation failed"* ]]`
+- Tests SHOULD assert `[ "$status" -eq 1 ]` and `[[ "$output" == *"[ERROR]"* ]]`
+
+## Verified Workflow
+
+### 1. Read the script and identify testing surfaces
+
+```bash
+# Identify: external commands, hard-coded paths, env vars, exit codes
+grep -n 'exit \|exec \|cd \|mkdir \|chmod \|cp ' docker/entrypoint.sh
+```
+
+For `docker/entrypoint.sh`, key surfaces were:
+- `validate_env()` — regex checks on TIER, RUN_NUMBER; auth check
+- `ensure_clean_claude_environment()` — credential chain with 3 paths + env var fallback
+- `main()` — case dispatch with 8+ branches
+
+### 2. Compute the SCRIPT path
+
+```python
+import os
+print(os.path.relpath('docker/entrypoint.sh', 'tests/shell/docker/entrypoint'))
+# → ../../../../docker/entrypoint.sh
+```
+
+Use in `.bats` files:
+```bats
+SCRIPT="$(git -C "$(dirname "$BATS_TEST_FILENAME")" rev-parse --show-toplevel)/docker/entrypoint.sh"
+```
+
+### 3. Create helpers and mocks
+
+```bash
+mkdir -p tests/shell/docker/entrypoint/{helpers,mocks}
+# Write helpers/common.bash, mocks/claude, mocks/timeout, mocks/git, mocks/python
+chmod +x tests/shell/docker/entrypoint/mocks/{claude,timeout,git,python}
+cd tests/shell/docker/entrypoint/mocks && ln -sf python python3
+```
+
+### 4. Split tests by functional area
+
+Three files keeps each under ~150 lines and allows targeted runs:
+- `test_validate_env.bats` — pure env var validation, no credential side effects
+- `test_credentials.bats` — credential chain, uses python passthrough to trigger
+- `test_commands.bats` — main() dispatch, includes HOME/host-creds contamination guard
+
+### 5. Run tests iteratively
+
+```bash
+pixi run test-shell 2>&1 | grep -E "(ok |not ok |# )"
+# Fix failures, re-run until all pass
+```
+
+### 6. Update CI workflow
+
+Add explicit path to `shell-test.yml` `pull_request.paths` (alongside `**/*.sh`):
+
+```yaml
+paths:
+  - "**/*.sh"
+  - "tests/shell/**"
+  - "docker/entrypoint.sh"   # explicit for clarity
+  - ".github/workflows/shell-test.yml"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Related Skills
+
+- `bats-shell-testing` — Original BATS setup skill (preflight_check.sh, gh/git mocking patterns)
+- `credential-mount-context-manager` — Credential chain architecture for Docker/WSL2 containers
+```
+
+## Superseded from testing-bats-fake-binary-shim-with-lookup-file
+
+```markdown
+---
+name: testing-bats-fake-binary-shim-with-lookup-file
+description: 'Skill: testing-bats-fake-binary-shim-with-lookup-file. Use when stubbing external CLI binaries (gh, kubectl, aws, curl) under BATS with per-test configurable responses.'
+category: testing
+date: 2026-05-17
+version: 1.0.0
+user-invocable: false
+---
+# Skill: testing-bats-fake-binary-shim-with-lookup-file
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-05-17 |
+| PR | HomericIntelligence/ProjectHephaestus#421 |
+| Objective | Stub out external CLI binaries (like `gh`, `kubectl`, `aws`) under BATS shell tests using a per-test fake binary on PATH, with configurable per-call responses passed from the BATS test to the fake binary |
+| Outcome | Success — 11 BATS tests using this exact pattern, all green in CI |
+| Category | testing |
+| Verification | verified-ci |
+
+## When to Use
+
+Trigger this skill when:
+
+1. Writing BATS tests for a shell function that shells out to `gh`, `kubectl`, `aws`, `curl`, etc.
+2. You need per-test configurable responses without recompiling or rebuilding mocks.
+3. You are tempted to reach for `declare -A` to map argv → response — DON'T; use a lookup file.
+4. You need orthogonal failure-mode toggles (e.g. simulate a repo failing) alongside the response table.
+
+## Key Insight
+
+**Bash associative arrays (`declare -A`) cannot be exported to subprocesses.** If you try
+`export FAKE_GH_RESPONSES_<key>=value` for each key, you end up needing to enumerate keys,
+which is brittle and pollutes the environment.
+
+**The fix:** write a simple `key=value` lookup file from the BATS test, export the FILE PATH
+(a plain scalar), and have the fake binary read the file with `awk`. Plain scalar env vars
+(single string or space-separated list) export cleanly and complement the lookup file for
+boolean/failure-mode toggles.
+
+## Verified Workflow
+
+1. In `setup()`:
+   - `mktemp -d` for the fake binary directory.
+   - Write the fake script (heredoc), `chmod +x` it.
+   - Initialise the lookup file (`: > "$FAKE_GH_COUNTS"`).
+   - Prepend the directory to `PATH` and `export PATH` + the file-path env var + any scalar toggles.
+2. The fake binary:
+   - Parses argv, extracts the discriminating key (e.g. `--repo` value).
+   - Uses `awk -F= -v n="$key" '$1==n {print $2; exit}' "$LOOKUP_FILE"` to fetch its configured response.
+   - Falls back to a sensible default if the key is absent.
+3. The BATS test uses a helper like `write_counts()` to populate the lookup file per-test, then runs the function under test with `run`.
+4. Use a space-separated env var (e.g. `FAKE_GH_FAIL_REPOS="Foo Bar"`) for orthogonal toggles like simulated failures — these export cleanly because they are strings, not associative arrays.
+5. In `teardown()`: `rm -rf` the mktemp dir so fake binaries don't leak into sibling tests.
+
+### Quick Reference
+
+Real example from `tests/shell/scripts/test_repo_ordering.bats` in ProjectHephaestus:
+
+```bash
+setup() {
+    GH_FAKE_DIR="$(mktemp -d)"
+    FAKE_GH_COUNTS="$GH_FAKE_DIR/counts"
+    : > "$FAKE_GH_COUNTS"
+    FAKE_GH_FAIL_REPOS=""
+
+    cat > "$GH_FAKE_DIR/gh" <<'FAKE'
+#!/usr/bin/env bash
+set -uo pipefail
+repo=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --repo) repo="$2"; shift 2 ;;
+        *) shift ;;
+    esac
+done
+name="${repo##*/}"
+for failed in ${FAKE_GH_FAIL_REPOS:-}; do
+    [[ "$failed" == "$name" ]] && { echo "fail" >&2; exit 1; }
+done
+count=$(awk -F= -v n="$name" '$1==n {print $2; exit}' "$FAKE_GH_COUNTS" 2>/dev/null)
+printf '%s\n' "${count:-0}"
+FAKE
+    chmod +x "$GH_FAKE_DIR/gh"
+    PATH="$GH_FAKE_DIR:$PATH"
+    export PATH FAKE_GH_COUNTS FAKE_GH_FAIL_REPOS
+}
+
+teardown() {
+    rm -rf "$GH_FAKE_DIR"
+}
+
+write_counts() {
+    : > "$FAKE_GH_COUNTS"
+    for pair in "$@"; do printf '%s\n' "$pair" >> "$FAKE_GH_COUNTS"; done
+}
+
+@test "sort: typical ordering" {
+    write_counts Foo=10 Bar=2 Baz=5
+    run sort_repos_by_open_count "TestOrg" Foo Bar Baz
+    [ "$status" -eq 0 ]
+    [ "$output" = $'Bar\nBaz\nFoo' ]
+}
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| 1 | `declare -A FAKE_GH_COUNTS; export FAKE_GH_COUNTS` then read from fake binary | Bash cannot export associative arrays to subprocesses — fake binary sees an empty array | Associative arrays are shell-local; never crossable to a forked subprocess |
+| 2 | Hardcoding responses inside the fake binary script | Need to regenerate the script per test or use case statements that explode in size | Doesn't scale and couples test setup to fake-binary source |
+| 3 | Setting one env var per key (`FAKE_GH_COUNT_Foo=10`) | Requires test to enumerate keys, fake binary to know them, and pollutes env | Loses generality — only viable for very small fixed key sets |
+
+## Results & Parameters
+
+- **Lookup file format:** `key=value\n` per line; `awk -F=` parses cleanly even when values contain spaces (as long as the key has no `=`).
+- **Failure-mode flags:** use a space-separated scalar env var (`FAKE_X_FAIL="a b c"`) and iterate with `for x in $VAR; do ... done`.
+- **Defensive shell settings:** always `set -uo pipefail` in the fake binary so a missing env var aborts loudly instead of silently doing the wrong thing.
+- **Teardown is mandatory:** `rm -rf` the mktemp dir — leaving fake binaries on `PATH` leaks into sibling tests.
+- **Discriminating key:** typically extracted via argv parsing (e.g. value after `--repo`). Use `${var##*/}` to strip prefixes like `Org/`.
+
+## Verified On
+
+- **HomericIntelligence/ProjectHephaestus PR #421** — 11 BATS tests using this exact pattern, all green in CI.
+
+## Related Skills
+
+- `bats-shell-testing` — general BATS test-suite scaffolding and `pixi`/CI integration.
+- `docker-entrypoint-bats` — BATS testing of container entrypoints.
+```
+
+## Superseded from bash-globstar-test-discovery-pitfall
+
+```markdown
+---
+name: bash-globstar-test-discovery-pitfall
+description: "Test runners that use `for f in dir/**/*.ext` silently skip files at depth >=3 without `shopt -s globstar`. Use when: (1) writing a bash loop over recursive globs, (2) test count is suspiciously low, (3) coverage metrics drop after refactor."
+category: testing
+date: 2026-05-11
+version: "1.0.0"
+verification: verified-ci
+user-invocable: false
+tags: [bash, globstar, test-discovery, find, mapfile, justfile, recursive-glob, silent-failure]
+---
+
+# Bash Globstar Test Discovery Pitfall
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-11 |
+| **Objective** | Prevent test runners from silently skipping files at depth >=3 when iterating with `dir/**/*.ext` |
+| **Outcome** | Success — replaced glob with `find \| mapfile`; coverage went from 41/298 tests (~14%) to 298/298 (100%) |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- Writing a bash `for` loop over a recursive glob like `tests/**/*.mojo`, `src/**/*.py`, or any `**/*` pattern
+- Test count, file count, or coverage metric is suspiciously low after a refactor that "should not have changed anything"
+- A test suite "passes" but a deliberately-failing test at depth >=3 doesn't break the build
+- `find dir -name '*.ext' | wc -l` returns N files but the loop iterates far fewer
+- Iterating over files in a justfile, Makefile, or CI script that runs under bash without explicit shell options
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# WRONG — silently skips files at depth >=3 (no globstar enabled)
+for test_file in tests/**/*.mojo; do
+    [[ "$(basename "$test_file")" == "__init__.mojo" ]] && continue
+    mojo run "$test_file" || exit 1
+done
+
+# WRONG (subtle) — works only if `shopt -s globstar` is active in this shell
+shopt -s globstar
+for test_file in tests/**/*.mojo; do
+    # Works here, but future contributors copying the loop elsewhere lose the shopt
+done
+
+# RIGHT — `find` walks the tree recursively regardless of bash options
+mapfile -t test_files < <(
+    find tests -name "test_*.mojo" \
+        -not -path "*/__init__.mojo" \
+        -not -path "tests/helpers/fixtures.mojo" \
+        -not -path "tests/helpers/utils.mojo" \
+        -not -path "tests/conftest.mojo" \
+        | sort
+)
+test_count=${#test_files[@]}
+for test_file in "${test_files[@]}"; do
+    mojo run "$test_file" || exit 1
+done
+```
+
+### Detailed Steps
+
+1. **Identify the symptom**: Compare expected to actual file count. Run `find <dir> -name '<pattern>' | wc -l` and compare to the loop's iteration count (add `echo "Processing: $f"` to the loop body and count lines). If they differ, recursion is broken.
+
+2. **Confirm the cause**: Check whether `shopt -s globstar` is active in the shell running the loop. Justfiles, Makefiles, CI scripts, and remote shells (ssh, podman exec) often run a fresh bash without it. In a fresh bash, `**` is equivalent to `*` — it matches only the immediate level.
+
+3. **Replace the glob with `find` + `mapfile`**:
+   - Use `find <root> -name '<pattern>'` for the recursive walk. `find` does not depend on bash shell options.
+   - Make exclusions explicit with `-not -path 'glob'`. This is auditable in the recipe itself, not buried in `[[ ]]` checks inside the loop.
+   - Pipe through `sort` for deterministic ordering.
+   - Use `mapfile -t array < <(...)` to read into an array. Process substitution `< <(...)` (not pipe) keeps `mapfile` in the parent shell so the array is visible after the redirect closes.
+
+4. **Iterate the array with quoted expansion**: `for f in "${array[@]}"` (with quotes) handles whitespace and special characters in paths correctly. Raw `for f in $variable` splits on IFS and breaks on spaces.
+
+5. **Verify**: Print `${#test_files[@]}` before the loop and confirm it matches `find ... | wc -l`. Add a deliberately-failing test at depth >=3 (e.g., `tests/a/b/c/test_canary.mojo`) and confirm the runner now reports it as failed.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| `for f in tests/**/*.mojo` (no shopt) | Used `**` directly assuming bash recurses by default | Bash treats `**` as `*` without `shopt -s globstar`; only matches depth 2 (`tests/<file>`). Silent — produces some matches, so the loop "works" | `**` is opt-in in bash; never assume it recurses |
+| `shopt -s globstar` at top of recipe | Enabled globstar then iterated `tests/**/*.mojo` | Functional in that recipe, but introduces a footgun: future contributors copy the loop pattern elsewhere without copying the shopt and silently regress | Encode the recursion in the command (`find`), not in shell state |
+| `find ... \| while read f; do ...; done` | Piped find output into a while-read loop | The `\|` creates a subshell — counters incremented inside (`(( count++ ))`) don't propagate to the parent; per-file exit codes are masked by the pipe's exit status | Use `mapfile -t arr < <(find ...)` with process substitution so iteration stays in the parent shell |
+| `for f in $(find ...)` | Command substitution into unquoted loop | Splits on IFS — breaks on paths containing spaces or special characters | `mapfile` + `"${arr[@]}"` is whitespace-safe |
+
+## Results & Parameters
+
+**Root cause:** In bash, `**` is a normal glob unless `shopt -s globstar` is enabled. With globstar off (the default), `tests/**/*.mojo` expands as if `**` were `*` — matching exactly two path components, so only files at `tests/<dir>/<file>` are found. Files at `tests/<dir>/<subdir>/<file>` or deeper are silently skipped. The loop still iterates, the script still appears to work, and the bug only surfaces when someone notices coverage is wrong or adds a deliberately-failing deep test that never runs.
+
+**The fix replaces shell-state-dependent recursion with explicit `find`:**
+
+```bash
+# Canonical pattern for test discovery in bash scripts/justfiles:
+mapfile -t test_files < <(
+    find <root_dir> -name '<glob_pattern>' \
+        -not -path '<exclusion_1>' \
+        -not -path '<exclusion_2>' \
+        | sort
+)
+test_count=${#test_files[@]}
+echo "Discovered ${test_count} test files"
+
+for test_file in "${test_files[@]}"; do
+    # ... run the test ...
+done
+```
+
+**Why `find` over `shopt -s globstar`:**
+
+1. `globstar` is a bash-specific feature; sourced scripts, remote shells (ssh/podman exec), and non-bash sh implementations may not have it.
+2. The filter set is explicit in the `find` command — readable in the recipe, not implicit in shell state.
+3. `find -not -path` exclusions are auditable in one place; globstar-based exclusions require multiple `[[ ]]` checks inside the loop.
+4. `mapfile` + quoted array expansion handles whitespace in paths correctly; raw `for ... in $glob` does not.
+
+**Verified on:** HomericIntelligence/ProjectOdyssey PR #5389 (2026-05-11). Justfile test recipe walked `tests/**/*.mojo` and ran 41 of 298 test files (~14%). The recipe's summary printed "298 tests" from an unrelated count, masking the gap. After replacing the glob with `find | mapfile`, coverage went from 41/298 to 298/298 under `--Werror`.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| HomericIntelligence/ProjectOdyssey | PR #5389 justfile test recipe | `tests/**/*.mojo` matched only 41/298 files; replaced with `find -name 'test_*.mojo' \| mapfile` to reach 298/298 |
+```
+
+## Superseded from bash-test-helper-captured-rc-pattern
+
+```markdown
+---
+name: bash-test-helper-captured-rc-pattern
+description: "Replace `cmd || true` in bash test helpers with `_rc=0; cmd || _rc=$?; : $((_rc))`. Use when: (1) a test helper invokes a command whose exit code should NOT abort the test but SHOULD remain observable for debugging, (2) the `|| true` suppresses an exit code that the test transcript should still surface (`echo \"DEBUG: cmd rc=$_rc\"`), (3) a codebase enforces a forbid-`|| true` lint guard but the test-helper case was previously labeled 'intentional', (4) a test framework helper like `run_test`, `apply_agent`, `handle_unmanaged` is called with an expected-failure path and downstream assertions don't depend on $?, (5) needing to preserve 'don't assert on rc' semantics while complying with a no-silent-failures policy."
+category: testing
+date: 2026-05-10
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - bash
+  - test-helpers
+  - captured-rc
+  - silent-failures
+  - exit-code
+  - bats
+  - myrmidons
+  - set-e
+  - debugging-observability
+---
+
+# Bash Test Helper Captured-RC Pattern
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-10 |
+| **Objective** | Refactor 11 test-helper sites in Myrmidons that previously used `\|\| true` to suppress exit codes during expected-failure paths, without losing the diagnostic value of seeing the rc in test output. |
+| **Outcome** | All 83 bats + 51 stand-alone tests pass; the captured-rc pattern lets the lint guard run cleanly while preserving every test's existing behavior. |
+| **Verification** | verified-ci |
+| **PR** | HomericIntelligence/Myrmidons#711 |
+
+## When to Use
+
+- A test helper calls a command whose failure is expected on some paths and should NOT abort the test
+- The test framework previously used `cmd || true` and the codebase is now adopting a forbid-`|| true` lint guard (see `ci-cd-forbid-suppressions-pygrep-lint-guard`)
+- The test author wants to keep the exit code observable in transcripts/logs for regression debugging, not just discarded
+- A repo's CLAUDE.md or comments label the existing `|| true` as "intentional exit-code suppression in test helpers" — that label conflicts with a no-silent-failures policy and the captured-rc pattern resolves the conflict
+
+**Keyword triggers**: `|| true`, captured rc, bash test helper, expected-failure path, forbid suppressions, no-silent-failures, bats helper, `set -e`, exit code observability
+
+## Verified Workflow
+
+**Step 1: Replace the suppression with rc capture.** For a line that was `cmd || true`:
+
+```bash
+# Before (lint-guard violation):
+some_test_helper "$arg" || true
+
+# After (captured rc, no assertion):
+_some_rc=0
+some_test_helper "$arg" || _some_rc=$?
+: $((_some_rc))  # explicit no-op; rc is captured in $_some_rc for inspection
+```
+
+The `: $((_some_rc))` line is a deliberate no-op that asserts to readers "we are aware of the rc and choosing not to act on it." If subsequent debug logging refers to `$_some_rc`, drop the `:` line.
+
+**Step 2: For `output=$(cmd) && true || true` (capturing both stdout and rc):**
+
+```bash
+# Before:
+output=$(_agamemnon_curl_retry "$url" ) && true || true
+
+# After:
+_retry_rc=0
+output=$(_agamemnon_curl_retry "$url") || _retry_rc=$?
+echo "DEBUG: curl rc=$_retry_rc"  # optional but recommended for test transcripts
+```
+
+**Step 3: Optional debug surface.** Where the helper's behavior is part of what the test investigates, add an `if` to surface the rc to the transcript:
+
+```bash
+_apply_rc=0
+apply_agent "$config" || _apply_rc=$?
+if [[ "$_apply_rc" -ne 0 ]]; then
+    echo "DEBUG: apply_agent returned $_apply_rc for config '$config' (test continues)" >&2
+fi
+```
+
+This is the meaningful upgrade over `|| true` — the test transcript now contains a breadcrumb when the helper failed, even though the test itself does not abort.
+
+### Quick Reference
+
+```bash
+# Pattern 1: just capture rc, no debug surface
+_rc=0; cmd || _rc=$?; : $((_rc))
+
+# Pattern 2: capture rc + output
+_rc=0; output=$(cmd) || _rc=$?
+
+# Pattern 3: capture + debug log
+_rc=0; cmd || _rc=$?
+if (( _rc != 0 )); then echo "DEBUG: cmd failed rc=$_rc" >&2; fi
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---|---|---|---|
+| 1 | Original codebase used `cmd \|\| true` and CLAUDE.md labeled it "intentional exit-code suppression in test helpers" | Conflicts with the ecosystem's no-silent-failures policy (see `ci-cd-forbid-suppressions-pygrep-lint-guard`). The "intentional" label hid genuine debugging value behind a discarded exit code. | "Intentional suppression" is not a legitimate label. Capture the rc; suppress only the abort. |
+| 2 | Tried `cmd \|\| :` as a cosmetic alternative | `:` is functionally identical to `true`, so the same lint guard catches it (or should, if widened). | Don't paper over the policy with synonyms — refactor the structure. |
+| 3 | Tried `set +e; cmd; rc=$?; set -e` to temporarily disable abort | Works but is much more verbose and requires careful scoping. The `_rc=0; cmd \|\| _rc=$?` form keeps `set -e` intact and is one line shorter. | Use `\|\| _rc=$?` capture; reserve `set +e` brackets for cases where multiple commands need un-trapped behavior. |
+| 4 | Tried `output=$(cmd) && true \|\| true` (chained both branches) | Doesn't actually capture the rc — both branches just discard it. The `&& true` is a no-op when `cmd` succeeds; the `\|\| true` swallows the failure. | Pattern is meaningless; use `output=$(cmd) \|\| _rc=$?` to capture once. |
+| 5 | Considered just deleting the suppression entirely and letting tests abort on the expected-failure path | Several test cases (`test-api-retry.sh`, `test-apply-cache.sh`, `test-prune-settle.sh`) deliberately exercise error paths and rely on subsequent assertions over the captured rc/output. Hard-aborting would skip the assertions. | The "don't assert on $?" intent is real and valid; only the suppression mechanism needs to change. |
+
+## Results & Parameters
+
+11 test-helper sites refactored in Myrmidons PR #711:
+
+- `tests/test-api-retry.sh:292,313,334,342` — `_curl_rc=0; ... || _curl_rc=$?` and `_retry_rc=0; ... || _retry_rc=$?`
+- `tests/test-apply-cache.sh:181,217,251,299` — `_apply_rc=0; apply_agent ... || _apply_rc=$?` with `if`-guarded debug echo
+- `tests/test-prune-settle.sh:178,225` — `_hu_rc=0; handle_unmanaged ... || _hu_rc=$?`
+- `tests/test-export-default-owner.sh:61` — special case: `unset VAR 2>/dev/null || true` → bare `unset` (the suppression was unnecessary — `unset` doesn't fail on a non-existent var under `set -u` because `unset -v` accepts undefined names)
+
+Test results post-refactor:
+
+- bats: 83/83 passing (test_reconcile, test_export_default_owner, test_apply_args, test_apply_error, test_unmanaged)
+- Stand-alone: 51/51 passing (test-api-retry.sh, test-apply-cache.sh, test-prune-settle.sh, test-export-default-owner.sh)
+
+## Verified On
+
+| Project | Context | Details |
+|---|---|---|
+| HomericIntelligence/Myrmidons | PR #711 — refactored 11 test-helper sites previously labeled "intentional \|\| true" in CLAUDE.md | All bats + stand-alone tests pass; lint guard `forbid-or-true` passes; Myrmidons CLAUDE.md flagged for follow-up doc rewrite |
+```
