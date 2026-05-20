@@ -1,0 +1,1010 @@
+# lockfile-and-release-pipeline-management — History
+
+## Superseded from restore-generated-file-from-main-verbatim
+
+---
+name: restore-generated-file-from-main-verbatim
+description: "Restore a drifted generated file (pixi.lock, Cargo.lock, poetry.lock, package-lock.json, lock-format-shifted YAML, vendor-imports JSON, etc.) on a feature branch by copying main's exact bytes when the source file (pixi.toml, Cargo.toml, pyproject.toml) is identical to main and main is GREEN. Use when: (1) `pixi install --locked` (or equivalent) fails in CI and your branch's pyproject.toml/pixi.toml/Cargo.toml is unchanged vs main, (2) 2+ local regeneration attempts produced different lock content that CI still rejects (tool-version skew between developer and CI runner), (3) you've already tried installing CI's pinned tool version locally and the regenerated lock STILL diverges, (4) origin/main has a recent GREEN CI run on the same source-file SHA, (5) you don't need any branch-specific generation context in the lock (no new deps on this branch), (6) you're about to dispatch a 4th 'regenerate locally' agent — STOP and copy from main instead, (7) lockfile format has shifted across pixi/cargo/poetry binary versions and you can't pin to CI's version, (8) you cut a release tag and the lockfile mismatch is the only blocker between you and merge."
+category: ci-cd
+date: 2026-05-18
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [pixi-lock, cargo-lock, poetry-lock, package-lock, lockfile, generated-file, verbatim-copy, git-checkout-from-main, ci-cd, drift-recovery, tool-version-skew]
+---
+
+# Restore Generated File From Main Verbatim
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-18 |
+| **Objective** | When a feature branch's generated/lock file has drifted in confusing ways and the matching SOURCE file is identical to main, restore the generated file to main's exact bytes — bypassing the "regenerate locally and hope CI agrees" rabbit hole that consumes multiple failed agent dispatches |
+| **Outcome** | One commit, one push, CI green. Avoids the entire tool-version-skew / format-shift / partial-regenerate trap |
+| **Verification** | verified-ci (ProjectAgamemnon PR #400, 2026-05-18) |
+
+## When to Use
+
+- A generated file on your branch (`pixi.lock`, `Cargo.lock`, `poetry.lock`, `package-lock.json`, lock-format-shifted YAML, vendor-imports JSON, etc.) is rejected by CI
+- The matching source file (`pixi.toml`, `Cargo.toml`, `pyproject.toml`, `package.json`) is **identical** between your branch and `origin/main`
+- `origin/main` had a recent GREEN CI run on this exact source-file SHA
+- You've already attempted local regeneration 1+ times and CI still rejects the result
+- You have no branch-specific reason for the generated file to differ from main (no new deps, no version bumps)
+- You're considering dispatching yet another agent to "regenerate the lock properly" — STOP, copy from main first
+- Tool-version skew suspected (developer pixi/cargo/poetry binary differs from CI's pinned version) and you can't easily pin locally
+- The lockfile blocks a release tag and time-to-merge matters more than carrying your branch's specific lock generation
+
+## When This Approach is WRONG
+
+Do NOT use this skill if any of the following are true:
+
+- The generated file SHOULD differ from main because your PR adds/removes/changes dependencies — you MUST regenerate properly
+- Your branch has source-file changes that haven't yet propagated to the lock — regenerate the lock IN YOUR BRANCH
+- The generated file is partially hand-maintained (config-as-data, not pure tool output)
+- Main itself is RED — copying its lock just propagates the bug (see `ci-cd-pixi-lock-stale-multi-pr-triage` for that case)
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Confirm source files match main (must be empty output)
+git diff origin/main..HEAD -- clients/python/pixi.toml
+
+# 2. Confirm main is GREEN on the same source-file SHA
+gh run list --workflow=python-client.yml --branch=main --limit=3 \
+  --json conclusion,headSha,displayTitle
+
+# 3. Restore generated file verbatim from main
+git checkout origin/main -- clients/python/pixi.lock
+
+# 4. Verify zero diff vs main on the generated file
+git diff origin/main -- clients/python/pixi.lock | wc -l   # must be 0
+
+# 5. Run pre-commit on JUST the restored file, then commit (signed)
+pre-commit run --files clients/python/pixi.lock
+git commit -S -m "fix(ci): align clients/python/pixi.lock with main verbatim"
+git push --force-with-lease   # if branch was previously rebased
+
+# 6. DO NOT run `pixi install` (or `cargo update`, etc.) locally afterwards
+#    — that re-writes the lock and undoes the alignment.
+```
+
+### Detailed Steps
+
+1. **Confirm main has the same source file you do.** If `pyproject.toml`/`pixi.toml`/`Cargo.toml` differs, this skill DOES NOT apply — you need to regenerate properly:
+
+   ```bash
+   git fetch origin
+   git diff origin/main..HEAD -- clients/python/pixi.toml
+   # Empty output = source files match, generated file is the only drift
+   ```
+
+2. **Confirm main is GREEN with this source file.** Check the latest CI run on main:
+
+   ```bash
+   gh run list --workflow=python-client.yml --branch=main --limit=3 \
+     --json conclusion,headSha,displayTitle
+   # A recent successful run on a SHA that has the same pyproject/pixi.toml = safe to copy lock
+   ```
+
+3. **Restore the generated file from main verbatim:**
+
+   ```bash
+   git checkout origin/main -- clients/python/pixi.lock
+   # Multiple files at once if needed:
+   git checkout origin/main -- clients/python/pixi.lock clients/python/tests/test_bump_version.py
+   ```
+
+4. **Verify zero diff vs main on the restored file:**
+
+   ```bash
+   git diff origin/main -- clients/python/pixi.lock | wc -l   # must be 0
+   ```
+
+5. **Sign-commit and push** (use `--force-with-lease` only if the branch was rebased):
+
+   ```bash
+   pre-commit run --files clients/python/pixi.lock
+   git commit -S -m "fix(ci): align clients/python/pixi.lock with main verbatim"
+   git push --force-with-lease
+   ```
+
+6. **CRITICAL — do NOT run `pixi install` / `cargo update` / `poetry lock` / `npm install` locally afterward.** Local tool invocations re-write the lock based on your local binary version, undoing the alignment. Just commit the verbatim file and let CI's pinned tool consume it.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| 1 | Install pixi v0.39.5 locally (matching CI's pinned `prefix-dev/setup-pixi` version) and regenerate from current branch | Produced ANOTHER format that CI couldn't parse: `lock-file not up-to-date with the project`. Likely subtle environment differences (OS, glibc, conda channel cache) between developer machine and CI runner | Pinning developer pixi to CI's version is necessary but not sufficient — environment differences can still produce a divergent lock |
+| 2 | Regenerate with pixi v0.67.2 (developer's installed version) and accept the format drift | Hit the v0.39.5 vs v0.67.2 binary-skew rabbit hole — newer pixi writes a lock format the older CI pixi rejects | Newer-to-older pixi lockfile compatibility is NOT guaranteed; always use CI's pinned version for regeneration OR copy from main |
+| 3 | `git checkout origin/main -- pixi.lock` AND then `pixi install` locally to "sync" my environment | `pixi install` immediately re-wrote the lock based on the local pixi binary, re-introducing the exact drift the checkout fixed | Once you copy verbatim, **do not touch the file with any tool**. Local install is the trap |
+| 4 (WORKED) | `git checkout origin/main -- pixi.lock` and DO NOT run `pixi install` afterward | CI's `pixi install --locked` accepted main's exact lock — CI tooling is the only environment that needs to agree with the lock | The shortest path is always: trust main's bytes, commit them, let CI consume them |
+
+## Results & Parameters
+
+### Real Recovery — ProjectAgamemnon PR #400 (2026-05-18)
+
+```bash
+# Branch was preparing v0.1.0 release tag. Lockfile mismatch was the only CI blocker.
+# 3 prior agent dispatches had tried regeneration approaches and failed.
+
+git diff origin/main..HEAD -- clients/python/pixi.toml   # empty — source files identical
+gh run list --workflow=python-client.yml --branch=main --limit=3 --json conclusion
+# [{"conclusion":"success",...}]
+
+git checkout origin/main -- clients/python/pixi.lock
+git diff origin/main -- clients/python/pixi.lock | wc -l   # 0
+pre-commit run --files clients/python/pixi.lock            # passes
+git commit -S -m "fix(ci): align clients/python/pixi.lock with main verbatim"
+git push --force-with-lease
+
+# CI green on first run. v0.1.0 tag cut shortly after.
+```
+
+### Decision flowchart
+
+```
+Generated file CI failure on feature branch
+  │
+  ├─ Source file differs from main?     ──► Regenerate (different skill)
+  │
+  ├─ Branch adds new deps to source?    ──► Regenerate (different skill)
+  │
+  ├─ main is RED on same source SHA?    ──► Fix main first (different skill)
+  │
+  └─ Source matches main, main is GREEN, no new deps
+        │
+        └─► THIS SKILL: git checkout origin/main -- <generated-file>
+                       commit, push, DO NOT run install tool locally
+```
+
+### Generated files this skill applies to
+
+- `pixi.lock` (pixi)
+- `Cargo.lock` (cargo)
+- `poetry.lock` (poetry)
+- `package-lock.json` / `yarn.lock` / `pnpm-lock.yaml` (Node)
+- `go.sum` (Go modules — when source `go.mod` matches main)
+- `requirements.txt` if pip-compile generated (when `requirements.in` matches main)
+- Vendored generated JSON/YAML where source-of-truth is a manifest in the repo
+- Any file whose contents are 100% determined by another file in the repo + a tool version
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectAgamemnon | PR #400 (clients/python/pixi.lock, 2026-05-18) — 3 failed regeneration attempts, verbatim copy worked first try; v0.1.0 tag cut shortly after | See `git log --grep="align clients/python/pixi.lock with main verbatim"` in ProjectAgamemnon |
+
+## Superseded from npm-package-lock-resync-after-package-json-edit
+
+---
+name: npm-package-lock-resync-after-package-json-edit
+description: "Regenerate and commit package-lock.json in the SAME PR whenever a Node.js dependency in package.json changes (add/remove/upgrade/downgrade). CI uses `npm ci` (strict) and will fail with EUSAGE 'lock file's X@A.B.C does not satisfy X@D.E.F' if the lockfile is stale. Use when: (1) editing any dependency version in package.json, (2) an audit/easy-issue says 'downgrade X to satisfy engines constraint', (3) dispatching a sub-agent to edit package.json, (4) the repo has multiple Node sub-projects (e.g., `dagger/package.json` plus root) and you might miss the right lockfile."
+category: ci-cd
+date: 2026-05-10
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [npm, package-json, package-lock, lockfile, npm-ci, eusage, node, dagger, sub-agent-dispatch, easy-issue, engines]
+---
+
+# npm: Resync package-lock.json After Editing package.json
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-10 |
+| **Objective** | Prevent `npm ci` regressions caused by editing `package.json` without regenerating the sibling `package-lock.json` in the same PR |
+| **Outcome** | Successful — pattern verified by ProjectProteus PR #136, which restored the lockfile after PR #135 broke CI |
+| **Verification** | verified-ci — Proteus #136 regenerates `dagger/package-lock.json` via `npm install` and commits ONLY the lockfile; subsequent `npm ci` runs clean |
+
+## When to Use
+
+- **Editing any dependency version in `package.json`** — added, removed, upgraded, or downgraded (including `dependencies`, `devDependencies`, `peerDependencies`, `optionalDependencies`).
+- **Audit issue says "downgrade X to satisfy `engines` constraint"** — never edit `package.json` alone. The lockfile is part of the same atomic change.
+- **Sub-agent dispatch prompts that ask for `package.json` edits** — the brief MUST explicitly tell the sub-agent to regenerate the lockfile in the same directory.
+- **CI uses `npm ci`** (the strict mode) rather than `npm install`. `npm ci` refuses to install if `package.json` and `package-lock.json` disagree.
+- **Repo has multiple Node sub-projects** (e.g., `dagger/package.json` plus a root `package.json`) — easy to miss the right lockfile when running `find` from the wrong directory.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. cd to the SAME directory as the package.json you edited
+cd <pkg-dir>          # e.g., cd dagger
+
+# 2. Regenerate the lockfile (this updates package-lock.json AND populates node_modules/)
+npm install
+
+# 3. Stage ONLY the lockfile (never node_modules/)
+git add package-lock.json
+
+# 4. Commit with a message that ties the lockfile bump to the package.json edit
+git commit -m "chore(<pkg-dir>): regenerate package-lock.json after @types/node downgrade"
+```
+
+Suggested commit-message conventions:
+
+- `chore(<pkg-dir>): regenerate package-lock.json after <dep> <action>`
+- `fix(<pkg-dir>): resync package-lock.json with package.json (<dep> <old> -> <new>)`
+- For combined PRs: include both files in one commit `chore(<pkg-dir>): downgrade <dep> to <range> + lockfile`.
+
+### Detailed Steps
+
+1. **Identify which directory owns the `package.json` you edited.** If the file is `dagger/package.json`, you must `cd dagger` before running `npm install`. Running it from the repo root regenerates the WRONG lockfile (or none at all).
+
+2. **Confirm a lockfile exists in that directory** before assuming there is none:
+
+   ```bash
+   ls <pkg-dir>/package-lock.json <pkg-dir>/npm-shrinkwrap.json 2>/dev/null
+   ```
+
+   Do NOT trust a project-root `find . -name package-lock.json` that returned empty if you ran it from the wrong CWD or with restrictive `-maxdepth`.
+
+3. **Run `npm install` in that directory.** This rewrites `package-lock.json` to match the new `package.json` and creates `node_modules/`. The `node_modules/` directory should NOT be committed (it is normally gitignored — verify before staging).
+
+4. **Stage only the lockfile.**
+
+   ```bash
+   git status                        # confirm package-lock.json is the only new/changed file you want
+   git add <pkg-dir>/package-lock.json
+   ```
+
+5. **Verify locally with the same command CI runs:**
+
+   ```bash
+   cd <pkg-dir>
+   rm -rf node_modules
+   npm ci                            # must succeed cleanly with no EUSAGE error
+   ```
+
+6. **Commit and push.** Include the lockfile in the same PR as the `package.json` edit. Never split them across two PRs.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Easy-issue sweep agent (Proteus #135) | Edited `dagger/package.json` to downgrade `@types/node` from `^25.x` to `^20.x`, claimed "no `package-lock.json` present", merged | Agent ran `find . -name package-lock.json` from repo root with the wrong CWD/depth assumption and missed `dagger/package-lock.json`. CI then failed with `npm error code EUSAGE` and `Invalid: lock file's @types/node@25.6.2 does not satisfy @types/node@20.19.40` | Always run `ls <pkg-dir>/package-lock.json` from the same directory as the edited `package.json`. Never trust a single `find` result as proof a lockfile is absent. |
+| Edit `package.json` and push without `npm install` | Hoping local `node_modules/` was fresh enough that everything "just works" | Local builds may use `npm install` (which mutates the lockfile) or pre-existing `node_modules/`, masking the problem. CI uses `npm ci` (strict) and refuses any `package.json` <-> `package-lock.json` mismatch | Use the same command CI uses: `npm ci` after `rm -rf node_modules`. If that fails locally, it will fail in CI. |
+| Run `npm install` from the repo root when `package.json` is nested | Assumed npm would auto-discover the right package | npm only operates on the CWD's `package.json`. From the repo root with no root `package.json`, the command errors or regenerates an unrelated lockfile | Always `cd <pkg-dir>` first. The lockfile lives next to its `package.json`. |
+| Commit `node_modules/` along with the lockfile | Trying to "be safe" by committing the resolved tree | `node_modules/` is large, platform-specific, and gitignored for a reason. Bloats the diff and clutters review | Only `package-lock.json` belongs in the commit. Confirm `.gitignore` covers `node_modules/`. |
+
+## Results & Parameters
+
+### Pattern: Expand Easy-Issue Briefs
+
+When an easy-issue brief says **"change `<dep>`'s version in package.json"**, mentally (and in any sub-agent prompt) expand it to:
+
+> "Change `<dep>`'s version in `<pkg-dir>/package.json` AND regenerate `<pkg-dir>/package-lock.json` by running `npm install` in `<pkg-dir>/`. Commit both files in the same PR."
+
+### Sub-Agent Dispatch Template Addition
+
+Append this clause to any dispatch brief that may touch a `package.json`:
+
+```text
+If you edit any package.json:
+  1. cd into the SAME directory as that package.json.
+  2. Run `npm install` to regenerate package-lock.json.
+  3. Run `rm -rf node_modules && npm ci` to verify the lockfile is in sync.
+  4. Stage and commit ONLY package.json AND package-lock.json (NOT node_modules/).
+  5. Both files MUST land in the same PR.
+CI uses `npm ci`, which is strict and will fail with EUSAGE if the lockfile is stale.
+```
+
+### Expected Output
+
+A successful regeneration looks like:
+
+```text
+$ cd dagger
+$ npm install
+added 142 packages, and audited 143 packages in 4s
+$ rm -rf node_modules && npm ci
+added 142 packages in 3s
+$ git status
+  modified:   dagger/package.json
+  modified:   dagger/package-lock.json
+```
+
+CI then passes with no `npm error code EUSAGE` lines.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectProteus | PR #135 (regression source) — `@types/node` downgraded in `dagger/package.json` only; `npm ci` failed with EUSAGE in follow-up workflow run | Easy-issue sweep agent missed `dagger/package-lock.json` |
+| ProjectProteus | PR #136 (fix) — regenerated `dagger/package-lock.json` via `npm install` in `dagger/`, committed lockfile only, CI green | Validates the regen-and-commit pattern end-to-end |
+
+## References
+
+- [npm ci documentation](https://docs.npmjs.com/cli/v10/commands/npm-ci) — explains the strict mode and the EUSAGE error class
+- [npm install documentation](https://docs.npmjs.com/cli/v10/commands/npm-install) — the command that regenerates `package-lock.json`
+- [package-lock.json reference](https://docs.npmjs.com/cli/v10/configuring-npm/package-lock-json)
+
+## Superseded from versioning-consistency-release-workflow
+
+---
+name: versioning-consistency-release-workflow
+description: "Establish single-source-of-truth version management with importlib.metadata, pre-commit consistency checks, and CHANGELOG fixes. Use when: (1) project has version declared in multiple files that can drift, (2) __init__.py hardcodes a version string instead of using importlib.metadata, (3) CHANGELOG references phantom version numbers, (4) skill templates generate aspirational version refs."
+category: ci-cd
+date: '2026-03-25'
+version: "2.0.0"
+user-invocable: false
+verification: verified-local
+history: versioning-consistency-release-workflow.history
+tags:
+  - versioning
+  - release
+  - ci
+  - changelog
+  - DRY
+  - importlib-metadata
+  - pre-commit
+---
+
+# Version Consistency and Release Workflow
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-25 |
+| **Objective** | Establish a single-source-of-truth version management system: `pyproject.toml` is canonical, `importlib.metadata` reads it at runtime, pre-commit hook guards against drift, and CHANGELOG uses `[Unreleased]` convention. |
+| **Outcome** | Successful — two PRs (#1557, #1562) across two issues (#1527, #1535), 4808+ tests passing, all pre-commit hooks green. |
+| **Verification** | verified-local |
+| **History** | [changelog](./versioning-consistency-release-workflow.history) |
+
+## When to Use
+
+- Project declares version in multiple files (e.g., `pyproject.toml`, `pixi.toml`, `__init__.py`, CLI) that can drift
+- `__init__.py` hardcodes `__version__ = "X.Y.Z"` instead of using `importlib.metadata.version()`
+- CLI hardcodes a version string instead of importing from a canonical source
+- CHANGELOG references phantom future versions (e.g., "deprecated in v1.5.0, removed in v2.0.0") when no releases exist
+- Skill templates or code generators produce aspirational version numbers in CHANGELOG entries
+- Want a pre-commit hook to catch version drift before it reaches production
+- Need to add a GitHub Actions release workflow triggered by version tags
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Switch __init__.py to importlib.metadata (single source of truth)
+# In package/__init__.py:
+#   from importlib.metadata import PackageNotFoundError, version as _get_version
+#   try:
+#       __version__: str = _get_version("mypackage")
+#   except PackageNotFoundError:
+#       __version__ = "0.0.0"
+
+# 2. Replace hardcoded CLI version with dynamic import
+# In cli/main.py:
+#   from mypackage import __version__
+#   @click.version_option(version=__version__, prog_name="mypackage")
+
+# 3. Create version consistency pre-commit hook
+python3 scripts/check_package_version_consistency.py --verbose
+
+# 4. Run tests
+pixi run pytest tests/unit/scripts/test_check_package_version_consistency.py -v
+
+# 5. Verify
+python -c "import mypackage; print(mypackage.__version__)"
+```
+
+### Detailed Steps
+
+1. **Switch `__init__.py` to `importlib.metadata`**: Replace `__version__ = "0.1.0"` with `importlib.metadata.version("mypackage")`. Include a `PackageNotFoundError` fallback for editable/dev installs. This makes `pyproject.toml` the single authority — no more dual maintenance.
+
+2. **Eliminate hardcoded CLI version**: Import `__version__` from the package's `__init__.py` instead of hardcoding a version string in the CLI decorator.
+
+3. **Create a pre-commit consistency checker**: A Python script using `tomllib` (not regex) that validates:
+   - `pixi.toml` `[workspace].version` matches `pyproject.toml` `[project].version`
+   - `__init__.py` uses `importlib.metadata` (no hardcoded `__version__ = "..."` pattern)
+   - `CHANGELOG.md` has no version references higher than the canonical version
+
+4. **Register as pre-commit hook**: Trigger on changes to `pyproject.toml`, `pixi.toml`, `__init__.py`, `CHANGELOG.md`. Use `pass_filenames: false`.
+
+5. **Fix CHANGELOG phantom versions**: Replace aspirational version references with `[Unreleased]` per keepachangelog.com convention. If deprecated classes have already been removed, change the section from "Deprecated" to "Removed".
+
+6. **Fix root cause — skill templates**: If the phantom versions came from a code-generation skill template, update the template to use "a future major version" instead of hardcoded version numbers.
+
+7. **Update tests**: Replace hardcoded version assertions in CLI tests with dynamic `__version__` imports. Add comprehensive tests for the consistency checker.
+
+8. **Respect test structure conventions**: Place version consistency tests in `tests/unit/scripts/` to match the script being tested.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Test file at `tests/unit/test_version_consistency.py` | Placed test directly under `tests/unit/` | Pre-commit hook `check-unit-test-structure` requires tests in sub-packages | Always check project's test structure conventions before placing new test files |
+| Regex-based TOML parsing | Used `re.match(r'^version\s*=\s*"([^"]+)"')` to read TOML values | Fragile: breaks on inline comments, multi-line strings, or non-standard formatting | Use `tomllib` (stdlib since 3.11) for reliable TOML parsing; fall back to `tomli` for 3.10 |
+| `if cond: return False; return True` pattern | Simple conditional in `check_init_uses_importlib()` | Ruff SIM103 requires direct condition return | Use `return not pattern.search(content)` for boolean-returning functions |
+
+## Results & Parameters
+
+### importlib.metadata Pattern (recommended)
+
+```python
+# package/__init__.py — read version from installed metadata
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _get_version
+
+try:
+    __version__: str = _get_version("mypackage")
+except PackageNotFoundError:
+    __version__ = "0.0.0"  # fallback when package is not installed
+```
+
+### Consistency Script Pattern (with tomllib)
+
+```python
+import tomllib  # Python 3.11+; use tomli as fallback for 3.10
+
+def get_pyproject_version(path: Path) -> str:
+    with open(path, "rb") as f:
+        data = tomllib.load(f)
+    return data["project"]["version"]
+
+def get_pixi_version(path: Path) -> str:
+    with open(path, "rb") as f:
+        data = tomllib.load(f)
+    return data["workspace"]["version"]
+
+def check_init_uses_importlib(path: Path) -> bool:
+    content = path.read_text()
+    return not re.search(r'^__version__\s*=\s*["\'][\d.]+["\']', content, re.MULTILINE)
+
+def find_aspirational_versions(changelog_path: Path, canonical: str) -> list[str]:
+    content = changelog_path.read_text()
+    canonical_tuple = tuple(int(p) for p in canonical.split("."))
+    aspirational = []
+    for match in re.finditer(r"\bv(\d+\.\d+\.\d+)\b", content):
+        if tuple(int(p) for p in match.group(1).split(".")) > canonical_tuple:
+            ref = f"v{match.group(1)}"
+            if ref not in aspirational:
+                aspirational.append(ref)
+    return aspirational
+```
+
+### Pre-commit Hook Configuration
+
+```yaml
+- id: check-package-version-consistency
+  name: Check Package Version Consistency
+  description: Fails if package version in pyproject.toml, pixi.toml, or CHANGELOG.md are inconsistent
+  entry: pixi run python scripts/check_package_version_consistency.py
+  language: system
+  files: ^(pyproject\.toml|pixi\.toml|package/__init__\.py|CHANGELOG\.md)$
+  pass_filenames: false
+```
+
+### CHANGELOG Fix Pattern
+
+Replace phantom version references:
+- Before: "deprecated as of v1.5.0. It will be removed in v2.0.0."
+- After (if still deprecated): "deprecated. It will be removed in a future major version."
+- After (if already removed): Section header changes from "Deprecated" to "Removed"
+
+### Skill Template Root-Cause Fix
+
+Update any code-generation templates that produce CHANGELOG entries:
+- Before: `"<Class> is deprecated and will be removed in v2.0.0."`
+- After: `"<Class> is deprecated and will be removed in a future major version."`
+
+### Release Workflow Key Points
+
+- Trigger on `push.tags: ["v*"]` — not on PR merge
+- Validate tag version matches `pyproject.toml` version before creating release
+- Use `gh release create` with `--generate-notes` for auto-generated release notes
+- Pass `github.ref_name` via `env:` variable (not `${{ }}` interpolation in `run:`) for GH Actions security
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | Issue #1527 — Audit S10 versioning remediation | PR #1557: 8 files changed, 35 tests passing, all pre-commit hooks green |
+| ProjectScylla | Issue #1535 — Reconcile version 0.1.0 with CHANGELOG refs | PR #1562: 8 files changed, 26 new tests, 4808 total passing, 77.50% coverage |
+
+## Superseded from release-recipe-bump-version-noop-trap
+
+---
+name: release-recipe-bump-version-noop-trap
+description: "Diagnose and fix the silent failure where `just release X.Y.Z` (or any recipe wrapping bump-version + git commit + git tag + push --follow-tags) exits non-zero when the pyproject(s) already contain the target version. The bump is a no-op, the subsequent commit fails with 'nothing to commit', and the recipe aborts before tagging — even though nothing is actually wrong. Use when: (1) `just release X.Y.Z` ends with 'nothing added to commit' and 'Recipe `release` failed with exit code 1', (2) `git status` shows clean working tree after a failed release run, (3) a release recipe only stages one of multiple source-of-truth pyproject files, (4) you need to recover and ship the tag manually after a recipe failure."
+category: ci-cd
+date: '2026-05-18'
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - release
+  - just
+  - justfile
+  - bump-version
+  - git-tag
+  - pyproject
+  - idempotency
+  - recipe
+---
+
+# Release Recipe Bump-Version No-op Trap
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-18 |
+| **Objective** | Document the silent failure mode where `just release X.Y.Z` exits non-zero because `bump-version.py` is a no-op (versions already at target), causing the following `git commit` to fail. Provide both the verified manual recovery workaround and the proper justfile fix. |
+| **Outcome** | Successful — v0.1.0 tag was cut and pushed manually on ProjectAgamemnon during Phase F-6, and the `python-client-release.yml` workflow fired correctly off the tag push. The underlying justfile bug is documented and a fix is staged for a follow-up PR. |
+| **Verification** | verified-local |
+
+## When to Use
+
+- `just release X.Y.Z` output ends with:
+  ```
+  bumped version to X.Y.Z
+  bumped version to X.Y.Z
+  nothing added to commit but untracked files present (use "git add" to track)
+  error: Recipe `release` failed with exit code 1
+  ```
+- `git status` shows a clean working tree after a failed release attempt
+- `grep '^version = ' clients/python/pyproject.toml agamemnon/pyproject.toml` (or your project's equivalents) shows both/all files already at the target version
+- A previous release attempt got far enough to bump pyproject files but failed before/at tag-push, and re-running the recipe now appears broken
+- The release recipe stages only one of several source-of-truth pyproject files (silently dropping bumps to the unstaged ones)
+- You need to recover and ship the tag without polluting git history with a needless version-down-then-up cycle
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Confirm both/all pyprojects are already at the target version
+grep -H '^version = ' clients/python/pyproject.toml agamemnon/pyproject.toml
+
+# 2. Skip the broken recipe entirely — create and push the signed tag manually
+git tag -s vX.Y.Z -m "vX.Y.Z"
+git push origin vX.Y.Z
+
+# 3. Verify the tag is properly signed
+git tag --verify vX.Y.Z
+
+# 4. Confirm the release workflow fired off the tag push (not PR merge)
+gh run list --workflow=python-client-release.yml --limit=2
+```
+
+### Detailed Steps
+
+1. **Confirm this is the no-op trap, not a real failure.** Run `git status` — it should be clean. Then grep every source-of-truth pyproject file for the target version. If they all already show `version = "X.Y.Z"`, the recipe failed because `bump-version.py` had nothing to do, not because of an actual problem.
+
+2. **Skip the recipe; tag manually.** Use `git tag -s` to create a signed annotated tag matching the recipe's convention (typically `vX.Y.Z`). Push with `git push origin vX.Y.Z` — do NOT use `--follow-tags` since there's no commit to push alongside it.
+
+3. **Verify the tag is signed.** Run `git tag --verify vX.Y.Z`. If the release workflow gates on signed tags, this is required.
+
+4. **Confirm the release workflow fired.** Most release workflows trigger on `push.tags: ["v*"]` (not on PR merge). A tag push alone is sufficient to fire them. Use `gh run list --workflow=<release-workflow>.yml --limit=2` to confirm.
+
+5. **File a follow-up PR fixing the recipe.** Apply the justfile patch in Results & Parameters below so the next release run isn't fragile. Two changes are required: (a) stage ALL source-of-truth pyproject files, not just one; (b) gate the commit on `git diff --cached --quiet` so no-op bumps don't abort the recipe.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Re-run `just release X.Y.Z` after seeing the error | Assumed transient issue; ran the same recipe again | `bump-version.py` is still a no-op (files already at target), so the subsequent `git commit` still has nothing to commit and the recipe still aborts before tagging | Recipe failure is deterministic when bump-version is a no-op; re-running cannot escape the trap |
+| `git commit --allow-empty` before re-running the recipe | Tried to satisfy the commit step with an empty commit | Doesn't fix the recipe-flow problem (recipe still runs its own commit), and pollutes history with a meaningless empty commit | Don't paper over recipe bugs with manual side-commits — recover the tag manually instead |
+| Edit pyprojects down to `0.0.1` then run `just release X.Y.Z` | Forced bump-version to have work to do | Works mechanically but adds a useless "0.0.1 -> X.Y.Z" version-down-then-up dance to git history; reviewers will (rightly) question it | Manipulating source files to satisfy a broken recipe pollutes history; manual tag-and-push is cleaner |
+| Recipe stages only `clients/python/pyproject.toml` (not `agamemnon/pyproject.toml`) | Pre-existing justfile only `git add`s the first pyproject | Silently drops the bump to the second pyproject, leaving it on whatever version the bump script wrote but unstaged — release ships with one file bumped and the other dangling in the working tree | Whenever `bump-version.py` writes to N files, the recipe must `git add` all N — or the bump and the recipe diverge silently |
+| **Manual `git tag -s` + `git push origin vX.Y.Z` (winning approach)** | Bypassed the recipe entirely, created a signed annotated tag, pushed it | Worked first try; release workflow fired off the tag push as designed | Release workflows triggered on tag pushes are decoupled from the recipe — manual recovery is safe and clean |
+
+## Results & Parameters
+
+### Diagnostic command set
+
+```bash
+# After a failed `just release X.Y.Z`, run all of these:
+git status                                              # should be clean
+grep -H '^version = ' clients/python/pyproject.toml agamemnon/pyproject.toml
+git log --oneline -5                                    # confirm no half-done bump commit
+git tag --list 'v*' --sort=-v:refname | head -5         # confirm tag wasn't already cut
+```
+
+If `git status` is clean AND all pyproject files already show the target version AND the tag doesn't exist, this is the no-op trap.
+
+### Manual recovery (verified on ProjectAgamemnon 2026-05-18, v0.1.0)
+
+```bash
+# Signed annotated tag matching the recipe's convention
+git tag -s v0.1.0 -m "v0.1.0"
+git push origin v0.1.0
+
+# Verify
+git tag --verify v0.1.0
+gh run list --workflow=python-client-release.yml --limit=2
+```
+
+### Proper justfile fix (apply as follow-up PR)
+
+```diff
+ release VERSION push='true':
+   #!/usr/bin/env bash
+   set -euo pipefail
+   if ! [[ "{{VERSION}}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+     echo "error: VERSION must be X.Y.Z (got '{{VERSION}}')" >&2
+     exit 1
+   fi
+   ./scripts/check-release-readiness.sh "{{VERSION}}"
+   python3 scripts/bump-version.py "{{VERSION}}"
+-  git add clients/python/pyproject.toml
+-  git commit -S -m "chore: bump version to v{{VERSION}}"
++  git add clients/python/pyproject.toml agamemnon/pyproject.toml
++  # Only commit if the bump actually changed something
++  if ! git diff --cached --quiet; then
++    git commit -S -m "chore: bump version to v{{VERSION}}"
++  else
++    echo "Version already at {{VERSION}}; skipping no-op bump commit"
++  fi
+   git tag -s "v{{VERSION}}" -m "v{{VERSION}}"
+   if [ "{{push}}" = "true" ]; then
+     git push --follow-tags
+   fi
+```
+
+Two required changes:
+
+1. **Stage every source-of-truth pyproject** — if `bump-version.py` writes to N files, `git add` must list all N. Whenever a new pyproject is added to the bump script (e.g., ProjectAgamemnon's Phase F-5 added `agamemnon/pyproject.toml` via PR #414), the recipe's `git add` line must be updated in lockstep.
+
+2. **Gate the commit on staged content** — `git diff --cached --quiet` returns non-zero when something is staged. The `if !` inverts it, so the commit runs only when there's actually something to commit. No-op bumps now log a friendly message and continue to tagging instead of aborting.
+
+### Generalization
+
+This trap applies to ANY release recipe (just, make, npm scripts, shell) that follows the pattern:
+
+```
+bump-version  →  git commit  →  git tag  →  git push --follow-tags
+```
+
+If the bump step can be a no-op (because someone already ran it in a previous, partially-failed attempt), the commit step will fail and abort the chain before the tag is created. The fix is universal: gate the commit on whether anything is actually staged, and ensure the bump and the stage list cover the same files.
+
+### Why this matters for first-time releases too
+
+Even on a brand-new v0.1.0 cut, if a previous attempt got as far as bumping the pyprojects but failed at, say, the pre-commit signing step or tag creation, the second run will hit this trap. The user sees a red error on what they believe is the first real release attempt and assumes the entire release is broken — when in reality the pyprojects are already correctly bumped and only the tag is missing.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectAgamemnon | Phase F-6 v0.1.0 release cut, 2026-05-18 | `just release 0.1.0` failed with "nothing added to commit"; both `clients/python/pyproject.toml` and `agamemnon/pyproject.toml` already at 0.1.0; manual `git tag -s v0.1.0 && git push origin v0.1.0` succeeded and triggered `python-client-release.yml` |
+
+## Superseded from renovate-multi-ecosystem-cpp-repos
+
+---
+name: renovate-multi-ecosystem-cpp-repos
+description: "Configure Renovate bot for C++20 repos using Conan, FetchContent, pixi, GitHub Actions, and Dockerfiles. Use when: (1) adding automated dependency updates to a C++ project, (2) need custom regex for CMake FetchContent GIT_TAG, (3) configuring Renovate for a multi-repo org with submodules."
+category: ci-cd
+date: 2026-04-01
+version: "1.0.0"
+user-invocable: false
+verification: unverified
+tags:
+  - renovate
+  - conan
+  - pixi
+  - fetchcontent
+  - github-actions
+  - dockerfile
+  - dependency-management
+---
+
+# Renovate Bot for Multi-Ecosystem C++20 Repos
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-01 |
+| **Objective** | Configure Renovate bot to auto-update all dependency types in C++20 repos: Conan, CMake FetchContent, pixi, GitHub Actions, Dockerfiles |
+| **Outcome** | Configs created and committed; Renovate app being installed on org |
+| **Verification** | unverified (Renovate app installation in progress, no PRs opened yet) |
+
+## When to Use
+
+- Adding automated dependency updates to a C++20 project that uses Conan + FetchContent + pixi
+- Need to track CMake FetchContent `GIT_TAG` versions (no native Renovate manager — requires custom regex)
+- Configuring Renovate for a multi-repo org where a meta-repo has submodules that each need their own config
+- Want GitHub Actions minor/patch updates to auto-merge
+
+## Verified Workflow
+
+> **Note:** Verification level is `unverified` — configs committed but Renovate app installation in progress. Will be upgraded to `verified-ci` once Renovate opens its first PRs.
+
+### Quick Reference
+
+```bash
+# Add renovate.json to repo root, then install the Renovate GitHub App
+# https://github.com/apps/renovate → install for org
+```
+
+### Renovate Manager Support
+
+| Ecosystem | Renovate Manager | Native? | Used In |
+| ----------- | ----------------- | --------- | --------- |
+| Conan 2.x (`conanfile.py`) | `conan` | Yes | C++ repos |
+| pixi.toml (conda-forge) | `pixi` | Yes | C++ repos |
+| CMake FetchContent (`GIT_TAG`) | `regex` (custom) | No | C++ repos with nats.c |
+| GitHub Actions (`uses:`) | `github-actions` | Yes | All repos |
+| Dockerfile (`FROM`) | `dockerfile` | Yes | C++ repos with containers |
+| Python (`pyproject.toml`) | `pep621` | Yes | Python repos |
+
+### C++20 Repo Config (`renovate.json`)
+
+```json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["before 5am on Monday"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["CMakeLists\\.txt$"],
+      "matchStrings": [
+        "FetchContent_Declare\\([\\s\\S]*?GIT_REPOSITORY\\s+https://github\\.com/(?<depName>[^/]+/[^.]+)\\.git\\s+GIT_TAG\\s+(?<currentValue>v?[\\d.]+)"
+      ],
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["conan"],
+      "groupName": "C++ Conan dependencies"
+    },
+    {
+      "matchManagers": ["pixi"],
+      "groupName": "pixi build tools",
+      "schedule": ["before 5am on the first day of the month"]
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "automerge": true
+    }
+  ]
+}
+```
+
+### Meta-Repo Config (Odysseus root with submodules)
+
+```json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "schedule": ["before 5am on Monday"],
+  "ignorePaths": [
+    "control/**", "testing/**", "infrastructure/**",
+    "provisioning/**", "research/**", "shared/**", "ci-cd/**"
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "automerge": true
+    }
+  ]
+}
+```
+
+The `ignorePaths` prevents Renovate from scanning submodule directories — each submodule has its own `renovate.json` and gets its own PRs in its own repo.
+
+### Installation Steps
+
+1. Create `renovate.json` in each repo root
+2. Go to https://github.com/apps/renovate
+3. Install for the GitHub org (or select specific repos)
+4. Renovate auto-discovers configs and opens onboarding PRs
+5. Merge the onboarding PR to activate
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Dependabot for Conan | Considered GitHub Dependabot | Dependabot has no native Conan, pixi, or FetchContent support | Renovate is the correct choice for C++ ecosystems — much broader manager coverage |
+| Single config for meta-repo + submodules | Tried one renovate.json at Odysseus root to cover everything | Submodules are separate git repos — Renovate needs a config per repo to open PRs | Use `ignorePaths` in the meta-repo config, put individual configs in each submodule |
+
+## Results & Parameters
+
+```yaml
+# Schedule
+conan_and_fetchcontent: "before 5am on Monday"  # weekly
+pixi_tools: "before 5am on the first day of the month"  # monthly
+github_actions: "auto-merge minor/patch"
+
+# FetchContent regex pattern (key part)
+# Matches: FetchContent_Declare(\n  nats_c\n  GIT_REPOSITORY https://github.com/nats-io/nats.c.git\n  GIT_TAG v3.9.1)
+regex: "FetchContent_Declare\\([\\s\\S]*?GIT_REPOSITORY\\s+https://github\\.com/(?<depName>[^/]+/[^.]+)\\.git\\s+GIT_TAG\\s+(?<currentValue>v?[\\d.]+)"
+datasource: "github-tags"
+versioning: "semver"
+
+# Files created
+repos_configured:
+  - Odysseus (root — ignores submodules)
+  - control/ProjectAgamemnon
+  - control/ProjectNestor
+  - testing/ProjectCharybdis
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| Odysseus | Meta-repo config | ignorePaths for submodules, GH Actions auto-merge |
+| ProjectAgamemnon | C++20 repo config | Conan + FetchContent regex + pixi + GH Actions + Dockerfile |
+| ProjectNestor | C++20 repo config | Same as Agamemnon |
+| ProjectCharybdis | C++20 repo config | Same as Agamemnon (fewer deps currently) |
+
+## Prior history from versioning-consistency-release-workflow
+
+# versioning-consistency-release-workflow — History
+
+## v2.0.0 (2026-03-25)
+
+**Changed by:** Issue #1535 — Reconcile version 0.1.0 with CHANGELOG aspirational refs (PR #1562)
+**Verification:** verified-local
+
+### What changed
+- Added `importlib.metadata.version()` as the recommended approach for `__init__.py` (replaces hardcoded string)
+- Replaced regex-based TOML parsing with `tomllib` for the consistency check script
+- Added CHANGELOG aspirational version detection to the pre-commit hook
+- Added skill template remediation as a root-cause fix (update templates that generate phantom versions)
+- Added `PackageNotFoundError` fallback pattern for dev installs
+- Added new failed attempt: regex TOML parsing vs tomllib
+
+### Why
+v1.0.0 recommended hardcoded `__version__ = "0.1.0"` in `__init__.py` and regex-based TOML parsing.
+Issue #1535 proved that `importlib.metadata` is the proper single-source-of-truth pattern (pyproject.toml
+is authoritative, runtime reads from installed metadata). The regex TOML parser is fragile and unnecessary
+since Python 3.11+ includes `tomllib`. The pre-commit hook also needed CHANGELOG scanning to catch the
+exact aspirational version problem that triggered the issue.
+
+### Previous version (v1.0.0) snapshot
+
+---
+name: versioning-consistency-release-workflow
+description: "Establish single-source-of-truth version management with CI consistency checks, release workflow, and CHANGELOG fixes. Use when: (1) project has version declared in multiple files that can drift, (2) need to add automated release workflow triggered by git tags, (3) CHANGELOG references phantom version numbers."
+category: ci-cd
+date: '2026-03-25'
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - versioning
+  - release
+  - ci
+  - changelog
+  - DRY
+---
+
+# Version Consistency and Release Workflow
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-03-25 |
+| **Objective** | Establish a single-source-of-truth version management system: eliminate hardcoded versions, add CI consistency checks, create a release workflow, fix aspirational CHANGELOG references, and document the versioning strategy. |
+| **Outcome** | Successful — PR created with all tests passing and pre-commit hooks green. |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Project declares version in multiple files (e.g., `pyproject.toml`, `pixi.toml`, `__init__.py`, CLI) that can drift
+- CLI hardcodes a version string instead of importing from a canonical source
+- CHANGELOG references phantom future versions (e.g., "deprecated in v1.5.0, removed in v2.0.0") when no releases exist
+- Need to add a GitHub Actions release workflow triggered by version tags
+- Want CI to catch version drift before it reaches production
+- Audit finding: no git tags, no GitHub releases, no documented versioning strategy
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Replace hardcoded CLI version with dynamic import
+# In cli/main.py:
+#   from mypackage import __version__
+#   @click.version_option(version=__version__, prog_name="mypackage")
+
+# 2. Create version consistency script
+python3 scripts/check_version_consistency.py
+
+# 3. Run tests
+pixi run pytest tests/unit/scripts/test_check_version_consistency.py -v
+
+# 4. After PR merges, tag the release
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+### Detailed Steps
+
+1. **Eliminate hardcoded CLI version**: Import `__version__` from the package's `__init__.py` instead of hardcoding a version string in the CLI decorator.
+
+2. **Create a version consistency checker script**: A lightweight Python script that reads version strings from all declaration sites using regex.
+
+3. **Add CI step**: Add the consistency check to the test workflow.
+
+4. **Fix CHANGELOG phantom versions**: Replace references to non-existent versions with relative timeline language.
+
+5. **Create release workflow**: A GitHub Actions workflow triggered by `v*` tags.
+
+6. **Document versioning strategy**: Add a "Versioning and Releases" section to CONTRIBUTING.md.
+
+7. **Update tests**: Replace hardcoded version assertions in CLI tests with dynamic `__version__` imports.
+
+8. **Respect test structure conventions**: Place version consistency tests in `tests/unit/scripts/` to match the script being tested.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Test file at `tests/unit/test_version_consistency.py` | Placed test directly under `tests/unit/` | Pre-commit hook `check-unit-test-structure` requires tests in sub-packages | Always check project's test structure conventions before placing new test files |
+
+## Results & Parameters
+
+### Version Declaration Sites Pattern
+
+```python
+# pyproject.toml — canonical source
+[project]
+version = "0.1.0"
+
+# pixi.toml — workspace version
+[workspace]
+version = "0.1.0"
+
+# package/__init__.py — runtime access
+__version__ = "0.1.0"
+
+# CLI — derived (imports __version__)
+from mypackage import __version__
+
+@click.version_option(version=__version__, prog_name="mypackage")
+```
+
+### Consistency Script Pattern (no TOML library needed)
+
+```python
+def _read_toml_version(path: Path, table_key: str) -> str | None:
+    text = path.read_text()
+    in_table = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("[") and stripped.endswith("]"):
+            in_table = stripped == f"[{table_key}]"
+            continue
+        if in_table:
+            match = re.match(r'^version\s*=\s*"([^"]+)"', stripped)
+            if match:
+                return match.group(1)
+    return None
+```
+
+### Release Workflow Key Points
+
+- Trigger on `push.tags: ["v*"]` — not on PR merge
+- Validate tag version matches `pyproject.toml` version before creating release
+- Use `gh release create` with `--generate-notes` for auto-generated release notes
+- Pass `github.ref_name` via `env:` variable (not `${{ }}` interpolation in `run:`) for GH Actions security
+
+### CHANGELOG Fix Pattern
+
+Replace phantom version references:
+- Before: "deprecated as of v1.5.0. It will be removed in v2.0.0."
+- After: "deprecated. It will be removed in a future major release."
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectScylla | Issue #1527 — Audit S10 versioning remediation | PR #1557: 8 files changed, 35 tests passing, all pre-commit hooks green |
+
+---
