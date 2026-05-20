@@ -1,0 +1,1585 @@
+<!-- markdownlint-disable MD024 -->
+# skill-corpus-merge-consolidation-workflow — History
+
+## v1.0.0 (2026-05-19)
+
+**Changed by:** Merge — absorbed 8 narrow skills (epic #1866 / cluster P2-tooling-C3)
+**Verification:** verified-ci
+
+### What changed
+
+- Initial canonical version, absorbing:
+  - tooling-skill-deduplication-semver-versioning
+  - skill-merge-history-as-superseded-snapshot
+  - skill-merge-manifest-enumeration-from-cluster-examples
+  - bulk-skill-migration-script
+  - migrate-skill-aux-dirs
+  - consolidate-skills-directory
+  - tooling-legacy-hierarchical-flat-migration
+  - plugin-generalization
+
+---
+
+## Superseded from tooling-skill-deduplication-semver-versioning
+
+**Original date:** 2026-03-28
+**Original version:** 1.6.0
+
+```yaml
+name: tooling-skill-deduplication-semver-versioning
+description: "Deduplicate overlapping skills by merging clusters into consolidated skills, and implement semantic versioning for skill amendments. Use when: (1) multiple skills cover the same topic with redundant content, (2) skill registry has 1000+ entries with obvious duplicates, (3) version bump rules need to distinguish major/minor/patch changes, (4) need algorithmic duplicate detection via marketplace.json without reading all files, (5) running at-scale deduplication across 900+ skills with parallel agents."
+category: tooling
+date: 2026-03-28
+version: "1.6.0"
+user-invocable: false
+verification: verified-ci
+history: tooling-skill-deduplication-semver-versioning.history
+tags: [deduplication, merge, semver, versioning, skills-registry, consolidation]
+```
+
+# Skill Deduplication and Semantic Versioning
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-28 |
+| **Objective** | Merge duplicate skill clusters into consolidated skills, with semantic versioning for amendments |
+| **Outcome** | Six rounds: 16 test-splitting-\*merged to 3 (net -13); 10 mojo-test-\* merged to 1 (net -9); 6 deprecated-file-cleanup-\*merged to 1 (net -5); 9 conv2d-gradient-\* merged to 3 (net -6); 12 test-splitting-\*merged to 3 (net -9); 4 test-splitting-\* merged to 1 with OBSOLETE notice (net -3) after heap corruption was fixed at compiler level. |
+| **Verification** | verified-ci |
+| **History** | [changelog](./tooling-skill-deduplication-semver-versioning.history) |
+
+## When to Use
+
+- Multiple skills share a common prefix (e.g., `pr-review-*`, `mojo-test-*`)
+- `/advise` returns redundant or contradictory advice for the same topic
+- Need to identify duplicate clusters in a large skills registry (900+ skills)
+- Need algorithmic detection of semantic duplicates (not just prefix matching)
+- Running a full registry cleanup pass across 975+ skills with parallel agents
+- Updating `/learn` versioning rules to use semantic versioning
+- A skill covers a topic that is now OBSOLETE and needs a prominent deprecation notice before all other content
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Find duplicate clusters by 2-part prefix
+ls skills/*.md | grep -v notes.md | grep -v history | sed 's|skills/||;s|\.md$||' | \
+  awk -F'-' '{print $1"-"$2}' | sort | uniq -c | sort -rn | head -20
+
+# List all skills in a cluster
+ls skills/<prefix>*.md | grep -v notes.md | grep -v history
+
+# Read descriptions to group by subtopic
+for f in skills/<prefix>*.md; do
+  echo "=== $(basename $f .md) ==="; head -5 "$f" | grep "^description:"; echo
+done
+```
+
+### Detailed Steps
+
+**Phase 1: Identify duplicate clusters**
+
+1. List all skill names, extract 2-part prefixes, count occurrences
+2. Focus on clusters with 3+ skills sharing a prefix
+3. Read descriptions to sub-group within each cluster (e.g., test-splitting-* split into: workflow, CI-patterns, audit — these were later consolidated to one with OBSOLETE notice after the heap corruption was fixed at compiler level)
+
+**Phase 2: Merge each sub-group**
+
+For each sub-group of duplicates:
+
+1. Read ALL source skills — extract unique content from each:
+   - Failed Attempts rows (deduplicate by lesson, not exact text)
+   - Verified Workflow steps (combine into comprehensive workflow)
+   - When to Use triggers (union of all triggers)
+   - Results & Parameters (merge all configs)
+2. Write a single consolidated skill at `skills/<merged-name>.md`:
+   - Use `version: "1.0.0"` (new consolidated skill, not an amendment)
+   - Description covers ALL trigger conditions from all sources
+   - All unique learnings preserved
+3. Delete all superseded source `.md` and `.notes.md` files (remember to delete both)
+4. No `.history` file needed — this is a new v1.0.0 skill, not an amendment
+5. If another agent may have already deleted some files, skip them silently (`git rm` will error on missing files)
+
+**Special case: OBSOLETE topics**
+
+When the underlying topic is no longer applicable (e.g., a bug was fixed at the compiler level),
+consolidate ALL related skills into a single historical reference with a prominent obsolescence
+notice immediately after the Overview table:
+
+```markdown
+## <Topic> Status: OBSOLETE
+
+> **<Topic> has been fixed.** <Brief explanation of why the workaround is no longer needed.>
+>
+> **Do NOT use this skill to implement <workaround> on new code.**
+>
+> For <the actual problem>, use **<preferred solution>** instead:
+> - <Preferred solution detail 1>
+> - <Preferred solution detail 2>
+>
+> This skill is preserved for historical reference and for understanding existing code
+> that has not yet been updated.
+```
+
+Key difference from regular consolidation: even well-organized 3-file clusters warrant
+further consolidation to 1 when a prominent OBSOLETE notice is the primary requirement,
+because splitting the obsolescence notice across 3 files fragments the message.
+
+**Phase 3: Validate**
+
+```bash
+python3 scripts/validate_plugins.py
+```
+
+**Phase 4: Use parallel agents for large merges**
+
+For multiple clusters, launch parallel agents (one per group) in the same worktree. Each agent reads its group's skills and writes the merged output. For 975+ skills, launch 3 agents at a time (each handling 2 merge groups) — agents must touch non-overlapping files to avoid conflicts.
+
+### At-Scale Algorithmic Detection (975+ skills)
+
+When prefix grouping is insufficient, use algorithmic semantic detection:
+
+**Step 1: Load names + descriptions from marketplace.json (no need to read 975 files)**
+
+```python
+import json, difflib
+from collections import defaultdict
+
+with open('marketplace.json') as f:
+    skills = json.load(f)  # list of {name, description, ...}
+
+# Group by 2-token and 3-token name prefixes
+prefix2 = defaultdict(list)
+prefix3 = defaultdict(list)
+for s in skills:
+    parts = s['name'].split('-')
+    if len(parts) >= 2: prefix2['-'.join(parts[:2])].append(s)
+    if len(parts) >= 3: prefix3['-'.join(parts[:3])].append(s)
+
+clusters2 = {k: v for k, v in prefix2.items() if len(v) >= 3}
+clusters3 = {k: v for k, v in prefix3.items() if len(v) >= 3}
+```
+
+**Step 2: SequenceMatcher for semantic duplicates (catches different-named skills)**
+
+```python
+def normalize(text):
+    return text.lower().strip()
+
+threshold = 0.80  # >80% similarity = near-duplicate
+
+near_dupes = []
+for i, a in enumerate(skills):
+    for b in skills[i+1:]:
+        ratio = difflib.SequenceMatcher(
+            None, normalize(a['description']), normalize(b['description'])
+        ).ratio()
+        if ratio > threshold:
+            near_dupes.append((ratio, a['name'], b['name']))
+
+near_dupes.sort(reverse=True)
+```
+
+**Step 3: Manual topic grouping for semantic clusters**
+
+For clusters that differ by name structure but cover the same concept:
+- Keyword matching: scan all descriptions for shared topic keywords
+- Manual review: group by intent (e.g., all "fix import" skills regardless of prefix)
+- Expected output: 20-25 merge groups for a 975-skill registry
+
+**Step 4: Always verify file existence before merging**
+
+```bash
+# Many "duplicates" from analysis may already be merged in a prior session
+for skill_name in <list>; do
+  [ -f "skills/${skill_name}.md" ] && echo "EXISTS: $skill_name" || echo "MISSING: $skill_name"
+done
+```
+
+**Key insight**: Plan agents often underestimate duplicate count (exact name match finds ~10, semantic grouping finds ~42+). Always run the full algorithmic pass.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Parallel agents in same worktree | Launched 3 agents to merge 3 groups simultaneously in one worktree | Worked fine — no conflicts since each agent writes different files | Parallel agents in a shared worktree work when they touch non-overlapping files |
+| Major-only version bumps | Always bump X.0.0 for any amendment | Loses information about change scale — a typo fix looks the same as a full rewrite | Use semver: Major for rewrites/merges, Minor for new findings, Patch for typos |
+| Merging by exact text dedup | Tried deduplicating Failed Attempts by exact row match | Different skills describe the same lesson with different wording | Deduplicate by lesson/concept, not by exact text match |
+| Splitting into multiple consolidated files | Planned 10 mojo-test-\* files into 2-3 sub-groups | All 10 files covered the same core workflow with minor variations | When content is truly redundant, even large clusters (10 files) can consolidate to 1 |
+| Forgetting .notes.md files | Deleted .md files but forgot accompanying .notes.md | Orphaned .notes.md files clutter the skills directory | Always delete both .md and .notes.md when removing source skills |
+| Cross-category consolidation | Source skills had mismatched categories (e.g., one marked `documentation`, rest `tooling`) | Category was set per-skill rather than reflecting the actual content topic | When consolidating, pick the most accurate category for the merged skill's actual function, not just the majority |
+| Over-splitting subtopics | Planned 9 conv2d skills into more than 3 groups | Content analysis showed clear 3-way split: finite-difference checks, depthwise-specific quirks, analytical-value tests | Group by actual usage scenario (how the tests are written), not by file naming pattern |
+| Depthwise mixed with standard conv2d | Considered merging depthwise into the standard conv2d finite-differences skill | Depthwise has critical API differences (kernel shape, field names, tolerance API) that warrant a dedicated skill | Even when topics are adjacent, separate skills when the API contract differs significantly |
+| Assuming one-time merges are durable | Merged test-splitting-\* cluster in Round 1 (16->3), assumed stable | /learn calls after the merge created 9 new duplicate skills covering the same topic | Deduplication is not permanent; re-duplication occurs organically — schedule periodic re-consolidation passes; also note that test-splitting itself became obsolete when the underlying compiler bug was fixed |
+| Plan agent underestimating duplicates | Asked plan agent to identify duplicates before executing | Plan agent only checked exact name matches (~10 found), actual semantic grouping found ~42 | Always run algorithmic pass (prefix grouping + SequenceMatcher) — plan agents miss semantic duplicates |
+| Reading all 975 skill files | Tried to read every skill .md file to find duplicates | Extremely slow; 975 file reads times out and wastes context | Use marketplace.json which has names + descriptions — no need to read individual files for detection phase |
+| Committing directly to main | Made dedup commits directly on main branch | Bypasses PR review process; user corrected immediately | Always use a feature branch (`skill/<name>`) via git worktree, even for registry cleanup work |
+| Planning merges without checking file existence | Identified 42 duplicate groups from analysis, started merging | Many skills existed only in git history (prior sessions already merged them on main) | Always `ls skills/<name>.md` before attempting to read or merge — skip gracefully if missing |
+| Sequential agent execution for large batches | Ran merge agents one-at-a-time for 22 groups | Very slow for 42 absorptions across 22 groups | Run 3 agents in parallel, each handling 2 groups — 6x faster, no conflicts when touching different files |
+| Stopping at 3 when topic is OBSOLETE | Round 5 consolidated 12 test-splitting skills to 3 sub-skills | When the underlying topic was declared OBSOLETE (heap corruption fixed at compiler level), the 3-file structure fragmented the OBSOLETE notice | When a topic is OBSOLETE, consolidate further to 1 file — the obsolescence notice is the dominant content |
+
+## Results & Parameters
+
+### Deduplication Results
+
+**Round 1: test-splitting cluster (2026-03-25)**
+
+```yaml
+skills_before: 16
+skills_after: 3
+net_reduction: 13 skills (-81%)
+lines_before: 3279
+lines_after: 864
+unique_lessons_preserved: 35 Failed Attempts rows
+```
+
+**Round 2: Mojo test splitting cluster (2026-03-27)**
+
+```yaml
+skills_before: 10
+skills_after: 1
+net_reduction: 9 skills (-90%)
+lines_deleted: 2499
+lines_added: 250
+unique_lessons_preserved: 12 Failed Attempts rows, 17 Verified On entries
+files_deleted: 20 (10 .md + 10 .notes.md)
+```
+
+**Round 3: Deprecated file cleanup cluster (2026-03-28)**
+
+```yaml
+skills_before: 6
+skills_after: 1
+net_reduction: 5 skills (-83%)
+files_deleted: 12 (6 .md + 6 .notes.md)
+unique_lessons_preserved: 8 Failed Attempts rows
+consolidated_into: deprecated-file-stub-cleanup
+```
+
+**Round 5: test-splitting second pass (2026-03-28)**
+
+```yaml
+skills_before: 12
+skills_after: 3
+net_reduction: 9 skills (-75%)
+files_deleted: 19 (12 .md + 5 .notes.md + 1 .history + 1 extra notes)
+lines_deleted: 2745
+lines_added: 553
+split_into:
+  - test-file-split-workflow (ci-cd): how to split — full CI pattern fork, import audit, compile hang variant
+  - split-audit-recovery (testing): codebase audit, batch issue creation, dropped-test recovery
+  - desplit-merge-workflow (testing): reversing splits; CRITICAL dedup bug where struct defs get "<top-level>" name
+key_insight: prior round merged these to 3, but subsequent /learn calls recreated 9 more duplicates — re-consolidation needed
+```
+
+**Round 6: test-splitting OBSOLETE consolidation (2026-03-28)**
+
+```yaml
+skills_before: 4
+skills_after: 1
+net_reduction: 3 skills (-75%)
+files_deleted: 3 (split-audit-recovery.md, desplit-merge-workflow.md, ci-pattern-updates.md)
+motivation: heap corruption workaround was fixed at compiler level; needed single skill with prominent OBSOLETE notice
+key_insight: when a topic is OBSOLETE, consolidate to 1 even if subtopics were well-organized into 3
+obsolete_notice_position: immediately after Overview table (before "When to Use")
+note: test-file splitting was a workaround for a Mojo 0.26.1 heap corruption bug; the bug was fixed at compiler level so the practice is no longer required
+```
+
+**Round 4: Conv2D gradient testing cluster (2026-03-28)**
+
+```yaml
+skills_before: 9
+skills_after: 3
+net_reduction: 6 skills (-67%)
+files_deleted: 18 (9 .md + 9 .notes.md)
+lines_deleted: 2136
+lines_added: 712
+split_into:
+  - conv2d-gradient-checking-finite-differences (standard conv2d: padding, stride, multi-channel)
+  - depthwise-conv2d-gradient-checking-tests (depthwise-specific API quirks)
+  - conv2d-backward-analytical-value-tests (exact expected values, batch accumulation, border pixel formula)
+key_insight: topic-adjacent skills with different APIs warrant separate skills even in same domain
+```
+
+### Semver Rules for /learn
+
+| Change Type | Bump | When |
+| ------------- | ------ | ------ |
+| Major (X.0.0) | `1.0.0` → `2.0.0` | Merge skills, rewrite workflow, change core recommendation |
+| Minor (0.X.0) | `1.0.0` → `1.1.0` | Add findings, failed attempts, extend workflow |
+| Patch (0.0.X) | `1.0.0` → `1.0.1` | Fix typos, formatting, metadata |
+
+**Round 7: Large-scale algorithmic deduplication (2026-04-07)**
+
+```yaml
+skills_before: 975
+skills_after: 933
+net_reduction: 42 skills (-4.3%)
+merge_groups: 22
+method: marketplace.json analysis + difflib.SequenceMatcher (>80% threshold) + manual topic grouping
+parallel_agents: 3 agents at a time, each handling 2 groups
+files_deleted: 42+ (absorbed .md files; some already merged in prior sessions)
+key_insights:
+  - marketplace.json enables full-registry analysis without reading 975 files
+  - Semantic grouping finds 4x more duplicates than prefix-only matching
+  - Many "planned" merges were no-ops (files already gone from prior sessions)
+  - Conflict during rebase: same file renamed+modified on both branches → combine trigger conditions from both sides
+```
+
+### Top Duplicate Clusters Remaining (for future merges)
+
+```
+9  pr-review-*
+7  skill-fix-*
+7  pre-commit-*
+7  mojo-hash-*
+7  mojo-extensor-*
+7  github-actions-*
+7  git-worktree-*
+5  mojo-jit-*
+5  mass-pr-*
+5  batch-pr-*
+```
+
+Note: `mojo-test-*` cluster (was 8) resolved in PR #1075 (10->1). `deprecated-file-*` cluster (was 6) resolved in PR #1077 (6->1). `conv2d-gradient-*` cluster (was 9) resolved in PR #1080 (9->3). test-splitting second pass (12 re-duplicated) resolved in PR #1086 (12->3). test-splitting OBSOLETE pass resolved in PR #1097 (4->1).
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectMnemosyne | PR #1040, merged 16 test-splitting skills + added semver | 2026-03-25 session |
+| ProjectMnemosyne | PR #1075, merged 10 mojo-test-\* skills into 1 | 2026-03-27 session |
+| ProjectMnemosyne | PR #1077, merged 6 deprecated-file-cleanup-\* skills into 1 | 2026-03-28 session |
+| ProjectMnemosyne | PR #1080, merged 9 conv2d-gradient-\* skills into 3 | 2026-03-28 session |
+| ProjectMnemosyne | PR #1086, re-consolidated 12 test-splitting skills into 3 (cluster re-duplicated after prior merge) | 2026-03-28 session |
+| ProjectMnemosyne | PR #1097, consolidated 4 test-splitting skills to 1 with prominent OBSOLETE notice (heap corruption fixed at compiler level) | 2026-03-28 session |
+| ProjectMnemosyne | PR pending, algorithmic dedup of 975 skills → 933 (-42 net) via marketplace.json + SequenceMatcher + 22 merge groups | 2026-04-07 session |
+
+### Prior history (tooling-skill-deduplication-semver-versioning.history)
+
+The absorbed skill had its own .history file recording v1.0.0 through v1.5.0 version bumps.
+Key milestones: v1.1.0 (PR #1075, mojo-test-\* 10→1), v1.2.0 (PR #1077, deprecated-file-\* 6→1),
+v1.3.0 (PR #1080, conv2d-gradient-\* 9→3), v1.4.0 (PR #1086, re-consolidation 12→3),
+v1.5.0 (PR #1097, OBSOLETE consolidation 4→1), v1.6.0 (PR pending, algorithmic 975→933).
+
+---
+
+## Superseded from skill-merge-history-as-superseded-snapshot
+
+**Original date:** 2026-05-18
+**Original version:** 1.0.0
+
+```yaml
+name: skill-merge-history-as-superseded-snapshot
+description: "Pattern for preserving absorbed skill content when merging N narrow skills into 1 canonical. Use when: (1) a merge PR deletes multiple narrow skills and you need to retain their full body for grep/advise searchability, (2) you want deletions to be reversible-by-inspection without git-log archaeology, (3) you need an audit trail that /advise can surface for absorbed skill triggers."
+category: tooling
+date: 2026-05-18
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [skill-merge, history, superseded, canonical, audit-trail, deletion, advise]
+```
+
+# Skill Merge — History as Superseded Snapshot
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-18 |
+| **Objective** | Preserve full content of absorbed skills when a merge PR consolidates N narrow skills into 1 canonical and deletes the originals |
+| **Outcome** | Successful — 20 PRs auto-merged on green CI using this pattern |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- A merge PR consolidates multiple narrow skills into one canonical skill and deletes the originals
+- You need deleted skills to remain searchable and reversible without `git log` archaeology
+- The `/advise` traffic from absorbed skill triggers must continue surfacing the new canonical
+- You want a structured audit trail that validators can grep and enforce
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Create the .history file for the canonical skill
+cat > skills/<canonical-name>.history << 'EOF'
+# <canonical-name> — History
+
+## v1.0.0 (YYYY-MM-DD)
+
+**Changed by:** Merge — absorbed <N> narrow skills
+**Verification:** verified-ci
+
+### What changed
+- Initial canonical version, absorbing: skill-a, skill-b, skill-c
+
+### Superseded from skill-a
+
+name: skill-a
+description: "..."
+category: tooling
+date: YYYY-MM-DD
+version: "1.0.0"
+
+`<full body of skill-a verbatim>`
+
+---
+
+### Superseded from skill-b
+
+name: skill-b
+
+`<full body of skill-b verbatim>`
+
+---
+EOF
+
+# 2. Reference .history from the canonical's frontmatter
+# Add to skills/`<canonical-name>`.md YAML frontmatter
+# history: `<canonical-name>`.history
+
+# 3. Sweep-delete the absorbed skills (skip-missing-safe)
+for f in $(jq -r '.absorbed_skills[]' manifest.json); do
+  git rm "skills/$f.md" "skills/$f.notes.md" "skills/$f.history" 2>/dev/null || true
+done
+```
+
+### Detailed Steps
+
+1. **Identify absorbed skills** — List every narrow skill that will be deleted in the merge PR.
+   Their names become the `## Superseded from <name>` section headings.
+
+2. **Read each absorbed skill in full** — Before deleting, read both `.md` and `.notes.md` (if
+   present) for each skill to be absorbed.
+
+3. **Create `skills/<canonical-name>.history`** — Use the format below. Each absorbed skill
+   gets its own `## Superseded from <skill-name>` section containing:
+   - The original YAML frontmatter as a fenced yaml block
+   - The full body verbatim (all markdown sections)
+
+4. **Reference history from canonical frontmatter** — Add `history: <canonical-name>.history`
+   to the canonical's YAML frontmatter. Validators will fail if this field names a non-existent
+   file.
+
+5. **Canonicalize the `description` field** — Incorporate the "Use when:" triggers from all
+   absorbed skills so `/advise` keyword search continues to surface the canonical.
+
+6. **Delete absorbed skill files** — Use `git rm` (not `rm`) so the deletion is tracked:
+
+   ```bash
+   for f in skill-a skill-b skill-c; do
+     git rm "skills/$f.md" 2>/dev/null || true
+     git rm "skills/$f.notes.md" 2>/dev/null || true
+     git rm "skills/$f.history" 2>/dev/null || true
+   done
+   ```
+
+7. **Validate** — Run `python3 scripts/validate_plugins.py`. The validator checks:
+   - `history:` frontmatter field matches the actual `.history` filename
+   - All five required markdown sections are present in the canonical
+
+8. **Commit both canonical and history together**:
+
+   ```bash
+   git add skills/<canonical-name>.md skills/<canonical-name>.history
+   git commit -m "feat(skill-merge): absorb <N> skills into canonical <name>"
+   ```
+
+## Superseded-From Section Template
+
+Copy-paste template for each absorbed skill block inside the `.history` file:
+
+```markdown
+### Superseded from <absorbed-skill-name>
+
+**Original date:** YYYY-MM-DD
+**Original version:** X.Y.Z
+
+name: <absorbed-skill-name>
+description: "..."
+category: <category>
+date: YYYY-MM-DD
+version: "X.Y.Z"
+verification: <level>
+tags: []
+
+### Overview
+
+`<paste original Overview table>`
+
+### When to Use
+
+`<paste original When to Use bullets>`
+
+### Verified Workflow
+
+`<paste original workflow content>`
+
+### Failed Attempts
+
+`<paste original Failed Attempts table>`
+
+### Results & Parameters
+
+`<paste original Results & Parameters content>`
+
+---
+```
+
+## Key Invariants
+
+| Rule | Rationale |
+| ------ | ----------- |
+| Canonical `.md` stays under 700 LOC | Readability — reviewers can skim a PR diff |
+| `.history` file is unbounded in size | Every absorbed body must be verbatim — no summarizing |
+| Heading is exactly `## Superseded from <skill-name>` | Enables `grep "Superseded from" skills/*.history` audits |
+| `history:` frontmatter must match actual filename | Validators auto-reject mismatches |
+| YAML frontmatter of absorbed skill is a fenced code block | Preserves structure without confusing the YAML parser |
+| Canonical `description` incorporates all absorbed triggers | `/advise` keyword search must still surface the canonical |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | --------------- |
+| Summary-only history | Wrote a brief "what changed" paragraph per absorbed skill instead of full body | Lost the ability to recover absorbed skill content without `git log` | Always paste the full original body verbatim |
+| In-place amendment style | Used same `.history` format as a version-bump amendment (recording diffs only) | Diffs are meaningless when the entire file is being deleted | Merges record absorbed bodies, amendments record what changed |
+| Omitting frontmatter reference | Created `.history` but did not add `history:` field to canonical `.md` | Validator rejected the skill file with "orphan history file" error | Always add `history:` field to canonical frontmatter first |
+| Deleting with `rm` instead of `git rm` | Used shell `rm` to remove absorbed skill files | Files showed as unstaged deletions; history file was not staged | Always use `git rm` so deletions are tracked in the commit |
+| Merging triggers into a single long description | Concatenated all absorbed "Use when:" items verbatim | Description exceeded single-line limit and failed YAML parsing | Summarize trigger themes; keep description under ~300 characters |
+
+## Results & Parameters
+
+Expected outputs after following this workflow:
+
+- `skills/<canonical-name>.md` — under 700 LOC, references `.history` in frontmatter
+- `skills/<canonical-name>.history` — one `### Superseded from <name>` section per absorbed skill
+- No remaining `.md` files for absorbed skills in `skills/`
+- `python3 scripts/validate_plugins.py` exits 0
+- `grep "Superseded from" skills/*.history` lists all absorbed skill names
+
+Grep audit command for CI:
+
+```bash
+# Verify all absorbed skills are documented in .history files
+grep -h "### Superseded from" skills/*.history | sort
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectMnemosyne | 20 merge PRs, all auto-merged on green CI | Session 2026-05-18 |
+
+---
+
+## Superseded from skill-merge-manifest-enumeration-from-cluster-examples
+
+**Original date:** 2026-05-19
+**Original version:** 2.0.0
+
+```yaml
+name: skill-merge-manifest-enumeration-from-cluster-examples
+description: "Use when consolidating many narrow skills into canonical ones using cluster examples. Triggers: (1) issue body lists 3 example members per cluster but NOT the full member list, (2) merge agents stall or drift scope because they lack a definitive skill list, (3) running bulk skill consolidation across 10+ clusters, (4) running a *second-pass* consolidation after an earlier merge wave produced canonicals — agents must be told about them or they will propose duplicates, (5) building a swarm where each sub-agent should choose between 'new cluster' and 'absorb into existing'."
+category: tooling
+date: 2026-05-19
+version: "2.0.0"
+user-invocable: false
+verification: verified-local
+history: skill-merge-manifest-enumeration-from-cluster-examples.history
+tags: [skill-merge, consolidation, manifest, enumeration, cluster, swarm, bulk, second-pass, absorb-into-canonical]
+```
+
+# Skill-Merge Manifest Enumeration from Cluster Examples
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-18 |
+| **Objective** | Reliably enumerate every skill belonging to each merge cluster when the issue body only provides 3 example members |
+| **Outcome** | Successful — decoupled enumeration from merge, eliminating stall and scope-drift in a 17-cluster, 1100-skill consolidation |
+| **Verification** | verified-local |
+| **History** | [v1.0.0 → v2.0.0](skill-merge-manifest-enumeration-from-cluster-examples.history) |
+
+## When to Use
+
+- Issue body lists only 3 example members per cluster, not the full member list
+- Merge agents stall mid-run because they cannot determine which skills belong to the cluster
+- Scope errors occur (agent merges wrong skills or misses members) during bulk consolidation
+- Running a large-scale skill consolidation with 10+ clusters in parallel
+- A "catch-all" cluster exists that may absorb irrelevant skills
+- You need cross-cluster duplicate detection before shipping merge PRs
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Gate 0 — enumerate each cluster in parallel (one Haiku agent per cluster)
+# Each agent writes: /tmp/skill-merge-manifests/<cluster_id>.json
+
+# Gate 1 — detect cross-cluster duplicates after all manifests are written
+jq -r '.absorbed_skills[]' /tmp/skill-merge-manifests/*.json | sort | uniq -d
+
+# Gate 2 — merge agents read their manifest as single source of truth
+MANIFEST=$(cat /tmp/skill-merge-manifests/<cluster_id>.json)
+```
+
+```json
+{
+  "cluster_id": "M07",
+  "canonical_name": "tooling-myrmidon-swarm-full-workflow",
+  "absorbed_skills": ["skill-a.md", "skill-b.md"],
+  "keep_as_examples": ["skill-a.md"],
+  "boundary_notes": "Excludes swarm-orchestration meta-skills (see excluded list)",
+  "estimated_loc_after_merge": 420,
+  "overflow_warning": false
+}
+```
+
+### Detailed Steps
+
+1. **Dispatch one Haiku enumeration agent per cluster** — do not bundle clusters; isolation
+   prevents cross-contamination.
+
+2. **Each enumeration agent follows this exact sequence:**
+   a. Read the 3 example members from the issue to learn the keyword surface
+   b. Grep the full skills corpus for those keywords
+   c. Read each candidate match and decide IN or OUT
+   d. Write the manifest JSON file to `/tmp/skill-merge-manifests/<cluster_id>.json`
+
+3. **Enumeration agent must EXCLUDE protected meta-skills** — before writing the manifest,
+   filter out any skill whose filename matches the protected list (see Results & Parameters).
+   Failure to exclude leaves the swarm able to delete its own foundation mid-run.
+
+4. **Gate 1 — cross-cluster duplicate detection** (mandatory, runs after all manifests written):
+
+   ```bash
+   jq -r '.absorbed_skills[]' /tmp/skill-merge-manifests/*.json | sort | uniq -d
+   ```
+
+   For each duplicate, reassign it to the most-specific cluster by updating that cluster's
+   manifest JSON before launching merge agents.
+
+5. **For the "catch-all suspect" cluster** — instruct the enumerator to apply EXTRA strict
+   inclusion criteria. Document the rejection rate in `boundary_notes`.
+
+6. **Launch merge agents** — each merge agent reads only its cluster manifest and merges
+   exactly the `absorbed_skills[]` list. No guessing, no re-enumeration.
+
+7. **Per-PR markdownlint discipline** — before pushing each merge PR:
+   - Escape `\|` inside backtick code-spans in table cells (avoids MD056)
+   - Escape `\#` at the start of lines referencing PR numbers (avoids MD018)
+
+## Second-Pass Variant
+
+When a prior merge wave has already produced canonicals (e.g., M1–M17), enumeration agents
+in the next pass must be told about those canonicals or they will propose new clusters that
+duplicate existing ones.
+
+### Prompt Addendum (inject into every second-pass enumeration agent)
+
+```text
+EXISTING CANONICALS (DO NOT propose new clusters with these names):
+- <name1> — <one-line theme>
+- <name2> — <one-line theme>
+...
+
+For each input skill, choose ONE of:
+  (a) absorb_into_canonical: <name> — if the skill clearly belongs in an existing canonical
+  (b) new_cluster_candidate — if the skill is narrow AND not covered by any existing canonical
+
+Output two arrays in your JSON: `clusters[]` (new only) AND `absorb_into_canonical[]`.
+```
+
+### JSON Output Schema Additions
+
+Second-pass manifests extend the base schema with an `absorb_into_canonical` array:
+
+```json
+"absorb_into_canonical": [
+  {"name":"<skill>","canonical":"<one-of-existing>","why":"<one-line>"}
+]
+```
+
+The `clusters[]` array contains **only genuinely new** clusters whose names do not match any
+existing canonical. The orchestrator gate must validate this constraint before launching any
+merge agents — reject any `clusters[]` entry whose `canonical_name` matches an existing
+canonical and re-route its members into `absorb_into_canonical[]` automatically.
+
+### Gate Stage Validation (second-pass)
+
+```bash
+# Check no proposed cluster name collides with an existing canonical
+EXISTING_CANONICALS=("canonical-name-1" "canonical-name-2")  # fill from prior wave
+jq -r '.clusters[].canonical_name' /tmp/skill-merge-manifests/*.json | while read name; do
+  for existing in "${EXISTING_CANONICALS[@]}"; do
+    if [[ "$name" == "$existing" ]]; then
+      echo "COLLISION: $name already exists — re-route to absorb_into_canonical"
+    fi
+  done
+done
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Direct merge without enumeration phase | Merge agent given 3 examples and told to discover the rest | Agent stalled or drifted scope — it had no definitive boundary | Always enumerate first; merge agents need a fixed manifest |
+| Single agent enumerating all clusters | One agent iterated all 17 clusters sequentially | Cross-contamination: agent conflated keywords across adjacent clusters | One enumeration agent per cluster, fully isolated |
+| Omitting protected meta-skill exclusions | Enumeration agents allowed to include any skill | Cluster owning "swarm orchestration" absorbed and deleted its own tooling | Hard-code the protected list in every enumeration agent prompt |
+| Skipping Gate 1 duplicate check | Manifests shipped directly to merge agents | Same skill appeared in two merge PRs, causing conflicts and double-deletion | Gate 1 duplicate detection is mandatory before any merge launches |
+| Trusting catch-all cluster to self-bound | No extra strictness instruction for catch-all | Catch-all absorbed 82 candidates; most were wrong cluster | For catch-all clusters, instruct enumerator to be EXTRA strict |
+| Overflow above 100 skills per manifest | No cap enforced | Merge agent timeout / PR too large to review | Cap at 100; set `overflow_warning: true` and split into sub-PRs |
+| Running second-pass clustering without supplying the existing-canonicals list | Documentation-shard agent proposed C1=`academic-paper-validation-and-publication` and C2=`stale-documentation-audits-and-sync` as NEW clusters — both were already canonicals from M16/M17. 27 members had to be re-routed at the gate stage | Always pass the existing-canonicals list + 1-line themes as agent input; require a two-bucket output (clusters[] + absorb_into_canonical[]); validate at gate stage that no proposed cluster name matches an existing canonical | — |
+
+## Results & Parameters
+
+### Manifest Schema
+
+```json
+{
+  "cluster_id": "<MXX>",
+  "canonical_name": "<kebab-case-canonical-skill-name>",
+  "absorbed_skills": ["<skill-filename-1.md>", "<skill-filename-2.md>"],
+  "keep_as_examples": ["<one-or-two-representative-members.md>"],
+  "boundary_notes": "<free text — what is explicitly excluded and why>",
+  "estimated_loc_after_merge": 350,
+  "overflow_warning": false
+}
+```
+
+Cap `absorbed_skills` at 100 entries. If a cluster exceeds 100, set `overflow_warning: true`
+and split into sub-clusters before launching merge agents.
+
+### Protected Meta-Skills (always exclude from every cluster manifest)
+
+These skills are swarm infrastructure — absorbing them into a canonical merge skill
+breaks the agents running the merge itself:
+
+```
+worktree-parallel-agent-execution
+myrmidon-swarm-end-to-end-orchestration-full-workflow
+tooling-sub-agent-pr-trust-but-verify
+tooling-myrmidon-swarm-prompt-guardrails-reduce-stall-rate
+stop-reassess-gate-bulk-transformation
+```
+
+Add these as a fixed exclusion list in every enumeration agent prompt.
+
+### Catch-All Cluster Prompt Addendum
+
+> You are enumerating cluster \<ID\> which is designated a CATCH-ALL. Apply EXTRA strict
+> inclusion criteria. A skill belongs here ONLY if it genuinely fits no other cluster.
+> Err heavily toward OUT. Document your rejection count in `boundary_notes`.
+
+### Gate 1 Command
+
+```bash
+# After all enumeration agents complete:
+mkdir -p /tmp/skill-merge-manifests
+jq -r '.absorbed_skills[]' /tmp/skill-merge-manifests/*.json \
+  | sort | uniq -d \
+  > /tmp/skill-merge-manifests/duplicates.txt
+cat /tmp/skill-merge-manifests/duplicates.txt
+# For each duplicate, manually edit the less-specific cluster's manifest to remove it
+```
+
+### Markdownlint Rules (per-PR, before push)
+
+| Violation | Pattern | Fix |
+|-----------|---------|-----|
+| MD056 | Pipe `\|` inside backtick code-span in table cell | Escape as `\\\|` |
+| MD018 | `\#` at start of line (PR number references) | Escape as `\\\#` |
+
+### Observed Scale
+
+| Metric | Value |
+|--------|-------|
+| Clusters | 17 |
+| Total skills in corpus | ~1100 |
+| Enumeration agents dispatched | 17 (Haiku tier) |
+| Stall rate after change | ~0% |
+| Scope errors after change | ~0% |
+| Catch-all rejection rate | 65 of 82 candidates rejected |
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectMnemosyne | 17-cluster, 1100-skill consolidation session | Manifest-first enumeration decoupled from merge phase |
+
+### Prior history (skill-merge-manifest-enumeration-from-cluster-examples.history)
+
+v1.0.0 (2026-05-18): Initial version covering first-pass enumeration for 17-cluster, 1100-skill consolidation.
+v2.0.0 (2026-05-19): Extended to support second-pass consolidation with existing-canonicals list and two-bucket output schema.
+
+---
+
+## Superseded from bulk-skill-migration-script
+
+**Original date:** 2026-03-04
+**Original version:** 1.0.0
+
+```yaml
+name: bulk-skill-migration-script
+description: Write an idempotent Python script to bulk-migrate skills from a source Claude project to a ProjectMnemosyne marketplace. Handles discovery, SKILL.md transformation, category mapping, and skips already-migrated skills.
+category: tooling
+date: 2026-03-04
+version: 1.0.0
+user-invocable: false
+```
+
+# Bulk Skill Migration Script
+
+Automate bulk migration of skills from a source repo (e.g. ProjectOdyssey2 `.claude/skills/`)
+to ProjectMnemosyne's `skills/<category>/<name>/` plugin structure.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-04 |
+| Objective | Migrate all source skills to Mnemosyne plugin format idempotently |
+| Outcome | 4 missing skills ported; 81 already-present skills correctly skipped |
+
+## When to Use
+
+- Porting skills from a source project to ProjectMnemosyne for the first time
+- Running incremental migrations when new skills are added to a source project
+- Auditing which source skills are missing from Mnemosyne
+- Automating the repetitive SKILL.md transformation (frontmatter cleanup, section renames, path generalization)
+
+## Verified Workflow
+
+1. **Audit first** — list source skills vs. Mnemosyne skills to know scope:
+
+   ```bash
+   ls /path/to/source/.claude/skills/ | sort > /tmp/source_skills.txt
+   ls /path/to/ProjectMnemosyne/skills/ | sort > /tmp/mnemosyne_skills.txt
+   comm -23 /tmp/source_skills.txt /tmp/mnemosyne_skills.txt
+   ```
+
+2. **Write the migration script** in the source repo's `scripts/` directory with these functions:
+
+   ```python
+   def parse_frontmatter(content: str) -> tuple[dict, str]:
+       """Parse YAML frontmatter, return (dict, remaining body)."""
+
+   def determine_category(skill_name: str, frontmatter: dict, tier: str | None) -> str:
+       """Map source categories to valid Mnemosyne categories."""
+
+   def generalize_content(content: str) -> str:
+       """Replace hardcoded paths with <project-root>, <package-manager>, etc."""
+
+   def transform_skill_md(content: str, skill_name: str, category: str) -> str:
+       """Full SKILL.md transformation pipeline."""
+
+   def skill_already_exists(skill_name: str) -> bool:
+       """Check across all category dirs — idempotency guard."""
+
+   def migrate_skill(...) -> bool:
+       """Create .claude-plugin/plugin.json + skills/<name>/SKILL.md."""
+   ```
+
+3. **Run dry-run first**:
+
+   ```bash
+   python3 scripts/migrate_odyssey_skills.py --dry-run
+   ```
+
+4. **Run for real** (skip-existing is default):
+
+   ```bash
+   python3 scripts/migrate_odyssey_skills.py
+   ```
+
+5. **Validate all plugins** in Mnemosyne:
+
+   ```bash
+   cd /path/to/ProjectMnemosyne
+   python3 scripts/validate_plugins.py skills/
+   ```
+
+6. **Regenerate marketplace index**:
+
+   ```bash
+   python3 scripts/generate_marketplace.py
+   ```
+
+7. **Commit and PR** in ProjectMnemosyne, then commit the script in source repo.
+
+## Category Mapping Table
+
+| Source Category | Mnemosyne Category |
+| --- | --- |
+| `github`, `worktree`, `agent`, `plan`, `generation` | `tooling` |
+| `ci`, `phase` | `ci-cd` |
+| `mojo` | `architecture` |
+| `doc` | `documentation` |
+| `quality`, `review` | `evaluation` |
+| `testing` | `testing` |
+| `analysis`, `ml` | `optimization` |
+| `training` | `training` |
+
+## Key Transformations
+
+```python
+# Required SKILL.md transformations
+body = re.sub(r"^## Workflow\b", "## Verified Workflow", body, flags=re.MULTILINE)
+
+# Path generalization replacements
+PATH_REPLACEMENTS = [
+    (r"/home/username/ProjectName/", "<project-root>/"),
+    (r"\bProjectName\b", "<project-name>"),
+    (r"\bpixi run mojo\b", "<package-manager> run mojo"),
+    (r"\bpixi run\b", "<package-manager> run"),
+]
+
+# Remove Odyssey-specific frontmatter fields
+# Keep only: name, description, category, date, user-invocable
+FIELDS_TO_REMOVE = {"mcp_fallback", "agent", "tier", "source"}
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Using `comm` with inline `ls` substitution | `ls dir/ \| sort > /tmp/file.txt` in one command | Sort error: "cannot read: ls" — shell quoting issue | Pipe `ls` output separately before passing to sort |
+| Checking existence only by top-level dir name | `if (mnemosyne_dir / skill_name).exists()` | Skills may be under category subdirs; flat check misses them | Iterate all category subdirs: `for cat in mnemosyne_skills_dir.iterdir(): if (cat / skill_name).exists()` |
+| Regex substitution order matters | Replacing `pixi run mojo` after `pixi run` | `pixi run` replacement fires first, leaving `mojo` dangling | Put more specific patterns (longer strings) before general ones |
+| Assuming all tier-2 skills need same category | Mapping all tier-2 to `optimization` | `generate-api-docs` belongs to `documentation`, not `optimization` | Build per-skill override map for tier-2 categories |
+| Writing PR body inline with `--body "..."` | Used `"$(cat <<'EOF'...)"` with nested quotes | Special chars broke heredoc quoting in some shells | Write body to a temp file, use `--body-file` flag |
+
+## Results & Parameters
+
+### Script Parameters
+
+| Parameter | Default | Description |
+| ----------- | --------- | ------------- |
+| `--dry-run` | false | Show planned actions without creating files |
+| `--skill NAME` | all | Migrate only a specific skill by name |
+| `--force` | false | Overwrite skills that already exist in Mnemosyne |
+| `--skip-existing` | true | Skip skills already present (idempotency) |
+
+### Example Output
+
+```
+Found 85 skills in Odyssey2
+SKIP: gh-create-pr-linked (already exists in Mnemosyne)
+...
+Processing: worktree-cleanup (category=tooling, tier=None)
+  Migrating worktree-cleanup -> skills/tooling/worktree-cleanup/
+  OK: skills/tooling/worktree-cleanup/.claude-plugin/plugin.json
+  OK: skills/tooling/worktree-cleanup/skills/worktree-cleanup/SKILL.md
+
+Migration Summary:
+  Succeeded: 4
+  Skipped:   81
+  Failed:    0
+```
+
+### Validation Pass
+
+```
+python3 scripts/validate_plugins.py skills/
+-> ALL VALIDATIONS PASSED (377 plugins, 0 errors)
+```
+
+## References
+
+- Source script: `scripts/migrate_odyssey_skills.py` in ProjectOdyssey2
+- ProjectMnemosyne validator: `scripts/validate_plugins.py`
+- Marketplace generator: `scripts/generate_marketplace.py`
+- Related skills: `port-reusable-scripts`, `plugin-generalization`, `fix-skill-validation-warnings`
+
+---
+
+## Superseded from migrate-skill-aux-dirs
+
+**Original date:** 2026-03-07
+**Original version:** 1.0.0
+
+```yaml
+name: migrate-skill-aux-dirs
+description: 'Copy auxiliary subdirectories (scripts/, templates/, hooks/) when migrating skills. Use when: fixing a migration script that silently drops subdirs, or porting skills with non-SKILL.md content.'
+category: tooling
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+```
+
+# migrate-skill-aux-dirs
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Name | migrate-skill-aux-dirs |
+| Category | tooling |
+| Problem | Migration scripts that only copy SKILL.md silently drop scripts/, templates/, hooks/ subdirs |
+| Solution | After writing SKILL.md, iterate source subdirs and copy each to the correct destination |
+| Key Tool | `shutil.copytree(..., dirs_exist_ok=True)` |
+
+## When to Use
+
+- A skill migration script copies only `SKILL.md` and ignores subdirectories
+- Skills like `gh-create-pr-linked` have `scripts/` and `templates/` that disappear after migration
+- Adding auxiliary subdir support to `migrate_skill()` or any analogous function
+- Writing tests for subdir-copy behavior (TDD: confirm failure first, then fix)
+
+## Verified Workflow
+
+### 1. Identify the Pattern
+
+The bug manifests when `migrate_skill()` only creates target dirs and writes `SKILL.md`/`plugin.json`
+without iterating the source skill directory for other subdirectories.
+
+```python
+# BEFORE (broken) — only SKILL.md is copied
+skill_md_path.write_text(transformed)
+# subdirs silently dropped
+
+# AFTER (fixed) — iterate all subdirs
+source_dir = source_skill_md.parent
+for subdir in sorted(source_dir.iterdir()):
+    if not subdir.is_dir() or subdir.name.startswith("."):
+        continue
+    if subdir.name == "references":
+        dest = plugin_dir / "references"  # plugin root
+    else:
+        dest = skill_md_dir / subdir.name  # alongside SKILL.md
+    shutil.copytree(subdir, dest, dirs_exist_ok=True)
+```
+
+### 2. Routing Rules
+
+| Subdir | Destination in Mnemosyne |
+| -------- | -------------------------- |
+| `scripts/` | `skills/<category>/<name>/skills/<name>/scripts/` |
+| `templates/` | `skills/<category>/<name>/skills/<name>/templates/` |
+| `hooks/` | `skills/<category>/<name>/skills/<name>/hooks/` |
+| `references/` | `skills/<category>/<name>/references/` (plugin root) |
+| `.hidden/` | **Skipped** (starts with `.`) |
+
+### 3. Use `dirs_exist_ok=True`
+
+```python
+import shutil
+shutil.copytree(src, dest, dirs_exist_ok=True)
+```
+
+This allows merging into pre-existing destination directories without raising `FileExistsError`.
+Without this flag, re-running migration would fail if any subdir already exists.
+
+### 4. Update dry-run to report subdirs
+
+```python
+else:
+    print(f"  [DRY RUN] Would create: {plugin_dir}")
+    source_dir = source_skill_md.parent
+    for subdir in sorted(source_dir.iterdir()):
+        if not subdir.is_dir() or subdir.name.startswith("."):
+            continue
+        if subdir.name == "references":
+            print(f"  [DRY RUN] Would copy references/ -> skills/{category}/{skill_name}/references/")
+        else:
+            print(f"  [DRY RUN] Would copy {subdir.name}/ -> skills/{category}/{skill_name}/skills/{skill_name}/{subdir.name}/")
+```
+
+### 5. Write Tests First (TDD)
+
+Key test cases to cover before fixing:
+
+```python
+def test_skill_with_scripts_subdir_copies_scripts(tmp_path, migrate_module):
+    # Make skill dir with scripts/create_pr.sh
+    # Call migrate_skill(...)
+    expected = mnemosyne_skills / "tooling" / "name" / "skills" / "name" / "scripts"
+    assert expected.exists()
+    assert (expected / "create_pr.sh").exists()
+
+def test_hidden_directories_not_copied(tmp_path, migrate_module):
+    # .hidden/ must NOT appear in output
+
+def test_dry_run_does_not_copy_files(tmp_path, migrate_module):
+    # plugin_dir must not exist after dry_run=True
+
+def test_existing_destination_does_not_raise(tmp_path, migrate_module):
+    # Pre-create dest subdir; copytree with dirs_exist_ok=True must merge, not error
+```
+
+### 6. Import `shutil`
+
+Add `import shutil` at the top of the script — the standard library module is all that's needed.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Putting `references/` alongside SKILL.md | Placed `references/` inside `skills/<name>/` | Mnemosyne convention puts `references/` at plugin root, not alongside SKILL.md | Check the Mnemosyne plugin layout spec before routing subdirs |
+| Using `shutil.copytree` without `dirs_exist_ok` | Called `copytree(src, dest)` | Raises `FileExistsError` on second migration run if dest already exists | Always use `dirs_exist_ok=True` for idempotent behavior |
+| Skipping dry-run subdir reporting | Only dry-run printed the plugin_dir line | Users had no visibility into what subdirs would be copied | Dry-run branch should mirror the real branch's output with `[DRY RUN]` prefix |
+
+## Results & Parameters
+
+```python
+# Full fixed migrate_skill() subdir block — drop into any similar migration function
+import shutil
+
+source_dir = source_skill_md.parent
+for subdir in sorted(source_dir.iterdir()):
+    if not subdir.is_dir() or subdir.name.startswith("."):
+        continue
+    if subdir.name == "references":
+        dest = plugin_dir / "references"
+        shutil.copytree(subdir, dest, dirs_exist_ok=True)
+    else:
+        dest = skill_md_dir / subdir.name
+        shutil.copytree(subdir, dest, dirs_exist_ok=True)
+```
+
+Key parameters:
+- `dirs_exist_ok=True` — required for idempotent re-runs
+- Skip hidden dirs (`name.startswith(".")`) — avoids copying `.git`, `.cache`, etc.
+- `references/` routing to plugin root — follows Mnemosyne plugin layout convention
+- 11 unit tests, all using `unittest.mock.patch.object` to override `MNEMOSYNE_SKILLS_DIR`
+
+---
+
+## Superseded from consolidate-skills-directory
+
+**Original date:** 2026-02-23
+**Original version:** 1.0.0
+
+```yaml
+name: consolidate-skills-directory
+description: 'Consolidate a dual plugins/+skills/ structure into a single skills/<category>/<name>/ directory. Use when: (1) ProjectMnemosyne has both plugins/ and skills/ directories causing confusion, (2) migrating flat legacy skills to plugin format, (3) updating all tooling and CI to reference the new canonical location.'
+category: tooling
+date: 2026-02-23
+version: 1.0.0
+user-invocable: false
+```
+
+# Consolidate skills/ Directory
+
+Migrate from a dual `plugins/` + `skills/` structure to a single canonical `skills/<category>/<name>/` location for all skills.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-02-23 |
+| Objective | Consolidate 225 plugins/ + 88 legacy skills/ into a single skills/ directory |
+| Outcome | 310 skills in skills/, plugins/ contains only mnemosyne |
+
+## When to Use
+
+- ProjectMnemosyne has both `plugins/<category>/<name>/` and `skills/<name>/` directories
+- New contributors are confused about where to put skills
+- Tooling (CI, scripts) needs to scan a single directory
+- Legacy flat skills need migration to the standard plugin format (`<category>/<name>/.claude-plugin/plugin.json + skills/<name>/SKILL.md`)
+
+## Verified Workflow
+
+### 1. Write migration script
+
+Create `scripts/migrate_to_skills.py` to convert flat legacy skills:
+
+- Reads `category` from `plugin.json` or SKILL.md YAML frontmatter
+- Falls back to name-based keyword inference (e.g. `fix-*` → `debugging`, `mypy-*` → `testing`)
+- **Critical**: detect in-place migrations (when `legacy_dir == target_dir`) and skip file copies — just add `.claude-plugin/plugin.json`
+- Add YAML frontmatter to any SKILL.md that lacks `---` delimiters
+
+Map non-standard categories: `workflow→tooling`, `refactoring→architecture`, `automation→tooling`, `docs→documentation`.
+
+### 2. Update scripts to accept multiple scan directories
+
+```python
+# generate_marketplace.py — new signature
+def main():
+    # First arg ending in .json = output file, rest = scan dirs
+    # Default: output=.claude-plugin/marketplace.json, scan_dirs=[skills/, plugins/]
+    ...
+    generate_marketplace(scan_dirs, repo_root)
+
+# validate_plugins.py — new signature
+def main():
+    # All args = scan dirs
+    # Default: [skills/, plugins/]
+    ...
+```
+
+### 3. Move plugins/ → skills/ with bash
+
+```bash
+for category in plugins/*/; do
+  cat_name=$(basename "$category")
+  for plugin in "$category"*/; do
+    plugin_name=$(basename "$plugin")
+    [ "$cat_name/$plugin_name" = "tooling/mnemosyne" ] && continue
+    mkdir -p "skills/$cat_name"
+    [ -d "skills/$cat_name/$plugin_name" ] && rm -rf "skills/$cat_name/$plugin_name"
+    mv "$plugin" "skills/$cat_name/$plugin_name"
+  done
+  [ "$cat_name" != "tooling" ] && rmdir "$category" 2>/dev/null
+done
+```
+
+### 4. Fix any stray skills after migration
+
+After `git restore .` + switching branches, check for:
+- Legacy flat dirs still at `skills/<name>/` (not `skills/<category>/<name>/`)
+- Skills that have `.claude-plugin/plugin.json` but no `skills/<name>/SKILL.md` (partially-migrated)
+
+```bash
+# Find stray flat dirs (top-level dirs in skills/ that aren't categories)
+find skills -maxdepth 1 -mindepth 1 -type d | grep -v -E "^skills/(architecture|ci-cd|debugging|documentation|evaluation|optimization|testing|tooling|training)$"
+```
+
+### 5. Update CI and commands
+
+- `.github/workflows/validate-plugins.yml`: trigger on `skills/**` + `plugins/**`, pass both to script
+- `.github/workflows/update-marketplace.yml`: same
+- `plugins/tooling/mnemosyne/commands/learn.md`: generate into `skills/<category>/<name>/`
+- `CLAUDE.md`, `README.md`, `.claude/shared/plugin-standards.md`: update Required Structure section
+
+### 6. Add YAML frontmatter to migrated legacy SKILL.md files
+
+```python
+for plugin_json_path in skills_root.rglob('.claude-plugin/plugin.json'):
+    skill_md = find_skill_md(plugin_json_path.parent.parent)
+    if not skill_md.read_text().startswith('---'):
+        plugin_data = json.loads(plugin_json_path.read_text())
+        frontmatter = build_frontmatter(plugin_data)
+        skill_md.write_text(frontmatter + skill_md.read_text())
+```
+
+### 7. Handle stray legacy skills that have `.claude-plugin/` but no `skills/<name>/SKILL.md`
+
+These are partially-migrated skills with rich `plugin.json` metadata but the SKILL.md wasn't moved. Detect and migrate manually:
+
+```python
+for plugin_json_path in skills_root.rglob('.claude-plugin/plugin.json'):
+    plugin_dir = plugin_json_path.parent.parent
+    skill_files = list((plugin_dir / 'skills').glob('*/SKILL.md'))
+    if not skill_files:  # Missing SKILL.md subdir
+        migrate_in_place(plugin_dir)
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+```yaml
+# Final state after migration
+skills_count: 310
+skills_location: skills/<category>/<name>/
+exception: plugins/tooling/mnemosyne/  # stays in plugins/
+
+# Validation command
+validate: python3 scripts/validate_plugins.py skills/ plugins/
+
+# Marketplace generation command
+generate: python3 scripts/generate_marketplace.py .claude-plugin/marketplace.json skills/ plugins/
+
+# Category inference priority
+category_sources:
+  1: plugin.json "category" field
+  2: SKILL.md YAML frontmatter "category:" field
+  3: Name keyword inference (fix-* → debugging, mypy-* → testing, etc.)
+  4: Default → tooling
+
+# Non-standard category mappings
+category_map:
+  workflow: tooling
+  refactoring: architecture
+  automation: tooling
+  docs: documentation
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectMnemosyne | PR #183 — 971 files changed | [notes.md](../references/notes.md) |
+
+---
+
+## Superseded from tooling-legacy-hierarchical-flat-migration
+
+**Original date:** 2026-03-25
+**Original version:** 1.0.0
+
+```yaml
+name: tooling-legacy-hierarchical-flat-migration
+description: "Migrate remaining legacy hierarchical skills (nested directories with SKILL.md + plugin.json) to flat format (skills/<name>.md). Use when: (1) find skills/ -type d -mindepth 1 returns results, (2) skills have .claude-plugin/plugin.json files, (3) skills use SKILL.md filename instead of <name>.md."
+category: tooling
+date: 2026-03-25
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [migration, flat-format, hierarchical, legacy, skill-format, plugin-json]
+```
+
+# Legacy Hierarchical to Flat Skill Migration
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-25 |
+| **Objective** | Migrate the last 4 skills from nested `skills/<category>/<name>/skills/<name>/SKILL.md` to flat `skills/<name>.md` |
+| **Outcome** | All 4 migrated, 0 nested directories remain, 1031/1031 skills valid |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- `find skills/ -type d -mindepth 1` returns directories (should be empty)
+- Skills have `.claude-plugin/plugin.json` files alongside `SKILL.md`
+- Agent created skills in the old nested format: `skills/<category>/<name>/skills/<name>/SKILL.md`
+- Marketplace generation misses skills because they're in unexpected paths
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Detect legacy skills
+find skills/ -type d -mindepth 1
+find skills/ -name "plugin.json"
+find skills/ -name "SKILL.md"
+
+# Migrate one skill
+cp skills/<cat>/<name>/skills/<name>/SKILL.md skills/<name>.md
+cp skills/<cat>/<name>/references/notes.md skills/<name>.notes.md
+rm -rf skills/<cat>/<name>/
+rmdir skills/<cat>/  # only if empty
+
+# Fix missing version in frontmatter (if needed)
+# Add: version: "1.0.0"
+
+# Validate
+python3 scripts/validate_plugins.py
+```
+
+### Detailed Steps
+
+1. **Identify legacy skills**: `find skills/ -type d -mindepth 1` to find nested directories
+2. **Check each for the pattern**: `skills/<cat>/<name>/skills/<name>/SKILL.md` + `.claude-plugin/plugin.json` + `references/notes.md`
+3. **Check for existing flat duplicates**: `test -f skills/<name>.md` — if flat version already exists, compare content before overwriting
+4. **Copy SKILL.md to flat location**: The SKILL.md files may already have YAML frontmatter (partially migrated) — check and preserve it
+5. **Copy references/notes.md**: Rename to `skills/<name>.notes.md`
+6. **Fix frontmatter**: Add `version: "1.0.0"` if missing (3 of 4 were missing it)
+7. **Delete nested directory**: `rm -rf skills/<cat>/<name>/` removes the entire tree including `.claude-plugin/`
+8. **Delete empty category dirs**: `rmdir skills/<cat>/` — only succeeds if empty
+9. **Validate**: `python3 scripts/validate_plugins.py` — all skills must pass
+10. **Verify clean state**: `find skills/ -type d -mindepth 1` should return nothing
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Assumed SKILL.md needed full rewrite | Expected old format without frontmatter | All 4 already had YAML frontmatter — only needed file move | Check SKILL.md content before assuming a full rewrite is needed; partially migrated files only need relocation |
+| Forgot to check for `version` field | Copied SKILL.md directly without checking required fields | 3 of 4 were missing `version: "1.0.0"` in frontmatter, would fail validation | Always verify all required frontmatter fields after copy: name, description, category, date, version |
+
+## Results & Parameters
+
+### Migration Results
+
+```yaml
+legacy_skills_found: 4
+successfully_migrated: 4
+validation_result: 1031/1031 valid
+nested_directories_remaining: 0
+```
+
+### Legacy Skills Migrated
+
+| Skill | Category Dir | Missing Fields |
+| ------- | ------------- | ---------------- |
+| e2e-resource-exhaustion | `optimization/` | `version` |
+| experiment-dataset-triage | `evaluation/` | `version` |
+| batch-subprocess-signal-hang | `debugging/` | `version` |
+| tensor-dtype-native-ops-inversion | `architecture/` | (none) |
+
+### Detection Commands
+
+```bash
+# Find all legacy-format skills
+find skills/ -type d -mindepth 1
+find skills/ -name "plugin.json"
+find skills/ -name "SKILL.md"
+
+# Count flat vs legacy
+echo "Flat: $(ls skills/*.md 2>/dev/null | grep -v notes.md | wc -l)"
+echo "Legacy dirs: $(find skills/ -type d -mindepth 1 | wc -l)"
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectMnemosyne | PR #1017, migrated last 4 hierarchical skills | 2026-03-25 session |
+
+---
+
+## Superseded from plugin-generalization
+
+**Original date:** 2026-01-03
+**Original version:** 1.0.0
+
+```yaml
+name: plugin-generalization
+description: Generalize skills/plugins for cross-repository compatibility
+category: tooling
+date: 2026-01-03
+version: 1.0.0
+```
+
+# Plugin Generalization
+
+Migrate plugins/skills from repository-specific to cross-repository compatible format.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-01-03 |
+| Objective | Make plugins work across multiple repositories without hardcoded references |
+| Outcome | Success - 33 plugins migrated, 109 validated |
+
+## When to Use
+
+- Plugins have `source: ProjectName` in YAML frontmatter
+- Hardcoded paths like `tests/shared/core/` need abstraction
+- PR numbers embedded in workflows (e.g., "PR #3050")
+- Migrating a skills marketplace to support multiple projects
+- New team wants to use existing skills in different codebase
+
+## Verified Workflow
+
+### 1. Identify Repository-Specific Content
+
+```bash
+# Find all plugins with source: field in frontmatter
+grep -r "^source:" plugins/ --include="SKILL.md"
+
+# Count affected plugins
+grep -r "^source:" plugins/ --include="SKILL.md" | wc -l
+```
+
+### 2. Update Templates First
+
+Update `templates/experiment-skill/` with new structure:
+
+**SKILL.md template changes:**
+- Remove `source:` from frontmatter
+- Add "Verified On" section at bottom
+- Use placeholders: `<project-root>`, `<test-path>`, `<package-manager>`
+
+**plugin.json template changes:**
+- Remove `source_project` field
+- Add optional `requires` object for tool dependencies
+- Add optional `verified_on` array for provenance
+
+### 3. Batch Remove Source Fields
+
+```bash
+# Remove source: lines from frontmatter
+for file in plugins/<category>/*/skills/*/SKILL.md; do
+  sed -i '/^source: ProjectName$/d' "$file"
+done
+```
+
+### 4. Add "Verified On" Sections
+
+Add to end of each SKILL.md:
+
+```markdown
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectName | PR #XXX context | [notes.md](../../references/notes.md) |
+```
+
+### 5. Move Specifics to References
+
+Create `references/notes.md` with project-specific details:
+- Exact commands used
+- Specific file paths
+- PR/commit links
+- Environment details
+
+### 6. Update CLAUDE.md
+
+Add "Cross-Repository Compatibility" section with guidelines.
+
+### 7. Validate and Regenerate
+
+```bash
+# Validate all plugins
+python scripts/validate_plugins.py
+
+# Regenerate marketplace index
+python scripts/generate_marketplace.py
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+### Files Changed Per Plugin
+
+| File | Change Type | Lines |
+| ------ | ------------- | ------- |
+| SKILL.md | Modify | ~10-20 (remove source, add Verified On) |
+| references/notes.md | Create | ~30-50 (project-specific details) |
+| plugin.json | Modify | ~5 (add requires, verified\_on) |
+
+### Generalization Checklist
+
+- [ ] Remove `source:` from YAML frontmatter
+- [ ] Replace hardcoded paths with placeholders
+- [ ] Add "Verified On" section
+- [ ] Create/update references/notes.md with specifics
+- [ ] Update plugin.json with optional fields
+- [ ] Run validation script
+- [ ] Regenerate marketplace.json
+
+### Placeholder Reference
+
+| Placeholder | Example | Purpose |
+| ------------- | --------- | --------- |
+| `<project-root>` | `/home/user/project` | Repository root |
+| `<test-path>` | `tests/` | Test directory |
+| `<package-manager>` | `pixi`, `npm`, `pip` | Package manager command |
+| `<pr-number>` | `3050` | Pull request number |
+| `<branch>` | `feature/xyz` | Git branch name |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectMnemosyne | Generalized 33 plugins across 8 categories | [notes.md](../../references/notes.md) |
+
+## References
+
+- CLAUDE.md "Cross-Repository Compatibility" section
+- templates/experiment-skill/ for updated templates
+- scripts/validate_plugins.py for validation
+
+---
