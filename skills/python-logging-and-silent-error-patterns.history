@@ -1,0 +1,1099 @@
+## Superseded from logging-context-deduplication
+
+---
+name: logging-context-deduplication
+description: 'Fix duplicated context prefixes in structured logging pipelines. Use
+  when: log lines show the same context twice, or empty context renders as [//].'
+category: debugging
+date: 2026-03-18
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | Log lines show duplicated context (e.g., `[T5/12/1]` from filter AND `[T5/12/run_01]` from f-string) |
+| **Root Cause** | Logging filter injects fields into records, but message f-strings also manually prefix the same info |
+| **Secondary Bug** | When no context is set, format string renders `[//]` instead of being omitted |
+| **Scope** | 4 state machine files, 1 logging filter, 1 format string |
+
+## When to Use
+
+- Log output contains the same tier/subtest/run identifier twice per line
+- A `logging.Filter` injects context fields that message strings also include manually
+- Log lines outside of a scoped context show empty delimiters like `[//]` or `[/]`
+- Thread ID fields show raw memory addresses (e.g., `[T:134028120278720]`) instead of human-readable names
+
+## Verified Workflow
+
+### Quick Reference
+
+| Layer | What to change | Pattern |
+| ------- | --------------- | --------- |
+| Filter | Add composite `log_context_tag` field | Empty when no context, `[T0/00/1]` when set |
+| Format string | Use `%(log_context_tag)s` | Replaces `[%(tier_id)s/...]` |
+| Log messages | Remove manual `[tier/sub/run]` prefixes | Keep only the message content |
+| Thread field | `%(threadName)s` not `%(thread)d` | Human-readable names |
+
+### Step 1: Identify the duplication sources
+
+Trace the logging pipeline to find where context is injected:
+
+1. **Filter-level injection**: A `ContextFilter` (or similar `logging.Filter`) that sets `record.tier_id`, `record.subtest_id`, `record.run_num` from thread-local storage
+2. **Format string**: `"%(tier_id)s/%(subtest_id)s/%(run_num)s"` in `logging.basicConfig()` format
+3. **Message-level prefixes**: f-strings in log calls like `logger.info(f"[{tier_id}/{subtest_id}/run_{run_num:02d}] ...")`
+
+### Step 2: Remove manual prefixes from log messages
+
+Strip the `[tier/subtest/run]` prefix from all f-string log messages in state machine code. The filter already handles this.
+
+**Before:**
+```python
+logger.info(
+    f"[{tier_id}/{subtest_id}/run_{run_num:02d}] "
+    f"{current.value} -> {transition.to_state.value}: {transition.description} ({elapsed:.1f}s)"
+)
+```
+
+**After:**
+```python
+logger.info(
+    f"{current.value} -> {transition.to_state.value}: {transition.description} ({elapsed:.1f}s)"
+)
+```
+
+### Step 3: Fix empty-context rendering with composite tag
+
+Replace the always-rendered format field with a composite tag that is empty when no context is set:
+
+**In the ContextFilter:**
+```python
+def filter(self, record):
+    tier_id = getattr(_context, "tier_id", "")
+    subtest_id = getattr(_context, "subtest_id", "")
+    run_num = getattr(_context, "run_num", None)
+
+    record.tier_id = tier_id
+    record.subtest_id = subtest_id
+    record.run_num = str(run_num) if run_num is not None else ""
+
+    if tier_id or subtest_id or run_num is not None:
+        parts = [tier_id, subtest_id]
+        if run_num is not None:
+            parts.append(str(run_num))
+        record.log_context_tag = " [" + "/".join(parts) + "]"
+    else:
+        record.log_context_tag = ""
+    return True
+```
+
+**In the format string:**
+```python
+# Before: " [%(tier_id)s/%(subtest_id)s/%(run_num)s]"  -> renders "[//]" when empty
+# After:  "%(log_context_tag)s"                          -> renders "" when empty
+format="%(asctime)s [%(levelname)s] [%(threadName)s]%(log_context_tag)s %(name)s: %(message)s"
+```
+
+### Step 4: Use threadName instead of thread ID
+
+Replace `%(thread)d` with `%(threadName)s` for human-readable thread identification:
+- `[T:134028120278720]` becomes `[MainThread]` or `[Thread-1]`
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Keep manual prefixes, remove filter | Would require updating every log call site to include context | Hundreds of log sites across the codebase; filter approach is the right abstraction | Use filters for cross-cutting concerns, not per-message formatting |
+| Conditional format string with `%(tier_id)s` | Format string is static; can't conditionally include/exclude sections | Python's `logging.Formatter` doesn't support conditional sections | Build the conditional logic in the Filter, emit a single composite field |
+| Use `os.setpgrp()` for signal handling | Creates new process group, detaching from terminal's foreground group | Kernel sends Ctrl+C/Ctrl+Z to terminal's foreground group, which is now empty | Child processes already use `start_new_session=True`; parent doesn't need its own group |
+
+## Results & Parameters
+
+### Log output comparison
+
+**Before:**
+```
+2026-03-18 20:10:16 [INFO] [T:136414484813504] [//] scylla.e2e.runner: Experiment completed
+2026-03-18 20:10:16 [INFO] [T:136414484813504] [T5/12/1] scylla.e2e.state_machine: [T5/12/run_01] dir_structure_created -> worktree_created: Create git worktree (2.8s)
+```
+
+**After:**
+```
+2026-03-18 20:10:16 [INFO] [MainThread] scylla.e2e.runner: Experiment completed
+2026-03-18 20:10:16 [INFO] [Thread-1] [T5/12/1] scylla.e2e.state_machine: dir_structure_created -> worktree_created: Create git worktree (2.8s)
+```
+
+### Files modified
+
+| File | Change |
+| ------ | -------- |
+| `scylla/e2e/log_context.py` | Added composite `log_context_tag` field to ContextFilter |
+| `scripts/manage_experiment.py` | Updated format string to use `%(log_context_tag)s` and `%(threadName)s` |
+| `scylla/e2e/state_machine.py` | Removed `[tier/sub/run]` prefixes from 5 log messages |
+| `scylla/e2e/subtest_state_machine.py` | Removed `[tier/sub]` prefixes from 5 log messages |
+| `scylla/e2e/tier_state_machine.py` | Removed `[tier]` prefixes from 5 log messages |
+| `scylla/e2e/experiment_state_machine.py` | Removed `[experiment]` prefixes from 3 log messages |
+
+---
+
+## Superseded from logging-handler-registry-deduplication
+
+---
+name: logging-handler-registry-deduplication
+description: "Fix Python get_logger() adding duplicate handlers on repeated calls. Use when: (1) logger adds multiple StreamHandlers after repeated get_logger() calls, (2) file handler is silently skipped on second call, (3) parent logger propagation causes duplicate output."
+category: debugging
+date: 2026-03-25
+version: "2.0.0"
+user-invocable: false
+verification: verified-local
+history: logging-handler-registry-deduplication.history
+tags:
+  - python
+  - logging
+  - deduplication
+  - handlers
+---
+
+# Logging Handler Registry Deduplication
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-25 |
+| **Objective** | Fix `get_logger()` adding duplicate handlers when called multiple times for the same logger name, and allow incremental handler addition (e.g., file handler on second call) |
+| **Outcome** | Successful — two verified approaches: module-level registry (v1) and isinstance-based inspection (v2) |
+| **Verification** | verified-local (438 tests pass) |
+| **History** | [changelog](./logging-handler-registry-deduplication.history) |
+
+## When to Use
+
+- `get_logger("name")` called multiple times produces duplicate log lines (one per call)
+- `if not logger.handlers` guard prevents adding a file handler on a subsequent call
+- Parent logger propagation causes double output (e.g., root logger + child logger both emit)
+- Need to track which specific handlers have been configured per logger name
+- Factory function wraps `logging.getLogger()` and needs idempotent handler setup
+
+## Verified Workflow
+
+Two approaches are verified. Choose based on complexity needs.
+
+### Approach A: isinstance-based handler inspection (simpler, no external state)
+
+Inspect `logger.handlers` directly with type checks. No module-level registry needed.
+
+#### Quick Reference
+
+```python
+import os
+
+def get_logger(name: str, log_file: str | None = None) -> logging.Logger:
+    logger = logging.getLogger(name)
+
+    # Console: only add if no StreamHandler (non-FileHandler) exists
+    # IMPORTANT: FileHandler is a subclass of StreamHandler, so exclude it
+    has_console = any(
+        isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler)
+        for h in logger.handlers
+    )
+    if not has_console:
+        logger.addHandler(logging.StreamHandler(sys.stdout))
+
+    # File: only add if no FileHandler for this resolved path exists
+    if log_file:
+        resolved = os.path.abspath(log_file)
+        has_file = any(
+            isinstance(h, logging.FileHandler) and h.baseFilename == resolved
+            for h in logger.handlers
+        )
+        if not has_file:
+            logger.addHandler(logging.FileHandler(log_file))
+
+    return logger
+```
+
+**Key gotcha**: `logging.FileHandler` is a subclass of `logging.StreamHandler`. The console handler check must use `and not isinstance(h, logging.FileHandler)` to avoid counting file handlers as console handlers.
+
+### Approach B: Module-level registry (more explicit, handles custom handler types)
+
+#### Quick Reference
+
+```python
+# Module-level registry — tracks handler keys per logger name
+_configured_loggers: dict[str, set[str]] = {}
+
+def get_logger(name: str, log_file: str | None = None) -> logging.Logger:
+    logger = logging.getLogger(name)
+    configured = _configured_loggers.setdefault(name, set())
+
+    if "console" not in configured:
+        logger.addHandler(logging.StreamHandler(sys.stdout))
+        configured.add("console")
+
+    if log_file and log_file not in configured:
+        logger.addHandler(logging.FileHandler(log_file))
+        configured.add(log_file)
+
+    logger.propagate = False
+    return logger
+```
+
+### Detailed Steps (both approaches)
+
+1. **Replace `if not logger.handlers` with per-handler-type checks** — The naive guard fails because:
+   - It's all-or-nothing: if handlers exist, no new ones can be added
+   - It doesn't distinguish handler types (console vs file)
+   - Python's logging hierarchy means `logger.handlers` can be empty while parent handles output
+
+2. **Check each handler type independently**:
+   - Console: only add if no console StreamHandler exists
+   - File: only add if no FileHandler for the same resolved path exists
+
+3. **Compare file paths using resolved absolute paths** — `FileHandler.baseFilename` stores the absolute path, so compare against `os.path.abspath(log_file)` to handle relative vs absolute equivalence
+
+4. **Always update level** — Call `logger.setLevel()` on every invocation so subsequent calls with a different level take effect
+
+5. **Consider `logger.propagate = False`** — Prevents parent loggers (especially root) from duplicating messages that child loggers already handle
+
+### When to prefer each approach
+
+| Criterion | Approach A (isinstance) | Approach B (registry) |
+| ----------- | ------------------------ | ---------------------- |
+| External state | None | Module-level dict |
+| Test cleanup | No cleanup needed | Must clear registry between tests |
+| Custom handler types | Requires isinstance checks for each type | Just add a string key |
+| Simplicity | Simpler for standard handlers | Better for complex handler setups |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| `if not logger.handlers` guard | Check if logger already has any handlers before adding | All-or-nothing: blocks adding file handler on second call; doesn't prevent duplicates if handlers are removed and re-added | Track handler types individually, not just presence/absence |
+| Check `type(h)` without attribute inspection | Inspect `type(h)` for existing handlers | Doesn't distinguish between two different file paths; would need to inspect `baseFilename` attribute | Must compare `baseFilename` (absolute path) to deduplicate file handlers |
+| Rely on `propagate=True` (default) | Let parent loggers handle output | Parent + child both emit when both have handlers, causing duplicate lines | Set `propagate=False` on any logger that has its own handlers |
+| isinstance check without FileHandler exclusion | Check `isinstance(h, logging.StreamHandler)` for console detection | FileHandler is a subclass of StreamHandler, so file handlers are counted as console handlers, preventing console handler from being added | Always use `isinstance(h, StreamHandler) and not isinstance(h, FileHandler)` for console detection |
+
+## Results & Parameters
+
+### Key behavior after fix
+
+```python
+# Repeated calls — no duplicate handlers
+logger1 = get_logger("app")           # 1 StreamHandler
+logger2 = get_logger("app")           # Still 1 StreamHandler
+
+# Incremental handler addition works
+logger3 = get_logger("app", log_file="app.log")  # 1 StreamHandler + 1 FileHandler
+
+# Same file path doesn't duplicate
+logger4 = get_logger("app", log_file="app.log")  # Still 1 StreamHandler + 1 FileHandler
+
+# Level updates take effect
+logger5 = get_logger("app", level=logging.DEBUG)  # Level changed to DEBUG
+```
+
+### Environment
+
+- Python 3.10+
+- Standard library `logging` module
+- Works with `LoggerAdapter` wrappers (e.g., `ContextLogger`)
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | Issue #32 — PR #70 | Fixed duplicate console handlers with registry approach, 389 tests pass |
+| ProjectHephaestus | Issue #54 — PR #98 | Fixed file handler silently dropped on subsequent calls with isinstance approach, 438 tests pass |
+
+### Previous version history (logging-handler-registry-deduplication.history)
+
+## v2.0.0 (2026-03-25)
+
+**Changed by:** Issue #54 — get_logger ignores log_file on subsequent calls (PR #98)
+**Verification:** verified-local
+
+### What changed
+- Added alternative approach: isinstance-based handler inspection (no external registry needed)
+- Updated Failed Attempts: registry-less isinstance approach now documented as verified alternative
+- Added new Verified On entry for Issue #54 / PR #98 (438 tests pass)
+- Documented that `FileHandler` is a subclass of `StreamHandler` — console check must exclude FileHandler
+
+### Why
+v1.0.0 documented a module-level registry approach from Issue #32. Issue #54 showed that a simpler
+isinstance-based approach (inspecting `logger.handlers` directly with type + attribute checks) also
+works and avoids the need for a separate registry dict. Both approaches are valid; the isinstance
+approach is simpler when you don't need to track custom handler keys.
+
+### Previous version (v1.0.0) snapshot
+
+```
+name: logging-handler-registry-deduplication
+...
+```
+
+---
+
+## Superseded from python-logging-filter-placement
+
+---
+name: python-logging-filter-placement
+description: 'Diagnose and fix Python logging KeyError from custom format fields.
+  Use when: KeyError on %(custom_field)s, filter fields missing from output, or custom
+  context not appearing in threaded logs.'
+category: debugging
+date: 2026-03-18
+version: 1.0.0
+user-invocable: false
+---
+# Python Logging Filter Placement
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Problem** | `KeyError` or `ValueError` when using custom `%(field)s` placeholders in Python logging format strings |
+| **Root Cause** | `logging.Filter` added to logger instead of handler; filter runs but fields may not reach formatter |
+| **Fix** | Add filter to handler(s), not the logger |
+| **Confidence** | High - verified with Python 3.10+ and 3.14t |
+
+## When to Use
+
+- `KeyError: 'custom_field'` or `ValueError: Formatting field not found in record: 'custom_field'` in logging output
+- Custom `logging.Filter` that injects fields via `record.field = value` but fields are missing from formatted output
+- Thread-local context (tier_id, request_id, etc.) not appearing in log lines
+- Logging works in some threads but not others
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# WRONG - filter on logger
+logging.getLogger().addFilter(ContextFilter())
+
+# RIGHT - filter on handler(s)
+for handler in logging.getLogger().handlers:
+    handler.addFilter(ContextFilter())
+```
+
+### Step 1: Understand the Python Logging Pipeline
+
+```
+Logger.handle()
+  -> Logger.filter(record)     # Logger filters run here
+  -> Logger.callHandlers()
+     -> Handler.handle(record)
+        -> Handler.filter(record)   # Handler filters run here
+        -> Handler.emit(record)
+           -> Formatter.format(record)  # %(field)s resolved here
+```
+
+Key insight: `Handler.handle()` calls `self.filter(record)` **before** `self.emit(record)` which calls `self.format(record)`. So handler filters are guaranteed to inject fields before formatting.
+
+Logger filters also run before handlers, but in multi-threaded applications with propagation, the timing can be unreliable depending on Python version.
+
+### Step 2: Fix the Filter Placement
+
+Move `addFilter()` from the logger to its handler(s):
+
+```python
+# After logging.basicConfig() creates a StreamHandler:
+for handler in logging.getLogger().handlers:
+    handler.addFilter(ContextFilter())
+```
+
+### Step 3: Write Integration Tests
+
+Test through `handler.handle()` (the real pipeline), not `handler.format()`:
+
+```python
+def test_handler_pipeline():
+    handler = logging.StreamHandler()
+    handler.addFilter(ContextFilter())
+    handler.setFormatter(logging.Formatter(
+        "[%(custom_field)s] %(message)s"
+    ))
+
+    record = logging.LogRecord(
+        name="test", level=logging.INFO,
+        pathname="", lineno=0,
+        msg="test", args=(), exc_info=None,
+    )
+
+    # handle() runs filter -> emit -> format
+    handler.handle(record)  # Must not raise
+```
+
+**Critical**: Do NOT test with `handler.format(record)` directly -- that skips the filter entirely and will always raise `KeyError`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Test with `handler.format()` | Called `handler.format(record)` to test the pipeline | `format()` does not invoke filters; only `handle()` runs `filter()` before `emit()`/`format()` | Always test through `handler.handle()` for integration tests |
+| Filter on logger only | Added `ContextFilter` to root logger via `addFilter()` | In Python 3.14t with threaded workers, propagated loggers could miss the filter injection | Add filter to handlers for guaranteed field injection |
+
+## Results & Parameters
+
+### Environment
+
+- Python 3.10+ (verified on 3.14.3 free-threaded build)
+- Standard library `logging` module
+- `ThreadPoolExecutor` worker threads
+
+### Configuration Pattern
+
+```python
+import logging
+from my_module import ContextFilter
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(tier_id)s/%(subtest_id)s] %(message)s",
+)
+
+# Add filter to HANDLER, not logger
+for handler in logging.getLogger().handlers:
+    handler.addFilter(ContextFilter())
+```
+
+### ContextFilter Pattern
+
+```python
+import logging
+import threading
+
+_context = threading.local()
+
+class ContextFilter(logging.Filter):
+    def filter(self, record):
+        record.tier_id = getattr(_context, "tier_id", "")
+        record.subtest_id = getattr(_context, "subtest_id", "")
+        return True
+
+def set_log_context(*, tier_id="", subtest_id=""):
+    _context.tier_id = tier_id
+    _context.subtest_id = subtest_id
+```
+
+---
+
+## Superseded from debugging-loggeradapter-process-dict-mutation
+
+---
+name: debugging-loggeradapter-process-dict-mutation
+description: "Fix LoggerAdapter.process() mutating caller's extra dict and add thread-safe context reads. Use when: (1) ContextLogger or LoggerAdapter subclass modifies kwargs in-place, (2) shared dicts leak context between log calls."
+category: debugging
+date: 2026-03-25
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - logging
+  - thread-safety
+  - dict-mutation
+  - LoggerAdapter
+  - ContextLogger
+---
+
+# LoggerAdapter.process() Dict Mutation Fix
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-25 |
+| **Objective** | Fix `ContextLogger.process()` mutating caller-provided `extra` dict and add thread-safe `_context` reads |
+| **Outcome** | Successful — all 15 tests pass, PR created |
+| **Verification** | verified-local |
+| **Project** | ProjectHephaestus |
+
+## When to Use
+
+- A `LoggerAdapter` subclass overrides `process()` and calls `extra.update()` on the caller's dict
+- Context from one log call leaks into subsequent calls because the same `extra` dict is reused
+- A logger's internal context dict is read without holding a lock while other methods (`bind`, `unbind`) acquire the lock before mutation
+- Any `process()` override that modifies `kwargs["extra"]` in-place rather than creating a new dict
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# BEFORE (buggy — mutates caller's dict):
+def process(self, msg, kwargs):
+    extra = kwargs.get("extra", {})
+    extra.update(self._context)        # mutates caller's dict!
+    kwargs["extra"] = extra
+    return msg, kwargs
+
+# AFTER (safe — creates new dict, acquires lock):
+def process(self, msg, kwargs):
+    with self._context_lock:
+        context = self._context.copy()
+    kwargs["extra"] = {**kwargs.get("extra", {}), **context}
+    return msg, kwargs
+```
+
+### Detailed Steps
+
+1. **Identify the mutation**: `extra.update(self._context)` modifies the dict object that the caller passed in via `kwargs["extra"]`. If the caller reuses that dict, context keys persist across calls.
+2. **Fix with spread operator**: Replace `extra.update()` with `{**caller_extra, **context}` to create a fresh dict each time. Context keys from `self._context` override caller keys (intentional — logger context takes priority).
+3. **Add lock for thread safety**: Wrap the `self._context` read in `with self._context_lock:` to prevent reading a partially-updated context if another thread is calling `bind()` or `unbind()` concurrently. Copy while holding the lock, then release before doing anything else.
+4. **Write regression tests**:
+   - Test that caller's `extra` dict is unchanged after `process()` is called
+   - Test that context added via `bind()` appears in `process()` output
+5. **Verify existing tests still pass**: Run the full logging test suite to confirm no regressions.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A — direct fix | The pattern was well-understood from the issue description | N/A | When the mutation pattern is `extra.update(self._context)`, the fix is always to create a new dict via spread. No need for `copy()` + `update()` intermediate step. |
+
+## Results & Parameters
+
+### Fix Pattern
+
+```python
+# Thread-safe, non-mutating process() for any LoggerAdapter subclass:
+def process(self, msg: Any, kwargs: Any) -> tuple[Any, Any]:
+    with self._context_lock:
+        context = self._context.copy()
+    kwargs["extra"] = {**kwargs.get("extra", {}), **context}
+    return msg, kwargs
+```
+
+### Test Pattern
+
+```python
+def test_process_does_not_mutate_caller_extra(self) -> None:
+    logger = get_logger("test.no_mutate", context={"ctx_key": "ctx_val"})
+    caller_extra: dict[str, str] = {"request_id": "abc"}
+    original_extra = caller_extra.copy()
+    logger.process("msg", {"extra": caller_extra})
+    assert caller_extra == original_extra
+
+def test_process_includes_bound_context(self) -> None:
+    base = get_logger("test.bound_context")
+    bound = base.bind(user="alice", session="s1")
+    _msg, kwargs = bound.process("hello", {})
+    assert kwargs["extra"]["user"] == "alice"
+    assert kwargs["extra"]["session"] == "s1"
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | Issue #60 — ContextLogger.process mutation fix | 15/15 tests pass, PR #118 |
+
+---
+
+## Superseded from debugging-silent-error-suppression-pola
+
+---
+name: debugging-silent-error-suppression-pola
+description: "Fix functions that silently swallow errors and default to fallback behavior instead of propagating exceptions. Use when: (1) a function catches ValueError but falls back instead of re-raising, (2) symmetric functions (load/save) have inconsistent error handling, (3) POLA violations where callers get unexpected output formats."
+category: debugging
+date: 2026-03-25
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - error-handling
+  - POLA
+  - silent-failure
+  - io-utils
+  - hephaestus
+---
+
+# Fix Silent Error Suppression in Symmetric Functions
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-25 |
+| **Objective** | Remove try/except fallback in `save_data()` that silently defaulted to JSON for unknown file extensions, making it consistent with `load_data()` which correctly raises `ValueError` |
+| **Outcome** | Success — all 435 tests pass, PR #97 created |
+| **Verification** | verified-local |
+| **Project** | ProjectHephaestus, Issue #53, PR #97 |
+
+## When to Use
+
+- A function catches an exception and falls back to a default instead of propagating the error
+- Symmetric functions (e.g., load/save, encode/decode, serialize/deserialize) have inconsistent error handling
+- A caller passes an unsupported value and gets silently wrong output instead of an error
+- POLA violation: `save_data(data, "file.csv")` creates a JSON file with `.csv` extension
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Identify the silent fallback pattern
+grep -n "except ValueError" hephaestus/io/utils.py
+
+# 2. Check if the symmetric function raises properly
+grep -A2 "def load_data" hephaestus/io/utils.py  # should let ValueError propagate
+
+# 3. Remove try/except, let exception propagate
+# 4. Update docstring to document ValueError raise condition
+# 5. Update tests: old test expected fallback, new test expects ValueError
+# 6. Verify
+pixi run pytest tests/unit/io/test_utils.py -v --no-cov
+pixi run pytest tests/ -v --no-cov
+```
+
+### Detailed Steps
+
+1. **Identify the anti-pattern**: Look for `try/except ValueError` blocks that catch format detection errors and fall back to a default format:
+   ```python
+   # BEFORE (anti-pattern)
+   try:
+       fmt = _detect_format(filepath, format_hint)
+   except ValueError:
+       fmt = "json"  # silent fallback
+   ```
+
+2. **Check the symmetric function**: Verify `load_data()` correctly lets the `ValueError` propagate — this confirms the inconsistency
+
+3. **Remove the try/except**: Let the `ValueError` from `_detect_format()` propagate naturally:
+   ```python
+   # AFTER (correct)
+   fmt = _detect_format(filepath, format_hint)
+   ```
+
+4. **Update the docstring**: Add `ValueError` to the Raises section documenting the new behavior:
+   ```python
+   Raises:
+       ValueError: If format cannot be determined from the file extension
+           and no format_hint is provided, or if format is unsafe and
+           allow_unsafe_deserialization is False.
+   ```
+
+5. **Update tests**: Replace the test that expected silent fallback with one that expects `ValueError`:
+   ```python
+   # BEFORE
+   def test_default_format_json(self, tmp_path):
+       f = tmp_path / "out.dat"
+       assert save_data({"x": 1}, f)  # silently creates JSON
+
+   # AFTER
+   def test_unknown_extension_raises(self, tmp_path):
+       f = tmp_path / "out.dat"
+       with pytest.raises(ValueError, match="Could not determine"):
+           save_data({"x": 1}, f)
+   ```
+
+6. **Run full test suite** to ensure no other code depended on the silent fallback
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A — direct fix | The fix was straightforward (3 lines removed, docstring updated, test updated) | N/A | When the symmetric function already has the correct behavior, the fix is just removing the suppression code |
+
+## Results & Parameters
+
+### Files Modified
+
+| File | Changes |
+| ------ | --------- |
+| `hephaestus/io/utils.py` | Removed try/except fallback (3 lines), updated docstring Raises section |
+| `tests/unit/io/test_utils.py` | Replaced `test_default_format_json` with `test_unknown_extension_raises` |
+
+### Test Results
+
+```
+435 passed, 0 failed
+```
+
+### Pattern: Identifying Silent Error Suppression
+
+A function has a silent error suppression bug when ALL of these are true:
+1. It catches an exception from a helper function
+2. Instead of re-raising or wrapping the exception, it falls back to a default value
+3. The fallback can produce silently wrong output (e.g., JSON file with `.csv` extension)
+4. A symmetric function (load counterpart) correctly raises the same exception
+
+### Detection Heuristic
+
+```bash
+# Find try/except blocks that catch and discard ValueError
+grep -B1 -A2 "except ValueError" src/ --include="*.py" -rn | grep -v "raise"
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | Issue #53, PR #97 | Fixed `save_data()` silent JSON fallback, 435 tests pass |
+
+---
+
+## Superseded from debugging-auth-mode-case-mismatch-fail-open
+
+---
+name: debugging-auth-mode-case-mismatch-fail-open
+description: "Detect and fix the case-mismatched-enum + fail-open-default-branch pattern that ships dashboards open. Use when: (1) reviewing or auditing auth-mode middleware that compares against typed string constants, (2) you find a switch with a default branch that calls next.ServeHTTP."
+category: debugging
+date: 2026-05-06
+version: "1.0.0"
+user-invocable: false
+tags:
+  - security
+  - auth-bypass
+  - fail-open
+  - case-mismatch
+  - enum-normalization
+  - defense-in-depth
+  - go
+---
+
+# Skill: debugging-auth-mode-case-mismatch-fail-open
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-05-06 |
+| Objective | Surface a recurring fail-open pattern that bypasses authentication when `ATLAS_AUTH_MODE` (or any analogous typed-enum config string) is set to a mixed-case value. |
+| Outcome | Reproduced in production-shipped Atlas v0.2.0; fixed in v0.2.1 with a one-line normalization plus a defense-in-depth fail-closed default branch. Two regression tests in `internal/config/config_test.go::TestValidate_NormalizesAuthMode` and `internal/server/auth_test.go::TestMiddleware_UnknownModeFailsClosed`. |
+| Verification | verified-ci — the v0.2.1 fix has regression tests that run in CI on every push. |
+| Category | debugging |
+
+### What Happened
+
+A real auth bypass shipped in Atlas v0.2.0. Two bugs interacted; neither was dangerous alone:
+
+1. `Config.Validate` lowercased `c.AuthMode` *into a local switch tag* but never mutated the field itself. Any mixed-case value (e.g. `ATLAS_AUTH_MODE=Bearer`) passed validation while the struct field retained its original casing.
+2. The auth middleware's `switch mode` had a `default:` branch that fell through to `next.ServeHTTP(w, r)`. The intent was "AuthNone falls through"; the effect was "any unknown mode falls through".
+
+Operators who set `ATLAS_AUTH_MODE=Bearer` (the natural-looking title case) got a dashboard that returned `HTTP 200` to unauthenticated callers. The bug was reachable via a single-byte typo.
+
+## When to Use
+
+Trigger this skill when:
+
+- Reviewing any auth middleware that switches on a string-typed mode (`basic` / `bearer` / `token` / etc.).
+- Reviewing config that reads an env var into a string field and never normalizes case.
+- A dashboard, API, or admin endpoint mysteriously serves to unauthenticated callers despite "auth being enabled".
+- The middleware's switch has a `default:` branch that calls `next.ServeHTTP(w, r)` instead of returning `401`.
+- Auditing any typed enum derived from `os.Getenv` (log levels, feature flags, throttling modes, cache modes).
+
+## Verified Workflow
+
+### Quick Reference
+
+```go
+// FIX 1: Normalize the field IN PLACE in Validate (don't lowercase a local copy).
+
+// BAD:
+func (c *Config) Validate(logger *slog.Logger) error {
+    switch mode := strings.ToLower(c.AuthMode); mode { // local-only lowercase
+    case "bearer": /* ... */
+    case "basic":  /* ... */
+    case "none":   /* ... */
+    default:
+        return fmt.Errorf("unknown mode %q", c.AuthMode)
+    }
+}
+// c.AuthMode is unchanged -> middleware sees the raw mixed-case value later.
+
+// GOOD:
+func (c *Config) Validate(logger *slog.Logger) error {
+    c.AuthMode = strings.ToLower(strings.TrimSpace(c.AuthMode)) // mutate the field
+    switch c.AuthMode {
+    case "bearer": /* ... */
+    case "basic":  /* ... */
+    case "none":   /* ... */
+    default:
+        return fmt.Errorf("unknown mode %q", c.AuthMode)
+    }
+}
+```
+
+```go
+// FIX 2: Make the middleware's default branch FAIL CLOSED, not pass through.
+
+// BAD:
+func Middleware(mode AuthMode, ...) func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            switch mode {
+            case AuthBasic:  /* check */
+            case AuthBearer: /* check */
+            default:
+                // AuthNone OR unknown — both fall through!
+            }
+            next.ServeHTTP(w, r)
+        })
+    }
+}
+
+// GOOD:
+func Middleware(mode AuthMode, ...) func(http.Handler) http.Handler {
+    return func(next http.Handler) http.Handler {
+        return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            switch mode {
+            case AuthNone:   // explicit pass-through
+            case AuthBasic:  /* check or 401 */
+            case AuthBearer: /* check or 401 */
+            default:
+                http.Error(w, "Unauthorized", http.StatusUnauthorized)
+                return
+            }
+            next.ServeHTTP(w, r)
+        })
+    }
+}
+```
+
+### Detailed Steps
+
+1. **Audit every Validate function** that reads a typed-enum string from env. Look for the antipattern: `switch x := strings.ToLower(c.X); x` where `c.X` is the actual struct field.
+2. **Audit every middleware switch** on the same enum. Look for a `default:` branch that falls through to `next.ServeHTTP`.
+3. **Add regression tests in two places**: config-level normalization and middleware fail-closed.
+4. **Apply both fixes together**.
+5. **Reproduce against the shipped image** before claiming fixed.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Lowercase the switch tag only | `switch mode := strings.ToLower(c.AuthMode); mode` in `Validate` | `Validate` accepts `"Bearer"`. Then `routes.go` calls `Middleware(AuthMode(s.cfg.AuthMode), ...)` with the un-normalized field. Middleware compares against typed const `AuthBearer = "bearer"` exactly; `"Bearer" != "bearer"`, hits default branch. Default falls through to `next.ServeHTTP`. Dashboard open. | Lowercasing a local copy in `Validate` accomplishes nothing for downstream consumers. Normalize the field. |
+| Document case-sensitivity in the README only | Added a note that `ATLAS_AUTH_MODE` must be lowercase | One typo in a YAML deserializer or env-var injection path silently enables the bypass. Documentation is not a security control. | If a single-byte typo can ship the dashboard open, the code must defend itself, not rely on the operator reading docs. |
+| Fix the default branch only | Made the middleware default fail closed but left `Validate` as-is | `Validate` accepts `"Bearer"`, fails to log a warning, and middleware then 401s every request from a "configured" deployment. | Both fixes are required. |
+| Trust intuitive enum semantics elsewhere | `nats.go`'s `MaxReconnects(0)` means "never reconnect", not "infinite" | Intuition lost to docs. | Whenever an enum value's intuition could go either way, write a regression test that proves the actual semantic. |
+
+## Results & Parameters
+
+### Reproducing the Bug
+
+```bash
+docker run -d --rm -p 3002:3002 \
+  -e ATLAS_AUTH_MODE=Bearer \
+  -e ATLAS_AUTH_BEARER_TOKEN=demo-secret \
+  ghcr.io/homericintelligence/atlas:v0.2.0
+
+curl -s -o /dev/null -w 'HTTP %{http_code}\n' http://localhost:3002/readyz
+# With the bug: HTTP 200 (bypass!)
+```
+
+### Regression Test Pattern (Go)
+
+```go
+func TestValidate_NormalizesAuthMode(t *testing.T) {
+    for _, in := range []string{"Bearer", "BEARER", "BeArEr", "  bearer\t", "NONE", "BASIC"} {
+        c := &Config{AuthMode: in, AuthBearerToken: "x", AuthUser: "u", AuthPass: "p"}
+        if err := c.Validate(discardLogger()); err != nil {
+            t.Fatalf("must accept normalized %q: %v", in, err)
+        }
+        if want, got := strings.ToLower(strings.TrimSpace(in)), c.AuthMode; got != want {
+            t.Fatalf("AuthMode %q -> got %q, want %q", in, got, want)
+        }
+    }
+}
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| HomericIntelligence/ProjectArgus | Atlas v0.2.0 -> v0.2.1 security audit, May 2026 | Bug shipped in v0.2.0 image; fixed in PR #457 |
+
+---
+
+## Superseded from debugging-argparse-ambiguous-flag-silent-mismatch
+
+---
+name: debugging-argparse-ambiguous-flag-silent-mismatch
+description: "Python argparse silently accepts prefix-matching flag abbreviations by default. Use when: (1) a Python CLI in CI has been silently no-op'ing, (2) you removed a || true wrapper and discovered the invocation was broken, (3) reviewing CLI invocations after a forbid-suppressions sweep."
+category: debugging
+date: 2026-05-11
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - argparse
+  - python-cli
+  - silent-flag-mismatch
+  - prefix-matching
+  - allow_abbrev
+  - pip-audit
+  - cli-debugging
+  - silent-noop
+---
+
+# Debugging argparse Ambiguous Flag Silent Mismatch
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-11 |
+| **Objective** | Diagnose Python CLIs that silently accept ambiguous flag abbreviations, causing the command to no-op while a `\|\| true` or `::warning::` wrapper hides the exit code. |
+| **Outcome** | Root-caused HomericIntelligence/AchaeanFleet#656's broken `pip-audit --require aider-chat` invocation. |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- A Python CLI in CI has been failing silently — you suspect it's never actually run.
+- After removing a `|| true` / `continue-on-error: true` / `::warning::` wrapper, the underlying invocation produces an argparse error (exit 2).
+- Reviewing CI workflow steps that use flags like `--require`, `--ignore`, `--exit`, `--out`, `--no-` — any short, ambiguous-prefix flag.
+- Auditing existing scripts after a forbid-suppressions sweep.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Diagnose: run the bare command, read stderr for the actual flag argparse picked
+<tool> <args>  # observe argparse error message; look for "--<expanded>"
+
+# Confirm: check --help for prefix-matching ambiguity
+<tool> --help 2>&1 | grep -E "^\s*--<short-form>"
+
+# Mitigation in your own argparse code:
+parser = argparse.ArgumentParser(allow_abbrev=False)
+```
+
+### Steps
+
+1. Strip the suppression wrapper and run the bare command.
+2. Read stderr — look for `--<expanded-flag>` in the argparse error message.
+3. Confirm with `--help` and grep for prefix collision.
+4. Fix the invocation (use full flag name, or understand what the tool actually does).
+5. Audit codebase for similar risk.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---|---|---|---|
+| 1 | Assumed `pip-audit --require aider-chat` was an obscure pip-audit feature | pip-audit has no `--require <package>` flag. argparse prefix-matched to `--requirement <file>` | Always check `<tool> --help` before assuming a flag exists. |
+| 2 | Re-added `\|\| true` after seeing the bare command fail | Banned by forbid-suppressions guard; failure was deterministic | When removing a suppression surfaces a deterministic error, fix the underlying invocation. |
+| 3 | Tried `pip-audit -r aider-chat` (the short form of `--requirement`) | Same problem — `-r aider-chat` is `--requirement aider-chat`, expects a file path | The fix isn't a flag rename; understand what the tool actually does. |
+| 4 | Assumed argparse would error on ambiguous flags | Default `allow_abbrev=True` silently picks the longest unique prefix-matching flag | Set `allow_abbrev=False` in own argparse code. |
+| 5 | Tried `pip-audit --require=aider-chat` (with `=`) | Same expansion; `--require=X` and `--require X` are parsed identically | The `=` syntax does not change argparse's prefix-matching behavior. |
+| 6 | Searched codebase for `--require` only | Doesn't generalize to other ambiguous flags | Use the broader regex to audit the whole codebase. |
+
+## Verified On
+
+| Project | Context | Details |
+|---|---|---|
+| HomericIntelligence/AchaeanFleet | PR #656 + issue #655 — pip-audit step had been a silent no-op | Fixed invocation, allowlisted 57 transitive CVEs |
+
+---
+
+## Superseded from repr-truncation-consistency
+
+---
+name: repr-truncation-consistency
+description: 'Apply NumPy-style truncation to __repr__ for consistency with __str__.
+  Use when: a class has truncated __str__ but untruncated __repr__, or repr() on large
+  objects causes performance issues.'
+category: debugging
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+---
+# repr-truncation-consistency
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-15 |
+| **Issue** | #4038 - Apply `__repr__` truncation for consistency with `__str__` |
+| **Objective** | Make `repr()` on large `ExTensor` objects safe by applying the same threshold-based truncation already in `__str__` |
+| **Outcome** | Success — `__repr__` now mirrors `__str__` truncation (threshold=1000, show 3+3 with `...`) |
+| **PR** | #4858 |
+
+## When to Use
+
+Use this skill when:
+
+- A class added `__str__` truncation but `__repr__` was missed (common follow-up issue)
+- `repr()` on large tensor/array objects produces extremely long strings
+- CI or logs are flooding due to untruncated debug output
+- Fixing a "follow-up from #XXXX" issue where `__str__` was fixed but `__repr__` was not
+
+## Verified Workflow
+
+### 1. Read the Existing `__str__` Implementation
+
+Before touching `__repr__`, read the `__str__` method to understand the truncation pattern already in use:
+
+```bash
+grep -n "fn __str__\|fn __repr__\|TRUNCATE_THRESHOLD\|SHOW_ELEMENTS" <file>
+```
+
+Capture the exact constants and logic to replicate faithfully.
+
+### 2. Update `__repr__` with the Same Constants and Branch
+
+Replace the unguarded loop with the threshold check:
+
+```mojo
+fn __repr__(self) -> String:
+    comptime TRUNCATE_THRESHOLD = 1000
+    comptime SHOW_ELEMENTS = 3
+
+    result += ", data=["
+    if self._numel > TRUNCATE_THRESHOLD:
+        for i in range(SHOW_ELEMENTS):
+            if i > 0:
+                result += ", "
+            result += String(self._get_float64(i))
+        result += ", ..."
+        for i in range(self._numel - SHOW_ELEMENTS, self._numel):
+            result += ", " + String(self._get_float64(i))
+    else:
+        for i in range(self._numel):
+            if i > 0:
+                result += ", "
+            result += String(self._get_float64(i))
+    result += "])"
+    return result
+```
+
+### 3. Write Tests Mirroring `test_<class>_str.mojo`
+
+| Test | What It Checks |
+| ------ | ---------------- |
+| Empty tensor (numel=0) | No crash, correct format |
+| Single element | Full output, no truncation |
+| Small tensor (numel <= threshold) | All elements shown, no `...` |
+| Exactly at threshold | No truncation (boundary condition) |
+| numel = threshold + 1 | Truncation activates |
+| Large tensor format | Correct prefix/suffix, last 3 elements present |
+| dtype preserved | dtype appears in repr string |
+| Shape preserved | shape/numel appear in repr (if `__repr__` includes them) |
+| Edge case: 6 elements | No truncation near SHOW_ELEMENTS * 2 |
+| Empty int/non-float dtypes | No crashes for non-default dtypes |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Using hardcoded `1000` and `3` in `__repr__` | Copied literals from `__str__` directly | Would diverge if constants are updated in `__str__` later | Always use `comptime` named constants, not literals |
+| Skipping tests for `__repr__` | Assumed `__str__` tests provided sufficient coverage | `__repr__` has different output format (includes shape/numel) so format assertions differ | Mirror the `__str__` test file but adjust expected strings for `__repr__` format |
+
+## Results & Parameters
+
+```
+Truncation threshold: 1000 elements
+Elements shown at each end: 3
+Format: <prefix>, data=[v0, v1, v2, ..., vN-2, vN-1, vN])
+Test cases added: 11
+Files modified: 1 source + 1 new test file
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | PR #4858, Issue #4038 | [notes.md](../references/notes.md) |
