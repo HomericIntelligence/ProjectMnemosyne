@@ -1,0 +1,1123 @@
+# History: codebase-analysis-generic-tier2-tools
+
+Superseded originals from Epic #1828 (M23 cluster, Phase 1 / #1823).
+All 14 members absorbed 2026-05-19.
+
+---
+
+## Superseded from analyze-code-structure
+
+---
+name: analyze-code-structure
+description: Examine code organization and identify structural patterns. Use when
+  reviewing module design.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 1
+---
+# Analyze Code Structure
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Examine code organization, module hierarchy, and structural patterns to understand how components are organized. |
+| Outcome | Operational |
+
+Examine code organization, module hierarchy, and structural patterns to understand how components are organized.
+
+## When to Use
+
+- Initial codebase review and orientation
+- Understanding existing module organization
+- Identifying code structure for documentation
+- Planning refactoring or reorganization
+
+### Quick Reference
+
+```bash
+# Quick code structure analysis
+find . -name "*.py" -o -name "*.mojo" | head -20
+tree -L 2 --dirsfirst
+grep -r "^class\|^def\|^fn\|^struct" --include="*.py" --include="*.mojo" | head -30
+```
+
+## Verified Workflow
+
+1. **Survey the codebase**: Identify top-level modules and packages
+2. **Map module hierarchy**: Create visual tree of module organization
+3. **List main components**: Classes, structs, major functions
+4. **Trace imports**: Understand module dependencies
+5. **Document findings**: Summarize structure for team
+
+## Output Format
+
+Structure analysis:
+
+- Module/package hierarchy (tree view)
+- Key components per module
+- Import dependencies
+- Layer organization (if applicable)
+- Notable patterns (MVC, singleton, factory, etc.)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `analyze-code-structure` tier-2 skill for deeper analysis
+- See CLAUDE.md > Modularity for design principles
+- See `identify-architecture` skill for ML-specific structure
+
+---
+
+## Superseded from analyze-equations
+
+---
+name: analyze-equations
+description: Parse and interpret mathematical equations from research papers. Use
+  when extracting formulas for implementation.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Analyze Equations
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Extract and parse mathematical equations from research papers to understand computational requirements |
+| Outcome | Operational |
+
+Extract and parse mathematical equations from research papers to understand computational requirements
+and implementation details.
+
+## When to Use
+
+- Converting paper formulas to code implementations
+- Understanding algorithm mathematical foundation
+- Identifying performance-critical computations
+- Planning SIMD optimization strategies
+
+### Quick Reference
+
+```bash
+# Extract LaTeX equations from PDF
+pdftotext -layout paper.pdf - | grep -E '\$\$|\\begin\{equation\}' | head -20
+```
+
+## Verified Workflow
+
+1. **Extract equations**: Identify and extract LaTeX/mathematical notation from source documents
+2. **Parse components**: Break down complex equations into primitive operations
+3. **Identify variables**: Document input parameters, intermediate values, output
+4. **Determine data types**: Specify scalar vs vector operations, precision requirements
+5. **Map to implementation**: Connect mathematical notation to code operations (matrix multiply, activation, etc.)
+
+## Output Format
+
+Mathematical analysis document:
+
+- Extracted equations (with source references)
+- Component breakdown (operands, operations)
+- Variable definitions and constraints
+- Data type requirements (float32, float64, int32)
+- Mojo implementation mapping
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See CLAUDE.md > Language Preference for Mojo ML implementations
+- See `extract-algorithm` skill for algorithmic interpretation
+- See `/notes/review/mojo-ml-patterns.md` for Mojo tensor operations
+
+---
+
+## Superseded from benchmark-functions
+
+---
+name: benchmark-functions
+description: Measure function performance and compare implementations. Use when optimizing
+  critical code paths.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Benchmark Functions
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Systematically measure function execution time, memory usage, and performance characteristics to identify optimization opportunities. |
+| Outcome | Operational |
+
+Systematically measure function execution time, memory usage, and performance characteristics to identify optimization opportunities.
+
+## When to Use
+
+- Comparing different algorithm implementations
+- Measuring performance before/after optimization
+- Profiling SIMD vs scalar implementations
+- Establishing performance baselines for CI/CD
+
+### Quick Reference
+
+```bash
+# Python benchmarking with timeit
+python3 -m timeit -s 'import module' 'module.function(args)' -n 1000 -r 5
+
+# Mojo benchmarking with built-in timing
+mojo run benchmark_script.mojo
+```
+
+## Verified Workflow
+
+1. **Set up benchmarks**: Create timing harness with warm-up iterations
+2. **Run measurements**: Execute function multiple times, record timing
+3. **Collect statistics**: Calculate mean, median, std deviation
+4. **Compare baselines**: Compare against previous implementations
+5. **Identify bottlenecks**: Pinpoint functions needing optimization
+
+## Output Format
+
+Benchmark report:
+
+- Function name and parameters tested
+- Execution time statistics (mean, median, min, max)
+- Memory usage (if applicable)
+- Comparison to baseline (improvement percentage)
+- Iterations and sample size used
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `profile-code` skill for detailed performance profiling
+- See `suggest-optimizations` skill for improvement strategies
+- See CLAUDE.md > Performance for Mojo optimization guidelines
+
+---
+
+## Superseded from calculate-coverage
+
+---
+name: calculate-coverage
+description: Measure test coverage and identify untested code. Use when assessing
+  test completeness.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Calculate Coverage
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Measure code coverage percentage and identify which code paths are untested to ensure comprehensive testing. |
+| Outcome | Operational |
+
+Measure code coverage percentage and identify which code paths are untested to ensure comprehensive testing.
+
+## When to Use
+
+- Checking test coverage for modules
+- Identifying gaps in test suites
+- Meeting coverage thresholds (typically 80%+)
+- Planning additional test cases
+
+### Quick Reference
+
+```bash
+# Python coverage with pytest
+pip install coverage pytest-cov
+pytest --cov=module_name --cov-report=html tests/
+
+# View coverage report
+open htmlcov/index.html
+
+# Check coverage threshold
+coverage report --fail-under=80
+```
+
+## Verified Workflow
+
+1. **Install coverage tool**: Set up measurement infrastructure
+2. **Run tests with coverage**: Execute test suite capturing coverage data
+3. **Generate report**: Create HTML or text coverage report
+4. **Analyze gaps**: Identify untested functions, branches, edge cases
+5. **Plan improvements**: Create tests for uncovered code paths
+
+## Output Format
+
+Coverage analysis:
+
+- Overall coverage percentage
+- Per-module coverage breakdown
+- Uncovered lines (with line numbers)
+- Branch coverage (if applicable)
+- Recommendations for improvement
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `run-tests` skill for test execution
+- See `generate-tests` skill for test creation
+- See CLAUDE.md > Key Development Principles (TDD) for testing strategy
+
+---
+
+## Superseded from check-dependencies
+
+---
+name: check-dependencies
+description: Validate and verify dependencies are available and compatible. Use when
+  setting up environments.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Check Dependencies
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Verify that required dependencies are installed and compatible with the project requirements. - Setting up development environment |
+| Outcome | Operational |
+
+Verify that required dependencies are installed and compatible with the project requirements.
+
+## When to Use
+
+- Setting up development environment
+- Validating CI/CD environment configuration
+- Troubleshooting import errors
+- Checking version compatibility
+
+### Quick Reference
+
+```bash
+# Check Python dependencies
+pip check
+
+# Verify specific package versions
+pip show package_name
+
+# Validate pixi environment
+pixi info
+pixi task list
+```
+
+## Verified Workflow
+
+1. **List requirements**: Identify all declared dependencies (pixi.toml, requirements.txt)
+2. **Verify installation**: Check that all packages are installed and importable
+3. **Check versions**: Confirm version constraints are met
+4. **Test imports**: Actually import modules to detect hidden issues
+5. **Report status**: Document any missing or incompatible dependencies
+
+## Output Format
+
+Dependency validation report:
+
+- All declared dependencies listed
+- Installation status (installed/missing)
+- Installed version vs required version
+- Compatibility status (compatible/incompatible)
+- Issues found (if any)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See CLAUDE.md > Environment Setup for Pixi configuration
+- See `extract-dependencies` skill for dependency extraction
+- See pixi.toml in repository root for project dependencies
+
+---
+
+## Superseded from detect-code-smells
+
+---
+name: detect-code-smells
+description: Identify code quality issues and anti-patterns. Use when reviewing code
+  for maintainability problems.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Detect Code Smells
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Identify code quality issues, anti-patterns, and maintainability problems that suggest need for refactoring. |
+| Outcome | Operational |
+
+Identify code quality issues, anti-patterns, and maintainability problems that suggest need for refactoring.
+
+## When to Use
+
+- Code review before merging
+- Identifying refactoring priorities
+- Mentoring and code quality improvement
+- Planning technical debt reduction
+
+### Quick Reference
+
+```bash
+# Python code smell detection
+pip install pylint radon
+pylint --disable=all --enable=convention,refactor module.py
+radon cc -a module.py  # Cyclomatic complexity
+radon mi -s module.py  # Maintainability index
+```
+
+## Verified Workflow
+
+1. **Scan for patterns**: Identify common code smell patterns (long functions, duplication, magic numbers)
+2. **Check complexity**: Measure cyclomatic and cognitive complexity
+3. **Evaluate naming**: Check for unclear variable/function names
+4. **Review structure**: Identify violations of SOLID principles
+5. **Document findings**: List smells with severity and recommendations
+
+## Output Format
+
+Code quality report:
+
+- Code smell type (duplication, long method, magic number, etc.)
+- Location (file:line)
+- Severity (critical/high/medium/low)
+- Explanation of the issue
+- Suggested fix or refactoring approach
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See CLAUDE.md > SOLID principles for design guidance
+- See CLAUDE.md > DRY and KISS principles for quality standards
+- See `refactor-code` skill for applying fixes
+
+---
+
+## Superseded from extract-algorithm
+
+---
+name: extract-algorithm
+description: Parse and document algorithm pseudocode from research papers. Use when
+  preparing for implementation.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Extract Algorithm
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Identify, document, and translate algorithms from research papers into structured pseudocode for implementation planning. |
+| Outcome | Operational |
+
+Identify, document, and translate algorithms from research papers into structured pseudocode for implementation planning.
+
+## When to Use
+
+- Converting paper algorithms to code
+- Understanding computational complexity
+- Planning implementation steps
+- Documenting algorithm variations
+
+### Quick Reference
+
+```bash
+# Extract text from PDF focusing on algorithms
+pdftotext paper.pdf - | grep -A 20 -i "algorithm\|pseudocode" | head -50
+
+# Convert pseudo-code to structured documentation
+# Use cleaner formatting with numbered steps
+```
+
+## Verified Workflow
+
+1. **Locate algorithm**: Find algorithm description, pseudocode, or flowchart in paper
+2. **Document steps**: Extract numbered steps or pseudocode from paper
+3. **Identify inputs/outputs**: List parameters, preconditions, postconditions
+4. **Note special cases**: Document edge cases and conditional logic
+5. **Translate to implementation plan**: Convert to implementation checklist
+
+## Output Format
+
+Algorithm documentation:
+
+- Algorithm name and source reference
+- Inputs (parameters, data types, constraints)
+- Outputs (return values, side effects)
+- Pseudocode or step-by-step description
+- Complexity analysis (time and space)
+- Special cases and error handling
+- Implementation notes and tips
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `analyze-equations` skill for mathematical formula extraction
+- See `identify-architecture` skill for understanding algorithm structure
+- See CLAUDE.md > Key Development Principles for implementation guidance
+
+---
+
+## Superseded from extract-dependencies
+
+---
+name: extract-dependencies
+description: Analyze imports and identify all module dependencies. Use when mapping
+  project structure.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Extract Dependencies
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Analyze import statements and identify all external and internal module dependencies in codebase. - Understanding module coupling |
+| Outcome | Operational |
+
+Analyze import statements and identify all external and internal module dependencies in codebase.
+
+## When to Use
+
+- Understanding module coupling
+- Planning dependency updates
+- Identifying circular dependencies
+- Generating dependency graphs
+
+### Quick Reference
+
+```bash
+# Python dependency extraction
+grep -r "^import\|^from" --include="*.py" . | sort | uniq
+
+# Generate dependency graph
+pipdeptree
+
+# Check for circular dependencies
+python3 -c "import ast; [print(f.name) for f in ast.walk(ast.parse(open('file.py').read())) if isinstance(f, ast.Import)]"
+```
+
+## Verified Workflow
+
+1. **Scan imports**: Extract all import statements from codebase
+2. **Categorize dependencies**: Separate external, internal, standard library
+3. **Map relationships**: Create graph of which modules import which
+4. **Identify chains**: Trace dependency chains (A->B->C)
+5. **Report analysis**: Document dependency structure and issues
+
+## Output Format
+
+Dependency analysis:
+
+- External dependencies (with versions)
+- Internal module dependencies
+- Dependency graph (text or ASCII art)
+- Circular dependencies (if found)
+- Recommended import order
+- Unnecessary or redundant dependencies
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `check-dependencies` skill for validation
+- See `analyze-code-structure` skill for module organization
+- See pixi.toml for declared project dependencies
+
+---
+
+## Superseded from extract-hyperparameters
+
+---
+name: extract-hyperparameters
+description: Identify and document model hyperparameters from papers. Use when setting
+  up training configurations.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Extract Hyperparameters
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Locate and document all hyperparameters mentioned in research papers including learning rates, batch sizes, and model configurations. |
+| Outcome | Operational |
+
+Locate and document all hyperparameters mentioned in research papers including learning rates, batch sizes, and model configurations.
+
+## When to Use
+
+- Reproducing paper results
+- Setting up model training configurations
+- Comparing hyperparameter choices across papers
+- Planning hyperparameter tuning experiments
+
+### Quick Reference
+
+```bash
+# Extract numeric values and parameters from papers
+pdftotext paper.pdf - | grep -i "learning rate\|batch\|epochs\|weight decay\|dropout" | head -20
+
+# Common pattern search
+grep -E "\\b(lr|batch_size|epochs|momentum|dropout|layers)\\s*[=:]" config.py
+```
+
+## Verified Workflow
+
+1. **Find hyperparameter table**: Look for "Table 1" or "Hyperparameters" section
+2. **Document architecture parameters**: Layer sizes, activation functions, normalization
+3. **Extract training parameters**: Learning rate, batch size, epochs, optimizers
+4. **Note regularization**: Dropout, weight decay, batch normalization
+5. **Create configuration file**: Translate to implementation format (YAML/JSON/Mojo)
+
+## Output Format
+
+Hyperparameter documentation:
+
+- Model architecture (layers, sizes, activations)
+- Training parameters (LR, batch size, epochs)
+- Optimizer configuration (type, momentum, decay)
+- Regularization settings (dropout, L1/L2)
+- Data preprocessing (normalization, augmentation)
+- Hardware and precision (float32, float64)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `prepare-dataset` skill for data configuration
+- See `train-model` skill for training implementation
+- See `/notes/review/mojo-ml-patterns.md` for Mojo configuration patterns
+
+---
+
+## Superseded from identify-architecture
+
+---
+name: identify-architecture
+description: Analyze ML model architecture from papers and code. Use when understanding
+  model structure for implementation.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Identify Architecture
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Analyze and document machine learning model architectures including layers, connections, and information flow. |
+| Outcome | Operational |
+
+Analyze and document machine learning model architectures including layers, connections, and information flow.
+
+## When to Use
+
+- Understanding paper model designs
+- Planning model implementation
+- Comparing architecture variations
+- Documenting neural network structure
+
+### Quick Reference
+
+```bash
+# Extract architecture from paper
+# Look for: "Figure X: Architecture of [Model]"
+# Check for: Table with layer specifications
+# Find: Layer descriptions (Conv2D, FC, BatchNorm, etc.)
+
+# Visualize model structure (Mojo)
+# var model: SimpleNet = ...
+# print(model)  # Should show layer information
+```
+
+## Verified Workflow
+
+1. **Locate architecture diagram**: Find visual architecture representation in paper
+2. **List layers**: Enumerate all layers with type and parameters
+3. **Document connections**: Map data flow between layers (skip connections, merges)
+4. **Extract layer parameters**: For each layer record size, activation, normalization
+5. **Create implementation plan**: Translate to Mojo struct/function definitions
+
+## Output Format
+
+Architecture documentation:
+
+- Model name and source
+- Layer-by-layer breakdown
+- Layer type (Conv2D, Dense, etc.)
+- Parameters (kernel size, stride, padding, activation)
+- Input/output shapes
+- Data flow diagram (text or ASCII)
+- Special components (skip connections, attention)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `extract-hyperparameters` skill for model configuration
+- See CLAUDE.md > Mojo Syntax Standards for implementation patterns
+- See `/notes/review/mojo-ml-patterns.md` for architecture patterns
+
+---
+
+## Superseded from lint-code
+
+---
+name: lint-code
+description: Check code for style and quality issues. Use when validating code before
+  commits.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 1
+---
+# Lint Code
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Run linting tools to identify style issues, potential bugs, and code quality problems in source files. |
+| Outcome | Operational |
+
+Run linting tools to identify style issues, potential bugs, and code quality problems in source files.
+
+## When to Use
+
+- Pre-commit code validation
+- Finding simple mistakes (unused variables, typos)
+- Enforcing style consistency
+- Quick code review before merging
+
+### Quick Reference
+
+```bash
+# Python linting
+pylint module.py
+flake8 .
+black --check .  # Format checker
+
+# Mojo formatting (enforced by pre-commit)
+pixi run mojo format file.mojo
+
+# All linters via pixi
+pixi run quality-run-linters
+```
+
+## Verified Workflow
+
+1. **Select linters**: Choose appropriate tools (pylint, flake8, black, etc.)
+2. **Run checks**: Execute linters on code
+3. **Review issues**: Analyze warnings and errors
+4. **Fix problems**: Address high-priority issues
+5. **Verify fixes**: Re-run linters to confirm
+
+## Output Format
+
+Lint report:
+
+- File path and line number
+- Issue type (style, convention, error, warning)
+- Issue description
+- Suggested fix or reference
+- Severity level
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See CLAUDE.md > Pre-commit Hooks for automated checking
+- See `quality-run-linters` skill for comprehensive linting
+- See quality standards in CLAUDE.md for project guidelines
+
+---
+
+## Superseded from profile-code
+
+---
+name: profile-code
+description: Measure execution time and memory usage of code. Use when analyzing performance
+  characteristics.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Profile Code
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Use profiling tools to measure CPU time, memory allocation, and identify performance bottlenecks in code. |
+| Outcome | Operational |
+
+Use profiling tools to measure CPU time, memory allocation, and identify performance bottlenecks in code.
+
+## When to Use
+
+- Finding performance bottlenecks
+- Measuring CPU vs memory tradeoffs
+- Understanding where code spends most time
+- Optimizing hot code paths
+
+### Quick Reference
+
+```bash
+# Python CPU profiling with cProfile
+python3 -m cProfile -s cumulative script.py | head -30
+
+# Memory profiling
+pip install memory-profiler
+python3 -m memory_profiler script.py
+
+# Detailed call graph
+pip install graphviz
+python3 -m pstats /tmp/profile.prof
+```
+
+## Verified Workflow
+
+1. **Select profiler**: Choose appropriate tool (cProfile for CPU, memory_profiler for memory)
+2. **Run with instrumentation**: Execute code with profiling enabled
+3. **Capture metrics**: Record timing and memory data
+4. **Analyze output**: Identify top time consumers and memory hogs
+5. **Report findings**: Document bottlenecks with before/after context
+
+## Output Format
+
+Profiling report:
+
+- Top functions by execution time
+- Call count for each function
+- Memory allocation per function
+- Call graph/call tree
+- Percentage of total time/memory per function
+- Recommendations for optimization
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `suggest-optimizations` skill for improvement recommendations
+- See `benchmark-functions` skill for measuring improvements
+- See CLAUDE.md > Performance for optimization guidelines
+
+---
+
+## Superseded from suggest-optimizations
+
+---
+name: suggest-optimizations
+description: Identify performance optimization opportunities. Use when improving code
+  efficiency.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Suggest Optimizations
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Analyze code and profile data to recommend optimization strategies for improving performance and resource usage. |
+| Outcome | Operational |
+
+Analyze code and profile data to recommend optimization strategies for improving performance and resource usage.
+
+## When to Use
+
+- Performance-critical code paths identified in profiling
+- Reducing execution time for hot functions
+- Lowering memory usage
+- Planning SIMD or vectorization strategies
+
+### Quick Reference
+
+```bash
+# Identify optimization opportunities
+# 1. Profile to find bottlenecks
+# 2. Analyze algorithmic complexity
+# 3. Check for unnecessary operations
+# 4. Evaluate data structure choices
+# 5. Consider SIMD/vectorization
+
+# Profile Python code
+python3 -m cProfile -s cumulative script.py | head -20
+```
+
+## Verified Workflow
+
+1. **Profile critical paths**: Identify functions consuming most time/memory
+2. **Analyze algorithms**: Check time/space complexity, look for inefficiencies
+3. **Examine data structures**: Verify optimal data structure choices
+4. **Consider caching**: Identify repeated computations
+5. **Propose optimizations**: List specific changes with expected impact
+
+## Output Format
+
+Optimization recommendation:
+
+- Bottleneck identified (function, line number)
+- Current performance (time/memory)
+- Root cause analysis
+- Recommended optimization technique
+- Expected improvement (percentage or time estimate)
+- Implementation difficulty (low/medium/high)
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `benchmark-functions` skill for measuring improvements
+- See `profile-code` skill for detailed profiling
+- See CLAUDE.md > Mojo for SIMD optimization patterns
+
+---
+
+## Superseded from validate-inputs
+
+---
+name: validate-inputs
+description: Check function inputs for correctness and safety. Use when implementing
+  defensive programming.
+category: evaluation
+date: '2026-03-19'
+version: 1.0.0
+mcp_fallback: none
+tier: 2
+---
+# Validate Inputs
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Implement input validation to ensure functions receive correct data types, shapes, ranges, and formats. |
+| Outcome | Operational |
+
+Implement input validation to ensure functions receive correct data types, shapes, ranges, and formats.
+
+## When to Use
+
+- Adding defensive checks to functions
+- Improving error messages for bad inputs
+- Ensuring tensor shape/dtype correctness
+- Validating configuration parameters
+
+### Quick Reference
+
+```python
+# Input validation pattern
+def validate_tensor(tensor):
+    assert tensor is not None, "Tensor cannot be None"
+    assert isinstance(tensor, ExTensor), "Must be ExTensor type"
+    assert len(tensor.shape) > 0, "Tensor shape cannot be empty"
+    assert tensor.dtype() in [DType.float32, DType.float64], "Invalid dtype"
+    return True
+
+# Usage with context
+try:
+    validate_tensor(input_data)
+except AssertionError as e:
+    raise ValueError(f"Invalid input: {e}")
+```
+
+## Verified Workflow
+
+1. **Document expectations**: Specify types, shapes, ranges for inputs
+2. **Implement checks**: Add validation before processing
+3. **Provide error messages**: Clear messages for validation failures
+4. **Test edge cases**: Verify validation catches invalid inputs
+5. **Document behavior**: Note what validation is performed
+
+## Output Format
+
+Input validation specification:
+
+- Parameter name and type
+- Constraints (shape, range, valid values)
+- Error handling strategy
+- Error messages returned
+- Test cases for invalid inputs
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+N/A — this skill describes a workflow pattern.
+
+## References
+
+- See `generate-tests` skill for validation test cases
+- See CLAUDE.md > Defensive Programming for best practices
+- See `scan-vulnerabilities` skill for security validation
