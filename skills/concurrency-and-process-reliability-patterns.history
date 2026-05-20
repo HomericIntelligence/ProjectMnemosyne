@@ -1,0 +1,1485 @@
+## Superseded from batch-subprocess-signal-hang
+
+---
+name: batch-subprocess-signal-hang
+description: "Debugging batch mode hangs caused by subprocess stdin blocking, signal group isolation, and worker-thread terminal calls. Use when: (1) batch/parallel workers hang on exit, (2) Ctrl+C stops working after os.setpgrp(), (3) subprocess.run blocks waiting for stdin."
+category: debugging
+date: 2026-03-20
+version: "1.0.0"
+user-invocable: false
+---
+
+# Batch Subprocess & Signal Hang Debugging
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | Python batch runners hang indefinitely or ignore Ctrl+C |
+| **Root Causes** | 3 distinct bugs: stdin blocking, process group isolation, worker-thread stty |
+| **Languages** | Python 3.10+ |
+| **Key Tools** | subprocess, threading, signal, os |
+
+## When to Use
+
+- ThreadPoolExecutor workers hang on exit even though work completed
+- `Ctrl+C` has no effect (SIGINT not delivered)
+- `subprocess.run()` blocks for seconds waiting for input
+- `stty sane` called from non-main thread blocks or corrupts terminal
+- Process hangs after calling `os.setpgrp()` or `os.setsid()`
+
+## Verified Workflow
+
+### Bug 1: subprocess.run() blocks waiting for stdin
+
+**Symptom**: A subprocess call like `subprocess.run(["claude", "--print", "ping"])` blocks for 3-30 seconds.
+
+**Root Cause**: The CLI tool waits for stdin. Without `stdin=subprocess.DEVNULL`, it inherits the parent's stdin and blocks.
+
+**Fix**:
+```python
+# BEFORE (blocks)
+result = subprocess.run(["claude", "--print", "ping"], capture_output=True, text=True, timeout=30)
+
+# AFTER (returns immediately)
+result = subprocess.run(["claude", "--print", "ping"], capture_output=True, text=True, timeout=30, stdin=subprocess.DEVNULL)
+```
+
+**Rule**: Always pass `stdin=subprocess.DEVNULL` to non-interactive subprocess calls, especially in batch/background contexts.
+
+### Bug 2: os.setpgrp() breaks Ctrl+C
+
+**Symptom**: Pressing Ctrl+C has no effect. The process ignores SIGINT entirely.
+
+**Root Cause**: `os.setpgrp()` moves the process into a new process group. The terminal sends SIGINT to the **foreground process group** only. Since the process is no longer in it, SIGINT never arrives.
+
+**Fix**: Remove `os.setpgrp()`. If you need to kill child processes on exit, use `signal.signal(SIGINT, handler)` to propagate signals manually, or use `os.killpg()` only as a second-signal force-kill handler.
+
+**Rule**: Never call `os.setpgrp()` or `os.setsid()` in interactive CLI tools unless you also set up explicit signal forwarding. The process will become invisible to terminal job control.
+
+### Bug 3: stty from worker threads hangs
+
+**Symptom**: ThreadPoolExecutor workers hang on cleanup. The program never exits after all work completes.
+
+**Root Cause**: A `terminal_guard()` context manager calls `subprocess.run(["stty", "sane"], stdin=sys.stdin)` in its `__finally__` block. When called from a worker thread (not the main thread), the `stty` process blocks trying to access the controlling terminal.
+
+**Fix**: Guard terminal restoration with a main-thread check:
+```python
+import threading
+
+def restore_terminal() -> None:
+    with contextlib.suppress(Exception):
+        if threading.current_thread() is not threading.main_thread():
+            return  # Only main thread owns the controlling terminal
+        if sys.stdin.isatty():
+            subprocess.run(["stty", "sane"], stdin=sys.stdin, check=False)
+```
+
+**Rule**: Never call `stty` or other terminal-manipulation commands from worker threads. The controlling terminal is owned by the main thread only.
+
+### Diagnostic Checklist
+
+1. **Hang on exit?** → Check for non-daemon threads, stty calls from workers, ThreadPoolExecutor not shutting down
+2. **Ctrl+C ignored?** → Check for `os.setpgrp()`, `os.setsid()`, or signal handlers that swallow SIGINT
+3. **Subprocess slow?** → Check for missing `stdin=subprocess.DEVNULL`
+4. **Per-iteration slowness?** → Check for redundant subprocess pre-flight checks that should run once
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Move rate limit check from per-tier to once-per-experiment only | Initial fix removed per-tier check but didn't add stdin=DEVNULL | The subprocess still blocked for 3s waiting for stdin even when called once | Always add stdin=subprocess.DEVNULL for non-interactive subprocesses |
+| Remove SIGTSTP handler only, keep os.setpgrp() | Thought SIGTSTP kill handler was the only signal problem | os.setpgrp() itself was the root cause — it isolated the process from terminal SIGINT delivery | os.setpgrp() affects ALL signals from terminal, not just the ones you handle |
+| Add noqa comment to unused import instead of removing it | Tried to keep rate_limit imports in tier_action_builder.py with noqa:F401 | Unnecessary complexity — the import should just be removed when the function call is removed | Clean up imports immediately when removing call sites |
+| Debug with piped output (grep/tail) | Used `command 2>&1 \| tail -30` and `\| grep` to filter output | Pipe buffering made it appear the process was hung when it was actually running fine | Always use PYTHONUNBUFFERED=1 or redirect to file when debugging hangs |
+
+## Results & Parameters
+
+### Environment
+- Python 3.10+ with ThreadPoolExecutor for parallel batch execution
+- CLI subprocess calls (`claude --print ping`) for rate limit pre-flight checks
+- `stty sane` for terminal restoration after agent runs
+
+### Configuration Pattern
+```python
+# Safe subprocess call (non-interactive)
+subprocess.run(
+    ["command", "--flag", "arg"],
+    capture_output=True,
+    text=True,
+    timeout=30,
+    stdin=subprocess.DEVNULL,  # ALWAYS for non-interactive
+)
+
+# Safe terminal restoration (main thread only)
+def restore_terminal():
+    if threading.current_thread() is not threading.main_thread():
+        return
+    if sys.stdin.isatty():
+        subprocess.run(["stty", "sane"], stdin=sys.stdin, check=False)
+
+# Signal handling (no process group isolation)
+# Do NOT call os.setpgrp() in interactive CLI tools
+signal.signal(signal.SIGINT, graceful_handler)   # First Ctrl+C
+signal.signal(signal.SIGTERM, graceful_handler)   # systemd/docker stop
+```
+
+### Files Modified (ProjectScylla)
+- `scylla/utils/terminal.py` — main-thread guard for stty
+- `scylla/e2e/rate_limit.py` — stdin=subprocess.DEVNULL
+- `scylla/e2e/runner.py` — single pre-flight rate limit check
+- `scylla/e2e/tier_action_builder.py` — removed per-tier rate limit check
+- `scripts/manage_experiment.py` — removed os.setpgrp() and dead signal handlers
+
+## Superseded from bisect-pytest-oom-with-ulimit
+
+---
+name: bisect-pytest-oom-with-ulimit
+description: "Diagnose which specific pytest test causes an OOM by capping virtual memory with `ulimit -v` BEFORE invocation, so the OOM-killer reaps only pytest (yielding a MemoryError traceback) instead of the parent shell. Use when: (1) a pytest run kills the shell, freezes WSL, or 'just disappears' with no traceback, (2) you see `exit=137` (SIGKILL) from pytest, (3) tee'd log files end up zero-bytes because the writer was reaped, (4) you suspect a single test allocates excessive memory but can't tell which."
+category: debugging
+date: 2026-05-15
+version: "1.0.0"
+user-invocable: false
+tags:
+  - pytest
+  - oom
+  - ulimit
+  - bisection
+  - memory-leak
+  - wsl2
+  - debugging
+  - tracemalloc
+---
+
+# Bisect Pytest OOM with ulimit
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-15 |
+| **Objective** | Identify the specific pytest test that triggers an OOM-killer event so the leak can be fixed |
+| **Outcome** | Verified-CI: successfully pinpointed a runaway `while True: print(...); time.sleep(1)` loop (with `time.sleep` mocked) on ProjectHephaestus PR #412 |
+
+## When to Use
+
+- A pytest run kills the shell, freezes WSL2, or "just disappears" with no traceback
+- You see `exit=137` (SIGKILL by OOM-killer) from a pytest invocation
+- Tee'd log files survive as zero-byte files because the writer was reaped before flush
+- You suspect a single unit test allocates excessive memory but cannot identify it
+- You need to diagnose a runaway loop, print spam, or unbounded allocation in a unit test
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Phase 1: cap pytest memory BEFORE invocation
+ulimit -v 4194304   # 4 GiB virtual memory cap (per pytest process)
+ulimit -t 180       # 180 CPU-seconds — kills a runaway tight loop
+
+# Phase 2: bisect at file granularity (-v prints test IDs; last printed = culprit)
+pixi run pytest tests/unit/foo/test_a.py --no-cov --cov-fail-under=0 -p no:cacheprovider -v 2>&1 | tee /tmp/diag-a.log
+
+# Phase 3: pinpoint individual test
+pixi run pytest tests/unit/foo/test_b.py::TestClass::test_method --no-cov --cov-fail-under=0 -p no:cacheprovider -v 2>&1 | tail -50
+
+# Phase 4: peak-memory profile of the offender
+ulimit -v 4194304; ulimit -t 60
+/usr/bin/time -v pixi run pytest "<offending-test-id>" --no-cov -p no:cacheprovider -v -s 2>&1 | tail -30
+```
+
+### Detailed Steps
+
+1. **Cap memory in the shell BEFORE invoking pytest.** Set `ulimit -v 4194304` (4 GiB virtual memory) and `ulimit -t 180` (CPU-seconds). These inherit into pytest and any subprocess it spawns. When pytest exceeds the cap, Python raises `MemoryError` inside the normal teardown path instead of being SIGKILL'd by the kernel — you get a real traceback.
+
+2. **Bisect at file granularity.** Run each test file alone with `-v` and `tee` the output. The LAST printed test ID before the cap fires is the offender (the test in progress when allocation exceeded the limit). Critical flags:
+   - `--no-cov --cov-fail-under=0` — disables `pytest-cov` (often forced via `addopts` in `pyproject.toml`); coverage adds memory pressure that masks the real leak.
+   - `-p no:cacheprovider` — prevents pytest from writing `.pytest_cache` which can pollute diagnosis.
+   - `-v` — prints each test ID as it runs.
+
+3. **Pinpoint with single-test runs.** Once the file is known, run individual `file::Class::method` IDs with `-v -s` and `tail` the output to see the traceback.
+
+4. **Loop over every collected test (when manual pinpointing is too slow).** Use a while-read loop with `timeout` and a case statement on exit code: `0=PASS`, `124=TIMEOUT`, `137=OOM` (only seen if ulimit not set), other=`FAIL`.
+
+5. **Get a peak-memory profile.** Use `/usr/bin/time -v` and look at `Maximum resident set size (kbytes)` — should match the cap if it OOMed.
+
+6. **Attribute to a line with tracemalloc.** Reproduce the test logic OUTSIDE pytest under `python -X tracemalloc=10`, call `tracemalloc.take_snapshot().statistics('lineno')`, and print the top allocators. The top sites tell you exactly what's leaking.
+
+### Bulk loop snippet
+
+```bash
+pixi run pytest <file> --collect-only -q --no-cov --cov-fail-under=0 | grep '::' > /tmp/tests.lst
+while read -r t; do
+  printf '%s ... ' "$t"
+  timeout 30 pixi run pytest "$t" --no-cov --cov-fail-under=0 -p no:cacheprovider -q > /tmp/one.log 2>&1
+  case $? in
+    0)   echo PASS ;;
+    124) echo TIMEOUT ;;
+    137) echo OOM ;;        # SIGKILL — only happens if ulimit not set
+    *)   echo "FAIL($?)" ;;
+  esac
+done < /tmp/tests.lst | tee /tmp/per-test.txt
+```
+
+### Tracemalloc snippet (OUTSIDE pytest)
+
+```bash
+pixi run python -X tracemalloc=10 - <<'PY'
+import tracemalloc
+tracemalloc.start()
+# ... reproduce the test logic ...
+cur, peak = tracemalloc.get_traced_memory()
+print(f"current={cur/1e6:.1f}MB peak={peak/1e6:.1f}MB")
+for s in tracemalloc.take_snapshot().statistics('lineno')[:5]:
+    print(s)
+PY
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Watch terminal | Running `pixi run pytest tests/unit -v` without ulimit, watching which test runs last | OOM-killer reaped the parent shell too; terminal disappeared with no output | Always set `ulimit -v` BEFORE pytest so the kernel kills only pytest |
+| Trust tee logs | Piping pytest output to `tee /tmp/diag.log` and reading the file post-mortem | Under WSL2 the buffered file ended up zero bytes — writer was reaped before flush | tee is not OOM-safe; rely on ulimit to keep pytest's own stderr alive |
+| Delete suspect tests | Removing tests by deletion before isolating the culprit | Destroyed evidence and made bisection impossible | Always isolate first, fix second; never delete diagnostic targets |
+| Reduce parallelism | Lowering `-n` for pytest-xdist | Most projects don't use xdist; serial execution alone doesn't bound peak RSS | Parallelism is orthogonal to a single-test memory leak |
+| Rely on `--tb=long` | Hoping pytest's long traceback would show the leak | The traceback is unreachable if the kernel SIGKILLs before Python unwinds | Kernel SIGKILL is uncatchable; convert it to MemoryError via ulimit |
+
+## Results & Parameters
+
+### Configuration
+
+```bash
+# Recommended caps for a typical unit-test suite
+ulimit -v 4194304   # 4 GiB virtual memory per process (adjust to ~50% of host RAM)
+ulimit -t 180       # 180 CPU-seconds per process
+
+# Pytest flags for clean diagnosis
+PYTEST_DIAG_FLAGS="--no-cov --cov-fail-under=0 -p no:cacheprovider -v"
+```
+
+### Expected Output
+
+- Successful diagnosis: pytest emits a `MemoryError` traceback ending in the offending test's call stack, AND the shell stays alive.
+- `/usr/bin/time -v` output's `Maximum resident set size (kbytes)` field equals the `ulimit -v` cap (in KiB) when the cap fired.
+- `tracemalloc` top-N output names the source file + line of the dominant allocator (e.g. 27 MB of identical print strings from a `while True: print(...); time.sleep(1)` loop).
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | PR #412 — pinpointed `tests/unit/github/test_rate_limit.py::TestGhCallRateLimitFromStdout::test_raises_after_exhausting_retries` as the 4 GiB allocator; root cause was a `while True: print(...); time.sleep(1)` loop with `time.sleep` mocked, generating 27 MB of `[INFO] Rate limit resets in 00:59:59` strings | Verified-CI 2026-05-15 |
+
+## References
+
+- [pytest-coverage-fail-under-partial-run-trap](pytest-coverage-fail-under-partial-run-trap.md)
+- [ci-pytest-pip-install-pyproject-addopts-trap](ci-pytest-pip-install-pyproject-addopts-trap.md)
+- [e2e-claude-cli-pipeline-oom-fixes](e2e-claude-cli-pipeline-oom-fixes.md)
+- [Python tracemalloc docs](https://docs.python.org/3/library/tracemalloc.html)
+- [Linux ulimit(1)](https://man7.org/linux/man-pages/man1/ulimit.1p.html)
+
+## Superseded from global-semaphore-parallelism
+
+---
+name: global-semaphore-parallelism
+description: Implement global parallelism control using shared semaphores. Use when
+  limiting concurrent workers across multiple process pools or fixing per-tier parallelism
+  issues.
+category: debugging
+date: '2026-03-19'
+version: 1.0.0
+user-invocable: false
+---
+# Global Semaphore Parallelism Control
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-01-08 |
+| **Project** | ProjectScylla |
+| **Objective** | Fix E2E runner errors and implement global parallelism control using shared semaphores |
+| **Outcome** | ✅ Successfully fixed 3 critical errors: AttributeError, FileNotFoundError, and per-tier parallelism |
+| **PR** | [#151](https://github.com/HomericIntelligence/ProjectScylla/pull/151) |
+| **Tests** | 108/108 unit tests passing |
+
+## When to Use This Skill
+
+Use this approach when you need to:
+
+1. **Limit concurrent workers across multiple process pools** - When you have parallel tiers/groups that each spawn their own process pools, but you want a global limit on total concurrent workers
+2. **Share concurrency limits across process boundaries** - When ProcessPoolExecutor workers need to coordinate on a shared resource limit
+3. **Fix per-tier to global parallelism** - When `--parallel N` creates N workers per tier instead of N workers globally
+4. **Preserve parallel-start behavior** - When you want tiers to start in parallel but limit total concurrent execution within them
+5. **Debug missing properties/attributes** - When encountering `AttributeError: 'Object' has no attribute 'property'`
+
+## Context: The Three Problems
+
+### Problem 1: Missing `cost_of_pass` Attribute
+**Error**: `AttributeError: 'TierResult' object has no attribute 'cost_of_pass'` at `runner.py:332`
+
+**Root cause**: Code tried to access `tier_results[tier_id].cost_of_pass` but TierResult class didn't have this property.
+
+### Problem 2: FileNotFoundError on Report Save
+**Error**: `FileNotFoundError: .../T1/09/report.json` when saving subtest reports
+
+**Root cause**: `save_subtest_report` tried to write to a directory that didn't exist (runs may have been moved to `.failed/` directory).
+
+### Problem 3: Per-Tier Parallelism Instead of Global
+**Current behavior**: With `--parallel 6` and 5 tiers running in parallel:
+- Each tier creates ProcessPoolExecutor with 6 workers
+- Total: 6 workers × 5 tiers = **30 concurrent agents**
+
+**Desired behavior**: `--parallel 6` = maximum **6 agents globally** across ALL tiers
+
+## Verified Workflow
+
+### Fix 1: Add Missing Property to Data Class
+
+**File**: `src/scylla/e2e/models.py`
+
+Add a `@property` method that calculates the value from existing data:
+
+```python
+@property
+def cost_of_pass(self) -> float:
+    """Calculate cost-of-pass for this tier's best subtest.
+
+    Returns:
+        Cost per successful pass (mean_cost / pass_rate), or infinity if no passes.
+
+    """
+    if not self.best_subtest or self.best_subtest not in self.subtest_results:
+        return float("inf")
+
+    best = self.subtest_results[self.best_subtest]
+    if best.pass_rate <= 0:
+        return float("inf")
+
+    return best.mean_cost / best.pass_rate
+```
+
+Update `to_dict()` to include the property:
+
+```python
+def to_dict(self) -> dict[str, Any]:
+    return {
+        # ... existing fields ...
+        "cost_of_pass": self.cost_of_pass,  # Add this line
+        # ... more fields ...
+    }
+```
+
+### Fix 2: Ensure Directory Exists Before Writing
+
+**File**: `src/scylla/e2e/run_report.py`
+
+Add `mkdir` before file write operations:
+
+```python
+# Ensure directory exists before writing
+subtest_dir.mkdir(parents=True, exist_ok=True)
+(subtest_dir / "report.json").write_text(json.dumps(json_report, indent=2))
+```
+
+**Key insight**: Always create parent directories when writing files that might be in dynamically created locations (like `.failed/` subdirectories).
+
+### Fix 3: Global Semaphore for Cross-Process Concurrency Control
+
+**Architecture change**: From per-tier limits to global limits
+
+**Before**:
+```
+ThreadPoolExecutor(5 tiers) - parallel tier start
+  ├── T0: ProcessPoolExecutor(6 workers) ← 6 agents
+  ├── T1: ProcessPoolExecutor(6 workers) ← 6 agents
+  ├── T2: ProcessPoolExecutor(6 workers) ← 6 agents
+  ├── T3: ProcessPoolExecutor(6 workers) ← 6 agents
+  └── T4: ProcessPoolExecutor(6 workers) ← 6 agents
+  Total: 30 concurrent agents!
+```
+
+**After**:
+```
+ThreadPoolExecutor(5 tiers) - parallel tier start (preserved)
+  └── Global Semaphore(6) - shared across ALL process pools
+      └── Max 6 agents at any time across ALL tiers
+```
+
+#### Step 1: Create Manager and Global Semaphore
+
+**File**: `src/scylla/e2e/runner.py` (in `run()` method)
+
+```python
+# Create global semaphore for limiting concurrent agents across ALL tiers
+from multiprocessing import Manager
+
+manager = Manager()
+global_semaphore = manager.Semaphore(self.config.parallel_subtests)
+logger.info(
+    f"Created global semaphore with {self.config.parallel_subtests} concurrent agent limit"
+)
+```
+
+**Critical**: Use `Manager().Semaphore()` NOT `multiprocessing.Semaphore()` because Manager creates a server process that hosts the semaphore, allowing it to be shared across process boundaries when ProcessPoolExecutor spawns new processes.
+
+#### Step 2: Thread Call Chain - Pass Semaphore Through Layers
+
+**File**: `src/scylla/e2e/runner.py`
+
+Update function signature:
+```python
+def _run_tier(
+    self,
+    tier_id: TierID,
+    baseline: TierBaseline | None,
+    global_semaphore=None,  # Add parameter
+) -> TierResult:
+```
+
+Pass to all tier execution calls:
+```python
+# Sequential execution
+tier_result = self._run_tier(tier_id, previous_baseline, global_semaphore)
+
+# Parallel execution
+futures = {
+    executor.submit(self._run_tier, tier_id, previous_baseline, global_semaphore): tier_id
+    for tier_id in group
+}
+```
+
+Pass to subtest executor:
+```python
+results = run_tier_subtests_parallel(
+    # ... other params ...
+    global_semaphore=global_semaphore,  # Add parameter
+)
+```
+
+#### Step 3: Process Pool Submission - Pass to Workers
+
+**File**: `src/scylla/e2e/subtest_executor.py`
+
+Update function signature:
+```python
+def run_tier_subtests_parallel(
+    # ... existing params ...
+    global_semaphore=None,  # Add parameter
+) -> dict[str, SubTestResult]:
+```
+
+Pass to worker function via pool.submit():
+```python
+future = pool.submit(
+    _run_subtest_in_process,
+    # ... other params ...
+    global_semaphore=global_semaphore,  # eksternal parameter
+)
+```
+
+#### Step 4: Worker Process - Implement Acquire/Release
+
+**File**: `src/scylla/e2e/subtest_executor.py`
+
+Update worker function signature:
+```python
+def _run_subtest_in_process(
+    # ... existing params ...
+    global_semaphore=None,  # Add parameter
+) -> SubTestResult:
+```
+
+Wrap agent execution with semaphore:
+```python
+# Acquire global semaphore to limit concurrent agents across all tiers
+if global_semaphore:
+    global_semaphore.acquire()
+
+try:
+    # Create managers and executor
+    tier_manager = TierManager(tiers_dir)
+    workspace_manager = WorkspaceManager(...)
+
+    # Run agent (this is the expensive operation we want to limit)
+    executor = SubTestExecutor(config, tier_manager, workspace_manager)
+    return executor.run_subtest(
+        # ... params ...
+    )
+finally:
+    # Always release semaphore, even if exception occurred
+    if global_semaphore:
+        global_semaphore.release()
+```
+
+**Critical patterns**:
+- ✅ Acquire in worker process (not main process)
+- ✅ Use try/finally to guarantee release
+- ✅ Check if semaphore exists (backward compatibility)
+- ✅ Acquire blocks until slot available
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Configuration Used
+
+**Experiment parameters**:
+- `--parallel 6`: Global concurrent agent limit
+- Multiple tiers (T0-T4): 5 tiers with parallel execution
+- Each tier: 10-24 subtests per tier
+
+### Performance Characteristics
+
+**Before (per-tier parallelism)**:
+- Max concurrent agents: `parallel_subtests × active_tiers`
+- With `--parallel 6` and 5 tiers: **30 agents**
+- Memory usage: Very high
+- API rate limits: Frequently hit
+
+**After (global parallelism)**:
+- Max concurrent agents: `parallel_subtests` (6)
+- With `--parallel 6` and 5 tiers: **6 agents**
+- Memory usage: Controlled
+- API rate limits: Manageable
+
+### Test Results
+
+All 108 unit tests passing:
+```bash
+pixi run pytest tests/unit/e2e/ -v
+============================= 108 passed in 0.32s ==============================
+```
+
+### Code Changes Summary
+
+| File | Lines Changed | Change Type |
+| ------ | -------------- | ------------- |
+| `models.py` | +18 | Add cost_of_pass property |
+| `run_report.py` | +2 | Add mkdir before write |
+| `runner.py` | +12 | Create and pass semaphore |
+| `subtest_executor.py` | +17 | Acquire/release in worker |
+| **Total** | **+49** | **4 files modified** |
+
+## Key Insights
+
+### 1. Manager() vs Direct Semaphore Creation
+
+**Always use `Manager().Semaphore()` for cross-process sharing**:
+- Manager creates a server process hosting the semaphore
+- Server process allows sharing across process boundaries
+- Direct semaphore creation fails with serialization errors
+
+### 2. Acquire Location Matters
+
+**Acquire in worker process, not main process**:
+- Main process acquires → blocks submission of remaining tasks
+- Worker process acquires → allows pool to queue all tasks
+- Worker blocking is the desired behavior (throttles execution)
+
+### 3. Try/Finally for Resource Cleanup
+
+**Always wrap semaphore acquire/release in try/finally**:
+- Guarantees release even on exceptions
+- Prevents semaphore slot leaks
+- Critical for long-running processes
+
+### 4. Properties for Derived Values
+
+**Use `@property` for calculated values**:
+- Avoids storing redundant data
+- Guarantees consistency with source data
+- Simplifies state management
+
+### 5. Directory Creation Before Writes
+
+**Always create parent directories for dynamic paths**:
+- Use `path.mkdir(parents=True, exist_ok=True)`
+- Especially important for failure/retry paths (`.failed/` directories)
+- Prevents FileNotFoundError on first write
+
+## Related Skills
+
+- **retry-transient-errors**: Network error handling with exponential backoff
+- **graceful-signal-handling**: Clean shutdown with signal handlers
+- **e2e-checkpoint-resume**: Resume capability for long-running experiments
+
+## References
+
+- Python multiprocessing.Manager documentation: https://docs.python.org/3/library/multiprocessing.html#multiprocessing.Manager
+- ProcessPoolExecutor: https://docs.python.org/3/library/concurrent.futures.html#processpoolexecutor
+- Semaphore synchronization: https://docs.python.org/3/library/threading.html#semaphore-objects
+
+## Superseded from mock-expensive-simulations
+
+---
+name: mock-expensive-simulations
+description: Diagnose and fix pytest tests hanging due to expensive Monte Carlo or
+  bootstrap simulation calls, with correct patch target (caller vs origin namespace)
+  identification
+category: debugging
+date: 2026-02-23
+version: 1.0.0
+user-invocable: false
+---
+# Skill: Mock Expensive Simulations
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-02-23 |
+| **Objective** | Diagnose why `test_cop_integration.py`, `test_duration_integration.py`, and `test_export_data.py` hung after ~7% of the test suite, then fix the hang without altering the test logic |
+| **Outcome** | ✅ Success — 11 tests now pass in 14.8s (was hanging indefinitely); autouse mock in conftest.py prevents all future hangs |
+| **Category** | Debugging |
+| **Tags** | pytest, monte-carlo, mock, conftest, autouse, simulation, performance, hanging-tests |
+
+## When to Use This Skill
+
+Use this skill when:
+
+- **Tests hang** partway through a run (e.g., at a fixed percentage like 7%) without a clear error
+- Tests call functions that perform **Monte Carlo / bootstrap simulations** with high `n_iterations`
+- A **push hook** runs the full test suite and blocks indefinitely before CI even starts
+- Tests only assert **structural correctness** (keys, types, list lengths) — not exact numerical values
+
+**Trigger phrases:**
+- "Tests hang after X% of the suite runs"
+- "pytest runs fine locally with a subset but times out in CI"
+- "Push hook is blocking — tests don't finish"
+- "Some tests started hanging after a new statistics/analysis feature was added"
+
+## Verified Workflow
+
+### Phase 1: Establish Whether the Hang Is on the Branch or Pre-existing on Main
+
+Before bisecting, verify whether main itself hangs:
+
+```bash
+# Run the hanging files directly on origin/main
+git stash
+timeout 60 pixi run python -m pytest tests/unit/analysis/test_cop_integration.py --no-cov -q
+git stash pop
+```
+
+If main also hangs — the issue is pre-existing, not introduced by the branch. Skip bisect.
+
+If only the branch hangs — use bisect (see Phase 2).
+
+### Phase 2: Git Bisect to Find Introducing Commit (if branch-specific)
+
+```bash
+git bisect start
+git bisect bad HEAD          # current tip hangs
+git bisect good <main-sha>   # main is good
+
+# For each commit git shows, run with a timeout:
+timeout 60 pixi run python -m pytest \
+  tests/unit/analysis/test_cop_integration.py \
+  tests/unit/analysis/test_duration_integration.py \
+  --no-cov -q 2>&1 | tail -3
+
+# exit 0 within timeout -> good; exit 124 (timeout killed) -> bad
+git bisect good   # or
+git bisect bad
+
+git bisect reset  # when done
+```
+
+**Important:** If `timeout 60` kills the process, that IS a "bad" commit — don't wait longer.
+
+### Phase 3: Identify the Expensive Call
+
+Once the introducing commit is found (or on main, grep for the pattern):
+
+```bash
+# Find Monte Carlo / simulation calls
+grep -rn "n_simulations\|n_resamples\|bootstrap\|monte_carlo\|for.*range.*n_sim" \
+  scripts/ scylla/ --include="*.py" | grep -v "test_\|#"
+
+# Find the function definition with its default parameter
+grep -n "def.*power\|def.*bootstrap\|def.*simulate" scylla/analysis/stats.py
+```
+
+**Signature to look for:**
+```python
+def expensive_fn(..., n_simulations: int | None = None) -> float:
+    if n_simulations is None:
+        n_simulations = config.power_n_simulations  # often 10_000
+```
+
+**Call site in production code:**
+```python
+# export_data.py — called without n_simulations override
+result = mann_whitney_power(n1, n2, effect_size)      # uses default 10,000
+result = kruskal_wallis_power(group_sizes, effect_size)
+```
+
+### Phase 4: Verify the Function Is Imported via `from ... import`
+
+This matters for the patch target:
+
+```bash
+grep "^from.*import\|^import" scripts/export_data.py | grep -i "power\|stat"
+```
+
+- `from scylla.analysis.stats import mann_whitney_power` → patch `"export_data.mann_whitney_power"`
+- `import scylla.analysis.stats` then `stats.mann_whitney_power()` → patch `"scylla.analysis.stats.mann_whitney_power"`
+
+When using `from X import Y`, you must patch the **caller's namespace**, not the origin.
+
+### Phase 5: Add autouse Mock in conftest.py
+
+Add to `tests/unit/analysis/conftest.py` (or whichever conftest covers the hanging tests):
+
+```python
+from unittest.mock import patch
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def mock_power_simulations():
+    """Mock expensive Monte Carlo simulations to prevent test hangs.
+
+    mann_whitney_power() and kruskal_wallis_power() each run 10,000 simulations
+    by default (~5s each). With 2 models × 6 transitions × 2 calls = 24 calls per
+    compute_statistical_results() invocation, this causes tests to hang for 2+ minutes.
+
+    Tests only assert output structure — the exact power values are irrelevant.
+    """
+    # Patch in caller's namespace (from-import) AND in origin module (for direct callers)
+    with (
+        patch("export_data.mann_whitney_power", return_value=0.8, create=True),
+        patch("export_data.kruskal_wallis_power", return_value=0.75, create=True),
+        patch("scylla.analysis.stats.mann_whitney_power", return_value=0.8),
+        patch("scylla.analysis.stats.kruskal_wallis_power", return_value=0.75),
+    ):
+        yield
+```
+
+**Key design decisions:**
+- `autouse=True` — applies to every test in the directory without requiring explicit use
+- `create=True` — needed when patching `export_data.*` because the module is in `scripts/` and loaded via `sys.path.insert`, so the attribute may not exist in the Python module registry at conftest load time
+- Patch both namespaces for safety (caller + origin)
+- Return values (`0.8`, `0.75`) are realistic power estimates — tests checking structure don't care
+
+### Phase 6: Verify the Fix
+
+```bash
+# Must complete in << 60 seconds
+timeout 60 pixi run python -m pytest \
+  tests/unit/analysis/test_cop_integration.py \
+  tests/unit/analysis/test_duration_integration.py \
+  tests/unit/analysis/test_export_data.py \
+  --no-cov -q
+
+# Expected: 11 passed in ~15s
+```
+
+Then run pre-commit:
+```bash
+pixi run pre-commit run --files tests/unit/analysis/conftest.py
+```
+
+Ruff will reformat the `with` block to use parenthesized form — accept this and re-run to confirm clean pass.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Before vs After
+
+| Metric | Before Fix | After Fix |
+| -------- | ----------- | ----------- |
+| `test_cop_integration.py` | Hang (>120s) | 1 passed, ~14s total |
+| `test_duration_integration.py` | Hang (>120s) | 1 passed, ~14s total |
+| `test_export_data.py` | Hang (>120s) | 9 passed, ~14s total |
+| Push hook | Blocks indefinitely | Completes, suite passes |
+
+### Simulation Budget (Root Cause)
+
+| Function | Default n_simulations | Calls per invocation | Total simulations |
+| ---------- | ---------------------- | --------------------- | ------------------- |
+| `mann_whitney_power` | 10,000 | 24 (2 models × 6 transitions × 2) | 240,000 |
+| `kruskal_wallis_power` | 10,000 | 2 (1 per model) | 20,000 |
+| **Total** | | | **260,000 iterations** |
+
+At ~5s per 10,000 simulations: **~130 seconds per `compute_statistical_results()` call**.
+
+### The Fix (copy-paste)
+
+```python
+# Add to tests/unit/analysis/conftest.py
+from unittest.mock import patch
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def mock_power_simulations():
+    """Mock expensive Monte Carlo simulations to prevent test hangs."""
+    with (
+        patch("export_data.mann_whitney_power", return_value=0.8, create=True),
+        patch("export_data.kruskal_wallis_power", return_value=0.75, create=True),
+        patch("scylla.analysis.stats.mann_whitney_power", return_value=0.8),
+        patch("scylla.analysis.stats.kruskal_wallis_power", return_value=0.75),
+    ):
+        yield
+```
+
+### General Pattern for Any Expensive Simulation Function
+
+```python
+@pytest.fixture(autouse=True)
+def mock_slow_computations():
+    """Mock any function with O(N*simulations) runtime in tests."""
+    patches = {
+        "your_module.expensive_fn": 0.5,       # caller namespace
+        "scylla.analysis.stats.expensive_fn": 0.5,  # origin namespace
+    }
+    with contextlib.ExitStack() as stack:
+        for target, return_val in patches.items():
+            stack.enter_context(patch(target, return_value=return_val, create=True))
+        yield
+```
+
+## Superseded from nats-optional-import-guard-deliver-policy
+
+---
+name: nats-optional-import-guard-deliver-policy
+description: "Debugging pattern for nats-py optional import guard failures caused by enum conversion. Use when: (1) nats subscriber tests show mock_js.subscribe.call_count == 0, (2) adding an enum/type conversion from nats.js.api inside _subscribe_loop, (3) CI shows 'nats-py is not installed' error when nats IS mocked."
+category: debugging
+date: 2026-04-12
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - nats
+  - optional-dependency
+  - import-guard
+  - lazy-import
+  - DeliverPolicy
+  - nats-py
+  - python
+  - asyncio
+---
+
+# nats-py Optional Import Guard: DeliverPolicy Enum Pitfall
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-12 |
+| **Objective** | Pass `deliver_policy` from NATSConfig to `js.subscribe()` in ProjectScylla (issue #1654) |
+| **Outcome** | Successful — PR #1784 merged; fix avoids triggering optional import guard by passing string directly |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- nats subscriber tests are showing `mock_js.subscribe.call_count == 0` after adding a new `js.subscribe()` argument
+- Adding a type or enum from `nats.js.api` (e.g. `DeliverPolicy`, `AckPolicy`, `ReplayPolicy`) inside `_subscribe_loop` or any function that has an optional-dependency lazy import guard
+- CI logs show `"nats-py is not installed. Install with: pip install 'scylla[nats]'"` even though nats IS mocked in the test
+- A new import from an optional package was placed inside an existing `try/except ImportError` block
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# WRONG — triggers import guard on environments without nats-py installed
+from nats.js.api import DeliverPolicy  # placed inside try block
+
+sub = await js.subscribe(
+    subject=subject,
+    durable=durable,
+    stream=self._config.stream,
+    deliver_policy=DeliverPolicy(self._config.deliver_policy),  # enum conversion
+)
+
+# CORRECT — pass string directly; nats-py accepts str at runtime
+sub = await js.subscribe(
+    subject=subject,
+    durable=durable,
+    stream=self._config.stream,
+    deliver_policy=self._config.deliver_policy,  # plain string, no import needed
+)
+```
+
+### Detailed Steps
+
+1. **Identify the symptom**: Test fails with `assert 0 == 3` on `mock_js.subscribe.call_count`. Check for `"nats-py is not installed"` in test log output — this confirms the guard triggered.
+
+2. **Locate the import guard pattern** in the subscriber code:
+
+   ```python
+   async def _subscribe_loop(self) -> None:
+       try:
+           import nats as nats_client  # lazy import — nats-py is optional
+       except ImportError:
+           logger.error("nats-py is not installed. Install with: pip install 'scylla[nats]'")
+           return  # ← exits early
+   ```
+
+3. **Find the problematic enum import** — look for any `from nats.*` import placed INSIDE the `try` block after the initial `import nats`:
+
+   ```python
+   try:
+       import nats as nats_client
+       from nats.js.api import DeliverPolicy  # ← this is the culprit
+   except ImportError:
+       logger.error("nats-py is not installed.")
+       return
+   ```
+
+4. **Understand why it fails**: In test environments, `import nats` may succeed (mocked) but `from nats.js.api import DeliverPolicy` raises `ImportError` because the mock doesn't define that submodule. The `except ImportError` catches it and calls `return` — so `js.subscribe()` is never reached.
+
+5. **Apply the fix**: Remove the enum import entirely. Pass the config field as a plain string. nats-py's `js.subscribe()` accepts string values for `deliver_policy` at runtime:
+
+   ```python
+   # Remove: from nats.js.api import DeliverPolicy
+   sub = await js.subscribe(
+       subject=subject,
+       durable=durable,
+       stream=self._config.stream,
+       deliver_policy=self._config.deliver_policy,  # str, not DeliverPolicy enum
+   )
+   ```
+
+6. **If mypy complains** about `str` vs `DeliverPolicy`: add `# type: ignore[arg-type]` on the line, or use an `Optional[str]` type annotation that matches the config model. Do not re-introduce the enum import to satisfy mypy.
+
+7. **Verify**: Run the affected unit tests. `mock_js.subscribe.call_count` should now equal the expected value.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Enum conversion inside try block | `from nats.js.api import DeliverPolicy` placed inside the `try:` after `import nats`, used as `DeliverPolicy(self._config.deliver_policy)` | Mock does not define `nats.js.api` submodule → `ImportError` → guard's `return` fires → `js.subscribe()` never called | Any import from an optional dependency inside a try/except ImportError guard will trigger early return if that import fails, even if previous imports in the same block succeeded |
+| Enum conversion before try block | Placing `from nats.js.api import DeliverPolicy` at module top level | Causes `ImportError` at import time in environments without nats-py, breaking the optional-dependency contract entirely | Optional dependency imports must always be deferred inside the guard, not placed at module level |
+
+## Results & Parameters
+
+**Correct pattern — no enum import, plain string passthrough:**
+
+```python
+async def _subscribe_loop(self) -> None:
+    try:
+        import nats as nats_client  # lazy import — nats-py is optional
+    except ImportError:
+        logger.error(
+            "nats-py is not installed. Install with: pip install 'scylla[nats]'"
+        )
+        return
+
+    # ... setup code ...
+
+    sub = await js.subscribe(
+        subject=subject,
+        durable=durable,
+        stream=self._config.stream,
+        deliver_policy=self._config.deliver_policy,  # str from config — no enum needed
+    )
+```
+
+**CI failure signature (before fix):**
+
+```
+ERROR scylla.nats.subscriber:subscriber.py:109 nats-py is not installed. Install with: pip install 'scylla[nats]'
+AssertionError: assert 0 == 3  (mock_js.subscribe.call_count)
+FAILED tests/unit/nats/test_subscribe_multi.py::TestMultiSubjectSubscription::test_subscribes_to_all_subjects
+```
+
+**General rule**: Any `from <optional-package>.*` import placed inside a `try/except ImportError` block will silently trigger that guard if the submodule is absent or not mocked — even when the top-level package import succeeds.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| HomericIntelligence/ProjectScylla | PR #1784, fix for issue #1654 (pass deliver_policy to js.subscribe) | 2026-04-12 — CI passed |
+
+## Superseded from nats-py-connection-resilience-patterns
+
+---
+name: nats-py-connection-resilience-patterns
+description: "Patterns for making nats-py Python clients show clean connection state instead of stack traces. Use when: (1) building a NATS event viewer or console that must handle NATS being unreachable, (2) nats-py is printing full tracebacks on connection failures, (3) implementing retry-with-clean-status for asyncio NATS clients, (4) needing interruptible reconnection loops with graceful shutdown."
+category: debugging
+date: 2026-04-05
+version: "1.0.0"
+user-invocable: false
+tags:
+  - nats
+  - nats-py
+  - asyncio
+  - connection-handling
+  - resilience
+  - python
+  - odysseus-console
+  - error-handling
+  - reconnection
+---
+
+# nats-py Connection Resilience Patterns
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-05 |
+| **Objective** | Make odysseus-console.py show clean [CONNECTED]/[DISCONNECTED]/[RECONNECTING] status instead of full stack traces when NATS is unreachable |
+| **Outcome** | Successful -- full lifecycle verified: NATS down -> clean retry -> NATS up -> events flowing -> NATS down -> clean disconnect -> retry |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Building a Python NATS client (using nats-py) that must gracefully handle NATS being unreachable at startup or during operation
+- nats-py's default error callback is printing full tracebacks (`logging.error("nats: encountered error", exc_info=True)`) and you want clean status output
+- Implementing a retry loop for initial NATS connection that shows user-friendly status messages
+- Needing interruptible sleep in reconnection loops (graceful shutdown on Ctrl+C)
+- Debugging why `connect()` hangs forever when NATS is down with `allow_reconnect=True`
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+import asyncio
+import logging
+import nats as nats_mod
+
+# Step 1: Suppress nats-py internal traceback logging
+logging.getLogger("nats").setLevel(logging.CRITICAL)
+
+RETRY_INTERVAL = 5  # seconds between reconnection attempts
+
+async def run(nats_url: str):
+    stop = asyncio.Event()
+
+    # Step 2: Define async callbacks (MUST be coroutines)
+    async def disconnected_cb():
+        print("[DISCONNECTED]")
+
+    async def reconnected_cb():
+        print("[RECONNECTED]")
+
+    async def closed_cb():
+        print("[CLOSED]")
+
+    # Step 3: Outer retry loop with fast-fail connect
+    while not stop.is_set():
+        try:
+            nc = await asyncio.wait_for(
+                nats_mod.connect(
+                    nats_url,
+                    allow_reconnect=False,       # fail fast, don't retry internally
+                    connect_timeout=3,            # TCP socket timeout
+                    disconnected_cb=disconnected_cb,
+                    reconnected_cb=reconnected_cb,
+                    closed_cb=closed_cb,
+                ),
+                timeout=5,  # hard timeout wrapper
+            )
+            print(f"[CONNECTED] {nats_url}")
+
+            # Step 4: Main event loop -- poll nc.is_closed
+            while not nc.is_closed:
+                # ... subscribe and process messages ...
+                await asyncio.sleep(0.1)
+
+            print("[DISCONNECTED] Connection lost")
+
+        except (OSError, asyncio.TimeoutError, Exception) as e:
+            print(f"[DISCONNECTED] {type(e).__name__}: {e}")
+
+        # Step 5: Interruptible sleep before retry
+        if not stop.is_set():
+            print(f"[RECONNECTING] Retrying in {RETRY_INTERVAL}s...")
+            try:
+                await asyncio.wait_for(stop.wait(), timeout=RETRY_INTERVAL)
+            except asyncio.TimeoutError:
+                pass  # normal -- timeout means retry interval elapsed
+```
+
+### Detailed Steps
+
+1. **Suppress nats-py internal logging**: `logging.getLogger("nats").setLevel(logging.CRITICAL)` prevents nats-py's `_default_error_callback` from printing full tracebacks via `logging.error("nats: encountered error", exc_info=True)`.
+
+2. **Use `allow_reconnect=False`**: This makes `connect()` fail fast on the first attempt instead of entering an internal retry loop. With `allow_reconnect=True` and `max_reconnect_attempts=-1`, `connect()` never returns when NATS is down -- it hangs indefinitely in the internal reconnection loop.
+
+3. **Wrap `connect()` with `asyncio.wait_for()`**: The `connect_timeout` parameter only controls the TCP socket timeout, not the overall `connect()` call duration. Adding `asyncio.wait_for(..., timeout=5)` provides a hard ceiling on how long connect can take.
+
+4. **All callbacks must be `async def`**: nats-py validates that `disconnected_cb`, `reconnected_cb`, `closed_cb`, and `error_cb` are coroutine functions. Using regular `def` raises `"callbacks must be coroutine functions"`.
+
+5. **Use `nc.is_closed` (not `nc.is_connected`) for connection monitoring**: When `allow_reconnect=False`, the client transitions directly to closed state on disconnect. Polling `nc.is_closed` detects this permanent connection loss.
+
+6. **Interruptible sleep pattern**: Use `asyncio.wait_for(stop_event.wait(), timeout=RETRY_INTERVAL)` instead of `asyncio.sleep()`. This allows graceful shutdown (set `stop` event from signal handler) while still sleeping between retries.
+
+### Root Cause Analysis
+
+nats-py's default error callback uses:
+```python
+logging.error("nats: encountered error", exc_info=True)
+```
+
+This prints full stack traces to stderr on every failed connection attempt. The `exc_info=True` parameter causes Python's logging to include the full traceback. The two-pronged fix is:
+1. Suppress the logger (`logging.CRITICAL`)
+2. Manage retries externally with clean status messages
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Non-async callbacks | `def disconnected_cb():` (regular function) | nats-py validates callbacks with `asyncio.iscoroutinefunction()` and raises "callbacks must be coroutine functions" | All nats-py callbacks (`disconnected_cb`, `reconnected_cb`, `closed_cb`, `error_cb`) must be `async def` coroutines |
+| `allow_reconnect=True` with `max_reconnect_attempts=-1` | Let nats-py handle reconnection internally with infinite retries | `connect()` never returns when NATS is down -- hangs in internal retry loop with no way to show status | Use `allow_reconnect=False` and manage retries externally for full control over status display |
+| `allow_reconnect=True` with `max_reconnect_attempts=30` + `reconnect_time_wait=2` | Bounded internal retries (30 attempts x 2s = 60s) | 60 seconds of internal retrying before `connect()` raises, during which no status output is possible | Even bounded internal retries are too slow for responsive UX; external retry loop is the only clean solution |
+| `connect_timeout=3` alone | Set TCP connect timeout expecting it to cap the overall `connect()` duration | `connect_timeout` only applies to the TCP socket timeout, not the overall `connect()` call with reconnection logic | Always wrap `connect()` with `asyncio.wait_for()` for a hard timeout guarantee |
+| `git checkout --ours` during rebase | Used `--ours` to keep "our" changes during rebase conflict | In rebase context, `--ours` refers to the BASE branch (main), not YOUR commits. Opposite of merge semantics. | During rebase: `--ours` = base branch, `--theirs` = your commits. During merge: `--ours` = your branch, `--theirs` = incoming branch |
+
+## Results & Parameters
+
+### Configuration
+
+```python
+# Connection parameters
+connect_config = {
+    "allow_reconnect": False,     # fail fast, manage retries externally
+    "connect_timeout": 3,         # TCP socket timeout (seconds)
+}
+
+# External retry parameters
+RETRY_INTERVAL = 5                # seconds between reconnection attempts
+CONNECT_HARD_TIMEOUT = 5          # asyncio.wait_for timeout (seconds)
+
+# Logging suppression
+import logging
+logging.getLogger("nats").setLevel(logging.CRITICAL)
+```
+
+### Expected Output
+
+When NATS is down at startup:
+```
+[DISCONNECTED] ConnectionRefusedError: ...
+[RECONNECTING] Retrying in 5s...
+[DISCONNECTED] ConnectionRefusedError: ...
+[RECONNECTING] Retrying in 5s...
+```
+
+When NATS comes up:
+```
+[CONNECTED] nats://<host>:4222
+```
+
+When NATS goes down during operation:
+```
+[DISCONNECTED]
+[RECONNECTING] Retrying in 5s...
+```
+
+When Ctrl+C is pressed during retry:
+```
+[RECONNECTING] Retrying in 5s...
+^C
+(clean shutdown, no traceback)
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| Odysseus | odysseus-console.py NATS event viewer | Full lifecycle: NATS down -> clean retry -> NATS up -> events flowing -> NATS down -> clean disconnect -> retry |
+
+## References
+
+- [nats-py GitHub](https://github.com/nats-io/nats.py) -- Official Python client for NATS
+- [architecture-crosshost-nats-compose-deployment](architecture-crosshost-nats-compose-deployment.md) -- Cross-host NATS deployment patterns (related skill)
+- [natsc-fetchcontent-cpp20-integration](natsc-fetchcontent-cpp20-integration.md) -- NATS C client for C++ services (related skill)
+
+## Superseded from retry-transient-errors
+
+---
+name: retry-transient-errors
+description: Fix git clone failures caused by transient network errors. Use when experiencing
+  connection reset, curl 56, or timeout errors in subprocess calls.
+category: debugging
+date: '2026-01-04'
+version: 1.0.0
+user-invocable: false
+---
+# Skill: Adding Retry Logic for Transient Errors
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | N/A |
+| Objective | Fix git clone failures caused by transient network errors ("Connection reset by peer", "curl 56") |
+| Outcome | Operational |
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-01-04 |
+| **Objective** | Fix git clone failures caused by transient network errors ("Connection reset by peer", "curl 56") |
+| **Outcome** | ✅ Successfully implemented exponential backoff retry logic with comprehensive tests |
+| **Files Modified** | `src/scylla/e2e/workspace_manager.py`, `tests/unit/e2e/test_workspace_manager.py` |
+| **PR** | #146 (merged) |
+
+## When to Use This Skill
+
+Use this skill when:
+
+1. **Intermittent failures** occur during external operations (network calls, file I/O, subprocess execution)
+2. **Error messages indicate transient issues**:
+   - "Connection reset by peer"
+   - "Network unreachable"
+   - "Operation timed out"
+   - "Temporary failure"
+   - "curl 56" (RPC failed)
+   - "early EOF"
+3. **Operations should succeed on retry** (not permanent errors like authentication or "not found")
+4. **No existing retry logic** is present in the code
+
+**Red Flags** - When NOT to add retry logic:
+- Permanent errors (authentication failed, resource not found, permission denied)
+- Logic errors or bugs in code
+- User input validation failures
+- Configuration errors
+
+## Verified Workflow
+
+### 1. Identify the Failure Point
+
+**What worked:**
+- Read the error logs to identify the exact subprocess call or operation that's failing
+- Check if error message indicates transient vs permanent failure
+- Example: `"RPC failed; curl 56 Recv failure: Connection reset by peer"` → transient network error
+
+**Location:** `workspace_manager.py:74-81` - single `subprocess.run()` call with no error handling
+
+### 2. Categorize Error Patterns
+
+**What worked:**
+- Create a list of transient error patterns to detect in `stderr`
+- Use lowercase comparison for case-insensitive matching
+- Include both general patterns and specific error codes
+
+**Transient patterns identified:**
+```python
+transient_patterns = [
+    "connection reset",
+    "connection refused",
+    "network unreachable",
+    "network is unreachable",  # Include variations
+    "temporary failure",
+    "could not resolve host",
+    "curl 56",  # Specific RPC error code
+    "timed out",
+    "early eof",
+    "recv failure",
+]
+```
+
+### 3. Implement Exponential Backoff Retry
+
+**What worked:**
+- Use 3 total attempts (initial + 2 retries) - matches project's error-handling.md standard
+- Base delay: 1.0 seconds
+- Exponential: `delay = base_delay * (2 ** attempt)` → 1s, 2s, 4s
+- Break on success, sleep only between failed attempts
+
+**Code pattern:**
+```python
+max_retries = 3
+base_delay = 1.0
+
+for attempt in range(max_retries):
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode == 0:
+        break  # Success - exit retry loop
+
+    stderr = result.stderr.lower()
+    is_transient = any(pattern in stderr for pattern in transient_patterns)
+
+    # Fail immediately on non-transient errors or last attempt
+    if not is_transient or attempt == max_retries - 1:
+        raise RuntimeError(f"Failed: {result.stderr}")
+
+    # Exponential backoff
+    delay = base_delay * (2 ** attempt)
+    logger.warning(f"Retry {attempt+1}/{max_retries} in {delay}s: {result.stderr.strip()}")
+    time.sleep(delay)
+```
+
+### 4. Add Comprehensive Tests
+
+**What worked:**
+- Use `unittest.mock` to simulate transient failures
+- Test multiple scenarios:
+  - ✅ Success on first attempt
+  - ✅ Retry succeeds on 2nd/3rd attempt
+  - ✅ Exponential backoff timing verification
+  - ✅ Immediate failure on auth/not-found errors
+  - ✅ Exhausted retries raises error
+  - ✅ Idempotent behavior
+  - ✅ Case-insensitive error detection
+
+**Test pattern:**
+```python
+def test_retry_on_transient_error(self, tmp_path: Path) -> None:
+    """Test retry succeeds on second attempt."""
+    fail_result = MagicMock()
+    fail_result.returncode = 1
+    fail_result.stderr = "curl 56 Recv failure: Connection reset by peer"
+
+    success_result = MagicMock()
+    success_result.returncode = 0
+
+    with patch("subprocess.run", side_effect=[fail_result, success_result]):
+        with patch("time.sleep") as mock_sleep:
+            manager.setup_base_repo()
+
+    assert mock_sleep.call_count == 1
+    assert mock_sleep.call_args == call(1.0)  # First retry = 1s
+```
+
+### 5. Document in Docstring
+
+**What worked:**
+- Add retry behavior to method docstring
+- Mention exponential backoff and transient error types
+
+```python
+def setup_base_repo(self) -> None:
+    """Clone repository once at experiment start.
+
+    Uses exponential backoff retry for transient network errors
+    (connection reset, curl failures, timeouts).
+    """
+```
+
+## Failed Attempts & Learnings
+| Attempt | Issue | Resolution |
+| --------- | ------- | ------------ |
+| See detailed notes below | Various approaches tried | Refer to documentation in this section |
+
+### ❌ Initial Pattern Matching Too Narrow
+
+**What failed:**
+- Pattern: `"network unreachable"`
+- Actual error: `"Network is unreachable"`
+- **Why it failed:** Didn't account for "is" in the middle of the phrase
+
+**Fix:**
+```python
+transient_patterns = [
+    "network unreachable",
+    "network is unreachable",  # Added variation
+]
+```
+
+**Lesson:** When pattern matching error messages, check actual error logs for variations in phrasing.
+
+### ⚠️ Consider Adding Import Check
+
+**Observation:** Had to add `import time` to the imports section.
+
+**Lesson:** When adding retry logic, verify the `time` module is imported. In Python, this is standard library - always available.
+
+## Results & Parameters
+
+### Test Results
+```bash
+pixi run pytest tests/unit/e2e/test_workspace_manager.py -v
+# 11/11 tests passed
+```
+
+### Final Configuration
+
+| Parameter | Value | Rationale |
+| ----------- | ------- | ----------- |
+| **Max retries** | 3 | Project standard from `.claude/shared/error-handling.md` |
+| **Base delay** | 1.0s | Project standard |
+| **Backoff multiplier** | 2x | Exponential: 1s, 2s, 4s |
+| **Total max wait** | 7s | Sum of delays (1+2+4) |
+
+### Files Changed
+
+**workspace_manager.py** (`src/scylla/e2e/workspace_manager.py:51-126`):
+- Added `import time`
+- Wrapped `subprocess.run()` in retry loop
+- Added transient error detection
+- Added exponential backoff logic
+- Added warning logs on retry
+
+**test_workspace_manager.py** (`tests/unit/e2e/test_workspace_manager.py`):
+- New file with 11 test cases
+- Tests both transient and permanent error handling
+- Validates backoff timing with mock assertions
+
+## Key Takeaways
+
+1. **Always check project standards first** - `.claude/shared/error-handling.md` had the exact retry pattern
+2. **Distinguish transient vs permanent errors** - don't waste retries on auth failures
+3. **Log retry attempts** - helps with debugging and visibility
+4. **Test both success and exhaustion paths** - ensure retries eventually fail if error persists
+5. **Use case-insensitive matching** - error messages vary in capitalization
+6. **Include error variations** - "network unreachable" vs "network is unreachable"
+
+## Copy-Paste Code Template
+
+```python
+import time
+
+# Inside the function with failing operation:
+max_retries = 3
+base_delay = 1.0
+
+for attempt in range(max_retries):
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode == 0:
+        break
+
+    stderr = result.stderr.lower()
+
+    # Define transient patterns specific to your operation
+    transient_patterns = [
+        "connection reset",
+        "connection refused",
+        "network unreachable",
+        "network is unreachable",
+        "temporary failure",
+        "timed out",
+        # Add operation-specific patterns here
+    ]
+
+    is_transient = any(pattern in stderr for pattern in transient_patterns)
+
+    # Fail on non-transient errors or last attempt
+    if not is_transient or attempt == max_retries - 1:
+        raise RuntimeError(f"Operation failed: {result.stderr}")
+
+    # Exponential backoff
+    delay = base_delay * (2 ** attempt)
+    logger.warning(
+        f"Attempt {attempt + 1}/{max_retries} failed, "
+        f"retrying in {delay}s: {result.stderr.strip()}"
+    )
+    time.sleep(delay)
+```
+
+## Related Resources
+
+- `.claude/shared/error-handling.md` - Project retry standards
+- `src/scylla/e2e/rate_limit.py` - Similar retry pattern for rate limits
+- `src/scylla/executor/runner.py:138-587` - Another retry implementation example
