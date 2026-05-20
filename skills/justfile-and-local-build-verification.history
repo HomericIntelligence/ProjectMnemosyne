@@ -1,0 +1,776 @@
+## Superseded from just-recipe-heredoc-fix
+
+---
+name: just-recipe-heredoc-fix
+description: 'Fix heredoc-in-just-recipe whitespace errors by replacing with printf.
+  Use when: just recipe uses <<EOF heredoc and fails with ''inconsistent leading whitespace''.
+  Also covers parameter alias/normalization patterns enabled by the bash shebang.'
+category: ci-cd
+date: 2026-05-03
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: just-recipe-heredoc-fix.history
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | `just` parse error: "Recipe line has inconsistent leading whitespace" when a `#!/usr/bin/env bash` recipe contains a heredoc (`<<EOF`) whose body lines have different indentation than the recipe body |
+| **Root Cause** | `just` requires all lines in a recipe body to share the same leading whitespace prefix. Heredoc body lines (e.g., 2-space indent) conflict with the recipe's 4-space indent, and the heredoc terminator (e.g., `ENTRY`) at column 0 triggers the error |
+| **Fix** | Replace the heredoc with `printf` using format strings and argument lists |
+| **Context** | Discovered while adding `just test-timing` recipe that writes JSON lines per test file |
+
+## When to Use
+
+- Adding a `#!/usr/bin/env bash` just recipe that needs to emit structured multi-field text (JSON, CSV, etc.)
+- Encountering `"Recipe line has inconsistent leading whitespace"` from `just --list` or `just <recipe>`
+- The heredoc body lines have 2-space indent but the surrounding recipe uses 4-space indent
+- The heredoc terminator appears at column 0 (bare `EOF` or `ENTRY`)
+- Recipe parameter value needs normalization/aliasing (short name → full resource name)
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Diagnose: run just --list to see the error
+just --list 2>&1 | head -10
+# Output: error: Recipe line has inconsistent leading whitespace...
+
+# After fix: verify recipe appears
+just --list | grep <recipe-name>
+```
+
+### Step 1 — Identify the Heredoc Pattern
+
+Look for this pattern in the justfile recipe:
+
+```just
+        cat >> "$OUTPUT" <<ENTRY
+  {"field": "$var1", "field2": $var2}
+ENTRY
+```
+
+The problem: recipe body is indented 4 spaces, heredoc content is 2 spaces, terminator `ENTRY` is at column 0.
+
+### Step 2 — Replace with printf
+
+Replace the entire `cat >> ... <<ENTRY ... ENTRY` block with a `printf` call:
+
+```just
+        printf '  {"field": "%s", "field2": %s}\n' \
+            "$var1" "$var2" >> "$OUTPUT"
+```
+
+Key points:
+
+- Keep the same leading whitespace (4 spaces) as the rest of the recipe
+- Use `printf` format string for the fixed text skeleton
+- Use `%s` placeholders for variable values, passed as positional args
+- Append `>> "$OUTPUT"` at the end of the `printf` line (or on the continuation)
+- Use `\` line continuation — `just` handles this correctly
+
+### Step 3 — Verify Fix
+
+```bash
+just --list | grep <recipe-name>
+# Should now show the recipe without errors
+```
+
+### Parameter Alias Pattern
+
+The `#!/usr/bin/env bash` shebang also enables full shell `if` logic for parameter
+normalization — mapping short/alias names to canonical resource names before use.
+
+```just
+train model="lenet_emnist" precision="fp32" epochs="10":
+    #!/usr/bin/env bash
+    MODEL="{{model}}"
+    if [ "$MODEL" = "lenet" ] || [ "$MODEL" = "lenet5" ]; then MODEL="lenet_emnist"; fi
+    echo "Training $MODEL..."
+    just _run "pixi run mojo run -I . examples/$MODEL/run_train.mojo --epochs {{epochs}}"
+```
+
+**Critical pitfall — operator precedence bug:** avoid the bare `&&` form:
+
+```bash
+# WRONG — bash evaluates || and && left-to-right without grouping:
+# [ "lenet" = "lenet" ] → true, short-circuits first ||
+# then: true && MODEL="lenet_emnist" → sets MODEL correctly for first alias
+# BUT: [ "lenet5" = "lenet" ] || [ "lenet5" = "lenet5" ] → true (second ||)
+# then: true && MODEL="lenet_emnist" works here by accident
+# Edge case: any input where first || is true causes short-circuit and && is NOT reached
+[ "$MODEL" = "lenet" ] || [ "$MODEL" = "lenet5" ] && MODEL="lenet_emnist" || true  # BUG
+
+# CORRECT — proper if block eliminates the precedence ambiguity:
+if [ "$MODEL" = "lenet" ] || [ "$MODEL" = "lenet5" ]; then MODEL="lenet_emnist"; fi
+```
+
+The `if ... ; then ... fi` form is unambiguous regardless of how many `||` conditions
+are chained. Always use it when two or more aliases map to the same canonical name.
+
+**Verification (2026-05-03):** `just train lenet fp16 1` and `just train lenet5 fp32 1`
+both resolved to `examples/lenet_emnist/run_train.mojo` and ran end-to-end (CI: PR #5351).
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Heredoc with `ENTRY` terminator at column 0 | `cat >> "$OUTPUT" <<ENTRY\n  {...}\nENTRY` | `just` "inconsistent leading whitespace" — terminator at column 0 doesn't match recipe's 4-space indent | `just` validates whitespace of ALL lines in recipe body, including heredoc terminators |
+| Indented heredoc terminator (`ENTRY`) | Tried indenting the `ENTRY` terminator to match recipe indent | bash heredoc terminators must be at column 0 (or use `<<-` with tab-only indent) — mixing bash and just constraints makes this impossible cleanly | bash and just have conflicting whitespace requirements for heredoc terminators |
+| `<<-ENTRY` with tabs | Considered using `<<-` (strip leading tabs) with tab-indented body | Recipe already uses spaces throughout; mixing tabs only for the heredoc body creates a maintenance hazard | `printf` is simpler and avoids the bash/just whitespace conflict entirely |
+| Bare `&&` alias form | `[ "$M" = "a" ] \|\| [ "$M" = "b" ] && M="full"` | Operator precedence bug: bash evaluates `\|\|` and `&&` left-to-right; when first `\|\|` operand is true it short-circuits and `&&` is skipped, leaving `M` unset | Always use `if [ ... ] \|\| [ ... ]; then ...; fi` — eliminates precedence ambiguity |
+
+## Results & Parameters
+
+### Before (broken)
+
+```just
+# Run all Mojo tests with per-file timing, output JSON report
+test-timing output="test-timing.json":
+    #!/usr/bin/env bash
+    set -e
+    # ...
+        cat >> "$OUTPUT" <<ENTRY
+  {"file": "$test_file", "duration_s": $duration, "status": "$status", "attempts": $attempts_used}
+ENTRY
+    done
+```
+
+Error output:
+
+```text
+error: Recipe line has inconsistent leading whitespace. Recipe started with `    ` but found line with `  `
+   ——▶ justfile:709:1
+    │
+709 │   {"file": "$test_file", ...}
+    │ ^^
+```
+
+### After (working)
+
+```just
+# Run all Mojo tests with per-file timing, output JSON report
+test-timing output="test-timing.json":
+    #!/usr/bin/env bash
+    set -e
+    # ...
+        printf '  {"file": "%s", "duration_s": %s, "status": "%s", "attempts": %s}\n' \
+            "$test_file" "$duration" "$status" "$attempts_used" >> "$OUTPUT"
+    done
+```
+
+Verification:
+
+```bash
+just --list | grep test-timing
+# test-timing output="test-timing.json" # Run all Mojo tests with per-file timing, output JSON report
+```
+
+### General printf Template
+
+For any JSON-line output in a just recipe:
+
+```just
+        printf '  {"<key1>": "%s", "<key2>": %s, "<key3>": "%s"}\n' \
+            "$string_var" "$numeric_var" "$another_string_var" >> "$OUTPUT"
+```
+
+- Use `"%s"` (with quotes) for string JSON values
+- Use `%s` (without quotes) for numeric JSON values
+- Append to output file with `>> "$OUTPUT"` on the last line of the `printf` call
+
+
+## Superseded from justfile-build-recipe-silent-noop
+
+---
+name: justfile-build-recipe-silent-noop
+description: 'Detect and fix build recipes that silently compile nothing due to
+  over-eager find filter exclusions. Use when: (1) build succeeds suspiciously fast,
+  (2) build/<mode>/ contains 0-1 files, (3) adding `-Werror` to a build that previously
+  appeared green.'
+category: ci-cd
+date: 2026-05-11
+version: 1.0.0
+verification: verified-ci
+user-invocable: false
+---
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | A `just build` (or similar Make/justfile/script) recipe completes with "Build successful" but compiles 0-1 files — silently regressed because its `find` filter excludes every directory now holding real source |
+| **Root Cause** | Exclusion-list filtering: `find . -name '*.mojo' -not -path './tests/*' -not -path './shared/*' …` — every new top-level source directory not listed continues to be silently excluded; if all source dirs end up excluded, the build is a no-op |
+| **Fix** | Replace exclusion-based discovery with explicit per-directory enumeration; split executables (`mojo build`) from libraries (`mojo package`); add an end-of-recipe summary that prints the actual count and asserts a minimum |
+| **Verification** | After fix in ProjectOdyssey PR #5389: 46 binaries + 1 .mojopkg compiled per mode; `--Werror` then surfaced 9+ real warnings the no-op recipe had been hiding |
+| **Reference PR** | [HomericIntelligence/ProjectOdyssey#5389](https://github.com/HomericIntelligence/ProjectOdyssey/pull/5389) |
+
+## When to Use
+
+- `just build` (or equivalent) completes in seconds — far faster than a realistic full compile of the codebase
+- Build output prints "✅ Build successful" but you see no `→ Building: X` lines, or only 1-2 lines
+- `ls build/<mode>/ | wc -l` returns 0 or 1 vs the dozens of executables you expect
+- CI "Build Validation" job passes in well under a minute on a non-trivial codebase
+- You're about to add `--Werror` / `-Werror` to a build step that has "always been green" — verify it isn't green because nothing was being compiled
+- Adding a new top-level source directory (e.g. `papers/`, `experiments/`) that the build does not appear to pick up
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Diagnose: count how many files the recipe actually compiles
+just build 2>&1 | grep -c "→ Building:"     # If 0-1, recipe is broken
+ls build/debug/ 2>/dev/null | wc -l         # Should match expected count
+
+# 2. Audit the find filter in the recipe
+grep -nE 'find .* -name "\*\.\w+"' justfile
+# Look for -not -path patterns that exclude every directory containing src
+
+# 3. Replace with explicit per-directory enumeration
+find examples   -name "*.mojo" -not -path "*/.*" -not -name "__init__.mojo" -not -name "model.mojo" -print0
+find benchmarks -name "*.mojo" -not -path "*/.*" -not -name "__init__.mojo" -print0
+find papers     -path "*/examples/*.mojo" -not -path "*/.*" -not -name "__init__.mojo" -print0
+
+# 4. Filter for executable entry points (single xargs invocation, tolerate no-match)
+... | xargs -0 grep -lE "^fn main|^def main" || true
+
+# 5. For library directories with no main(), use the package builder, not the executable builder
+mojo package shared -o build/debug/shared.mojopkg
+
+# 6. Add a count-asserting summary
+echo "Built: $BUILT executables, $FAILED failed"
+if [ "$BUILT" -lt 5 ]; then
+    echo "ERROR: suspiciously few binaries built — recipe likely regressed"
+    exit 1
+fi
+```
+
+### Detailed Steps
+
+1. **Reproduce the silent no-op.** Run the recipe and count its actual outputs. A real
+   build prints one line per compiled file; a no-op prints only summary text.
+
+   ```bash
+   just build 2>&1 | tee /tmp/build.log
+   grep -c "→ Building:" /tmp/build.log        # Should be > 1
+   ls build/debug/ 2>/dev/null | wc -l
+   ```
+
+2. **Locate the broken filter.** The pattern to look for is a `find` invocation that
+   uses *exclusion* lists for source directories:
+
+   ```bash
+   find . \
+       \( -path "./.pixi" -o -path "./worktrees" \) -prune -o \
+       \( -name "*.mojo" \
+           -not -path "./.claude/*" \
+           -not -path "./tests/*" \
+           -not -path "./shared/*" \
+           -not -path "./examples/*" \
+           -not -path "./benchmarks/*" \
+       \) -print
+   ```
+
+   If every directory that contains real source is in the exclusion list, the recipe
+   matches zero (or only a stray) files.
+
+3. **Rewrite as explicit inclusion.** Enumerate the directories the build *should*
+   visit, not the ones it should skip. New top-level directories then default to
+   "excluded until added" — a safer default for a build recipe.
+
+4. **Split executables from libraries.** `mojo build` requires `fn main` or
+   `def main`. Library trees (`shared/`, packages with only `__init__.mojo`) must
+   use `mojo package` instead. Mixing them causes spurious failures or pushes you
+   back toward over-eager exclusion.
+
+5. **Use a single `xargs` invocation for the main-detector grep.** `xargs -I{} grep -l
+   "^fn main" {}` re-invokes grep once per file and exits 123 on any no-match — fatal
+   when even one file lacks `main()`. The fix is one batched invocation tolerant of
+   exit 1:
+
+   ```bash
+   printf '%s\0' "${candidates[@]}" | xargs -0 grep -lE "^fn main|^def main" || true
+   ```
+
+6. **Add a count-asserting summary.** This is the regression guard. Without it,
+   the recipe can silently drift back to no-op as the tree evolves.
+
+   ```bash
+   BUILT=0; FAILED=0
+   for f in "${entry_points[@]}"; do
+       if mojo build "$f" -o "build/$mode/$(basename "$f" .mojo)"; then
+           BUILT=$((BUILT+1))
+       else
+           FAILED=$((FAILED+1))
+       fi
+   done
+   echo "Built: $BUILT executables, $FAILED failed"
+   if [ "$BUILT" -lt 5 ]; then
+       echo "ERROR: suspiciously few binaries built — recipe likely regressed"
+       exit 1
+   fi
+   ```
+
+7. **Avoid `find … | while read` loops** for the per-file build step. They mask
+   failures of individual builds (the loop's exit code is the last command's, not
+   the worst one). Use explicit BUILT/FAILED counters as above.
+
+8. **Verify with `--Werror`.** Adding strict warning-as-error mode is the most
+   reliable smoke test: a no-op recipe stays green, a real recipe surfaces every
+   latent warning. In ProjectOdyssey PR #5389 this surfaced 9+ real warnings the
+   prior no-op recipe had been hiding.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| ------- | -------------- | ------------- | -------------- |
+| 1 | Compile `shared/` per-file with `mojo build` | `__init__.mojo` and library modules have no `main()` — `mojo build` errors out | Library trees must use `mojo package shared -o build/<mode>/shared.mojopkg`, not `mojo build`; split executables from libraries |
+| 2 | `xargs -I{} grep -l "^fn main" {}` to find entry points | Re-invokes grep per file; any file without `main()` returns exit 1, and xargs exits 123 — fatal for the whole pipeline | Use a single batched invocation tolerant of no-match: `xargs -0 grep -lE "^fn main\|^def main" \|\| true` |
+| 3 | `find … \| while read f; do mojo build "$f"; done` | Loop exit status is last command's; individual build failures are silently lost | Use explicit `BUILT=$((BUILT+1))` / `FAILED=$((FAILED+1))` counters and final non-zero exit when `FAILED > 0` |
+| 4 | Patch exclusion-based `find` filter by adding new `-not -path` clauses when CI breaks | Reactive — each new top-level source directory must be remembered, and the silent-no-op failure mode is preserved | Use explicit per-directory inclusion so new dirs are *added* (visible commit) rather than *implicitly excluded* (silent) |
+| 5 | Trust "✅ Build successful" output as proof the recipe worked | Recipe prints success based on exit code, not actual artifact count | Add an end-of-recipe assertion: `if [ "$BUILT" -lt N ]; then exit 1; fi` for a known-minimum N |
+
+## Results & Parameters
+
+| Parameter | Value | Notes |
+| --------- | ----- | ----- |
+| **Pre-fix builds compiled** | 1 file (`scripts/verify_installation.mojo`) | Excluded every dir holding real source |
+| **Post-fix builds compiled** | 46 executables + 1 `.mojopkg` per build mode | debug / release / asan / tsan |
+| **Latent warnings surfaced** | 9+ | All hidden by the prior no-op behavior |
+| **Recipe runtime change** | Seconds → minutes | A real compile is *expected* to take time |
+| **Minimum-count guard threshold** | Project-specific (use `expected_count / 2` or known floor) | Tune per repo; goal is "obviously broken" detection, not exact match |
+| **Verification level** | verified-ci | Shipped in [ProjectOdyssey#5389](https://github.com/HomericIntelligence/ProjectOdyssey/pull/5389) |
+| **Generalizes to** | Any build recipe using exclusion-based `find`/`glob` discovery: Makefiles, justfiles, npm/yarn scripts, shell wrappers around compiler CLIs | The anti-pattern is language-agnostic |
+
+
+## Superseded from build-run-local
+
+---
+name: build-run-local
+description: Run local builds with proper environment setup matching CI pipeline
+category: ci-cd
+date: 2025-12-30
+version: 1.0.0
+---
+# Build and Run Local
+
+Execute local builds with environment setup matching CI pipeline.
+
+## Overview
+
+| Date | Objective | Outcome |
+| ------ | ----------- | --------- |
+| 2025-12-30 | Local verification before push | Catch issues before CI, faster iteration |
+
+## When to Use
+
+- (1) Building code locally before pushing
+- (2) Verifying changes work before creating PR
+- (3) Debugging build issues in isolation
+- (4) Running tests in local environment
+
+## Verified Workflow
+
+1. **Activate environment**: Use environment manager to setup
+2. **Verify environment**: Check tool versions and dependencies
+3. **Build locally**: Run build with proper flags
+4. **Run tests**: Execute test suite locally
+5. **Check warnings**: Verify zero-warnings compliance
+6. **Run pre-commit**: Validate formatting and linting
+7. **Commit changes**: Only after local verification passes
+
+## Results
+
+Copy-paste ready commands:
+
+```bash
+# Activate environment (example with pixi)
+eval "$(pixi shell-hook)"
+
+# Verify environment
+which python && python --version
+which mojo && mojo --version
+
+# Build project (Mojo example)
+mojo build -I . src/main.mojo
+
+# Run tests
+pytest tests/
+# or for Mojo
+mojo test -I . tests/
+
+# Run specific test
+pytest tests/test_specific.py -v
+# or for Mojo
+mojo test -I . tests/test_specific.mojo
+
+# Format code
+black .  # Python
+mojo format .  # Mojo
+
+# Run all pre-commit checks
+pre-commit run --all-files
+```
+
+### Build Flags
+
+- `-I .` includes current directory in path
+- `-O` enables optimizations for release builds
+- `-v` for verbose output
+- `-k "pattern"` to run specific tests
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Error Handling
+
+| Problem | Solution |
+| --------- | ---------- |
+| Environment not found | Activate environment manager (pixi, conda, venv) |
+| Module not found | Verify `-I .` flag and correct paths |
+| Permission denied | Check file permissions and ownership |
+| Out of memory | Reduce parallel jobs or simplify test |
+| Timeout | Check for infinite loops or long operations |
+
+## Build Verification Checklist
+
+- [ ] Environment activated
+- [ ] Build succeeds with no errors
+- [ ] Zero warnings (if required by project)
+- [ ] All tests pass
+- [ ] Pre-commit hooks pass
+- [ ] No new lint errors
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Local build verification with pixi/Mojo | Patterns adaptable to any build system |
+
+## References
+
+- See run-precommit for pre-commit hooks
+- See fix-ci-failures for debugging CI issues
+- See validate-workflow for workflow validation
+
+
+## Superseded from verify-and-commit
+
+---
+name: verify-and-commit
+description: "Take a dirty working tree (implementation already complete) through\
+  \ the full verify \u2192 fix \u2192 commit \u2192 PR workflow. Covers running tests,\
+  \ fixing pre-commit failures, and creating a PR."
+category: ci-cd
+date: 2026-02-24
+version: 1.0.0
+user-invocable: false
+---
+# Verify and Commit
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-02-24 |
+| Objective | Verify a pre-implemented feature, fix linting/typing issues, and ship a PR |
+| Outcome | All 1014 e2e unit tests passed; all 3015 total tests passed (78% coverage); all pre-commit hooks passed; PR #1081 created and auto-merge enabled |
+| Repository | HomericIntelligence/ProjectScylla |
+
+## When to Use
+
+- Implementation was completed in a previous session (context ran out) and needs verification + commit
+- You have a dirty working tree and need to get it through CI before creating a PR
+- Pre-commit hooks are failing and need targeted fixes before committing
+- mypy known-issue counts have drifted after adding new test files
+
+## Verified Workflow
+
+### Step 1: Run the targeted test suite first
+
+Run only the tests for the area you changed — faster feedback before committing:
+
+```bash
+pixi run python -m pytest tests/unit/<module>/ -v --no-cov
+```
+
+Look for the summary line. All tests must pass before proceeding.
+
+### Step 2: Run pre-commit on all files
+
+```bash
+pre-commit run --all-files
+```
+
+Pre-commit runs twice in this project (hooks run, then re-validate). Note which hooks fail.
+
+### Step 3: Fix pre-commit failures
+
+**Ruff format** (auto-fixed by hook, just re-run):
+- The hook modifies files in place. After the first run, re-run `pre-commit run --all-files` and it will pass.
+
+**Ruff E501 (line too long) in comments/docstrings**:
+- Wrap the line at a natural break point. In help text strings, add a newline + indent:
+  ```python
+  # Before (>100 chars):
+  "  rerun-agents /exp/ → run --config <dir> --results-dir /exp/ --from replay_generated --filter-tier T0 --filter-status failed"
+  # After:
+  "  rerun-agents /exp/\n    → run --config <dir> --results-dir /exp/ --from replay_generated\n          --filter-tier T0 --filter-status failed"
+  ```
+
+**check-mypy-counts (MYPY_KNOWN_ISSUES.md out of date)**:
+- Run the update script:
+  ```bash
+  pixi run python scripts/check_mypy_counts.py --update
+  ```
+- This regenerates MYPY_KNOWN_ISSUES.md with current counts. Stage the file alongside your other changes.
+- Common cause: new test files that introduce `arg-type` errors via mock/patch signatures.
+
+### Step 4: Re-run pre-commit to confirm all green
+
+```bash
+pre-commit run --all-files
+```
+
+All hooks should show `Passed` or `Skipped`.
+
+### Step 5: Run full test suite (push hook will do this, but catch early)
+
+```bash
+pixi run python -m pytest tests/ -v 2>&1 | tail -5
+```
+
+### Step 6: Create branch, stage, commit, push, PR
+
+```bash
+git checkout -b <issue-number>-<description>
+
+git add <file1> <file2> ... MYPY_KNOWN_ISSUES.md
+
+git commit -m "$(cat <<'EOF'
+feat(scope): Short imperative description
+
+Longer explanation of what changed and why. List key additions:
+- Thing 1
+- Thing 2
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+EOF
+)"
+
+git push -u origin <branch-name>
+
+gh pr create \
+  --title "feat(scope): Short description" \
+  --body "$(cat <<'EOF'
+## Summary
+- Bullet 1
+- Bullet 2
+
+## Test plan
+- [x] All N unit tests pass
+- [x] All M total tests pass (X% coverage)
+- [x] All pre-commit hooks pass
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+EOF
+)"
+
+gh pr merge --auto --rebase
+```
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | YYYY-MM-DD |
+| **Objective** | Skill objective |
+| **Outcome** | Success/Operational |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Project-Specific Commands
+
+| Task | Command |
+| ------ | --------- |
+| Run e2e unit tests only | `pixi run python -m pytest tests/unit/e2e/ -v --no-cov` |
+| Run full suite | `pixi run python -m pytest tests/ -v` |
+| Update mypy counts | `pixi run python scripts/check_mypy_counts.py --update` |
+| Run pre-commit | `pre-commit run --all-files` |
+
+### Pre-commit Hook Order (ProjectScylla)
+
+1. `ruff-format-python` — auto-formats; re-run after first pass
+2. `ruff-check-python` — E501 violations must be fixed manually
+3. `mypy` — type check (passes if no new errors)
+4. `check-mypy-counts` — baseline count check; update with `--update` script
+5. Other custom hooks (model config naming, doc policy, markdownlint, YAML, ShellCheck)
+
+### Typical MYPY_KNOWN_ISSUES.md Drift Pattern
+
+When adding new test files that use `unittest.mock.patch` or `MagicMock`, mypy often
+raises `arg-type` errors on mock return values. These are pre-existing / accepted errors.
+The `check-mypy-counts` hook tracks counts per directory so drift is caught automatically.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | PR #1081 — consolidate run subcommands | [notes.md](../../references/notes.md) |
+
+
+## History from just-recipe-heredoc-fix.history
+
+## v1.0.0 — 2026-03-14
+
+---
+name: just-recipe-heredoc-fix
+description: 'Fix heredoc-in-just-recipe whitespace errors by replacing with printf.
+  Use when: just recipe uses <<EOF heredoc and fails with ''inconsistent leading whitespace''.'
+category: ci-cd
+date: 2026-03-14
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | `just` parse error: "Recipe line has inconsistent leading whitespace" when a `#!/usr/bin/env bash` recipe contains a heredoc (`<<EOF`) whose body lines have different indentation than the recipe body |
+| **Root Cause** | `just` requires all lines in a recipe body to share the same leading whitespace prefix. Heredoc body lines (e.g., 2-space indent) conflict with the recipe's 4-space indent, and the heredoc terminator (e.g., `ENTRY`) at column 0 triggers the error |
+| **Fix** | Replace the heredoc with `printf` using format strings and argument lists |
+| **Context** | Discovered while adding `just test-timing` recipe that writes JSON lines per test file |
+
+## When to Use
+
+- Adding a `#!/usr/bin/env bash` just recipe that needs to emit structured multi-field text (JSON, CSV, etc.)
+- Encountering `"Recipe line has inconsistent leading whitespace"` from `just --list` or `just <recipe>`
+- The heredoc body lines have 2-space indent but the surrounding recipe uses 4-space indent
+- The heredoc terminator appears at column 0 (bare `EOF` or `ENTRY`)
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Diagnose: run just --list to see the error
+just --list 2>&1 | head -10
+# Output: error: Recipe line has inconsistent leading whitespace...
+
+# After fix: verify recipe appears
+just --list | grep <recipe-name>
+```
+
+### Step 1 — Identify the Heredoc Pattern
+
+Look for this pattern in the justfile recipe:
+
+```just
+        cat >> "$OUTPUT" <<ENTRY
+  {"field": "$var1", "field2": $var2}
+ENTRY
+```
+
+The problem: recipe body is indented 4 spaces, heredoc content is 2 spaces, terminator `ENTRY` is at column 0.
+
+### Step 2 — Replace with printf
+
+Replace the entire `cat >> ... <<ENTRY ... ENTRY` block with a `printf` call:
+
+```just
+        printf '  {"field": "%s", "field2": %s}\n' \
+            "$var1" "$var2" >> "$OUTPUT"
+```
+
+Key points:
+- Keep the same leading whitespace (4 spaces) as the rest of the recipe
+- Use `printf` format string for the fixed text skeleton
+- Use `%s` placeholders for variable values, passed as positional args
+- Append `>> "$OUTPUT"` at the end of the `printf` line (or on the continuation)
+- Use `\` line continuation — `just` handles this correctly
+
+### Step 3 — Verify Fix
+
+```bash
+just --list | grep <recipe-name>
+# Should now show the recipe without errors
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Heredoc with `ENTRY` terminator at column 0 | `cat >> "$OUTPUT" <<ENTRY\n  {...}\nENTRY` | `just` "inconsistent leading whitespace" — terminator at column 0 doesn't match recipe's 4-space indent | `just` validates whitespace of ALL lines in recipe body, including heredoc terminators |
+| Indented heredoc terminator (`ENTRY`) | Tried indenting the `ENTRY` terminator to match recipe indent | bash heredoc terminators must be at column 0 (or use `<<-` with tab-only indent) — mixing bash and just constraints makes this impossible cleanly | bash and just have conflicting whitespace requirements for heredoc terminators |
+| `<<-ENTRY` with tabs | Considered using `<<-` (strip leading tabs) with tab-indented body | Recipe already uses spaces throughout; mixing tabs only for the heredoc body creates a maintenance hazard | `printf` is simpler and avoids the bash/just whitespace conflict entirely |
+
+## Results & Parameters
+
+### Before (broken)
+
+```just
+# Run all Mojo tests with per-file timing, output JSON report
+test-timing output="test-timing.json":
+    #!/usr/bin/env bash
+    set -e
+    # ...
+        cat >> "$OUTPUT" <<ENTRY
+  {"file": "$test_file", "duration_s": $duration, "status": "$status", "attempts": $attempts_used}
+ENTRY
+    done
+```
+
+Error output:
+
+```text
+error: Recipe line has inconsistent leading whitespace. Recipe started with `    ` but found line with `  `
+   ——▶ justfile:709:1
+    │
+709 │   {"file": "$test_file", ...}
+    │ ^^
+```
+
+### After (working)
+
+```just
+# Run all Mojo tests with per-file timing, output JSON report
+test-timing output="test-timing.json":
+    #!/usr/bin/env bash
+    set -e
+    # ...
+        printf '  {"file": "%s", "duration_s": %s, "status": "%s", "attempts": %s}\n' \
+            "$test_file" "$duration" "$status" "$attempts_used" >> "$OUTPUT"
+    done
+```
+
+Verification:
+
+```bash
+just --list | grep test-timing
+# test-timing output="test-timing.json" # Run all Mojo tests with per-file timing, output JSON report
+```
+
+### General printf Template
+
+For any JSON-line output in a just recipe:
+
+```just
+        printf '  {"<key1>": "%s", "<key2>": %s, "<key3>": "%s"}\n' \
+            "$string_var" "$numeric_var" "$another_string_var" >> "$OUTPUT"
+```
+
+- Use `"%s"` (with quotes) for string JSON values
+- Use `%s` (without quotes) for numeric JSON values
+- Append to output file with `>> "$OUTPUT"` on the last line of the `printf` call
