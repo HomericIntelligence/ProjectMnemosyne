@@ -1,0 +1,844 @@
+## Superseded from cpp-agamemnon-register-routes-signature-cascade
+
+---
+name: cpp-agamemnon-register-routes-signature-cascade
+description: "Use when: (1) Agamemnon C++ PR fails with 'error: no matching function for call to register_routes' in test files, (2) PR fails with undefined references to a new feature class after CMakeLists was updated, (3) clang-tidy fails with misc-use-anonymous-namespace on static functions in src/nats_client.cpp, (4) PR's CMakeLists.txt was updated but test/CMakeLists.txt or agamemnon_lib source list was not. Covers the three recurring error classes when a PR adds a new parameter to register_routes() in routes.hpp and only patches server_main.cpp but leaves test call-sites stale."
+category: debugging
+date: 2026-05-09
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - cpp
+  - agamemnon
+  - register_routes
+  - cmake
+  - test-fixture
+  - signature-mismatch
+  - undefined-reference
+  - clang-tidy
+  - anonymous-namespace
+  - agamemnon_lib
+---
+
+# C++ Agamemnon register_routes Signature Cascade
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-09 |
+| **Objective** | Diagnose and fix the three recurring CI error classes when a ProjectAgamemnon PR adds a new parameter to `register_routes()` in `routes.hpp` |
+| **Outcome** | Successful — applied to 8 Agamemnon PRs in a single session; all CI build/static-analysis clusters went green and PRs began merging via squash auto-merge |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- A ProjectAgamemnon PR fails with `error: no matching function for call to 'register_routes'` in test files (`test/src/test_routes_malformed.cpp`, `test/src/test_routes.cpp`, `test/src/test_nats_client.cpp`, etc.)
+- PR fails with `undefined reference to` a new feature class (e.g., `AuthMiddleware`, `RateLimiter`, `MetricsRegistry`, `Orchestrator`) at link time across all test executables
+- `clang-tidy` CI job fails with `[misc-use-anonymous-namespace]` on a `static` function in `src/nats_client.cpp`
+- PR author updated `include/projectagamemnon/routes.hpp` and `src/server_main.cpp` but did NOT update test fixture call sites or `agamemnon_lib` source list in `CMakeLists.txt`
+- CI failure survives a clean rebase onto main — this is a bug in the PR's own diff, not a merge conflict
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Step 1: Get the job ID for the failing build
+RUN=$(gh run list --repo HomericIntelligence/ProjectAgamemnon \
+  --branch <branch> --workflow "Build and Test" --limit 1 \
+  --json databaseId --jq '.[0].databaseId')
+JOB=$(gh run view $RUN --repo HomericIntelligence/ProjectAgamemnon \
+  --json jobs --jq '.jobs[] | select(.name=="ubuntu-24.04-gcc-debug") | .databaseId')
+
+# Step 2: Extract actual compile/link errors
+gh api repos/HomericIntelligence/ProjectAgamemnon/actions/jobs/$JOB/logs 2>&1 \
+  | grep -E "error:|undefined reference" | head -10
+
+# Step 3: Find all register_routes call sites
+grep -rn "register_routes" src/ test/
+
+# Step 4: Read current signature
+cat include/projectagamemnon/routes.hpp | grep -A3 "register_routes"
+
+# Step 5: Check agamemnon_lib source list
+grep -n "src/" CMakeLists.txt | head -30
+```
+
+### Detailed Steps
+
+#### Class A — `error: no matching function for call to 'register_routes'`
+
+The PR adds a new N-th argument to `register_routes()` in `routes.hpp` and `server_main.cpp`
+but test files still call the old (N-1)-argument signature.
+
+1. Run `grep -rn "register_routes" src/ test/` to enumerate every call site.
+2. Read `include/projectagamemnon/routes.hpp` to determine the current full signature.
+3. For each failing test file, open it and locate the test fixture struct/class.
+4. Check whether the fixture already has an instance of the new parameter type (e.g., `auth_`, `metrics_`, `orchestrator_`, `rate_limiter_`).
+5. If the instance is missing, instantiate it in the fixture using a minimal/default constructor.
+6. Update the `register_routes(...)` call site to pass the new argument.
+7. Repeat for every test file reported in the error log.
+
+Example — adding `AuthMiddleware&` as the 4th argument:
+
+```cpp
+// Before (stale)
+register_routes(app, db_, config_);
+
+// After — fixture already has auth_ member
+register_routes(app, db_, config_, auth_);
+
+// After — fixture was missing auth_; add it:
+// struct Fixture {
+//   ...
+//   AuthMiddleware auth_{config_};   // <- add this
+// };
+register_routes(app, db_, config_, auth_);
+```
+
+#### Class B — Undefined references at link time
+
+The PR introduces a new `.cpp` file (e.g., `src/auth.cpp`, `src/rate_limiter.cpp`,
+`src/metrics.cpp`, `src/orchestrator.cpp`) but does not add it to the `agamemnon_lib`
+STATIC library source list in `CMakeLists.txt`.
+
+1. Run `grep -n "src/" CMakeLists.txt` to see the current `agamemnon_lib` source list.
+2. Add the missing `.cpp` file to the `add_library(agamemnon_lib STATIC ...)` block.
+3. If the new feature pulls in an external dependency (e.g., libcurl):
+   - Add `find_package(CURL REQUIRED)` near the top of `CMakeLists.txt`.
+   - Add `target_link_libraries(agamemnon_lib PUBLIC CURL::libcurl)`.
+   - Add the dep to `conanfile.py` if Conan manages it.
+4. If test executables need to link against the new library, check `test/CMakeLists.txt`
+   and add `target_link_libraries(<test_exe> PRIVATE <new_lib>)`.
+
+Example — `src/metrics.cpp` not in build:
+
+```cmake
+# Before
+add_library(agamemnon_lib STATIC
+  src/server.cpp
+  src/routes.cpp
+  src/nats_client.cpp
+)
+
+# After
+add_library(agamemnon_lib STATIC
+  src/server.cpp
+  src/routes.cpp
+  src/nats_client.cpp
+  src/metrics.cpp     # <- add
+)
+```
+
+#### Class C — `[misc-use-anonymous-namespace]`
+
+`clang-tidy` flags `static` free functions in `.cpp` files (most commonly
+`src/nats_client.cpp`) with `[misc-use-anonymous-namespace]`. Promote them to
+error in CI by replacing `static` with an anonymous namespace.
+
+```cpp
+// Before
+static bool is_infra_error(natsStatus s) { ... }
+
+// After
+namespace {
+bool is_infra_error(natsStatus s) { ... }
+}  // namespace
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Rebase onto main | Rebasing the PR onto latest main to fix "register_routes" errors | Test call-sites are stale in the PR's own diff — clean rebase doesn't fix them | This is a PR-internal bug, not a merge-conflict artifact |
+| Only patching routes.hpp | Updating the declaration but not propagating the new arg to test fixtures | Compiler finds the new signature but all test call-sites still call the old arity | Always `grep -rn register_routes src/ test/` after changing the signature |
+| Only adding .cpp to CMakeLists.txt root | Adding `src/metrics.cpp` to `CMakeLists.txt` but not to `test/CMakeLists.txt` link lines | Test executables still get undefined-reference errors because they don't link `agamemnon_lib` transitively | Check both `CMakeLists.txt` and `test/CMakeLists.txt` for link-line gaps |
+
+## Results & Parameters
+
+### PR Table (Verified on 8 PRs, 2026-05-09)
+
+| PR | New 4th arg | What was missed | Error class |
+|----|-------------|-----------------|-------------|
+| #154 (HMAS) | `Orchestrator&` | `server_main.cpp:77` + test fixtures | A |
+| #259 (auth) | `AuthMiddleware&` | `server_main.cpp` + test fixtures | A |
+| #270 (body cap) | (none — separate issue) | `test/CMakeLists.txt` missing test_routes block | B |
+| #292 (metrics) | `MetricsRegistry&` | `server_main.cpp:77` + test fixture missing member | A+B |
+| #336 (pagination) | (params with no default) | 25 test call-sites | A |
+| #342 (rate-limit) | `RateLimiter&` | `server_main.cpp:97` + test fixtures | A |
+| #160 | (multiple) | `agamemnon_lib` missing `.cpp` | B |
+| #285 | `static` fn | `src/nats_client.cpp` static fn | C |
+
+### Diagnostic Log Extraction
+
+```bash
+# Get compile errors from CI without downloading full log
+gh api repos/HomericIntelligence/ProjectAgamemnon/actions/jobs/$JOB/logs 2>&1 \
+  | grep -E "error:|undefined reference" | head -10
+
+# Useful patterns to grep for in CI output:
+#   "no matching function for call to 'register_routes'"
+#   "undefined reference to"
+#   "[misc-use-anonymous-namespace]"
+```
+
+### Branch Protection Note
+
+`strict_required_status_checks_policy: false` on ProjectAgamemnon — passing checks on
+ANY commit SHA in the PR satisfy required checks. After pushing a fix, the auto-merge
+fires on the PR's current HEAD without needing to wait for the base to be up-to-date.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| HomericIntelligence/ProjectAgamemnon | 8 PRs fixed in one session (2026-05-09) | PRs #154, #259, #270, #292, #336, #342, #160, #285 — all went green and merged |
+
+## Superseded from cpp-atomic-posix-socket-adl-collision
+
+---
+name: cpp-atomic-posix-socket-adl-collision
+description: "Fix C++ build failures when std::atomic members break POSIX socket API calls. Use when: (1) adding std::atomic<int> to a class that uses POSIX socket functions causes build errors like 'call to deleted constructor of std::atomic<int>', (2) a bind() call suddenly resolves as std::bind instead of POSIX bind(), (3) socket/file descriptor operations fail with type errors after a member is changed to atomic."
+category: debugging
+date: 2026-03-31
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - cpp
+  - atomic
+  - posix
+  - adl
+  - socket
+---
+
+# C++ std::atomic POSIX Socket ADL Collision
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-31 |
+| **Objective** | Fix build failures when `std::atomic<int>` members cause unqualified POSIX socket calls to resolve incorrectly via ADL |
+| **Outcome** | All sanitizer CI builds (asan/lsan/ubsan/tsan/msan) pass after applying `.load()` + `::` qualification fixes |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- A class has `std::atomic<int>` or `std::atomic<uint16_t>` members (e.g., `server_fd_`, `port_`)
+- The class also calls POSIX socket functions: `bind()`, `accept()`, `listen()`, `getsockname()`, `setsockopt()`, `close()`, `poll()`
+- Build fails with: `error: call to deleted constructor of 'std::atomic<int>'` at a socket call site
+- The error message mentions `std::bind` in the call stack even though you wrote `bind()`
+- You added `<atomic>` or `<functional>` to a file that previously only used `<sys/socket.h>`
+
+## Verified Workflow
+
+### Quick Reference
+
+```cpp
+// BEFORE (broken — bind() resolves as std::bind via ADL):
+bind(server_fd_, (struct sockaddr*)&address, sizeof(address))
+htons(port_)
+setsockopt(server_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))
+pfd.fd = server_fd_;
+
+// AFTER (correct — explicit POSIX scope + .load()):
+::bind(server_fd_.load(), (struct sockaddr*)&address, sizeof(address))
+htons(port_.load())
+setsockopt(server_fd_.load(), SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))
+pfd.fd = server_fd_.load();
+```
+
+### Detailed Steps
+
+1. **Understand the root cause**: When `<functional>` or `<atomic>` is included (directly or transitively), `std::bind` is in scope. Unqualified `bind(fd, ...)` triggers ADL — the compiler finds `std::bind` which takes a callable and arguments, not file descriptors. The `std::atomic<int>` argument cannot be copy-constructed (deleted), producing the cryptic error.
+
+2. **Find all affected call sites** — every place a `std::atomic<T>` is passed to a POSIX function:
+   ```bash
+   # Find socket calls using atomic members (look for patterns like member_fd_, port_)
+   grep -n "bind\|listen\|accept\|setsockopt\|getsockname\|close\|pfd\.fd" src/file.cpp
+   ```
+
+3. **Apply two fixes to each call site**:
+   - **Add `::` prefix** to ambiguous POSIX functions: `::bind(...)`, `::close(...)`, `::accept(...)`, `::listen(...)`, `::getsockname(...)`, `::setsockopt(...)`
+   - **Add `.load()`** to extract the `int` value from each `std::atomic<int>`: `server_fd_.load()`
+
+4. **`htons()` does NOT need `::` prefix** (it's in `<netinet/in.h>`, not conflicted), but still needs `.load()` for atomic port values.
+
+5. **`close()` is not ambiguous** but still needs `.load()`: `close(server_fd_.load())`
+
+6. **Assignment to non-atomic fields**: `pfd.fd = server_fd_.load()` — `pollfd.fd` is plain `int`
+
+### Full Pattern Reference
+
+```cpp
+// All call sites that need fixing when server_fd_ is std::atomic<int>
+// and port_ is std::atomic<uint16_t>:
+
+// socket() — returns int, store normally: server_fd_ = socket(AF_INET, SOCK_STREAM, 0)
+// setsockopt — needs load + scope:
+::setsockopt(server_fd_.load(), SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt))
+
+// bind — needs load + scope (most critical — ADL collision here!):
+::bind(server_fd_.load(), (struct sockaddr*)&address, sizeof(address))
+
+// htons on atomic port — needs load (no :: needed):
+address.sin_port = htons(port_.load())
+
+// getsockname — needs load + scope:
+::getsockname(server_fd_.load(), (struct sockaddr*)&actual_address, &len)
+
+// listen — needs load + scope:
+::listen(server_fd_.load(), BACKLOG)
+
+// poll — struct field assignment needs load:
+pfd.fd = server_fd_.load()
+
+// accept — needs load + scope:
+int client_fd = ::accept(server_fd_.load(), (struct sockaddr*)&addr, &len)
+
+// close — needs load (no ADL issue but still needs value):
+close(server_fd_.load())
+
+// Conditional checks — needs load:
+if (server_fd_.load() >= 0) { ... }
+if (server_fd_.load() < 0) { ... }
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Just adding `.load()` without `::` on `bind()` | `bind(server_fd_.load(), ...)` | ADL still resolves `bind` as `std::bind` even with plain `int` argument | Must add `::` to explicitly select global namespace `bind` |
+| Only fixing `bind()` | Fixed bind but left setsockopt/getsockname/listen with atomic members | Other call sites still pass `std::atomic<int>` directly to POSIX APIs | Audit ALL socket call sites systematically with grep |
+| Treating as a simple type error | Thought it was just about passing int instead of atomic | The real issue is ADL + name lookup, not just type conversion | `std::bind` in scope from `<functional>` (via `<atomic>`) hijacks unqualified `bind()` |
+| Only applying `.load()` to bind | `bind(server_fd_.load(), ...)` without `::` prefix | ADL still finds `std::bind` and tries to match | Both fixes required together: `::` prefix AND `.load()` |
+
+## Results & Parameters
+
+### Why This Happens
+
+```
+Headers that introduce std::bind into scope:
+  <atomic>  → includes <functional> → introduces std::bind
+
+ADL lookup for bind(server_fd_, ...) where server_fd_ is atomic<int>:
+  → Finds std::bind (takes callable + args)
+  → std::atomic<int> cannot be copy-constructed (deleted constructor)
+  → Error: "call to deleted constructor of std::atomic<int>"
+```
+
+### Grep Pattern to Find All Affected Sites
+
+```bash
+# Find all POSIX socket function calls in a file
+grep -n "bind\|listen\|accept\|setsockopt\|getsockname\|close\|pfd\.fd\|pollfd\|htons" src/monitoring/health_check_server.cpp
+
+# Find atomic member usages
+grep -n "server_fd_\|port_\." src/monitoring/health_check_server.cpp
+```
+
+### Verification
+
+After fixing, all sanitizer builds should pass:
+- `Test (asan)` — AddressSanitizer
+- `Test (lsan)` — LeakSanitizer
+- `Test (ubsan)` — UndefinedBehaviorSanitizer
+- `Test (tsan)` — ThreadSanitizer (may have pre-existing flaky tests, unrelated)
+- `Code Coverage` — Coverage build
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectKeystone | PR #146 — `health_check_server.cpp` atomics | All sanitizer builds pass in CI 2026-03-31 |
+
+## Superseded from cpp-deprecated-field-internal-use-pragma-suppression
+
+---
+name: cpp-deprecated-field-internal-use-pragma-suppression
+description: "Suppress -Wdeprecated-declarations in the struct/class's own .cpp when a field is marked [[deprecated]]. Use when: (1) adding [[deprecated(\"...\")]] to a C++ struct/class member causes the struct's own implementation file to fail under -Werror,-Wdeprecated-declarations, (2) internal assignments to a deprecated field need to be silenced without removing the deprecation marker, (3) a deprecation-marker PR must not refactor internals."
+category: debugging
+date: 2026-05-09
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - cpp
+  - deprecated
+  - pragma
+  - werror
+  - wdeprecated-declarations
+  - diagnostic-suppression
+  - struct-field
+---
+
+# C++ `[[deprecated]]` Field Causes Own .cpp to Fail Under `-Werror`
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-09 |
+| **Objective** | Add `[[deprecated("...")]]` to a C++ struct field without breaking the struct's own implementation file under `-Werror,-Wdeprecated-declarations` |
+| **Outcome** | Successful — CI build passed after wrapping internal assignments with `#pragma GCC diagnostic` blocks |
+| **Verification** | verified-ci — applied to ProjectKeystone PR #545, `src/core/message.cpp` |
+
+## When to Use
+
+- Adding `[[deprecated("...")]]` to a struct or class **member** in a C++ project with `-Werror`
+- The struct's own `.cpp` assigns to the deprecated field internally and now fails to compile
+- You want to keep the deprecation marker for external callers without refactoring internals in the same PR
+- CI error resembles: `error: 'T field' is deprecated [-Werror,-Wdeprecated-declarations]` pointing at your own source file
+
+## Verified Workflow
+
+### Quick Reference
+
+```cpp
+// Wrap a single assignment:
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+msg.command = cmd;
+_Pragma("GCC diagnostic pop")
+
+// Wrap a block of consecutive assignments:
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+msg.command = actionTypeToString(action);
+msg.command = "CANCEL_TASK";
+msg.command = cmd;
+#pragma GCC diagnostic pop
+```
+
+### Detailed Steps
+
+1. **Add the deprecation marker** to the struct field in the header:
+
+   ```cpp
+   struct KeystoneMessage {
+     [[deprecated("Use 'action' field instead; 'command' will be removed in v3.0")]]
+     std::string command;
+     // ...
+   };
+   ```
+
+2. **Build** — CI (or local `-Werror` build) will now fail with errors like:
+
+   ```
+   src/core/message.cpp:42:7: error: 'std::string KeystoneMessage::command' is deprecated
+       [-Werror,-Wdeprecated-declarations]
+      msg.command = cmd;
+          ^~~~~~~
+   ```
+
+3. **Identify all internal assignment/read sites** in the struct's own `.cpp`:
+
+   ```bash
+   grep -n "\.command" src/core/message.cpp
+   ```
+
+4. **Wrap each site** (or each consecutive block) with diagnostic suppression:
+
+   - For a single assignment, use `_Pragma` (works inside macros and inline functions):
+
+     ```cpp
+     _Pragma("GCC diagnostic push")
+     _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+     msg.command = cmd;
+     _Pragma("GCC diagnostic pop")
+     ```
+
+   - For a block of consecutive uses, prefer the cleaner `#pragma` directive form:
+
+     ```cpp
+     #pragma GCC diagnostic push
+     #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+     msg.command = actionTypeToString(action);
+     msg.command = "CANCEL_TASK";
+     msg.command = cmd;
+     #pragma GCC diagnostic pop
+     ```
+
+5. **Rebuild** — the internal uses are now silenced; external callers still see the deprecation warning.
+
+6. **Verify CI passes** with `-Werror` enabled.
+
+### Why Not Remove the Deprecation?
+
+The deprecation is intentional — external callers must migrate. The internal uses are the legacy
+path that has not been ripped out yet. Removing the deprecation defeats the purpose of the PR.
+
+### Why Not Refactor Internal Uses?
+
+Out of scope for a deprecation-marker PR. The PR's purpose is to **start** the deprecation cycle,
+not finish migrating internals. Mixing refactoring into the same PR obscures reviewability and
+increases blast radius.
+
+### Clang Compatibility
+
+Both `#pragma GCC diagnostic` and `_Pragma("GCC diagnostic ...")` are recognized by Clang as
+well as GCC. No separate `#pragma clang diagnostic` block is needed for mixed-compiler projects.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| No suppression | Added `[[deprecated]]` and submitted PR | Internal assignments in the same `.cpp` triggered `-Wdeprecated-declarations`; build failed under `-Werror` | The compiler has no automatic exemption for "a class's own implementation file" — all call sites are treated equally |
+| Removing deprecation | Considered removing `[[deprecated]]` to silence CI | Would defeat the purpose of the deprecation-marker PR; external callers would not be warned | Keep the deprecation, suppress only the internal legacy sites |
+| Refactoring internals | Considered migrating all internal uses in the same PR | Out of scope; changes review surface, increases risk, conflates two separate concerns | Do the pragma suppression now; schedule the internal migration as a follow-up issue |
+
+## Results & Parameters
+
+### Pattern Summary
+
+| Scenario | Pragma Form | When to Use |
+|----------|-------------|-------------|
+| Single assignment | `_Pragma("GCC diagnostic push/ignored/pop")` | Inside macros, template bodies, or single-line contexts |
+| Block of assignments | `#pragma GCC diagnostic push/ignored/pop` | Cleaner for 2+ consecutive uses in a plain `.cpp` block |
+
+### Verified on ProjectKeystone
+
+- **File**: `src/core/message.cpp`
+- **PR**: ProjectKeystone #545 (2026-05-09)
+- **Compiler flags**: `-Werror,-Wdeprecated-declarations` (via CMake)
+- **Fields suppressed**: `KeystoneMessage::command` (3 assignment sites)
+- **CI result**: Build passed (asan / lsan / ubsan variants)
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectKeystone | PR #545 deprecating `KeystoneMessage::command` field | `src/core/message.cpp`, 3 internal assignments wrapped, CI green |
+
+## Superseded from cpp-httplib-lambda-capture-ub
+
+---
+name: cpp-httplib-lambda-capture-ub
+description: "Fix dangling reference UB in cpp-httplib route handler lambdas. Use when: (1) registering cpp-httplib routes that capture shared state by reference, (2) debugging crashes in HTTP handlers after register_routes() returns, (3) reviewing cpp-httplib lambda captures."
+category: debugging
+date: 2026-03-30
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - cpp-httplib
+  - lambda
+  - undefined-behavior
+  - dangling-reference
+  - cpp20
+---
+
+# cpp-httplib Lambda Capture Dangling Reference UB
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-30 |
+| **Objective** | Fix undefined behavior in cpp-httplib route handlers that capture shared state |
+| **Outcome** | Successful — root cause identified and fixed across 20+ route handlers |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Registering cpp-httplib route handlers via a `register_routes(server, store, nats)` helper function
+- Route handlers that capture shared state (Store, NatsClient, etc.)
+- Debugging HTTP handlers that work in simple tests but crash/corrupt under load
+- Code review of any cpp-httplib route registration
+
+## Verified Workflow
+
+### Quick Reference
+
+```cpp
+// WRONG — dangling reference after register_routes() returns:
+void register_routes(httplib::Server& server, Store& store) {
+  server.Get("/v1/agents", [&store](auto& req, auto& res) {
+    // store reference dangles if register_routes stack frame is gone
+    // cpp-httplib copies the lambda by value into internal storage
+  });
+}
+
+// CORRECT — capture pointer by value:
+void register_routes(httplib::Server& server, Store& store) {
+  Store* sp = &store;  // pointer lives in lambda's capture, not stack
+  server.Get("/v1/agents", [sp](auto& req, auto& res) {
+    // sp is a copy of the pointer — safe after register_routes returns
+    res.set_content(sp->list_agents().dump(), "application/json");
+  });
+}
+```
+
+### Detailed Steps
+
+1. In `register_routes()`, extract raw pointers from references at the top:
+   ```cpp
+   Store* sp = &store;
+   NatsClient* np = &nats;
+   ```
+2. Capture `sp` and `np` by value in all lambdas: `[sp, np](...)`
+3. Never capture `&store` or `&nats` — they're function parameters on the stack
+4. This is safe because Store and NatsClient outlive the server (created in main())
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| `[&store]` capture | Reference capture of function parameter | cpp-httplib stores handlers in `std::function` by value — the lambda outlives the `register_routes` stack frame, leaving a dangling reference | cpp-httplib copies lambdas into internal handler storage; any by-ref capture of a local/parameter is UB |
+| `[&]` default capture | Capture everything by reference | Same problem — all references dangle after function returns | Never use `[&]` in cpp-httplib route handlers |
+
+## Results & Parameters
+
+```cpp
+// Pattern used across all 20+ route handlers in ProjectAgamemnon:
+void register_routes(httplib::Server& server, Store& store, NatsClient& nats) {
+  Store* sp = &store;
+  NatsClient* np = &nats;
+
+  server.Get("/v1/health", [](auto&, auto& res) { /* no captures needed */ });
+  server.Get("/v1/agents", [sp](auto&, auto& res) { /* uses sp-> */ });
+  server.Post("/v1/agents", [sp, np](auto& req, auto& res) { /* uses both */ });
+  // ... all handlers follow same pattern
+}
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectAgamemnon | E2E pipeline implementation | 20+ route handlers fixed from [&store] to [sp] capture pattern |
+
+## Superseded from cpp-nlohmann-json-value-nullptr-type-error
+
+---
+name: cpp-nlohmann-json-value-nullptr-type-error
+description: "Fix nlohmann/json value() returning nullptr_t when passed nullptr as default, causing .is_null() compile error. Use when: (1) json.value(key, nullptr).is_null() causes compile error about member reference base type nullptr_t, (2) checking if a json field is null using value() with nullptr default, (3) clang-tidy reports clang-diagnostic-error on a .value() call."
+category: debugging
+date: 2026-04-07
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - nlohmann-json
+  - cpp
+  - cpp20
+  - nullptr
+  - clang-tidy
+  - type-error
+---
+
+# nlohmann/json value() Returns nullptr_t Not json When Passed nullptr
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-07 |
+| **Objective** | Fix clang-diagnostic-error when calling .is_null() on result of json::value() with nullptr default |
+| **Outcome** | Compile error fixed by wrapping nullptr in json() constructor |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- `json.value("key", nullptr).is_null()` causes compile error
+- Error: "member reference base type 'std::nullptr_t' is not a structure or union"
+- Checking if a json field is null using the `value()` accessor
+- clang-tidy reports `[clang-diagnostic-error]` on a `.value()` call with nullptr
+
+## Verified Workflow
+
+### Quick Reference
+
+```cpp
+// WRONG — json::value(key, nullptr) returns nullptr_t, not json:
+if (obj.value("myField", nullptr).is_null()) { ... }
+
+// CORRECT — wrap nullptr in json() to force return type json:
+if (obj.value("myField", json(nullptr)).is_null()) { ... }
+
+// ALTERNATIVE — check contains() + is_null() explicitly:
+if (!obj.contains("myField") || obj["myField"].is_null()) { ... }
+```
+
+### Detailed Steps
+
+1. Find the call to `json::value()` where `nullptr` is passed as the default
+2. Replace bare `nullptr` with `json(nullptr)` to explicitly construct a json null value
+3. The return type of `value<T>(key, default)` is deduced from the type of `default` — `nullptr` deduces to `nullptr_t`, but `json(nullptr)` deduces to `json`
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Bare nullptr default | `obj.value("completedAt", nullptr).is_null()` | clang-diagnostic-error: "member reference base type 'std::nullptr_t' is not a structure or union" | json::value() returns the type of the default argument — nullptr gives nullptr_t, not json |
+
+## Results & Parameters
+
+```cpp
+// nlohmann/json value() signature (simplified):
+// template<typename ValueType>
+// ValueType value(const key_type& key, const ValueType& default_value) const;
+//
+// When called with nullptr, ValueType = std::nullptr_t
+// When called with json(nullptr), ValueType = json  ← correct
+
+// Real-world example from HomericIntelligence/ProjectAgamemnon store.cpp:
+if (body.contains("status") && body["status"] == "completed" &&
+    it->second.value("completedAt", json(nullptr)).is_null()) {
+  it->second["completedAt"] = now_iso8601();
+}
+
+// Error text caught by clang-tidy:
+// src/store.cpp:210:47: error: member reference base type 'std::nullptr_t'
+//     is not a structure or union [clang-diagnostic-error]
+//     it->second.value("completedAt", nullptr).is_null()
+//                                              ^~~~~~~~
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectAgamemnon | store.cpp update_task() — check completedAt null before setting timestamp | CI passes after changing nullptr to json(nullptr) |
+
+## Superseded from cpp-scaffold-cmake-test-path-fix
+
+---
+name: cpp-scaffold-cmake-test-path-fix
+description: "Fix CMake test source path bug in C++20 scaffold repos where add_subdirectory(test) causes double-prefix. Use when: (1) cmake configure succeeds but ctest reports 'No tests were found', (2) test/CMakeLists.txt uses 'test/src/test_main.cpp' as the source path, (3) linking succeeds but gtest never discovers tests, (4) building a scaffolded C++ repo (Agamemnon/Nestor/Charybdis template) for the first time."
+category: debugging
+date: 2026-03-29
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [cmake, gtest, add_subdirectory, test-path, cpp20, scaffold, ctest, odysseus]
+---
+
+# C++ Scaffold CMake Test Path Fix
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-29 |
+| **Objective** | Fix ctest reporting "No tests were found" in C++20 scaffold repos (Agamemnon/Nestor/Charybdis template) |
+| **Outcome** | Successful. Test binary compiles and links. ctest discovers tests correctly. |
+| **Verification** | verified-local — cmake configure + build + ctest verified in both per-repo and meta-repo build contexts |
+
+## When to Use
+
+- `ctest` reports "No tests were found!!!" even though the test executable was built
+- `test/CMakeLists.txt` has `add_executable(..._tests test/src/test_main.cpp)`
+- The repo was generated from the HomericIntelligence C++20 SGSG scaffold template
+- Building a scaffold repo (ProjectAgamemnon, ProjectNestor, ProjectCharybdis) for the first time
+- A new scaffold repo was created and the first `just build` + `just test` fails
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Find the bug
+grep "add_executable" test/CMakeLists.txt
+# Bad:  add_executable(${PROJECT_NAME}_tests test/src/test_main.cpp)
+# Good: add_executable(${PROJECT_NAME}_tests src/test_main.cpp)
+
+# One-line fix (from repo root)
+sed -i 's|add_executable(\${PROJECT_NAME}_tests test/src/test_main.cpp)|add_executable(${PROJECT_NAME}_tests src/test_main.cpp)|' test/CMakeLists.txt
+
+# Verify: build and test from repo root
+cmake --preset debug && cmake --build --preset debug && ctest --preset debug
+
+# Verify: build from meta-repo (Odysseus) with -S/-B override
+cmake -S . -B /tmp/test-build -DCMAKE_BUILD_TYPE=Debug -G Ninja -D${PROJECT_NAME}_BUILD_TESTING=ON
+cmake --build /tmp/test-build
+ctest --test-dir /tmp/test-build --output-on-failure
+```
+
+### Detailed Steps
+
+1. **Understand the bug.** The scaffold generates `test/CMakeLists.txt` which is included via `add_subdirectory(test)` from the root `CMakeLists.txt`. When cmake processes `test/CMakeLists.txt`, `CMAKE_CURRENT_SOURCE_DIR` is already set to `<project>/test/`. The path `test/src/test_main.cpp` therefore resolves to `<project>/test/test/src/test_main.cpp` — a path that doesn't exist. However, cmake doesn't error on this at configure time — it only fails at link time or silently produces a binary that gtest can't discover.
+
+2. **Diagnose.** Run `ctest --output-on-failure` and look for "No tests were found!!!". The test executable was compiled (cmake found *something* to link), but gtest_discover_tests found no TEST() macros. This is a separate symptom — see "Known Non-Issue" below.
+
+3. **Fix.** Edit `test/CMakeLists.txt` line 10:
+   ```cmake
+   # Before (wrong — double test/ prefix after add_subdirectory):
+   add_executable(${PROJECT_NAME}_tests test/src/test_main.cpp)
+
+   # After (correct — relative to test/ directory):
+   add_executable(${PROJECT_NAME}_tests src/test_main.cpp)
+   ```
+
+4. **Verify both build contexts.** The fix must work:
+   - From within the repo: `cmake --preset debug && cmake --build --preset debug`
+   - From meta-repo (Odysseus): `cmake -S <path> -B <BUILD_ROOT>/<Name> -G Ninja -D<Name>_BUILD_TESTING=ON`
+
+   Both use the same `CMakeLists.txt` → `add_subdirectory(test)` → `test/CMakeLists.txt` path, so the fix is context-independent.
+
+5. **Commit in submodule repo** (not in meta-repo):
+   ```bash
+   git checkout -b fix/test-cmake-path
+   git add test/CMakeLists.txt
+   git commit -m "fix(test): correct source path in test/CMakeLists.txt"
+   ```
+   Then update the submodule pointer in the meta-repo:
+   ```bash
+   cd <meta-repo>
+   git add <submodule-path>
+   git commit -m "fix(submodules): update <Name> pointer to fix/test-cmake-path"
+   ```
+
+## Known Non-Issue: "No tests were found" After Fix
+
+After applying the path fix, ctest may still report "No tests were found!!!" for scaffold repos. This is a **separate pre-existing issue** — not a regression:
+
+The scaffold puts `int main()` in `src/main.cpp` which is compiled into the static library `lib<ProjectName>.a`. The test executable links against both this library and `GTest::gtest_main`. The library's `main()` symbol wins at link time, so gtest's `main()` never runs and tests are never registered.
+
+**This is separate from the path bug.** The test binary links and can be executed. To fix the gtest discovery issue, either:
+- Remove `int main()` from `src/main.cpp` (scaffold placeholder — it shouldn't be in a library)
+- Or keep it and add a proper `main()` to the test file that calls `RUN_ALL_TESTS()`
+
+Both scaffold bugs (path + main symbol) need to be fixed together for tests to actually run.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Absolute path in test/CMakeLists.txt | Used `${CMAKE_SOURCE_DIR}/test/src/test_main.cpp` | Works from repo root but breaks when `-S` points to a different directory (Odysseus meta-repo case) | Always use paths relative to `CMAKE_CURRENT_SOURCE_DIR` inside subdirectories; never rely on `CMAKE_SOURCE_DIR` for test sources |
+| Fix only for preset build | Only tested with `cmake --preset debug`, not the `-S/-B` meta-repo path | Meta-repo uses `cmake -S <submodule> -B <BUILD_ROOT>/<Name>` which bypasses presets entirely | Must verify both build contexts: preset (per-repo) and `-S/-B` (meta-repo) |
+
+## Results & Parameters
+
+```yaml
+repos_affected:
+  - control/ProjectAgamemnon   # fix commit: 3362f25
+  - control/ProjectNestor      # fix commit: c060492
+  - testing/ProjectCharybdis   # fix commit: a26835e
+
+root_cause: >
+  SGSG scaffold template generates test/CMakeLists.txt with wrong relative path.
+  add_subdirectory(test) sets CMAKE_CURRENT_SOURCE_DIR to <project>/test/,
+  but the path test/src/test_main.cpp adds another test/ prefix.
+
+fix_pattern: >
+  Change: add_executable(${PROJECT_NAME}_tests test/src/test_main.cpp)
+  To:     add_executable(${PROJECT_NAME}_tests src/test_main.cpp)
+
+works_in_both_contexts:
+  - "cmake --preset debug"  # per-repo, uses CMakePresets.json
+  - "cmake -S <path> -B <external>"  # meta-repo BUILD_ROOT pattern
+
+related_skill: meta-repo-build-root-pattern
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectAgamemnon | PR #68, 2026-03-29 Odysseus full build session | Fix applied, both build contexts verified |
+| ProjectNestor | PR #68, 2026-03-29 Odysseus full build session | Fix applied, both build contexts verified |
+| ProjectCharybdis | PR #68, 2026-03-29 Odysseus full build session | Fix applied, both build contexts verified |
