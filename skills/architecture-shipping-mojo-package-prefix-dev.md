@@ -2,11 +2,12 @@
 name: architecture-shipping-mojo-package-prefix-dev
 description: "End-to-end pattern for making a Mojo library installable via `pixi add <pkg>` from the modular-community channel: idiomatic `src/<package_name>/` layout, `conda.recipe/recipe.yaml` (rattler-build), PR to `modular/modular-community`, and optional Python wheel that bundles the `.mojopkg`. Use when: (1) planning to publish a Mojo library, (2) converting an in-tree `shared/` directory into a distributable package, (3) replacing fictional `mojo install`/`mojo publish` CLI references in docs, (4) deciding between conda channel vs Python wheel vs git dependency for distribution."
 category: architecture
-date: 2026-05-18
-version: "1.0.0"
+date: 2026-05-19
+version: "2.0.0"
 user-invocable: false
-verification: unverified
-tags: [mojo-packaging, prefix-dev, modular-community, rattler-build, mojopkg, python-wheel, conda]
+verification: verified-local
+history: architecture-shipping-mojo-package-prefix-dev.history
+tags: [mojo-packaging, prefix-dev, modular-community, rattler-build, mojopkg, python-wheel, conda, org-fork, upstream-pr]
 ---
 
 # Shipping a Mojo Package via prefix.dev (modular-community)
@@ -15,10 +16,11 @@ tags: [mojo-packaging, prefix-dev, modular-community, rattler-build, mojopkg, py
 
 | Field | Value |
 |-------|-------|
-| **Date** | 2026-05-18 |
+| **Date** | 2026-05-19 |
 | **Objective** | Document the actual, end-to-end pattern for shipping a Mojo library so downstream consumers can `pixi add <pkg>` from the modular-community channel and `from <pkg>.<mod> import <symbol>` in Mojo |
-| **Outcome** | Synthesized plan from surveying NuMojo, decimojo, argmojo, mist, and mojolang.org docs (May 2026). Not yet executed end-to-end in any project the author controls. |
-| **Verification** | unverified |
+| **Outcome** | Executed end-to-end in ProjectOdyssey (issue #5413): `src/projectodyssey/` layout, `conda.recipe/recipe.yaml`, `.mojopkg` build, install-local, Python wheel, and release-artifact attachment all verified. The modular-community PR (modular/modular-community#274) is open but **not yet merged**, so the channel-install end is still unverified. |
+| **Verification** | verified-local — recipe build / install-local / wheel / release artifacts verified locally and in the release run; modular-community channel install pending modular/modular-community#274 merge |
+| **History** | [changelog](./architecture-shipping-mojo-package-prefix-dev.history) |
 
 ## When to Use
 
@@ -44,7 +46,14 @@ These commands **do not exist** in Mojo 1.0 (May 2026). Many tutorials and old I
 
 ## Verified Workflow
 
-> **Verification status: UNVERIFIED — treat this as a "Proposed Workflow".** This workflow has not been validated end-to-end. It is synthesized from reading real published Mojo packages (decimojo, argmojo, NuMojo, mist) and the official Modular docs at <https://mojolang.org/docs/tools/packaging/>. ProjectOdyssey is partway through implementing it (PR #5414 in flight; recipe + release workflow + wheel PRs queued). Treat as a hypothesis until at least one project completes the full conda-channel publish end-to-end.
+> **Verification status: VERIFIED-LOCAL.** ProjectOdyssey (issue #5413) executed this workflow
+> end-to-end: the `src/projectodyssey/` layout, `conda.recipe/recipe.yaml`, local `.mojopkg`
+> build, install-local, the Python wheel, and the release-artifact attachment are all verified
+> locally / in the release run. The **one remaining unverified step** is the modular-community
+> *channel install*: modular/modular-community#274 is open but not yet merged, so consumers
+> cannot yet `pixi add projectodyssey` from the channel. Treat steps 1–4 and 7 as verified;
+> treat step 5 (publish) as verified-up-to-PR-open and the consumer experience (step 6) as
+> pending the upstream merge.
 
 ### Quick Reference
 
@@ -64,8 +73,13 @@ pixi exec --spec rattler-build -- rattler-build build \
   -c https://conda.modular.com/max \
   -c https://repo.prefix.dev/modular-community
 
-# 4. Publish: PR to modular/modular-community
-#    Add recipes/<pkg>/recipe.yaml + a test .mojo file
+# 4. Publish via an ORG FORK (you have no push access to modular/modular-community)
+gh repo fork modular/modular-community --org <ORG> --clone=false   # one-time
+gh repo clone <ORG>/modular-community /tmp/mc                       # auto-adds `upstream`
+cd /tmp/mc && git fetch upstream && git checkout main && git reset --hard upstream/main
+git checkout -b add-<pkg>-recipe   # add recipes/<pkg>/, commit
+git push -u origin add-<pkg>-recipe
+gh pr create --repo modular/modular-community --head <ORG>:add-<pkg>-recipe --title "Add <pkg> recipe"
 #    prefix.dev builds & publishes automatically on merge
 ```
 
@@ -119,15 +133,51 @@ pixi exec --spec rattler-build -- rattler-build build \
   -c https://repo.prefix.dev/modular-community
 ```
 
-#### 5. Publish
+#### 5. Publish — via an org fork (NOT a direct push)
 
-Open a PR to <https://github.com/modular/modular-community>. The README's three required steps:
+You almost certainly do **not** have push access to `modular/modular-community`. Publishing is an
+**upstream-fork contribution workflow**. A script (or human) must fork the repo into the publishing
+org once, then always push branches to the *fork* and open PRs against *upstream*.
 
-1. Fork `modular/modular-community`
-2. Add `recipes/<pkg>/` folder containing `recipe.yaml` + the test `.mojo` file
-3. Open the PR
+```bash
+# 5a. ONE-TIME: fork modular/modular-community into your org
+gh repo fork modular/modular-community --org <ORG> --clone=false
 
-Once merged, prefix.dev's build infrastructure builds and publishes automatically. No further action needed.
+# 5b. Clone the FORK as `origin`. `gh repo clone` of a fork AUTO-ADDS `upstream`.
+gh repo clone <ORG>/modular-community /tmp/mc
+cd /tmp/mc
+# DO NOT run `git remote add upstream ...` — it already exists; double-adding errors (exit 3).
+git remote -v   # origin = your fork, upstream = modular/modular-community
+
+# 5c. Hard-sync the fork's main to upstream BEFORE branching (forks drift)
+git fetch upstream
+git checkout main
+git reset --hard upstream/main
+git push origin main
+
+# 5d. Branch, add recipes/<pkg>/, push to the FORK
+git checkout -b add-<pkg>-recipe
+mkdir -p recipes/<pkg>
+cp /path/to/recipe.yaml recipes/<pkg>/recipe.yaml
+cp /path/to/smoke.mojo  recipes/<pkg>/smoke.mojo
+git add recipes/<pkg>
+git commit -m "Add <pkg> recipe"
+git push -u origin add-<pkg>-recipe
+
+# 5e. Open the PR against UPSTREAM with a cross-fork head ref
+gh pr create --repo modular/modular-community \
+  --head <ORG>:add-<pkg>-recipe \
+  --title "Add <pkg> recipe" \
+  --body "Adds recipes/<pkg>/ ..."
+```
+
+Once merged, prefix.dev's build infrastructure builds and publishes automatically. No further action
+needed.
+
+**`--dry-run` trap:** if a publish script has a `--dry-run` mode that skips the `git push`, dry-run
+will report success even when the script is mis-wired to push directly to `modular/modular-community`
+(which has no push access). Always do at least one **real** (non-dry-run) execution against the fork
+before trusting the script.
 
 #### 6. Consumer experience
 
@@ -174,6 +224,9 @@ decimojo demonstrates a working pattern. Two flavors:
 | Believing `mojo install` / `mojo publish` exist | ProjectOdyssey's pre-May-2026 `shared/INSTALL.md` told users to run `mojo install <pkg>.mojopkg` and `mojo publish` | These commands do not exist in Mojo 1.0. They appear in older tutorials and AI-generated docs but have no implementation. Users hit "command not found" or silent no-ops. | Always verify CLI commands against `mojo --help` (Mojo 1.0, May 2026). The real distribution path is conda/prefix.dev via rattler-build — there is no first-party `mojo` publish UX. |
 | Shipping a flat `shared/` directory as the package root | Tried `mojo package shared/ -o shared.mojopkg` and proposing `shared` as the package name | (a) Non-idiomatic — Modular's docs and every major package (decimojo, argmojo) use `src/<package_name>/`. (b) `shared` is a generic name that would collide on prefix.dev's global namespace. (c) Imports become `from shared.x import y` which is ambiguous across projects. | Always use `src/<unique_package_name>/`. The directory name IS the import name AND the prefix.dev package name — they must all match and must be unique globally. |
 | Full Python native-bindings wheel as first attempt | Tried `mojo build --emit shared-lib` with `@export def PyInit_<pkg>` exposing tensor and layer types | Most Mojo stdlib types (Tensor, List, struct types) are not `ConvertibleFromPython` in Mojo 1.0 (May 2026). Bindings work for scalars (`Int`, `Float64`, `String`) but fail to compile or silently lose data for Tensor/List/custom structs without manual `PythonObject` packing/unpacking on every call site. | Start with the loader-only wheel pattern: bundle the `.mojopkg` as package data and expose `mojopkg_path()`. Add native bindings incrementally, per-symbol, only after confirming `ConvertibleFromPython` is implemented for every parameter and return type involved. |
+| Publish script pushed directly to `modular/modular-community` | `scripts/publish_modular_community.py` cloned `modular/modular-community` and ran `git push -u origin <branch>` against it | No push access to Modular's repo — `git push` is rejected (403 / permission denied). Publishing to an upstream you do not own is always a fork-and-PR workflow. | Fork `modular/modular-community` into the publishing org (`gh repo fork --org <ORG>`), clone the FORK as `origin`, push the branch to the fork, and `gh pr create --repo modular/modular-community --head <ORG>:<branch>`. |
+| `git remote add upstream` after `gh repo clone` of a fork | The script ran `git remote add upstream https://github.com/modular/modular-community` to set up the upstream remote | `gh repo clone` of a *fork* already adds an `upstream` remote automatically; adding it again fails with `fatal: remote upstream already exists` (exit 3) and aborts the script | After `gh repo clone <ORG>/<fork>`, the `upstream` remote already exists — do NOT add it. Just `git fetch upstream`. Only add `upstream` manually if you cloned with plain `git clone`. |
+| `--dry-run` masked the broken push | The publish script was exercised only with `--dry-run`, which reported success | Dry-run skips the actual `git push`, so it never exercised the (broken) direct-push-to-upstream code path. The push-access failure only appeared on the first real run. | A `--dry-run` that skips the push gives false confidence. Do at least one real (non-dry-run) execution against the fork before trusting a publish script. |
 
 ## Results & Parameters
 
@@ -251,7 +304,9 @@ channels = [
 
 | Project | Context | Details |
 |---------|---------|---------|
-| ProjectOdyssey | 4-PR plan: rename `shared/` → `src/projectodyssey/` (PR #5414 in flight), then conda.recipe + release workflow + wheel | Plan synthesized from May 2026 survey; end-to-end conda-channel publish not yet completed |
+| ProjectOdyssey | 4-PR implementation merged: rename `shared/` → `src/projectodyssey/` (#5414), conda recipe (#5415), Python wheel (#5416), release.yml (#5417) | Implementation landed; verification done separately under issue #5413 |
+| ProjectOdyssey | Issue #5413 end-to-end verification — recipe build, install-local, wheel, release artifacts all run successfully | 12 follow-up fix PRs (#5419–#5433); release pipeline reached `create-release` for the first time |
+| ProjectOdyssey | modular-community publish via org fork | `gh repo fork` into HomericIntelligence; modular/modular-community#274 opened (not yet merged — channel install unverified) |
 
 ## See Also
 
