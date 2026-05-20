@@ -768,3 +768,383 @@ class TestMigrateSkill:
 
         captured = capsys.readouterr()
         assert "ci/ci-skill" in captured.out
+
+    def test_unsafe_skill_name_slash_rejected(self, tmp_path, monkeypatch, capsys):
+        import migrate_ecosystem_skills as mod
+
+        target_skills_dir = tmp_path / "skills"
+        monkeypatch.setattr(mod, "SKILLS_DIR", target_skills_dir)
+
+        source_path = self._make_source_skill(tmp_path, "safe-skill")
+        result = migrate_skill("../../evil", "odyssey", source_path, None, dry_run=False, force=False)
+
+        assert result == "failed"
+        assert "refusing" in capsys.readouterr().err.lower()
+
+    def test_empty_skill_name_rejected(self, tmp_path, monkeypatch, capsys):
+        import migrate_ecosystem_skills as mod
+
+        target_skills_dir = tmp_path / "skills"
+        monkeypatch.setattr(mod, "SKILLS_DIR", target_skills_dir)
+
+        source_path = self._make_source_skill(tmp_path, "safe-skill")
+        result = migrate_skill("", "odyssey", source_path, None, dry_run=False, force=False)
+
+        assert result == "failed"
+
+    def test_write_oserror_returns_failed(self, tmp_path, monkeypatch, capsys):
+        import migrate_ecosystem_skills as mod
+
+        target_skills_dir = tmp_path / "skills"
+        monkeypatch.setattr(mod, "SKILLS_DIR", target_skills_dir)
+
+        source_path = self._make_source_skill(tmp_path, "write-fail-skill")
+
+        # Patch SKILLS_DIR.write_text on the resolved target path by injecting an
+        # OSError via the module-level migrate_skill path — simplest: pre-create the
+        # skills dir so mkdir is a no-op, then patch Path.write_text to always raise.
+        target_skills_dir.mkdir(parents=True, exist_ok=True)
+
+        import pathlib
+
+        def _always_raise(*args, **kwargs):
+            raise OSError("disk full")
+
+        monkeypatch.setattr(pathlib.Path, "write_text", _always_raise)
+        result = migrate_skill("write-fail-skill", "odyssey", source_path, None, dry_run=False, force=False)
+
+        assert result == "failed"
+        err = capsys.readouterr().err
+        assert "ERROR" in err
+
+
+# ===========================================================================
+# _format_yaml_value — list item quoting branch (L189-190)
+# ===========================================================================
+
+
+class TestFormatYamlValueListItemQuoting:
+    def test_list_item_needing_quote_is_quoted(self):
+        # Items with colons need quoting inside flow sequences
+        result = _format_yaml_value("tags", ["use when: x", "plain"])
+        assert '"use when: x"' in result
+        assert "plain" in result
+
+    def test_list_item_with_comma_is_quoted(self):
+        result = _format_yaml_value("tags", ["a, b"])
+        assert '"a, b"' in result
+
+
+# ===========================================================================
+# _insert_before_failed_attempts — L330 branch (Results fallback)
+# ===========================================================================
+
+
+class TestInsertBeforeFailedAttempts:
+    """Indirectly tested through add_missing_sections."""
+
+    def test_stub_inserted_before_results_when_no_failed_attempts(self):
+        # Body has ## Results but no ## Failed Attempts — covers the fallback at L330
+        body = (
+            "## Overview\n\n| x | y |\n\n## When to Use\n\n- x\n\n"
+            "## Verified Workflow\n\n### Quick Reference\n```bash\n```\n\n"
+            "## Results & Parameters\n\n- x\n"
+        )
+        result = add_missing_sections(body, "my-skill")
+        # Failed Attempts stub must appear before Results & Parameters
+        fa_pos = result.index("## Failed Attempts")
+        rp_pos = result.index("## Results & Parameters")
+        assert fa_pos < rp_pos
+
+
+# ===========================================================================
+# rename_workflow_section — L396 (already ends with newline — no-op branch)
+# ===========================================================================
+
+
+class TestRenameWorkflowSectionTrailingNewline:
+    def test_result_ends_with_newline_when_body_already_has_trailing_newline(self):
+        # transform_skill only appends "\n" if the assembled result doesn't end with one.
+        # When body already ends with "\n", the result ends with "\n" (L395-396 branch not taken).
+        content = "---\nname: s\ndescription: d\n---\n## Verified Workflow\nsteps\n"
+        result = transform_skill(content, "s", None)
+        assert result.endswith("\n")
+
+    def test_newline_appended_when_body_missing_trailing_newline(self):
+        # This exercises L396: the `result += "\n"` branch.
+        # Craft content that produces a result without a trailing newline before the fix.
+        # We do this by ensuring the assembled body doesn't end with a newline.
+        content = "---\nname: s\ndescription: d\n---\nsome body text"
+        result = transform_skill(content, "s", None)
+        assert result.endswith("\n")
+
+
+# ===========================================================================
+# transform_skill — branches at L440/442/448/450/460/481/483/492
+# (Scylla/Keystone hidden-dir and file-skip branches tested via discover_*)
+# ===========================================================================
+
+
+class TestDiscoverScyllaSkillsEdgeCases:
+    def test_skips_hidden_category_dir(self, tmp_path, monkeypatch):
+        monkeypatch.setitem(__import__("migrate_ecosystem_skills").SOURCES, "scylla", tmp_path)
+        hidden_cat = tmp_path / ".hidden"
+        hidden_cat.mkdir()
+        skill_dir = hidden_cat / "some-skill"
+        skill_dir.mkdir()
+        (skill_dir / "SKILL.md").write_text("content")
+        skills = discover_scylla_skills()
+        assert skills == []
+
+    def test_skips_non_dir_items_in_category(self, tmp_path, monkeypatch):
+        monkeypatch.setitem(__import__("migrate_ecosystem_skills").SOURCES, "scylla", tmp_path)
+        cat_dir = tmp_path / "testing"
+        cat_dir.mkdir()
+        # A plain file inside the category dir (not a skill dir)
+        (cat_dir / "readme.md").write_text("not a skill")
+        skills = discover_scylla_skills()
+        assert skills == []
+
+    def test_skips_hidden_skill_dir_within_category(self, tmp_path, monkeypatch):
+        monkeypatch.setitem(__import__("migrate_ecosystem_skills").SOURCES, "scylla", tmp_path)
+        cat_dir = tmp_path / "testing"
+        cat_dir.mkdir()
+        hidden_skill = cat_dir / ".hidden-skill"
+        hidden_skill.mkdir()
+        (hidden_skill / "SKILL.md").write_text("content")
+        skills = discover_scylla_skills()
+        assert skills == []
+
+    def test_skips_non_dir_subitem_in_tier(self, tmp_path, monkeypatch):
+        monkeypatch.setitem(__import__("migrate_ecosystem_skills").SOURCES, "scylla", tmp_path)
+        cat_dir = tmp_path / "other"
+        tier_dir = cat_dir / "tier-1"
+        tier_dir.mkdir(parents=True)
+        # A file in the tier that is not a skill dir
+        (tier_dir / "notes.txt").write_text("notes")
+        skills = discover_scylla_skills()
+        assert skills == []
+
+
+class TestDiscoverKeystoneSkillsEdgeCases:
+    def test_skips_hidden_item(self, tmp_path, monkeypatch):
+        monkeypatch.setitem(__import__("migrate_ecosystem_skills").SOURCES, "keystone", tmp_path)
+        hidden = tmp_path / ".hidden"
+        hidden.mkdir()
+        (hidden / "SKILL.md").write_text("content")
+        skills = discover_keystone_skills()
+        assert skills == []
+
+    def test_skips_non_dir_items(self, tmp_path, monkeypatch):
+        monkeypatch.setitem(__import__("migrate_ecosystem_skills").SOURCES, "keystone", tmp_path)
+        (tmp_path / "readme.md").write_text("file, not dir")
+        skills = discover_keystone_skills()
+        assert skills == []
+
+    def test_skips_non_dir_subitems_in_nested_scan(self, tmp_path, monkeypatch):
+        monkeypatch.setitem(__import__("migrate_ecosystem_skills").SOURCES, "keystone", tmp_path)
+        tier = tmp_path / "tier-1"
+        tier.mkdir()
+        # A plain file (not a skill subdir) inside the tier
+        (tier / "notes.txt").write_text("notes")
+        skills = discover_keystone_skills()
+        assert skills == []
+
+
+# ===========================================================================
+# build_target_frontmatter — L504-505: get_content_size OSError, L542: unknown source
+# ===========================================================================
+
+
+class TestGetContentSizeOSError:
+    def test_oserror_returns_zero(self, tmp_path):
+        from migrate_ecosystem_skills import get_content_size
+
+        nonexistent = tmp_path / "does-not-exist.md"
+        assert get_content_size(nonexistent) == 0
+
+
+class TestBuildSkillRegistryUnknownSource:
+    def test_unknown_source_in_filter_returns_empty(self, tmp_path, monkeypatch):
+        import migrate_ecosystem_skills as mod
+
+        odyssey = tmp_path / "odyssey"
+        scylla = tmp_path / "scylla"
+        keystone = tmp_path / "keystone"
+        for d in [odyssey, scylla, keystone]:
+            d.mkdir()
+        monkeypatch.setitem(mod.SOURCES, "odyssey", odyssey)
+        monkeypatch.setitem(mod.SOURCES, "scylla", scylla)
+        monkeypatch.setitem(mod.SOURCES, "keystone", keystone)
+
+        # An unrecognised source_filter hits the `else: continue` branch (L542)
+        registry = build_skill_registry(source_filter="unknown-source")
+        assert registry == {}
+
+    def test_priority_deduplication_prefers_larger_content(self, tmp_path, monkeypatch):
+        import migrate_ecosystem_skills as mod
+
+        odyssey = tmp_path / "odyssey"
+        keystone = tmp_path / "keystone"
+        scylla = tmp_path / "scylla"
+        for d in [odyssey, keystone, scylla]:
+            d.mkdir()
+        monkeypatch.setitem(mod.SOURCES, "odyssey", odyssey)
+        monkeypatch.setitem(mod.SOURCES, "scylla", scylla)
+        monkeypatch.setitem(mod.SOURCES, "keystone", keystone)
+
+        # Same skill in both odyssey and keystone — keystone has priority
+        for base in [odyssey, keystone]:
+            sd = base / "dup-skill"
+            sd.mkdir()
+            (sd / "SKILL.md").write_text("content" * (10 if base == keystone else 1))
+
+        registry = build_skill_registry()
+        assert registry["dup-skill"][0] == "keystone"
+
+
+# ===========================================================================
+# parse_args
+# ===========================================================================
+
+
+class TestParseArgs:
+    def test_defaults(self, monkeypatch):
+        import sys
+
+        from migrate_ecosystem_skills import parse_args
+
+        monkeypatch.setattr(sys, "argv", ["migrate_ecosystem_skills.py"])
+        args = parse_args()
+        assert args.dry_run is False
+        assert args.source is None
+        assert args.skill is None
+        assert args.force is False
+
+    def test_dry_run_flag(self, monkeypatch):
+        import sys
+
+        from migrate_ecosystem_skills import parse_args
+
+        monkeypatch.setattr(sys, "argv", ["migrate_ecosystem_skills.py", "--dry-run"])
+        args = parse_args()
+        assert args.dry_run is True
+
+    def test_source_flag(self, monkeypatch):
+        import sys
+
+        from migrate_ecosystem_skills import parse_args
+
+        monkeypatch.setattr(sys, "argv", ["migrate_ecosystem_skills.py", "--source", "odyssey"])
+        args = parse_args()
+        assert args.source == "odyssey"
+
+    def test_skill_flag(self, monkeypatch):
+        import sys
+
+        from migrate_ecosystem_skills import parse_args
+
+        monkeypatch.setattr(sys, "argv", ["migrate_ecosystem_skills.py", "--skill", "my-skill"])
+        args = parse_args()
+        assert args.skill == "my-skill"
+
+    def test_force_flag(self, monkeypatch):
+        import sys
+
+        from migrate_ecosystem_skills import parse_args
+
+        monkeypatch.setattr(sys, "argv", ["migrate_ecosystem_skills.py", "--force"])
+        args = parse_args()
+        assert args.force is True
+
+
+# ===========================================================================
+# main()
+# ===========================================================================
+
+
+class TestMain:
+    def _setup(self, tmp_path, monkeypatch):
+        import sys
+
+        import migrate_ecosystem_skills as mod
+
+        target_skills_dir = tmp_path / "skills"
+        monkeypatch.setattr(mod, "SKILLS_DIR", target_skills_dir)
+        monkeypatch.setattr(sys, "argv", ["migrate_ecosystem_skills.py"])
+        return mod
+
+    def test_empty_registry_returns_0(self, tmp_path, monkeypatch, capsys):
+        mod = self._setup(tmp_path, monkeypatch)
+        monkeypatch.setattr(mod, "build_skill_registry", lambda **_: {})
+        from migrate_ecosystem_skills import main
+
+        result = main()
+        assert result == 0
+        assert "No skills found" in capsys.readouterr().out
+
+    def test_all_migrated_returns_0(self, tmp_path, monkeypatch, capsys):
+        mod = self._setup(tmp_path, monkeypatch)
+        skill_dir = tmp_path / "source" / "alpha"
+        skill_dir.mkdir(parents=True)
+        skill_path = skill_dir / "SKILL.md"
+        skill_path.write_text("---\nname: alpha\ndescription: d\n---\nBody.\n")
+        monkeypatch.setattr(
+            mod,
+            "build_skill_registry",
+            lambda **_: {"alpha": ("odyssey", skill_path, None)},
+        )
+        from migrate_ecosystem_skills import main
+
+        result = main()
+        assert result == 0
+        out = capsys.readouterr().out
+        assert "1" in out
+
+    def test_any_failure_returns_1(self, tmp_path, monkeypatch, capsys):
+        mod = self._setup(tmp_path, monkeypatch)
+        nonexistent = tmp_path / "ghost" / "SKILL.md"
+        monkeypatch.setattr(
+            mod,
+            "build_skill_registry",
+            lambda **_: {"ghost": ("odyssey", nonexistent, None)},
+        )
+        from migrate_ecosystem_skills import main
+
+        result = main()
+        assert result == 1
+
+    def test_dry_run_banner_printed(self, tmp_path, monkeypatch, capsys):
+        import sys
+
+        mod = self._setup(tmp_path, monkeypatch)
+        monkeypatch.setattr(sys, "argv", ["migrate_ecosystem_skills.py", "--dry-run"])
+        monkeypatch.setattr(mod, "build_skill_registry", lambda **_: {})
+        from migrate_ecosystem_skills import main
+
+        main()
+        assert "DRY RUN" in capsys.readouterr().out
+
+
+# ===========================================================================
+# __main__ guard (L719)
+# ===========================================================================
+
+
+class TestMainGuard:
+    def test_main_guard_runs_without_error(self, tmp_path, monkeypatch):
+        import runpy
+        import sys
+
+        import migrate_ecosystem_skills as mod
+
+        monkeypatch.setattr(sys, "argv", ["migrate_ecosystem_skills.py"])
+        monkeypatch.setattr(mod, "build_skill_registry", lambda **_: {})
+
+        import os
+
+        script_path = os.path.join(os.path.dirname(__file__), "..", "scripts", "migrate_ecosystem_skills.py")
+        try:
+            runpy.run_path(script_path, run_name="__main__")
+        except SystemExit as e:
+            assert e.code == 0

@@ -149,6 +149,8 @@ jobs:
           echo "Template structure valid"
       - name: Run test suite
         run: pytest tests/ -v
+      - name: Enforce coverage for migrate_ecosystem_skills.py
+        run: python -m coverage report --include=scripts/migrate_ecosystem_skills.py --fail-under=90
 
   integration-tests:
     name: integration-tests
