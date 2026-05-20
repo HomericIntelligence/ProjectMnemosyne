@@ -1,0 +1,163 @@
+---
+name: ci-cd-verify-merged-prs-end-to-end
+description: "Treat closing an umbrella issue that tracks N sequential implementation PRs as a distinct end-to-end verification task: merged-and-green PRs do not compose. Each PR's CI exercises only its own changed files, so the full pipeline (e.g. packaging: rename → recipe → wheel → release.yml) has never run as a whole. Use when: (1) an umbrella issue stays OPEN after all its child PRs merged, (2) acceptance criteria have not been driven end-to-end, (3) a tag-triggered or rarely-run workflow (release.yml, nightly, weekly E2E) has never actually fired, (4) you suspect 'all PRs merged green so it must work', (5) budgeting effort for a verification pass that uncovers a sequential defect cascade."
+category: ci-cd
+date: 2026-05-19
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [verification, merged-prs, acceptance-criteria, end-to-end, release-pipeline, defect-cascade, umbrella-issue, smoke-test]
+---
+
+# Verifying Merged PRs End-to-End ("merged ≠ verified")
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-19 |
+| **Objective** | Establish that closing an umbrella issue tracking N sequential implementation PRs requires actually running the composed artifacts/pipeline — not assuming merged-green PRs compose into a working whole |
+| **Outcome** | Successful — ProjectOdyssey issue #5413 ("Ship ProjectOdyssey as an installable Mojo package") had 4 implementation PRs already merged green, yet driving the 5 acceptance criteria end-to-end surfaced 12 sequential defects, each fixed in its own follow-up PR. Issue closed completed. |
+| **Verification** | verified-ci — all 12 follow-up fix PRs landed with green CI; the release pipeline reached the `create-release` job for the first time |
+| **History** | n/a (initial version) |
+
+## When to Use
+
+- An umbrella / tracking issue is still **OPEN** even though every child implementation PR has merged
+- Acceptance criteria exist but no one has driven them **end-to-end** — only the individual PRs were reviewed
+- A workflow is **tag-triggered** or **rarely run** (`release.yml`, weekly E2E, nightly) and has never actually fired with real inputs
+- You catch yourself (or a teammate) reasoning "all N PRs merged and CI was green, so the feature works"
+- You need to **budget effort** for closing such an issue — a verification pass is inherently iterative and multi-round-trip
+- A feature was split across "PR 1 of N … PR N of N" — the composition was never tested, only the slices
+
+## The Core Insight: Why Merged ≠ Verified
+
+When a feature is split into N sequential PRs, three structural gaps remain after all N merge green:
+
+1. **Per-PR CI tests only the changed files in isolation.** PR 1 (rename `shared/` → `src/projectodyssey/`)
+   passed its CI; PR 2 (conda recipe) passed its CI; PR 3 (wheel) passed its CI; PR 4 (`release.yml`)
+   passed its CI. **No CI run ever exercised the four together** as one pipeline. CI green on each slice
+   says nothing about the composition.
+
+2. **Defects are SEQUENTIAL — a cascade, not a set.** Each fix unblocks the next failure. You cannot
+   observe defect N+1 until defect N is fixed, because defect N halts the pipeline before N+1's code
+   path is reached. Example chain from ProjectOdyssey #5413:
+   conda `mojo-version` pin wrong → (fix) → in-recipe test bug surfaces → (fix) → install-script bug
+   surfaces → (fix) → … 12 defects deep. A verification pass is therefore **inherently iterative** —
+   budget for many round-trips, not one.
+
+3. **Tag-triggered / rarely-run jobs were never triggered.** A `release.yml` with stages
+   `validate-version → build → test → create-release` only runs when a tag is pushed. If no tag was
+   ever pushed, **every one of those jobs is unverified** regardless of how clean the YAML looks.
+
+**Recommendation:** When an issue tracks "N sequential implementation PRs", treat *closing the issue*
+as a distinct verification task with its own effort budget. Actually run the artifacts and the
+pipeline. Do not assume merged PRs compose. Tag-triggered or rarely-run workflows especially need an
+explicit smoke trigger before the issue can be honestly closed.
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# 1. Enumerate the acceptance criteria from the umbrella issue — these are the verification targets
+gh issue view <ISSUE> --json body --jq .body
+
+# 2. Confirm child PRs merged (this is NOT verification — just context)
+gh pr list --repo <OWNER>/<REPO> --state merged --search "<issue-keyword>"
+
+# 3. Drive EACH acceptance criterion end-to-end with the real artifact/pipeline.
+#    Expect a sequential defect cascade — fix N, re-run, observe N+1, repeat.
+
+# 4. For tag-triggered / rarely-run workflows: force a real run.
+#    Push a throwaway pre-release tag, or use workflow_dispatch if the workflow supports it:
+gh workflow run release.yml --ref main -f version=0.0.0-verify   # if dispatch input exists
+git tag v0.0.0-verify && git push origin v0.0.0-verify           # otherwise: throwaway tag
+gh run watch <RUN_ID>
+git push origin :v0.0.0-verify                                   # delete the throwaway tag after
+
+# 5. Only close the umbrella issue once EVERY criterion is observed passing end-to-end.
+gh issue close <ISSUE> --comment "All N acceptance criteria verified end-to-end. See PRs #..."
+```
+
+### Detailed Steps
+
+1. **Extract the acceptance criteria.** They are the verification contract. If the issue lists
+   "5 acceptance criteria", you have 5 things to *observe* passing — not 4 PRs to confirm merged.
+
+2. **Treat merged child PRs as context, not evidence.** A merged green PR proves its slice compiled
+   and its own tests passed. It does not prove the slice composes with its siblings.
+
+3. **Run the composed pipeline / artifact for real.**
+   - Packaging: actually build the `.conda` / `.mojopkg` / `.whl`, install it into a clean env,
+     import the package.
+   - Release: actually push a tag (throwaway pre-release tag) and watch every job run.
+
+4. **Expect and budget for a defect cascade.** Fix the first failure, re-run, observe the next.
+   Each fix is its own small follow-up PR. Do not try to predict defect N+1 before defect N is
+   fixed — you literally cannot reach that code path yet.
+
+5. **Force tag-triggered / rarely-run workflows to fire.** Use `workflow_dispatch` if the workflow
+   declares an input; otherwise push a throwaway pre-release tag and delete it afterward. A
+   never-triggered job is an unverified job.
+
+6. **File issues for defects you choose not to fix in-pass.** A genuinely out-of-scope or
+   lower-priority defect (e.g. a too-strict version regex) gets its own tracked issue rather than
+   blocking the verification pass.
+
+7. **Close the umbrella issue only when every criterion is observed passing**, and reference the
+   follow-up fix PRs in the closing comment for an audit trail.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Assume merged = done | Treated issue #5413 as effectively complete because its 4 implementation PRs (#5414–#5417) had all merged green | Each PR's CI exercised only its own changed files; the packaging pipeline (rename → recipe → wheel → release.yml) had never run as a composed whole. Driving the acceptance criteria surfaced 12 hidden defects. | Merged-and-green PRs do not compose. Closing an umbrella issue is a separate verification task — actually run the composed artifact/pipeline. |
+| Try to predict the full defect list up front | After hitting the conda `mojo-version` pin bug, attempted to enumerate all remaining packaging defects in one analysis pass | Defects are sequential — each fix unblocks the next failure. Defect N halts the pipeline before defect N+1's code path is even reached, so N+1 is unobservable until N is fixed. | A verification pass is inherently iterative. Budget for many fix→re-run round-trips instead of one big upfront analysis. |
+| Trust `release.yml` because the YAML looked correct | Assumed the tag-triggered release pipeline (validate-version → build → test → create-release) worked because the workflow file passed lint and review | The workflow had never been triggered — no tag was ever pushed — so none of its jobs had ever executed with real inputs. Several bugs only surfaced on the first real run. | Tag-triggered / rarely-run workflows need an explicit smoke trigger (throwaway pre-release tag or `workflow_dispatch`). A never-run job is an unverified job. |
+
+## Results & Parameters
+
+### ProjectOdyssey issue #5413 — defect cascade summary
+
+- **Umbrella issue:** #5413 "Ship ProjectOdyssey as an installable Mojo package", 5 acceptance criteria
+- **Implementation PRs (already merged before the session):** #5414 (rename `shared/` → `src/projectodyssey/`),
+  #5415 (conda recipe), #5416 (Python wheel), #5417 (`release.yml`)
+- **Follow-up fix PRs from the verification pass (12):** #5419, #5421, #5422, #5423, #5424, #5425,
+  #5426, #5427, #5428, #5430, #5431, #5432, #5433
+- **Issue filed for an out-of-scope defect:** #5420 (release.yml semver regex
+  `^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$` rejects hyphenated pre-release suffixes)
+- **Upstream PR opened:** modular/modular-community #274
+- **Outcome:** issue #5413 closed completed; release pipeline reached `create-release` for the first time
+
+### Closing-comment template
+
+```text
+All <N> acceptance criteria verified end-to-end:
+1. <criterion 1> — verified via <how>
+2. <criterion 2> — verified via <how>
+...
+Defects surfaced during verification and fixed: #<a>, #<b>, ... (<count> follow-up PRs).
+Out-of-scope defect tracked separately: #<x>.
+```
+
+### Related defect: AVX-512 ISA mismatch surfaced during the same pass
+
+While driving the pipeline, an ASan SIGILL flake hit 232/298 tests at once. Diagnosed (via the
+`mojo-jit-crash-and-retry-strategies` skill, AVX-512 section) as the AVX-512 ISA mismatch pattern:
+Mojo emitted AVX-512 on a runner whose hypervisor masks the AVX-512 CPUID leaves. **Concrete fix:
+pin sanitizer builds to `--mcpu=x86-64-v3`** (Haswell microarchitecture level, pre-AVX-512) — every
+GitHub-hosted runner supports the `x86-64-v3` level, so this is a safe floor. See
+`mojo-jit-crash-and-retry-strategies` for the full AVX-512 diagnostic flow.
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectOdyssey | Issue #5413 packaging verification session — 4 merged PRs, 12-defect cascade, issue closed completed | Follow-up PRs #5419–#5433; issue #5420 filed; modular/modular-community #274 opened |
+
+## See Also
+
+- `architecture-shipping-mojo-package-prefix-dev` — the packaging pattern whose end-to-end verification produced this skill
+- `ci-cd-podman-host-container-build-dir-permissions` — one defect class (4 of the 12) from this cascade
+- `mojo-jit-crash-and-retry-strategies` — AVX-512 `--mcpu=x86-64-v3` diagnosis used during the same pass
