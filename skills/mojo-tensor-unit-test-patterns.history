@@ -1,0 +1,1398 @@
+<!-- markdownlint-disable MD024 -->
+<!-- markdownlint-disable MD041 -->
+# History: mojo-tensor-unit-test-patterns
+
+Verbatim snapshots of the 12 skills absorbed into this canonical.
+
+---
+
+## Superseded from activate-mojo-str-repr-tests
+
+```markdown
+---
+name: activate-mojo-str-repr-tests
+description: 'Implement Stringable/Representable traits on a Mojo struct and activate
+  commented-out __str__/__repr__ placeholder tests. Use when: a test file has TODO-guarded
+  __str__/__repr__ stubs, you need String()/repr() support on a Mojo struct, or tests
+  are commented out pending string method implementation.'
+category: testing
+date: 2026-03-05
+version: 1.0.0
+user-invocable: false
+---
+# Skill: Activate Mojo __str__/__repr__ Tests
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-03-05 |
+| **Category** | testing |
+| **Objective** | Implement `__str__`/`__repr__` on `ExTensor` and activate placeholder tests in `test_utility.mojo` |
+| **Outcome** | Successfully added `Stringable`/`Representable` traits, implemented both methods, activated 2 tests with concrete assertions |
+| **Context** | Issue #3162 - Activate `__str__`/`__repr__` tests in `test_utility.mojo` (follow-up from #2722) |
+
+## When to Use
+
+Use this skill when:
+
+- A Mojo test file has placeholder stubs like `pass  # Placeholder` with `# TODO(#NNNN): Implement __str__` comments
+- A Mojo struct needs `String(t)` or `repr(t)` support (i.e., `Stringable`/`Representable` traits)
+- Tests are guarded by TODO comments referencing an upstream issue that is now resolved
+- You need to implement both human-readable (`__str__`) and debug-detailed (`__repr__`) string representations
+
+Do NOT use when:
+
+- The upstream implementation issue is still open — verify `__str__`/`__repr__` exist before activating tests
+- The struct already implements `Stringable`/`Representable` — only the test activation step is needed
+- The struct uses a non-standard element access mechanism that `_get_float64` doesn't cover
+
+## Verified Workflow
+
+### Step 1: Confirm Implementation Status
+
+Before activating tests, verify whether `__str__`/`__repr__` already exist:
+
+```bash
+grep -rn "fn __str__\|fn __repr__" shared/core/extensor.mojo
+```
+
+If not present, implementation is needed first (Steps 2-3). If present, skip to Step 4.
+
+### Step 2: Add Traits to Struct Declaration
+
+Locate the struct definition and add `Stringable` and `Representable` to the trait list:
+
+```mojo
+# Before
+struct ExTensor(Copyable, ImplicitlyCopyable, Movable, Sized):
+
+# After
+struct ExTensor(Copyable, ImplicitlyCopyable, Movable, Sized, Stringable, Representable):
+```
+
+### Step 3: Implement __str__ and __repr__
+
+Insert after `__len__` (or at the end of dunder methods). Use the existing internal `_get_float64(index)` method for element access:
+
+```mojo
+fn __str__(self) -> String:
+    """Human-readable string representation."""
+    var result = String("ExTensor([")
+    for i in range(self._numel):
+        if i > 0:
+            result += ", "
+        result += String(self._get_float64(i))
+    result += "], dtype=" + String(self._dtype) + ")"
+    return result
+
+fn __repr__(self) -> String:
+    """Detailed representation for debugging."""
+    var shape_str = String("[")
+    for i in range(len(self._shape)):
+        if i > 0:
+            shape_str += ", "
+        shape_str += String(self._shape[i])
+    shape_str += "]"
+    var result = String("ExTensor(shape=") + shape_str
+    result += ", dtype=" + String(self._dtype)
+    result += ", numel=" + String(self._numel)
+    result += ", data=["
+    for i in range(self._numel):
+        if i > 0:
+            result += ", "
+        result += String(self._get_float64(i))
+    result += "])"
+    return result
+```
+
+### Step 4: Identify Element Access Method
+
+Before implementing, confirm the internal element read method:
+
+```bash
+grep -n "fn _get_float64\|fn _get_float32\|fn _get_int64" shared/core/extensor.mojo
+```
+
+For `ExTensor`, `_get_float64(index: Int) -> Float64` handles all dtypes (float16/32/64 + integer types via cast). Use this for both `__str__` and `__repr__`.
+
+### Step 5: Activate Placeholder Tests
+
+Replace the commented stubs in the test file. The expected format for `String(DType.float32)` is `"float32"`. For `String(Float64(0.0))`, Mojo produces `"0.0"`:
+
+```mojo
+fn test_str_readable() raises:
+    """Test __str__ produces readable output."""
+    var t = arange(0.0, 3.0, 1.0, DType.float32)
+    var s = String(t)
+    assert_equal(s, "ExTensor([0.0, 1.0, 2.0], dtype=float32)", "__str__ format")
+
+
+fn test_repr_complete() raises:
+    """Test __repr__ produces complete representation."""
+    var shape = List[Int]()
+    shape.append(2)
+    shape.append(2)
+    var t = ones(shape, DType.float32)
+    var r = repr(t)
+    assert_equal(
+        r,
+        "ExTensor(shape=[2, 2], dtype=float32, numel=4, data=[1.0, 1.0, 1.0, 1.0])",
+        "__repr__ format",
+    )
+```
+
+### Step 6: Add assert_equal to Imports
+
+Check whether `assert_equal` is already imported in the test file:
+
+```bash
+grep "assert_equal" tests/shared/core/test_utility.mojo
+```
+
+If not present, add it to the `from tests.shared.conftest import (...)` block.
+
+### Step 7: Verify with Pre-commit
+
+```bash
+pixi run pre-commit run --all-files
+```
+
+Expected: all hooks pass (mojo format may show GLIBC errors on older Linux systems — this is a local environment issue, not a code error).
+
+## Key Findings
+
+### DType String Format
+
+`String(DType.float32)` produces `"float32"` — confirmed by multiple test assertions across the codebase (e.g., `test_dtype_ordinal.mojo`, `test_serialization.mojo`).
+
+### Float64 String Format
+
+`String(Float64(0.0))` produces `"0.0"`, `String(Float64(1.0))` produces `"1.0"` — Mojo uses standard decimal float representation for integer-valued floats, matching the issue comment suggestions.
+
+### Implementation Was Missing
+
+The issue assumed `__str__`/`__repr__` were already implemented (follow-up from #2722), but code inspection showed they were absent. Both the implementation AND test activation were required. Always grep for the methods before assuming they exist.
+
+### _get_float64 Handles All Dtypes
+
+The `_get_float64(self, index: Int) -> Float64` method in `ExTensor` handles float16, float32, float64, and all integer types (via `_get_int64` cast). Safe to use as the universal element accessor in `__str__`/`__repr__`.
+
+### Local Mojo Unavailable
+
+The local system had GLIBC version incompatibilities preventing `mojo test` from running. CI (Docker-based) is required for actual test execution. This is expected and acceptable — pre-commit hooks (markdown lint, YAML, trailing whitespace) still pass locally.
+
+## Results & Parameters
+
+| Parameter | Value |
+| ----------- | ------- |
+| `__str__` format | `ExTensor([0.0, 1.0, 2.0], dtype=float32)` |
+| `__repr__` format | `ExTensor(shape=[2, 2], dtype=float32, numel=4, data=[1.0, 1.0, 1.0, 1.0])` |
+| Trait list addition | `Stringable, Representable` |
+| Element accessor | `self._get_float64(i)` |
+| Import needed | `assert_equal` from `tests.shared.conftest` |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Grep for `__str__` in `extensor.mojo` | Expected to find existing implementation based on issue title saying "methods are implemented" | Methods did not exist in `extensor.mojo` — only in unrelated `nvfp4.mojo`/`mxfp4.mojo` | Always verify implementation existence before activating tests; issue descriptions can be wrong |
+| Run `pixi run mojo test` locally | Expected to run tests to verify string format | GLIBC version mismatch (`GLIBC_2.32`, `2.33`, `2.34` not found) | Local Mojo requires newer GLIBC; use Docker/CI for actual test runs |
+| Using `_get_float64_at` as method name | Issue plan suggested this name | Method is actually named `_get_float64` in `ExTensor` | Always grep for actual method names rather than trusting plan docs |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | PR #3371, Issue #3162 | [notes.md](../references/notes.md) |
+```
+
+### activate-mojo-str-repr-tests.notes.md
+
+```markdown
+# Session Notes: Activate __str__/__repr__ Tests in test_utility.mojo
+
+## Issue
+
+- **Issue**: #3162 - Activate `__str__`/`__repr__` tests in `test_utility.mojo`
+- **PR**: #3371
+- **Branch**: `3162-auto-impl`
+- **Repository**: `HomericIntelligence/ProjectOdyssey`
+- **Follow-up from**: #2722 (ExTensor string method implementation)
+
+## Objective
+
+Uncomment and activate the placeholder `test_str_readable` and `test_repr_complete` test
+functions in `tests/shared/core/test_utility.mojo` (lines 350-370), which were guarded by
+`# TODO(#2722)` comments. The issue stated both methods were implemented, but inspection
+showed they were not.
+
+## Files Modified
+
+- `shared/core/extensor.mojo` — added `Stringable, Representable` traits, implemented `__str__` and `__repr__`
+- `tests/shared/core/test_utility.mojo` — added `assert_equal` import, activated 2 test functions
+
+## Key Commands
+
+```bash
+# Search for implementation
+grep -rn "fn __str__\|fn __repr__" shared/core/extensor.mojo
+
+# Find element access methods
+grep -n "fn _get_float64\|fn _get_float32" shared/core/extensor.mojo
+
+# Verify DType string format
+grep -n "assert_equal.*float32" tests/shared/core/test_dtype_ordinal.mojo
+
+# Run pre-commit locally
+pixi run pre-commit run --all-files
+
+# Create PR
+gh pr create --title "feat(core): implement __str__ and __repr__ on ExTensor" \
+  --body "Closes #3162" --label "implementation"
+```
+
+## Actual String Formats
+
+From issue plan comments and codebase analysis:
+
+- `String(DType.float32)` → `"float32"` (confirmed by test_serialization.mojo:45)
+- `String(Float64(0.0))` → `"0.0"` (Mojo standard float formatting)
+- `String(Float64(1.0))` → `"1.0"`
+- `String(Float64(2.0))` → `"2.0"`
+
+## Environment Notes
+
+- Local Mojo unusable due to GLIBC version mismatch (system has GLIBC 2.31, Mojo requires 2.32+)
+- Pre-commit hooks pass locally (markdown, YAML, trailing whitespace)
+- Mojo format hook shows GLIBC errors but does not block commit
+- Test verification requires CI (Docker environment)
+```
+
+---
+
+## Superseded from add-uint-bitwise-not-tests
+
+```markdown
+---
+name: add-uint-bitwise-not-tests
+description: 'Add Mojo UInt bitwise NOT (~) operator tests. Use when: extending bitwise
+  coverage for unsigned integer types, or adding complement operator tests to an existing
+  Mojo test suite.'
+category: testing
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-03-07 |
+| Objective | Add `~` complement operator tests for UInt8, UInt16, UInt32, UInt64 in a Mojo project |
+| Outcome | 16 tests passing in CI; new standalone file added alongside existing bitwise tests |
+
+## When to Use
+
+- Existing Mojo bitwise test suite covers AND, OR, XOR, shifts but omits `~` (NOT)
+- Adding operator coverage for unsigned integer types (`UInt8`, `UInt16`, `UInt32`, `UInt64`)
+- Following up a bitwise test issue (e.g. a GitHub issue references "missing complement operator")
+- Extending `test_unsigned.mojo` or equivalent with not-operator cases
+
+## Verified Workflow
+
+1. **Read the existing bitwise test file** (`tests/shared/core/test_unsigned.mojo`) to match the exact pattern (`fn test_name() raises:`, `raise Error("msg")`, `String(result)` in messages, `fn main():` with try/except/print)
+
+2. **Create a standalone file** `tests/shared/core/test_uint_bitwise_not.mojo` — separate from the existing file to keep concerns isolated and match the issue plan
+
+3. **Implement 4 test functions per type** (16 total across UInt8/16/32/64):
+   - `~T(0)` → max value (all bits set)
+   - `~T(max)` → `0` (all bits cleared)
+   - `~T(alternating)` → bit-inverted alternating pattern
+   - `~~T(x) == x` double-inversion identity
+
+4. **Register in CI workflow** — check `.github/workflows/comprehensive-tests.yml` for explicit file lists; add the new filename to the relevant pattern string alongside `test_unsigned.mojo`
+
+5. **Commit** — all pre-commit hooks (mojo format, YAML, trailing whitespace, EOF) pass automatically for this pattern
+
+## Test Pattern (Copy-Paste Ready)
+
+```mojo
+fn test_uint8_not_zero() raises:
+    """~UInt8(0) should equal 255 (all bits set)."""
+    var result: UInt8 = ~UInt8(0)
+    if result != 255:
+        raise Error("~UInt8(0) expected 255, got " + String(result))
+
+
+fn test_uint8_not_max() raises:
+    """~UInt8(255) should equal 0 (all bits cleared)."""
+    var result: UInt8 = ~UInt8(255)
+    if result != 0:
+        raise Error("~UInt8(255) expected 0, got " + String(result))
+
+
+fn test_uint8_not_alternating() raises:
+    """~UInt8(0b10101010) should equal 0b01010101 (85)."""
+    var result: UInt8 = ~UInt8(0b10101010)
+    if result != 85:
+        raise Error("~UInt8(0b10101010) expected 85, got " + String(result))
+
+
+fn test_uint8_double_inversion() raises:
+    """~~UInt8(42) should equal 42 (double complement identity)."""
+    var val: UInt8 = 42
+    if ~~val != val:
+        raise Error("~~UInt8(42) expected 42")
+```
+
+Alternating bit values per type:
+
+| Type | Input | Expected |
+| ------ | ------- | ---------- |
+| UInt8 | `0b10101010` (170) | `0b01010101` (85) |
+| UInt16 | `0xAAAA` (43690) | `0x5555` (21845) |
+| UInt32 | `0xAAAAAAAA` (2863311530) | `0x55555555` (1431655765) |
+| UInt64 | `0xAAAAAAAAAAAAAAAA` | `0x5555555555555555` |
+
+## CI Registration
+
+The project's `comprehensive-tests.yml` uses explicit file lists. Add the new file to the same
+group as `test_unsigned.mojo`:
+
+```yaml
+pattern: "... test_unsigned.mojo test_uint_bitwise_not.mojo ..."
+```
+
+Check whether the workflow auto-discovers `test_*.mojo` or requires explicit registration before
+assuming no change is needed.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Running tests locally with `pixi run mojo run` | Executed the new test file on the host machine | GLIBC version mismatch (requires 2.32/2.33/2.34, host has older version) | Mojo binary only runs in the CI Docker container; verify syntax by pattern-matching against existing files instead |
+| Using `mojo test` runner | Alternative test execution path | Same GLIBC incompatibility on host | Trust pre-commit hooks (mojo format passes = syntactically valid) as local verification proxy |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #3293, PR #3891 | [notes.md](../../references/notes.md) |
+
+## Results & Parameters
+
+- **Files created**: `tests/shared/core/test_uint_bitwise_not.mojo` (16 test functions)
+- **Files modified**: `.github/workflows/comprehensive-tests.yml` (added filename to pattern)
+- **Pre-commit hooks**: All pass (mojo format, check-yaml, trailing-whitespace, end-of-file-fixer)
+- **PR**: Linked to issue with `Closes #3293`, auto-merge enabled
+```
+
+### add-uint-bitwise-not-tests.notes.md
+
+```markdown
+# Session Notes: add-uint-bitwise-not-tests
+
+## Session Context
+
+- **Date**: 2026-03-07
+- **Repository**: ProjectOdyssey
+- **Branch**: `3293-auto-impl`
+- **Issue**: #3293 — Add UInt bitwise NOT (~) operator tests
+- **PR**: #3891
+
+## Objective
+
+The existing bitwise test suite (#3081) covered AND, OR, XOR, and shifts for unsigned integer
+types but omitted the `~` complement operator. Issue #3293 requested adding NOT tests for
+`UInt8`, `UInt16`, `UInt32`, and `UInt64`.
+
+## Implementation Plan (from issue comments)
+
+The issue had a pre-written implementation plan specifying:
+
+- Create `tests/shared/core/test_uint_bitwise_not.mojo` as a **standalone file**
+- 4 test cases per type: zero, max, alternating bits, double-inversion
+- No implementation changes — `~` is a built-in operator
+
+## Files Changed
+
+```
+tests/shared/core/test_uint_bitwise_not.mojo  (new, 230 lines, 16 test functions)
+.github/workflows/comprehensive-tests.yml     (modified: added filename to pattern)
+```
+
+## Test Case Values
+
+### UInt8 (8-bit, max=255)
+
+```
+~UInt8(0)          == 255
+~UInt8(255)        == 0
+~UInt8(0b10101010) == 85   (0b01010101)
+~~UInt8(42)        == 42
+```
+
+### UInt16 (16-bit, max=65535)
+
+```
+~UInt16(0)      == 65535
+~UInt16(65535)  == 0
+~UInt16(0xAAAA) == 21845  (0x5555)
+~~UInt16(1000)  == 1000
+```
+
+### UInt32 (32-bit, max=4294967295)
+
+```
+~UInt32(0)          == 4294967295
+~UInt32(4294967295) == 0
+~UInt32(0xAAAAAAAA) == 1431655765  (0x55555555)
+~~UInt32(12345)     == 12345
+```
+
+### UInt64 (64-bit, max=18446744073709551615)
+
+```
+~UInt64(0)                    == 18446744073709551615
+~UInt64(18446744073709551615) == 0
+~UInt64(0xAAAAAAAAAAAAAAAA)   == 0x5555555555555555
+~~UInt64(999999)              == 999999
+```
+
+## CI Discovery
+
+`comprehensive-tests.yml` uses explicit file lists (not glob). The new file was added to the
+"Core Activations & Types" group pattern at line 198.
+
+## Environment Constraints
+
+- Host OS GLIBC too old for Mojo binary (requires 2.32/2.33/2.34)
+- Tests verified syntactically via pre-commit `mojo format` hook passing
+- Actual test execution happens in CI Docker container
+```
+
+---
+
+## Superseded from bf16-nan-canonicalization-test
+
+```markdown
+---
+name: bf16-nan-canonicalization-test
+description: 'Test and fix BFloat16 NaN canonicalization in Mojo tensor types. Use
+  when: implementing __hash__ for float tensors, BF16 NaN hashing produces inconsistent
+  results, or debugging NaN bit pattern preservation through dtype conversions.'
+category: testing
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | BFloat16 NaN canonicalization in `__hash__` could silently fail due to numeric cast path |
+| **Root Cause** | `Float64(Float32(BFloat16))` may canonicalize unusual NaN bit patterns before the `isnan()` check |
+| **Fix** | Raw bit manipulation: read UInt16, shift left 16 bits, bitcast to Float32, then convert to Float64 |
+| **Test Strategy** | `make_bf16_nan_tensor` helper writes raw UInt16 bits via pointer cast to bypass `_set_float64` |
+| **Verified** | Canonical NaN (0x7FC0), negative quiet NaN (0xFFC0), and cross-variant hash equality |
+
+## When to Use
+
+- You are implementing or debugging `__hash__` for a Mojo tensor/array type that stores BFloat16 data
+- You see inconsistent hashing for BFloat16 NaN values (different NaN patterns hash differently)
+- You need to test that unusual NaN bit patterns survive a multi-step dtype conversion pipeline
+- You need to write raw float bit patterns to Mojo tensors, bypassing the typed setter
+
+## Verified Workflow
+
+### Quick Reference
+
+| Step | What to Do |
+| ------ | ------------ |
+| 1 | Identify the `_get_float64` / dtype conversion path for BFloat16 |
+| 2 | Replace numeric cast with raw bit manipulation |
+| 3 | Add `make_bf16_nan_tensor` helper that writes raw UInt16 bits |
+| 4 | Test canonical NaN (0x7FC0), negative quiet NaN (0xFFC0), and cross-variant equality |
+
+### Step 1 — Diagnose the conversion path
+
+BFloat16 shares the same sign+exponent layout as Float32 but occupies only the upper 16 bits.
+The naive conversion `Float64(Float32(BFloat16))` goes through the numeric cast path, which
+the CPU may silently canonicalize (setting mantissa to a canonical pattern), destroying the
+original NaN bit signature.
+
+```mojo
+# WRONG — may canonicalize unusual NaN patterns
+elif self._dtype == DType.bfloat16:
+    var ptr = (self._data + offset).bitcast[BFloat16]()
+    return Float64(Float32(ptr[]))
+```
+
+### Step 2 — Fix with raw bit manipulation
+
+BF16 bits map directly to the upper 16 bits of Float32:
+- BF16: `[sign:1][exp:8][mantissa:7]`
+- F32:  `[sign:1][exp:8][mantissa:23]` — lower 16 mantissa bits are zero
+
+```mojo
+# CORRECT — preserves all NaN mantissa bits
+elif self._dtype == DType.bfloat16:
+    var raw_ptr = (self._data + offset).bitcast[UInt16]()
+    var raw: UInt16 = raw_ptr[]
+    var f32_bits: UInt32 = UInt32(raw) << 16
+    var f32_val = UnsafePointer[UInt32](to=f32_bits).bitcast[Float32]()[]
+    return Float64(f32_val)
+```
+
+### Step 3 — Write a raw-bits test helper
+
+Because `_set_float64` also goes through the numeric cast path, you cannot use the normal
+tensor setter to inject unusual NaN values. Use a pointer cast to write raw UInt16 bits directly:
+
+```mojo
+fn make_bf16_nan_tensor(raw_bits: UInt16) -> ExTensor:
+    var t = ExTensor(Shape(1), DType.bfloat16)
+    # Write raw UInt16 bits directly — bypasses _set_float64 numeric cast
+    var raw_ptr = t._data.bitcast[UInt16]()
+    raw_ptr[0] = raw_bits
+    return t
+```
+
+### Step 4 — Test three NaN invariants
+
+```mojo
+def test_bf16_nan_canonical_hash():
+    """Canonical BF16 NaN (0x7FC0) should hash consistently."""
+    var t1 = make_bf16_nan_tensor(0x7FC0)
+    var t2 = make_bf16_nan_tensor(0x7FC0)
+    assert_equal(hash(t1), hash(t2))
+
+def test_bf16_nan_negative_hash():
+    """Negative quiet BF16 NaN (0xFFC0) should hash consistently."""
+    var t1 = make_bf16_nan_tensor(0xFFC0)
+    var t2 = make_bf16_nan_tensor(0xFFC0)
+    assert_equal(hash(t1), hash(t2))
+
+def test_bf16_nan_cross_variant_hash():
+    """Both NaN variants should canonicalize to the same hash."""
+    var t_pos = make_bf16_nan_tensor(0x7FC0)
+    var t_neg = make_bf16_nan_tensor(0xFFC0)
+    assert_equal(hash(t_pos), hash(t_neg))
+```
+
+## BF16 NaN Bit Patterns Reference
+
+| Pattern | Hex | Meaning |
+| --------- | ----- | --------- |
+| `0111 1111 1100 0000` | `0x7FC0` | Canonical positive quiet NaN |
+| `1111 1111 1100 0000` | `0xFFC0` | Negative quiet NaN |
+| `0111 1111 1000 0000` | `0xFF80` | Positive Infinity (NOT NaN — mantissa is zero!) |
+| `1111 1111 1000 0000` | `0xFF80` | Negative Infinity (NOT NaN) |
+
+**Key Rule**: BF16 NaN requires `exp=0xFF` AND `mantissa != 0`. The mantissa is bits [6:0].
+`0x7FC0` has mantissa bit 6 set (quiet NaN bit). `0xFF80` has mantissa = 0 → Infinity.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Test 0xFF80 as negative NaN | Used `0xFF80` as the "negative NaN" bit pattern | `0xFF80` is BF16 negative infinity (mantissa = 0), not NaN; the test would fail the isnan() check | Always verify NaN bit patterns: mantissa must be non-zero. Negative quiet NaN is `0xFFC0`. |
+| Numeric cast for _get_float64 | `Float64(Float32(BFloat16))` | CPU numeric cast canonicalizes NaN before `isnan()` check, different NaN variants get different hashes | Use raw bit manipulation (UInt16 → UInt32 shift → Float32 bitcast) to preserve NaN bits |
+| Use `_set_float64` to inject NaN | Called the typed setter with NaN to populate test tensor | `_set_float64` itself uses the same numeric cast path, immediately canonicalizing the injected value | Use pointer cast (`bitcast[UInt16]`) to write raw bits, bypassing the typed setter entirely |
+
+## Results & Parameters
+
+### Key Code Pattern (Copy-Paste)
+
+```mojo
+# _get_float64: BF16 raw bit preservation
+var raw_ptr = (self._data + offset).bitcast[UInt16]()
+var raw: UInt16 = raw_ptr[]
+var f32_bits: UInt32 = UInt32(raw) << 16
+var f32_val = UnsafePointer[UInt32](to=f32_bits).bitcast[Float32]()[]
+return Float64(f32_val)
+
+# Test helper: inject raw BF16 NaN bits
+fn make_bf16_nan_tensor(raw_bits: UInt16) -> ExTensor:
+    var t = ExTensor(Shape(1), DType.bfloat16)
+    t._data.bitcast[UInt16]()[0] = raw_bits
+    return t
+```
+```
+
+### bf16-nan-canonicalization-test.notes.md
+
+```markdown
+# Session Notes: BF16 NaN Canonicalization
+
+## Session Context
+
+- **Date**: 2026-03-15
+- **Issue**: ProjectOdyssey #4060
+- **PR**: #4862
+- **Branch**: `4060-auto-impl`
+
+## Key Discovery: 0xFF80 is NOT a NaN
+
+Initial plan used `0xFF80` as "negative NaN" test case. During implementation discovered:
+
+- BF16 bit pattern: `[sign:1][exp:8][mantissa:7]`
+- `0xFF80` = `1111 1111 1000 0000` → sign=1, exp=0xFF (all ones), mantissa=0
+- mantissa=0 → **Infinity**, not NaN
+- Correct negative quiet NaN: `0xFFC0` = `1111 1111 1100 0000` (mantissa bit 6 set)
+
+Closes #4060. Follow-up from #3382 (original NaN canonicalization fix for float16/float32/float64).
+```
+
+---
+
+## Superseded from bfloat16-regression-test-pattern
+
+```markdown
+---
+name: bfloat16-regression-test-pattern
+description: 'Pattern for writing bfloat16 regression tests in Mojo that catch silent-failure
+  bugs (missing dtype branches). Use when: (1) adding bfloat16 support to dtype-dispatched
+  functions, (2) auditing existing dtype handlers, (3) writing regression tests after
+  fixing a silent-write or silent-read bug.'
+category: testing
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | Dtype-dispatched functions (e.g. `_get_float32`, `_set_float32`) often have `if/elif` chains for float16/float32/float64 but omit bfloat16, causing silent failures — writes are no-ops and reads return garbage via the integer fallback path. |
+| **Solution** | Three-part regression test: zero-guard, round-trip, and multi-element verification. The zero-guard is the most important — it exactly mirrors the failure mode. |
+| **Language** | Mojo 0.26.1 |
+| **Test File Pattern** | `tests/shared/core/test_extensor_getset_<fn>.mojo` |
+| **Tolerance** | `1e-2` for bfloat16 (7-bit mantissa, ~2 decimal digits precision) |
+
+## When to Use
+
+- After auditing a dtype-dispatched function (grep for `if self._dtype == DType.float16` chains)
+- When fixing a "bfloat16 silent no-op" or "bfloat16 reads garbage" bug
+- When a PR adds a bfloat16 branch but tests only cover float16/float32/float64
+- When reviewing follow-up issues from a prior bfloat16 fix (e.g. issue #3910 follow-up from #3301)
+
+## Verified Workflow
+
+### Quick Reference
+
+```mojo
+# 1. Zero-guard test (read path)
+fn test_get_fn_bfloat16() raises:
+    var t = zeros([1], DType.bfloat16)
+    t._set_float64(0, 1.5)
+    var got = t._get_fn(0)
+    assert_true(Float64(got) != 0.0, "bfloat16 branch missing")
+    assert_almost_equal(Float64(got), 1.5, tolerance=1e-2)
+
+# 2. Zero-guard test (write path)
+fn test_set_fn_bfloat16() raises:
+    var t = zeros([1], DType.bfloat16)
+    t._set_fn(0, FloatType(1.5))
+    var got = t._get_float64(0)
+    assert_true(got != 0.0, "bfloat16 _set_fn silently wrote zero")
+    assert_almost_equal(got, 1.5, tolerance=1e-2)
+
+# 3. Round-trip test
+fn test_get_fn_bfloat16_roundtrip() raises:
+    var t = zeros([4], DType.bfloat16)
+    t._set_fn(0, FloatType(1.0))
+    t._set_fn(1, FloatType(2.0))
+    t._set_fn(2, FloatType(0.5))
+    t._set_fn(3, FloatType(-1.0))
+    assert_almost_equal(Float64(t._get_fn(0)), 1.0, tolerance=1e-2)
+    assert_almost_equal(Float64(t._get_fn(1)), 2.0, tolerance=1e-2)
+    assert_almost_equal(Float64(t._get_fn(2)), 0.5, tolerance=1e-2)
+    assert_almost_equal(Float64(t._get_fn(3)), -1.0, tolerance=1e-2)
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Using `1.5` in round-trip via `_set_float32` | Called `t._set_float32(0, Float32(1.5))` then `_get_float32` on bfloat16 | 1.5 IS exactly representable in bfloat16 (= 1 + 1/2), this actually works | Verify representability before assuming a value is "safe" |
+| Using `2.7` for bfloat16 test | Test value `2.7` used in float32 tests copy-pasted to bfloat16 | 2.7 is not exactly representable in bfloat16; test would fail even with correct code | Use only power-of-2 fractions for bfloat16: 0.5, 1.0, 1.5, 2.0, -1.0 |
+| Reading back via `_get_int64` to verify | Used the int64 fallback to confirm writes | The int64 path reinterprets bfloat16 bits as integers — misread | Always use the float64 cross-check path (`_get_float64`) to verify bfloat16 writes |
+| Checking if fix was needed | Grepped for "bfloat16" in extensor.mojo lines 1188–1246 | Found the fix was already applied in a prior commit; only the tests were missing | Always check both the implementation AND the tests. A fixed function can still lack regression coverage. |
+
+## Results & Parameters
+
+### Bfloat16 tolerance rationale
+
+```text
+bfloat16: 1 sign bit, 8 exponent bits, 7 mantissa bits → tolerance = 1e-2
+float16:  1 sign bit, 5 exponent bits, 10 mantissa bits → tolerance = 1e-3
+float32:  1 sign bit, 8 exponent bits, 23 mantissa bits → tolerance = 1e-6
+```
+
+### Exactly-representable bfloat16 test values
+
+```text
+Safe (power-of-2 fractions):   0.0, 0.5, 1.0, 1.5, 2.0, -0.5, -1.0, -1.5, -2.0
+Unsafe (not exact in bfloat16): 0.1, 0.3, 1.3, 2.7, 3.9
+```
+```
+
+---
+
+## Superseded from extensor-dtype-str-repr
+
+```markdown
+---
+name: extensor-dtype-str-repr
+description: 'Pattern for dtype-aware __str__/__repr__ in Mojo ExTensor and testing
+  integer/bool formatting. Use when: adding string formatting to tensor structs, testing
+  integer types render without decimals, testing bool renders as True/False.'
+category: testing
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Goal** | Fix ExTensor __str__/__repr__ to format integers without decimals and bools as True/False |
+| **Language** | Mojo v0.26.1+ |
+| **Files** | shared/core/extensor.mojo, tests/shared/core/test_utility.mojo |
+| **PR** | #4045, Closes #3376 |
+
+## When to Use
+
+- Adding `__str__` or `__repr__` to a Mojo tensor/array struct
+- The formatting needs to vary by dtype (float vs integer vs bool)
+- Writing tests that verify integer values have no decimal suffix
+- Writing tests that verify bool values display as `True`/`False`
+
+## Verified Workflow
+
+### 1. Add a dtype-dispatching format helper
+
+```mojo
+fn _format_element(self, i: Int) -> String:
+    """Format a single element as a string based on dtype."""
+    if self._dtype == DType.bool:
+        return "True" if self._get_int64(i) != 0 else "False"
+    elif (
+        self._dtype == DType.int8
+        or self._dtype == DType.int16
+        or self._dtype == DType.int32
+        or self._dtype == DType.int64
+        or self._dtype == DType.uint8
+        or self._dtype == DType.uint16
+        or self._dtype == DType.uint32
+        or self._dtype == DType.uint64
+    ):
+        return String(self._get_int64(i))
+    else:
+        return String(self._get_float64(i))
+```
+
+### 2. Update __str__ and __repr__ to use the helper
+
+```mojo
+fn __str__(self) -> String:
+    var result = String("ExTensor([")
+    for i in range(self._numel):
+        if i > 0:
+            result += ", "
+        result += self._format_element(i)
+    result += "], dtype=" + String(self._dtype) + ")"
+    return result
+```
+
+### 3. Write tests using zeros + setitem pattern
+
+```mojo
+fn test_str_int32_no_decimals() raises:
+    var shape = List[Int]()
+    shape.append(3)
+    var t = zeros(shape, DType.int32)
+    t[1] = 1.0
+    t[2] = 2.0
+    var s = String(t)
+    assert_equal(s, "ExTensor([0, 1, 2], dtype=int32)", "__str__ int32 format")
+
+fn test_str_bool_true_false() raises:
+    var shape = List[Int]()
+    shape.append(3)
+    var t = zeros(shape, DType.bool)
+    t[1] = 1.0
+    var s = String(t)
+    assert_equal(
+        s, "ExTensor([False, True, False], dtype=bool)", "__str__ bool format"
+    )
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| `dtype.is_integral()` | Using `self._dtype.is_integral()` to check integer types | Not tested locally due to GLIBC mismatch; codebase never used this pattern | Use explicit `== DType.xxx` comparisons to match existing codebase style |
+| Running mojo locally | `pixi run mojo build shared/core/extensor.mojo` | GLIBC_2.32/2.33/2.34 not found on the host system | Rely on pre-commit hooks for format validation; CI handles actual Mojo compilation |
+
+## Results & Parameters
+
+**Expected string outputs**:
+
+```text
+ExTensor([0.0, 1.0, 2.0], dtype=float32)
+ExTensor([0, 1, 2], dtype=int32)
+ExTensor([False, True, False], dtype=bool)
+ExTensor(shape=[3], dtype=int32, numel=3, data=[0, 1, 2])
+ExTensor(shape=[3], dtype=bool, numel=3, data=[False, True, False])
+```
+```
+
+---
+
+## Superseded from extend-structural-test-with-value-assertions
+
+```markdown
+---
+name: extend-structural-test-with-value-assertions
+description: 'Pattern for closing the value-correctness gap in Mojo tensor tests that
+  only assert structure (strides, contiguity) but not element values. Use when: existing
+  test verifies is_contiguous() or strides but skips element value checks after as_contiguous().'
+category: testing
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+Captures the pattern for extending an existing Mojo test that only checks structural properties
+(strides, `is_contiguous()`) to also verify that element values are correctly reordered after
+`as_contiguous()` on a transposed tensor.
+
+The key gap: a test can pass `is_contiguous() == True` and have correct `_strides` while silently
+producing wrong element values if the copy implementation uses flat indexing instead of
+stride-based indexing.
+
+## When to Use
+
+- An existing test asserts `is_contiguous()` and `_strides[n]` after `as_contiguous()` but has no element-value assertions
+- A follow-up issue requests value-correctness regression coverage for `as_contiguous()` after `transpose()`
+- You want to verify that a non-contiguous copy operation remaps elements (not just metadata) correctly
+
+## Verified Workflow
+
+### Quick Reference
+
+- **Source tensor**: `arange(0.0, N, 1.0)` reshaped to `(rows, cols)`, transposed to `(cols, rows)`
+- **Expected value formula**: `c._get_float64(j * rows + i)` == original value at row `i`, col `j` == `i * cols + j`
+- **Assertion helper**: `assert_almost_equal(c._get_float64(flat_idx), expected, 1e-6, msg)`
+- **Tolerance**: `1e-6` for `DType.float32`
+
+For a `(rows=3, cols=4)` source transposed to `(cols=4, rows=3)`:
+
+```mojo
+# Verify element values are correctly reordered per transpose stride mapping.
+# Original (3,4) row-major: a[i,j] = i*4 + j (values 0..11)
+# Row 0 of transpose = col 0 of original: 0, 4, 8
+assert_almost_equal(c._get_float64(0), 0.0, 1e-6, "c[0,0] should be 0")
+assert_almost_equal(c._get_float64(1), 4.0, 1e-6, "c[0,1] should be 4")
+assert_almost_equal(c._get_float64(2), 8.0, 1e-6, "c[0,2] should be 8")
+assert_almost_equal(c._get_float64(3), 1.0, 1e-6, "c[1,0] should be 1")
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Checking only strides and contiguity | Original test asserted `is_contiguous() == True` and `_strides` | Structural metadata can be correct while element values are wrong | Always append element-value assertions after structural checks |
+| Using `_get_float64(i)` on the non-contiguous tensor before `as_contiguous()` | Asserting values on `t` (the transposed view) | `_get_float64(i)` reads flat memory index `i`, ignoring strides | Assert values on `c` (the contiguous result), not on the non-contiguous view |
+
+## Results & Parameters
+
+- **Source shape**: `(3, 4)` — canonical minimal non-square case, 12 total elements
+- **Value fill**: `arange(0.0, 12.0, 1.0, DType.float32)` — sequential, easy to trace
+- **Transpose**: `.transpose(0, 1)` swaps dims 0 and 1
+- **Result shape**: `(4, 3)` — all 12 elements must be checked
+- **Tolerance**: `1e-6` for float32
+```
+
+---
+
+## Superseded from testing-view-copy-semantics-mismatch
+
+```markdown
+---
+name: testing-view-copy-semantics-mismatch
+description: "Fix CI failures caused by tests assuming __getitem__(Slice) returns a view when it actually returns a copy. Use when: (1) test asserts _is_view but gets False, (2) __setitem__ write-through test fails because the 'view' is actually a copy, (3) slice() vs __getitem__(Slice) semantics diverge, (4) CI fix introduces new failures from implicit type conversion."
+category: testing
+date: 2026-03-24
+version: "1.0.0"
+user-invocable: false
+tags:
+  - view
+  - copy
+  - slice
+  - semantics
+  - mojo
+  - tensor
+  - ci-fix
+  - type-conversion
+---
+
+# View vs Copy Semantics Mismatch in Tensor Tests
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-24 |
+| **Objective** | Fix CI failures introduced by our own PR during iterative bug fixing |
+| **Outcome** | Success -- 2 of 3 failures fixed, 1 identified as pre-existing upstream Mojo bug |
+| **Repository** | ProjectOdyssey |
+| **PR** | #5097 (round 2 fixes) |
+
+## When to Use
+
+- A test asserts `_is_view == True` but fails because `__getitem__(Slice)` returns a copy
+- A `__setitem__` write-through test fails (writes to "view" don't affect the original)
+- CI reports `value passed to 'input' cannot be converted from 'Tensor' to 'AnyTensor'`
+- Fixing one test introduces a new failure because the return type changed
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Check if a method returns view or copy:
+grep -A5 "fn __getitem__.*Slice" shared/tensor/any_tensor.mojo
+# WRONG: var view = tensor[2:8]        # Returns COPY (_is_view=False)
+# RIGHT: var view = tensor.slice(2, 8)  # Returns VIEW (_is_view=True)
+```
+
+### Pattern 1: View vs Copy Semantics
+
+| Method | Returns | `_is_view` | Memory | Use When |
+| -------- | --------- | ------------ | -------- | ---------- |
+| `tensor[a:b]` | Copy | `False` | New allocation | Read-only slicing |
+| `tensor.slice(a, b)` | View | `True` | Shared with parent | Write-through to original |
+
+```mojo
+# WRONG: writes don't affect original
+var view = original[2:8]
+view[0] = Float32(99.0)
+
+# RIGHT: writes affect original
+var view = original.slice(2, 8)
+view[0] = Float32(99.0)
+```
+
+### Pattern 2: Tensor to AnyTensor Conversion
+
+```mojo
+# WRONG: Tensor[DType.float32] cannot convert to AnyTensor
+var output = layer.forward(input)
+
+# RIGHT: Explicit conversion
+var output = layer.forward(input.as_any())
+```
+
+### Iterative CI Fix Workflow
+
+1. Push fix; 2. Wait for CI; 3. Read ALL failures (not just the first); 4. Classify: caused by
+our change vs pre-existing; 5. Fix what we caused, document what's pre-existing; 6. Push and repeat.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Fixed tuple destructuring in test_typed_conv2d | Changed `var (a,b,c) = fn()` to subscript access | Introduced new error: `forward(input)` fails because Tensor can't convert to AnyTensor | When fixing one error in a function, check ALL other calls in that function for type compatibility |
+| Assumed `__getitem__(Slice)` returns view | Test at line 40 asserted `_is_view == True` on `original[2:8]` | `__getitem__(Slice)` explicitly returns a copy per its docstring | Always read the method's docstring before assuming its semantics |
+
+## Results & Parameters
+
+### AnyTensor methods quick reference
+
+```mojo
+tensor[i]           # __getitem__(Int) -> Float32 (element access)
+tensor[a:b]         # __getitem__(Slice) -> AnyTensor COPY
+tensor.slice(a, b)  # slice() -> AnyTensor VIEW (shares memory)
+tensor.clone()      # clone() -> AnyTensor COPY (deep copy)
+tensor.transpose()  # transpose() -> AnyTensor VIEW (stride-based)
+```
+```
+
+---
+
+## Superseded from uint-overflow-wrap-tests
+
+```markdown
+---
+name: uint-overflow-wrap-tests
+description: 'Skill: uint-overflow-wrap-tests. Use when adding overflow/wrap-around
+  tests for Mojo built-in unsigned integer types (UInt8, UInt16, UInt32, UInt64) to
+  verify modular arithmetic at boundary values.'
+category: testing
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+---
+# UInt Overflow/Wrap-Around Tests Skill
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-07 |
+| **Issue** | #3292 — Add UInt overflow/wrap-around behavior tests |
+| **Objective** | 15 tests verifying modular arithmetic at boundary values for UInt8/16/32/64 |
+| **Outcome** | Success — PR #3890 created, pre-commit hooks passed |
+
+## When to Use
+
+- A Mojo test suite covers standard UInt arithmetic but lacks overflow/wrap-around boundary tests
+- Verifying that `UInt8(255) + 1 == 0`, `UInt8(0) - 1 == 255`, etc. for each UInt type
+
+## Verified Workflow
+
+For each UInt type (`UInt8`, `UInt16`, `UInt32`, `UInt64`), add three overflow tests:
+
+| Test Pattern | What to Verify |
+| --- | --- |
+| `max_val + 1 == 0` | Addition overflow wraps to zero |
+| `0 - 1 == max_val` | Subtraction underflow wraps to max |
+| `a * b == 0` when `a*b == 2^N` | Multiplication overflow wraps mod 2^N |
+
+Also add 3 sanity checks (near-boundary values that should NOT wrap).
+
+```mojo
+fn test_uint8_add_overflow() raises:
+    """Test UInt8 addition wraps around at 255 + 1 == 0."""
+    var max_val: UInt8 = 255
+    var one: UInt8 = 1
+    var result = max_val + one
+    if result != 0:
+        raise Error("UInt8(255) + 1 should wrap to 0, got " + String(result))
+```
+
+Overflow-triggering values:
+
+| Type | Add overflow | Sub underflow | Mul overflow (a, b) |
+| ------ | --- | --- | --- |
+| `UInt8` | `255 + 1` | `0 - 1` | `16 * 16 = 256 mod 256 = 0` |
+| `UInt16` | `65535 + 1` | `0 - 1` | `256 * 256 = 65536 mod 65536 = 0` |
+| `UInt32` | `4294967295 + 1` | `0 - 1` | `65536 * 65536 = 2^32 mod 2^32 = 0` |
+| `UInt64` | `18446744073709551615 + 1` | `0 - 1` | `4294967296 * 4294967296 = 0` |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Running `pixi run mojo test` locally | Tried to execute the tests locally to verify | GLIBC version mismatch: system has GLIBC_2.31, Mojo requires GLIBC_2.32+ | Mojo tests only run in Docker/CI on this machine |
+| Creating a new test file | Considered making `test_uint_overflow.mojo` | File already existed (`test_unsigned.mojo`) with the right structure | Always check for existing test files before creating new ones |
+
+## Key Takeaways
+
+1. **Extend existing files** — always prefer appending to an existing test file
+2. **Typed variables are essential** — arithmetic on `var a: UInt8 = 255` stays in UInt8 context
+3. **Include sanity checks** — add 2-3 near-boundary tests that should NOT wrap
+4. **Multiplication overflow values** — pick `a * b = exactly 2^N` for clean wrap-to-zero
+```
+
+---
+
+## Superseded from unique-tmp-path-per-test-run
+
+```markdown
+---
+name: unique-tmp-path-per-test-run
+description: 'Replace hardcoded /tmp test file paths with unique per-run paths to
+  prevent stale state. Use when: a test writes a fixed temp path that can persist
+  across aborted runs, or parallel runs may collide.'
+category: testing
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | Tests using a hardcoded `/tmp/<name>.txt` path leave stale files if the test aborts before cleanup |
+| **Solution** | Generate a unique path per run using a nanosecond counter suffix |
+| **Language** | Mojo (Mojo v0.26.1) |
+| **Pattern** | `from time import perf_counter_ns` → `String(perf_counter_ns())` suffix |
+| **Effort** | Single targeted edit — 2-3 lines changed |
+
+## When to Use
+
+- A test file has a hardcoded `/tmp/<fixed-name>` path for a temporary file
+- Parallel CI matrix runs could execute the same test simultaneously and collide
+- A test aborted mid-run and left a stale `/tmp` file, causing the next run to fail
+
+## Verified Workflow
+
+```mojo
+# Before
+var test_path = "/tmp/test_remove_safely_3283.txt"
+
+# After
+from time import perf_counter_ns
+var suffix = String(perf_counter_ns())
+var test_path = "/tmp/test_remove_safely_" + suffix + ".txt"
+```
+
+Key decisions:
+- `perf_counter_ns()` over `uuid`: Mojo v0.26.1 stdlib has no `uuid` module
+- Import inside function is valid Mojo syntax
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Use `uuid` module | Tried `from uuid import uuid4` | Mojo v0.26.1 stdlib has no `uuid` module — compile-time error | Check Mojo stdlib availability before choosing a uniqueness strategy |
+| Move import to module level | Adding import at top of file | Not needed — inline import works and minimises diff size | Prefer the smallest change that solves the problem |
+| Add a new helper function | Extracting `make_tmp_path()` utility | YAGNI — only one call site | Don't abstract one-off patterns; inline is cleaner |
+```
+
+---
+
+## Superseded from enable-disabled-mojo-tests
+
+```markdown
+---
+name: enable-disabled-mojo-tests
+description: 'Re-enable disabled, skipped, or TODO-stubbed Mojo test files by identifying
+  the root cause and replacing stubs with real tests. Use when: (1) a .mojo test file
+  has a NOTE saying tests are disabled or prints SKIPPED with no test functions, (2)
+  a test file has TODO markers citing an issue number with commented-out test code,
+  (3) backward pass tests are commented out with stale ownership/borrowing notes, (4)
+  a cleanup issue asks to re-enable tests, (5) blocking components are now implemented,
+  or (6) pytest.skip() guards exist for resolved configuration issues.'
+category: testing
+date: 2026-04-07
+version: 2.0.0
+user-invocable: false
+tags:
+  - mojo
+  - tests
+  - skip
+  - todo
+  - disabled
+  - re-enable
+  - cleanup
+---
+## Overview
+
+This skill covers all forms of disabled/skipped/TODO Mojo (and Python pytest) tests:
+re-enabling NOTE-stubbed files, uncommenting TODO test code, re-enabling backward pass
+tests after type alias fixes, and removing pytest.skip guards for resolved configuration
+issues.
+
+## When to Use
+
+- A `.mojo` test file's `main()` only prints a skip message ("SKIPPED") with no actual test functions
+- A test file has a `NOTE: These tests are temporarily disabled` comment
+- Test stubs exist with commented-out body: `# var result = fn(...)` and `pass # Placeholder`
+- Functions are implemented in a module file but absent from `__init__.mojo` exports
+- Backward pass tests are commented out with a note like "disabled due to ownership issues"
+- `pytest.skip()` calls exist that guard tests for missing configs or wrong paths
+
+Do NOT use when:
+- Tests are skipped due to an active, unfixed compiler bug (document blocker instead)
+- Tests require external resources not available in CI
+
+## Verified Workflow
+
+### Phase 0: Determine the Disable Pattern
+
+| Pattern | Indicator | Action |
+| --------- | ----------- | -------- |
+| Stub file | `main()` only prints "SKIPPED", no test functions | Write all tests from scratch |
+| NOTE-disabled | `NOTE: temporarily disabled pending X` | Check if X is resolved, then write tests |
+| TODO commented-out | `# var b = fn(a)` + `pass # Placeholder` | Uncomment + fix syntax |
+| Backward-pass disabled | `# DISABLED — ownership issues in XBackwardResult` | Check type alias, write analytical tests |
+| pytest.skip() | `if not file.exists(): pytest.skip(...)` | Fix path or config, remove guard |
+
+**Always read the actual file before assuming its structure.**
+
+### DataLoader Shape Requirement
+
+`DataLoader` requires 2D input — always use `[n_samples, feature_dim]`:
+
+```mojo
+var data = ones([n_samples, 10], DType.float32)
+var labels = zeros([n_samples, 1], DType.float32)
+return DataLoader(data^, labels^, batch_size=4)
+```
+
+### Common syntax bugs in commented-out Mojo code
+
+| Bug Pattern | Fix |
+| ------------- | ----- |
+| `target_shape[0] = 4` | `target_shape.append(4)` (List requires append) |
+| `var b = tile(a, 3)` | `var reps = List[Int](); reps.append(3); var b = tile(a, reps)` |
+| `List[Int](1, 2, 3)` constructor | Use list literals `[1, 2, 3]` (Mojo v0.26.1+) |
+
+### Commit without mojo-format on GLIBC-old hosts
+
+```bash
+SKIP=mojo-format git commit -m "fix(training): re-enable X tests"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Assuming tests existed but were "disabled" | Expected skip guard or `@disabled` annotation | The file had zero test functions — it was a complete stub | Always `Read` the actual file before assuming its structure |
+| Write file via Write tool without reading first | Called Write tool on existing file | Write tool requires the file to be Read first | Always Read the existing file before calling Write |
+| Run `pixi run mojo run test_X.mojo` to verify | Executed mojo directly on host | GLIBC_2.32/2.33/2.34 not found | Mojo tests can only be verified in CI (Docker). |
+| Create DataLoader with 1D data `[n_samples]` | Passed flat tensor to DataLoader | DataLoader reads `self.data.shape()[1]` for feature_dim, panics on 1D | DataLoader requires 2D input: `[n_samples, feature_dim]`. |
+| Looking for `shared/core/types/unsigned.mojo` | Searched for the custom wrapper module the disable note referenced | File never existed — was abandoned before being created | When a module is referenced in a note but doesn't exist, test the builtins instead |
+| Using `List[Int](1, 2, 3)` constructor syntax | Tried older Mojo list construction pattern | Mojo v0.26.1+ uses list literals `[1, 2, 3]` | Use list literal syntax |
+| `target_shape[0] = 4` for initialization | Assignment to index on new List | Mojo List requires `append()` not index-assignment for new elements | Always use `.append()` to build Lists in Mojo |
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #3082 — re-enable test_validation_loop.mojo | Validation loop tests, DataLoader 2D shape pattern |
+| ProjectOdyssey | Issue #3085 — re-enable Conv2D backward tests | Backward pass, GradientTriple/GradientPair field names |
+| ProjectOdyssey | Issue #3081 — re-enable test_unsigned.mojo | Stub file, 18 tests written from scratch |
+| ProjectOdyssey | Issue #3013 — ExTensor shape operations | TODO uncomment, missing __init__.mojo exports |
+| ProjectScylla | Issue #670 — resolve skipped pytest tests | pytest.skip removal, Pydantic field fix, path fix |
+```
+
+---
+
+## Superseded from placeholder-test-staleness-annotations
+
+```markdown
+---
+name: placeholder-test-staleness-annotations
+description: 'Upgrade pass-only placeholder tests with TODO annotations, cross-issue
+  references, and concrete test specs. Use when: placeholder tests contain only `pass`,
+  are blocked on an unimplemented dependency, or need to be made grep-discoverable.'
+category: testing
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Goal** | Prevent placeholder tests from going silently stale |
+| **Language** | Mojo (applies to any language) |
+| **Trigger** | Issue tracking stale/pass-only placeholder tests |
+| **Output** | Annotated tests with `# TODO(#N)`, cross-issue docstrings, and concrete test specs |
+
+## When to Use
+
+- Placeholder tests contain only `pass` and a vague `NOTE(#N)` comment in the docstring
+- The blocking dependency (e.g. `from_array()` in #3013) is not yet implemented
+- You want `grep -r 'TODO(#3013)'` to surface all tests waiting on a dependency
+
+## Verified Workflow
+
+```
+1. grep for placeholder tests (fn test_foo.*raises)
+2. For each: add # TODO(#DEP-ISSUE) above pass
+3. Update docstring: reference both dep issue and tracking issue
+4. Add concrete test spec (array values, expected shapes/dtypes)
+5. Commit with docs(tests): prefix
+```
+
+**Before:**
+
+```mojo
+fn test_from_array_1d() raises:
+    """NOTE(#3013): from_array() is not yet implemented."""
+    pass
+```
+
+**After:**
+
+```mojo
+fn test_from_array_1d() raises:
+    """Blocked on #3013 (from_array() not yet implemented).
+    Tracked by #4127 to prevent this placeholder from going stale.
+    Once #3013 merges, implement using a 3-element Float32 array:
+      [0.5, 1.0, 1.5] -> shape [3], dtype float32.
+    """
+    # TODO(#3013): implement when from_array() ships
+    pass
+```
+
+Standard FP-representable test values: `0.0, 0.5, 1.0, 1.5, -0.5, -1.0`.
+
+Use `docs(tests):` commit prefix (not `fix:` or `feat:` — no behavior changes).
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Implement the actual test | Write real assertions without `from_array()` existing | `from_array()` is not in the codebase yet; compilation would fail | Don't implement until the dependency ships; annotation is the right deliverable |
+| Remove the placeholder entirely | Delete the `pass`-only test functions | Loses intent and spec | Keep placeholders; they document what must be tested |
+| Use `NOTE(#N)` prose only | Leave as vague comment in docstring | Not grep-discoverable | `# TODO(#N)` above `pass` is machine-readable |
+| Combine dep and tracking issue refs | Only reference `#3013` | The tracking issue (#4127) context lost | Always reference both: the blocker and the staleness-tracker |
+```
+
+---
+
+## Superseded from resolve-blocked-todos
+
+```markdown
+---
+name: resolve-blocked-todos
+description: 'Resolve TODO markers blocked by a now-closed issue. Use when: (1) a
+  tracking issue has TODO(#N) markers and issue #N is now closed, (2) disabled tests
+  have TODO comments waiting on a dependency, (3) cleanup issues need to be resolved
+  after a blocking PR merges.'
+category: testing
+date: 2026-03-05
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Property | Value |
+| ---------- | ------- |
+| **Category** | testing |
+| **Trigger** | Blocking issue closed; TODO(#N) markers remain in code |
+| **Outcome** | All TODO markers removed, disabled tests enabled, functionality implemented |
+
+## When to Use
+
+- `gh issue view N --json state -q '.state'` returns `"CLOSED"` for the blocking issue
+- Tests are commented out with TODO markers and the dependency is now resolved
+
+## Verified Workflow
+
+```bash
+# Phase A: Verify blocking issue is closed
+gh issue view <N> --json state -q '.state'   # must return "CLOSED"
+
+# Phase B: Locate all TODO markers
+grep -rn "TODO.*#<N>\|TODO(#<N>)" --include="*.mojo" .
+
+# Phase C: Check for implementation on feature branch
+git branch --all | grep "<N>"
+git cherry-pick <commit-hash> --no-commit
+
+# Phase G: Verify no TODO markers remain
+grep -rn "TODO.*#<N>" --include="*.mojo" .
+```
+
+For each TODO: remove the comment, uncomment test code, replace `pass  # Placeholder`
+with real assertions, add needed imports.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Assumed blocking issue was still open | Relied on tracking issue description "wait until #2722 resolves" | Issue had been closed since the tracking issue was created | Always verify `gh issue view N --json state` first |
+| Waited for methods to appear in main | Expected `__str__`, `__repr__`, `__hash__` in current main branch | Implementation was on branch `2722-auto-impl`, not yet merged | Check git branches and cherry-pick from the feature branch |
+| Use `contiguous(b)` as a module-level function | Test comments implied module-level function | Only `tensor.contiguous()` method and `as_contiguous()` function exist | Always verify function signatures with grep before enabling commented code |
+```
