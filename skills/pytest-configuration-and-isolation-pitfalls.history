@@ -1,0 +1,866 @@
+<!-- markdownlint-disable MD024 -->
+# History: pytest-configuration-and-isolation-pitfalls
+
+This file contains verbatim snapshots of all skills superseded by the canonical
+`pytest-configuration-and-isolation-pitfalls` skill (epic #1862, cluster P2-testing-C7).
+
+---
+
+## Superseded from testing-pytest-ini-shadows-pyproject
+
+~~~markdown
+---
+name: testing-pytest-ini-shadows-pyproject
+description: "TRIGGER CONDITIONS: (1) CI Python test job hangs until timeout with no visible failure, (2) pytest warns 'ignoring pytest config in pyproject.toml!', (3) tests fail with ModuleNotFoundError even though pythonpath is set in pyproject.toml, (4) asyncio tests hang indefinitely after import failure."
+category: testing
+date: 2026-04-25
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: []
+---
+
+# pytest.ini Silently Shadows pyproject.toml Config
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-25 |
+| **Objective** | Diagnose CI Python test job hanging until timeout; fix root cause |
+| **Outcome** | Success — deleting `pytest.ini` restored `pyproject.toml` authority and tests collected correctly |
+| **Verification** | verified-local (CI outcome pending at time of capture) |
+
+## When to Use
+
+- CI Python test job hits `timeout-minutes` gate on every run with no explicit failure message
+- pytest log shows: `configfile: pytest.ini (WARNING: ignoring pytest config in pyproject.toml!)`
+- Tests fail with `ModuleNotFoundError` on `import src.*` even though `pythonpath = ["src"]` is in `pyproject.toml`
+- asyncio-mode tests appear to hang indefinitely after a collection error
+- A `pytest.ini` exists in the repo root alongside `pyproject.toml`
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Check which config file pytest is actually using
+pytest --co -q 2>&1 | grep "configfile:"
+
+# Check precedence — if pytest.ini exists, pyproject.toml is ignored
+ls pytest.ini setup.cfg tox.ini 2>/dev/null
+
+# Fix: delete pytest.ini if pyproject.toml [tool.pytest.ini_options] is authoritative
+git rm pytest.ini
+```
+
+### Detailed Steps
+
+1. **Identify the shadowing**: Run pytest with collection-only and grep for the config file warning:
+
+   ```bash
+   pytest --co -q 2>&1 | grep -E "configfile:|WARNING"
+   # If output contains: configfile: pytest.ini (WARNING: ignoring pytest config in pyproject.toml!)
+   # → pytest.ini is active and pyproject.toml settings are completely ignored
+   ```
+
+2. **Audit what each file contains**: Compare `pytest.ini` to `[tool.pytest.ini_options]` in `pyproject.toml`:
+
+   ```bash
+   cat pytest.ini
+   grep -A 20 '\[tool.pytest.ini_options\]' pyproject.toml
+   ```
+
+   Look for settings present in `pyproject.toml` but absent from `pytest.ini`, especially:
+   - `pythonpath = ["src"]` — if missing, all `import src.*` fail at collection
+   - `addopts` with coverage flags
+   - `asyncio_mode`
+
+3. **Confirm the hang mechanism**: With `pythonpath` missing, test collection fails with `ModuleNotFoundError`. In `asyncio_mode = auto`, failed imports leave dangling event loop tasks. Pytest waits for those tasks forever — the process never exits until the OS timeout kills it.
+
+4. **Fix**: If `pyproject.toml` is the authoritative config (contains all necessary settings), delete `pytest.ini`:
+
+   ```bash
+   git rm pytest.ini
+   git commit -m "fix(test): remove pytest.ini — pyproject.toml is authoritative config"
+   ```
+
+5. **Verify collection succeeds**:
+
+   ```bash
+   pytest --co -q 2>&1 | head -20
+   # Should show: configfile: pyproject.toml (no WARNING)
+   # All test modules should collect without ModuleNotFoundError
+   ```
+
+6. **Verify tests pass**:
+
+   ```bash
+   pytest -x
+   ```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Increase `timeout-minutes` | Raised CI job timeout from 10 to 20 minutes | Rejected by team — tests exceeding 10 min are considered buggy; and the root cause was not slow tests but infinite hang | Never mask a hang by increasing timeout; diagnose the hang |
+| Inspect test source for slow `asyncio.sleep` | Found 3 tests with `asyncio.sleep(10.0)` — filed as issue #480 | These were not the cause of the CI timeout; they run fine once imports succeed | Collection failures cause hangs independent of test execution time |
+
+## Results & Parameters
+
+### pytest config precedence (highest to lowest)
+
+```
+pytest.ini          ← WINS — completely silences pyproject.toml
+pyproject.toml      ← [tool.pytest.ini_options] ignored if pytest.ini exists
+setup.cfg           ← [tool:pytest] section
+tox.ini             ← [pytest] section
+```
+
+### Minimal pytest.ini that caused the issue
+
+```ini
+[pytest]
+asyncio_mode = auto
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+```
+
+Note: `python_files`, `python_classes`, `python_functions` are pytest defaults — the file was functionally redundant except for `asyncio_mode`, which was also in `pyproject.toml`.
+
+### Authoritative pyproject.toml config (after fix)
+
+```toml
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]        # CRITICAL — was absent from pytest.ini
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["--cov=keystone", "--cov-report=term-missing"]
+```
+
+### Failure cascade when `pythonpath` is missing
+
+```
+pytest collects test files
+  → test file: from keystone.transport import MessageBus
+  → ModuleNotFoundError: No module named 'keystone'
+  → asyncio_mode = auto creates event loop for coroutine tests
+  → import failure leaves event loop task dangling
+  → pytest waits for event loop tasks to complete
+  → process hangs indefinitely until OS timeout kills the job
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectKeystone | CI `Python Tests` job hung on every run; branch `fix/security-scan-gitleaks-jq` | pytest.ini had no `pythonpath`, pyproject.toml had `pythonpath = ["src"]` |
+~~~
+
+---
+
+## Superseded from pytest-coverage-fail-under-partial-run-trap
+
+~~~markdown
+---
+name: pytest-coverage-fail-under-partial-run-trap
+description: "[tool.coverage.report] fail_under = X in pyproject.toml fires for EVERY pytest invocation, not just full-suite runs. Partial test runs (e.g., `pytest -m integration`, single test class, single file) measure coverage of only what they execute, naturally producing lower numbers and tripping the global gate even when the full suite is well above threshold. Use when: (1) integration-only CI job fails with 'Required test coverage of X.0% not reached' but full-suite coverage is fine, (2) running a single pytest file or class trips coverage gate, (3) you suspect coverage failure caused by recently-added gate and partial test selection rather than real coverage regression, (4) deciding whether to put coverage gate in pyproject.toml's [tool.coverage.report] vs in CI workflow's --cov-fail-under flag."
+category: testing
+date: 2026-05-07
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [pytest, coverage, fail-under, ci, integration-tests, partial-runs, coverage-gate]
+---
+
+# pytest fail_under Trips on Partial Test Runs
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-07 |
+| **Objective** | Document the non-obvious failure mode where `[tool.coverage.report].fail_under` fires for any pytest invocation, including partial test selections |
+| **Outcome** | Discovered + worked around in ProjectHermes during a 31-PR rebase swarm; codified here so future sessions don't waste a wave debugging it |
+| **Verification** | verified-ci — observed in CI logs across multiple PRs and reproduced locally |
+
+## When to Use
+
+- A CI job runs `pytest -m integration` (or `pytest -m "not integration"`, or `pytest tests/specific.py`) and fails with `FAIL Required test coverage of X.0% not reached. Total coverage: <X-2>%`
+- The full-suite `pytest` run on the same codebase shows much higher coverage (e.g., 96%) but a partial run shows lower
+- You're deciding where to put the coverage gate: in `pyproject.toml` (applies to every invocation) vs in CI workflow YAML (`--cov-fail-under=X`, applies only to that step)
+- A recently-merged PR added `fail_under = X` to pyproject.toml without verifying integration-only runs hit that threshold
+- A bisect of "why is CI failing" lands on a coverage-gate failure that doesn't make sense given the actual coverage of the codebase
+
+## Verified Workflow
+
+### Quick Reference
+
+The fix has two viable shapes; pick based on intent:
+
+```toml
+# Option A: Remove gate from pyproject.toml. Put it ONLY in CI on the full-suite step.
+# pyproject.toml:
+[tool.coverage.report]
+# fail_under = 80   <- DELETE this
+precision = 2
+```
+
+```yaml
+# .github/workflows/ci.yml — only the FULL-suite step has the gate:
+- name: Unit tests (full suite)
+  run: pixi run pytest -m "not integration" --cov-fail-under=80
+- name: Integration tests
+  run: pixi run pytest -m integration -v   # NO --cov-fail-under here
+```
+
+```bash
+# Option B: Pass --no-cov on partial pytest runs to disable coverage measurement (and gate) for them
+pixi run pytest -m integration --no-cov
+```
+
+```bash
+# Option C: Add tests so partial runs hit the threshold (real but slow)
+# Identify uncovered modules during integration runs:
+pixi run pytest -m integration --cov | tail -20
+# Add @pytest.mark.integration tests for the lowest-covered modules until threshold met
+```
+
+### Why This Happens
+
+`coverage.py` measures code that ran during the current pytest invocation. It does NOT
+accumulate across runs (without explicit `--cov-append`). When pytest configuration
+includes `fail_under` (either via `[tool.coverage.report] fail_under = X` in
+pyproject.toml OR `--cov-fail-under=X` on the CLI), the gate fires after each invocation
+based on THAT invocation's measurement.
+
+For a 633-statement codebase:
+
+- Full suite (`pytest`): runs every test → covers ~96% of statements → passes
+- Integration only (`pytest -m integration`): runs ~80 integration tests → covers ~78% of
+  statements → trips a `fail_under = 80` gate
+- Single class (`pytest tests/foo.py::TestBar`): runs ~5 tests → covers ~50% of statements
+  → trips even harder
+
+### Symptom Signature in CI Logs
+
+```text
+FAIL Required test coverage of 80.0% not reached. Total coverage: 78.52%
+```
+
+The number after "Total coverage:" is THIS invocation's coverage, NOT the full-suite
+number. If you see this from a job whose name contains "Integration", "specific file",
+or anything other than "full suite", suspect a partial-run trap.
+
+### Diagnostic Commands
+
+```bash
+# What's the actual coverage of a partial run?
+pixi run pytest -m integration --cov | tail -25
+
+# What's the actual coverage of the full suite?
+pixi run pytest --cov | tail -25
+
+# Where is the gate configured?
+grep -rn "fail_under\|cov-fail-under" pyproject.toml .github/workflows/ pytest.ini setup.cfg 2>/dev/null
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Lowered `fail_under` from 80 to 78 to "match current coverage" | Edit pyproject.toml's `[tool.coverage.report]` block | Made a passing CI cover up the real bug (gate-trap on partial runs); next time someone ran full suite they'd see it pass at 96%, then run integration alone and see 78% with no explanation | Don't lower the gate — fix the configuration so the gate only applies to runs where it makes sense |
+| Added `# fmt: off` and other linter pragmas | Tried to silence coverage output | `fail_under` is enforced by coverage.py, not by linters; pragmas don't help | The gate is a coverage.py feature; only coverage.py config or CLI flags affect it |
+| Removed `[tool.coverage.report]` from pyproject.toml entirely | Wholesale delete | Removed unrelated configuration (precision, exclude_lines) along with `fail_under` | Surgical: only remove the `fail_under` line, keep the rest of `[tool.coverage.report]` |
+| Trusted that "the gate worked yesterday on main" | Assumed if it merged once, it stays correct | The PR that ADDED the gate (e.g., a coverage-tracking improvement PR) may have been tested on full-suite runs only, never on integration-only runs; the failure mode only manifests after the gate-PR lands AND a partial-run CI job runs | When merging a PR that adds a coverage gate, verify CI passes on EVERY pytest invocation in the workflow, not just the most-prominent one |
+
+## Results & Parameters
+
+### Recommended Configuration
+
+```toml
+# pyproject.toml — coverage settings WITHOUT a fail_under gate
+[tool.coverage.run]
+source = ["mypackage"]
+
+[tool.coverage.report]
+precision = 2
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:"]
+# DO NOT put fail_under here — it applies to every pytest invocation
+```
+
+```yaml
+# .github/workflows/<ci>.yml — gate ONLY on the full-suite job
+jobs:
+  unit-tests:
+    steps:
+      - name: Unit tests (full suite, gated)
+        run: pixi run pytest -m "not integration" --cov-fail-under=80
+
+  integration-tests:
+    steps:
+      - name: Integration tests (no gate — partial run by design)
+        run: pixi run pytest -m integration -v
+```
+
+### Coverage Measurement Reference
+
+```text
+Run command                              | Tests run     | Cover  | Gate-safe at fail_under=80?
+-----------------------------------------|---------------|--------|------------------------------
+pytest                                   | All           | 96.52% | YES
+pytest -m "not integration"              | Unit only     | 92%    | YES
+pytest -m integration                    | Integ only    | 78.52% | NO (partial-run trap)
+pytest tests/test_one_class.py::Test     | 5 tests       | 50.39% | NO (extreme partial-run)
+pytest --cov-append (after multiple runs)| Cumulative    | 96.52% | YES (with --cov-append)
+```
+
+### Detection in CI
+
+After any CI failure with "Required test coverage of X% not reached":
+
+1. Check the **job name** that failed. If it's "Integration", "Smoke", or any other partial-selection job → partial-run trap.
+2. Run the same command locally; observe the partial-coverage number.
+3. Compare to full-suite local run; if full-suite passes, it's the trap.
+4. Apply Option A (move gate to CI workflow) or Option B (`--no-cov` on partial jobs).
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| HomericIntelligence/ProjectHermes | 2026-05-07: PR #475 added `--cov-fail-under=80` + `fail_under = 80`; subsequent integration-only CI jobs began failing at 78.52% | Worked around by adding @pytest.mark.integration tests in tests/test_integration_coverage.py to push integration-only coverage above 80%. Real fix (move gate to CI-only) deferred to follow-up. |
+~~~
+
+---
+
+## Superseded from pytest-pythonpath-scripts-fix
+
+~~~markdown
+---
+name: pytest-pythonpath-scripts-fix
+description: 'TRIGGER CONDITIONS: When analysis/scripts tests fail to collect due to ImportError on a scripts/ module, or when test count is suspiciously low (~1691 vs expected ~3199+), or when a pre-push hook runs fewer tests than a direct pytest invocation.'
+category: testing
+date: 2026-02-27
+version: 1.0.0
+user-invocable: false
+---
+
+# pytest-pythonpath-scripts-fix
+
+Fix suppressed test collection caused by scripts/ not being on the pytest Python path.
+
+## Overview
+
+| Item | Details |
+| ------ | --------- |
+| Date | 2026-02-27 |
+| Objective | Make all analysis unit tests that import `export_data` (a script in `scripts/`) collect and run under pytest, pre-push hooks, and CI |
+| Outcome | Success |
+
+## When to Use
+
+- Analysis tests fail at collection time with `ModuleNotFoundError` for a module in `scripts/`
+- Visible test count is artificially suppressed (e.g., ~1691 vs ~3257 expected)
+- Pre-push hook or CI collects fewer tests than a direct local `pytest` run
+- A test file has a manual `sys.path.insert` workaround pointing at `scripts/`
+- You are auditing why coverage appears lower than expected
+
+## Verified Workflow
+
+1. **Identify the root cause**: Run `pixi run pytest --collect-only 2>&1 | grep ERROR` to see collection errors. Look for `ModuleNotFoundError` on a module that lives in `scripts/`.
+
+2. **Check `pyproject.toml`**: Confirm `pythonpath` in `[tool.pytest.ini_options]` does NOT include `"scripts"`.
+
+3. **Add `"scripts"` to `pythonpath`**:
+
+```toml
+# pyproject.toml — [tool.pytest.ini_options]
+# Before
+pythonpath = ["."]
+# After
+pythonpath = [".", "scripts"]
+```
+
+4. **Remove the manual workaround** in the test file (if present):
+
+```python
+# Remove these lines from the test file:
+import sys
+from pathlib import Path
+# Add scripts directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "scripts"))
+```
+
+Also remove `sys` and `Path` from imports if they are no longer referenced elsewhere.
+
+5. **Verify collection**:
+
+```bash
+pixi run pytest tests/unit/analysis/test_export_data.py -v --collect-only
+# Expect: all test functions listed, no collection errors
+```
+
+6. **Verify full suite**:
+
+```bash
+pixi run pytest -x
+# Expect: full test count collected, coverage threshold met
+```
+
+7. **Run pre-commit** to confirm no ruff/mypy/formatting regressions:
+
+```bash
+pre-commit run --all-files
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Results & Parameters
+
+```toml
+# pyproject.toml — exact working config
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "scripts"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--cov=scylla",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    # ...
+]
+```
+
+Test count before fix: ~1691 collected (collection errors silently suppressed)
+Test count after fix: 3257 collected, 3257 passed
+Coverage: 78.31% (threshold 75%)
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | Issue #1137, PR #1190 | notes.md (pytest-pythonpath-scripts-fix.notes.md) |
+
+## References
+
+- Related skills: `pytest-coverage-threshold-config`, `mypy-scripts-coverage-extension`, `reenable-precommit-hook`
+- Issue: https://github.com/HomericIntelligence/ProjectScylla/issues/1137
+~~~
+
+---
+
+## Superseded from flaky-test-patch-isolation
+
+~~~markdown
+---
+name: flaky-test-patch-isolation
+description: Fix flaky tests caused by class-level mock state leakage via patch.object(__class__,
+  ...). Adds autouse teardown fixture with patch.stopall() to isolate test classes.
+category: testing
+date: '2026-03-19'
+version: 1.0.0
+---
+# Skill: Flaky Test — Class-Level Patch Isolation
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-03 |
+| Category | testing |
+| Objective | Fix intermittent test failure caused by class-level mock state leakage |
+| Outcome | Success — autouse teardown fixture with `patch.stopall()` eliminated flakiness |
+| Issue | HomericIntelligence/ProjectScylla#1131 |
+
+## When to Use
+
+Apply this pattern when:
+- A test is **flaky only in the full suite** (passes in isolation or smaller subsets)
+- The test suite has classes with `patch.object(SomeClass, "method", ...)` (class-level patching)
+- Flakiness correlates with **test ordering** or **suite size**
+- A test class modifies class attributes via mocks and a test sometimes fails mid-patch
+
+## Root Cause Pattern
+
+`patch.object(obj.__class__, "method", ...)` patches the **class** (not the instance). If the context manager exits abnormally (test fails inside `with patch.object(...)`), the patch remains active on the class for all subsequent tests — even those in different test classes.
+
+```python
+# DANGEROUS: patches ConfigLoader class-level _load_yaml
+with patch.object(orchestrator.loader.__class__, "_load_yaml", wraps=...):
+    ...  # if this fails, ConfigLoader._load_yaml stays patched
+```
+
+## Verified Workflow
+
+### 1. Identify the leak
+
+Look for `patch.object(instance.__class__, ...)` patterns in test classes that run before the flaky test.
+
+```bash
+grep -rn "patch.object.*__class__" tests/
+```
+
+### 2. Add autouse teardown to the leaking class
+
+```python
+from collections.abc import Generator
+from unittest.mock import patch
+
+class TestWithClassLevelPatches:
+    @pytest.fixture(autouse=True)
+    def _isolate(self) -> Generator[None, None, None]:
+        """Ensure no class-level mock state bleeds into subsequent tests."""
+        yield
+        patch.stopall()
+```
+
+`patch.stopall()` stops **all** patches started via `patch()`, `patch.object()`, etc. that haven't been explicitly stopped. It is safe to call even when no patches are active.
+
+### 3. Move imports to module level
+
+Remove redundant per-method `from unittest.mock import patch` imports:
+
+```python
+# Before (in each test method):
+def test_something(self):
+    from unittest.mock import patch
+    with patch(...):
+        ...
+
+# After (module level):
+from unittest.mock import patch
+
+def test_something(self):
+    with patch(...):
+        ...
+```
+
+## Results & Parameters
+
+Copy-paste ready configurations and expected outputs.
+
+## Failed Attempts / Alternatives Considered
+
+| Approach | Why Rejected |
+| ---------- | ------------- |
+| Use `patch.object(instance, "method", ...)` | Would fix the root cause but was out of scope — the test predated this session |
+| Add teardown only to `TestEvalOrchestratorEndToEnd` | Wrong class — the leak originates in `TestEvalOrchestratorWithFixture` |
+| `unittest.mock.patch` as a decorator | No benefit over context manager; doesn't address class-level leak |
+
+## Key Code
+
+```python
+# In the class that does class-level patching:
+class TestEvalOrchestratorWithFixture:
+    @pytest.fixture(autouse=True)
+    def _isolate(self) -> Generator[None, None, None]:
+        """Ensure no class-level mock state bleeds into subsequent tests.
+
+        Uses unittest.mock.patch's stopall to clean up any patches that may
+        have been left active if a test fails mid-context-manager, preventing
+        class-level attribute leakage into TestEvalOrchestratorEndToEnd.
+        """
+        yield
+        patch.stopall()
+```
+
+## Results
+
+- All 3799 tests pass (was: intermittent failure under load)
+- 67.96% combined coverage (above 9% threshold)
+- Pre-commit (ruff, mypy, black) all pass
+- Fix is minimal: 13 insertions, 9 deletions
+~~~
+
+---
+
+## Superseded from fixture-timeout-calibration
+
+~~~markdown
+---
+name: fixture-timeout-calibration
+description: "Skill: fixture-timeout-calibration"
+category: testing
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+---
+# Skill: fixture-timeout-calibration
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-02-21 |
+| PR | #884 |
+| Objective | Update `timeout_seconds` in all 47 test fixture YAML files with calibrated values derived from observed batch run durations |
+| Outcome | Success — total timeout sum reduced from ~147,900s to ~29,820s (~80% reduction) |
+| Category | testing |
+
+## When to Use
+
+Trigger this skill when:
+
+- Batch E2E runs finish but many tests use generic default timeout values that are far too conservative
+- You have a set of observed actual durations from a completed run and want to set per-test timeouts proportionally
+- You need to update a large number of YAML fixture files (10+) with calculated values in bulk
+- CI is failing due to over-long timeouts causing the pipeline to time out at the job level
+- You want to enforce a minimum floor (e.g. 180s) and a safety multiplier (e.g. 3x) on observed durations
+
+## Results & Parameters
+
+### Calibration Formula
+
+```
+timeout_seconds = max(180, ceil(actual_duration * 3 / 60) * 60)
+```
+
+- **Multiplier**: 3x actual observed duration
+- **Granularity**: Round up to the nearest 60 seconds
+- **Floor**: 180 seconds minimum (never lower than 3 minutes)
+
+### Example Calculations
+
+| Observed Duration | Raw (3x) | Rounded to 60s | Final |
+| ------------------- | ---------- | ---------------- | ------- |
+| 28s | 84s | 120s | 180s (floor) |
+| 45s | 135s | 180s | 180s |
+| 72s | 216s | 240s | 240s |
+| 150s | 450s | 480s | 480s |
+| 300s | 900s | 900s | 900s |
+
+### Before / After
+
+| Metric | Before | After |
+| -------- | -------- | ------- |
+| Files updated | 47 | 47 |
+| Total timeout sum | ~147,900s | ~29,820s |
+| Reduction | — | ~80% |
+| Files at old default (300s) | many | 0 |
+| Minimum value | 300s | 180s |
+
+## Verified Workflow
+
+### 1. Collect observed durations
+
+Run the batch E2E suite and extract actual durations from the results. Durations are typically in the
+`run_metadata.json` or in the test result YAML output for each test.
+
+```bash
+# Example: gather durations from results
+grep -r "duration_seconds" tests/fixtures/results/ | sort
+```
+
+### 2. Calculate calibrated values
+
+Apply the formula to each observed duration:
+
+```python
+import math
+
+def calibrate_timeout(actual_duration_seconds: float) -> int:
+    raw = actual_duration_seconds * 3
+    rounded = math.ceil(raw / 60) * 60
+    return max(180, rounded)
+```
+
+### 3. Read fixture files in parallel batches
+
+Read 9-10 files at a time to understand the current structure before editing:
+
+```bash
+# Verify structure of a representative file first
+cat tests/fixtures/tests/test-001/test.yaml
+```
+
+Typical fixture structure:
+
+```yaml
+task:
+  description: "..."
+  timeout_seconds: 300   # <-- field to update
+  ...
+```
+
+### 4. Edit fixture files in parallel batches
+
+Edit files in groups of 9-10. This is efficient and stays within tool concurrency limits.
+
+For each file, change only the `timeout_seconds` field. Do not touch any other fields.
+
+```
+tests/fixtures/tests/test-001/test.yaml  -> timeout_seconds: 180
+tests/fixtures/tests/test-002/test.yaml  -> timeout_seconds: 240
+...
+tests/fixtures/tests/test-047/test.yaml  -> timeout_seconds: 360
+```
+
+### 5. CRITICAL — grep the test suite for hardcoded expected values
+
+Before committing, search the entire test suite for any hardcoded references to the old timeout value:
+
+```bash
+grep -r "timeout_seconds" tests/unit/
+grep -r "timeout_seconds" tests/
+grep -rn "== 300" tests/unit/
+grep -rn "timeout_seconds ==" tests/
+```
+
+Update any hardcoded assertions to match the new floor value (180) or to be data-driven.
+
+### 6. Commit and push
+
+```bash
+git add tests/fixtures/tests/
+git add tests/unit/          # if any unit tests were updated
+git commit -m "test(fixtures): calibrate timeout_seconds using 3x observed duration formula"
+git push -u origin <branch>
+```
+
+### 7. Create and enable auto-merge on the PR
+
+```bash
+gh pr create --title "test(fixtures): calibrate timeout_seconds to observed durations" \
+  --body "Closes #<issue>"
+gh pr merge --auto --rebase
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+
+## Related Skills
+
+- `git-worktree-collision-fix` — E2E batch runner error elimination
+- `wired-runner-fixture` — Shared pytest fixture extraction patterns
+~~~
+
+---
+
+## Superseded from testing-date-bomb-hardcoded-timestamp-future-failure
+
+~~~markdown
+---
+name: testing-date-bomb-hardcoded-timestamp-future-failure
+description: "Identifies and fixes 'date bomb' tests — time-dependent assertions using hardcoded epochs or calendar dates that pass when written but fail after a fixed window elapses. Use when: (1) a test suddenly fails in CI with no code changes, (2) reviewing tests that reference specific calendar dates or hardcoded Unix timestamps, (3) a test asserts a parsed time value is within N seconds of a literal constant."
+category: testing
+date: 2026-05-10
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: []
+---
+
+# Testing: Date Bomb — Hardcoded Timestamp Future Failure
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-05-10 |
+| **Objective** | Fix a CI test that suddenly began failing weeks after it was written, with no code changes |
+| **Outcome** | PR #367 merged green; test is now temporally reflexive and will not rot |
+| **Verification** | verified-ci |
+
+## When to Use
+
+- A test was passing in CI for weeks or months and suddenly fails with no code changes
+- A test asserts time or date relationships against hardcoded epochs or specific calendar dates
+- Reviewing tests that mention specific calendar dates ("May 8", "2026-05-09") in fixtures or assertions
+- Pre-commit review of date-related tests for time-dependent assertions using literal constants
+- A test error mentions a large delta between `now` and an expected timestamp
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# BAD — date bomb (passes today, fails after the fixed window passes)
+def test_parses_date_qualified_form():
+    parsed = parse_date_string("May 8, 5pm")
+    expected_epoch = 1778284800  # May 8, 2026 5pm UTC — hardcoded!
+    assert abs(parsed - expected_epoch) < 86400  # 24h tolerance
+
+# GOOD — dynamic future date (temporally reflexive)
+from datetime import datetime, timedelta, timezone
+
+def test_parses_date_qualified_form():
+    now = datetime.now(timezone.utc)
+    future = now + timedelta(days=2)
+    input_str = future.strftime("%B %-d, %-I%p").lower()  # e.g., "may 12, 4pm"
+    expected_epoch = future.timestamp()
+    parsed = parse_date_string(input_str)
+    assert abs(parsed - expected_epoch) < 86400
+```
+
+### Detailed Steps
+
+1. **Identify the date bomb** — Look for hardcoded Unix timestamps or string literals referencing specific dates in test fixtures, `assert` statements, or helper constants. Grep for patterns like `178\d{7}`, `assert abs(parsed -`, or strings like `"May \d"` in test files.
+
+2. **Understand the parser under test** — Determine what relative reference point the parser uses (e.g., "next occurrence of May 8" anchored to `now`). The test's expected value must be derived from the same anchor.
+
+3. **Generate input and expected value from `now`** — Pick an offset (e.g., `now + timedelta(days=2)`) that stays consistently in the "future" window the parser expects. Format the offset as the input string using the same format the parser accepts.
+
+4. **Assert against the same dynamic value** — The assertion `abs(parsed - expected_epoch) < 86400` is now valid indefinitely because both sides come from `datetime.now()` in the same test run.
+
+5. **Verify no other tests in the file share the same hardcoded constant** — Search for the literal epoch value across the test file; fix every occurrence in the same PR.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| 1 | Hardcode timestamp `1778284800` ("May 8, 2026 5pm UTC") with 24-hour tolerance | Test passed initially. After ~2 days, `now` drifted past the 24-hour window and the assertion failed. The "date bomb" detonated as time advanced. | Hardcoded timestamps in time-dependent tests have an implicit expiration date. They are time bombs. |
+| 2 | Increase tolerance from 24 hours to 7 days | Defers the failure by ~5 days but does not eliminate it; tests still rot over time and require periodic manual updates | Tolerance widening is a band-aid. The correct fix is to make the test temporally reflexive — generate the input *and* the expected value from `now()` so they always match regardless of when the test runs. |
+
+## Results & Parameters
+
+**Root cause (PR #367, HomericIntelligence/ProjectHephaestus):**
+
+File: `tests/unit/github/test_rate_limit.py`
+Test: `TestDetectClaudeUsageCap::test_parses_date_qualified_form`
+
+The test hardcoded the input string `"May 8, 5pm"` along with epoch `1778284800` and asserted the parsed result was within 86400 seconds. This worked the day it was written but detonated once the system clock moved more than 24 hours past May 8, 2026 5pm UTC.
+
+**Detection grep patterns:**
+```bash
+# Find hardcoded Unix timestamps in test files (2025–2027 range)
+grep -rn "17[6-9][0-9]\{7\}\|18[0-2][0-9]\{7\}" tests/
+
+# Find 24h/7d tolerance assertions
+grep -rn "abs(.*parsed.*-.*[0-9]\{10\})" tests/
+
+# Find calendar date literals in test strings
+grep -rn '"[A-Z][a-z]* [0-9]\{1,2\},\? [0-9]\{1,2\}[ap]m"' tests/
+```
+
+**Template for any relative-date parser test:**
+```python
+from datetime import datetime, timedelta, timezone
+
+def test_parses_<unit>_relative():
+    now = datetime.now(timezone.utc)
+    target = now + timedelta(<offset>)
+    input_str = target.strftime("<format>")
+    expected = target.timestamp()
+    parsed = parse_date_string(input_str)
+    assert abs(parsed - expected) < <tolerance_seconds>
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ProjectHephaestus | PR #367 — test_rate_limit.py hardcoded epoch | verified-ci, merged green |
+~~~
