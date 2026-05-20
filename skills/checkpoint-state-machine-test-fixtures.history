@@ -1,0 +1,1607 @@
+<!-- markdownlint-disable MD024 -->
+
+## Superseded from additive-resume-integration-tests
+
+```markdown
+---
+name: additive-resume-integration-tests
+description: "Integration test patterns for stateful additive resume behavior in ProjectScylla \u2014 validates that sequential invocations with expanding --tiers/--max-subtests never reset existing checkpoint state, including TierStateMachine-level tier_states verification."
+category: testing
+date: '2026-03-19'
+version: 1.1.0
+absorbed: [tier-state-additive-resume-tests]
+---
+# Skill: Integration Tests for Additive Resume Behavior
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-02-27 |
+| Project | ProjectScylla |
+| Objective | Add integration tests validating additive resume across sequential --tiers/--max-subtests/--until invocations |
+| Outcome | Success — 16/16 tests pass, full suite 3201 passed, 78.36% coverage |
+| Issue | HomericIntelligence/ProjectScylla#1111 |
+| PR | HomericIntelligence/ProjectScylla#1149 |
+
+## When to Use
+
+Use this skill when:
+- Adding integration tests for stateful/resumable experiment behavior
+- Testing checkpoint state machine progression across multiple invocations
+- Validating additive/non-destructive behavior (new tiers/subtests don't reset existing ones)
+- Testing that ephemeral flags don't affect persistent state (config hash stability)
+
+## Key Architectural Insight: State Machine Layers
+
+ProjectScylla has a 4-level state machine hierarchy:
+- **StateMachine** — run-level (RunState: PENDING → WORKTREE_CLEANED)
+- **SubtestStateMachine** — subtest-level (SubtestState: PENDING → AGGREGATED)
+- **TierStateMachine** — tier-level (TierState: PENDING → COMPLETE)
+- **ExperimentStateMachine** — experiment-level (ExperimentState: INITIALIZING → COMPLETE)
+
+**Important**: Each layer independently populates different checkpoint fields:
+- `run_states` ← populated by `StateMachine`
+- `subtest_states` ← populated by `SubtestStateMachine`
+- `tier_states` ← populated by `TierStateMachine` ONLY
+- If you only run `SubtestStateMachine`, `tier_states` stays empty (implicitly "pending")
+
+## Verified Workflow
+
+### Test Architecture Pattern
+
+Tests at the state machine level (not `E2ERunner.run()`) — no real API calls, git ops, or subprocesses:
+
+```python
+from scylla.e2e.state_machine import StateMachine
+from scylla.e2e.subtest_state_machine import SubtestStateMachine, UntilHaltError
+from scylla.e2e.tier_state_machine import TierStateMachine
+
+# Simulate runs halted at a specific state (mimics --until flag)
+def _simulate_tier_subtests_at_state(cp, cp_path, tier_id, subtest_ids, run_count, until_run_state):
+    for subtest_id in subtest_ids:
+        ssm = SubtestStateMachine(checkpoint=cp, checkpoint_path=cp_path)
+
+        def _pending_runs() -> None:
+            run_sm = StateMachine(checkpoint=cp, checkpoint_path=cp_path)
+            for run_num in range(1, run_count + 1):
+                run_sm.advance_to_completion(
+                    tier_id, subtest_id, run_num,
+                    make_noop_run_actions(),
+                    until_state=until_run_state,
+                )
+            raise UntilHaltError("all runs reached until_state")
+
+        subtest_actions: dict[SubtestState, Callable[[], None]] = cast(
+            dict[SubtestState, Callable[[], None]],
+            {
+                SubtestState.PENDING: _pending_runs,
+                SubtestState.RUNS_IN_PROGRESS: MagicMock(),
+                SubtestState.RUNS_COMPLETE: MagicMock(),
+            },
+        )
+        ssm.advance_to_completion(tier_id, subtest_id, subtest_actions)
+```
+
+### Config Hash Stability Verification
+
+```python
+from scylla.e2e.checkpoint import compute_config_hash
+
+# All these produce the same hash:
+configs = [
+    make_config(["T0"], max_subtests=1, until_run_state=RunState.REPLAY_GENERATED),
+    make_config(["T0", "T1"], max_subtests=2, until_run_state=RunState.REPLAY_GENERATED),
+    make_config(["T0", "T1", "T2"], max_subtests=3),
+    make_config(["T0", "T1", "T2", "T3"], max_subtests=1),
+]
+hashes = [compute_config_hash(c) for c in configs]
+assert len(set(hashes)) == 1  # All identical
+```
+
+Fields excluded from config hash (as of v3.1):
+- `tiers_to_run` — additive across resumes
+- `max_subtests` — development/testing only
+- `parallel_subtests` — parallelization setting only
+- All `until_*`, `from_*`, `filter_*` ephemeral flags
+
+### Monotonic State Advancement Check
+
+```python
+def _run_state_index(state_str: str) -> int:
+    from scylla.e2e.state_machine import _RUN_STATE_SEQUENCE
+    for idx, state in enumerate(_RUN_STATE_SEQUENCE):
+        if state.value == state_str:
+            return idx
+    return -1  # Terminal states (failed, rate_limited)
+
+# Verify runs only move forward
+for tier_id, subtests in previous_cp.run_states.items():
+    for subtest_id, runs in subtests.items():
+        for run_key, old_state_str in runs.items():
+            new_state_str = cp.run_states.get(tier_id, {}).get(subtest_id, {}).get(run_key, old_state_str)
+            old_idx = _run_state_index(old_state_str)
+            new_idx = _run_state_index(new_state_str)
+            if old_idx == -1 and new_idx == -1:
+                continue  # Both terminal: OK
+            assert new_idx >= old_idx  # Monotonic
+```
+
+## TierStateMachine Layer Tests
+
+The `tier_states` checkpoint field is populated **only** by `TierStateMachine`. Running
+`SubtestStateMachine` alone leaves `tier_states` empty; a tier is implicitly `"pending"` if absent
+from `tier_states`, regardless of whether subtests/runs completed.
+
+| State Machine | Checkpoint field populated |
+| --- | --- |
+| `StateMachine` | `run_states[tier_id][subtest_id][run_num]` |
+| `SubtestStateMachine` | `subtest_states[tier_id][subtest_id]` |
+| **`TierStateMachine`** | **`tier_states[tier_id]`** |
+| `ExperimentStateMachine` | `experiment_state` |
+
+### Helper: `_simulate_tier_to_complete`
+
+Combines `SubtestStateMachine` + `TierStateMachine` to drive a tier fully to COMPLETE:
+
+```python
+from scylla.e2e.tier_state_machine import TierStateMachine
+
+def _simulate_tier_to_complete(
+    cp: E2ECheckpoint,
+    cp_path: Path,
+    tier_id: str,
+    subtest_ids: list[str],
+    run_count: int,
+) -> None:
+    """Run all subtests to WORKTREE_CLEANED, then advance TierStateMachine to COMPLETE."""
+    _simulate_tier_subtests_full(cp, cp_path, tier_id, subtest_ids, run_count)
+
+    tsm = TierStateMachine(checkpoint=cp, checkpoint_path=cp_path)
+    tier_actions = make_noop_tier_actions()
+    tsm.advance_to_completion(tier_id, tier_actions)
+```
+
+### Helper: `make_noop_tier_actions` (full TierState enum coverage)
+
+```python
+from scylla.e2e.models import TierState
+from unittest.mock import MagicMock
+
+def make_noop_tier_actions() -> dict[TierState, Callable[[], None]]:
+    return {
+        TierState.PENDING: MagicMock(),
+        TierState.CONFIG_LOADED: MagicMock(),
+        TierState.SUBTESTS_RUNNING: MagicMock(),
+        TierState.SUBTESTS_COMPLETE: MagicMock(),
+        TierState.BEST_SELECTED: MagicMock(),
+        TierState.REPORTS_GENERATED: MagicMock(),
+    }
+```
+
+### TierState sequence
+
+```python
+_TIER_STATE_SEQUENCE = [
+    TierState.PENDING,
+    TierState.CONFIG_LOADED,
+    TierState.SUBTESTS_RUNNING,
+    TierState.SUBTESTS_COMPLETE,
+    TierState.BEST_SELECTED,
+    TierState.REPORTS_GENERATED,
+    TierState.COMPLETE,
+]
+_TIER_TERMINAL_STATES = frozenset([TierState.COMPLETE, TierState.FAILED])
+```
+
+### Assert tier_states additive across resume
+
+```python
+# After T0 reaches COMPLETE
+_simulate_tier_to_complete(cp, cp_path, "T0", ["00"], runs=3)
+cp = load_checkpoint(cp_path)
+assert cp.tier_states.get("T0") == TierState.COMPLETE.value
+
+# Load fresh from disk, add T1 partial runs (no TierStateMachine advance)
+cp = load_checkpoint(cp_path)
+_simulate_tier_subtests_at_state(cp, cp_path, "T1", ["00"], 3, RunState.REPLAY_GENERATED)
+cp_after = load_checkpoint(cp_path)
+
+# T0 must remain "complete" — never downgraded by adding T1
+assert cp_after.tier_states.get("T0") == TierState.COMPLETE.value
+# T1 absent from tier_states (TierStateMachine not advanced for T1)
+assert "T1" not in cp_after.tier_states
+```
+
+### Structural guarantee: only explicitly run tiers in tier_states
+
+```python
+_simulate_tier_to_complete(cp, cp_path, "T0", ["00"], 3)
+cp = load_checkpoint(cp_path)
+
+assert "T0" in cp.tier_states
+assert cp.tier_states["T0"] == TierState.COMPLETE.value
+assert len(cp.tier_states) == 1  # No phantom entries for T1, T2, etc.
+```
+
+### TestAdditiveResumeTierStates test scenarios
+
+`TestAdditiveResumeTierStates` in `tests/integration/e2e/test_additive_resume.py`:
+
+| Test | Scenario |
+| ------ | --------- |
+| `test_t0_complete_then_add_t1_preserves_t0_tier_state` | T0→COMPLETE, then T1 partial |
+| `test_two_tiers_complete_then_add_third_preserves_both` | T0+T1→COMPLETE, then T2 partial |
+| `test_complete_tier_tier_state_additive_across_three_invocations` | 3 sequential invocations |
+| `test_until_tier_state_partial_completion_preserved` | T0 halted at SUBTESTS_RUNNING |
+| `test_tier_states_dict_structure_after_full_completion` | Structural guarantee |
+
+```bash
+# Run tier-level tests only:
+pixi run python -m pytest tests/integration/e2e/test_additive_resume.py \
+    -v -k "TestAdditiveResumeTierStates"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Test counts
+- 4 TestConfigHashStability tests
+- 4 TestAdditiveResume tests (4-stage progression)
+- 8 TestAdditiveResumeInvariants tests (parametrized + fine-grained)
+- Total: **16 integration tests**
+
+### Key constants
+```python
+_RUNS = 3        # runs_per_subtest (constant across all stages)
+_EXPERIMENT_ID = "additive-resume-test"
+_FIXTURE_DIR = Path("tests/fixtures/tests/test-001")
+```
+
+### Minimal ExperimentConfig for testing
+```python
+config = ExperimentConfig(
+    experiment_id="additive-resume-test",
+    task_repo="https://github.com/mvillmow/Hello-World",
+    task_commit="7fd1a60b01f91b314f59955a4e4d4e80d8edf11d",
+    task_prompt_file=Path("tests/fixtures/tests/test-001/prompt.md"),
+    language="python",
+    models=["claude-haiku-4-5-20251001"],
+    judge_models=["claude-haiku-4-5-20251001"],
+    runs_per_subtest=3,
+    tiers_to_run=[TierID("T0")],
+    max_subtests=1,
+    until_run_state=RunState.REPLAY_GENERATED,
+)
+```
+
+### pytestmark
+```python
+pytestmark = pytest.mark.integration
+# Run with: pixi run python -m pytest tests/integration/ -v -m integration
+```
+```
+
+## Superseded from checkpoint-reconcile-state-order
+
+```markdown
+---
+name: checkpoint-reconcile-state-order
+description: 'Fix stale checkpoint run states by reconciling with on-disk artifacts.
+  Use when: adding RunState enum values, testing checkpoint reconcile edge cases,
+  or debugging silent rank-comparison failures.'
+category: testing
+date: 2026-03-14
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | `_reconcile_checkpoint_with_disk()` uses a `state_order` rank list. States missing from the list get rank=0 (same as `pending`), so `inferred_rank > current_rank` is `0 > 0 = False` — the state never advances. No error is raised. |
+| **Root Cause** | `state_order` was not kept in sync with the `RunState` enum. Three states were missing: `worktree_created`, `config_committed`, `prompt_written`. |
+| **Fix** | Add all non-terminal `RunState` values in sequential order. Add a regression-guard test that asserts every non-terminal state appears in the function source. |
+| **Project** | ProjectScylla — `scripts/manage_experiment.py` + `tests/unit/e2e/test_manage_experiment_run.py` |
+
+## When to Use
+
+- You are extending a state machine and adding new `RunState` (or equivalent) enum values
+- A reconcile/recovery function uses a rank list (`state_order = [...]`) to compare states
+- Runs are "stuck" at an intermediate state despite on-disk artifacts being present
+- You need edge-case test coverage for: corrupted JSON, missing fields, mixed terminal/non-terminal states
+- CI fails with `assert 'passed' is None` or similar — checkpoint auto-syncs status on `set_run_state`
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# The pattern to watch for:
+state_order = [
+    "pending",
+    "dir_structure_created",
+    # ← missing states here get rank=0, silently fail rank comparison
+    "symlinks_applied",
+    ...
+]
+state_rank = {s: i for i, s in enumerate(state_order)}
+# current_rank = state_rank.get(current_state, 0)  ← "get with default 0" hides the gap
+```
+
+### Step 1 — Identify Missing States
+
+Compare `state_order` list against the `RunState` enum (or equivalent):
+
+```python
+# scylla/e2e/models.py RunState sequential order:
+# PENDING → DIR_STRUCTURE_CREATED → WORKTREE_CREATED → SYMLINKS_APPLIED
+# → CONFIG_COMMITTED → BASELINE_CAPTURED → PROMPT_WRITTEN → REPLAY_GENERATED
+# → AGENT_COMPLETE → DIFF_CAPTURED → JUDGE_PIPELINE_RUN → JUDGE_PROMPT_BUILT
+# → JUDGE_COMPLETE → RUN_FINALIZED → REPORT_WRITTEN → CHECKPOINTED
+# → WORKTREE_CLEANED
+# Terminal: FAILED | RATE_LIMITED (exclude from state_order)
+```
+
+Check: does `state_order` contain ALL non-terminal values?
+
+### Step 2 — Fix `state_order`
+
+Add missing states in correct sequential position:
+
+```python
+state_order = [
+    "pending",
+    "dir_structure_created",
+    "worktree_created",        # ← was missing
+    "symlinks_applied",
+    "config_committed",        # ← was missing
+    "baseline_captured",
+    "prompt_written",          # ← was missing
+    "replay_generated",
+    "agent_complete",
+    "diff_captured",
+    "judge_pipeline_run",
+    "judge_prompt_built",
+    "judge_complete",
+    "run_finalized",
+    "report_written",
+    "checkpointed",
+    "worktree_cleaned",
+]
+```
+
+### Step 3 — Add Regression Guard Test
+
+Use `inspect.getsource()` to assert all non-terminal states appear in the function:
+
+```python
+def test_reconcile_state_order_covers_all_run_states(self) -> None:
+    """All non-terminal RunState values must appear in state_rank (regression guard)."""
+    import inspect
+    import manage_experiment
+    from scylla.e2e.models import RunState
+
+    source = inspect.getsource(manage_experiment._reconcile_checkpoint_with_disk)
+    terminal_states = {RunState.FAILED.value, RunState.RATE_LIMITED.value}
+    non_terminal = {s.value for s in RunState if s.value not in terminal_states}
+
+    for state_value in non_terminal:
+        assert state_value in source, (
+            f"RunState '{state_value}' is missing from _reconcile_checkpoint_with_disk "
+            f"state_order — add it in the correct sequential position."
+        )
+```
+
+### Step 4 — Edge-Case Tests
+
+#### Corrupted JSON — state advances, status defaults to "passed"
+
+```python
+def test_reconcile_corrupted_run_result_json(self, tmp_path):
+    (run_dir / "run_result.json").write_text("{ not valid json !!!")
+    (run_dir / "report.md").write_text("# Report")
+    # checkpoint at intermediate state
+    corrected = _reconcile_checkpoint_with_disk(checkpoint, exp_dir)
+    assert corrected == 1
+    assert checkpoint.run_states["T0"]["00"]["1"] == "worktree_cleaned"
+    # set_run_state("worktree_cleaned") auto-calls mark_run_completed("passed")
+    # because inferred_status=None (JSON parse failed) → no override
+    assert checkpoint.get_run_status("T0", "00", 1) == "passed"
+```
+
+**Key insight**: `set_run_state("worktree_cleaned")` auto-syncs `completed_runs` to `"passed"` (backward compat). If `inferred_status is None`, this default is NOT overridden. So corrupted JSON → status = `"passed"`, NOT `None`.
+
+#### Missing `judge_passed` field — status = "failed" (default False)
+
+```python
+def test_reconcile_missing_judge_passed_field(self, tmp_path):
+    (run_dir / "run_result.json").write_text(json.dumps({"cost_usd": 0.05}))
+    (run_dir / "report.md").write_text("# Report")
+    corrected = _reconcile_checkpoint_with_disk(checkpoint, exp_dir)
+    assert corrected == 1
+    assert checkpoint.run_states["T0"]["00"]["1"] == "worktree_cleaned"
+    # .get("judge_passed", False) → False → inferred_status="failed"
+    # mark_run_completed(..., "failed") overrides the "passed" default
+    assert checkpoint.get_run_status("T0", "00", 1) == "failed"
+```
+
+#### `worktree_created` rank — run advances to `agent_complete`
+
+```python
+def test_reconcile_worktree_created_state_gets_correct_rank(self, tmp_path):
+    # agent/result.json exists on disk
+    checkpoint.run_states = {"T0": {"00": {"1": "worktree_created"}}}
+    corrected = _reconcile_checkpoint_with_disk(checkpoint, exp_dir)
+    assert corrected == 1
+    assert checkpoint.run_states["T0"]["00"]["1"] == "agent_complete"
+    # Before fix: worktree_created rank=0, agent_complete rank>0, 0 > 0 = False → no advance
+    # After fix: worktree_created rank=2, agent_complete rank=8, 8 > 2 = True → advances
+```
+
+#### Mixed `failed` + `rate_limited` + `worktree_cleaned`
+
+```python
+def test_reset_interleaved_rate_limited_and_failed(self, tmp_path):
+    checkpoint.run_states = {"T0": {"00": {"1": "failed", "2": "rate_limited", "3": "worktree_cleaned"}}}
+    checkpoint.completed_runs = {"T0": {"00": {3: "passed"}}}  # int key, not str
+    _reset_non_completed_runs(checkpoint)
+    assert checkpoint.run_states["T0"]["00"]["1"] == "pending"
+    assert checkpoint.run_states["T0"]["00"]["2"] == "pending"
+    assert checkpoint.run_states["T0"]["00"]["3"] == "worktree_cleaned"
+    assert checkpoint.get_run_status("T0", "00", 3) == "passed"
+```
+
+**Note**: `completed_runs` inner keys are `int`, not `str`. Mypy will catch `{"3": "passed"}` — use `{3: "passed"}`.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Assert `get_run_status() is None` after corrupted JSON | Expected that no `mark_run_completed` call → `None` status | `set_run_state("worktree_cleaned")` auto-calls `mark_run_completed("passed")` as backward-compat sync | Always check if `set_run_state` has side-effects on `completed_runs` before asserting status |
+| `completed_runs={"T0": {"00": {"3": "passed"}}}` (str key) | Used string `"3"` as inner dict key | `E2ECheckpoint` declares `completed_runs: dict[str, dict[str, dict[int, str]]]` — inner key is `int` | Mypy error: `Dict entry 0 has incompatible type "str": "str"; expected "int": "str"` |
+| Assumed `json.JSONDecodeError` not caught by `except (OSError, ValueError, KeyError)` | Thought the except block wouldn't fire | `json.JSONDecodeError` IS a subclass of `ValueError` — it is caught; the issue was the `set_run_state` side-effect | Verify the inheritance chain before assuming exception handling gaps |
+
+## Results & Parameters
+
+### PR Created
+
+- **Branch**: `reconcile-checkpoint-retry-errors`
+- **PR**: `HomericIntelligence/ProjectScylla#1485`
+- **Files changed**: `scripts/manage_experiment.py` (+3 lines), `tests/unit/e2e/test_manage_experiment_run.py` (+176 lines)
+- **Tests added**: 5 edge-case tests in `TestRetryErrorsInBatch`
+- **Test suite**: 4861 passed, 78.36% coverage
+
+### `E2ECheckpoint.set_run_state` Auto-Sync Behavior
+
+```python
+# States that auto-call mark_run_completed("passed") if no prior status:
+terminal_complete = {
+    "run_complete",      # v3.0 compat
+    "run_finalized",     # v3.1
+    "report_written",    # v3.1
+    "checkpointed",
+    "worktree_cleaned",
+}
+# Logic: preserves existing "passed"/"failed", defaults to "passed"
+existing = self.get_run_status(tier_id, subtest_id, run_num)
+compat_status = existing if existing in ("passed", "failed") else "passed"
+self.mark_run_completed(tier_id, subtest_id, run_num, status=compat_status)
+```
+
+This means: if you call `set_run_state("worktree_cleaned")` before `mark_run_completed(..., "failed")`, the final status is `"failed"` (override wins). But if `inferred_status is None`, no override occurs and status stays `"passed"`.
+# Session Notes: checkpoint-reconcile-state-order
+
+## Date
+2026-03-14
+
+## Session Summary
+Implemented plan to extend and ship `reconcile-checkpoint-retry-errors` branch for ProjectScylla.
+
+## Objective
+Fix `_reconcile_checkpoint_with_disk()` which had 3 RunState values missing from its `state_order` rank table, causing silent rank-comparison failures for runs stuck in those states.
+
+## Files Changed
+- `scripts/manage_experiment.py`: Added `worktree_created`, `config_committed`, `prompt_written` to `state_order` list (lines ~402-418)
+- `tests/unit/e2e/test_manage_experiment_run.py`: Added 5 edge-case tests to `TestRetryErrorsInBatch` class
+
+## Key Discovery: `set_run_state` side-effect
+`E2ECheckpoint.set_run_state()` in `scylla/e2e/checkpoint.py` has backward-compat logic:
+when state is set to `worktree_cleaned` (and similar terminal-complete states), it automatically
+calls `mark_run_completed()` with `"passed"` as default (or preserves existing status).
+
+This caused the first test iteration to fail with `assert 'passed' is None` because:
+1. `set_run_state("worktree_cleaned")` → `mark_run_completed("passed")` (auto-sync)
+2. `inferred_status is None` (corrupted JSON) → no explicit `mark_run_completed` call
+3. Final status = `"passed"` (from step 1), not `None`
+
+## Key Discovery: `completed_runs` int keys
+`E2ECheckpoint.completed_runs` type: `dict[str, dict[str, dict[int, str]]]`
+The innermost key (run number) is `int`, not `str`.
+Using `{"3": "passed"}` causes mypy error: `Dict entry 0 has incompatible type "str": "str"; expected "int": "str"`.
+Fix: use `{3: "passed"}`.
+
+## Ruff E501 Fix
+Docstring exceeded 100 chars: "Subtest with mixed run states: failed + rate_limited reset; worktree_cleaned preserved."
+Fix: shortened to "Mixed run states: failed + rate_limited reset; worktree_cleaned preserved."
+
+## Test Results
+- 17 targeted tests passed (`-k "reconcile or retry_errors"`)
+- 4861 total unit tests passed, 78.36% coverage
+- Pre-commit ruff + mypy clean on changed files
+- PR #1485 created and auto-merge enabled
+```
+
+## Superseded from checkpoint-test-fixture-patterns
+
+```markdown
+---
+name: checkpoint-test-fixture-patterns
+description: 'Patterns for building consistent checkpoint test fixtures with hierarchical
+  state. Use when: writing tests for resume/retry logic, debugging orphan detector
+  resets, or setting up checkpoint state for state machine tests.'
+category: testing
+date: 2026-03-17
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | Test fixtures for checkpoint-based resume logic silently break when they set higher-level state (e.g., subtest "aggregated") without providing the lower-level backing state (e.g., run_states entries) that integrity validators expect |
+| **Solution** | Always populate all four checkpoint hierarchy levels consistently: experiment_state → tier_states → subtest_states → run_states |
+| **Key Insight** | Runtime validators (orphan detectors, intermediate-run scanners) run during resume and will correct inconsistent fixtures — causing "correct code, broken test" failures |
+| **Scope** | ProjectScylla `scylla/e2e/resume_manager.py`, `scylla/e2e/checkpoint.py`, `tests/unit/e2e/test_runner.py` |
+
+## When to Use
+
+- Writing new tests for `_initialize_or_resume_experiment()` or `ResumeManager.reset_failed_states()`
+- Debugging a test where checkpoint subtest/tier states are unexpectedly reset to "pending"
+- Setting up `E2ECheckpoint` fixtures for state machine transition tests
+- Adding new checkpoint integrity validators that inspect cross-level consistency
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# WRONG — orphan detector will reset "01" to "pending"
+checkpoint = E2ECheckpoint(
+    experiment_state="failed",
+    subtest_states={"T0": {"00": "failed", "01": "aggregated"}},
+    # run_states defaults to {} — "01" has no backing runs!
+)
+
+# RIGHT — "01" has a backing run, orphan detector leaves it alone
+checkpoint = E2ECheckpoint(
+    experiment_state="failed",
+    subtest_states={"T0": {"00": "failed", "01": "aggregated"}},
+    run_states={"T0": {"01": {"1": "worktree_cleaned"}}},
+)
+```
+
+### Checkpoint Hierarchy Rules
+
+The E2ECheckpoint has a 4-level hierarchy. Each level's state implies constraints on levels below:
+
+```
+experiment_state  (1 value)
+  └─ tier_states      (per tier: T0, T1, ...)
+       └─ subtest_states  (per subtest: 00, 01, ...)
+            └─ run_states      (per run: 1, 2, 3, ...)
+```
+
+**Consistency rules enforced at resume time:**
+
+| Higher State | Required Lower State | Validator |
+| ------------- | --------------------- | ----------- |
+| subtest "aggregated" or "runs_complete" | At least one entry in `run_states[tier][subtest]` | `_find_orphaned_subtest_states()` |
+| subtest "runs_in_progress" | At least one run in non-terminal state | `_find_tiers_with_intermediate_runs()` |
+| tier "complete" | All subtests in "aggregated" | `_reset_tier_state_for_rerun()` |
+| experiment "complete" | All tiers in complete-family state | `_reset_intermediate_runs_in_complete_experiment()` |
+
+### Step-by-Step: Building a Resume Test Fixture
+
+1. **Decide which states you're testing** — identify the specific reset behavior under test
+2. **Set all four levels consistently** — if a subtest is "aggregated", give it a terminal run
+3. **Use terminal run states for completed work** — `"worktree_cleaned"` is the canonical terminal state
+4. **Use non-terminal run states for in-progress work** — `"pending"`, `"report_written"`, etc.
+5. **Verify the test asserts the right thing** — if testing that failed subtests reset, ensure non-failed subtests have backing state so they don't also reset
+
+### Common Terminal vs Non-Terminal Run States
+
+```python
+TERMINAL_STATES = {"worktree_cleaned"}  # Run is fully done
+RETRYABLE_STATES = {"failed", "rate_limited"}  # Reset to pending on resume
+INTERMEDIATE_STATES = {"report_written", "judge_pipeline_run", ...}  # Mid-pipeline
+```
+
+### Full Example: Testing Failed-Subtest Reset
+
+```python
+def test_resume_resets_failed_subtests_only(self, mock_config, tmp_path):
+    """Only failed subtests reset; aggregated subtests with runs survive."""
+    checkpoint = E2ECheckpoint(
+        experiment_id=mock_config.experiment_id,
+        experiment_dir=str(tmp_path / mock_config.experiment_id),
+        config_hash="abc123",
+        experiment_state="failed",
+        tier_states={"T0": "failed"},
+        subtest_states={"T0": {"00": "failed", "01": "aggregated"}},
+        # Critical: "01" needs backing run_states
+        run_states={"T0": {"01": {"1": "worktree_cleaned"}}},
+        started_at=datetime.now(timezone.utc).isoformat(),
+        last_updated_at=datetime.now(timezone.utc).isoformat(),
+        status="failed",
+    )
+    # ... run resume ...
+    assert checkpoint.subtest_states["T0"]["00"] == "pending"      # reset
+    assert checkpoint.subtest_states["T0"]["01"] == "aggregated"   # untouched
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Minimal fixture with subtest_states only | Set `subtest_states={"T0": {"00": "failed", "01": "aggregated"}}` without run_states | `_find_orphaned_subtest_states()` detected "01" as orphaned (aggregated with no backing runs) and correctly reset it to "pending" | Fixtures must be cross-level consistent — higher-state assertions require lower-state backing data |
+| Using `_run_resume` helper for complex fixtures | Used the shared helper which only accepts subtest_states/tier_states kwargs | Helper creates checkpoint with `run_states={}` — no way to inject run_states | For tests needing run_states, inline the checkpoint creation instead of using the shared helper |
+
+## Results & Parameters
+
+### Fix Applied
+
+```python
+# File: tests/unit/e2e/test_runner.py
+# Test: TestInitializeOrResumeExperimentFailedReset
+#       ::test_resume_failed_experiment_resets_failed_subtest_states_to_pending
+
+# Before (FAILING): used _run_resume helper, no run_states
+# After (PASSING): inlined checkpoint creation with run_states for subtest "01"
+```
+
+### Validators in ResumeManager.reset_failed_states()
+
+Execution order matters — validators run in this sequence:
+1. `_reset_infra_error_runs()` — failed/rate_limited runs → pending
+2. `_reset_intermediate_runs_in_complete_experiment()` — complete experiments with stuck runs
+3. `_reset_orphaned_subtest_states()` — aggregated subtests without run_states → pending
+4. `_reset_failed_and_interrupted()` — failed/interrupted experiment/tier/subtest → pending/tiers_running
+
+### Test Results
+
+```
+Before fix: 1 failed (assert 'pending' == 'aggregated')
+After fix:  2637 passed, 1 skipped
+```
+# Session Notes: Checkpoint Test Fixture Patterns
+
+## Date: 2026-03-17
+
+## Context
+
+During a push to `1490-always-retry-infra-failures` branch, the pre-push hook ran
+the full test suite and caught a failure in `test_resume_failed_experiment_resets_failed_subtest_states_to_pending`.
+
+The test was asserting that an "aggregated" subtest survives a resume, but the
+orphan detector (added as part of the ResumeManager decomposition) correctly
+identified it as orphaned and reset it.
+
+## Root Cause
+
+`_find_orphaned_subtest_states()` in `resume_manager.py` scans for subtests in
+"aggregated" or "runs_complete" state that have no entries in `run_states`. This
+is a valid checkpoint integrity check — in production, every aggregated subtest
+has runs that produced its aggregation.
+
+The test fixture used the `_run_resume()` helper which creates a checkpoint with
+`run_states={}` by default. Subtest "01" was set to "aggregated" but had no
+backing runs, so the orphan detector reset it to "pending".
+
+## Fix
+
+Inlined the checkpoint creation in the test method and added:
+```python
+run_states={"T0": {"01": {"1": "worktree_cleaned"}}}
+```
+
+This gives subtest "01" a legitimate backing run, so the orphan detector skips it.
+
+## Key Insight
+
+When writing resume/retry tests, the fixture must be internally consistent across
+all four checkpoint hierarchy levels. Runtime validators enforce this consistency
+during resume, and they will "fix" inconsistent fixtures — causing tests to fail
+even though the production code is correct.
+
+## Files Changed
+
+- `tests/unit/e2e/test_runner.py` — 1 test method rewritten (36 lines added, 5 removed)
+- Commit: `6bfe3e10 fix(test): add run_states to subtest reset test fixture to prevent orphan detection`
+```
+
+## Superseded from orphan-aware-test-fixtures
+
+```markdown
+---
+name: orphan-aware-test-fixtures
+description: 'Patterns for fixing test fixtures that break when checkpoint integrity
+  detectors are added. Use when: adding orphan detection to resume pipelines, or when
+  aggregated states get unexpectedly reset.'
+category: testing
+date: 2026-03-17
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Problem** | Adding `_reset_orphaned_subtest_states()` to the resume pipeline created a new invariant: subtest states in `aggregated`/`runs_complete` must have backing `run_states`, or they get reset to `pending`. Existing tests that set `subtest_states` without `run_states` broke silently — the orphan detector correctly reset them. |
+| **Solution** | Add `run_states` entries with `worktree_cleaned` for any test fixture subtest in `aggregated` or `runs_complete` state |
+| **Key Insight** | Integrity detectors create implicit invariants on test fixtures. When you add a detector that validates cross-field consistency (e.g., subtest_states must have backing run_states), ALL existing fixtures that set those fields must be updated. |
+| **Scope** | `tests/unit/e2e/test_runner.py` — `TestInitializeOrResumeExperimentFailedReset` and `TestInitializeOrResumeExperimentMaxSubtests` |
+
+## When to Use
+
+- Adding an orphan/integrity detector to a resume or state machine pipeline
+- Debugging tests where checkpoint states get unexpectedly reset to `pending`
+- Rebasing branches that add new checkpoint invariants onto branches with existing test fixtures
+- Seeing `assert 'pending' == 'aggregated'` or `assert 'config_loaded' == 'pending'` failures in resume tests
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# BEFORE (broken — orphan detector resets "01" to "pending"):
+checkpoint = E2ECheckpoint(
+    experiment_state="failed",
+    subtest_states={"T0": {"00": "failed", "01": "aggregated"}},
+    # No run_states → "01" is orphaned → reset to pending
+)
+
+# AFTER (fixed — "01" has backing run_states):
+checkpoint = E2ECheckpoint(
+    experiment_state="failed",
+    subtest_states={"T0": {"00": "failed", "01": "aggregated"}},
+    run_states={"T0": {"01": {"1": "worktree_cleaned"}}},
+)
+```
+
+### Step-by-Step: Diagnosing Orphan-Related Test Failures
+
+1. **Identify the symptom**: Test asserts a subtest state is `"aggregated"` or `"runs_complete"` but gets `"pending"` instead.
+
+2. **Check if an orphan detector exists**: Search for `_find_orphaned_subtest_states` or similar cross-field validation in the resume pipeline.
+
+3. **Trace the execution order**: In `reset_failed_states()`, the orphan reset runs BEFORE the failed/interrupted reset:
+   ```python
+   def reset_failed_states(self):
+       self._reset_infra_error_runs()           # Step 1
+       self._reset_intermediate_runs_in_complete_experiment()  # Step 2
+       self._reset_orphaned_subtest_states()     # Step 3 ← resets "aggregated" without run_states
+       self._reset_failed_and_interrupted()      # Step 4
+   ```
+
+4. **Fix**: Add `run_states` entries for every subtest that the test expects to remain in `aggregated` or `runs_complete` state. Use `"worktree_cleaned"` as the terminal run state.
+
+5. **Audit**: `grep` for `"aggregated"` and `"runs_complete"` across all test fixtures:
+   ```bash
+   grep -n '"aggregated"\|"runs_complete"' tests/unit/e2e/test_runner.py
+   ```
+   For each match, verify there's a corresponding `run_states` entry.
+
+### Cascade Effects
+
+The orphan detector also calls `_reset_tier_to_config_loaded()` and `_reset_experiment_to_tiers_running()`, which can change tier and experiment states as side effects:
+
+| Orphan detected | Tier state changes to | Experiment state changes to |
+| --- | --- | --- |
+| Any subtest orphaned | `config_loaded` (if was complete-family) | `tiers_running` (if was complete-family) |
+
+This means a test expecting `tier_states["T0"] == "pending"` might get `"config_loaded"` instead if the orphan detector fires first.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| First push after rebase | Rebased onto main, resolved 3 merge conflicts, pushed | `test_resume_failed_experiment_resets_failed_subtest_states_to_pending` failed — `"aggregated"` subtest without `run_states` was orphan-detected | Adding integrity detectors creates implicit invariants on ALL fixtures that touch the validated fields |
+| Second push after fixing one test | Fixed the first failing test, pushed | `test_resume_detects_missing_subtests_and_resets_tier_to_pending` failed — same root cause in different test class | Must audit ALL test fixtures for the pattern, not just the first failure; use `grep '"aggregated"'` across the entire file |
+
+## Results & Parameters
+
+### Fix Pattern
+
+```python
+# For every subtest in "aggregated" state in a test fixture,
+# add a terminal run_states entry:
+run_states={"T0": {"00": {"1": "worktree_cleaned"}, "01": {"1": "worktree_cleaned"}}}
+```
+
+### Audit Command
+
+```bash
+# Find all test fixtures with aggregated/runs_complete without run_states
+grep -n '"aggregated"\|"runs_complete"' tests/unit/e2e/test_runner.py
+```
+
+### Test Results
+
+```
+Before fix: 2 failures (2637 passed, 1 failed; then 2648 passed, 1 failed)
+After fix: 4914 passed, 2 skipped, 77.34% coverage
+Push: succeeded with --force-with-lease (rebased branch)
+```
+# Session Notes: Orphan-Aware Test Fixtures
+
+## Date: 2026-03-17
+
+## Context
+
+After implementing the dryrun3 analysis infrastructure (fig35-39, single-judge guards,
+Kendall's tau, table11, resume retry logic), the branch needed to be committed, rebased
+onto origin/main (20 commits behind), and pushed.
+
+## The Problem
+
+The push pre-hook runs the full test suite. Two tests failed sequentially:
+
+### Failure 1: `test_resume_failed_experiment_resets_failed_subtest_states_to_pending`
+- **Expected**: `subtest_states["T0"]["01"] == "aggregated"` (should survive reset)
+- **Got**: `"pending"` (orphan detector reset it)
+- **Root cause**: The fixture set `subtest_states={"T0": {"00": "failed", "01": "aggregated"}}`
+  but no `run_states`. The `_find_orphaned_subtest_states()` method found `"01"` was
+  `"aggregated"` with no backing runs → orphaned → reset to `"pending"`.
+
+### Failure 2: `test_resume_detects_missing_subtests_and_resets_tier_to_pending`
+- **Expected**: `tier_states["T0"] == "pending"` (should be reset due to missing subtests)
+- **Got**: `"config_loaded"` (orphan detector reset tier before the missing-subtests check)
+- **Root cause**: Same pattern — `subtest_states={"T0": {"00": "aggregated", "01": "aggregated"}}`
+  with no `run_states`. Orphan detector fired first, resetting tier to `"config_loaded"`.
+
+## The Fix
+
+Add `run_states` with `worktree_cleaned` entries for every subtest that tests expect to
+remain in `"aggregated"` state:
+
+```python
+# Before
+checkpoint = E2ECheckpoint(
+    subtest_states={"T0": {"00": "aggregated", "01": "aggregated"}},
+)
+
+# After
+checkpoint = E2ECheckpoint(
+    subtest_states={"T0": {"00": "aggregated", "01": "aggregated"}},
+    run_states={"T0": {"00": {"1": "worktree_cleaned"}, "01": {"1": "worktree_cleaned"}}},
+)
+```
+
+## Key Insight
+
+Adding an integrity detector creates an IMPLICIT INVARIANT on all existing test fixtures.
+The `_reset_orphaned_subtest_states()` method was added to `resume_manager.py` as part of
+the dryrun3 analysis work. It validated cross-field consistency (subtest_states vs run_states)
+that previous tests never needed to maintain because the check didn't exist.
+
+This is a general pattern: any new validation/invariant check in a pipeline will retroactively
+break tests that violate the invariant, even if those tests were correct before.
+
+## Rebase Summary
+
+- 20 commits on main ahead of branch
+- 3 merge conflicts resolved (all docstring/comment wording + run multiplier fixes)
+- 2 test fixtures fixed for orphan detection invariant
+- Final: 4914 passed, 77.34% coverage, push succeeded
+```
+
+## Superseded from zombie-detection-integration-tests
+
+```markdown
+---
+name: zombie-detection-integration-tests
+description: "Integration test patterns for zombie experiment detection and reset\
+  \ in ProjectScylla \u2014 validates the full path from dead PID + stale heartbeat\
+  \ through ResumeManager.handle_zombie() to checkpoint.status='interrupted' with\
+  \ real disk I/O."
+category: testing
+date: '2026-03-19'
+version: 1.0.0
+---
+# Skill: Integration Tests for Zombie Detection + Resume Flow
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Date | 2026-03-02 |
+| Project | ProjectScylla |
+| Objective | Add integration test exercising the full zombie detection path: dead PID + stale heartbeat → `reset_zombie_checkpoint()` → `checkpoint.status='interrupted'` |
+| Outcome | Success — 11/11 tests pass, full suite 3595 passed, 67.46% coverage |
+| Issue | HomericIntelligence/ProjectScylla#1224 |
+| PR | HomericIntelligence/ProjectScylla#1312 |
+
+## When to Use
+
+Use this skill when:
+- Writing integration tests for zombie detection or health monitoring paths
+- Testing `ResumeManager.handle_zombie()` or `reset_zombie_checkpoint()` with real disk I/O
+- Validating that checkpoint state (run/subtest/tier) is preserved during a zombie reset
+- Testing the no-op case (`experiment_dir=None` or non-running status)
+- Need to test dead-PID scenarios without mocking `os.kill`
+
+## Key Architectural Insight: Zombie Detection Three-Condition Check
+
+`is_zombie()` in `scylla/e2e/health.py` requires **all three** conditions to be true:
+
+1. `checkpoint.status == "running"`
+2. The PID referenced in `checkpoint.pid` (or `experiment.pid` file) is dead
+3. `checkpoint.last_heartbeat` is stale (older than `heartbeat_timeout_seconds`, default 120s)
+
+If any condition fails, the checkpoint is **not** treated as a zombie. This means:
+- A fresh heartbeat bypasses zombie detection even for dead PIDs (process restarted, heartbeat was written recently)
+- A non-running status (`interrupted`, `completed`, `failed`) is never a zombie
+
+## Verified Workflow
+
+### Dead PID Technique — No Mocking Required
+
+Use a guaranteed-dead PID value to avoid mocking `os.kill`:
+
+```python
+# Linux's max PID is 4,194,304. A value well above this is always dead.
+_DEAD_PID = 999_999_999
+
+cp = make_checkpoint(
+    status="running",
+    pid=_DEAD_PID,
+    last_heartbeat=_stale_heartbeat(),
+    experiment_dir=str(tmp_path),
+)
+```
+
+This is cleaner than `@patch("os.kill", side_effect=OSError)` and works on any Linux system.
+
+### Timestamp Helpers
+
+```python
+from datetime import datetime, timedelta, timezone
+
+_STALE_HEARTBEAT_AGE = 300   # well past 120s default
+_FRESH_HEARTBEAT_AGE = 10    # well within 120s default
+
+def _stale_heartbeat() -> str:
+    return (datetime.now(timezone.utc) - timedelta(seconds=_STALE_HEARTBEAT_AGE)).isoformat()
+
+def _fresh_heartbeat() -> str:
+    return (datetime.now(timezone.utc) - timedelta(seconds=_FRESH_HEARTBEAT_AGE)).isoformat()
+```
+
+### Integration Test Pattern (Real Disk I/O)
+
+Unlike unit tests that mock file operations, integration tests use `tmp_path` and real
+`save_checkpoint` / `load_checkpoint` calls to validate the full round-trip:
+
+```python
+from scylla.e2e.checkpoint import E2ECheckpoint, load_checkpoint, save_checkpoint
+from scylla.e2e.resume_manager import ResumeManager
+
+def test_status_is_interrupted_after_handle_zombie(self, tmp_path: Path) -> None:
+    cp = make_checkpoint(
+        status="running",
+        pid=_DEAD_PID,
+        last_heartbeat=_stale_heartbeat(),
+        experiment_dir=str(tmp_path),
+    )
+    cp_path = tmp_path / "checkpoint.json"
+    save_checkpoint(cp, cp_path)           # Write initial checkpoint
+
+    rm = _make_resume_manager(cp)
+    _, updated_cp = rm.handle_zombie(
+        checkpoint_path=cp_path,
+        experiment_dir=tmp_path,
+        heartbeat_timeout_seconds=120,
+    )
+
+    assert updated_cp.status == "interrupted"           # In-memory check
+    on_disk = load_checkpoint(cp_path)
+    assert on_disk.status == "interrupted"              # Disk persistence check
+```
+
+### Minimal ResumeManager Construction
+
+`ResumeManager` requires `config` and `tier_manager` collaborators. For tests that only
+exercise `handle_zombie()`, mock them with `MagicMock(spec=...)`:
+
+```python
+from unittest.mock import MagicMock
+from scylla.e2e.models import ExperimentConfig
+from scylla.e2e.resume_manager import ResumeManager
+
+def _make_resume_manager(checkpoint: E2ECheckpoint) -> ResumeManager:
+    config = MagicMock(spec=ExperimentConfig)
+    tier_manager = MagicMock()
+    return ResumeManager(checkpoint, config, tier_manager)
+```
+
+### Disk-Not-Modified Check
+
+To verify a no-op path (fresh heartbeat, `experiment_dir=None`) doesn't write to disk,
+use `st_mtime` before and after:
+
+```python
+original_mtime = cp_path.stat().st_mtime
+rm.handle_zombie(checkpoint_path=cp_path, experiment_dir=tmp_path)
+assert cp_path.stat().st_mtime == original_mtime
+```
+
+For the `experiment_dir=None` case, assert the checkpoint file was never created:
+
+```python
+# Do NOT write checkpoint to disk first
+cp_path = tmp_path / "checkpoint.json"
+rm.handle_zombie(checkpoint_path=cp_path, experiment_dir=None)
+assert not cp_path.exists()
+```
+
+### Test Class Organization
+
+Organize tests into 4 logical classes covering all code paths:
+
+```python
+class TestZombieResetsStatusToInterrupted:    # Core zombie → interrupted
+class TestZombieResetPreservesStateData:      # State data survives reset
+class TestNonZombieCheckpointUnchanged:       # Not a zombie → no change
+class TestExperimentDirNoneIsNoop:            # Guard against None dir
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Test counts (11 total)
+
+| Class | Count |
+| ------- | ------- |
+| `TestZombieResetsStatusToInterrupted` | 2 |
+| `TestZombieResetPreservesStateData` | 4 |
+| `TestNonZombieCheckpointUnchanged` | 3 |
+| `TestExperimentDirNoneIsNoop` | 2 |
+
+### Coverage behavior
+
+Running only integration tests hits ~8.27% combined coverage (below the 9% floor).
+Always run with `--override-ini="addopts="` to suppress the coverage floor when
+running integration tests in isolation:
+
+```bash
+pixi run python -m pytest tests/integration/ -v --override-ini="addopts="
+```
+
+The 9% floor is only meaningful when the full test suite runs together.
+
+### Key constants
+
+```python
+_DEAD_PID = 999_999_999          # Guaranteed dead on Linux (max is 4,194,304)
+_STALE_HEARTBEAT_AGE = 300       # 5 minutes — well past 120s default timeout
+_FRESH_HEARTBEAT_AGE = 10        # 10 seconds — well within 120s default timeout
+```
+
+### pytestmark
+
+```python
+pytestmark = pytest.mark.integration
+# Run with: pixi run python -m pytest tests/integration/ -v --override-ini="addopts="
+```
+
+### Zombie detection source
+
+- `scylla/e2e/health.py` — `is_zombie()`, `reset_zombie_checkpoint()`, `DEFAULT_HEARTBEAT_TIMEOUT_SECONDS`
+- `scylla/e2e/resume_manager.py` — `ResumeManager.handle_zombie()`
+- `tests/integration/e2e/test_zombie_resume.py` — the integration test file
+```
+
+## Superseded from wired-runner-fixture
+
+```markdown
+---
+name: wired-runner-fixture
+description: "Skill: wired-runner-fixture"
+category: testing
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+---
+# Skill: wired-runner-fixture
+
+## Overview
+
+| Field | Value |
+| ----------- | ------------------------------------------------------------ |
+| Date | 2026-02-20 |
+| Issue | #771 |
+| PR | #815 |
+| Objective | Extract shared `wired_runner` pytest fixture for `E2ERunner` tests |
+| Outcome | Success — 4 tests refactored, zero per-test boilerplate |
+| Category | testing |
+
+## When to Use
+
+Trigger this skill when:
+
+- Multiple test methods in a class each construct the same object with `SomeClass(mock_a, mock_b, ...)` before calling the method under test
+- The real constructor takes a `Path` argument and creates a heavy dependency (e.g. `TierManager`) internally, requiring mocking to avoid filesystem access
+- You want to add `experiment_dir` or other post-construction attributes that the constructor leaves as `None`
+- A follow-up issue references "extract fixture" or "eliminate boilerplate" across a test class
+
+## Verified Workflow
+
+### 1. Identify the boilerplate pattern
+
+```python
+# BEFORE: each test method constructs the object directly
+def test_foo(self, mock_config, mock_tier_manager):
+    runner = E2ERunner(mock_config, mock_tier_manager, Path("/tmp"))
+    result = runner.some_method(...)
+```
+
+Check the real constructor signature — the second arg may be a `Path`, not a mock:
+
+```python
+# Real constructor (scylla/e2e/runner.py)
+def __init__(self, config: ExperimentConfig, tiers_dir: Path, results_base_dir: Path, ...):
+    self.tier_manager = TierManager(tiers_dir)  # filesystem access!
+    self.experiment_dir: Path | None = None
+```
+
+### 2. Add imports
+
+```python
+from unittest.mock import MagicMock, patch
+from scylla.e2e.tier_manager import TierManager
+```
+
+### 3. Write the fixture
+
+Place it **after** the lower-level fixtures it depends on (`mock_config`, `mock_tier_manager`) and **before** the test class:
+
+```python
+@pytest.fixture
+def wired_runner(
+    mock_config: ExperimentConfig,
+    mock_tier_manager: MagicMock,
+    tmp_path: Path,
+) -> E2ERunner:
+    """Pre-configured E2ERunner with experiment_dir and tier_manager already set."""
+    with patch.object(TierManager, "__init__", return_value=None):
+        runner = E2ERunner(mock_config, tmp_path / "tiers", tmp_path / "results")
+    runner.tier_manager = mock_tier_manager
+    runner.experiment_dir = tmp_path / "experiment"
+    runner.experiment_dir.mkdir(parents=True)
+    return runner
+```
+
+**Key decisions:**
+
+- `patch.object(TierManager, "__init__", return_value=None)` — bypass real filesystem init, inject mock afterward
+- `tmp_path` (pytest built-in) — real directory, auto-cleaned, no `Path("/tmp")` collisions
+- Post-construction attribute injection — matches how tests actually use the object
+- Function scope (default) — `E2ERunner` mutates state, so per-test isolation is required
+
+### 4. Refactor all test methods in the class
+
+```python
+# AFTER: fixture parameter replaces both mock parameters and construction
+def test_foo(self, wired_runner: E2ERunner) -> None:
+    result = wired_runner.some_method(...)
+```
+
+Remove the `E2ERunner(...)` construction line from every method. Adopt **all-or-nothing** within the class — partial adoption creates inconsistency.
+
+### 5. Verify
+
+```bash
+# All tests in file pass
+pixi run python -m pytest tests/unit/e2e/test_runner.py -v
+
+# Only one E2ERunner(...) call remains — inside the fixture
+grep -n "E2ERunner(" tests/unit/e2e/test_runner.py
+
+# Pre-commit clean
+pre-commit run --files tests/unit/e2e/test_runner.py
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+```
+File modified: tests/unit/e2e/test_runner.py
+Tests refactored: 4 (TestTokenStatsAggregation class)
+Net line change: +25 insertions, -24 deletions (fixture adds ~16 lines, removes boilerplate)
+Pre-commit: all hooks passed (ruff, black, mypy)
+Test result: 4/4 passed
+```
+
+### Final fixture (copy-paste ready)
+
+```python
+@pytest.fixture
+def wired_runner(
+    mock_config: ExperimentConfig,
+    mock_tier_manager: MagicMock,
+    tmp_path: Path,
+) -> E2ERunner:
+    """Pre-configured E2ERunner with experiment_dir and tier_manager already set."""
+    with patch.object(TierManager, "__init__", return_value=None):
+        runner = E2ERunner(mock_config, tmp_path / "tiers", tmp_path / "results")
+    runner.tier_manager = mock_tier_manager
+    runner.experiment_dir = tmp_path / "experiment"
+    runner.experiment_dir.mkdir(parents=True)
+    return runner
+```
+```
+
+## Superseded from validation-loop-reset-test
+
+```markdown
+---
+name: validation-loop-reset-test
+description: 'Pattern for testing that training/validation loops reset DataLoaders
+  before iterating, using a pre-exhaustion strategy. Use when: adding tests for loop
+  reset behavior, verifying run() or run_subset() semantics, or writing parallel tests
+  across loop methods.'
+category: testing
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Category** | testing |
+| **Mojo version** | 0.26.1 |
+| **Issue** | #3688 (follow-up from #3186) |
+| **Pattern** | Pre-exhaustion strategy for DataLoader reset tests |
+| **File modified** | `tests/shared/training/test_validation_loop.mojo` |
+
+## When to Use
+
+- Adding a parallel test for `run()` after a `run_subset()` reset test already exists
+- Verifying that any training or validation loop method calls `reset()` on a DataLoader before iterating
+- Checking that a loop is resilient to a pre-exhausted (fully consumed) DataLoader
+- Following up on an issue that says "check whether method X has the same pattern as method Y"
+
+## Verified Workflow
+
+### Quick Reference
+
+```
+1. Read the existing parallel test (e.g. test_..._run_subset_resets_loader)
+2. Read the implementation to confirm the reset() call site and line number
+3. Add test function using pre-exhaustion strategy
+4. Add call to test function in main()
+5. Commit, push, PR
+```
+
+### Step 1 — Read the existing parallel test
+
+Locate the existing reset test for the sibling method and understand its structure:
+
+```mojo
+fn test_validation_loop_run_subset_resets_loader() raises:
+    """..."""
+    var vloop = ValidationLoop()
+    var loader = create_val_loader(n_batches=2)
+    loader.current_batch = loader.num_batches   # pre-exhaust
+    assert_true(not loader.has_next())
+    var metrics = TrainingMetrics()
+    var val_loss = vloop.run_subset(simple_forward, simple_loss, loader, 2, metrics)
+    assert_greater(val_loss, Float64(-1e-10))
+    assert_less(val_loss, Float64(1e10))
+    print("  test_validation_loop_run_subset_resets_loader: PASSED")
+```
+
+### Step 2 — Read the implementation to confirm reset() call site
+
+Check `validation_loop.mojo`:
+
+- `run_subset()` calls `val_loader.reset()` directly at line ~266.
+- `run()` delegates to `validate()`, which calls `val_loader.reset()` at line ~94.
+
+Document the exact call path in the docstring so reviewers understand the indirection.
+
+### Step 3 — Write the parallel test using pre-exhaustion strategy
+
+```mojo
+fn test_validation_loop_run_resets_loader() raises:
+    """Test run() resets a pre-exhausted DataLoader before iterating.
+
+    Strategy: Create a loader with exactly 2 batches, then exhaust it by
+    setting current_batch = num_batches. Without reset(), has_next() returns
+    False immediately -> 0 batches processed -> division by zero. With reset(),
+    the loader restarts and processes all 2 batches -> valid finite loss.
+
+    This proves run() calls val_loader.reset() internally (via validate(),
+    line 94 of validation_loop.mojo).
+    """
+    var vloop = ValidationLoop()
+    # 2 batches total (8 samples, batch_size=4)
+    var loader = create_val_loader(n_batches=2)
+    # Pre-exhaust: advance to end so has_next() returns False
+    loader.current_batch = loader.num_batches
+    assert_true(not loader.has_next())
+    var metrics = TrainingMetrics()
+    # run() delegates to validate() which calls val_loader.reset() internally
+    var val_loss = vloop.run(simple_forward, simple_loss, loader, metrics)
+    # Valid finite loss proves batches were processed after reset (not 0)
+    assert_greater(val_loss, Float64(-1e-10))
+    assert_less(val_loss, Float64(1e10))
+    print("  test_validation_loop_run_resets_loader: PASSED")
+```
+
+Key elements of the pre-exhaustion strategy:
+
+1. `loader.current_batch = loader.num_batches` — directly mutates the loader state to simulate exhaustion
+2. `assert_true(not loader.has_next())` — pre-condition: confirms loader is exhausted before calling the method under test
+3. A **valid finite loss** as the post-condition — proves `reset()` ran (otherwise division-by-zero or zero batches)
+
+### Step 4 — Add call to main()
+
+Place the call in the correct group block (under `run()` tests, not `run_subset()` tests):
+
+```mojo
+print("Running ValidationLoop.run() tests...")
+test_validation_loop_run_basic()
+test_validation_loop_run_updates_metrics()
+test_validation_loop_run_compute_accuracy_false()
+test_validation_loop_run_resets_loader()   # ← add here
+```
+
+### Step 5 — Commit, push, PR
+
+```bash
+git add tests/shared/training/test_validation_loop.mojo
+git commit -m "test(validation_loop): add test_validation_loop_run_resets_loader
+
+Closes #3688"
+git push -u origin 3688-auto-impl
+gh pr create --title "..." --body "Closes #3688"
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Using `run_in_background` for Skill tool | Called commit-commands:commit-push-pr skill | Skill tool denied (don't-ask mode) | Fall back to direct Bash git commands when Skill tool is unavailable |
+| Checking for pytest tests | Issue prompt said "use pytest" | Project uses Mojo test runner, not pytest | Always check test file extension and existing test patterns before writing tests |
+
+## Results & Parameters
+
+**Test file**: `tests/shared/training/test_validation_loop.mojo`
+
+**Pre-exhaustion snippet** (copy-paste):
+
+```mojo
+loader.current_batch = loader.num_batches
+assert_true(not loader.has_next())
+```
+
+**Post-condition assertions** (valid finite loss):
+
+```mojo
+assert_greater(val_loss, Float64(-1e-10))
+assert_less(val_loss, Float64(1e10))
+```
+
+**Why finite loss proves reset**:
+- Without reset: `has_next()` returns `False` immediately → 0 batches → division by zero (crash or `avg_loss = 0/0`)
+- With reset: loader restarts → N batches processed → `avg_loss = total / N` → finite positive value
+# Session Notes — validation-loop-reset-test
+
+## Date
+2026-03-15
+
+## Issue
+GitHub #3688 — "Test ValidationLoop.run() also resets DataLoader before iterating"
+Follow-up from #3186.
+
+## Objective
+Add `test_validation_loop_run_resets_loader` in Mojo to verify that `ValidationLoop.run()`
+calls `val_loader.reset()` internally, parallel to the existing `test_validation_loop_run_subset_resets_loader`.
+
+## Files Examined
+
+- `shared/training/loops/validation_loop.mojo` — implementation
+  - `run()` delegates to `validate()` at line ~205
+  - `validate()` calls `val_loader.reset()` at line ~94
+  - `run_subset()` calls `val_loader.reset()` directly at line ~266
+- `tests/shared/training/test_validation_loop.mojo` — test file
+
+## Approach
+
+Used the pre-exhaustion strategy:
+1. Create a `DataLoader` with 2 batches
+2. Set `loader.current_batch = loader.num_batches` to simulate exhaustion
+3. Assert `not loader.has_next()` as pre-condition
+4. Call `vloop.run()` — if reset works, batches are processed; if not, division by zero
+5. Assert valid finite loss as post-condition
+
+## Outcome
+
+- Added `test_validation_loop_run_resets_loader` (27 lines) after `test_validation_loop_run_subset_resets_loader`
+- Added call in `main()` under the `run()` tests block
+- Committed to branch `3688-auto-impl`, pushed, PR #4770 created
+
+## Skill Tool Failure
+
+The `commit-commands:commit-push-pr` skill was denied (don't-ask permission mode).
+Fell back to direct Bash `git add && git commit && git push` + `gh pr create`.
+
+## Key Patterns
+
+- Mojo tests use `fn main() raises` not pytest
+- DataLoader state is directly mutable via `loader.current_batch`
+- `assert_true(not loader.has_next())` is the canonical pre-exhaustion check
+- Finite loss (not zero, not infinity) is the correct post-condition for reset proof
+```
+
+## Superseded from dataloader-reset-verification
+
+```markdown
+---
+name: dataloader-reset-verification
+description: 'Test pattern to verify DataLoader reset behavior in training/validation
+  loops. Use when: confirming an iterator''s reset() is called before iteration, or
+  verifying a loop does not silently skip batches on a partially-consumed loader.'
+category: testing
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| Category | testing |
+| Language | Mojo |
+| Issue | #3186 (ProjectOdyssey) |
+| Pattern | Self-proving test via catastrophic failure mode |
+
+## When to Use
+
+- You need to prove an iterator-consuming loop calls `reset()` before iteration
+- A validation/training loop accepts a pre-existing loader that may be partially consumed
+- The failure mode (division by zero from zero batches) is clearly distinct from success (valid finite loss)
+- You want a test that doesn't require mock objects — direct field mutation suffices
+
+## Verified Workflow
+
+### 1. Identify the reset call in the implementation
+
+Read the source to confirm where `reset()` is called (e.g., `validation_loop.mojo:255`):
+
+```mojo
+val_loader.reset()
+while val_loader.has_next() and num_batches < max_batches:
+    ...
+var avg_loss = total_loss / Float64(num_batches)  # division by zero if reset() absent
+```
+
+### 2. Pre-exhaust the loader via direct field mutation
+
+```mojo
+var loader = create_val_loader(n_batches=2)
+# Advance current_batch to num_batches so has_next() returns False
+loader.current_batch = loader.num_batches
+assert_true(not loader.has_next())
+```
+
+### 3. Call the function under test with max_batches matching loader capacity
+
+```mojo
+var val_loss = vloop.run_subset(simple_forward, simple_loss, loader, 2, metrics)
+```
+
+### 4. Assert the result is a valid finite number
+
+```mojo
+# Valid loss proves 2 batches were processed after reset (not 0)
+assert_greater(val_loss, Float64(-1e-10))
+assert_less(val_loss, Float64(1e10))
+```
+
+Without `reset()`: `num_batches == 0` → `total_loss / 0.0` → `NaN` or raises.
+With `reset()`: `num_batches == 2` → valid finite loss.
+
+### 5. Why this is self-proving
+
+The test does not require mocking. The failure mode (division by zero / NaN / raise) is
+categorically different from the success mode (valid bounded Float64). No spy object needed.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Mock-based approach | Wrapping DataLoader to count reset() calls | Mojo structs don't support vtable-based mocking easily; no trait for spy | Use direct field mutation + observable side effects instead |
+| Checking batch count post-call | Asserting `loader.current_batch == 2` after run_subset | run_subset may call reset() again at end or leave loader in partial state | Assert on the output (loss) not loader state after the call |
+| Asserting exact loss value | `assert_almost_equal(val_loss, Float64(1.0), ...)` | Relies on loss function returning exactly 1.0; brittle if loss function changes | Use range assertions (`> -eps` and `< large`) for robustness |
+
+## Results & Parameters
+
+```mojo
+# Copy-paste test template
+fn test_run_subset_resets_loader() raises:
+    var vloop = ValidationLoop()
+    var loader = create_val_loader(n_batches=2)  # small loader to keep test fast
+    loader.current_batch = loader.num_batches    # exhaust loader
+    assert_true(not loader.has_next())           # confirm pre-condition
+    var metrics = TrainingMetrics()
+    var val_loss = vloop.run_subset(
+        simple_forward, simple_loss, loader, 2, metrics
+    )
+    assert_greater(val_loss, Float64(-1e-10))    # finite: reset() was called
+    assert_less(val_loss, Float64(1e10))
+    print("  test_run_subset_resets_loader: PASSED")
+```
+
+**Key parameters:**
+
+- `n_batches=2`: Minimum batches that allows `max_batches=2` to be meaningful
+- `max_batches=2`: Must equal `n_batches` so that all batches are consumed after reset
+- Range bounds: `-1e-10` to `1e10` — wide enough to tolerate any valid loss function
+# Session Notes: DataLoader Reset Verification
+
+## Raw Session Details
+
+**Issue**: ProjectOdyssey #3186 — "Verify ValidationLoop.run_subset() resets DataLoader correctly"
+
+**Problem statement**: The existing `test_validation_loop_run_subset_limited` created a fresh
+`DataLoader` for each call, so it never tested whether `run_subset()` internally resets a
+partially-consumed loader. A pre-advanced loader would produce fewer batches than `max_batches`.
+
+**Files modified**:
+
+- `tests/shared/training/test_validation_loop.mojo` — added `test_validation_loop_run_subset_resets_loader()`
+
+**Key source reference**:
+
+- `shared/training/loops/validation_loop.mojo:255` — `val_loader.reset()` call
+- `shared/training/trainer_interface.mojo:352-354` — `DataLoader.reset()` implementation
+- `shared/training/trainer_interface.mojo:362` — `has_next()`: `current_batch < num_batches`
+
+**Approach chosen**: Direct field mutation (`loader.current_batch = loader.num_batches`) rather
+than mock objects. Mojo structs expose public fields so this is idiomatic. The failure mode
+(division by zero at `total_loss / Float64(0)`) is categorically distinguishable from success.
+
+**PR created**: ProjectOdyssey #3687
+
+**Pre-commit hooks**: All passed (mojo format, trailing whitespace, end-of-file-fixer,
+check-added-large-files, validate-test-coverage).
+
+**Local test execution**: Not possible — GLIBC version mismatch on host (requires 2.32+, host
+has older libc). Tests validated by code review and CI instead.
+
+## Generalizable Pattern
+
+The "self-proving via catastrophic failure" pattern applies whenever:
+
+1. A loop computes `total / count` and count can be 0 if reset() is absent
+2. The struct fields are accessible for direct mutation (no encapsulation barrier)
+3. The success outcome (finite number) is categorically distinct from failure (NaN/raise/zero)
+
+This avoids the need for mock objects, spy wrappers, or test doubles entirely.
+```
