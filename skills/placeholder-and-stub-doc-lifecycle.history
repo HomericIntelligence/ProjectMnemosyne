@@ -1,0 +1,1517 @@
+## Superseded from deferred-doc-placeholder
+
+---
+name: deferred-doc-placeholder
+description: 'Pattern for adding an HTML comment placeholder to a docs navigation
+  index when an entire section is removed due to stub deletion. Use when: a docs/index.md
+  section disappears after placeholder stubs are deleted and a follow-up issue tracks
+  restoring it.'
+category: documentation
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+---
+# Deferred Doc Placeholder
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-07 |
+| **Issue** | #3312 (ProjectOdyssey) |
+| **PR** | #3932 (ProjectOdyssey) |
+| **Objective** | Restore navigation awareness in `docs/index.md` after Core Documentation section was removed when 17 placeholder stubs were deleted in #3142 |
+| **Outcome** | HTML comment block added listing all 17 deferred topics with status, reason, and acceptance criteria; no broken links introduced |
+| **Status** | Completed and merged |
+
+## When to Use This Skill
+
+Apply this pattern when:
+
+1. A docs navigation index (`docs/index.md` or similar hub) had a **section removed** because the linked files were placeholder stubs deleted under YAGNI
+2. A follow-up issue explicitly tracks **restoring the navigation hub** when real docs are written
+3. You want to make the **absence visible** to future contributors without introducing broken links
+4. Multiple topics are deferred and each needs **acceptance criteria** for restoration
+
+**Do NOT use** when:
+
+- Only one or two links are missing (just add a TODO comment inline)
+- The section was intentionally removed permanently (no planned restoration)
+- The doc files actually exist — link them directly instead
+
+## Verified Workflow
+
+### 1. Read the issue and the current index file
+
+```bash
+gh issue view <number> --comments
+# Then read docs/index.md to see its current state
+```
+
+Confirm: which section is missing, which topics belong to it.
+
+### 2. Insert an HTML comment block at the section's former location
+
+Place the comment between the last real section above and the next real section below.
+Each deferred topic gets three sub-fields:
+
+```markdown
+<!-- DEFERRED: <Section Name> section
+  The following topics were linked in docs/index.md but their source files
+  were placeholder stubs deleted in #<stub-deletion-issue>. Re-add each entry
+  once the corresponding doc is written.
+
+  - <topic-slug> (<path/to/file.md>)
+    Status: Deferred — doc not yet written
+    Why: Stub deleted in #<issue> (YAGNI)
+    Acceptance criteria: Write <path/to/file.md>; re-add link here
+
+  ...
+
+  Tracking issue: #<follow-up-issue>
+-->
+```
+
+Key rules:
+
+- Use an **HTML comment** (`<!-- ... -->`), not a Markdown heading — the section should
+  not render in the output, only in source
+- List **every** topic that was in the removed section
+- Include **all related sections** that also lost entries (e.g., Advanced Topics, Dev Guides)
+- Add `Tracking issue: #<number>` at the bottom so the comment is self-referencing
+
+### 3. Verify no broken links were introduced
+
+```bash
+grep -n "\[.*\](<missing-path>" docs/index.md   # should return nothing
+```
+
+### 4. Check line length compliance (markdownlint MD013)
+
+```bash
+awk 'length > 120 {print NR": "length" chars"}' docs/index.md
+```
+
+Lines inside HTML comments are exempt from markdownlint rendering rules, but confirm
+any pre-existing long lines are not from your edit.
+
+### 5. Commit, push, PR
+
+Pure documentation change — no tests needed:
+
+```bash
+git add docs/index.md
+git commit -m "docs(index): add deferred placeholder for <Section> section
+
+<Brief explanation of what was removed and why the comment was added.>
+
+Closes #<issue-number>"
+
+git push -u origin <branch>
+gh pr create --title "docs(index): add deferred placeholder for <Section> section" \
+  --body "Closes #<issue-number>"
+gh pr merge --auto --rebase
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Single-pass implementation | — | Task was well-scoped: one file edit, HTML comment, no broken links |
+
+## Results & Parameters
+
+### Files Modified
+
+| File | Change |
+| ------ | -------- |
+| `docs/index.md` | +55 lines: HTML comment block between Getting Started and Advanced Topics sections |
+
+### Comment Block Template (copy-paste)
+
+```markdown
+<!-- DEFERRED: Core Documentation section
+  The following topics were linked in docs/index.md but their source files
+  were placeholder stubs deleted in #3142. Re-add each entry once the
+  corresponding doc is written.
+
+  - project-structure (core/project-structure.md)
+    Status: Deferred — doc not yet written
+    Why: Stub deleted in #3142 (YAGNI)
+    Acceptance criteria: Write core/project-structure.md; re-add link here
+
+  - shared-library (core/shared-library.md)
+    Status: Deferred — doc not yet written
+    Why: Stub deleted in #3142
+    Acceptance criteria: Write core/shared-library.md; re-add link here
+
+  Tracking issue: #3312
+-->
+```
+
+### Pre-commit Results
+
+All hooks passed with a pure HTML comment addition:
+
+- `Markdown Lint` — Passed (HTML comments are not HTML elements; MD033 allows-list not triggered)
+- `Trim Trailing Whitespace` — Passed
+- `Fix End of Files` — Passed
+- `Check for Large Files` — Passed
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectOdyssey | Issue #3312, PR #3932 | 17-topic Core Documentation section restored as deferred comment after stubs deleted in #3142 |
+
+## Related Skills
+
+- **document-deferred-future-improvements** — Annotates *existing* Future Improvements items inside design docs with Status/Why/Acceptance Criteria; this skill is for a *missing navigation section* in an index file
+- **delete-placeholder-docs** — The upstream skill that removes stubs; this skill documents the follow-up pattern
+- **placeholder-note-to-status-tracking** — Similar pattern for converting bare placeholder notes to structured status entries
+
+## Superseded from deferred-doc-placeholder (notes)
+
+# Session Notes: deferred-doc-placeholder
+
+## Session Details
+
+- **Date**: 2026-03-07
+- **Repository**: HomericIntelligence/ProjectOdyssey
+- **Branch**: 3312-auto-impl
+- **Issue**: #3312 — "docs/index.md lacks Core Documentation section after stub deletion"
+- **PR**: #3932
+
+## Problem
+
+After 17 placeholder stub files were deleted in PR/issue #3142 (under YAGNI), the
+`docs/index.md` Core Documentation section was removed entirely. The section included 8 topics:
+
+- project-structure
+- shared-library
+- paper-implementation
+- testing-strategy
+- mojo-patterns
+- agent-system
+- workflow
+- configuration
+
+Also removed from Advanced Topics: performance, custom-layers, distributed-training,
+visualization, debugging, integration.
+
+Also removed from Development Guides: architecture, api-reference, ci-cd.
+
+The issue asked for a reminder that the navigation hub is now sparse and these topics
+should be re-added when real docs are written.
+
+## Approach Taken
+
+Single file edit: inserted an HTML comment block into `docs/index.md` between the
+Getting Started section (line 18) and Advanced Topics section (line 19 post-edit).
+
+The comment lists all 17 deferred topics with:
+- Status (Deferred — doc not yet written)
+- Why (Stub deleted in #3142, YAGNI)
+- Acceptance criteria (Write <file>; re-add link here)
+
+Plus a `Tracking issue: #3312` footer.
+
+## Execution
+
+```bash
+# Read current state
+cat docs/index.md
+
+# Edit (used Edit tool to insert comment block at line 19)
+# Verified: grep -c "DEFERRED: Core Documentation" docs/index.md → 1
+# Verified: grep -n "\[.*\](core/" docs/index.md → no matches (no broken links)
+# Verified: awk 'length > 120' docs/index.md → 2 pre-existing long lines, not from edit
+
+# Commit
+git add docs/index.md
+git commit -m "docs(index): add deferred placeholder for Core Documentation section"
+# All pre-commit hooks passed
+
+# Push + PR
+git push -u origin 3312-auto-impl
+gh pr create --title "docs(index): add deferred placeholder for Core Documentation section"
+gh pr merge --auto --rebase 3932
+```
+
+## Key Observations
+
+1. HTML comments in Markdown pass `markdownlint-cli2` even with MD033 (allowed_elements list)
+   because comments are not HTML *elements*
+2. The pre-existing long lines (106, 112 chars) in the Community/License sections were
+   pre-existing — confirmed via `git diff HEAD`
+3. The task was trivial but important: making stub-deletion follow-ups explicit so future
+   contributors don't wonder why the nav hub is sparse
+
+## Commit Hash
+
+`d5d70c2f` (post-edit) — superseded by the new commit in this session
+
+## Superseded from delete-placeholder-docs
+
+---
+name: delete-placeholder-docs
+description: 'Delete empty placeholder documentation stubs and remove broken links.
+  Use when: stub files contain only placeholder text, YAGNI cleanup is needed, or
+  broken links must be fixed.'
+category: documentation
+date: 2026-03-05
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Property | Value |
+| ---------- | ------- |
+| Category | documentation |
+| Complexity | S |
+| Files changed | N stubs deleted + M referencing files updated |
+| Pre-requisite | Confirm all files contain only placeholder text before deleting |
+
+Deletes documentation stub files that contain only placeholder text (e.g. `Content here.`) and
+removes all broken links to the deleted files from other documents. Applies the YAGNI principle:
+documentation should be written alongside feature implementation, not created as empty stubs.
+
+## When to Use
+
+- A GitHub issue asks to delete empty/placeholder documentation files
+- Files contain only placeholder text like "Content here." or similar boilerplate
+- `docs/index.md` or other navigation files link to non-existent or stub content
+- Cleanup pass after a documentation reorganization left orphaned stubs
+
+## Verified Workflow
+
+1. **Identify stub files** - Grep for placeholder text to confirm and find all stubs:
+
+   ```bash
+   grep -rl "Content here\." docs/
+   ```
+
+2. **Find all referencing files** - Search for links to each stub path across all docs:
+
+   ```bash
+   grep -rl "custom-layers\|debugging\.md\|..." docs/
+   ```
+
+3. **Read referencing files** - Read each file that links to stubs to understand context
+   before editing (required by Edit tool).
+
+4. **Delete stub files** - Use a single `rm` command for all stubs at once:
+
+   ```bash
+   rm docs/advanced/stub1.md docs/core/stub2.md docs/dev/stub3.md
+   ```
+
+5. **Update referencing files** - For each file containing broken links:
+   - Remove the entire bullet/line for the deleted file
+   - If removing from a section that becomes empty, remove or simplify the section
+   - Keep links that point to real, substantive files (e.g. `benchmarking.md`, `troubleshooting.md`)
+
+6. **Verify no broken links remain**:
+
+   ```bash
+   grep -rl "deleted-stub-path" docs/
+   # Should return: No files found
+   ```
+
+7. **Run pre-commit** skipping hooks with known environmental failures:
+
+   ```bash
+   SKIP=mojo-format pixi run pre-commit run --all-files
+   ```
+
+8. **Commit, push, create PR** with `Closes #<issue>` in the message.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Deleting files without checking referencing files first | Ran `rm` on all stubs immediately | Left broken links in `docs/README.md`, `docs/glossary.md`, `docs/advanced/troubleshooting.md`, `docs/getting-started/first_model.md` | Always grep for all references before deleting |
+| Running `just pre-commit-all` | Used `just` to invoke pre-commit | `just` not in PATH in this environment | Use `pixi run pre-commit run --all-files` directly |
+| Expecting all pre-commit hooks to pass | Ran full pre-commit suite | `mojo-format` fails due to GLIBC version mismatch (pre-existing env issue, not caused by our changes) | Use `SKIP=mojo-format` when the hook failure is environmental, not code-related |
+
+## Results & Parameters
+
+**Session outcome**: Deleted 17 stub files, updated 5 referencing documents, all relevant
+pre-commit hooks passed (markdown lint, ruff, yaml, trailing whitespace, etc.).
+
+**Files typically referencing stubs**:
+- `docs/index.md` - Main navigation hub (most links)
+- `docs/README.md` - Directory structure tree + Next Steps section
+- `docs/glossary.md` - See Also section
+- `docs/getting-started/first_model.md` - Learn More + Related Documentation sections
+- Topic-specific docs with cross-reference sections
+
+**Key pattern for updating referencing files**: When a section in a nav file (like `index.md`)
+contains only stubs, remove the entire section. When a section contains a mix, remove only
+the stub links and keep substantive ones.
+
+**Commit message format**:
+
+```
+docs: delete N empty placeholder documentation stubs
+
+Remove all documentation files containing only "Content here." as
+placeholder text. Per YAGNI, documentation should be written alongside
+feature implementation, not created as empty stubs beforehand.
+
+Also remove all broken links to the deleted files from:
+- docs/index.md
+- docs/README.md
+- docs/glossary.md
+- docs/advanced/troubleshooting.md
+- docs/getting-started/first_model.md
+
+Closes #NNNN
+```
+
+## Superseded from delete-placeholder-docs (notes)
+
+# Session Notes: delete-placeholder-docs
+
+## Context
+
+- **Date**: 2026-03-05
+- **Issue**: HomericIntelligence/ProjectOdyssey#3142
+- **Branch**: 3142-auto-impl
+- **PR**: HomericIntelligence/ProjectOdyssey#3308
+
+## Objective
+
+Delete 17 (listed as 18 in title, 17 in body) empty placeholder documentation files containing
+only "Content here." text. Update all docs that link to the deleted stubs. Part of a YAGNI
+cleanup pass (PR-B in the improvement plan).
+
+## Files Deleted
+
+**docs/advanced/** (6): custom-layers.md, debugging.md, distributed-training.md, integration.md,
+performance.md, visualization.md
+
+**docs/core/** (8): agent-system.md, configuration.md, mojo-patterns.md, paper-implementation.md,
+project-structure.md, shared-library.md, testing-strategy.md, workflow.md
+
+**docs/dev/** (3): api-reference.md, architecture.md, ci-cd.md
+
+## Files Updated
+
+1. `docs/index.md` - Removed Core Documentation section (8 links), removed 6 stub links from
+   Advanced Topics, removed 3 stub links from Development Guides. Kept:
+   benchmarking.md, troubleshooting.md, release-process.md.
+
+2. `docs/README.md` - Updated directory tree to reflect actual structure, removed 2 broken
+   links from Next Steps section.
+
+3. `docs/glossary.md` - Removed 2 links from See Also section (mojo-patterns, api-reference).
+
+4. `docs/advanced/troubleshooting.md` - Removed 4 plain-text path references from Quick
+   Reference Links section.
+
+5. `docs/getting-started/first_model.md` - Removed 4 stub links from Learn More section,
+   removed 2 stub links from Related Documentation section.
+
+## Key Decisions
+
+- Kept non-stub files linked from the same sections: `benchmarking.md`, `troubleshooting.md`,
+  `release-process.md`, `build.md`
+- Removed entire "Core Documentation" section from index.md (all 8 entries were stubs)
+- Simplified "Advanced Topics" to only substantive files
+- Replaced missing performance/custom-layers links in first_model.md with benchmarking.md
+
+## Environment Issues
+
+- `just` not in PATH - used `pixi run pre-commit run --all-files` instead
+- `mojo-format` pre-commit hook fails due to GLIBC version mismatch on this host machine
+  (not a code issue) - used `SKIP=mojo-format` for verification
+- All other hooks (markdown lint, ruff, yaml, etc.) passed cleanly
+
+## Verification
+
+```bash
+grep -rl "custom-layers\|advanced/performance\|core/mojo-patterns\|..." docs/
+# Returns: No files found
+```
+
+## Superseded from document-deferred-future-improvements
+
+---
+name: document-deferred-future-improvements
+description: 'Pattern for documenting deferred Future Improvements in design docs:
+  add Status, Why Deferred, and Acceptance Criteria to each item so future contributors
+  avoid re-investigating implementation status'
+category: documentation
+date: 2026-02-22
+version: 1.0.0
+user-invocable: false
+---
+# Document Deferred Future Improvements
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-02-22 |
+| **Issue** | #881 |
+| **PR** | #990 |
+| **Objective** | Add structured deferral notes to confirmed-unimplemented Future Improvements in `docs/design/container-architecture.md` |
+| **Outcome** | ✅ All four items annotated with Status, Why Deferred, Acceptance Criteria; health check noted as already implemented |
+| **Status** | Completed and merged |
+
+## When to Use This Skill
+
+Apply this pattern when:
+
+1. A design doc contains a **Future Improvements** (or similar) section with bare list items
+2. Items have been **confirmed unimplemented** via code inspection
+3. Future contributors would otherwise need to **re-investigate status** (wasted effort)
+4. A follow-up issue explicitly requests **clarifying deferral rationale**
+
+**Do NOT use** when:
+
+- Items are actively in-flight (mark as WIP instead)
+- The section is already annotated with status fields
+- The doc is auto-generated from code (annotations would be overwritten)
+
+## Verified Workflow
+
+### 1. Read the design doc and identify Future Improvements items
+
+```bash
+# Find the section
+grep -n "Future Improvements" docs/design/*.md
+```
+
+### 2. Inspect actual implementation files to confirm status
+
+For each item, read the relevant implementation files directly:
+
+```bash
+# For container items: Dockerfile and wrapper scripts
+cat docker/Dockerfile
+cat scripts/run_experiment_in_container.sh
+```
+
+Look for:
+- Flags / directives the item would require (e.g., `--memory`, `--platform`, named volumes)
+- If absent → item is **Deferred (not implemented)**
+- If present → item is **Implemented** — note where
+
+### 3. For each item, write three sub-bullets
+
+```markdown
+1. **Item name**: One-line description.
+
+   - **Status**: Deferred (not implemented)  [or: Implemented — see FILE:LINE]
+   - **Why deferred**: Concrete reason grounded in what you saw in the code.
+     Reference specific flags, files, or constraints that block implementation.
+   - **Acceptance criteria**: Measurable conditions to implement (2-3 bullets).
+```
+
+### 4. Surface any already-implemented items
+
+If an item in the list is actually implemented, add a separate entry noting it:
+
+```markdown
+5. **Health checks**: Verify container readiness via `HEALTHCHECK`.
+
+   - **Status**: Implemented — see `docker/Dockerfile` lines 116–117.
+```
+
+This prevents future contributors from treating already-done work as pending.
+
+### 5. Commit, push, PR
+
+Pure documentation changes — no Python code, no tests needed:
+
+```bash
+git add docs/design/container-architecture.md
+git commit -m "docs(container): document future improvements implementation status
+
+Closes #<issue-number>"
+git push -u origin <branch>
+gh pr create --title "docs(container): ..." --body "Closes #<issue-number>"
+gh pr merge --auto --rebase
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Files Modified
+
+| File | Change |
+| --- | --- |
+| `docs/design/container-architecture.md` | +50 lines: expanded Future Improvements from 4 bare bullets to structured entries with Status/Why Deferred/Acceptance Criteria |
+
+### Item Findings (issue-881 specific)
+
+| Item | Status | Key Evidence |
+| --- | --- | --- |
+| Multi-platform ARM64 | Deferred | `FROM` SHA digest is x86_64-only; no ARM64 CI runner |
+| Layer caching | Deferred | Source + deps copied together before `pip install`; hatchling makes split non-trivial |
+| Resource limits | Deferred | No `--memory`/`--cpus` flags in wrapper script; no profiling data |
+| Volume optimization | Deferred | Wrapper uses bind mounts only; named volumes add lifecycle complexity |
+| Health checks | Implemented | `docker/Dockerfile:116-117` |
+
+### Acceptance Criteria Template
+
+For container-related deferred items, acceptance criteria typically include:
+
+- **ARM64**: ARM64 CI runner available; `buildx --platform` used; digests updated
+- **Layer caching**: Build with source-only changes skips pip install layer; CI time ≥30% faster
+- **Resource limits**: Profiling done; flags added as configurable params with documented defaults per tier
+- **Volume optimization**: Named volumes created; cold-start ≥20% faster
+
+## Related Skills
+
+- **docker-multistage-build** — Implementing the layer caching improvement
+- **pin-npm-dockerfile** — Relates to Dockerfile reproducibility
+
+## References
+
+- Issue #881: <https://github.com/HomericIntelligence/ProjectScylla/issues/881>
+- PR #990: <https://github.com/HomericIntelligence/ProjectScylla/pull/990>
+- Follow-up from: Issue #759
+
+## Superseded from document-deferred-future-improvements (notes)
+
+# Raw Notes — document-deferred-future-improvements (issue-881)
+
+## Session Context
+
+- **Date**: 2026-02-22
+- **Branch**: `881-auto-impl` in ProjectScylla
+- **Working directory**: `/home/mvillmow/ProjectScylla/.worktrees/issue-881`
+
+## What Was Done
+
+1. Read `.claude-prompt-881.md` — issue asked to add deferral notes to four Future Improvements items in `docs/design/container-architecture.md`
+2. Read `docs/design/container-architecture.md` — confirmed four bare bullet items at end of file
+3. Read `docker/Dockerfile` — confirmed:
+   - `FROM` uses SHA256 digest pinned to x86_64 (ARM64 not supported)
+   - Source + deps copied together before `pip install` (layer caching blocked)
+   - No resource limit flags present
+   - HEALTHCHECK **is** implemented at lines 116–117
+4. Read `scripts/run_experiment_in_container.sh` — confirmed:
+   - No `--memory`, `--cpus`, `--memory-swap` flags in `docker run` command
+   - Bind mounts used (not named volumes)
+5. Edited the Future Improvements section with structured entries
+6. Committed, pushed, created PR #990 with auto-merge
+
+## Key Implementation Details
+
+### Structure used for each item
+
+```markdown
+N. **Name**: Short description.
+
+   - **Status**: Deferred (not implemented)
+   - **Why deferred**: [concrete reason referencing actual code]
+   - **Acceptance criteria**: [measurable conditions]
+```
+
+### Evidence found in Dockerfile
+
+```dockerfile
+# Line 14 — architecture-specific digest
+FROM python:3.14.2-slim@sha256:1a3c6dbfd2173971abba880c3cc2ec4643690901f6ad6742d0827bae6cefc925 AS builder
+
+# Lines 33-37 — source + deps copied together (layer caching problem)
+COPY pyproject.toml /opt/scylla/
+COPY README.md /opt/scylla/
+COPY scylla/ /opt/scylla/scylla/
+RUN pip install --user --no-cache-dir /opt/scylla/
+
+# Lines 116-117 — HEALTHCHECK implemented
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD python -c 'import scylla; print("OK")' || exit 1
+```
+
+### Evidence found in wrapper script
+
+```bash
+# No --memory, --cpus flags
+DOCKER_CMD=(
+    docker run
+    --rm
+    --workdir /workspace
+    "${VOLUMES[@]}"    # bind mounts, not named volumes
+    "${ENV_VARS[@]}"
+    "${IMAGE_NAME}"
+    python scripts/run_e2e_experiment.py
+    "$@"
+)
+```
+
+## Pre-commit Hook Results
+
+All hooks passed without issues:
+- Markdown Lint: Passed
+- Trim Trailing Whitespace: Passed
+- Fix End of Files: Passed
+- Check for Large Files: Passed
+- Fix Mixed Line Endings: Passed
+
+(Python hooks were skipped — no Python files changed)
+
+## Superseded from placeholder-doc-rewrite
+
+---
+name: placeholder-doc-rewrite
+description: 'Replace placeholder documentation with accurate, verified content grounded
+  in the actual codebase. Use when: a doc file contains stub text, a getting-started
+  guide needs real commands, or a quickstart links to non-existent paths.'
+category: documentation
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Skill** | placeholder-doc-rewrite |
+| **Category** | documentation |
+| **Trigger** | Placeholder docs with stub text; quickstart/installation guides needing real content |
+| **Output** | Verified, linting-compliant markdown replacing the placeholder |
+| **Validated On** | ML Odyssey `docs/getting-started/quickstart.md` (issue #3305) |
+
+## When to Use
+
+- A markdown file contains stub text like "More examples.", "Step 1/2/3", `import ml_odyssey`
+- A README or navigation page links to a doc that was never written
+- An issue asks to "write a real quickstart" or "replace placeholder"
+- Installation or getting-started guides reference commands/paths that may not exist
+
+## Verified Workflow
+
+### Step 1: Read the placeholder and related docs in parallel
+
+Read the target placeholder alongside any adjacent docs it references (e.g. `installation.md`,
+`first_model.md`) and the issue body with `gh issue view <n> --comments`.
+
+```bash
+gh issue view 3305 --comments
+```
+
+Use `Read` on all related files in a single parallel call, not sequentially.
+
+### Step 2: Verify all paths and imports before writing
+
+Before writing any command or import path, confirm it exists:
+
+- Use `Glob` to verify file paths mentioned in the doc
+- Use `Read` on `__init__.mojo` / package index files to confirm actual exports
+- Use `Bash ls` on directories referenced in code examples
+
+This prevents documenting paths or APIs that don't exist.
+
+### Step 3: Write the replacement doc
+
+Structure the content around what the issue specifies. For quickstarts, the standard
+sections are: Prerequisites, Clone/Install, Verify Environment, Run First Test,
+Minimal Usage Example, What's Next.
+
+Keep code examples minimal and executable — one file, real imports, real output.
+
+### Step 4: Validate markdown before committing
+
+`pixi run npx markdownlint-cli2` is unreliable (npx often not in pixi env).
+Use pre-commit instead:
+
+```bash
+pixi run pre-commit run markdownlint-cli2 --files docs/path/to/file.md
+```
+
+### Step 5: Commit and PR
+
+Stage only the target file (not backup files, not the prompt file):
+
+```bash
+git add docs/getting-started/quickstart.md
+git commit -m "docs(getting-started): write real quickstart.md
+
+<body>
+
+Closes #<n>"
+git push -u origin <branch>
+gh pr create --title "..." --body "..." --label "documentation"
+gh pr merge --auto --rebase <pr-number>
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| `pixi run npx markdownlint-cli2 <file>` | Run markdownlint via npx inside pixi env | `npx: command not found` — npx not installed in the pixi conda env | Use `pixi run pre-commit run markdownlint-cli2 --files <file>` instead |
+| Running pixi command as background task | Used `run_in_background=true` for markdownlint | Command took 3+ minutes just for pixi env init, causing repeated timeouts | Run markdownlint synchronously with a generous timeout (120s+), not in background |
+| Documenting APIs from `shared/EXAMPLES.md` | Copied import examples from the EXAMPLES doc | EXAMPLES.md uses aspirational/planned APIs, not what's actually implemented | Always read `__init__.mojo` or package index to find real exports |
+
+## Results & Parameters
+
+### Minimal Usage Example Pattern
+
+A quickstart usage example should:
+
+1. Import from the actual package index (read `__init__.mojo` first)
+2. Use 3–5 lines of real, runnable code
+3. Show expected terminal output as a `text` code block
+
+```mojo
+from shared.core import ExTensor, zeros, ones
+
+fn main() raises:
+    var shape = List[Int]()
+    shape.append(5)
+    var t = zeros(shape, DType.float32)
+    print("numel:", t.numel())
+```
+
+### Markdown Lint Command (Reliable)
+
+```bash
+pixi run pre-commit run markdownlint-cli2 --files <path/to/file.md>
+```
+
+### First-Test Selection Criteria
+
+Pick a test that is:
+
+- Self-contained (no external datasets, no network)
+- Fast (< 30 seconds)
+- Exercises a core primitive visible to new users
+
+For ML Odyssey: `tests/shared/core/test_creation.mojo` satisfies all three.
+
+## Superseded from placeholder-doc-rewrite (notes)
+
+# Session Notes: placeholder-doc-rewrite
+
+## Session Context
+
+- **Date**: 2026-03-07
+- **Issue**: HomericIntelligence/ProjectOdyssey#3305
+- **Branch**: 3305-auto-impl
+- **PR**: HomericIntelligence/ProjectOdyssey#3917
+
+## Objective
+
+Replace `docs/getting-started/quickstart.md` (10-line placeholder) with a real
+quickstart guide covering: cloning, `pixi install`, running a first model test,
+and a minimal usage example from the shared library.
+
+## Files Read for Context
+
+- `docs/getting-started/quickstart.md` — placeholder (9 lines)
+- `docs/getting-started/installation.md` — also placeholder, noted for reference
+- `docs/getting-started/first_model.md` — real content, links back to quickstart
+- `shared/EXAMPLES.md` — aspirational API examples (NOT used — APIs unverified)
+- `shared/INSTALL.md` — setup patterns for pixi
+- `shared/core/__init__.mojo` — actual exports (ExTensor, zeros, ones, etc.)
+- `tests/shared/core/test_creation.mojo` — chosen as "first test" example
+- `pixi.toml` — confirmed `mojo >= 0.26.1`, confirmed `pixi run mojo` pattern
+
+## Key Decisions
+
+1. **Test to showcase**: `tests/shared/core/test_creation.mojo` — fast, self-contained,
+   exercises ExTensor which is the core type users will encounter first.
+
+2. **Usage example imports**: Grounded in `shared/core/__init__.mojo` exports (`zeros`,
+   `ones`, `ExTensor`) rather than aspirational APIs from EXAMPLES.md.
+
+3. **Markdown validation**: Used `pixi run pre-commit run markdownlint-cli2 --files`
+   because `pixi run npx` fails (npx not in conda env).
+
+## Commands That Worked
+
+```bash
+# Validate markdown
+pixi run pre-commit run markdownlint-cli2 --files docs/getting-started/quickstart.md
+
+# Stage and commit (pre-commit hooks ran automatically on commit)
+git add docs/getting-started/quickstart.md
+git commit -m "docs(getting-started): write real quickstart.md\n\nCloses #3305"
+git push -u origin 3305-auto-impl
+
+# Create PR
+gh pr create --title "docs(getting-started): write real quickstart.md" \
+  --body "..." --label "documentation"
+gh pr merge --auto --rebase 3917
+```
+
+## Commands That Failed
+
+```bash
+# Failed: npx not in pixi conda environment
+pixi run npx markdownlint-cli2 docs/getting-started/quickstart.md
+# Error: npx: command not found
+
+# Failed: background task pixi command timed out 3 times at 30s/60s/120s
+# (pixi env init alone takes ~2 minutes on first invocation in worktree)
+```
+
+## Pre-commit Hook Results
+
+All hooks passed on commit:
+- Mojo Format: Skipped (no .mojo files changed)
+- Markdown Lint: Passed
+- Trim Trailing Whitespace: Passed
+- Fix End of Files: Passed
+- Check for Large Files: Passed
+- Fix Mixed Line Endings: Passed
+
+## Superseded from write-installation-docs
+
+---
+name: write-installation-docs
+description: 'Replace placeholder installation documentation with complete, accurate
+  content. Use when: installation.md contains placeholder text, a README links to
+  an installation guide that needs real content, or a follow-up issue requests writing
+  real installation steps.'
+category: documentation
+date: 2026-03-07
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Skill** | write-installation-docs |
+| **Category** | documentation |
+| **Trigger** | Placeholder installation docs, README linking to stub guide |
+| **Output** | Complete installation.md with prereqs, install steps, verification, Docker alt, troubleshooting |
+| **Validation** | markdownlint-cli2 via pre-commit hook |
+
+## When to Use
+
+- `docs/getting-started/installation.md` contains placeholder text ("Step 1", "Requirements.", etc.)
+- A README or other doc links to an installation guide that has no real content
+- A follow-up issue requests writing real installation steps after initial scaffolding
+- Pixi-based Mojo project needs onboarding documentation
+
+## Verified Workflow
+
+1. **Read current file** to confirm placeholder state
+2. **Read issue comments** for implementation plan: `gh issue view <N> --comments`
+3. **Source version data** from `pixi.toml` — do NOT guess versions
+4. **Source commands** from `justfile` — use exact recipe names
+5. **Write complete content** covering:
+   - Prerequisites (platform, Git, Pixi, optional Docker)
+   - Pixi installation via curl
+   - Repository cloning
+   - `pixi install` with channel info
+   - Mojo version requirement from `pixi.toml`
+   - Verification with `just build` and `just test-mojo`
+   - Docker alternative using GHCR image
+   - Troubleshooting (channel errors, version mismatch, `just` not found, container not running)
+6. **Validate markdown** — run pre-commit markdownlint hook:
+   ```bash
+   pixi run pre-commit run --all-files markdownlint-cli2
+   ```
+7. **Commit and push** — stage only the doc file, not the prompt file
+8. **Create PR** linked to issue with `Closes #<N>` in body
+
+## Key Decisions
+
+### Source Versions from pixi.toml — Not From Memory
+
+Always read `pixi.toml` for the exact Mojo version constraint before writing docs.
+Do not use approximate version strings from memory.
+
+```toml
+# Example from pixi.toml
+[dependencies]
+mojo = ">=0.26.1.0.dev2025122805,<0.27"
+```
+
+Document the constraint range (`>=0.26.1,<0.27`) not the full nightly build string.
+
+### Source Commands from justfile — Not From README
+
+Read the `justfile` directly to confirm recipe names. The README may be stale.
+Key recipes: `just build`, `just test-mojo`, `just docker-up`, `just shell`.
+
+### Use `pixi run pre-commit run` for Markdownlint Validation
+
+`npx` may not be available in the pixi environment. Use the pre-commit hook instead:
+
+```bash
+# WORKS
+pixi run pre-commit run --all-files markdownlint-cli2
+
+# FAILS - npx not found in pixi env
+pixi run npx markdownlint-cli2 path/to/file.md
+```
+
+### Troubleshooting Section Is Required
+
+Installation docs that lack troubleshooting cause repeated support requests.
+Always include sections for: channel errors, version mismatches, missing tools, container not running.
+
+## Results & Parameters
+
+### Markdownlint Rules to Follow
+
+- Language tags on all fenced code blocks (` ```bash `, ` ```toml `, ` ```text `)
+- Blank line before and after every code block
+- Blank line before and after every list
+- Blank line before and after every heading
+- Lines <= 120 characters
+
+### Recommended Section Structure
+
+```text
+# Installation
+## Prerequisites
+## Installing Pixi
+## Cloning the Repository
+## Installing Dependencies
+## Mojo Version Requirements
+## Verifying the Installation
+## Docker Alternative
+### Pull the Development Image
+### Start the Development Environment
+### Open a Shell in the Container
+### Run Tests Directly
+## Troubleshooting
+### <pixi install> fails with channel errors
+### Mojo version mismatch
+### <just> command not found
+### Docker container not running
+```
+
+### Git: Stage Only the Doc File
+
+The worktree may contain a `.claude-prompt-<N>.md` file — do NOT stage it:
+
+```bash
+git add docs/getting-started/installation.md
+# Do NOT: git add .
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| `pixi run npx markdownlint-cli2 path/to/file.md` | Used npx to run markdownlint directly | `npx: command not found` in the pixi env | Use `pixi run pre-commit run --all-files markdownlint-cli2` instead |
+| Hardcoding Mojo version string | Writing `0.26.1.0.dev2025122805` directly | Full nightly build strings go stale immediately | Use version range (`>=0.26.1,<0.27`) from pixi.toml constraint |
+
+## Superseded from write-installation-docs (notes)
+
+# Session Notes: write-installation-docs
+
+## Session Context
+
+- **Date**: 2026-03-07
+- **Issue**: HomericIntelligence/ProjectOdyssey#3304
+- **PR**: HomericIntelligence/ProjectOdyssey#3913
+- **Branch**: 3304-auto-impl
+- **File Modified**: `docs/getting-started/installation.md`
+
+## What Was Done
+
+Replaced 11-line placeholder file with 141-line complete installation guide.
+
+### Original Content
+
+```markdown
+# Installation
+
+## Prerequisites
+
+Requirements.
+
+## Installation Steps
+
+1. Step 1
+2. Step 2
+3. Step 3
+```
+
+### Final Sections
+
+- Prerequisites (Linux linux-64, Git, Pixi, Docker optional)
+- Installing Pixi (curl install + verify)
+- Cloning the Repository
+- Installing Dependencies (pixi install)
+- Mojo Version Requirements (sourced from pixi.toml)
+- Verifying the Installation (just build + just test-mojo)
+- Docker Alternative (GHCR image, just docker-up, just shell)
+- Troubleshooting (4 common issues)
+
+## Sources Used
+
+- `pixi.toml` — Mojo version constraint, channels
+- `justfile` — exact recipe names (build, test-mojo, docker-up, shell)
+- `CLAUDE.md` — Docker image tags, markdown standards
+
+## Validation Result
+
+`pixi run pre-commit run --all-files markdownlint-cli2` → **Passed**
+
+## Tools That Failed
+
+- `pixi run npx markdownlint-cli2 docs/getting-started/installation.md` → `npx: command not found`
+- `pixi run markdownlint-cli2 docs/getting-started/installation.md` → `markdownlint-cli2: command not found`
+
+Use `pixi run pre-commit run --all-files markdownlint-cli2` instead.
+
+## Superseded from installation-md-ide-setup
+
+---
+name: installation-md-ide-setup
+description: 'Extend an installation.md with IDE setup section and tighten prerequisites
+  version constraints. Use when: an installation doc lacks editor/IDE guidance, VS
+  Code Mojo extension steps are missing, or prerequisites need explicit version numbers.'
+category: documentation
+date: 2026-03-15
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Skill** | installation-md-ide-setup |
+| **Category** | documentation |
+| **Trigger** | Installation docs missing IDE/editor guidance or version constraints in prerequisites |
+| **Output** | Expanded installation.md with `## IDE Setup` section and tightened prerequisites |
+| **Validated On** | ML Odyssey `docs/getting-started/installation.md` (issue #3918) |
+
+## When to Use
+
+- An `installation.md` exists with real content but no IDE or editor setup section
+- A getting-started guide is missing VS Code extension installation steps
+- Prerequisites list tools without version numbers (e.g. "Git" with no version)
+- A quickstart or README links to installation.md expecting IDE coverage
+- Issue asks to "add IDE setup" or "cover editor configuration"
+
+## Verified Workflow
+
+### Step 1: Read the existing installation.md and related shared docs
+
+Read the target file alongside any shared install reference (e.g. `shared/INSTALL.md`,
+`tools/INSTALL.md`) to understand what's already covered and what's missing:
+
+```bash
+# Read in parallel
+Read docs/getting-started/installation.md
+Read shared/INSTALL.md
+Read tools/INSTALL.md
+```
+
+Also read the issue with `gh issue view <n> --comments` to confirm scope.
+
+### Step 2: Identify gaps in prerequisites
+
+Scan the `## Prerequisites` section for tools listed without version constraints.
+For each, add the minimum version. Common additions:
+
+- `Pixi` → `Pixi >= 0.24`
+- `Git` → `Git >= 2.x (any modern 2.x release is sufficient)`
+
+Keep the note short — one clause per bullet is enough.
+
+### Step 3: Write the IDE Setup section
+
+Insert `## IDE Setup` **before** `## Troubleshooting`. Standard subsections:
+
+#### VS Code
+
+```markdown
+### VS Code
+
+Install the **Mojo** extension from the VS Code marketplace:
+
+1. Open VS Code
+2. Press `Ctrl+Shift+X` to open Extensions
+3. Search for **Mojo** (publisher: Modular)
+4. Click **Install**
+
+The extension provides syntax highlighting, code completion, and inline diagnostics for `.mojo`
+and `.🔥` files.
+
+**Configure the formatter** to use Pixi's Mojo by adding the following to
+`.vscode/settings.json` in the repository root:
+
+```json
+{
+    "mojo.mojoPath": "${workspaceFolder}/.pixi/envs/default/bin/mojo"
+}
+```
+
+Verify the extension is using the correct Mojo version by checking
+**View → Output → Mojo Language Server**.
+```
+
+#### Other Editors
+
+```markdown
+### Other Editors
+
+For editors with LSP support, point the Mojo LSP server to:
+
+```text
+.pixi/envs/default/bin/mojo-lsp-server
+```
+
+Set the formatter to:
+
+```bash
+pixi run mojo format <file>
+```
+```
+
+### Step 4: Run markdownlint
+
+```bash
+pixi run npx markdownlint-cli2 docs/getting-started/installation.md
+```
+
+This is the reliable path in ML Odyssey (npx is available via the pixi env). If it reports
+`0 error(s)`, proceed. If `npx: command not found`, fall back to pre-commit:
+
+```bash
+pixi run pre-commit run markdownlint-cli2 --files docs/getting-started/installation.md
+```
+
+### Step 5: Commit and PR
+
+Stage only the target file:
+
+```bash
+git add docs/getting-started/installation.md
+git commit -m "docs(installation): add IDE setup section and tighten prerequisites
+
+Add VS Code Mojo extension setup instructions and LSP configuration
+for other editors. Tighten Prerequisites to include Pixi >= 0.24
+version requirement and clarify Git 2.x note.
+
+Closes #<n>"
+git push -u origin <branch>
+gh pr create --title "docs(installation): add IDE setup section and tighten prerequisites" \
+  --body "$(cat <<'EOF'
+## Summary
+
+- Add \`## IDE Setup\` section with VS Code Mojo extension install steps
+- Add LSP configuration for other editors
+- Tighten prerequisites with version constraints
+
+Closes #<n>
+EOF
+)"
+gh pr merge --auto --rebase <pr-number>
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Using `Skill` tool for commit+push+PR | Invoked `commit-commands:commit-push-pr` skill | Skill tool denied in `don't ask` permission mode | Fall back to direct `git add` + `git commit` + `git push` + `gh pr create` commands |
+| Checking `shared/INSTALL.md` for content to copy | Read shared INSTALL.md hoping for IDE section to lift | Shared INSTALL.md focuses on Docker/pixi install, not IDE config | Write IDE Setup from scratch using standard VS Code + LSP patterns |
+
+## Results & Parameters
+
+### Minimal prerequisites bullets
+
+```markdown
+- **Git** >= 2.x (any modern Git 2.x release is sufficient)
+- **Pixi** >= 0.24 package manager (installation steps below)
+```
+
+### VS Code settings.json path for Pixi-managed Mojo
+
+```json
+{
+    "mojo.mojoPath": "${workspaceFolder}/.pixi/envs/default/bin/mojo"
+}
+```
+
+### LSP server path (generic, Pixi layout)
+
+```text
+.pixi/envs/default/bin/mojo-lsp-server
+```
+
+### markdownlint command (ML Odyssey — npx available)
+
+```bash
+pixi run npx markdownlint-cli2 <file>
+```
+
+### Section insertion point
+
+Insert `## IDE Setup` immediately before `## Troubleshooting` so the reading order
+follows: install → verify → optional alternatives → IDE → troubleshoot.
+
+## Superseded from installation-md-ide-setup (notes)
+
+# Session Notes: installation-md-ide-setup
+
+## Session Context
+
+- **Date**: 2026-03-15
+- **Issue**: HomericIntelligence/ProjectOdyssey #3918
+- **Branch**: 3918-auto-impl
+- **PR**: https://github.com/HomericIntelligence/ProjectOdyssey/pull/4830
+
+## Objective
+
+The existing `docs/getting-started/installation.md` was already a 143-line real document
+(not a placeholder) covering prerequisites, Pixi install, repo clone, `pixi install`,
+Mojo version requirements, verification, and Docker alternative. The issue asked to add
+IDE setup (VS Code Mojo extension) and tighten prerequisites with version numbers.
+
+## What the file looked like before
+
+```
+- **Platform**: Linux (linux-64) — the only supported platform
+- **Git** >= 2.x
+- **Pixi** package manager (installation steps below)
+- **Docker** (optional) — for the Docker-based workflow
+```
+
+No IDE setup section existed. The doc ended with a `## Troubleshooting` section.
+
+## Changes Made
+
+1. **Prerequisites** — added Pixi `>= 0.24` version and clarified Git 2.x note
+2. **New `## IDE Setup` section** inserted before `## Troubleshooting`:
+   - VS Code: extension install, `.vscode/settings.json` formatter config, LSP verification
+   - Other Editors: LSP server path, formatter command
+
+## Commands That Worked
+
+```bash
+# Markdownlint (0 errors)
+pixi run npx markdownlint-cli2 docs/getting-started/installation.md
+
+# Commit
+git add docs/getting-started/installation.md
+git commit -m "docs(installation): add IDE setup section and tighten prerequisites"
+
+# PR
+gh pr create --title "..." --body "..."
+gh pr merge --auto --rebase 4830
+```
+
+## Commands That Failed
+
+- `Skill tool: commit-commands:commit-push-pr` — denied in `don't ask` permission mode.
+  Workaround: use raw git/gh CLI commands directly.
+
+## Files Changed
+
+- `docs/getting-started/installation.md` — +42 lines, 2 deletions (prerequisites tightened)
+
+## Superseded from readme-from-codebase-exploration
+
+---
+name: readme-from-codebase-exploration
+description: 'Replace placeholder README.md with accurate project description by exploring
+  the live codebase. Use when: README has placeholder text, project has outgrown its
+  docs, or a new contributor needs to understand quickly.'
+category: documentation
+date: 2026-03-05
+version: 1.0.0
+user-invocable: false
+---
+## Overview
+
+| Attribute | Value |
+| --- | --- |
+| **Category** | documentation |
+| **Trigger** | README contains placeholder text or is significantly out of date |
+| **Output** | Accurate, structured README.md with verified links and real content |
+| **Pre-commit** | `pixi run pre-commit run --files README.md` must pass |
+
+## When to Use
+
+- README.md contains placeholder lines like "Description here.", "Features list.", "Installation steps."
+- The codebase has grown (new modules, architectures, test counts) but docs haven't kept up
+- A P0 issue flags the README as misleading to new contributors
+- Badge counts (tests, coverage) are stale
+
+## Verified Workflow
+
+### 1. Read the current README
+
+Read the existing README first to understand what placeholders exist and what structure to keep.
+
+### 2. Explore the live codebase in parallel
+
+Run parallel queries to gather accurate content:
+
+```bash
+# Count actual test files
+find . -name "test_*.mojo" | wc -l
+
+# Count total source files
+find . -name "*.mojo" | wc -l
+
+# List model test files to enumerate architectures
+ls tests/models/
+
+# List shared library structure
+ls shared/
+```
+
+### 3. Read supporting documentation
+
+Read `shared/README.md`, `CONTRIBUTING.md`, `docs/getting-started/installation.md`,
+and `pixi.toml` to gather real installation instructions and library descriptions.
+
+### 4. Write the new README
+
+Key sections to include:
+
+- **What This Is** — 2-sentence project purpose + scale (lines of code, # architectures, # tests)
+- **Implemented Architectures** — table with architecture, paper citation, status
+- **Shared Library** — subsections per major module (core, autograd, training) with component lists
+- **Getting Started** — real `pixi install`, real `just test-mojo` commands
+- **Documentation** — links to actual files (verify they exist before linking)
+- **Project Structure** — text tree of actual directories
+- **Testing Strategy** — describe the real strategy (e.g. two-tier layerwise + e2e)
+- **Coverage Status** — honest note if coverage tooling is blocked
+
+### 5. Validate with pre-commit
+
+```bash
+pixi run pre-commit run --files README.md
+```
+
+All checks must pass: markdownlint, trailing whitespace, end-of-file fixer.
+
+### 6. Commit and PR
+
+```bash
+git add README.md
+git commit -m "docs(readme): replace placeholder text with accurate project description"
+gh pr create --title "..." --body "Closes #<issue>"
+gh pr merge --auto --rebase
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Linking to `docs/getting-started/installation.md` content | Copying raw text from the file | The installation.md itself had placeholder content | Read the file before referencing it — don't assume docs are real |
+| Using `npx markdownlint-cli2` for linting | Ran directly via pixi | `npx` not found in pixi environment | Use `pixi run pre-commit run --files README.md` instead |
+| Running `just pre-commit-all` | Used `pixi run just` | `just` not found as a pixi command | Use `pixi run pre-commit run --files <file>` for single-file validation |
+
+## Results & Parameters
+
+### Badge Update Pattern
+
+```markdown
+[![Tests](https://img.shields.io/badge/tests-247%2B-brightgreen.svg)](tests/)
+```
+
+Count test files before writing: `find . -name "test_*.mojo" | wc -l`
+
+### Architecture Table Pattern
+
+```markdown
+| Architecture | Paper | Status |
+|---|---|---|
+| LeNet-5 | LeCun et al., 1998 | Implemented |
+| AlexNet | Krizhevsky et al., 2012 | Implemented |
+```
+
+### Shared Library Description Pattern
+
+Group by subdirectory, not by individual file. Each subsection gets:
+- A bold heading matching the directory name
+- A bullet list of high-level capabilities (not filenames)
+
+### Pre-commit Validation (Working Command)
+
+```bash
+pixi run pre-commit run --files README.md
+```
+
+Expected passing output:
+```text
+Markdown Lint............................................................Passed
+Trim Trailing Whitespace.................................................Passed
+Fix End of Files.........................................................Passed
+Check for Large Files....................................................Passed
+Fix Mixed Line Endings...................................................Passed
+```
+
+## Superseded from readme-from-codebase-exploration (notes)
+
+# Session Notes: readme-from-codebase-exploration
+
+## Context
+
+- **Repository**: HomericIntelligence/ProjectOdyssey
+- **Issue**: #3141 — [P0-1] Write a real README.md
+- **Branch**: 3141-auto-impl
+- **PR**: #3303
+- **Date**: 2026-03-05
+
+## Problem
+
+The root README.md contained only placeholder text:
+- "Description here."
+- "Features list."
+- "Quick start guide."
+- "Installation steps."
+
+This despite the project having ~198K lines of Mojo code, 7 neural network architectures,
+an autograd engine, and a comprehensive shared library. Badge claimed 122+ tests when the
+actual count was 247+.
+
+## Exploration Steps
+
+1. Read the existing README.md to understand structure and what was already good (Coverage Status section was real content worth keeping)
+2. Listed top-level directory structure
+3. Listed `tests/models/` to enumerate all 7 implemented architectures
+4. Listed `shared/` subdirectories to understand library structure
+5. Listed `shared/core/`, `shared/autograd/`, `shared/training/` for component details
+6. Counted test files: `find . -name "test_*.mojo" | wc -l` → 213 test files, 248 in tests/ path
+7. Counted total Mojo files: `find . -name "*.mojo" | wc -l` → 483
+8. Read `shared/README.md` for existing descriptions
+9. Read `docs/getting-started/installation.md` (was also placeholder — avoided copying)
+10. Read beginning of `CONTRIBUTING.md` for real install instructions
+11. Listed `shared/training/optimizers/` to enumerate optimizer implementations
+12. Read `VERSION` and `pixi.toml` for version and tool info
+
+## What Was Written
+
+New README sections:
+- **What This Is**: 2-sentence purpose + scale metrics
+- **Implemented Architectures**: Table of 6 architectures with paper citations
+- **Shared Library**: 3 subsections (core, autograd, training) with real component lists
+- **Getting Started**: `pixi install`, `just test-mojo`, `just build`
+- **Quick Reference**: `just --list`, `just format`, `just pre-commit-all`, `just validate`
+- **Documentation**: Links to real files (verified they exist)
+- **Project Structure**: Text tree of actual directories
+- **Testing Strategy**: Two-tier description (layerwise + e2e) with link to ADR-004
+- **Coverage Status**: Kept from original (was real content), updated test count to 247+
+
+## Key Decisions
+
+- Kept the Coverage Status section from the original (only section with real content)
+- Used 247+ for badge count (conservative — actual files were 213-248 depending on counting method)
+- Described architectures as "Implemented" not "Complete" (honest about status)
+- Did NOT link to `docs/getting-started/installation.md` body content (it was placeholder)
+- Described shared library by capability, not by filename
+
+## Tool Issues Encountered
+
+- `pixi run npx markdownlint-cli2` → `npx: command not found`
+- `pixi run just pre-commit-all` → `just: command not found`
+- Working command: `pixi run pre-commit run --files README.md`
+
+## Result
+
+PR #3303 created, auto-merge enabled. All pre-commit checks passed.
