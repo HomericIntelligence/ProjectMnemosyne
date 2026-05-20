@@ -1,0 +1,2720 @@
+# parallel-agent-research-and-swarm-orchestration — History
+
+## Superseded from arch-research-myrmidon-swarm-review
+
+
+# Myrmidon Swarm: Parallel Architecture Research Review
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-13 |
+| **Objective** | Review and validate 31 AI architecture research documents (research + summary pairs) for citation accuracy, Big-O correctness, baseline comparison validity, and implementation feasibility |
+| **Outcome** | Successful — 31 review docs, 155 verification files, 2 synthesis reports, 1 final summary produced. Absorbed arch-research-doc-lora-review-pattern + arch-research-static-inference-model-surgery on 2026-05-03 |
+| **Verification** | verified-local |
+| **Absorbed** | arch-research-doc-lora-review-pattern (v1.1.0), arch-research-static-inference-model-surgery (v1.0.0) on 2026-05-03 |
+
+## When to Use
+
+- Reviewing a corpus of 10+ existing research documents for factual correctness
+- Verifying that cited papers exist, summaries are faithful, and arXiv IDs are not fabricated
+- Cross-checking Big-O complexity tables and Nx improvement claims against canonical baseline specs
+- Finding missing literature that changes novelty classifications
+- Producing independent review documents for a research corpus
+- Generating research docs for new ideas that have no prior `research_*.md`/`summary_*.md` files, where each new idea needs full 5-role Myrmidon treatment alongside (or after) the existing corpus review
+- Merging a reviewed corpus (review_*.md + summary_*.md + 5× verification_*.md per idea) into single-source research docs while simultaneously adding a new baseline and re-validating all merged docs
+- Reviewing any research or summary document that involves low-rank factorization of weight matrices (LoRA, matrix decomposition, rank-r parameterization)
+- Validating claims about inference speedup from weight factorization — especially "merged vs unmerged" distinctions
+- Any document that uses GaLore, CoLA, WeLore, or similar citations as evidence for training or inference benefits
+- Reviewing any research or summary document that involves learned gates on residual streams, layer-level pruning, or "static at inference" skip decisions
+- Validating TTFT/TPOT claims for layer pruning ideas (ShortGPT, GateSkip, Mixture of Depths)
+- Any document that claims "static at inference time" speedup from frozen gates
+- Any document describing synergy between layer-pruning ideas (e.g., idea 4.4 Skip List Layers + idea 4.5 Learned Residual Flow)
+- A research document claims a mechanism is "static at inference time" and therefore has zero per-token overhead
+- A document describes frozen gates, frozen routing weights, or frozen skip decisions as producing inference speedup
+- Any idea where architectural decisions are learned during training and then "frozen" — and the document claims this produces a faster model at inference time
+- Reviewing DenseFormer-style ideas (learned depth weights frozen post-training) vs hard-gate pruning ideas
+
+**Red flags requiring the LoRA checklist:**
+- Document claims both TTFT penalty AND throughput improvement for the same "unmerged" path
+- Document cites GaLore's optimizer state reduction to support LoRA weight parameter reduction (different mechanisms)
+- Document cites dLoRA (course PDF) as evidence of inference overhead
+- "Unmerged" rows in tables don't specify whether W_core is present or absent
+- Training cost claim assumes optimizer savings without checking whether W_core is also being trained
+
+**Red flags requiring the Layer Pruning checklist:**
+- Document claims "static at inference" speedup from frozen gates without specifying model surgery
+- Document attributes 1.05–1.15× training overhead to scalar gates (correct range is ~1.00×; that range belongs to Hyper-Connections SHC matrix expansion)
+- Document lacks a citation for Mixture of Depths [Raposo et al., 2024, arXiv:2404.02258]
+- Document cites "Frankle and Carlin" instead of "Frankle and Carbin" (Lottery Ticket Hypothesis)
+- Document claims idea 4.4 (Skip List Layers) and idea 4.5 (Residual Flow) "combine well" without noting order-dependency
+- Any 2026 arXiv ID without a "URL not verified" marker
+
+## Verified Workflow
+
+### Quick Reference
+
+```
+Phase 0: Pre-flight baseline verification
+  → Web-fetch authoritative config.json for each baseline model
+  → Identify all errors in the shared context/prelude document
+  → Inject canonical baselines verbatim into every agent prompt
+
+Phase 1: 31 lead agents launched in parallel (one per idea)
+  → Each lead spawns 5 sub-agents in parallel:
+     a. Citation Verifier (WebFetch each paper; confirm existence/authors)
+     b. Complexity Auditor (re-derive Big-O independently; check concrete byte calcs)
+     c. Literature Gap Finder (rerun search queries + synonym variants)
+     d. Comparison Validator (validate Nx claims, directional arrows)
+     e. Feasibility Checker (hardware, training stability, framework support)
+  → Each sub-agent emits verification_{id}_{role}.md
+
+Phase 2: Lead agents synthesize → review_{id}_{name}.md
+Phase 3a: Synthesis doc validator → review_synthesis_docs.md
+Phase 3b: Coordinator → review_summary.md
+```
+
+### Detailed Steps
+
+1. **Pre-flight baseline verification** — Before any agents run, web-fetch authoritative specs for every baseline model (e.g., HuggingFace config.json). Compare against any shared context document. If they disagree, the web-verified spec wins. Document all discrepancies as "inherited errors" and inject them into every agent prompt so sub-agents know which errors to attribute to the prelude vs. original author reasoning.
+
+2. **Parallel lead agent launch** — Launch all N lead agents in a single message (one Agent tool call per idea). Each lead gets: canonical baselines + inherited error callouts + the research/summary doc pair for its idea.
+
+3. **5 sub-agent roles per lead** — Each lead immediately spawns 5 sub-agents in parallel. Role assignments:
+   - **Citation Verifier**: WebFetch every cited paper. Verdict per paper: YES / NO / PARTIALLY / COULD NOT VERIFY. Check author names, year, venue, and that the research doc's summary matches the actual abstract. Flag hallucinated arXiv IDs.
+   - **Complexity Auditor**: Re-derive every Big-O independently. Recompute every concrete byte value (KV cache, weight memory) using canonical baseline specs. Surface hidden costs: router FLOPs O(d·E) for MoE, gradient memory 2× during training.
+   - **Literature Gap Finder**: Run the pre-canned search queries from the original idea list plus 3–5 synonym variants. Compare against cited papers. Focus on post-cutoff papers, seminal overlooked work, and papers that would change the novelty classification.
+   - **Comparison Validator**: Validate every Nx claim and every ↓/↑/= arrow in summary tables. Recompute using canonical baseline parameter values (not just symbolic O notation). Flag best-case-without-disclaimer claims.
+   - **Feasibility Checker**: Hardware feasibility (custom kernels? Triton/CUDA?), training stability (routing collapse, expert collapse), framework support, cross-idea synergy claims (read the other idea's doc to confirm).
+
+4. **Synthesis** — After all 5 sub-agent verification files land, lead agent synthesizes → review doc with 8 sections: citation verification, missing literature, Big-O verification, technical correctness, prior art check, verdict check, error summary, confidence scores. Assigns PASS / PASS WITH ISSUES / NEEDS REVISION / FAIL.
+
+5. **Phase 3a synthesis doc validation** — One agent reads all synthesis artifacts (priority rankings, implementation specs, cross-reference matrices) and cross-checks each claim against the 31 reviews. Flags claims that rest on corrected Nx values or ideas with FAIL/NEEDS REVISION verdicts.
+
+6. **Phase 3b coordinator** — One coordinator reads all 31 reviews + synthesis validation report. Produces: per-idea verdict table, aggregate stats, systemic error pattern analysis, revised priority ranking.
+
+### LoRA / Low-Rank Parameterization Review Checklist
+
+> **Note:** Verified locally on idea 4.3 (LoRA Everywhere) review session.
+
+#### LoRA Quick Reference
+
+```
+Five-agent parallel review:
+  A — Citation Verifier    → verification_<id>_citations.md
+  B — Complexity Auditor   → verification_<id>_complexity.md
+  C — Literature Gap Finder → verification_<id>_literature.md
+  D — Comparison Validator → verification_<id>_comparison.md
+  E — Feasibility Checker  → verification_<id>_feasibility.md
+  F — Synthesizer (Wave 2) → review_<id>_<name>.md
+```
+
+#### LoRA Step 1: Identify the Parameterization Cases (Before Any Analysis)
+
+For any W = W_core + A·B document, ALWAYS distinguish three cases before analyzing any claim:
+
+| Case | Formula | W_core | Expected Benefit |
+|------|---------|--------|-----------------|
+| Case 1: Merged | W_full = W_core + A·B materialized | Any | ZERO inference benefit — identical to dense |
+| Case 2: Unmerged, W_core present | x·W_core + (x·A)·B | Present | 1.5× MORE bandwidth and FLOPs than dense — a regression |
+| Case 3: Unmerged, W_core absent | (x·A)·B only | Absent | 2× fewer weight bytes, ~1.64× TPOT improvement |
+
+**Every claim in the document must specify which case it applies to.** If it doesn't, that is a red flag.
+
+#### LoRA Step 2: Complexity Table Audit Checklist
+
+For each row in any complexity or benefit table, verify:
+
+- [ ] **TTFT (prefill)**:
+  - Case 1 (merged): identical to dense ✓
+  - Case 2 (W_core + A·B): 1.5× MORE FLOPs at r=d/4 (FLOPs = 3d² vs 2d²) ← slower
+  - Case 3 (pure A·B): 0.5× FLOPs at r=d/4 (FLOPs = d² vs 2d²) ← **2× FASTER, NOT slower**
+
+- [ ] **TPOT (batch=1 decode)**:
+  - Case 1 (merged): identical to dense ✓
+  - Case 2 (W_core + A·B): 1.5× MORE bytes loaded (d² + d²/2 = 1.5d² vs d²) ← slower
+  - Case 3 (pure A·B): 0.5× bytes loaded (d²/2 vs d²) ← **~1.64× faster per CoLA** ✓
+
+- [ ] **Weight memory**:
+  - Cases 1 and 2: identical to or worse than dense (W_core present)
+  - Case 3 only: 2× reduction at r=d/4 ✓
+
+- [ ] **Training optimizer state**:
+  - If W_core is also trained: 1.5× MORE optimizer memory than dense (d² + 2·d²/4·2 = 1.5× Adam states)
+  - If W_core is frozen or absent (pure A·B): 50% reduction ✓
+
+#### LoRA Step 3: Citation Verification Checklist
+
+For any document citing papers about LoRA or low-rank training, verify:
+
+| Citation | What to Check |
+|----------|--------------|
+| GaLore (Zhao et al., 2024) | Verify: reduces GRADIENT optimizer states; weights remain full-rank. Do NOT use to support weight parameter reduction in LoRA Everywhere. |
+| CoLA (Liu et al., 2025) | Verify: has nonlinearity σ between A and B. Claims are valid only at ≤7B. EMNLP 2025 venue is plausible. |
+| WeLore (Wei et al., 2025) | Verify: post-training compression study (not pre-training). Uniform 50% rank → PPL 1836.62; non-uniform → 11.87 for LLaMA-2 7B. |
+| dLoRA (Princeton course PDF) | Flag as grey literature (non-peer-reviewed course syllabus). The 38.9% overhead measures W_core+A·B compute-bound — NOT pure A·B bandwidth-bound. Do not cross-apply. |
+| GaLore 2 (Su et al., 2025) | Treat as SUSPECT: vague author list, modest claimed improvement (~6% memory reduction vs GaLore 1's 65.5%), possible Llama 7B/8B inconsistency. |
+| SLTrain (Cichocki et al., 2024) | Verify: low-rank alone fails at pre-training; needs sparse correction. Analogous to W_core in idea 4.3 serving as full-rank anchor. |
+| Flora (Hao et al., 2024) | Key insight: fixed A·B (no rotation) is inferior to full-rank training. W_core or nonlinearity serves same role as Flora's rotation. |
+
+#### LoRA Step 4: Literature Gap Checklist
+
+For any low-rank parameterization research doc, check whether these are cited:
+
+- [ ] **Monarch matrices** (Dao et al., 2022, NeurIPS, arXiv 2204.00595) — structured factorization competitor, O(d log d) params vs O(dr) for LoRA; achieves higher expressiveness at similar compression
+- [ ] **Scale laws for low-rank pre-training** — does quality gap grow or shrink with scale?
+- [ ] **LoRA-GA** (gradient-aligned initialization) — addresses A·B initialization for pre-training
+- [ ] **Sheared LLaMA** (Xia et al., 2023) — competing paradigm: train dense then compress, vs train compressed
+- [ ] **FWSVD** (Fisher-weighted SVD) — post-hoc compression baseline for comparison
+
+#### LoRA Step 5: Inference Regime Disambiguation
+
+**ALWAYS verify which inference regime each speedup claim applies to:**
+
+| Regime | Characteristic | Who benefits |
+|--------|---------------|-------------|
+| Batch=1 decode | Bandwidth-bound — TPOT proportional to bytes loaded | Case 3 (pure A·B): ~1.64× faster |
+| Large-batch decode | Compute-bound — TPOT proportional to FLOPs | No benefit (FLOPs same or higher) |
+| Prefill (any batch) | Compute-bound — TTFT proportional to FLOPs | Case 3 (pure A·B): ~2× faster |
+| Multi-request serving | Mixed — dLoRA's measurement regime | Case 2 (W_core+A·B): +38.9% overhead |
+
+**The dLoRA 38.9% overhead and CoLA 1.64× speedup are BOTH CORRECT — they measure different cases in different regimes. Never apply one to the context of the other.**
+
+---
+
+### Layer Pruning / Residual Gating Review Checklist
+
+> **Note:** Verified locally on idea 4.5 (Learned Residual Flow Control) review session.
+
+#### Layer Pruning Step 1: "Static at Inference" Implementation Path Audit
+
+**CRITICAL**: Documents claiming "static at inference time" speedup MUST specify the implementation path. There are two paths; only one delivers the claimed speedup:
+
+| Path | Description | Inference speedup? |
+|------|-------------|-------------------|
+| Frozen soft gates | Gates g_i ∈ (0,1) frozen after training; layer still computes F_i(x) then multiplies by g_i | **NONE** — layer executes fully; only one scalar multiply saved |
+| Model surgery | After training, identify zero-gate layers (g_i < 0.5), physically remove them from model graph, reindex | **REAL** — identical to a model originally designed with L·p layers; zero per-token overhead |
+
+**The inference speedup claim is ONLY valid when model surgery is performed.** Flag any document that claims speedup from frozen gates without specifying surgery.
+
+For any "static at inference" claim, also determine which scenario applies:
+
+```
+Scenario A: Frozen soft gate g_i ∈ (0,1)
+  → Layer still computes F_i(x) then multiplies by g_i
+  → NO compute savings (full layer executes)
+  → Only one scalar multiply saved — negligible
+
+Scenario B: Frozen hard-zero gate g_i = 0
+  WITH conditional execution: if gate[i]: x = x + F_i(RMSNorm(x))
+  → STATIC gate means all tokens take same branch → no GPU divergence
+  → Speedup achieved but requires conditional logic in forward pass
+
+Scenario C: Model surgery (post-training layer removal)
+  → Remove layers with g_i < 0.5 from model graph entirely
+  → Re-index remaining layers
+  → Result: standard N·p-layer transformer, no gate infrastructure
+  → TRUE zero overhead — identical to model designed with N·p layers from scratch
+```
+
+| What the document says | Which scenario | Real speedup? |
+|-----------------------|----------------|--------------|
+| "Gates are frozen after training" (no further detail) | Scenario A | NO — gates are frozen but layers still execute |
+| "Zero-gate layers are skipped" | Scenario B | YES — conditional execution with static branch |
+| "Layers with g < 0.5 are removed from the checkpoint" | Scenario C | YES — true model surgery |
+| "Static, so no per-token overhead" WITHOUT specifying mechanism | AMBIGUOUS — flag for clarification | UNKNOWN until clarified |
+
+For models using Pre-LN (like Qwen3/3.5 with RMSNorm before sublayers):
+```
+Standard pre-norm: x_{i+1} = x_i + F_i(RMSNorm(x_i))
+With soft gate:    x_{i+1} = x_i + g_i · F_i(RMSNorm(x_i))
+```
+If g_i = 0 but the code is not conditioned on it, RMSNorm runs and F_i runs — both are wasted. **Model surgery resolves this completely** — the entire layer (norm + sublayer) is removed, so neither runs.
+
+**Framework feasibility:**
+
+| Framework | Model surgery feasibility |
+|-----------|--------------------------|
+| PyTorch | `nn.ModuleList` can be filtered in-place. `torch.jit.script` or torch.compile() will compile the pruned model with no residual gate infrastructure. FEASIBLE. |
+| JAX | `jax.lax.scan` over variable-length list requires refactoring; functional-style layer application over a filtered list works. FEASIBLE with effort. |
+| HuggingFace Transformers | Most models use `nn.ModuleList` for layers; filtering is straightforward. Some models have hardcoded layer count in config — requires config update. FEASIBLE. |
+
+**Residual stream reindexing:** After removing layers from a standard sequential transformer, `active_layers = [l for i,l in enumerate(model.layers) if gates[i] > 0.5]` — no explicit reindexing needed. **Exception**: If idea 4.4 (Skip List Layers) is also applied, skip connections are position-indexed and must be updated after surgery.
+
+#### Layer Pruning Step 2: TTFT/TPOT Claim Verification
+
+For p = fraction of layers active after pruning (e.g., p=0.75 means 25% pruned):
+
+**TTFT (~0.75× for p=0.75)**: CORRECT when:
+- Pruning is uniform across layer types (both attention and MLP layers pruned)
+- MLP FLOPs dominate at the sequence length being analyzed
+- At s=8K for A1 (d_ff=17408): MLP fraction ≈ 90% of total FLOPs → uniform pruning gives ≈ 0.75× TTFT ✓
+- At s=8K for A2 (d_ff=25600): MLP fraction ≈ 85% → pruning gives ≈ 0.75× TTFT ✓
+
+**TPOT (~0.75× for p=0.75)**: CORRECT when:
+- Batch=1 (bandwidth-bound)
+- Active weight bytes scale as p × baseline
+- KV cache access for pruned attention layers also reduces proportionally
+
+#### Layer Pruning Step 3: Training Overhead Verification
+
+**Gate type → training overhead mapping:**
+
+| Gate type | Extra FLOPs per forward pass | Training overhead |
+|-----------|------------------------------|-------------------|
+| Scalar gate per layer (L scalars) | L × batch_size × seq_len scalar ops | ~1.00× (negligible — <0.01% of baseline) |
+| Vector gate per layer (L × d vectors) | L × d × batch_size × seq_len scalar ops | ~1.00× (still negligible vs d·d_ff matmuls) |
+| Hyper-Connections SHC (n × d expansion matrix) | n × d² per layer | 1.05–1.15× (measurable overhead) |
+
+**Do NOT attribute the 1.05–1.15× Hyper-Connections SHC overhead to scalar or vector gates.**
+> Source: **[Zhu et al., 2024]** — §"Static Hyper-Connections (SHC)" (arXiv:2409.19606)
+
+#### Layer Pruning Step 4: Citation Checklist
+
+For any document about learned layer skipping, residual gating, or static pruning, verify:
+
+| Citation | What to Check |
+|----------|--------------|
+| Mixture of Depths (Raposo et al., 2024, arXiv:2404.02258) | **CRITICAL MISSING CHECK** — MoD is the closest prior art for learned skip decisions at scale. If not cited, flag as significant gap. Note: MoD is DYNAMIC (per-token); idea 4.5 is STATIC — this distinction preserves PARTIAL novelty. |
+| LayerDrop (Fan et al., 2020, arXiv:1909.11556) | Foundational work on training transformers to be robust to layer dropping. If not cited, flag as important gap. Note: LayerDrop is RANDOM (not learned); idea 4.5 learns the optimal static pattern. |
+| ShortGPT (Men et al., 2024, arXiv:2403.03853) | Block Influence (BI) metric proves 24–27% of layers are redundant. Quality claims: LLaMA 2-7B: 27.1% pruned MMLU 45.39→43.96 (−3.2%); LLaMA 2-13B: 24.6% pruned MMLU 55.00→54.69 (−0.6%). Verify math: 45.39→43.96 = −1.43 abs = −3.15% relative ✓ |
+| GateSkip (Laitenberger et al., 2024, arXiv:2510.13876) | Validates learned gating principle with adaptive regularization. Correct table refs: Table 1 (1B quality), Table 6 (8B quality), Table 10 (throughput). |
+| Frankle and Carbin, 2019 (ICLR, arXiv:1803.03635) | **AUTHOR NAME CHECK** — Correct name is "Carbin" not "Carlin". Second author is Michael Carbin (MIT CSAIL). This misspelling recurs in multiple docs. |
+| Any arXiv ID from 2026 | Flag as HIGH RISK — must verify URL resolves. Add "URL not verified" marker if not fetched. |
+
+#### Layer Pruning Step 5: 4.4 + 4.5 Composition Audit
+
+When a layer-pruning document claims synergy with Skip List Layers (idea 4.4):
+
+**The composition is ORDER-DEPENDENT:**
+
+| Order | Composability | Notes |
+|-------|--------------|-------|
+| 4.5 first (determine survivors), then 4.4 (apply skip topology to survivors) | CLEAN — 4.4 operates on the pruned architecture with known layer count | Requires sequential training |
+| 4.4 first (set skip intervals), then 4.5 (prune) | BROKEN — pruning a layer that is an anchor for a 4.4 skip connection breaks the topology | Skip intervals must be recomputed after pruning |
+| Joint training | COMPLEX — 4.4 skip connections may help gradient flow past near-zero gates; possible positive interaction but requires careful design | Not cleanly validated |
+
+**"Combines well with 4.4" claims should be qualified as "combines well if 4.5 gating is applied first."**
+
+#### Layer Pruning Step 6: Baseline Formula Audit
+
+Check the complexity tables against these known issues:
+
+| Formula | Common Error | Correct |
+|---------|-------------|---------|
+| Weight memory | O(p·L·d·d_ff + L·d) — missing attention weights | O(p·L·(d·d_ff + d²) + L·d) |
+| Bandwidth (A1 hybrid) | O(p·L·(d²+s·d_kv/4)) — missing MLP loading | O(p·L·(d²+d·d_ff+s·d_kv/4)) |
+| Baseline B compute | O(L·(d²+k·d·d_e)) — missing global-attn term | O(L·(d²+s·d/4+k·d·d_e)) for B's 25% global-attn layers |
+| Context window heading | "32K tokens" for A1/B | A1 and B: 262,144; A2: 40,960 |
+
+---
+
+### Phase A: Research New Ideas (when ideas have no prior docs)
+
+When adding N new ideas to an existing corpus that already has Phase 1–3 complete:
+
+1. **Read the existing `SHARED_PRELUDE.md`** verbatim — inject into every new-idea lead agent prompt. New ideas get the same canonical baseline specs.
+
+2. **Launch N new-idea lead agents in parallel** (one per idea). Each agent:
+   - Spawns 5 sub-agents in parallel (same roles: Citation Verifier, Complexity Auditor, Literature Gap Finder, Comparison Validator, Feasibility Checker)
+   - Produces `research_6_N_<slug>.md`, `summary_6_N_<slug>.md`, 5× `verification_6_N_<role>.md`, then `review_6_N_<slug>.md`
+   - Follows the same 8-section review template as Phase 2 lead agents
+
+3. **Critical prior art each new-idea agent MUST check** (inject these search terms explicitly):
+   - N1 (in-arch AR loop with stop-token break): RWKW inference loops, Medusa/EAGLE speculative decoding trained-in, PonderNet, ACT (Adaptive Computation Time)
+   - N2 (prefill/decode split): Splitwise (Patel 2023, arXiv:2311.18677), DistServe (Zhong 2024, arXiv:2401.09670), SARATHI-Serve chunked prefill (Agrawal 2023)
+   - N3 (block-diffusion AR decoder): BD3-LM (arXiv:2406.15253), MDLM (Sahoo 2024, arXiv:2406.07524), LLaDA (Nie 2025, arXiv:2502.09992), Fast-dLLM (arXiv:2505.05175)
+   - N4 (combined N1+N2+N3): cite all three base papers above; cross-synergy analysis required
+
+4. **arXiv IDs must be WebFetch-verified** before citation — same rule as Phase 1.
+
+5. **After Phase A completes**: new `research_6_N_*.md` files are equivalent to existing `research_1_*`–`research_5_*` files and can be included in the LaTeX paper on equal footing.
+
+### Phase B: Per-Idea Merge + Myrmidon Re-Validation of Merged Docs
+
+When the corpus has accumulated separate review_*.md, summary_*.md, and verification_*.md files per idea and you want to collapse them into a single authoritative research_*.md per idea (with optional new baseline addition):
+
+**Pre-conditions:**
+- All `review_X_Y.md` + `summary_X_Y.md` + `verification_X_Y_*.md` exist for each idea
+- `SHARED_PRELUDE.md` extended with new baseline (e.g., Baseline C) before starting
+- Outlier files identified (e.g., `scope_X_Y_*.md` to absorb into `research_X_Y.md`)
+
+**Step B1: Extend SHARED_PRELUDE.md with new baseline**
+- Web-fetch authoritative config.json for new baseline
+- Add full spec block + per-token complexity + KV cache formulas at all reference contexts
+- Add to KV cache comparison table
+- Update Changelog section
+
+**Step B2: One lead agent per idea (39 × parallel launch in 2 waves to avoid message size limits)**
+- Each lead reads: `research_X_Y.md` + `summary_X_Y.md` + `review_X_Y.md` + all `verification_X_Y_*.md`
+- Integrates review findings SILENTLY into prose (no "Review Findings" subsection)
+- Integrates summary doc: Executive Summary subsection + Key Comparison Tables for ALL baselines (including new one)
+- Absorbs any outlier scope files (e.g., `scope_4_7_*.md`) for its idea
+- Converts all inline citations to `<Title>[N]: <description>` format
+- Collects `<!-- CITATION MANIFEST -->` block at bottom of merged doc
+- Applies systemic corrections silently (wrong KV formula, wrong vocab, wrong context)
+- Spawns 5 sub-agents in parallel for validation of the merged doc
+- Produces final merged `research_X_Y.md` (overwrite in-place)
+- Produces `verification_merged_X_Y_{citations,complexity,literature,comparison,feasibility}.md`
+
+**Step B3: Delete legacy docs (after all merges complete)**
+- `rm summary_*.md review_*.md scope_*.md`
+- `rm verification_*.md` (original, non-merged ones)
+- Keep `verification_merged_*.md` as audit trail
+- Delete audit trail after synthesis regen if desired
+
+**Step B4: Regenerate synthesis docs from merged corpus**
+- `cross_reference_matrix.md`, `priority_ranking.md`, `architecture_synthesis.md`, `implementation_spec_phase1.md`
+
+### Phase C: Accuracy Review-and-Fix Pass (in-place, marker-free)
+
+**When to use Phase C vs Phase B:**
+- Phase B = merge + re-validate: collapses separate review/summary/verification files into unified `research_X_Y.md`; spawns 5 sub-agents per idea; adds a new baseline.
+- Phase C = surgical fix pass: all 39 `research_X_Y.md` already exist (post-Phase-B); goal is to correct factual errors in-place without producing any new output files.
+
+**Fix priority order (7 levels — work in this order):**
+1. KV cache and FLOP values (wrong formula, wrong head count, wrong context window)
+2. Wrong arXiv IDs (replace with WebFetch-verified IDs)
+3. Claim mismatches (research doc says X, cited paper says Y)
+4. Invalid table rows (rows that cannot be recomputed to within ±5% of stated value)
+5. Wrong directional arrows in comparison tables (↓ vs ↑)
+6. Missing prior art (add any citations that change novelty classification; no cap on new citations)
+7. Training / synergy caveats (flag best-case-without-caveat claims)
+
+**Two-wave launch (same limit as Phase B):**
+- Wave 1: 17 lead agents — groups 1+2+3 (ideas 1.1–1.7, 2.1–2.2, 3.1–3.8)
+- Wave 2: 22 lead agents — groups 4+5+6 (ideas 4.1–4.7, 5.1–5.10, 6.1–6.5)
+- Do NOT launch all 39 in one message: confirmed runtime failure.
+
+**Three citation manifest formats (leads must handle all three):**
+- Format A: HTML comment per line — `<!-- [N] Title: ... -->`
+- Format B: plain `## Citation Manifest` heading followed by numbered list
+- Format C: `<!-- CITATION MANIFEST -->` header followed by a plain-text list outside the HTML comment block
+
+**Fix discipline rules:**
+- Change the minimum text necessary to make the value correct. No paragraph rewrites.
+- No `[corrected: ...]` inline markers. No `## Corrections applied:` subsections added by the Phase C agent. No meta-commentary.
+- Do not add a "Review Findings" or "Phase C Notes" subsection.
+- **Verdicts are OUT OF SCOPE**: PURSUE / INVESTIGATE / DEPRIORITIZE / Final Verdict / Prior Art Classification are NOT touched in this pass; they will be addressed in a separate later phase.
+- Pre-existing `## Corrections applied:` headers (from Phase B merge metadata) are legitimate — do not remove them.
+
+**LoRA case taxonomy (for LoRA-based ideas such as 4.2, 4.3):**
+- Case 1 — LoRA merged into W_base before inference: KV benefit = zero (full-rank W seen at runtime)
+- Case 2 — W_core + A·B stored separately (both present in KV): ~1.5× worse KV than base model
+- Case 3 — pure A·B adapter only (W_base discarded): ~2× fewer weight bytes, ~1.64× TPOT improvement
+
+**SwiGLU ×3 factor (for MoE and expert-routing ideas):**
+- SwiGLU has 3 weight matrices per expert: gate projection, up projection, down projection.
+- Per-token per-layer expert FLOPs = 3×d×d_ff (not 2×d×d_ff).
+- Always apply this factor when computing MoE active-expert FLOPs or total router + expert cost.
+- Missing ×3 causes ~1.5× undercount; found in research_1_3 and others during Phase C.
+
+### Phase D: Verdict Removal Pass
+
+**When to use:** After Phase C (accuracy review-and-fix pass) is complete and before corpus publication. Phase D removes all verdict-related content from every `research_X_Y.md` file while preserving all technical content.
+
+**What to remove (5 targets):**
+
+1. `## Verdict` / `## Final Verdict` / `## Recommendation` section blocks — remove the header and all body text until the next `##` heading or EOF.
+2. `**Prior Art Classification:** EXISTS/PARTIAL/NOVEL` lines — remove the entire line.
+3. Standalone verdict-token lines — lines whose entire content is `**PURSUE**`, `**INVESTIGATE**`, `**DEPRIORITIZE**` (bold or bare) and nothing else. Do NOT remove mid-sentence uses of these words in technical argument.
+4. Verdict-adjacent `- **Potential impact**: ...` and `- **Implementation effort**: ...` bullets — only when immediately adjacent (within the same block) to a verdict header or standalone token; not when appearing in independent implementation analysis.
+5. Verdict-adjacent `**Confidence:** X/10` and `**Priority rank:** N` lines — only within verdict blocks; preserve any identical-looking lines that appear in independent scoring sections.
+
+**What NOT to remove (5 preservation rules):**
+
+1. Technical analysis, comparison tables, FLOPs/KV calculations — always preserve.
+2. Literature review prose around a `**Prior Art Classification:**` line — only the status line itself is removed; surrounding analysis stays.
+3. Mid-sentence uses of pursue / investigate / deprioritize embedded in technical argument — do not remove.
+4. Citation manifest blocks (`<!-- CITATION MANIFEST -->` or `## Citation Manifest`).
+5. `## Accuracy / Quality Tradeoff` sections and pre-existing `## Corrections applied:` metadata headers from Phase B merge — these are not verdict content; do not touch.
+
+**Structural variation by group:**
+
+- **Groups 1–4**: Verdict tokens appear as inline `**Verdict: PURSUE/INVESTIGATE/DEPRIORITIZE**` sentences embedded in the Executive Summary section — not as dedicated section headers. Use sentence-level extraction: find and remove only the verdict sentence, leaving surrounding Executive Summary prose intact.
+- **Groups 5.1–5.8**: Verdict appears as `**Status: PURSUE/INVESTIGATE/PARTIAL** — ...` lines in the Executive Summary section. Remove the entire line.
+- **Groups 5.9–5.10 and 4.x outliers**: Full `## 8–10. Verdict` or `## Verdict` section blocks running to EOF. Remove header + entire body.
+- **Group 6**: Verdict tokens are embedded inline within `## Executive Summary` prose paragraphs (same treatment as groups 1–4). Some 6.x docs have `### Prior Art Classification` subsections that are verdict tables — remove the entire subsection including its table. Some 6.x docs have `## Assessment` sections with mixed technical content and verdict tokens: strip only the verdict tokens and classification status lines; preserve the surrounding technical prose (do not remove the whole section).
+
+**Two-wave execution:** Same 17+22 wave structure as Phase C — launch 17 leads for groups 1–3, wait for completion, then 22 leads for groups 4–6. Confirmed: attempting all 39 in one message causes timeout.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Using prelude/command baseline specs directly | Accepted SHARED_PRELUDE.md baseline numbers at face value | Prelude had 5 factual errors: wrong vocab (151,936→248,320 for A1/B), wrong context (32,768→262,144), wrong head_dim (128→256 for GatedAttn), wrong head counts for B global attention. These cascaded into all 31 research docs | Always web-fetch authoritative config.json before starting any quantitative analysis |
+| Single-agent review | Tried reviewing multiple ideas sequentially | Context window exhaustion; cross-contamination between ideas | One lead agent per idea; no agent works on more than one idea |
+| Agent self-approval stall | 4 agents invoked `/hephaestus:advise` internally, presented a plan, and waited for approval | Agents stalled indefinitely waiting for human approval in background context | Detect stalled agents by checking for verification files without corresponding review files; unblock by sending explicit approval via SendMessage |
+| Trusting "68 GB KV at 32K" for A2 | SHARED_PRELUDE stated A2 (Qwen3-32B) KV cache = ~68 GB at 32K context | Wrong: used 64 Q-heads instead of 8 KV-heads in formula; ~8× overestimate. Correct: 64L × 2 × 8KV × 128hd × 32768tok × 2B = ~8.59 GB | Always verify KV cache formulas use KV head count not Q head count |
+| N4 before N1/N2/N3 | Tried to research the combined idea before the three component ideas had research docs | N4 requires cross-references to N1, N2, N3 prior art and Big-O analysis; without them the N4 agent fabricates component details | Always research component ideas N1, N2, N3 fully before launching N4 agent |
+| Trusting author complexity claims for new ideas | Accepted "O(n) per token" claim from a new idea's mechanism description without re-deriving | Author was counting attention heads as O(1); when DeltaNet state per head is O(d²), full per-token cost is O(d²) not O(n·d) | Complexity Auditor sub-agent must re-derive every Big-O for new ideas, same as for existing corpus |
+| Processing all 39 ideas in a single agent message | One giant Agent call listing all 39 ideas | Context exhaustion before half the ideas complete | Split into waves of ~7 ideas per group; parallel agents per group are fine |
+| Verification file role-name drift ignored | Assumed all ideas use the same verification file suffix pattern | Ideas 1.x–5.x use `{citations,comparison,complexity,feasibility,literature}`; ideas 6.x use `{citation_verifier,comparison_validator,complexity_auditor,feasibility_checker,literature_gap}` — glob-only approach missed 6.x files | Each lead agent must explicitly glob BOTH naming patterns before reading |
+| All 39 leads in one message | Launched all in a single message with 39 Agent tool calls | Message too large for runtime | Wave approach: launch groups 1–3 first, then 4–6 after confirmation |
+| Scope outlier handled by wrong agent | Tried to absorb `scope_4_7_*.md` in a general cleanup step | The scope file's content was context-dependent on idea 4.7 — only the 4.7 lead agent knew the right place to fold it in | Always assign outlier files to the lead agent for their idea |
+| Adding `[corrected: ...]` markers during Phase C in-place fix pass | Using inline correction markers to trace changes made during Phase C | User explicitly opted out — markers create clutter in the final corpus and make the doc less readable | Phase C is marker-free: change the minimum text, no inline traces, no `## Corrections applied:` subsections added by the Phase C agent |
+| Treating pre-existing `## Corrections applied:` as banned content | Agent flagged `## Corrections applied: See verification_merged_1_5_*.md files` as a banned subsection and attempted removal | It was a pre-existing Phase B merge metadata header, not added by the Phase C agent | Before flagging a section as "agent-added banned content", check git history or context — it may be a legitimate pre-existing artifact |
+| Launching all 39 Phase C leads in one message | Single Agent call listing all 39 Phase C leads | 39 is too many for one message (same limit as Phase B) | Two-wave approach: launch 17 leads for groups 1–3, wait for completion, then launch 22 leads for groups 4–6 |
+| Using H_q in attention FLOPs formula | Attention FLOPs computed as 4×d×H_q×s per layer | The formula is 4×d×s per layer total (not per head); H_q does not appear as a multiplier — prefill attention FLOPs = 2×s×d (QKV projection) + 2×s×d (attention matmul) = 4×s×d per layer | Complexity Auditor must re-derive attention FLOPs from first principles; H_kv applies only to KV cache size, not to total attention FLOPs |
+| Using SwiGLU FLOPs = 2×d×d_ff | Treated SwiGLU the same as a standard two-matrix FFN (gate + down) | SwiGLU has 3 weight matrices per expert (gate, up, down): correct FLOPs = 3×d×d_ff not 2×d×d_ff; missing ×3 causes ~1.5× undercount | SwiGLU FLOPs = 3×d×d_ff per token per layer; apply to all MoE and expert-routing ideas that count per-expert FLOPs |
+| Treating `## Corrections applied:` as banned content during Phase D | Agent flagged `## Corrections applied: See verification_merged_*.md files` as agent-added banned content and attempted removal | It was a pre-existing Phase B merge metadata header, not added by the Phase C or Phase D agent | Before flagging a section as "agent-added banned content", check file context or git history — it may be a legitimate pre-existing artifact |
+| Removing whole `## Assessment` sections in group 6 docs during Phase D | Removed entire `## Assessment` section because it contained a verdict token | Group 6 `## Assessment` sections sometimes contain mixed technical content alongside verdict tokens; removing the whole section destroys technical analysis | For sections with mixed content: strip only verdict tokens and classification status lines; preserve surrounding technical prose |
+| Treating "unmerged" as a single case (LoRA) | Research doc had a single "unmerged" row covering all three cases | TTFT and TPOT values were contradictory (one showed penalty, other showed speedup) | Always split into Case 1/2/3 before populating any table |
+| Using GaLore optimizer savings to quantify LoRA Everywhere training benefit | Doc cited GaLore Table 1 (65.5%) to support LoRA Everywhere (50%) | Different mechanisms: GaLore reduces gradient states; LoRA reduces weight parameters | Cite separately; note that GaLore 65.5% beats LoRA Everywhere 50% for optimizer state alone |
+| Applying dLoRA 38.9% to TPOT (batch=1 decode) | Complexity table used 38.9% overhead as TPOT estimate | dLoRA measures compute-bound multi-request; TPOT at batch=1 is bandwidth-bound | dLoRA measurement is only valid for Case 2 in compute-bound serving |
+| Assuming TTFT is penalized for the case with inference benefit (LoRA) | Summary doc said "1.5× slower TTFT" for all unmerged cases | Pure A·B (Case 3) actually has 2× FASTER TTFT (half the FLOPs) | The TTFT penalty only applies to Case 2 (W_core present), which has no deployment value |
+| Not distinguishing whether W_core is trained or frozen | Training cost claim assumed 50% optimizer savings | If W_core is also trained from scratch, optimizer memory is 1.5× MORE than dense | Explicitly state: optimizer savings ONLY if W_core is frozen or absent |
+| Claiming "static at inference" speedup from frozen soft gates (Layer Pruning / static-inference) | Research doc described frozen gates OR stated "static at inference, therefore zero overhead" for frozen continuous gate values | Frozen soft gates still execute the full layer computation (gate value is frozen, but F_i(x) still runs before the multiply); only model surgery (physical layer removal) produces real speedup | Always distinguish: frozen gate VALUE ≠ eliminated computation; model surgery (Scenario C) required for real speedup |
+| Conditional execution with per-token gates | Prior work like GateSkip uses dynamic (per-token) gates with conditional execution | Per-token conditional causes SIMD divergence on GPU — different tokens take different branches | Dynamic gates cannot use efficient static branching; only truly static (same for all tokens) gates allow branch prediction optimization |
+| Forgetting that pre-norm still runs under frozen soft gates | Implementation skipped the sublayer but kept the RMSNorm running | RMSNorm cost is ~O(d) per token per layer — small but not zero | Model surgery must remove the entire layer block (norm + attention/MLP), not just the sublayer computation |
+| Assuming DenseFormer-style savings | Research doc conflated DenseFormer's frozen DWA weights with hard-zero gate inference | DenseFormer freezes learned AGGREGATION weights (still blends all past representations) — no layer is eliminated, and throughput is actually 22% WORSE than baseline | Frozen learned weights ≠ frozen skip decisions; aggregation weights run at every token regardless of value |
+| Attributing 1.05–1.15× training overhead to scalar gates (Layer Pruning) | Doc cited Hyper-Connections SHC overhead range for scalar gate overhead | SHC uses n × d expansion matrix (~10M extra FLOPs/layer); scalar gates add ~64 scalar ops total | 1.05–1.15× is correct for SHC; scalar gates are ~1.00× (< 0.01% overhead) |
+| Missing Mixture of Depths as critical prior art (Layer Pruning) | Literature review omitted MoD despite it being the closest related work for learned layer skipping | MoD demonstrates per-token hard binary skip decisions at 6B+ scale; without it, novelty claim is incomplete | Always check for MoD [Raposo et al., 2024, arXiv:2404.02258] as first citation for any "learned layer skip" idea |
+| Misspelling Lottery Ticket author name (Layer Pruning) | "Frankle and Carlin" appeared in multiple docs | Correct name is Michael Carbin (MIT CSAIL), not "Carlin" | Add to citation checklist: always verify second author of LTH = Carbin |
+| Claiming 4.4 + 4.5 "combine well" without qualification (Layer Pruning) | Research doc stated both ideas synergize without noting composition order | 4.4 first → 4.5 second breaks skip-interval anchor points; composition is order-dependent | Qualify: "combines well if 4.5 gating (layer selection) is applied before 4.4 (connectivity topology)" |
+
+## Results & Parameters
+
+### Corpus Merge Parallelization — Verified Grouping (39 Ideas, 6 Groups)
+
+| Wave | Groups | Ideas | Lead agents | Sub-agents |
+| ------ | -------- | ------- | ------------- | ------------ |
+| 1 | 1, 2, 3 | 1.1–1.7, 2.1–2.2, 3.1–3.8 | 17 | 85 |
+| 2 | 4, 5, 6 | 4.1–4.7, 5.1–5.10, 6.1–6.5 | 22 | 110 |
+
+**Outlier file handling**: `scope_X_Y_*.md` → assigned to idea X.Y lead agent; absorbed into merged `research_X_Y.md`.
+
+**Verification file naming drift** (two conventions — must handle both):
+- Ideas 1.x–5.x: `verification_{id}_{citations|comparison|complexity|feasibility|literature}.md`
+- Ideas 6.x: `verification_{id}_{citation_verifier|comparison_validator|complexity_auditor|feasibility_checker|literature_gap[_finder]}.md`
+
+### Systemic Error Patterns Found (apply to any similar review)
+
+1. **KV cache formula error**: `n_q` (query heads) used instead of `n_kv` (KV heads) → 8× overestimate for GQA models
+2. **Context window mislabeling**: Concrete byte values computed at native context but labeled with a smaller context value
+3. **Vocab propagation**: Shared vocab across model families confused; each baseline may have different vocab size
+4. **Speedup figure context mismatch**: Long-context speedup figures (e.g., "3× at 65K context") incorrectly cited at short context (8K–32K) where MLP FLOPs dominate attention
+5. **Citation discipline failures**: Anonymous keys ("Multiple authors"), missing §X.Y section references, post-cutoff papers without "unverified" flags
+
+### Review Document Template (8 sections)
+
+```markdown
+## 1. Paper Citation Verification (YES/NO/PARTIALLY/COULD NOT VERIFY per paper)
+## 2. Missing Literature (papers the review should have cited)
+## 3. Big-O / Complexity Verification (table: original vs. corrected)
+## 4. Technical Correctness (mechanism, feasibility, fairness)
+## 5. Prior Art Classification Check (EXISTS/PARTIAL/NOVEL — confirmed or revised)
+## 6. Verdict Check (PURSUE/INVESTIGATE/DEPRIORITIZE — confirmed or revised)
+## 7. Error Summary (Critical / Minor / Suggestions)
+## 8. Confidence Scores (literature, technical, comparison, overall — 1-10)
+```
+
+### Correction Pass (post-review)
+
+After reviews complete, launch parallel surgical correction agents (one per group of 5–8 ideas). Each agent:
+- Reads the review files for its assigned ideas
+- Makes in-place edits to research/summary docs
+- Adds `[corrected: ...]` inline notes so changes are traceable
+- Never touches review_*.md or verification_*.md (read-only ground truth)
+
+### New Idea Research — Verified arXiv IDs (2026-04-14)
+
+These IDs were WebFetch-verified during the N1–N4 research pass:
+
+| Idea | Key paper | arXiv ID | Verified |
+| ------ | ----------- | ---------- | --------- |
+| N1 (AR loop + stop token) | PonderNet | arXiv:2107.05407 | YES |
+| N1 | EAGLE speculative decoding | arXiv:2401.15077 | YES |
+| N2 (prefill/decode split) | Splitwise | arXiv:2311.18677 | YES |
+| N2 | DistServe | arXiv:2401.09670 | YES |
+| N3 (block diffusion AR) | BD3-LM | arXiv:2406.15253 | YES |
+| N3 | MDLM | arXiv:2406.07524 | YES |
+| N3 | LLaDA | arXiv:2502.09992 | YES |
+| N3 | Fast-dLLM | arXiv:2505.05175 | YES |
+
+### N1–N4 Final Verdicts
+
+| Idea | Verdict | Rationale |
+| ------ | --------- | ----------- |
+| N1 (In-arch AR loop + stop token) | INVESTIGATE | Novel framing; prior art (PonderNet, Medusa) covers components but not the specific trained-in stop-token-as-architecture-gate |
+| N2 (Prefill/decode split) | PURSUE | Splitwise and DistServe validate the operational benefit; architectural-level split (vs. system-level) is the novel angle |
+| N3 (Block-diffusion AR decoder) | INVESTIGATE | BD3-LM and LLaDA are close prior art; the AR-across-blocks + diffusion-within-block combination at architecture level has novelty |
+| N4 (Combined N1+N2+N3) | INVESTIGATE | Synergy benefit is plausible but compounding complexity; depends on N2 and N3 independently proving out first |
+
+### LoRA FLOPs Reference at r=d/4
+
+```
+Dense matmul (d×d): FLOPs = 2d² per token
+
+Case 2 (W_core + A·B unmerged):
+  W_core: 2d²
+  A (d×r): 2dr = 2d²/4 = d²/2
+  B (r×d): 2rd = d²/2
+  Total: 2d² + d² = 3d²  ← 1.5× MORE than dense
+
+Case 3 (pure A·B unmerged):
+  A (d×r): 2dr = d²/2
+  B (r×d): 2rd = d²/2
+  Total: d²  ← 0.5× of dense (2× FASTER)
+
+Training FLOPs (forward + backward, Case 3):
+  ≈ 3d² per matmul vs dense ≈ 6d²  ← ~0.5× training FLOPs
+```
+
+### LoRA Bandwidth Reference at r=d/4, bf16
+
+```
+Dense: d² × 2 bytes per matrix per token
+Case 2: (d² + d²/4 + d²/4) × 2 = 1.5d² × 2  ← 1.5× MORE
+Case 3: (d²/4 + d²/4) × 2 = d²/2 × 2          ← 2× FEWER
+
+CoLA empirical (≤7B): 1.64× throughput (not 2× due to non-GEMM ops ≈18% of time)
+  1/(0.18 + 0.82/2) ≈ 1.64×  ✓
+```
+
+### Layer Pruning Reference Figures (at p=0.75, 25% pruning)
+
+```
+TTFT reduction:
+  A1 at 8K context: MLP fraction ≈ 90% → TTFT ≈ 0.75× baseline ✓
+  A2 at 8K context: MLP fraction ≈ 85% → TTFT ≈ 0.75× baseline ✓
+  Caveat: only when full layers (both attn + MLP) are pruned uniformly
+
+TPOT reduction (batch=1):
+  Active weight bytes → p × baseline bytes → TPOT ≈ p = 0.75× ✓
+
+Quality degradation references (ShortGPT post-hoc, without fine-tune):
+  LLaMA 2-7B: 27.1% pruned, MMLU 45.39→43.96 (−3.2% relative)
+  LLaMA 2-13B: 24.6% pruned, MMLU 55.00→54.69 (−0.6% relative)
+
+GateSkip quality retention (dynamic gates, with calibration):
+  Llama-3.1-8B at 25% savings: >90% baseline accuracy ✓
+  Llama-3.2-1B at 25% savings: 26.8%→19.8% (sharp cliff at small scale)
+
+TPOT/TTFT under static scenarios:
+  Scenario A (frozen soft gates): no speedup
+  Scenario B (frozen hard gates + conditional execution): speedup minus branch overhead
+    (static branch on GPU ≈ zero overhead since all tokens take same path)
+  Scenario C (model surgery): speedup exactly proportional to p
+```
+
+### Expected Speedup at p=0.75 (25% pruning), batch=1
+
+```
+TPOT: 0.75× baseline (bandwidth-bound; weight bytes ∝ active layers)
+TTFT: ~0.75× baseline (MLP-dominated at s≤8K; compute ∝ active layers)
+
+Note: Speedup is exactly proportional to p only under model surgery.
+Under frozen soft gates (Scenario A): no speedup.
+Under frozen hard gates with conditional execution (Scenario B): speedup minus branch overhead
+  (static branch on GPU ≈ zero overhead since all tokens take same path).
+```
+
+### Scalar Gate Training Overhead Reference
+
+```
+Extra FLOPs from scalar gates (L=64, batch=1, s=2048):
+  Gate multiplies: 64 × 2048 = 131,072 scalar FLOPs
+  Baseline A2 MLP FLOPs: 64 × 6 × 5120 × 25600 × 2048 ≈ 10^15 FLOPs
+  Overhead fraction: 131K / 10^15 ≈ 1.3 × 10^-10 → effectively 1.00×
+
+For comparison: Hyper-Connections SHC (n=4 expansion):
+  Per layer: n × d^2 = 4 × 5120^2 ≈ 105M extra FLOPs per layer
+  Over 64 layers: 6.7B extra FLOPs
+  Overhead: 6.7B / 10^15 × 64 ≈ 10^-4 per layer → ~1.05-1.15× total ✓
+```
+
+### Model Surgery Implementation Recipe (PyTorch)
+
+```python
+# After training with soft scalar gates
+import torch
+import torch.nn as nn
+
+# Step 1: Extract gate values
+gate_values = {i: torch.sigmoid(model.gate_logits[i]).item()
+               for i in range(len(model.layers))}
+
+# Step 2: Identify layers to keep
+threshold = 0.5
+active_indices = [i for i, g in gate_values.items() if g >= threshold]
+pruned_indices = [i for i, g in gate_values.items() if g < threshold]
+p_active = len(active_indices) / len(model.layers)
+
+print(f"Keeping {len(active_indices)}/{len(model.layers)} layers (p={p_active:.2f})")
+print(f"Pruned layers: {pruned_indices}")
+
+# Step 3: Model surgery
+model.layers = nn.ModuleList([model.layers[i] for i in active_indices])
+
+# Step 4: Remove gate infrastructure
+if hasattr(model, 'gate_logits'):
+    del model.gate_logits
+
+# Step 5: Save pruned model
+torch.save(model.state_dict(), f"model_p{p_active:.2f}.pt")
+
+# Inference: identical to a model designed with len(active_indices) layers
+# Zero per-token overhead, zero branching, zero gate compute
+```
+
+### Soft Gate Training Recipe (Standard)
+
+```python
+# Initialize gate logits to -2 (sigmoid(-2) ≈ 0.12)
+# Gates start mostly passing-through, then regularization pushes toward 0 or 1
+gate_logits = nn.Parameter(torch.full((num_layers,), -2.0))
+
+# Adaptive L1 sparsity loss
+def gate_loss(logits, target_sparsity=0.25, lambda_max=0.01):
+    gates = torch.sigmoid(logits)
+    active_fraction = gates.mean()
+    lambda_t = lambda_max * max(0, active_fraction - (1 - target_sparsity))
+    return lambda_t * gates.sum()
+
+# Training loop addition:
+L_total = L_task + gate_loss(gate_logits)
+```
+
+### Go/No-Go Ablation Design (Layer Pruning variant)
+
+```
+Four 1B–3B scale training runs on same data (50B tokens):
+  1. Dense baseline
+  2. ShortGPT BI post-hoc pruning at 25%, no recovery fine-tune
+  3. ShortGPT BI post-hoc pruning at 25%, with 5% recovery fine-tune
+  4. Soft-gate training (p_target=0.75) → threshold → model surgery
+
+Pass criterion: Model 4 quality within 2% of Model 1 (dense) at same inference cost
+Key question: Does gate-aware training (Model 4) outperform post-hoc pruning (Model 3)?
+Compute cost: ~4 A100-weeks
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ArchIdeas | 31 AI architecture ideas (sections 1–5 plus 4.7) | Qwen3.5-27B Hybrid, Qwen3-32B Dense, Qwen3.5-397B-A17B MoE baselines |
+| ArchIdeas | 4 new ideas (N1–N4) added to existing 31-idea corpus | research_6_1 through research_6_4 produced by parallel Myrmidon swarms; all 4 included in final LaTeX paper |
+| ArchIdeas | 39-idea corpus merge (Phase B) | review_*.md + summary_*.md + 5× verification_*.md merged into 39 unified research_*.md files; 195 merged verification files produced; synthesis docs regenerated |
+| ArchIdeas | 39-idea corpus accuracy review-and-fix pass (Phase C) | In-place surgical fix pass on all 39 research_X_Y.md; no output files; verdicts out of scope. Baseline C (K2 Family / LLM360): L=80, d=8192, d_ff=28672, H_q=64, H_kv=8, head_dim=128, vocab=250112; K2-V2 ctx=524288, K2-Think-V2 ctx=262144; KV @ 32K≈10.0 GiB, @ 262K≈80.0 GiB, @ 524K≈160.0 GiB |
+| ArchIdeas | 39-idea corpus verdict removal pass (Phase D) | Removed all verdict-related content (PURSUE/INVESTIGATE/DEPRIORITIZE tokens, Final Verdict sections, Prior Art Classification status lines, verdict-adjacent impact/effort/confidence bullets) from all 39 research_X_Y.md files; all technical content preserved; two-wave execution (17+22) |
+| ArchIdeas research | Myrmidon swarm review of idea 4.3 (LoRA Everywhere), 5 parallel sub-agents | `/home/mvillmow/Random/ArchIdeas/research/review_4_3_lora_everywhere.md` |
+| ArchIdeas research | Myrmidon swarm review of idea 4.5 (Learned Residual Flow Control), 5 parallel sub-agents | `/home/mvillmow/Random/ArchIdeas/research/review_4_5_learned_residual_flow.md` |
+| ArchIdeas research | Idea 4.5 (Learned Residual Flow Control) review, sub-agent B complexity audit — static-at-inference model surgery pattern | `/home/mvillmow/Random/ArchIdeas/research/verification_4_5_complexity.md` §B.2 |
+
+---
+
+### Prior history for arch-research-myrmidon-swarm-review
+
+# arch-research-myrmidon-swarm-review — History
+
+## v2.0.0 (2026-05-03)
+
+Absorbed: arch-research-doc-lora-review-pattern (v1.1.0), arch-research-static-inference-model-surgery (v1.0.0)
+FA rows merged: 30 (31 unique rows minus 1 dedup: frozen-soft-gates lesson covered by both lora-review and static-inference)
+VO rows merged: 8 (5 canonical + 2 from lora-review + 1 from static-inference; no duplicates)
+
+---
+
+## v1.4.0 (2026-04-17)
+
+**Changed by:** ArchIdeas session — verdict removal pass on the 39-idea corpus (Phase D)
+**Verification:** verified-local
+
+### What changed
+- Added Phase D: Verdict Removal Pass section covering when to use, 5 removal targets, 5 preservation rules, structural variation by group (groups 1–4 inline Executive Summary tokens, groups 5.x Status lines or full section blocks, group 6 inline prose and mixed Assessment sections), and two-wave execution (17+22)
+- Added 2 new Failed Attempts rows: treating pre-existing `## Corrections applied:` as banned content, removing whole `## Assessment` sections in group 6 docs
+- Added Phase D verdict removal pass row to Verified On table
+- Bumped version to 1.4.0
+
+### Why
+The ArchIdeas corpus completed its verdict removal pass (Phase D) after Phase C accuracy fixes. This phase is distinct from Phase C: it targets verdict tokens, classification status lines, and verdict-adjacent metadata bullets — not factual errors. The structural variation across groups (inline Executive Summary sentences vs. Status lines vs. full section blocks vs. mixed Assessment sections) required group-by-group treatment strategies not captured in prior skill versions.
+
+### Previous version (v1.3.0) snapshot
+
+---
+version: "1.3.0"
+date: 2026-04-14
+---
+
+(see history entry below for v1.3.0 full content)
+
+---
+
+## v1.3.0 (2026-04-14)
+
+**Changed by:** ArchIdeas session — first accuracy review-and-fix pass on the 39-idea corpus (Phase C)
+**Verification:** verified-local
+
+### What changed
+- Added Phase C: Accuracy Review-and-Fix Pass (in-place, marker-free) section covering when to use Phase C vs Phase B, the 7-priority fix order, two-wave structure (17+22), three citation manifest formats, fix discipline rules, LoRA case taxonomy, and SwiGLU ×3 factor
+- Added Baseline C (K2 Family / LLM360) specs to Verified On table entry
+- Added 5 new Failed Attempts rows: marker-free discipline (no `[corrected: ...]` markers), pre-existing `## Corrections applied:` not being banned content, 39-lead Phase C wave limit, H_q misuse in attention FLOPs formula, SwiGLU FLOPs = 3×d×d_ff not 2×d×d_ff
+- Bumped version to 1.3.0
+
+### Why
+The ArchIdeas corpus completed its first accuracy review-and-fix pass (Phase C). This phase is distinct from Phase B (merge): it is an in-place surgical fix pass with no output files, no inline correction markers, and verdicts explicitly out of scope. The two-wave limit (17+22), three citation manifest formats, and SwiGLU/LoRA FLOPs corrections were all new learnings not captured in v1.2.0.
+
+### Previous version (v1.2.0) snapshot
+
+---
+version: "1.2.0"
+date: 2026-04-14
+---
+
+# Myrmidon Swarm: Parallel Architecture Research Review
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-13 |
+| **Objective** | Review and validate 31 AI architecture research documents (research + summary pairs) for citation accuracy, Big-O correctness, baseline comparison validity, and implementation feasibility |
+| **Outcome** | Successful — 31 review docs, 155 verification files, 2 synthesis reports, 1 final summary produced |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Reviewing a corpus of 10+ existing research documents for factual correctness
+- Verifying that cited papers exist, summaries are faithful, and arXiv IDs are not fabricated
+- Cross-checking Big-O complexity tables and Nx improvement claims against canonical baseline specs
+- Finding missing literature that changes novelty classifications
+- Producing independent review documents for a research corpus
+- Generating research docs for new ideas that have no prior `research_*.md`/`summary_*.md` files, where each new idea needs full 5-role Myrmidon treatment alongside (or after) the existing corpus review
+- Merging a reviewed corpus (review_*.md + summary_*.md + 5× verification_*.md per idea) into single-source research docs while simultaneously adding a new baseline and re-validating all merged docs
+
+## Verified Workflow
+
+### Phase B: Per-Idea Merge + Myrmidon Re-Validation of Merged Docs
+
+(full Phase B content — see skill file git history for complete v1.2.0 text)
+
+## Failed Attempts
+
+(see skill file git history for complete v1.2.0 Failed Attempts table)
+
+## Results & Parameters
+
+(see skill file git history for complete v1.2.0 Results section)
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ArchIdeas | 31 AI architecture ideas (sections 1–5 plus 4.7) | Qwen3.5-27B Hybrid, Qwen3-32B Dense, Qwen3.5-397B-A17B MoE baselines |
+| ArchIdeas | 4 new ideas (N1–N4) added to existing 31-idea corpus | research_6_1 through research_6_4 produced by parallel Myrmidon swarms |
+| ArchIdeas | 39-idea corpus merge (Phase B) | review_*.md + summary_*.md + 5× verification_*.md merged into 39 unified research_*.md files |
+
+---
+
+## v1.2.0 (2026-04-14)
+
+**Changed by:** ArchIdeas session — 39-idea corpus overhaul: parallel per-idea merge of legacy review/summary/verification docs into unified research docs
+**Verification:** verified-local
+
+### What changed
+- Added new "When to Use" trigger for corpus merge workflow (review_*.md + summary_*.md + 5× verification_*.md → single research_*.md)
+- Added Phase B: Per-Idea Merge + Myrmidon Re-Validation of Merged Docs (Steps B1–B4)
+- Added 4 new Failed Attempts rows: all-39-in-one-message context exhaustion, verification file role-name drift (1.x–5.x vs 6.x suffix conventions), 39-leads-in-one-message runtime size limit, scope outlier assigned to wrong agent
+- Added Corpus Merge Parallelization results table (39 ideas, 2 waves, 6 groups, 39 lead agents, 195 sub-agents)
+- Added outlier file handling note and verification file naming drift documentation
+- Extended Verified On table with 39-idea Phase B corpus merge row
+
+### Why
+The ArchIdeas corpus grew to 39 ideas with separate review_*.md, summary_*.md, and verification_*.md files per idea. A major overhaul was needed to merge all legacy docs into single-source research_*.md files while simultaneously adding a new baseline (Baseline C) and re-validating. The wave-based launch strategy and dual verification file naming conventions were not captured anywhere and are critical for future runs.
+
+### Previous version (v1.1.0) snapshot
+See history entry below.
+
+---
+
+## v1.1.0 (2026-04-14)
+
+**Changed by:** ArchIdeas session — adding 4 new architectural ideas to existing 31-idea corpus
+**Verification:** verified-local
+
+### What changed
+- Added Phase A: Research New Ideas workflow for ideas with no prior research docs
+- Added new "When to Use" trigger for new-idea research
+- Added 2 new Failed Attempts rows (N4-before-siblings; trust-author-complexity-claim)
+- Added New Idea Research Parameters section with 8 verified arXiv IDs and N1–N4 verdicts
+- Extended Verified On table with new-idea research row
+
+### Why
+The existing skill only covered reviewing an existing corpus (Phase 1–3). The ArchIdeas session needed to generate brand-new research docs for 4 previously-undocumented ideas (N1–N4) and include them in the paper alongside the existing 31 reviewed ideas. The same 5-role Myrmidon pattern applies, but the trigger condition and prior-art search terms are different.
+
+### Previous version (v1.0.0) snapshot
+Commit reference: initial v1.0.0 (2026-04-13). See `skills/arch-research-myrmidon-swarm-review.md` git history.
+
+---
+
+## v1.0.0 (2026-04-13)
+
+**Initial version.**
+
+---
+
+## Superseded from research-corpus-audit-parallel-agent-pattern
+
+
+# Research Corpus Audit — Parallel Agent Pattern
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-17 |
+| **Objective** | Strict evidence-based quality audit of 68-file AI architecture research corpus across 10 dimensions; extended to per-idea numerical correctness review for KV cache quantization papers; inline derivation standard; exec summary overhead honesty |
+| **Outcome** | Successful — all 10 dimensions graded with file:line evidence; 3 structural issues identified and fixed; overall grade raised from B to A. Per-idea review of TurboQuant (5.1) found 2 critical inherited errors and 3 moderate issues. |
+| **Verification** | verified-local |
+| **History** | [changelog](./research-corpus-audit-parallel-agent-pattern.history) |
+| **Absorbed** | research-corpus-inline-derivation-standard (v1.1.0), research-corpus-exec-summary-overhead-honesty (v1.0.0) on 2026-05-03 |
+
+## When to Use
+
+- Auditing a set of research summary files for structural compliance (TTFT/TPOT rows, section headers, baseline splits)
+- Enforcing citation standards (`[Author et al., Year] — p.N, §X.Y` or `[derived from first principles]`) across a large corpus
+- Grading research output where every claim above F must cite a specific file:line
+- Running parallel quality checks across 30+ files without bloating main context
+- Deep per-idea review of KV cache quantization research docs (context length mislabeling, head_dim errors, TPOT overstatement)
+- Running a remediation pass after audit — fixing arithmetic errors, terminology drift, or missing structural sections across many files in parallel
+- Capturing what failed during an in-flight remediation so future sessions don't repeat the same mistakes
+- Writing a numeric value (memory size, TPOT, bandwidth, parameter count) that comes from a formula, not a cited paper
+- Reviewing existing research docs for derivation tag completeness — any time you would write `[derived from first principles]` bare, show the computation instead
+- Adding a Notes cell to a comparison table where the value is analytically computed
+- A table has a block-level note like "All calculations derived from first principles using canonical head dimensions from SHARED_PRELUDE.md" with no per-row derivations — this is the antipattern
+- Writing an executive summary comparison table for an AI architecture idea that increases per-token latency (TPOT)
+- Auditing research docs where FLOPs overhead and TPOT overhead diverge by more than an order of magnitude
+- Reviewing proposals for in-architecture AR loops, iterative refinement, speculative decoding variants, or diffusion-based decoders
+- Any idea where the overhead is dominated by sequential passes rather than raw compute
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Wave 1: dispatch 4 parallel agents for the 10 dimensions
+# Group by tool type: grep-heavy vs read-heavy
+# Agent A: D1(completeness) + D3(baseline split) + D4(TTFT/TPOT) + D7(accuracy section) — grep-driven
+# Agent B: D2(citation spot-check) — read 5 files, check 15 numeric values
+# Agent C: D5(TPOT direction) + D6(novelty verdicts) — targeted reads
+# Agent D: D8(matrix) + D9(ranking) + D10(spec accuracy) — read 4 artifacts
+
+# Wave 2: synthesize in main context, apply structural-F cap rule
+# D3=F or D10=F caps overall at C regardless of other grades
+```
+
+### Detailed Steps
+
+1. **Pre-flight (main context):** `ls` the corpus directory, count `research_*.md` and `summary_*.md` files. Note any stray files outside the expected naming pattern.
+
+2. **Wave 1 — 4 parallel agents (single message, 4 tool calls):**
+
+   | Agent | Dimensions | Strategy |
+   |-------|-----------|----------|
+   | A (Haiku OK) | D1, D3, D4, D7 | Grep entire corpus for presence strings: `Baseline A1`, `Baseline A2`, `Baseline B`, `Baseline C`, `TTFT`, `TPOT`, `Accuracy`. Return per-file miss list. |
+   | B (Sonnet) | D2 | Read 5 seeded summary files. For each, find first 3 numeric values in comparison tables; verify citation block or first-principles marker. Report 15/15 tally. |
+   | C (Sonnet) | D5, D6 | Read 5 targeted summaries for TPOT direction. Read priority_ranking.md; pick 5 EXISTS/NOVEL verdicts; verify Prior Art Gap names papers. |
+   | D (Sonnet) | D8, D9, D10 | Read cross_reference_matrix.md (count IDs, synergies, conflicts), priority_ranking.md (count ranked ideas, verify rank-1), implementation_spec_phase1.md (4 numeric cross-checks vs source summaries). |
+
+3. **Wave 2 — Synthesize:** Assemble per-dimension blocks (grade + evidence + issues + justification). Apply structural-F cap: if D3 or D10 = F, overall cannot exceed C. Render summary table. Pick top-3 remediation issues.
+
+4. **Fix identified issues** by direct file edits.
+
+5. **Verify fixes** with targeted greps confirming old patterns gone and new patterns present.
+
+## Remediation Workflow (Post-Audit)
+
+### Quick Reference — Parallel Fix Agents
+
+```bash
+# Two-pass remediation (run passes sequentially — not simultaneously):
+# Pass 1: arithmetic + framing fixes (Critical + Major issues)
+# Pass 2: structural + systemic fixes (section additions, terminology, citation format)
+
+# Split file list explicitly between parallel agents — never assign same file to two agents
+# Use isolation: "worktree" per agent so edits land in a clean copy
+```
+
+### Wave-Based Parallel Fix Agents
+
+After an audit identifies issues, dispatch fix agents in waves. Key rules:
+
+1. **Group fixes by file overlap.** Never assign the same file to two parallel agents — merge conflicts are guaranteed. When fixing systemic issues across many files (e.g., terminology drift across 29 files), split the file list explicitly between agents.
+
+2. **Two-pass fix pattern.** First pass: arithmetic and framing fixes (Critical + Major severity issues). Second pass: structural and systemic fixes (section additions, terminology normalization, citation format). Running both passes simultaneously causes conflicts — run passes sequentially.
+
+3. **Isolation per agent.** Use `isolation: "worktree"` on each fix agent so edits land in a clean copy. Each agent reads its assigned files, makes targeted edits, and returns. The main context merges results.
+
+4. **Background agents for long batches — prefer foreground.** Background agents (`run_in_background: true`) have a higher failure rate on long-running tasks (~2M tokens / 77 tool uses observed failure point with "API Error: ConnectionRefused"). Prefer foreground agents with a clear scope, or split large batches into smaller foreground agents.
+
+### Terminology Drift Fix (S-03 pattern)
+
+When fixing a term that refers to a baseline layer in some contexts but appears in paper titles in others:
+
+- **Replace** when the term refers to the A1/B architecture component (a model name being used as a label)
+- **Preserve** when the term appears in a paper title, citation, verbatim quote from another paper's search space enumeration, or the paper's own abstract
+- Use `replace_all: false` in Edit calls — review each occurrence individually
+
+### Structural Section Addition (D5 pattern)
+
+When appending new sections to files:
+
+- Append after the last numbered section body
+- Place **before** a `## Citations` section if one exists (not after it)
+- For files using the numbered section template (G1), the new appended section gets no number
+- Do NOT renumber existing sections
+
+### Exec-Summary vs Body Inconsistency
+
+When an executive summary value conflicts with a detailed body derivation, the body derivation is almost always correct. The summary was written first (or copied) and wasn't updated when the detailed calculation was refined. Fix the summary to match the body — not the reverse.
+
+## Inline Derivation Standard
+
+When writing numeric claims derived analytically (not from a paper), always show the full computation inline.
+
+### Quick Reference
+
+```
+# Correct format — show the full computation inline:
+~5 MB [derived: 512 tokens × 5120 dims × 2 bytes (BF16) = 5,242,880 bytes ≈ 5 MB]
+
+# Wrong format — bare label gives no verifiable information:
+~5 MB [derived from first principles — no direct experimental citation]
+
+# Multi-step derivation — chain the arithmetic:
+~4.10 GB [derived: W_out = V × d × 2 bytes = 250,112 × 8,192 × 2 = 4,097,835,008 bytes ≈ 4.10 GB;
+           LM head fraction = 4.10/145.1 ≈ 2.83% of total model weights]
+
+# Multi-baseline derivation (show per-baseline substitution):
+**Derivation:** KV cache = L × 2 × H_kv × head_dim × s × 2 bytes (BF16).
+A1: 32×2×8×128×32768×2 = 4.29 GB. A2: 64×2×8×128×32768×2 = 8.59 GB.
+A3: 64×2×4×128×32768×2 = 4.29 GB. A4: 64×2×16×128×32768×2 = 17.18 GB.
+```
+
+### Detailed Steps
+
+1. **Identify the claim type.** Is the number from a paper (→ use `[Author et al., Year] — p.N, §X.Y`)? Or is it analytically derived from known constants (→ use the inline derivation format)?
+
+2. **Write the formula with variable substitution.** Always replace variable names with actual values so the reader can verify without looking up definitions:
+   - Bad: `n_layers × 2 × n_heads × head_dim × seq_len × bytes`
+   - Good: `64 layers × 2 × 8 KV heads × 128 dims × 32,768 tokens × 2 bytes (BF16)`
+
+3. **Show the intermediate and final result.** Use `=` to chain steps:
+   ```
+   64 × 2 × 8 × 128 × 32768 × 2 = 8,589,934,592 bytes ≈ 8.0 GB
+   ```
+
+4. **Add a one-sentence note** (optional) when the formula measures something non-obvious:
+   ```
+   [derived: 64×2×8×128×32768×2 = 8.59 GB; KV cache at 32K context for A2 (32B dense, BF16)]
+   ```
+
+5. **For multi-step derivations**, chain them with a semicolon:
+   ```
+   [derived: weight_BW = 32B params × 2 bytes = 64 GB;
+             KV_BW = 68.7 GB (at 262K ctx);
+             TPOT improvement = (64+68.7)/(64+17.2) = 132.7/81.2 ≈ 1.63×;
+             note: INT4 compresses KV by 4×, weight BW unchanged]
+   ```
+
+6. **For multi-baseline tables**, show each baseline's substitution explicitly (not just the formula). Use a `**Derivation:**` block before or after the table listing each baseline's parameter values and result.
+
+7. **Placement.** In table cells, put the derivation inline after the value. In prose, put it immediately after the value in brackets. Never defer it to a footnote or endnote — the goal is on-the-spot verifiability.
+
+### When to cite a paper instead
+
+Use `[Author et al., Year] — p.N, §X.Y` when:
+- The value comes from a measurement in an experiment (throughput, accuracy, latency)
+- The value is a design choice from a specific model architecture (e.g., n_heads=8 from Qwen3-32B spec)
+- The formula itself is from a paper (e.g., the KIVI quantization error bound formula)
+
+Use `[derived: ...]` when:
+- The value follows mechanically from known constants (dimensions, bytes per dtype, sequence length)
+- The value is a ratio or improvement computed from two other values
+- The arithmetic is straightforward enough that a reader can verify it in under 30 seconds
+
+## Exec Summary Overhead Honesty
+
+When an idea increases per-token latency (TPOT), the executive summary table must surface the dominant overhead metric, not just FLOPs.
+
+### Quick Reference
+
+```markdown
+# Pattern: When TPOT >> FLOPs for an idea, the exec summary table MUST include:
+
+| Metric | Baseline | With Idea | Delta |
+|--------|----------|-----------|-------|
+| Params | 32B | 32.06B | +0.18% |
+| FLOPs/token | X TFLOPs | X+Y TFLOPs | +0.18% |
+| **TPOT** | **T ms** | **W x T ms** | **W x 1.5-2.5x** |
+
+> **Warning — TPOT dominates:** Although FLOPs overhead is negligible (+0.18%),
+> this idea introduces W sequential decoding passes per token. Wall-clock TPOT
+> scales as W x 1.5-2.5x because each pass is memory-bandwidth-bound, not
+> compute-bound. The FLOPs row understates the real cost.
+```
+
+### Detailed Steps
+
+1. **Identify the overhead type.** For any architecture idea, compute both:
+   - FLOPs overhead (compute cost per token)
+   - TPOT overhead (wall-clock latency per output token)
+
+2. **Check for divergence.** If TPOT overhead is more than 5x the FLOPs overhead percentage, the idea is latency-dominated, not compute-dominated.
+
+3. **Surface the dominant metric in the exec summary table.** The TPOT row must:
+   - Be bolded
+   - Include a warning callout below the table explaining why it dominates
+   - Appear in the table itself (not just referenced to a later section)
+
+4. **Never show only FLOPs when TPOT is the binding constraint.** Ideas that add sequential passes (AR loops, iterative refinement, multi-step decoding) are always TPOT-dominated because each pass is memory-bandwidth-bound during inference.
+
+5. **Explain the mechanism.** The warning callout should state why FLOPs understates the cost — typically because each sequential pass pays the full memory-bandwidth cost of loading model weights, and modern LLM inference is memory-bandwidth-bound, not compute-bound.
+
+### Ideas where exec-summary honesty rule applies
+
+- **In-architecture AR loops** (e.g., research_6_1): W sequential passes per token, each paying full weight-load cost
+- **Iterative refinement decoders**: Multiple forward passes to refine each output token
+- **Diffusion-based text decoders**: N denoising steps per token, each a full forward pass
+- **Speculative decoding (draft model overhead)**: Draft model adds sequential latency even when FLOPs are small
+
+### Ideas where this rule does NOT apply
+
+- Ideas that only add parameters (e.g., wider FFN, more attention heads) — FLOPs and TPOT scale together
+- Ideas that reduce latency (e.g., KV cache compression, quantization) — no overhead to disclose
+- Ideas that add parallel computation (e.g., mixture of experts routing) — FLOPs may increase but TPOT stays flat
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+|---------|----------------|---------------|----------------|
+| Single-agent corpus read | Reading all 68+ files in main context for a comprehensive audit | Context bloat; impractical at scale | Use parallel agents; each reads a subset; synthesize results in main context |
+| Narrative TPOT section | Using `## TPOT Impact Analysis` prose section instead of standard table rows | Invisible to corpus-wide grep; fails D4 audit automatically | TTFT and TPOT MUST appear as explicit `\| TTFT (8K prompt) \|` and `\| TPOT (batch=1) \|` rows in each comparison table |
+| `↑ negligible` for zero-overhead ideas | Using `↑ negligible` in TPOT cells for ideas with < 0.1% overhead | Corpus convention requires `≈ ref` for true no-overhead ideas; `↑` implies a real compute addition | TPOT direction: `↑` = real overhead, `≈ ref` = negligible/zero, `↓` = improvement |
+| Wrong section header | Using `## Quality Tradeoff Evidence` instead of `## Accuracy / Quality Tradeoff` | D7 grep for "Accuracy" missed the section entirely | Section header must match corpus standard exactly: `## Accuracy / Quality Tradeoff` |
+| Trust "32K ctx" label for A2 KV cache | Accepting the "32K ctx" label on KV cache figures without verifying the formula arithmetic | The 68.7 GB figure requires 262,144 tokens, not 32,768 — the label was wrong while the arithmetic used the full max context | Always re-derive: `64×2×8×128×32768×2 = 8 GB` (actual 32K), not 68.7 GB; the inherited error is context 32,768→262,144 |
+| Trust FlashInfer "4x speedup" for total TPOT | Using the attention-kernel 4× figure to claim "4× TPOT improvement" for INT4 KV | FlashInfer's speedup is for the attention kernel only; TPOT also includes weight loading (~64 GB for 32B model) which is unchanged | Always compute realistic TPOT: `total_BW_before / total_BW_after = (weight_BW + KV_BW) / (weight_BW + KV_BW/4)`; for A2 at 262K: ~1.6× not 4× |
+| Using `[derived from first principles]` tags for numeric claims | Added the tag to numeric table cells with no further detail; user rejected bare labels during 39-file audit ("bare tags are useless to a reader — they signal 'trust me' without showing the work") | User prefers the actual arithmetic shown inline in the Notes cell; bare label carries zero verifiable information | Show the full derivation chain in the Notes cell (e.g., `A×B×C×D = X bytes; TPOT = before/after = N×`) — the tag alone is not sufficient |
+| `[derived from first principles — no direct experimental citation]` extended label | Extended the bare tag with an explanation of why there's no citation | Still no verifiable arithmetic; just a longer "trust me" | The explanation of why there's no citation is irrelevant — what matters is showing the derivation |
+| Treating D7 (Accuracy section) as uniformly required | Graded D7=F because 29/39 files lacked `## Accuracy / Quality Tradeoff` | Groups 1–4 and 6.x use different section naming conventions — some use `## Quality` or embed accuracy tradeoff discussion in `## Technical Analysis` subsections | When auditing D7 on a heterogeneous corpus, also grep for `## Quality`, `## Tradeoff`, and `## Accuracy` as acceptable alternatives; strict `## Accuracy / Quality Tradeoff` header is only enforced for corpus-standard docs (groups 1–5, excluding Phase A docs) |
+| Auditing group 6 docs with group 1–5 structural expectations | Counted group 6 thematic docs as missing TTFT/TPOT rows | Group 6 docs (Phase A research) use a thematic section template, not the standard 7-section numbered template | Pre-flight the audit by checking which docs follow the standard template vs thematic template; apply structural checks only to standard-template docs (see Structural Deficit Remediation Pattern above) |
+| SendMessage to in-flight background agent | Tried to send a mid-flight instruction change to an already-launched background agent via SendMessage | Tool not available in this context; background agents are fire-and-forget | Cannot change instructions for an in-flight background agent. Only option: wait for completion, assess damage, launch a corrective agent afterward |
+| Background agents for S-04 derivation tag addition (large batch) | Launched two `run_in_background: true` agents to add inline derivation tags across 29 files | Both failed with "API Error: Unable to connect to API (ConnectionRefused)" after ~2M tokens / 77 tool uses — background agents have higher failure rate on long-running tasks | Prefer foreground agents with clear scopes; split large batches into smaller foreground agents; avoid background agents for tasks that run >50 tool calls |
+| Broadcasting wrong tag standard to background agents | Launched background agents with `[derived from first principles]` bare tag instruction; user corrected the standard mid-session to require inline arithmetic | Could not propagate correction to in-flight background agents; correction only reached agents not yet started | Finalize all standards and formats before launching agents. If user corrects a standard mid-session, abort/ignore in-flight agents and re-launch with correct instructions |
+| Parallel fix agents on overlapping file sets | Dispatched two remediation agents whose file lists were not explicitly partitioned | Both agents edited some of the same files; merge produced conflicts | Always partition the file list explicitly between parallel agents — never rely on agents to "avoid" the same file organically |
+| Treating 5.9/5.10 as standard-template docs | Audited research_5_9 and research_5_10 with standard-template expectations (numbered sections 1–8) | They use the thematic template (like Group 6); structural checks D1/D3/D4/D7 failed spuriously | Pre-flight must identify which docs are thematic-template; 7 files total use thematic template (Group 6 + 5.9/5.10). Declare schema variants in SHARED_PRELUDE.md |
+| Bibliography entries without paper-internal locators | Group 5 and Group 6 files used numbered bibliography format `[N]: Author... arXiv:XXXX` with no `§X.Y` or `Table N` locators | D2 citation audit requires locators at the bibliography entry level, not just in-text prose | When a file uses numbered bibliography format, locators must be added to each entry — fetch arXiv abstract page and add the most relevant section/table locator |
+| impl_spec numeric drift from source doc | `implementation_spec_phase1.md` claimed k̄_l=7 TPOT as `0.74–0.79×`; source doc `research_1_3.md` derives `0.68×` via `(k̄_l/11) × 0.88 + 0.12` | Range claims (0.74–0.79×) were not cross-checked against the exact formula in the source research doc | Always cross-check spec numeric claims against source research docs using the exact formula — range claims are especially prone to drifting from point estimates |
+| Deferring arithmetic to a notes.md file | Wrote `[derived — see notes.md §3.2]` in a research doc | Reader must switch files to verify; breaks the audit flow | Inline derivations must be self-contained; the reader should never have to leave the file |
+| Using variable names without substitution in derivation | Wrote `n_layers × n_heads × head_dim × seq × bytes` in a derivation tag | Reader can't verify without looking up each variable | Substitute actual values in the formula so the arithmetic is checkable on the spot |
+| Block-level derivation disclaimer at table top | Wrote "All calculations derived from first principles using canonical head dimensions from SHARED_PRELUDE.md" above the table with no per-row derivations | Reader still must redo the math for each row; the block note is a collective "trust me" at table scope rather than row scope | Same rule applies at block scope: every derived value needs its own inline computation, not a shared disclaimer |
+| Exec summary with FLOPs-only overhead row | Showed +0.18% FLOPs overhead in exec summary table; TPOT multiplier buried in section 6 | Creates misleading first impression that the idea is nearly free; reader who skims only the exec summary concludes overhead is negligible | The exec summary is the most-read section — it must contain the most important cost metric, even if unfavorable |
+| TPOT mentioned in prose below exec summary table but not in the table itself | Added a sentence after the table mentioning TPOT | Readers scan the table, not the prose; the table is the "contract" of the exec summary | The dominant overhead metric must be a row in the table, not prose commentary |
+
+## Results & Parameters
+
+### Corpus conventions (must match exactly for audit to pass)
+
+```
+# Required comparison table structure (per baseline A1/A2/B):
+| Metric | Baseline | This Idea | Change | Notes |
+|--------|----------|-----------|--------|-------|
+| TTFT (8K prompt) | ref | ... | ... | [citation or first-principles] |
+| TPOT (batch=1) | ref | ... | ↑/↓/≈ ref | [citation or first-principles] |
+
+# Required section headers (corpus-standard docs, groups 1–5):
+## Benefits vs Baseline A1 (Qwen3.5-27B Hybrid)
+## Benefits vs Baseline A2 (Qwen3-32B Dense)
+## Benefits vs Baseline B (Qwen3.5-397B-A17B MoE)
+## Benefits vs Baseline C (<Baseline C model name>)
+## Accuracy / Quality Tradeoff
+
+# TPOT direction conventions:
+↑          = real compute addition (e.g., 3.4 Recursive Internal State, 5.6 Double Attention)
+≈ ref      = negligible / zero overhead (e.g., 3.8 Trainable Activation, 4.4 Skip List Layers)
+↓          = improvement (e.g., 5.1 TurboQuant, 5.4 Linked Attention)
+
+# Citation standard:
+[Author et al., Year] — p.N, §X.Y "Section Heading"
+# PREFERRED for derived numeric claims — show full arithmetic inline in Notes cell:
+# e.g. "total_BW_before=54+2.15=56.15 GB; after=53.71 GB; TPOT=53.71/56.15=0.956≈0.955×"
+# DO NOT use bare [derived from first principles] tags without the supporting arithmetic
+```
+
+### Grading thresholds
+
+```
+D2 Citation: A=15/15, B=12-14/15, C=9-11/15, F<9/15
+D3 Baseline: A=all docs have A1+A2+B+C, F=any file missing BOTH A1 AND A2, C=1-3 missing one; grep pattern `## Benefits vs Baseline A[^12]` catches A1/A2 headers — now 4 baselines expected
+D4 TTFT/TPOT: A=all docs have both rows (N_docs×4 expected hits), C=1-3 missing one, F=any missing both; expected counts scale as N_docs×4 (not ×3)
+D5 Overhead: A=all 5 pass, F=any of 3.4/4.6/5.6 shows TPOT decreasing
+D6 Novelty: A=5/5 paper-specific, C=3/5
+D7 Accuracy section: A=all 34 have section, C=1-3 missing
+D8 Matrix: A=34×34 + synergy≥10 + conflict≥3, C=≥30 ideas covered, F<30
+D9 Ranking: A=34 ranked with citations, C≥28, F<25
+D10 Spec: A=all 4 cross-checks pass, C=3/4, F=any fabricated number
+
+Structural cap: D3=F OR D10=F → overall capped at C
+```
+
+### Schema Variant Declaration Pattern (for SHARED_PRELUDE.md)
+
+When a corpus contains documents that follow different templates, declare the schema variants
+explicitly in SHARED_PRELUDE.md so auditors know which structural checks apply to which files:
+
+```markdown
+## Schema Variants
+
+This corpus uses two document templates:
+
+**Standard template** (Groups 1–5, excluding 5.9/5.10):
+- Numbered sections 1-8 under Executive Summary
+
+**Thematic template** (Group 6 + research_5_9, research_5_10 — 7 files total):
+- Unnumbered sections + per-baseline ## Benefits vs Baseline X sections
+
+Audit dimensions D1/D3/D4/D7 apply only to standard-template docs.
+Thematic-template docs verified against their own structural checklist.
+```
+
+### 4-Fix Remediation Order (for post-audit fix sessions)
+
+When a final audit finds a small set of remaining issues (4–10 fixes), apply in this order
+to minimize time and avoid blocking dependencies:
+
+1. **Single-line numeric corrections** (fastest, no dependencies) — Fix immediately in main context
+2. **Table row insertions** (fast, targeted) — Fix in main context
+3. **Schema/documentation declarations** (e.g., SHARED_PRELUDE.md Schema Variants) — Fix in main context
+4. **Bibliography PDF fetches** (~76+ papers) — Dispatch 4 parallel worktree agents last (one per file, never overlap file sets)
+
+Rationale: Steps 1–3 are fast (seconds each) and unblocking. Step 4 (arXiv abstract fetches) is
+the slowest and should always be parallelized and deferred until after fast fixes are confirmed.
+
+### TTFT Row Template for KV-Cache-Only Quantization
+
+For ideas where quantization applies only to KV cache (not weights), TTFT is always `≈ ref`
+because prefill is compute-bound and KV quantization only affects decode-time KV reads:
+
+```
+| TTFT (8K prompt) | ref | ≈ ref | ≈ ref | Prefill is compute-bound at 8K; KV quantization affects decode-time KV reads only, not prefill FLOPs; attention-kernel dequant overhead <2% (§4.2) |
+```
+
+This row is baseline-independent — use `≈ ref` for all baselines (A1/A2/B/C) for these ideas.
+
+### Structural Deficit Remediation Pattern
+
+Some docs (e.g., Phase A thematic research docs — groups 6.x and late-Phase-A additions like 5.9/5.10) are produced with a thematic section template and never received the standard `## Benefits vs Baseline X` + TTFT/TPOT table structure. This is a known schema variance — the content is correct but the structural layer is missing.
+
+**Pre-flight check:** Before auditing, determine which docs use the standard 7-section numbered template vs the thematic template. Apply structural checks (D1/D3/D4/D7) only to standard-template docs. Mark thematic-template docs as `[schema-variant: Phase A thematic]` and exclude from those dimensions.
+
+**Remediation approach (when adding structure to thematic docs):**
+
+1. Read the existing complexity analysis sections in the doc (typically titled `## Technical Analysis`, `## Complexity`, or `## Implementation Notes`).
+2. From those sections, derive the TTFT/TPOT/KV/Weight values using the canonical formula (see KV Cache Quantization Numerical Checklist above). Show full arithmetic inline in the Notes cell.
+3. Insert `## Benefits vs Baseline A1`, `## Benefits vs Baseline A2`, `## Benefits vs Baseline B`, `## Benefits vs Baseline C` sections with standard tables (TTFT/TPOT/KV/Weight rows) immediately **before** the `<!-- CITATION MANIFEST -->` block.
+4. Do NOT rewrite or remove existing sections — only insert the new structural sections.
+5. Verify insertion with `grep -n "Benefits vs Baseline" <file>` to confirm all 4 are present.
+
+### Audit agent prompts (key instructions)
+
+Each agent prompt must include:
+1. Dimension criteria verbatim with grade thresholds
+2. "Start at F; raise only with file:line evidence. No 'probably fine.'"
+3. Return format: `[file:line] → [finding] → [PASS/FAIL]`
+4. Response length cap (~300 words per dimension)
+
+### KV Cache Quantization Numerical Checklist (for per-idea review)
+
+When reviewing a research doc about KV cache quantization (ideas referencing KIVI, KVQuant, TurboQuant, RotateKV, FireQ, etc.):
+
+```python
+# 1. ALWAYS re-derive KV cache sizes from scratch
+# Formula: num_KV_layers × 2 × n_KV_heads × head_dim × seq_len × bytes_per_element
+#
+# Canonical baselines (from SHARED_PRELUDE.md + canonical corrections):
+#   A1: 16 layers, 4 KV heads, head_dim=256 → 16×2×4×256×seq×2 bytes (BF16)
+#   A2: 64 layers, 8 KV heads, head_dim=128 → 64×2×8×128×seq×2 bytes (BF16)
+#   B:  15 layers, 2 KV heads, head_dim=256 → 15×2×2×256×seq×2 bytes (BF16)
+#
+# Common error: doc says "32K ctx" but formula uses 262144 tokens
+# Check: 64×2×8×128×32768×2 = 8 GB (NOT 68.7 GB)
+#        64×2×8×128×262144×2 = 68.7 GB ← this is what produces 68.7
+
+# 2. ALWAYS compute realistic TPOT (batch=1), not just attention kernel speedup
+# weight_BW = num_active_params × bytes_per_param  (BF16 = 2 bytes)
+# KV_BW_before = KV_cache_bytes_at_seq_len
+# KV_BW_after  = KV_cache_bytes_at_seq_len / compression_ratio
+# TPOT_improvement = (weight_BW + KV_BW_before) / (weight_BW + KV_BW_after)
+#
+# Example — A2 at 262K context, INT4 KV:
+# weight_BW  = 32B × 2 = 64 GB
+# KV_BW_before = 68.7 GB
+# KV_BW_after  = 17.2 GB
+# Realistic TPOT = (64+68.7)/(64+17.2) = 132.7/81.2 ≈ 1.63× (NOT 4×)
+
+# 3. Check canonical head_dim corrections
+# A1 full-attention layers: canonical head_dim=256 (not 128 from older SHARED_PRELUDE)
+# B GatedAttn layers: canonical 2 KV heads × head_dim=256 (product = 512, same as 4×128)
+# → A1 KV cache is 2× what old-prelude says; B is unchanged (product invariant)
+
+# 4. Check citation for "4× bandwidth reduction"
+# BF16→INT4 is 4× by definition (2 bytes → 0.5 bytes); needs no experimental citation
+# Do NOT cite an INT8 paper (4× vs FP32) for an INT4 vs BF16 claim
+```
+
+### Realistic TPOT Improvement Table (for reference)
+
+| Model | Seq len | KV BW before | Weight BW | Realistic INT4 KV TPOT | Attention kernel only |
+|-------|---------|-------------|----------|------------------------|----------------------|
+| A1 (27B Hybrid) | 32K | ~2.0 GB | ~54 GB | ~1.03× | ~4× (kernel only) |
+| A2 (32B Dense) | 32K | ~8.0 GB | ~64 GB | ~1.13× | ~4× (kernel only) |
+| A2 (32B Dense) | 262K | ~68.7 GB | ~64 GB | ~1.63× | ~4× (kernel only) |
+| B (397B MoE) | 32K | ~1.0 GB | ~34 GB (active) | ~1.02× | ~4× (kernel only) |
+
+### Inline Derivation — Canonical Format
+
+```
+# Single-step derivation:
+<value> [derived: <formula with values substituted> = <result>]
+
+# Single-step with explanatory note:
+<value> [derived: <formula> = <result>; <1-sentence note on what it measures>]
+
+# Multi-step derivation:
+<value> [derived: <step 1 formula> = <step 1 result>;
+                  <step 2 formula using step 1 result> = <step 2 result>;
+                  <optional note>]
+
+# Multi-baseline (use a Derivation: block before or after the table):
+**Derivation:** <formula in symbolic form (BF16)>.
+<Baseline A>: <substitution> = <result>.
+<Baseline B>: <substitution> = <result>.
+```
+
+### Inline Derivation — Real Examples from the ArchIdeas Corpus
+
+```
+# KV cache size:
+~8.0 GB [derived: 64 layers × 2 × 8 KV heads × 128 dims × 32,768 tokens × 2 bytes (BF16) = 8,589,934,592 bytes ≈ 8.0 GB]
+
+# TPOT improvement:
+~1.63× [derived: weight_BW = 32B × 2 = 64 GB; KV_BW_before = 68.7 GB (262K ctx, BF16); KV_BW_after = 17.2 GB (INT4, 4× compression); TPOT = (64+68.7)/(64+17.2) = 132.7/81.2 ≈ 1.63×]
+
+# Memory per token:
+~5 MB [derived: 512 tokens × 5,120 dims × 2 bytes (BF16) = 5,242,880 bytes ≈ 5 MB; activation memory per forward pass at seq_len=512]
+
+# LM head fraction:
+~2.83% [derived: W_out = 250,112 vocab × 8,192 dims × 2 bytes = 4,097,835,008 bytes ≈ 4.10 GB; fraction = 4.10/145.1 ≈ 2.83% of total model weights]
+
+# KV cache — multi-baseline (research_5_4_linked_attention.md):
+**Derivation:** KV cache = L × 2 × H_kv × head_dim × s × 2 bytes (BF16).
+A1 (7B MQA, s=32K): 32×2×1×128×32768×2 = 0.54 GB.
+A2 (32B GQA-8, s=32K): 64×2×8×128×32768×2 = 8.59 GB.
+A3 (32B MQA, s=32K): 64×2×1×128×32768×2 = 1.07 GB.
+A4 (32B GQA-16, s=32K): 64×2×16×128×32768×2 = 17.18 GB.
+```
+
+### Exec Summary Overhead — Decision Rule
+
+```
+IF idea introduces sequential passes (W > 1) per output token:
+  TPOT_overhead = W × (1.0 to 2.5) × baseline_TPOT
+  FLOPs_overhead = small (shared weights, tiny extra params)
+
+  → TPOT row is the most important row in exec summary
+  → Bold the TPOT row
+  → Add warning callout explaining the divergence
+```
+
+## Verified On
+
+| Project | Context | Details |
+|---------|---------|---------|
+| ArchIdeas corpus | 34 ideas, 68 files, 5 artifacts | Audit Apr 2026 — found D4/D5/D7 issues in summary_5_3 and summary_3_8; all fixed |
+| ArchIdeas idea 5.1 (TurboQuant) | Per-idea review with 5-agent swarm | Apr 2026 — found context length mislabel (68.7 GB at 262K labeled "32K"), A1 head_dim error, TPOT overstatement |
+| ArchIdeas corpus (post Phase C/D) | 39 ideas, 4-baseline grading | Apr 2026 — D1=F (7 Phase A thematic docs missing all 4 baseline sections), D4=F (94/156 TTFT, 125/156 TPOT), D5=F (research_6_4 no TPOT rows), D7=F (10/39 have strict Accuracy header), D3/D6/D8/D9/D10=A; overall grade D; synthesis artifacts excellent, per-file structural compliance poor |
+| ArchIdeas corpus remediation (post-audit) | Wave-based parallel fix agents across 39-file corpus | Apr 2026 — two-pass remediation: Pass 1 fixed arithmetic/framing (Critical + Major); Pass 2 fixed terminology drift (S-03) and section additions (D5); background agents failed at ~2M tokens; foreground agents succeeded; all fixes confirmed, no remaining bare tags |
+| ArchIdeas corpus | 4-fix final remediation pass | Apr 2026 — impl_spec numeric corrected (0.68× per research_1_3 formula); 4 TTFT rows added to research_5_1; 77 bibliography locators added across 4 files via arXiv fetch; SHARED_PRELUDE.md Schema Variants section added for 5.9/5.10 thematic-template declaration; all fixes verified via grep |
+| ArchIdeas corpus | 39-file audit inline derivation standard, Phase C + D | Apr 2026 — user rejected bare tags mid-session, inline derivation standard applied to multiple files; found and fixed block-level disclaimer antipattern in research_5_4_linked_attention.md |
+| ArchIdeas corpus | Exec summary honesty — quality remediation of research_6_1_inarch_ar_loop.md | Apr 2026 — exec summary was missing TPOT row; FLOPs showed +0.18% while TPOT was W x 1.5-2.5x; added TPOT row with warning callout |
+| ArchIdeas corpus | Follow-up quality remediation pass (inline derivation) | Apr 2026 — found and fixed block-level disclaimer antipattern in research_5_4_linked_attention.md; added per-baseline KV cache derivation |
+
+---
+
+### Prior history for research-corpus-audit-parallel-agent-pattern
+
+# research-corpus-audit-parallel-agent-pattern — History
+
+## v2.0.0 (2026-05-03)
+
+Absorbed: research-corpus-inline-derivation-standard (v1.1.0), research-corpus-exec-summary-overhead-honesty (v1.0.0)
+FA rows merged: 22 (16 canonical + 3 unique from inline-derivation + 2 from exec-summary; 1 dedup: bare-tag lessons merged)
+VO rows merged: 8 (5 canonical + 2 inline-derivation + 1 exec-summary)
+
+---
+
+## v1.4.0 (2026-04-18)
+
+**Changed by:** ArchIdeas corpus final remediation pass (39-file strict quality audit, 4 remaining issues fixed)
+**Verification:** verified-local
+
+### What changed
+- Added 3 new Failed Attempts: 5.9/5.10 treated as standard-template docs, bibliography entries without paper-internal locators, impl_spec numeric drift from source doc
+- Added Schema Variants declaration pattern to Results & Parameters (SHARED_PRELUDE.md template when corpus has multiple templates)
+- Added 4-fix remediation order (numeric corrections → table row insertions → schema declarations → bibliography PDF fetches)
+- Added TTFT ≈ ref row template for KV-cache-only quantization files
+- Added Verified On row for 4-fix final remediation pass (Apr 2026)
+- Bumped version 1.3.0 → 1.4.0
+
+### Why
+The final audit pass surfaced three new failure patterns not previously documented: (1) 5.9/5.10
+were treated as standard-template docs despite using the thematic template — pre-flight must now
+explicitly list which 7 files use thematic template; (2) numbered bibliography format `[N]: Author...
+arXiv:XXXX` requires per-entry `§X.Y` or `Table N` locators (not just in-text prose citations) for
+D2 to pass; (3) impl_spec range claims (0.74–0.79×) can drift from source point estimates (0.68×)
+when the source formula is not cross-checked. The 4-fix remediation order prevents wasted time on
+slow PDF fetches before fixing fast numeric corrections.
+
+### Previous version (v1.3.0) snapshot
+
+The v1.3.0 skill content is preserved in git history at the commit prior to the v1.4.0 amendment.
+Key additions in v1.3.0 were: Remediation Workflow section, wave-based parallel fix agent rules,
+terminology drift fix pattern (S-03), structural section addition placement rules (D5), and 4 new
+Failed Attempts covering background agent failure modes and overlapping file sets.
+
+---
+
+## v1.3.0 (2026-04-17)
+
+**Changed by:** ArchIdeas corpus remediation session (post-audit wave-based parallel fix agents)
+**Verification:** verified-local
+
+### What changed
+- Added `## Remediation Workflow (Post-Audit)` section covering wave-based parallel fix agents, terminology drift (S-03) fix rules, structural section addition (D5) placement, and exec-summary vs body inconsistency triage
+- Added 4 new Failed Attempts: SendMessage to in-flight background agent, background agents for large batch failing at ~2M tokens, broadcasting wrong standard to background agents, parallel fix agents on overlapping file sets
+- Updated "When to Use" with two new triggers for post-audit remediation work
+- Added tags: remediation, wave-based, terminology-drift
+- Added Verified On row for remediation session
+- Bumped version 1.2.0 → 1.3.0
+
+### Why
+The remediation phase after a corpus audit introduces a distinct failure surface not covered by
+the existing audit-focused skill. Key new learnings: (1) background agents fail silently on
+long-running batches — foreground agents are safer; (2) mid-flight instruction changes cannot be
+propagated to background agents; (3) file overlap between parallel agents causes merge conflicts —
+always partition explicitly; (4) exec-summary vs body conflicts should always be resolved in favor
+of the body. These patterns will recur in any future multi-file remediation session.
+
+---
+
+## v1.2.0 (2026-04-17)
+
+**Changed by:** ArchIdeas 39-idea corpus audit (post Phase C + Phase D)
+**Verification:** verified-local
+
+### What changed
+- Bumped version 1.1.0 → 1.2.0
+- Updated D1/D3/D4 grading thresholds to reflect 4 baselines (A1/A2/B/C); D4 expected count is now N_docs×4
+- Added `### Structural Deficit Remediation Pattern` subsection covering Phase A thematic doc normalization (read complexity sections, derive TTFT/TPOT/KV values, insert Benefits vs Baseline sections before citation manifest)
+- Updated corpus conventions: inline arithmetic preferred over bare `[derived from first principles]` tags
+- Added 3 new Failed Attempts: derivation tags without arithmetic, D7 strict header on heterogeneous corpus, auditing group 6 with group 1–5 structural expectations
+- Added Verified On row for 39-idea ArchIdeas post-Phase-C/D audit (overall grade D)
+- Added Baseline C to required section headers list
+
+### Why
+The 39-idea corpus audit revealed that 7 Phase A thematic docs (groups 6.x, 5.9, 5.10) were
+never normalized to the standard 4-baseline comparison template. This is a structural schema
+variance, not a content error. The remediation pattern (derive values from existing complexity
+sections, insert standard tables before citation manifest) worked successfully. The audit also
+exposed that D7 grading is only meaningful when the corpus is homogeneous — heterogeneous corpora
+require fuzzy header matching. Updated thresholds and new Failed Attempts document these findings
+to prevent re-discovering them in future audits.
+
+---
+
+## v1.1.0 (2026-04-13)
+
+**Changed by:** TurboQuant (Idea 5.1) per-idea Myrmidon swarm review session
+**Verification:** verified-local
+
+### What changed
+- Extended "When to Use" to include per-idea KV cache quantization review
+- Added 2 new Failed Attempts: "Trust 32K ctx label" and "Trust FlashInfer 4× for total TPOT"
+- Added "KV Cache Quantization Numerical Checklist" to Results & Parameters
+- Added "Realistic TPOT Improvement Table" with pre-computed values for A1/A2/B
+- Added second "Verified On" row for TurboQuant review session
+- Updated description to mention KV cache / quantization numerical correctness
+- Added history frontmatter field
+- Bumped version 1.0.0 → 1.1.0
+
+### Why
+Corpus-level audit (v1.0.0) catches structural compliance but misses per-idea numerical
+errors. The TurboQuant review found two critical inherited errors that pass corpus audit
+but are wrong: (1) context length mislabeling (68.7 GB labeled "32K ctx" but computed
+with 262K tokens), (2) TPOT overstatement (claiming "2×-3×" when correct accounting of
+weight bandwidth gives ~1.6×). These error patterns will recur across all KV-related ideas
+(5.1, 5.2, 5.5, 5.6, etc.). The checklist prevents re-discovering them in future reviews.
+
+### Previous version (v1.0.0) snapshot
+
+```markdown
+---
+name: research-corpus-audit-parallel-agent-pattern
+description: "Strict 10-dimension quality audit of AI architecture research corpora using parallel agent delegation. Use when: (1) auditing a large set of research/summary docs for structural compliance, (2) enforcing citation standards and TPOT framing conventions across a corpus, (3) grading research output with file:line evidence."
+category: architecture
+date: 2026-04-13
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [research, audit, corpus, tpot, citation, parallel-agents, myrmidon]
+---
+
+# Research Corpus Audit — Parallel Agent Pattern
+
+## Overview
+
+| Field | Value |
+|-------|-------|
+| **Date** | 2026-04-13 |
+| **Objective** | Strict evidence-based quality audit of 68-file AI architecture research corpus across 10 dimensions |
+| **Outcome** | Successful — all 10 dimensions graded with file:line evidence; 3 structural issues identified and fixed; overall grade raised from B to A |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Auditing a set of research summary files for structural compliance (TTFT/TPOT rows, section headers, baseline splits)
+- Enforcing citation standards (`[Author et al., Year] — p.N, §X.Y` or `[derived from first principles]`) across a large corpus
+- Grading research output where every claim above F must cite a specific file:line
+- Running parallel quality checks across 30+ files without bloating main context
+
+[... remainder of v1.0.0 content as shown in the live skill file before amendment ...]
+```
+
+---
+
+## v1.0.0 (2026-04-13)
+
+**Initial version.**
+
+---
+
+## Superseded from myrmidon-swarm-end-to-end-orchestration-full-workflow
+
+# Myrmidon Swarm: End-to-End Orchestration Full Workflow
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-12 |
+| **Objective** | L0 commander pattern for complex multi-phase myrmidon sessions: cleanup → rebase → PR creation → CI fix → merge → knowledge capture |
+| **Outcome** | Successful — 32→1 worktrees, 6 PRs merged with CI passing, 3 skills created in ProjectMnemosyne |
+| **Verification** | verified-ci |
+
+Covers the **orchestration meta-pattern** — how the L0 orchestrator structures a multi-hour session involving heterogeneous sub-tasks, multiple agent tiers, feedback loops, and CI integration. Companion to `myrmidon-waves-worktree-cleanup-rebase-pr-merge` (tactical wave execution) and `batch-pr-rebase-myrmidon-wave-execution` (PR rebase + conflict strategy). This skill is about **session architecture**, not individual wave tactics.
+
+## When to Use
+
+- End-to-end task spans 3+ distinct phases with dependencies between phases
+- Mix of destructive operations (worktree removal, force-push) and creative operations (PR creation, knowledge capture)
+- Task scope is not fully known at start — requires exploration sub-agents before planning
+- CI failures are plausible and require a fix workflow, not just auto-merge and hope
+- Session involves cross-repo work (e.g., learn → ProjectMnemosyne skill creation)
+- Risk of mid-execution pivots if plan is not explicitly approved before agent deployment
+- Running a `repo-analyze-strict` audit across all repos in an ecosystem (meta-repo + all submodules)
+- Filing a per-repo Epic + per-finding child issues across 10+ repos simultaneously
+- Recovering from GitHub org monthly API usage limit mid-session
+
+Do NOT use when:
+- Task is a single well-defined wave (use `myrmidon-waves-worktree-cleanup-rebase-pr-merge`)
+- All sub-tasks are known upfront with no exploration needed
+- Session is < 30 minutes estimated
+
+## Verified Workflow
+
+### Quick Reference
+
+```bash
+# Phase 1: Exploration — dispatch Sonnet to gather state
+# (worktree count, PR state, branch status, CI health)
+
+# Phase 2: Design — L0 creates structured plan with wave assignments
+# Present plan to user BEFORE spawning any agents
+
+# Phase 3: User Approval Gate
+# Never spawn destructive agents without explicit approval
+
+# Phase 4: Wave Execution
+# Wave 1 (Haiku, parallel): mechanical cleanup
+# Wave 2a (Sonnet, parallel): analysis + rebase + PR
+# Wave 2b (Haiku, parallel with 2a): conflict checks
+# Wave 3 (Haiku): prune + verify
+
+# Phase 5: CI Monitoring + Fix Loop
+# After PRs created, monitor CI; dispatch Haiku fix agents as needed
+gh pr checks <N> --watch
+gh run view <run-id> --log-failed
+# Fix agent → push → re-enable auto-merge
+
+# Phase 6: Knowledge Capture (parallel sub-agents)
+# After all PRs merged, dispatch /learn sub-agents
+# One sub-agent per skill being captured
+
+# Phase 7: Session Record — create tracking issue on target repo
+TITLE="chore(triage): $(date +%Y-%m-%d) issue classification pass"
+gh issue create --repo <owner>/<repo> --title "$TITLE" \
+  --body "$(cat session-summary.md)"
+# Discoverable via: gh issue list --search "chore(triage)"
+
+# Identify mega-agent candidates (files with 6+ issues)
+# Count file mentions across issue bodies to find contended files
+# Files with 6+ → per-file Sonnet mega-agent; branch: bundle-<file>-<issues>
+```
+
+### Variant: per-namespace sequential dispatch (intra-cluster split)
+
+Use this variant when a single logical cluster grows too large for one PR and its members share a common file-name prefix (e.g., `mojo-*`, `e2e-*`, `pre-commit-*`). Parallel sub-PRs on overlapping namespaces race on branch refs and auto-merge cascade rebases; sequential dispatch eliminates all conflicts.
+
+**Detection heuristic:**
+
+```bash
+# Count skills in cluster manifest
+jq '.absorbed_skills | length' cluster-M3.json   # If > ~30, consider splitting
+
+# Check for shared prefix (all files start with same token)
+jq -r '.absorbed_skills[]' cluster-M3.json | sed 's/-.*//' | sort -u
+# Single output token → namespace collision risk → split required
+```
+
+**Split pattern:**
+
+1. Subcluster the manifest by theme. Example: a 114-member Mojo mega-cluster split into 4 subclusters — `jit-crash-retry` (13), `type-api-migration` (40), `sanitizer-build-flags` (8), `dtype-shape-package` (49).
+2. Extract each subcluster into its own manifest: `M3-jit-crash-retry.json`, `M3-type-api-migration.json`, etc.
+3. Dispatch sub-PRs **sequentially** — wait for each to merge before starting the next.
+4. Each sub-PR references the parent epic with `Refs #<parent-epic>` (NOT `Closes`) until the final sub-PR.
+5. Each sub-PR deletion sweep must be skip-missing-safe because earlier sub-PRs may have already removed overlapping files:
+
+```bash
+# Safe deletion — skip files already removed by prior sub-PR
+for f in "${FILES[@]}"; do
+  [ -f "skills/$f.md" ] && git rm "skills/$f.md" || true
+done
+```
+
+6. After the FINAL sub-PR merges, close the parent epic with a comment listing all sub-PR numbers:
+
+```bash
+gh issue comment <parent-epic> --body "All sub-PRs merged: #1808, #1809, #1810, #1811. Closing."
+gh issue close <parent-epic>
+```
+
+**Why parallel fails:** per `worktree-parallel-agent-execution`, parallel agents on overlapping file namespaces can clobber each other's git operations even in isolated worktrees, because branch deletions race when the sub-PRs share a `Refs` parent and the auto-merge cascade triggers rebases on overlapping branches.
+
+**Timing reference (2026-05-18 Mojo mega-cluster split):**
+
+| Sub-PR | Theme | Skills | Time |
+| ------- | ----- | ------ | ---- |
+| \#1808 | jit-crash-retry | 13 | ~10 min |
+| \#1809 | type-api-migration | 40 | ~15 min |
+| \#1810 | sanitizer-build-flags | 8 | ~8 min |
+| \#1811 | dtype-shape-package | 49 | ~17 min |
+| **Total** | | **110** | **~50 min sequential** |
+
+### Phase 1: Exploration (Sonnet Sub-Agent)
+
+Dispatch a single Sonnet sub-agent to gather the full state before any planning:
+
+```bash
+# Sub-agent gathers:
+git worktree list --porcelain               # All worktrees
+git branch -v                               # Branch states
+gh pr list --state open --json number,title,headRefName,mergeStateStatus
+gh pr list --state closed --limit 20 --json number,title,state
+# For each open PR:
+gh pr checks <N> --json name,status,conclusion
+```
+
+Also run `/advise` as a sub-agent call at this phase to pull relevant prior learnings before designing the plan. This prevents re-discovering known failure modes during execution.
+
+**What the exploration output must contain:**
+- Exact count of worktrees (total, main, stale, active)
+- Each branch: commits ahead of main, PR state (open/closed/merged/NONE), CI state
+- Any existing open PRs: CI status, merge readiness
+- Relevant ProjectMnemosyne skills found via /advise
+- Per-issue file paths (if the issue inventory includes "files-likely-touched")
+
+**Classifier swarm decision rule**: If Explore agents return file-path evidence per issue (e.g. from an issue inventory that includes "files-likely-touched"), skip the Phase 4 classifier swarm — classify LOW/MEDIUM/HIGH deterministically from contention counts instead. Dispatch classifier agents only when issues lack file-mapping evidence.
+
+### Phase 2: Plan Design (L0 Orchestrator)
+
+After exploration, the L0 orchestrator designs a structured multi-wave plan. The plan must include:
+
+```
+## Proposed Plan
+
+### Wave 1 — Stale Cleanup (Haiku, parallel)
+- Remove N worktrees: <list by path>
+- Estimated time: X min
+
+### Wave 2a — Rebase + PR (Sonnet, parallel, concurrent with 2b)
+- Branches needing PR: <list>
+- Sonnet agents: 1 per branch
+- Estimated time: X min
+
+### Wave 2b — Conflict Check (Haiku, parallel, concurrent with 2a)
+- Closed-PR branches to check: <list>
+- Estimated time: X min
+
+### Wave 3 — Prune + Verify (Haiku, single)
+- git worktree prune + git fetch --prune
+- Estimated time: X min
+
+### Phase 5 — CI Monitoring + Fix Loop
+- Monitor all new PRs for CI failures
+- Dispatch Haiku fix agents if pre-commit/lint fails
+
+### Phase 6 — Knowledge Capture
+- Skills to create: <list>
+- Sub-agents: 1 per skill
+
+### Phase 7 — Tracking Issue
+- Target repo: <owner>/<repo>
+- Title: chore(triage): YYYY-MM-DD issue classification pass
+- Body: metrics table + closures + PRs + remaining issues + artifact paths + skill PR links
+
+### Go / No-Go Criteria
+- Wave 1 irreversible: branches deleted after worktree remove
+- Decision gates: present before destructive operations
+```
+
+**Per-file mega-agent rule** — when the issue inventory has file-path evidence, apply this during plan design:
+
+```
+For each source file touched by 6+ issues → assign one Sonnet mega-agent
+  - Branch name: bundle-<file-stem>-<issue-numbers>
+  - One PR per mega-agent; PR title may be long (do not abbreviate)
+For cross-file mega-agents → run the one touching most files LAST (Wave E), others first (Wave D)
+```
+
+This typically collapses many planned waves into 2 (Wave D: parallel per-file agents, Wave E: solo cross-file agent).
+
+**Parallel Plan agent + Explore agents** — the Plan agent (wave design) can run simultaneously with the Explore agents (inventory/already-done/CI checks) if the Plan agent is given the issue list up front and asked to produce a *conditional* plan ("if file X has 6+ issues, use mega-agent"). This saves one full phase compared to running them sequentially.
+
+### Phase 3: User Approval Gate
+
+**Critical**: Present the full plan before dispatching ANY agents. Wait for explicit user approval.
+
+**Pre-launch checks** — run these before presenting the plan and adjust accordingly:
+
+```bash
+# Check auto-merge capability
+gh repo view --json autoMergeAllowed --jq '.autoMergeAllowed'
+# If false: note in plan that PRs require manual merge; remove --auto from agent prompts
+
+# Check pre-commit hooks
+ls .pre-commit-config.yaml 2>/dev/null && echo "hooks present" || echo "NO HOOKS — remove pre-commit steps from agent prompts"
+
+# Check lockfiles (affects CI job templates)
+ls package-lock.json dagger/package-lock.json pixi.lock 2>/dev/null
+# If missing: use npm install not npm ci in any CI jobs added this session
+```
+
+Approval request format:
+```
+I have the exploration results. Here is my proposed plan:
+
+[PLAN CONTENT]
+
+This plan will:
+- Permanently remove N worktrees (Wave 1 — irreversible)
+- Create N PRs from currently-unpublished work (Wave 2a)
+- Confirm N closed-PR branches as superseded (Wave 2b)
+
+Shall I proceed?
+```
+
+Do not interpret silence or continued conversation as approval. Wait for explicit "yes", "proceed", "approved", or equivalent.
+
+### Phase 4: Wave Execution
+
+Execute waves using the `myrmidon-waves-worktree-cleanup-rebase-pr-merge` skill for tactical details. Key orchestration rules:
+
+1. **Wave 1 must complete before Wave 2**: stale worktrees removed first prevents agent confusion
+2. **Wave 2a and 2b run in parallel**: Sonnet rebase+PR work is slow; Haiku conflict checks are fast; do both simultaneously
+3. **Wave 3 only after Wave 2**: prune after all changes committed
+4. **Check Wave 2a outputs before Phase 5**: count actual PRs created (some branches will be superseded — no PR created)
+
+**Feedback loop at Wave 2 output:**
+
+```
+Wave 2a results:
+- Branch X: PR #N created, auto-merge enabled
+- Branch Y: superseded (all commits already on main), branch deleted
+- Branch Z: PR #N created, auto-merge enabled
+
+Decision: 7/10 branches were superseded. Only 3 PRs created.
+→ Correct response: proceed with 3 PRs only, do NOT force PRs for superseded work
+→ Wrong response: create PRs for superseded branches to "complete the plan"
+```
+
+### Phase 5: CI Monitoring and Fix Loop
+
+After PRs are created with auto-merge enabled, monitor CI actively. Do not assume CI will pass.
+
+**Monitoring commands:**
+
+```bash
+# Check all new PRs at once
+for N in <pr-numbers>; do
+  echo "PR #$N:"
+  gh pr checks $N --json name,status,conclusion \
+    --jq '.[] | select(.conclusion != "SUCCESS" and .conclusion != null) | "\(.name): \(.conclusion)"'
+done
+
+# Watch a specific PR
+gh pr checks <N> --watch
+```
+
+**CI failure response:**
+
+```bash
+# Step 1: Identify the failure
+gh run view <run-id> --log-failed
+
+# Step 2: Dispatch Haiku fix agent with specific failure context
+# Agent task: "Fix pre-commit failure on PR #N. Error: <paste failure>"
+# Agent must: fix the code, commit, push to the PR branch
+
+# Step 3: Re-enable auto-merge (GitHub clears it on force-push)
+gh pr merge --auto --rebase <N>
+gh pr view <N> --json autoMergeRequest
+# Confirm: autoMergeRequest.mergeMethod is "rebase", NOT null
+
+# Step 4: Poll for merge
+for i in $(seq 1 30); do
+  STATE=$(gh pr view <N> --json state --jq '.state')
+  [ "$STATE" = "MERGED" ] && echo "PR #$N MERGED" && break
+  sleep 30
+done
+```
+
+**Worktree removal — handle __pycache__:**
+
+Agent worktrees that executed Python accumulate `__pycache__/` dirs that block `git worktree remove`:
+
+```bash
+# Clean __pycache__ first, then remove normally (no --force needed)
+find .claude/worktrees/ -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+git worktree remove .claude/worktrees/agent-<id>
+git worktree prune
+```
+
+**Common CI failure patterns in ProjectHephaestus:**
+
+| Failure | Symptom | Fix |
+| --------- | --------- | ----- |
+| pre-commit hook | "Files were modified by this hook" | Run `pre-commit run --all-files`, commit changes |
+| ruff S101 | "Use of assert detected" | Replace `assert x is not None` with `if x is None: raise` |
+| mypy union-attr | "Item of None has no attribute" | Use if/raise guard to narrow type before use |
+| pixi task path | "Missing target module" or "Duplicate module" | Ensure task bakes in path; CI step must NOT re-pass path |
+| caplog empty | pytest `caplog` shows no records | Set `logger.propagate = True` in try/finally around caplog section |
+
+### Phase 6: Knowledge Capture
+
+After all PRs are merged, capture learnings in ProjectMnemosyne using `/learn` sub-agents.
+
+**Sub-agent delegation pattern for knowledge capture:**
+
+Dispatch one sub-agent per skill being captured. This keeps the main conversation clean and allows parallel skill creation:
+
+```
+Sub-agent task:
+"You are a Sonnet specialist agent creating a skill in ProjectMnemosyne.
+Topic: <skill topic>
+Learnings: <paste learnings>
+Instructions:
+1. Search for existing skills to amend (search: <keywords>)
+2. If amending: update the existing skill file
+3. If new: create skill/mnemosyne-skill-<name> worktree, create file, validate, commit, PR, auto-merge
+4. Validate with python3 scripts/validate_plugins.py
+5. Enable auto-merge on PR
+6. Clean up worktree"
+```
+
+**Required validation before commit:**
+
+```bash
+cd /tmp/mnemosyne-skill-<name>
+python3 scripts/validate_plugins.py 2>&1 | tail -20
+# Must show: Valid: N/N  with no errors before committing
+```
+
+### Phase 7: Session Record (Tracking Issue)
+
+After all skill PRs are merged in ProjectMnemosyne, create a permanent tracking issue on the
+**target repo** (the repo the session worked on). This makes the session discoverable in future
+work via `gh issue list --search "chore(triage)"`.
+
+**Why this matters**: Without a tracking issue, session results exist only in `results.md`
+artifact files and the agent's memory. A tracking issue is indexed by GitHub search, visible
+in the issue list, and provides a durable cross-reference from the repo to the session artifacts
+and ProjectMnemosyne skill PRs.
+
+**Tracking issue creation:**
+
+```bash
+# Title format: chore(triage): YYYY-MM-DD issue classification pass
+TITLE="chore(triage): $(date +%Y-%m-%d) issue classification pass"
+
+# Body must include:
+# - Session metrics table (issues processed, PRs merged, agents used, duration)
+# - Table of closures: ALREADY-DONE issues with numbers
+# - Table of batch-fix PRs: issue → PR mapping
+# - Lists of remaining MEDIUM and HIGH issues (not yet addressed)
+# - Artifact file paths (e.g. analysis/issue-triage/results.md)
+# - Links to ProjectMnemosyne skill PRs created this session
+
+gh issue create \
+  --repo <owner>/<repo> \
+  --title "$TITLE" \
+  --body "$(cat session-summary.md)"
+```
+
+**Tracking issue body template:**
+
+```markdown
+## Session: YYYY-MM-DD Issue Classification Pass
+
+### Metrics
+
+| Metric | Value |
+|--------|-------|
+| Issues classified | N |
+| PRs merged | N |
+| Agents used | ... |
+| Session duration | ~X hours |
+
+### Closures (ALREADY-DONE)
+
+| Issue | Title | Resolution |
+|-------|-------|------------|
+| #N | ... | Already implemented |
+
+### Batch Fix PRs
+
+| Issue | Title | PR |
+|-------|-------|----|
+| #N | ... | #M |
+
+### Remaining MEDIUM Issues
+
+- #N: description
+
+### Remaining HIGH Issues
+
+- #N: description
+
+### Artifacts
+
+- `analysis/issue-triage/results.md`
+
+### ProjectMnemosyne Skills
+
+- PR #N: skill/... (amended/created)
+```
+
+**HARD issues — enumerate even if leaving them open**: Even when the user says "leave HARD issues alone", the tracking issue body should still enumerate them with rationale (e.g. "requires architectural decision", "cross-cutting concern"). This gives future sessions a quick reference without reading all open issues.
+
+**PR title length**: Mega-agent PR titles can be long (e.g. `feat(executor): 11 improvements — timeout, teardown, retry, logging, dry-run, hooks, rich progress`). This is fine — do not abbreviate. The PR body's `Closes #N` lines are what matter for issue auto-close; the title is secondary.
+
+**Verification**: Confirm the issue was created by running:
+
+```bash
+gh issue list --repo <owner>/<repo> --search "chore(triage)" --limit 5
+```
+
+### Full Session Timeline Reference
+
+```
+Phase 1 (Exploration):    1 Sonnet sub-agent + /advise call     ~10-15 min
+Phase 2 (Plan Design):    L0 orchestrator designs plan           ~5 min
+Phase 3 (Approval):       User review + approval                ~5 min
+Phase 4 (Wave Execution): 3 waves, parallel within waves         ~20-45 min
+Phase 5 (CI Fix Loop):    Monitor + dispatch fix agents          ~15-30 min
+Phase 6 (Learn):          N sub-agents for skill capture         ~20-30 min
+Phase 7 (Tracking Issue): gh issue create on target repo         ~2-5 min
+─────────────────────────────────────────────────────────────────────────
+Total session (typical):                                         ~1.5-3 hours
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Over-broad Wave 1 agent scope | Agent prompt said "remove stale worktrees" without explicit list | Agent removed too many worktrees before rebase analysis, discarding branches that had unreleased work | Be extremely specific in agent prompts: provide the exact list of worktree paths to remove, not a general instruction |
+| Auto-merge assumption | Enabled auto-merge on all 6 PRs and moved on to Phase 6 | 2 PRs failed pre-commit hooks; auto-merge was blocked and they stayed open | Always monitor CI after PR creation; never assume auto-merge will complete; have Phase 5 fix workflow ready |
+| Forcing PRs for superseded branches | When Wave 2a reported 7/10 branches superseded, considered creating "stub" PRs anyway to match the plan | Would create unnecessary noise PRs that add no value to main | When agents report superseded work, accept the decision and do NOT create PRs; update plan in real time |
+| Skipping /advise before planning | Jumped from exploration to plan design without consulting ProjectMnemosyne | Re-discovered known failure modes (pixi.lock conflict strategy, caplog propagation issue) mid-execution | Always run /advise as a sub-agent call after exploration, before designing the plan |
+| Parallel skill capture in main conversation | Tried to create all 3 skills in the main L0 conversation thread | Each skill creation involves worktree creation, file writing, validation, commit, push — sequential in main thread takes 45+ minutes | Delegate skill capture to parallel sub-agents: one per skill, run concurrently |
+| Not re-enabling auto-merge after CI fix | Fix agent pushed commit to fix pre-commit failure, declared "done" | GitHub silently cleared auto-merge on the force-push; PR sat open indefinitely | After every push to a PR branch, explicitly re-run `gh pr merge --auto --rebase <N>` and verify the response |
+| Skipping tracking issue creation | Session ended after Phase 6 skill PRs merged; no tracking issue created on target repo | Session results were only in `results.md` artifact file and agent memory — not searchable via `gh issue list` in future sessions | Always create a `chore(triage): YYYY-MM-DD issue classification pass` tracking issue on the target repo as Phase 7 (final step) |
+| `git worktree remove <path>` on agent worktrees after session | Ran `git worktree remove` on 5 unlocked worktrees containing only `__pycache__/` as untracked content | Fails with "contains modified or untracked files" — git treats `__pycache__/` as untracked even though it is irrelevant | Clean `__pycache__` first: `find .claude/worktrees/agent-* -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null` then `git worktree remove`. Alternatively ask user to approve `--force` (Safety Net blocks it without explicit permission). |
+| Agent-added CI job breaks subsequent PRs | Added a `typecheck` CI job to `ci.yml` in Wave E (issue #31). This job used `npm ci`. All subsequent PRs picked up this new required check. | The new CI job required `package-lock.json` which didn't exist. PRs #60 and #61 (created in later waves) both failed CI on the new typecheck job. Required dispatch of two fix agents to change `npm ci` → `npm install`. | When a wave adds a new CI job, verify it passes on `origin/main` before launching subsequent waves. New required CI checks affect ALL open PRs. If the new job has a dependency (e.g., lockfile), ensure that dependency is met or the job is non-blocking before continuing. |
+| Auto-merge disabled blocks wave completion signal | Used `gh pr merge <N> --auto --rebase` as the final step in all agent prompts, per standard pattern | ProjectProteus had `enablePullRequestAutoMerge: false` at the repository level. Agents reported "auto-merge is not enabled" and PRs stayed open. Wave completion was harder to assess — could not use "all PRs MERGED" as the done signal. | Before starting a swarm session, check `gh repo view --json autoMergeAllowed --jq '.autoMergeAllowed'`. If `false`, the completion signal for each wave must be "all PRs pushed with CI passing" rather than "all PRs MERGED". Adjust monitoring accordingly. |
+| Two index.ts agents racing to same file (Wave C) | Dispatched C1 (#10), C2 (#14), C3 (#36) as parallel agents since they touched different functions in `dagger/src/index.ts` | Even though they touched different functions, parallel agents on the same file create merge conflicts. Had to run them sequentially (one per wave-step, each rebasing on origin/main after the previous merged). | Same-file edits must always be sequential even if the edits are to different functions/sections. The "no two agents per wave touching the same file" rule applies even to non-overlapping edits within a file. |
+| Running Phase 4 classifier swarm when inventory already has file evidence | Dispatching 3 Explore classifier agents after 3 Explore inventory agents already returned file paths per issue | Duplicate work — inventory agents already provided enough signal for deterministic classification from contention counts | Skip classifier swarm if inventory agents returned file-path evidence; classify LOW/MEDIUM/HIGH directly from contention counts |
+| Forking implementation branch from wrong base | Created Atlas branch from `feat/issue-22-ci-hardening` instead of `main` (2026-04-27) | Picked up 12 extra CI commits unrelated to Atlas; PR was not rebased to main; MERGEABLE state was wrong | Always verify branch base: `git log --oneline main..HEAD` before creating PR. If wrong base was used, cherry-pick the work onto a clean `main` fork: `git checkout -b <branch> main && git cherry-pick <sha>` |
+| Haiku filers for large issue batches | Used Haiku agents to file 40+ issues per repo | Hit GitHub secondary rate limits (403 BCE2) causing incomplete filing across multiple repos | Use Sonnet agents for issue-filing tasks with 40+ issues; add `sleep 3` between creations and `sleep 60` on 403 |
+| Concurrent filer agents during org limit | Dispatched retry agents after secondary rate-limit errors | All agents returned "You've hit your org's monthly usage limit" — hard blocker | Test with a single `gh api` POST before dispatching batch; the limit resets daily and the test issue confirms availability |
+| `--label "audit-finding"` without `--limit` | Verified child issue counts via `gh issue list --label audit-finding` without specifying `--limit` | GitHub defaults to 30 results, masking true count and causing false MISMATCH alarms | Always pass `--limit 200` when counting issues with `gh issue list` |
+| findings.json as nested object | Audit agent returned JSON with top-level keys (`project`, `findings`, `summary`) instead of a flat array | Filer agents expected a flat JSON array, causing KeyError on iteration | Enforce flat array format in agent prompt: "findings.json MUST be a flat JSON array where each element is one finding object"; add a Python extraction fallback if needed |
+| Write tool blocked in worktree agents | Audit agents couldn't write `report.md` to their worktree ("Subagents should return findings as text") | L0 received inline content but no file was written; subsequent filer agents had no input file | Instruct audit agents to print the full report as their final message; L0 orchestrator uses Write tool to save it to the scratch dir |
+| Parallel filer agents on same repo | Multiple filer agent retries filed against the same repo concurrently | Created exact-title duplicate issues; required a cleanup pass to close ~119 duplicates | Run exactly one filer agent per repo; use idempotency check (label search) before any filing; never retry by spawning a parallel agent |
+| Closing duplicate Epics (lower number first) | Assumed the lower-numbered Epic was the canonical one | Child issues referenced the higher-numbered Epic via "Part of #N"; closing lower Epic was correct but required verifying which number the child bodies referenced | Before closing a duplicate Epic, check which issue number the child bodies contain in "Part of #N" — that is the canonical one to keep |
+| Dispatched 4 Mojo sub-PRs in parallel | Planned to run all 4 Mojo mega-cluster sub-PRs simultaneously since each touched a disjoint theme subset | Parallel dispatch on a shared `mojo-*` namespace would race on branch refs and on auto-merge cascade rebases — earlier sub-PR merges trigger rebase events that collide with in-flight parallel agents | Use per-namespace sequential dispatch: detect shared filename prefix, split manifest by theme, dispatch sub-PRs one-at-a-time. Sequential took ~50 min for 4 sub-PRs (#1808-#1811) with zero conflicts. |
+
+## Results & Parameters
+
+### Session Scale Reference (ProjectHephaestus 2026-04-05)
+
+| Metric | Value |
+| -------- | ------- |
+| Starting worktrees | 32 |
+| Ending worktrees | 1 (main only) |
+| PRs created | 6 (Wave 2a) |
+| PRs merged with CI passing | 6 |
+| Skills created in ProjectMnemosyne | 3 |
+| Total session time | ~3 hours |
+| Agents used | 1 Sonnet (exploration), 2 Haiku (Wave 1 + Wave 3), 1 Sonnet (conflict resolution), 1 Haiku (CI fix), 3 Sonnet (skill capture) |
+| Data loss incidents | 0 |
+| Force-push disasters | 0 |
+
+### Session Scale Reference (ProjectTelemachy 2026-04-25)
+
+| Metric | Value |
+| -------- | ------- |
+| Issues at start | 57 |
+| Issues remaining at end | 6 (89% closure rate) |
+| PRs created | 17 |
+| PRs auto-merged | 17 |
+| Issues closed with evidence, no PR | 6 |
+| Wave A+B+0 dispatch | Simultaneous — 12 agents in one message |
+| Wave D | 3 parallel Sonnet mega-agents (per-file) |
+| Wave E | 1 solo Sonnet executor mega-agent (11 issues, 38 tests passing) |
+| Waves F+G | 4 agents |
+| Total wall clock | ~2.5 hours |
+| Classifier swarm dispatched | No — deterministic from file-contention counts |
+
+### Ecosystem-Wide Strict Audit Parameters
+
+| Parameter | Value |
+| ----------- | ------- |
+| Repos per batch | 5 (cap from myrmidon-swarm skill) |
+| Batches | 3 (for 15 repos) |
+| Auditor tier | Sonnet (synthesis + evidence-based grading required) |
+| Filer tier | Sonnet preferred over Haiku for 40+ issues (rate-limit resilience) |
+| File coverage | Every .py .cpp .h .go .rs .sh .bash .ts source file; every test file; every config (.toml .yaml .yml .json .hcl Dockerfile* justfile) |
+| Large corpus sampling | 1-in-10 (every 10th file alphabetically) for doc/data dirs > 100 files |
+| findings.json schema | Flat JSON array; fields: section (int), severity (CRITICAL\|MAJOR\|MINOR\|NITPICK), title (<=70 chars), evidence (str), description (str), principle (str\|null) |
+| Issue creation sleep | sleep 3 between issues; sleep 60 on 403 |
+| Issue count verification | `gh issue list --label audit-finding --state open --limit 200 --jq length` |
+| Duplicate detection | `group_by(.title) \| map(select(length > 1))` via jq on full issue list |
+| Org limit test | Single `gh api repos/$REPO/issues --method POST` before dispatching batch |
+| Scratch dir | ~/.agent-brain/strict-audit-YYYY-MM-DD/ (outside Odysseus working tree) |
+
+### Agent Tier Assignment
+
+| Task | Tier | Reason |
+| ------ | ------ | -------- |
+| Exploration + state gathering | Sonnet | Requires structured output synthesis across many data sources |
+| /advise query | Sonnet | Knowledge retrieval requires semantic matching |
+| Remove stale worktrees | Haiku | Mechanical: rm artifacts + git worktree remove |
+| Conflict pre-check (closed PRs) | Haiku | Binary output: conflicts or no conflicts |
+| Rebase + analyze unique work + create PR | Sonnet | Requires diff reading, meaningful PR description |
+| Pre-commit/lint CI fix | Haiku | Pattern-based fix: run pre-commit, commit, push |
+| Complex CI fix (logic errors) | Sonnet | Requires understanding of code to fix meaningfully |
+| Final prune + verify | Haiku | Mechanical: git worktree prune + git fetch --prune |
+| Skill creation in ProjectMnemosyne | Sonnet | Requires synthesis of learnings into structured documentation |
+| L0 orchestration | Sonnet/Opus | Session architecture, wave sequencing, user interaction |
+
+### Decision Gates
+
+| Gate | Condition | Action |
+| ------ | ----------- | -------- |
+| Wave 1 pre-flight | Branch list confirmed by exploration | Proceed with exact list |
+| Wave 2a output | Some branches superseded | Do NOT create PRs for them; update PR count expectation |
+| CI post-creation | Any PR has failing required checks | Dispatch Haiku fix agent before proceeding to Phase 6 |
+| Pre-Phase 6 | All PRs in MERGED state | Proceed to knowledge capture |
+| Pre-Phase 7 | All skill PRs merged in ProjectMnemosyne | Create tracking issue on target repo |
+
+### L0 Orchestration Checklist
+
+```
+[ ] Pre-launch: autoMergeAllowed checked — if false, completion signal is "CI passing" not "MERGED"
+[ ] Pre-launch: .pre-commit-config.yaml checked — if absent, pre-commit steps removed from all agent prompts
+[ ] Pre-launch: lockfiles checked — if absent, npm install used instead of npm ci in CI job templates
+[ ] After any wave that adds new CI jobs: verify new job passes on main before launching next wave
+[ ] Phase 1: Exploration sub-agent dispatched and completed
+[ ] Phase 1: /advise called and prior learnings reviewed
+[ ] Phase 2: Plan drafted with explicit wave assignments, agent tiers, time estimates
+[ ] Phase 3: User explicitly approved plan before agent deployment
+[ ] Phase 4: Wave 1 completed; stale worktrees removed
+[ ] Phase 4: Wave 2a (Sonnet) and 2b (Haiku) run in parallel
+[ ] Phase 4: Wave 3 (Haiku prune) completed after Wave 2
+[ ] Phase 4: Actual PR count confirmed (may differ from plan if branches superseded)
+[ ] Phase 5: All new PRs monitored for CI failures
+[ ] Phase 5: Any failing PRs fixed; auto-merge re-enabled after fix push
+[ ] Phase 5: All PRs confirmed MERGED
+[ ] Phase 6: /learn sub-agents dispatched (one per skill)
+[ ] Phase 6: All skill PRs merged in ProjectMnemosyne
+[ ] Phase 7: Tracking issue created on target repo (chore(triage): YYYY-MM-DD)
+[ ] Phase 7: Tracking issue body includes metrics, closures, PRs, remaining issues, artifacts, skill PR links
+[ ] Phase 7: Confirmed via gh issue list --search "chore(triage)"
+[ ] Complete: worktree count verified (git worktree list)
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | 32 worktrees → 1, 6 PRs created and merged, 3 skills captured, 2026-04-05 | Full L0 session: exploration → plan → approval → 3 waves → 2 CI fixes → 3 parallel /learn agents |
+| ProjectScylla | 64 issues classified, 12 PRs merged, tracking issue #1786 created, 2026-04-12 | Myrmidon swarm triage: classification + batch-fix waves + Phase 7 tracking issue on target repo |
+| ProjectProteus | 43-issue classification + 20 EASY implementations, 2026-04-25 | TypeScript/Bash/YAML repo; auto-merge disabled; no pre-commit hooks; no lockfiles; npm install fix required after typecheck job added |
+| ProjectTelemachy | 57 issues → 6 remaining (89% closure), 17 PRs, ~2.5h wall clock, 2026-04-25 | Python/pixi repo; deterministic classification from file-contention counts; per-file Sonnet mega-agents (Wave D+E); Waves 0+A+B dispatched simultaneously (12 agents in one message) |
+| HomericIntelligence/Odysseus | Atlas Epic issue #152 scaffold, PR #173, 2026-04-27 | Direct worktree approach (not myrmidon-multi) for precision scaffold; branch forked from wrong base; cherry-pick fix onto clean main fork |
+| HomericIntelligence/Odysseus | 2026-04-28 ecosystem-wide strict audit (15 repos, 680 findings, 15 Epics + child issues) | verified-local |
+| HomericIntelligence/ProjectMnemosyne | 2026-05-18 skill-corpus consolidation (17 clusters, 1,100→690 skills) | tracking issue \#1813; Mojo mega-cluster sub-PRs \#1808-\#1811 |
+
+## References
+
+- [myrmidon-waves-worktree-cleanup-rebase-pr-merge](myrmidon-waves-worktree-cleanup-rebase-pr-merge.md) — Tactical wave execution for worktree cleanup (Wave 1-3 details)
+- [batch-pr-rebase-myrmidon-wave-execution](batch-pr-rebase-myrmidon-wave-execution.md) — Conflict strategies for rebase + PR workflow
+- [multi-repo-pr-orchestration-swarm-pattern](multi-repo-pr-orchestration-swarm-pattern.md) — Multi-repo variant of the swarm pattern
+- [haiku-wave-pr-remediation](haiku-wave-pr-remediation.md) — Haiku wave patterns for PR remediation
+
+---
+
+### Prior history for myrmidon-swarm-end-to-end-orchestration-full-workflow
+
+## v1.7.0 (2026-05-18)
+
+**Changed by:** 2026-05-18 skill-corpus consolidation (17 clusters, 1,100→690 skills); Mojo mega-cluster split session
+**Verification:** verified-ci
+
+### What changed
+- Added new subsection `### Variant: per-namespace sequential dispatch (intra-cluster split)` under Verified Workflow
+- Added 1 new Failed Attempts row: parallel dispatch on shared `mojo-*` namespace (sub-PRs #1808-#1811)
+- Added Verified On row: HomericIntelligence/ProjectMnemosyne 2026-05-18 consolidation, tracking issue #1813
+- Bumped version 1.6.0 → 1.7.0; updated date to 2026-05-18
+
+### Why
+Running a 114-member Mojo mega-cluster as a single PR was infeasible. Splitting into 4 sub-PRs
+by theme was required. Attempting parallel dispatch on the shared `mojo-*` namespace would have
+caused race conditions on branch refs and auto-merge cascade rebases. Sequential dispatch took
+~50 min for all 4 sub-PRs with zero conflicts. Pattern is reusable for any cluster with a
+shared filename prefix.
+
+### Previous version (v1.6.0) snapshot
+[archived — see git history for full snapshot]
+
+---
+
+## v1.6.0 (2026-04-28)
+
+**Changed by:** Ecosystem-wide strict audit session (15 HomericIntelligence repos)
+**Verification:** verified-local
+
+### What changed
+- Added 7 new Failed Attempts entries documenting rate-limit and duplicate issues from large-scale audit
+- Added "Ecosystem-Wide Strict Audit Parameters" to Results & Parameters
+- Added new "When to Use" trigger conditions for ecosystem-wide audits
+- Updated Verified On table
+
+### Why
+First time the swarm pattern was applied to a full 15-repo ecosystem audit + mass issue filing. The session surfaced several new failure modes (org monthly limit, findings.json format enforcement, Write-tool blocking in worktrees, parallel filer duplicates) not covered by prior sessions which handled smaller task sets.
+
+### Previous version (v1.5.0) snapshot
+[archived — see git history for full snapshot]
+
+---
+
+## v1.4.0 (2026-04-25)
+
+**Changed by:** ProjectTelemachy myrmidon-swarm pass (2026-04-25)
+**Verification:** verified-local
+
+### What changed
+- Added deterministic classification rule (skip classifier swarm when inventory has file evidence)
+- Added per-file mega-agent rule in Phase 2 plan design
+- Added parallel Plan agent + Explore agents optimization note to Phase 2
+- Added HARD issues enumeration note and PR title length note to Phase 7
+- Added session stats: 57→6 issues, 17 PRs, ~2.5h wall clock (ProjectTelemachy table)
+- Added Verified On row: ProjectTelemachy 2026-04-25
+- Added Failed Attempts entry: running Phase 4 classifier swarm when inventory already has file evidence
+- Added mega-agent candidate bash commands to Quick Reference
+- Bumped version 1.3.0 → 1.4.0
+
+### Why
+Running 3 classifier agents after 3 inventory agents had already returned file paths was redundant.
+Classification from file-contention counts is deterministic and faster. Per-file mega-agents
+collapsed 12 planned waves to 2 (Wave D: 3 parallel + Wave E: 1 solo), saving ~90 min. Simultaneous
+Phase 0 + Wave A + Wave B dispatch (12 agents in one message) also saved a full phase of serial
+execution.
+
+### Previous version (v1.3.0) snapshot
+[see git history]
+
+---
+
+## v1.3.0 (2026-04-25)
+
+**Changed by:** ProjectProteus 43-issue myrmidon swarm session
+**Verification:** verified-local
+
+### What changed
+- Added 3 new Failed Attempts entries from ProjectProteus swarm (2026-04-25):
+  - Agent-added CI job (`typecheck`) breaks subsequent PRs when lockfile is missing (`npm ci` → `npm install` fix required)
+  - Auto-merge disabled at repo level blocks wave completion signal; PRs stay open indefinitely
+  - Two agents on same file (`dagger/src/index.ts`) cause merge conflicts even when editing different functions
+- Added pre-launch bash checks to Phase 3 (User Approval Gate): `autoMergeAllowed`, `.pre-commit-config.yaml`, lockfile presence
+- Added 4 new items to L0 Orchestration Checklist (pre-launch group + post-CI-job-add check)
+- Added ProjectProteus row to Verified On table
+- Bumped version 1.2.0 → 1.3.0; updated date to 2026-04-25
+
+### Why
+Live swarm session on ProjectProteus revealed three new failure modes not previously captured:
+auto-merge being disabled changed the completion signal pattern, a mid-session CI job addition
+with a missing lockfile dependency cascaded failures to all subsequent PRs, and same-file parallel
+agents conflicted despite touching different functions.
+
+### Previous frontmatter (v1.2.0)
+
+```
+---
+name: myrmidon-swarm-end-to-end-orchestration-full-workflow
+description: "Full end-to-end L0 commander pattern for complex myrmidon orchestration sessions. Use when: (1) task spans 3+ phases (cleanup + rebase + merge + CI + knowledge), (2) 10+ sub-tasks with mixed agent tiers required, (3) cross-repo work requiring /advise and /learn coordination, (4) feedback loops and decision gates are needed before committing to destructive operations, (5) auto-merge assumption cannot be made (CI may fail)."
+category: architecture
+date: 2026-04-23
+version: "1.2.0"
+user-invocable: false
+verification: verified-ci
+history: myrmidon-swarm-end-to-end-orchestration-full-workflow.history
+tags: [myrmidon, orchestration, l0-commander, multi-phase, planning, wave, ci, auto-merge, feedback-loop, end-to-end, knowledge-capture]
+---
+```
+
+---
+
+## v1.2.0 (2026-04-23)
+
+**Changed by:** ProjectArgus branch/worktree cleanup session
+**Verification:** verified-local
+
+### What changed
+- Added Failed Attempts entry: `git worktree remove` blocked by `__pycache__` untracked files
+- Added Phase 5 cleanup note: clean `__pycache__` with `find` before `git worktree remove`
+
+### Why
+After a batch triage session, `git worktree remove` failed on all 5 unlocked worktrees due to `__pycache__/` dirs left by Python execution in agents. Safety Net also blocks `--force`. Fix: clean `__pycache__` first.
+
+---
+
+## v1.0.0 — 2026-04-05
+
+### Snapshot
+
+```
+---
+name: myrmidon-swarm-end-to-end-orchestration-full-workflow
+description: "Full end-to-end L0 commander pattern for complex myrmidon orchestration sessions. Use when: (1) task spans 3+ phases (cleanup + rebase + merge + CI + knowledge), (2) 10+ sub-tasks with mixed agent tiers required, (3) cross-repo work requiring /advise and /learn coordination, (4) feedback loops and decision gates are needed before committing to destructive operations, (5) auto-merge assumption cannot be made (CI may fail)."
+category: architecture
+date: 2026-04-05
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags: [myrmidon, orchestration, l0-commander, multi-phase, planning, wave, ci, auto-merge, feedback-loop, end-to-end, knowledge-capture]
+---
+```
+
+Original 6-phase workflow: Exploration → Plan Design → User Approval Gate → Wave Execution →
+CI Monitoring + Fix Loop → Knowledge Capture. Session Timeline reference totalled ~1.5-3 hours
+for a typical session. Verified on ProjectHephaestus (32 worktrees → 1, 6 PRs created and
+merged, 3 skills captured, 2026-04-05).
+
+Phase 6 ended at "All skill PRs merged in ProjectMnemosyne" with no post-merge tracking issue
+step. The L0 Orchestration Checklist ended at `[ ] Phase 6: All skill PRs merged in
+ProjectMnemosyne`.
+
+---
+
+## Superseded from automation-6phase-issue-pr-pipeline
+
+
+# 6-Phase GitHub Issue Automation Pipeline
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-24 |
+| **Objective** | Design and implement a complete 6-phase automation pipeline in Python for processing open GitHub issues across HomericIntelligence repos in a loop |
+| **Outcome** | SUCCESS — all 6 phases implemented with 251 unit tests passing; ruff + mypy clean; verified-precommit |
+| **Verification** | verified-precommit — 251 unit tests pass locally, ruff + mypy clean |
+| **History** | Extends multi-repo-automation-loop-shell-script (2-phase plan+implement) to a full 6-phase loop |
+
+## When to Use
+
+- Building a multi-phase GitHub issue automation loop (plan → review-plan → implement → review-PR → address-review → drive-green)
+- Implementing inline PR review comments via GitHub GraphQL (`addPullRequestReview` mutation) rather than normal PR comments
+- Resuming a prior Claude session from an implementer's saved `session_id` (`claude --resume <session_id>`)
+- Preventing Claude workers from being launched for issues that have no open PR (pre-discovery no-PR guard)
+- Implementing dry-run discipline: side-effectful API calls are gated but Claude analysis still runs
+- Adding new GitHub API helpers for PR review posting, unresolved thread listing, thread resolution, and CI checks
+- Gating a final-loop-only phase (e.g., auto-merge) on `loop == LOOPS`
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# Phase sequence per repo per iteration:
+# 1. plan-all       — plan every open issue, post plan as GH issue comment
+# 2. review-plans   — review every posted plan, post plan-review as GH issue comment
+# 3. implement-all  — implement every issue, create PR
+# 4. review-PRs     — review each PR, post INLINE review comments (GraphQL)
+# 5. address-review — for each PR with unresolved threads, resume implementer session
+# 6. drive-green    — 1 fix iteration on red CI checks, enable auto-merge [FINAL LOOP ONLY]
+
+# address_review session reuse pattern:
+session_id = self._load_impl_session_id(issue_number)
+# session_id read from .issue_implementer/issue-{N}.json
+if session_id:
+    cmd = ["claude", "--resume", session_id, "--print", ...]
+else:
+    cmd = ["claude", "--print", ...]  # fresh session fallback
+
+# Pre-discovery no-PR guard in run():
+pr_map = self._discover_prs(issue_numbers)  # BEFORE submitting workers
+for issue_number in issue_numbers:
+    if issue_number not in pr_map:
+        continue  # Never launch a worker for a PR-less issue
+with ThreadPoolExecutor(...) as executor:
+    futures = {executor.submit(self._address_issue, n, pr_map[n], slot): n
+               for n, slot in zip(filtered_issues, slots)}
+
+# drive-green gating:
+if loop == loops:
+    ci_driver.run(repo_dir, issue_numbers)
+```
+
+### Detailed Steps
+
+#### Phase 1: plan-all (PlanIssues)
+
+Calls `hephaestus.automation.planner` for each open issue. Posts the generated plan as a GitHub issue comment. Existing plan comments are detected and skipped to avoid duplicates.
+
+#### Phase 2: review-plans (PlanReviewer)
+
+Iterates all open issues that have a plan comment. Claude reads the plan and posts a review comment on the same issue. The reviewer is strictly read-only — no commits, no pushes.
+
+**New file**: `hephaestus/automation/plan_reviewer.py`
+
+```python
+class PlanReviewer:
+    def run(self, repo_dir, issues): ...
+    def _review_issue(self, issue_number, plan_comment): ...
+    # Posts review via: gh issue comment <N> --body "<review text>"
+```
+
+#### Phase 3: implement-all (IssueImplementer)
+
+Existing `hephaestus.automation.implementer` — creates worktree, runs Claude, creates PR. Saves `session_id` to `.issue_implementer/issue-{N}.json`.
+
+#### Phase 4: review-PRs (PRReviewer — read-only)
+
+Claude analyzes the PR diff and CI state, then posts inline review comments via GitHub GraphQL `addPullRequestReview` mutation. Strictly read-only: no commits, no pushes — only comment posting.
+
+**New file**: `hephaestus/automation/pr_reviewer.py` (refactored from reviewer.py)
+
+```python
+class PRReviewer:
+    def run(self, repo_dir, issues): ...
+    def _review_pr(self, issue_number, pr_number): ...
+    # Posts via gh_pr_review_post() — GraphQL addPullRequestReview
+    # Returns list of thread IDs
+```
+
+#### Phase 5: address-review (AddressReview)
+
+For each PR with unresolved review threads:
+1. Load the implementer's `session_id` from `.issue_implementer/issue-{N}.json`
+2. Resume that session with `claude --resume <session_id> --print <prompt>`
+3. Parse Claude's JSON output for `{"addressed": [...thread_ids...], "replies": {...}}`
+4. Resolve ONLY threads that Claude explicitly lists in `addressed` — others stay open
+5. Post reply comments for threads listed in `replies`
+
+**New file**: `hephaestus/automation/address_review.py`
+
+```python
+class AddressReview:
+    def run(self, repo_dir, issues): ...
+    def _address_issue(self, issue_number, pr_number, slot_id): ...
+    def _load_impl_session_id(self, issue_number) -> str | None: ...
+    # Reads .issue_implementer/issue-{N}.json -> session_id
+```
+
+**Critical selective resolution rule**: Claude's output is parsed for:
+```json
+{"addressed": ["thread_abc", "thread_xyz"], "replies": {"thread_abc": "Fixed by..."}}
+```
+Only threads in `addressed` get `resolveReviewThread` called. Threads not mentioned stay open.
+
+#### Phase 6: drive-green (CIDriver — final loop only)
+
+Gated by `loop == LOOPS`. For each PR with failing required CI checks:
+1. Fetch failing check names via `gh_pr_checks()`
+2. Run exactly 1 fix iteration (never more) per PR per invocation
+3. Resume implementer session with failing check context
+4. Push fix, re-check CI
+5. Enable auto-merge when all required checks pass: `gh pr merge --auto --rebase`
+
+**New file**: `hephaestus/automation/ci_driver.py`
+
+```python
+class CIDriver:
+    def run(self, repo_dir, issues): ...
+    def _fix_pr(self, issue_number, pr_number): ...
+    # Exactly 1 fix iteration per invocation — never loops internally
+```
+
+#### New GitHub API helpers
+
+**New additions in `hephaestus/automation/github_api.py`**:
+
+```python
+def gh_pr_review_post(pr_number, comments, dry_run=False) -> list[str]:
+    """Post inline review comments via GraphQL addPullRequestReview mutation.
+    Returns list of review thread IDs."""
+
+def gh_pr_list_unresolved_threads(pr_number, dry_run=False) -> list[dict]:
+    """List all unresolved review threads on a PR."""
+
+def gh_pr_resolve_thread(thread_id, reply=None, dry_run=False) -> None:
+    """Resolve a review thread, optionally posting a reply first."""
+
+def gh_pr_checks(pr_number, dry_run=False) -> list[dict]:
+    """List CI check runs for a PR with their status and conclusion."""
+```
+
+#### Dry-run discipline
+
+Every module short-circuits all side-effectful calls when `dry_run=True`:
+
+```python
+if self.options.dry_run:
+    self._log("info", f"[DRY RUN] Would post review for PR #{pr_number}")
+    return []  # No gh api calls
+
+# Side-effectful calls only in non-dry-run:
+gh_pr_review_post(pr_number, comments, dry_run=False)
+gh_pr_resolve_thread(thread_id, dry_run=False)
+gh pr merge --auto --rebase  # only in ci_driver non-dry-run
+```
+
+Claude analysis still runs in dry-run mode — only GitHub API mutations are suppressed.
+
+#### Shell loop integration
+
+`scripts/run_automation_loop.sh` updated to 6-phase loop with `--parallel-repos N`:
+
+```bash
+for loop in $(seq 1 "$LOOPS"); do
+  for repo in "${REPOS[@]}"; do
+    "$PYTHON" -m hephaestus.automation.planner ...         # Phase 1
+    "$PYTHON" -m hephaestus.automation.plan_reviewer ...   # Phase 2
+    "$PYTHON" -m hephaestus.automation.implementer ...     # Phase 3
+    "$PYTHON" -m hephaestus.automation.pr_reviewer ...     # Phase 4
+    "$PYTHON" -m hephaestus.automation.address_review ...  # Phase 5
+  done
+  if [ "$loop" -eq "$LOOPS" ]; then
+    for repo in "${REPOS[@]}"; do
+      "$PYTHON" -m hephaestus.automation.ci_driver ...     # Phase 6 — final loop only
+    done
+  fi
+done
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Workers discover their own PR | `_find_pr_for_issue()` called inside each worker thread | Claude could be launched before discovering there's no PR — wasting quota and producing noise | Move `_discover_prs()` to `run()` level as a pre-filter; workers only receive `(issue_number, pr_number)` pairs where PR is confirmed to exist |
+| `_address_issue(issue_number, slot_id)` signature | Original signature without `pr_number` | When pre-discovery pattern was added, `pr_number` was needed inside the worker to avoid re-discovery | Changed to `_address_issue(issue_number, pr_number, slot_id)` — all tests updated accordingly |
+| Hardcoded `dry_run=False` in thread list call | `gh_pr_list_unresolved_threads(pr_number, dry_run=False)` in address_review | In dry-run mode, the API call still ran — inconsistent dry-run behavior | Pass `dry_run=self.options.dry_run` through to all helper calls |
+| Resolving all review threads | Resolved every unresolved thread after Claude ran | Threads Claude did not explicitly address were incorrectly closed | Only resolve threads in Claude's `{"addressed": [...]}` list — all others stay open |
+
+## Results & Parameters
+
+### Files Created
+
+| File | Purpose |
+| ------ | --------- |
+| `hephaestus/automation/plan_reviewer.py` | Phase 2 — review posted plans, comment on issues |
+| `hephaestus/automation/pr_reviewer.py` | Phase 4 — read-only inline PR review via GraphQL |
+| `hephaestus/automation/address_review.py` | Phase 5 — resume implementer session to fix review feedback |
+| `hephaestus/automation/ci_driver.py` | Phase 6 — 1 CI fix iteration, enable auto-merge |
+| `hephaestus/automation/github_api.py` | 4 new helpers: `gh_pr_review_post`, `gh_pr_list_unresolved_threads`, `gh_pr_resolve_thread`, `gh_pr_checks` |
+| `scripts/review_plans.py` | CLI entry for phase 2 |
+| `scripts/address_review.py` | CLI entry for phase 5 |
+| `scripts/drive_prs_green.py` | CLI entry for phase 6 |
+| `scripts/run_automation_loop.sh` | Updated 6-phase loop with `--parallel-repos N` |
+
+### Test Coverage
+
+```
+251 unit tests passing (all phases)
+ruff check: clean
+mypy: clean
+```
+
+### Session State Files
+
+```
+.issue_implementer/
+  issue-{N}.json           # IssueImplementer state — contains session_id
+  review-{N}.json          # PRReviewer state
+  address-{N}.json         # AddressReview state
+  ci-{N}.json              # CIDriver state
+```
+
+### GraphQL Patterns
+
+```python
+# Post inline review — addPullRequestReview mutation
+gh api graphql -f query='
+  mutation {
+    addPullRequestReview(input: {
+      pullRequestId: "<pr_node_id>",
+      event: COMMENT,
+      comments: [{path: "...", line: N, body: "..."}]
+    }) { pullRequestReview { id } }
+  }'
+
+# Resolve thread — resolveReviewThread mutation
+gh api graphql -f query='
+  mutation { resolveReviewThread(input: {threadId: "<thread_id>"}) { thread { id } } }'
+
+# Optionally post in-thread reply before resolving
+gh api graphql -f query='
+  mutation {
+    addPullRequestReviewComment(input: {
+      inReplyTo: "<thread_first_comment_id>", body: "..."
+    }) { comment { id } }
+  }'
+```
+
+### Key Invariants
+
+| Invariant | Enforcement |
+| ----------- | ------------- |
+| `address_review` resolves only explicitly-addressed threads | Parse `{"addressed": [...]}` JSON; never resolve threads not in this list |
+| `ci_driver` runs exactly 1 fix iteration per PR | No internal retry loop; 1 Claude invocation per `_fix_pr()` call |
+| `drive-green` runs only on final loop | `if loop == LOOPS:` gate in `run_automation_loop.sh` |
+| `pr_reviewer` is read-only | No `git push`, no `git commit`, no worktree mutation — only `gh api graphql` comment posts |
+| Workers never launch for PR-less issues | `_discover_prs()` runs in `run()` before any `executor.submit()` |
+| Dry-run suppresses all mutations | Every `gh api`, `git push`, `resolveReviewThread`, `pr merge --auto` call is gated on `not dry_run` |
+
+### Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | Session 2026-04-24 — 6-phase pipeline design + implementation | 251 tests pass, ruff + mypy clean; CI not yet run |
+
+---
+
+## Superseded from architect-review-implementation
+
+# Skill: Architect Review Implementation
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-02-23 |
+| **Objective** | Implement all recommended post-merge actions from a Chief Architect review of the state machine refactor (1008-state-machine-refactor) |
+| **Outcome** | ✅ Success — 3 doc/test tasks completed, branch rebased against origin/main, 72/72 tests passing, mypy counts verified |
+| **Category** | Architecture |
+| **Tags** | state-machine, code-review, post-merge, rebase, conflict-resolution, test-coverage |
+
+## When to Use This Skill
+
+Use this skill when you have:
+
+- A completed chief architect or code review with a list of recommended follow-up actions
+- Post-merge cleanup tasks (documentation, test coverage gaps, comment clarity)
+- A feature branch that needs rebasing against an updated main branch
+- Merge conflicts in test files that were refactored by multiple commits
+
+**Trigger phrases:**
+- "Implement the plan from the chief architect review"
+- "Post-merge cleanup recommended by reviewer"
+- "Rebase against origin/main and fix merge conflicts"
+- "The reviewer noted these minor issues after approving the PR"
+
+## Verified Workflow
+
+### Phase 1: Implement Recommended Actions in Parallel
+
+For documentation and test additions that are independent, implement them simultaneously:
+
+1. **Documentation gaps** — Add clarifying prose to CLAUDE.md or module docstrings
+2. **Test coverage gaps** — Add the missing test class to the relevant test file
+3. **Comment accuracy** — Update counts/descriptions in source file docstrings
+
+```python
+# Example: adding until_state tests to an existing SM test file
+class TestSubtestStateMachineUntilState:
+    """Tests for advance_to_completion() until_state early-stop behavior."""
+
+    def test_stops_at_until_state_before_executing_action(self, ssm, checkpoint, checkpoint_path):
+        """Stop AT until_state without executing its action."""
+        action_target = MagicMock()
+        actions = {SubtestState.PENDING: MagicMock(), SubtestState.RUNS_IN_PROGRESS: action_target}
+        final = ssm.advance_to_completion(TIER_ID, SUBTEST_ID, actions,
+                                          until_state=SubtestState.RUNS_IN_PROGRESS)
+        assert final == SubtestState.RUNS_IN_PROGRESS
+        action_target.assert_not_called()  # BEFORE executing the target action
+
+    def test_until_state_does_not_mark_failed(self, ssm, checkpoint, checkpoint_path):
+        """Clean stop — no FAILED state set."""
+        ssm.advance_to_completion(TIER_ID, SUBTEST_ID, {}, until_state=SubtestState.RUNS_COMPLETE)
+        assert ssm.get_state(TIER_ID, SUBTEST_ID) != SubtestState.FAILED
+```
+
+Key `until_state` test cases to cover (for any state machine):
+- Stop BEFORE executing the target state's action
+- State preserved on disk (no FAILED set)
+- Resume after stop completes to terminal state
+- Immediate stop when already at target state
+- No FAILED marking on clean stop
+
+### Phase 2: Commit and Run Pre-commit
+
+```bash
+# Stage only the modified files (not --all)
+git add CLAUDE.md MYPY_KNOWN_ISSUES.md scylla/e2e/stages.py tests/unit/e2e/test_subtest_state_machine.py
+
+# If new tests introduce new mypy errors, update the count file:
+pixi run python scripts/check_mypy_counts.py --update
+
+# Re-stage the updated count file
+git add MYPY_KNOWN_ISSUES.md
+
+# Commit
+git commit -m "docs(e2e): Post-merge cleanup from Chief Architect review"
+```
+
+### Phase 3: Rebase Against origin/main
+
+```bash
+git fetch origin main
+git rebase origin/main
+```
+
+**Expect conflicts in these categories:**
+
+| Conflict Type | Resolution Strategy |
+| --------------- | --------------------- |
+| `# noqa: S101` annotations | Keep HEAD (branch) version — pre-existing suppression |
+| Class renames (e.g. `TestFoo` → `TestFooState`) | Take incoming (more descriptive name) |
+| Docstring expansions | Take incoming (more detail is better) |
+| Duplicate section comments | Drop the duplicate, keep one |
+| MYPY count tables | Use `check_mypy_counts.py` to determine actual count; take lower if a fix was applied |
+
+### Phase 4: Resolve Complex Test File Conflicts
+
+When a test file has been heavily refactored across multiple commits, the conflict can produce **doubled class definitions**. The safe resolution pattern:
+
+```bash
+# 1. Save the main branch (correct) version
+git show origin/main:tests/unit/e2e/test_parallel_executor.py > /tmp/test_file_main.py
+
+# 2. Identify the small diffs the incoming commit actually intended
+git show <commit-sha> -- tests/unit/e2e/test_parallel_executor.py | head -80
+
+# 3. Apply main branch version as base
+cp /tmp/test_file_main.py tests/unit/e2e/test_parallel_executor.py
+
+# 4. Apply only the tiny non-duplicate changes (class renames, docstring additions)
+# -- do NOT re-apply large blocks that main already has
+```
+
+Signs you have doubled content (not a real conflict):
+- `grep "^class Test" <file>` shows two entries with the same name
+- File is ~2x longer than either parent version
+- The same test method appears twice
+
+### Phase 5: Verify and Continue
+
+```bash
+# After each conflict resolution
+git add <resolved-files>
+git rebase --continue
+
+# Final verification
+pixi run python -m pytest tests/unit/e2e/test_subtest_state_machine.py tests/unit/e2e/test_parallel_executor.py -v --no-cov
+pixi run python scripts/check_mypy_counts.py
+```
+
+### Phase 6: Push and Update PR
+
+```bash
+git push origin <branch> --force-with-lease
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Files Changed
+
+| File | Change |
+| ------ | -------- |
+| `CLAUDE.md` | Added "Partial-Failure Semantics" subsection to Evaluation Protocol |
+| `scylla/e2e/stages.py` | Updated module docstring: 16-stage count now documented as "15 explicit + 1 implicit" |
+| `tests/unit/e2e/test_subtest_state_machine.py` | Added `TestSubtestStateMachineUntilState` (5 tests) |
+| `MYPY_KNOWN_ISSUES.md` | Updated arg-type count in tests/ (13→14), scripts/ total (7→6 after fix) |
+
+### Key Semantic: `until_state` Stops BEFORE Executing
+
+All four state machines (Run, Experiment, Tier, Subtest) share this pattern:
+
+```python
+while not self.is_complete(...):
+    current = self.get_state(...)
+    if until_state is not None and current == until_state:
+        break  # BEFORE self.advance() — action for until_state is NOT executed
+    self.advance(...)
+```
+
+This means `--until agent_complete` leaves the run in `AGENT_COMPLETE` state with agent results saved but before diff capture. The run can resume from that exact point.
+
+### Partial-Failure Design
+
+`experiment_state=COMPLETE` does NOT mean all tiers succeeded. In parallel tier groups, a failed tier is logged as a warning and the experiment continues. Check `tier_states` in the checkpoint to determine per-tier outcome.
+
+### Rebase Strategy for Multi-Commit Branches
+
+When 5+ commits are being rebased and several conflict on the same test file:
+
+1. First conflict (commit N): use main branch as base + apply small diffs
+2. Subsequent conflicts (commit N+1): the file is now clean; the next conflict is usually cosmetic (renaming, docstring)
+3. If a conflict block is empty on HEAD side (`<<<<<<< HEAD` immediately followed by `=======`), the incoming content is simply missing — take the incoming block entirely
+
+---
