@@ -204,6 +204,19 @@ command infrastructure.
 5. PR will be validated by CI before merge
 6. `marketplace.json` auto-updates on merge
 
+## Dependencies
+
+`pixi.toml` is the **canonical** dependency specification for this project. All runtime and
+development dependencies are declared there, together with task definitions and a committed
+`pixi.lock` for reproducible environments.
+
+- Install everything: `pixi install`
+- Run tasks: `pixi run validate`, `pixi run test`, `pixi run check`
+
+There is no `requirements.txt`. CI workflows contain `if [ -f requirements.txt ]` guards for
+legacy compatibility, but the file is intentionally absent — `pixi` is the only supported
+dependency manager.
+
 ## References
 
 - [ProjectOdyssey](https://github.com/HomericIntelligence/ProjectOdyssey) - Training platform
