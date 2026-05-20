@@ -1,0 +1,556 @@
+<!-- markdownlint-disable MD024 -->
+# parallel-agent-swarm-dispatch-patterns — History
+
+## Superseded from tooling-myrmidon-swarm-prompt-guardrails-reduce-stall-rate
+
+```markdown
+---
+name: tooling-myrmidon-swarm-prompt-guardrails-reduce-stall-rate
+description: "Prompt-design guardrails that reduce Myrmidon swarm agent stall rate from 80% to 0% on multi-agent dispatches. Use when: (1) preparing to dispatch 5+ Opus agents in parallel via Task isolation=worktree, (2) prior swarm round had high stall rate (stream-idle / no-progress watchdog), (3) tasks touch architectural / cross-cutting / multi-file work, (4) deciding between full-fix and partial-fix scope for a single PR."
+category: tooling
+date: 2026-05-12
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: tooling-myrmidon-swarm-prompt-guardrails-reduce-stall-rate.history
+tags: [myrmidon, swarm, prompt-design, scope-guardrails, partial-fix, refs-not-closes, agent-dispatch, stall-prevention, precommit-stall, dont-run-precommit-locally]
+---
+
+# Skill: Myrmidon Swarm Prompt Guardrails to Reduce Stall Rate
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-06 |
+| **Objective** | Eliminate Myrmidon swarm agent stalls on architectural / cross-cutting GitHub issues by changing only the dispatch prompt, not the model or harness |
+| **Outcome** | Stall rate dropped from 4 of 5 (80%) on round 1 to 0 of 7 (0%) on round 2 in a single ProjectScylla session — same Opus model, same `Task isolation=worktree` dispatch, only the prompts changed |
+| **Verification** | verified-local — measured 2026-05-06 across two consecutive Myrmidon dispatch rounds in the ProjectScylla repo |
+
+## When to Use
+
+- You are about to dispatch 5+ Opus agents in parallel against GitHub issues via `Task isolation=worktree`
+- A prior swarm round had a high stall rate (stream-idle watchdog firing, agents giving up mid-plan)
+- The issues being dispatched touch architectural / cross-cutting / multi-file refactor work
+- You are deciding between a full-fix scope and a partial-fix scope for a single PR
+- You want to write a dispatch prompt that does NOT depend on the agent self-discovering repo policies (merge method, pre-commit skip flags, etc.)
+
+## Verified Workflow
+
+The seven guardrails below are listed in approximate order of impact. Apply ALL of them when dispatching against hard issues — they compose.
+
+### 1. `Refs #N` instead of `Closes #N` for partial fixes
+
+`Closes #N` puts psychological pressure on the agent to ship the entire issue. On a multi-file refactor (e.g. "decompose 4 files into modules"), this triggers analysis paralysis: the agent maps all 4 files, runs out of token budget, and stalls.
+
+`Refs #N` lets the agent ship a slice and move on. Combine with explicit "this is a partial fix; the rest is tracked in #M and #L" wording in the PR body.
+
+**Example:** ProjectScylla #1876 originally said "decompose 4 files." Round-2 prompt scoped it to "decompose ONE file (`loader.py`); the other three need their own follow-up PRs. Use `Refs #1876`, not `Closes`." Agent finished cleanly.
+
+### 2. Scope down to one file or one piece
+
+For cross-cutting work, pick one slice now and file the rest. The "one slice" framing avoids the wide-refactor stall mode where the agent gets stuck mapping the whole thing before writing any code.
+
+**Examples:**
+- #1887 ("structured logging + tracing") → "JSON logging foundation only; tracing is out of scope."
+- #1888 ("scaffold + wire call sites") → "scaffold only; do NOT touch existing call sites."
+
+### 3. Hard LOC budgets per agent
+
+State the cap explicitly: `Scope ≤ ~400 LOC of net change` or `≤ ~250 LOC including tests`. Agents that exceeded the budget on round 1 stalled while planning maximalist solutions; agents under the budget on round 2 finished in under 8 minutes.
+
+Round-2 budgets that worked: 250–600 LOC depending on the slice.
+
+### 4. Gated verification with explicit STOP path
+
+Build a Step 1 verification gate into the prompt, with an explicit STOP condition that does NOT open a PR.
+
+**Example (#1537):** "Step 1 must be: verify which entry points actually exist and which are true duplicates. If FEWER than 5 of 9 entry points exist OR fewer than 3 are true duplicates, STOP and comment on the issue without opening a PR." The agent verified 9 of 9 existed but found only 3 were true duplicates — and consolidated those 3 instead of forcing all 9. No stall.
+
+### 5. Explicit scope-out boundaries for foundation/scaffold PRs
+
+Write the *don'ts* into the prompt: `Do NOT modify production code in <area>`, `Do NOT touch existing call sites`, `Do NOT migrate any existing tests`. Without these, the agent expands scope mid-task and stalls when the expanded scope blows the LOC budget.
+
+### 6. Real-evidence requirement for documentation tasks
+
+For any "produce a doc / table / report" issue, require:
+- Real `path/to/file.py:LINE` citations for every claim
+- An explicit `TBD` marker for every numeric cell that lacks a citation
+
+This kills the stall mode where the agent invents data, doubts itself, and freezes mid-table.
+
+**Example (#1892):** Round-2 prompt produced 41 real code citations + 44 explicit `TBD` cells. No stall.
+
+### 7. PR protocol block, copy-paste ready, with the repo's actual merge method
+
+Embed a literal PR protocol block in the prompt so the agent does not rediscover repo policy:
+
+```text
+git push -u origin <N>-<slug>
+gh pr create --title "..." --body "...Refs #<N>."
+gh pr merge --auto --squash    # repo only allows squash, not rebase
+```
+
+Include the parenthetical "(Repo only allows squash auto-merge)" so the agent doesn't try `--rebase` first, fail, and waste tokens investigating.
+
+### 8. PRECOMMIT_STALL abort condition (added in v1.1.0)
+
+pre-commit hook environment installs can hang indefinitely on first-run of an isolated
+worktree (cold pixi/python env). The hang produces no progress output and is
+indistinguishable from a successful long-running hook. In the 2026-05-12 Argus #182
+attempt, an agent stalled >5 min waiting for `git commit` to complete pre-commit env
+install before the orchestrator killed it. Retry with explicit guardrail succeeded in
+<5 min.
+
+Every dispatch prompt for any agent that will run `git commit` MUST include:
+
+```text
+PRECOMMIT_STALL: If `git commit` or `pre-commit run` hangs >60s on hook env
+install (e.g. "Installing environment for ..." or "Initializing environment ..."
+with no further output), ABORT immediately. Do NOT wait. Skip local pre-commit
+and let CI validate:
+  SKIP=audit-doc-policy-violations,gitleaks,yamllint git commit -m "..."
+Or use `git commit --no-verify`. Report `PRECOMMIT_STALL` in your final summary.
+```
+
+### 9. Don't run pre-commit locally for low-risk wave changes (added in v1.1.0)
+
+For doc-only / config-only / single-line wave changes where CI will catch any regression,
+explicitly tell the agent NOT to run pre-commit locally. CI runs all hooks in a clean
+environment; local pre-commit on a cold worktree is high-stall risk for near-zero benefit.
+
+```text
+NOTE: Do NOT run `pre-commit run --all-files` locally for this change. The hooks
+will run in CI when you push. If you need a pre-commit check, run it only on the
+files you actually modified:
+  pre-commit run --files <specific-files>
+Skip the slow/unreliable hooks at the same time:
+  SKIP=audit-doc-policy-violations,gitleaks,yamllint pre-commit run --files <files>
+```
+
+This pattern was verified across 51 PRs in the 2026-05-12 ecosystem-wide easy-sweep:
+agents that ran `pre-commit run --all-files` had multi-minute stalls; agents that
+trusted CI had zero stalls.
+
+### Quick Reference
+
+Fill-in-the-blank prompt template — paste into a Task call with `subagent_type="general-purpose"` and `isolation=worktree`:
+
+```text
+You are an L4 implementation agent in the Myrmidon swarm. You are running
+in an isolated git worktree on branch `<N>-<slug>` based on `main`
+(HEAD `<sha>`). Implement <full|partial> GitHub issue #<N> in <repo>
+and open a single PR.
+
+## Your task — <one-sentence scope>
+
+<short context>
+
+## Hard constraints (READ FIRST)
+
+- Branch name: `<N>-<slug>`. Do not create any other branch.
+- Scope ≤ ~<LOC> LOC of net change.
+- Do NOT modify <area-out-of-scope>.
+- <Optional Step-1 STOP gate: if condition X is not met, STOP and comment on
+  the issue without opening a PR>
+- For low-risk wave changes: skip local pre-commit entirely; let CI validate. If you
+  do run pre-commit locally, run targeted-files only:
+    `SKIP=audit-doc-policy-violations,gitleaks,yamllint pre-commit run --files <changed-files>`
+- PRECOMMIT_STALL: if `git commit` / `pre-commit run` hangs >60s on env install,
+  ABORT, use `git commit --no-verify` (or SKIP=...), and report `PRECOMMIT_STALL`.
+- Use `Refs #<N>` (NOT `Closes #<N>`) since this is a partial fix.
+
+## PR protocol
+
+git push -u origin <N>-<slug>
+gh pr create --title "..." --body "...Refs #<N>."
+gh pr merge --auto --squash    # repo only allows squash, not rebase
+
+## Output (under 150 words)
+
+- <metric 1>
+- <metric 2>
+- PR URL
+
+The user does NOT see your tool calls — only this final summary.
+```
+
+## Failed Attempts (Round 1 Anti-Patterns)
+
+| # | What Was Tried | Why It Failed | Lesson Learned |
+|---|----------------|---------------|----------------|
+| 1 | Generic "implement #N" with full-issue scope | Agent gets lost in analysis when the issue spans 4 files / cross-cutting work | Scope to one slice; use `Refs` not `Closes` |
+| 2 | No LOC budget | Agent attempts a maximalist solution then stalls when it cannot fit it together | Hard LOC ceiling forces decomposition early |
+| 3 | `Closes #N` on a partial-fix scope | Agent feels obligated to do the whole issue → analysis paralysis | `Refs #N` + explicit "this is a partial fix" wording in PR body |
+| 4 | Telling the agent "auto-merge with `--rebase`" without checking repo policy | Repo only allows squash; agent's `gh pr merge --auto --rebase` errors out and the agent investigates instead of trying squash | Tell the agent the merge method up front (squash vs rebase) |
+| 5 | Letting the agent invent test cases / numbers / design rationale | Agent stalls when it cannot find supporting evidence in the codebase | Require real `file:line` citations for all docs; require an explicit test-name list |
+| 6 | Letting agents run `pre-commit run --all-files` on cold worktrees (Argus #182, 2026-05-12) | First-run pre-commit hook env install on a freshly-created isolated worktree (no cached pixi env) hangs for 5+ min with no progress output, indistinguishable from a hang. Argus #182 first attempt stalled >5 min and was killed. | Add PRECOMMIT_STALL abort condition (guardrail #8) and tell the agent NOT to run local pre-commit for low-risk wave changes (guardrail #9). Verified by Argus #182 retry: completed in <5 min. |
+
+## Results & Parameters
+
+### Measured comparison (single ProjectScylla session, 2026-05-06)
+
+| Metric | Round 1 (medium issues) | Round 2 (hard issues) |
+|---|---|---|
+| Agents dispatched | 5 | 7 |
+| Model | Opus, `isolation=worktree` | Opus, `isolation=worktree` |
+| Stall rate | 4 of 5 (80%) | 0 of 7 (0%) |
+| PRs delivered | 5 (4 via manual recovery) | 7 (all clean agent finish) |
+| Avg duration per finished agent | mixed (recovery-heavy) | 305–455s, all under 8 min |
+| Token budget per finished agent | unbounded | 60k–83k, mostly under 100k |
+
+### Parameters that worked on round 2
+
+- LOC budget: 250–600 per agent (varied by slice)
+- All seven guardrails applied to every dispatch prompt
+- All seven dispatches used `Refs #N`, not `Closes #N`, since each was a deliberate partial fix
+- One dispatch (#1537) used a Step-1 STOP gate; it triggered correctly (3 duplicates found instead of 9)
+
+### Known follow-on issue (out of scope here)
+
+Two of the 7 round-2 PRs (capacity planning + ADRs) needed a manual rebase post-merge due to a `docs/README.md` collision when both agents added entries to the same index file. That is a multi-agent docs/README collision pattern and belongs in its own skill — not addressed by these prompt guardrails.
+
+## Verified On
+
+| Project | Date | Context |
+| --------- | ------ | --------- |
+| ProjectScylla | 2026-05-06 | Initial 7-guardrail set; stall rate dropped 80% → 0% (5→7 agents, same Opus + worktree isolation) |
+| HomericIntelligence/{Argus,Agamemnon,Myrmidons,Hermes,Charybdis} | 2026-05-12 → 2026-05-13 | Ecosystem-wide easy-sweep, 65 wave agents across 3 waves, 51 PRs merged. Guardrails #8 (PRECOMMIT_STALL) and #9 (don't run pre-commit locally) added after Argus #182 first attempt stalled >5 min on cold-worktree pre-commit env install. Retry with both guardrails succeeded in <5 min. Zero stalls in waves 2 and 3 after guardrails were embedded in agent prompts. |
+```
+
+### Prior history of tooling-myrmidon-swarm-prompt-guardrails-reduce-stall-rate
+
+```markdown
+# tooling-myrmidon-swarm-prompt-guardrails-reduce-stall-rate — History
+
+## v1.1.0 (2026-05-12)
+
+**Changed by:** 2026-05-12 → 2026-05-13 ecosystem-wide easy-sweep session
+**Verification:** verified-local
+
+### What changed
+
+- Added 2 new guardrails: #8 PRECOMMIT_STALL abort condition, #9 Don't run pre-commit locally for low-risk wave changes.
+- Updated fill-in-the-blank prompt template.
+- Added Failed Attempts row #6 for Argus #182 cold-worktree stall.
+- Added Verified On section for 2026-05-12 ecosystem-wide easy-sweep.
+- Added 2 tags: `precommit-stall`, `dont-run-precommit-locally`.
+- Created this `.history` file. Bumped version 1.0.0 → 1.1.0.
+
+## v1.0.0 (2026-05-07)
+
+**Initial version** — created from ProjectScylla 2026-05-06 session. Documented 7 guardrails.
+```
+
+---
+
+## Superseded from parallel-subagent-explicit-file-ownership
+
+```markdown
+---
+name: parallel-subagent-explicit-file-ownership
+description: "Lead every parallel sub-agent prompt with an explicit '**The file you own is: <path>**' line BEFORE any background context. Use when: (1) dispatching >=2 sub-agents in a single message that produce related-but-distinct output files, (2) sub-agents collectively touch a shared file tree where misidentification would cause silent duplicate work, (3) you observe two parallel sub-agents producing PRs that amend the same file when one was supposed to create a new file, (4) /learn or similar workflows are dispatched in parallel across related skill topics."
+category: tooling
+date: 2026-05-13
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - sub-agent
+  - parallel-dispatch
+  - prompt-engineering
+  - file-ownership
+  - collision-avoidance
+  - orchestration
+  - learn-workflow
+---
+
+# Skill: Explicit File Ownership in Parallel Sub-Agent Prompts
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-13 |
+| **Objective** | Prevent parallel sub-agents from independently converging on the same target file by stating each agent's owned file as the FIRST line of its prompt, before any task description. |
+| **Outcome** | One of three parallel sub-agents whose prompt led with explicit filename ownership produced the intended unique PR (#1698). The two whose prompts buried the filename in a long task description collided on the same existing skill file, producing duplicate PRs #1696 and #1697 — #1697 had to be closed DIRTY. |
+| **Verification** | verified-ci — direct evidence from ProjectMnemosyne PR set #1696/#1697/#1698 (2026-05-13). |
+
+## When to Use
+
+- Launching >=2 parallel sub-agents in a single message
+- Sub-agents operate on related/overlapping topics (same skill family, same module, same file tree)
+- Any pattern where misidentification of the target file would cause silent duplicate work
+- `/learn` workflows dispatched in parallel across related skill topics
+- Mixed create/amend batches — one agent creates a new file, another amends a sibling file
+
+**Do NOT bother when:**
+
+- Only one sub-agent is being dispatched (no collision possible)
+- Sub-agents work on entirely unrelated repos or file trees
+- Sub-agents are pure-research (read-only, no file writes)
+
+## Verified Workflow
+
+### Quick Reference
+
+The fix is one line at the top of every parallel sub-agent's prompt:
+
+```text
+**The file you own is: `<exact-relative-path>`.** Do NOT touch any other file.
+```
+
+For amendments to existing files, be just as explicit:
+
+```text
+**The file you own is: `skills/existing-skill-name.md`.** AMEND it from v<old> to v<new>.
+Do NOT create a new skill file under a different name. Do NOT touch any other skill file.
+```
+
+Place this line in the first paragraph of the prompt — sub-agent attention is finite, and early
+instructions dominate the rest.
+
+### Detailed Steps
+
+1. Before launching parallel sub-agents, enumerate every file they will collectively touch. One file per agent.
+2. For each agent prompt, put the file-ownership line at the top (first paragraph, before background).
+3. If two agents could reasonably read the instructions as pointing to the same file, the instructions are ambiguous — fix them, don't hope.
+4. After sub-agents complete, verify each produced its intended PR by checking that the PR's file list matches the assigned ownership.
+
+### Template
+
+```text
+[First paragraph]
+**The file you own is: `<exact-path>`.** [If amending:] AMEND it from v<old> to v<new>.
+Do NOT touch any other file [list any files you specifically must avoid].
+
+[Then: full task description, background, context]
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --- | --- | --- | --- |
+| Detailed-but-unprefixed prompts | Three parallel `/learn` sub-agents got long prompts describing each distinct skill topic, but no leading filename | Two of the three independently amended the same existing skill instead of one creating a new file. PRs #1696 and #1697 collided; #1697 closed DIRTY. | Lead with the filename, not the topic. |
+| Trust sub-agent context inference | Assumed each agent would pick the right file from the surrounding context | Sub-agents read prompts top-down; the "create new skill" intent was buried hundreds of words in | Move ownership statements to the FIRST paragraph. |
+| Rely on `/learn`'s "search existing skills first" step | Both colliding sub-agents ran the search step, found the existing skill, and independently concluded "amend it" | Two parallel agents will independently converge on the same "amend X" conclusion if their prompts both touch X. | The dispatcher must commit each sub-agent to a unique target file BEFORE the search step runs. |
+| Switch to sequential dispatch as the "safe" alternative | Proposed as a way to avoid collisions without prompt changes | Wastes wall-clock time; parallel dispatch is fine with explicit ownership | Don't sacrifice parallelism to compensate for vague prompts. Fix the prompts. |
+
+## Results & Parameters
+
+Reference incident: ProjectMnemosyne PRs #1696, #1697, #1698 on 2026-05-13.
+
+## Verified On
+
+| Project | Context | Details |
+| ------- | ------- | ------- |
+| ProjectMnemosyne | 2026-05-13 parallel `/learn` dispatch from ProjectOdyssey session | PRs #1696/#1697 (collision) vs PR #1698 (success). |
+```
+
+---
+
+## Superseded from tooling-sub-agent-pr-trust-but-verify
+
+```markdown
+---
+name: tooling-sub-agent-pr-trust-but-verify
+description: "Verify sub-agent PR reports against the GitHub API before assuming success. Use when: (1) a sub-agent reports a PR was opened/merged/auto-armed, (2) you need to confirm scope and merge state of an opaque-to-you sub-agent run, (3) a sub-agent reports 'rebased and pushed' but you suspect content corruption, (4) a sub-agent reports any artifact-producing work, (5) the sub-agent runs in a low-token-budget context (e.g., 24k–31k transcript), (6) a sub-agent goes silent or times out without returning a final message, (7) a sub-agent writes a structured artifact (JSON, YAML, TOML)."
+category: tooling
+date: 2026-05-19
+version: "1.4.0"
+history: tooling-sub-agent-pr-trust-but-verify.history
+user-invocable: false
+verification: verified-local
+tags:
+  - sub-agent
+  - pr-merge
+  - gh-cli
+  - verification
+  - mergeable
+  - trust-but-verify
+  - orchestration
+---
+
+[Full body as read from skills/tooling-sub-agent-pr-trust-but-verify.md — see git history]
+```
+
+### Prior history of tooling-sub-agent-pr-trust-but-verify
+
+```markdown
+# tooling-sub-agent-pr-trust-but-verify — History
+
+## v1.4.0 (2026-05-19) — Added structured artifact JSON validation trigger and trailing-comma failure row.
+## v1.3.0 (2026-05-18) — Added silent-success pattern; pre-dispatch branch check before re-dispatch.
+## v1.2.0 (2026-05-18) — Added non-PR artifact verification section; three confabulation failure shapes.
+## v1.1.0 (2026-05-07) — Added commit-content corruption detection (Haiku rebase agent / PR #452).
+## v1.0.0 — Initial: GitHub API state verification for PR merge/auto-merge claims.
+```
+
+---
+
+## Superseded from tooling-swarm-subagent-needs-write-tools
+
+```markdown
+---
+name: tooling-swarm-subagent-needs-write-tools
+description: "For any swarm sub-agent that must commit/push/edit/create-PR OR write any output file (JSON/MD/log), set subagent_type=general-purpose. feature-dev:code-architect / code-explorer / code-reviewer / Explore / Plan are read-only by design — they produce blueprints, not artifacts. Failure mode is silent OR HALLUCINATED."
+category: tooling
+date: 2026-05-18
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - sub-agent
+  - swarm
+  - subagent-type
+  - tool-availability
+  - dispatch
+  - myrmidon
+  - implementation-vs-design
+  - hallucinated-success
+  - artifact-verification
+  - explore-agent
+---
+
+[Full body as read from skills/tooling-swarm-subagent-needs-write-tools.md — see git history]
+```
+
+### Prior history of tooling-swarm-subagent-needs-write-tools
+
+```markdown
+# tooling-swarm-subagent-needs-write-tools — History
+
+## v1.1.0 (2026-05-18) — Added Explore-agent hallucinated-success failure mode; made artifact verification mandatory; added ProjectMnemosyne 2026-05-18 verification row.
+## v1.0.0 (2026-05-16) — Initial: misdispatch of feature-dev:code-architect for MEDIUM C++ implementation; re-dispatch with general-purpose fixed (PRs #387-#390).
+```
+
+---
+
+## Superseded from tooling-direct-agent-fanout-with-shared-brief
+
+```markdown
+---
+name: tooling-direct-agent-fanout-with-shared-brief
+description: "Dispatch N parallel Agent calls for repetitive multi-repo work by writing a single shared classification/instruction brief to ~/.tmp/<topic>.md, then giving each agent a short pointer-prompt with only the per-repo details. Use when: (1) you've already done the planning yourself and want to skip the orchestrator skill's Phase-1 re-plan, (2) the same procedure applies across many repos with minor per-repo variations, (3) you want each agent's context window to stay small."
+category: tooling
+date: 2026-05-10
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - agent-orchestration
+  - parallel-dispatch
+  - shared-brief
+  - multi-repo
+  - myrmidon-alternative
+  - context-management
+  - fan-out
+---
+
+[Full body as read from skills/tooling-direct-agent-fanout-with-shared-brief.md — see git history]
+```
+
+---
+
+## Superseded from haiku-not-for-analysis
+
+```markdown
+---
+name: haiku-not-for-analysis
+description: "Never dispatch Haiku for analysis, triage, classification, or any judgment-required work — Haiku silently produces high-confidence false positives that look correct on the surface. Use when: (1) about to choose model: haiku for a sub-agent, (2) Sonnet/Opus quota is exhausted and you are tempted to substitute Haiku, (3) writing prompts for issue triage / ALREADY-DONE detection / scope classification / repo audits, (4) routing phases of an automation pipeline to model tiers."
+category: tooling
+date: 2026-05-07
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags:
+  - agent-dispatch
+  - model-tier
+  - haiku
+  - sonnet
+  - opus
+  - triage
+  - classification
+  - analysis
+  - false-positive
+  - already-done
+  - quota-exhaustion
+---
+
+[Full body as read from skills/haiku-not-for-analysis.md — see git history]
+```
+
+---
+
+## Superseded from hephaestus-learn-sub-agent-must-execute
+
+```markdown
+---
+name: hephaestus-learn-sub-agent-must-execute
+description: "Dispatching /hephaestus:learn sub-agents reliably: prompts must say EXECUTE not plan, and the caller must check `gh pr list --head skill/<name>` before re-dispatching to avoid duplicate work."
+category: tooling
+date: 2026-05-11
+version: "1.0.0"
+verification: verified-ci
+user-invocable: false
+tags: []
+---
+
+[Full body as read from skills/hephaestus-learn-sub-agent-must-execute.md — see git history]
+```
+
+---
+
+## Superseded from tooling-bundle-wave-issues-sharing-hot-file
+
+```markdown
+---
+name: tooling-bundle-wave-issues-sharing-hot-file
+description: "When N swarm-wave issues all target the same file, bundle them into ONE sub-agent that produces N atomic commits in one PR — do NOT dispatch N parallel agents with 'serialize via rebase'."
+category: tooling
+date: 2026-05-16
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - swarm
+  - wave-planning
+  - bundle-pr
+  - hot-file
+  - atomic-commits
+  - bisectability
+  - rebase-avoidance
+  - myrmidon
+---
+
+[Full body as read from skills/tooling-bundle-wave-issues-sharing-hot-file.md — see git history]
+```
+
+---
+
+## Superseded from stop-reassess-gate-bulk-transformation
+
+```markdown
+---
+name: stop-reassess-gate-bulk-transformation
+description: "Insert an explicit stop-and-reassess gate between a 'bulk transformation' phase and an 'implementation' phase so survivor tasks can be re-graded against the new post-transformation state."
+category: tooling
+date: 2026-05-18
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+history: stop-reassess-gate-bulk-transformation.history
+tags: [planning, stop-gate, re-grade, survivor-queue, phase-boundary, bulk-transformation, implementation-phase, swarm-dispatch, multi-wave, skill-merge, post-deletion]
+---
+
+[Full body as read from skills/stop-reassess-gate-bulk-transformation.md — see git history]
+```
+
+### Prior history of stop-reassess-gate-bulk-transformation
+
+```markdown
+# stop-reassess-gate-bulk-transformation — History
+
+## v1.1.0 (2026-05-18) — Added multi-wave variant; post-deletion re-grade recipe; 25% threshold heuristic; second Verified On row (ProjectMnemosyne 2026-05-18 consolidation).
+## v1.0.0 (2026-05-17) — Initial: Myrmidons charter-cleanup session; TLS env-var doc issues identified as MOOT-NOW after charter cleanup PRs landed.
+```
