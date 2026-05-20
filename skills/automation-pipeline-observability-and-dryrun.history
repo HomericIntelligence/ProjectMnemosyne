@@ -1,0 +1,1275 @@
+
+## Superseded from automation-implementer-dryrun-guard
+
+---
+name: automation-implementer-dryrun-guard
+description: "Guard against dry-run mode leaking into post-implementation steps (PR creation, learn, follow-up). Use when: (1) adding --dry-run to an automation implementer that has distinct Claude-code and PR-creation phases, (2) debugging 'No commits between main and branch' errors in dry-run mode, (3) designing any multi-phase CLI tool where --dry-run should exit early after the simulated phase."
+category: debugging
+date: 2026-04-12
+version: "1.0.0"
+user-invocable: false
+verification: verified-local
+tags: [dry-run, implementer, automation, hephaestus, worktree, pr-creation, early-return]
+---
+
+# Automation Implementer Dry-Run Guard
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-12 |
+| **Objective** | Prevent `--dry-run` mode from leaking past the Claude-code invocation step into worktree PR creation, `/learn`, and follow-up issue filing in `hephaestus.automation.implementer` |
+| **Outcome** | SUCCESS — early-return guard added after `_run_claude_code()` in dry-run mode; all 596 tests pass; PR #271 created |
+| **Verification** | verified-local — 596 tests pass locally; CI for PR #271 pending |
+
+## When to Use
+
+- Adding `--dry-run` to any multi-phase automation tool where one phase runs code and the next phase creates side effects (PRs, issues, commits)
+- Debugging "No commits between main and `<branch>`" or "Nothing to merge" errors that only appear in dry-run mode
+- Designing the implementer pattern: Claude-code phase → PR-creation phase — dry-run should skip everything after Claude-code returns
+- Reviewing any implementation of `--dry-run` that short-circuits only one internal method but not the full pipeline
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# After the simulated phase sets session_id, add an early return guard:
+session_id = self._run_claude_code(...)   # returns None in dry-run
+with self.state_lock:
+    state.session_id = session_id
+self._save_state(state)
+
+# CRITICAL: exit the worker before any post-implementation side effects
+if self.options.dry_run:
+    self._log("info", f"[DRY RUN] Skipping PR creation, learn, follow-up for #{issue_number}", thread_id)
+    return WorkerResult(
+        issue_number=issue_number,
+        success=True,
+        branch_name=branch_name,
+        worktree_path=str(worktree_path),
+    )
+
+# Only reached in non-dry-run mode:
+self._ensure_pr_created(...)
+self._run_learn(...)
+self._file_follow_up_issues(...)
+```
+
+### Detailed Steps
+
+1. **Identify the dry-run short-circuit point** — Locate where `_run_claude_code()` (or equivalent) returns `None` in dry-run mode. This is typically where the real work is simulated.
+
+2. **Save state before the guard** — Any state that should persist even in dry-run (e.g., `session_id`) must be saved before the early return, so the checkpoint reflects the dry-run attempt.
+
+3. **Add an explicit early return** — Immediately after saving state, check `self.options.dry_run` and return a success `WorkerResult`. Do not rely on downstream methods to check the flag; they may not all be guarded.
+
+4. **Log clearly** — Log a `[DRY RUN]` message listing exactly what was skipped. This makes dry-run behavior auditable without reading code.
+
+5. **Return a proper result object** — Return a `WorkerResult(success=True, ...)` so the caller's aggregation logic counts the dry-run as a "processed" issue without treating it as a failure.
+
+6. **Verify no side effects in dry-run** — After applying the guard, run with `--dry-run` and confirm:
+   - No worktree is left behind (or worktree is cleaned up by the guard's finally block)
+   - No PR is created
+   - No follow-up issues are filed
+   - No `/learn` skill is committed
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Short-circuit only `_run_claude_code()` | Returned `None` from `_run_claude_code()` when `dry_run=True` | Execution continued to `_ensure_pr_created()` which called `gh pr create` on an empty branch, producing "No commits between main and `<branch>`" errors | A single method guard is not enough; the entire post-simulation pipeline must be skipped via an early return at the worker level |
+| Check `dry_run` inside `_ensure_pr_created()` | Added `if self.options.dry_run: return` inside PR creation | Worked for PR creation but still ran `_run_learn()` and `_file_follow_up_issues()`, creating noise in skill files and issue trackers during testing | Each downstream method would need its own guard — brittle. One early return at the worker level is cleaner and more robust |
+| Trust that empty `session_id` would prevent PR creation | Assumed that `session_id = None` from `_run_claude_code()` would be checked before `_ensure_pr_created()` | `_ensure_pr_created()` did not check `session_id` before attempting PR creation | Never rely on implicit sentinel values flowing through to downstream steps; use explicit control flow |
+
+## Results & Parameters
+
+### Bug Signature
+
+```
+# Symptom in dry-run mode (before fix)
+ERROR: No commits between main and feat/issue-42-some-title
+gh: GraphQL error: No commits between main and feat/issue-42-some-title
+```
+
+### Fix Location
+
+`hephaestus/automation/implementer.py` — `_process_issue()` worker method, immediately after `_run_claude_code()` call and state save:
+
+```python
+# In dry-run mode, skip all post-implementation steps
+if self.options.dry_run:
+    self._log(
+        "info",
+        f"[DRY RUN] Skipping PR creation, learn, follow-up for #{issue_number}",
+        thread_id,
+    )
+    return WorkerResult(
+        issue_number=issue_number,
+        success=True,
+        branch_name=branch_name,
+        worktree_path=str(worktree_path),
+    )
+```
+
+### Dry-Run Phases (After Fix)
+
+| Phase | Dry-Run Behavior | Non-Dry-Run Behavior |
+| ------- | ----------------- | ---------------------- |
+| `_run_claude_code()` | Returns `None` immediately | Runs Claude Code session |
+| State save | Saves `session_id=None` to checkpoint | Saves real `session_id` |
+| Early return guard | Returns `WorkerResult(success=True)` | Continues to next phase |
+| `_ensure_pr_created()` | SKIPPED | Creates/updates PR |
+| `_run_learn()` | SKIPPED | Commits skill to ProjectMnemosyne |
+| `_file_follow_up_issues()` | SKIPPED | Files follow-up GitHub issues |
+
+### Generalizable Pattern for Multi-Phase CLIs
+
+Any tool with a "simulate" phase followed by "side-effect" phases should use this pattern:
+
+```python
+result = self._run_simulation_phase(...)
+self._persist_state(result)
+
+if self.options.dry_run:
+    self._log("info", "[DRY RUN] Skipping side effects")
+    return SuccessResult(...)  # No PR, no commits, no issues
+
+# Side-effect phases only reached in real mode:
+self._create_pr(...)
+self._notify(...)
+self._file_issues(...)
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | PR #271 — automation module porting + dry-run loop testing | 596 tests pass; dry-run across 14 repos confirmed no PRs created |
+
+## Superseded from improve-automation-error-visibility
+
+---
+name: improve-automation-error-visibility
+description: Improve error visibility in curses UI automation scripts and add granular
+  status updates
+category: debugging
+date: 2026-02-14
+version: 1.0.0
+user-invocable: false
+---
+# Improve Automation Error Visibility
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-02-14 |
+| **Project** | ProjectScylla |
+| **Issue** | #632 |
+| **PR** | #633 |
+| **Objective** | Make errors visible in curses UI and add granular status updates to automation scripts |
+| **Outcome** | ✅ Success - All 211 tests passing, errors now visible in UI, 12+ granular status updates |
+
+## When to Use
+
+Use this skill when:
+- **Error blindness**: Logger errors/warnings don't appear in curses UI "Recent Activity"
+- **Coarse status updates**: UI shows only high-level phases (e.g., "Implementing") but users can't see sub-steps
+- **Silent failures**: Worker slots go from active directly to "[idle]" with no failure indication
+- **Missing context propagation**: Sub-methods can't update UI status because they lack slot_id/thread_id
+- **Timeout issues**: CLI commands hang indefinitely without timeout protection
+- **Incomplete exception handling**: Some exception types escape error handlers
+
+**Key Indicators**:
+- Zero visibility of `logger.error()` or `logger.warning()` in UI
+- Users asking "what's happening?" during long operations
+- Failed workers disappear without trace
+- Exceptions escape and crash the whole script
+
+## Verified Workflow
+
+### 1. Add Dual-Logging Helper
+
+Create a helper method that routes to both standard logger AND UI log manager:
+
+```python
+def _log(self, level: str, msg: str, thread_id: int | None = None) -> None:
+    """Log to both standard logger and UI thread buffer."""
+    getattr(logger, level)(msg)
+    tid = thread_id or threading.get_ident()
+    prefix = {"error": "ERROR", "warning": "WARN", "info": ""}.get(level, "")
+    ui_msg = f"{prefix}: {msg}" if prefix else msg
+    self.log_manager.log(tid, ui_msg)
+```
+
+**Use throughout code**:
+```python
+# Replace direct logger calls
+self._log("error", f"Failed to implement issue #{issue_number}: {e}", thread_id)
+self._log("warning", f"Retrospective failed: {e}", thread_id)
+self._log("info", f"Issue #{issue_number} completed", thread_id)
+```
+
+### 2. Propagate Context IDs Through Method Chains
+
+Add `slot_id` parameter to all sub-methods that need to update UI:
+
+```python
+# Parent method
+def _implement_issue(self, issue_number: int) -> WorkerResult:
+    slot_id = self.status_tracker.acquire_slot()
+    thread_id = threading.get_ident()
+
+    # Pass context to sub-methods
+    self._run_claude_code(issue_number, worktree_path, prompt, slot_id=slot_id)
+    self._ensure_pr_created(issue_number, branch_name, worktree_path, slot_id)
+    self._run_retrospective(session_id, worktree_path, issue_number, slot_id)
+    self._run_follow_up_issues(session_id, worktree_path, issue_number, slot_id)
+
+# Sub-method signatures
+def _run_claude_code(
+    self, issue_number: int, worktree_path: Path, prompt: str, slot_id: int | None = None
+) -> str | None:
+    if slot_id is not None:
+        self.status_tracker.update_slot(slot_id, f"#{issue_number}: Running Claude Code")
+```
+
+### 3. Add Granular Status Updates
+
+Replace coarse 5-phase updates with 12+ granular sub-steps:
+
+```python
+# Worktree setup
+self.status_tracker.update_slot(slot_id, f"#{issue_number}: Creating worktree")
+
+# Plan phase (use ImplementationPhase.PLANNING)
+self.status_tracker.update_slot(slot_id, f"#{issue_number}: Checking plan")
+if not has_plan:
+    state.phase = ImplementationPhase.PLANNING
+    self.status_tracker.update_slot(slot_id, f"#{issue_number}: Generating plan")
+
+# Fetch context
+self.status_tracker.update_slot(slot_id, f"#{issue_number}: Fetching issue")
+
+# Implementation (use ImplementationPhase.IMPLEMENTING)
+state.phase = ImplementationPhase.IMPLEMENTING
+self.status_tracker.update_slot(slot_id, f"#{issue_number}: Running Claude Code")
+
+# PR creation (use ImplementationPhase.CREATING_PR)
+state.phase = ImplementationPhase.CREATING_PR
+self.status_tracker.update_slot(slot_id, f"#{issue_number}: Checking commit")
+self.status_tracker.update_slot(slot_id, f"#{issue_number}: Pushing branch")
+self.status_tracker.update_slot(slot_id, f"#{issue_number}: Creating PR")
+
+# Retrospective (use ImplementationPhase.RETROSPECTIVE)
+state.phase = ImplementationPhase.RETROSPECTIVE
+self.status_tracker.update_slot(slot_id, f"#{issue_number}: Running retrospective")
+
+# Follow-up (use ImplementationPhase.FOLLOW_UP_ISSUES)
+state.phase = ImplementationPhase.FOLLOW_UP_ISSUES
+self.status_tracker.update_slot(slot_id, f"#{issue_number}: Identifying follow-ups")
+for i, item in enumerate(items, 1):
+    self.status_tracker.update_slot(slot_id, f"#{issue_number}: Creating follow-up {i}/{len(items)}")
+```
+
+### 4. Classify Exceptions with Contextual Error Messages
+
+Replace generic `except Exception` with classified handling:
+
+```python
+try:
+    # Implementation logic
+    pass
+
+except subprocess.TimeoutExpired as e:
+    error_msg = f"Timeout: {' '.join(e.cmd[:3])} exceeded {e.timeout}s"
+    self._log("error", error_msg, thread_id)
+    # Show in UI, save state, return failed result
+
+except subprocess.CalledProcessError as e:
+    error_msg = f"Command failed (exit {e.returncode}): {' '.join(e.cmd[:3])}"
+    self._log("error", error_msg, thread_id)
+    if e.stderr:
+        self._log("error", f"stderr: {e.stderr[:300]}", thread_id)
+    # Show in UI, save state, return failed result
+
+except RuntimeError as e:
+    self._log("error", f"Runtime error: {e}", thread_id)
+    # Show in UI, save state, return failed result
+
+except Exception as e:
+    self._log("error", f"Unexpected {type(e).__name__}: {e}", thread_id)
+    # Show in UI, save state, return failed result
+```
+
+### 5. Show Failure in UI Before Releasing Slot
+
+Make failures visible by updating slot status before release:
+
+```python
+except Exception as e:
+    error_msg = str(e)[:80]
+    self._log("error", f"Failed: {e}", thread_id)
+
+    # Show failure in UI BEFORE releasing
+    self.status_tracker.update_slot(slot_id, f"#{issue_number}: FAILED - {error_msg[:50]}")
+
+    # Save failure state
+    state.phase = ImplementationPhase.FAILED
+    state.error = str(e)
+    self._save_state(state)
+
+    return WorkerResult(issue_number=issue_number, success=False, error=str(e))
+
+finally:
+    # Brief pause so user sees failure status
+    time.sleep(1)
+    self.status_tracker.release_slot(slot_id)
+```
+
+### 6. Add Timeout Protection to CLI Calls
+
+Prevent hanging by adding timeouts to all subprocess calls:
+
+```python
+# For gh CLI wrapper
+result = run(
+    ["gh"] + args,
+    check=check,
+    capture_output=True,
+    timeout=120,  # 2 minute timeout
+)
+
+# For Claude Code
+result = run(
+    ["claude", str(prompt_file), ...],
+    cwd=worktree_path,
+    timeout=1800,  # 30 minute timeout
+)
+```
+
+### 7. Broaden Exception Handling for Non-Critical Paths
+
+For auto-merge and other optional features, catch all exceptions:
+
+```python
+# Before: Only caught CalledProcessError
+if auto_merge:
+    try:
+        _gh_call(["pr", "merge", str(pr_number), "--auto", "--rebase"])
+    except subprocess.CalledProcessError as e:
+        logger.warning(f"Failed to enable auto-merge: {e}")
+
+# After: Catch all exceptions (RuntimeError from rate limit, etc.)
+if auto_merge:
+    try:
+        _gh_call(["pr", "merge", str(pr_number), "--auto", "--rebase"])
+    except Exception as e:
+        logger.warning(f"Failed to enable auto-merge: {e}")
+```
+
+### 8. Comprehensive Test Coverage
+
+Add tests for all new behaviors:
+
+```python
+# Test _log() helper routes to both logger and UI
+def test_log_helper_routes_to_ui(implementer):
+    with patch("module.logger") as mock_logger, \
+         patch.object(implementer.log_manager, "log") as mock_log_manager:
+        implementer._log("error", "Test error")
+        mock_logger.error.assert_called_once_with("Test error")
+        mock_log_manager.assert_called_once()
+        assert "ERROR:" in str(mock_log_manager.call_args)
+
+# Test failure shows in status slot
+def test_failure_shows_in_status_slot(implementer):
+    with patch.object(implementer.status_tracker, "update_slot") as mock_update:
+        # Trigger failure
+        result = implementer._implement_issue(123)
+        # Verify "FAILED" appeared in status updates
+        assert any("FAILED" in str(call) for call in mock_update.call_args_list)
+
+# Test exception classification
+def test_exception_classification_timeout(implementer):
+    with patch.object(implementer, "_log") as mock_log:
+        # Trigger TimeoutExpired
+        result = implementer._implement_issue(123)
+        # Verify "Timeout" appears in log calls
+        assert any("Timeout" in str(call) for call in mock_log.call_args_list)
+
+# Test granular status updates
+def test_granular_status_updates(implementer):
+    with patch.object(implementer.status_tracker, "update_slot") as mock_update:
+        result = implementer._implement_issue(123)
+        messages = [str(call) for call in mock_update.call_args_list]
+        # Check for 12+ distinct status messages
+        assert len(messages) >= 12
+        assert any("Creating worktree" in msg for msg in messages)
+        assert any("Running Claude Code" in msg for msg in messages)
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Final Configuration
+
+```python
+# Timeout values
+GH_CLI_TIMEOUT = 120      # 2 minutes for gh commands
+CLAUDE_TIMEOUT = 1800     # 30 minutes for Claude Code
+RETROSPECTIVE_TIMEOUT = 600  # 10 minutes for retrospective
+
+# UI display
+FAILURE_PAUSE = 1         # Seconds to show failure before releasing slot
+ERROR_TRUNCATE = 50       # Characters for error display in status slot
+STDERR_TRUNCATE = 300     # Characters for stderr in logs
+
+# Log prefixes
+LOG_PREFIXES = {
+    "error": "ERROR",
+    "warning": "WARN",
+    "info": ""
+}
+```
+
+### Test Results
+
+```bash
+# All automation tests pass
+$ pixi run python -m pytest tests/unit/automation/ -v
+============================= test session starts ==============================
+...
+============================== 211 passed in 14.11s =============================
+
+# Pre-commit hooks pass
+$ pre-commit run --all-files
+Check for shell=True (Security)..........................................Passed
+Ruff Format Python.......................................................Passed
+Ruff Check Python........................................................Passed
+...
+```
+
+### Status Update Progression
+
+**Before (5 updates)**:
+1. "Issue #123: Starting"
+2. "Issue #123: Implementing"
+3. "Issue #123: Verifying"
+4. "Issue #123: Retrospective"
+5. "Issue #123: Follow-up issues"
+
+**After (12+ updates)**:
+1. "#123: Creating worktree"
+2. "#123: Checking plan"
+3. "#123: Generating plan" (conditional)
+4. "#123: Fetching issue"
+5. "#123: Running Claude Code"
+6. "#123: Checking commit"
+7. "#123: Pushing branch"
+8. "#123: Creating PR"
+9. "#123: Running retrospective"
+10. "#123: Identifying follow-ups"
+11. "#123: Creating follow-up 1/N"
+12. "#123: Creating follow-up N/N"
+
+### Error Visibility Comparison
+
+**Before**:
+- UI "Recent Activity": 3 info messages only
+- Logger output: ~40 error/warning messages (invisible to UI)
+- Failed worker: Disappears silently to "[idle]"
+
+**After**:
+- UI "Recent Activity": All errors and warnings visible with prefixes
+- Logger output: Same ~40 messages (still in logs)
+- Failed worker: Shows "FAILED - {error}" for 1 second before "[idle]"
+
+## Key Learnings
+
+1. **Dual-logging pattern is powerful**: Route critical messages to both structured logging AND user-visible UI
+2. **Context propagation is essential**: Pass `slot_id`/`thread_id` through call chains for observability
+3. **Classify exceptions by type**: Different exception types need different error messages and handling
+4. **Show failures before cleanup**: Always display error state before releasing resources
+5. **Timeout everything**: Any external process call should have a timeout
+6. **Test the observability**: Error visibility needs explicit test coverage
+7. **Keep it simple**: Helper methods > separate modules for simple cross-cutting concerns
+
+## Related Skills
+
+- `parallel-worktree-workflow` - Worker pool pattern used in implementer
+- `checkpoint-recovery` - State persistence and resume capability
+- `investigate-test-failures` - Testing patterns and coverage strategies
+- `python-subprocess-terminal-corruption` - Subprocess handling best practices
+
+## References
+
+- Issue: https://github.com/HomericIntelligence/ProjectScylla/issues/632
+- PR: https://github.com/HomericIntelligence/ProjectScylla/pull/633
+- Files modified:
+  - `scylla/automation/implementer.py`
+  - `scylla/automation/github_api.py`
+  - `tests/unit/automation/test_implementer.py`
+  - `tests/unit/automation/test_github_api_errors.py` (new)
+
+## Superseded from persist-automation-logs
+
+---
+name: persist-automation-logs
+description: 'Persist execution logs (Claude Code, retrospective, follow-up) to disk
+  for post-mortem analysis after worktrees are cleaned up. Use when: automation fails
+  silently, curses UI hides subprocess output, non-blocking phases fail without trace,
+  or you need to debug after cleanup.'
+category: debugging
+date: 2026-02-14
+version: 1.0.0
+user-invocable: false
+---
+# Persist Automation Logs for Post-Mortem Analysis
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-02-14 |
+| **Project** | ProjectScylla |
+| **Issue** | #602 |
+| **PR** | TBD |
+| **Objective** | Persist execution logs (Claude Code output, retrospective, follow-up) to disk even after worktrees are cleaned up |
+| **Outcome** | ✅ Success - All 30 tests passing, logs persisted to `.issue_implementer/` directory |
+
+## When to Use
+
+Use this skill when:
+- **Silent failures after cleanup**: Automation script fails, worktrees are cleaned up, and there's no way to debug what happened
+- **Curses UI hides output**: When using curses UI, Claude Code stdout/stderr is invisible until the process completes
+- **Non-blocking phases fail**: Retrospective or follow-up phases fail silently (logged to stderr but not persisted)
+- **Need post-mortem analysis**: You need to analyze what happened after the script has exited and cleaned up all temporary state
+
+**Key Indicators**:
+- Logger warnings like `"Retrospective failed for issue #123: {error}"` but no way to see the actual error details
+- Worktree cleanup (`worktree_manager.cleanup_all()`) destroys all evidence of what went wrong
+- No log files exist in `.issue_implementer/` except state JSON files
+
+**Related Skills**:
+- `improve-automation-error-visibility`: Complements this by making errors visible in curses UI *during* execution
+- This skill focuses on *persisting* logs for *after* execution completes
+
+## Verified Workflow
+
+### 1. Add File Logging to Main Script
+
+Add a `FileHandler` to the Python logger to capture all stderr/stdout to a file:
+
+**File**: `scripts/implement_issues.py`
+
+```python
+from pathlib import Path
+
+def setup_logging(verbose: bool = False, log_dir: Path | None = None) -> None:
+    """Configure logging.
+
+    Args:
+        verbose: Enable verbose (DEBUG) logging
+        log_dir: Optional directory to write log files
+    """
+    level = logging.DEBUG if verbose else logging.INFO
+    fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    datefmt = "%Y-%m-%d %H:%M:%S"
+    logging.basicConfig(level=level, format=fmt, datefmt=datefmt)
+
+    # Add file handler if log_dir provided
+    if log_dir:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        fh = logging.FileHandler(log_dir / "run.log", mode="a")
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(logging.Formatter(fmt, datefmt=datefmt))
+        logging.getLogger().addHandler(fh)
+
+def main() -> int:
+    args = parse_args()
+
+    # Set up logging with file handler
+    from scylla.automation.git_utils import get_repo_root
+    state_dir = get_repo_root() / ".issue_implementer"
+    setup_logging(args.verbose, log_dir=state_dir)
+    # ... rest of main
+```
+
+**Result**: All `logger.info()`, `logger.warning()`, `logger.error()` calls are written to `.issue_implementer/run.log`
+
+### 2. Save Claude Code Output on Success AND Failure
+
+**File**: `scylla/automation/implementer.py`, method `_run_claude_code()`
+
+Add `state_dir.mkdir()` at the start to ensure directory exists:
+
+```python
+def _run_claude_code(self, issue_number: int, worktree_path: Path, prompt: str) -> str | None:
+    if self.options.dry_run:
+        return None
+
+    self.state_dir.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
+
+    # ... write prompt and run Claude
+```
+
+**On success** (after parsing JSON):
+
+```python
+try:
+    data = json.loads(result.stdout)
+    session_id = data.get("session_id")
+
+    # Save successful output to log file
+    log_file = self.state_dir / f"claude-{issue_number}.log"
+    log_file.write_text(result.stdout or "")
+
+    return session_id
+except (json.JSONDecodeError, AttributeError):
+    logger.warning(f"Could not parse session_id for issue #{issue_number}")
+
+    # Save output even if JSON parsing failed
+    log_file = self.state_dir / f"claude-{issue_number}.log"
+    log_file.write_text(result.stdout or "")
+
+    return None
+```
+
+**On CalledProcessError**:
+
+```python
+except subprocess.CalledProcessError as e:
+    logger.error(f"Claude Code failed for issue #{issue_number}")
+    logger.error(f"Exit code: {e.returncode}")
+
+    # Save failure output to log file
+    log_file = self.state_dir / f"claude-{issue_number}.log"
+    stdout = e.stdout or ""
+    stderr = e.stderr or ""
+    output = f"EXIT CODE: {e.returncode}\n\nSTDOUT:\n{stdout}\n\nSTDERR:\n{stderr}"
+    log_file.write_text(output)
+
+    raise RuntimeError(f"Claude Code failed: {e.stderr or e.stdout}") from e
+```
+
+**On TimeoutExpired**:
+
+```python
+except subprocess.TimeoutExpired as e:
+    # Save timeout info to log file
+    log_file = self.state_dir / f"claude-{issue_number}.log"
+    log_file.write_text(f"TIMEOUT after {e.timeout}s\n\nOutput:\n{e.output or ''}")
+
+    raise RuntimeError("Claude Code timed out") from e
+```
+
+### 3. Save Retrospective Output on Failure
+
+**File**: `scylla/automation/implementer.py`, method `_run_retrospective()`
+
+Add `state_dir.mkdir()` and save failure output:
+
+```python
+def _run_retrospective(self, session_id: str, worktree_path: Path, issue_number: int) -> None:
+    """Resume Claude session to run /learn."""
+    self.state_dir.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
+    log_file = self.state_dir / f"retrospective-{issue_number}.log"
+
+    try:
+        result = run([
+            "claude", "--resume", session_id,
+            "/mnemosyne:learn commit the results and create a PR",
+            "--print", "--permission-mode", "dontAsk",
+            "--allowedTools", "Read,Write,Edit,Glob,Grep,Bash",
+        ], cwd=self.repo_root, timeout=600)
+
+        # Write output to log file
+        log_file.write_text(result.stdout or "")
+        logger.info(f"Retrospective completed for issue #{issue_number}")
+        logger.info(f"Retrospective log: {log_file}")
+
+    except Exception as e:
+        logger.warning(f"Retrospective failed for issue #{issue_number}: {e}")
+
+        # Save failure output to log file
+        error_output = f"FAILED: {e}\n"
+        if hasattr(e, "stdout"):
+            error_output += f"\nSTDOUT:\n{e.stdout or ''}"
+        if hasattr(e, "stderr"):
+            error_output += f"\nSTDERR:\n{e.stderr or ''}"
+        log_file.write_text(error_output)
+
+        # Non-blocking: never re-raise
+```
+
+### 4. Save Follow-Up Issues Output
+
+**File**: `scylla/automation/implementer.py`, method `_run_follow_up_issues()`
+
+Add `state_dir.mkdir()`, save on success, and save on failure:
+
+```python
+def _run_follow_up_issues(self, session_id: str, worktree_path: Path, issue_number: int) -> None:
+    """Resume Claude session to identify and file follow-up issues."""
+    self.state_dir.mkdir(parents=True, exist_ok=True)  # Ensure directory exists
+
+    # ... write prompt
+
+    try:
+        result = run([...], cwd=worktree_path, timeout=600)
+
+        # Save successful output to log file
+        follow_up_log = self.state_dir / f"follow-up-{issue_number}.log"
+        follow_up_log.write_text(result.stdout or "")
+
+        # Parse JSON output and create issues...
+
+    except Exception as e:
+        logger.warning(f"Follow-up issues failed for issue #{issue_number}: {e}")
+
+        # Save failure output to log file
+        follow_up_log = self.state_dir / f"follow-up-{issue_number}.log"
+        error_output = f"FAILED: {e}\n"
+        if hasattr(e, "stdout"):
+            error_output += f"\nSTDOUT:\n{e.stdout or ''}"
+        if hasattr(e, "stderr"):
+            error_output += f"\nSTDERR:\n{e.stderr or ''}"
+        follow_up_log.write_text(error_output)
+
+        # Non-blocking: never re-raise
+```
+
+### 5. Add Test Coverage
+
+Create tests to verify log persistence on both success and failure paths:
+
+**File**: `tests/unit/automation/test_implementer.py`
+
+```python
+def test_claude_code_output_saved_to_log(self, implementer, tmp_path):
+    """Test that Claude Code stdout is saved to log file on success."""
+    implementer.state_dir = tmp_path
+    worktree_path = tmp_path / "worktree"
+    worktree_path.mkdir(exist_ok=True)
+
+    mock_result = MagicMock()
+    mock_result.stdout = json.dumps({
+        "session_id": "test-session-123",
+        "result": "Implementation complete",
+    })
+
+    with patch("scylla.automation.implementer.run") as mock_run:
+        mock_run.return_value = mock_result
+
+        implementer._run_claude_code(123, worktree_path, "Implement issue")
+
+        # Verify log file was created and contains stdout
+        log_file = tmp_path / "claude-123.log"
+        assert log_file.exists()
+        assert "test-session-123" in log_file.read_text()
+
+def test_claude_code_failure_saved_to_log(self, implementer, tmp_path):
+    """Test that Claude Code failure output is saved to log file."""
+    implementer.state_dir = tmp_path
+    worktree_path = tmp_path / "worktree"
+    worktree_path.mkdir(exist_ok=True)
+
+    with patch("scylla.automation.implementer.run") as mock_run:
+        error = subprocess.CalledProcessError(
+            returncode=1, cmd=["claude"],
+            output="Some output", stderr="Error message"
+        )
+        error.stdout = "Claude stdout output"
+        error.stderr = "Claude stderr output"
+        mock_run.side_effect = error
+
+        with pytest.raises(RuntimeError, match="Claude Code failed"):
+            implementer._run_claude_code(456, worktree_path, "Implement issue")
+
+        # Verify log file contains failure details
+        log_file = tmp_path / "claude-456.log"
+        assert log_file.exists()
+        content = log_file.read_text()
+        assert "EXIT CODE: 1" in content
+        assert "Claude stdout output" in content
+        assert "Claude stderr output" in content
+```
+
+Similar tests for retrospective and follow-up phases.
+
+**Important**: Update existing tests to use `tmp_path` for `state_dir`:
+
+```python
+def test_existing_test(self, implementer, tmp_path):
+    """Existing test that needs state_dir."""
+    implementer.state_dir = tmp_path  # Add this line
+    # ... rest of test
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Files Created After Implementation
+
+After running `scripts/implement_issues.py`, the `.issue_implementer/` directory contains:
+
+```
+.issue_implementer/
+├── run.log                      # Full Python logger output (all phases, all issues)
+├── claude-123.log               # Claude Code output for issue #123
+├── claude-456.log               # Claude Code output for issue #456
+├── retrospective-123.log        # Retrospective output for issue #123
+├── follow-up-123.log            # Follow-up issues output for issue #123
+├── issue-123.json               # State file for issue #123
+└── issue-456.json               # State file for issue #456
+```
+
+### Test Results
+
+- **Before**: 24 tests passing
+- **After**: 30 tests passing (added 5 new tests, updated 10 existing tests)
+- **Coverage**: All three execution phases (Claude Code, retrospective, follow-up) tested for both success and failure paths
+
+### Log File Formats
+
+**Claude Code success**:
+```json
+{
+  "type": "result",
+  "session_id": "abc123-def456",
+  "result": "Implementation complete",
+  "total_cost_usd": 0.13
+}
+```
+
+**Claude Code failure**:
+```
+EXIT CODE: 1
+
+STDOUT:
+<claude stdout output>
+
+STDERR:
+<claude stderr output>
+```
+
+**Retrospective/Follow-up failure**:
+```
+FAILED: [Error message]
+
+STDOUT:
+<process stdout if available>
+
+STDERR:
+<process stderr if available>
+```
+
+## Key Learnings
+
+1. **Ensure directory exists before writing**: Always call `mkdir(parents=True, exist_ok=True)` before writing log files, especially in tests
+2. **Save on ALL exit paths**: Don't just save on success - failures are what need debugging
+3. **Don't patch file I/O in tests**: Use real file I/O with `tmp_path` instead of mocking `Path.write_text`
+4. **Separate concerns**: `FileHandler` for Python logs, individual log files for subprocess output
+5. **Test both success and failure**: Verify logs are persisted in all scenarios
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | Issue #602, PR TBD | [notes.md](../references/notes.md) |
+
+## Superseded from fix-implement-issues-script
+
+---
+name: fix-implement-issues-script
+description: Debug and fix automation pipeline failures in implement_issues.py
+category: debugging
+date: 2026-02-14
+version: 1.0.0
+user-invocable: false
+---
+# Fix implement_issues.py Automation Pipeline
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-02-14 |
+| **Objective** | Fix failing automation pipeline for GitHub issue implementation |
+| **Outcome** | ✅ Fully robust pipeline with fallback logic |
+| **PR** | #624 (6 commits) |
+
+## Overview
+
+The `implement_issues.py` script automates GitHub issue implementation by:
+
+1. Creating git worktrees
+2. Running Claude Code to implement the issue
+3. Creating commits and PRs
+
+Multiple failure modes were discovered and fixed through iterative debugging.
+
+## When to Use This Skill
+
+Invoke when:
+
+- `implement_issues.py` fails with git errors
+- Claude Code exits with non-zero status
+- Worktree creation fails with "branch already exists"
+- Files show truncated paths in git operations
+- PR creation fails after successful implementation
+
+## Verified Workflow
+
+### 1. Fix Git Status Parsing Bug
+
+**Problem**: Filenames truncated (`ests/unit/...` instead of `tests/unit/...`)
+
+**Root Cause**: `line[3:].strip()` - the `.strip()` removed first character
+
+**Solution**:
+
+```python
+# WRONG:
+filename_part = line[3:].strip()  # Removes first char!
+
+# RIGHT:
+filename_part = line[3:]  # Position 3 is start of filename
+```
+
+**Git status format**: `"XY filename"` where X/Y are status codes, position 2 is space, position 3+ is filename.
+
+### 2. Reuse Existing Branches on Retry
+
+**Problem**: `git worktree add -b branch` fails if branch exists from previous run
+
+**Solution**:
+
+```python
+# Check if branch exists first
+result = run(
+    ["git", "rev-parse", "--verify", branch_name],
+    capture_output=True,
+    check=False,
+)
+branch_exists = result.returncode == 0
+
+if branch_exists:
+    # Reuse existing branch (no -b flag)
+    run(["git", "worktree", "add", worktree_path, branch_name])
+else:
+    # Create new branch
+    run(["git", "worktree", "add", "-b", branch_name, worktree_path, base_branch])
+```
+
+### 3. Add Robust Fallback Logic
+
+**Problem**: Pipeline failed if Claude didn't push or create PR
+
+**Solution**: Verify-and-fallback pattern
+
+```python
+def _ensure_pr_created(issue_number, branch_name, worktree_path):
+    # 1. Verify commit exists (MUST have this)
+    if not commit_exists:
+        raise RuntimeError("No commit created")
+
+    # 2. Push if not already pushed (FALLBACK)
+    if not branch_on_remote:
+        run(["git", "push", "-u", "origin", branch_name])
+
+    # 3. Create PR if doesn't exist (FALLBACK)
+    if not pr_exists:
+        pr_number = self._create_pr(issue_number, branch_name)
+
+    return pr_number
+```
+
+**Key insight**: Only fail on truly unrecoverable errors (no commit). Everything else can be fixed automatically.
+
+### 4. Move Git Operations to Claude Agent
+
+**Updated Prompt**:
+
+```markdown
+**Git Workflow:**
+After implementation is complete and tests pass:
+1. Create a git commit using the /commit-commands:commit skill
+2. Push the changes to origin
+3. Create a pull request using the /commit-commands:commit-push-pr skill
+```
+
+**File Handling Guidelines**:
+
+```markdown
+**File Handling:**
+- DO NOT create backup files (.orig, .bak, .swp, etc.)
+- Clean up any backup files before finishing
+```
+
+### 5. Add Critical CLI Flags
+
+**Required flags** for `claude` command:
+
+```python
+[
+    "claude",
+    prompt_file,
+    "--output-format", "json",
+    "--permission-mode", "dontAsk",  # CRITICAL: Prevents hanging
+    "--allowedTools", "Read,Write,Edit,Glob,Grep,Bash",  # CRITICAL: Explicit permissions
+]
+```
+
+### 6. Fix Import Errors
+
+**Problem**: `cannot import name 'gh_call'`
+
+**Solution**: Use private function `_gh_call` and parse JSON:
+
+```python
+from .github_api import _gh_call
+
+result = _gh_call(["pr", "list", "--head", branch_name, "--json", "number"])
+pr_data = json.loads(result.stdout)  # Must parse stdout
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+**All tests pass**: 199 automation tests ✅
+
+**Key configurations**:
+
+```python
+# Worktree settings
+base_dir = repo_root / ".worktrees"
+branch_name = f"{issue_number}-auto-impl"
+
+# Claude Code timeout
+timeout = 1800  # 30 minutes
+
+# Permission mode (CRITICAL)
+--permission-mode dontAsk
+
+# Allowed tools (CRITICAL)
+--allowedTools Read,Write,Edit,Glob,Grep,Bash
+```
+
+**Error logging added**:
+
+```python
+except subprocess.CalledProcessError as e:
+    logger.error(f"Claude Code failed")
+    logger.error(f"Exit code: {e.returncode}")
+    if e.stdout:
+        logger.error(f"Stdout: {e.stdout[:1000]}")
+    if e.stderr:
+        logger.error(f"Stderr: {e.stderr[:1000]}")
+```
+
+## Implementation Files Changed
+
+- `scylla/automation/implementer.py` - Main automation logic
+- `scylla/automation/worktree_manager.py` - Branch reuse logic
+- `scylla/automation/prompts.py` - Claude instructions
+- `scylla/automation/models.py` - Added `body` field to IssueInfo
+- `scylla/automation/github_api.py` - Used existing `_gh_call`
+- `tests/unit/automation/test_*.py` - Updated tests
+
+## Related Skills
+
+- None (this is a new pattern for ProjectScylla)
+
+## Future Improvements
+
+1. Add retry logic for transient git failures
+2. Cache PR existence checks to avoid repeated gh calls
+3. Add metrics collection (time per phase, success rate)
+4. Support for stacked PRs (multiple dependent issues)
+
+## Superseded from audit-composition-root-wiring-check
+
+---
+name: audit-composition-root-wiring-check
+description: "Verifies that internal components are actually wired in the composition root (cmd/main, app entry, DI container) — not just present as packages with tests. Use when: (1) auditing a codebase before declaring it complete or shippable, (2) tests pass but a feature seems 'done but not working' or metrics permanently read zero, (3) before tagging a release, (4) inheriting a codebase and need to know what's actually live in production vs structurally dead."
+category: debugging
+date: 2026-05-05
+version: "1.0.0"
+user-invocable: false
+tags: ["audit", "dead-code", "composition-root", "wiring", "instrumentation", "go", "verification"]
+---
+
+# Audit: Composition-Root Wiring Check
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-05-05 |
+| **Objective** | Catch the architecture-vs-implementation gap: components that exist + have tests + are documented, but are never instantiated or invoked from the composition root, so they don't actually run in production. |
+| **Outcome** | Verified-local. Caught five separate dead-spine bugs in Atlas that earlier reviews missed for months; fix PRs merged and Atlas v0.2.0 shipped with the spine wired. |
+
+## When to Use
+
+- Before declaring any audit complete (this is the single most missed class of audit defect).
+- When tests pass and CI is green, but a feature seems "done but not working" in staging or prod.
+- When metrics permanently read zero, or alerts referencing those metrics never fire.
+- Before tagging a release. The "headline architectural promise" of the release is exactly the kind of thing that can be merged-but-unwired.
+- When inheriting a codebase: distinguish what's actually live from what's merely present.
+- Whenever a reviewer says "this package looks complete" — that's the trigger to check if it's wired.
+
+The failure mode this catches: package implementation exists, unit tests pass with 90%+ coverage, README and architecture doc reference it, `Config` struct is populated — but `cmd/<binary>/main.go` never calls the constructor or `Start(ctx)`. The package is structurally dead code in production.
+
+## Verified Workflow
+
+### Quick Reference
+
+For each runtime component (subscriber, metrics type, worker, validator, health check), pick the constructor or hot-path method symbol, then grep the composition root only:
+
+```bash
+# Go (substitute for your language as noted below)
+pkg=internal/nats
+ctor=nats.New        # constructor symbol
+start=Subscriber.Start
+
+# Is the package instantiated from cmd/?
+grep -rn "$ctor"  cmd/ --include='*.go' | grep -v '_test.go'
+
+# Is the lifecycle method actually invoked?
+grep -rn ".Start(" cmd/ --include='*.go' | grep -v '_test.go'
+```
+
+If the first command returns zero non-test hits, the package is structurally dead code and any test coverage is misleading. Stop and flag it as a release blocker.
+
+### Detailed Steps
+
+1. **Enumerate runtime components.** From `internal/`, list every package that should be a runtime component (not a pure utility). Typical categories:
+
+   | Component type | What "wired" means | Symbol to grep |
+   | --- | --- | --- |
+   | Subscriber / event consumer | `Start(ctx)` is called, ideally as a goroutine | `pkg.New`, `Start(` |
+   | Metrics type (counter/histogram/gauge) | `Inc*` / `Observe*` / `Set*` called from real call sites, not just defined | `Inc`, `Observe`, `Set`, `Add` |
+   | Background worker / poller | Constructed AND `go x.Start(ctx)` (or equivalent) | `pkg.New`, `go` + start method |
+   | Health-check registration | Registered with the health registry | `Register(`, `RegisterCheck(` |
+   | Validator | Called from `Load()` / config-parse path | validator function name |
+   | Middleware / interceptor | Added to the router/server chain | `Use(`, `WithMiddleware(`, chain registration |
+
+2. **For each component, run the negative grep.** Search the composition root (`cmd/`, `app/`, wherever `main` lives) — excluding tests — for the constructor symbol:
+
+   ```bash
+   grep -rn "<ctor-symbol>" cmd/ --include='*.go' | grep -v '_test.go'
+   ```
+
+   Zero hits = structurally dead code. Document the package, the constructor, and where it was *expected* to be wired.
+
+3. **For metrics specifically, also check the call sites of the mutator methods.** A metric that is only `Inc`'d inside its own defining package is dead instrumentation:
+
+   ```bash
+   # If the only hits for `IncFanout` are in metrics.go itself, the metric never moves.
+   grep -rn 'IncFanout\|ObserveLatency\|SetActiveClients' \
+        --include='*.go' \
+        --exclude='*_test.go' \
+        --exclude-dir=vendor
+   ```
+
+   Cross-reference with any alerting rules (`rules/*.yml`, Prometheus alerts). An alert that references a metric whose mutator is never called from production cannot ever fire, even though every component "exists".
+
+4. **Verify the goroutine is actually launched.** `Start(ctx)` returning immediately is just as bad as not calling it. Confirm the call site uses `go subscriber.Start(ctx)` (or the equivalent supervised-goroutine pattern), and that the cancel/shutdown wiring is in place.
+
+5. **Build a wiring matrix and put it in the audit report.** One row per component, one column per "expected", "constructed in cmd/", "lifecycle invoked", "exercised in production path". Anything with empty cells is a finding — not a nit, a blocker.
+
+### Language-specific symbol-grep cheatsheet
+
+| Language | Composition root | Constructor pattern | Lifecycle pattern |
+| --- | --- | --- | --- |
+| Go | `cmd/<binary>/main.go` | `pkg.New(`, `pkg.NewX(` | `.Start(ctx)`, `go pkg.Run(` |
+| Python | `<package>/__main__.py`, `app.py`, `main.py` | `ClassName(`, `create_x(` | `.start()`, `await x.run()` |
+| Rust | `src/main.rs`, `src/bin/*.rs` | `Type::new(`, `Builder::build()` | `.run().await`, `tokio::spawn(` |
+| TypeScript/Node | `src/index.ts`, `src/server.ts` | `new ClassName(`, `createX(` | `.start()`, `.listen(` |
+| Mojo | top-level `fn main()` in entry module | `ClassName(`, factory fn | `.run()`, task spawn |
+
+In every case the rule is the same: grep the composition root, exclude tests, look for the constructor and the lifecycle method.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Trust "package exists + has tests = component works" | Earlier Atlas reviews graded the project as healthy because `internal/nats.Subscriber` had a complete implementation, a test file with a mock bus and 90%+ coverage, an architecture-doc entry, a README mention, and a wired-up `Config` with `DefaultStreams()`. | `cmd/argus-dashboard/main.go` never called `nats.New(...)` or `subscriber.Start(ctx)`. The package was structurally dead code in production; SSE clients only ever received heartbeats. The headline architectural promise of the entire epic was unimplemented in production. | Test coverage is independent of production wiring. Always grep the composition root for the constructor symbol — exclude tests — before grading any component "done". |
+| Trust the `/metrics` endpoint as evidence metrics work | `internal/server/AtlasMetrics` was defined, registered, and exposed at `/metrics`. The endpoint returned valid Prometheus output. | None of the `Inc*` / `Observe*` / `Set*` methods were ever called from production code paths. Every counter and histogram permanently read zero. `rules/atlas-alerts.yml` referenced these metrics, so none of those alerts could ever fire. | Endpoint reachability is not instrumentation correctness. Grep the mutator methods (`Inc`, `Observe`, `Set`) excluding the metric's own package and tests; if the only hits are inside the defining file, the metric is dead instrumentation. |
+| Hope reviewers would catch it during normal code review | Three rounds of human review on Atlas missed the gap for months because each PR only touched one layer (subscriber package, metrics package, main.go) and no review held all three in mind at once. | Wiring lives at the seam between PRs. A per-PR review is structurally incapable of catching "package added in PR A is never called from main.go modified in PR B". | Spine-wiring checks must be a release-gate audit step, not a reviewer-vibes check. Add a wiring matrix to the audit report. |
+
+## Results & Parameters
+
+### Atlas case: the wiring matrix that caught the bugs
+
+| Component | Defined? | Tested? | Constructed in `cmd/`? | Lifecycle invoked? | Status |
+| --- | --- | --- | --- | --- | --- |
+| `internal/nats.Subscriber` | yes | yes (90%+) | **NO** | **NO** | DEAD — fixed in PR #444 |
+| `internal/server.AtlasMetrics` (Inc/Observe/Set) | yes | yes | yes (struct constructed) | **NO mutators called** | DEAD INSTRUMENTATION — fixed in PR #445/#446 |
+| Health-check registration | yes | yes | yes | yes | OK |
+| Config validator | yes | yes | yes (called from `Load()`) | yes | OK |
+
+The first two rows are what F-graded the audit. PRs #444 #445 #446 #447 #448 wired the spine and Atlas v0.2.0 shipped.
+
+### Drop-in audit script (Go)
+
+```bash
+#!/usr/bin/env bash
+# audit-wiring.sh — flag internal packages whose constructors are never
+# called from cmd/. Run from repo root.
+set -euo pipefail
+
+CMD_DIR=${1:-cmd}
+INTERNAL_DIR=${2:-internal}
+
+echo "Composition-root wiring audit: $INTERNAL_DIR -> $CMD_DIR"
+echo
+
+# Enumerate exported constructors (functions starting with New) in internal/.
+grep -rhn --include='*.go' --exclude='*_test.go' \
+     -E '^func New[A-Z][A-Za-z0-9_]*\(' "$INTERNAL_DIR" \
+  | sed -E 's/.*func (New[A-Za-z0-9_]+)\(.*/\1/' \
+  | sort -u \
+  | while read -r ctor; do
+      hits=$(grep -rln --include='*.go' --exclude='*_test.go' "\b$ctor\b" "$CMD_DIR" || true)
+      if [[ -z "$hits" ]]; then
+        printf 'DEAD  %-40s (no call site in %s/)\n' "$ctor" "$CMD_DIR"
+      fi
+    done
+```
+
+Run before every release. Any line starting with `DEAD` is a release blocker until proven a deliberate library export.
+
+### Expected output on a healthy repo
+
+```text
+Composition-root wiring audit: internal -> cmd
+(no DEAD lines)
+```
+
+On Atlas pre-fix this same script would have printed `DEAD New` for the NATS subscriber and several metrics constructors — caught in seconds, not months.
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| Atlas (Go observability dashboard) | `/hephaestus:repo-analyze-strict-full` audit on 2026-05-05 graded the project F (NO-GO) on this exact issue. Three independent reviewer agents (architecture, source-quality, safety/reliability) converged on the same root cause. Fix PRs #444 #445 #446 #447 #448 merged; Atlas v0.2.0 shipped with the spine wired. | This skill |
+
+## References
+
+- Companion skill: [audit-implementation](audit-implementation.md) — how to triage and ship the fixes once the wiring gap is identified.
+- Companion skill: [code-quality-audit-principles](code-quality-audit-principles.md) — broader audit framework; this skill is the "is it actually live?" subroutine.
