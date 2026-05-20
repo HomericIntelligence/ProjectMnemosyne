@@ -1,0 +1,2032 @@
+<!-- markdownlint-disable MD024 -->
+<!-- markdownlint-disable MD041 -->
+<!-- markdownlint-disable MD033 -->
+
+## Superseded from logging-stdlib-json-formatter
+
+```markdown
+---
+name: logging-stdlib-json-formatter
+description: "Build a zero-dependency JSON log formatter using stdlib logging.Formatter. Use when: (1) adding structured JSON logging to a shared library, (2) integrating Python logs with Loki/Promtail/ELK without adding dependencies."
+category: tooling
+date: 2026-03-25
+version: "1.1.0"
+user-invocable: false
+verification: verified-local
+absorbed:
+  - tooling-structured-json-logging-stdlib
+tags:
+  - logging
+  - json
+  - observability
+  - stdlib
+---
+
+# Stdlib JSON Log Formatter (Zero Dependencies)
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-03-25 |
+| **Objective** | Add structured JSON logging to a shared Python library without introducing new dependencies |
+| **Outcome** | Successful. `JsonFormatter` outputs single-line JSON records compatible with Loki/Promtail ingestion |
+| **Verification** | verified-local |
+
+## When to Use
+
+- Adding structured/JSON logging to a Python project that wants to stay dependency-light
+- Integrating Python logs with log aggregation systems (Loki, Promtail, ELK, Datadog)
+- Extending a `ContextLogger` / `LoggerAdapter` pattern to emit structured output
+- Need to handle extra/context fields as top-level JSON keys without collisions
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+import json
+import logging
+import traceback
+from datetime import datetime, timezone
+
+class JsonFormatter(logging.Formatter):
+    RESERVED = frozenset({"timestamp", "level", "logger", "message", "exception", "stack_info"})
+    _DEFAULT_ATTRS = frozenset(logging.LogRecord("", 0, "", 0, None, None, None).__dict__.keys())
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_dict = {
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),  # resolves lazy %s formatting
+        }
+        # Detect user-supplied extras by diffing against default LogRecord attrs
+        extras = {k: v for k, v in record.__dict__.items() if k not in self._DEFAULT_ATTRS}
+        for key, value in extras.items():
+            if key in self.RESERVED:
+                log_dict[f"ctx_{key}"] = value  # prefix collisions
+            else:
+                log_dict[key] = value
+        if record.exc_info and record.exc_info[0] is not None:
+            log_dict["exception"] = "".join(traceback.format_exception(*record.exc_info))
+        if record.stack_info:
+            log_dict["stack_info"] = record.stack_info
+        return json.dumps(log_dict, default=str)  # default=str handles non-serializable
+```
+
+### Detailed Steps
+
+1. **Subclass `logging.Formatter`** -- override `format()` to build a dict and serialize with `json.dumps()`
+2. **Use `record.getMessage()`** for the message field -- this resolves lazy `%s` formatting that `record.msg` alone would miss
+3. **Generate ISO 8601 timestamps with timezone** -- `datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat()` produces `2026-03-25T10:00:00+00:00`
+4. **Detect extra fields** by comparing `record.__dict__` against a snapshot of default `LogRecord` attributes. Build the snapshot once at module level: `frozenset(logging.LogRecord("", 0, "", 0, None, None, None).__dict__.keys())`
+5. **Handle reserved field collisions** -- if a context key matches a reserved name (`timestamp`, `level`, `logger`, `message`, `exception`, `stack_info`), prefix it with `ctx_` to avoid silently overwriting the standard field
+6. **Use `default=str`** in `json.dumps()` to safely serialize non-JSON-serializable objects (datetimes, custom classes, etc.)
+7. **Wire into existing API** by adding a `json_format: bool = False` parameter to `get_logger()` and `setup_logging()`. When True, instantiate `JsonFormatter()` instead of `logging.Formatter(LOG_FORMAT)`
+
+### Integration Pattern
+
+```python
+# Backward-compatible: json_format defaults to False
+def get_logger(name: str, json_format: bool = False) -> ContextLogger:
+    logger = logging.getLogger(name)
+    if not logger.handlers:
+        formatter = JsonFormatter() if json_format else logging.Formatter(LOG_FORMAT)
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    return ContextLogger(logger)
+```
+
+### Context Fields Flow
+
+When using a `LoggerAdapter` (like `ContextLogger`) that injects extra fields via `process()`:
+
+```python
+# ContextLogger.process() merges self._context into kwargs["extra"]
+# logging framework sets these as attributes on the LogRecord
+# JsonFormatter detects them by diffing against _DEFAULT_ATTRS
+# They appear as top-level keys in the JSON output
+
+logger = get_logger("svc", json_format=True)
+bound = logger.bind(request_id="abc-123", service="keystone")
+bound.info("Processing")
+# {"timestamp":"...","level":"INFO","logger":"svc","message":"Processing","request_id":"abc-123","service":"keystone"}
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Use `python-json-logger` package | Considered adding as a dependency | Unnecessary complexity for a shared library that only depends on pyyaml; stdlib `json` + `logging.Formatter` does everything needed | Before adding a dependency, check if stdlib can do the job -- for JSON formatting it absolutely can |
+| Access extra fields via `record.extra` attribute | LogRecord has no `.extra` attribute; extras are set as individual attributes on the record object | `logging.LoggerAdapter.process()` merges extras into `kwargs["extra"]`, but the framework then calls `setattr(record, key, value)` for each | Detect extras by diffing `record.__dict__` against a baseline snapshot of default LogRecord attributes |
+| Use `record.msg` instead of `record.getMessage()` | `record.msg` is the raw format string (e.g. `"hello %s"`); args are not applied | `getMessage()` calls `self.msg % self.args` to produce the final string | Always use `record.getMessage()` in custom formatters to resolve lazy formatting |
+| Setting `format` kwarg on `basicConfig` with `json_format=True` | Passed `format=format_string` to `logging.basicConfig()` even when `json_format=True` | The `format` kwarg overrides handler formatters in some cases | When using custom formatters, set them on handlers explicitly and omit `format` from `basicConfig()` |
+
+## Results & Parameters
+
+### Output Format
+
+```json
+{"timestamp": "2026-03-25T10:00:00.123456+00:00", "level": "INFO", "logger": "myapp.service", "message": "Request processed", "request_id": "abc-123", "duration_ms": 42}
+```
+
+### Key Design Decisions
+
+| Decision | Rationale |
+| ---------- | ----------- |
+| Zero new dependencies | Shared library consumed by many repos; minimize dependency surface |
+| `default=str` in json.dumps | Gracefully handles non-serializable values instead of crashing |
+| `ctx_` prefix for collisions | Silent data loss (overwriting `level` field) is worse than a renamed key |
+| UTC timestamps | Log aggregation systems expect consistent timezone; UTC is the standard |
+| Opt-in via `json_format=False` default | Full backward compatibility; existing callers unchanged |
+
+### Test Patterns
+
+```python
+# Test JSON output validity
+parsed = json.loads(formatter.format(record))
+assert isinstance(parsed, dict)
+
+# Test reserved field collision
+record = make_record(extra={"level": "custom"})
+parsed = json.loads(formatter.format(record))
+assert parsed["level"] == "INFO"           # original preserved
+assert parsed["ctx_level"] == "custom"     # collision prefixed
+
+# Test non-serializable values
+record = make_record(extra={"obj": CustomClass()})
+parsed = json.loads(formatter.format(record))
+assert parsed["obj"] == str(CustomClass())  # falls back to str()
+```
+
+## Extended Patterns
+
+### Standard Attribute Set with `message`, `msg`, `args`
+
+When pre-computing the baseline `LogRecord` attribute set, include `{"message", "msg", "args"}` explicitly:
+
+```python
+_STANDARD_RECORD_ATTRS = frozenset(
+    logging.LogRecord("", 0, "", 0, "", (), None).__dict__.keys()
+    | {"message", "msg", "args"}
+)
+```
+
+These three keys must be excluded because:
+- `message` is added by `Formatter.format()` after `__init__`, so it does not appear in the dummy record's `__dict__`
+- `msg` and `args` are the raw template and arguments respectively — `getMessage()` resolves them into the final string and they should not be emitted raw
+
+### Alternate Timestamp Format
+
+Some integrations prefer the `logging` default timestamp style instead of UTC isoformat. Use `self.formatTime()` to stay consistent with the configured `datefmt`:
+
+```python
+"timestamp": self.formatTime(record, self.datefmt),
+```
+
+This produces output like `"2026-03-25 14:30:00,123"` (respects `datefmt` when set, falls back to `logging` default otherwise). The canonical skill uses UTC isoformat (`datetime.fromtimestamp(..., tz=timezone.utc).isoformat()`); choose based on your log aggregator's expectations.
+
+### Apply Formatter to ALL Handlers
+
+When `json_format=True`, apply the formatter to every handler (stdout, stderr, file) — do not create handlers first and then set the formatter:
+
+```python
+def setup_logging(..., json_format: bool = False) -> None:
+    formatter = JsonFormatter() if json_format else logging.Formatter(format_string)
+    # Set formatter before adding handlers, or apply to each handler in loop
+    for handler in handlers:
+        handler.setFormatter(formatter)
+```
+
+When `json_format=True`, the `format_string` parameter is effectively ignored — document this in the docstring.
+
+### Exporting from Subpackage
+
+To allow `from hephaestus import JsonFormatter` (or top-level `hephaestus.JsonFormatter` access):
+
+**Subpackage `__init__.py`** — add to `__all__` and import explicitly:
+
+```python
+from .utils import JsonFormatter
+
+__all__ = [..., "JsonFormatter"]
+```
+
+**Top-level lazy imports** — add to `_LAZY_IMPORTS` dict:
+
+```python
+_LAZY_IMPORTS = {
+    ...
+    "JsonFormatter": ("hephaestus.logging.utils", "JsonFormatter"),
+}
+```
+
+This pattern defers the import until first access, keeping top-level import time fast.
+
+### Named Test Cases
+
+Three test cases that fully cover the `JsonFormatter`:
+
+```python
+def test_output_is_valid_json():
+    """Format a LogRecord and assert the output is valid JSON with expected fields."""
+    formatter = JsonFormatter()
+    record = logging.LogRecord(
+        name="test", level=logging.INFO, pathname="", lineno=0,
+        msg="hello world", args=(), exc_info=None
+    )
+    output = formatter.format(record)
+    parsed = json.loads(output)  # raises if not valid JSON
+    assert parsed["level"] == "INFO"
+    assert parsed["message"] == "hello world"
+
+def test_includes_exception():
+    """Verify exception info is included when exc_info is set on the record."""
+    formatter = JsonFormatter()
+    try:
+        raise ValueError("boom")
+    except ValueError:
+        record = logging.LogRecord(
+            name="test", level=logging.ERROR, pathname="", lineno=0,
+            msg="failed", args=(), exc_info=sys.exc_info()
+        )
+    parsed = json.loads(formatter.format(record))
+    assert "exception" in parsed
+    assert "ValueError" in parsed["exception"]
+
+def test_json_format():
+    """Verify that setup_logging(json_format=True) installs JsonFormatter on all handlers."""
+    setup_logging(json_format=True)
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
+        assert isinstance(handler.formatter, JsonFormatter)
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | Issue #45 - Structured JSON logging audit finding | PR #78, 451 tests pass, all lint clean |
+```
+
+## Superseded from execution-stage-logging
+
+```markdown
+---
+name: execution-stage-logging
+description: Add structured stage logging with timing to track worker thread progress
+  through multi-stage pipelines
+category: tooling
+date: 2026-01-04
+version: 1.0.0
+tags:
+- logging
+- observability
+- debugging
+- worker-threads
+- pipeline
+---
+# Execution Stage Logging
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-01-04 |
+| **Objective** | Add visibility into which stage each worker thread is executing and how long each stage takes |
+| **Outcome** | ✅ Structured stage logging with timing prevents "appears hung" issues |
+| **Project** | ProjectScylla |
+| **PR** | [#139](https://github.com/HomericIntelligence/ProjectScylla/pull/139) |
+
+## When to Use
+
+Use this pattern when:
+- Parallel workers execute multi-stage pipelines
+- Long-running operations make it unclear if process is stuck
+- Need to identify performance bottlenecks per stage
+- Want structured logs for parsing/analysis
+- Debugging which workers are slow/stuck
+
+## Problem
+
+**Unstructured Logging**:
+```
+[AGENT] - Running agent with model[...]
+```
+...27 seconds of silence...
+```
+Starting tier T1
+```
+
+**Issues**:
+1. No indication of current stage during execution
+2. Can't tell if worker is stuck or just slow
+3. No timing data per stage
+4. Unclear which worker is doing what
+5. Appears hung to users
+
+## Verified Workflow
+
+### 1. Define Stage Enum
+
+```python
+from enum import Enum
+
+class ExecutionStage(str, Enum):
+    """Execution stages for worker thread reporting."""
+    WORKTREE = "WORKTREE"
+    AGENT = "AGENT"
+    JUDGE = "JUDGE"
+    CLEANUP = "CLEANUP"
+    COMPLETE = "COMPLETE"
+```
+
+### 2. Create Stage Logging Helper
+
+```python
+import time
+from datetime import UTC, datetime
+
+def _stage_log(
+    worker_id: str,
+    stage: ExecutionStage,
+    status: str,
+    elapsed: float | None = None,
+) -> None:
+    """Log execution stage with worker context and timing.
+
+    Args:
+        worker_id: Worker identifier (e.g., "T0_00")
+        stage: Execution stage
+        status: Status description (e.g., "Starting", "Complete")
+        elapsed: Optional elapsed time in seconds
+    """
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+    elapsed_str = f" ({elapsed:.1f}s)" if elapsed is not None else ""
+    logger.info(f"{timestamp} [{worker_id}] Stage: {stage.value} - {status}{elapsed_str}")
+```
+
+### 3. Add Stage Markers
+
+```python
+def execute_pipeline(worker_id: str):
+    """Execute multi-stage pipeline with stage logging."""
+    start_time = time.time()
+
+    # Stage 1: AGENT
+    _stage_log(worker_id, ExecutionStage.AGENT, "Starting")
+    agent_start = time.time()
+
+    result = run_agent()
+
+    agent_duration = time.time() - agent_start
+    _stage_log(worker_id, ExecutionStage.AGENT, "Complete", agent_duration)
+
+    # Stage 2: JUDGE
+    _stage_log(worker_id, ExecutionStage.JUDGE, "Starting")
+    judge_start = time.time()
+
+    judgment = run_judge(result)
+
+    judge_duration = time.time() - judge_start
+    _stage_log(worker_id, ExecutionStage.JUDGE, "Complete", judge_duration)
+
+    # Final
+    total_elapsed = time.time() - start_time
+    _stage_log(worker_id, ExecutionStage.COMPLETE, "All stages complete", total_elapsed)
+```
+
+### 4. Example Output
+
+```
+2026-01-04T19:30:15.234Z [T0_00] Stage: AGENT - Starting
+2026-01-04T19:30:28.456Z [T0_00] Stage: AGENT - Complete (13.2s)
+2026-01-04T19:30:29.123Z [T0_00] Stage: JUDGE - Starting
+2026-01-04T19:30:35.789Z [T0_00] Stage: JUDGE - Complete (6.7s)
+2026-01-04T19:30:35.890Z [T0_00] Stage: COMPLETE - All stages complete (20.7s)
+```
+
+### 5. Parallel Worker Output
+
+```
+2026-01-04T19:30:15.234Z [T0_00] Stage: AGENT - Starting
+2026-01-04T19:30:15.245Z [T0_01] Stage: AGENT - Starting
+2026-01-04T19:30:28.456Z [T0_00] Stage: AGENT - Complete (13.2s)
+2026-01-04T19:30:29.123Z [T0_00] Stage: JUDGE - Starting
+2026-01-04T19:30:30.678Z [T0_01] Stage: AGENT - Complete (15.4s)  # Slower!
+2026-01-04T19:30:31.234Z [T0_01] Stage: JUDGE - Starting
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Stage Logging Pattern
+
+```python
+# Template for adding stage logging to existing code:
+
+def existing_function(worker_id: str):
+    # 1. Track overall timing
+    start_time = time.time()
+
+    # 2. For each stage:
+    _stage_log(worker_id, ExecutionStage.STAGE_NAME, "Starting")
+    stage_start = time.time()
+
+    # ... existing stage logic ...
+
+    stage_duration = time.time() - stage_start
+    _stage_log(worker_id, ExecutionStage.STAGE_NAME, "Complete", stage_duration)
+
+    # 3. Final completion
+    total_elapsed = time.time() - start_time
+    _stage_log(worker_id, ExecutionStage.COMPLETE, "All stages complete", total_elapsed)
+```
+
+### Benefits Achieved
+
+1. **Visibility**: Know exactly which stage each worker is in
+2. **Performance**: Timing data identifies slow stages
+3. **Debugging**: Easy to spot stuck workers
+4. **Structured**: Parseable format for analysis tools
+5. **User Confidence**: Progress visible, not "appears hung"
+
+### Parsing Stage Logs
+
+```python
+import re
+
+def parse_stage_log(line: str):
+    """Parse stage log line into structured data."""
+    pattern = r"(\S+) \[(\w+)\] Stage: (\w+) - (\w+)(?: \((\d+\.\d+)s\))?"
+    match = re.match(pattern, line)
+
+    if match:
+        return {
+            "timestamp": match.group(1),
+            "worker_id": match.group(2),
+            "stage": match.group(3),
+            "status": match.group(4),
+            "duration": float(match.group(5)) if match.group(5) else None
+        }
+```
+
+## Key Learnings
+
+1. **Consistent Format**: Use `[worker_id] Stage: STAGE - status (timing)` pattern
+2. **Both Start and Complete**: Log transitions, not just endpoints
+3. **Timing Essential**: Elapsed time helps identify bottlenecks
+4. **Worker Context**: Include worker ID in every log
+5. **Enum for Stages**: Prevents typos, enables tooling
+
+## Use Cases
+
+1. **Parallel ML Training**: Track which GPU is in which training phase
+2. **ETL Pipelines**: Monitor extract/transform/load stages per worker
+3. **Batch Processing**: Track item processing stages across workers
+4. **Test Runners**: Show which test stage each worker is running
+
+## Related Skills
+
+- `tooling/structured-logging` - General structured logging patterns
+- `debugging/hung-process-detection` - Detecting stuck processes
+- `optimization/performance-profiling` - Finding bottlenecks
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | PR #139 - Worker stage reporting for E2E experiments | [notes.md](../../references/notes.md) |
+```
+
+### Notes: execution-stage-logging
+
+```markdown
+# Execution Stage Logging - Implementation Notes
+
+## Context
+
+ProjectScylla E2E experiments showed:
+- 27-second gaps in logs between agent start and completion
+- Unclear which workers were running vs stuck
+- Users thought process had hung
+- No timing data per stage
+
+Example from results.log:
+```
+Line 18-19: Agent starts at 08:33:49
+Line 20: Next tier starts at 08:34:16 (27 seconds gap!)
+```
+
+## Solution
+
+Added structured stage logging with timing:
+
+1. **ExecutionStage enum**:
+   ```python
+   class ExecutionStage(str, Enum):
+       WORKTREE = "WORKTREE"
+       AGENT = "AGENT"
+       JUDGE = "JUDGE"
+       CLEANUP = "CLEANUP"
+       COMPLETE = "COMPLETE"
+   ```
+
+2. **_stage_log() helper**:
+   ```python
+   def _stage_log(
+       subtest_id: str,
+       stage: ExecutionStage,
+       status: str,
+       elapsed: float | None = None
+   ) -> None:
+       timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+       elapsed_str = f" ({elapsed:.1f}s)" if elapsed is not None else ""
+       logger.info(f"{timestamp} [{subtest_id}] Stage: {stage.value} - {status}{elapsed_str}")
+   ```
+
+3. **Stage markers in _execute_single_run()**:
+   - AGENT Starting / Complete (with duration)
+   - JUDGE Starting / Complete (with duration)
+   - COMPLETE All stages complete (with total time)
+
+## Example Output
+
+```
+2026-01-04T19:30:15.234Z [T0_00] Stage: AGENT - Starting
+2026-01-04T19:30:28.456Z [T0_00] Stage: AGENT - Complete (13.2s)
+2026-01-04T19:30:29.123Z [T0_00] Stage: JUDGE - Starting
+2026-01-04T19:30:35.789Z [T0_00] Stage: JUDGE - Complete (6.7s)
+2026-01-04T19:30:35.890Z [T0_00] Stage: COMPLETE - All stages complete (20.7s)
+```
+
+## Files Changed
+
+- `src/scylla/e2e/subtest_executor.py`:
+  - Added ExecutionStage enum (11 lines)
+  - Added _stage_log() function (14 lines)
+  - Added stage markers in _execute_single_run() (5 locations)
+  - Added timing tracking (start_time, agent_start, judge_start)
+
+## Benefits
+
+1. **Visibility**: Always know which stage each worker is in
+2. **Performance Data**: Timing identifies slow stages
+3. **Debugging**: Easy to spot stuck workers
+4. **Foundation for #129**: Progress indicators can parse these logs
+
+## PR Details
+
+- **Branch**: `131-worker-stage-reporting`
+- **Files Changed**: 1 modified
+- **Lines**: +48, -2
+- **Status**: Awaiting merge
+```
+
+## Superseded from graceful-signal-handling
+
+```markdown
+---
+name: graceful-signal-handling
+description: Implement graceful shutdown for SIGINT/SIGTERM with checkpoint save and
+  partial results
+category: tooling
+date: 2026-01-04
+version: 1.0.0
+tags:
+- signals
+- shutdown
+- checkpoint
+- ctrl-c
+- graceful-exit
+---
+# Graceful Signal Handling
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-01-04 |
+| **Objective** | Enable graceful shutdown on Ctrl+C (SIGINT) and SIGTERM without losing completed work |
+| **Outcome** | ✅ Processes save checkpoints on interrupt and return partial results |
+| **Project** | ProjectScylla |
+| **PR** | [#141](https://github.com/HomericIntelligence/ProjectScylla/pull/141) |
+
+## When to Use
+
+Use this pattern when:
+- Long-running processes need to handle Ctrl+C gracefully
+- Work should be saved on interruption (checkpoints)
+- Partial results are valuable even if process doesn't complete
+- Multi-process/multi-threaded execution needs coordinated shutdown
+- Users need ability to stop and resume work
+
+## Problem
+
+**Abrupt Termination**:
+```
+[INFO] Starting tier T0...
+^C
+Process terminated with signal SIGINT
+```
+
+**Issues**:
+1. Ctrl+C kills process immediately
+2. No checkpoint saved
+3. All work lost
+4. Can't resume from where it stopped
+5. Workers left in inconsistent state
+
+## Verified Workflow
+
+### 1. Define Global Shutdown Flag
+
+```python
+# In main runner module
+_shutdown_requested = False
+
+def request_shutdown() -> None:
+    """Request graceful shutdown (called by signal handlers)."""
+    global _shutdown_requested
+    _shutdown_requested = True
+    logger.warning("Graceful shutdown requested")
+
+def is_shutdown_requested() -> bool:
+    """Check if shutdown has been requested."""
+    return _shutdown_requested
+```
+
+### 2. Register Signal Handlers
+
+```python
+# In CLI entry point
+import signal
+
+def signal_handler(signum: int, frame):
+    logger.warning(f"Received signal {signum}, initiating graceful shutdown...")
+    request_shutdown()
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+```
+
+### 3. Check for Shutdown in Main Loop
+
+```python
+try:
+    for tier_id in config.tiers_to_run:
+        # Check for shutdown before starting tier
+        if is_shutdown_requested():
+            logger.warning(f"Shutdown requested before tier {tier_id}, stopping...")
+            break
+
+        tier_result = run_tier(tier_id, baseline)
+        tier_results[tier_id] = tier_result
+
+finally:
+    # Save checkpoint on interrupt
+    if is_shutdown_requested() and checkpoint:
+        checkpoint.status = "interrupted"
+        checkpoint.last_updated_at = datetime.now(UTC).isoformat()
+        save_checkpoint(checkpoint, checkpoint_path)
+        logger.warning("💾 Checkpoint saved after interrupt")
+```
+
+### 4. Extend Coordinator for Cross-Process Shutdown
+
+```python
+class RateLimitCoordinator:
+    def __init__(self, manager: SyncManager) -> None:
+        self._shutdown_event = manager.Event()  # Add shutdown event
+
+    def signal_shutdown(self) -> None:
+        """Signal all workers to stop accepting new work."""
+        self._shutdown_event.set()
+        logger.info("Shutdown signal sent to all workers")
+
+    def is_shutdown_requested(self) -> bool:
+        """Check if shutdown has been requested."""
+        return self._shutdown_event.is_set()
+```
+
+### 5. Check Shutdown in Worker Processes
+
+```python
+for run_num in range(1, runs_per_subtest + 1):
+    # Check for shutdown before starting run
+    if coordinator and coordinator.is_shutdown_requested():
+        logger.warning(f"Shutdown requested before run {run_num}, stopping...")
+        break
+
+    # Execute run...
+```
+
+### 6. Return Partial Results
+
+```python
+# If shutdown was requested, return partial results
+if is_shutdown_requested():
+    logger.warning("Experiment interrupted - returning partial results")
+    return ExperimentResult(
+        config=config,
+        tier_results=tier_results,  # Only completed tiers
+        # ... other fields
+    )
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Signal Handling Pattern
+
+```python
+# 1. Global shutdown flag (module level)
+_shutdown_requested = False
+
+def request_shutdown() -> None:
+    global _shutdown_requested
+    _shutdown_requested = True
+
+# 2. Register handlers in main()
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
+# 3. Check in loops
+if is_shutdown_requested():
+    break
+
+# 4. Save checkpoint in finally
+finally:
+    if is_shutdown_requested() and checkpoint:
+        checkpoint.status = "interrupted"
+        save_checkpoint(checkpoint, checkpoint_path)
+```
+
+### Checkpoint Status Values
+
+```python
+"running"                 # Normal execution
+"paused_rate_limit"      # Paused for rate limit
+"interrupted"            # User interrupted (Ctrl+C)
+"completed"              # Finished normally
+"failed"                 # Error occurred
+```
+
+### Shutdown Flow
+
+1. **Signal Received** → Set global shutdown flag
+2. **Main Loop** → Check flag before next tier/task
+3. **Coordinator** → Signal all workers via shared Event
+4. **Workers** → Check coordinator.is_shutdown_requested()
+5. **Current Work** → Complete gracefully or timeout
+6. **Checkpoint** → Save with "interrupted" status
+7. **Return** → Partial results for completed work
+
+## Key Learnings
+
+1. **Global Flag First**: Simple global flag + signal handlers is sufficient
+2. **Coordinator for Workers**: Use multiprocessing.Manager.Event for cross-process coordination
+3. **Check at Boundaries**: Check shutdown before starting new work, not mid-task
+4. **Always Use Finally**: Checkpoint save must be in finally block
+5. **Partial Results OK**: Returning partial results is valuable
+
+## Use Cases
+
+1. **Long-Running Experiments**: ML training, benchmarking, testing
+2. **Batch Processing**: ETL pipelines, data migrations
+3. **Parallel Execution**: Multiple workers coordinating shutdown
+4. **Resumable Tasks**: Save checkpoint and resume later
+
+## Related Skills
+
+- `optimization/checkpoint-result-validation` - Validating checkpoints on resume
+- `tooling/execution-stage-logging` - Tracking which stage was interrupted
+- `testing/resume-tests` - Testing interrupt/resume scenarios
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | PR #141 - Graceful signal handling for E2E experiments | [notes.md](../../references/notes.md) |
+```
+
+### Notes: graceful-signal-handling
+
+```markdown
+# Graceful Signal Handling - Implementation Notes
+
+## Context
+
+ProjectScylla E2E experiments had no signal handling:
+- Ctrl+C killed process immediately
+- No checkpoint saved
+- All work lost
+- Couldn't resume from where it stopped
+
+**Issue #130**: "Implement signal handling for graceful interruption (Ctrl+C/Z)"
+
+## Solution
+
+Implemented comprehensive signal handling with:
+1. Signal handlers registered in CLI entry point
+2. Global shutdown flag in runner module
+3. Coordinator extension for cross-process signaling
+4. Checkpoint save with "interrupted" status
+5. Partial results return
+
+### Code Changes
+
+**File 1**: `scripts/run_e2e_experiment.py`
+
+1. **Import signal module** (line 18):
+```python
+import signal
+```
+
+2. **Import shutdown functions** (line 28):
+```python
+from scylla.e2e.runner import request_shutdown, run_experiment
+```
+
+3. **Register signal handlers** (lines 349-355):
+```python
+# Register signal handlers for graceful shutdown
+def signal_handler(signum: int, frame):
+    logger.warning(f"Received signal {signum}, initiating graceful shutdown...")
+    request_shutdown()
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+```
+
+**File 2**: `src/scylla/e2e/runner.py`
+
+1. **Global shutdown coordination** (lines 50-71):
+```python
+# Global shutdown coordination
+_shutdown_requested = False
+
+def request_shutdown() -> None:
+    """Request graceful shutdown of the experiment."""
+    global _shutdown_requested
+    _shutdown_requested = True
+    logger.warning("Graceful shutdown requested")
+
+def is_shutdown_requested() -> bool:
+    """Check if shutdown has been requested."""
+    return _shutdown_requested
+```
+
+2. **Check shutdown before each tier** (lines 220-222):
+```python
+# Check for shutdown before starting tier
+if is_shutdown_requested():
+    logger.warning(f"Shutdown requested before tier {tier_id.value}, stopping...")
+    break
+```
+
+3. **Save checkpoint in finally block** (lines 241-248):
+```python
+finally:
+    # Save checkpoint on interrupt
+    if is_shutdown_requested() and self.checkpoint:
+        self.checkpoint.status = "interrupted"
+        self.checkpoint.last_updated_at = datetime.now(UTC).isoformat()
+        save_checkpoint(self.checkpoint, checkpoint_path)
+        logger.warning("💾 Checkpoint saved after interrupt")
+    self._cleanup_pid_file()
+```
+
+4. **Return partial results** (lines 251-287):
+```python
+# If shutdown was requested, return partial results
+if is_shutdown_requested():
+    logger.warning("Experiment interrupted - returning partial results")
+    return ExperimentResult(
+        config=self.config,
+        tier_results=tier_results,  # Only completed tiers
+        # ... (partial results)
+    )
+```
+
+**File 3**: `src/scylla/e2e/subtest_executor.py`
+
+1. **Extend RateLimitCoordinator** (line 304):
+```python
+def __init__(self, manager: SyncManager) -> None:
+    # ... existing fields
+    self._shutdown_event = manager.Event()  # NEW
+```
+
+2. **Add shutdown methods** (lines 374-386):
+```python
+def signal_shutdown(self) -> None:
+    """Signal all workers to stop accepting new work."""
+    self._shutdown_event.set()
+    logger.info("Shutdown signal sent to all workers")
+
+def is_shutdown_requested(self) -> bool:
+    """Check if shutdown has been requested."""
+    return self._shutdown_event.is_set()
+```
+
+3. **Check shutdown before each run** (lines 497-502):
+```python
+# Check for shutdown before starting run
+if coordinator and coordinator.is_shutdown_requested():
+    logger.warning(
+        f"Shutdown requested before run {run_num}, stopping..."
+    )
+    break
+```
+
+4. **Propagate shutdown in parallel loop** (lines 1212-1215):
+```python
+# Check for shutdown request
+if is_shutdown_requested():
+    logger.warning("Shutdown requested, signaling workers to stop...")
+    coordinator.signal_shutdown()
+    break
+```
+
+## Shutdown Flow
+
+```
+1. User presses Ctrl+C
+   ↓
+2. signal_handler() called
+   ↓
+3. request_shutdown() sets global flag
+   ↓
+4. Main loop checks is_shutdown_requested()
+   ↓
+5. If True, break out of tier loop
+   ↓
+6. coordinator.signal_shutdown() notifies workers
+   ↓
+7. Workers check coordinator.is_shutdown_requested()
+   ↓
+8. Workers stop accepting new runs
+   ↓
+9. finally block executes
+   ↓
+10. Checkpoint saved with status="interrupted"
+   ↓
+11. _cleanup_pid_file() removes PID file
+   ↓
+12. Return partial ExperimentResult
+```
+
+## Files Changed
+
+- `scripts/run_e2e_experiment.py`: Signal handler registration
+- `src/scylla/e2e/runner.py`: Global flag, shutdown checks, checkpoint save, partial results
+- `src/scylla/e2e/subtest_executor.py`: Coordinator extension, worker checks
+
+**Total**: 3 files changed, +136 lines, -21 lines
+
+## Benefits
+
+1. **No Work Lost**: Checkpoint saved with completed work
+2. **Clean Shutdown**: Workers stop gracefully
+3. **Partial Results**: Return what was completed
+4. **Resumable**: Can resume from checkpoint
+5. **User-Friendly**: Ctrl+C works as expected
+
+## PR Details
+
+- **Branch**: `130-signal-handling`
+- **Files Changed**: 3 modified
+- **Lines**: +136, -21
+- **Status**: Merged to main
+
+## Testing
+
+Manual test scenarios:
+- Interrupt during worktree setup
+- Interrupt during agent execution
+- Interrupt during judge execution
+- Interrupt between tiers
+- Verify checkpoint saved with "interrupted" status
+- Verify partial results returned
+- Verify resume works from interrupted checkpoint
+```
+
+## Superseded from tier-progress-indicators
+
+```markdown
+---
+name: tier-progress-indicators
+description: Add real-time progress tracking for parallel tier execution to prevent
+  'appears hung' issues
+category: tooling
+date: 2026-01-04
+version: 1.0.0
+tags:
+- progress
+- observability
+- parallel-execution
+- logging
+- user-experience
+---
+# Tier Progress Indicators
+
+## Overview
+
+| Attribute | Value |
+| ----------- | ------- |
+| **Date** | 2026-01-04 |
+| **Objective** | Add real-time progress indicators during parallel tier execution to prevent appearance of hung process |
+| **Outcome** | ✅ Progress logging shows completed/total tasks, active workers, and elapsed time |
+| **Project** | ProjectScylla |
+| **PR** | [#140](https://github.com/HomericIntelligence/ProjectScylla/pull/140) |
+
+## When to Use
+
+Use this pattern when:
+- Parallel workers execute long-running tasks
+- Users can't tell if the process is stuck or just slow
+- Need visibility into overall progress (X of Y complete)
+- Want to show active worker count and elapsed time
+- Process appears hung due to lack of output during execution
+
+## Problem
+
+**Silent Execution**:
+```
+[INFO] Starting tier T0
+```
+...30 seconds of silence...
+```
+[INFO] Tier T0 complete
+```
+
+**Issues**:
+1. No indication of progress during execution
+2. Users think process has hung
+3. Can't tell how many workers are active
+4. No timing information for performance analysis
+5. Unclear if process is stuck or progressing normally
+
+## Verified Workflow
+
+### 1. Add Progress Tracking Variables
+
+```python
+# Before parallel execution starts
+total_subtests = len(tier_config.subtests)
+start_time = time.time()
+completed_count = 0
+```
+
+### 2. Log Progress After Each Completion
+
+```python
+for future in as_completed(futures):
+    subtest_id = futures[future]
+    try:
+        results[subtest_id] = future.result()
+        completed_count += 1
+
+        # Log progress after each completion
+        elapsed = time.time() - start_time
+        active_workers = total_subtests - completed_count
+        logger.info(
+            f"[PROGRESS] Tier {tier_id.value}: "
+            f"{completed_count}/{total_subtests} complete, "
+            f"{active_workers} active, elapsed: {elapsed:.0f}s"
+        )
+```
+
+### 3. Handle Error Cases
+
+```python
+except Exception as e:
+    # Create error result
+    results[subtest_id] = create_error_result(...)
+    completed_count += 1  # Still count as complete
+
+    # Log progress after error
+    elapsed = time.time() - start_time
+    active_workers = total_subtests - completed_count
+    logger.info(
+        f"[PROGRESS] Tier {tier_id.value}: "
+        f"{completed_count}/{total_subtests} complete, "
+        f"{active_workers} active, elapsed: {elapsed:.0f}s"
+    )
+```
+
+### 4. Example Output
+
+```
+[INFO] Starting tier T0
+[PROGRESS] Tier T0: 1/24 complete, 23 active, elapsed: 15s
+[PROGRESS] Tier T0: 2/24 complete, 22 active, elapsed: 28s
+[PROGRESS] Tier T0: 3/24 complete, 21 active, elapsed: 42s
+[PROGRESS] Tier T0: 4/24 complete, 20 active, elapsed: 55s
+...
+[PROGRESS] Tier T0: 24/24 complete, 0 active, elapsed: 320s
+[INFO] Tier T0 complete
+```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Progress Log Format
+
+```
+[PROGRESS] Tier {tier_id}: {completed}/{total} complete, {active} active, elapsed: {elapsed}s
+```
+
+**Fields**:
+- `tier_id`: Tier being executed (e.g., "T0")
+- `completed`: Number of subtests completed so far
+- `total`: Total number of subtests in tier
+- `active`: Number of workers still running (calculated as `total - completed`)
+- `elapsed`: Time since tier started (in seconds, no decimals)
+
+### Implementation Locations
+
+```python
+# In run_tier_subtests_parallel() function
+total_subtests = len(tier_config.subtests)  # Before loop
+start_time = time.time()                     # Before loop
+completed_count = 0                           # Initialize counter
+
+# In as_completed() loop
+completed_count += 1                          # After each completion
+elapsed = time.time() - start_time
+active_workers = total_subtests - completed_count
+logger.info(f"[PROGRESS] Tier {tier_id}: ...")  # Log progress
+```
+
+### Benefits Achieved
+
+1. **Visibility**: Users know exactly how many tasks are complete
+2. **Active Workers**: Shows parallelism in action
+3. **Timing**: Elapsed time helps estimate remaining duration
+4. **Confidence**: No more "appears hung" concerns
+5. **Debugging**: Easy to spot when workers slow down or stop
+
+## Key Learnings
+
+1. **Log After Every Completion**: Both success and error paths need progress updates
+2. **Calculate Active Workers**: `total - completed` gives clear picture of parallelism
+3. **Whole Seconds**: Use `elapsed:.0f` to avoid decimal clutter in logs
+4. **Consistent Format**: `[PROGRESS]` prefix makes logs parseable
+5. **Simple is Better**: Basic counters work better than complex progress bars
+
+## Use Cases
+
+1. **Parallel Test Runners**: Show X of Y tests complete
+2. **Batch Processing**: Track items processed across workers
+3. **ML Training**: Display epochs or batches completed
+4. **API Rate-Limited Operations**: Show progress when workers pause/resume
+
+## Related Skills
+
+- `tooling/execution-stage-logging` - Worker-level stage tracking with timing
+- `debugging/hung-process-detection` - Detecting stuck processes
+- `optimization/parallel-execution` - Optimizing worker parallelism
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectScylla | PR #140 - Progress indicators for E2E tier execution | [notes.md](../../references/notes.md) |
+```
+
+### Notes: tier-progress-indicators
+
+```markdown
+# Tier Progress Indicators - Implementation Notes
+
+## Context
+
+ProjectScylla E2E experiments showed long periods of silence during tier execution:
+- Users thought process had hung
+- No visibility into which subtests were running vs complete
+- No timing data to estimate remaining duration
+
+**Evidence from Issue #129**:
+- Desired: Live progress updates showing X of Y sub-tests complete
+- Desired: Active worker thread count
+- Desired: Elapsed time
+
+## Solution
+
+Added real-time progress logging after each subtest completion in the parallel execution loop.
+
+### Code Changes
+
+**File**: `src/scylla/e2e/subtest_executor.py`
+
+**In `run_tier_subtests_parallel()` function**:
+
+1. **Track tier-level timing** (lines 1157-1158):
+```python
+total_subtests = len(tier_config.subtests)
+start_time = time.time()
+```
+
+2. **Initialize completion counter** (line 1184):
+```python
+completed_count = 0
+```
+
+3. **Log progress after each successful completion** (lines 1189-1198):
+```python
+results[subtest_id] = future.result()
+completed_count += 1
+
+# Log progress after each completion
+elapsed = time.time() - start_time
+active_workers = total_subtests - completed_count
+logger.info(
+    f"[PROGRESS] Tier {tier_id.value}: "
+    f"{completed_count}/{total_subtests} complete, "
+    f"{active_workers} active, elapsed: {elapsed:.0f}s"
+)
+```
+
+4. **Log progress after rate limit errors** (lines 1234-1243):
+```python
+results[subtest_id] = SubTestResult(...)  # Error result
+completed_count += 1
+
+# Log progress after error
+elapsed = time.time() - start_time
+active_workers = total_subtests - completed_count
+logger.info(f"[PROGRESS] Tier {tier_id.value}: ...")
+```
+
+5. **Log progress after general exceptions** (lines 1260-1269):
+```python
+results[subtest_id] = SubTestResult(...)  # Error result
+completed_count += 1
+
+# Log progress after error
+elapsed = time.time() - start_time
+active_workers = total_subtests - completed_count
+logger.info(f"[PROGRESS] Tier {tier_id.value}: ...")
+```
+
+## Example Output
+
+```
+[INFO] Starting tier T0
+[INFO] Tier T0: 24 sub-tests, mode: empty
+[PROGRESS] Tier T0: 1/24 complete, 23 active, elapsed: 15s
+[PROGRESS] Tier T0: 2/24 complete, 22 active, elapsed: 28s
+[PROGRESS] Tier T0: 3/24 complete, 21 active, elapsed: 42s
+[PROGRESS] Tier T0: 4/24 complete, 20 active, elapsed: 55s
+[PROGRESS] Tier T0: 5/24 complete, 19 active, elapsed: 68s
+...
+[PROGRESS] Tier T0: 23/24 complete, 1 active, elapsed: 305s
+[PROGRESS] Tier T0: 24/24 complete, 0 active, elapsed: 320s
+[INFO] Tier T0 complete
+```
+
+## Files Changed
+
+- `src/scylla/e2e/subtest_executor.py`:
+  - Added `total_subtests` tracking
+  - Added `start_time` tracking
+  - Added `completed_count` counter
+  - Added progress logging in 3 locations (success, rate limit error, general error)
+  - Total: +34 lines
+
+## Benefits
+
+1. **User Confidence**: No more "appears hung" concerns - progress is visible
+2. **Performance Analysis**: Elapsed time helps identify slow tiers
+3. **Debugging**: Active worker count shows parallelism in action
+4. **Estimation**: Users can estimate remaining time
+5. **Simple**: Minimal overhead, just counters and logs
+
+## PR Details
+
+- **Branch**: `129-progress-indicators`
+- **Files Changed**: 1 modified (`subtest_executor.py`)
+- **Lines**: +34
+- **Status**: Merged to main
+
+## Related Issues
+
+- Issue #131: Worker stage reporting (shows which stage each worker is in)
+- Issue #129: Progress indicators (this skill - overall tier progress)
+```
+
+## Superseded from subprocess-expected-failure-log-suppress
+
+```markdown
+---
+name: subprocess-expected-failure-log-suppress
+description: "Suppress logger.error() for expected CalledProcessError in run_subprocess() and git_utils.run() using log_on_error/log_errors=False. Use when: (1) a subprocess call probes for an optional resource (git ref, remote branch) and failure is expected, (2) a first-try cleanup attempt is expected to fail on clean state, (3) callers catch and handle CalledProcessError themselves so ERROR log entries are noise."
+category: tooling
+date: 2026-04-22
+version: "1.0.0"
+user-invocable: false
+verification: verified-ci
+tags:
+  - subprocess
+  - logging
+  - run_subprocess
+  - log_on_error
+  - log_errors
+  - CalledProcessError
+  - expected-failure
+  - git-utils
+  - hephaestus
+---
+
+# Suppress Logs for Expected Subprocess Failures
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-22 |
+| **Objective** | Suppress noisy ERROR log entries for subprocess failures that callers intentionally catch and handle |
+| **Outcome** | Success — 1403 tests pass, PR #301 merged |
+| **Verification** | verified-ci |
+| **Project** | ProjectHephaestus, PR #301 (branch: port-circuit-breaker-success-threshold) |
+
+## When to Use
+
+- A `run_subprocess()` call probes for an optional resource (e.g., `git rev-parse --verify <ref>`) where absence is a valid expected outcome
+- A first-try cleanup attempt (e.g., `git worktree remove <path>`) is designed to fail if the path does not exist yet
+- The caller already catches `CalledProcessError` and recovers gracefully — so the `logger.error()` inside the helper is pure noise in logs
+- You see ERROR log spam from expected subprocess failures during normal operation
+
+**Keyword triggers**: `log_on_error`, `log_errors`, subprocess, git probe, expected failure, suppress error log
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+# For run_subprocess() in hephaestus/utils/helpers.py
+result = run_subprocess(
+    ["git", "rev-parse", "--verify", branch_name],
+    check=False,         # Don't raise — check returncode yourself
+    log_on_error=False,  # Suppress ERROR log if it fails
+)
+
+# For git_utils.run() in hephaestus/automation/git_utils.py
+result = run(
+    ["git", "worktree", "remove", path],
+    check=False,
+    log_errors=False,    # Suppress ERROR log for expected removal failures
+)
+```
+
+### Detailed Steps
+
+1. **Identify the noisy call site**: Look for `run_subprocess()` or `git_utils.run()` calls where:
+   - The exception is immediately caught by the caller
+   - OR `check=False` is used and the caller inspects `returncode` directly
+   - AND the failure is expected in normal operation
+
+2. **Add `log_on_error=False` to `run_subprocess()` calls**:
+
+   ```python
+   # BEFORE (noisy)
+   result = run_subprocess(
+       ["git", "rev-parse", "--verify", branch_name],
+       check=False,
+   )
+   branch_exists = result.returncode == 0
+
+   # AFTER (clean logs)
+   result = run_subprocess(
+       ["git", "rev-parse", "--verify", branch_name],
+       check=False,
+       log_on_error=False,
+   )
+   branch_exists = result.returncode == 0
+   ```
+
+3. **Add `log_errors=False` to `git_utils.run()` calls**:
+
+   ```python
+   # BEFORE (noisy)
+   try:
+       run(["git", "worktree", "remove", str(path)])
+   except CalledProcessError:
+       pass  # Expected if not yet created
+
+   # AFTER (clean logs)
+   try:
+       run(["git", "worktree", "remove", str(path)], log_errors=False)
+   except CalledProcessError:
+       pass  # Expected if not yet created
+   ```
+
+4. **Verify the exception still propagates**: The `log_on_error=False` / `log_errors=False` flag ONLY suppresses the `logger.error()` call. The `CalledProcessError` still propagates normally so callers that do NOT catch it will still fail loudly.
+
+5. **Implementation reference** — signature changes made in PR #301:
+
+   ```python
+   # hephaestus/utils/helpers.py
+   def run_subprocess(
+       cmd: list[str],
+       *,
+       check: bool = True,
+       log_on_error: bool = True,   # ← new kwarg
+       **kwargs,
+   ) -> subprocess.CompletedProcess:
+       try:
+           return subprocess.run(cmd, check=check, **kwargs)
+       except subprocess.CalledProcessError as e:
+           if log_on_error:
+               logger.error(f"Command failed: {e.cmd!r} → exit {e.returncode}")
+           raise
+
+   # hephaestus/automation/git_utils.py
+   def run(
+       cmd: list[str | Path],
+       *,
+       check: bool = True,
+       log_errors: bool = True,     # ← new kwarg
+       **kwargs,
+   ) -> subprocess.CompletedProcess:
+       try:
+           return subprocess.run([str(c) for c in cmd], check=check, **kwargs)
+       except subprocess.CalledProcessError as e:
+           if log_errors:
+               logger.error(f"git command failed: {e.cmd!r} → exit {e.returncode}")
+           raise
+   ```
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A — direct approach | The pattern was clear from the first probe site in worktree_manager.py | N/A | Callers that catch CalledProcessError are the canonical signal that the failure is expected |
+
+## Results & Parameters
+
+### Files Changed
+
+| File | Change |
+| ------ | -------- |
+| `hephaestus/utils/helpers.py` | Added `log_on_error: bool = True` kwarg; guard `logger.error()` with it |
+| `hephaestus/automation/git_utils.py` | Added `log_errors: bool = True` kwarg; guard `logger.error()` with it |
+| `hephaestus/automation/worktree_manager.py` | Pass `log_errors=False` at probe/cleanup call sites |
+
+### Default behavior preserved
+
+Both kwargs default to `True` — existing callers that did NOT pass the flag continue to log errors exactly as before. Only explicitly opted-in call sites suppress logs.
+
+### Canonical use cases in hephaestus/automation/worktree_manager.py
+
+```python
+# 1. Probe: does branch exist?
+result = run(
+    ["git", "rev-parse", "--verify", branch_name],
+    capture_output=True,
+    check=False,
+    log_errors=False,   # failure = branch absent, fully expected
+)
+branch_exists = result.returncode == 0
+
+# 2. First-try cleanup: remove worktree if it exists (no-op if absent)
+try:
+    run(["git", "worktree", "remove", str(worktree_path)], log_errors=False)
+except CalledProcessError:
+    pass  # Not yet created — expected on first run
+```
+
+### Test coverage
+
+```bash
+pixi run pytest tests/unit -v
+# 1403 passed, 0 failed (CI: PR #301)
+```
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| ProjectHephaestus | PR #301, branch port-circuit-breaker-success-threshold | 1403 tests pass in CI |
+```
+
+## Superseded from add-shell-log-level
+
+```markdown
+---
+name: add-shell-log-level
+description: "Skill: add-shell-log-level"
+category: tooling
+date: 2026-03-19
+version: "1.0.0"
+user-invocable: false
+---
+# Skill: add-shell-log-level
+
+## Overview
+
+| Field | Value |
+| ----------- | ----------------------------------------------------------------------- |
+| Date | 2026-02-20 |
+| Objective | Add a new log level function to a shared bash library that already defines its color variable but lacks the corresponding log function |
+| Outcome | Success — `log_debug()` added, pre-commit (ShellCheck) and syntax checks pass, PR merged via auto-merge |
+| Issue | #781 |
+| PR | #829 |
+
+## When to Use
+
+- A shell script defines a color variable (e.g., `BLUE='\033[0;34m'`) but no function uses it
+- You need to add a `log_debug` / `log_trace` / `log_verbose` level to a shared bash logging library
+- An issue asks you to "resolve a dead variable" or "add verbose/diagnostic logging" in shell scripts
+- Follow-up work from removing a variable that turns out to be useful
+
+## Verified Workflow
+
+### 1. Read the file first
+
+Always read the full script before editing so you understand the existing log function signatures.
+
+```bash
+# Check what log functions already exist
+grep -n 'log_' scripts/docker_common.sh
+```
+
+### 2. Apply the minimal change
+
+The pattern used in `scripts/docker_common.sh`:
+
+```bash
+# Colors for output: RED=error, GREEN=info, YELLOW=warn, BLUE=debug
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+log_info()  { echo -e "${GREEN}[INFO]${NC} $*"; }
+log_warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $*" >&2; }
+log_debug() { echo -e "${BLUE}[DEBUG]${NC} $*"; }
+```
+
+Key details:
+
+- Use `$*` (not `$1`) for variadic messages
+- `log_error` writes to stderr (`>&2`); `log_debug` writes to stdout
+- Update the comment to document which color maps to which level
+
+### 3. Run syntax and quality checks
+
+```bash
+bash -n scripts/docker_common.sh          # parse-only, no execution
+pre-commit run --files scripts/docker_common.sh  # ShellCheck + whitespace hooks
+```
+
+### 4. Commit and PR
+
+Follow conventional commits:
+
+```
+feat(scripts): add log_debug() using BLUE color to docker_common.sh
+```
+
+Include `Closes #<issue>` in the commit message body.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+| Item | Value |
+| ------ | ------- |
+| File changed | `scripts/docker_common.sh` |
+| Lines changed | +8 / -4 (net +4) |
+| ShellCheck result | Passed |
+| Pre-commit result | All hooks passed |
+| Bash syntax check | Passed |
+| PR | #829 |
+| Auto-merge | Enabled (rebase) |
+
+## Notes
+
+- The `BLUE` color was previously removed (#722) because no function used it; this skill re-adds it with purpose
+- The `$*` change (from `$1`) is a low-risk improvement that handles multi-word arguments without quoting gymnastics
+- No Python tests are needed for a bash-only change; shell syntax checks + ShellCheck are sufficient
+```
+
+## Superseded from console-inline-status-carriage-return
+
+```markdown
+---
+name: console-inline-status-carriage-return
+description: "Pattern for using carriage return (\\r) to overwrite transient terminal status lines instead of printing new lines. Use when: (1) a console tool prints repeated status updates that spam the terminal, (2) you need inline status for transient states (disconnected, reconnecting, retrying) while preserving permanent events on their own lines, (3) implementing a NATS event viewer or similar long-running console that cycles through connection states."
+category: tooling
+date: 2026-04-05
+version: "1.0.0"
+user-invocable: false
+tags:
+  - console
+  - terminal
+  - carriage-return
+  - inline
+  - nats
+  - status
+  - ansi
+  - tui
+---
+
+# Console Inline Status with Carriage Return
+
+## Overview
+
+| Field | Value |
+| ------- | ------- |
+| **Date** | 2026-04-05 |
+| **Objective** | Stop odysseus-console.py from printing a new line for every disconnect/reconnect/retry cycle, which spams the terminal when NATS is down |
+| **Outcome** | Successful -- transient states overwrite in place via `\r`, permanent states (connected, events) print on new lines |
+| **Verification** | verified-local |
+
+## When to Use
+
+- A console tool prints repeated transient status messages (disconnected, reconnecting, retrying) that create a wall of text when the upstream service is unavailable
+- You want transient status to overwrite in place while permanent events (actual data, successful connection) each get their own line
+- Building a NATS event viewer, log tailer, or any long-running terminal tool that cycles through connection states
+- You need to avoid ANSI escape codes (pure `\r` carriage return works in all terminals)
+
+## Verified Workflow
+
+### Quick Reference
+
+```python
+import os
+
+_last_was_inline: bool = False
+
+def _term_width() -> int:
+    """Get terminal width, fallback to 80 columns."""
+    try:
+        return os.get_terminal_size().columns
+    except OSError:
+        return 80
+
+def print_status(state: str, detail: str = "", inline: bool = False) -> None:
+    """Print a status line, optionally overwriting the current line.
+
+    Args:
+        state:  Tag like DISCONNECTED, RECONNECTING, CONNECTED
+        detail: Optional detail string
+        inline: If True, overwrite current line with \r instead of newline
+    """
+    global _last_was_inline
+    line = f"[{state}]"
+    if detail:
+        line += f" {detail}"
+
+    if inline:
+        width = _term_width()
+        padding = max(0, width - len(line))
+        print(f"\r{line}{' ' * padding}", end="", flush=True)
+        _last_was_inline = True
+    else:
+        if _last_was_inline:
+            print()  # finish the inline line before printing a new one
+        print(line, flush=True)
+        _last_was_inline = False
+
+def clear_inline() -> None:
+    """If the last output was inline, emit a newline to finish it."""
+    global _last_was_inline
+    if _last_was_inline:
+        print()
+        _last_was_inline = False
+```
+
+### Usage in Event Loop
+
+```python
+# Transient states -- inline (overwrite in place)
+print_status("DISCONNECTED", "ConnectionRefusedError", inline=True)
+print_status("RECONNECTING", "Retrying in 5s...", inline=True)
+print_status("DISCONNECTED", "Connection timed out", inline=True)
+print_status("RECONNECTING", "Retrying in 5s...", inline=True)
+
+# Permanent states -- newline (each gets its own line)
+print_status("CONNECTED", "nats://host:4222")         # auto-finishes any inline
+print_status("RECONNECTED", "nats://host:4222")
+
+# Before printing actual events, clear any lingering inline status
+clear_inline()
+print(f"[event] {subject}: {payload}")
+```
+
+### Detailed Steps
+
+1. **Add `_last_was_inline` global**: Tracks whether the last output was an inline (carriage-return) status line. This is needed so that the next non-inline print knows to emit a newline first.
+
+2. **Add `_term_width()` helper**: Uses `os.get_terminal_size().columns` with a fallback to 80. The terminal width is needed to pad the status line with spaces so that a shorter line fully overwrites a previous longer line.
+
+3. **Modify `print_status()` with `inline` parameter**:
+   - When `inline=True`: Use `print(f"\r{line}{' ' * padding}", end="", flush=True)`. The `\r` moves the cursor to column 0, the padding fills to terminal width, `end=""` prevents a newline, and `flush=True` ensures immediate display.
+   - When `inline=False`: If `_last_was_inline` is True, emit a bare `print()` first to finish the previous inline line, then print the status normally.
+
+4. **Add `clear_inline()` helper**: Call this before printing any non-status output (e.g., actual NATS events in the `on_message` callback). It emits a newline if the last output was inline, preventing event text from being appended to or overwritten by a status line.
+
+5. **Padding to terminal width is critical**: Without padding, if a previous inline status was 60 characters and the new one is 30 characters, the last 30 characters of the old line remain visible after `\r`. Padding with spaces to the full terminal width ensures complete overwrite.
+
+### Which States Are Inline vs Newline
+
+| State | Mode | Reason |
+| ------- | ------ | -------- |
+| DISCONNECTED | inline | Transient -- may repeat many times when NATS is down |
+| RECONNECTING | inline | Transient -- immediately follows DISCONNECTED |
+| "Retrying in Ns..." | inline | Transient -- countdown between attempts |
+| Connection timed out | inline | Transient -- variant of disconnected |
+| Connection lost | inline | Transient -- detected during operation |
+| Connection closed | inline | Transient -- clean shutdown notification |
+| CONNECTED | newline | Permanent -- successful connection is worth logging |
+| RECONNECTED | newline | Permanent -- nats-py auto-reconnect success is worth logging |
+| Actual NATS events | newline | Permanent -- these are the primary output of the tool |
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| Print every status on new line | Each state change (DISCONNECTED, RECONNECTING, etc.) printed via `print()` | Creates a wall of repeating status text when NATS is down -- hundreds of lines of `[DISCONNECTED]` / `[RECONNECTING]` / `[DISCONNECTED]` | Transient states should overwrite in place; only permanent states deserve their own line |
+| Suppress transient states entirely | Skip printing DISCONNECTED/RECONNECTING, only show CONNECTED | Loses all visibility into what the console is doing during reconnection -- user sees nothing and thinks it is frozen | Transient states must be visible but should not accumulate; inline overwrite is the right balance |
+
+## Results & Parameters
+
+### Terminal Output When NATS Is Down
+
+```
+[RECONNECTING] Retrying in 5s...
+```
+(single line, overwriting in place every cycle)
+
+### Terminal Output When NATS Comes Up
+
+```
+[RECONNECTING] Retrying in 5s...
+[CONNECTED] nats://host:4222
+[event] hmas.agent.heartbeat: {"agent": "agamemnon", ...}
+[event] hmas.task.created: {"id": "task-42", ...}
+```
+
+### Terminal Output When NATS Goes Down During Operation
+
+```
+[event] hmas.agent.heartbeat: {"agent": "agamemnon", ...}
+[DISCONNECTED] Connection lost
+```
+(DISCONNECTED overwrites in place, events continue on new lines when reconnected)
+
+## Verified On
+
+| Project | Context | Details |
+| --------- | --------- | --------- |
+| Odysseus | odysseus-console.py NATS event viewer | Syntax checked; inline status eliminates terminal spam during NATS downtime |
+
+## References
+
+- [nats-py-connection-resilience-patterns](nats-py-connection-resilience-patterns.md) -- Companion skill: clean connection lifecycle without tracebacks (prerequisite pattern)
+- [python-subprocess-terminal-corruption](python-subprocess-terminal-corruption.md) -- Related: terminal state issues with subprocess (different problem, similar domain)
+```
+
+## Superseded from extract-logging-helper
+
+```markdown
+---
+name: extract-logging-helper
+description: 'Skill: extract-logging-helper. Use when working with extract logging
+  helper.'
+category: tooling
+date: 2026-01-01
+version: 1.0.0
+user-invocable: false
+---
+# Extract Logging Helper
+
+Workflow for eliminating duplicate `logger.info/warning` calls by extracting a void helper method, with mock-logger test patterns.
+
+## Overview
+
+| Attribute | Details |
+| ----------- | --------- |
+| **Date** | 2026-02-19 |
+| **Objective** | Extract duplicate checkpoint resume logging from two branches into `_log_checkpoint_resume()` |
+| **Outcome** | ✅ Success — 2 duplicate logging blocks → 1 helper, 5 new tests, no behavior change |
+| **Issue** | #713 (follow-up from #639) |
+| **PR** | #761 |
+
+## When to Use This Skill
+
+Use when you encounter:
+
+- **Identical `logger.info/warning` blocks** appearing in 2+ branches of a method
+- **Logging in both the success and fallback paths** of a conditional
+- **DRY violation review comment** mentioning duplicated log messages
+- **Follow-up issues** from a prior extract-method refactoring noting residual duplication
+
+**Trigger phrases**:
+
+- "Duplicate logging in both branches"
+- "Extract logging helper"
+- "Same log messages appear in success and fallback"
+- "Consider extracting `_log_*` helper"
+
+## Key Difference from Generic DRY Refactoring
+
+Logging helpers are **void methods** (`-> None`) with **side effects only** — no return value to test directly.
+This requires a different test pattern: **mock the logger** and assert on `call()` objects, not return values.
+
+## Verified Workflow
+
+### Phase 1: Identify & Confirm Duplication
+
+1. Read both branches carefully — confirm the *messages* are truly identical, not just similar.
+2. Note any lines that differ between branches (those stay in-place, only the shared lines move).
+
+```python
+# BEFORE — duplicated in if and else:
+if saved_config_path.exists():
+    logger.info(f"📂 Resuming from checkpoint: {checkpoint_path}")
+    logger.info(f"📋 Loading config from checkpoint: {saved_config_path}")  # unique
+    self.config = ExperimentConfig.load(saved_config_path)
+    logger.info(f"   Previously completed: {self.checkpoint.get_completed_run_count()} runs")
+else:
+    logger.warning(...)  # unique
+    if not validate_checkpoint_config(...): raise ValueError(...)  # unique
+    logger.info(f"📂 Resuming from checkpoint: {checkpoint_path}")  # ← duplicate
+    logger.info(f"   Previously completed: {self.checkpoint.get_completed_run_count()} runs")  # ← duplicate
+```
+
+### Phase 2: Place the Helper Method
+
+Insert the helper **just before** the method that will call it, keeping related methods together.
+
+```python
+def _log_checkpoint_resume(self, checkpoint_path: Path) -> None:
+    """Log checkpoint resume status with completed run count.
+
+    Args:
+        checkpoint_path: Path to checkpoint.json file
+
+    """
+    logger.info(f"📂 Resuming from checkpoint: {checkpoint_path}")
+    logger.info(
+        f"   Previously completed: {self.checkpoint.get_completed_run_count()} runs"
+    )
+```
+
+**Key details**:
+- Return type is `-> None` (no return value — pure side effect)
+- Docstring uses the same Args format as other helpers in the class
+- The method accesses `self.checkpoint` — verify it's set before the call sites
+
+### Phase 3: Update Call Sites
+
+```python
+# AFTER:
+if saved_config_path.exists():
+    self._log_checkpoint_resume(checkpoint_path)  # ← moved to top of branch
+    logger.info(f"📋 Loading config from checkpoint: {saved_config_path}")
+    self.config = ExperimentConfig.load(saved_config_path)
+else:
+    logger.warning(...)
+    if not validate_checkpoint_config(...): raise ValueError(...)
+    self._log_checkpoint_resume(checkpoint_path)  # ← end of fallback branch
+```
+
+Note: The order of the shared log messages **relative to branch-specific lines** may differ between
+branches — preserve the original intent, not just mechanical replacement.
+
+### Phase 4: Test with Mock Logger
+
+Testing a void logging helper requires patching `logger` and asserting on `call()` objects:
+
+```python
+from unittest.mock import MagicMock, call, patch
+
+class TestLogCheckpointResume:
+    """Tests for _log_checkpoint_resume helper method."""
+
+    def test_logs_checkpoint_path(self, mock_config, mock_tier_manager):
+        runner = E2ERunner(mock_config, mock_tier_manager, Path("/tmp"))
+        runner.checkpoint = MagicMock()
+        runner.checkpoint.get_completed_run_count.return_value = 5
+
+        checkpoint_path = Path("/tmp/checkpoint.json")
+        with patch("scylla.e2e.runner.logger") as mock_logger:
+            runner._log_checkpoint_resume(checkpoint_path)
+
+        mock_logger.info.assert_any_call(f"📂 Resuming from checkpoint: {checkpoint_path}")
+
+    def test_logs_both_messages_in_order(self, mock_config, mock_tier_manager):
+        runner = E2ERunner(mock_config, mock_tier_manager, Path("/tmp"))
+        runner.checkpoint = MagicMock()
+        runner.checkpoint.get_completed_run_count.return_value = 3
+
+        checkpoint_path = Path("/tmp/exp/checkpoint.json")
+        with patch("scylla.e2e.runner.logger") as mock_logger:
+            runner._log_checkpoint_resume(checkpoint_path)
+
+        assert mock_logger.info.call_count == 2
+        mock_logger.info.assert_has_calls([
+            call(f"📂 Resuming from checkpoint: {checkpoint_path}"),
+            call("   Previously completed: 3 runs"),
+        ])
+
+    def test_load_checkpoint_success_path_calls_helper(self, mock_config, mock_tier_manager, tmp_path):
+        """Verify the helper is actually called from both branches."""
+        runner = E2ERunner(mock_config, mock_tier_manager, tmp_path)
+        # ... set up checkpoint + config files ...
+        with (
+            patch("scylla.e2e.runner.load_checkpoint", return_value=mock_checkpoint),
+            patch.object(runner, "_log_checkpoint_resume") as mock_log,
+        ):
+            runner._load_checkpoint_and_config(checkpoint_path)
+        mock_log.assert_called_once_with(checkpoint_path)
+```
+
+**Test checklist for void logging helpers**:
+- [ ] Test each message individually with `assert_any_call`
+- [ ] Test message ordering with `assert_has_calls` + `call_count`
+- [ ] Test that calling methods invoke helper with `patch.object(runner, "_log_*")` + `assert_called_once_with`
+- [ ] Cover both the success path and the fallback path
+
+### Phase 5: Quality Checks
+
+```bash
+pre-commit run --files scylla/e2e/runner.py tests/unit/e2e/test_runner.py
+```
+
+Ruff will collapse single-line f-strings inside `logger.info(...)` — let it reformat, then re-run to confirm green.
+
+## Failed Attempts
+
+| Attempt | What Was Tried | Why It Failed | Lesson Learned |
+| --------- | ---------------- | --------------- | ---------------- |
+| N/A | Direct approach worked | N/A | Solution was straightforward |
+## Results & Parameters
+
+### Code Changes
+
+| File | Change |
+| ------ | -------- |
+| `scylla/e2e/runner.py` | +12 lines (helper) / -9 lines (deduplication) |
+| `tests/unit/e2e/test_runner.py` | +103 lines (5 new tests) |
+
+### Test Coverage
+
+**New tests**: 5
+
+- `test_logs_checkpoint_path` — message content assertion
+- `test_logs_completed_run_count` — dynamic count assertion
+- `test_logs_both_messages_in_order` — ordering assertion
+- `test_load_checkpoint_success_path_calls_helper` — success path integration
+- `test_load_checkpoint_fallback_path_calls_helper` — fallback path integration
+
+**All 9 tests pass** (4 pre-existing + 5 new)
+
+### Mock Logger Pattern (copy-paste ready)
+
+```python
+# Patch the module-level logger, not the stdlib logging module
+with patch("scylla.e2e.runner.logger") as mock_logger:
+    runner._log_checkpoint_resume(checkpoint_path)
+
+# Single message check:
+mock_logger.info.assert_any_call("expected message")
+
+# Ordered multi-message check:
+mock_logger.info.assert_has_calls([call("msg1"), call("msg2")])
+assert mock_logger.info.call_count == 2
+```
+
+## Related Skills
+
+- `dry-refactoring-workflow` — General DRY extraction workflow
+- `extract-method-refactoring` — Extract Method for long methods (issue #639)
+
+## Tags
+
+`refactoring`, `dry-principle`, `logging`, `helper-methods`, `mock-logger`, `pytest`, `void-method`, `tdd`
+```
